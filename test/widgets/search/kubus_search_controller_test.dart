@@ -6,7 +6,8 @@ import 'package:flutter_test/flutter_test.dart';
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  test('updateFieldFocus notifies listeners when the active field link changes', () {
+  test('updateFieldFocus notifies listeners when the active field link changes',
+      () {
     final controller = KubusSearchController(
       config: const KubusSearchConfig(
         scope: KubusSearchScope.home,

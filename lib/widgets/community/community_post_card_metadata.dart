@@ -33,8 +33,7 @@ class _PostMetadataSection extends StatelessWidget {
           ref: subjectRef,
           title: subjectRef.title!.trim(),
           subtitle: subjectRef.subtitle ?? subjectRef.ownerName,
-          imageUrl: MediaUrlResolver.resolve(subjectRef.imageUrl) ??
-              subjectRef.imageUrl,
+          imageUrl: MediaUrlResolver.resolveDisplayUrl(subjectRef.imageUrl),
         );
       }
       if (preview == null &&
@@ -43,8 +42,7 @@ class _PostMetadataSection extends StatelessWidget {
         preview = CommunitySubjectPreview(
           ref: subjectRef,
           title: post.artwork!.title,
-          imageUrl: MediaUrlResolver.resolve(post.artwork!.imageUrl) ??
-              post.artwork!.imageUrl,
+          imageUrl: MediaUrlResolver.resolveDisplayUrl(post.artwork!.imageUrl),
         );
       }
       if (preview != null) {
@@ -139,7 +137,7 @@ class _PostMetadataSection extends StatelessWidget {
                   if (post.distanceKm != null) ...[
                     const SizedBox(width: KubusSpacing.sm),
                     Text(
-                      'â€¢ ${post.distanceKm!.toStringAsFixed(1)} km',
+                      '· ${post.distanceKm!.toStringAsFixed(1)} km',
                       style: KubusTextStyles.compactBadge.copyWith(
                         color:
                             scheme.onTertiaryContainer.withValues(alpha: 0.7),
@@ -249,12 +247,11 @@ class _SubjectPreviewChip extends StatelessWidget {
                   color: accentColor.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(KubusRadius.sm),
                 ),
-                child: imageUrl != null && imageUrl.isNotEmpty
+                child: MediaUrlResolver.resolveDisplayUrl(imageUrl) != null
                     ? ClipRRect(
                         borderRadius: BorderRadius.circular(KubusRadius.sm),
                         child: Image.network(
-                          MediaUrlResolver.resolveDisplayUrl(imageUrl) ??
-                              imageUrl,
+                          MediaUrlResolver.resolveDisplayUrl(imageUrl)!,
                           fit: BoxFit.cover,
                           errorBuilder: (_, __, ___) => Icon(
                             _subjectTypeIcon(preview.ref.normalizedType),

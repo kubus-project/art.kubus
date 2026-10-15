@@ -71,8 +71,31 @@ class KubusMapOverviewController {
   GeoBounds? _inFlightBounds;
   int? _inFlightLevel;
 
+  // The overview kept on screen after the camera left the overview band, until
+  // the detailed markers for the new viewport have arrived. Without it the
+  // marker source is empty between the zoom crossing [exitZoom] and the detailed
+  // fetch landing (a blank map for the length of a request).
+  MapMarkerOverview? _handoff;
+
   /// The current overview, or null when detailed markers are showing.
   MapMarkerOverview? get overview => _active ? _overview : null;
+
+  /// The overview still drawn while detailed markers load, or null.
+  MapMarkerOverview? get handoffOverview => _active ? null : _handoff;
+
+  /// Whether the overview is held only to bridge to detailed markers.
+  bool get hasHandoff => !_active && _handoff != null;
+
+  /// The overview to draw: the live one, or the held hand-off one.
+  MapMarkerOverview? get drawableOverview => overview ?? handoffOverview;
+
+  /// Drops the held hand-off overview once the detailed markers are in. Returns
+  /// whether there was one (the caller then redraws).
+  bool releaseHandoff() {
+    final had = _handoff != null;
+    _handoff = null;
+    return had;
+  }
 
   /// Whether the map is currently drawn from the overview.
   bool get isActive => _active && _overview != null;
@@ -122,7 +145,11 @@ class KubusMapOverviewController {
     bool allowed = true,
   }) async {
     if (!wantsOverviewAt(zoom, allowed: allowed)) {
-      deactivate();
+      // Only crossing the zoom band may bridge to the detailed markers with
+      // the old dots. When a filter the overview cannot express is active the
+      // dots would show artworks the filter excludes (and, if the detailed
+      // fetch then failed, keep showing them), so they go at once.
+      deactivate(keepForHandoff: allowed);
       return KubusMapOverviewRefresh.detailed;
     }
 
@@ -194,7 +221,16 @@ class KubusMapOverviewController {
 
   /// Turns the overview off (detailed markers take over). Any request still in
   /// flight is discarded when it returns.
-  void deactivate() {
+  ///
+  /// With [keepForHandoff] the last overview stays drawable ([handoffOverview])
+  /// until [releaseHandoff], so the map keeps showing its dots while the
+  /// detailed markers load instead of going blank.
+  void deactivate({bool keepForHandoff = false}) {
+    if (keepForHandoff && _overview != null) {
+      _handoff = _overview;
+    } else if (!keepForHandoff) {
+      _handoff = null;
+    }
     _generation += 1;
     _inFlight = null;
     _inFlightBounds = null;

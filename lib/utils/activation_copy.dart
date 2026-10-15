@@ -31,17 +31,24 @@ class ActivationCopy {
           case PendingActionTargetType.artwork:
           case PendingActionTargetType.user:
           case PendingActionTargetType.marker:
+          case PendingActionTargetType.supportRequest:
           case null:
             return l10n.activationGateSaveArtworkTitle;
         }
       case PendingActionType.like:
-        return l10n.activationGateLikeArtworkTitle;
+        return targetType == PendingActionTargetType.post
+            ? l10n.activationGateLikePostTitle
+            : l10n.activationGateLikeArtworkTitle;
       case PendingActionType.follow:
         return l10n.activationGateFollowTitle;
       case PendingActionType.comment:
         return l10n.activationGateCommentTitle;
       case PendingActionType.contribute:
         return l10n.activationGateContributeTitle;
+      case PendingActionType.supportContact:
+      case PendingActionType.supportBug:
+      case PendingActionType.supportReply:
+        return l10n.activationGateGenericTitle(fallbackActionLabel);
       case null:
         return l10n.activationGateGenericTitle(fallbackActionLabel);
     }
@@ -68,16 +75,25 @@ class ActivationCopy {
           case PendingActionTargetType.artwork:
           case PendingActionTargetType.user:
           case PendingActionTargetType.marker:
+          case PendingActionTargetType.supportRequest:
             return l10n.activationConfirmSaveArtwork;
         }
       case PendingActionType.like:
-        return l10n.activationConfirmLikeArtwork;
+        return intent.targetType == PendingActionTargetType.post
+            ? l10n.activationConfirmLikePost
+            : l10n.activationConfirmLikeArtwork;
       case PendingActionType.follow:
         return l10n.activationConfirmFollow;
       case PendingActionType.comment:
         return l10n.activationConfirmComment;
       case PendingActionType.contribute:
         return l10n.activationConfirmContribute;
+      case PendingActionType.supportContact:
+        return l10n.activationConfirmSupportRequest;
+      case PendingActionType.supportBug:
+        return l10n.activationConfirmSupportBug;
+      case PendingActionType.supportReply:
+        return l10n.activationConfirmSupportReply;
     }
   }
 
@@ -95,6 +111,9 @@ class ActivationCopy {
         return l10n.commonFollow;
       case PendingActionType.comment:
       case PendingActionType.contribute:
+      case PendingActionType.supportContact:
+      case PendingActionType.supportBug:
+      case PendingActionType.supportReply:
         return l10n.activationConfirmContinueCta;
     }
   }
@@ -113,6 +132,9 @@ class ActivationCopy {
         return l10n.activationActionFollowedToast;
       case PendingActionType.comment:
       case PendingActionType.contribute:
+      case PendingActionType.supportContact:
+      case PendingActionType.supportBug:
+      case PendingActionType.supportReply:
         return l10n.activationConfirmHeading;
     }
   }

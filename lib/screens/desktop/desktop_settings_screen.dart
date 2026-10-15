@@ -29,7 +29,7 @@ import '../../widgets/detail/detail_shell_components.dart';
 import '../../widgets/detail/shared_section_widgets.dart';
 import '../../widgets/detail/shared_settings_widgets.dart';
 import '../../widgets/email_verification_status_badge.dart';
-import '../../widgets/support/support_ticket_dialog.dart';
+import '../support_center_screen.dart';
 import '../../utils/achievement_ui.dart';
 import '../../utils/app_animations.dart';
 import 'components/desktop_widgets.dart';

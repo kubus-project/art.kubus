@@ -1,0 +1,31 @@
+{
+  "first": {
+    "status": 200,
+    "retryAfter": null,
+    "success": true,
+    "count": 10
+  },
+  "second": {
+    "status": 200,
+    "retryAfter": null,
+    "success": true,
+    "count": 10
+  },
+  "excess": {
+    "status": 429,
+    "retryAfter": "60",
+    "success": false,
+    "error": "Too many uploads in a short time. Please wait before uploading again.",
+    "errorCode": "UPLOAD_RATE_LIMITED"
+  },
+  "multer": {
+    "status": 400,
+    "retryAfter": null,
+    "success": false,
+    "error": "Too many files or an unexpected file field",
+    "errorCode": "UPLOAD_FILE_COUNT_REJECTED"
+  },
+  "successfulStorageFileIncrement": 20,
+  "rateRejectedStorageDelta": 0,
+  "multerRejectedStorageDelta": 0
+}

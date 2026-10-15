@@ -1,34 +1,34 @@
 {
-  "version": "0.8.1",
-  "buildNumber": "261004.01",
-  "buildDate": "2026-10-04",
-  "channel": "alpha",
-  "ecosystem": "art.kubus",
-  "targets": {
-    "frontend": {
-      "repo": "art.kubus",
-      "path": ".",
-      "kind": "flutter"
-    },
-    "backend": {
-      "repo": "art.kubus-backend",
-      "path": "./backend",
-      "kind": "backend-node"
-    },
-    "node": {
-      "repo": "kubus-node",
-      "path": "../kubus-node",
-      "kind": "node"
-    },
-    "admin": {
-      "repo": "admin.kubus",
-      "path": "../admin.kubus",
-      "kind": "vite"
-    },
-    "artLanding": {
-      "repo": "art.kubus.site",
-      "path": "../art.kubus.site_webpage",
-      "kind": "vite"
-    }
-  }
+    "version":  "0.8.2",
+    "buildNumber":  "261013.01",
+    "buildDate":  "2026-10-13",
+    "channel":  "alpha",
+    "ecosystem":  "art.kubus",
+    "targets":  {
+                    "frontend":  {
+                                     "repo":  "art.kubus",
+                                     "path":  ".",
+                                     "kind":  "flutter"
+                                 },
+                    "backend":  {
+                                    "repo":  "art.kubus-backend",
+                                    "path":  "./backend",
+                                    "kind":  "backend-node"
+                                },
+                    "node":  {
+                                 "repo":  "kubus-node",
+                                 "path":  "../kubus-node",
+                                 "kind":  "node"
+                             },
+                    "admin":  {
+                                  "repo":  "admin.kubus",
+                                  "path":  "../admin.kubus",
+                                  "kind":  "vite"
+                              },
+                    "artLanding":  {
+                                       "repo":  "art.kubus.site",
+                                       "path":  "../art.kubus.site_webpage",
+                                       "kind":  "vite"
+                                   }
+                }
 }

@@ -216,16 +216,16 @@ extension _CommunityScreenStatePart5 on _CommunityScreenState {
                                 style: KubusTypography.inter(fontSize: 14),
                                 maxLines: 5,
                                 overflow: TextOverflow.ellipsis),
-                            if (post.imageUrl != null &&
-                                post.imageUrl!.isNotEmpty) ...[
+                            if (MediaUrlResolver.resolveDisplayUrl(
+                                    communityPostPreviewImageUrl(post)) !=
+                                null) ...[
                               const SizedBox(height: 8),
                               ClipRRect(
                                 borderRadius:
                                     BorderRadius.circular(KubusRadius.sm),
                                 child: Image.network(
                                   MediaUrlResolver.resolveDisplayUrl(
-                                          post.imageUrl) ??
-                                      post.imageUrl!,
+                                      communityPostPreviewImageUrl(post))!,
                                   fit: BoxFit.cover,
                                   height: 120,
                                   width: double.infinity,
@@ -464,6 +464,7 @@ extension _CommunityScreenStatePart5 on _CommunityScreenState {
     final confirmed = await showKubusDialog<bool>(
       context: context,
       builder: (dialogContext) => KubusAlertDialog(
+        size: KubusDialogSize.compact,
         title:
             Text(l10n.communityUnrepostTitle, style: KubusTypography.inter()),
         content: Text(l10n.communityUnrepostConfirmBody,
@@ -563,15 +564,24 @@ extension _CommunityScreenStatePart5 on _CommunityScreenState {
   }
 
   void _removePostFromLocalFeeds(String postId) {
-    void removeFrom(List<CommunityPost> posts) {
-      posts.removeWhere((item) => item.id == postId);
-    }
+    // Feed lists come straight from API results and can be fixed-length, so
+    // never mutate them in place: build replacements instead.
+    List<CommunityPost> without(List<CommunityPost> posts) =>
+        posts.any((item) => item.id == postId)
+            ? posts.where((item) => item.id != postId).toList()
+            : posts;
 
-    removeFrom(_communityPosts);
-    removeFrom(_followingFeedPosts);
-    removeFrom(_discoverFeedPosts);
-    removeFrom(_artFeedPosts);
-    removeFrom(_bufferedIncomingPosts);
+    final showingFollowing = identical(_communityPosts, _followingFeedPosts);
+    final showingDiscover = identical(_communityPosts, _discoverFeedPosts);
+    _followingFeedPosts = without(_followingFeedPosts);
+    _discoverFeedPosts = without(_discoverFeedPosts);
+    _communityPosts = showingFollowing
+        ? _followingFeedPosts
+        : showingDiscover
+            ? _discoverFeedPosts
+            : without(_communityPosts);
+    _artFeedPosts = without(_artFeedPosts);
+    _bufferedIncomingPosts.removeWhere((item) => item.id == postId);
     _expandedCommentPostIds.remove(postId);
     _inlineReplyToCommentIds.remove(postId);
     _inlineCommentControllers.remove(postId)?.dispose();
@@ -579,95 +589,27 @@ extension _CommunityScreenStatePart5 on _CommunityScreenState {
 
   Future<void> _confirmDeleteFeedPost(CommunityPost post) async {
     if (!mounted) return;
-    if (_deleteDialogOpenPostIds.contains(post.id) ||
-        _deleteInFlightPostIds.contains(post.id)) {
-      return;
-    }
-
-    final l10n = AppLocalizations.of(context)!;
+    if (_deleteDialogOpenPostIds.contains(post.id)) return;
     _deleteDialogOpenPostIds.add(post.id);
-    bool deleting = false;
-
     try {
-      await showKubusDialog<void>(
+      await confirmAndDeleteCommunityPost(
         context: context,
-        builder: (dialogContext) => StatefulBuilder(
-          builder: (context, setDialogState) => KubusAlertDialog(
-            title: Text(
-              l10n.postDetailDeletePostTitle,
-              style: KubusTypography.inter(fontWeight: FontWeight.bold),
-            ),
-            content: Text(
-              l10n.postDetailDeletePostBody,
-              style: KubusTypography.inter(),
-            ),
-            actions: [
-              TextButton(
-                onPressed: deleting
-                    ? null
-                    : () => Navigator.of(dialogContext).maybePop(),
-                child: Text(l10n.commonCancel),
-              ),
-              TextButton(
-                onPressed: deleting
-                    ? null
-                    : () async {
-                        if (_deleteInFlightPostIds.contains(post.id)) return;
-                        setDialogState(() => deleting = true);
-                        _deleteInFlightPostIds.add(post.id);
-                        final messenger = ScaffoldMessenger.of(context);
-                        final appRefresh = _appRefreshProvider;
-
-                        try {
-                          await context
-                              .read<CommunityInteractionsProvider>()
-                              .deleteCommunityPost(post);
-                          if (!mounted || !dialogContext.mounted) return;
-                          _applyState(() => _removePostFromLocalFeeds(post.id));
-                          try {
-                            final hub = Provider.of<CommunityHubProvider>(
-                              context,
-                              listen: false,
-                            );
-                            if (post.groupId != null) {
-                              hub.removeGroupPost(post.groupId!, post.id);
-                            }
-                            hub.removeArtFeedPost(post.id);
-                          } catch (_) {}
-                          appRefresh?.triggerCommunity();
-                          Navigator.of(dialogContext).pop();
-                          messenger.showKubusSnackBar(
-                            SnackBar(
-                                content: Text(l10n.postDetailPostDeletedToast)),
-                          );
-                        } catch (e) {
-                          if (kDebugMode) {
-                            debugPrint(
-                                'CommunityScreen: delete post failed: $e');
-                          }
-                          if (!mounted || !dialogContext.mounted) return;
-                          setDialogState(() => deleting = false);
-                          messenger.showKubusSnackBar(
-                            SnackBar(
-                              content:
-                                  Text(l10n.postDetailDeletePostFailedToast),
-                            ),
-                          );
-                        } finally {
-                          _deleteInFlightPostIds.remove(post.id);
-                        }
-                      },
-                child: deleting
-                    ? const SizedBox(
-                        width: 18,
-                        height: 18,
-                        child: InlineLoading(tileSize: 4),
-                      )
-                    : Text(l10n.commonDelete),
-              ),
-            ],
-          ),
-        ),
+        post: post,
+        onDeleted: () {
+          if (!mounted) return;
+          _applyState(() => _removePostFromLocalFeeds(post.id));
+          try {
+            final hub = Provider.of<CommunityHubProvider>(
+              context,
+              listen: false,
+            );
+            if (post.groupId != null) {
+              hub.removeGroupPost(post.groupId!, post.id);
+            }
+            hub.removeArtFeedPost(post.id);
+          } catch (_) {}
+          _appRefreshProvider?.triggerCommunity();
+        },
       );
     } finally {
       _deleteDialogOpenPostIds.remove(post.id);

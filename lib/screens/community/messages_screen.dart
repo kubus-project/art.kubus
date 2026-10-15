@@ -4,6 +4,8 @@ import 'dart:typed_data';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../providers/chat_provider.dart';
+import '../../providers/community_hub_provider.dart';
+import '../../widgets/community/community_compose_intent_resumer.dart';
 import '../../providers/profile_provider.dart';
 import '../../providers/cache_provider.dart';
 import '../../providers/app_mode_provider.dart';
@@ -323,6 +325,20 @@ class _MessagesScreenState extends State<MessagesScreen> {
   }
 
   Future<void> _startConversation() async {
+    // Starting a conversation is an account action on every entry point; the
+    // gate runs before the composer dialog so a guest never fills one in.
+    // A guest who starts a chat signs in and comes back to Messages, through the
+    // same compose-access mechanism as New post; it is the participant scope the
+    // profile message button uses.
+    final allowed = await ensureCommunityComposeAccess(
+      context,
+      intent: CommunityComposeIntent.startChat,
+      actionLabel: AppLocalizations.of(context)!
+          .messagesEmptyStartChatAction
+          .toLowerCase(),
+      sourceScreen: 'messages_screen',
+    );
+    if (!allowed || !mounted) return;
     final result = await showKubusDialog<Map<String, dynamic>>(
       context: context,
       builder: (ctx) => _CreateConversationDialog(),
@@ -512,7 +528,8 @@ class _MessagesScreenState extends State<MessagesScreen> {
     // Build a composite avatar widget from up to 4 member avatars.
     final count = wallets.length;
     if (count == 0) {
-      return CircleAvatar(radius: size / 2, child: Icon(Icons.group));
+      return KubusMonogramAvatar(
+          radius: size / 2, child: const Icon(Icons.group));
     }
     // Positioning for 1..4 avatars
     if (count == 1) {
@@ -741,8 +758,8 @@ class _MessagesScreenState extends State<MessagesScreen> {
                       if (memberWallets.isNotEmpty) {
                         leading = _buildGroupAvatar(memberWallets, 48);
                       } else {
-                        leading =
-                            CircleAvatar(radius: 20, child: Icon(Icons.group));
+                        leading = const KubusMonogramAvatar(
+                            radius: 20, child: Icon(Icons.group));
                       }
                     } else {
                       // Fallback for one-to-one: use other participant's wallet if available
@@ -811,7 +828,8 @@ class _MessagesScreenState extends State<MessagesScreen> {
                                 _conversationNames[c.id]!.isEmpty) &&
                             (_convToWalletList[c.id]?.isNotEmpty ?? false);
                         leading = Stack(alignment: Alignment.center, children: [
-                          CircleAvatar(
+                          KubusMonogramAvatar(
+                              radius: 20,
                               child: Text(initials.isNotEmpty
                                   ? initials
                                   : l10n.messagesFallbackConversationInitial)),
@@ -1391,7 +1409,7 @@ class _CreateConversationDialogState extends State<_CreateConversationDialog> {
                 }),
             const SizedBox(width: 8),
             if (_avatarBytes != null)
-              CircleAvatar(backgroundImage: MemoryImage(_avatarBytes!))
+              KubusMonogramAvatar(radius: 20, image: MemoryImage(_avatarBytes!))
           ]),
           SwitchListTile(
               value: _isGroup,

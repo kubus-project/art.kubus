@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
 
 import '../../community/community_interactions.dart';
+import '../../community/community_post_media.dart';
 import '../../models/community_subject.dart';
 import '../../providers/community_subject_provider.dart';
 import '../../utils/app_color_utils.dart';
@@ -11,9 +12,14 @@ import '../../utils/design_tokens.dart';
 import '../../utils/kubus_color_roles.dart';
 import '../../utils/media_url_resolver.dart';
 import '../../utils/profile_identity_navigation.dart';
-import '../inline_loading.dart';
 import '../profile_identity_summary.dart';
 import 'community_author_role_badges.dart';
+import 'community_post_caption.dart';
+import 'community_post_media_carousel.dart';
+import '../common/kubus_focus_ring.dart';
+import '../../models/pending_action_intent.dart';
+import '../../providers/pending_action_provider.dart';
+import 'post_like_settlement.dart';
 
 part 'community_post_card_interactions.dart';
 part 'community_post_card_metadata.dart';
@@ -41,6 +47,7 @@ class CommunityPostCard extends StatelessWidget {
     this.onOpenGroup,
     this.onOpenSubject,
     this.commentsExpanded = false,
+    this.expandCaption = false,
     this.inlineComments,
   });
 
@@ -68,6 +75,10 @@ class CommunityPostCard extends StatelessWidget {
   final ValueChanged<CommunityGroupReference>? onOpenGroup;
   final ValueChanged<CommunitySubjectPreview>? onOpenSubject;
   final bool commentsExpanded;
+
+  /// Shows the complete caption by default. The post detail screen sets this so
+  /// feed truncation never applies to the full post.
+  final bool expandCaption;
   final Widget? inlineComments;
 
   @override
@@ -187,8 +198,9 @@ class CommunityPostCard extends StatelessWidget {
                   const SizedBox(height: KubusSpacing.xs + KubusSpacing.xxs),
                   _OpenPostSurface(
                     onTap: () => onOpenPostDetail(post),
-                    child: Text(
-                      post.content,
+                    child: CommunityPostCaption(
+                      text: post.content,
+                      initiallyExpanded: expandCaption,
                       style: KubusTextStyles.detailBody.copyWith(
                         fontSize: isSmallScreen ? 13 : 15,
                         height: 1.5,
@@ -242,8 +254,10 @@ class CommunityPostCard extends StatelessWidget {
                 ] else ...[
                   _OpenPostSurface(
                     onTap: () => onOpenPostDetail(post),
-                    child: Text(
-                      post.content,
+                    child: CommunityPostCaption(
+                      text: post.content,
+                      hasMedia: communityPostMediaUrls(post).isNotEmpty,
+                      initiallyExpanded: expandCaption,
                       style: KubusTextStyles.detailBody.copyWith(
                         fontSize: isSmallScreen ? 13 : 15,
                         height: 1.5,
@@ -252,74 +266,13 @@ class CommunityPostCard extends StatelessWidget {
                     ),
                   ),
                 ],
-                if (_hasPrimaryImage(post)) ...[
+                if (post.postType != 'repost' &&
+                    communityPostMediaUrls(post).isNotEmpty) ...[
                   const SizedBox(height: KubusSpacing.md),
-                  _OpenPostSurface(
-                    onTap: () => onOpenPostDetail(_primaryImagePost(post)),
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(KubusRadius.md),
-                      child: Image.network(
-                        _primaryImageUrl(post),
-                        height: 200,
-                        width: double.infinity,
-                        fit: BoxFit.cover,
-                        loadingBuilder: (context, child, loadingProgress) {
-                          if (loadingProgress == null) return child;
-                          return Container(
-                            height: 200,
-                            decoration: BoxDecoration(
-                              gradient: LinearGradient(
-                                colors: [
-                                  accentColor.withValues(alpha: 0.3),
-                                  accentColor.withValues(alpha: 0.1),
-                                ],
-                              ),
-                              borderRadius:
-                                  BorderRadius.circular(KubusRadius.md),
-                            ),
-                            child: Center(
-                              child: SizedBox(
-                                width: 36,
-                                height: 36,
-                                child: InlineLoading(
-                                  expand: true,
-                                  shape: BoxShape.circle,
-                                  tileSize: 4.0,
-                                  progress: loadingProgress
-                                              .expectedTotalBytes !=
-                                          null
-                                      ? (loadingProgress.cumulativeBytesLoaded /
-                                          loadingProgress.expectedTotalBytes!)
-                                      : null,
-                                ),
-                              ),
-                            ),
-                          );
-                        },
-                        errorBuilder: (context, error, stackTrace) {
-                          return Container(
-                            height: 200,
-                            decoration: BoxDecoration(
-                              gradient: LinearGradient(
-                                colors: [
-                                  accentColor.withValues(alpha: 0.3),
-                                  accentColor.withValues(alpha: 0.1),
-                                ],
-                              ),
-                              borderRadius:
-                                  BorderRadius.circular(KubusRadius.md),
-                            ),
-                            child: Center(
-                              child: Icon(
-                                Icons.image_not_supported,
-                                color: scheme.onPrimary,
-                                size: 60,
-                              ),
-                            ),
-                          );
-                        },
-                      ),
-                    ),
+                  CommunityPostMediaCarousel(
+                    key: ValueKey<String>('media-${post.id}'),
+                    mediaUrls: communityPostMediaUrls(post),
+                    onOpenMedia: () => onOpenPostDetail(post),
                   ),
                 ],
                 if (post.postType != 'repost') ...[
@@ -346,8 +299,15 @@ class CommunityPostCard extends StatelessWidget {
                         icon: post.isLiked
                             ? Icons.favorite
                             : Icons.favorite_border,
-                        semanticLabel: l10n?.communityPostActionLike ?? '',
+                        semanticLabel: _actionLabel([
+                          l10n?.communityPostActionLike,
+                          l10n?.communityPostLikesCount(post.likeCount),
+                          post.isLiked
+                              ? l10n?.communityPostStateLiked
+                              : l10n?.communityPostStateNotLiked,
+                        ]),
                         toggled: post.isLiked,
+                        focusReturnKey: 'like:${post.id}',
                         onTap: onToggleLike,
                         isActive: post.isLiked,
                         color: post.isLiked
@@ -359,7 +319,10 @@ class CommunityPostCard extends StatelessWidget {
                     Expanded(
                       child: _InteractionButton(
                         icon: Icons.comment_outlined,
-                        semanticLabel: l10n?.communityPostActionComment ?? '',
+                        semanticLabel: _actionLabel([
+                          l10n?.communityPostActionComment,
+                          l10n?.commonCommentsCount(post.commentCount),
+                        ]),
                         onTap: onOpenComments,
                         isActive: commentsExpanded,
                         accentColor: accentColor,
@@ -386,7 +349,12 @@ class CommunityPostCard extends StatelessWidget {
                         icon: post.isBookmarked
                             ? Icons.bookmark
                             : Icons.bookmark_border,
-                        semanticLabel: l10n?.commonSave ?? '',
+                        semanticLabel: _actionLabel([
+                          l10n?.commonSave,
+                          post.isBookmarked
+                              ? l10n?.communityPostStateSaved
+                              : l10n?.communityPostStateNotSaved,
+                        ]),
                         toggled: post.isBookmarked,
                         onTap: onToggleBookmark,
                         isActive: post.isBookmarked,
@@ -460,25 +428,6 @@ class _OpenPostSurface extends StatelessWidget {
       ),
     );
   }
-}
-
-bool _hasPrimaryImage(CommunityPost post) {
-  return (post.postType == 'repost' && post.originalPost?.imageUrl != null) ||
-      (post.postType != 'repost' && post.imageUrl != null);
-}
-
-String _primaryImageUrl(CommunityPost post) {
-  final raw = (post.postType == 'repost' && post.originalPost != null)
-      ? post.originalPost!.imageUrl
-      : post.imageUrl;
-  final resolved = MediaUrlResolver.resolveDisplayUrl(raw);
-  return resolved ?? raw!;
-}
-
-CommunityPost _primaryImagePost(CommunityPost post) {
-  return (post.postType == 'repost' && post.originalPost != null)
-      ? post.originalPost!
-      : post;
 }
 
 String _timeAgo(

@@ -10,7 +10,6 @@ import 'package:flutter/services.dart';
 import 'package:maplibre_gl/maplibre_gl.dart' as ml;
 import 'package:latlong2/latlong.dart';
 import 'package:provider/provider.dart';
-import 'package:url_launcher/url_launcher.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
 
 import '../../features/map/telemetry/map_engagement_tracker.dart';
@@ -49,6 +48,8 @@ import '../../services/map_marker_service.dart';
 import '../../services/ar_service.dart';
 import '../../services/walking_location_service.dart';
 import '../../services/walking_navigation_diagnostics.dart';
+import '../../utils/keyboard_activation_tracker.dart';
+import '../../utils/map_destination_actions.dart';
 import '../../utils/map_marker_subject_loader.dart';
 import '../../utils/map_perf_tracker.dart';
 import '../../utils/map_performance_debug.dart';
@@ -60,6 +61,7 @@ import '../../utils/map_viewport_utils.dart';
 import '../../utils/geo_bounds.dart';
 import '../../utils/institution_navigation.dart';
 import '../../utils/user_profile_navigation.dart';
+import '../../widgets/common/kubus_size_reporter.dart';
 import '../../widgets/map_marker_style_config.dart';
 import '../../widgets/artwork_creator_byline.dart';
 import '../../widgets/art_map_view.dart';
@@ -68,12 +70,10 @@ import '../../widgets/map/panels/kubus_create_marker_panel.dart';
 import '../../widgets/map_overlay_blocker.dart';
 import '../../widgets/map/navigation/kubus_walking_navigation_panel.dart';
 import '../../widgets/map/navigation/kubus_walking_navigation_binding.dart';
-import '../../widgets/app_logo.dart';
 import '../../utils/app_animations.dart';
 import '../../utils/app_color_utils.dart';
 import '../../utils/artwork_media_resolver.dart';
 import '../../utils/artwork_navigation.dart';
-import '../../utils/map_navigation.dart';
 import '../../utils/media_url_resolver.dart';
 import 'desktop_shell.dart';
 import 'art/desktop_artwork_detail_screen.dart';
@@ -108,6 +108,7 @@ import '../../features/map/shared/map_marker_lod.dart';
 import '../../features/map/shared/map_marker_regroup_gate.dart';
 import '../../features/map/tutorial/map_tutorial_coordinator.dart';
 import '../../utils/design_tokens.dart';
+import '../../utils/creator_shell_navigation.dart';
 import '../../utils/kubus_map_tokens.dart';
 import '../../utils/kubus_color_roles.dart';
 import '../../widgets/kubus_snackbar.dart';
@@ -121,11 +122,11 @@ import '../../widgets/map/filters/kubus_map_filter_content.dart';
 import '../../widgets/map/discovery/kubus_discovery_path_card.dart'
     show KubusDiscoveryExpansionDirection;
 import '../../widgets/map/dialogs/kubus_map_attribution_dialog.dart';
+import '../../widgets/map/kubus_map_chrome.dart';
 import '../../widgets/map/dialogs/street_art_claims_dialog.dart';
 import '../../widgets/map/glass/kubus_map_platform_backdrop_host.dart';
 import '../../widgets/map/kubus_map_glass_surface.dart';
 import '../../widgets/common/kubus_filter_panel.dart';
-import '../../widgets/common/kubus_glass_icon_button.dart';
 import '../../features/map/detail/marker_info_detail_presentation.dart';
 import '../../widgets/map/panels/marker_info_detail_view.dart';
 import '../../widgets/common/kubus_cached_image.dart';
@@ -266,6 +267,10 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
 
   ml.MapLibreMapController? _mapController;
   ml.MapLibreMapController? _deactivateDetachedMapController;
+
+  /// Laid-out width of the bottom-right control cluster; the discovery card
+  /// above it takes exactly this width so the group reads as one block.
+  double? _controlClusterWidth;
   MapLayersManager? _layersManager;
   late AnimationController _animationController;
   late AnimationController _panelController;
@@ -397,6 +402,8 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       MapScreenConstants.markerRefreshInterval;
 
   late final KubusSearchController _mapSearchController;
+  final FocusNode _mapSearchFocusNode =
+      FocusNode(debugLabel: 'desktop_map_search');
   late final MapViewPreferencesController _mapViewPreferencesController;
   late final MapTutorialCoordinator _mapTutorialCoordinator;
   TutorialOverlayController? _tutorialOverlayController;
@@ -435,7 +442,9 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
   @override
   double get syncZoom => _cameraZoom;
   @override
-  MapMarkerOverview? get markerOverview => _overviewController.overview;
+  double get clusterTopologyZoom => _regroupGate.topologyZoomFor(_cameraZoom);
+  @override
+  MapMarkerOverview? get markerOverview => _overviewController.drawableOverview;
 
   /// The overview can express the content-layer toggles but not filters that
   /// depend on per-artwork state, so those fall back to detailed markers.
@@ -476,6 +485,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
 
   final GlobalKey _mapViewKey = GlobalKey();
   bool? _lastAppliedMapThemeDark;
+  int? _lastAppliedMapAccentArgb;
   bool _themeResyncScheduled = false;
 
   bool get _hasLeftDetailPanel =>
@@ -506,11 +516,12 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
   @override
   void initState() {
     super.initState();
+    KeyboardActivationTracker.install();
     _cameraCenter =
         widget.initialCenter ?? MapInitialViewport.europe.initialCenter;
     _cameraZoom = widget.initialZoom ?? MapInitialViewport.europe.initialZoom;
     _walkingLocationApi =
-        widget.walkingLocationApi ?? const GeolocatorWalkingLocationService();
+        widget.walkingLocationApi ?? GeolocatorWalkingLocationService.shared;
     _walkingLocationCoordinator = WalkingNavigationLocationCoordinator(
       _walkingLocationApi,
     );
@@ -559,6 +570,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       ),
       distance: _distance,
       supportsPendingMarker: true,
+      clusterTopologyZoomFor: _regroupGate.topologyZoomFor,
       managedLayerIdsOut: _managedLayerIds,
       managedSourceIdsOut: _managedSourceIds,
       registeredMapImagesOut: _registeredMapImages,
@@ -802,6 +814,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       getKubusMapController: () => _kubusMapController,
       getMapController: () => _mapController,
       getLayersManager: () => _layersManager,
+      getLocationAccentColor: () => context.read<ThemeProvider>().accentColor,
       getSelectionController: () => _animationController,
       getAmbientController: () => _ambientMarkerController,
       getManagedLayerIds: () => _managedLayerIds,
@@ -1617,7 +1630,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
         _locationLayerId,
         ml.CircleLayerProperties(
           circleRadius: 6,
-          circleColor: KubusMapMarkerHelpers.hexRgb(scheme.secondary),
+          circleColor: KubusMapMarkerHelpers.hexRgb(themeProvider.accentColor),
           circleOpacity: 1.0,
           circleStrokeWidth: 2,
           circleStrokeColor: KubusMapMarkerHelpers.hexRgb(scheme.surface),
@@ -1627,6 +1640,10 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       // Best-effort: style swaps or platform limitations can reject updates.
     }
 
+    await _layersManager?.safeSetLayerProperties(
+      _kubusMapController.ids.layers.locationAccuracyLayerId,
+      kubusLocationAccuracyProperties(color: themeProvider.accentColor),
+    );
     if (!mounted) return;
     _renderCoordinator.requestStyleUpdate(force: true);
   }
@@ -1634,7 +1651,9 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
   void _maybeScheduleThemeResync(ThemeProvider themeProvider) {
     final isDark = themeProvider.isDarkMode;
     final last = _lastAppliedMapThemeDark;
-    if (last != null && last == isDark) return;
+    final accentArgb = themeProvider.accentColor.toARGB32();
+    if (last == isDark && _lastAppliedMapAccentArgb == accentArgb) return;
+    _lastAppliedMapAccentArgb = accentArgb;
     _lastAppliedMapThemeDark = isDark;
     if (!_styleInitialized) return;
     if (_themeResyncScheduled) return;
@@ -1984,7 +2003,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       scheme: scheme,
       isDarkMode: themeProvider.isDarkMode,
       themeSpec: MapLayersThemeSpec(
-        locationFill: scheme.secondary,
+        locationFill: themeProvider.accentColor,
         locationStroke: scheme.surface,
         isometricPedestalTop: scheme.surfaceContainerHighest,
         isometricPedestalLeft: scheme.surfaceContainerHigh,
@@ -2023,14 +2042,28 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     }
   }
 
+  late final KubusUserLocationAnimator _userLocationAnimator =
+      KubusUserLocationAnimator(write: _writeUserLocation);
+
   Future<void> _syncUserLocation() async {
+    if (!mounted || !_styleInitialized) return;
+    final media = MediaQuery.maybeOf(context);
+    await _userLocationAnimator.update(_userLocation,
+        styleEpoch: _kubusMapController.styleEpoch,
+        reduceMotion: media?.disableAnimations == true ||
+            media?.accessibleNavigation == true);
+  }
+
+  Future<void> _writeUserLocation(LatLng? position, int epoch) async {
+    if (!mounted || _kubusMapController.styleEpoch != epoch) return;
     await KubusMapSourceSyncHelpers.syncPointSource(
       controller: _mapController,
       styleInitialized: _styleInitialized,
       managedSourceIds: _managedSourceIds,
       sourceId: _locationSourceId,
       featureId: 'me',
-      position: _userLocation,
+      position: position,
+      accuracyMeters: _userLocationAccuracyMeters,
     );
   }
 
@@ -2158,7 +2191,8 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     WalkingNavigationProvider navigation,
   ) async {
     final intent = navigation.intent;
-    if (intent != null) await MapNavigation.openExternalWalking(intent);
+    if (intent == null) return;
+    await MapDestination.fromWalkingIntent(intent).openWalkingExternally();
   }
 
   void _viewWalkingDestination(WalkingNavigationProvider navigation) {
@@ -2372,10 +2406,12 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
 
   @override
   void dispose() {
+    _userLocationAnimator.dispose();
     if (widget.walkingNavigationIntent != null) {
       _walkingNavigationProvider?.stopOwned(_walkingNavigationLease);
     }
     _markerSyncEngine.dispose();
+    _mapSearchFocusNode.dispose();
     MapAttributionHelper.setDesktopMapEnabled(false);
     _unsubscribeRouteObserver(source: 'dispose');
     // Avoid leaving Explore-side panels open when navigating away.
@@ -2614,11 +2650,15 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                           ? contextPanelWidth +
                               KubusMapMetrics.desktopChromeInset
                           : KubusMapMetrics.desktopChromeInset,
-                      bottom:
-                          KubusMapMetrics.desktopChromeInset + KubusSpacing.xxl,
-                      child: const SizedBox(
-                        width: 360,
-                        child: KubusActivationPromptCard(maxWidth: 360),
+                      bottom: KubusMapMetrics.desktopChromeInset +
+                          KubusHeaderMetrics.actionHitArea +
+                          KubusSpacing.sm,
+                      // Blocked like the other chrome over the platform view.
+                      child: MapOverlayBlocker(
+                        child: const SizedBox(
+                          width: 360,
+                          child: KubusActivationPromptCard(maxWidth: 360),
+                        ),
                       ),
                     ),
                     Positioned(
@@ -2642,29 +2682,46 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                                 mainAxisSize: MainAxisSize.min,
                                 crossAxisAlignment: CrossAxisAlignment.end,
                                 children: [
-                                  // Custom attribution button, left of the controls.
-                                  Padding(
-                                    padding: const EdgeInsets.only(
-                                      right: KubusSpacing.sm,
-                                    ),
-                                    child: _buildDesktopAttributionButton(),
-                                  ),
+                                  // Basemap credit: the compact info button
+                                  // sits beside the control cluster, bottom
+                                  // aligned with it (spelled out for a few
+                                  // seconds on arrival, then collapsed).
+                                  _buildDesktopAttributionButton(),
+                                  const SizedBox(width: KubusSpacing.sm),
                                   Column(
                                     mainAxisSize: MainAxisSize.min,
                                     crossAxisAlignment: CrossAxisAlignment.end,
                                     children: [
                                       // Always reserve a discovery path area on desktop:
                                       // show progress when present, otherwise a compact
-                                      // idle card. It sits directly above the controls
-                                      // and never collides with search/filters/cards.
+                                      // idle card. It sits directly above the controls,
+                                      // exactly as wide as the control cluster, and
+                                      // never collides with search/filters/cards.
                                       if (showDiscoveryChrome) ...[
-                                        if (activeProgress.isNotEmpty)
-                                          _buildDiscoveryCard(taskProvider)
-                                        else
-                                          _buildDiscoveryIdleCard(),
+                                        SizedBox(
+                                          width: _controlClusterWidth,
+                                          child: activeProgress.isNotEmpty
+                                              ? _buildDiscoveryCard(
+                                                  taskProvider,
+                                                )
+                                              : _buildDiscoveryIdleCard(),
+                                        ),
                                         const SizedBox(height: KubusSpacing.sm),
                                       ],
-                                      _buildMapControls(themeProvider),
+                                      KubusSizeReporter(
+                                        onSize: (size) {
+                                          if (!mounted) return;
+                                          final width =
+                                              size.width.roundToDouble();
+                                          if (_controlClusterWidth == width) {
+                                            return;
+                                          }
+                                          setState(
+                                            () => _controlClusterWidth = width,
+                                          );
+                                        },
+                                        child: _buildMapControls(themeProvider),
+                                      ),
                                     ],
                                   ),
                                 ],
@@ -2988,88 +3045,23 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
         maxWidth: KubusMapMetrics.resolveSearchWidth(
           MediaQuery.sizeOf(context).width,
         ),
+        // Hostless: there is no surface to pad inside of, and the panel inset
+        // already holds the row off the side edges. Horizontal inner padding
+        // only took width away from the field; the vertical rhythm is kept.
+        sidePanelInnerPadding:
+            const EdgeInsets.symmetric(vertical: KubusSpacing.md),
         rightInset: nearbyPanelOpen ? contextPanelWidth : 0,
-        leading: Row(
-          children: [
-            const AppLogo(
-              width: KubusSpacing.xl + KubusSpacing.xs,
-              height: KubusSpacing.xl + KubusSpacing.xs,
-            ),
-            const SizedBox(width: KubusSpacing.sm + KubusSpacing.xs),
-            Text(
-              l10n.desktopMapTitleDiscover,
-              style: KubusTextStyles.screenTitle.copyWith(
-                color: Theme.of(context).colorScheme.onSurface,
-              ),
-            ),
-          ],
-        ),
-        searchField: _buildDesktopSearchField(l10n),
-        // Advanced filters and layer visibility live behind one deliberate
-        // affordance instead of six permanently competing quick chips.
-        mapToggle: KeyedSubtree(
-          key: _tutorialFilterChipsKey,
-          child: KeyedSubtree(
-            key: _tutorialFiltersButtonKey,
-            child: Stack(
-              clipBehavior: Clip.none,
-              children: <Widget>[
-                KubusGlassIconButton(
-                  icon: _showFiltersPanel ? Icons.close : Icons.tune,
-                  tooltip: _showFiltersPanel
-                      ? l10n.commonClose
-                      : (_filterState.activeFilterCount == 0
-                          ? l10n.mapFiltersTitle
-                          : l10n.mapFilterActiveCountLabel(
-                              _filterState.activeFilterCount,
-                            )),
-                  active: _showFiltersPanel,
-                  accentColor: themeProvider.accentColor,
-                  borderRadius: KubusRadius.sm,
-                  enableBlur: kubusMapBlurEnabled(context),
-                  onPressed: () {
-                    if (_showFiltersPanel) {
-                      _closeDesktopFiltersPanel();
-                    } else {
-                      _openDesktopFiltersPanel();
-                    }
-                  },
-                  tooltipPreferBelow: true,
-                  tooltipVerticalOffset: 18,
-                  tooltipMargin: const EdgeInsets.symmetric(horizontal: 24),
-                ),
-                if (_filterState.activeFilterCount > 0)
-                  Positioned(
-                    right: -5,
-                    top: -5,
-                    child: ExcludeSemantics(
-                      child: Container(
-                        constraints: const BoxConstraints(
-                          minWidth: 18,
-                          minHeight: 18,
-                        ),
-                        padding: const EdgeInsets.symmetric(horizontal: 4),
-                        decoration: BoxDecoration(
-                          color: Theme.of(context).colorScheme.primary,
-                          shape: BoxShape.circle,
-                        ),
-                        alignment: Alignment.center,
-                        child: Text(
-                          '${_filterState.activeFilterCount}',
-                          style: Theme.of(context)
-                              .textTheme
-                              .labelSmall
-                              ?.copyWith(
-                                color: Theme.of(context).colorScheme.onPrimary,
-                              ),
-                        ),
-                      ),
-                    ),
-                  ),
-              ],
+        // The shell rail owns the brand mark; the map header is title only.
+        leading: Semantics(
+          header: true,
+          child: Text(
+            l10n.desktopMapTitleDiscover,
+            style: KubusTextStyles.screenTitle.copyWith(
+              color: Theme.of(context).colorScheme.onSurface,
             ),
           ),
         ),
+        searchField: _buildDesktopSearchField(l10n, themeProvider),
         // What is narrowing the map, with a clear for each. Hidden while the
         // filters panel is open: it shows and resets the same state.
         extraContent: _showFiltersPanel
@@ -3091,21 +3083,73 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     );
   }
 
-  Widget _buildDesktopSearchField(AppLocalizations l10n) {
-    final useMapBlur = kubusMapBlurEnabled(context);
+  Widget _buildDesktopSearchField(
+    AppLocalizations l10n,
+    ThemeProvider themeProvider,
+  ) {
     // No hard width cap here: the side-panel assembly resolves the field width
     // (comfortable when idle, expanded toward the right when focused / a query
     // is active) and the scaffold lays the field out at that width.
+    //
+    // The filter control lives INSIDE the field's flat surface (as on mobile),
+    // so search and filter read as one bar instead of two stacked glass boxes.
     return KeyedSubtree(
       key: _tutorialSearchKey,
       child: KubusGeneralSearch(
         controller: _mapSearchController,
+        focusNode: _mapSearchFocusNode,
         hintText: l10n.mapSearchHint,
         semanticsLabel: l10n.mapSearchHint,
-        enableBlur: useMapBlur,
+        enableBlur: false,
         useMapGlassSurface: true,
         mouseCursor: SystemMouseCursors.text,
         onSubmitted: _handleSearchSubmit,
+        trailingBuilder: (context, query) {
+          if (query.trim().isNotEmpty) {
+            return _buildDesktopSearchClear(l10n);
+          }
+          return _buildDesktopFilterToggle(l10n, themeProvider.accentColor);
+        },
+      ),
+    );
+  }
+
+  Widget _buildDesktopSearchClear(AppLocalizations l10n) {
+    return KubusMapChromeIconButton(
+      icon: Icons.close,
+      tooltip: l10n.mapClearSearchTooltip,
+      onPressed: () => _mapSearchController.clearQueryWithContext(context),
+    );
+  }
+
+  Widget _buildDesktopFilterToggle(AppLocalizations l10n, Color accent) {
+    final count = _filterState.activeFilterCount;
+    final tooltip = _showFiltersPanel
+        ? l10n.commonClose
+        : (count == 0
+            ? l10n.mapFiltersTitle
+            : l10n.mapFilterActiveCountLabel(count));
+    return KeyedSubtree(
+      key: _tutorialFilterChipsKey,
+      child: KeyedSubtree(
+        key: _tutorialFiltersButtonKey,
+        child: KubusMapChromeIconButton(
+          icon: _showFiltersPanel ? Icons.close : Icons.tune,
+          tooltip: tooltip,
+          active: _showFiltersPanel,
+          accentColor: accent,
+          badgeCount: count,
+          tooltipPreferBelow: true,
+          tooltipVerticalOffset: 18,
+          tooltipMargin: const EdgeInsets.symmetric(horizontal: 24),
+          onPressed: () {
+            if (_showFiltersPanel) {
+              _closeDesktopFiltersPanel();
+            } else {
+              _openDesktopFiltersPanel();
+            }
+          },
+        ),
       ),
     );
   }
@@ -3389,53 +3433,15 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                   ),
                 ],
               ),
-              if (artwork.description.isNotEmpty) ...[
-                const SizedBox(height: KubusSpacing.md),
-                DetailSectionLabel(label: l10n.commonDescription),
-              ],
-              if (artwork.description.isNotEmpty) ...[
-                Text(
-                  artwork.description,
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        fontSize: KubusHeaderMetrics.screenSubtitle,
-                        height: 1.5,
-                        color: Theme.of(
-                          context,
-                        ).colorScheme.onSurface.withValues(alpha: 0.78),
-                      ),
-                  maxLines: 8,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: KubusSpacing.md),
-              ],
-              MarkerAttributionSection.fromMarkerAndArtwork(
-                selectedMarker,
-                artwork,
-              ),
-              DetailSectionLabel(label: l10n.commonDetails),
-              DetailContextCluster(
-                compact: true,
-                items: [
-                  DetailContextItem(
-                    icon: Icons.visibility,
-                    value: '${artwork.viewsCount}',
-                  ),
-                  if (artwork.discoveryCount > 0)
-                    DetailContextItem(
-                      icon: Icons.explore,
-                      value: l10n.desktopMapDiscoveriesCount(
-                        artwork.discoveryCount,
-                      ),
-                    ),
-                ],
-              ),
-              _buildArtworkPoapPanel(artwork),
               const SizedBox(height: KubusSpacing.lg),
               DetailActionsSection(
                 title: l10n.commonActions,
                 labelPosition: DetailActionLabelPosition.afterPrimary,
                 primaryToLabelSpacing: KubusSpacing.md,
-                maxVisibleActions: 5,
+                // Six secondary actions at most; Directions is pinned so it
+                // leads the grid and is never moved behind More.
+                maxVisibleActions: 6,
+                secondaryLayout: DetailSecondaryActionLayout.grid,
                 primaryAction: SizedBox(
                   width: double.infinity,
                   child: DetailPrimaryCtaButton(
@@ -3514,6 +3520,8 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                         ? Icons.favorite
                         : Icons.favorite_border,
                     label: '${artwork.likesCount}',
+                    semanticsLabel:
+                        '${l10n.commonLikes}, ${artwork.likesCount}',
                     onTap: () async {
                       final authenticated =
                           await const ContextualAuthGate().ensureAuthenticated(
@@ -3536,6 +3544,8 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                   DetailSecondaryAction(
                     icon: Icons.comment_outlined,
                     label: '${artwork.commentsCount}',
+                    semanticsLabel:
+                        '${l10n.commonComments}, ${artwork.commentsCount}',
                     onTap: () {
                       _mapCommentsPanelController.openAndScrollToTop();
                     },
@@ -3556,24 +3566,64 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                     },
                     tooltip: l10n.commonShare,
                   ),
-                  DetailSecondaryAction(
-                    icon: Icons.directions,
-                    label: l10n.commonGetDirections,
-                    onTap: () async {
-                      final uri = Uri.parse(
-                        'https://www.google.com/maps/dir/?api=1&destination=${artwork.position.latitude},${artwork.position.longitude}',
-                      );
-                      if (await canLaunchUrl(uri)) {
-                        await launchUrl(
-                          uri,
-                          mode: LaunchMode.externalApplication,
-                        );
-                      }
-                    },
-                    tooltip: l10n.commonGetDirections,
-                  ),
+                  if (MapDestination.isValidCoordinate(artwork.position))
+                    DetailSecondaryAction(
+                      icon: Icons.directions,
+                      label: l10n.commonGetDirections,
+                      onTap: () => unawaited(
+                        MapDestination(
+                          id: artwork.id,
+                          title: artwork.title,
+                          position: artwork.position,
+                        ).showNavigationOptions(context),
+                      ),
+                      tooltip: l10n.commonGetDirections,
+                      pinned: true,
+                    ),
                 ],
               ),
+              const SizedBox(height: KubusSpacing.lg),
+              if (artwork.description.isNotEmpty) ...[
+                const SizedBox(height: KubusSpacing.md),
+                DetailSectionLabel(label: l10n.commonDescription),
+              ],
+              if (artwork.description.isNotEmpty) ...[
+                Text(
+                  artwork.description,
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        fontSize: KubusHeaderMetrics.screenSubtitle,
+                        height: 1.5,
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.onSurface.withValues(alpha: 0.78),
+                      ),
+                  maxLines: 8,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: KubusSpacing.md),
+              ],
+              MarkerAttributionSection.fromMarkerAndArtwork(
+                selectedMarker,
+                artwork,
+              ),
+              DetailSectionLabel(label: l10n.commonDetails),
+              DetailContextCluster(
+                compact: true,
+                items: [
+                  DetailContextItem(
+                    icon: Icons.visibility,
+                    value: '${artwork.viewsCount}',
+                  ),
+                  if (artwork.discoveryCount > 0)
+                    DetailContextItem(
+                      icon: Icons.explore,
+                      value: l10n.desktopMapDiscoveriesCount(
+                        artwork.discoveryCount,
+                      ),
+                    ),
+                ],
+              ),
+              _buildArtworkPoapPanel(artwork),
               const SizedBox(height: KubusSpacing.lg),
               if (AppConfig.isFeatureEnabled('collabInvites') && isSignedIn)
                 ArtworkCollaboratorsExpandableCard(
@@ -3693,7 +3743,10 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     final location = (exhibition.locationName ?? '').trim().isNotEmpty
         ? exhibition.locationName!.trim()
         : null;
-    final coverUrl = MediaUrlResolver.resolve(exhibition.coverUrl);
+    final coverUrl = MediaUrlResolver.resolveDisplayUrl(
+      exhibition.coverUrl,
+      maxWidth: MediaUrlResolver.cardMaxWidth,
+    );
     final poap = context.watch<ExhibitionsProvider>().poapStatusFor(
           exhibition.id,
         );
@@ -3951,21 +4004,21 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                     },
                     tooltip: l10n.commonShare,
                   ),
-                  if (exhibition.lat != null && exhibition.lng != null)
+                  if (exhibition.lat != null &&
+                      exhibition.lng != null &&
+                      MapDestination.isValidCoordinate(
+                        LatLng(exhibition.lat!, exhibition.lng!),
+                      ))
                     DetailSecondaryAction(
                       icon: Icons.directions,
                       label: l10n.commonGetDirections,
-                      onTap: () async {
-                        final uri = Uri.parse(
-                          'https://www.google.com/maps/dir/?api=1&destination=${exhibition.lat},${exhibition.lng}',
-                        );
-                        if (await canLaunchUrl(uri)) {
-                          await launchUrl(
-                            uri,
-                            mode: LaunchMode.externalApplication,
-                          );
-                        }
-                      },
+                      onTap: () => unawaited(
+                        MapDestination(
+                          id: exhibition.id,
+                          title: exhibition.title,
+                          position: LatLng(exhibition.lat!, exhibition.lng!),
+                        ).showNavigationOptions(context),
+                      ),
                       tooltip: l10n.commonGetDirections,
                     ),
                 ],
@@ -4007,7 +4060,10 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       if ((event.country ?? '').trim().isNotEmpty) event.country!.trim(),
     ];
     final location = locationBits.isNotEmpty ? locationBits.join(', ') : null;
-    final coverUrl = MediaUrlResolver.resolve(event.coverUrl);
+    final coverUrl = MediaUrlResolver.resolveDisplayUrl(
+      event.coverUrl,
+      maxWidth: MediaUrlResolver.cardMaxWidth,
+    );
     final badge = Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
@@ -4160,21 +4216,21 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                     },
                     tooltip: l10n.commonShare,
                   ),
-                  if (event.lat != null && event.lng != null)
+                  if (event.lat != null &&
+                      event.lng != null &&
+                      MapDestination.isValidCoordinate(
+                        LatLng(event.lat!, event.lng!),
+                      ))
                     DetailSecondaryAction(
                       icon: Icons.directions,
                       label: l10n.commonGetDirections,
-                      onTap: () async {
-                        final uri = Uri.parse(
-                          'https://www.google.com/maps/dir/?api=1&destination=${event.lat},${event.lng}',
-                        );
-                        if (await canLaunchUrl(uri)) {
-                          await launchUrl(
-                            uri,
-                            mode: LaunchMode.externalApplication,
-                          );
-                        }
-                      },
+                      onTap: () => unawaited(
+                        MapDestination(
+                          id: event.id,
+                          title: event.title,
+                          position: LatLng(event.lat!, event.lng!),
+                        ).showNavigationOptions(context),
+                      ),
                       tooltip: l10n.commonGetDirections,
                     ),
                 ],
@@ -4352,13 +4408,9 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
   }
 
   Widget _buildDesktopAttributionButton() {
-    final useMapBlur = kubusMapBlurEnabled(context);
-    return KubusGlassIconButton(
-      icon: Icons.info_outline,
-      tooltip: AppLocalizations.of(context)!.mapAttributionsTitle,
-      borderRadius: KubusRadius.sm,
-      iconColor: Theme.of(context).colorScheme.primary,
-      enableBlur: useMapBlur,
+    final l10n = AppLocalizations.of(context)!;
+    return KubusMapCollapsingAttribution(
+      semanticsLabel: l10n.mapAttributionsTitle,
       onPressed: () => unawaited(showKubusMapAttributionDialog(context)),
     );
   }
@@ -4426,7 +4478,6 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     final l10n = AppLocalizations.of(context)!;
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
-    final useMapBlur = kubusMapBlurEnabled(context);
 
     return Semantics(
       label: l10n.mapDiscoveryPathTitle,
@@ -4438,14 +4489,10 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
           cursor: SystemMouseCursors.click,
           child: GestureDetector(
             onTap: _isNearbyPanelOpen ? null : _openNearbyArtPanel,
-            child: buildKubusMapGlassSurface(
+            child: buildKubusMapChromeSurface(
               context: context,
-              kind: KubusMapGlassSurfaceKind.panel,
-              borderRadius: BorderRadius.circular(18),
-              tintBase: scheme.surface,
-              useBlur: useMapBlur,
+              borderRadius: BorderRadius.circular(KubusRadius.surface),
               padding: const EdgeInsets.all(KubusSpacing.md),
-              margin: EdgeInsets.zero,
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
@@ -4874,6 +4921,20 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       return;
     }
 
+    if (result.kind == KubusSearchResultKind.collection) {
+      final collectionId = result.collectionId?.trim() ?? '';
+      if (collectionId.isNotEmpty) {
+        unawaited(
+          CreatorShellNavigation.openCollectionDetailWorkspace(
+            context,
+            collectionId: collectionId,
+            collectionName: result.label,
+          ),
+        );
+      }
+      return;
+    }
+
     if (result.kind == KubusSearchResultKind.profile && result.id != null) {
       unawaited(UserProfileNavigation.open(context, userId: result.id!));
       return;
@@ -5182,6 +5243,14 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       }
     } else if (useBoundsQuery && _overviewController.isActive) {
       // Zoomed in to detailed markers: the overview is done, redraw from them.
+      _overviewController.deactivate(keepForHandoff: _overviewAllowedByFilters);
+      unawaited(_syncMapMarkers(themeProvider: themeProvider));
+    }
+
+    // A hand-off bridges a zoom crossing only. If a filter the overview cannot
+    // express switched on meanwhile, the held dots are no longer valid, and a
+    // failing detailed fetch below must not leave them on screen.
+    if (!_overviewAllowedByFilters && _overviewController.hasHandoff) {
       _overviewController.deactivate();
       unawaited(_syncMapMarkers(themeProvider: themeProvider));
     }
@@ -5242,6 +5311,18 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
             );
 
       final markersChanged = !_markersEquivalent(_artMarkers, merged);
+      // The overview dots stay on screen until these detailed markers are in.
+      // They replace dots that were already visible, so they ease in softly
+      // instead of fading up from nothing.
+      final overviewHandoff = _overviewController.hasHandoff;
+      if (overviewHandoff) {
+        _kubusMapController.beginOverviewHandoffEntrances(<String>[
+          for (final m in merged)
+            if (m.hasValidPosition) m.id,
+        ]);
+      }
+      final releasedHandoff =
+          overviewHandoff && _overviewController.releaseHandoff();
 
       if (markersChanged) {
         setState(() {
@@ -5255,7 +5336,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       // radius. (`_artMarkers` already equals `merged` at this point.)
       _applyVisibleMarkers();
 
-      if (markersChanged) {
+      if (markersChanged || releasedHandoff) {
         unawaited(_syncMapMarkers(themeProvider: themeProvider));
       }
       _restorePendingSelection();
@@ -5596,6 +5677,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
         onSelectStackIndex: onSelectStackIndex,
         onHorizontalDragEnd: onHorizontalDragEnd,
         maxCardHeight: maxCardHeight,
+        fallbackFocusNode: _mapSearchFocusNode,
       ),
     );
   }
@@ -6351,11 +6433,25 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       closeAccentColor: themeProvider.accentColor,
       onClose: _closeDesktopMarkerDetails,
       actions: <MarkerInfoDetailAction>[
+        if (MapDestination.isValidCoordinate(marker.position))
+          MarkerInfoDetailAction(
+            icon: Icons.directions,
+            label: l10n.commonNavigate,
+            tooltip: l10n.commonGetDirections,
+            semanticsLabel: l10n.artDetailNavigateToTitle(detail.title),
+            onTap: () => unawaited(
+              MapDestination(
+                id: marker.id,
+                title: detail.title,
+                position: marker.position,
+              ).showNavigationOptions(context),
+            ),
+          ),
         MarkerInfoDetailAction(
           icon: Icons.share_outlined,
           label: l10n.commonShare,
           tooltip: l10n.commonShare,
-          semanticsLabel: 'marker_info_share',
+          semanticsLabel: l10n.commonShare,
           onTap: () {
             ShareService().showShareSheet(
               context,

@@ -13,14 +13,11 @@ extension _CommunityScreenStatePart3 on _CommunityScreenState {
     String? actionLabel,
   }) {
     final l10n = AppLocalizations.of(context)!;
-    final hub = context.read<CommunityHubProvider>();
-    return const ContextualAuthGate().ensureAuthenticated(
-      requirements: ProtectedActionRequirements.participant,
+    return ensureCommunityComposeAccess(
       context,
+      intent: intent,
       actionLabel: actionLabel ?? l10n.communityComposeAuthAction,
-      returnRoute: '/community',
       sourceScreen: 'community_screen',
-      onAuthJourneyStarted: () => hub.rememberComposeIntentForAuth(intent),
     );
   }
 
@@ -36,6 +33,11 @@ extension _CommunityScreenStatePart3 on _CommunityScreenState {
         return _handleReviewFabPressed();
       case CommunityComposeIntent.createGroup:
         return _handleCreateGroupPressed();
+      case CommunityComposeIntent.startChat:
+        // The chat start the guest asked for: back in Messages, where the
+        // new-conversation entry is.
+        _openMessagesOverlay();
+        return Future<void>.value();
     }
   }
 
@@ -141,9 +143,7 @@ extension _CommunityScreenStatePart3 on _CommunityScreenState {
     }
 
     _newPostController.clear();
-    _selectedPostImage = null;
-    _selectedPostImageBytes = null;
-    _selectedPostVideo = null;
+    _composerMedia.clear();
 
     // Dispose old controllers if they exist and create fresh ones
     _composerTagController?.dispose();
@@ -157,137 +157,157 @@ extension _CommunityScreenStatePart3 on _CommunityScreenState {
       context: context,
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
+      // A composer with unsent text or media must not close by tap or drag.
+      // Its header close button and back gesture are guarded by PopScope.
+      isDismissible: false,
+      enableDrag: false,
       builder: (sheetContext) => StatefulBuilder(
         builder: (context, setModalState) {
-          return KeyboardInsetPadding(
-            child: Consumer<CommunityHubProvider>(
-              builder: (context, provider, _) {
-                final draft = provider.draft;
-                final themeProvider = Provider.of<ThemeProvider>(context);
-                return CommunityComposerSurface(
-                  showHandle: true,
-                  maxHeight: MediaQuery.of(context).size.height * 0.9,
-                  backgroundColor: Theme.of(context).colorScheme.surface,
-                  borderRadius: const BorderRadius.vertical(
-                    top: Radius.circular(KubusRadius.xl),
-                  ),
-                  bodyPadding: const EdgeInsets.symmetric(horizontal: 24),
-                  header: _buildComposerHeader(sheetContext),
-                  body: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      _buildComposerCategorySelector(draft, provider),
-                      const SizedBox(height: 16),
-                      _buildComposerTextField(),
-                      const SizedBox(height: 16),
-                      CommunityComposerMediaSection(
-                        showPreview: _hasSelectedMedia,
-                        preview: _buildComposerMediaPreview(setModalState),
-                        actions: _buildComposerAttachmentRow(setModalState),
-                        sectionKey: 'composer_media',
+          return PopScope(
+              canPop: !_isPostingNew &&
+                  _newPostController.text.trim().isEmpty &&
+                  _composerMedia.isEmpty,
+              onPopInvokedWithResult: (didPop, result) {
+                if (!didPop && !_isPostingNew) {
+                  _closeComposer(sheetContext);
+                }
+              },
+              child: KeyboardInsetPadding(
+                child: Consumer<CommunityHubProvider>(
+                  builder: (context, provider, _) {
+                    final draft = provider.draft;
+                    final themeProvider = Provider.of<ThemeProvider>(context);
+                    return CommunityComposerSurface(
+                      showHandle: true,
+                      maxHeight: MediaQuery.of(context).size.height * 0.9,
+                      backgroundColor: Theme.of(context).colorScheme.surface,
+                      borderRadius: const BorderRadius.vertical(
+                        top: Radius.circular(KubusRadius.xl),
                       ),
-                      const SizedBox(height: 20),
-                      _buildComposerGroupSelector(draft, provider),
-                      const SizedBox(height: 16),
-                      _buildComposerSubjectSelector(draft),
-                      const SizedBox(height: 16),
-                      _buildComposerLocationSection(draft, setModalState),
-                      const SizedBox(height: 16),
-                      _buildChipEditor(
-                        label: AppLocalizations.of(context)!
-                            .communityComposerTagsLabel,
-                        hint: AppLocalizations.of(context)!
-                            .communityComposerTagsHint,
-                        values: draft.tags,
-                        controller: tagController,
-                        prefix: '#',
-                        onAdd: (value) {
-                          final sanitized = value.replaceFirst('#', '');
-                          provider.addTag(sanitized);
-                        },
-                        onRemove: provider.removeTag,
-                      ),
-                      const SizedBox(height: 16),
-                      _buildChipEditor(
-                        label: AppLocalizations.of(context)!
-                            .communityComposerMentionsLabel,
-                        hint: AppLocalizations.of(context)!
-                            .communityComposerMentionsHint,
-                        values: draft.mentions,
-                        controller: mentionController,
-                        prefix: '@',
-                        onAdd: (value) {
-                          final normalized = value.startsWith('@')
-                              ? value.substring(1)
-                              : value;
-                          provider.addMention(normalized);
-                        },
-                        onRemove: provider.removeMention,
-                      ),
-                      const SizedBox(height: 32),
-                    ],
-                  ),
-                  footer: SafeArea(
-                    top: false,
-                    child: Padding(
-                      padding: const EdgeInsets.fromLTRB(24, 12, 24, 24),
-                      child: SizedBox(
-                        width: double.infinity,
-                        child: ElevatedButton(
-                          onPressed: _isPostingNew
-                              ? null
-                              : () => _submitComposer(
-                                    sheetContext: sheetContext,
-                                    setModalState: setModalState,
-                                    hub: provider,
-                                  ),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: themeProvider.accentColor,
-                            foregroundColor:
-                                Theme.of(context).colorScheme.onPrimary,
-                            disabledBackgroundColor: themeProvider.accentColor
-                                .withValues(alpha: 0.4),
-                            disabledForegroundColor: Theme.of(context)
-                                .colorScheme
-                                .onPrimary
-                                .withValues(alpha: 0.7),
+                      bodyPadding: const EdgeInsets.symmetric(horizontal: 24),
+                      header: _buildComposerHeader(sheetContext),
+                      body: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _buildComposerCategorySelector(draft, provider),
+                          const SizedBox(height: 16),
+                          _buildComposerTextField(),
+                          CommunityComposerCharacterCounter(
+                            controller: _newPostController,
                           ),
-                          child: AnimatedSwitcher(
-                            duration: context.animationTheme.short,
-                            switchInCurve: context.animationTheme.defaultCurve,
-                            switchOutCurve: context.animationTheme.fadeCurve,
-                            child: _isPostingNew
-                                ? SizedBox(
-                                    key: const ValueKey(
-                                        'composer_posting_spinner'),
-                                    width: 20,
-                                    height: 20,
-                                    child: InlineLoading(
-                                      expand: true,
-                                      shape: BoxShape.circle,
-                                      tileSize: 3.5,
-                                    ),
-                                  )
-                                : Text(
-                                    AppLocalizations.of(context)!
-                                        .communityComposerSubmitPostButton,
-                                    key: ValueKey('composer_post_label'),
-                                    style: KubusTextStyles.navLabel.copyWith(
-                                      fontWeight: FontWeight.w600,
-                                      color: Theme.of(context)
-                                          .colorScheme
-                                          .onPrimary,
-                                    ),
-                                  ),
+                          const SizedBox(height: 16),
+                          CommunityComposerMediaTray(
+                            controller: _composerMedia,
+                            onAddPhotos: () =>
+                                _addComposerPhotos(setModalState),
+                            onAddVideo: () => _addComposerVideo(setModalState),
+                          ),
+                          const SizedBox(height: 20),
+                          _buildComposerGroupSelector(draft, provider),
+                          const SizedBox(height: 16),
+                          _buildComposerSubjectSelector(draft),
+                          const SizedBox(height: 16),
+                          _buildComposerLocationSection(draft, setModalState),
+                          const SizedBox(height: 16),
+                          _buildChipEditor(
+                            label: AppLocalizations.of(context)!
+                                .communityComposerTagsLabel,
+                            hint: AppLocalizations.of(context)!
+                                .communityComposerTagsHint,
+                            values: draft.tags,
+                            controller: tagController,
+                            prefix: '#',
+                            onAdd: (value) {
+                              final sanitized = value.replaceFirst('#', '');
+                              provider.addTag(sanitized);
+                            },
+                            onRemove: provider.removeTag,
+                          ),
+                          const SizedBox(height: 16),
+                          _buildChipEditor(
+                            label: AppLocalizations.of(context)!
+                                .communityComposerMentionsLabel,
+                            hint: AppLocalizations.of(context)!
+                                .communityComposerMentionsHint,
+                            values: draft.mentions,
+                            controller: mentionController,
+                            prefix: '@',
+                            onAdd: (value) {
+                              final normalized = value.startsWith('@')
+                                  ? value.substring(1)
+                                  : value;
+                              provider.addMention(normalized);
+                            },
+                            onRemove: provider.removeMention,
+                          ),
+                          const SizedBox(height: 32),
+                        ],
+                      ),
+                      footer: SafeArea(
+                        top: false,
+                        child: Padding(
+                          padding: const EdgeInsets.fromLTRB(24, 12, 24, 24),
+                          child: SizedBox(
+                            width: double.infinity,
+                            child: ElevatedButton(
+                              onPressed: _isPostingNew
+                                  ? null
+                                  : () => _submitComposer(
+                                        sheetContext: sheetContext,
+                                        setModalState: setModalState,
+                                        hub: provider,
+                                      ),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: themeProvider.accentColor,
+                                foregroundColor:
+                                    Theme.of(context).colorScheme.onPrimary,
+                                disabledBackgroundColor: themeProvider
+                                    .accentColor
+                                    .withValues(alpha: 0.4),
+                                disabledForegroundColor: Theme.of(context)
+                                    .colorScheme
+                                    .onPrimary
+                                    .withValues(alpha: 0.7),
+                              ),
+                              child: AnimatedSwitcher(
+                                duration: context.animationTheme.short,
+                                switchInCurve:
+                                    context.animationTheme.defaultCurve,
+                                switchOutCurve:
+                                    context.animationTheme.fadeCurve,
+                                child: _isPostingNew
+                                    ? SizedBox(
+                                        key: const ValueKey(
+                                            'composer_posting_spinner'),
+                                        width: 20,
+                                        height: 20,
+                                        child: InlineLoading(
+                                          expand: true,
+                                          shape: BoxShape.circle,
+                                          tileSize: 3.5,
+                                        ),
+                                      )
+                                    : Text(
+                                        AppLocalizations.of(context)!
+                                            .communityComposerSubmitPostButton,
+                                        key: ValueKey('composer_post_label'),
+                                        style:
+                                            KubusTextStyles.navLabel.copyWith(
+                                          fontWeight: FontWeight.w600,
+                                          color: Theme.of(context)
+                                              .colorScheme
+                                              .onPrimary,
+                                        ),
+                                      ),
+                              ),
+                            ),
                           ),
                         ),
                       ),
-                    ),
-                  ),
-                );
-              },
-            ),
-          );
+                    );
+                  },
+                ),
+              ));
         },
       ),
     );
@@ -306,42 +326,33 @@ extension _CommunityScreenStatePart3 on _CommunityScreenState {
     });
   }
 
-  Widget _buildPostOption(IconData icon, String label, {VoidCallback? onTap}) {
-    final scheme = Theme.of(context).colorScheme;
-
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.all(KubusSpacing.md),
-        decoration: BoxDecoration(
-          color: scheme.surfaceContainerHighest.withValues(alpha: 0.28),
-          borderRadius: BorderRadius.circular(KubusRadius.md),
-          border: Border.all(
-            color: scheme.outline.withValues(alpha: 0.32),
-          ),
-        ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              icon,
-              color: scheme.onSurface,
-              size: 24,
+  Future<void> _closeComposer(BuildContext sheetContext) async {
+    if (_isPostingNew) return;
+    if (_newPostController.text.trim().isNotEmpty ||
+        _composerMedia.isNotEmpty) {
+      final l10n = AppLocalizations.of(sheetContext)!;
+      final discard = await showKubusDialog<bool>(
+        context: sheetContext,
+        builder: (context) => KubusAlertDialog(
+          size: KubusDialogSize.compact,
+          title: Text(l10n.communityComposerDiscardDraft),
+          actions: [
+            KubusButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              label: l10n.commonCancel,
+              variant: KubusButtonVariant.quiet,
             ),
-            const SizedBox(height: 8),
-            Text(
-              label,
-              style: KubusTypography.inter(
-                fontSize: 12,
-                fontWeight: FontWeight.w500,
-                color: scheme.onSurface,
-              ),
-              textAlign: TextAlign.center,
+            const SizedBox(width: KubusSpacing.sm),
+            KubusButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              label: l10n.commonContinue,
             ),
           ],
         ),
-      ),
-    );
+      );
+      if (discard != true || !sheetContext.mounted) return;
+    }
+    if (sheetContext.mounted) Navigator.of(sheetContext).pop();
   }
 
   Widget _buildComposerHeader(BuildContext sheetContext) {
@@ -357,7 +368,7 @@ extension _CommunityScreenStatePart3 on _CommunityScreenState {
       ),
       trailing: IconButton(
         tooltip: l10n.commonClose,
-        onPressed: () => Navigator.of(sheetContext).maybePop(),
+        onPressed: _isPostingNew ? null : () => _closeComposer(sheetContext),
         icon: const Icon(Icons.close),
         color: Theme.of(context).colorScheme.onSurface,
       ),
@@ -369,190 +380,71 @@ extension _CommunityScreenStatePart3 on _CommunityScreenState {
     final isCompact = MediaQuery.of(context).size.width < 400;
     final l10n = AppLocalizations.of(context)!;
 
-    return TextField(
-      controller: _newPostController,
-      minLines: 3,
-      maxLines: null,
-      decoration: InputDecoration(
-        hintText: l10n.communityComposerTextHint,
-        hintStyle: KubusTypography.inter(
+    // The composer's field has no border of its own (borderSide none), so the
+    // keyboard focus indicator is the shared ring.
+    return KubusFocusRing(
+      borderRadius: BorderRadius.circular(KubusRadius.lg),
+      child: TextField(
+        controller: _newPostController,
+        minLines: 3,
+        maxLines: null,
+        decoration: InputDecoration(
+          hintText: l10n.communityComposerTextHint,
+          hintStyle: KubusTypography.inter(
+            fontSize: isCompact ? 14 : 16,
+            color: scheme.onPrimaryContainer.withValues(alpha: 0.72),
+          ),
+          filled: true,
+          fillColor: scheme.primaryContainer.withValues(alpha: 0.4),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(KubusRadius.lg),
+            borderSide: BorderSide.none,
+          ),
+          contentPadding: EdgeInsets.symmetric(
+            horizontal: 16,
+            vertical: isCompact ? 12 : 18,
+          ),
+        ),
+        style: KubusTypography.inter(
           fontSize: isCompact ? 14 : 16,
-          color: scheme.onPrimaryContainer.withValues(alpha: 0.72),
+          height: 1.4,
+          color: scheme.onPrimaryContainer,
         ),
-        filled: true,
-        fillColor: scheme.primaryContainer.withValues(alpha: 0.4),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(KubusRadius.lg),
-          borderSide: BorderSide.none,
-        ),
-        contentPadding: EdgeInsets.symmetric(
-          horizontal: 16,
-          vertical: isCompact ? 12 : 18,
-        ),
+        textInputAction: TextInputAction.newline,
       ),
-      style: KubusTypography.inter(
-        fontSize: isCompact ? 14 : 16,
-        height: 1.4,
-        color: scheme.onPrimaryContainer,
-      ),
-      textInputAction: TextInputAction.newline,
     );
   }
 
-  Widget _buildComposerMediaPreview(StateSetter setModalState) {
-    final scheme = Theme.of(context).colorScheme;
-    final l10n = AppLocalizations.of(context)!;
-    if (_selectedPostImageBytes != null) {
-      return Stack(
-        children: [
-          ClipRRect(
-            borderRadius: BorderRadius.circular(18),
-            child: Image.memory(
-              _selectedPostImageBytes!,
-              height: 220,
-              width: double.infinity,
-              fit: BoxFit.cover,
-            ),
-          ),
-          Positioned(
-            top: 12,
-            right: 12,
-            child: IconButton(
-              tooltip: l10n.commonRemove,
-              style: IconButton.styleFrom(
-                backgroundColor: scheme.surface.withValues(alpha: 0.8),
-                foregroundColor: scheme.onSurface,
-              ),
-              onPressed: () => setModalState(() {
-                _selectedPostImage = null;
-                _selectedPostImageBytes = null;
-              }),
-              icon: const Icon(Icons.close),
-            ),
-          ),
-        ],
-      );
+  Future<void> _addComposerPhotos(StateSetter setModalState) async {
+    final remaining = _composerMedia.remainingSlots;
+    if (remaining <= 0) {
+      _showSnack(AppLocalizations.of(context)!
+          .communityComposerMediaLimitReached(_composerMedia.maxItems));
+      return;
     }
-    if (_selectedPostVideo != null) {
-      return Container(
-        height: 200,
-        decoration: BoxDecoration(
-          color: scheme.primaryContainer.withValues(alpha: 0.4),
-          borderRadius: BorderRadius.circular(18),
-        ),
-        child: Stack(
-          children: [
-            Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.videocam_outlined,
-                      size: 42,
-                      color: Provider.of<ThemeProvider>(context, listen: false)
-                          .accentColor),
-                  const SizedBox(height: 8),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    child: Text(
-                      _selectedPostVideo!.name,
-                      style: KubusTypography.inter(
-                        fontSize: 13,
-                        color: scheme.onSurface,
-                      ),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      textAlign: TextAlign.center,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            Positioned(
-              top: 12,
-              right: 12,
-              child: IconButton(
-                tooltip: l10n.commonRemove,
-                style: IconButton.styleFrom(
-                  backgroundColor: scheme.surface.withValues(alpha: 0.8),
-                  foregroundColor: scheme.onSurface,
-                ),
-                onPressed: () => setModalState(() {
-                  _selectedPostVideo = null;
-                }),
-                icon: const Icon(Icons.close),
-              ),
-            ),
-          ],
-        ),
-      );
-    }
-    return const SizedBox.shrink();
+    final picked = await pickCommunityComposerPhotos(limit: remaining);
+    if (picked.isEmpty || !mounted) return;
+    final added = _composerMedia.add(picked);
+    setModalState(() {});
+    final trimmed = communityComposerTrimmedMessage(
+      AppLocalizations.of(context)!,
+      added: added,
+      picked: picked.length,
+      max: _composerMedia.maxItems,
+    );
+    if (trimmed != null) _showSnack(trimmed);
   }
 
-  Widget _buildComposerAttachmentRow(StateSetter setModalState) {
-    final scheme = Theme.of(context).colorScheme;
-    final l10n = AppLocalizations.of(context)!;
-    final hasMedia = _hasSelectedMedia;
-    final animationTheme = context.animationTheme;
-    return AnimatedContainer(
-      duration: animationTheme.short,
-      curve: animationTheme.defaultCurve,
-      padding: EdgeInsets.all(hasMedia ? 8 : 0),
-      decoration: BoxDecoration(
-        color: hasMedia
-            ? scheme.primaryContainer.withValues(alpha: 0.2)
-            : Colors.transparent,
-        borderRadius: BorderRadius.circular(KubusRadius.xl),
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: _buildPostOption(
-              Icons.image_outlined,
-              l10n.commonImage,
-              onTap: () async {
-                final picker = ImagePicker();
-                final image = await picker.pickImage(
-                  source: ImageSource.gallery,
-                  maxWidth: 1920,
-                  maxHeight: 1920,
-                  imageQuality: 85,
-                );
-                if (image != null) {
-                  final bytes = await image.readAsBytes();
-                  setModalState(() {
-                    _selectedPostImage = image;
-                    _selectedPostImageBytes = bytes;
-                    _selectedPostVideo = null;
-                  });
-                }
-              },
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: _buildPostOption(
-              Icons.videocam_outlined,
-              l10n.commonVideo,
-              onTap: () async {
-                final picker = ImagePicker();
-                final video = await picker.pickVideo(
-                  source: ImageSource.gallery,
-                  maxDuration: const Duration(minutes: 5),
-                );
-                if (video != null) {
-                  setModalState(() {
-                    _selectedPostVideo = video;
-                    _selectedPostImage = null;
-                    _selectedPostImageBytes = null;
-                  });
-                }
-              },
-            ),
-          ),
-        ],
-      ),
-    );
+  Future<void> _addComposerVideo(StateSetter setModalState) async {
+    if (_composerMedia.isFull) {
+      _showSnack(AppLocalizations.of(context)!
+          .communityComposerMediaLimitReached(_composerMedia.maxItems));
+      return;
+    }
+    final picked = await pickCommunityComposerVideo();
+    if (picked == null || !mounted) return;
+    _composerMedia.add(<CommunityComposerPickedMedia>[picked]);
+    setModalState(() {});
   }
 
   Widget _buildComposerCategorySelector(
@@ -678,11 +570,12 @@ extension _CommunityScreenStatePart3 on _CommunityScreenState {
           hub.setDraftArtwork(null);
         }
       },
-      leading: previewValue != null && imageUrl != null && imageUrl.isNotEmpty
+      leading: previewValue != null &&
+              MediaUrlResolver.resolveDisplayUrl(imageUrl) != null
           ? ClipRRect(
               borderRadius: BorderRadius.circular(KubusRadius.md),
               child: Image.network(
-                MediaUrlResolver.resolveDisplayUrl(imageUrl) ?? imageUrl,
+                MediaUrlResolver.resolveDisplayUrl(imageUrl)!,
                 width: 44,
                 height: 44,
                 fit: BoxFit.cover,
@@ -995,6 +888,9 @@ extension _CommunityScreenStatePart3 on _CommunityScreenState {
     List<Map<String, dynamic>> suggestions = [];
     bool isLoading = false;
     bool showSuggestions = true;
+    // True when the backend reported this kind as degraded and returned no
+    // rows, so the empty state must not say "no results".
+    bool searchUnavailable = false;
 
     showModalBottomSheet(
       context: context,
@@ -1124,6 +1020,7 @@ extension _CommunityScreenStatePart3 on _CommunityScreenState {
                                   searchController.clear();
                                   setModalState(() {
                                     results.clear();
+                                    searchUnavailable = false;
                                     showSuggestions = true;
                                   });
                                 },
@@ -1142,6 +1039,7 @@ extension _CommunityScreenStatePart3 on _CommunityScreenState {
                         if (q.isEmpty) {
                           setModalState(() {
                             results.clear();
+                            searchUnavailable = false;
                             showSuggestions = true;
                           });
                           return;
@@ -1151,36 +1049,34 @@ extension _CommunityScreenStatePart3 on _CommunityScreenState {
                           showSuggestions = false;
                         });
                         try {
+                          // The request's `type` and the rows read back are the
+                          // same kind. Tags are searched as `all` (the backend
+                          // has no tag kind) and only the custom entry is added.
                           final response = await backend.search(
                             query: q,
                             type: searchType == 'tags' ? 'all' : searchType,
                             limit: 20,
                           );
                           final list = <Map<String, dynamic>>[];
+                          var unavailable = false;
                           if (response['success'] == true) {
-                            if (searchType == 'profiles') {
-                              final profiles =
-                                  _extractSearchResults(response, 'profiles');
-                              list.addAll(profiles);
-                            } else if (searchType == 'artworks') {
-                              final artworks =
-                                  _extractSearchResults(response, 'artworks');
-                              list.addAll(artworks);
-                            } else if (searchType == 'tags') {
+                            if (searchType == 'tags') {
                               list.add(
                                   {'tag': q, 'count': 0, 'isCustom': true});
-                              final tags =
-                                  _extractSearchResults(response, 'tags');
-                              list.addAll(tags);
-                            } else {
-                              final all =
-                                  _extractSearchResults(response, 'all');
-                              list.addAll(all);
                             }
+                            final rows =
+                                communitySearchRows(response, searchType);
+                            list.addAll(rows);
+                            unavailable = rows.isEmpty &&
+                                communitySearchKindDegraded(
+                                  response,
+                                  searchType,
+                                );
                           }
                           if (mounted) {
                             setModalState(() {
                               results = list;
+                              searchUnavailable = unavailable;
                               isLoading = false;
                             });
                           }
@@ -1235,8 +1131,11 @@ extension _CommunityScreenStatePart3 on _CommunityScreenState {
                                           searchController.text.isEmpty
                                               ? l10n
                                                   .communitySearchEmptyStartTyping
-                                              : l10n
-                                                  .communitySearchEmptyNoResults,
+                                              : searchUnavailable
+                                                  ? l10n
+                                                      .commonSomethingWentWrong
+                                                  : l10n
+                                                      .communitySearchEmptyNoResults,
                                           style: KubusTypography.inter(
                                             color: scheme.onSurface
                                                 .withValues(alpha: 0.5),
@@ -1263,42 +1162,5 @@ extension _CommunityScreenStatePart3 on _CommunityScreenState {
         },
       ),
     );
-  }
-
-  List<Map<String, dynamic>> _extractSearchResults(
-      Map<String, dynamic> response, String type) {
-    final list = <Map<String, dynamic>>[];
-    try {
-      if (response['results'] is Map<String, dynamic>) {
-        final data = response['results'] as Map<String, dynamic>;
-        final items = data[type] ?? data['results'] ?? [];
-        if (items is List) {
-          for (final item in items) {
-            if (item is Map<String, dynamic>) {
-              list.add(item);
-            }
-          }
-        }
-      } else if (response['data'] is List) {
-        for (final item in response['data']) {
-          if (item is Map<String, dynamic>) {
-            list.add(item);
-          }
-        }
-      } else if (response['data'] is Map<String, dynamic>) {
-        final data = response['data'] as Map<String, dynamic>;
-        final items = data[type] ?? [];
-        if (items is List) {
-          for (final item in items) {
-            if (item is Map<String, dynamic>) {
-              list.add(item);
-            }
-          }
-        }
-      }
-    } catch (e) {
-      debugPrint('Error extracting search results: $e');
-    }
-    return list;
   }
 }

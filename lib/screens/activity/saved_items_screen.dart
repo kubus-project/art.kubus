@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
 import '../../community/community_interactions.dart';
+import '../../community/community_post_media.dart';
 import '../../l10n/app_localizations.dart';
 import '../../models/artwork.dart';
 import '../../models/collection_record.dart';
@@ -849,6 +850,7 @@ class _SavedItemsScreenState extends State<SavedItemsScreen> {
     await showKubusDialog<void>(
       context: context,
       builder: (dialogContext) => KubusAlertDialog(
+        size: KubusDialogSize.compact,
         title: Text(
           l10n.savedItemsRemoveDialogTitle,
           style: KubusTypography.inter(fontWeight: FontWeight.w700),
@@ -917,6 +919,7 @@ Future<void> showSavedItemsClearAllDialog(BuildContext context) async {
   await showKubusDialog<void>(
     context: context,
     builder: (dialogContext) => KubusAlertDialog(
+      size: KubusDialogSize.compact,
       title: Text(
         l10n.savedItemsClearAllDialogTitle,
         style: KubusTypography.inter(fontWeight: FontWeight.w700),
@@ -1550,8 +1553,10 @@ class _PostSavedTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final imageUrl =
-        MediaUrlResolver.resolveDisplayUrl(post?.imageUrl ?? record.imageUrl);
+    final previewUrl = post == null
+        ? record.imageUrl
+        : (communityPostPreviewImageUrl(post!) ?? record.imageUrl);
+    final imageUrl = MediaUrlResolver.resolveDisplayUrl(previewUrl);
     final title = (record.title ?? '').trim().isNotEmpty
         ? record.title!.trim()
         : post != null && post!.authorName.trim().isNotEmpty

@@ -416,6 +416,9 @@ class AppLocalizationsSl extends AppLocalizations {
   String get activationGateLikeArtworkTitle => 'Všečkaj to umetnino';
 
   @override
+  String get activationGateLikePostTitle => 'Všečkaj to objavo';
+
+  @override
   String get activationGateFollowTitle => 'Spremljaj tega umetnika';
 
   @override
@@ -472,16 +475,29 @@ class AppLocalizationsSl extends AppLocalizations {
   String get activationConfirmLikeArtwork => 'Želiš všečkati to umetnino?';
 
   @override
+  String get activationConfirmLikePost => 'Želiš všečkati to objavo?';
+
+  @override
   String get activationConfirmFollow => 'Želiš spremljati tega umetnika?';
 
   @override
   String get activationConfirmComment => 'Želiš napisati komentar?';
 
   @override
+  String get activationConfirmSupportRequest =>
+      'Nadaljujete z zahtevkom za podporo?';
+
+  @override
+  String get activationConfirmSupportBug => 'Nadaljujete s prijavo napake?';
+
+  @override
+  String get activationConfirmSupportReply => 'Nadaljujete z odgovorom?';
+
+  @override
   String get activationConfirmContribute => 'Želiš nadaljevati svoj prispevek?';
 
   @override
-  String get activationConfirmLikeCta => 'Všeček';
+  String get activationConfirmLikeCta => 'Všečkaj';
 
   @override
   String get activationConfirmContinueCta => 'Nadaljuj';
@@ -10950,6 +10966,156 @@ class AppLocalizationsSl extends AppLocalizations {
       'Objave ni bilo mogoče ustvariti.';
 
   @override
+  String communityUploadRateLimitedSeconds(int seconds) {
+    return 'Dosežena je omejitev nalaganja. Poskusite znova čez $seconds s.';
+  }
+
+  @override
+  String communityUploadRateLimitedMinutes(int minutes) {
+    return 'Dosežena je omejitev nalaganja. Poskusite znova čez približno $minutes min.';
+  }
+
+  @override
+  String get communityUploadRateLimitedGeneric =>
+      'Trenutno je preveč nalaganj. Počakajte trenutek in poskusite znova.';
+
+  @override
+  String get communityComposerMediaAddPhotos => 'Dodaj fotografije';
+
+  @override
+  String get communityComposerMediaAddVideo => 'Dodaj video';
+
+  @override
+  String communityComposerMediaLimitReached(int max) {
+    return 'V objavo lahko dodate največ $max predstavnih datotek.';
+  }
+
+  @override
+  String communityComposerMediaTrimmed(int added, int picked, int max) {
+    return 'Dodanih: $added od $picked datotek. Objava vsebuje do $max elementov.';
+  }
+
+  @override
+  String communityComposerValidationRejected(String detail) {
+    return 'Strežnik objave ni sprejel: $detail. Osnutek je ohranjen.';
+  }
+
+  @override
+  String communityComposerMediaCount(int count, int max) {
+    return 'Izbranih: $count od $max';
+  }
+
+  @override
+  String get communityComposerMediaMoveEarlier => 'Premakni nazaj';
+
+  @override
+  String get communityComposerMediaMoveLater => 'Premakni naprej';
+
+  @override
+  String get communityComposerMediaRetry => 'Ponovi nalaganje';
+
+  @override
+  String communityComposerMediaUploadFailed(int count) {
+    return '$count datotek ni bilo mogoče naložiti. Osnutek je ohranjen, lahko poskusite znova.';
+  }
+
+  @override
+  String get communityComposerMediaStatusPending => 'Čaka na nalaganje';
+
+  @override
+  String get communityComposerMediaStatusUploading => 'Nalaganje…';
+
+  @override
+  String get communityComposerMediaStatusFailed => 'Nalaganje ni uspelo';
+
+  @override
+  String get communityComposerMediaStatusDone => 'Naloženo';
+
+  @override
+  String communityComposerCharactersRemaining(int count) {
+    return 'Še $count znakov';
+  }
+
+  @override
+  String communityComposerCharacterLimitExceeded(int max) {
+    return 'Objava je lahko dolga največ $max znakov. Za objavo skrajšajte besedilo.';
+  }
+
+  @override
+  String get communityPostShowMore => 'več';
+
+  @override
+  String get communityPostShowLess => 'manj';
+
+  @override
+  String communityMediaCarouselPosition(int index, int total) {
+    return 'Predstavnost $index od $total';
+  }
+
+  @override
+  String get communityMediaPrevious => 'Prejšnja predstavnost';
+
+  @override
+  String get communityMediaNext => 'Naslednja predstavnost';
+
+  @override
+  String get communityMediaVideoPlay => 'Predvajaj video';
+
+  @override
+  String get communityMediaVideoPause => 'Ustavi video';
+
+  @override
+  String get communityMediaVideoMute => 'Utišaj video';
+
+  @override
+  String get communityMediaVideoUnmute => 'Vklopi zvok';
+
+  @override
+  String get communityMediaVideoUnavailable =>
+      'Tega videa tukaj ni mogoče predvajati.';
+
+  @override
+  String get communityMediaVideoPreviewUnavailable => 'Predogled ni na voljo';
+
+  @override
+  String get communityMediaVideoReplay => 'Ponovno predvajaj video';
+
+  @override
+  String get communityMediaVideoRetry => 'Poskusi znova';
+
+  @override
+  String get communityMediaVideoLoading => 'Nalaganje videa';
+
+  @override
+  String get communityMediaVideoBuffering => 'Medpomnjenje';
+
+  @override
+  String get communityMediaVideoSeek => 'Položaj videa';
+
+  @override
+  String communityMediaVideoTime(String position, String duration) {
+    return '$position od $duration';
+  }
+
+  @override
+  String get communityMediaVideoVolume => 'Glasnost';
+
+  @override
+  String get communityMediaVideoFullscreen => 'Celoten zaslon';
+
+  @override
+  String get communityMediaVideoExitFullscreen => 'Zapri celoten zaslon';
+
+  @override
+  String get communityMediaVideoControls => 'Video predvajalnik';
+
+  @override
+  String get communityMediaImageUnavailable => 'Slika ni na voljo';
+
+  @override
+  String get communityPostOpenOriginal => 'Odpri izvirno objavo';
+
+  @override
   String get communityToggleLikeFailedToast =>
       'Všečka ni bilo mogoče posodobiti.';
 
@@ -13374,6 +13540,18 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get communityPostActionComment => 'Komentiraj';
+
+  @override
+  String get communityPostStateLiked => 'všečkano';
+
+  @override
+  String get communityPostStateNotLiked => 'ni všečkano';
+
+  @override
+  String get communityPostStateSaved => 'shranjeno';
+
+  @override
+  String get communityPostStateNotSaved => 'ni shranjeno';
 
   @override
   String get communityRepostedToast => 'Ponovno objavljeno';
@@ -17639,4 +17817,378 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get daoTreasuryLedgerLabel => 'Zabeleženi premiki zakladnice';
+
+  @override
+  String get artworkEditArtistLabel => 'Umetnik / avtor';
+
+  @override
+  String get artworkEditArtistHelper =>
+      'Kdo je ustvaril delo: oseba, skupina ali kolektiv. To ni nalagatelj ali fotograf. Pustite prazno, če avtor ni znan.';
+
+  @override
+  String get artworkDraftArtistHelper => 'Pustite prazno, če avtor ni znan.';
+
+  @override
+  String get communitySearchTypeCollections => 'Zbirke';
+
+  @override
+  String searchCollectionArtworkCount(num count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count umetnin',
+      few: '$count umetnine',
+      two: '$count umetnini',
+      one: '$count umetnina',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String communityComposerRateLimitedSeconds(int seconds) {
+    return 'Objavljanje je začasno omejeno. Poskusite znova čez $seconds s. Osnutek je ohranjen.';
+  }
+
+  @override
+  String get communityComposerRateLimitedGeneric =>
+      'Objavljanje je začasno omejeno. Pred ponovnim poskusom počakajte. Osnutek je ohranjen.';
+
+  @override
+  String get communityComposerDiscardDraft => 'Želite zavreči ta osnutek?';
+
+  @override
+  String get communityComposerAlreadyCommitted =>
+      'Objava je morda že objavljena. Osnutek je ohranjen. Preden ga izbrišete ali začnete novo objavo, preverite vir objav.';
+
+  @override
+  String get communityComposerCheckFeed => 'Preveri vir objav';
+
+  @override
+  String get supportCenterTitle => 'Pomoč in podpora';
+
+  @override
+  String get supportCenterEntrySubtitle =>
+      'Pogosta vprašanja, kontakt s podporo, prijave napak in vaši zahtevki';
+
+  @override
+  String get supportCenterSectionsLabel => 'Razdelki pomoči';
+
+  @override
+  String get supportCenterSectionFaq => 'Pogosta vprašanja';
+
+  @override
+  String get supportCenterSectionContact => 'Kontakt s podporo';
+
+  @override
+  String get supportCenterSectionBug => 'Prijava napake';
+
+  @override
+  String get supportCenterSectionRequests => 'Moji zahtevki';
+
+  @override
+  String get supportFaqQuestion1 => 'Kaj je art.kubus?';
+
+  @override
+  String get supportFaqAnswer1 =>
+      'Odprt zemljevid za raziskovanje umetniških del, razstav in kulturnih prostorov.';
+
+  @override
+  String get supportFaqQuestion2 => 'Lahko brskam brez prijave?';
+
+  @override
+  String get supportFaqAnswer2 =>
+      'Da. Javno vsebino lahko raziskujete brez računa. Dejanja, ki spreminjajo vsebino, zahtevajo prijavo.';
+
+  @override
+  String get supportFaqQuestion3 => 'Ali potrebujem denarnico?';
+
+  @override
+  String get supportFaqAnswer3 =>
+      'Za brskanje po javnem zemljevidu denarnica ni potrebna.';
+
+  @override
+  String get supportFaqQuestion4 => 'Kako prijavim težavo?';
+
+  @override
+  String get supportFaqAnswer4 =>
+      'Izberite Prijava napake in opišite korake, s katerimi jo lahko ponovite. Prijavo spremljate v razdelku Moji zahtevki.';
+
+  @override
+  String get supportFaqQuestion5 => 'Kje so odgovori podpore?';
+
+  @override
+  String get supportFaqAnswer5 =>
+      'Odprite Moji zahtevki in izberite zahtevek, če želite prebrati odgovore ali odgovoriti.';
+
+  @override
+  String get supportFormSubjectLabel => 'Zadeva';
+
+  @override
+  String get supportFormMessageLabel => 'Sporočilo';
+
+  @override
+  String get supportFormSubmitContact => 'Pošlji zahtevek';
+
+  @override
+  String get supportFormSubmitBug => 'Pošlji prijavo napake';
+
+  @override
+  String get supportFormSending => 'Pošiljanje…';
+
+  @override
+  String get supportFormRequiredError => 'To polje je obvezno.';
+
+  @override
+  String get supportFormSubjectTooLong => 'Uporabite največ 255 znakov.';
+
+  @override
+  String get supportFormMessageTooLong => 'Uporabite največ 5000 znakov.';
+
+  @override
+  String get supportFormReportTooLong =>
+      'Poročilo je predolgo. Skrajšajte ga na 5000 znakov.';
+
+  @override
+  String get supportBugWhatHappenedLabel => 'Kaj se je zgodilo?';
+
+  @override
+  String get supportBugStepsLabel => 'Koraki za ponovitev';
+
+  @override
+  String get supportBugExpectedLabel => 'Pričakovano delovanje';
+
+  @override
+  String get supportBugActualLabel => 'Dejansko delovanje';
+
+  @override
+  String get supportBugPlatformLabel => 'Vključi platformo naprave';
+
+  @override
+  String get supportBugPlatformHint =>
+      'Neobvezno. Ne zbiramo dnevnikov, poverilnic ali osebnih podatkov.';
+
+  @override
+  String get supportRequestSentToast => 'Zahtevek je poslan podpori.';
+
+  @override
+  String get supportBugSentToast => 'Prijava napake je poslana. Hvala.';
+
+  @override
+  String get supportRequestsEmpty => 'Zahtevkov še ni.';
+
+  @override
+  String get supportRequestsRefresh => 'Osveži';
+
+  @override
+  String get supportRequestsBack => 'Nazaj na vse zahtevke';
+
+  @override
+  String supportRequestUpdatedOn(Object date) {
+    return 'Posodobljeno $date';
+  }
+
+  @override
+  String supportRequestOpenedOn(Object date) {
+    return 'Odprto $date';
+  }
+
+  @override
+  String get supportRequestKindSupport => 'Zahtevek za podporo';
+
+  @override
+  String get supportRequestKindBug => 'Prijava napake';
+
+  @override
+  String get supportStatusOpen => 'Odprt';
+
+  @override
+  String get supportStatusPending => 'Čaka na vaš odgovor';
+
+  @override
+  String get supportStatusResolved => 'Rešen';
+
+  @override
+  String get supportStatusClosed => 'Zaprt';
+
+  @override
+  String get supportSenderYou => 'Vi';
+
+  @override
+  String get supportSenderSupport => 'Ekipa podpore';
+
+  @override
+  String get supportReplyLabel => 'Odgovor';
+
+  @override
+  String get supportReplySend => 'Pošlji odgovor';
+
+  @override
+  String get supportClosedTitle => 'Zahtevek je zaprt';
+
+  @override
+  String get supportClosedHint =>
+      'Zaprte zahtevke lahko samo preberete. Če še potrebujete pomoč, pošljite nov zahtevek.';
+
+  @override
+  String get supportClosedNewRequest => 'Pošljite nov zahtevek';
+
+  @override
+  String get supportErrorLoadRequests =>
+      'Zahtevkov ni bilo mogoče naložiti. Preverite povezavo in poskusite znova.';
+
+  @override
+  String get supportErrorLoadRequest =>
+      'Zahtevka ni bilo mogoče odpreti. Preverite povezavo in poskusite znova.';
+
+  @override
+  String get supportErrorNotFound =>
+      'Zahtevka ni bilo mogoče najti. Morda je bil odstranjen.';
+
+  @override
+  String get supportErrorInvalid =>
+      'Preverite označena polja in poskusite znova.';
+
+  @override
+  String get supportErrorRateLimited =>
+      'Preveč poskusov. Poskusite znova čez približno uro.';
+
+  @override
+  String get supportErrorClosedReply =>
+      'Zahtevek je zaprt, zato nanj ni mogoče odgovoriti.';
+
+  @override
+  String get supportErrorGeneric =>
+      'Prišlo je do napake. Preverite povezavo in poskusite znova.';
+
+  @override
+  String get supportRetry => 'Poskusi znova';
+
+  @override
+  String get supportUnavailable =>
+      'Zahtevki za podporo trenutno niso na voljo. FAQ je še vedno odprt.';
+
+  @override
+  String get supportSignInTitle => 'Prijavite se za stik s podporo';
+
+  @override
+  String get supportSignInBody =>
+      'Zahtevki za podporo so povezani z vašim računom. FAQ lahko preberete tudi brez prijave.';
+
+  @override
+  String get supportSignInAction => 'Prijava';
+
+  @override
+  String get supportSignInActionLabel => 'pošljete zahtevek za podporo';
+
+  @override
+  String get supportSignInRequired =>
+      'Za pošiljanje zahtevkov in ogled zgodovine se prijavite.';
+
+  @override
+  String get supportErrorAccountIdentity =>
+      'Vaša seja ni primerna za zahtevke za podporo. Odjavite se, znova se prijavite in poskusite znova.';
+
+  @override
+  String get communityPostDeleteSessionExpired =>
+      'Seja je potekla. Za izbris objave se znova prijavi.';
+
+  @override
+  String get communityPostDeleteNotAllowed =>
+      'Izbrišeš lahko samo svoje objave.';
+
+  @override
+  String get communityPostDeleteConflict =>
+      'Te objave trenutno ni mogoče izbrisati. Osveži vir in poskusi znova.';
+
+  @override
+  String get communityPostDeleteNetwork =>
+      'Povezava z art.kubus ni uspela. Preveri povezavo in poskusi znova.';
+
+  @override
+  String get communityArtDiscoveryTitle => 'Odkrij umetnost';
+
+  @override
+  String get communityArtDiscoverySubtitleMap =>
+      'Okoli območja, ki si ga ogledoval na zemljevidu';
+
+  @override
+  String get communityArtDiscoverySubtitleDevice => 'V bližini tvoje lokacije';
+
+  @override
+  String get communityArtDiscoverySubtitleSaved =>
+      'Okoli zadnjega uporabljenega območja';
+
+  @override
+  String get communityArtDiscoverySubtitlePublic =>
+      'Umetnost in pogovori s celotne platforme';
+
+  @override
+  String communityArtDiscoveryWithin(Object distance) {
+    return 'V razdalji $distance';
+  }
+
+  @override
+  String get communityArtDiscoveryUseMyLocation => 'Uporabi mojo lokacijo';
+
+  @override
+  String get communityArtDiscoveryReasonForYou => 'Zate';
+
+  @override
+  String get communityArtDiscoveryReasonNearby => 'V bližini';
+
+  @override
+  String get communityArtDiscoveryReasonFollowed => 'Od umetnika, ki mu slediš';
+
+  @override
+  String get communityArtDiscoveryReasonNewArtwork => 'Novo delo';
+
+  @override
+  String get communityArtDiscoveryReasonDiscussion => 'Pogovor skupnosti';
+
+  @override
+  String get communityArtDiscoveryReasonReview => 'Nedavna recenzija';
+
+  @override
+  String get communityArtDiscoveryReasonExhibition => 'Razstava';
+
+  @override
+  String get communityArtDiscoveryEmptyTitle => 'Tu še ni ničesar';
+
+  @override
+  String get communityArtDiscoveryEmptyBody =>
+      'Trenutno ni mogoče najti javnih del, recenzij ali razstav. Poskusi znova čez trenutek ali raziskuj zemljevid.';
+
+  @override
+  String get communityArtDiscoveryErrorTitle =>
+      'Odkrivanja ni bilo mogoče naložiti';
+
+  @override
+  String get communityArtDiscoveryErrorBody =>
+      'Preveri povezavo in poskusi znova.';
+
+  @override
+  String get communityArtDiscoveryLoadMore => 'Pokaži več';
+
+  @override
+  String get contributionHeadline =>
+      'Umetnost je povsod. Pomagaj jo postaviti na zemljevid.';
+
+  @override
+  String get contributionBody =>
+      'Odkrij lokalno umetnost, dokumentiraj, kar najdeš, in spoznaj ljudi, ki jo ustvarjajo.';
+
+  @override
+  String get contributionJoin => 'Pridruži se art.kubus';
+
+  @override
+  String get contributionDocument => 'Dokumentiraj umetnost v javnem prostoru';
+
+  @override
+  String get contributionArtwork => 'Dodaj umetniško delo';
+
+  @override
+  String get contributionExhibition => 'Dodaj razstavo ali dogodek';
+
+  @override
+  String get contributionApplication => 'Preveri stanje prijave';
 }

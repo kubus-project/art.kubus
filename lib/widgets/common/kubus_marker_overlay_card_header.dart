@@ -10,10 +10,13 @@ extension _KubusMarkerOverlayCardHeaderParts on KubusMarkerOverlayCard {
     required Artwork? artwork,
     required bool canPresentExhibition,
     required VoidCallback? onTitleTap,
+    required FocusNode titleFocusNode,
     required String? linkedSubjectTypeLabel,
     required String? linkedSubjectTitle,
     required String? linkedSubjectSubtitle,
+    String? placeText,
   }) {
+    final normalizedPlace = placeText?.trim();
     final normalizedLinkedTypeLabel = linkedSubjectTypeLabel?.trim();
     final normalizedLinkedTitle = linkedSubjectTitle?.trim();
     final normalizedLinkedSubtitle = linkedSubjectSubtitle?.trim();
@@ -71,11 +74,12 @@ extension _KubusMarkerOverlayCardHeaderParts on KubusMarkerOverlayCard {
                 const SizedBox(height: KubusSpacing.xxs),
               ],
               if (onTitleTap != null)
-                GestureDetector(
-                  behavior: HitTestBehavior.opaque,
-                  onTap: onTitleTap,
-                  child: MouseRegion(
-                    cursor: SystemMouseCursors.click,
+                FocusTraversalOrder(
+                  order: const NumericFocusOrder(0),
+                  child: _OverlayKeyboardTitle(
+                    focusNode: titleFocusNode,
+                    onActivate: onTitleTap,
+                    accent: baseColor,
                     child: titleWidget,
                   ),
                 )
@@ -123,14 +127,44 @@ extension _KubusMarkerOverlayCardHeaderParts on KubusMarkerOverlayCard {
                   ),
                 ),
               ],
+              if (normalizedPlace != null && normalizedPlace.isNotEmpty) ...[
+                SizedBox(height: artwork != null ? 2 : KubusSpacing.xs),
+                Row(
+                  key: const ValueKey<String>('marker_overlay_place'),
+                  children: [
+                    Icon(
+                      Icons.place_outlined,
+                      size: 12,
+                      color: scheme.onSurfaceVariant,
+                    ),
+                    const SizedBox(width: KubusSpacing.xxs),
+                    Expanded(
+                      child: Text(
+                        normalizedPlace,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: KubusTypography.textTheme.bodySmall?.copyWith(
+                          color: scheme.onSurfaceVariant,
+                          fontWeight: FontWeight.w500,
+                          fontSize: KubusHeaderMetrics.sectionSubtitle - 2,
+                          height: 1.15,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
             ],
           ),
         ),
         const SizedBox(width: KubusSpacing.sm),
-        _OverlayIconButton(
-          icon: Icons.close,
-          tooltip: l10n.commonClose,
-          onTap: onClose,
+        FocusTraversalOrder(
+          order: const NumericFocusOrder(1),
+          child: _OverlayIconButton(
+            icon: Icons.close,
+            tooltip: l10n.commonClose,
+            onTap: onClose,
+          ),
         ),
       ],
     );

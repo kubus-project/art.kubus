@@ -1,0 +1,444 @@
+﻿{
+    "posts": [
+        {
+            "id": "9696cfe5-501a-4a08-bc48-69ffddc312e3",
+            "groupId": null,
+            "postType": "image",
+            "subjects": null,
+            "mediaUrls": [
+                "/uploads/profiles/posts/02f23027-3fe0-4b43-9855-15e6f44379b6_scaled_photo-0.png",
+                "/uploads/profiles/posts/08bb9de2-24d6-4cc6-8abe-0232e5ba0374_scaled_photo-1.png",
+                "/uploads/profiles/posts/09d980b9-3852-4e6b-86e0-9e9567833c83_scaled_photo-2.png",
+                "/uploads/profiles/posts/abbeaa36-1757-442d-94fd-e259bb9c41b1_scaled_photo-3.png",
+                "/uploads/profiles/posts/a1411ad6-88f3-450f-8038-fd14ebb4fb03_scaled_photo-4.png"
+            ],
+            "submissions": [
+                {
+                    "key": "dcec8ab5-6e27-4653-9317-6abf06ea3a4c",
+                    "operation": "community",
+                    "responseSaved": true
+                }
+            ],
+            "contentPreview": "QA mobile retry čšž 🎨 caption caption caption caption caption caption ",
+            "captionCodePoints": 381
+        },
+        {
+            "id": "36139815-f876-4e93-94b2-3c1e49d02ea8",
+            "groupId": null,
+            "postType": "image",
+            "subjects": null,
+            "mediaUrls": [
+                "/uploads/profiles/posts/870aa450-8e6f-4b3c-8d37-0cbe8b0cf03b_scaled_photo-0.png",
+                "/uploads/profiles/posts/d7bcf04d-1b52-41f5-a2c1-e30659e956ae_scaled_photo-1.png",
+                "/uploads/profiles/posts/d427743d-2253-48c7-9431-511e559d3058_scaled_photo-2.png",
+                "/uploads/profiles/posts/758563cd-4696-4e54-88bb-d4de503e70d9_scaled_photo-3.png",
+                "/uploads/profiles/posts/cfb002ba-2fa3-4f7c-aee3-ed132e7e54ae_scaled_photo-4.png"
+            ],
+            "submissions": [
+                {
+                    "key": "5b7046b7-6723-448d-a328-7b7c6842ec7d",
+                    "operation": "community",
+                    "responseSaved": true
+                }
+            ],
+            "contentPreview": "QA third upload failure",
+            "captionCodePoints": 23
+        },
+        {
+            "id": "de49425c-8ea6-48aa-acdf-79aa94b1ac11",
+            "groupId": null,
+            "postType": "video",
+            "subjects": null,
+            "mediaUrls": [
+                "/uploads/profiles/posts/287d57ea-c0a8-40c6-95bd-4b8a31edd81e_scaled_photo-1.png",
+                "/uploads/profiles/posts/f3568fc6-0345-47e2-9733-fbe44a13615f_scaled_photo-2.png",
+                "/uploads/profiles/posts/15d4ddbd-9461-4b76-b8c9-8d6a4b785586_video.mp4"
+            ],
+            "submissions": [
+                {
+                    "key": "775c24bc-fea2-4023-8ea1-a19664d9a982",
+                    "operation": "community",
+                    "responseSaved": true
+                }
+            ],
+            "contentPreview": "Shared a photo",
+            "captionCodePoints": 14
+        },
+        {
+            "id": "5eb4773e-66e3-4a25-9f32-10adb093251c",
+            "groupId": "924d50a0-abda-4da5-a8c8-217005ac656b",
+            "postType": "video",
+            "subjects": null,
+            "mediaUrls": [
+                "/uploads/profiles/posts/a13af67d-931b-4eda-9dc3-d31b56d6816b_scaled_portrait.png",
+                "/uploads/profiles/posts/c6abfcc4-b649-4b7e-958e-e36c8254f427_scaled_panorama.png",
+                "/uploads/profiles/posts/e126d338-d7f7-48b7-a390-cdcbdf9df1d6_video.mp4"
+            ],
+            "submissions": [
+                {
+                    "key": "62a752ae-ca90-4c20-be16-d28f0ac8755d",
+                    "operation": "group:924d50a0-abda-4da5-a8c8-217005ac656b",
+                    "responseSaved": true
+                }
+            ],
+            "contentPreview": "QA group retained after failure",
+            "captionCodePoints": 31
+        },
+        {
+            "id": "3cb6dd3d-3125-45ce-b855-ea4c150e5da9",
+            "groupId": null,
+            "postType": "video",
+            "subjects": null,
+            "mediaUrls": [
+                "/uploads/profiles/posts/474ae2f5-c1b8-4d3c-9935-84528293bb82_scaled_photo-0.png",
+                "/uploads/profiles/posts/a197d2c2-f604-456e-940b-bbc0aca906eb_scaled_photo-2.png",
+                "/uploads/profiles/posts/7be53a97-5de4-42d7-b6a4-5b4e78b3e5bd_video.mp4"
+            ],
+            "submissions": [
+                {
+                    "key": "80804c42-0ca9-4c99-8a46-70e4eddd5ae0",
+                    "operation": "community",
+                    "responseSaved": true
+                }
+            ],
+            "contentPreview": "QA desktop dialog connection loss",
+            "captionCodePoints": 33
+        },
+        {
+            "id": "c9d12c66-d4a3-4f77-a665-4395b45e7819",
+            "groupId": "924d50a0-abda-4da5-a8c8-217005ac656b",
+            "postType": "video",
+            "subjects": null,
+            "mediaUrls": [
+                "/uploads/profiles/posts/fe3a90a6-ce49-495a-8a04-0e4eb27a13f6_scaled_photo-0.png",
+                "/uploads/profiles/posts/39c8b189-c319-4bc3-8b76-0c1cf632ff60_scaled_photo-2.png",
+                "/uploads/profiles/posts/aa1225cd-f065-4eb2-9013-ca4af1784855_video.mp4"
+            ],
+            "submissions": [
+                {
+                    "key": "32b79fdb-16e9-4af1-be5c-e8960ce51a2d",
+                    "operation": "group:924d50a0-abda-4da5-a8c8-217005ac656b",
+                    "responseSaved": true
+                }
+            ],
+            "contentPreview": "QA real group mixed",
+            "captionCodePoints": 19
+        },
+        {
+            "id": "a39a6524-0b43-4358-b56e-f66727ede965",
+            "groupId": null,
+            "postType": "text",
+            "subjects": null,
+            "mediaUrls": [
+            ],
+            "submissions": [
+                {
+                    "key": "5e4df72b-33ac-405a-89a5-ea4403255049",
+                    "operation": "community",
+                    "responseSaved": false
+                }
+            ],
+            "contentPreview": "QA commit gap",
+            "captionCodePoints": 13
+        },
+        {
+            "id": "7a3bb937-0d60-4176-aa6e-fab502cebd11",
+            "groupId": null,
+            "postType": "text",
+            "subjects": [
+                {
+                    "id": "924d50a0-abda-4da5-a8c8-217005ac656b",
+                    "type": "group"
+                }
+            ],
+            "mediaUrls": [
+            ],
+            "submissions": [
+                {
+                    "key": "7aacc52c-852c-4320-a270-552eeb6a853a",
+                    "operation": "community",
+                    "responseSaved": true
+                }
+            ],
+            "contentPreview": "QA two writable backends",
+            "captionCodePoints": 24
+        },
+        {
+            "id": "53a5d390-a32e-480b-ab5b-92aec24ebe9a",
+            "groupId": null,
+            "postType": "repost",
+            "subjects": null,
+            "mediaUrls": null,
+            "submissions": null,
+            "contentPreview": "QA repost žžžžžžžžžžžžžžžžžžžžžžžžžžžžžžžžžžžžžžžžžžžžžžžžžžžžžžžžžžžž",
+            "captionCodePoints": 2200
+        },
+        {
+            "id": "e1f384a1-8215-4a82-b86d-7ecfb5046539",
+            "groupId": null,
+            "postType": "video",
+            "subjects": null,
+            "mediaUrls": [
+                "/uploads/profiles/posts/ed60abaf-bc5a-46eb-a336-77acb2957785_scaled_portrait.png",
+                "/uploads/profiles/posts/b6934e4a-d0fe-403a-a207-fb1955f3e691_scaled_panorama.png",
+                "/uploads/profiles/posts/95b26b1c-eaee-40fd-8267-4cec0adf158a_video.mp4"
+            ],
+            "submissions": [
+                {
+                    "key": "6cf7e1c2-8ff5-46d3-9b20-e12813410be3",
+                    "operation": "community",
+                    "responseSaved": true
+                }
+            ],
+            "contentPreview": "QA temna namizna objava č š ž",
+            "captionCodePoints": 29
+        },
+        {
+            "id": "2da9fff2-44f7-449b-9f44-a92e08dd4dbf",
+            "groupId": null,
+            "postType": "video",
+            "subjects": null,
+            "mediaUrls": [
+                "/uploads/profiles/posts/74feb0f9-5a59-4652-8616-39f615073139_video.mp4"
+            ],
+            "submissions": [
+                {
+                    "key": "1068f962-188c-4a81-8fed-2b6141fb004f",
+                    "operation": "community",
+                    "responseSaved": true
+                }
+            ],
+            "contentPreview": "🎥",
+            "captionCodePoints": 1
+        },
+        {
+            "id": "a1a08e2c-02bf-4e1d-a63c-a4ed13a9ba40",
+            "groupId": null,
+            "postType": "video",
+            "subjects": null,
+            "mediaUrls": [
+                "/uploads/profiles/posts/05535b03-ec18-4c38-a604-2020b45d4bef_video.mp4"
+            ],
+            "submissions": [
+                {
+                    "key": "c5f0c7eb-f98d-4794-99d0-0e9db45c1401",
+                    "operation": "community",
+                    "responseSaved": true
+                }
+            ],
+            "contentPreview": "🎥",
+            "captionCodePoints": 1
+        },
+        {
+            "id": "0f0c3587-9c53-4032-b7ee-d34d338f9155",
+            "groupId": null,
+            "postType": "image",
+            "subjects": null,
+            "mediaUrls": [
+                "/uploads/profiles/posts/6e10316d-c0c1-4575-a39d-3dca5ff7b949_scaled_landscape.png"
+            ],
+            "submissions": [
+                {
+                    "key": "35b945a1-1587-45b4-86e4-de5c457a2b29",
+                    "operation": "community",
+                    "responseSaved": true
+                }
+            ],
+            "contentPreview": "Shared a photo",
+            "captionCodePoints": 14
+        },
+        {
+            "id": "49527f98-5d4a-409a-8cf7-04174d1c64f8",
+            "groupId": null,
+            "postType": "image",
+            "subjects": null,
+            "mediaUrls": [
+                "/uploads/profiles/posts/92be04ed-b100-4fbd-88f2-262120dd2e7a_scaled_landscape.png"
+            ],
+            "submissions": [
+                {
+                    "key": "8e0f0dc0-74b2-4dc5-8a5d-29ab3db770e2",
+                    "operation": "community",
+                    "responseSaved": true
+                }
+            ],
+            "contentPreview": "Shared a photo",
+            "captionCodePoints": 14
+        },
+        {
+            "id": "1235d775-1d80-443f-adf4-565d79f6f8fe",
+            "groupId": null,
+            "postType": "image",
+            "subjects": null,
+            "mediaUrls": [
+                "/uploads/profiles/posts/c63b7989-c739-4602-9cb6-ac633873cad4_scaled_photo-0.png",
+                "/uploads/profiles/posts/a837e593-55ca-4367-8f12-e6b42e96ae50_scaled_photo-1.png",
+                "/uploads/profiles/posts/0a606ab8-1ad1-48e1-b3b9-6886efdaad0b_scaled_photo-2.png",
+                "/uploads/profiles/posts/2ed15293-681d-476e-9966-766e9c9af193_scaled_photo-3.png",
+                "/uploads/profiles/posts/1759e124-9c51-4ee9-b1f2-f93d4ccdb7ae_scaled_photo-4.png"
+            ],
+            "submissions": [
+                {
+                    "key": "bc54a3ff-2bdd-422c-87b7-d705d08cdf49",
+                    "operation": "community",
+                    "responseSaved": true
+                }
+            ],
+            "contentPreview": "QA final third-upload recovery",
+            "captionCodePoints": 30
+        },
+        {
+            "id": "20e1b894-9cd8-4bdf-9ba8-cba45dd6eec5",
+            "groupId": null,
+            "postType": "repost",
+            "subjects": null,
+            "mediaUrls": null,
+            "submissions": null,
+            "contentPreview": "QA repost mixed once",
+            "captionCodePoints": 20
+        },
+        {
+            "id": "580e534b-5623-41b6-9469-e0746c396295",
+            "groupId": null,
+            "postType": "image",
+            "subjects": null,
+            "mediaUrls": [
+                "/uploads/profiles/posts/51e15b7d-8df6-4c3b-9922-697bac511347_scaled_landscape.png"
+            ],
+            "submissions": [
+                {
+                    "key": "3d30ebc7-63ea-4137-8a76-1effa166c99f",
+                    "operation": "community",
+                    "responseSaved": true
+                }
+            ],
+            "contentPreview": "QA flag off one attachment",
+            "captionCodePoints": 26
+        },
+        {
+            "id": "5a75c042-6cee-416b-ad6a-ea710c8d4c16",
+            "groupId": null,
+            "postType": "video",
+            "subjects": null,
+            "mediaUrls": [
+                "/uploads/profiles/posts/1fb73f0e-7571-4e5a-a122-a110d136a761_scaled_photo-1.png",
+                "/uploads/profiles/posts/7dc7dde4-b0b6-4058-95ab-448995f43adc_scaled_photo-0.png",
+                "/uploads/profiles/posts/97e46afa-32b9-4b3a-a7bb-7ff0c61af309_scaled_photo-3.png",
+                "/uploads/profiles/posts/1f9e7cf3-48de-483c-8e15-e9c9a81710f3_video.mp4",
+                "/uploads/profiles/posts/22542ae5-cd3e-4189-8815-3347fcd2e96b_scaled_photo-4.png",
+                "/uploads/profiles/posts/6c15dfaa-19e9-46f3-8fb5-5c1c10c1b635_scaled_photo-5.png",
+                "/uploads/profiles/posts/3c6b14ed-e48a-4f80-84cb-8b976a997b53_scaled_photo-6.png",
+                "/uploads/profiles/posts/cf14f670-2897-4c0c-8a53-83158252e766_scaled_photo-7.png",
+                "/uploads/profiles/posts/d44639bd-a030-4114-9b03-f6f2b72177c8_scaled_photo-8.png",
+                "/uploads/profiles/posts/4ea24501-7dce-4c62-8020-234e9b2a184c_scaled_photo-9.png"
+            ],
+            "submissions": [
+                {
+                    "key": "d89bc802-0f27-4ea6-8ba5-1d8fa6c3c652",
+                    "operation": "community",
+                    "responseSaved": true
+                }
+            ],
+            "contentPreview": "QA ten mixed čšž 🎨 caption caption caption caption caption caption cap",
+            "captionCodePoints": 418
+        },
+        {
+            "id": "6e5d85c5-3f35-4bbb-9fc0-aac2b9ab20fa",
+            "groupId": null,
+            "postType": "image",
+            "subjects": null,
+            "mediaUrls": [
+                "/uploads/profiles/posts/92be04ed-b100-4fbd-88f2-262120dd2e7a_scaled_landscape.png"
+            ],
+            "submissions": null,
+            "contentPreview": "QA legacy single image",
+            "captionCodePoints": 22
+        },
+        {
+            "id": "00853d5e-c7e2-47f0-9c56-114c50afc4f9",
+            "groupId": null,
+            "postType": "image",
+            "subjects": null,
+            "mediaUrls": [
+                "/uploads/profiles/posts/3f35b9d9-08fe-42e4-b0b7-498d2caaae05_scaled_photo-0.png"
+            ],
+            "submissions": [
+                {
+                    "key": "6d721eaa-1428-4244-a72b-c189899efe76",
+                    "operation": "community",
+                    "responseSaved": true
+                }
+            ],
+            "contentPreview": "QA final disabled artifact single image",
+            "captionCodePoints": 39
+        },
+        {
+            "id": "16465809-f82d-464b-ad6c-ca8e89569777",
+            "groupId": null,
+            "postType": "image",
+            "subjects": null,
+            "mediaUrls": [
+                "/uploads/profiles/posts/d3ad5692-63f7-402e-82fe-86c9050d97cd_scaled_photo-1.png",
+                "/uploads/profiles/posts/f66fd955-35ae-4484-9025-62d030f90394_scaled_photo-0.png",
+                "/uploads/profiles/posts/d3f96216-2910-4928-bef0-42938761988b_scaled_photo-2.png",
+                "/uploads/profiles/posts/2169381e-ff62-4ff7-bf14-4d3f1963c019_scaled_photo-3.png",
+                "/uploads/profiles/posts/ec20286b-13f4-4f72-9f82-17297ed9c53d_scaled_photo-4.png",
+                "/uploads/profiles/posts/8009835f-9071-47e3-8ae3-f591e99cc954_scaled_photo-5.png",
+                "/uploads/profiles/posts/a2d0eb42-07a4-416e-bc1f-6655a78140fc_scaled_photo-6.png",
+                "/uploads/profiles/posts/848ed99a-0436-46ba-ba55-685313cf084b_scaled_photo-7.png",
+                "/uploads/profiles/posts/2edc0519-eff2-412a-b77e-3b6fa90f131e_scaled_photo-8.png",
+                "/uploads/profiles/posts/0e33ec3a-0869-4bab-86ba-1435560ce03d_scaled_photo-9.png"
+            ],
+            "submissions": [
+                {
+                    "key": "44cf0fe4-5b06-4ecf-aa7b-ae21f19f93cf",
+                    "operation": "community",
+                    "responseSaved": true
+                }
+            ],
+            "contentPreview": "QA ten images",
+            "captionCodePoints": 13
+        },
+        {
+            "id": "cbcc11e1-df23-4544-9b57-17e312f18f89",
+            "groupId": null,
+            "postType": "video",
+            "subjects": null,
+            "mediaUrls": [
+                "/uploads/profiles/posts/74feb0f9-5a59-4652-8616-39f615073139_video.mp4"
+            ],
+            "submissions": [
+                {
+                    "key": "qa-simultaneous-A-1791503377814",
+                    "operation": "community",
+                    "responseSaved": true
+                }
+            ],
+            "contentPreview": "QA simultaneous video A",
+            "captionCodePoints": 23
+        },
+        {
+            "id": "81183f3a-9b17-4741-857c-aac416b5d284",
+            "groupId": null,
+            "postType": "video",
+            "subjects": null,
+            "mediaUrls": [
+                "/uploads/profiles/posts/74feb0f9-5a59-4652-8616-39f615073139_video.mp4"
+            ],
+            "submissions": [
+                {
+                    "key": "qa-simultaneous-B-1791503377835",
+                    "operation": "community",
+                    "responseSaved": true
+                }
+            ],
+            "contentPreview": "QA simultaneous video B",
+            "captionCodePoints": 23
+        }
+    ],
+    "rollbackPosts": 0,
+    "duplicateLedgerKeys": 0,
+    "rollbackReservations": 0,
+    "verifiedEmailFixtures": 2,
+    "temporaryTriggersRemaining": 0
+}

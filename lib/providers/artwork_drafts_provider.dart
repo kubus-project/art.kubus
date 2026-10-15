@@ -68,6 +68,11 @@ class DraftCollaborationInvite {
 
 class ArtworkDraftState {
   String title = '';
+
+  /// The cultural author of the work, exactly as the user typed it. It is
+  /// never prefilled from the signed-in account: authorship is an explicit
+  /// statement, and blank means unattributed.
+  String artistName = '';
   String description = '';
   String category = 'Digital Art';
   String tagsCsv = '';
@@ -161,6 +166,7 @@ class ArtworkDraftsProvider extends ChangeNotifier {
   void updateBasics({
     required String draftId,
     String? title,
+    String? artistName,
     String? description,
     String? category,
     String? tagsCsv,
@@ -169,6 +175,7 @@ class ArtworkDraftsProvider extends ChangeNotifier {
     final draft = _drafts[draftId];
     if (draft == null) return;
     if (title != null) draft.title = title;
+    if (artistName != null) draft.artistName = artistName;
     if (description != null) draft.description = description;
     if (category != null) draft.category = category;
     if (tagsCsv != null) draft.tagsCsv = tagsCsv;
@@ -538,6 +545,9 @@ class ArtworkDraftsProvider extends ChangeNotifier {
 
       final title = draft.title.trim();
       final description = draft.description.trim();
+      // Explicit authorship only: blank is sent as nothing, never as the
+      // uploader. Same trim-and-blank-is-unknown rule as the edit screen.
+      final artistName = draft.artistName.trim();
       if (title.isEmpty || description.isEmpty) {
         draft.submitError = l10n.artworkDraftTitleDescriptionRequired;
         return null;
@@ -636,6 +646,7 @@ class ArtworkDraftsProvider extends ChangeNotifier {
         description: description,
         imageUrl: coverUrl,
         walletAddress: wallet,
+        artistName: artistName.isEmpty ? null : artistName,
         category: draft.category,
         tags: _parseTagsCsv(draft.tagsCsv),
         galleryUrls: galleryUrls,

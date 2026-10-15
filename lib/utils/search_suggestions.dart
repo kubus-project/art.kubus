@@ -119,6 +119,14 @@ List<Map<String, dynamic>> normalizeSearchSuggestionsPayload(dynamic raw) {
       final wallet =
           (m['wallet'] ?? m['walletAddress'] ?? m['wallet_address'] ?? m['id'])
               ?.toString();
+      // Only a wallet the row itself carries counts as one. The id fallback
+      // above names the record for institutions, events and artworks.
+      final hasOwnWallet =
+          (m['wallet'] ?? m['walletAddress'] ?? m['wallet_address'])
+                  ?.toString()
+                  .trim()
+                  .isNotEmpty ??
+              false;
 
       String label;
       String? subtitle;
@@ -210,12 +218,21 @@ List<Map<String, dynamic>> normalizeSearchSuggestionsPayload(dynamic raw) {
             username.isNotEmpty &&
             !WalletUtils.looksLikeWallet(username);
 
-        // Only fall back to @username/wallet if we still have no useful subtitle.
-        if ((subtitle ?? '').trim().isEmpty) {
+        // Only fall back to @username/wallet if we still have no useful
+        // subtitle. An artwork's subtitle is its recorded artist or nothing:
+        // the uploader's handle or an id is not authorship. A record id is
+        // never a subtitle either, so only a real wallet field is masked.
+        final ownWallet =
+            (m['wallet'] ?? m['walletAddress'] ?? m['wallet_address'])
+                ?.toString()
+                .trim();
+        if (type.toLowerCase() != 'artwork' &&
+            type.toLowerCase() != 'collection' &&
+            (subtitle ?? '').trim().isEmpty) {
           if (hasSafeUsername) {
             subtitle = '@$username';
-          } else if (wallet != null && wallet.trim().isNotEmpty) {
-            subtitle = maskWallet(wallet.trim());
+          } else if (ownWallet != null && ownWallet.isNotEmpty) {
+            subtitle = maskWallet(ownWallet);
           }
         }
       }
@@ -340,6 +357,10 @@ List<Map<String, dynamic>> normalizeSearchSuggestionsPayload(dynamic raw) {
               artworkMetadataMap?['artwork_id'])
           ?.toString()
           .trim();
+      // `icon` is the backend's legacy single media key: a person's avatar
+      // for profiles, the cover, logo or image for every other kind.
+      final isPersonResult = type.toLowerCase() == 'profile';
+      final legacyIcon = m['icon'];
       final avatarCandidate = (m['avatarUrl'] ??
               m['avatar_url'] ??
               m['avatar'] ??
@@ -355,7 +376,8 @@ List<Map<String, dynamic>> normalizeSearchSuggestionsPayload(dynamic raw) {
               authorMap?['profileImageUrl'] ??
               authorMap?['profile_image_url'] ??
               artworkMap?['authorAvatar'] ??
-              artworkMap?['author_avatar'])
+              artworkMap?['author_avatar'] ??
+              (isPersonResult ? legacyIcon : null))
           ?.toString()
           .trim();
       final imageCandidate = (m['imageUrl'] ??
@@ -381,6 +403,11 @@ List<Map<String, dynamic>> normalizeSearchSuggestionsPayload(dynamic raw) {
               m['artwork_image'] ??
               m['artworkImageUrl'] ??
               m['artwork_image_url'] ??
+              m['logoUrl'] ??
+              m['logo_url'] ??
+              m['bannerUrl'] ??
+              m['banner_url'] ??
+              (isPersonResult ? null : legacyIcon) ??
               artworkMap?['imageUrl'] ??
               artworkMap?['image_url'] ??
               artworkMap?['coverImageUrl'] ??
@@ -449,7 +476,11 @@ List<Map<String, dynamic>> normalizeSearchSuggestionsPayload(dynamic raw) {
         'type': type,
         if (rawDisplayName != null) 'displayName': rawDisplayName,
         if (rawUsername != null) 'username': rawUsername,
-        if (wallet != null) 'wallet': wallet,
+        // A profile's id is its wallet. Another kind's id is a record id, so
+        // it is not emitted as a wallet (an institution row opened that id as
+        // a profile).
+        if (wallet != null && (type.toLowerCase() == 'profile' || hasOwnWallet))
+          'wallet': wallet,
         if (markerCandidate != null && markerCandidate.isNotEmpty)
           'markerId': markerCandidate,
         if (subjectTypeCandidate != null && subjectTypeCandidate.isNotEmpty)
@@ -463,6 +494,9 @@ List<Map<String, dynamic>> normalizeSearchSuggestionsPayload(dynamic raw) {
         if (imageCandidate != null && imageCandidate.isNotEmpty)
           'imageUrl': imageCandidate,
         if (imageListCandidate.isNotEmpty) 'imageUrls': imageListCandidate,
+        if (type.toLowerCase() == 'collection' &&
+            (m['artworkCount'] ?? m['artwork_count']) != null)
+          'artworkCount': m['artworkCount'] ?? m['artwork_count'],
       };
       if (lat != null && lng != null) {
         normalized['lat'] = lat;

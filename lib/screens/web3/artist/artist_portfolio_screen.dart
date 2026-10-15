@@ -620,6 +620,7 @@ class _ArtistPortfolioScreenState extends State<ArtistPortfolioScreen> {
       context: context,
       builder: (dialogContext) {
         return KubusAlertDialog(
+          size: KubusDialogSize.compact,
           title: Text(l10n.artistGalleryDeleteArtworkTitle),
           content: Text(l10n.artistGalleryDeleteConfirmBody(title)),
           actions: [

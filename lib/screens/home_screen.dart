@@ -16,6 +16,7 @@ import '../providers/recent_activity_provider.dart';
 import '../providers/profile_provider.dart';
 import '../providers/stats_provider.dart';
 import '../providers/exhibitions_provider.dart';
+import '../core/shell_routes.dart';
 import '../models/recent_activity.dart';
 import '../models/user_persona.dart';
 import '../models/user_profile.dart';
@@ -31,6 +32,7 @@ import 'package:art_kubus/services/contextual_auth_gate.dart';
 import '../widgets/app_logo.dart';
 import '../widgets/topbar_icon.dart';
 import '../utils/activity_navigation.dart';
+import '../utils/creator_shell_navigation.dart';
 import '../widgets/inline_loading.dart';
 import '../widgets/enhanced_stats_chart.dart';
 import '../widgets/empty_state_card.dart';
@@ -90,6 +92,14 @@ bool shouldShowHomeStatCardIcon({
   required bool isVerticalLayout,
 }) {
   return showIconOnly || isVerticalLayout;
+}
+
+@visibleForTesting
+bool shouldUseSingleColumnHomeCulturalStats({
+  required double width,
+  required double textScale,
+}) {
+  return width < 304 || textScale >= 1.5;
 }
 
 @visibleForTesting
@@ -303,8 +313,11 @@ class _HomeWeb3Card extends StatelessWidget {
                 Semantics(
                   label: AppLocalizations.of(context)!.homeAccountRequiredLabel,
                   child: ExcludeSemantics(
-                    child: Icon(Icons.lock_outline,
-                        size: 14, color: roles.lockedFeature),
+                    child: Icon(
+                      Icons.lock_outline,
+                      size: 14,
+                      color: roles.lockedFeature,
+                    ),
                   ),
                 ),
             ],
@@ -339,10 +352,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   void initState() {
     super.initState();
     _homeSearchController = KubusSearchController(
-      config: const KubusSearchConfig(
-        scope: KubusSearchScope.home,
-        limit: 8,
-      ),
+      config: const KubusSearchConfig(scope: KubusSearchScope.home, limit: 8),
     );
     _animationController = AnimationController(
       duration: AppAnimationTheme.defaults.long,
@@ -373,35 +383,43 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       if (!mounted) return;
       final statsProvider = context.read<StatsProvider>();
       final exhibitionsProvider = context.read<ExhibitionsProvider>();
-      unawaited(statsProvider.ensureSnapshot(
-        entityType: 'user',
-        entityId: walletAddress,
-        metrics: homeActivityPublicSnapshotMetrics,
-        scope: 'public',
-      ));
-      unawaited(statsProvider.ensureSnapshot(
-        entityType: 'user',
-        entityId: walletAddress,
-        metrics: homeActivityPrivateSnapshotMetrics,
-        scope: 'private',
-      ));
-      unawaited(exhibitionsProvider.loadExhibitions(
-        refresh: true,
-        mine: true,
-        limit: 50,
-      ));
+      unawaited(
+        statsProvider.ensureSnapshot(
+          entityType: 'user',
+          entityId: walletAddress,
+          metrics: homeActivityPublicSnapshotMetrics,
+          scope: 'public',
+        ),
+      );
+      unawaited(
+        statsProvider.ensureSnapshot(
+          entityType: 'user',
+          entityId: walletAddress,
+          metrics: homeActivityPrivateSnapshotMetrics,
+          scope: 'private',
+        ),
+      );
+      unawaited(
+        exhibitionsProvider.loadExhibitions(
+          refresh: true,
+          mine: true,
+          limit: 50,
+        ),
+      );
       final nowUtc = DateTime.now().toUtc();
-      unawaited(statsProvider.ensureSeries(
-        entityType: 'user',
-        entityId: walletAddress,
-        metric: 'viewsReceived',
-        bucket: 'month',
-        timeframe: 'all',
-        from: homeActivityProgramViewsFromUtc().toIso8601String(),
-        to: homeActivityProgramViewsToUtc(nowUtc).toIso8601String(),
-        groupBy: 'targetType',
-        scope: 'private',
-      ));
+      unawaited(
+        statsProvider.ensureSeries(
+          entityType: 'user',
+          entityId: walletAddress,
+          metric: 'viewsReceived',
+          bucket: 'month',
+          timeframe: 'all',
+          from: homeActivityProgramViewsFromUtc().toIso8601String(),
+          to: homeActivityProgramViewsToUtc(nowUtc).toIso8601String(),
+          groupBy: 'targetType',
+          scope: 'private',
+        ),
+      );
     });
   }
 
@@ -430,13 +448,13 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       parent: _animationController,
       curve: animationTheme.fadeCurve,
     );
-    final slideAnimation = Tween<Offset>(
-      begin: const Offset(0, 0.08),
-      end: Offset.zero,
-    ).animate(CurvedAnimation(
-      parent: _animationController,
-      curve: animationTheme.defaultCurve,
-    ));
+    final slideAnimation =
+        Tween<Offset>(begin: const Offset(0, 0.08), end: Offset.zero).animate(
+      CurvedAnimation(
+        parent: _animationController,
+        curve: animationTheme.defaultCurve,
+      ),
+    );
 
     return Scaffold(
       backgroundColor: Colors.transparent,
@@ -538,10 +556,14 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     final dashboardFirst = (currentUser?.isArtist ?? false) ||
         (currentUser?.isInstitution ?? false);
 
-    sections.add(animated(HomeDiscoveryIntro(
-      onExploreMap: () => context.read<MainTabProvider>().setIndex(0),
-      onOpenCommunity: () => context.read<MainTabProvider>().setIndex(2),
-    )));
+    sections.add(
+      animated(
+        HomeDiscoveryIntro(
+          onExploreMap: () => context.read<MainTabProvider>().setIndex(0),
+          onOpenCommunity: () => context.read<MainTabProvider>().setIndex(2),
+        ),
+      ),
+    );
     sections.add(SizedBox(height: spacing));
     if (!dashboardFirst) {
       sections.add(animated(_buildHomeRails()));
@@ -625,20 +647,21 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         : networkName.toUpperCase();
     final isMainnet = networkLabel == 'MAINNET';
     final networkColor = isMainnet ? scheme.tertiary : scheme.secondary;
-    return SliverAppBar(
-      floating: true,
-      snap: true,
-      backgroundColor: Colors.transparent,
-      elevation: 0,
-      expandedHeight: 148,
-      flexibleSpace: LayoutBuilder(
+    return SliverFloatingHeader(
+      snapMode: FloatingHeaderSnapMode.overlay,
+      animationStyle: MediaQuery.disableAnimationsOf(context)
+          ? AnimationStyle.noAnimation
+          : null,
+      child: LayoutBuilder(
         builder: (context, constraints) {
           final isSmallScreen = constraints.maxWidth < 375;
 
           return Stack(
-            fit: StackFit.expand,
+            fit: StackFit.loose,
             children: [
-              KubusGlassAppBarBackdrop(showBottomDivider: true),
+              const Positioned.fill(
+                child: KubusGlassAppBarBackdrop(showBottomDivider: true),
+              ),
               SafeArea(
                 bottom: false,
                 child: Padding(
@@ -653,6 +676,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                     KubusHeaderMetrics.appBarVerticalPadding,
                   ),
                   child: Column(
+                    mainAxisSize: MainAxisSize.min,
                     children: [
                       Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -750,7 +774,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                                               ),
                                               decoration: BoxDecoration(
                                                 color: networkColor.withValues(
-                                                    alpha: 0.12),
+                                                  alpha: 0.12,
+                                                ),
                                                 borderRadius:
                                                     BorderRadius.circular(
                                                   KubusRadius.sm,
@@ -791,8 +816,9 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                                 _showNotificationsBottomSheet(context);
                               },
                               badgeCount: np.unreadCount,
-                              badgeColor: Provider.of<ThemeProvider>(context)
-                                  .accentColor,
+                              badgeColor: Provider.of<ThemeProvider>(
+                                context,
+                              ).accentColor,
                             ),
                           ),
                           TopBarIcon(
@@ -874,9 +900,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     }
   }
 
-  Future<void> _handleHomeSearchResultTap(
-    KubusSearchResult result,
-  ) async {
+  Future<void> _handleHomeSearchResultTap(KubusSearchResult result) async {
     _homeSearchController.commitSelection(result.label);
     FocusScope.of(context).unfocus();
 
@@ -884,10 +908,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     if (result.kind == KubusSearchResultKind.marker && markerId.isNotEmpty) {
       await ShareDeepLinkNavigation.open(
         context,
-        ShareDeepLinkTarget(
-          type: ShareEntityType.marker,
-          id: markerId,
-        ),
+        ShareDeepLinkTarget(type: ShareEntityType.marker, id: markerId),
       );
       return;
     }
@@ -899,10 +920,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     if (isMapSubjectResult && markerId.isNotEmpty && result.position == null) {
       await ShareDeepLinkNavigation.open(
         context,
-        ShareDeepLinkTarget(
-          type: ShareEntityType.marker,
-          id: markerId,
-        ),
+        ShareDeepLinkTarget(type: ShareEntityType.marker, id: markerId),
       );
       return;
     }
@@ -957,6 +975,13 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       case HomeSearchDestinationKind.artwork:
         await openArtwork(context, destination.id!, source: 'home_search');
         return;
+      case HomeSearchDestinationKind.collection:
+        await CreatorShellNavigation.openCollectionDetailWorkspace(
+          context,
+          collectionId: destination.id!,
+          collectionName: result.label,
+        );
+        return;
       case HomeSearchDestinationKind.profile:
         await UserProfileNavigation.open(context, userId: destination.id!);
         return;
@@ -977,21 +1002,26 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     return LayoutBuilder(
       builder: (context, constraints) {
         final navigationProvider = Provider.of<NavigationProvider>(context);
-        final persona =
-            context.select<ProfileProvider, UserPersona?>((p) => p.userPersona);
-        final currentUser =
-            context.select<ProfileProvider, UserProfile?>((p) => p.currentUser);
+        final persona = context.select<ProfileProvider, UserPersona?>(
+          (p) => p.userPersona,
+        );
+        final currentUser = context.select<ProfileProvider, UserProfile?>(
+          (p) => p.currentUser,
+        );
         final l10n = AppLocalizations.of(context)!;
         final theme = Theme.of(context);
         final scheme = theme.colorScheme;
-        final frequentScreens =
-            navigationProvider.getQuickActionScreens(maxItems: 12);
+        final frequentScreens = navigationProvider.getQuickActionScreens(
+          maxItems: 12,
+        );
+        final stackSectionHeader =
+            MediaQuery.textScalerOf(context).scale(1) >= 1.5;
         const sectionHeaderGap = KubusSpacing.sm + KubusSpacing.xs;
         const sectionBlockGap = KubusSpacing.md;
-        final suggestedKeys =
-            resolveSuggestedQuickActionKeys(persona, currentUser)
-                .where(HomeQuickActionRegistry.contains)
-                .toList(growable: false);
+        final suggestedKeys = resolveSuggestedQuickActionKeys(
+          persona,
+          currentUser,
+        ).where(HomeQuickActionRegistry.contains).toList(growable: false);
         final isCompactLayout = constraints.maxWidth < 640;
         final compactCardWidth =
             ((constraints.maxWidth - KubusSpacing.sm) / 2).clamp(140.0, 220.0);
@@ -1011,35 +1041,55 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  l10n.homeQuickActionsTitle,
-                  style: KubusTextStyles.screenTitle.copyWith(
-                    color: Theme.of(context).colorScheme.onSurface,
-                  ),
+            if (stackSectionHeader) ...[
+              Text(
+                l10n.homeQuickActionsTitle,
+                style: KubusTextStyles.screenTitle.copyWith(
+                  color: Theme.of(context).colorScheme.onSurface,
                 ),
-                if (frequentScreens.isNotEmpty)
-                  Text(
+              ),
+              if (frequentScreens.isNotEmpty)
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: Text(
                     l10n.homeRecentlyUsedLabel,
                     style: KubusTextStyles.screenSubtitle.copyWith(
-                      color: Theme.of(context)
-                          .colorScheme
-                          .onSurface
-                          .withValues(alpha: 0.6),
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.onSurface.withValues(alpha: 0.6),
                     ),
                   ),
-              ],
-            ),
+                ),
+            ] else
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    l10n.homeQuickActionsTitle,
+                    style: KubusTextStyles.screenTitle.copyWith(
+                      color: Theme.of(context).colorScheme.onSurface,
+                    ),
+                  ),
+                  if (frequentScreens.isNotEmpty)
+                    Text(
+                      l10n.homeRecentlyUsedLabel,
+                      style: KubusTextStyles.screenSubtitle.copyWith(
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.onSurface.withValues(alpha: 0.6),
+                      ),
+                    ),
+                ],
+              ),
             const SizedBox(height: sectionHeaderGap),
             if (frequentScreens.isEmpty)
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   KubusFlatPanel(
-                    padding:
-                        const EdgeInsets.all(KubusChromeMetrics.cardPadding),
+                    padding: const EdgeInsets.all(
+                      KubusChromeMetrics.cardPadding,
+                    ),
                     child: Row(
                       children: [
                         Icon(
@@ -1080,11 +1130,13 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                               ),
                               isCompactLayout,
                               onTap: () {
-                                unawaited(HomeQuickActionExecutor.execute(
-                                  context,
-                                  key,
-                                  source: HomeQuickActionSurface.mobileHome,
-                                ));
+                                unawaited(
+                                  HomeQuickActionExecutor.execute(
+                                    context,
+                                    key,
+                                    source: HomeQuickActionSurface.mobileHome,
+                                  ),
+                                );
                               },
                               visitCount: 0,
                             ),
@@ -1114,11 +1166,13 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                         ),
                         isCompactLayout,
                         onTap: () {
-                          unawaited(HomeQuickActionExecutor.execute(
-                            context,
-                            screen.key,
-                            source: HomeQuickActionSurface.mobileHome,
-                          ));
+                          unawaited(
+                            HomeQuickActionExecutor.execute(
+                              context,
+                              screen.key,
+                              source: HomeQuickActionSurface.mobileHome,
+                            ),
+                          );
                         },
                         visitCount: screen.visitCount,
                       ),
@@ -1291,8 +1345,29 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
         return LayoutBuilder(
           builder: (context, constraints) {
-            final isSmallScreen = constraints.maxWidth < 375;
-            final isVerySmallScreen = constraints.maxWidth < 320;
+            final textScale = MediaQuery.textScalerOf(context).scale(1);
+            final singleColumn = shouldUseSingleColumnHomeCulturalStats(
+              width: constraints.maxWidth,
+              textScale: textScale,
+            );
+            final metricTitleStyle = KubusTextStyles.statLabel.copyWith(
+              color: Theme.of(
+                context,
+              ).colorScheme.onSurface.withValues(alpha: 0.68),
+            );
+            final metricValueStyle = KubusTextStyles.statValue.copyWith(
+              color: Theme.of(context).colorScheme.onSurface,
+            );
+            final metricExtent = math.max(
+              104.0,
+              KubusStatCard.centeredExtent(
+                context,
+                titleLines: 2,
+                titleStyle: metricTitleStyle,
+                valueStyle: metricValueStyle,
+                padding: const EdgeInsets.all(10),
+              ),
+            );
 
             return Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -1300,25 +1375,26 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                 Text(
                   l10n.homeYourStatsTitle,
                   style: KubusTextStyles.screenTitle.copyWith(
-                    fontSize: isSmallScreen
+                    fontSize: constraints.maxWidth < 375
                         ? KubusHeaderMetrics.sectionTitle + KubusSpacing.xxs
                         : KubusHeaderMetrics.screenTitle,
                     color: Theme.of(context).colorScheme.onSurface,
                   ),
                 ),
                 SizedBox(
-                  height: isSmallScreen
+                  height: constraints.maxWidth < 375
                       ? KubusSpacing.sm + KubusSpacing.xs
                       : KubusSpacing.md,
                 ),
-                if (isVerySmallScreen)
+                if (singleColumn)
                   Column(
                     children: cards.asMap().entries.map((entry) {
                       final index = entry.key;
                       final card = entry.value;
                       return Padding(
                         padding: EdgeInsets.only(
-                            bottom: index < cards.length - 1 ? 8 : 0),
+                          bottom: index < cards.length - 1 ? 8 : 0,
+                        ),
                         child: _buildStatCard(
                           card.label,
                           card.isLoading
@@ -1334,17 +1410,16 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                     }).toList(),
                   )
                 else
-                  Row(
-                    children: cards.asMap().entries.map((entry) {
-                      final card = entry.value;
-                      return Expanded(
-                        child: Padding(
-                          padding: EdgeInsets.only(
-                            right: entry.key < cards.length - 1
-                                ? KubusSpacing.sm
-                                : KubusSpacing.none,
-                          ),
-                          child: _buildStatCard(
+                  GridView.count(
+                    crossAxisCount: 2,
+                    mainAxisSpacing: KubusSpacing.sm,
+                    crossAxisSpacing: KubusSpacing.sm,
+                    mainAxisExtent: metricExtent,
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    children: cards
+                        .map(
+                          (card) => _buildStatCard(
                             card.label,
                             card.isLoading
                                 ? '...'
@@ -1355,9 +1430,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                             isVerticalLayout: false,
                             action: card.action,
                           ),
-                        ),
-                      );
-                    }).toList(),
+                        )
+                        .toList(growable: false),
                   ),
               ],
             );
@@ -1388,11 +1462,15 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     return 96;
   }
 
-  Widget _buildStatCard(String title, String value, IconData icon,
-      {Color? color,
-      bool showIconOnly = false,
-      bool isVerticalLayout = false,
-      HomeActivityCardAction? action}) {
+  Widget _buildStatCard(
+    String title,
+    String value,
+    IconData icon, {
+    Color? color,
+    bool showIconOnly = false,
+    bool isVerticalLayout = false,
+    HomeActivityCardAction? action,
+  }) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
     final statColor = color ?? AppColorUtils.featureColor(title, scheme);
@@ -1404,20 +1482,10 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           isVerticalLayout: isVerticalLayout,
         );
 
-        final titleStyle = KubusTextStyles.compactBadge.copyWith(
-          fontSize: isSmallScreen
-              ? KubusChromeMetrics.navBadgeLabel - 1
-              : KubusChromeMetrics.navBadgeLabel,
+        final titleStyle = KubusTextStyles.statLabel.copyWith(
           color: scheme.onSurface.withValues(alpha: 0.68),
         );
-        final valueStyle = KubusTextStyles.badgeCount.copyWith(
-          fontSize: isVerticalLayout
-              ? (isSmallScreen
-                  ? KubusChromeMetrics.navBadgeLabel
-                  : KubusChromeMetrics.navMetaLabel)
-              : (isSmallScreen
-                  ? KubusChromeMetrics.navMetaLabel
-                  : KubusChromeMetrics.navLabel),
+        final valueStyle = KubusTextStyles.statValue.copyWith(
           color: scheme.onSurface,
         );
         final padding = EdgeInsets.all(isSmallScreen ? 10 : 12);
@@ -1475,9 +1543,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         Navigator.of(context).push(
           MaterialPageRoute(
             builder: (_) => Scaffold(
-              appBar: AppBar(
-                title: Text(l10n.homeStatProgramViews),
-              ),
+              appBar: AppBar(title: Text(l10n.homeStatProgramViews)),
               body: const InstitutionAnalytics(),
             ),
           ),
@@ -1528,14 +1594,17 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                           color: roles.lockedFeature.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(KubusRadius.sm),
                           border: Border.all(
-                              color:
-                                  roles.lockedFeature.withValues(alpha: 0.3)),
+                            color: roles.lockedFeature.withValues(alpha: 0.3),
+                          ),
                         ),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Icon(Icons.lock,
-                                size: 12, color: roles.lockedFeature),
+                            Icon(
+                              Icons.lock,
+                              size: 12,
+                              color: roles.lockedFeature,
+                            ),
                             Text(
                               l10n.homeAccountRequiredLabel,
                               style: KubusTextStyles.badgeCount.copyWith(
@@ -1559,27 +1628,19 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   profileProvider.currentUser?.isInstitution ?? false,
               onOpenDao: () => Navigator.push(
                 context,
-                MaterialPageRoute(
-                  builder: (context) => const GovernanceHub(),
-                ),
+                MaterialPageRoute(builder: (context) => const GovernanceHub()),
               ),
               onOpenArtistStudio: () => Navigator.push(
                 context,
-                MaterialPageRoute(
-                  builder: (context) => const ArtistStudio(),
-                ),
+                MaterialPageRoute(builder: (context) => const ArtistStudio()),
               ),
               onOpenInstitutionHub: () => Navigator.push(
                 context,
-                MaterialPageRoute(
-                  builder: (context) => const InstitutionHub(),
-                ),
+                MaterialPageRoute(builder: (context) => const InstitutionHub()),
               ),
               onOpenMarketplace: () => Navigator.push(
                 context,
-                MaterialPageRoute(
-                  builder: (context) => const Marketplace(),
-                ),
+                MaterialPageRoute(builder: (context) => const Marketplace()),
               ),
               onOpenNode: () => Navigator.push(
                 context,
@@ -1609,7 +1670,9 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           content = _buildActivityLoadingState();
         } else if (error != null && activities.isEmpty) {
           content = _buildActivityErrorState(
-              error, () => activityProvider.refresh(force: true));
+            error,
+            () => activityProvider.refresh(force: true),
+          );
         } else if (activities.isEmpty) {
           content = _buildActivityEmptyState();
         } else {
@@ -1624,29 +1687,35 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           );
         }
 
+        final title = Text(
+          l10n.homeRecentActivityTitle,
+          style: KubusTextStyles.screenTitle.copyWith(
+            color: Theme.of(context).colorScheme.onSurface,
+          ),
+        );
+        final viewAll = TextButton(
+          onPressed: _showFullActivity,
+          child: Text(
+            l10n.commonViewAll,
+            style: KubusTextStyles.navLabel.copyWith(
+              color: Theme.of(context).colorScheme.tertiary,
+            ),
+          ),
+        );
+        final compactHeader = MediaQuery.sizeOf(context).width < 450 ||
+            MediaQuery.textScalerOf(context).scale(1) >= 1.5;
+
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  l10n.homeRecentActivityTitle,
-                  style: KubusTextStyles.screenTitle.copyWith(
-                    color: Theme.of(context).colorScheme.onSurface,
-                  ),
-                ),
-                TextButton(
-                  onPressed: _showFullActivity,
-                  child: Text(
-                    l10n.commonViewAll,
-                    style: KubusTextStyles.navLabel.copyWith(
-                      color: Theme.of(context).colorScheme.tertiary,
-                    ),
-                  ),
-                ),
-              ],
-            ),
+            if (compactHeader) ...[
+              title,
+              Align(alignment: Alignment.centerRight, child: viewAll),
+            ] else
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [title, viewAll],
+              ),
             const SizedBox(height: 16),
             content,
           ],
@@ -1690,10 +1759,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           description: l10n.commonSomethingWentWrong,
         ),
         const SizedBox(height: 12),
-        OutlinedButton(
-          onPressed: onRetry,
-          child: Text(l10n.commonRetry),
-        ),
+        OutlinedButton(onPressed: onRetry, child: Text(l10n.commonRetry)),
       ],
     );
   }
@@ -1709,9 +1775,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             promotionProvider.homeRails.isEmpty) {
           return const SizedBox(
             height: 176,
-            child: Center(
-              child: InlineLoading(expand: false),
-            ),
+            child: Center(child: InlineLoading(expand: false)),
           );
         }
         if (rails.isEmpty) {
@@ -1743,25 +1807,21 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: rails
-              .map((entry) => Padding(
-                    padding: EdgeInsets.only(
-                      bottom: entry == rails.last ? 0 : KubusSpacing.xl,
-                    ),
-                    child: _buildHomeRailSection(
-                      entry.key,
-                      entry.value,
-                    ),
-                  ))
+              .map(
+                (entry) => Padding(
+                  padding: EdgeInsets.only(
+                    bottom: entry == rails.last ? 0 : KubusSpacing.xl,
+                  ),
+                  child: _buildHomeRailSection(entry.key, entry.value),
+                ),
+              )
               .toList(growable: false),
         );
       },
     );
   }
 
-  Widget _buildHomeRailSection(
-    HomeRail rail,
-    List<HomeRailItem> items,
-  ) {
+  Widget _buildHomeRailSection(HomeRail rail, List<HomeRailItem> items) {
     final l10n = AppLocalizations.of(context)!;
     final title = switch (rail.entityType) {
       PromotionEntityType.artwork => l10n.homeRailArtworksTitle,
@@ -1773,10 +1833,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        SharedSectionHeader(
-          title: title,
-          padding: EdgeInsets.zero,
-        ),
+        SharedSectionHeader(title: title, padding: EdgeInsets.zero),
         const SizedBox(height: 16),
         LayoutBuilder(
           builder: (context, constraints) {
@@ -1809,40 +1866,20 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     // The rail card's context line reads off the media plate, so it takes the
     // card's own on-media register rather than a surface foreground colour.
     final baseStyle = KubusEntityCard.onMediaSubtitleStyle();
-    const linkColor = Colors.white;
     if (item.entityType == PromotionEntityType.artwork) {
       final creatorIdentity = resolveArtworkHomeRailCreator(
         item,
-        fallbackLabel:
-            AppLocalizations.of(context)!.desktopHomeCreatorFallbackName,
+        fallbackLabel: AppLocalizations.of(context)?.commonUnknownArtist ??
+            'Unknown artist',
       );
       if (creatorIdentity == null) return null;
 
-      final creatorText = Text(
+      // Authorship is a recorded name, not an account: plain text, no link.
+      return Text(
         creatorIdentity.label,
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
-        style: creatorIdentity.canOpenProfile
-            ? baseStyle.copyWith(
-                color: linkColor,
-                decoration: TextDecoration.underline,
-                decorationColor: linkColor.withValues(alpha: 0.7),
-              )
-            : baseStyle,
-      );
-      if (!creatorIdentity.canOpenProfile) {
-        return creatorText;
-      }
-      return GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTap: () => unawaited(
-          UserProfileNavigation.open(
-            context,
-            userId: creatorIdentity.userId!,
-            username: creatorIdentity.username,
-          ),
-        ),
-        child: creatorText,
+        style: baseStyle,
       );
     }
 
@@ -1906,7 +1943,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       case PromotionEntityType.event:
         await Navigator.of(context).push(
           MaterialPageRoute(
-              builder: (_) => EventDetailScreen(eventId: item.id)),
+            builder: (_) => EventDetailScreen(eventId: item.id),
+          ),
         );
         return;
       case PromotionEntityType.exhibition:
@@ -1978,8 +2016,10 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   }
 
   void _showFullActivity() {
-    final activityProvider =
-        Provider.of<RecentActivityProvider>(context, listen: false);
+    final activityProvider = Provider.of<RecentActivityProvider>(
+      context,
+      listen: false,
+    );
     if (!activityProvider.initialized) {
       activityProvider.initialize(force: true);
     } else {
@@ -1987,9 +2027,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     }
     Navigator.push(
       context,
-      MaterialPageRoute(
-        builder: (context) => const ActivityScreen(),
-      ),
+      MaterialPageRoute(builder: (context) => const ActivityScreen()),
     );
   }
 
@@ -2006,10 +2044,12 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           backgroundColor: Theme.of(dialogContext).colorScheme.surface,
           title: Row(
             children: [
-              Icon(icon,
-                  color: Provider.of<ThemeProvider>(dialogContext).accentColor),
+              Icon(
+                icon,
+                color: Provider.of<ThemeProvider>(dialogContext).accentColor,
+              ),
               const SizedBox(width: 12),
-              Text(l10n.homeStatsDialogTitle(displayTitle)),
+              Expanded(child: Text(l10n.homeStatsDialogTitle(displayTitle))),
             ],
           ),
           content: SizedBox(
@@ -2020,8 +2060,9 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                 children: [
                   Consumer<StatsProvider>(
                     builder: (context, statsProvider, _) {
-                      final accent =
-                          Provider.of<ThemeProvider>(dialogContext).accentColor;
+                      final accent = Provider.of<ThemeProvider>(
+                        dialogContext,
+                      ).accentColor;
 
                       if (wallet.isEmpty) {
                         return EmptyStateCard(
@@ -2048,25 +2089,26 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                               l10n.commonNotAvailable,
                               style: KubusTextStyles.navLabel.copyWith(
                                 fontWeight: FontWeight.w600,
-                                color: Theme.of(dialogContext)
-                                    .colorScheme
-                                    .onSurface
-                                    .withValues(alpha: 0.8),
+                                color: Theme.of(
+                                  dialogContext,
+                                ).colorScheme.onSurface.withValues(alpha: 0.8),
                               ),
                             ),
                           ),
                         );
                       }
 
-                      final metric =
-                          StatsApiService.metricFromUiStatType(statType);
+                      final metric = StatsApiService.metricFromUiStatType(
+                        statType,
+                      );
                       const bucket = 'day';
                       const timeframe = '7d';
                       final now = DateTime.now().toUtc();
                       final today = DateTime.utc(now.year, now.month, now.day);
                       final currentTo = today.add(const Duration(days: 1));
-                      final currentFrom =
-                          currentTo.subtract(const Duration(days: 7));
+                      final currentFrom = currentTo.subtract(
+                        const Duration(days: 7),
+                      );
 
                       statsProvider.ensureSeries(
                         entityType: 'user',
@@ -2116,18 +2158,14 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                           height: 200,
                           padding: const EdgeInsets.all(KubusSpacing.md),
                           decoration: BoxDecoration(
-                            color: Theme.of(dialogContext)
-                                .colorScheme
-                                .onSurface
-                                .withValues(alpha: 0.05),
+                            color: Theme.of(
+                              dialogContext,
+                            ).colorScheme.onSurface.withValues(alpha: 0.05),
                             borderRadius: BorderRadius.circular(KubusRadius.md),
                           ),
                           child: Center(
                             child: isLoading
-                                ? InlineLoading(
-                                    tileSize: 8.0,
-                                    color: accent,
-                                  )
+                                ? InlineLoading(tileSize: 8.0, color: accent)
                                 : Text(
                                     l10n.commonNotAvailable,
                                     style: KubusTextStyles.navLabel.copyWith(
@@ -2214,6 +2252,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   MaterialPageRoute(
                     builder: (context) =>
                         AdvancedAnalyticsScreen(statType: statType),
+                    settings: const RouteSettings(name: ShellRoutes.analytics),
                   ),
                 );
               },
@@ -2229,43 +2268,45 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     final milestones = _getStatsMilestones(statType);
     final l10n = AppLocalizations.of(context)!;
     final scheme = Theme.of(context).colorScheme;
-    final accent =
-        Provider.of<ThemeProvider>(context, listen: false).accentColor;
+    final accent = Provider.of<ThemeProvider>(
+      context,
+      listen: false,
+    ).accentColor;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           l10n.homeRecentMilestonesTitle,
-          style: KubusTextStyles.sectionTitle.copyWith(
-            color: scheme.onSurface,
-          ),
+          style: KubusTextStyles.sectionTitle.copyWith(color: scheme.onSurface),
         ),
         const SizedBox(height: 12),
-        ...milestones.map((milestone) => Padding(
-              padding: const EdgeInsets.only(bottom: 8),
-              child: Row(
-                children: [
-                  Container(
-                    width: 8,
-                    height: 8,
-                    decoration: BoxDecoration(
-                      color: accent,
-                      shape: BoxShape.circle,
+        ...milestones.map(
+          (milestone) => Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: Row(
+              children: [
+                Container(
+                  width: 8,
+                  height: 8,
+                  decoration: BoxDecoration(
+                    color: accent,
+                    shape: BoxShape.circle,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    milestone,
+                    style: KubusTextStyles.navMetaLabel.copyWith(
+                      color: scheme.onSurface.withValues(alpha: 0.8),
                     ),
                   ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      milestone,
-                      style: KubusTextStyles.navMetaLabel.copyWith(
-                        color: scheme.onSurface.withValues(alpha: 0.8),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            )),
+                ),
+              ],
+            ),
+          ),
+        ),
       ],
     );
   }
@@ -2301,10 +2342,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 class ActivityScreen extends StatefulWidget {
   final bool embedded;
 
-  const ActivityScreen({
-    super.key,
-    this.embedded = false,
-  });
+  const ActivityScreen({super.key, this.embedded = false});
 
   @override
   State<ActivityScreen> createState() => _ActivityScreenState();
@@ -2335,8 +2373,10 @@ class _ActivityScreenState extends State<ActivityScreen> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final provider =
-          Provider.of<RecentActivityProvider>(context, listen: false);
+      final provider = Provider.of<RecentActivityProvider>(
+        context,
+        listen: false,
+      );
       if (!provider.initialized) {
         provider.initialize(force: true);
       } else {
@@ -2375,7 +2415,8 @@ class _ActivityScreenState extends State<ActivityScreen> {
           if (activityProvider.error != null && activities.isEmpty) {
             if (kDebugMode) {
               debugPrint(
-                  'HomeScreen: activity screen load failed: ${activityProvider.error}');
+                'HomeScreen: activity screen load failed: ${activityProvider.error}',
+              );
             }
             return RefreshIndicator(
               onRefresh: () => activityProvider.refresh(force: true),
@@ -2424,7 +2465,8 @@ class _ActivityScreenState extends State<ActivityScreen> {
               itemBuilder: (context, index) => RecentActivityTile(
                 activity: activities[index],
                 margin: EdgeInsets.only(
-                    bottom: index == activities.length - 1 ? 0 : 16),
+                  bottom: index == activities.length - 1 ? 0 : 16,
+                ),
                 onTap: () =>
                     ActivityNavigation.open(context, activities[index]),
               ),

@@ -1,13 +1,12 @@
+import 'package:art_kubus/widgets/community/community_post_media_carousel.dart';
+import 'package:art_kubus/widgets/kubus_button.dart';
 import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import '../../../widgets/inline_loading.dart';
-import 'package:flutter/services.dart';
-import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
-import '../../../config/config.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../providers/themeprovider.dart';
 import '../../../providers/profile_provider.dart';
@@ -36,6 +35,8 @@ import '../../../widgets/avatar_widget.dart';
 import '../../../widgets/empty_state_card.dart';
 import '../../../widgets/user_activity_status_line.dart';
 import '../../../widgets/community/community_compose_intent_resumer.dart';
+import '../../../widgets/community/post_like_settlement.dart';
+import '../../../services/pending_action_executor.dart';
 import '../../../widgets/community/community_post_card.dart';
 import '../../../widgets/community/community_author_role_badges.dart';
 import '../../../widgets/community/community_post_options_sheet.dart';
@@ -43,6 +44,7 @@ import '../../../widgets/community/community_subject_picker.dart';
 import '../../../utils/app_animations.dart';
 import '../../../utils/app_color_utils.dart';
 import '../../../utils/artwork_navigation.dart';
+import '../../../utils/creator_shell_navigation.dart';
 import '../../../utils/community_screen_utils.dart';
 import '../../../utils/design_tokens.dart';
 import '../../../utils/home/home_quick_action_executor.dart';
@@ -58,6 +60,10 @@ import '../../../utils/wallet_utils.dart';
 import '../../../utils/community_subject_navigation.dart';
 import '../../../widgets/glass_components.dart';
 import '../../../widgets/community/community_composer_controls.dart';
+import '../../../widgets/community/community_composer_media_tray.dart';
+import '../../../community/community_composer_media.dart';
+import '../../../community/community_post_text_limits.dart';
+import '../../../community/community_upload_feedback.dart';
 import '../../../widgets/community/community_composer_layout.dart';
 import '../../../widgets/search/kubus_general_search.dart' as kubus_search;
 import '../../../widgets/search/kubus_search_config.dart';
@@ -77,11 +83,15 @@ import '../../community/conversation_screen.dart';
 import '../../community/post_detail_screen.dart';
 import '../../download_app_screen.dart';
 import '../../map_screen.dart';
-import '../../season0/season0_screen.dart';
 import '../../web3/achievements/achievements_page.dart';
-import '../../../widgets/community/community_season0_banner.dart';
+import '../../../widgets/community/contextual_contribution_card.dart';
 import '../../../widgets/common/kubus_screen_header.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
+import 'package:art_kubus/widgets/community/community_post_delete.dart';
+import 'package:art_kubus/widgets/community/community_art_discovery_feed.dart';
+import 'package:art_kubus/community/art_discovery.dart';
+import 'package:art_kubus/community/art_discovery_sources.dart';
+import 'package:art_kubus/providers/community_art_discovery_provider.dart';
 
 part 'desktop_community_screen_parts/desktop_community_screen_p1.dart';
 part 'desktop_community_screen_parts/desktop_community_screen_p2.dart';
@@ -89,16 +99,6 @@ part 'desktop_community_screen_parts/desktop_community_screen_p3.dart';
 part 'desktop_community_screen_parts/desktop_community_screen_p4.dart';
 part 'desktop_community_screen_parts/desktop_community_screen_p5.dart';
 part 'desktop_community_screen_parts/desktop_community_screen_p6.dart';
-
-class _ComposerImagePayload {
-  final Uint8List bytes;
-  final String fileName;
-
-  const _ComposerImagePayload({
-    required this.bytes,
-    required this.fileName,
-  });
-}
 
 /// Desktop community screen with Twitter/Instagram-style feed
 /// Features multi-column layout with trending and suggestions
@@ -130,7 +130,11 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
   bool _isPosting = false;
   int _lastHandledComposerOpenNonce = 0;
   final TextEditingController _composeController = TextEditingController();
-  final List<_ComposerImagePayload> _selectedImages = [];
+  final CommunityComposerMediaController _composerMedia =
+      CommunityComposerMediaController(
+    maxItems: communityComposerMaxMediaItems(),
+  );
+  bool _composerSubmitInFlight = false;
   String? _selectedLocation;
   String _selectedCategory = 'post';
   final TextEditingController _tagController = TextEditingController();
@@ -162,6 +166,14 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
   // Feed state for different tabs
   List<CommunityPost> _discoverPosts = [];
   List<CommunityPost> _followingPosts = [];
+  // A like the continuation confirms for a post in this feed is shown on its
+  // card at once, without reloading the list or moving the scroll position.
+  late final PostLikeSettlementWatcher _likeSettlements =
+      PostLikeSettlementWatcher(
+    _applySettledPostLike,
+    onLikeStarted: _applyStartedPostLike,
+    onLikeAttemptEnded: _applyEndedPostLike,
+  );
   bool _isLoadingDiscover = false;
   bool _isLoadingFollowing = false;
   bool _discoverFeedLoaded = false;
@@ -174,6 +186,12 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
   final Map<String, TextEditingController> _inlineCommentControllers =
       <String, TextEditingController>{};
   final Map<String, String?> _inlineReplyToCommentIds = <String, String?>{};
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _likeSettlements.attach(readPendingActionsOrNull(context));
+  }
 
   @override
   void initState() {
@@ -220,6 +238,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
 
   @override
   void dispose() {
+    _likeSettlements.detach();
     _appRefreshProvider?.removeListener(_onAppRefreshTriggered);
     _animationController.dispose();
     _tabController.dispose();
@@ -233,6 +252,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
     _tagController.dispose();
     _mentionController.dispose();
     _composeController.dispose();
+    _composerMedia.dispose();
     super.dispose();
   }
 
@@ -258,7 +278,8 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
         },
         child: Scaffold(
           backgroundColor: Colors.transparent,
-          body: Stack(
+          body: CommunityMediaViewport(
+              child: Stack(
             children: [
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -305,7 +326,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
               // Compose dialog
               if (_showComposeDialog) _buildComposeDialog(themeProvider),
             ],
-          ),
+          )),
         ),
       ),
     );

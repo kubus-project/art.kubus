@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 
 import '../../utils/design_tokens.dart';
 import '../glass_components.dart';
+import '../map/kubus_map_chrome.dart';
 import '../map/kubus_map_glass_surface.dart';
-import 'kubus_glass_icon_button.dart';
 
 /// Shared glass shell for map filter/sort content.
 class KubusFilterPanel extends StatelessWidget {
@@ -121,10 +121,10 @@ class KubusFilterPanel extends StatelessWidget {
                 ),
               ),
               if (onClose != null)
-                KubusGlassIconButton(
+                KubusMapChromeIconButton(
                   icon: Icons.close,
                   tooltip: closeTooltip,
-                  borderRadius: 10,
+                  borderRadius: KubusRadius.surface,
                   onPressed: onClose,
                 ),
             ],
@@ -143,21 +143,11 @@ class KubusFilterPanel extends StatelessWidget {
 
     Widget panel;
     if (useMapGlassSurface) {
-      panel = buildKubusMapGlassSurface(
+      // Map chrome: one flat surface and hairline, no blur-over-map stacking.
+      panel = buildKubusMapChromeSurface(
         context: context,
-        kind: KubusMapGlassSurfaceKind.panel,
         margin: margin,
-        padding: EdgeInsets.zero,
         borderRadius: BorderRadius.circular(borderRadius),
-        tintBase: scheme.surface,
-        blurPolicy: mapBlurPolicy,
-        overlayName: 'filter-panel',
-        overMapPlatformView: overMapPlatformView,
-        backdropRegionId: backdropRegionId,
-        enablePlatformBackdropRegion: enablePlatformBackdropRegion,
-        isWebOverride: isWebOverride,
-        platformBackdropHostAvailableOverride:
-            platformBackdropHostAvailableOverride,
         child: panelBody,
       );
     } else if (useGlassSurface) {

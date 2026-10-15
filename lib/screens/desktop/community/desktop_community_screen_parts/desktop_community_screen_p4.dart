@@ -493,7 +493,21 @@ extension _DesktopCommunityScreenStatePart4 on _DesktopCommunityScreenState {
     return '${wallet.substring(0, 4)}...${wallet.substring(wallet.length - 4)}';
   }
 
-  void _startNewConversation() {
+  Future<void> _startNewConversation() async {
+    // Starting a conversation is an account action on every entry point; the
+    // gate runs before the dialog so a guest never fills one in.
+    // A guest who starts a chat signs in and comes back to Messages, through the
+    // same compose-access mechanism as New post; it is the participant scope the
+    // profile message button uses.
+    final allowed = await ensureCommunityComposeAccess(
+      context,
+      intent: CommunityComposeIntent.startChat,
+      actionLabel: AppLocalizations.of(context)!
+          .messagesEmptyStartChatAction
+          .toLowerCase(),
+      sourceScreen: 'desktop_community_screen',
+    );
+    if (!allowed || !mounted) return;
     // Show dialog to start new conversation
     showKubusDialog(
       context: context,
@@ -547,6 +561,31 @@ extension _DesktopCommunityScreenStatePart4 on _DesktopCommunityScreenState {
     });
   }
 
+  /// Collapsing the quick composer never needs an account; opening it does.
+  Future<void> _toggleComposerExpansion() async {
+    if (_isComposerExpanded) {
+      _applyState(() => _isComposerExpanded = false);
+      return;
+    }
+    await _requestComposerExpansion();
+  }
+
+  /// Opens the inline composer once the visitor may compose. [beforeOpen] runs
+  /// in the same state update, for a caller that also sets the draft category.
+  Future<void> _requestComposerExpansion({VoidCallback? beforeOpen}) async {
+    final allowed = await ensureCommunityComposeAccess(
+      context,
+      intent: CommunityComposeIntent.post,
+      actionLabel: AppLocalizations.of(context)!.communityComposeAuthAction,
+      sourceScreen: 'desktop_community_screen',
+    );
+    if (!allowed || !mounted) return;
+    _applyState(() {
+      beforeOpen?.call();
+      _isComposerExpanded = true;
+    });
+  }
+
   Widget _buildCreatePostPrompt(ThemeProvider themeProvider) {
     final profileProvider = Provider.of<ProfileProvider>(context);
     final user = profileProvider.currentUser;
@@ -590,8 +629,7 @@ extension _DesktopCommunityScreenStatePart4 on _DesktopCommunityScreenState {
           Material(
             color: Colors.transparent,
             child: InkWell(
-              onTap: () =>
-                  _applyState(() => _isComposerExpanded = !_isComposerExpanded),
+              onTap: () => unawaited(_toggleComposerExpansion()),
               borderRadius: BorderRadius.circular(_isComposerExpanded ? 0 : 16),
               child: Padding(
                 padding: const EdgeInsets.all(14),
@@ -694,7 +732,8 @@ extension _DesktopCommunityScreenStatePart4 on _DesktopCommunityScreenState {
     dynamic user,
     CommunityHubProvider hub,
   ) {
-    final remainingChars = 280 - _composeController.text.length;
+    final remainingChars = kCommunityPostMaxCharacters -
+        communityPostCharacterCount(_composeController.text);
     final onPrimary = Theme.of(context).colorScheme.onPrimary;
 
     return Column(
@@ -768,106 +807,40 @@ extension _DesktopCommunityScreenStatePart4 on _DesktopCommunityScreenState {
             ),
           ),
 
-        // Selected images preview
-        if (_selectedImages.isNotEmpty)
+        // Selected media tray
+        if (_composerMedia.isNotEmpty || _composerMedia.publishError != null)
           Padding(
             padding: const EdgeInsets.fromLTRB(14, 10, 14, 0),
-            child: SizedBox(
-              height: 60,
-              child: ListView.builder(
-                scrollDirection: Axis.horizontal,
-                itemCount: _selectedImages.length,
-                itemBuilder: (context, index) {
-                  return Stack(
-                    children: [
-                      Container(
-                        width: 60,
-                        height: 60,
-                        margin: const EdgeInsets.only(right: 8),
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(KubusRadius.sm),
-                          image: DecorationImage(
-                            image: MemoryImage(_selectedImages[index].bytes),
-                            fit: BoxFit.cover,
-                          ),
-                        ),
-                      ),
-                      Positioned(
-                        top: 2,
-                        right: 10,
-                        child: GestureDetector(
-                          onTap: () => _applyState(
-                              () => _selectedImages.removeAt(index)),
-                          child: Container(
-                            padding: const EdgeInsets.all(2),
-                            decoration: BoxDecoration(
-                              color: Colors.black.withValues(alpha: 0.6),
-                              shape: BoxShape.circle,
-                            ),
-                            child: Icon(
-                              Icons.close,
-                              size: 12,
-                              color: Theme.of(context)
-                                  .colorScheme
-                                  .onInverseSurface,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  );
-                },
-              ),
-            ),
-          ),
-
-        // Location indicator
-        if (_selectedLocation != null)
-          Padding(
-            padding: const EdgeInsets.fromLTRB(14, 10, 14, 0),
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-              decoration: BoxDecoration(
-                color: themeProvider.accentColor.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(KubusRadius.md),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(Icons.location_on,
-                      size: 14, color: themeProvider.accentColor),
-                  const SizedBox(width: 4),
-                  Flexible(
-                    child: Text(
-                      _selectedLocation!,
-                      style: KubusTextStyles.navMetaLabel.copyWith(
-                        color: themeProvider.accentColor,
-                      ),
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                  const SizedBox(width: 6),
-                  GestureDetector(
-                    onTap: () => _applyState(() => _selectedLocation = null),
-                    child: Icon(Icons.close,
-                        size: 12, color: themeProvider.accentColor),
-                  ),
-                ],
-              ),
+            child: CommunityComposerMediaTray(
+              controller: _composerMedia,
+              onAddPhotos: _pickPhotos,
+              onAddVideo: _pickVideo,
+              showAddActions: false,
+              thumbnailSize: 72,
             ),
           ),
 
         // Action bar
         Padding(
           padding: const EdgeInsets.all(KubusSpacing.sm + KubusSpacing.xs),
-          child: Row(
+          child: Wrap(
+            alignment: WrapAlignment.end,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            spacing: KubusSpacing.xs,
+            runSpacing: KubusSpacing.xs,
             children: [
               _buildCompactActionButton(
                 Icons.image_outlined,
                 AppLocalizations.of(context)!
                     .desktopCommunityComposerPhotoLabel,
                 themeProvider,
-                onTap: _pickImage,
+                onTap: _pickPhotos,
+              ),
+              _buildCompactActionButton(
+                Icons.videocam_outlined,
+                AppLocalizations.of(context)!.communityComposerMediaAddVideo,
+                themeProvider,
+                onTap: _pickVideo,
               ),
               _buildCompactActionButton(
                 Icons.location_on_outlined,
@@ -889,7 +862,6 @@ extension _DesktopCommunityScreenStatePart4 on _DesktopCommunityScreenState {
                 themeProvider,
                 onTap: () => _showMentionPicker(hub),
               ),
-              const Spacer(),
               // Character count
               Text(
                 '$remainingChars',
@@ -908,7 +880,7 @@ extension _DesktopCommunityScreenStatePart4 on _DesktopCommunityScreenState {
               const SizedBox(width: 12),
               // Post button
               ElevatedButton(
-                onPressed: _composeController.text.trim().isEmpty || _isPosting
+                onPressed: !_canSubmitComposer || _isPosting
                     ? null
                     : _submitInlinePost,
                 style: ElevatedButton.styleFrom(
@@ -1148,8 +1120,10 @@ extension _DesktopCommunityScreenStatePart4 on _DesktopCommunityScreenState {
   }
 
   void _removePostFromLocalFeeds(String postId) {
-    _discoverPosts.removeWhere((post) => post.id == postId);
-    _followingPosts.removeWhere((post) => post.id == postId);
+    // Fetched lists can be fixed-length; replace them rather than mutate.
+    _discoverPosts = _discoverPosts.where((post) => post.id != postId).toList();
+    _followingPosts =
+        _followingPosts.where((post) => post.id != postId).toList();
     _paneStack.removeWhere(
       (route) =>
           route.type == _PaneViewType.postDetail && route.post?.id == postId,
@@ -1168,95 +1142,27 @@ extension _DesktopCommunityScreenStatePart4 on _DesktopCommunityScreenState {
 
   Future<void> _confirmDeleteFeedPost(CommunityPost post) async {
     if (!mounted) return;
-    if (_deleteDialogOpenPostIds.contains(post.id) ||
-        _deleteInFlightPostIds.contains(post.id)) {
-      return;
-    }
-
-    final l10n = AppLocalizations.of(context)!;
+    if (_deleteDialogOpenPostIds.contains(post.id)) return;
     _deleteDialogOpenPostIds.add(post.id);
-    bool deleting = false;
-
     try {
-      await showKubusDialog<void>(
+      await confirmAndDeleteCommunityPost(
         context: context,
-        builder: (dialogContext) => StatefulBuilder(
-          builder: (context, setDialogState) => KubusAlertDialog(
-            title: Text(
-              l10n.postDetailDeletePostTitle,
-              style: KubusTypography.inter(fontWeight: FontWeight.bold),
-            ),
-            content: Text(
-              l10n.postDetailDeletePostBody,
-              style: KubusTypography.inter(),
-            ),
-            actions: [
-              TextButton(
-                onPressed: deleting
-                    ? null
-                    : () => Navigator.of(dialogContext).maybePop(),
-                child: Text(l10n.commonCancel),
-              ),
-              TextButton(
-                onPressed: deleting
-                    ? null
-                    : () async {
-                        if (_deleteInFlightPostIds.contains(post.id)) return;
-                        setDialogState(() => deleting = true);
-                        _deleteInFlightPostIds.add(post.id);
-                        final messenger = ScaffoldMessenger.of(context);
-                        final appRefresh = _appRefreshProvider;
-
-                        try {
-                          await context
-                              .read<CommunityInteractionsProvider>()
-                              .deleteCommunityPost(post);
-                          if (!mounted || !dialogContext.mounted) return;
-                          _applyState(() => _removePostFromLocalFeeds(post.id));
-                          try {
-                            final hub = Provider.of<CommunityHubProvider>(
-                              context,
-                              listen: false,
-                            );
-                            if (post.groupId != null) {
-                              hub.removeGroupPost(post.groupId!, post.id);
-                            }
-                            hub.removeArtFeedPost(post.id);
-                          } catch (_) {}
-                          appRefresh?.triggerCommunity();
-                          Navigator.of(dialogContext).pop();
-                          messenger.showKubusSnackBar(
-                            SnackBar(
-                                content: Text(l10n.postDetailPostDeletedToast)),
-                          );
-                        } catch (e) {
-                          if (kDebugMode) {
-                            debugPrint(
-                                'DesktopCommunityScreen: delete post failed: $e');
-                          }
-                          if (!mounted || !dialogContext.mounted) return;
-                          setDialogState(() => deleting = false);
-                          messenger.showKubusSnackBar(
-                            SnackBar(
-                              content:
-                                  Text(l10n.postDetailDeletePostFailedToast),
-                            ),
-                          );
-                        } finally {
-                          _deleteInFlightPostIds.remove(post.id);
-                        }
-                      },
-                child: deleting
-                    ? const SizedBox(
-                        width: 18,
-                        height: 18,
-                        child: InlineLoading(tileSize: 4),
-                      )
-                    : Text(l10n.commonDelete),
-              ),
-            ],
-          ),
-        ),
+        post: post,
+        onDeleted: () {
+          if (!mounted) return;
+          _applyState(() => _removePostFromLocalFeeds(post.id));
+          try {
+            final hub = Provider.of<CommunityHubProvider>(
+              context,
+              listen: false,
+            );
+            if (post.groupId != null) {
+              hub.removeGroupPost(post.groupId!, post.id);
+            }
+            hub.removeArtFeedPost(post.id);
+          } catch (_) {}
+          _appRefreshProvider?.triggerCommunity();
+        },
       );
     } finally {
       _deleteDialogOpenPostIds.remove(post.id);

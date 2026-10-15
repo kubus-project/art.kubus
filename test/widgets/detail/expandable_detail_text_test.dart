@@ -5,8 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 final String _longText = List.generate(
   40,
-  (i) =>
-      'Paragraph $i of a long curatorial essay describing the exhibition '
+  (i) => 'Paragraph $i of a long curatorial essay describing the exhibition '
       'concept, the participating artists, and the historical context.',
 ).join('\n');
 

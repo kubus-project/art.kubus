@@ -17,6 +17,33 @@ if (!['true', 'false'].includes(analyticsBuildEnabled)) {
   console.error('KUBUS_ANALYTICS_APP_ENABLED must be true or false when set.');
   process.exit(1);
 }
+const communityMultiMediaEnabled = (process.env.KUBUS_COMMUNITY_MULTI_MEDIA_ENABLED || 'true')
+  .trim().toLowerCase();
+if (!['true', 'false'].includes(communityMultiMediaEnabled)) {
+  console.error('KUBUS_COMMUNITY_MULTI_MEDIA_ENABLED must be true or false when set.');
+  process.exit(1);
+}
+const communityVideoAutoplayEnabled = (process.env.KUBUS_COMMUNITY_VIDEO_AUTOPLAY_ENABLED || 'true')
+  .trim().toLowerCase();
+if (!['true', 'false'].includes(communityVideoAutoplayEnabled)) {
+  console.error('KUBUS_COMMUNITY_VIDEO_AUTOPLAY_ENABLED must be true or false when set.');
+  process.exit(1);
+}
+const communityVideoPostersEnabled = (process.env.KUBUS_COMMUNITY_VIDEO_POSTERS_ENABLED || 'true')
+  .trim().toLowerCase();
+if (!['true', 'false'].includes(communityVideoPostersEnabled)) {
+  console.error('KUBUS_COMMUNITY_VIDEO_POSTERS_ENABLED must be true or false when set.');
+  process.exit(1);
+}
+// Support Center ticket features need backend 0.8.2 (migration 105). CI builds
+// fail closed: they stay off until the repository variable
+// KUBUS_SUPPORT_TICKETS_ENABLED is set to true after that backend is deployed.
+const supportTicketsEnabled = (process.env.KUBUS_SUPPORT_TICKETS_ENABLED || 'false')
+  .trim().toLowerCase();
+if (!['true', 'false'].includes(supportTicketsEnabled)) {
+  console.error('KUBUS_SUPPORT_TICKETS_ENABLED must be true or false when set.');
+  process.exit(1);
+}
 const buildMetadata = [
   'KUBUS_APP_VERSION',
   'KUBUS_BUILD_NUMBER',
@@ -39,6 +66,51 @@ try {
 if (!['https:', 'http:'].includes(backendUrl.protocol)) {
   console.error('KUBUS_BACKEND_URL must use HTTP or HTTPS.');
   process.exit(1);
+}
+
+// The client reads its API origin from BACKEND_BASE_URL (and fails over to
+// BACKEND_STANDBY_BASE_URL), not from KUBUS_BACKEND_URL, and both default to
+// production. A build that will be deployed to development therefore must name
+// its own backend, and must not fail over to production: it never falls back
+// silently. Validation builds (not deployed) do not set the switch.
+let developmentBackend = null;
+if ((process.env.KUBUS_REQUIRE_STAGING_BACKEND || '').trim() === 'true') {
+  const raw = (process.env.KUBUS_DEVELOPMENT_BACKEND_URL || '').trim();
+  if (!raw) {
+    console.error(
+      'A development build needs KUBUS_DEVELOPMENT_BACKEND_URL (the public HTTPS origin of the staging backend); ' +
+        'it refuses to build against the production API.',
+    );
+    process.exit(1);
+  }
+  let origin;
+  try {
+    origin = new URL(raw);
+  } catch {
+    console.error('KUBUS_DEVELOPMENT_BACKEND_URL must be an absolute URL.');
+    process.exit(1);
+  }
+  const host = origin.hostname.toLowerCase();
+  const isPrivateHost =
+    host === 'localhost' || host.endsWith('.localhost') || host.endsWith('.local') ||
+    host.endsWith('.internal') || !host.includes('.') || host.includes(':') ||
+    /^\d+(\.\d+){3}$/.test(host);
+  if (origin.protocol !== 'https:' || isPrivateHost) {
+    console.error('KUBUS_DEVELOPMENT_BACKEND_URL must be a public HTTPS origin, not a local or private address.');
+    process.exit(1);
+  }
+  if (origin.username || origin.password || (origin.pathname !== '/' && origin.pathname !== '') ||
+      origin.search || origin.hash) {
+    console.error('KUBUS_DEVELOPMENT_BACKEND_URL must be a bare origin (no credentials, path, query or fragment).');
+    process.exit(1);
+  }
+  const productionHosts = new Set(['api.kubus.site', 'bapi.kubus.site']);
+  const productionBase = new URL(process.env.KUBUS_BACKEND_URL).hostname.toLowerCase();
+  if (productionHosts.has(host) || host === productionBase) {
+    console.error('KUBUS_DEVELOPMENT_BACKEND_URL points at a production backend; a development build must use staging.');
+    process.exit(1);
+  }
+  developmentBackend = origin.origin;
 }
 
 const values = Object.fromEntries([
@@ -68,10 +140,20 @@ if (suppliedBuildMetadataCount === buildMetadata.length) {
   }
   Object.assign(values, suppliedBuildMetadata);
 }
+if (developmentBackend) {
+  values.KUBUS_BACKEND_URL = developmentBackend;
+  values.BACKEND_BASE_URL = developmentBackend;
+  // Same origin as the primary, so failover can never reach production.
+  values.BACKEND_STANDBY_BASE_URL = developmentBackend;
+}
 values.KUBUS_ENABLE_WEB_SEMANTICS = false;
 // This is build capability, never consent. ConfigProvider owns the persisted
 // user preference and TelemetryService requires both layers to be enabled.
 values.ANALYTICS_APP_ENABLED = analyticsBuildEnabled === 'true';
+values.COMMUNITY_MULTI_MEDIA_ENABLED = communityMultiMediaEnabled === 'true';
+values.COMMUNITY_VIDEO_AUTOPLAY_ENABLED = communityVideoAutoplayEnabled === 'true';
+values.COMMUNITY_VIDEO_POSTERS_ENABLED = communityVideoPostersEnabled === 'true';
+values.SUPPORT_TICKETS_ENABLED = supportTicketsEnabled === 'true';
 
 const outputPath = resolve(rootDir, '.dart_tool', 'public-build-defines.json');
 mkdirSync(dirname(outputPath), { recursive: true });

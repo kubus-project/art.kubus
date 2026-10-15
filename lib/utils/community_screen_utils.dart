@@ -196,7 +196,7 @@ CommunitySubjectPreview? resolveCommunityDraftSubjectPreview({
         ref: first,
         title: first.title!.trim(),
         subtitle: first.subtitle,
-        imageUrl: MediaUrlResolver.resolve(first.imageUrl) ?? first.imageUrl,
+        imageUrl: MediaUrlResolver.resolveDisplayUrl(first.imageUrl),
       );
     }
   }
@@ -209,7 +209,7 @@ CommunitySubjectPreview? resolveCommunityDraftSubjectPreview({
   return CommunitySubjectPreview(
     ref: CommunitySubjectRef(type: 'artwork', id: artwork.id),
     title: artwork.title,
-    imageUrl: MediaUrlResolver.resolve(artwork.imageUrl) ?? artwork.imageUrl,
+    imageUrl: MediaUrlResolver.resolveDisplayUrl(artwork.imageUrl),
   );
 }
 

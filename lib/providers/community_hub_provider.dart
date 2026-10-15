@@ -248,6 +248,7 @@ class CommunityHubProvider extends ChangeNotifier {
   Future<CommunityPost?> submitGroupPost(
     String groupId, {
     required String content,
+    String? idempotencyKey,
     String? imageUrl,
     List<String>? mediaUrls,
     List<String>? mediaCids,
@@ -265,6 +266,7 @@ class CommunityHubProvider extends ChangeNotifier {
     final created = await _apiService.createGroupPost(
       groupId,
       content: content,
+      idempotencyKey: idempotencyKey,
       imageUrl: imageUrl,
       mediaUrls: mediaUrls,
       mediaCids: mediaCids,
@@ -544,6 +546,37 @@ class CommunityHubProvider extends ChangeNotifier {
 
   bool get hasPendingComposeIntent => _pendingComposeIntent != null;
 
+  String? _pendingCommentDraftPostId;
+  String? _pendingCommentDraft;
+  DateTime? _pendingCommentDraftAt;
+
+  /// Keeps a comment the guest typed on [postId] while they go through
+  /// sign-in. A sign-in route can replace the feed the comment was typed in,
+  /// so the text is held here until the post's composer picks it up.
+  void rememberCommentDraftForAuth(String postId, String text) {
+    if (text.trim().isEmpty) return;
+    _pendingCommentDraftPostId = postId;
+    _pendingCommentDraft = text;
+    _pendingCommentDraftAt = DateTime.now();
+  }
+
+  /// Returns and clears the comment kept for [postId]. A draft for another
+  /// post stays put; an abandoned one expires after [maxAge].
+  String? takeCommentDraftForAuth(
+    String postId, {
+    Duration maxAge = const Duration(minutes: 30),
+  }) {
+    if (_pendingCommentDraftPostId != postId) return null;
+    final draft = _pendingCommentDraft;
+    final at = _pendingCommentDraftAt;
+    _pendingCommentDraftPostId = null;
+    _pendingCommentDraft = null;
+    _pendingCommentDraftAt = null;
+    if (draft == null || at == null) return null;
+    if (DateTime.now().difference(at) >= maxAge) return null;
+    return draft;
+  }
+
   /// Request that a community composer opens (mobile sheet or desktop inline),
   /// optionally pre-seeded with a linked subject.
   void requestComposerOpen({
@@ -585,4 +618,11 @@ class CommunityHubProvider extends ChangeNotifier {
 }
 
 /// Creation surfaces in Community that a guest can request before signing in.
-enum CommunityComposeIntent { post, groupPost, artDrop, review, createGroup }
+enum CommunityComposeIntent {
+  post,
+  groupPost,
+  artDrop,
+  review,
+  createGroup,
+  startChat
+}

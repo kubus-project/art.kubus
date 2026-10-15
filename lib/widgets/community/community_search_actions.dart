@@ -15,6 +15,8 @@ class CommunitySearchActions {
     KubusSearchResult result, {
     required Future<void> Function(String userId) onProfile,
     required Future<void> Function(String artworkId) onArtwork,
+    required Future<void> Function(String collectionId, String title)
+        onCollection,
     required Future<void> Function(String postId) onPost,
     required void Function(String screenKey) onScreen,
     required Future<void> Function({
@@ -35,6 +37,12 @@ class CommunitySearchActions {
         final artworkId = result.id?.trim() ?? '';
         if (artworkId.isNotEmpty) {
           await onArtwork(artworkId);
+        }
+        return;
+      case KubusSearchResultKind.collection:
+        final collectionId = result.id?.trim() ?? '';
+        if (collectionId.isNotEmpty) {
+          await onCollection(collectionId, result.label);
         }
         return;
       case KubusSearchResultKind.institution:

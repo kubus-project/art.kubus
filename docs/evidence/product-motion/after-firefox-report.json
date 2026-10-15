@@ -1,0 +1,344 @@
+{
+  "label": "after-firefox",
+  "browser": "firefox",
+  "theme": "light",
+  "reducedMotion": false,
+  "results": [
+    {
+      "id": "action-stacked",
+      "answer": "float",
+      "samples": 51,
+      "entry": [
+        {
+          "t": 236,
+          "dy": -1.98
+        },
+        {
+          "t": 297,
+          "dy": -1.98
+        },
+        {
+          "t": 365,
+          "dy": -1.98
+        }
+      ],
+      "liftMean": -2.79,
+      "liftMin": -4.47,
+      "liftMax": -1.48,
+      "bob": 2.99,
+      "shadow": 3.7,
+      "exitDy": 0,
+      "exitShadow": 0,
+      "failures": []
+    },
+    {
+      "id": "action-inline",
+      "answer": "float",
+      "samples": 58,
+      "entry": [
+        {
+          "t": 103,
+          "dy": -2.5
+        },
+        {
+          "t": 162,
+          "dy": -2.5
+        },
+        {
+          "t": 213,
+          "dy": -2.5
+        },
+        {
+          "t": 263,
+          "dy": -2
+        },
+        {
+          "t": 316,
+          "dy": -2
+        },
+        {
+          "t": 366,
+          "dy": -1.5
+        }
+      ],
+      "liftMean": -2.79,
+      "liftMin": -4.5,
+      "liftMax": -1.5,
+      "bob": 3,
+      "shadow": 3.74,
+      "exitDy": 0,
+      "exitShadow": 0,
+      "failures": []
+    },
+    {
+      "id": "action-compact",
+      "answer": "float",
+      "samples": 58,
+      "entry": [
+        {
+          "t": 136,
+          "dy": -2.5
+        },
+        {
+          "t": 201,
+          "dy": -2
+        },
+        {
+          "t": 256,
+          "dy": -2
+        },
+        {
+          "t": 310,
+          "dy": -2
+        },
+        {
+          "t": 363,
+          "dy": -1.5
+        }
+      ],
+      "liftMean": -2.84,
+      "liftMin": -4.5,
+      "liftMax": -1.5,
+      "bob": 3,
+      "shadow": 3.67,
+      "exitDy": 0,
+      "exitShadow": 0,
+      "failures": []
+    },
+    {
+      "id": "action-disabled",
+      "answer": "none",
+      "samples": 63,
+      "entry": [
+        {
+          "t": 120,
+          "dy": 0
+        },
+        {
+          "t": 172,
+          "dy": 0
+        },
+        {
+          "t": 231,
+          "dy": 0
+        },
+        {
+          "t": 277,
+          "dy": 0
+        },
+        {
+          "t": 326,
+          "dy": 0
+        },
+        {
+          "t": 376,
+          "dy": 0
+        }
+      ],
+      "liftMean": 0,
+      "liftMin": 0,
+      "liftMax": 0,
+      "bob": 0,
+      "shadow": 0,
+      "exitDy": 0,
+      "exitShadow": 0,
+      "failures": []
+    },
+    {
+      "id": "stat-centered",
+      "answer": "float",
+      "samples": 57,
+      "entry": [
+        {
+          "t": 119,
+          "dy": -2.52
+        },
+        {
+          "t": 180,
+          "dy": -2.52
+        },
+        {
+          "t": 230,
+          "dy": -2.02
+        },
+        {
+          "t": 281,
+          "dy": -2.02
+        },
+        {
+          "t": 332,
+          "dy": -2.02
+        },
+        {
+          "t": 383,
+          "dy": -1.52
+        }
+      ],
+      "liftMean": -2.85,
+      "liftMin": -4.51,
+      "liftMax": -1.52,
+      "bob": 2.99,
+      "shadow": 3.69,
+      "exitDy": 0,
+      "exitShadow": 0,
+      "failures": []
+    },
+    {
+      "id": "stat-centered-tap",
+      "answer": "float",
+      "samples": 57,
+      "entry": [
+        {
+          "t": 90,
+          "dy": -2.52
+        },
+        {
+          "t": 149,
+          "dy": -2.52
+        },
+        {
+          "t": 201,
+          "dy": -2.52
+        },
+        {
+          "t": 250,
+          "dy": -2.02
+        },
+        {
+          "t": 302,
+          "dy": -2.02
+        },
+        {
+          "t": 357,
+          "dy": -1.52
+        }
+      ],
+      "liftMean": -2.84,
+      "liftMin": -4.51,
+      "liftMax": -1.52,
+      "bob": 3,
+      "shadow": 3.7,
+      "exitDy": 0,
+      "exitShadow": 0,
+      "failures": []
+    },
+    {
+      "id": "stat-standard",
+      "answer": "float",
+      "samples": 58,
+      "entry": [
+        {
+          "t": 105,
+          "dy": -2.49
+        },
+        {
+          "t": 165,
+          "dy": -2.49
+        },
+        {
+          "t": 215,
+          "dy": -2.01
+        },
+        {
+          "t": 265,
+          "dy": -2
+        },
+        {
+          "t": 317,
+          "dy": -1.99
+        },
+        {
+          "t": 391,
+          "dy": -1.51
+        }
+      ],
+      "liftMean": -2.83,
+      "liftMin": -4.5,
+      "liftMax": -1.5,
+      "bob": 3,
+      "shadow": 3.76,
+      "exitDy": 0,
+      "exitShadow": 0,
+      "failures": []
+    },
+    {
+      "id": "stat-standard-tap",
+      "answer": "float",
+      "samples": 54,
+      "entry": [
+        {
+          "t": 106,
+          "dy": -2.49
+        },
+        {
+          "t": 165,
+          "dy": -2.49
+        },
+        {
+          "t": 214,
+          "dy": -2.01
+        },
+        {
+          "t": 261,
+          "dy": -2
+        },
+        {
+          "t": 310,
+          "dy": -2
+        },
+        {
+          "t": 359,
+          "dy": -1.51
+        }
+      ],
+      "liftMean": -2.81,
+      "liftMin": -4.5,
+      "liftMax": -1.5,
+      "bob": 3,
+      "shadow": 3.77,
+      "exitDy": 0,
+      "exitShadow": 0,
+      "failures": []
+    },
+    {
+      "id": "stat-standard-expressive",
+      "answer": "float",
+      "samples": 52,
+      "entry": [
+        {
+          "t": 92,
+          "dy": -2.51
+        },
+        {
+          "t": 152,
+          "dy": -2.51
+        },
+        {
+          "t": 204,
+          "dy": -2.01
+        },
+        {
+          "t": 259,
+          "dy": -2.01
+        },
+        {
+          "t": 323,
+          "dy": -2.01
+        },
+        {
+          "t": 386,
+          "dy": -1.51
+        }
+      ],
+      "liftMean": -2.82,
+      "liftMin": -4.51,
+      "liftMax": -1.51,
+      "bob": 3,
+      "shadow": 3.75,
+      "exitDy": 0,
+      "exitShadow": 0,
+      "failures": []
+    }
+  ],
+  "pageErrors": []
+}

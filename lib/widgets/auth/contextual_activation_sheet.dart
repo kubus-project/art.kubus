@@ -5,7 +5,6 @@ import '../../l10n/app_localizations.dart';
 import '../../models/pending_action_intent.dart';
 import '../../utils/activation_copy.dart';
 import '../../utils/design_tokens.dart';
-import '../glass_components.dart';
 import '../google_sign_in_button.dart';
 import '../kubus_auth_method_button.dart';
 import '../kubus_button.dart';
@@ -167,17 +166,21 @@ class _ContextualActivationSheet extends StatelessWidget {
       ),
     );
 
-    LiquidGlassPanel panel(
-        {required BorderRadius radius, required double maxHeight}) {
-      return LiquidGlassPanel(
-        margin: EdgeInsets.zero,
-        showBorder: true,
-        blurSigma: KubusGlassEffects.blurSigmaHeavy,
-        fallbackMinOpacity: KubusGlassEffects.fallbackOpaqueOpacity,
-        borderRadius: radius,
-        padding: EdgeInsets.zero,
-        backgroundColor: scheme.surfaceContainerHighest.withValues(
-          alpha: theme.brightness == Brightness.dark ? 0.86 : 0.94,
+    Widget panel({required BorderRadius radius, required double maxHeight}) {
+      // Opaque on purpose: this sheet sits over the community screen (comment
+      // text, the composer, action icons). A translucent glass fill let that
+      // content show through the copy and the buttons.
+      return Material(
+        color: scheme.surfaceContainerHighest,
+        clipBehavior: Clip.antiAlias,
+        shape: RoundedRectangleBorder(
+          borderRadius: radius,
+          side: BorderSide(
+            color: theme.brightness == Brightness.dark
+                ? KubusColors.glassBorderDark
+                : KubusColors.glassBorderLight,
+            width: KubusSizes.hairline,
+          ),
         ),
         // Small viewports and long Slovenian strings must scroll rather than
         // overflow, and the surface must never grow past the visible area.

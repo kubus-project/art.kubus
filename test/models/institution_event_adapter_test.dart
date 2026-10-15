@@ -31,7 +31,9 @@ void main() {
     expect(event.location, 'Main Hall');
     expect(event.latitude, 46.0511);
     expect(event.longitude, 14.5051);
-    expect(event.imageUrls, contains('/uploads/events/opening.png'));
+    expect(event.coverUrl, '/uploads/events/opening.png');
+    expect(event.imageUrls, isEmpty);
+    expect(event.heroImageRef, '/uploads/events/opening.png');
     expect(event.price, 12.5);
     expect(event.capacity, 120);
     expect(event.currentAttendees, 34);

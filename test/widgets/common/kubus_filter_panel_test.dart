@@ -65,8 +65,7 @@ void main() {
     expect(tester.takeException(), isNull);
 
     // The panel is bounded by maxHeight (it is NOT 1200px of content tall).
-    final panelHeight =
-        tester.getSize(find.byType(KubusFilterPanel)).height;
+    final panelHeight = tester.getSize(find.byType(KubusFilterPanel)).height;
     expect(panelHeight, lessThanOrEqualTo(201.0));
 
     // The content scrolls: the first row is visible, and after dragging up it
@@ -86,7 +85,7 @@ void main() {
     expect(position.pixels, greaterThan(0));
   });
 
-  testWidgets('filter side panel can opt into map glass backdrop region',
+  testWidgets('filter side panel is flat map chrome with no backdrop region',
       (tester) async {
     final controller = KubusMapBackdropHostController();
     var buttonTapped = 0;
@@ -114,9 +113,11 @@ void main() {
     );
     await tester.pump();
 
-    expect(find.byType(KubusMapBackdropRegionTracker), findsOneWidget);
-    expect(controller.regionCount, 1);
-    expect(controller.regions.single.id, 'desktop-map-filter-panel');
+    // Flat map chrome: one near-opaque surface, nothing blurs the map under it,
+    // so no backdrop region is registered.
+    expect(find.byType(BackdropFilter), findsNothing);
+    expect(find.byType(KubusMapBackdropRegionTracker), findsNothing);
+    expect(controller.regionCount, 0);
 
     await tester.tap(find.text('Apply'));
     await tester.pump();

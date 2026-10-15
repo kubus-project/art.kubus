@@ -17,7 +17,8 @@ ArtMarker _marker(String id, LatLng pos) {
 }
 
 void main() {
-  test('kubusBuildMarkerFeatureList calls builders based on clustering', () async {
+  test('kubusBuildMarkerFeatureList calls builders based on clustering',
+      () async {
     final a = _marker('a', const LatLng(52.0, 13.0));
     final b = _marker('b', const LatLng(52.0, 13.0));
 

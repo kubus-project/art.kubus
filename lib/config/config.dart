@@ -23,6 +23,36 @@ class AppConfig {
   static const bool enableLiking = true;
   static const bool enableCommenting = true;
   static const bool enableSharing = true;
+
+  /// Multi-media Community posts: ordered sets of up to ten images and videos,
+  /// the swipeable carousel and 2200-character captions. Release builds default
+  /// to off until backend PR #79 is live. Staging and emergency rollback use
+  /// --dart-define=COMMUNITY_MULTI_MEDIA_ENABLED=true|false, not a source edit.
+  /// When off, composers accept one attachment and posts show their first item.
+  static const bool enableCommunityMultiMedia = bool.fromEnvironment(
+    'COMMUNITY_MULTI_MEDIA_ENABLED',
+    defaultValue: !isProduction,
+  );
+
+  /// Muted autoplay of Community videos in the feed: a clip that is clearly on
+  /// screen starts silently, and the viewer's first tap brings sound. It is on
+  /// in every build and exists as a kill switch only, set with
+  /// --dart-define=COMMUNITY_VIDEO_AUTOPLAY_ENABLED=false. Reduced motion always
+  /// turns it off, whatever this says.
+  static const bool enableCommunityVideoAutoplay = bool.fromEnvironment(
+    'COMMUNITY_VIDEO_AUTOPLAY_ENABLED',
+    defaultValue: true,
+  );
+
+  /// Still posters for Community videos: a clip picked in the composer gets a
+  /// captured poster and that poster is uploaded with the post. Off means no
+  /// thumbnail decoding and no poster upload at selection or publish; posters
+  /// that are already stored keep displaying. Kill switch only, set with
+  /// --dart-define=COMMUNITY_VIDEO_POSTERS_ENABLED=false.
+  static const bool enableCommunityVideoPosters = bool.fromEnvironment(
+    'COMMUNITY_VIDEO_POSTERS_ENABLED',
+    defaultValue: true,
+  );
   static const bool enableSeoPublicPages = bool.fromEnvironment(
     'SEO_PUBLIC_PAGES_ENABLED',
     defaultValue: true,
@@ -32,7 +62,16 @@ class AppConfig {
     defaultValue: true,
   );
   static const bool enableReporting = true;
-  static const bool enableSupportTickets = true;
+
+  /// Support Center requests, conversations and the contact form. They need
+  /// backend 0.8.2 (migration 105); public CI builds pass
+  /// SUPPORT_TICKETS_ENABLED from the repository variable
+  /// KUBUS_SUPPORT_TICKETS_ENABLED and stay off until it is true. Local builds
+  /// and tests default on. Off shows the FAQ and a notice, with no ticket calls.
+  static const bool enableSupportTickets = bool.fromEnvironment(
+    'SUPPORT_TICKETS_ENABLED',
+    defaultValue: true,
+  );
 
   /// Meta browser pixel. Off by default: no third-party script is added to the
   /// page unless a deployment both enables this and supplies a pixel id.
@@ -558,6 +597,12 @@ class AppConfig {
         return enableIPFS;
       case 'collabInvites':
         return enableCollabInvites;
+      case 'communityMultiMedia':
+        return enableCommunityMultiMedia;
+      case 'communityVideoAutoplay':
+        return enableCommunityVideoAutoplay;
+      case 'communityVideoPosters':
+        return enableCommunityVideoPosters;
       case 'collabInviteNotifications':
         return enableCollabInviteNotifications;
       case 'season0':
@@ -639,15 +684,15 @@ class AppInfo {
   static const String appName = 'art.kubus';
   static const String version = String.fromEnvironment(
     'KUBUS_APP_VERSION',
-    defaultValue: '0.8.1',
+    defaultValue: '0.8.2',
   );
   static const int buildNumber = int.fromEnvironment(
     'KUBUS_BUILD_NUMBER',
-    defaultValue: 26100401,
+    defaultValue: 26101301,
   );
   static const String buildDate = String.fromEnvironment(
     'KUBUS_BUILD_DATE',
-    defaultValue: '2026-10-04',
+    defaultValue: '2026-10-13',
   );
 
   /// Get full version string

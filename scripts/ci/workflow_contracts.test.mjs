@@ -102,10 +102,18 @@ test('PR validation is deployment-secret-free and has a stable aggregate', () =>
   assert.doesNotMatch(content, /SFTP_|HTTP_BASIC_|SIGNING_|APPLE_/);
 });
 
+test('PR validation keeps the PRODUCT motion acceptance gate', () => {
+  const content = workflow('pr-validation.yml');
+  assert.match(content, /product_motion_gallery_main\.dart/);
+  assert.match(content, /scripts\/qa\/product_motion_acceptance\.mjs/);
+  assert.match(content, /for browser in chromium firefox/);
+  assert.match(content, /for reduced in 0 1/);
+});
+
 test('branch deployments have isolated sources, environments, and concurrency', () => {
   const development = workflow('deploy-development.yml');
   const production = workflow('release-production.yml');
-  assert.doesNotMatch(development, /\bpush:/);
+  assert.match(development, /\bpush:\s*branches:\s*\[dev\]/);
   assert.match(development, /\bworkflow_dispatch:/);
   assert.match(development, /test "\$SOURCE_REF" = refs\/heads\/dev/);
   assert.doesNotMatch(development, /\bpull_request:|\bpull_request_target:/);

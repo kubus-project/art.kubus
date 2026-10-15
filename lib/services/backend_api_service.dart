@@ -28,12 +28,12 @@ import '../community/community_interactions.dart';
 import '../utils/wallet_utils.dart';
 import '../utils/search_suggestions.dart';
 import '../utils/media_url_resolver.dart';
+import '../utils/http_retry_after.dart';
 import 'share/share_types.dart';
 import '../config/config.dart';
 import 'encrypted_wallet_backup_service.dart';
 import 'public_action_outbox_service.dart';
 import 'public_fallback_service.dart';
-import 'storage_config.dart';
 import 'user_action_logger.dart';
 import 'auth_gating_service.dart';
 import 'auth_session_coordinator.dart';
@@ -91,11 +91,13 @@ class BackendApiRequestException implements Exception {
   final int statusCode;
   final String path;
   final String? body;
+  final Duration? retryAfter;
 
   const BackendApiRequestException({
     required this.statusCode,
     required this.path,
     this.body,
+    this.retryAfter,
   });
 
   String get userMessage {
@@ -1598,6 +1600,7 @@ class BackendApiService
     Object? body,
     Encoding? encoding,
     bool isIdempotent = false,
+    bool allowImplicitBackendFailover = true,
     Duration timeout = AppConfig.requestTimeout,
   }) {
     return _request(
@@ -1608,6 +1611,7 @@ class BackendApiService
       body: body,
       encoding: encoding,
       isIdempotent: isIdempotent,
+      allowImplicitBackendFailover: allowImplicitBackendFailover,
       timeout: timeout,
     );
   }
@@ -6375,6 +6379,7 @@ class BackendApiService
   /// POST /api/community/posts
   Future<CommunityPost> createCommunityPost({
     required String content,
+    String? idempotencyKey,
     String? imageUrl,
     List<String>? mediaUrls,
     List<String>? mediaCids,
@@ -6419,8 +6424,11 @@ class BackendApiService
         locationLng: locationLng,
       );
 
+      requestBody['idempotencyKey'] = idempotencyKey ?? TelemetryUuid.v4();
       final response = await _post(
         Uri.parse('$baseUrl/api/community/posts'),
+        // Older backends may commit before failing. Never implicitly replay.
+        allowImplicitBackendFailover: false,
         headers: _getHeaders(),
         body: jsonEncode(requestBody),
       );
@@ -6453,7 +6461,12 @@ class BackendApiService
         }
         return decoratedPost;
       } else {
-        throw Exception('Failed to create post: ${response.statusCode}');
+        throw BackendApiRequestException(
+          statusCode: response.statusCode,
+          path: '/api/community/posts',
+          body: response.body,
+          retryAfter: parseHttpRetryAfter(response.headers['retry-after']),
+        );
       }
     } catch (e) {
       AppConfig.debugPrint('BackendApiService.createCommunityPost failed: $e');
@@ -6519,9 +6532,13 @@ class BackendApiService
         headers: _getHeaders(),
       );
 
-      if (response.statusCode != 200) {
-        throw Exception(
-          'Failed to delete post: ${response.statusCode} - ${response.body}',
+      // 200/202/204 all mean the server removed the post. Anything else is
+      // surfaced with its status so callers can tell 401/403/404/409/5xx apart.
+      if (!_isSuccessStatus(response.statusCode)) {
+        throw BackendApiRequestException(
+          statusCode: response.statusCode,
+          path: '/api/community/posts/$postId',
+          body: response.body,
         );
       }
     } catch (_) {
@@ -6643,6 +6660,7 @@ class BackendApiService
     int limit = 20,
     int page = 1,
     String sort = 'hybrid',
+    bool includeGeneral = false,
   }) async {
     try {
       final params = <String, String>{
@@ -6652,6 +6670,9 @@ class BackendApiService
         'limit': limit.toString(),
         'page': page.toString(),
         'sort': sort.trim().toLowerCase(),
+        // Also public posts that are not reviews, drops or events but sit in
+        // the area. Servers that predate the flag ignore it.
+        if (includeGeneral) 'includeGeneral': 'true',
       };
       final uri = Uri.parse(
         '$baseUrl/api/community/art-feed',
@@ -6853,6 +6874,7 @@ class BackendApiService
   Future<CommunityPost> createGroupPost(
     String groupId, {
     required String content,
+    String? idempotencyKey,
     String? imageUrl,
     List<String>? mediaUrls,
     List<String>? mediaCids,
@@ -6900,8 +6922,11 @@ class BackendApiService
         locationLng: locationLng,
       );
 
+      body['idempotencyKey'] = idempotencyKey ?? TelemetryUuid.v4();
       final response = await _post(
         Uri.parse('$baseUrl/api/groups/$groupId/posts'),
+        // Older backends may commit before failing. Never implicitly replay.
+        allowImplicitBackendFailover: false,
         headers: _getHeaders(),
         body: jsonEncode(body),
       );
@@ -6939,8 +6964,11 @@ class BackendApiService
         }
         throw Exception('Unexpected group post payload');
       }
-      throw Exception(
-        'Failed to create group post: ${response.statusCode} - ${response.body}',
+      throw BackendApiRequestException(
+        statusCode: response.statusCode,
+        path: '/api/groups/$groupId/posts',
+        body: response.body,
+        retryAfter: parseHttpRetryAfter(response.headers['retry-after']),
       );
     } catch (e) {
       AppConfig.debugPrint('BackendApiService.createGroupPost failed: $e');
@@ -7771,50 +7799,116 @@ class BackendApiService
     }
   }
 
-  /// Create a support ticket
-  /// POST /api/support/tickets
+  /// Create a support or bug ticket for the signed-in account.
+  /// POST /api/support/tickets (Support Center contract, requester endpoint 1)
+  ///
+  /// [kind] is `support` (default) or `bug`; any other value is sent as
+  /// `support`. Failures throw [BackendApiRequestException] carrying the HTTP
+  /// status so the Support Center can map 400/401/403/429 to copy.
   Future<Map<String, dynamic>> createSupportTicket({
     required String subject,
     required String message,
-    String? email,
+    String kind = 'support',
   }) async {
+    const path = '/api/support/tickets';
     try {
-      final payload = <String, dynamic>{
-        'subject': subject.trim(),
-        'message': message.trim(),
-      };
-      final emailTrimmed = (email ?? '').trim();
-      if (emailTrimmed.isNotEmpty) {
-        payload['email'] = emailTrimmed;
-      }
-
       final response = await _post(
-        Uri.parse('$baseUrl/api/support/tickets'),
+        Uri.parse('$baseUrl$path'),
         headers: _getHeaders(),
-        body: jsonEncode(payload),
+        body: jsonEncode(<String, dynamic>{
+          'subject': subject.trim(),
+          'message': message.trim(),
+          'kind': kind == 'bug' ? 'bug' : 'support',
+        }),
+        // The contract has no idempotency key: a create that the primary
+        // stored but answered with a 5xx or lost must not be sent again to
+        // another origin, which would open a duplicate request.
         isIdempotent: false,
+        allowImplicitBackendFailover: false,
       );
-
-      if (response.statusCode == 200 || response.statusCode == 201) {
-        final decoded = jsonDecode(response.body);
-        if (decoded is Map<String, dynamic>) {
-          final data = decoded['data'];
-          if (data is Map<String, dynamic>) {
-            return data;
-          }
-        }
-        return <String, dynamic>{};
-      }
-
-      final body =
-          response.body.isNotEmpty ? response.body : 'No response body';
-      throw Exception(
-        'Failed to create support ticket (${response.statusCode}): $body',
-      );
+      return _asSupportMap(_supportEnvelopeData(response, path: path), path);
     } catch (e) {
       AppConfig.debugPrint('BackendApiService.createSupportTicket failed: $e');
       rethrow;
     }
+  }
+
+  /// The signed-in account's support requests, newest update first.
+  /// GET /api/support/tickets (requester endpoint 2)
+  Future<List<Map<String, dynamic>>> getMySupportTickets() async {
+    const path = '/api/support/tickets';
+    final response = await _get(
+      Uri.parse('$baseUrl$path'),
+      headers: _getHeaders(),
+    );
+    final data = _supportEnvelopeData(response, path: path);
+    if (data is! List) {
+      throw FormatException('Unexpected support response shape for $path');
+    }
+    return data
+        .whereType<Map>()
+        .map((item) => Map<String, dynamic>.from(item))
+        .toList(growable: false);
+  }
+
+  /// One support request with its full `messages` conversation (ascending).
+  /// GET /api/support/tickets/:id (requester endpoint 3)
+  Future<Map<String, dynamic>> getMySupportTicket(String id) async {
+    const path = '/api/support/tickets/:id';
+    final response = await _get(
+      Uri.parse('$baseUrl/api/support/tickets/${Uri.encodeComponent(id)}'),
+      headers: _getHeaders(),
+    );
+    return _asSupportMap(_supportEnvelopeData(response, path: path), path);
+  }
+
+  /// Adds a requester reply; the ticket becomes `open` again.
+  /// POST /api/support/tickets/:id/replies (requester endpoint 4)
+  ///
+  /// Returns the created message. A closed ticket fails with status 409.
+  Future<Map<String, dynamic>> replyToSupportTicket(
+    String id,
+    String message,
+  ) async {
+    const path = '/api/support/tickets/:id/replies';
+    final response = await _post(
+      Uri.parse(
+        '$baseUrl/api/support/tickets/${Uri.encodeComponent(id)}/replies',
+      ),
+      headers: _getHeaders(),
+      body: jsonEncode(<String, dynamic>{'message': message.trim()}),
+      // A reply is appended on every successful POST and the contract has no
+      // idempotency key, so it is never resent to another origin. The caller
+      // reloads the ticket to show what the server actually stored.
+      isIdempotent: false,
+      allowImplicitBackendFailover: false,
+    );
+    return _asSupportMap(_supportEnvelopeData(response, path: path), path);
+  }
+
+  /// Unwraps the `{ success, data }` envelope. Non-2xx responses become
+  /// [BackendApiRequestException] with the parsed `Retry-After` delay.
+  Object? _supportEnvelopeData(http.Response response, {required String path}) {
+    if (!_isSuccessStatus(response.statusCode)) {
+      throw BackendApiRequestException(
+        statusCode: response.statusCode,
+        path: path,
+        body: response.body,
+        retryAfter: parseHttpRetryAfter(response.headers['retry-after']),
+      );
+    }
+    final decoded = jsonDecode(response.body);
+    if (decoded is Map && decoded.containsKey('data')) {
+      return decoded['data'];
+    }
+    throw FormatException('Unexpected support response shape for $path');
+  }
+
+  Map<String, dynamic> _asSupportMap(Object? data, String path) {
+    if (data is! Map) {
+      throw FormatException('Unexpected support response shape for $path');
+    }
+    return Map<String, dynamic>.from(data);
   }
 
   // ==================== Achievement Endpoints ====================
@@ -10163,11 +10257,15 @@ class BackendApiService
   Future<List<Map<String, dynamic>>> getSearchSuggestions({
     required String query,
     int limit = 10,
+    bool includeCollections = false,
   }) async {
     try {
       final queryParams = <String, String>{
         'q': query,
         'limit': limit.toString(),
+        // Collection suggestions are opt-in on the backend so that clients
+        // without the collection result kind never receive them.
+        if (includeCollections) 'include': 'collections',
       };
 
       final uri = Uri.parse(
@@ -10657,14 +10755,16 @@ Artwork parseArtworkFromBackendJson(Map<String, dynamic> json) {
 
   final id = stringVal(json['id'] ?? json['_id'] ?? '');
   final title = stringVal(json['title'] ?? json['name'] ?? '');
-  final artist = stringVal(
-    json['artist'] ??
-        json['artistName'] ??
-        json['artist_name'] ??
-        json['walletAddress'] ??
-        json['wallet_address'] ??
-        'Unknown Artist',
-  );
+  // Cultural authorship is the explicit artist only. The uploader/owner wallet
+  // (`walletAddress`) is a different role and is never promoted to the artist;
+  // an unattributed artwork carries an empty artist and is rendered as the
+  // localized "Unknown artist" by the surfaces that show it.
+  final artist = pickString([
+        json['artist'],
+        json['artistName'],
+        json['artist_name'],
+      ]) ??
+      '';
 
   final rawImage = pickString([
     json['imageUrl'],
@@ -10772,9 +10872,13 @@ Artwork parseArtworkFromBackendJson(Map<String, dynamic> json) {
     metadata['image_cid'],
     json['cid'],
   ]);
-  final normalizedImageUrl = MediaUrlResolver.resolveDisplayUrl(rawImage) ??
-      MediaUrlResolver.resolveDisplayUrl(imageCid) ??
-      StorageConfig.resolveUrl(imageCid);
+  // Cover chain: the image field first, then the stored CID as an IPFS
+  // reference (gateway chain). An unsafe or unresolvable field is skipped, and
+  // nothing is passed through raw.
+  final normalizedImageUrl = MediaUrlResolver.firstDisplayUrl(<String?>[
+    rawImage,
+    MediaUrlResolver.ipfsReferenceForCid(imageCid),
+  ]);
   final arScale = doubleVal(
     json['arScale'] ?? json['ar_scale'] ?? arAsset?['scale'],
   );
@@ -10838,7 +10942,10 @@ Artwork parseArtworkFromBackendJson(Map<String, dynamic> json) {
         json['gallery_urls'] ??
         json['gallery'] ??
         json['mediaGallery'],
-  ).map((u) => MediaUrlResolver.resolveDisplayUrl(u) ?? u).toList();
+  )
+      .map((u) => MediaUrlResolver.resolveDisplayUrl(u))
+      .whereType<String>()
+      .toList();
 
   List<Map<String, dynamic>> parseGalleryMeta(dynamic raw) {
     if (raw is List) {
@@ -10934,9 +11041,8 @@ Artwork parseArtworkFromBackendJson(Map<String, dynamic> json) {
     json['poapImageUrl'],
     json['poap_image_url'],
   ]);
-  final poapImageUrl = poapImageRaw != null
-      ? (MediaUrlResolver.resolveDisplayUrl(poapImageRaw) ?? poapImageRaw)
-      : null;
+  // An unresolvable POAP image is no image: the raw string is never passed on.
+  final poapImageUrl = MediaUrlResolver.resolveDisplayUrl(poapImageRaw);
 
   final walletAddress = nullableString(
     json['walletAddress'] ?? json['wallet_address'],

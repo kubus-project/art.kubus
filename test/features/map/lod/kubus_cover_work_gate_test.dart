@@ -40,28 +40,61 @@ void main() {
     });
   });
 
-  test('skips a job whose precondition no longer holds when its turn comes',
-      () {
-    fakeAsync((async) {
-      final gate = KubusCoverWorkGate();
-      var cameraMoving = false;
-      final ran = <String>[];
+  test(
+    'skips a job whose precondition no longer holds when its turn comes',
+    () {
+      fakeAsync((async) {
+        final gate = KubusCoverWorkGate();
+        var cameraMoving = false;
+        final ran = <String>[];
 
-      gate.runSerial<bool>(() async {
-        ran.add('first');
-        // The camera starts moving while the first job is still running.
-        cameraMoving = true;
-        return true;
+        gate.runSerial<bool>(() async {
+          ran.add('first');
+          // The camera starts moving while the first job is still running.
+          cameraMoving = true;
+          return true;
+        });
+        bool? second = true;
+        gate.runSerial<bool>(() async {
+          ran.add('second');
+          return true;
+        }, shouldRun: () => !cameraMoving).then((value) => second = value);
+        async.elapse(const Duration(seconds: 1));
+
+        expect(ran, <String>['first']);
+        expect(second, isNull);
+        gate.dispose();
       });
-      bool? second = true;
-      gate.runSerial<bool>(() async {
-        ran.add('second');
-        return true;
-      }, shouldRun: () => !cameraMoving).then((value) => second = value);
-      async.elapse(const Duration(seconds: 1));
+    },
+  );
 
-      expect(ran, <String>['first']);
-      expect(second, isNull);
+  test('jobs keep running while the camera moves, at the motion pace', () {
+    fakeAsync((async) {
+      var moving = true;
+      final gate = KubusCoverWorkGate(
+        spacing: const Duration(milliseconds: 20),
+        motionSpacing: const Duration(milliseconds: 150),
+        isPaced: () => moving,
+      );
+      final ranAt = <int>[];
+      for (var i = 0; i < 4; i += 1) {
+        gate.runSerial<void>(
+          () async => ranAt.add(async.elapsed.inMilliseconds),
+        );
+      }
+      async.elapse(const Duration(milliseconds: 320));
+      expect(
+          ranAt,
+          <int>[
+            0,
+            150,
+            300,
+          ],
+          reason: 'a moving camera gets covers, spaced out');
+      moving = false;
+      async.elapse(const Duration(milliseconds: 200));
+      expect(ranAt, hasLength(4));
+      expect(ranAt.last, 450, reason: 'the pace in force when a job ended');
       gate.dispose();
     });
   });
@@ -84,24 +117,30 @@ void main() {
     });
   });
 
-  test('coalesces a burst of resync requests into one trailing call', () {
+  test('resync window is anchored to the first request in a burst', () {
     fakeAsync((async) {
       final gate = KubusCoverWorkGate(
         resyncDelay: const Duration(milliseconds: 100),
         resyncMaxWait: const Duration(seconds: 5),
       );
-      var calls = 0;
+      final callsAt = <String>[];
 
-      for (var i = 0; i < 12; i += 1) {
-        gate.scheduleResync(() => calls += 1);
-        async.elapse(const Duration(milliseconds: 40));
-      }
-      // Each request restarted the 100 ms timer, so nothing has fired yet.
-      expect(calls, 0);
-      expect(gate.hasPendingResync, isTrue);
+      gate.scheduleResync(() => callsAt.add('first'));
+      async.elapse(const Duration(milliseconds: 80));
+      gate.scheduleResync(
+        () => callsAt.add('latest@${async.elapsed.inMilliseconds}'),
+      );
+      async.elapse(const Duration(milliseconds: 20));
+      expect(callsAt, <String>['latest@100']);
+      expect(gate.hasPendingResync, isFalse);
 
-      async.elapse(const Duration(milliseconds: 100));
-      expect(calls, 1);
+      gate.scheduleResync(() => callsAt.add('second-first'));
+      async.elapse(const Duration(milliseconds: 50));
+      gate.scheduleResync(
+        () => callsAt.add('second-latest@${async.elapsed.inMilliseconds}'),
+      );
+      async.elapse(const Duration(milliseconds: 50));
+      expect(callsAt, <String>['latest@100', 'second-latest@200']);
       expect(gate.hasPendingResync, isFalse);
       gate.dispose();
     });
@@ -110,7 +149,7 @@ void main() {
   test('a long burst still flushes every resyncMaxWait', () {
     fakeAsync((async) {
       final gate = KubusCoverWorkGate(
-        resyncDelay: const Duration(milliseconds: 100),
+        resyncDelay: const Duration(seconds: 5),
         resyncMaxWait: const Duration(milliseconds: 300),
       );
       var calls = 0;
@@ -121,7 +160,8 @@ void main() {
         gate.scheduleResync(() => calls += 1);
         async.elapse(const Duration(milliseconds: 60));
       }
-      // Flushes at 300, 600 and 900 ms: one per window, not one per cover.
+      // Flushes at 300, 600 and 900 ms: the max-wait deadline remains active
+      // when the normal anchored window is longer than the burst.
       expect(calls, 3);
       expect(gate.hasPendingResync, isFalse);
       async.elapse(const Duration(milliseconds: 500));

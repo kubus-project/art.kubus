@@ -1297,6 +1297,7 @@ class _MarketplaceState extends State<Marketplace>
     showKubusDialog(
       context: context,
       builder: (context) => KubusAlertDialog(
+        size: KubusDialogSize.compact,
         backgroundColor: scheme.surfaceContainerHighest,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(KubusRadius.lg),

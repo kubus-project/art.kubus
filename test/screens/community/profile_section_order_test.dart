@@ -2,14 +2,14 @@ import 'package:art_kubus/screens/community/profile_section_order.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  test('the public profile reads identity to closing stats', () {
+  test('the public profile puts statistics after identity and practice', () {
     expect(publicProfileSections, <ProfileSection>[
       ProfileSection.identity,
+      ProfileSection.stats,
       ProfileSection.work,
       ProfileSection.publicArt,
       ProfileSection.activity,
       ProfileSection.recognition,
-      ProfileSection.stats,
     ]);
     expect(publicProfileSections, isNot(contains(ProfileSection.ownerTools)));
   });
@@ -52,9 +52,9 @@ void main() {
       );
       expect(built, <String>[
         'identity',
+        'stats',
         'activity',
         'recognition',
-        'stats',
         'ownerTools',
       ]);
     });
@@ -68,13 +68,13 @@ void main() {
             : [section.name, '${section.name}-detail'],
       );
       expect(built.where((item) => item.startsWith('|')).toList(), <String>[
-        '|identity>work|',
+        '|identity>stats|',
+        '|stats>work|',
         '|work>activity|',
         '|activity>recognition|',
-        '|recognition>stats|',
       ]);
       expect(built.first, 'identity');
-      expect(built.last, 'stats-detail');
+      expect(built.last, 'recognition-detail');
     });
 
     test('nothing to build yields nothing, and no stray gap', () {

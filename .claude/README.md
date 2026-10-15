@@ -25,8 +25,17 @@ Personal overrides go in `settings.local.json` (gitignored).
     vue-check/             # /vue-check — lint/type-check/test the Vue frontends
   agents/
     security-reviewer.md   # subagent for auth/wallet/crypto/secrets diffs
+    release-verifier.md    # haiku, read-only: PR heads, threads, checks, artifact identity
+    ui-qa-inspector.md     # haiku, read-only: widget tests, tokens, screenshot inspection
 ../.mcp.json               # context7 + read-only Postgres MCP servers
 ```
+
+## Orchestration
+
+Delegation, ownership, cost and handoff rules live in
+`docs/engineering/agent-orchestration.md`; the two Haiku agents above are the
+recurring read-only roles from it. Other roles are spawned ad hoc with an
+explicit `model: haiku` and are not persisted.
 
 ## Hooks
 

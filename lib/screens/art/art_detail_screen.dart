@@ -6,6 +6,7 @@ import 'dart:async';
 import '../../services/telemetry/telemetry_service.dart';
 
 import 'package:flutter/material.dart';
+import '../../widgets/common/kubus_cached_image.dart';
 import '../../widgets/inline_loading.dart';
 import '../../widgets/avatar_widget.dart';
 import '../../widgets/artwork_creator_byline.dart';
@@ -498,21 +499,14 @@ class _ArtDetailScreenState extends State<ArtDetailScreen> {
       return placeholder;
     }
 
-    return Image.network(
-      resolved,
+    // KubusCachedImage walks the gateway candidates (an IPFS cover moves to the
+    // next gateway when one fails) and shows the placeholder, not a broken
+    // image, when every candidate has failed.
+    return KubusCachedImage(
+      imageUrl: resolved,
       fit: BoxFit.cover,
       semanticLabel: semanticLabel,
       errorBuilder: (_, __, ___) => placeholder,
-      loadingBuilder: (context, child, loadingProgress) {
-        if (loadingProgress == null) return child;
-        return Center(
-          child: SizedBox(
-            width: 48,
-            height: 48,
-            child: InlineLoading(shape: BoxShape.circle, color: scheme.primary),
-          ),
-        );
-      },
     );
   }
 
@@ -682,11 +676,8 @@ class _ArtDetailScreenState extends State<ArtDetailScreen> {
                   SubjectAction(
                     icon: Icons.navigation_outlined,
                     label: l10n.commonNavigate,
-                    onPressed: () =>
-                        ArtworkLocationActions.showNavigationOptions(
-                      context,
-                      artwork,
-                    ),
+                    onPressed: () => MapDestination.ofArtwork(artwork)
+                        .showNavigationOptions(context),
                   ),
                 ],
               ),
@@ -1151,6 +1142,7 @@ class _ArtDetailScreenState extends State<ArtDetailScreen> {
     final confirmed = await showKubusDialog<bool>(
       context: context,
       builder: (dialogContext) => KubusAlertDialog(
+        size: KubusDialogSize.compact,
         backgroundColor: scheme.surfaceContainerHighest,
         title: Text(l10n.artistGalleryDeleteArtworkTitle),
         content: Text(l10n.artistGalleryDeleteConfirmBody(artwork.title)),
@@ -1742,6 +1734,7 @@ class _ArtDetailScreenState extends State<ArtDetailScreen> {
       context: context,
       builder: (dialogContext) {
         return KubusAlertDialog(
+          size: KubusDialogSize.compact,
           title: Text(l10n.commentDeleteConfirmTitle),
           content: Text(l10n.commentDeleteConfirmMessage),
           actions: [

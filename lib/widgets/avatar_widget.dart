@@ -558,8 +558,9 @@ class _AvatarWidgetState extends State<AvatarWidget>
           (lower.contains('/svg') ||
               lower.endsWith('.svg') ||
               lower.contains('format=svg'))) {
-        candidate =
-            candidate.replaceAll('/svg', '/png').replaceAll('.svg', '.png');
+        candidate = MediaUrlResolver.svgAsPngReference(
+          candidate.replaceAll('/svg', '/png'),
+        );
       }
 
       if (candidate.startsWith('//')) {
@@ -579,9 +580,7 @@ class _AvatarWidgetState extends State<AvatarWidget>
       return candidate;
     }
 
-    return MediaUrlResolver.resolveDisplayUrl(candidate) ??
-        MediaUrlResolver.resolve(candidate) ??
-        candidate;
+    return MediaUrlResolver.resolveDisplayUrl(candidate);
   }
 
   bool _isUsableNetworkUrl(String? candidate) {
@@ -610,5 +609,56 @@ class _AvatarWidgetState extends State<AvatarWidget>
     final wallet = widget.wallet.trim();
     if (wallet.isEmpty) return;
     ProfilePackagePrefetcher.prefetchHighIntent(wallet);
+  }
+}
+
+/// A square-cornered stand-in for [AvatarWidget] where there is no profile to
+/// resolve: group icons, conversation initials and a just-picked image.
+///
+/// Same box and corner radius as [AvatarWidget] for the same [radius], so a
+/// conversation list or header never mixes round and square avatars.
+class KubusMonogramAvatar extends StatelessWidget {
+  const KubusMonogramAvatar({
+    super.key,
+    required this.radius,
+    this.child,
+    this.image,
+  });
+
+  /// Half the edge length, as for [AvatarWidget.radius].
+  final double radius;
+  final Widget? child;
+  final ImageProvider? image;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final shape = BorderRadius.circular(
+      AvatarWidget.shapeRadiusFor(radius: radius),
+    );
+    return Container(
+      width: radius * 2,
+      height: radius * 2,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        color: scheme.surfaceContainerHighest,
+        borderRadius: shape,
+        image: image == null
+            ? null
+            : DecorationImage(image: image!, fit: BoxFit.cover),
+      ),
+      child: child == null
+          ? null
+          : DefaultTextStyle.merge(
+              style: TextStyle(
+                color: scheme.onSurfaceVariant,
+                fontSize: (radius * 0.7).clamp(10.0, 16.0).toDouble(),
+              ),
+              child: IconTheme.merge(
+                data: IconThemeData(color: scheme.onSurfaceVariant),
+                child: child!,
+              ),
+            ),
+    );
   }
 }

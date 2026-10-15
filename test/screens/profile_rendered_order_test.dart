@@ -1,6 +1,7 @@
 import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:art_kubus/models/user.dart';
 import 'package:art_kubus/widgets/detail/profile_identity_block.dart';
+import 'package:art_kubus/widgets/common/kubus_stat_card.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -8,11 +9,8 @@ import '../support/profile_fixtures.dart';
 import '../support/profile_screen_harness.dart';
 
 /// The shared section order (`profile_section_order.dart`) as it is actually
-/// rendered, not as a constant: identity, work, activity (posts), recognition,
-/// closing statistics, then the owner's tools. It covers the canonical public
-/// entry (the page a visitor lands on from a shared link or search), which
-/// composed its own sequence and put the statistics before the posts on phones
-/// and the achievements before the posts on desktop.
+/// rendered: identity/practice, statistics, work, posts, recognition and owner
+/// tools. Covers canonical public entry and in-app owner/visitor layouts.
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
@@ -21,7 +19,19 @@ void main() {
       )!;
 
   Offset at(WidgetTester tester, String text) {
-    final finder = find.text(text);
+    // A statistics label such as "Posts" is not the later section heading.
+    final headings = find.byElementPredicate((element) {
+      if (element.widget is! Text || (element.widget as Text).data != text) {
+        return false;
+      }
+      var metric = false;
+      element.visitAncestorElements((ancestor) {
+        metric = ancestor.widget is KubusStatCard;
+        return !metric;
+      });
+      return !metric;
+    });
+    final finder = headings.evaluate().isNotEmpty ? headings : find.text(text);
     expect(finder, findsWidgets, reason: '"$text" is not rendered');
     return tester.getTopLeft(finder.first);
   }
@@ -51,7 +61,7 @@ void main() {
         showAchievements: true,
       );
 
-  group('public profile reads identity, work, posts, recognition, statistics',
+  group('public profile reads identity, statistics, work, posts, recognition',
       () {
     for (final canonical in const <bool>[false, true]) {
       final entry = canonical ? 'canonical public entry' : 'in-app';
@@ -70,10 +80,10 @@ void main() {
         final l10n = l10nOf(tester);
         expectOrder(tester, [
           ('identity', user.bio),
+          ('statistics', l10n.userProfileFollowersStatLabel),
           ('work', l10n.userProfileArtworksTitle),
           ('activity', l10n.userProfilePostsTitle),
           ('recognition', ProfileFixtures.achievementTitle),
-          ('closing statistics', l10n.userProfileFollowersStatLabel),
         ]);
       });
 
@@ -93,9 +103,9 @@ void main() {
         final l10n = l10nOf(tester);
         expectOrder(tester, [
           ('identity', user.bio),
+          ('statistics', l10n.userProfileFollowersStatLabel),
           ('activity', l10n.userProfilePostsTitle),
           ('recognition', ProfileFixtures.achievementTitle),
-          ('closing statistics', l10n.userProfileFollowersStatLabel),
         ]);
         // Not given empty artist bands.
         expect(find.text(l10n.userProfileArtistHighlightsTitle), findsNothing);
@@ -118,10 +128,10 @@ void main() {
         final l10n = l10nOf(tester);
         expectOrder(tester, [
           ('identity', user.bio),
+          ('statistics', l10n.userProfileFollowersStatLabel),
           ('work', l10n.userProfileArtistPortfolioTitle),
           ('activity', l10n.userProfilePostsTitle),
           ('recognition', ProfileFixtures.achievementTitle),
-          ('closing statistics', l10n.userProfileFollowersStatLabel),
         ]);
       });
     }
@@ -139,16 +149,16 @@ void main() {
       final l10n = l10nOf(tester);
       expectOrder(tester, [
         ('identity', user.bio),
+        ('statistics', l10n.userProfileFollowersStatLabel),
         ('work', l10n.userProfileArtistPortfolioTitle),
         ('activity', l10n.userProfilePostsTitle),
         ('recognition', ProfileFixtures.achievementTitle),
-        ('closing statistics', l10n.userProfileFollowersStatLabel),
       ]);
     });
 
     testWidgets(
         'desktop artist, in-app, two columns @ 1440: recognition sits beside '
-        'the narrative and everything precedes the statistics', (tester) async {
+        'the narrative follows the statistics', (tester) async {
       final user = artist();
       await pumpProfileSurface(
         tester,
@@ -169,8 +179,8 @@ void main() {
       expect(posts.dy, greaterThan(work.dy));
       // The trailing side column, not a band between the posts and the numbers.
       expect(recognition.dx, greaterThan(posts.dx + 200));
-      expect(stats.dy, greaterThan(posts.dy));
-      expect(stats.dy, greaterThan(recognition.dy));
+      expect(stats.dy, lessThan(posts.dy));
+      expect(stats.dy, lessThan(recognition.dy));
     });
 
     testWidgets(
@@ -189,9 +199,9 @@ void main() {
       final l10n = l10nOf(tester);
       expectOrder(tester, [
         ('identity', user.bio),
+        ('statistics', l10n.userProfileFollowersStatLabel),
         ('activity', l10n.userProfilePostsTitle),
         ('recognition', ProfileFixtures.achievementTitle),
-        ('closing statistics', l10n.userProfileFollowersStatLabel),
       ]);
     });
   });
@@ -209,10 +219,10 @@ void main() {
       final l10n = l10nOf(tester);
       expectOrder(tester, [
         ('identity', user.bio),
+        ('statistics', l10n.userProfileFollowersStatLabel),
         ('work', l10n.userProfileArtistHighlightsTitle),
         ('activity', l10n.userProfilePostsTitle),
         ('recognition', l10n.userProfileAchievementsTitle),
-        ('closing statistics', l10n.userProfileFollowersStatLabel),
         ('owner tools', l10n.settingsGroupAccount),
       ]);
     });
@@ -229,10 +239,10 @@ void main() {
       final l10n = l10nOf(tester);
       expectOrder(tester, [
         ('identity', user.bio),
+        ('statistics', l10n.userProfileFollowersStatLabel),
         ('work', 'Portfolio'),
         ('activity', 'Your posts'),
         ('recognition', l10n.userProfileAchievementsTitle),
-        ('closing statistics', l10n.userProfileFollowersStatLabel),
         ('owner tools', l10n.settingsGroupAccount),
       ]);
     });
@@ -257,9 +267,10 @@ void main() {
       expect(work.dy, greaterThan(bio.dy));
       expect(posts.dy, greaterThan(work.dy));
       expect(recognition.dx, greaterThan(posts.dx + 200));
-      expect(stats.dy, greaterThan(posts.dy));
-      expect(stats.dy, greaterThan(recognition.dy));
-      expect(tools.dy, greaterThan(stats.dy));
+      expect(stats.dy, lessThan(posts.dy));
+      expect(stats.dy, lessThan(recognition.dy));
+      expect(tools.dy, greaterThan(posts.dy));
+      expect(tools.dy, greaterThan(recognition.dy));
     });
   });
 }

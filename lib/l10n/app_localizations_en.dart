@@ -414,6 +414,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get activationGateLikeArtworkTitle => 'Like this artwork';
 
   @override
+  String get activationGateLikePostTitle => 'Like this post';
+
+  @override
   String get activationGateFollowTitle => 'Follow this artist';
 
   @override
@@ -470,10 +473,23 @@ class AppLocalizationsEn extends AppLocalizations {
   String get activationConfirmLikeArtwork => 'Like this artwork?';
 
   @override
+  String get activationConfirmLikePost => 'Like this post?';
+
+  @override
   String get activationConfirmFollow => 'Follow this artist?';
 
   @override
   String get activationConfirmComment => 'Write your comment?';
+
+  @override
+  String get activationConfirmSupportRequest =>
+      'Continue your support request?';
+
+  @override
+  String get activationConfirmSupportBug => 'Continue your bug report?';
+
+  @override
+  String get activationConfirmSupportReply => 'Continue your reply?';
 
   @override
   String get activationConfirmContribute => 'Continue your contribution?';
@@ -10848,6 +10864,156 @@ class AppLocalizationsEn extends AppLocalizations {
   String get communityComposerCreatePostFailedToast => 'Failed to create post.';
 
   @override
+  String communityUploadRateLimitedSeconds(int seconds) {
+    return 'Upload limit reached. Try again in $seconds seconds.';
+  }
+
+  @override
+  String communityUploadRateLimitedMinutes(int minutes) {
+    return 'Upload limit reached. Try again in about $minutes minutes.';
+  }
+
+  @override
+  String get communityUploadRateLimitedGeneric =>
+      'Too many uploads right now. Wait a moment and try again.';
+
+  @override
+  String get communityComposerMediaAddPhotos => 'Add photos';
+
+  @override
+  String get communityComposerMediaAddVideo => 'Add video';
+
+  @override
+  String communityComposerMediaLimitReached(int max) {
+    return 'You can add up to $max items to a post.';
+  }
+
+  @override
+  String communityComposerMediaTrimmed(int added, int picked, int max) {
+    return 'Added $added of $picked files. A post holds up to $max items.';
+  }
+
+  @override
+  String communityComposerValidationRejected(String detail) {
+    return 'The server did not accept this post: $detail. Your draft is kept.';
+  }
+
+  @override
+  String communityComposerMediaCount(int count, int max) {
+    return '$count of $max selected';
+  }
+
+  @override
+  String get communityComposerMediaMoveEarlier => 'Move earlier';
+
+  @override
+  String get communityComposerMediaMoveLater => 'Move later';
+
+  @override
+  String get communityComposerMediaRetry => 'Retry upload';
+
+  @override
+  String communityComposerMediaUploadFailed(int count) {
+    return '$count files could not be uploaded. Your draft is kept, so you can retry.';
+  }
+
+  @override
+  String get communityComposerMediaStatusPending => 'Waiting to upload';
+
+  @override
+  String get communityComposerMediaStatusUploading => 'Uploading…';
+
+  @override
+  String get communityComposerMediaStatusFailed => 'Upload failed';
+
+  @override
+  String get communityComposerMediaStatusDone => 'Uploaded';
+
+  @override
+  String communityComposerCharactersRemaining(int count) {
+    return '$count characters left';
+  }
+
+  @override
+  String communityComposerCharacterLimitExceeded(int max) {
+    return 'Posts can be up to $max characters. Shorten your text to publish.';
+  }
+
+  @override
+  String get communityPostShowMore => 'more';
+
+  @override
+  String get communityPostShowLess => 'less';
+
+  @override
+  String communityMediaCarouselPosition(int index, int total) {
+    return 'Media $index of $total';
+  }
+
+  @override
+  String get communityMediaPrevious => 'Previous media';
+
+  @override
+  String get communityMediaNext => 'Next media';
+
+  @override
+  String get communityMediaVideoPlay => 'Play video';
+
+  @override
+  String get communityMediaVideoPause => 'Pause video';
+
+  @override
+  String get communityMediaVideoMute => 'Mute video';
+
+  @override
+  String get communityMediaVideoUnmute => 'Unmute video';
+
+  @override
+  String get communityMediaVideoUnavailable =>
+      'This video cannot be played here.';
+
+  @override
+  String get communityMediaVideoPreviewUnavailable => 'Preview unavailable';
+
+  @override
+  String get communityMediaVideoReplay => 'Replay video';
+
+  @override
+  String get communityMediaVideoRetry => 'Try again';
+
+  @override
+  String get communityMediaVideoLoading => 'Loading video';
+
+  @override
+  String get communityMediaVideoBuffering => 'Buffering';
+
+  @override
+  String get communityMediaVideoSeek => 'Video position';
+
+  @override
+  String communityMediaVideoTime(String position, String duration) {
+    return '$position of $duration';
+  }
+
+  @override
+  String get communityMediaVideoVolume => 'Volume';
+
+  @override
+  String get communityMediaVideoFullscreen => 'Full screen';
+
+  @override
+  String get communityMediaVideoExitFullscreen => 'Exit full screen';
+
+  @override
+  String get communityMediaVideoControls => 'Video player';
+
+  @override
+  String get communityMediaImageUnavailable => 'Image unavailable';
+
+  @override
+  String get communityPostOpenOriginal => 'View original post';
+
+  @override
   String get communityToggleLikeFailedToast => 'Failed to update like.';
 
   @override
@@ -13240,6 +13406,18 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get communityPostActionComment => 'Comment';
+
+  @override
+  String get communityPostStateLiked => 'liked';
+
+  @override
+  String get communityPostStateNotLiked => 'not liked';
+
+  @override
+  String get communityPostStateSaved => 'saved';
+
+  @override
+  String get communityPostStateNotSaved => 'not saved';
 
   @override
   String get communityRepostedToast => 'Reposted';
@@ -17457,4 +17635,376 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get daoTreasuryLedgerLabel => 'Recorded treasury movements';
+
+  @override
+  String get artworkEditArtistLabel => 'Artist / author';
+
+  @override
+  String get artworkEditArtistHelper =>
+      'Who made the artwork: a person, group or collective. This is not the uploader or the photographer. Leave blank if unknown.';
+
+  @override
+  String get artworkDraftArtistHelper =>
+      'Leave blank if the author is unknown.';
+
+  @override
+  String get communitySearchTypeCollections => 'Collections';
+
+  @override
+  String searchCollectionArtworkCount(num count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count artworks',
+      one: '1 artwork',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String communityComposerRateLimitedSeconds(int seconds) {
+    return 'Posting is temporarily limited. Try again in $seconds seconds. Your draft is kept.';
+  }
+
+  @override
+  String get communityComposerRateLimitedGeneric =>
+      'Posting is temporarily limited. Wait before trying again. Your draft is kept.';
+
+  @override
+  String get communityComposerDiscardDraft => 'Discard this draft?';
+
+  @override
+  String get communityComposerAlreadyCommitted =>
+      'Your post may already be published. Your draft is kept. Check your feed before clearing it or starting a new post.';
+
+  @override
+  String get communityComposerCheckFeed => 'Check feed';
+
+  @override
+  String get supportCenterTitle => 'Help & support';
+
+  @override
+  String get supportCenterEntrySubtitle =>
+      'FAQ, contact support, bug reports and your requests';
+
+  @override
+  String get supportCenterSectionsLabel => 'Help sections';
+
+  @override
+  String get supportCenterSectionFaq => 'FAQ';
+
+  @override
+  String get supportCenterSectionContact => 'Contact support';
+
+  @override
+  String get supportCenterSectionBug => 'Report a bug';
+
+  @override
+  String get supportCenterSectionRequests => 'My requests';
+
+  @override
+  String get supportFaqQuestion1 => 'What is art.kubus?';
+
+  @override
+  String get supportFaqAnswer1 =>
+      'An open art map for exploring artworks, exhibitions and cultural spaces.';
+
+  @override
+  String get supportFaqQuestion2 => 'Can I browse without signing in?';
+
+  @override
+  String get supportFaqAnswer2 =>
+      'Yes. Public discovery works without an account. Content-changing actions require sign-in.';
+
+  @override
+  String get supportFaqQuestion3 => 'Do I need a wallet?';
+
+  @override
+  String get supportFaqAnswer3 =>
+      'No wallet is needed to browse the public art map.';
+
+  @override
+  String get supportFaqQuestion4 => 'How do I report an issue?';
+
+  @override
+  String get supportFaqAnswer4 =>
+      'Choose Report a bug and describe the steps to reproduce it. You can follow the report under My requests.';
+
+  @override
+  String get supportFaqQuestion5 => 'Where are support replies?';
+
+  @override
+  String get supportFaqAnswer5 =>
+      'Open My requests and select a request to read replies and respond.';
+
+  @override
+  String get supportFormSubjectLabel => 'Subject';
+
+  @override
+  String get supportFormMessageLabel => 'Message';
+
+  @override
+  String get supportFormSubmitContact => 'Send request';
+
+  @override
+  String get supportFormSubmitBug => 'Send bug report';
+
+  @override
+  String get supportFormSending => 'Sending…';
+
+  @override
+  String get supportFormRequiredError => 'This field is required.';
+
+  @override
+  String get supportFormSubjectTooLong => 'Use 255 characters or fewer.';
+
+  @override
+  String get supportFormMessageTooLong => 'Use 5000 characters or fewer.';
+
+  @override
+  String get supportFormReportTooLong =>
+      'The report is too long. Shorten it to 5000 characters.';
+
+  @override
+  String get supportBugWhatHappenedLabel => 'What happened?';
+
+  @override
+  String get supportBugStepsLabel => 'Steps to reproduce';
+
+  @override
+  String get supportBugExpectedLabel => 'Expected behaviour';
+
+  @override
+  String get supportBugActualLabel => 'Actual behaviour';
+
+  @override
+  String get supportBugPlatformLabel => 'Include device platform';
+
+  @override
+  String get supportBugPlatformHint =>
+      'Optional. No logs, credentials or personal data are collected.';
+
+  @override
+  String get supportRequestSentToast => 'Request sent to support.';
+
+  @override
+  String get supportBugSentToast => 'Bug report sent. Thank you.';
+
+  @override
+  String get supportRequestsEmpty => 'No requests yet.';
+
+  @override
+  String get supportRequestsRefresh => 'Refresh';
+
+  @override
+  String get supportRequestsBack => 'Back to all requests';
+
+  @override
+  String supportRequestUpdatedOn(Object date) {
+    return 'Updated $date';
+  }
+
+  @override
+  String supportRequestOpenedOn(Object date) {
+    return 'Opened $date';
+  }
+
+  @override
+  String get supportRequestKindSupport => 'Support request';
+
+  @override
+  String get supportRequestKindBug => 'Bug report';
+
+  @override
+  String get supportStatusOpen => 'Open';
+
+  @override
+  String get supportStatusPending => 'Waiting for your reply';
+
+  @override
+  String get supportStatusResolved => 'Resolved';
+
+  @override
+  String get supportStatusClosed => 'Closed';
+
+  @override
+  String get supportSenderYou => 'You';
+
+  @override
+  String get supportSenderSupport => 'Support team';
+
+  @override
+  String get supportReplyLabel => 'Reply';
+
+  @override
+  String get supportReplySend => 'Send reply';
+
+  @override
+  String get supportClosedTitle => 'This request is closed';
+
+  @override
+  String get supportClosedHint =>
+      'Closed requests are read-only. If you still need help, send a new request.';
+
+  @override
+  String get supportClosedNewRequest => 'Send a new request';
+
+  @override
+  String get supportErrorLoadRequests =>
+      'Your requests could not be loaded. Check your connection and try again.';
+
+  @override
+  String get supportErrorLoadRequest =>
+      'This request could not be opened. Check your connection and try again.';
+
+  @override
+  String get supportErrorNotFound =>
+      'This request could not be found. It may have been removed.';
+
+  @override
+  String get supportErrorInvalid =>
+      'Check the highlighted fields and try again.';
+
+  @override
+  String get supportErrorRateLimited =>
+      'Too many requests. Try again in about an hour.';
+
+  @override
+  String get supportErrorClosedReply =>
+      'This request is closed, so it cannot take a reply.';
+
+  @override
+  String get supportErrorGeneric =>
+      'Something went wrong. Check your connection and try again.';
+
+  @override
+  String get supportRetry => 'Try again';
+
+  @override
+  String get supportUnavailable =>
+      'Support requests are not available right now. The FAQ is still open.';
+
+  @override
+  String get supportSignInTitle => 'Sign in to contact support';
+
+  @override
+  String get supportSignInBody =>
+      'Support requests are linked to your account. You can read the FAQ without signing in.';
+
+  @override
+  String get supportSignInAction => 'Sign in';
+
+  @override
+  String get supportSignInActionLabel => 'send a support request';
+
+  @override
+  String get supportSignInRequired =>
+      'Sign in to send requests and see your history.';
+
+  @override
+  String get supportErrorAccountIdentity =>
+      'Your session cannot be used for support requests. Sign out, sign in again, then retry.';
+
+  @override
+  String get communityPostDeleteSessionExpired =>
+      'Your session has expired. Sign in again to delete this post.';
+
+  @override
+  String get communityPostDeleteNotAllowed =>
+      'You can only delete your own posts.';
+
+  @override
+  String get communityPostDeleteConflict =>
+      'This post can\'t be deleted right now. Refresh the feed and try again.';
+
+  @override
+  String get communityPostDeleteNetwork =>
+      'Couldn\'t reach art.kubus. Check your connection and try again.';
+
+  @override
+  String get communityArtDiscoveryTitle => 'Discover art';
+
+  @override
+  String get communityArtDiscoverySubtitleMap =>
+      'Around the area you were viewing on the map';
+
+  @override
+  String get communityArtDiscoverySubtitleDevice => 'Around your location';
+
+  @override
+  String get communityArtDiscoverySubtitleSaved =>
+      'Around the last area you used';
+
+  @override
+  String get communityArtDiscoverySubtitlePublic =>
+      'Art and conversations from across the platform';
+
+  @override
+  String communityArtDiscoveryWithin(Object distance) {
+    return 'Within $distance';
+  }
+
+  @override
+  String get communityArtDiscoveryUseMyLocation => 'Use my location';
+
+  @override
+  String get communityArtDiscoveryReasonForYou => 'For you';
+
+  @override
+  String get communityArtDiscoveryReasonNearby => 'Nearby';
+
+  @override
+  String get communityArtDiscoveryReasonFollowed => 'From an artist you follow';
+
+  @override
+  String get communityArtDiscoveryReasonNewArtwork => 'New artwork';
+
+  @override
+  String get communityArtDiscoveryReasonDiscussion => 'Community discussion';
+
+  @override
+  String get communityArtDiscoveryReasonReview => 'Recent review';
+
+  @override
+  String get communityArtDiscoveryReasonExhibition => 'Exhibition';
+
+  @override
+  String get communityArtDiscoveryEmptyTitle => 'Nothing here yet';
+
+  @override
+  String get communityArtDiscoveryEmptyBody =>
+      'No public art, reviews or exhibitions could be found right now. Try again in a moment, or explore the map.';
+
+  @override
+  String get communityArtDiscoveryErrorTitle => 'Couldn\'t load discovery';
+
+  @override
+  String get communityArtDiscoveryErrorBody =>
+      'Check your connection and try again.';
+
+  @override
+  String get communityArtDiscoveryLoadMore => 'Show more';
+
+  @override
+  String get contributionHeadline =>
+      'Art is everywhere. Help put it on the map.';
+
+  @override
+  String get contributionBody =>
+      'Discover local art, document what you find, and connect with the people behind it.';
+
+  @override
+  String get contributionJoin => 'Join art.kubus';
+
+  @override
+  String get contributionDocument => 'Document public art';
+
+  @override
+  String get contributionArtwork => 'Add artwork';
+
+  @override
+  String get contributionExhibition => 'Add exhibition or event';
+
+  @override
+  String get contributionApplication => 'View application status';
 }

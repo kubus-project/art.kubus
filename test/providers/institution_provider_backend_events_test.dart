@@ -77,7 +77,7 @@ void main() {
     expect(event.institutionId, 'inst-1');
     expect(event.institution?.id, 'inst-1');
     expect(event.location, 'Studio 2');
-    expect(event.imageUrls, contains('/uploads/events/backend.png'));
+    expect(event.coverUrl, '/uploads/events/backend.png');
   });
 }
 

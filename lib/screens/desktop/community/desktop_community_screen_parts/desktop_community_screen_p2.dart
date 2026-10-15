@@ -176,7 +176,11 @@ extension _DesktopCommunityScreenStatePart2 on _DesktopCommunityScreenState {
     final l10n = AppLocalizations.of(context)!;
     final scheme = Theme.of(context).colorScheme;
     final currentTab = _tabs[_tabController.index];
-    if (currentTab == 'groups') return const SizedBox.shrink();
+    // Groups have no feed order, and Art discovery is ranked by one policy
+    // (follows, saves, proximity, recency), not by a chosen sort.
+    if (currentTab == 'groups' || currentTab == 'art') {
+      return const SizedBox.shrink();
+    }
     final sortMode = _sortModeForTab(currentTab);
 
     Widget buildChip(String label, String value, IconData icon) {
@@ -347,6 +351,12 @@ extension _DesktopCommunityScreenStatePart2 on _DesktopCommunityScreenState {
         artworkId,
         source: 'desktop_community_search',
       ),
+      onCollection: (collectionId, title) =>
+          CreatorShellNavigation.openCollectionDetailWorkspace(
+        context,
+        collectionId: collectionId,
+        collectionName: title,
+      ),
       onPost: (postId) async {
         final post = _findPostById(postId);
         if (post != null) {
@@ -499,16 +509,22 @@ extension _DesktopCommunityScreenStatePart2 on _DesktopCommunityScreenState {
 
     if (posts.isEmpty) {
       final hasQuery = _communitySearchController.state.query.trim().isNotEmpty;
-      return _buildEmptyState(
-        themeProvider,
-        Icons.travel_explore,
-        !hasQuery
-            ? l10n.desktopCommunityEmptyDiscoverTitle
-            : l10n.desktopCommunityEmptySearchTitle,
-        !hasQuery
-            ? l10n.desktopCommunityEmptyDiscoverBody
-            : l10n.desktopCommunityEmptySearchBody,
-      );
+      return Column(children: [
+        Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+            child: _buildContributionCard()),
+        Expanded(
+            child: _buildEmptyState(
+          themeProvider,
+          Icons.travel_explore,
+          !hasQuery
+              ? l10n.desktopCommunityEmptyDiscoverTitle
+              : l10n.desktopCommunityEmptySearchTitle,
+          !hasQuery
+              ? l10n.desktopCommunityEmptyDiscoverBody
+              : l10n.desktopCommunityEmptySearchBody,
+        )),
+      ]);
     }
 
     return RefreshIndicator(
@@ -516,42 +532,20 @@ extension _DesktopCommunityScreenStatePart2 on _DesktopCommunityScreenState {
       color: themeProvider.accentColor,
       child: ListView.builder(
         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-        itemCount:
-            posts.length + (AppConfig.isFeatureEnabled('season0') ? 1 : 0),
+        itemCount: posts.length + 1,
         itemBuilder: (context, index) {
-          if (AppConfig.isFeatureEnabled('season0') && index == 0) {
-            return _buildSeason0Banner();
+          if (index == 0) {
+            return _buildContributionCard();
           }
-          final postIndex =
-              AppConfig.isFeatureEnabled('season0') ? index - 1 : index;
+          final postIndex = index - 1;
           return _buildPostCard(posts[postIndex], themeProvider);
         },
       ),
     );
   }
 
-  Widget _buildSeason0Banner() {
-    final l10n = AppLocalizations.of(context)!;
-    return CommunitySeason0Banner(
-      title: l10n.season0BannerTitle,
-      subtitle: l10n.season0BannerTap,
-      onTap: () {
-        final shellScope = DesktopShellScope.of(context);
-        if (shellScope != null) {
-          shellScope.pushScreen(
-            DesktopSubScreen(
-              title: l10n.season0ScreenTitle,
-              child: const Season0Screen(embedded: true),
-            ),
-          );
-        } else {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (_) => const Season0Screen()),
-          );
-        }
-      },
-    );
+  Widget _buildContributionCard() {
+    return const ContextualContributionCard(returnRoute: '/community');
   }
 
   Widget _buildFollowingFeed(ThemeProvider themeProvider) {
@@ -596,134 +590,33 @@ extension _DesktopCommunityScreenStatePart2 on _DesktopCommunityScreenState {
   }
 
   Widget _buildArtFeed(ThemeProvider themeProvider) {
-    return Consumer<CommunityHubProvider>(
-      builder: (context, communityProvider, _) {
-        final l10n = AppLocalizations.of(context)!;
-        final allPosts = communityProvider.artFeedPosts;
-        final isLoading = communityProvider.artFeedLoading;
-        final error = communityProvider.artFeedError;
-
-        if (isLoading && allPosts.isEmpty) {
-          return _buildLoadingState(
-              themeProvider, l10n.desktopCommunityLoadingNearbyArtLabel);
-        }
-
-        if (error != null && allPosts.isEmpty) {
-          return _buildErrorState(themeProvider, error, () async {
-            await communityProvider.loadArtFeed(
-              latitude: 46.05,
-              longitude: 14.50,
-              radiusKm: 50,
-              limit: 50,
-              refresh: true,
-            );
-          });
-        }
-
-        if (allPosts.isEmpty) {
-          return _buildEmptyState(
-            themeProvider,
-            Icons.view_in_ar_outlined,
-            l10n.desktopCommunityEmptyNearbyArtTitle,
-            l10n.desktopCommunityEmptyNearbyArtBody,
-          );
-        }
-
-        final posts = _sortPosts(_filterPostsForQuery(allPosts), _artSortMode);
-        if (posts.isEmpty) {
-          return _buildEmptyState(
-            themeProvider,
-            Icons.search,
-            l10n.desktopCommunityEmptySearchTitle,
-            l10n.desktopCommunityEmptySearchSubtitle,
-          );
-        }
-
-        return RefreshIndicator(
-          onRefresh: () async {
-            await communityProvider.loadArtFeed(
-              latitude: 46.05,
-              longitude: 14.50,
-              radiusKm: 50,
-              limit: 50,
-              refresh: true,
-            );
-          },
-          color: themeProvider.accentColor,
-          child: NotificationListener<ScrollNotification>(
-            onNotification: (notification) {
-              // Infinite scroll: load next page when near the bottom.
-              if (notification.metrics.extentAfter < 600 &&
-                  communityProvider.artFeedHasMore &&
-                  !communityProvider.artFeedLoading) {
-                final center = communityProvider.artFeedCenter;
-                unawaited(communityProvider.loadArtFeed(
-                  latitude: center?.lat ?? 46.05,
-                  longitude: center?.lng ?? 14.50,
-                  radiusKm: communityProvider.artFeedRadiusKm,
-                  limit: communityProvider.artFeedPageSize,
-                  refresh: false,
-                ));
-              }
-              return false;
-            },
-            child: ListView.builder(
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-              itemCount: posts.length + 1,
-              itemBuilder: (context, index) {
-                if (index == 0) {
-                  return Padding(
-                    padding: const EdgeInsets.only(bottom: 12),
-                    child: Row(
-                      children: [
-                        ElevatedButton.icon(
-                          onPressed: () async {
-                            await communityProvider.loadArtFeed(
-                              latitude: 46.05,
-                              longitude: 14.50,
-                              radiusKm: 50,
-                              limit: 50,
-                              refresh: true,
-                            );
-                          },
-                          icon: const Icon(Icons.my_location),
-                          label: Text(
-                              l10n.desktopCommunityArtUseCurrentAreaButton),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: themeProvider.accentColor,
-                            foregroundColor:
-                                Theme.of(context).colorScheme.onPrimary,
-                            shape: RoundedRectangleBorder(
-                                borderRadius:
-                                    BorderRadius.circular(KubusRadius.md)),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        OutlinedButton.icon(
-                          onPressed: () async {
-                            await communityProvider.loadArtFeed(
-                              latitude: 46.05,
-                              longitude: 14.50,
-                              radiusKm: 200,
-                              limit: 100,
-                              refresh: true,
-                            );
-                          },
-                          icon: const Icon(Icons.travel_explore),
-                          label:
-                              Text(l10n.desktopCommunityArtWiderRadiusButton),
-                        ),
-                      ],
-                    ),
-                  );
-                }
-                return _buildPostCard(posts[index - 1], themeProvider);
-              },
-            ),
-          ),
-        );
-      },
+    final query = _communitySearchController.state.query.trim().toLowerCase();
+    return CommunityArtDiscoveryFeed(
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+      maxContentWidth: 760,
+      postBuilder: (context, post) => _buildPostCard(post, themeProvider),
+      onRefresh: () => _loadArtFeed(force: true),
+      onUseMyLocation: () => _loadArtFeed(force: true, promptForLocation: true),
+      matches:
+          query.isEmpty ? null : (item) => _artDiscoveryMatches(item, query),
     );
+  }
+
+  /// The tab's search field applies to every kind of discovery entry.
+  bool _artDiscoveryMatches(ArtDiscoveryItem item, String query) {
+    switch (item.kind) {
+      case ArtDiscoveryKind.post:
+        return _filterPostsForQuery([item.post!]).isNotEmpty;
+      case ArtDiscoveryKind.artwork:
+        final art = item.artwork!;
+        return art.title.toLowerCase().contains(query) ||
+            art.artist.toLowerCase().contains(query) ||
+            art.tags.any((tag) => tag.toLowerCase().contains(query));
+      case ArtDiscoveryKind.exhibition:
+        final show = item.exhibition!;
+        return show.title.toLowerCase().contains(query) ||
+            (show.locationName ?? '').toLowerCase().contains(query);
+    }
   }
 
   Widget _buildFloatingActions(ThemeProvider themeProvider) {
@@ -764,6 +657,32 @@ extension _DesktopCommunityScreenStatePart2 on _DesktopCommunityScreenState {
     );
   }
 
+  /// Guests meet the contextual account surface before any composer opens,
+  /// as on mobile. Signed-in visitors pass straight through.
+  Future<void> _requestComposer({
+    required CommunityComposeIntent intent,
+    required VoidCallback open,
+  }) async {
+    final allowed = await ensureCommunityComposeAccess(
+      context,
+      intent: intent,
+      actionLabel: AppLocalizations.of(context)!.communityComposeAuthAction,
+      sourceScreen: 'desktop_community_screen',
+    );
+    if (!allowed || !mounted) return;
+    open();
+  }
+
+  void _openComposeDialog() {
+    _applyState(() => _showComposeDialog = true);
+  }
+
+  /// The art drop composer also explains how the AR attachment works.
+  void _openArtDropComposer() {
+    _openComposeDialog();
+    _showARAttachmentInfo();
+  }
+
   List<CommunityFabOption> _getFabOptions(
     int tabIndex, {
     required AppLocalizations l10n,
@@ -784,10 +703,11 @@ extension _DesktopCommunityScreenStatePart2 on _DesktopCommunityScreenState {
             icon: Icons.post_add_outlined,
             label: l10n.desktopCommunityCreateOptionGroupPost,
             onTap: () {
-              _applyState(() {
-                _isFabExpanded = false;
-                _showComposeDialog = true;
-              });
+              _applyState(() => _isFabExpanded = false);
+              unawaited(_requestComposer(
+                intent: CommunityComposeIntent.groupPost,
+                open: _openComposeDialog,
+              ));
             },
           ),
         ];
@@ -797,21 +717,22 @@ extension _DesktopCommunityScreenStatePart2 on _DesktopCommunityScreenState {
             icon: Icons.place_outlined,
             label: l10n.desktopCommunityCreateOptionArtDrop,
             onTap: () {
-              _applyState(() {
-                _isFabExpanded = false;
-                _showComposeDialog = true;
-              });
-              _showARAttachmentInfo();
+              _applyState(() => _isFabExpanded = false);
+              unawaited(_requestComposer(
+                intent: CommunityComposeIntent.artDrop,
+                open: _openArtDropComposer,
+              ));
             },
           ),
           CommunityFabOption(
             icon: Icons.rate_review_outlined,
             label: l10n.desktopCommunityCreateOptionPostReview,
             onTap: () {
-              _applyState(() {
-                _isFabExpanded = false;
-                _showComposeDialog = true;
-              });
+              _applyState(() => _isFabExpanded = false);
+              unawaited(_requestComposer(
+                intent: CommunityComposeIntent.review,
+                open: _openComposeDialog,
+              ));
             },
           ),
         ];
@@ -821,10 +742,11 @@ extension _DesktopCommunityScreenStatePart2 on _DesktopCommunityScreenState {
             icon: Icons.edit_outlined,
             label: l10n.desktopCommunityCreateOptionPost,
             onTap: () {
-              _applyState(() {
-                _isFabExpanded = false;
-                _showComposeDialog = true;
-              });
+              _applyState(() => _isFabExpanded = false);
+              unawaited(_requestComposer(
+                intent: CommunityComposeIntent.post,
+                open: _openComposeDialog,
+              ));
             },
           ),
         ];
@@ -981,14 +903,31 @@ extension _DesktopCommunityScreenStatePart2 on _DesktopCommunityScreenState {
   /// Reopens the creation surface a guest requested before signing in
   /// (delivered by `CommunityComposeIntentResumer`).
   void _resumeComposeIntent(CommunityComposeIntent intent) {
-    if (intent == CommunityComposeIntent.createGroup) {
-      unawaited(_requestCreateGroup(
-        Provider.of<ThemeProvider>(context, listen: false),
-      ));
-      return;
+    switch (intent) {
+      case CommunityComposeIntent.createGroup:
+        unawaited(_requestCreateGroup(
+          Provider.of<ThemeProvider>(context, listen: false),
+        ));
+        break;
+      case CommunityComposeIntent.post:
+        // The inline composer keeps any draft still held by this screen.
+        unawaited(_requestComposerExpansion());
+        break;
+      case CommunityComposeIntent.groupPost:
+      case CommunityComposeIntent.review:
+        unawaited(_requestComposer(intent: intent, open: _openComposeDialog));
+        break;
+      case CommunityComposeIntent.artDrop:
+        unawaited(_requestComposer(
+          intent: intent,
+          open: _openArtDropComposer,
+        ));
+        break;
+      case CommunityComposeIntent.startChat:
+        // Back in the Messages panel, where the new-conversation entry is.
+        _handleSidebarTabChange(true);
+        break;
     }
-    // The inline composer keeps any draft still held by this screen.
-    _applyState(() => _isComposerExpanded = true);
   }
 
   Future<void> _showCreateGroupDialog(ThemeProvider themeProvider) async {

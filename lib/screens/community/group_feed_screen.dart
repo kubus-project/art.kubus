@@ -1,14 +1,20 @@
+import 'package:art_kubus/widgets/community/community_post_media_carousel.dart';
+import 'package:art_kubus/widgets/community/community_post_delete.dart';
 import 'package:flutter/foundation.dart';
 import 'package:art_kubus/widgets/glass_components.dart';
 
 import 'package:flutter/material.dart';
-import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import '../../services/share/share_service.dart';
 import '../../services/share/share_types.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
 
 import '../../community/community_interactions.dart';
+import '../../community/community_composer_media.dart';
+import '../../community/community_post_text_limits.dart';
+import '../../community/community_upload_feedback.dart';
+import '../../widgets/community/community_composer_character_counter.dart';
+import '../../widgets/community/community_composer_media_tray.dart';
 import '../../models/community_group.dart';
 import '../../models/community_subject.dart';
 import '../../providers/app_refresh_provider.dart';
@@ -24,6 +30,7 @@ import '../../services/contextual_auth_gate.dart';
 import '../../services/profile_package_mutation_tracker.dart';
 import '../../utils/app_animations.dart';
 import '../../utils/app_color_utils.dart';
+import '../../utils/community_screen_utils.dart';
 import '../../utils/community_subject_navigation.dart';
 import '../../utils/media_url_resolver.dart';
 import '../../utils/wallet_utils.dart';
@@ -60,8 +67,10 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
   bool _membershipInFlight = false;
   final TextEditingController _composerController = TextEditingController();
   bool _posting = false;
-  XFile? _selectedImage;
-  Uint8List? _selectedImageBytes;
+  final CommunityComposerMediaController _composerMedia =
+      CommunityComposerMediaController(
+    maxItems: communityComposerMaxMediaItems(),
+  );
   final Set<String> _deleteDialogOpenPostIds = <String>{};
   final Set<String> _deleteInFlightPostIds = <String>{};
 
@@ -129,7 +138,7 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
                 ),
               ],
             ),
-      body: Consumer<CommunityHubProvider>(
+      body: CommunityMediaViewport(child: Consumer<CommunityHubProvider>(
         builder: (context, hub, _) {
           final summary = _resolveGroup(hub);
           final posts = hub.groupPosts(summary.id);
@@ -207,7 +216,7 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
             ),
           );
         },
-      ),
+      )),
     );
   }
 
@@ -314,36 +323,16 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
               ),
             ),
           ),
-          if (_selectedImageBytes != null) ...[
+          CommunityComposerCharacterCounter(controller: _composerController),
+          if (_composerMedia.isNotEmpty ||
+              _composerMedia.publishError != null) ...[
             const SizedBox(height: KubusSpacing.md),
-            ClipRRect(
-              borderRadius: BorderRadius.circular(KubusRadius.md),
-              child: Stack(
-                children: [
-                  Image.memory(
-                    _selectedImageBytes!,
-                    height: 180,
-                    width: double.infinity,
-                    fit: BoxFit.cover,
-                  ),
-                  Positioned(
-                    top: 8,
-                    right: 8,
-                    child: IconButton(
-                      style: IconButton.styleFrom(
-                        backgroundColor: scheme.surface.withValues(alpha: 0.8),
-                      ),
-                      onPressed: _posting
-                          ? null
-                          : () => setState(() {
-                                _selectedImage = null;
-                                _selectedImageBytes = null;
-                              }),
-                      icon: const Icon(Icons.close),
-                    ),
-                  ),
-                ],
-              ),
+            CommunityComposerMediaTray(
+              controller: _composerMedia,
+              onAddPhotos: _pickComposerPhotos,
+              onAddVideo: _pickComposerVideo,
+              showAddActions: false,
+              thumbnailSize: 80,
             ),
           ],
           const SizedBox(height: KubusSpacing.md),
@@ -353,8 +342,13 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
             children: [
               IconButton(
                 tooltip: l10n.commonImage,
-                onPressed: _posting ? null : _pickComposerImage,
+                onPressed: _posting ? null : _pickComposerPhotos,
                 icon: const Icon(Icons.image_outlined),
+              ),
+              IconButton(
+                tooltip: l10n.communityComposerMediaAddVideo,
+                onPressed: _posting ? null : _pickComposerVideo,
+                icon: const Icon(Icons.videocam_outlined),
               ),
               const Spacer(),
               ElevatedButton(
@@ -375,21 +369,46 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
     );
   }
 
-  Future<void> _pickComposerImage() async {
-    final picker = ImagePicker();
-    final image = await picker.pickImage(
-      source: ImageSource.gallery,
-      maxWidth: 1920,
-      maxHeight: 1920,
-      imageQuality: 85,
+  Future<void> _pickComposerPhotos() async {
+    final remaining = _composerMedia.remainingSlots;
+    if (remaining <= 0) {
+      _showComposerMediaLimit();
+      return;
+    }
+    final picked = await pickCommunityComposerPhotos(limit: remaining);
+    if (picked.isEmpty || !mounted) return;
+    var added = 0;
+    setState(() => added = _composerMedia.add(picked));
+    final trimmed = communityComposerTrimmedMessage(
+      AppLocalizations.of(context)!,
+      added: added,
+      picked: picked.length,
+      max: _composerMedia.maxItems,
     );
-    if (image == null) return;
-    final bytes = await image.readAsBytes();
-    if (!mounted) return;
-    setState(() {
-      _selectedImage = image;
-      _selectedImageBytes = bytes;
-    });
+    if (trimmed != null) {
+      ScaffoldMessenger.of(context).showKubusSnackBar(
+        SnackBar(content: Text(trimmed)),
+      );
+    }
+  }
+
+  Future<void> _pickComposerVideo() async {
+    if (_composerMedia.isFull) {
+      _showComposerMediaLimit();
+      return;
+    }
+    final picked = await pickCommunityComposerVideo();
+    if (picked == null || !mounted) return;
+    setState(() => _composerMedia.add(<CommunityComposerPickedMedia>[picked]));
+  }
+
+  void _showComposerMediaLimit() {
+    ScaffoldMessenger.of(context).showKubusSnackBar(
+      SnackBar(
+        content: Text(AppLocalizations.of(context)!
+            .communityComposerMediaLimitReached(_composerMedia.maxItems)),
+      ),
+    );
   }
 
   Future<void> _submitGroupPost(
@@ -399,10 +418,20 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
     final messenger = ScaffoldMessenger.of(context);
     final appModeProvider =
         Provider.of<AppModeProvider?>(context, listen: false);
-    final content = _composerController.text.trim();
-    if (content.isEmpty) {
+    final typedContent = _composerController.text.trim();
+    if (typedContent.isEmpty && _composerMedia.isEmpty) {
       messenger.showKubusSnackBar(
           SnackBar(content: Text(l10n.communityComposerAddContentToast)));
+      return;
+    }
+    if (communityPostExceedsLimit(typedContent)) {
+      messenger.showKubusSnackBar(
+        SnackBar(
+          content: Text(l10n.communityComposerCharacterLimitExceeded(
+            kCommunityPostMaxCharacters,
+          )),
+        ),
+      );
       return;
     }
     if (appModeProvider?.isIpfsFallbackMode ?? false) {
@@ -416,35 +445,41 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
 
     setState(() => _posting = true);
     try {
-      String? imageUrl;
-      if (_selectedImageBytes != null && _selectedImage != null) {
-        final upload = await BackendApiService().uploadFile(
-          fileBytes: _selectedImageBytes!,
-          fileName: _selectedImage!.name,
-          fileType: 'community_post_media',
-          metadata: {'scope': 'group_post', 'groupId': summary.id},
-        );
-        final raw = upload['uploadedUrl']?.toString();
-        imageUrl = MediaUrlResolver.resolve(raw) ?? raw;
-      }
-
+      final api = BackendApiService();
       final draft = hub.draft;
-      await hub.submitGroupPost(
-        summary.id,
-        content: content,
-        imageUrl: imageUrl,
-        artworkId: draft.artwork?.id,
-        subjectType: draft.subjectType,
-        subjectId: draft.subjectId,
-        subjects: draft.subjects,
+      await _composerMedia.publish<Object?>(
+        upload: (item) => uploadCommunityComposerMediaItem(
+          api,
+          item,
+          metadata: {'scope': 'group_post', 'groupId': summary.id},
+        ),
+        submit: (mediaUrls) => hub.submitGroupPost(
+          summary.id,
+          idempotencyKey: _composerMedia.submissionKey,
+          content: typedContent.isNotEmpty
+              ? typedContent
+              : communityComposerMediaFallbackCaption(
+                  l10n,
+                  hasImages: _composerMedia.hasImages,
+                  hasVideos: _composerMedia.hasVideos,
+                ),
+          mediaUrls: mediaUrls.isEmpty ? null : mediaUrls,
+          postType: communityComposerPostType(
+            hasImage: _composerMedia.hasImages,
+            hasVideo: _composerMedia.hasVideos,
+          ),
+          artworkId: draft.artwork?.id,
+          subjectType: draft.subjectType,
+          subjectId: draft.subjectId,
+          subjects: draft.subjects,
+        ),
       );
 
       if (!mounted) return;
       setState(() {
         _posting = false;
         _composerController.clear();
-        _selectedImage = null;
-        _selectedImageBytes = null;
+        _composerMedia.clear();
       });
       hub.setDraftSubject();
       hub.setDraftArtwork(null);
@@ -458,7 +493,13 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
       if (!mounted) return;
       messenger.showKubusSnackBar(
         SnackBar(
-          content: Text(l10n.communityComposerCreatePostFailedToast),
+          content: Text(communityComposerFailureMessage(
+            l10n,
+            e,
+            unuploadedMediaCount: _composerMedia.hasFailedUploads
+                ? _composerMedia.unuploadedCount
+                : null,
+          )),
           duration: const Duration(seconds: 3),
         ),
       );
@@ -570,8 +611,7 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
       preview = CommunitySubjectPreview(
         ref: CommunitySubjectRef(type: 'artwork', id: draft.artwork!.id),
         title: draft.artwork!.title,
-        imageUrl: MediaUrlResolver.resolve(draft.artwork!.imageUrl) ??
-            draft.artwork!.imageUrl,
+        imageUrl: MediaUrlResolver.resolveDisplayUrl(draft.artwork!.imageUrl),
       );
     }
 
@@ -815,99 +855,23 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
 
   Future<void> _confirmDeleteFeedPost(CommunityPost post) async {
     if (!mounted) return;
-    if (_deleteDialogOpenPostIds.contains(post.id) ||
-        _deleteInFlightPostIds.contains(post.id)) {
-      return;
-    }
-
-    final l10n = AppLocalizations.of(context)!;
+    if (_deleteDialogOpenPostIds.contains(post.id)) return;
     _deleteDialogOpenPostIds.add(post.id);
-    bool deleting = false;
-
+    AppRefreshProvider? appRefresh;
     try {
-      await showKubusDialog<void>(
+      appRefresh = Provider.of<AppRefreshProvider>(context, listen: false);
+    } catch (_) {}
+    final hub = Provider.of<CommunityHubProvider>(context, listen: false);
+    final groupId = post.groupId ?? _group.id;
+    try {
+      await confirmAndDeleteCommunityPost(
         context: context,
-        builder: (dialogContext) => StatefulBuilder(
-          builder: (context, setDialogState) => KubusAlertDialog(
-            title: Text(
-              l10n.postDetailDeletePostTitle,
-              style: KubusTypography.inter(fontWeight: FontWeight.bold),
-            ),
-            content: Text(
-              l10n.postDetailDeletePostBody,
-              style: KubusTypography.inter(),
-            ),
-            actions: [
-              TextButton(
-                onPressed: deleting
-                    ? null
-                    : () => Navigator.of(dialogContext).maybePop(),
-                child: Text(l10n.commonCancel),
-              ),
-              TextButton(
-                onPressed: deleting
-                    ? null
-                    : () async {
-                        if (_deleteInFlightPostIds.contains(post.id)) return;
-                        setDialogState(() => deleting = true);
-                        _deleteInFlightPostIds.add(post.id);
-                        final messenger = ScaffoldMessenger.of(context);
-                        AppRefreshProvider? appRefresh;
-                        try {
-                          appRefresh = Provider.of<AppRefreshProvider>(
-                            context,
-                            listen: false,
-                          );
-                        } catch (_) {}
-
-                        try {
-                          await BackendApiService()
-                              .deleteCommunityPost(post.id);
-                          ProfilePackageMutationTracker.postDeleted(
-                            authorWallet: post.authorWallet ?? post.authorId,
-                          );
-                          if (!mounted || !dialogContext.mounted) return;
-                          final hub = Provider.of<CommunityHubProvider>(
-                            context,
-                            listen: false,
-                          );
-                          final groupId = post.groupId ?? _group.id;
-                          hub.removeGroupPost(groupId, post.id);
-                          hub.removeArtFeedPost(post.id);
-                          appRefresh?.triggerCommunity();
-                          Navigator.of(dialogContext).pop();
-                          messenger.showKubusSnackBar(
-                            SnackBar(
-                                content: Text(l10n.postDetailPostDeletedToast)),
-                          );
-                        } catch (e) {
-                          if (kDebugMode) {
-                            debugPrint(
-                                'GroupFeedScreen: delete post failed: $e');
-                          }
-                          if (!mounted || !dialogContext.mounted) return;
-                          setDialogState(() => deleting = false);
-                          messenger.showKubusSnackBar(
-                            SnackBar(
-                              content:
-                                  Text(l10n.postDetailDeletePostFailedToast),
-                            ),
-                          );
-                        } finally {
-                          _deleteInFlightPostIds.remove(post.id);
-                        }
-                      },
-                child: deleting
-                    ? const SizedBox(
-                        width: 18,
-                        height: 18,
-                        child: InlineLoading(tileSize: 4),
-                      )
-                    : Text(l10n.commonDelete),
-              ),
-            ],
-          ),
-        ),
+        post: post,
+        onDeleted: () {
+          hub.removeGroupPost(groupId, post.id);
+          hub.removeArtFeedPost(post.id);
+          appRefresh?.triggerCommunity();
+        },
       );
     } finally {
       _deleteDialogOpenPostIds.remove(post.id);
@@ -921,6 +885,10 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
       context,
       actionLabel: l10n.commonLikes.toLowerCase(),
       returnRoute: '/p/${Uri.encodeComponent(post.id)}',
+      actionType: PendingActionType.like,
+      targetType: PendingActionTargetType.post,
+      targetId: post.id,
+      sourceScreen: 'group_feed',
     );
     if (!authenticated || !mounted) return;
     final walletAddress = Provider.of<WalletProvider>(context, listen: false)
@@ -1469,20 +1437,27 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
                 ),
               ),
               const SizedBox(height: KubusSpacing.md),
-              Padding(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: KubusSpacing.lg),
-                child: CommunityPostCard(
-                  post: post,
-                  accentColor: themeProvider.accentColor,
-                  onOpenPostDetail: _openPostDetail,
-                  onOpenProfileIdentity: (identity) =>
-                      openProfileIdentity(context, identity),
-                  onToggleLike: () => _toggleLike(post),
-                  onOpenComments: () => _openPostDetail(post),
-                  onRepost: () {},
-                  onShare: () {},
-                  onToggleBookmark: () => _toggleBookmark(post),
+              Expanded(
+                child: CommunityMediaViewport(
+                  child: SingleChildScrollView(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: KubusSpacing.lg,
+                      ),
+                      child: CommunityPostCard(
+                        post: post,
+                        accentColor: themeProvider.accentColor,
+                        onOpenPostDetail: _openPostDetail,
+                        onOpenProfileIdentity: (identity) =>
+                            openProfileIdentity(context, identity),
+                        onToggleLike: () => _toggleLike(post),
+                        onOpenComments: () => _openPostDetail(post),
+                        onRepost: () {},
+                        onShare: () {},
+                        onToggleBookmark: () => _toggleBookmark(post),
+                      ),
+                    ),
+                  ),
                 ),
               ),
             ],
@@ -1550,6 +1525,7 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
     final confirmed = await showKubusDialog<bool>(
       context: context,
       builder: (dialogContext) => KubusAlertDialog(
+        size: KubusDialogSize.compact,
         title:
             Text(l10n.communityUnrepostTitle, style: KubusTypography.inter()),
         content: Text(

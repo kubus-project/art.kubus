@@ -3,6 +3,7 @@ import 'package:flutter/widgets.dart';
 import 'package:provider/provider.dart';
 
 import '../community/community_interactions.dart';
+import '../community/community_post_media.dart';
 import '../providers/saved_items_provider.dart';
 import 'user_action_logger.dart';
 
@@ -55,13 +56,8 @@ class CommunityPostSaveController {
   }
 
   static String? _imageFor(CommunityPost post) {
-    final image = post.imageUrl?.trim();
-    if (image != null && image.isNotEmpty) return image;
-    for (final media in post.mediaUrls) {
-      final candidate = media.trim();
-      if (candidate.isNotEmpty) return candidate;
-    }
-    return post.artwork?.imageUrl;
+    // A video-first post has its poster here, never the clip itself.
+    return communityPostPreviewImageUrl(post) ?? post.artwork?.imageUrl;
   }
 
   static Map<String, dynamic> _metadataFor(CommunityPost post) {

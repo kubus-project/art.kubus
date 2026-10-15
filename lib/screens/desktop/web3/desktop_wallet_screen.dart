@@ -339,11 +339,7 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
     ).push(MaterialPageRoute(builder: (_) => const TokenSwap()));
   }
 
-  Future<void> _openBackupProtection() async {
-    await Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => const WalletBackupProtectionScreen()),
-    );
-  }
+  Future<void> _openBackupProtection() => openWalletBackupProtection(context);
 
   Widget _buildHeader(
     ThemeProvider themeProvider,
@@ -960,7 +956,7 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
         final rawImage = series?.imageUrl ?? series?.animationUrl;
         final resolvedImage = rawImage == null
             ? null
-            : (MediaUrlResolver.resolve(rawImage) ?? rawImage);
+            : MediaUrlResolver.resolveDisplayUrl(rawImage);
         return <String, dynamic>{
           'id': collectible.id,
           'tokenId': collectible.tokenId,

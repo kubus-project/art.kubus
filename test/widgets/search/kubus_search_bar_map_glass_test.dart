@@ -155,8 +155,7 @@ void main() {
       expect(decoration.borderRadius, BorderRadius.circular(KubusRadius.sm));
     });
 
-    testWidgets(
-        'fallback over the map drops BackdropFilter and adds the material sheen',
+    testWidgets('map field is one flat surface: no BackdropFilter and no sheen',
         (tester) async {
       await tester.pumpWidget(
         _wrap(
@@ -171,7 +170,88 @@ void main() {
       );
 
       expect(find.byType(BackdropFilter), findsNothing);
-      expect(find.byType(KubusMapGlassMaterialSheen), findsOneWidget);
+      expect(find.byType(KubusMapGlassMaterialSheen), findsNothing);
+    });
+
+    testWidgets('map field fill shares the hairline box (one boundary)',
+        (tester) async {
+      await tester.pumpWidget(
+        _wrap(
+          const SizedBox(
+            width: 360,
+            height: KubusHeaderMetrics.searchBarHeight,
+            child: KubusSearchBar(
+              hintText: 'Search',
+              enableBlur: false,
+              useMapGlassSurface: true,
+            ),
+          ),
+        ),
+      );
+
+      // The fill is painted by the same box that draws the hairline, so the
+      // two can never disagree on size. A separate filled child inside the
+      // bordered box sized to the field's own height drew a second outline.
+      final box = tester.widget<AnimatedContainer>(
+        find
+            .descendant(
+              of: find.byType(KubusSearchBar),
+              matching: find.byType(AnimatedContainer),
+            )
+            .first,
+      );
+      final decoration = box.decoration as BoxDecoration;
+      expect(decoration.color, isNotNull);
+      expect(
+        tester.getSize(find.byType(AnimatedContainer).first).height,
+        KubusHeaderMetrics.searchBarHeight,
+      );
+      // The app theme's state-specific outlines must not paint inside the
+      // field: the TextField draws no border of its own in any state.
+      final input = tester.widget<TextField>(find.byType(TextField));
+      expect(input.decoration?.enabledBorder, InputBorder.none);
+      expect(input.decoration?.focusedBorder, InputBorder.none);
+      expect(input.decoration?.disabledBorder, InputBorder.none);
+    });
+
+    testWidgets('text and hint share the icon center in a 48px field',
+        (tester) async {
+      final controller = TextEditingController(text: 'Mural search');
+      addTearDown(controller.dispose);
+      await tester.pumpWidget(
+        _wrap(
+          SizedBox(
+            width: 360,
+            height: KubusHeaderMetrics.searchBarHeight,
+            child: KubusSearchBar(
+              hintText: 'Search',
+              controller: controller,
+              trailing: const Icon(Icons.close),
+              enableBlur: false,
+              useMapGlassSurface: true,
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+
+      final iconCenter = tester.getCenter(find.byIcon(Icons.search));
+      final trailingCenter = tester.getCenter(find.byIcon(Icons.close));
+      final editable = tester
+          .state<EditableTextState>(find.byType(EditableText))
+          .renderEditable;
+      final caret = editable.getLocalRectForCaret(
+        TextPosition(offset: controller.selection.baseOffset),
+      );
+      final renderedTextCenter = editable.localToGlobal(caret.center).dy;
+      expect((renderedTextCenter - iconCenter.dy).abs(), lessThan(4));
+      expect((renderedTextCenter - trailingCenter.dy).abs(), lessThan(4));
+
+      controller.clear();
+      await tester.pump();
+      final hintCenter = tester.getCenter(find.text('Search'));
+      expect((hintCenter.dy - iconCenter.dy).abs(), lessThan(4));
+      expect((hintCenter.dy - trailingCenter.dy).abs(), lessThan(4));
     });
 
     testWidgets('normal search bar fallback does NOT use the map sheen',
@@ -189,7 +269,7 @@ void main() {
       expect(find.byType(KubusMapGlassMaterialSheen), findsNothing);
     });
 
-    testWidgets('map mode keeps real blur when blur is available',
+    testWidgets('map mode stays flat even when blur is available',
         (tester) async {
       await tester.pumpWidget(
         _wrap(
@@ -201,9 +281,9 @@ void main() {
         ),
       );
 
-      // Provider absent => GlassSurface defaults to real blur, and the sheen is
-      // only for the blur-off fallback.
-      expect(find.byType(BackdropFilter), findsOneWidget);
+      // Blur-over-blur was the stacking defect: map chrome never blurs, even
+      // when the device could, and it adds no sheen.
+      expect(find.byType(BackdropFilter), findsNothing);
       expect(find.byType(KubusMapGlassMaterialSheen), findsNothing);
     });
 
@@ -231,8 +311,8 @@ void main() {
         ),
       );
 
-      // Sheen fallback is active, but the text field still works fully.
-      expect(find.byType(KubusMapGlassMaterialSheen), findsOneWidget);
+      // The flat map surface still carries a fully working text field.
+      expect(find.byType(KubusMapGlassMaterialSheen), findsNothing);
       expect(find.text('Find art'), findsOneWidget); // hint visible
 
       await tester.tap(find.byType(TextField));
@@ -251,7 +331,7 @@ void main() {
   });
 
   group('KubusSearchResultsOverlay map glass mode', () {
-    testWidgets('dropdown fallback shows the sheen and results remain tappable',
+    testWidgets('dropdown is solid, not glass, and results remain tappable',
         (tester) async {
       final themeProvider = ThemeProvider();
       addTearDown(themeProvider.dispose);
@@ -288,12 +368,36 @@ void main() {
       await tester.pump();
       await tester.pump();
 
-      // Dropdown is open over the map: it must read as map glass (sheen) with
-      // no raw BackdropFilter required on this fallback path.
+      // Dropdown is open over the map: result text must sit on a solid
+      // surface, so there is neither a backdrop blur nor a translucent sheen
+      // inside the overlay for map chips and labels to show through.
       final resultTile = find.widgetWithText(ListTile, 'Ocean Light');
       expect(resultTile, findsOneWidget);
-      expect(find.byType(KubusMapGlassMaterialSheen), findsWidgets);
-      expect(find.byType(BackdropFilter), findsNothing);
+      final overlay = find.byType(KubusSearchResultsOverlay);
+      expect(
+        find.descendant(
+          of: overlay,
+          matching: find.byType(KubusMapGlassMaterialSheen),
+        ),
+        findsNothing,
+      );
+      expect(
+        find.descendant(of: overlay, matching: find.byType(BackdropFilter)),
+        findsNothing,
+      );
+      // Flat map chrome: one hairline rule, no drop shadow lifting the panel.
+      expect(
+        find.descendant(
+          of: overlay,
+          matching: find.byWidgetPredicate(
+            (widget) =>
+                widget is DecoratedBox &&
+                widget.decoration is BoxDecoration &&
+                (widget.decoration as BoxDecoration).boxShadow != null,
+          ),
+        ),
+        findsNothing,
+      );
 
       // Still tappable.
       tester.widget<ListTile>(resultTile).onTap?.call();
@@ -336,6 +440,48 @@ void main() {
       );
 
       expect(find.byType(BackdropFilter), findsOneWidget);
+      expect(find.byType(KubusMapGlassMaterialSheen), findsNothing);
+    });
+
+    // Analytics and spatial chips keep the glass fallback; only the map-aware
+    // chips (filter strip, layer chips, discovery card) are flat.
+    testWidgets('map-aware chip is one flat surface with blur off',
+        (tester) async {
+      await tester.pumpWidget(
+        _wrap(
+          KubusGlassChip(
+            label: 'Nearby',
+            icon: Icons.near_me,
+            active: false,
+            enableBlur: false,
+            useMapAwareGlass: true,
+            onPressed: () {},
+          ),
+        ),
+      );
+
+      expect(find.byType(BackdropFilter), findsNothing);
+      expect(find.byType(KubusMapGlassMaterialSheen), findsNothing);
+      expect(find.text('Nearby'), findsOneWidget);
+    });
+
+    testWidgets('map-aware chip is flat even when blur is available',
+        (tester) async {
+      await tester.pumpWidget(
+        _wrap(
+          KubusGlassChip(
+            label: 'Street Art',
+            icon: Icons.brush,
+            active: true,
+            enableBlur: true,
+            useMapAwareGlass: true,
+            onPressed: () {},
+          ),
+        ),
+      );
+
+      // Map chrome never blurs or sheens, even when the device could blur.
+      expect(find.byType(BackdropFilter), findsNothing);
       expect(find.byType(KubusMapGlassMaterialSheen), findsNothing);
     });
   });

@@ -3,6 +3,14 @@ name: Release production web
 on:
   workflow_dispatch:
     inputs:
+      community_multi_media_enabled:
+        description: >-
+          Community multi-media (up to ten photos and videos, 2200-character
+          captions). Needs backend art.kubus-backend#79 on every writable
+          instance. Set false only for the emergency rollback build.
+        required: false
+        default: true
+        type: boolean
       bootstrap_web_root:
         description: One-time physical Netcup document root preflight
         required: false
@@ -44,6 +52,7 @@ jobs:
     with:
       deployment_environment: production
       source_sha: ${{ needs.source.outputs.sha }}
+      community_multi_media_enabled: ${{ inputs.community_multi_media_enabled == true }}
       full_browser_matrix: true
 
   deploy:

@@ -31,7 +31,7 @@ void main() {
     expect(props['icon'], 'blank');
     expect(props['lat'], 48.2);
     expect(props['lng'], 16.37);
-    // The marker of an overview node is a dot at every zoom.
+    // The aggregate retains its overview provenance through the LOD handoff.
     expect(props['overview'], isTrue);
     // It never held the markers, so it names none.
     expect(props.containsKey('clusterMemberIds'), isFalse);
@@ -39,6 +39,23 @@ void main() {
 
     // GeoJSON order is longitude, latitude.
     expect((f['geometry'] as Map)['coordinates'], <double>[16.37, 48.2]);
+  });
+
+  test(
+      'a pending detailed-data handoff can show a canonical badge without '
+      'changing aggregate identity or inventing members', () {
+    final near = kubusOverviewNodeFeature(
+      node: node,
+      colorHex: '#00bfa5',
+      blankIconId: 'blank',
+      artworkIconId: 'cl_v4_artwork-streetArt_99+_d',
+    );
+    expect(near['id'], feature()['id']);
+    expect(near['geometry'], feature()['geometry']);
+    final props = near['properties'] as Map;
+    expect(props['icon'], 'cl_v4_artwork-streetArt_99+_d');
+    expect(props['clusterCount'], 400);
+    expect(props.containsKey('clusterMemberIds'), isFalse);
   });
 
   test('its id carries the cluster prefix so taps and hover treat it as one',

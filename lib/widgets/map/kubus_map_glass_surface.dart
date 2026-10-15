@@ -199,8 +199,8 @@ KubusMapBlurDecision resolveKubusMapBlurDecision(
       mobileNativeOverride ?? isMobileNativeMapPlatform(web: web);
   final mobileBackdropSampleable = mobileBackdropSampleableOverride ??
       mobileMapBackdropFilterCanSample(web: web);
-  final nativeBlurHost =
-      nativeBlurHostAvailableOverride ?? mobileNativeBlurHostAvailable(web: web);
+  final nativeBlurHost = nativeBlurHostAvailableOverride ??
+      mobileNativeBlurHostAvailable(web: web);
   final webGlHealthy = webGlHealthyOverride ?? webGLContextHealthy.value;
   final platformBackdropHostAvailable = platformBackdropHostAvailableOverride ??
       (web &&
@@ -524,14 +524,12 @@ KubusMapGlassSurfacePreset resolveKubusMapGlassSurfacePreset(
               KubusMapBackdropStrategy.flutterBackdropFilter ||
           blurDecision.strategy ==
               KubusMapBackdropStrategy.platformViewBackdropHost ||
-          blurDecision.strategy ==
-              KubusMapBackdropStrategy.nativeBackdropHost);
+          blurDecision.strategy == KubusMapBackdropStrategy.nativeBackdropHost);
   final resolvedPlatformBackdrop = useBlur &&
       blurDecision.enabled &&
       (blurDecision.strategy ==
               KubusMapBackdropStrategy.platformViewBackdropHost ||
-          blurDecision.strategy ==
-              KubusMapBackdropStrategy.nativeBackdropHost);
+          blurDecision.strategy == KubusMapBackdropStrategy.nativeBackdropHost);
   final borderColor = scheme.outlineVariant.withValues(
     alpha: switch (kind) {
       KubusMapGlassSurfaceKind.panel =>
@@ -607,6 +605,9 @@ Widget buildKubusMapGlassSurface({
   BoxBorder? border,
   List<BoxShadow>? boxShadow,
   VoidCallback? onTap,
+  // Keyboard target of the tap surface; a caller that must keep focus across
+  // rebuilds owns the node and passes it here.
+  FocusNode? focusNode,
   // Default to the strict real-blur policy so every map overlay that does not
   // explicitly opt out is routed through the real-blur path (Android
   // BackdropFilter over the Virtual-Display map; web/iOS host where available).
@@ -701,8 +702,8 @@ Widget buildKubusMapGlassSurface({
   }
 
   if (kDebugMode) {
-    final realBlurRequired =
-        preset.requireRealBlur || blurPolicy == KubusMapBlurPolicy.forceRealBlur;
+    final realBlurRequired = preset.requireRealBlur ||
+        blurPolicy == KubusMapBlurPolicy.forceRealBlur;
     final platform = kIsWeb ? 'web' : defaultTargetPlatform.name;
     final key = '$kind:${overlayName ?? ''}:${preset.backdropStrategy}:'
         '${preset.useBlur}:${preset.realBlurUnavailable}';
@@ -767,6 +768,7 @@ Widget buildKubusMapGlassSurface({
     surface = Material(
       color: Colors.transparent,
       child: InkWell(
+        focusNode: focusNode,
         onTap: onTap,
         borderRadius: effectiveRadius,
         child: surface,
@@ -794,10 +796,16 @@ class KubusMapGlassMaterialSheen extends StatelessWidget {
     super.key,
     required this.borderRadius,
     required this.isDark,
+    this.showRim = true,
   });
 
   final BorderRadius borderRadius;
   final bool isDark;
+
+  /// Whether the sheen paints its own hairline rim. A surface that already
+  /// draws its own boundary (a text field) turns this off so it keeps exactly
+  /// one visible edge.
+  final bool showRim;
 
   @override
   Widget build(BuildContext context) {
@@ -818,10 +826,12 @@ class KubusMapGlassMaterialSheen extends StatelessWidget {
           ],
           stops: const <double>[0.0, 0.55, 1.0],
         ),
-        border: Border.all(
-          color: rim,
-          width: KubusSizes.hairline,
-        ),
+        border: showRim
+            ? Border.all(
+                color: rim,
+                width: KubusSizes.hairline,
+              )
+            : null,
       ),
     );
   }
@@ -846,6 +856,7 @@ Widget wrapWithKubusMapGlassSheen({
   required BorderRadius borderRadius,
   required bool isDark,
   required bool show,
+  bool showRim = true,
 }) {
   if (!show) return child;
   // Passthrough keeps tight parent constraints on [child] so glass chrome fills
@@ -859,6 +870,7 @@ Widget wrapWithKubusMapGlassSheen({
           child: KubusMapGlassMaterialSheen(
             borderRadius: borderRadius,
             isDark: isDark,
+            showRim: showRim,
           ),
         ),
       ),

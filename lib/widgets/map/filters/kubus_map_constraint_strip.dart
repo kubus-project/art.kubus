@@ -224,6 +224,12 @@ class KubusMapConstraintStripBinding extends StatelessWidget {
     return ListenableBuilder(
       listenable: searchController,
       builder: (context, _) {
+        // While the results list is open the typed query is already on screen
+        // in the field, and the list is the thing to read. The strip would sit
+        // half under it, so it steps aside and returns when the list closes.
+        if (searchController.state.isOverlayVisible) {
+          return const SizedBox.shrink();
+        }
         return KubusMapConstraintStrip(
           constraints: resolveMapConstraints(
             filters: filters,

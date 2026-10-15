@@ -4,7 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  testWidgets('MapOverlayBlocker blocks taps and pointer signals', (tester) async {
+  testWidgets('MapOverlayBlocker blocks taps and pointer signals',
+      (tester) async {
     var backgroundTapCount = 0;
     var backgroundScrollCount = 0;
 

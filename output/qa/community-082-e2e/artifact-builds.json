@@ -1,0 +1,18 @@
+[
+  {
+    "name": "artifact-on-final",
+    "sourceSha": "cca7ae13d5f4aa66a4500f5d5b8007352285fd93",
+    "COMMUNITY_MULTI_MEDIA_ENABLED": true,
+    "filesVerified": 192,
+    "mainJsSha256": "ca5124a57107c398b87143b58250c164f80175dc687f0c8861a055eba845904f",
+    "manifestSha256": "a55502e3c2c194ad27de8f2c37fe06c2dfa478df982723139665d0273a4112aa"
+  },
+  {
+    "name": "artifact-off-final",
+    "sourceSha": "cca7ae13d5f4aa66a4500f5d5b8007352285fd93",
+    "COMMUNITY_MULTI_MEDIA_ENABLED": false,
+    "filesVerified": 192,
+    "mainJsSha256": "9de97089b73dd0f7b7ad8e204581a15d99e38ad931db0e056546ff2926e3b7db",
+    "manifestSha256": "695fcb3485b5ecfadf1e806de3f0949f28adf259b65e7dfd0e78e97a03337e96"
+  }
+]

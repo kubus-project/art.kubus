@@ -1,16 +1,17 @@
 // NOTE: use_build_context_synchronously lint handled per-instance; avoid file-level ignore
 
+import 'package:art_kubus/widgets/kubus_button.dart';
 import 'package:art_kubus/widgets/glass_components.dart';
 // NOTE: use_build_context_synchronously lint handled per-instance; avoid file-level ignore
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:art_kubus/utils/design_tokens.dart';
+import '../../widgets/community/community_post_media_carousel.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
-import '../../config/config.dart';
 import '../../utils/wallet_utils.dart';
+import '../../utils/community_search_results.dart';
 import '../../utils/search_suggestions.dart';
 import '../../utils/user_profile_navigation.dart';
 import '../../widgets/inline_loading.dart';
@@ -21,15 +22,18 @@ import '../../widgets/common/keyboard_inset_padding.dart';
 import '../../widgets/empty_state_card.dart';
 import '../../widgets/profile_identity_summary.dart';
 import '../../widgets/community/community_compose_intent_resumer.dart';
+import '../../widgets/community/post_like_settlement.dart';
+import '../../services/pending_action_executor.dart';
 import '../../widgets/community/community_post_card.dart';
 import '../../widgets/community/community_post_options_sheet.dart';
+import '../../widgets/community/community_search_institution_tile.dart';
 import '../../widgets/community/community_subject_picker.dart';
 import 'package:provider/provider.dart';
 import '../../providers/app_mode_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:image_picker/image_picker.dart';
 import 'package:location/location.dart' as loc;
-import 'dart:io';
+import '../../services/walking_location_service.dart';
+import '../../features/map/navigation/walking_navigation_models.dart';
 import '../../providers/themeprovider.dart';
 import '../../providers/config_provider.dart';
 import '../../providers/wallet_provider.dart';
@@ -51,6 +55,12 @@ import 'post_detail_screen.dart';
 import 'group_feed_screen.dart';
 import '../web3/achievements/achievements_page.dart';
 import '../../community/community_interactions.dart';
+import '../../community/community_post_media.dart';
+import '../../community/community_composer_media.dart';
+import '../../community/community_post_text_limits.dart';
+import '../../community/community_upload_feedback.dart';
+import '../../widgets/community/community_composer_character_counter.dart';
+import '../../widgets/community/community_composer_media_tray.dart';
 import '../../providers/app_refresh_provider.dart';
 import '../../services/socket_service.dart';
 import '../../providers/notification_provider.dart';
@@ -62,6 +72,7 @@ import '../../providers/profile_provider.dart';
 import '../../utils/app_animations.dart';
 import '../../utils/activity_navigation.dart';
 import '../../utils/artwork_navigation.dart';
+import '../../utils/creator_shell_navigation.dart';
 import '../../utils/community_screen_utils.dart';
 import '../../utils/home/home_quick_action_executor.dart';
 import '../../utils/home/home_quick_action_models.dart';
@@ -77,16 +88,21 @@ import '../../utils/community_subject_navigation.dart';
 import '../../utils/media_url_resolver.dart';
 import '../../utils/profile_identity_navigation.dart';
 import '../../widgets/common/kubus_screen_header.dart';
-import '../../widgets/community/community_season0_banner.dart';
+import '../../widgets/community/contextual_contribution_card.dart';
 import '../../widgets/community/community_search_actions.dart';
 import '../../widgets/community/community_search_bar.dart';
-import '../season0/season0_screen.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
+import 'package:art_kubus/widgets/community/community_post_delete.dart';
+import 'package:art_kubus/widgets/community/community_art_discovery_feed.dart';
+import 'package:art_kubus/community/art_discovery.dart';
+import 'package:art_kubus/community/art_discovery_sources.dart';
+import 'package:art_kubus/providers/community_art_discovery_provider.dart';
 import '../../widgets/search/kubus_search_config.dart';
 import '../../widgets/search/kubus_search_controller.dart';
 import '../../widgets/search/kubus_search_result.dart';
 import '../../widgets/search/kubus_general_search.dart' as kubus_search;
 import '../../widgets/notifications/kubus_notifications_sheet.dart';
+import '../../widgets/common/kubus_focus_ring.dart';
 
 part 'community_screen_parts/community_screen_p1.dart';
 part 'community_screen_parts/community_screen_p2.dart';
@@ -94,10 +110,7 @@ part 'community_screen_parts/community_screen_p3.dart';
 part 'community_screen_parts/community_screen_p4.dart';
 part 'community_screen_parts/community_screen_p5.dart';
 
-enum CommunityFeedType {
-  following,
-  discover,
-}
+enum CommunityFeedType { following, discover }
 
 class CommunityScreen extends StatefulWidget {
   const CommunityScreen({super.key});
@@ -132,6 +145,14 @@ class _CommunityScreenState extends State<CommunityScreen>
   List<CommunityPost> _communityPosts = [];
   List<CommunityPost> _followingFeedPosts = [];
   List<CommunityPost> _discoverFeedPosts = [];
+  // A like the continuation confirms for a post in this feed is shown on its
+  // card at once, without reloading the list or moving the scroll position.
+  late final PostLikeSettlementWatcher _likeSettlements =
+      PostLikeSettlementWatcher(
+    _applySettledPostLike,
+    onLikeStarted: _applyStartedPostLike,
+    onLikeAttemptEnded: _applyEndedPostLike,
+  );
   List<CommunityPost> _artFeedPosts = [];
   final Set<String> _expandedCommentPostIds = <String>{};
   final Map<String, TextEditingController> _inlineCommentControllers =
@@ -142,14 +163,12 @@ class _CommunityScreenState extends State<CommunityScreen>
   bool _isLoadingDiscoverFeed = false;
   bool _followingFeedLoaded = false;
   bool _discoverFeedLoaded = false;
-  bool _isLoadingArtFeed = false;
   CommunityFeedType _activeFeed = CommunityFeedType.following;
   // Deduplication and local push are now handled centrally by NotificationProvider
   final Map<int, bool> _bookmarkedPosts = {};
   // Avatar cache removed - ChatProvider or UserService are used for user avatars
   // Scroll controller for the feed to detect when user is away from top
   late ScrollController _feedScrollController;
-  bool _artFeedLoadMoreInFlight = false;
   late final TextEditingController _groupSearchController;
   late final KubusSearchController _communitySearchController;
   Timer? _groupSearchDebounce;
@@ -161,20 +180,19 @@ class _CommunityScreenState extends State<CommunityScreen>
   final List<CommunityPost> _bufferedIncomingPosts = [];
   // Keep ids of posts we just created locally to suppress duplicate socket echoes
   final Set<String> _recentlyCreatedPostIds = <String>{};
-  String? _artFeedError;
 
   // New post state
   final TextEditingController _newPostController = TextEditingController();
   TextEditingController? _composerTagController;
   TextEditingController? _composerMentionController;
   bool _isPostingNew = false;
-  XFile? _selectedPostImage;
-  Uint8List? _selectedPostImageBytes; // Store bytes for preview
-  XFile? _selectedPostVideo;
+  bool _composerSubmitting = false;
+  final CommunityComposerMediaController _composerMedia =
+      CommunityComposerMediaController(
+    maxItems: communityComposerMaxMediaItems(),
+  );
   // Location selected by user when creating a new post; may be null.
   // selectedLocation removed; location name is used in the UI when creating posts
-  double? _artFeedLatitude;
-  double? _artFeedLongitude;
   String? _lastWalletAddress;
   AppRefreshProvider? _appRefreshProvider;
   int _lastCommunityRefreshVersion = 0;
@@ -192,8 +210,10 @@ class _CommunityScreenState extends State<CommunityScreen>
     // first thing they see, so they land on Discover instead.
     var isSignedIn = true;
     try {
-      isSignedIn =
-          Provider.of<ProfileProvider>(context, listen: false).isSignedIn;
+      isSignedIn = Provider.of<ProfileProvider>(
+        context,
+        listen: false,
+      ).isSignedIn;
     } catch (_) {}
     _tabController = TabController(
       length: _tabCount,
@@ -207,14 +227,17 @@ class _CommunityScreenState extends State<CommunityScreen>
         limit: 12,
       ),
     );
-    _communitySearchController
-        .addListener(_handleCommunitySearchControllerChanged);
+    _communitySearchController.addListener(
+      _handleCommunitySearchControllerChanged,
+    );
     _communityPosts = isSignedIn ? _followingFeedPosts : _discoverFeedPosts;
     _activeFeed =
         isSignedIn ? CommunityFeedType.following : CommunityFeedType.discover;
     try {
-      _lastWalletAddress = Provider.of<WalletProvider>(context, listen: false)
-          .currentWalletAddress;
+      _lastWalletAddress = Provider.of<WalletProvider>(
+        context,
+        listen: false,
+      ).currentWalletAddress;
     } catch (_) {}
     _startInitialCommunityLoad();
 
@@ -253,23 +276,29 @@ class _CommunityScreenState extends State<CommunityScreen>
 
     // Listen for config provider changes to reload data
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final configProvider =
-          Provider.of<ConfigProvider>(context, listen: false);
+      final configProvider = Provider.of<ConfigProvider>(
+        context,
+        listen: false,
+      );
       configProvider.addListener(_onConfigChanged);
     });
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       try {
-        final walletProvider =
-            Provider.of<WalletProvider>(context, listen: false);
+        final walletProvider = Provider.of<WalletProvider>(
+          context,
+          listen: false,
+        );
         walletProvider.addListener(_onWalletProviderChanged);
       } catch (_) {}
     });
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       try {
-        _appRefreshProvider =
-            Provider.of<AppRefreshProvider>(context, listen: false);
+        _appRefreshProvider = Provider.of<AppRefreshProvider>(
+          context,
+          listen: false,
+        );
         _lastCommunityRefreshVersion =
             _appRefreshProvider?.communityVersion ?? 0;
         _lastGlobalRefreshVersion = _appRefreshProvider?.globalVersion ?? 0;
@@ -281,6 +310,7 @@ class _CommunityScreenState extends State<CommunityScreen>
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
+    _likeSettlements.attach(readPendingActionsOrNull(context));
     if (!_animationsInitialized) {
       _animationsInitialized = true;
       final animationTheme = context.animationTheme;
@@ -290,40 +320,43 @@ class _CommunityScreenState extends State<CommunityScreen>
         vsync: this,
       );
 
-      _fadeAnimation = Tween<double>(
-        begin: 0.0,
-        end: 1.0,
-      ).animate(CurvedAnimation(
-        parent: _animationController,
-        curve: animationTheme.fadeCurve,
-      ));
+      _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+        CurvedAnimation(
+          parent: _animationController,
+          curve: animationTheme.fadeCurve,
+        ),
+      );
 
-      _slideAnimation = Tween<Offset>(
-        begin: const Offset(0, 0.3),
-        end: Offset.zero,
-      ).animate(CurvedAnimation(
-        parent: _animationController,
-        curve: animationTheme.defaultCurve,
-      ));
+      _slideAnimation =
+          Tween<Offset>(begin: const Offset(0, 0.3), end: Offset.zero).animate(
+        CurvedAnimation(
+          parent: _animationController,
+          curve: animationTheme.defaultCurve,
+        ),
+      );
 
       _bellController = AnimationController(
         duration: animationTheme.short,
         vsync: this,
       );
 
-      _bellScale = Tween<double>(begin: 1.0, end: 1.18).animate(CurvedAnimation(
-        parent: _bellController,
-        curve: animationTheme.emphasisCurve,
-      ));
+      _bellScale = Tween<double>(begin: 1.0, end: 1.18).animate(
+        CurvedAnimation(
+          parent: _bellController,
+          curve: animationTheme.emphasisCurve,
+        ),
+      );
 
       _messagePulseController = AnimationController(
         duration: animationTheme.short,
         vsync: this,
       );
       _messageScale = Tween<double>(begin: 1.0, end: 1.12).animate(
-          CurvedAnimation(
-              parent: _messagePulseController,
-              curve: animationTheme.defaultCurve));
+        CurvedAnimation(
+          parent: _messagePulseController,
+          curve: animationTheme.defaultCurve,
+        ),
+      );
 
       _animationController.forward();
     }
@@ -336,33 +369,44 @@ class _CommunityScreenState extends State<CommunityScreen>
 
   @override
   void dispose() {
+    _likeSettlements.detach();
     // Remove config provider listener
     try {
-      final configProvider =
-          Provider.of<ConfigProvider>(context, listen: false);
+      final configProvider = Provider.of<ConfigProvider>(
+        context,
+        listen: false,
+      );
       configProvider.removeListener(_onConfigChanged);
     } catch (e) {
       // Provider may not be available during dispose
     }
 
     _animationController.dispose();
+    _composerMedia.dispose();
     try {
-      SocketService()
-          .removeNotificationListener(_onSocketNotificationForCommunity);
+      SocketService().removeNotificationListener(
+        _onSocketNotificationForCommunity,
+      );
     } catch (_) {}
     try {
-      Provider.of<NotificationProvider>(context, listen: false)
-          .removeListener(_onNotificationProviderChange);
+      Provider.of<NotificationProvider>(
+        context,
+        listen: false,
+      ).removeListener(_onNotificationProviderChange);
     } catch (_) {}
     _bellController.dispose();
     _messagePulseController.dispose();
     try {
-      Provider.of<ChatProvider>(context, listen: false)
-          .removeListener(_onChatProviderChanged);
+      Provider.of<ChatProvider>(
+        context,
+        listen: false,
+      ).removeListener(_onChatProviderChanged);
     } catch (_) {}
     try {
-      Provider.of<WalletProvider>(context, listen: false)
-          .removeListener(_onWalletProviderChanged);
+      Provider.of<WalletProvider>(
+        context,
+        listen: false,
+      ).removeListener(_onWalletProviderChanged);
     } catch (_) {}
     try {
       _appRefreshProvider?.removeListener(_onAppRefreshTriggered);
@@ -389,60 +433,65 @@ class _CommunityScreenState extends State<CommunityScreen>
 
   @override
   Widget build(BuildContext context) {
-    final composerOpenNonce = context
-        .select<CommunityHubProvider, int>((hub) => hub.composerOpenNonce);
+    final composerOpenNonce = context.select<CommunityHubProvider, int>(
+      (hub) => hub.composerOpenNonce,
+    );
     _maybeHandleComposerOpenRequest(composerOpenNonce);
 
     final screen = Scaffold(
       backgroundColor: Colors.transparent,
-      body: SafeArea(
-        bottom: false,
-        child: Stack(
-          children: [
-            AnimatedBuilder(
-              animation: _animationController,
-              builder: (context, child) {
-                return FadeTransition(
-                  opacity: _fadeAnimation,
-                  child: SlideTransition(
-                    position: _slideAnimation,
-                    child: NestedScrollView(
-                      controller: _feedScrollController,
-                      headerSliverBuilder:
-                          (BuildContext context, bool innerBoxIsScrolled) {
-                        return [
-                          SliverToBoxAdapter(
-                            child: _buildAppBar(),
-                          ),
-                        ];
-                      },
-                      body: TabBarView(
-                        controller: _tabController,
-                        children: [
-                          _buildFeedTab(),
-                          _buildDiscoverTab(),
-                          _buildGroupsTab(),
-                          _buildArtTab(),
-                        ],
+      body: CommunityMediaViewport(
+        child: SafeArea(
+          bottom: false,
+          child: Stack(
+            children: [
+              AnimatedBuilder(
+                animation: _animationController,
+                builder: (context, child) {
+                  return FadeTransition(
+                    opacity: _fadeAnimation,
+                    child: SlideTransition(
+                      position: _slideAnimation,
+                      child: NestedScrollView(
+                        controller: _feedScrollController,
+                        headerSliverBuilder:
+                            (BuildContext context, bool innerBoxIsScrolled) {
+                          return [
+                            SliverToBoxAdapter(child: _buildAppBar()),
+                          ];
+                        },
+                        body: TabBarView(
+                          controller: _tabController,
+                          children: [
+                            _buildFeedTab(),
+                            _buildDiscoverTab(),
+                            _buildGroupsTab(),
+                            _buildArtTab(),
+                          ],
+                        ),
                       ),
                     ),
-                  ),
-                );
-              },
-            ),
-            kubus_search.KubusSearchResultsOverlay(
-              controller: _communitySearchController,
-              accentColor: context.read<ThemeProvider>().accentColor,
-              minCharsHint: AppLocalizations.of(context)!
-                  .desktopCommunitySearchMinCharsHint,
-              noResultsText:
-                  AppLocalizations.of(context)!.communitySearchEmptyNoResults,
-              maxWidth: 520,
-              onResultTap: (result) {
-                unawaited(_handleCommunitySearchResultTap(result));
-              },
-            ),
-          ],
+                  );
+                },
+              ),
+              kubus_search.KubusSearchResultsOverlay(
+                controller: _communitySearchController,
+                accentColor: context.read<ThemeProvider>().accentColor,
+                minCharsHint: AppLocalizations.of(
+                  context,
+                )!
+                    .desktopCommunitySearchMinCharsHint,
+                noResultsText: AppLocalizations.of(
+                  context,
+                )!
+                    .communitySearchEmptyNoResults,
+                maxWidth: 520,
+                onResultTap: (result) {
+                  unawaited(_handleCommunitySearchResultTap(result));
+                },
+              ),
+            ],
+          ),
         ),
       ),
       floatingActionButton: AnimatedBuilder(
@@ -475,6 +524,5 @@ class _CommunityScreenState extends State<CommunityScreen>
     return query.startsWith('#') ? query.substring(1) : query;
   }
 
-  bool get _hasSelectedMedia =>
-      _selectedPostImageBytes != null || _selectedPostVideo != null;
+  bool get _hasSelectedMedia => _composerMedia.isNotEmpty;
 }

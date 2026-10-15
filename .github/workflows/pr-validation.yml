@@ -186,6 +186,36 @@ jobs:
         run: |
           set -euo pipefail
           if [ "$RELEASE_CANDIDATE" = true ]; then flutter test --coverage; else flutter test; fi
+      - name: PRODUCT motion acceptance (real browser pointer)
+        # Measures what is painted, not what is built: lift, continuous float,
+        # accent shadow and return to rest for every tile layout, in Chromium
+        # and Firefox, with and without prefers-reduced-motion.
+        # See docs/DESIGN_SYSTEM.md for the canonical PRODUCT motion contract.
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm --prefix scripts/qa ci --no-audit --no-fund
+          node --test scripts/qa/product_motion_sampling.test.mjs
+          npm --prefix scripts/qa exec -- playwright install --with-deps chromium firefox
+          flutter build web --release -t tool/qa/product_motion_gallery_main.dart --output build/motion-gallery
+          for browser in chromium firefox; do
+            for reduced in 0 1; do
+              QA_WEB_ROOT=build/motion-gallery QA_BROWSER="$browser" QA_REDUCED="$reduced" node scripts/qa/product_motion_acceptance.mjs
+            done
+          done
+      - name: Upload motion diagnostics on failure
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: product-motion-diagnostics-${{ github.sha }}
+          path: output/playwright/product-motion
+          if-no-files-found: ignore
+          retention-days: 3
+      - name: Community feature flag contracts in both configurations
+        run: |
+          node --test scripts/prepare_public_build_config.test.mjs scripts/verify_community_backend_contract.test.mjs
+          flutter test --dart-define=COMMUNITY_MULTI_MEDIA_ENABLED=true test/community test/widgets/community
+          flutter test --dart-define=COMMUNITY_MULTI_MEDIA_ENABLED=false test/community test/widgets/community
       - name: Upload release-candidate coverage
         if: ${{ github.base_ref == 'master' }}
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
@@ -260,7 +290,7 @@ jobs:
           flutter-version: ${{ env.FLUTTER_VERSION }}
           channel: stable
           cache: true
-      - uses: android-actions/setup-android@40fd30fb8d7440372e1316f5d1809ec01dcd3699 # v4.0.1
+      - uses: android-actions/setup-android@be39fa834029ff78f1a44aa3bb0819b8fc2bd8fd # v4.0.4
         # v4.0.1 defaults to installing the legacy `tools` package, which the
         # current cmdline-tools no longer lists; sdkmanager then fails before
         # anything compiles. platform-tools is the only package this step needs.

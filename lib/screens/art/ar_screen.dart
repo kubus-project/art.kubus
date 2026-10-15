@@ -316,7 +316,7 @@ class _ARScreenState extends State<ARScreen>
   );
   final ARMarkerService _arMarkerService = ARMarkerService();
   final WalkingLocationApi _locationService =
-      const GeolocatorWalkingLocationService();
+      GeolocatorWalkingLocationService.shared;
 
   /// Owns mode selection and the camera handoff between the scanner and AR.
   late final ArCameraOrchestrator _cameraOrchestrator = ArCameraOrchestrator(
@@ -1975,7 +1975,7 @@ class _ARScreenState extends State<ARScreen>
 
     final candidate = recoverable.first;
     final l10n = AppLocalizations.of(context)!;
-    final resume = await showDialog<bool>(
+    final resume = await showKubusDialog<bool>(
       context: context,
       builder: (dialogContext) => KubusAlertDialog(
         title: Text(l10n.spatialRecoveryTitle),
@@ -2180,7 +2180,7 @@ class _ARScreenState extends State<ARScreen>
         },
       ),
     );
-    await showDialog<void>(
+    await showKubusDialog<void>(
       context: context,
       barrierDismissible: true,
       builder: (_) {
@@ -2197,7 +2197,7 @@ class _ARScreenState extends State<ARScreen>
     required bool localAvailable,
   }) {
     final l10n = AppLocalizations.of(context)!;
-    return showDialog<_SpatialFailureAction>(
+    return showKubusDialog<_SpatialFailureAction>(
       context: context,
       builder: (dialogContext) => KubusAlertDialog(
         title: Text(l10n.spatialFailedTitle),
@@ -2395,9 +2395,10 @@ class _ARScreenState extends State<ARScreen>
     if (preferences.getBool(key) == true) return true;
     if (!mounted) return false;
     final l10n = AppLocalizations.of(context)!;
-    final confirmed = await showDialog<bool>(
+    final confirmed = await showKubusDialog<bool>(
           context: context,
           builder: (dialogContext) => KubusAlertDialog(
+            size: KubusDialogSize.compact,
             title: Text(l10n.spatialRemotePrivacyTitle),
             content: Text(
               '${l10n.spatialRemotePrivacyBody}\n\n${l10n.spatialProcessMaximumPrivacy}',
@@ -2431,7 +2432,7 @@ class _ARScreenState extends State<ARScreen>
     if (!mounted || manifest is! Map<String, dynamic>) return;
     final content = SpatialContent.fromJson(manifest);
     final l10n = AppLocalizations.of(context)!;
-    final action = await showDialog<_SpatialResultAction>(
+    final action = await showKubusDialog<_SpatialResultAction>(
       context: context,
       barrierDismissible: false,
       builder: (dialogContext) => PopScope(
@@ -4183,6 +4184,7 @@ class _ARScreenState extends State<ARScreen>
       builder: (context) {
         final l10n = AppLocalizations.of(context)!;
         return KubusAlertDialog(
+          size: KubusDialogSize.compact,
           backgroundColor: Theme.of(context).colorScheme.surface,
           title: Text(
             l10n.arNotSupportedTitle,
@@ -4217,6 +4219,7 @@ class _ARScreenState extends State<ARScreen>
       builder: (context) {
         final l10n = AppLocalizations.of(context)!;
         return KubusAlertDialog(
+          size: KubusDialogSize.compact,
           backgroundColor: Theme.of(context).colorScheme.surface,
           title: Text(
             l10n.arInitializationFailedTitle,

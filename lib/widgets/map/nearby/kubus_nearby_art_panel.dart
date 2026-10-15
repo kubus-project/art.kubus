@@ -33,6 +33,7 @@ class KubusNearbyArtPanel extends StatefulWidget {
     required this.viewportScope,
     required this.radiusKm,
     this.titleKey,
+    this.headerMeasurementKey,
     this.discoveryProgress,
     this.onClose,
     this.onRadiusTap,
@@ -50,6 +51,7 @@ class KubusNearbyArtPanel extends StatefulWidget {
   final bool viewportScope;
   final double radiusKm;
   final Key? titleKey;
+  final Key? headerMeasurementKey;
   final double? discoveryProgress;
   final VoidCallback? onClose;
   final VoidCallback? onRadiusTap;
@@ -106,6 +108,7 @@ class _KubusNearbyArtPanelState extends State<KubusNearbyArtPanel> {
       viewportScope: widget.viewportScope,
       radiusKm: widget.radiusKm,
       titleKey: widget.titleKey,
+      headerMeasurementKey: widget.headerMeasurementKey,
       discoveryProgress: widget.discoveryProgress,
       sort: _sort,
       useGrid: _useGrid,
@@ -132,7 +135,7 @@ class _KubusNearbyArtPanelState extends State<KubusNearbyArtPanel> {
       overlayName: 'nearby-art-panel',
       backdropRegionId:
           isMobile ? 'mobile-nearby-art-sheet' : 'desktop-nearby-art-panel',
-      enablePlatformBackdropRegion: !isMobile,
+      enablePlatformBackdropRegion: true,
       child: content,
     );
 

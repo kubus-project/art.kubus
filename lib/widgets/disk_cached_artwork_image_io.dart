@@ -20,17 +20,9 @@ class _KubusArtworkCacheManager {
   );
 }
 
-String _resolveArtworkImageUrl(String raw) {
-  final trimmed = raw.trim();
-  if (trimmed.isEmpty) return trimmed;
-  return MediaUrlResolver.resolveDisplayUrl(trimmed) ??
-      MediaUrlResolver.resolve(trimmed) ??
-      trimmed;
-}
-
 Future<void> prefetchDiskCachedArtworkImage(String url) async {
-  final resolved = _resolveArtworkImageUrl(url);
-  if (resolved.isEmpty) return;
+  final resolved = MediaUrlResolver.resolveDisplayUrl(url);
+  if (resolved == null) return;
   await _KubusArtworkCacheManager.instance.downloadFile(resolved);
 }
 
@@ -61,24 +53,30 @@ class DiskCachedArtworkImage extends StatefulWidget {
 
 class _DiskCachedArtworkImageState extends State<DiskCachedArtworkImage> {
   Future<File?>? _fileFuture;
-  String _resolvedUrl = '';
+  // Null when the reference is not a safe media URL: nothing is fetched and
+  // the widget renders its fallback icon.
+  String? _resolvedUrl;
 
   @override
   void initState() {
     super.initState();
-    _resolvedUrl = _resolveArtworkImageUrl(widget.url);
-    _fileFuture =
-        _KubusArtworkCacheManager.instance.getSingleFile(_resolvedUrl);
+    _load();
   }
 
   @override
   void didUpdateWidget(covariant DiskCachedArtworkImage oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.url != widget.url) {
-      _resolvedUrl = _resolveArtworkImageUrl(widget.url);
-      _fileFuture =
-          _KubusArtworkCacheManager.instance.getSingleFile(_resolvedUrl);
+      _load();
     }
+  }
+
+  void _load() {
+    _resolvedUrl = MediaUrlResolver.resolveDisplayUrl(widget.url);
+    final resolved = _resolvedUrl;
+    _fileFuture = resolved == null
+        ? Future<File?>.value(null)
+        : _KubusArtworkCacheManager.instance.getSingleFile(resolved);
   }
 
   @override
@@ -115,8 +113,17 @@ class _DiskCachedArtworkImageState extends State<DiskCachedArtworkImage> {
             resolvedSemanticLabel,
           );
         }
+        final networkUrl = _resolvedUrl;
+        if (networkUrl == null) {
+          return Center(
+            child: _withFallbackSemantics(
+              Icon(Icons.image_not_supported, color: errorColor),
+              resolvedSemanticLabel,
+            ),
+          );
+        }
         return Image.network(
-          _resolvedUrl.isNotEmpty ? _resolvedUrl : widget.url,
+          networkUrl,
           fit: widget.fit,
           semanticLabel: resolvedSemanticLabel,
           excludeFromSemantics: widget.excludeFromSemantics,

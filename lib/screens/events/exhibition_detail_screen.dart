@@ -32,6 +32,7 @@ import '../../l10n/app_localizations.dart';
 import '../../utils/artwork_media_resolver.dart';
 import '../../utils/app_color_utils.dart';
 import '../../utils/media_url_resolver.dart';
+import '../../widgets/common/kubus_cached_image.dart';
 import '../../utils/kubus_color_roles.dart';
 import '../../widgets/collaboration_panel.dart';
 import '../../widgets/common/kubus_reading_surface.dart';
@@ -322,6 +323,7 @@ class _ExhibitionDetailScreenState extends State<ExhibitionDetailScreen> {
     final confirmed = await showKubusDialog<bool>(
       context: context,
       builder: (dialogContext) => KubusAlertDialog(
+        size: KubusDialogSize.compact,
         title: Text(l10n.exhibitionDetailDeleteDialogTitle),
         content: Text(
           l10n.exhibitionDetailDeleteDialogContent(exhibition.title),
@@ -1613,7 +1615,7 @@ class _ExhibitionDetailsCard extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     final roles = KubusColorRoles.of(context);
 
-    final coverUrl = MediaUrlResolver.resolve(exhibition.coverUrl);
+    final coverUrl = MediaUrlResolver.resolveDisplayUrl(exhibition.coverUrl);
 
     String? dateRange;
     if (exhibition.startsAt != null || exhibition.endsAt != null) {
@@ -1975,16 +1977,21 @@ class _ExhibitionCoverFrame extends StatelessWidget {
         borderRadius: BorderRadius.circular(KubusRadius.sm),
         child: AspectRatio(
           aspectRatio: portrait ? 0.73 : 16 / 9,
-          child: Image.network(
-            url,
+          child: KubusCachedImage(
+            imageUrl: url,
             fit: BoxFit.cover,
+            placeholderBuilder: (_) => Container(
+              color: publicSurface
+                  ? roles.surfaceRaised
+                  : scheme.surfaceContainerHighest,
+            ),
             errorBuilder: (_, __, ___) => Container(
               color: publicSurface
                   ? roles.surfaceRaised
                   : scheme.surfaceContainerHighest,
               alignment: Alignment.center,
               child: Icon(
-                Icons.broken_image_outlined,
+                Icons.image_outlined,
                 size: 48,
                 color: publicSurface
                     ? roles.foregroundSubtle

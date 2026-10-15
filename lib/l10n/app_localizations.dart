@@ -762,6 +762,12 @@ abstract class AppLocalizations {
   /// **'Like this artwork'**
   String get activationGateLikeArtworkTitle;
 
+  /// No description provided for @activationGateLikePostTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Like this post'**
+  String get activationGateLikePostTitle;
+
   /// No description provided for @activationGateFollowTitle.
   ///
   /// In en, this message translates to:
@@ -864,6 +870,12 @@ abstract class AppLocalizations {
   /// **'Like this artwork?'**
   String get activationConfirmLikeArtwork;
 
+  /// No description provided for @activationConfirmLikePost.
+  ///
+  /// In en, this message translates to:
+  /// **'Like this post?'**
+  String get activationConfirmLikePost;
+
   /// No description provided for @activationConfirmFollow.
   ///
   /// In en, this message translates to:
@@ -875,6 +887,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Write your comment?'**
   String get activationConfirmComment;
+
+  /// No description provided for @activationConfirmSupportRequest.
+  ///
+  /// In en, this message translates to:
+  /// **'Continue your support request?'**
+  String get activationConfirmSupportRequest;
+
+  /// No description provided for @activationConfirmSupportBug.
+  ///
+  /// In en, this message translates to:
+  /// **'Continue your bug report?'**
+  String get activationConfirmSupportBug;
+
+  /// No description provided for @activationConfirmSupportReply.
+  ///
+  /// In en, this message translates to:
+  /// **'Continue your reply?'**
+  String get activationConfirmSupportReply;
 
   /// No description provided for @activationConfirmContribute.
   ///
@@ -18882,6 +18912,258 @@ abstract class AppLocalizations {
   /// **'Failed to create post.'**
   String get communityComposerCreatePostFailedToast;
 
+  /// No description provided for @communityUploadRateLimitedSeconds.
+  ///
+  /// In en, this message translates to:
+  /// **'Upload limit reached. Try again in {seconds} seconds.'**
+  String communityUploadRateLimitedSeconds(int seconds);
+
+  /// No description provided for @communityUploadRateLimitedMinutes.
+  ///
+  /// In en, this message translates to:
+  /// **'Upload limit reached. Try again in about {minutes} minutes.'**
+  String communityUploadRateLimitedMinutes(int minutes);
+
+  /// 0.8.2 community media
+  ///
+  /// In en, this message translates to:
+  /// **'Too many uploads right now. Wait a moment and try again.'**
+  String get communityUploadRateLimitedGeneric;
+
+  /// 0.8.2 community media
+  ///
+  /// In en, this message translates to:
+  /// **'Add photos'**
+  String get communityComposerMediaAddPhotos;
+
+  /// 0.8.2 community media
+  ///
+  /// In en, this message translates to:
+  /// **'Add video'**
+  String get communityComposerMediaAddVideo;
+
+  /// No description provided for @communityComposerMediaLimitReached.
+  ///
+  /// In en, this message translates to:
+  /// **'You can add up to {max} items to a post.'**
+  String communityComposerMediaLimitReached(int max);
+
+  /// No description provided for @communityComposerMediaTrimmed.
+  ///
+  /// In en, this message translates to:
+  /// **'Added {added} of {picked} files. A post holds up to {max} items.'**
+  String communityComposerMediaTrimmed(int added, int picked, int max);
+
+  /// No description provided for @communityComposerValidationRejected.
+  ///
+  /// In en, this message translates to:
+  /// **'The server did not accept this post: {detail}. Your draft is kept.'**
+  String communityComposerValidationRejected(String detail);
+
+  /// No description provided for @communityComposerMediaCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} of {max} selected'**
+  String communityComposerMediaCount(int count, int max);
+
+  /// 0.8.2 community media
+  ///
+  /// In en, this message translates to:
+  /// **'Move earlier'**
+  String get communityComposerMediaMoveEarlier;
+
+  /// 0.8.2 community media
+  ///
+  /// In en, this message translates to:
+  /// **'Move later'**
+  String get communityComposerMediaMoveLater;
+
+  /// 0.8.2 community media
+  ///
+  /// In en, this message translates to:
+  /// **'Retry upload'**
+  String get communityComposerMediaRetry;
+
+  /// No description provided for @communityComposerMediaUploadFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} files could not be uploaded. Your draft is kept, so you can retry.'**
+  String communityComposerMediaUploadFailed(int count);
+
+  /// 0.8.2 community media
+  ///
+  /// In en, this message translates to:
+  /// **'Waiting to upload'**
+  String get communityComposerMediaStatusPending;
+
+  /// 0.8.2 community media
+  ///
+  /// In en, this message translates to:
+  /// **'Uploading…'**
+  String get communityComposerMediaStatusUploading;
+
+  /// 0.8.2 community media
+  ///
+  /// In en, this message translates to:
+  /// **'Upload failed'**
+  String get communityComposerMediaStatusFailed;
+
+  /// 0.8.2 community media
+  ///
+  /// In en, this message translates to:
+  /// **'Uploaded'**
+  String get communityComposerMediaStatusDone;
+
+  /// No description provided for @communityComposerCharactersRemaining.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} characters left'**
+  String communityComposerCharactersRemaining(int count);
+
+  /// No description provided for @communityComposerCharacterLimitExceeded.
+  ///
+  /// In en, this message translates to:
+  /// **'Posts can be up to {max} characters. Shorten your text to publish.'**
+  String communityComposerCharacterLimitExceeded(int max);
+
+  /// 0.8.2 community media
+  ///
+  /// In en, this message translates to:
+  /// **'more'**
+  String get communityPostShowMore;
+
+  /// 0.8.2 community media
+  ///
+  /// In en, this message translates to:
+  /// **'less'**
+  String get communityPostShowLess;
+
+  /// No description provided for @communityMediaCarouselPosition.
+  ///
+  /// In en, this message translates to:
+  /// **'Media {index} of {total}'**
+  String communityMediaCarouselPosition(int index, int total);
+
+  /// 0.8.2 community media
+  ///
+  /// In en, this message translates to:
+  /// **'Previous media'**
+  String get communityMediaPrevious;
+
+  /// 0.8.2 community media
+  ///
+  /// In en, this message translates to:
+  /// **'Next media'**
+  String get communityMediaNext;
+
+  /// 0.8.2 community media
+  ///
+  /// In en, this message translates to:
+  /// **'Play video'**
+  String get communityMediaVideoPlay;
+
+  /// 0.8.2 community media
+  ///
+  /// In en, this message translates to:
+  /// **'Pause video'**
+  String get communityMediaVideoPause;
+
+  /// 0.8.2 community media
+  ///
+  /// In en, this message translates to:
+  /// **'Mute video'**
+  String get communityMediaVideoMute;
+
+  /// 0.8.2 community media
+  ///
+  /// In en, this message translates to:
+  /// **'Unmute video'**
+  String get communityMediaVideoUnmute;
+
+  /// 0.8.2 community media
+  ///
+  /// In en, this message translates to:
+  /// **'This video cannot be played here.'**
+  String get communityMediaVideoUnavailable;
+
+  /// 0.8.2 community video poster: shown on a video that has no still preview
+  ///
+  /// In en, this message translates to:
+  /// **'Preview unavailable'**
+  String get communityMediaVideoPreviewUnavailable;
+
+  /// 0.8.2 community media video player
+  ///
+  /// In en, this message translates to:
+  /// **'Replay video'**
+  String get communityMediaVideoReplay;
+
+  /// 0.8.2 community media video player
+  ///
+  /// In en, this message translates to:
+  /// **'Try again'**
+  String get communityMediaVideoRetry;
+
+  /// 0.8.2 community media video player
+  ///
+  /// In en, this message translates to:
+  /// **'Loading video'**
+  String get communityMediaVideoLoading;
+
+  /// 0.8.2 community media video player
+  ///
+  /// In en, this message translates to:
+  /// **'Buffering'**
+  String get communityMediaVideoBuffering;
+
+  /// 0.8.2 community media video player
+  ///
+  /// In en, this message translates to:
+  /// **'Video position'**
+  String get communityMediaVideoSeek;
+
+  /// 0.8.2 community media video player
+  ///
+  /// In en, this message translates to:
+  /// **'{position} of {duration}'**
+  String communityMediaVideoTime(String position, String duration);
+
+  /// 0.8.2 community media video player
+  ///
+  /// In en, this message translates to:
+  /// **'Volume'**
+  String get communityMediaVideoVolume;
+
+  /// 0.8.2 community media video player
+  ///
+  /// In en, this message translates to:
+  /// **'Full screen'**
+  String get communityMediaVideoFullscreen;
+
+  /// 0.8.2 community media video player
+  ///
+  /// In en, this message translates to:
+  /// **'Exit full screen'**
+  String get communityMediaVideoExitFullscreen;
+
+  /// 0.8.2 community media video player
+  ///
+  /// In en, this message translates to:
+  /// **'Video player'**
+  String get communityMediaVideoControls;
+
+  /// 0.8.2 community media
+  ///
+  /// In en, this message translates to:
+  /// **'Image unavailable'**
+  String get communityMediaImageUnavailable;
+
+  /// 0.8.2 community media
+  ///
+  /// In en, this message translates to:
+  /// **'View original post'**
+  String get communityPostOpenOriginal;
+
   /// No description provided for @communityToggleLikeFailedToast.
   ///
   /// In en, this message translates to:
@@ -23142,6 +23424,30 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Comment'**
   String get communityPostActionComment;
+
+  /// No description provided for @communityPostStateLiked.
+  ///
+  /// In en, this message translates to:
+  /// **'liked'**
+  String get communityPostStateLiked;
+
+  /// No description provided for @communityPostStateNotLiked.
+  ///
+  /// In en, this message translates to:
+  /// **'not liked'**
+  String get communityPostStateNotLiked;
+
+  /// No description provided for @communityPostStateSaved.
+  ///
+  /// In en, this message translates to:
+  /// **'saved'**
+  String get communityPostStateSaved;
+
+  /// No description provided for @communityPostStateNotSaved.
+  ///
+  /// In en, this message translates to:
+  /// **'not saved'**
+  String get communityPostStateNotSaved;
 
   /// No description provided for @communityRepostedToast.
   ///
@@ -30328,6 +30634,648 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Recorded treasury movements'**
   String get daoTreasuryLedgerLabel;
+
+  /// No description provided for @artworkEditArtistLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Artist / author'**
+  String get artworkEditArtistLabel;
+
+  /// No description provided for @artworkEditArtistHelper.
+  ///
+  /// In en, this message translates to:
+  /// **'Who made the artwork: a person, group or collective. This is not the uploader or the photographer. Leave blank if unknown.'**
+  String get artworkEditArtistHelper;
+
+  /// No description provided for @artworkDraftArtistHelper.
+  ///
+  /// In en, this message translates to:
+  /// **'Leave blank if the author is unknown.'**
+  String get artworkDraftArtistHelper;
+
+  /// No description provided for @communitySearchTypeCollections.
+  ///
+  /// In en, this message translates to:
+  /// **'Collections'**
+  String get communitySearchTypeCollections;
+
+  /// No description provided for @searchCollectionArtworkCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 artwork} other{{count} artworks}}'**
+  String searchCollectionArtworkCount(num count);
+
+  /// No description provided for @communityComposerRateLimitedSeconds.
+  ///
+  /// In en, this message translates to:
+  /// **'Posting is temporarily limited. Try again in {seconds} seconds. Your draft is kept.'**
+  String communityComposerRateLimitedSeconds(int seconds);
+
+  /// No description provided for @communityComposerRateLimitedGeneric.
+  ///
+  /// In en, this message translates to:
+  /// **'Posting is temporarily limited. Wait before trying again. Your draft is kept.'**
+  String get communityComposerRateLimitedGeneric;
+
+  /// No description provided for @communityComposerDiscardDraft.
+  ///
+  /// In en, this message translates to:
+  /// **'Discard this draft?'**
+  String get communityComposerDiscardDraft;
+
+  /// No description provided for @communityComposerAlreadyCommitted.
+  ///
+  /// In en, this message translates to:
+  /// **'Your post may already be published. Your draft is kept. Check your feed before clearing it or starting a new post.'**
+  String get communityComposerAlreadyCommitted;
+
+  /// No description provided for @communityComposerCheckFeed.
+  ///
+  /// In en, this message translates to:
+  /// **'Check feed'**
+  String get communityComposerCheckFeed;
+
+  /// No description provided for @supportCenterTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Help & support'**
+  String get supportCenterTitle;
+
+  /// No description provided for @supportCenterEntrySubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'FAQ, contact support, bug reports and your requests'**
+  String get supportCenterEntrySubtitle;
+
+  /// No description provided for @supportCenterSectionsLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Help sections'**
+  String get supportCenterSectionsLabel;
+
+  /// No description provided for @supportCenterSectionFaq.
+  ///
+  /// In en, this message translates to:
+  /// **'FAQ'**
+  String get supportCenterSectionFaq;
+
+  /// No description provided for @supportCenterSectionContact.
+  ///
+  /// In en, this message translates to:
+  /// **'Contact support'**
+  String get supportCenterSectionContact;
+
+  /// No description provided for @supportCenterSectionBug.
+  ///
+  /// In en, this message translates to:
+  /// **'Report a bug'**
+  String get supportCenterSectionBug;
+
+  /// No description provided for @supportCenterSectionRequests.
+  ///
+  /// In en, this message translates to:
+  /// **'My requests'**
+  String get supportCenterSectionRequests;
+
+  /// No description provided for @supportFaqQuestion1.
+  ///
+  /// In en, this message translates to:
+  /// **'What is art.kubus?'**
+  String get supportFaqQuestion1;
+
+  /// No description provided for @supportFaqAnswer1.
+  ///
+  /// In en, this message translates to:
+  /// **'An open art map for exploring artworks, exhibitions and cultural spaces.'**
+  String get supportFaqAnswer1;
+
+  /// No description provided for @supportFaqQuestion2.
+  ///
+  /// In en, this message translates to:
+  /// **'Can I browse without signing in?'**
+  String get supportFaqQuestion2;
+
+  /// No description provided for @supportFaqAnswer2.
+  ///
+  /// In en, this message translates to:
+  /// **'Yes. Public discovery works without an account. Content-changing actions require sign-in.'**
+  String get supportFaqAnswer2;
+
+  /// No description provided for @supportFaqQuestion3.
+  ///
+  /// In en, this message translates to:
+  /// **'Do I need a wallet?'**
+  String get supportFaqQuestion3;
+
+  /// No description provided for @supportFaqAnswer3.
+  ///
+  /// In en, this message translates to:
+  /// **'No wallet is needed to browse the public art map.'**
+  String get supportFaqAnswer3;
+
+  /// No description provided for @supportFaqQuestion4.
+  ///
+  /// In en, this message translates to:
+  /// **'How do I report an issue?'**
+  String get supportFaqQuestion4;
+
+  /// No description provided for @supportFaqAnswer4.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose Report a bug and describe the steps to reproduce it. You can follow the report under My requests.'**
+  String get supportFaqAnswer4;
+
+  /// No description provided for @supportFaqQuestion5.
+  ///
+  /// In en, this message translates to:
+  /// **'Where are support replies?'**
+  String get supportFaqQuestion5;
+
+  /// No description provided for @supportFaqAnswer5.
+  ///
+  /// In en, this message translates to:
+  /// **'Open My requests and select a request to read replies and respond.'**
+  String get supportFaqAnswer5;
+
+  /// No description provided for @supportFormSubjectLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Subject'**
+  String get supportFormSubjectLabel;
+
+  /// No description provided for @supportFormMessageLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Message'**
+  String get supportFormMessageLabel;
+
+  /// No description provided for @supportFormSubmitContact.
+  ///
+  /// In en, this message translates to:
+  /// **'Send request'**
+  String get supportFormSubmitContact;
+
+  /// No description provided for @supportFormSubmitBug.
+  ///
+  /// In en, this message translates to:
+  /// **'Send bug report'**
+  String get supportFormSubmitBug;
+
+  /// No description provided for @supportFormSending.
+  ///
+  /// In en, this message translates to:
+  /// **'Sending…'**
+  String get supportFormSending;
+
+  /// No description provided for @supportFormRequiredError.
+  ///
+  /// In en, this message translates to:
+  /// **'This field is required.'**
+  String get supportFormRequiredError;
+
+  /// No description provided for @supportFormSubjectTooLong.
+  ///
+  /// In en, this message translates to:
+  /// **'Use 255 characters or fewer.'**
+  String get supportFormSubjectTooLong;
+
+  /// No description provided for @supportFormMessageTooLong.
+  ///
+  /// In en, this message translates to:
+  /// **'Use 5000 characters or fewer.'**
+  String get supportFormMessageTooLong;
+
+  /// No description provided for @supportFormReportTooLong.
+  ///
+  /// In en, this message translates to:
+  /// **'The report is too long. Shorten it to 5000 characters.'**
+  String get supportFormReportTooLong;
+
+  /// No description provided for @supportBugWhatHappenedLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'What happened?'**
+  String get supportBugWhatHappenedLabel;
+
+  /// No description provided for @supportBugStepsLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Steps to reproduce'**
+  String get supportBugStepsLabel;
+
+  /// No description provided for @supportBugExpectedLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Expected behaviour'**
+  String get supportBugExpectedLabel;
+
+  /// No description provided for @supportBugActualLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Actual behaviour'**
+  String get supportBugActualLabel;
+
+  /// No description provided for @supportBugPlatformLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Include device platform'**
+  String get supportBugPlatformLabel;
+
+  /// No description provided for @supportBugPlatformHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Optional. No logs, credentials or personal data are collected.'**
+  String get supportBugPlatformHint;
+
+  /// No description provided for @supportRequestSentToast.
+  ///
+  /// In en, this message translates to:
+  /// **'Request sent to support.'**
+  String get supportRequestSentToast;
+
+  /// No description provided for @supportBugSentToast.
+  ///
+  /// In en, this message translates to:
+  /// **'Bug report sent. Thank you.'**
+  String get supportBugSentToast;
+
+  /// No description provided for @supportRequestsEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No requests yet.'**
+  String get supportRequestsEmpty;
+
+  /// No description provided for @supportRequestsRefresh.
+  ///
+  /// In en, this message translates to:
+  /// **'Refresh'**
+  String get supportRequestsRefresh;
+
+  /// No description provided for @supportRequestsBack.
+  ///
+  /// In en, this message translates to:
+  /// **'Back to all requests'**
+  String get supportRequestsBack;
+
+  /// No description provided for @supportRequestUpdatedOn.
+  ///
+  /// In en, this message translates to:
+  /// **'Updated {date}'**
+  String supportRequestUpdatedOn(Object date);
+
+  /// No description provided for @supportRequestOpenedOn.
+  ///
+  /// In en, this message translates to:
+  /// **'Opened {date}'**
+  String supportRequestOpenedOn(Object date);
+
+  /// No description provided for @supportRequestKindSupport.
+  ///
+  /// In en, this message translates to:
+  /// **'Support request'**
+  String get supportRequestKindSupport;
+
+  /// No description provided for @supportRequestKindBug.
+  ///
+  /// In en, this message translates to:
+  /// **'Bug report'**
+  String get supportRequestKindBug;
+
+  /// No description provided for @supportStatusOpen.
+  ///
+  /// In en, this message translates to:
+  /// **'Open'**
+  String get supportStatusOpen;
+
+  /// No description provided for @supportStatusPending.
+  ///
+  /// In en, this message translates to:
+  /// **'Waiting for your reply'**
+  String get supportStatusPending;
+
+  /// No description provided for @supportStatusResolved.
+  ///
+  /// In en, this message translates to:
+  /// **'Resolved'**
+  String get supportStatusResolved;
+
+  /// No description provided for @supportStatusClosed.
+  ///
+  /// In en, this message translates to:
+  /// **'Closed'**
+  String get supportStatusClosed;
+
+  /// No description provided for @supportSenderYou.
+  ///
+  /// In en, this message translates to:
+  /// **'You'**
+  String get supportSenderYou;
+
+  /// No description provided for @supportSenderSupport.
+  ///
+  /// In en, this message translates to:
+  /// **'Support team'**
+  String get supportSenderSupport;
+
+  /// No description provided for @supportReplyLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Reply'**
+  String get supportReplyLabel;
+
+  /// No description provided for @supportReplySend.
+  ///
+  /// In en, this message translates to:
+  /// **'Send reply'**
+  String get supportReplySend;
+
+  /// No description provided for @supportClosedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'This request is closed'**
+  String get supportClosedTitle;
+
+  /// No description provided for @supportClosedHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Closed requests are read-only. If you still need help, send a new request.'**
+  String get supportClosedHint;
+
+  /// No description provided for @supportClosedNewRequest.
+  ///
+  /// In en, this message translates to:
+  /// **'Send a new request'**
+  String get supportClosedNewRequest;
+
+  /// No description provided for @supportErrorLoadRequests.
+  ///
+  /// In en, this message translates to:
+  /// **'Your requests could not be loaded. Check your connection and try again.'**
+  String get supportErrorLoadRequests;
+
+  /// No description provided for @supportErrorLoadRequest.
+  ///
+  /// In en, this message translates to:
+  /// **'This request could not be opened. Check your connection and try again.'**
+  String get supportErrorLoadRequest;
+
+  /// No description provided for @supportErrorNotFound.
+  ///
+  /// In en, this message translates to:
+  /// **'This request could not be found. It may have been removed.'**
+  String get supportErrorNotFound;
+
+  /// No description provided for @supportErrorInvalid.
+  ///
+  /// In en, this message translates to:
+  /// **'Check the highlighted fields and try again.'**
+  String get supportErrorInvalid;
+
+  /// No description provided for @supportErrorRateLimited.
+  ///
+  /// In en, this message translates to:
+  /// **'Too many requests. Try again in about an hour.'**
+  String get supportErrorRateLimited;
+
+  /// No description provided for @supportErrorClosedReply.
+  ///
+  /// In en, this message translates to:
+  /// **'This request is closed, so it cannot take a reply.'**
+  String get supportErrorClosedReply;
+
+  /// No description provided for @supportErrorGeneric.
+  ///
+  /// In en, this message translates to:
+  /// **'Something went wrong. Check your connection and try again.'**
+  String get supportErrorGeneric;
+
+  /// No description provided for @supportRetry.
+  ///
+  /// In en, this message translates to:
+  /// **'Try again'**
+  String get supportRetry;
+
+  /// No description provided for @supportUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Support requests are not available right now. The FAQ is still open.'**
+  String get supportUnavailable;
+
+  /// No description provided for @supportSignInTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign in to contact support'**
+  String get supportSignInTitle;
+
+  /// No description provided for @supportSignInBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Support requests are linked to your account. You can read the FAQ without signing in.'**
+  String get supportSignInBody;
+
+  /// No description provided for @supportSignInAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign in'**
+  String get supportSignInAction;
+
+  /// No description provided for @supportSignInActionLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'send a support request'**
+  String get supportSignInActionLabel;
+
+  /// No description provided for @supportSignInRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign in to send requests and see your history.'**
+  String get supportSignInRequired;
+
+  /// No description provided for @supportErrorAccountIdentity.
+  ///
+  /// In en, this message translates to:
+  /// **'Your session cannot be used for support requests. Sign out, sign in again, then retry.'**
+  String get supportErrorAccountIdentity;
+
+  /// No description provided for @communityPostDeleteSessionExpired.
+  ///
+  /// In en, this message translates to:
+  /// **'Your session has expired. Sign in again to delete this post.'**
+  String get communityPostDeleteSessionExpired;
+
+  /// No description provided for @communityPostDeleteNotAllowed.
+  ///
+  /// In en, this message translates to:
+  /// **'You can only delete your own posts.'**
+  String get communityPostDeleteNotAllowed;
+
+  /// No description provided for @communityPostDeleteConflict.
+  ///
+  /// In en, this message translates to:
+  /// **'This post can\'t be deleted right now. Refresh the feed and try again.'**
+  String get communityPostDeleteConflict;
+
+  /// No description provided for @communityPostDeleteNetwork.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t reach art.kubus. Check your connection and try again.'**
+  String get communityPostDeleteNetwork;
+
+  /// No description provided for @communityArtDiscoveryTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Discover art'**
+  String get communityArtDiscoveryTitle;
+
+  /// No description provided for @communityArtDiscoverySubtitleMap.
+  ///
+  /// In en, this message translates to:
+  /// **'Around the area you were viewing on the map'**
+  String get communityArtDiscoverySubtitleMap;
+
+  /// No description provided for @communityArtDiscoverySubtitleDevice.
+  ///
+  /// In en, this message translates to:
+  /// **'Around your location'**
+  String get communityArtDiscoverySubtitleDevice;
+
+  /// No description provided for @communityArtDiscoverySubtitleSaved.
+  ///
+  /// In en, this message translates to:
+  /// **'Around the last area you used'**
+  String get communityArtDiscoverySubtitleSaved;
+
+  /// No description provided for @communityArtDiscoverySubtitlePublic.
+  ///
+  /// In en, this message translates to:
+  /// **'Art and conversations from across the platform'**
+  String get communityArtDiscoverySubtitlePublic;
+
+  /// No description provided for @communityArtDiscoveryWithin.
+  ///
+  /// In en, this message translates to:
+  /// **'Within {distance}'**
+  String communityArtDiscoveryWithin(Object distance);
+
+  /// No description provided for @communityArtDiscoveryUseMyLocation.
+  ///
+  /// In en, this message translates to:
+  /// **'Use my location'**
+  String get communityArtDiscoveryUseMyLocation;
+
+  /// No description provided for @communityArtDiscoveryReasonForYou.
+  ///
+  /// In en, this message translates to:
+  /// **'For you'**
+  String get communityArtDiscoveryReasonForYou;
+
+  /// No description provided for @communityArtDiscoveryReasonNearby.
+  ///
+  /// In en, this message translates to:
+  /// **'Nearby'**
+  String get communityArtDiscoveryReasonNearby;
+
+  /// No description provided for @communityArtDiscoveryReasonFollowed.
+  ///
+  /// In en, this message translates to:
+  /// **'From an artist you follow'**
+  String get communityArtDiscoveryReasonFollowed;
+
+  /// No description provided for @communityArtDiscoveryReasonNewArtwork.
+  ///
+  /// In en, this message translates to:
+  /// **'New artwork'**
+  String get communityArtDiscoveryReasonNewArtwork;
+
+  /// No description provided for @communityArtDiscoveryReasonDiscussion.
+  ///
+  /// In en, this message translates to:
+  /// **'Community discussion'**
+  String get communityArtDiscoveryReasonDiscussion;
+
+  /// No description provided for @communityArtDiscoveryReasonReview.
+  ///
+  /// In en, this message translates to:
+  /// **'Recent review'**
+  String get communityArtDiscoveryReasonReview;
+
+  /// No description provided for @communityArtDiscoveryReasonExhibition.
+  ///
+  /// In en, this message translates to:
+  /// **'Exhibition'**
+  String get communityArtDiscoveryReasonExhibition;
+
+  /// No description provided for @communityArtDiscoveryEmptyTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing here yet'**
+  String get communityArtDiscoveryEmptyTitle;
+
+  /// No description provided for @communityArtDiscoveryEmptyBody.
+  ///
+  /// In en, this message translates to:
+  /// **'No public art, reviews or exhibitions could be found right now. Try again in a moment, or explore the map.'**
+  String get communityArtDiscoveryEmptyBody;
+
+  /// No description provided for @communityArtDiscoveryErrorTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t load discovery'**
+  String get communityArtDiscoveryErrorTitle;
+
+  /// No description provided for @communityArtDiscoveryErrorBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Check your connection and try again.'**
+  String get communityArtDiscoveryErrorBody;
+
+  /// No description provided for @communityArtDiscoveryLoadMore.
+  ///
+  /// In en, this message translates to:
+  /// **'Show more'**
+  String get communityArtDiscoveryLoadMore;
+
+  /// No description provided for @contributionHeadline.
+  ///
+  /// In en, this message translates to:
+  /// **'Art is everywhere. Help put it on the map.'**
+  String get contributionHeadline;
+
+  /// No description provided for @contributionBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Discover local art, document what you find, and connect with the people behind it.'**
+  String get contributionBody;
+
+  /// No description provided for @contributionJoin.
+  ///
+  /// In en, this message translates to:
+  /// **'Join art.kubus'**
+  String get contributionJoin;
+
+  /// No description provided for @contributionDocument.
+  ///
+  /// In en, this message translates to:
+  /// **'Document public art'**
+  String get contributionDocument;
+
+  /// No description provided for @contributionArtwork.
+  ///
+  /// In en, this message translates to:
+  /// **'Add artwork'**
+  String get contributionArtwork;
+
+  /// No description provided for @contributionExhibition.
+  ///
+  /// In en, this message translates to:
+  /// **'Add exhibition or event'**
+  String get contributionExhibition;
+
+  /// No description provided for @contributionApplication.
+  ///
+  /// In en, this message translates to:
+  /// **'View application status'**
+  String get contributionApplication;
 }
 
 class _AppLocalizationsDelegate

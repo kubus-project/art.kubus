@@ -1,66 +1,97 @@
 import '../models/artwork.dart';
 import 'media_url_resolver.dart';
 
-/// Centralizes artwork media URL resolution so every screen shows the same
-/// cover image with IPFS/HTTP fallbacks applied consistently.
+/// Artwork and marker cover chain shared by every surface that shows a cover.
+///
+/// Order (first safe URL wins):
+/// 1. `artwork.imageUrl` (the backend's `image_url`, already resolved at parse)
+/// 2. cover-like metadata keys (see [coverMetadataKeys])
+/// 3. image CID metadata keys (see [imageCidMetadataKeys]), resolved through the
+///    configured IPFS gateways
+/// 4. [fallbackUrl], then [additionalUrls]
+///
+/// Metadata keys are the only place legacy spellings are read: they sit at the
+/// metadata boundary, and typed fields always take precedence over them.
 class ArtworkMediaResolver {
-  /// Resolve the primary cover for an artwork.
-  /// Mirrors the working logic used in Featured Artworks cards:
-  /// prefer the artwork's own `imageUrl`, then a provided fallback list.
+  /// Metadata keys that can carry a cover, in preference order.
+  static const List<String> coverMetadataKeys = <String>[
+    'coverImageUrl',
+    'cover_image_url',
+    'coverUrl',
+    'cover_url',
+    'coverImage',
+    'cover_image',
+    'imageUrl',
+    'image_url',
+    'image',
+    'thumbnailUrl',
+    'thumbnail_url',
+    'thumbnail',
+    'preview',
+    'previewUrl',
+    'hero',
+    'banner',
+  ];
+
+  /// Metadata keys that can carry an IPFS CID for the image.
+  static const List<String> imageCidMetadataKeys = <String>[
+    'imageCid',
+    'image_cid',
+    'imageCID',
+  ];
+
+  /// Resolve the primary cover for an artwork or marker.
+  ///
+  /// [maxWidth] asks the media resolver for a size-clamped URL (thumbnail
+  /// rewriting and width query clamping). Cards and map thumbnails pass it so a
+  /// marker never downloads archival media.
   static String? resolveCover({
     Artwork? artwork,
     Map<String, dynamic>? metadata,
     String? fallbackUrl,
     Iterable<String?> additionalUrls = const [],
-
-    /// Asks the media resolver for a size-clamped URL (thumbnail rewriting and
-    /// width query clamping) instead of the full display size. Map thumbnails
-    /// pass this so a marker never downloads archival media.
     int? maxWidth,
   }) {
-    final candidates = <String?>[
-      artwork?.imageUrl,
-      ..._metadataCandidates(artwork?.metadata),
-      ..._metadataCandidates(metadata),
-      fallbackUrl,
-      ...additionalUrls,
-    ];
+    return MediaUrlResolver.firstDisplayUrl(
+      <String?>[
+        artwork?.imageUrl,
+        ...coverRefsFromMetadata(artwork?.metadata),
+        ...coverRefsFromMetadata(metadata),
+        fallbackUrl,
+        ...additionalUrls,
+      ],
+      maxWidth: maxWidth,
+    );
+  }
 
-    for (final raw in candidates) {
-      final resolved = MediaUrlResolver.resolveDisplayUrl(
-        _asString(raw),
-        maxWidth: maxWidth,
+  /// Raw cover references carried by a metadata bag, in chain order.
+  ///
+  /// The bag's own keys come first. Older and imported marker payloads nest the
+  /// same keys one level down under `metadata` or `meta`; that nested bag is
+  /// read after the outer one, so typed outer values still win.
+  ///
+  /// Only string values count: a nested object or list under a cover key is
+  /// never stringified into a URL.
+  static List<String> coverRefsFromMetadata(Map<String, dynamic>? meta) {
+    if (meta == null || meta.isEmpty) return const <String>[];
+    final refs = <String>[];
+    _collectCoverRefs(meta, refs);
+    final nested = meta['metadata'] ?? meta['meta'];
+    if (nested is Map) {
+      _collectCoverRefs(
+        nested.map((key, value) => MapEntry(key.toString(), value)),
+        refs,
       );
-      if (resolved != null && resolved.isNotEmpty) {
-        return resolved;
-      }
     }
-    return null;
+    return refs;
   }
 
-  static List<String?> _metadataCandidates(Map<String, dynamic>? meta) {
-    if (meta == null || meta.isEmpty) return const <String?>[];
-    return [
-      meta['coverImage']?.toString(),
-      meta['coverImageUrl']?.toString(),
-      meta['cover_image_url']?.toString(),
-      meta['coverUrl']?.toString(),
-      meta['cover_url']?.toString(),
-      meta['imageUrl']?.toString(),
-      meta['image']?.toString(),
-      meta['thumbnailUrl']?.toString(),
-      meta['thumbnail_url']?.toString(),
-      meta['thumbnail']?.toString(),
-      meta['preview']?.toString(),
-      meta['previewUrl']?.toString(),
-      meta['hero']?.toString(),
-      meta['banner']?.toString(),
-    ];
-  }
-
-  static String? _asString(String? value) {
-    final trimmed = value?.trim();
-    if (trimmed == null || trimmed.isEmpty) return null;
-    return trimmed;
+  static void _collectCoverRefs(Map<String, dynamic> meta, List<String> refs) {
+    for (final key in <String>[...coverMetadataKeys, ...imageCidMetadataKeys]) {
+      final value = meta[key];
+      if (value is! String) continue;
+      final trimmed = value.trim();
+      if (trimmed.isNotEmpty) refs.add(trimmed);
+    }
   }
 }

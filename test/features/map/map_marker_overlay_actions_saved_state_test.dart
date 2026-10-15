@@ -85,7 +85,7 @@ class _ActionsHost extends StatelessWidget {
           Row(
             mainAxisSize: MainAxisSize.min,
             children: <Widget>[
-              Icon(action.icon, key: Key('icon:${action.semanticsLabel}')),
+              Icon(action.icon, key: Key('icon:${action.id}')),
               Text(action.label),
             ],
           ),

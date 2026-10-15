@@ -1,0 +1,36 @@
+{
+  "browser": "149.0.7827.55",
+  "responses": [
+    {
+      "url": "http://127.0.0.1:53001/api/dao/reviews/3pYTbe6S1NYgFTsZ7mUaTPjmBL4bWMARAb6iEXHeLgEf",
+      "status": 404,
+      "method": "GET"
+    },
+    {
+      "url": "http://127.0.0.1:53001/api/wallet-backup",
+      "status": 404,
+      "method": "GET"
+    },
+    {
+      "url": "http://127.0.0.1:53001/api/dao/reviews/3pYTbe6S1NYgFTsZ7mUaTPjmBL4bWMARAb6iEXHeLgEf",
+      "status": 404,
+      "method": "GET"
+    },
+    {
+      "url": "http://127.0.0.1:53001/api/wallet-backup",
+      "status": 404,
+      "method": "GET"
+    },
+    {
+      "url": "http://127.0.0.1:53001/api/dao/reviews/3pYTbe6S1NYgFTsZ7mUaTPjmBL4bWMARAb6iEXHeLgEf",
+      "status": 404,
+      "method": "GET"
+    }
+  ],
+  "retainedErrorCounts": {
+    "console": 118,
+    "pageerror": 0,
+    "requestfailed": 41
+  },
+  "captureLimits": "Earlier captures include controlled failures, expired sessions after isolated JWT restart and requests cancelled during navigation; no claim of globally zero console errors."
+}

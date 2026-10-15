@@ -29,7 +29,7 @@ class KubusProductPalette {
   /// [KubusColors.accentTealLight] so it clears 4.5:1 on ground, surface and
   /// under white text; dark is [KubusColors.accentTealDark] (9.3:1 on
   /// surface). The exact values are a tested contract, see
-  /// docs/design/PRODUCT_V5_CHARACTER_REBALANCE.md.
+  /// docs/DESIGN_SYSTEM.md.
   static const Color activeLight = Color(0xFF00766A);
   static const Color activeDark = Color(0xFF4ECDC4);
 
@@ -225,6 +225,10 @@ class KubusSizes {
   /// for compact count badges that must stay readable.
   static const double badgeCountFontSize = 11.0;
 
+  /// Hit area of an icon-only action ([KubusIconActionButton]) in a composer
+  /// or toolbar row.
+  static const double iconActionSize = 48.0;
+
   /// Hairline borders used on glass surfaces.
   static const double hairline = 1.0;
 
@@ -273,6 +277,9 @@ class KubusSizes {
   static const double dialogWidthMd = 420.0;
   static const double dialogWidthLg = 520.0;
 
+  /// Wide variant for dialogs that genuinely carry two columns or a table.
+  static const double dialogWidthXl = 720.0;
+
   /// Coloured state dot shown beside a status label (AR header, list rows).
   static const double statusDot = 8.0;
 
@@ -290,6 +297,37 @@ class KubusSizes {
 
   /// Height of the preview surface at the top of a spatial detail screen.
   static const double detailPreviewHeight = 320.0;
+
+  // --- Media player chrome (Community video) ---
+
+  /// Hit target of a media control (the 44dp touch guideline).
+  static const double mediaControlTarget = 44.0;
+
+  /// Icon inside a media control.
+  static const double mediaControlIcon = 22.0;
+
+  /// Large initial play / replay control.
+  static const double mediaPlayLarge = 56.0;
+
+  /// Icon inside [mediaPlayLarge].
+  static const double mediaPlayLargeIcon = 32.0;
+
+  /// Timeline track thickness at rest and while hovered or scrubbed.
+  static const double mediaTimelineTrack = 4.0;
+  static const double mediaTimelineTrackActive = 6.0;
+
+  /// Timeline scrub handle diameter.
+  static const double mediaTimelineHandle = 12.0;
+
+  /// Vertical hit area of the timeline, so a thin track is easy to grab.
+  static const double mediaTimelineHitHeight = 32.0;
+
+  /// Width of the desktop volume track.
+  static const double mediaVolumeTrackWidth = 72.0;
+
+  /// Stage width below which the control strip drops the volume track and the
+  /// elapsed/duration pair to a single compact line.
+  static const double mediaCompactStageWidth = 360.0;
 }
 
 /// Canonical Material elevations.
@@ -507,21 +545,45 @@ class KubusTypography {
         fontSize: 18,
       ),
       titleLarge: TextStyle(
-          fontFamily: contentFamily, fontWeight: FontWeight.w600, fontSize: 18),
+        fontFamily: contentFamily,
+        fontWeight: FontWeight.w600,
+        fontSize: 18,
+      ),
       titleMedium: TextStyle(
-          fontFamily: contentFamily, fontWeight: FontWeight.w600, fontSize: 16),
+        fontFamily: contentFamily,
+        fontWeight: FontWeight.w600,
+        fontSize: 16,
+      ),
       bodyLarge: TextStyle(
-          fontFamily: contentFamily, fontWeight: FontWeight.w400, fontSize: 16),
+        fontFamily: contentFamily,
+        fontWeight: FontWeight.w400,
+        fontSize: 16,
+      ),
       bodyMedium: TextStyle(
-          fontFamily: contentFamily, fontWeight: FontWeight.w400, fontSize: 14),
+        fontFamily: contentFamily,
+        fontWeight: FontWeight.w400,
+        fontSize: 14,
+      ),
       bodySmall: TextStyle(
-          fontFamily: contentFamily, fontWeight: FontWeight.w400, fontSize: 12),
+        fontFamily: contentFamily,
+        fontWeight: FontWeight.w400,
+        fontSize: 12,
+      ),
       labelLarge: TextStyle(
-          fontFamily: contentFamily, fontWeight: FontWeight.w600, fontSize: 14),
+        fontFamily: contentFamily,
+        fontWeight: FontWeight.w600,
+        fontSize: 14,
+      ),
       labelMedium: TextStyle(
-          fontFamily: contentFamily, fontWeight: FontWeight.w500, fontSize: 12),
+        fontFamily: contentFamily,
+        fontWeight: FontWeight.w500,
+        fontSize: 12,
+      ),
       labelSmall: TextStyle(
-          fontFamily: contentFamily, fontWeight: FontWeight.w500, fontSize: 10),
+        fontFamily: contentFamily,
+        fontWeight: FontWeight.w500,
+        fontSize: 10,
+      ),
     );
   }
 }
@@ -666,36 +728,26 @@ class KubusTextStyles {
 
   static TextStyle get display => KubusTypography.textTheme.displayLarge!;
   static TextStyle get entityTitle => KubusTypography.textTheme.headlineSmall!;
-  static TextStyle get lede => KubusTypography.textTheme.bodyLarge!
-      .copyWith(height: 1.5, fontWeight: FontWeight.w400);
+  static TextStyle get lede => KubusTypography.textTheme.bodyLarge!.copyWith(
+        height: 1.5,
+        fontWeight: FontWeight.w400,
+      );
   static TextStyle get body => KubusTypography.textTheme.bodyMedium!;
   static TextStyle get bodySmall => KubusTypography.textTheme.bodySmall!;
   static TextStyle get caption => KubusTypography.textTheme.labelSmall!;
   static TextStyle get actionLabel => KubusTypography.textTheme.labelLarge!;
-  static TextStyle get structuralLabel => KubusTypography.structural(
-        fontSize: 12,
-        fontWeight: FontWeight.w400,
-      );
-  static TextStyle get metadataRegister => KubusTypography.structural(
-        fontSize: 11,
-        fontWeight: FontWeight.w400,
-      );
-  static TextStyle get ordinal => KubusTypography.structural(
-        fontSize: 12,
-        fontWeight: FontWeight.w700,
-      );
-  static TextStyle get machineValue => KubusTypography.machine(
-        fontSize: 12,
-        fontWeight: FontWeight.w400,
-      );
-  static TextStyle get coordinate => KubusTypography.machine(
-        fontSize: 11,
-        fontWeight: FontWeight.w400,
-      );
-  static TextStyle get version => KubusTypography.machine(
-        fontSize: 11,
-        fontWeight: FontWeight.w700,
-      );
+  static TextStyle get structuralLabel =>
+      KubusTypography.structural(fontSize: 12, fontWeight: FontWeight.w400);
+  static TextStyle get metadataRegister =>
+      KubusTypography.structural(fontSize: 11, fontWeight: FontWeight.w400);
+  static TextStyle get ordinal =>
+      KubusTypography.structural(fontSize: 12, fontWeight: FontWeight.w700);
+  static TextStyle get machineValue =>
+      KubusTypography.machine(fontSize: 12, fontWeight: FontWeight.w400);
+  static TextStyle get coordinate =>
+      KubusTypography.machine(fontSize: 11, fontWeight: FontWeight.w400);
+  static TextStyle get version =>
+      KubusTypography.machine(fontSize: 11, fontWeight: FontWeight.w700);
 
   static TextStyle get screenTitle =>
       KubusTypography.textTheme.headlineMedium!.copyWith(

@@ -1,16 +1,14 @@
 import 'package:flutter/material.dart';
 
+import '../../utils/media_failure_registry.dart';
 import '../../utils/media_url_resolver.dart';
 
 typedef KubusImageErrorBuilder = Widget Function(
-  BuildContext context,
-  Object error,
-  StackTrace? stackTrace,
-);
+    BuildContext context, Object error, StackTrace? stackTrace);
 
 /// Shared network image widget for stable URL normalization and cache-friendly
 /// rendering across map + creator surfaces.
-class KubusCachedImage extends StatelessWidget {
+class KubusCachedImage extends StatefulWidget {
   const KubusCachedImage({
     super.key,
     required this.imageUrl,
@@ -29,10 +27,14 @@ class KubusCachedImage extends StatelessWidget {
     this.excludeFromSemantics = false,
     this.placeholderBuilder,
     this.errorBuilder,
+    this.skipRecentlyFailed = false,
   }) : assert(
           semanticLabel == null || !excludeFromSemantics,
           'semanticLabel cannot be provided when excludeFromSemantics is true.',
         );
+
+  @override
+  State<KubusCachedImage> createState() => _KubusCachedImageState();
 
   final String? imageUrl;
   final BoxFit fit;
@@ -51,22 +53,18 @@ class KubusCachedImage extends StatelessWidget {
   final WidgetBuilder? placeholderBuilder;
   final KubusImageErrorBuilder? errorBuilder;
 
+  /// Show the fallback without a request when this URL failed moments ago
+  /// (here or as a map marker cover, see [KubusMediaFailureRegistry]).
+  ///
+  /// For surfaces that rebuild continuously while open, such as the map
+  /// marker card following its marker; Flutter's image cache keeps no failed
+  /// loads, so each rebuild would otherwise request the dead URL again. Off by
+  /// default: elsewhere one failure must not hide the next attempt.
+  final bool skipRecentlyFailed;
+
   static String? versionTokenFromDate(DateTime? value) {
     if (value == null) return null;
     return value.millisecondsSinceEpoch.toString();
-  }
-
-  static String? resolveImageUrl(
-    String? raw, {
-    int? maxDisplayWidth,
-  }) {
-    final resolved = MediaUrlResolver.resolveDisplayUrl(
-          raw,
-          maxWidth: maxDisplayWidth,
-        ) ??
-        MediaUrlResolver.resolveDisplayUrl(raw);
-    if (resolved == null || resolved.trim().isEmpty) return null;
-    return resolved.trim();
   }
 
   static String? withStableVersion(String? url, String? version) {
@@ -97,15 +95,43 @@ class KubusCachedImage extends StatelessWidget {
     return parsed.replace(queryParameters: params).toString();
   }
 
-  @override
-  Widget build(BuildContext context) {
+  /// Builds the image for [state]'s current gateway candidate.
+  ///
+  /// Candidates come from the canonical resolver: an IPFS reference yields one
+  /// URL per configured gateway, and a failed candidate advances to the next.
+  Widget _buildImage(BuildContext context, _KubusCachedImageState state) {
     final resolvedSemanticLabel = _normalizedSemanticLabel;
-    final resolved = resolveImageUrl(
+    final candidates = MediaUrlResolver.resolveDisplayCandidates(
       imageUrl,
-      maxDisplayWidth: maxDisplayWidth,
+      maxWidth: maxDisplayWidth,
     );
+    var candidateIndex = candidates.isEmpty
+        ? 0
+        : state._candidateIndex.clamp(0, candidates.length - 1);
+    if (candidates.isEmpty) state._hasDecodedFrame = false;
+    if (skipRecentlyFailed && candidates.isNotEmpty) {
+      // A candidate that failed moments ago is passed over, not retried: the
+      // next eligible gateway is tried, and only when none is left does the
+      // fallback show (no request is made, so nothing can loop).
+      while (candidateIndex < candidates.length &&
+          KubusMediaFailureRegistry.shared.hasRecentlyFailed(
+            withStableVersion(candidates[candidateIndex], cacheVersion),
+          )) {
+        candidateIndex++;
+      }
+      if (candidateIndex >= candidates.length) {
+        state._hasDecodedFrame = false;
+        return _withFallbackSemantics(
+          errorBuilder?.call(context, const _KubusRecentImageFailure(), null) ??
+              _buildFallback(context),
+          resolvedSemanticLabel,
+        );
+      }
+    }
+    final resolved = candidates.isEmpty ? null : candidates[candidateIndex];
     final urlWithVersion = withStableVersion(resolved, cacheVersion);
     if (urlWithVersion == null || urlWithVersion.isEmpty) {
+      state._hasDecodedFrame = false;
       return _withFallbackSemantics(
         _buildFallback(context),
         resolvedSemanticLabel,
@@ -140,22 +166,42 @@ class KubusCachedImage extends StatelessWidget {
       fit: fit,
       alignment: alignment,
       filterQuality: filterQuality,
-      gaplessPlayback: true,
+      gaplessPlayback: state._preserveDecodedFrame,
       cacheWidth: effectiveCacheWidth,
       cacheHeight: effectiveCacheHeight,
       semanticLabel: resolvedSemanticLabel,
       excludeFromSemantics: excludeFromSemantics,
+      frameBuilder: (context, child, frame, wasSynchronouslyLoaded) {
+        if (frame != null || wasSynchronouslyLoaded) {
+          state._hasDecodedFrame = true;
+        }
+        return child;
+      },
       errorBuilder: (context, error, stackTrace) {
+        state._hasDecodedFrame = false;
+        KubusMediaFailureRegistry.shared.markFailed(urlWithVersion);
+        if (candidateIndex + 1 < candidates.length) {
+          state._advanceCandidate(candidateIndex);
+          return _withFallbackSemantics(
+            _buildFallback(context),
+            resolvedSemanticLabel,
+          );
+        }
+        // Every candidate failed: show the placeholder, never a broken-image
+        // glyph. Callers that want their own error widget pass errorBuilder.
         late final Widget fallback;
         if (errorBuilder != null) {
           fallback = errorBuilder!(context, error, stackTrace);
         } else {
-          fallback = _buildFallback(context, icon: Icons.broken_image_outlined);
+          fallback = _buildFallback(context);
         }
         return _withFallbackSemantics(fallback, resolvedSemanticLabel);
       },
       loadingBuilder: (context, child, progress) {
-        if (progress == null) return child;
+        // Image.network keeps its last decoded frame when gaplessPlayback is
+        // enabled. Keep that painted child during a URL refresh; the fallback
+        // is only for the initial load before any frame has decoded.
+        if (state._hasDecodedFrame) return child;
         return _withFallbackSemantics(
           placeholderBuilder?.call(context) ?? _buildFallback(context),
           resolvedSemanticLabel,
@@ -194,4 +240,43 @@ class KubusCachedImage extends StatelessWidget {
       ),
     );
   }
+}
+
+class _KubusCachedImageState extends State<KubusCachedImage> {
+  int _candidateIndex = 0;
+  bool _advancePending = false;
+  bool _hasDecodedFrame = false;
+  bool _preserveDecodedFrame = true;
+
+  @override
+  void didUpdateWidget(covariant KubusCachedImage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    _preserveDecodedFrame = oldWidget.imageUrl == widget.imageUrl;
+    if (!_preserveDecodedFrame) {
+      _candidateIndex = 0;
+      _hasDecodedFrame = false;
+    }
+  }
+
+  void _advanceCandidate(int failedIndex) {
+    if (_advancePending) return;
+    _advancePending = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _advancePending = false;
+      if (!mounted || _candidateIndex > failedIndex) return;
+      setState(() => _candidateIndex = failedIndex + 1);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) => widget._buildImage(context, this);
+}
+
+/// Error handed to [KubusCachedImage.errorBuilder] when the image was not
+/// requested because the same URL failed moments ago.
+class _KubusRecentImageFailure implements Exception {
+  const _KubusRecentImageFailure();
+
+  @override
+  String toString() => 'Image recently failed to load; not retried yet.';
 }

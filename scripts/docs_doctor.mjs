@@ -2,9 +2,12 @@ import { existsSync, readFileSync, statSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
+import { validateLocalMarkdownLinks } from './lib/markdown_local_links.mjs';
 
 const rootDir = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const failures = [];
+let markdownFilesChecked = 0;
+let markdownLinksChecked = 0;
 
 const requiredFiles = [
   '.gitmodules',
@@ -74,35 +77,58 @@ function checkPackageScripts() {
 }
 
 function checkMarkdownLinks(relativePath) {
-  const text = readText(relativePath);
-  const linkPattern = /\[[^\]]+\]\(([^)]+)\)/g;
-  let match;
+  const result = validateLocalMarkdownLinks(readText(relativePath), {
+    sourcePath: relativePath,
+    rootDir,
+    backendRoot: absolute('backend'),
+  });
+  markdownLinksChecked += result.checked.length;
+  for (const issue of result.issues) {
+    fail(`${relativePath} ${issue}`);
+  }
+}
 
-  while ((match = linkPattern.exec(text)) !== null) {
-    const rawTarget = match[1].trim();
-    if (
-      rawTarget.startsWith('#') ||
-      rawTarget.startsWith('http://') ||
-      rawTarget.startsWith('https://') ||
-      rawTarget.startsWith('mailto:')
-    ) {
-      continue;
-    }
+function trackedMarkdownFiles() {
+  const result = spawnSync('git', ['ls-files', '--', '*.md', '**/*.md'], {
+    cwd: rootDir,
+    encoding: 'utf8',
+    shell: process.platform === 'win32',
+  });
+  if (result.status !== 0) {
+    fail(`Unable to inspect tracked Markdown: ${result.stderr || result.error?.message}`);
+    return [];
+  }
+  return [...new Set(result.stdout.split(/\r?\n/).filter(Boolean))];
+}
 
-    const [targetWithoutAnchor] = rawTarget.split('#');
-    if (!targetWithoutAnchor) continue;
-
-    const target = decodeURIComponent(targetWithoutAnchor);
-    const resolved = resolve(dirname(absolute(relativePath)), target);
-    const backendRoot = absolute('backend');
-    if (!existsSync(resolved) && (resolved === backendRoot || resolved.startsWith(`${backendRoot}${process.platform === 'win32' ? '\\' : '/'}`))) {
-      // The private backend is a validated gitlink. Unprivileged PR jobs do not
-      // materialize it, so its internal documentation links are checked by the
-      // trusted scheduled/backend workflows instead.
-      continue;
-    }
-    if (!existsSync(resolved)) {
-      fail(`${relativePath} has a broken local Markdown link: ${rawTarget}`);
+function checkAllTrackedMarkdown() {
+  const removedPaths = [
+    'docs/PRODUCT_UX_SEO_PROGRAM.md',
+    'docs/AGENT_EXECUTION_PLAN.md',
+    'docs/DESIGN_SYSTEM_V2.md',
+    'docs/design/PRODUCT_V5_SEMANTIC_VISUAL_SYSTEM.md',
+    'docs/design/PRODUCT_V5_ART_DIRECTION_RESTORATION.md',
+    'docs/design/PRODUCT_V5_CHARACTER_REBALANCE.md',
+    'docs/design/PRODUCT_V5_MOTION_CONTRACT.md',
+    'docs/design/PRODUCT_V5_SPATIAL_SYSTEM.md',
+    'docs/design/PRODUCT_V5_APP_AUDIT.md',
+    'docs/design/PRODUCT_V5_FINAL_UX_HARDENING.md',
+    'docs/design/PRODUCT_V5_TILE_SYSTEM_INVENTORY.md',
+    'docs/design/PRODUCT_V5_TOKEN_MIGRATION.md',
+    'docs/DESIGN_UNIFICATION_NOTES.md',
+  ];
+  for (const relativePath of trackedMarkdownFiles()) {
+    markdownFilesChecked += 1;
+    const text = readText(relativePath);
+    checkMarkdownLinks(relativePath);
+    const prose = text
+      .replace(/^\s*(```|~~~)[^\n]*\n[\s\S]*?^\s*\1\s*$/gm, '')
+      .replace(/https?:\/\/[^\s)]+/g, '');
+    for (const removedPath of removedPaths) {
+      const escaped = removedPath.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replaceAll('/', '[\\\\/]');
+      if (new RegExp(escaped, 'i').test(prose)) {
+        fail(`${relativePath} refers to retired documentation path ${removedPath}`);
+      }
     }
   }
 }
@@ -214,10 +240,7 @@ requireIncludes('DESLOPPIFY.md', [
   '## Completed tasks',
 ]);
 
-checkMarkdownLinks('docs/README.md');
-checkMarkdownLinks('docs/LOCAL_VERIFICATION.md');
-checkMarkdownLinks('docs/engineering/branching-and-deployment.md');
-checkMarkdownLinks('CONTRIBUTING.md');
+checkAllTrackedMarkdown();
 
 for (const file of requiredFiles.filter((name) => name.endsWith('.md'))) {
   checkMojibake(file);
@@ -231,4 +254,8 @@ if (failures.length) {
   process.exit(1);
 }
 
-console.log(`Docs doctor passed (${requiredFiles.length} required files checked).`);
+console.log(
+  `Docs doctor passed (${requiredFiles.length} required files, ` +
+    `${markdownFilesChecked} tracked Markdown files and ` +
+    `${markdownLinksChecked} local links checked; 0 broken links or retired-path references).`,
+);

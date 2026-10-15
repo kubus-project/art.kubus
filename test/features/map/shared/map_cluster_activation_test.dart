@@ -1,4 +1,5 @@
 import 'package:art_kubus/features/map/shared/map_cluster_activation.dart';
+import 'package:art_kubus/features/map/shared/map_marker_regroup_gate.dart';
 import 'package:art_kubus/models/art_marker.dart';
 import 'package:art_kubus/utils/grid_utils.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -80,5 +81,37 @@ void main() {
       ),
       isNull,
     );
+  });
+
+  test('a cluster rendered within the regroup slack resolves at its zoom', () {
+    final markers = <ArtMarker>[
+      _marker('a', 46.0500, 14.5000),
+      _marker('b', 46.0508, 14.5008),
+    ];
+    int level(double zoom) => zoom.floor();
+    final gate = KubusMarkerRegroupGate();
+    gate.update(zoom: 9.05, clusterMaxZoom: 12, gridLevelForZoom: level);
+    // The camera eased back below 9, but within the slack the source still
+    // shows the level-9 grouping, so the tapped id carries level 9.
+    const cameraZoom = 8.95;
+    final topologyZoom = gate.topologyZoomFor(cameraZoom);
+    expect(level(topologyZoom), 9);
+    final anchor = GridUtils.gridCellForLevel(markers.first.position, 9);
+
+    KubusClusterActivationPlan? resolveAt(double zoom) =>
+        resolveKubusClusterActivationPlan(
+          markers: markers,
+          clusterFeatureId: 'cluster:${anchor.anchorKey}',
+          clusterIdPrefix: 'cluster:',
+          currentZoom: zoom,
+          maxZoom: 18,
+          gridLevelForZoom: level,
+        );
+
+    expect(resolveAt(cameraZoom), isNull,
+        reason: 'the camera zoom names a different grid level');
+    final plan = resolveAt(topologyZoom);
+    expect(plan, isNotNull);
+    expect(plan!.memberIds, <String>{'a', 'b'});
   });
 }

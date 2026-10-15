@@ -15,7 +15,8 @@ void main() {
     );
   }
 
-  testWidgets('SupportSectionCard renders methods and opens the tiers dialog', (tester) async {
+  testWidgets('SupportSectionCard renders methods and opens the tiers dialog',
+      (tester) async {
     await tester.pumpWidget(wrapWithApp(const SupportSectionCard()));
 
     expect(find.text('Support'), findsOneWidget);

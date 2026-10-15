@@ -45,7 +45,7 @@ void main() {
       }
 
       expect(KubusMapMetrics.resolveSearchWidth(360), 336);
-      expect(KubusMapMetrics.resolveSearchWidth(768), 560);
+      expect(KubusMapMetrics.resolveSearchWidth(768), 720);
     });
 
     test('context panel preserves map area at intermediate and wide widths',

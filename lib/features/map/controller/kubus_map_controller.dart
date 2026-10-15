@@ -15,6 +15,7 @@ import '../shared/map_marker_collision_config.dart';
 import '../shared/map_marker_overlay_acknowledgement.dart';
 import '../shared/map_marker_collision_utils.dart';
 import '../shared/map_marker_entrance_tracker.dart';
+import '../shared/map_marker_entry_schedule.dart';
 import '../shared/map_marker_overlay_viewport_planner.dart';
 import '../shared/map_cluster_activation.dart';
 import '../map_layers_manager.dart';
@@ -79,6 +80,22 @@ class KubusMapCameraState {
   final double zoom;
   final double bearing;
   final double pitch;
+
+  /// Whether [other] is a different camera beyond rounding noise.
+  ///
+  /// MapLibre also emits move events that leave the camera where it was (the
+  /// canvas re-measuring itself when the map becomes visible again). Those are
+  /// not gestures, so they must not dismiss the open marker card.
+  bool differsFrom(KubusMapCameraState other) {
+    const double centerEpsilonDeg = 1e-7;
+    const double zoomEpsilon = 1e-4;
+    const double angleEpsilonDeg = 1e-3;
+    return (center.latitude - other.center.latitude).abs() > centerEpsilonDeg ||
+        (center.longitude - other.center.longitude).abs() > centerEpsilonDeg ||
+        (zoom - other.zoom).abs() > zoomEpsilon ||
+        (bearing - other.bearing).abs() > angleEpsilonDeg ||
+        (pitch - other.pitch).abs() > angleEpsilonDeg;
+  }
 }
 
 @immutable
@@ -195,6 +212,7 @@ class KubusMapController {
     required Distance distance,
     this.supportsPendingMarker = false,
     this.dismissSelectionOnUserGesture = true,
+    this.clusterTopologyZoomFor,
     Set<String>? managedLayerIdsOut,
     Set<String>? managedSourceIdsOut,
     Set<String>? registeredMapImagesOut,
@@ -220,6 +238,12 @@ class KubusMapController {
   /// Desktop uses this to avoid confusing anchored overlays while panning.
   /// Mobile keeps the selection open and just re-anchors it.
   final bool dismissSelectionOnUserGesture;
+
+  /// The zoom the rendered marker grouping was built at for a camera zoom
+  /// (the screen's `KubusMarkerRegroupGate.topologyZoomFor`, which lags a
+  /// zoom-out). Cluster taps must resolve their feature id at this zoom: the id
+  /// carries the grid level it was rendered with. Null means the camera zoom.
+  final double Function(double cameraZoom)? clusterTopologyZoomFor;
 
   final Distance _distance;
 
@@ -327,6 +351,10 @@ class KubusMapController {
   }
 
   bool _autoFollow = true;
+
+  // A selection waiting for its marker to load (see selectMarkerWhenLoaded).
+  ArtMarker? Function(List<ArtMarker> markers)? _pendingSelectionResolver;
+  DateTime? _pendingSelectionDeadline;
 
   // Marker data.
   List<ArtMarker> _markers = const <ArtMarker>[];
@@ -617,6 +645,45 @@ class KubusMapController {
     }
   }
 
+  /// Selects the marker [resolve] finds, now if it is loaded, otherwise as soon
+  /// as a marker list that contains it arrives, for up to [timeout].
+  ///
+  /// A nearby row whose marker is outside the loaded set uses this: the camera
+  /// moves to the artwork and the card opens once its marker loads. A user
+  /// gesture on the map cancels the wait.
+  void selectMarkerWhenLoaded(
+    ArtMarker? Function(List<ArtMarker> markers) resolve, {
+    Duration timeout = const Duration(seconds: 8),
+  }) {
+    final immediate = resolve(_markers);
+    if (immediate != null) {
+      _pendingSelectionResolver = null;
+      _pendingSelectionDeadline = null;
+      selectMarker(immediate);
+      return;
+    }
+    _pendingSelectionResolver = resolve;
+    _pendingSelectionDeadline = DateTime.now().add(timeout);
+  }
+
+  void _resolvePendingSelection() {
+    final resolve = _pendingSelectionResolver;
+    if (resolve == null) return;
+    final deadline = _pendingSelectionDeadline;
+    if (deadline == null || DateTime.now().isAfter(deadline)) {
+      _pendingSelectionResolver = null;
+      _pendingSelectionDeadline = null;
+      return;
+    }
+    final marker = resolve(_markers);
+    if (marker == null) return;
+    _pendingSelectionResolver = null;
+    _pendingSelectionDeadline = null;
+    // setMarkers runs inside the screen's data refresh, which can be in the
+    // middle of a build; select once that work has returned.
+    scheduleMicrotask(() => selectMarker(marker));
+  }
+
   void setMarkers(List<ArtMarker> markers) {
     final incomingIds = markers.map((marker) => marker.id).toSet();
     _markerEntranceTracker.observeIncoming(
@@ -624,6 +691,7 @@ class KubusMapController {
       viewportInitialized: _viewportStateInitialized,
     );
     _markers = markers;
+    _resolvePendingSelection();
     _pruneSpiderfyStateIfNeeded();
 
     // Keep selection data fresh when marker instances are replaced during
@@ -911,26 +979,35 @@ class KubusMapController {
     _cameraIsMoving = true;
     _hasCameraFrame = true;
 
-    final bool hasGesture = !_programmaticCameraMove;
-    if (hasGesture && _autoFollow) {
-      _autoFollow = false;
-      onAutoFollowChanged?.call(_autoFollow);
-    }
-
     final nextCenter =
         LatLng(position.target.latitude, position.target.longitude);
     final nextZoom = position.zoom;
     final nextBearing = position.bearing;
     final nextPitch = position.tilt;
 
-    final bearingChanged = (nextBearing - _camera.bearing).abs() > 0.1;
-
-    _camera = KubusMapCameraState(
+    final previousCamera = _camera;
+    final nextCamera = KubusMapCameraState(
       center: nextCenter,
       zoom: nextZoom,
       bearing: nextBearing,
       pitch: nextPitch,
     );
+    // A move that leaves the camera unchanged is not a gesture (see
+    // [KubusMapCameraState.differsFrom]); it must not close the card.
+    final bool hasGesture =
+        !_programmaticCameraMove && nextCamera.differsFrom(previousCamera);
+    if (hasGesture) {
+      _pendingSelectionResolver = null;
+      _pendingSelectionDeadline = null;
+    }
+    if (hasGesture && _autoFollow) {
+      _autoFollow = false;
+      onAutoFollowChanged?.call(_autoFollow);
+    }
+
+    final bearingChanged = (nextBearing - previousCamera.bearing).abs() > 0.1;
+
+    _camera = nextCamera;
 
     if (bearingChanged) {
       bearingDegrees.value = nextBearing;
@@ -1291,6 +1368,8 @@ class KubusMapController {
   Future<void> _activateCluster(String featureId, LatLng fallbackCenter) async {
     _collapseSpiderfy();
     final gridLevelForZoom = tapConfig.clusterGridLevelForZoom;
+    final topologyZoom =
+        clusterTopologyZoomFor?.call(_camera.zoom) ?? _camera.zoom;
     final plan = gridLevelForZoom == null
         ? null
         : resolveKubusClusterActivationPlan(
@@ -1299,7 +1378,7 @@ class KubusMapController {
                 .toList(growable: false),
             clusterFeatureId: featureId,
             clusterIdPrefix: tapConfig.clusterIdPrefix,
-            currentZoom: _camera.zoom,
+            currentZoom: topologyZoom,
             maxZoom: tapConfig.clusterTapMaxZoom,
             gridLevelForZoom: gridLevelForZoom,
           );
@@ -2070,13 +2149,16 @@ class KubusMapController {
     return point.longitude >= west || point.longitude <= east;
   }
 
-  /// Soft, non-staggered re-entry animation for the currently visible markers.
+  /// Soft re-entry animation for the currently visible markers.
   ///
   /// Used when the cluster grouping changes (zoom crossed a grid level or
   /// clustering toggled) so the new marker/cluster arrangement eases in with a
-  /// quick scale/opacity pop instead of snapping. Markers whose full entry
-  /// animation is still in flight are left untouched so the staggered initial
-  /// pop-in never gets interrupted.
+  /// quick scale/opacity pop instead of snapping. The wave starts at the
+  /// viewport centre and spreads outwards within a bounded time, so a city's
+  /// clusters dissolving into dozens of individual markers read as one
+  /// progressive reveal rather than a simultaneous replacement. Markers whose
+  /// full entry animation is still in flight are left untouched so the
+  /// staggered initial pop-in never gets interrupted.
   void animateMarkerRegroup() {
     if (_reduceMotion) return;
     if (!_viewportStateInitialized) return;
@@ -2093,7 +2175,19 @@ class KubusMapController {
       ids.add(id);
     }
     if (ids.isEmpty) return;
-    _scheduleEntryAnimations(ids, staggered: false, soft: true);
+    _scheduleEntryAnimations(ids, staggered: true, soft: true);
+  }
+
+  /// Detailed markers arriving to replace the overview dots the map was just
+  /// showing. They are already represented, so they ease in softly (never from
+  /// invisible) and are treated as in view straight away, rather than waiting
+  /// for the next asynchronous viewport check to reveal them.
+  void beginOverviewHandoffEntrances(Iterable<String> markerIds) {
+    final ids = markerIds.toList(growable: false);
+    if (ids.isEmpty) return;
+    if (!_viewportStateInitialized) return;
+    _visibleMarkerIds = <String>{..._visibleMarkerIds, ...ids};
+    _scheduleEntryAnimations(ids, staggered: true, soft: true);
   }
 
   void _scheduleEntryAnimations(
@@ -2110,15 +2204,31 @@ class KubusMapController {
       return;
     }
 
-    final sorted = List<String>.of(markerIds)..sort();
     final nowMs = DateTime.now().millisecondsSinceEpoch;
-    final step = staggered ? MapMarkerCollisionConfig.entryStaggerMs : 0;
+    final Map<String, int> offsets;
+    if (staggered) {
+      final positions = <String, LatLng>{
+        for (final marker in _markers)
+          if (marker.hasValidPosition) marker.id: marker.position,
+      };
+      offsets = kubusEntryRevealOffsets(
+        ids: markerIds,
+        positionOf: (id) => _spiderfiedPositionByMarkerId[id] ?? positions[id],
+        center: _hasCameraFrame ? _camera.center : null,
+        maxStepMs: MapMarkerCollisionConfig.entryStaggerMs,
+        maxSpreadMs: soft
+            ? MapMarkerCollisionConfig.entryRegroupStaggerMaxSpreadMs
+            : MapMarkerCollisionConfig.entryStaggerMaxSpreadMs,
+      );
+    } else {
+      offsets = <String, int>{for (final id in markerIds) id: 0};
+    }
 
-    for (var i = 0; i < sorted.length; i++) {
-      final id = sorted[i];
+    for (final entry in offsets.entries) {
+      final id = entry.key;
       _entrySerialCounter += 1;
       _entryAnimationByMarkerId[id] = _MarkerEntryAnimationState(
-        revealAtMs: nowMs + (i * step),
+        revealAtMs: nowMs + entry.value,
         serial: _entrySerialCounter,
         soft: soft,
       );

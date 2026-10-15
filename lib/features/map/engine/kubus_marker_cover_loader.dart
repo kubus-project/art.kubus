@@ -6,6 +6,7 @@ import 'dart:ui' as ui;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/painting.dart';
 
+import '../../../utils/media_failure_registry.dart';
 import 'kubus_cover_perf_probe.dart';
 
 /// Remembers which cover URL a marker resolved to, for as long as the data it
@@ -331,6 +332,10 @@ class KubusMarkerCoverLoader {
         if (kDebugMode) {
           debugPrint('KubusMarkerCoverLoader: cover failed ($error)');
         }
+        // A real load error (not a slow network timing out): other surfaces
+        // drawing this media, such as the marker's quick card, skip the
+        // request instead of discovering the failure again.
+        KubusMediaFailureRegistry.shared.markFailed(url);
         finish(null);
       },
     );

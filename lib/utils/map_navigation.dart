@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:latlong2/latlong.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 import '../config/config.dart';
 import '../features/map/navigation/walking_navigation_models.dart';
@@ -9,27 +8,9 @@ import '../screens/map_screen.dart';
 import '../screens/desktop/desktop_map_screen.dart';
 import '../screens/desktop/desktop_shell.dart';
 
+/// Opens the art.kubus map and walking route. Directions to a place are built
+/// only in `MapDestination` (map_destination_actions.dart).
 class MapNavigation {
-  static Uri externalWalkingUri(WalkingNavigationIntent intent) => Uri.https(
-        'www.google.com',
-        '/maps/dir/',
-        <String, String>{
-          'api': '1',
-          'destination':
-              '${intent.destination.latitude},${intent.destination.longitude}',
-          'travelmode': 'walking',
-        },
-      );
-
-  static Future<bool> openExternalWalking(
-    WalkingNavigationIntent intent, {
-    Future<bool> Function(Uri uri)? launcher,
-  }) {
-    final uri = externalWalkingUri(intent);
-    return (launcher ??
-        (uri) => launchUrl(uri, mode: LaunchMode.externalApplication))(uri);
-  }
-
   static void open(
     BuildContext context, {
     required LatLng center,

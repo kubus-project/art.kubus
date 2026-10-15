@@ -2,6 +2,7 @@ import 'package:flutter/widgets.dart' show IconData, immutable;
 import 'package:latlong2/latlong.dart';
 
 import '../community/community_interactions.dart';
+import '../community/community_post_media.dart';
 import '../models/artwork.dart';
 import '../models/institution.dart';
 import '../utils/artwork_media_resolver.dart';
@@ -84,10 +85,13 @@ class SearchService {
       final raw = await _backendApi.getSearchSuggestions(
         query: query,
         limit: config.limit,
+        includeCollections:
+            config.effectiveKinds.contains(KubusSearchResultKind.collection),
       );
       final normalized = _backendApi.normalizeSearchSuggestions(raw);
       return normalized
-          .map(KubusSearchResult.fromMap)
+          .map(KubusSearchResult.tryFromMap)
+          .whereType<KubusSearchResult>()
           .where((result) => _includeResult(result, config))
           .toList(growable: false);
     } catch (_) {
@@ -211,8 +215,8 @@ class SearchService {
               'address': institution.address,
               'subjectType': 'institution',
               'subjectId': institution.id,
-              if (institution.imageUrls.isNotEmpty)
-                'imageUrl': institution.imageUrls.first,
+              if (institution.heroImageRef != null)
+                'imageUrl': institution.heroImageRef,
             },
           ),
         )
@@ -244,7 +248,7 @@ class SearchService {
               'location': event.location,
               'subjectType': 'event',
               'subjectId': event.id,
-              if (event.imageUrls.isNotEmpty) 'imageUrl': event.imageUrls.first,
+              if (event.heroImageRef != null) 'imageUrl': event.heroImageRef,
             },
           ),
         )
@@ -341,6 +345,7 @@ class SearchService {
       case KubusSearchScope.home:
         switch (result.kind) {
           case KubusSearchResultKind.artwork:
+          case KubusSearchResultKind.collection:
           case KubusSearchResultKind.profile:
             return resolvedId.isNotEmpty;
           case KubusSearchResultKind.institution:
@@ -362,6 +367,7 @@ class SearchService {
           case KubusSearchResultKind.marker:
             return result.position != null;
           case KubusSearchResultKind.artwork:
+          case KubusSearchResultKind.collection:
           case KubusSearchResultKind.profile:
           case KubusSearchResultKind.post:
           case KubusSearchResultKind.screen:
@@ -369,6 +375,7 @@ class SearchService {
         }
       case KubusSearchScope.map:
         if (result.kind == KubusSearchResultKind.artwork ||
+            result.kind == KubusSearchResultKind.collection ||
             result.kind == KubusSearchResultKind.profile) {
           return resolvedId.isNotEmpty;
         }
@@ -421,6 +428,7 @@ class SearchService {
     final order = switch (scope) {
       KubusSearchScope.home => const [
           KubusSearchResultKind.artwork,
+          KubusSearchResultKind.collection,
           KubusSearchResultKind.profile,
           KubusSearchResultKind.institution,
           KubusSearchResultKind.event,
@@ -433,6 +441,7 @@ class SearchService {
           KubusSearchResultKind.profile,
           KubusSearchResultKind.post,
           KubusSearchResultKind.artwork,
+          KubusSearchResultKind.collection,
           KubusSearchResultKind.institution,
           KubusSearchResultKind.screen,
           KubusSearchResultKind.event,
@@ -441,6 +450,7 @@ class SearchService {
         ],
       KubusSearchScope.map => const [
           KubusSearchResultKind.artwork,
+          KubusSearchResultKind.collection,
           KubusSearchResultKind.profile,
           KubusSearchResultKind.institution,
           KubusSearchResultKind.event,
@@ -513,18 +523,16 @@ class SearchService {
       id: id,
       data: <String, dynamic>{
         ...Map<String, dynamic>.from(map),
-        if ((_stringValue(
-                  map,
-                  const ['imageUrl', 'image_url', 'coverUrl', 'cover_url'],
-                ) ??
-                _stringValue(map['artwork'], const ['imageUrl', 'image_url']) ??
-                '')
-            .isNotEmpty)
-          'imageUrl': _stringValue(
+        // A video-first post's still is its poster, never the clip itself.
+        'imageUrl': communityMediaPreviewStill(<String?>[
+              _stringValue(
                 map,
                 const ['imageUrl', 'image_url', 'coverUrl', 'cover_url'],
-              ) ??
-              _stringValue(map['artwork'], const ['imageUrl', 'image_url']),
+              ),
+              if (map['mediaUrls'] is List)
+                for (final item in map['mediaUrls'] as List) item?.toString(),
+            ]) ??
+            _stringValue(map['artwork'], const ['imageUrl', 'image_url']),
         if ((_stringValue(
                   map,
                   const [
@@ -600,10 +608,9 @@ class SearchService {
       data: <String, dynamic>{
         'postId': id,
         'authorName': post.authorName,
-        if (post.imageUrl != null && post.imageUrl!.trim().isNotEmpty)
-          'imageUrl': post.imageUrl!.trim()
-        else if (post.mediaUrls.isNotEmpty)
-          'imageUrl': post.mediaUrls.first,
+        // A video-first post's still is its poster, never the clip itself.
+        if (communityPostPreviewImageUrl(post) case final still?)
+          'imageUrl': still,
         if (post.authorAvatar != null && post.authorAvatar!.trim().isNotEmpty)
           'avatarUrl': post.authorAvatar!.trim(),
         if ((post.authorWallet ?? '').trim().isNotEmpty)

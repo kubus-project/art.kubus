@@ -207,7 +207,7 @@ extension _DesktopCommunityScreenStatePart1 on _DesktopCommunityScreenState {
         }
         break;
       case 'art':
-        await _loadArtFeed();
+        await _loadArtFeed(force: true);
         break;
       case 'discover':
       default:
@@ -232,11 +232,7 @@ extension _DesktopCommunityScreenStatePart1 on _DesktopCommunityScreenState {
         }
         break;
       case 'art':
-        final communityProvider = context.read<CommunityHubProvider>();
-        if (communityProvider.artFeedPosts.isEmpty &&
-            !communityProvider.artFeedLoading) {
-          unawaited(_loadArtFeed());
-        }
+        unawaited(_loadArtFeed());
         break;
       case 'discover':
       default:
@@ -247,15 +243,18 @@ extension _DesktopCommunityScreenStatePart1 on _DesktopCommunityScreenState {
     }
   }
 
-  Future<void> _loadArtFeed() {
-    return context.read<CommunityHubProvider>().loadArtFeed(
-          latitude: 46.05,
-          longitude: 14.50,
-          radiusKm: 50,
-          limit: 24,
-          refresh: true,
-          sort: _artSortMode,
-        );
+  /// Loads the Art discovery feed (personalised, nearby, new and noteworthy).
+  /// Without a usable location it falls back to public discovery.
+  Future<void> _loadArtFeed({
+    bool force = false,
+    bool promptForLocation = false,
+  }) async {
+    final discovery = context.read<CommunityArtDiscoveryProvider>();
+    if (!force && (discovery.loaded || discovery.loading)) return;
+    await discovery.refresh(
+      buildLiveArtDiscoverySources(context),
+      promptForLocation: promptForLocation,
+    );
   }
 
   void _enrichTrendingTopicsFromFeedCounts() {
@@ -357,10 +356,11 @@ extension _DesktopCommunityScreenStatePart1 on _DesktopCommunityScreenState {
         context
             .read<CommunityInteractionsProvider>()
             .hydratePostsFromServer(filtered);
+        _refreshViewerStates(filtered);
       }
       if (mounted) {
         _applyState(() {
-          _discoverPosts = filtered;
+          _discoverPosts = List<CommunityPost>.of(filtered);
           _discoverFeedLoaded = true;
           _isLoadingDiscover = false;
         });
@@ -557,10 +557,11 @@ extension _DesktopCommunityScreenStatePart1 on _DesktopCommunityScreenState {
         context
             .read<CommunityInteractionsProvider>()
             .hydratePostsFromServer(filtered);
+        _refreshViewerStates(filtered);
       }
       if (mounted) {
         _applyState(() {
-          _followingPosts = filtered;
+          _followingPosts = List<CommunityPost>.of(filtered);
           _followingFeedLoaded = true;
           _isLoadingFollowing = false;
         });

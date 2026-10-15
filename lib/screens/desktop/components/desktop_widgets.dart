@@ -422,7 +422,6 @@ class DesktopSearchBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    final themeProvider = Provider.of<ThemeProvider>(context);
     final animationTheme = context.animationTheme;
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
@@ -447,7 +446,9 @@ class DesktopSearchBar extends StatelessWidget {
         borderRadius: radius,
         backgroundColor: glassTint,
         borderColor: scheme.outline.withValues(alpha: 0.18),
-        focusedBorderColor: themeProvider.accentColor,
+        // Structural focus role, not the personal accent: a dark-mode preset
+        // (navy, oxblood, slate) would otherwise drop the focus ring below 3:1.
+        focusedBorderColor: KubusColorRoles.of(context).focus,
         borderWidth: 1,
         focusedBorderWidth: 2,
         blurSigma: glassStyle.blurSigma,
@@ -458,7 +459,7 @@ class DesktopSearchBar extends StatelessWidget {
         boxShadow: null,
         focusedBoxShadow: [
           BoxShadow(
-            color: themeProvider.accentColor.withValues(alpha: 0.1),
+            color: KubusColorRoles.of(context).focus.withValues(alpha: 0.1),
             blurRadius: 8,
           ),
         ],

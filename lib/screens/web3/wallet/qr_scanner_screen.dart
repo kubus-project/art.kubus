@@ -588,6 +588,7 @@ class _QRScannerScreenState extends State<QRScannerScreen> {
         builder: (dialogContext) {
           final confirmL10n = AppLocalizations.of(dialogContext)!;
           return KubusAlertDialog(
+            size: KubusDialogSize.compact,
             title: Text(confirmL10n.exhibitionDetailPoapEligibilityVerified),
             content: Text(
               confirmL10n.exhibitionDetailPoapEligibilityClaimReadyHint,
@@ -632,7 +633,8 @@ class _QRScannerScreenState extends State<QRScannerScreen> {
       }
     } catch (error) {
       if (kDebugMode) {
-        debugPrint('QRScannerScreen: claim-ready exhibition handoff failed: $error');
+        debugPrint(
+            'QRScannerScreen: claim-ready exhibition handoff failed: $error');
       }
     } finally {
       if (mounted && !_hasCompletedScan) {

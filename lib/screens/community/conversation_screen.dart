@@ -1,3 +1,4 @@
+import 'package:art_kubus/widgets/kubus_button.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../utils/design_tokens.dart';
@@ -867,7 +868,8 @@ class _ConversationScreenState extends State<ConversationScreen> {
           height: radius * 2,
           decoration: BoxDecoration(
               color: Colors.grey[300],
-              borderRadius: BorderRadius.circular(radius * 0.5)),
+              borderRadius: BorderRadius.circular(
+                  AvatarWidget.shapeRadiusFor(radius: radius))),
           alignment: Alignment.center,
           child: Text(initials.isNotEmpty ? initials : 'U',
               style: TextStyle(
@@ -1233,7 +1235,7 @@ class _ConversationScreenState extends State<ConversationScreen> {
           ),
         );
       } else {
-        avatar = CircleAvatar(
+        avatar = KubusMonogramAvatar(
             radius: 18,
             child: Text(_headerInitials(),
                 style: const TextStyle(fontWeight: FontWeight.w600)));
@@ -1248,7 +1250,7 @@ class _ConversationScreenState extends State<ConversationScreen> {
           radius: 18,
         );
       } else {
-        avatar = CircleAvatar(
+        avatar = KubusMonogramAvatar(
             radius: 18,
             child: Text(_headerInitials(),
                 style: const TextStyle(fontWeight: FontWeight.w600)));
@@ -1495,6 +1497,7 @@ class _ConversationScreenState extends State<ConversationScreen> {
                 final confirmed = await showKubusDialog<bool>(
                   context: context,
                   builder: (dialogCtx) => KubusAlertDialog(
+                    size: KubusDialogSize.compact,
                     title: Text(l10n.messagesDeleteConversationTitle),
                     content: Text(l10n.messagesDeleteConversationBody),
                     actions: [
@@ -2296,15 +2299,10 @@ class _ConversationScreenState extends State<ConversationScreen> {
                     onSubmitted: (_) => _send(),
                   ),
                 ),
-                IconButton.filled(
+                KubusIconActionButton(
                   tooltip: l10n.commonSend,
                   onPressed: _send,
-                  style: IconButton.styleFrom(
-                    backgroundColor: roles.active,
-                    foregroundColor: roles.onActive,
-                    minimumSize: const Size(48, 48),
-                  ),
-                  icon: const Icon(Icons.send_rounded, size: 20),
+                  icon: Icons.send_rounded,
                 ),
               ],
             ),
@@ -2699,6 +2697,7 @@ class MembersDialog extends StatelessWidget {
                           final confirmed = await showKubusDialog<bool>(
                             context: context,
                             builder: (c) => KubusAlertDialog(
+                              size: KubusDialogSize.compact,
                               title: Text(l10n.messagesTransferOwnershipTitle),
                               content: Text(l10n.messagesTransferOwnershipBody(
                                   displayName, wallet)),

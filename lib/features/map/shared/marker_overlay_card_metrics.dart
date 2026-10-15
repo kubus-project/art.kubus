@@ -101,6 +101,7 @@ class MarkerOverlayCardContentSpec {
     required this.hasByline,
     required this.secondaryActionRows,
     required this.hasPager,
+    this.hasPlace = false,
     this.attributionLines = 0,
     this.titleLines = MarkerOverlayCardMetrics.headerTitleLines,
   });
@@ -124,6 +125,9 @@ class MarkerOverlayCardContentSpec {
   final bool hasLinkedTitle;
   final bool hasLinkedSubtitle;
   final bool hasByline;
+
+  /// A one-line "where" row under the byline.
+  final bool hasPlace;
   final int secondaryActionRows;
   final bool hasPager;
 
@@ -164,10 +168,15 @@ class MarkerOverlayCardMetrics {
   static const double headerLinkedTitleHeight = 15.0;
   static const double headerLinkedSubtitleHeight = 28.0;
   static const double headerBylineHeight = 15.0;
+  static const double headerPlaceHeight = 15.0;
   static const double headerExtraGap = KubusSpacing.xs;
 
+  /// Smallest touch target for any control on the card (close, actions, pager,
+  /// primary). 48 is the platform minimum a thumb can hit reliably.
+  static const double touchTargetHeight = 48;
+
   /// The close control's hit area; the header can never be shorter.
-  static const double headerMinHeight = KubusHeaderMetrics.actionHitArea;
+  static const double headerMinHeight = touchTargetHeight;
 
   // --- Media ---
   /// Preferred cover height. The card is a discovery surface: the image is a
@@ -254,12 +263,11 @@ class MarkerOverlayCardMetrics {
   }
 
   // --- Footer ---
-  static const double actionRowHeight = KubusHeaderMetrics.actionHitArea;
+  static const double actionRowHeight = touchTargetHeight;
   static const double actionRowGap = KubusSpacing.xs;
   static const double footerBlockGap = KubusSpacing.sm;
-  static const double pagerHeight =
-      KubusHeaderMetrics.actionHitArea - KubusSpacing.xs;
-  static const double primaryActionHeight = KubusHeaderMetrics.actionHitArea;
+  static const double pagerHeight = touchTargetHeight;
+  static const double primaryActionHeight = touchTargetHeight;
 
   /// Preview budget applied before layout so a novel-length description cannot
   /// make the estimator walk a huge string.
@@ -296,6 +304,10 @@ class MarkerOverlayCardMetrics {
     }
     if (spec.hasByline) {
       height += headerExtraGap + (headerBylineHeight * scale);
+    }
+    if (spec.hasPlace) {
+      height +=
+          (spec.hasByline ? 2.0 : headerExtraGap) + (headerPlaceHeight * scale);
     }
     return math.max(headerMinHeight, height);
   }
@@ -606,6 +618,7 @@ class MarkerOverlayCardMetrics {
       hasLinkedSubtitle:
           (resolved.linkedSubject.subtitle ?? '').trim().isNotEmpty,
       hasByline: artwork != null,
+      hasPlace: (resolved.placeText ?? '').trim().isNotEmpty,
       // `_buildFooter` always collapses the secondary actions onto one row:
       // one or two keep their labels, three or more become icon-only.
       secondaryActionRows: hasSecondaryActions ? 1 : 0,

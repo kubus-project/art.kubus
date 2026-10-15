@@ -24,6 +24,7 @@ class KubusNearbyArtPanelBody extends StatelessWidget {
     required this.viewportScope,
     required this.radiusKm,
     required this.titleKey,
+    required this.headerMeasurementKey,
     required this.discoveryProgress,
     required this.sort,
     required this.useGrid,
@@ -45,6 +46,7 @@ class KubusNearbyArtPanelBody extends StatelessWidget {
   final bool viewportScope;
   final double radiusKm;
   final Key? titleKey;
+  final Key? headerMeasurementKey;
   final double? discoveryProgress;
   final KubusNearbyArtSort sort;
   final bool useGrid;
@@ -132,6 +134,7 @@ class KubusNearbyArtPanelBody extends StatelessWidget {
           child: KubusNearbyArtPanelHeader(
             layout: layout,
             titleKey: titleKey,
+            measurementKey: headerMeasurementKey,
             artworkCount: artworks.length,
             discoveryProgress: discoveryProgress,
             viewportScope: viewportScope,
@@ -146,7 +149,10 @@ class KubusNearbyArtPanelBody extends StatelessWidget {
             onSortChanged: onSortChanged,
           ),
         ),
-        if (isLoading)
+        // A reload with rows already on screen keeps them: a viewport change
+        // reloads artworks, and replacing the rows would unmount the focused
+        // row (keyboard focus then cannot return to the card's opener).
+        if (isLoading && sorted.isEmpty)
           const SliverFillRemaining(
             hasScrollBody: false,
             child: KubusNearbyArtLoadingState(),
@@ -175,6 +181,7 @@ class KubusNearbyArtPanelBody extends StatelessWidget {
                 final accent = _subjectColorFor(context, artwork, marker);
 
                 return KubusNearbyArtArtworkGridItem(
+                  key: ValueKey<String>('nearby-art-${artwork.id}'),
                   artwork: artwork,
                   distanceText: distanceText,
                   accentColor: accent,
@@ -216,6 +223,7 @@ class KubusNearbyArtPanelBody extends StatelessWidget {
                 final accent = _subjectColorFor(context, artwork, marker);
 
                 return KubusNearbyArtArtworkListItem(
+                  key: ValueKey<String>('nearby-art-${artwork.id}'),
                   artwork: artwork,
                   distanceText: distanceText,
                   accentColor: accent,

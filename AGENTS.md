@@ -1,483 +1,82 @@
-# art.kubus - Agent Playbook (Codex Ready)
-
-Model compatibility: GPT-5.x Codex-compliant agents.
-
-Mission: keep the Flutter + Node.js stack stable while consolidating public entry, SEO, discovery, UI/UX, spatial/map, institutional, Web3 and governance surfaces without breaking feature flags, data contracts, native/web parity, or fallbacks.
-
-Preflight: always review **all** `AGENTS.md` files in this repo (root, `lib/**`, `backend/**`) before making changes.
-Security handbook: `art.kubus-threat-model.md` is the living security baseline and hardening backlog.
-Engineering workflow: `docs/engineering/branching-and-deployment.md` is the canonical branch, CI, deployment, and release guide.
-
-## Current product/design programme (mandatory before scoped work)
-
-The active programme is documented in:
-
-- `CLAUDE.md` — current agent entrypoint and reference branches.
-- `docs/PRODUCT_UX_SEO_PROGRAM.md` — the one canonical master roadmap and dependency gates.
-- `docs/AGENT_EXECUTION_PLAN.md` — bounded agent package, file ownership,
-  tests, visual QA and stop conditions for every wave.
-- `docs/DESIGN_SYSTEM_V2.md` — current kubus family/product design direction.
-- `docs/APP_NATIVE_PUBLIC_ENTRY.md` — canonical app.kubus.site entity-entry target.
-- `docs/seo-public-pages.md` and `docs/seo/domain-ownership.md` — renderer and URL ownership contracts.
-
-The current visual references are **not** the old public-site master layouts:
-`art.kubus.site@redesign/a1-foundation` is the WORLD reference and
-`kubus.site@redesign/k1-foundation` is the TIME reference. They establish the
-family v5 direction: Sofia Sans plus the approved Space Mono structural/system
-register (identity, controls, notions, ordinals, selected metadata and exact
-machine values; neither machine-only nor blanket uppercase mono), flat structural surfaces,
-hairlines, real data/geography, restrained motion, and no generic
-glass-first/SaaS/bento/gradient-card language.
-
-For app work, preserve platform-native controls and interaction density. Share
-the family grammar; do not copy an editorial website layout into Flutter.
-
-For canonical public entities, semantic server HTML remains mandatory for
-crawlability and real status codes, but it must become the **app-native first
-frame** rather than a separate SEO/marketing page. The canonical localized URL
-is also the preferred native deep-link URL.
-
-For broad UI work, audit first. Classify major screens KEEP / REFINE / REDESIGN /
-MERGE / REMOVE before spending effort cosmetically polishing obsolete flows.
-
-Before **SEO, public-entry, map redesign, broad UI, institution redesign,
-editorial redesign, DAO redesign or spatial-delivery redesign**, read the master
-roadmap and the matching work package. State what is true now, what remains,
-exact files owned/excluded, data contract, tests, screenshot evidence and stop
-condition. Wave 1 is read-only; do not change index policy, canonicals or
-production data as part of an audit. `node.kubus.site` is the public website;
-`kubus-node` is the runtime. Keep their analytics separate.
-
-
-## Branch, worktree, CI, and release governance
-
-- `master` is production-only. `dev` is the integration branch. Never develop or commit directly on either branch.
-- Before editing, run `git status`, `git branch --show-current`, and `git fetch origin`. Stop if the current branch is `master` or `dev`.
-- Ordinary work starts from the current `origin/dev`, uses a topic branch (`feature/`, `fix/`, `refactor/`, `ci/`, `docs/`, or `chore/`), and preferably uses a dedicated worktree.
-- Validate the topic branch by confirming that it has a merge base with the latest `origin/dev`; report meaningful divergence instead of requiring the branch tip to remain an ancestor after it gains commits.
-- Ordinary pull requests target `dev`. Only release pull requests from `dev` and emergency `hotfix/*` pull requests may target `master`.
-- Release pull requests use a merge commit. Ordinary topic pull requests into `dev` may use squash merge.
-- A production hotfix starts from `master` and must subsequently be merged or cherry-picked into `dev`.
-- After any `dev -> master` release merges, reconcile that ancestry back into `dev` before resuming development: `git rev-list --left-right --cherry-pick --count origin/master...origin/dev` must report `0` commits only on `master` (`--cherry-pick` so a cherry-picked hotfix already in `dev` does not count). Use a non-rewriting merge-commit reconciliation (`npm run verify:branch-reconciliation` guards this; see `docs/engineering/branching-and-deployment.md`).
-- Agents must not merge pull requests, deploy production, approve a protected production environment, or change environment secrets without explicit user authorization.
-- Investigate CI failures; never bypass, weaken, or rename required checks merely to obtain a green result.
-- Deployment changes must retain exact-SHA immutable artifacts, verified SSH hosts, safe remote paths, checksum verification, guarded physical promotion on Netcup, revision-aware smoke tests, and automatic rollback.
-- Development Basic Auth is a host-local policy applied and verified before physical promotion; never place password contents in repository configuration, CI artifacts, or logs. Production must reject development authentication policy.
-- UI changes require responsive validation and visual evidence where layout or appearance changes. Backend schema changes must continue to update both schema snapshots.
-- Keep these rules consistent across nested `AGENTS.md` files, Copilot instructions, contributor documentation, and the canonical engineering guide.
-
----
-
-## 1) Core Guardrails (Must Follow)
-
-1. Feature flags everywhere
-   - Flutter: never hardcode availability; use `AppConfig.isFeatureEnabled('flag')` and/or `ConfigProvider`.
-   - Backend: respect env toggles (`USE_MOCK_DATA`, `ENABLE_DEBUG_ENDPOINTS`, `ORBITDB_SYNC_MODE`, etc.).
-2. Theme discipline
-   - UI colors come from `Theme.of(context).colorScheme.*` or `themeProvider.accentColor`.
-   - No purple outside explicit AI/system indicators.
-   - Do not store UI `Color` in domain models (see "UI Color Roles" below).
-3. Provider-first state
-   - Stateful logic lives in `ChangeNotifier` providers under `lib/providers/`.
-   - Provider creation happens in `lib/main.dart`; initialization happens in `lib/core/app_initializer.dart` and `lib/services/app_bootstrap_service.dart`.
-   - No provider initialization/binding in widget constructors or `initState` (bindings must be done via ProxyProviders or inside providers, and must be idempotent).
-4. No placeholder code
-   - No `TODO`, `FIXME`, stub returns, fake success flows, or dead UI actions.
-5. Logging discipline
-   - Do not ship noisy `debugPrint('DEBUG: ...')` or emoji logs.
-   - If a log is useful, guard it with `if (kDebugMode)` and prefix with the class/file name.
-6. Storage/IPFS helpers only
-   - Never hardcode a single IPFS gateway or construct gateway URLs in UI/models/providers.
-   - Use:
-     - `StorageConfig.resolveUrl(raw)` (low-level)
-     - `MediaUrlResolver.resolve(raw)` (screens/widgets)
-     - `ArtworkMediaResolver.resolveCover(...)` (artwork covers)
-     - `UserService.safeAvatarUrl(...)` (avatars)
-     - `ARService` / `ARManager` for AR model launching
-7. OrbitDB dual-write (backend)
-   - Any Postgres mutation touching public entities must go through `publicSyncService` and honor `ORBITDB_SYNC_MODE`.
-8. Desktop/Mobile parity
-   - Any feature change in `lib/screens/` must be mirrored in `lib/screens/desktop/` using the same providers/services/models.
-9. Check before creating
-   - Search first (`rg`) and reuse existing services/widgets/providers to avoid duplication.
-10. Naming discipline
-   - Avoid creating duplicate domain models (e.g., do not introduce a second `ArtMarker`/`Achievement`).
-   - Service-local structs must be suffixed: `*Definition`, `*Dto`, `*Record`, `*Payload`.
-11. Cross-agent consistency
-    - Keep guidance aligned across all `AGENTS.md` files; if you update one, update the related layer docs too.
-12. No legacy code paths
-    - Do not add or preserve legacy compatibility layers, deprecated flows, duplicate old/new implementations, or migration-era shims unless explicitly requested.
-    - This project is pre-launch with no production users, so prefer replacing obsolete code cleanly instead of carrying legacy behavior forward.
-13. Call out drastic function changes
-    - If you substantially change a function's behavior, signature, side effects, return shape, or calling contract, explicitly note that in your handoff.
-    - Call out any required caller, test, or data-migration follow-up when the change is not drop-in compatible.
-14. Schema snapshots stay in sync
-    - Any backend database schema change must update both `backend/src/db/schema.sql` and `backend/src/db/schema_complete.sql` in the same change.
-    - Do not leave migrations/schema edits half-applied; the checked-in schema files must keep local and clean-database bootstrap paths accurate.
-
----
-
-## 2) Frontend Architecture (How The App Boots)
-
-- Entry: `lib/main.dart`
-  - Top-level providers are created here (ThemeProvider, Config, Web3, Wallet, Chat, Notifications, etc.).
-  - Refresh bindings are done via ProxyProviders (no widget-level `bindToRefresh` calls).
-- Initial routing: `lib/core/app_initializer.dart`
-  - Loads auth token, initializes core providers, and chooses onboarding vs main UI.
-- Warmup: `lib/services/app_bootstrap_service.dart`
-  - Preloads providers so home/community/web3 screens render with data immediately.
-
-Provider rules:
-- Providers expose `initialize()` (idempotent) and do not require widget constructors to trigger loading.
-- If a provider needs to listen to another provider, use `ChangeNotifierProxyProvider` and make the bind method idempotent.
-
-Key flows (keep single-source-of-truth):
-- Tasks/Achievements (UI progress): `lib/providers/task_provider.dart` + `lib/models/task.dart` + `lib/models/achievements.dart`
-- Achievements rewards (KUB8/POAP): `lib/services/achievement_service.dart` (service-local `AchievementDefinition`)
-- Map markers: use `ArtMarker` (`lib/models/art_marker.dart`) with `MapMarkerService`/`MapMarkerHelper` (no duplicate marker models)
-- HTTP: use `BackendApiService` (do not call `http` directly from screens/widgets)
-- Profiles: `User.id` is the wallet identifier; `UserProfile.walletAddress` is the profile identifier (do not invent a third variant)
-
----
-## 2.1) Map Layers Manager (Centralized MapLibre Logic)
-
-## Map System Architecture (Mobile + Desktop)
-
-This document describes the refactored map architecture for art.kubus.
-The primary goal is to eliminate duplication between mobile and desktop
-map implementations while preserving behavior and performance.
-
----
-
-## Design Principles
-
-- **Single source of truth** for MapLibre sources, layers, and modes
-- **Screens are layout-only** (no business logic)
-- **Controllers own side-effects**
-- **Explicit lifecycle ownership** (no leaked listeners/timers)
-- **Mobile and desktop share logic, differ only in layout**
-
----
-
-## Core Components
-
-### MapLayersManager
-Location:
-`lib/features/map/map_layers_manager.dart`
-
-Responsibilities:
-- Add/remove MapLibre sources and layers
-- Enforce canonical layer IDs and ordering
-- Toggle 2D / 3D modes
-- Apply theme-safe style updates
-- Guard against duplicate layer creation
-
-Notes:
-- Screens must never add layers directly
-- All layer mutations go through this manager
-
----
-
-### KubusMapController
-Location:
-`lib/features/map/controller/kubus_map_controller.dart`
-
-Responsibilities:
-- Attach/detach MapLibre controller
-- Handle style epochs
-- Coordinate MapLayersManager lifecycle
-- Own marker selection state
-- Handle camera centering and composition offsets
-- Cancel auto-follow on user interaction
-- Open/close marker overlays
-- Own and dispose all listeners, timers, and streams
-
-Screens:
-- Instantiate controller
-- Pass MapLibre controller reference
-- Observe state only
-
----
-
-### Marker Overlay System
-Location:
-`lib/features/map/map_overlay_stack.dart`
-
-Components:
-- `KubusMapPointerInterceptor`
-- `KubusMapMarkerOverlayLayer`
-
-Responsibilities:
-- Prevent pointer/scroll passthrough to map
-- Render marker info cards
-- Dismiss backdrop
-- Handle animated transitions
-- Desktop cursor behavior
-
-Shared by:
-- map_screen.dart
-- desktop_map_screen.dart
-
----
-
-### Nearby Art System
-Locations:
-- Controller: `lib/features/map/nearby/nearby_art_controller.dart`
-- UI: `lib/widgets/map/nearby/kubus_nearby_art_panel.dart`
-
-Responsibilities:
-- Fetch and manage nearby art data
-- Block map gestures while interacting
-- Center map and open marker overlay on selection
-- Provide identical behavior across mobile/desktop
-
----
-
-### Search System
-Locations:
-- Controller: `lib/features/map/search/map_search_controller.dart`
-- UI: `lib/widgets/search/kubus_search_bar.dart`
-
-Responsibilities:
-- Debounced search
-- Suggestion overlays
-- Routing selection to map controller
-- Unified cursor behavior (desktop)
-- Reused across map, home, community, messages
-
----
-
-### Primary Map Controls
-Location:
-`lib/widgets/map/controls/kubus_map_primary_controls.dart`
-
-Responsibilities:
-- Zoom in/out
-- Create marker
-- Toggle 2D / 3D
-- Compass
-- Layout parametrized by platform
-
----
-
-## Screens
-
-### map_screen.dart (Mobile)
-Responsibilities:
-- Layout composition
-- Mobile-only positioning
-- Wiring controllers to widgets
-
-### desktop_map_screen.dart (Desktop)
-Responsibilities:
-- Layout composition
-- Desktop-only positioning
-- Wiring controllers to widgets
-
-Both screens must:
-- Contain no MapLibre logic
-- Contain no timers/listeners
-- Delegate all behavior to controllers
-
----
-
-## Spatial system additions (Wave 5B)
-
-Read `docs/design/PRODUCT_V5_SPATIAL_SYSTEM.md` before touching the map. In
-short, still one map, one controller, one selection owner:
-
-- **Capability**: `KubusMapCapabilities` (web with MapLibre GL JS 5.x draws a
-  globe via a style-level projection stamped by `MapStyleService`; Android and
-  iOS are flat Mercator). Never fork a renderer; the flat map is the fallback.
-- **Level of detail**: `KubusMarkerLod` (far dots, mid canonical marker, close
-  bounded covers inside the canonical geometry) and `MapSpatialFraming`
-  (world to artwork levels, globe minimum zoom). Marker features are zoom
-  dependent now, so any new sync trigger must go through
-  `KubusMarkerRegroupGate`.
-- **Selection invariant**: the selected marker is pinned out of clusters, kept
-  opaque at every zoom, rendered even if its layer is hidden, and carried across
-  viewport refreshes (`markersPreservedAcrossViewportRefresh`). Do not add a
-  second selection state.
-- **Constraints**: anything that silently narrows results must be a
-  `KubusMapConstraint` (`map_constraints.dart`) so the strip can show and clear
-  it.
-- **Session memory**: `KubusMapSessionMemory` carries camera, search, filters and
-  selection across the phone/wide screen swap. It holds no renderer logic.
-- MapLibre has no `removeImage` and `setFeatureState` is web only: do not
-  depend on either.
-
----
-
-## Technical Debt Policy
-
-If logic appears in both map screens:
-→ it MUST be extracted.
-
-If a widget handles:
-- gestures
-- state
-- side-effects
-→ it MUST live outside the screen file.
-
-Any new map feature must:
-- integrate via KubusMapController
-- use MapLayersManager for styling
-- be testable without a real MapLibre controller
-
----
-
-## Exit Criteria for Refactors
-
-A refactor is considered complete only if:
-- Both map screens shrink significantly
-- flutter analyze passes
-- No behavior regressions
-- Leaving the map frees all resources
-
----
-
-## 3) UI Color Roles (No Colors In Models)
-
-Do not encode UI colors in models like `Achievement`, `Task`, or `Artwork`.
-
-Use shared UI helpers:
-- Category colors: `lib/utils/category_accent_color.dart`
-- Rarity colors: `lib/utils/rarity_ui.dart`
-- Color transforms: `lib/utils/app_color_utils.dart`
-
-If a new role color is needed, add a helper/util (or extend ThemeProvider) and update both mobile + desktop UIs.
-
----
-
-## 4) Local-First Fallback Policy (Frontend)
-
-Some backend endpoints may not exist during dev; the app must remain functional without them.
-
-- Collectibles/NFTs: local-first via `CollectiblesProvider` + `CollectiblesStorage`
-  - Marketplace uses series + collectibles from local storage.
-  - Wallet NFT galleries must not rely on backend `/api/nfts/*`.
-- Institutions/Events: local-first via `InstitutionProvider.initialize(...)` + `InstitutionStorage`
-- Blocked users: `BlockListService` (local SharedPreferences-backed set)
-
-When adding a new feature that needs persistence:
-- Prefer a small storage service under `lib/services/*_storage.dart`
-- Then wrap it with a provider under `lib/providers/*_provider.dart`
-
----
-
-## 5) Async + BuildContext Safety (Avoid Runtime Crashes)
-
-- Do not use a `BuildContext` after an `await` unless properly guarded.
-  - Prefer capturing `NavigatorState`, `ScaffoldMessengerState`, `ColorScheme`, and providers before `await`.
-  - For `State.context` usage: guard with `if (!mounted) return;`.
-  - For other contexts (dialogs/builder contexts): guard with `if (!context.mounted) return;` or avoid using that context after awaits.
-- Never `return` from a `finally` block.
-
----
-
-## 6) Web-Only Code (No `dart:html`)
-
-- Do not import `dart:html` (deprecated). Use `package:web/web.dart` + JS interop.
-- Web-only files must be named `*_web.dart` and only imported via conditional imports.
-- For conditional imports, prefer `if (dart.library.js_interop)`.
-
----
-
-## 7) Desktop/Mobile Parity Map (Update Both)
-
-Mobile screens:
-- Home: `lib/screens/home_screen.dart`
-- Map: `lib/screens/map_screen.dart`
-- Community: `lib/screens/community/community_screen.dart`
-- Profile: `lib/screens/community/profile_screen.dart`, `lib/screens/community/user_profile_screen.dart`
-- Marketplace: `lib/screens/web3/marketplace/marketplace.dart`
-- Wallet: `lib/screens/web3/wallet/wallet_home.dart`, `lib/screens/web3/wallet/nft_gallery.dart`
-- Institutions: `lib/screens/web3/institution/institution_hub.dart`
-
-Desktop screens:
-- Shell/Home/Map/Settings: `lib/screens/desktop/desktop_shell.dart`, `lib/screens/desktop/desktop_home_screen.dart`, `lib/screens/desktop/desktop_map_screen.dart`, `lib/screens/desktop/desktop_settings_screen.dart`
-- Community: `lib/screens/desktop/community/*`
-- Web3: `lib/screens/desktop/web3/*` (wallet, marketplace, governance, institution hub, artist studio)
-
----
-
-## 8) Reusable Widgets (Extend, Don't Duplicate)
-
-Core widgets:
-- `lib/widgets/avatar_widget.dart`
-- `lib/widgets/empty_state_card.dart`
-- `lib/widgets/inline_loading.dart`
-- `lib/widgets/app_loading.dart`
-- `lib/widgets/common/kubus_action_tile.dart` (every destination or shortcut: stacked, inline, compact; never a local icon-square card)
-- `lib/widgets/common/kubus_stat_card.dart` (metrics)
-- `lib/widgets/common/kubus_context_icon.dart` (page identity icon)
-
----
-
-## 9) Backend Notes (For Full-Stack Changes)
-
-- Express entry: `backend/src/server.js`
-- Routes: `backend/src/routes/*.js`
-- Storage: `backend/src/services/storageService.js`
-- OrbitDB lifecycle: `backend/src/services/orbitdbService.js`
-- Dual write: `backend/src/services/publicSyncService.js`
-
-Any mutation touching public entities must call the relevant `publicSyncService` mapper when `ORBITDB_SYNC_MODE != off`.
-
----
-
-## 9.1) HA + Public Fallback Deployment Contracts
-
-- The pre-launch public topology is:
-  - Oracle writable primary
-  - home standby backend
-  - DNSLink/IPFS public snapshot fallback
-- The stable public snapshot pointer is:
-  - `ipns://public.kubus.site/public-index.json`
-- That pointer is DNSLink-backed, not native `ipfs name publish`.
-  - the writable backend updates `_dnslink.public.kubus.site`
-  - gateways resolve the name through `/ipns/public.kubus.site/...`
-- Do not hardcode or reintroduce the retired `cloudflare-ipfs.com` public gateway anywhere in app or backend config.
-- `GET /health/ready` is process/container health only.
-- `GET /health/writable` is writable-role health for outage detection and failover.
-- Oracle HTTPS terminates on the Oracle reverse proxy with a Cloudflare Origin CA certificate.
-- home stays HTTP behind Cloudflare Tunnel unless the deployment model explicitly changes.
-- The HA compose stack is now structured for remote Docker context deploys:
-  - Postgres HA config is baked into the Postgres image
-  - nginx site config is baked into the nginx image
-  - the remaining manual Oracle secret is the `artkubus-nginx-ssl` named volume
-
----
-
-## 10) Review Checklist (Before Shipping)
-
-- Feature flags honored (Flutter + backend).
-- No hardcoded colors in UI (no purple outside AI/system).
-- No UI colors stored in domain models.
-- No duplicated URL/IPFS gateway resolution logic.
-- No `dart:html`; use `package:web/web.dart` for web-only code.
-- No `BuildContext` usage after `await` without proper guarding.
-- Providers initialize idempotently; no widget-level init/binding.
-- Desktop/mobile parity maintained.
-- Local-first fallbacks remain functional.
-- No new legacy/compatibility code was introduced unless explicitly required.
-- Any drastic function contract change is called out in the handoff.
-- Any backend DB schema change updated both `backend/src/db/schema.sql` and `backend/src/db/schema_complete.sql`.
-- If deployment code changed, Oracle/home topology, DNSLink, tunnel origin, TLS, and health-route assumptions still match the HA stack.
-
----
-
-## 11) Audit watchlist (keep fixed)
-
-Frontend (Flutter)
-- Map web style URL normalization must not double-prefix `assets/` and must provide a production-safe fallback.
-- Tutorial overlays must block pointer gestures on web (no touch-through to map).
-- Reauth/app-lock gates must not trigger before login; only enable auto-lock when PIN/biometric is configured.
-- Avoid overlapping polling/timers; gate refresh loops on visibility/feature flags.
-
-Backend (Node)
-- Normalize marker ownership (`createdBy` vs wallet) consistently.
-- Move auth challenge state from in-process memory to shared TTL storage for multi-instance deployments.
-- Add explicit schema/size limits and route-level rate limits for `/api/orbitdb/artworks` writes.
-- Deprecate dynamic `GET /api/upload/:identifier` retrieval in favor of static `/uploads/*` and/or opaque file IDs.
-- Keep alerting on repeated non-member socket joins, invalid upload identifiers, and challenge-cap trigger bursts.
+﻿# art.kubus agent entry point
+
+Read this file, applicable nested `AGENTS.md`, and the relevant canonical contracts
+before editing. Current explicit user requirements take precedence; verified source
+and functioning behavior distinguish implementation reality from intended behavior.
+Active security/data/engineering contracts come next, followed by the design system,
+architecture and roadmap. Historical research explains decisions and is not authority.
+
+## Canonical references
+
+- [Architecture](docs/ARCHITECTURE.md): boot, state, API, identity and media boundaries.
+- [Design system](docs/DESIGN_SYSTEM.md): type, color, composition, controls and motion.
+- [Roadmap](docs/ROADMAP.md): product outcomes, dependencies and measurable completion.
+- [Map system](docs/map-system.md): controller, renderer, selection, covers and continuity.
+- [Branching and deployment](docs/engineering/branching-and-deployment.md): exact-SHA CI, deployment and release rules.
+- [Agent orchestration](docs/engineering/agent-orchestration.md): bounded delegation and evidence.
+- [Security policy](SECURITY.md): security reporting and repository security boundaries.
+- [Documentation index](docs/README.md): setup and independent domain contracts.
+
+## Work and release discipline
+
+`master` is production-only; `dev` is integration. Never develop directly on either.
+Fetch first, inspect worktrees/status/current branch, preserve unrelated changes,
+and use an isolated topic branch from current `origin/dev`. Ordinary PRs target
+`dev`; release and emergency hotfix PRs alone may target `master`. Reconcile release
+ancestry back into `dev` according to the branching guide.
+
+Name one coordinator and exclusive file owners. Independent writers use separate
+worktrees. Delegate bounded tasks with start SHA, owned/excluded files, acceptance
+criteria, tests and concrete output. Follow explicitly requested model/worker limits;
+report unavailable configurations instead of silently substituting an expensive model.
+Do not repeat completed investigations or restart idle workers without cause.
+
+Merges, production deployment, protected approvals, secrets changes and release
+publication require explicit authorization. Required checks and review findings must
+pass on the exact head; never weaken CI to obtain green. Keep immutable artifacts,
+verified hosts/paths, credentials protected, revision-aware smoke checks and rollback.
+A merge is not deployment proof. Report implemented, tested, pushed, merged, deployed,
+owner-accepted and released separately.
+
+## Essential guardrails
+
+- Providers own state. Create them in `lib/main.dart`; initialize centrally through
+  `app_initializer.dart` / `app_bootstrap_service.dart`, idempotently. No widget-level
+  provider initialization or refresh binding. Reuse shared models/services/widgets.
+- Honor `AppConfig.isFeatureEnabled` and backend toggles; do not fake unavailable
+  capabilities, success, rewards, balances or data. No placeholder/dead actions.
+- Use shared theme, semantic color, typography, spacing and border tokens. Domain
+  models contain no UI colors. Preserve desktop/mobile feature and permission parity.
+- Use `BackendApiService`, `StorageConfig.resolveUrl(raw)`, `MediaUrlResolver`,
+  `ArtworkMediaResolver`, safe avatar helpers and established AR services. No inline
+  gateway construction. Keep local cache/fallback behavior; see Architecture.
+- Map sources/layers go through `MapLayersManager`; camera/selection go through
+  `KubusMapController`. Preserve style epochs, bounded cover work, selected markers,
+  map session memory and gesture/engagement semantics. No parallel map architecture.
+- Public entities retain canonical stable IDs, real renderer status codes and exact
+  client continuation. Artwork authorship, contribution/ownership and provenance
+  are separate. Preserve guest discovery and protected-action auth continuation.
+- Backend public-entity mutations use `publicSyncService` and `ORBITDB_SYNC_MODE`.
+  Schema changes update both `schema.sql` and `schema_complete.sql`. Private backend
+  gitlink and production data are independent boundaries, not incidental cleanup.
+- Guard `BuildContext` after awaits, dispose listeners/timers, gate polling by
+  visibility and feature flags, and never return from `finally`. Web-only code uses
+  conditional `*_web.dart` imports and `package:web`, not `dart:html`.
+- **No legacy code paths:** do not introduce duplicate obsolete implementations or
+  migration shims unless explicitly required. Explain substantial function-contract
+  changes and caller/test/data follow-up in the handoff. Useful debug logs are guarded.
+
+## Verification and documentation
+
+Completion requires relevant regression tests, formatting and that `flutter analyze passes`,
+plus exact-head required CI. Appearance changes require inspected responsive visual
+proof; browser emulation, compilation, emulator and physical-device evidence differ.
+PRODUCT hover changes update the Design system, primitives, widget tests and painted
+Chromium/Firefox gate together. Verify reduced motion first; honor OS preferences.
+
+Update an existing document before creating another. A new Markdown file needs an
+independent purpose. Keep living documents unversioned, historical analysis separate,
+entry points concise, and requirements in one canonical owner. Do not create permanent
+implementation waves. Use issues/PRs for transient work; validate references and migrate
+meaningful contract tests when documentation moves. Never discard security, compatibility
+or measured engineering knowledge merely to reduce a file count.
