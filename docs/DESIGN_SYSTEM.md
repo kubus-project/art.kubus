@@ -143,16 +143,20 @@ media contract supports it. `BoxFit.cover` must have appropriate parent constrai
 Keep avatar overlap and viewport geometry stable through asynchronous load and
 failure. Missing-cover fallback and failed authored-cover framing are distinct.
 
-Single-video Community stages on mobile reserve the usable content viewport before
-scrolling, excluding safe areas and persistent navigation/composer chrome. Posters,
-loading and playback share that stable height; metadata must not move the scroll
-anchor. Fit every video aspect whole without distortion or blanket cover cropping.
-Desktop retains its viewport cap; quoted previews and mixed carousels retain their
-compact and shared stage geometry.
-Every full-size Community card host captures its bounded viewing height before
-scrolling, including group feeds, profile history/previews and desktop panes.
-Modal previews capture the remaining space below persistent controls; do not
-fall back to device height inside an unbounded scroll child.
+Single-video Community stages use the recorded media aspect (then an aspect
+already learned this session), bounded by the measured usable host viewport.
+Portrait videos may fill that usable height on phones; landscape, square and
+ultrawide videos use a proportionate stage with room for controls. Desktop keeps
+its viewport cap. Poster and player share the same geometry. When the reference
+has no geometry, the stable 16:9 fallback does not resize after playback metadata
+arrives. This fallback cannot establish correct cold portrait sizing; existing
+media needs recorded geometry before that case can be accepted.
+Mixed carousels retain one 4:3 stage and quoted previews remain compact.
+
+Hashtags and mentions use semantic foreground on the raised surface. Interactive
+chips have the shared accent hover/focus response and keyboard activation; plain
+metadata remains readable when no action is available. A selected-state visual
+is used only by a surface that actually owns selection.
 
 ## PRODUCT hover motion
 

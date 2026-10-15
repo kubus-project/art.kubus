@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:ui' as ui;
 
 import 'package:flutter/foundation.dart';
 import 'package:image_picker/image_picker.dart';
@@ -79,6 +80,7 @@ class CommunityComposerMediaItem {
   /// selection and never blocks publishing: a video without a poster is still
   /// published, just without one.
   Uint8List? posterBytes;
+  double? aspectRatio;
 
   String get name => file.name;
   bool get isImage => kind == CommunityComposerMediaKind.image;
@@ -185,6 +187,19 @@ class CommunityComposerMediaController extends ChangeNotifier {
         poster = null;
       }
       if (poster == null || poster.isEmpty) return;
+      if (_disposed || !_items.contains(item)) return;
+      // The captured poster preserves the video's actual displayed geometry.
+      // Carry it on the reference so a cold feed can reserve the right stage.
+      try {
+        final codec = await ui.instantiateImageCodec(poster);
+        try {
+          final frame = await codec.getNextFrame();
+          item.aspectRatio = frame.image.width / frame.image.height;
+          frame.image.dispose();
+        } finally {
+          codec.dispose();
+        }
+      } catch (_) {/* Poster capture remains optional. */}
       if (_disposed || !_items.contains(item)) return;
       item.posterBytes = poster;
       notifyListeners();
@@ -377,6 +392,7 @@ Future<String> uploadCommunityComposerMediaItemWith(
     url,
     isVideo: true,
     posterUrl: posterUrl,
+    aspectRatio: item.aspectRatio,
   );
 }
 
