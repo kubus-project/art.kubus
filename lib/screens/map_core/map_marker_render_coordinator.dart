@@ -122,7 +122,10 @@ class MapMarkerRenderCoordinator {
   /// floating-badge bob) based on current state. This runs whenever the map is
   /// visible/active, independent of the current marker presentation.
   void updateAmbientTicker() {
-    setWebMapPresentationActive(_isPollingEnabled());
+    setWebMapPresentationActive(
+      _isPollingEnabled(),
+      owner: identityHashCode(_getKubusMapController()).toString(),
+    );
     final reduceMotion = _getKubusMapController().reduceMotion;
     final shouldAnimate = _isPollingEnabled() &&
         _isStyleInitialized() &&

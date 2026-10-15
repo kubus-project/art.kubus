@@ -1376,6 +1376,7 @@ async function presentationScenario(browserName, scheme, locale, motion, report)
     for (const width of list('QA_PRESENTATION_WIDTHS', '320,360,390,430,768,1440,1920').map(Number)) {
       await page.setViewportSize({ width, height: width >= 768 ? 1024 : 844 });
       await settle(page, 1800);
+      await waitForMap(page);
       await page.evaluate(() => {
         const m = window.__maps.at(-1);
         m.jumpTo({ zoom: m.getMinZoom(), center: [0, 10], pitch: 0, bearing: 0 });
@@ -1384,7 +1385,8 @@ async function presentationScenario(browserName, scheme, locale, motion, report)
       const before = await page.evaluate(() => {
         const m = window.__maps.at(-1), c = m.getContainer().querySelector('.kubus-globe-atmosphere');
         return { background: m.getCanvas().style.backgroundColor, active: c?.dataset.active,
-          solar: c?.dataset.subsolar, radius: c?.dataset.radius, mapCount: window.__maps.length };
+          solar: c?.dataset.subsolar, radius: c?.dataset.radius, mapCount: window.__maps.length,
+          zoom: m.getZoom(), center: m.getCenter(), pitch: m.getPitch(), visible: globalThis.kubusMapPresentationActive };
       });
       run.presentation ??= [];
       run.presentation.push({ width, ...before });
