@@ -217,3 +217,13 @@ cycle, rise ≥1.5 px, normal peak-to-peak ≥1 px, reduced peak-to-peak ≤0.6 
 shadow, disabled stillness and return to rest. Adaptive capture deadlines account
 for slow screenshots; insufficient samples remain inconclusive failures. A hover
 change updates code, this contract, widget tests and browser acceptance together.
+
+## Brand Identity / Wordmark Typography
+
+Official wordmarks are art.***kubus***, ***kubus*** and ***kubus*** Node: only `kubus` is bold
+italic; `art.` and capitalized `Node` are regular upright. Apply this beside the existing
+graphical logo in headers and explicitly designed brand compositions. Running text stays plain
+(art.kubus, kubus, kubus Node); technical identifiers retain exact spelling. Future frontend,
+redesign and branding work must preserve the [canonical wordmark
+specification](https://github.com/kubus-project/art.kubus.site/blob/master/docs/CONTENT-AND-BRAND.md#2-brand-identity--wordmark-typography),
+including genuine font faces, responsive alignment and one combined accessible name.
