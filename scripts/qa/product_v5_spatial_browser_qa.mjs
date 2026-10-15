@@ -1408,6 +1408,41 @@ async function presentationScenario(browserName, scheme, locale, motion, report)
       check(run, `${width}: cone rotates with north, missing heading is hidden`, location.rotation === 'map' && JSON.stringify(location.headingOpacity).includes('headingDegrees'), JSON.stringify(location));
       if (motion === 'reduce') check(run, `${width}: reduced pulse is static`, location.pulse === 0, JSON.stringify(location));
       await snap(page, `${tag}-${width}-location`, run);
+      if (process.env.QA_LOCATION_PROBE === 'true') {
+        const first = await page.evaluate(() => {
+          const m = window.__maps.at(-1), s = m.getSource('kubus_user_location');
+          window.__locationProbe = { source: s, original: s.setData, writes: 0,
+            originalData: structuredClone(s._data),
+            data: structuredClone(s._data?.geojson || s._data) };
+          s.setData = function (...args) { window.__locationProbe.writes++; return window.__locationProbe.original.apply(this, args); };
+          return { data: window.__locationProbe.data, radius: m.getPaintProperty('kubus_user_location_layer_pulse', 'circle-radius') };
+        });
+        await page.waitForTimeout(450);
+        const second = await page.evaluate(() => ({
+          radius: window.__maps.at(-1).getPaintProperty('kubus_user_location_layer_pulse', 'circle-radius'),
+          writes: window.__locationProbe.writes,
+        }));
+        check(run, 'emulated fix supplies a real point', first.data?.features?.some(f => f.geometry?.type === 'Point'), JSON.stringify(first));
+        check(run, 'browser does not invent device heading', first.data?.features?.every(f => f.properties?.headingDegrees == null), JSON.stringify(first.data));
+        check(run, 'pulse uses paint without source writes', second.writes === 0 && (motion === 'reduce' ? first.radius === second.radius : first.radius !== second.radius), JSON.stringify({ first: first.radius, ...second }));
+        run.locationProbe = { evidence: 'emulated fix; synthetic heading renderer probe, not sensor acceptance', first, second };
+        for (const [heading, bearing] of [[0, 0], [90, 0], [90, 90]]) {
+          await page.evaluate(({ heading, bearing }) => {
+            const p = window.__locationProbe;
+            const data = structuredClone(p.data);
+            for (const f of data.features) f.properties.headingDegrees = heading;
+            p.original.call(p.source, data);
+            window.__maps.at(-1).jumpTo({ bearing });
+          }, { heading, bearing });
+          await settle(page, 400);
+          await snap(page, `${tag}-${width}-renderer-heading-${heading}-bearing-${bearing}`, run);
+        }
+        await page.evaluate(() => {
+          const p = window.__locationProbe;
+          p.source.setData = p.original; p.original.call(p.source, p.originalData);
+          window.__maps.at(-1).jumpTo({ bearing: 0 });
+        });
+      }
       await noHorizontalOverflow(page, `${tag}-${width}`, run);
     }
     check(run, 'no uncaught page errors', run.console.length === 0, run.console.join(' | '));
