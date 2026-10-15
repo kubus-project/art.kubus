@@ -21,12 +21,13 @@ class ProfileIdentityData {
   });
 
   String? get navigationIdentifier {
+    final normalizedUserId = (userId ?? '').trim();
+    if (normalizedUserId.isNotEmpty) return normalizedUserId;
     final normalizedWallet = walletSeed.trim();
     if (normalizedWallet.isNotEmpty && normalizedWallet != label.trim()) {
       return normalizedWallet;
     }
-    final normalizedUserId = (userId ?? '').trim();
-    return normalizedUserId.isEmpty ? null : normalizedUserId;
+    return null;
   }
 
   /// The best human-facing text to take avatar initials from: the display
@@ -78,13 +79,24 @@ class ProfileIdentityData {
     String? fallbackUserId,
   }) {
     final identity = UserIdentityDisplayUtils.fromProfileMap(raw);
-    final userId = WalletUtils.resolveFromMap(raw, fallback: fallbackUserId);
-    final walletSeed = WalletUtils.coalesce(
-      walletAddress: raw['walletAddress']?.toString(),
-      wallet: raw['wallet']?.toString() ?? raw['wallet_address']?.toString(),
-      userId: userId,
-      fallback: fallbackUserId,
-    );
+    final explicitUserId = _firstNonEmpty(<dynamic>[
+      raw['userId'],
+      raw['user_id'],
+      raw['accountId'],
+      raw['account_id'],
+    ]);
+    final rawId = _normalizeText(raw['id']);
+    final userId = explicitUserId ??
+        (rawId != null && !WalletUtils.looksLikeWallet(rawId) ? rawId : null);
+    final walletSeed = _firstNonEmpty(<dynamic>[
+          raw['walletAddress'],
+          raw['wallet_address'],
+          raw['wallet'],
+          rawId != null && WalletUtils.looksLikeWallet(rawId) ? rawId : null,
+          fallbackUserId,
+          userId,
+        ]) ??
+        '';
     final rawLabel = identity.name.trim();
     final label = rawLabel.isEmpty || rawLabel.toLowerCase() == 'unknown artist'
         ? fallbackLabel
@@ -93,7 +105,7 @@ class ProfileIdentityData {
       label: label,
       handle: identity.handle,
       username: identity.username,
-      userId: userId.trim().isEmpty ? null : userId.trim(),
+      userId: userId,
       walletSeed: walletSeed.trim().isEmpty ? label : walletSeed.trim(),
       avatarUrl: _pickAvatarUrl(raw),
     );
@@ -114,8 +126,7 @@ class ProfileIdentityData {
       wallet: wallet,
     );
     final normalizedUsername = CreatorDisplayFormat.normalizeUsername(username);
-    final normalizedUserId = WalletUtils.canonical(
-        (userId ?? '').trim().isNotEmpty ? userId : wallet);
+    final normalizedUserId = WalletUtils.canonical(userId);
     final walletSeed = WalletUtils.canonical(
       (wallet ?? '').trim().isNotEmpty ? wallet : normalizedUserId,
     );
@@ -153,8 +164,15 @@ class ProfileIdentityData {
         nestedRaw is String && nestedRaw.trim().isNotEmpty
             ? nestedRaw.trim()
             : null;
-    final userId =
-        pick(const ['userId', 'user_id', 'id', 'authorId', 'author_id']);
+    final explicitUserId = pick(const [
+      'userId',
+      'user_id',
+      'authorId',
+      'author_id',
+    ]);
+    final rawId = pick(const ['id']);
+    final userId = explicitUserId ??
+        (rawId != null && !WalletUtils.looksLikeWallet(rawId) ? rawId : null);
     final wallet = pick(const [
           'walletAddress',
           'wallet_address',
@@ -177,8 +195,11 @@ class ProfileIdentityData {
         'name',
       ]),
       username: pick(const ['username', 'authorUsername', 'author_username']),
-      userId: userId ?? wallet,
-      wallet: wallet ?? userId,
+      userId: userId,
+      wallet: wallet ??
+          (rawId != null && WalletUtils.looksLikeWallet(rawId)
+              ? rawId
+              : userId),
       avatarUrl: pick(const [
         'avatarUrl',
         'avatar_url',
@@ -236,13 +257,15 @@ class ProfileIdentityData {
             raw['handle']?.toString() ??
             (subtitle.startsWith('@') ? subtitle.substring(1) : null),
       );
-      final userId = item.profileTargetId ?? item.id.trim();
+      final rawId = item.id.trim();
+      final userId = item.profileTargetId ??
+          (WalletUtils.looksLikeWallet(rawId) ? null : rawId);
       return ProfileIdentityData.fromValues(
         fallbackLabel: fallbackLabel,
         displayName: item.title,
         username: username,
         userId: userId,
-        wallet: userId,
+        wallet: item.profileTargetId ?? rawId,
         avatarUrl: _pickAvatarUrl(raw) ?? profileImageAsMark,
       );
     }

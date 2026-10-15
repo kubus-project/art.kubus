@@ -13,8 +13,8 @@ void openProfileIdentity(
 
   final username = identity.username?.trim();
   // Community identities contain both the account UUID and public wallet.
-  // ProfileIdentityData keeps the wallet first and retains the UUID for
-  // walletless accounts and canonical public-page handoffs.
+  // ProfileIdentityData prefers the canonical account UUID and retains a
+  // linked wallet when that is the only recorded profile identifier.
   final navigationId = identity.navigationIdentifier;
 
   if ((navigationId == null || navigationId.isEmpty) &&

@@ -34,7 +34,11 @@ class ArtworkProvenanceSection extends StatelessWidget {
     final rows = <(String, String)>[
       if (creator != null) (l10n.artworkProvenanceImageCreator, creator),
       if (license != null) (l10n.artworkProvenanceLicense, license),
-      if (credit != null) (l10n.artworkProvenanceCredit, credit),
+      if (credit != null &&
+          credit != creator &&
+          credit != license &&
+          credit != [creator, license].whereType<String>().join(' / '))
+        (l10n.artworkProvenanceCredit, credit),
       if (source != null) (l10n.artworkProvenanceSource, source),
     ];
 

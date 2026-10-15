@@ -127,6 +127,12 @@ accessible label only when verified; a role icon never grants verification.
 The mobile avatar badge is the single role/verification indicator, including its
 accessible label; do not repeat role chips inside the identity panel. Desktop
 keeps its name-adjacent role badges.
+When an account has both artist and institution roles, show both glyphs and announce both roles in the
+single mobile badge. A verified role badge keeps the role glyph and adds a small
+check; a verified account without a role uses the verification glyph. Desktop
+continues to show each role and verification beside the name. Owner avatars
+provide a labelled edit action, separate from presence and role/verification
+indicators.
 Preserve the canonical rounded-square avatar and the separate upper-right active
 presence indicator. Presence appears only for fresh, visible provider data; do not
 invent an online status or cover it with the identity badge.
