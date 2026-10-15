@@ -56,12 +56,24 @@ class _Harness {
 
 void main() {
   test('the grid level follows the backend half steps', () {
-    expect(KubusMapOverviewController.levelForZoom(0), 0);
+    expect(KubusMapOverviewController.levelForZoom(0), 6);
     expect(KubusMapOverviewController.levelForZoom(3.99), 7);
     expect(KubusMapOverviewController.levelForZoom(4), 8);
     expect(KubusMapOverviewController.levelForZoom(4.5), 9);
     expect(KubusMapOverviewController.levelForZoom(40), 24);
-    expect(KubusMapOverviewController.levelForZoom(double.nan), 0);
+    expect(KubusMapOverviewController.levelForZoom(double.nan), 6);
+  });
+
+  test(
+      'globe requests finer exact aggregates and reuses them within the globe band',
+      () async {
+    final h = _Harness();
+    await h.controller
+        .refresh(visible: h.visible, queryBounds: h.padded, zoom: 1.5);
+    expect(h.calls.single.$2, 3);
+    await h.controller
+        .refresh(visible: h.visible, queryBounds: h.padded, zoom: 2.5);
+    expect(h.calls, hasLength(1));
   });
 
   test('world and region zoom fetch the overview, not detailed markers',
