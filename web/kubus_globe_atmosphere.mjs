@@ -111,8 +111,17 @@ export function attachGlobeAtmosphere(map) {
     visible = entries.some((entry) => entry.isIntersecting);
     signature = ''; schedule();
   });
+  // A jump from a local Mercator view starts MapLibre's projection blend after
+  // the final camera event. Reduced motion has no solar timer to pick up that
+  // settled projection, so retry once on idle when no valid field was fitted.
+  const settled = () => {
+    if (canvas.dataset.active !== 'true' && map.getZoom() < 4.6) {
+      signature = ''; schedule();
+    }
+  };
   observer.observe(host);
   map.on('move', schedule); map.on('resize', style); map.on('style.load', style);
+  map.on('idle', settled);
   document.addEventListener('visibilitychange', schedule); motion.addEventListener('change', schedule);
   window.addEventListener('kubus-map-presentation-change', schedule);
   map.once('remove', () => {
@@ -120,6 +129,7 @@ export function attachGlobeAtmosphere(map) {
     document.removeEventListener('visibilitychange', schedule); motion.removeEventListener('change', schedule);
     window.removeEventListener('kubus-map-presentation-change', schedule);
     map.off('move', schedule); map.off('resize', style); map.off('style.load', style);
+    map.off('idle', settled);
   });
   style();
 }
