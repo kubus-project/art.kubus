@@ -1,3 +1,5 @@
+import 'dart:ui' show SemanticsFlag;
+
 import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:art_kubus/models/artwork.dart';
 import 'package:art_kubus/models/user.dart';
@@ -30,6 +32,7 @@ void main() {
   testWidgets(
       'an explicitly linked artist account makes the recorded byline interactive',
       (tester) async {
+    final semantics = tester.ensureSemantics();
     await tester.pumpWidget(harness(record('Recorded cultural artist', {
       'artistUserId': '11111111-1111-4111-8111-111111111111',
       'ownerUserId': '22222222-2222-4222-8222-222222222222',
@@ -37,6 +40,13 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Recorded cultural artist'), findsOneWidget);
     expect(find.byType(InkWell), findsOneWidget);
+    expect(
+      tester
+          .getSemantics(find.text('Recorded cultural artist'))
+          .hasFlag(SemanticsFlag.isLink),
+      isTrue,
+    );
+    semantics.dispose();
   });
   testWidgets('generic hydrated wallet lists do not identify cultural authors',
       (tester) async {
