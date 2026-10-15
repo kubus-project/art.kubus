@@ -25,8 +25,8 @@ const profile = (id) => ({
   username: id === ownerId ? 'visual-qa-owner' : 'visual-qa-visitor',
   displayName: id === ownerId ? 'Alexandra Katarina Longname' : 'Visitor Artist',
   bio: 'Browser fixture for the 0.8.3 visual regression pass.',
-  avatar: `${origin}/images/social-preview-default.webp`,
-  coverImage: `${origin}/images/social-preview-default.webp`,
+  avatar: `${mediaHost}/artwork.png`,
+  coverImage: `${mediaHost}/artwork.png`,
   isArtist: true, isInstitution: true, isVerified: true,
   preferences: { privacy: 'public', language: 'en', persona: 'creator' },
   createdAt: '2026-01-10T10:00:00Z', updatedAt: '2026-10-01T10:00:00Z',
@@ -44,6 +44,13 @@ const posts = Object.entries(shapes).filter(([shape]) => !process.env.QA_SHAPE |
   location: { name: 'Ljubljana', lat: 46.0569, lng: 14.5058 },
   stats: { likes: 2, comments: 0, shares: 0 },
 }));
+if (process.env.QA_SAME_ARTWORK === 'true') posts.unshift({ ...posts[0],
+  id: '77777777-7777-4777-8777-777777777777', content: 'Still view of the same recorded artwork',
+  mediaUrls: [`${mediaHost}/artwork.png`] });
+if (process.env.QA_MEDIA_MODE === 'mixed') posts[0].mediaUrls.push(`${mediaHost}/artwork.png`);
+if (process.env.QA_MEDIA_MODE === 'quoted') posts.unshift({ ...posts[0],
+  id: '88888888-8888-4888-8888-888888888888', content: 'Quoted art video', mediaUrls: [],
+  postType: 'shared_post', originalPostId: posts[0].id, originalPost: posts[0] });
 
 const types = { '.html': 'text/html', '.js': 'text/javascript', '.mjs': 'text/javascript',
   '.json': 'application/json', '.wasm': 'application/wasm', '.png': 'image/png',
@@ -87,12 +94,14 @@ try {
                   requests.push({ method: request.method(), path: url.pathname, search: url.search });
                   if (!['GET', 'HEAD', 'OPTIONS'].includes(request.method())) writesBlocked.push(url.pathname);
                   let data = [];
-                  if (/\/profiles\//.test(url.pathname)) data = profile(url.pathname.includes(visitorId) ? visitorId : ownerId);
+                  if (/\/profiles\/.+\/posts$/.test(url.pathname)) data = posts;
+                  else if (/\/profiles\//.test(url.pathname)) data = profile(url.pathname.includes(visitorId) ? visitorId : ownerId);
                   else if (/\/auth\/.*(me|session)/.test(url.pathname)) data = { user: profile(ownerId), profile: profile(ownerId) };
+                  else if (/\/community\/posts\/[a-z0-9-]+$/.test(url.pathname)) data = posts[0];
                   else if (/\/community\/(posts|art-feed)/.test(url.pathname)) data = posts;
                   else if (/\/artworks\//.test(url.pathname)) data = { id: artworkId, title: 'Recorded Artwork', artist: 'Recorded Artist',
                     description: 'QA fixture: artist differs from uploader.', artistName: 'Recorded Artist',
-                    metadata: { artistUserId: ownerId }, imageUrl: `${origin}/images/social-preview-default.webp`,
+                    metadata: { artistUserId: ownerId }, imageUrl: `${mediaHost}/artwork.png`,
                     latitude: 46.0569, longitude: 14.5058, createdAt: '2026-01-01T00:00:00Z' };
                   else if (url.pathname.endsWith('/config')) data = { communityMultiMediaEnabled: true };
                   return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ success: true, data }) });
@@ -108,6 +117,7 @@ try {
                 localStorage.setItem('flutter.wallet_address', JSON.stringify(wallet));
               }, { ownerId, wallet });
               let failure;
+              let stageBeforeActivation;
               try {
                 await page.goto(`${origin}${process.env.QA_PATH || '/community'}`, { waitUntil: 'domcontentloaded' });
                 await page.waitForSelector('flutter-view', { timeout: 60000 });
@@ -115,13 +125,22 @@ try {
                 const placeholder = page.locator('flt-semantics-placeholder');
                 if (await placeholder.count()) await placeholder.evaluate(el => el.click());
                 await page.waitForTimeout(1500);
+                if (process.env.QA_PRETAB) {
+                  const tab = page.getByRole('tab', { name: new RegExp(process.env.QA_PRETAB), exact: true }).first();
+                  const box = await tab.boundingBox();
+                  if (!box) throw new Error('Discovery tab missing');
+                  await page.mouse.click(box.x + box.width/2, box.y + box.height/2);
+                  await page.waitForTimeout(3000);
+                }
                 await page.screenshot({ path: path.join(out, `${name}-initial.png`) });
                 const initial = await page.locator('body').ariaSnapshot();
                 await fs.writeFile(path.join(out, `${name}-initial.yml`), initial);
-                const stageBefore = await page.getByRole('group', { name: 'Media 1 of 1', exact: true }).first().boundingBox().catch(() => null);
+                const mediaStage = page.getByRole('group', { name: 'Media 1 of 1', exact: true }).first();
+                const stageBefore = await mediaStage.count() ? await mediaStage.boundingBox() : null;
                 // Caller supplies a semantic label for bounded navigation QA.
                 if (process.env.QA_CLICK) {
-                  const target = page.getByRole(process.env.QA_CLICK_ROLE || 'button', { name: new RegExp(process.env.QA_CLICK) }).first();
+                  const isPlay = process.env.QA_CLICK === 'Play video';
+                  const target = page.getByRole(process.env.QA_CLICK_ROLE || 'button', { name: new RegExp(isPlay ? 'Play video|Pause video' : process.env.QA_CLICK) }).first();
                   let box = await target.boundingBox();
                   if (!box) throw new Error(`Missing action: ${process.env.QA_CLICK}`);
                   for (let attempt = 0; attempt < 8 && (box.y + box.height / 2 > (width < 768 ? 720 : 780) || box.y < 80); attempt++) {
@@ -131,7 +150,9 @@ try {
                     box = await target.boundingBox();
                     if (!box) throw new Error('Action disappeared while scrolling');
                   }
-                  await page.mouse.click(box.x + box.width/2, box.y + box.height/2);
+                  stageBeforeActivation = await mediaStage.count() ? await mediaStage.boundingBox() : null;
+                  if (!isPlay || /Play video/.test(await target.getAttribute('aria-label') || await target.innerText()))
+                    await page.mouse.click(box.x + box.width/2, box.y + box.height/2);
                   await page.waitForTimeout(4000);
                   await page.screenshot({ path: path.join(out, `${name}-action.png`) });
                   await fs.writeFile(path.join(out, `${name}-action.yml`), await page.locator('body').ariaSnapshot());
@@ -145,14 +166,10 @@ try {
                 const afterPlayback = await page.evaluate(() => {
                   const deep = root => [...root.querySelectorAll('*')].flatMap(el => [el, ...(el.shadowRoot ? deep(el.shadowRoot) : [])]);
                   return deep(document).filter(v => v.tagName === 'VIDEO').map(v => ({ time: v.currentTime, paused: v.paused })); });
-                const stageAfter = await page.getByRole('group', { name: 'Media 1 of 1', exact: true }).first().boundingBox().catch(() => null);
-                const captures = [];
-                for (const captureWidth of list('QA_CAPTURE_WIDTHS', String(width)).map(Number)) {
-                  await page.setViewportSize({ width: captureWidth, height: captureWidth < 768 ? 844 : 900 });
-                  await page.waitForTimeout(700);
-                  await page.screenshot({ path: path.join(out, `${name}-width-${captureWidth}.png`) });
-                  captures.push({ width: captureWidth, overflow: await page.evaluate(() => document.documentElement.scrollWidth > innerWidth) });
-                }
+                if (process.env.QA_CLICK === 'Play video' && (!playback.some((p, i) =>
+                  p.readyState >= 2 && !p.paused && afterPlayback[i]?.time > p.time)))
+                  throw new Error('Video did not advance through the playback interval');
+                const stageAfter = await mediaStage.count() ? await mediaStage.boundingBox() : null;
                 let fullscreen;
                 if (process.env.QA_FULLSCREEN === 'true') {
                   await page.setViewportSize({ width, height: width < 768 ? 844 : 900 });
@@ -166,8 +183,15 @@ try {
                   await page.keyboard.press('Escape');
                   await page.waitForTimeout(500);
                 }
+                const captures = [];
+                for (const captureWidth of list('QA_CAPTURE_WIDTHS', String(width)).map(Number)) {
+                  await page.setViewportSize({ width: captureWidth, height: captureWidth < 768 ? 844 : 900 });
+                  await page.waitForTimeout(700);
+                  await page.screenshot({ path: path.join(out, `${name}-width-${captureWidth}.png`) });
+                  captures.push({ width: captureWidth, overflow: await page.evaluate(() => document.documentElement.scrollWidth > innerWidth) });
+                }
                 results.push({ name, errors, writesBlocked, requests, playback, afterPlayback,
-                  stageBefore, stageAfter, fullscreen, captures,
+                  stageBefore, stageBeforeActivation, stageAfter, fullscreen, captures,
                   semanticText: initial, overflow: await page.evaluate(() => document.documentElement.scrollWidth > innerWidth) });
               } catch (e) { failure = e.message; results.push({ name, failure, errors, requests }); }
               console.log(`${name}: ${failure || 'captured'}`);
