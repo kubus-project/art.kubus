@@ -1,5 +1,3 @@
-import 'dart:ui' show SemanticsFlag;
-
 import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:art_kubus/models/artwork.dart';
 import 'package:art_kubus/models/user.dart';
@@ -43,7 +41,8 @@ void main() {
     expect(
       tester
           .getSemantics(find.text('Recorded cultural artist'))
-          .hasFlag(SemanticsFlag.isLink),
+          .flagsCollection
+          .isLink,
       isTrue,
     );
     semantics.dispose();
