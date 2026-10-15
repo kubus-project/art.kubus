@@ -206,6 +206,8 @@ const HOOK = () => {
     removeImage: 0,
     longTasks: [],
     markerFrames: [],
+    sourceLoaded: [],
+    peakActiveImages: 0,
     lastMarkerCount: 0,
     segment: 'boot',
   };
@@ -234,7 +236,13 @@ const HOOK = () => {
       proto.__perfHooked = true;
       const setStyle = proto.setStyle;
       proto.setStyle = function (...args) {
-        if (!window.__maps.includes(this)) window.__maps.push(this);
+        if (!window.__maps.includes(this)) {
+          window.__maps.push(this);
+          this.on('sourcedata', e => {
+            if (e.sourceId === 'kubus_markers' && e.isSourceLoaded)
+              window.__perf.sourceLoaded.push({ t: performance.now(), seg: window.__perf.segment });
+          });
+        }
         return setStyle.apply(this, args);
       };
       if (typeof proto._render === 'function') {
@@ -250,7 +258,9 @@ const HOOK = () => {
       proto.addImage = function (...args) {
         window.__perf.addImage += 1;
         window.__perf.addImageNames.push({ id: String(args[0]), t: performance.now(), seg: window.__perf.segment });
-        return addImage.apply(this, args);
+        const result = addImage.apply(this, args);
+        window.__perf.peakActiveImages = Math.max(window.__perf.peakActiveImages, this.listImages().length);
+        return result;
       };
       const removeImage = proto.removeImage;
       if (removeImage) {
@@ -603,6 +613,7 @@ async function oneRun(config, viewport, runIndex) {
       },
       setData: {
         calls: setData.length,
+        markerCalls: setData.filter(s => s.id === 'kubus_markers').length,
         totalMs: fix(setData.reduce((s, t) => s + t.d, 0)),
         max: fix(Math.max(0, ...setData.map((t) => t.d))),
         maxFeatures: Math.max(-1, ...setData.map((t) => t.features)),
@@ -612,10 +623,11 @@ async function oneRun(config, viewport, runIndex) {
         totalMs: fix(perf.readPixels.reduce((s, r) => s + r.d, 0)),
         max: fix(Math.max(0, ...perf.readPixels.map((r) => r.d))),
       },
-      images: { addImageDuringPath: perf.addImage - perf.addImageAtStart, removeImage: perf.removeImage },
+      images: { addImageDuringPath: perf.addImage - perf.addImageAtStart, removeImage: perf.removeImage, peakActive: perf.peakActiveImages },
       counts: result.counts,
       idles: result.idles,
       markerFrames: perf.markerFrames,
+      sourceLoaded: perf.sourceLoaded,
       video: process.env.PERF_VIDEO === 'true' ? await page.video()?.path() : null,
       cover,
       covers,
