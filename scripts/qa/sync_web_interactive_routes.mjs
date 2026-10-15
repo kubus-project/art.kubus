@@ -37,7 +37,7 @@ function validateManifest(manifest) {
     seenPaths.add(route.path);
     seenTests.add(route.testUrl);
   }
-  for (const required of ['/', '/en', '/sl', '/app', '/app/*', '/onboarding', '/register']) {
+  for (const required of ['/', '/en', '/sl', '/app', '/app/*', '/onboarding', '/register', '/support']) {
     if (!seenPaths.has(required)) throw new Error(`required browser route is missing: ${required}`);
   }
 }
