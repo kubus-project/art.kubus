@@ -1,7 +1,6 @@
 import 'package:art_kubus/models/user_profile.dart';
 import 'package:art_kubus/providers/main_tab_provider.dart';
 import 'package:art_kubus/providers/profile_provider.dart';
-import 'package:art_kubus/screens/community/profile_screen.dart' as owner;
 import 'package:art_kubus/screens/community/user_profile_screen.dart'
     as visitor;
 import 'package:art_kubus/screens/desktop/community/desktop_profile_screen.dart'
