@@ -42,7 +42,7 @@ void main() {
       tester
           .getSemantics(find.text('Recorded cultural artist'))
           .flagsCollection
-          .isLink,
+          .isButton,
       isTrue,
     );
     semantics.dispose();

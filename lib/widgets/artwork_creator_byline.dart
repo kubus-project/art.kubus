@@ -8,8 +8,6 @@ import '../models/artwork.dart';
 import '../models/user.dart';
 import '../services/event_bus.dart';
 import '../services/user_service.dart';
-import '../services/share/share_service.dart';
-import '../services/share/share_types.dart';
 import '../utils/user_identity_display.dart';
 import '../utils/wallet_utils.dart';
 import '../utils/user_profile_navigation.dart';
@@ -201,11 +199,7 @@ class _ArtworkCreatorBylineState extends State<ArtworkCreatorByline> {
             baseline: TextBaseline.alphabetic,
             child: Semantics(
               container: true,
-              link: true,
-              linkUrl: ShareService().buildShareUrl(
-                ShareTarget.profile(walletAddress: userId),
-                locale: Localizations.localeOf(context).languageCode,
-              ),
+              button: true,
               label: combinedLabel,
               excludeSemantics: true,
               onTap: () => UserProfileNavigation.open(
