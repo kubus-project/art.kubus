@@ -197,13 +197,24 @@ class _ArtworkCreatorBylineState extends State<ArtworkCreatorByline> {
           WidgetSpan(
             alignment: PlaceholderAlignment.baseline,
             baseline: TextBaseline.alphabetic,
-            child: InkWell(
+            child: Semantics(
+              container: true,
+              link: true,
+              label: combinedLabel,
+              excludeSemantics: true,
               onTap: () => UserProfileNavigation.open(
                 context,
                 userId: userId,
                 username: creator.username,
               ),
-              child: Text(combinedLabel, style: linkStyle),
+              child: InkWell(
+                onTap: () => UserProfileNavigation.open(
+                  context,
+                  userId: userId,
+                  username: creator.username,
+                ),
+                child: Text(combinedLabel, style: linkStyle),
+              ),
             ),
           ),
         );
