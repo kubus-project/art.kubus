@@ -28,6 +28,8 @@ for (const translated of [false, true]) {
     assert.equal(artworkDocumentLanguage(`<html lang="${expected}">${htmlLinks}`, owner).valid, true);
     assert.equal(artworkDocumentLanguage(`<html lang="${translated ? 'en' : 'sl'}">${htmlLinks}`, owner).valid, false);
     assert.equal(artworkDocumentLanguage(`<html>${htmlLinks}`, owner).valid, false);
+    assert.equal(artworkDocumentLanguage(`<html data-lang="${expected}">${htmlLinks}`, owner).valid, false);
+    assert.equal(artworkDocumentLanguage(`<html xml:lang="${expected}">${htmlLinks}`, owner).valid, false);
   });
 }
 
