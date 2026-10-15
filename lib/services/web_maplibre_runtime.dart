@@ -10,3 +10,6 @@ Future<void> ensureWebMapLibreRuntimeReady() =>
 /// the static boot colour from `index.html`, which belongs to neither theme.
 /// No-op off web.
 void setWebMapGroundColor(int argb) => setWebMapGroundColorImpl(argb);
+
+void setWebMapPresentationActive(bool active) =>
+    setWebMapPresentationActiveImpl(active);
