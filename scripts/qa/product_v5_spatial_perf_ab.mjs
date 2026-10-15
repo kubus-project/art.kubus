@@ -176,12 +176,14 @@ async function installFixture(context, config, stats) {
       delete headers['content-encoding'];
       delete headers['content-length'];
       delete headers['transfer-encoding'];
-      if (response.status() === 200) {
-        await fs.writeFile(bodyFile, body);
-        await fs.writeFile(metaFile, JSON.stringify({ url: target, status: 200, headers }));
-      }
+      // Failed covers/tiles are part of the fixture too: both artifacts must
+      // see the same failure, without a fresh network retry skewing one run.
+      await fs.writeFile(bodyFile, body);
+      await fs.writeFile(metaFile, JSON.stringify({ url: target, status: response.status(), headers }));
       return route.fulfill({ status: response.status(), headers: { ...headers, ...cors }, body });
     } catch {
+      await fs.writeFile(bodyFile, '');
+      await fs.writeFile(metaFile, JSON.stringify({ url: target, status: 503, headers: {} }));
       return route.fulfill({ status: 503, body: '' });
     }
   });
@@ -277,6 +279,8 @@ const HOOK = () => {
                 features: (data.features || []).slice(0, 256).map((f) => ({
                   id: f.id, p: f.geometry?.coordinates,
                   opacity: f.properties?.entryOpacity,
+                  scale: f.properties?.entryScale,
+                  coverReveal: f.properties?.coverReveal,
                   retiring: f.properties?.transitionRetiring === true,
                   selected: f.properties?.isSelected,
                 })),
@@ -312,6 +316,7 @@ function summarise(deltas) {
     max: fix(s[s.length - 1]),
     over33: s.filter((d) => d > 33.4).length,
     over50: s.filter((d) => d > 50).length,
+    missed60HzFrames: s.reduce((n, d) => n + Math.max(0, Math.round(d / (1000 / 60)) - 1), 0),
   };
 }
 
@@ -609,7 +614,9 @@ async function oneRun(config, viewport, runIndex) {
       },
       images: { addImageDuringPath: perf.addImage - perf.addImageAtStart, removeImage: perf.removeImage },
       counts: result.counts,
+      idles: result.idles,
       markerFrames: perf.markerFrames,
+      video: process.env.PERF_VIDEO === 'true' ? await page.video()?.path() : null,
       cover,
       covers,
       fixture: stats,
@@ -691,7 +698,7 @@ for (const vp of viewports) {
       readPixelsMs: m((r) => r.readPixels.totalMs),
       featuresAtZoomIn: m((r) => r.counts[0]?.features),
       featuresAtPan: m((r) => r.counts[1]?.features),
-      imagesAtEnd: m((r) => r.counts[2]?.images),
+      imagesAtEnd: m((r) => r.counts.at(-1)?.images),
       coverRequests: m((r) => r.cover.requests),
       coverKb: m((r) => r.cover.decodedKb),
       segP95: Object.fromEntries(Object.keys(cell[0].bySeg).map((s) => [s, m((r) => r.bySeg[s].p95)])),
