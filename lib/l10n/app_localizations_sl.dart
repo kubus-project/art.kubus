@@ -6929,7 +6929,7 @@ class AppLocalizationsSl extends AppLocalizations {
   String get walletHomeSecureWalletAction => 'Zaščiti denarnico';
 
   @override
-  String get availabilityNodeTitle => 'kubus Node';
+  String get availabilityNodeTitle => 'kubus node';
 
   @override
   String get availabilityNodeNavTitle => 'kubus vozlišče';
@@ -6948,7 +6948,7 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get kubusNodeHeroBody =>
-      'kubus Node ohranja javne kulturne zapise dostopne, streže arhivske datoteke prek omrežja in lahko prostorske zajeme obdela lokalno. Zasebne izvorne datoteke ostanejo na tvoji opremi; objavijo se le izbrane obdelane različice.';
+      'kubus node ohranja javne kulturne zapise dostopne, streže arhivske datoteke prek omrežja in lahko prostorske zajeme obdela lokalno. Zasebne izvorne datoteke ostanejo na tvoji opremi; objavijo se le izbrane obdelane različice.';
 
   @override
   String get kubusNodePrivacyBody =>
@@ -6976,7 +6976,7 @@ class AppLocalizationsSl extends AppLocalizations {
   String get kubusNodeOffline => 'Brez povezave';
 
   @override
-  String get kubusNodeNotPaired => 'Lokalno vozlišče kubus Node ni povezano';
+  String get kubusNodeNotPaired => 'Lokalno vozlišče kubus node ni povezano';
 
   @override
   String get kubusNodeUnavailable => 'Vozlišče ni dosegljivo';
@@ -7038,19 +7038,19 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get kubusNodePairBody =>
-      'V vmesniku kubus Node odpri Naprave in skeniraj prikazano kodo. Ta naprava prejme le omejeno lokalno poverilnico.';
+      'V vmesniku kubus node odpri Naprave in skeniraj prikazano kodo. Ta naprava prejme le omejeno lokalno poverilnico.';
 
   @override
   String get kubusNodePairingPayload => 'Podatki za povezavo';
 
   @override
-  String get kubusNodePairAction => 'Poveži kubus Node';
+  String get kubusNodePairAction => 'Poveži kubus node';
 
   @override
   String get kubusNodeUnpairAction => 'Pozabi povezano vozlišče';
 
   @override
-  String get kubusNodePairedToast => 'kubus Node je povezan';
+  String get kubusNodePairedToast => 'kubus node je povezan';
 
   @override
   String get kubusNodePairFailed => 'Povezava ni uspela';
@@ -7067,7 +7067,7 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get kubusNodeStateJoiningBody =>
-      'kubus Node usklajuje in preverja svoj prispevek k javnemu arhivu.';
+      'kubus node usklajuje in preverja svoj prispevek k javnemu arhivu.';
 
   @override
   String get kubusNodeStateDegraded => 'Povezava je prekinjena';
@@ -7081,7 +7081,7 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get kubusNodeStateLockedBody =>
-      'Prostorska obdelava postane na voljo, ko to vozlišče kubus Node dejavno prispeva k javnemu arhivu.';
+      'Prostorska obdelava postane na voljo, ko to vozlišče kubus node dejavno prispeva k javnemu arhivu.';
 
   @override
   String get kubusNodeStateUnconfigured => 'Potrebna je nastavitev';
@@ -7095,11 +7095,11 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get kubusNodeStateOfflineBody =>
-      'Aplikacija trenutno ne more doseči tega vozlišča kubus Node. Povezava ostane shranjena in se samodejno vzpostavi znova.';
+      'Aplikacija trenutno ne more doseči tega vozlišča kubus node. Povezava ostane shranjena in se samodejno vzpostavi znova.';
 
   @override
   String get kubusNodeReciprocity =>
-      'kubus Node ti omogoča lokalno prostorsko obdelavo, tvoje vozlišče pa v zameno prispeva prostor in dostopnost skupnemu javnemu arhivu.';
+      'kubus node ti omogoča lokalno prostorsko obdelavo, tvoje vozlišče pa v zameno prispeva prostor in dostopnost skupnemu javnemu arhivu.';
 
   @override
   String get kubusNodeCheckStatusAction => 'Preveri stanje vozlišča';
@@ -7125,7 +7125,7 @@ class AppLocalizationsSl extends AppLocalizations {
       'GPU je zaznan, a se prostorski procesor ne odziva.';
 
   @override
-  String get kubusNodeEntryTitle => 'kubus Node';
+  String get kubusNodeEntryTitle => 'kubus node';
 
   @override
   String get kubusNodeEntrySubtitle =>
@@ -7147,10 +7147,10 @@ class AppLocalizationsSl extends AppLocalizations {
       'Prejmi preverjene zapise prispevka KUB8';
 
   @override
-  String get kubusNodeEntryConnectCta => 'Poveži ali nastavi kubus Node';
+  String get kubusNodeEntryConnectCta => 'Poveži ali nastavi kubus node';
 
   @override
-  String get kubusNodeEntryOpenCta => 'Odpri kubus Node';
+  String get kubusNodeEntryOpenCta => 'Odpri kubus node';
 
   @override
   String get kubusNodeEntryAttention => 'Vozlišče potrebuje pozornost';
@@ -7160,7 +7160,7 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get kubusNodeScanBody =>
-      'V vmesniku kubus Node odpri Naprave in skeniraj prikazano kodo.';
+      'V vmesniku kubus node odpri Naprave in skeniraj prikazano kodo.';
 
   @override
   String get kubusNodeScanManualAction => 'Vnesi kodo ročno';
@@ -7170,7 +7170,7 @@ class AppLocalizationsSl extends AppLocalizations {
       'Za skeniranje kode je potreben dostop do kamere.';
 
   @override
-  String get kubusNodeScanInvalid => 'To ni koda za povezavo s kubus Node.';
+  String get kubusNodeScanInvalid => 'To ni koda za povezavo s kubus node.';
 
   @override
   String get kubusNodeConfirmTitle => 'Se želiš povezati s tem vozliščem?';
@@ -7216,7 +7216,7 @@ class AppLocalizationsSl extends AppLocalizations {
       'Zajem ohrani lokalno ali ga obdelaj pozneje.';
 
   @override
-  String get kubusNodeNoNodeTitle => 'Nobeno vozlišče kubus Node ni povezano';
+  String get kubusNodeNoNodeTitle => 'Nobeno vozlišče kubus node ni povezano';
 
   @override
   String get kubusNodeStoredLabel => 'Shranjeno';
@@ -7278,14 +7278,14 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get spatialProgressLocalBody =>
-      'Obdelava poteka na tvojem vozlišču kubus Node.';
+      'Obdelava poteka na tvojem vozlišču kubus node.';
 
   @override
   String get spatialProgressRemoteBody => 'Obdelava poteka v omrežju Kubus.';
 
   @override
   String get spatialProgressLeaveHint =>
-      'Ta zaslon lahko zapustiš. Obdelava se nadaljuje na tvojem vozlišču kubus Node.';
+      'Ta zaslon lahko zapustiš. Obdelava se nadaljuje na tvojem vozlišču kubus node.';
 
   @override
   String get spatialFailedTitle => 'Obdelava je bila prekinjena';
@@ -7296,7 +7296,7 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get spatialFailedLocalBody =>
-      'Obdelava se ni zaključila. Tvoj izvorni zajem je še vedno na voljo na vozlišču kubus Node.';
+      'Obdelava se ni zaključila. Tvoj izvorni zajem je še vedno na voljo na vozlišču kubus node.';
 
   @override
   String get spatialFailedTryAnother => 'Poskusi z drugim vozliščem';
@@ -16121,7 +16121,7 @@ class AppLocalizationsSl extends AppLocalizations {
   String get spatialProcessTitle => 'Obdelaj prostorski zajem';
 
   @override
-  String get spatialProcessLocalTitle => 'To vozlišče kubus Node';
+  String get spatialProcessLocalTitle => 'To vozlišče kubus node';
 
   @override
   String get spatialProcessLocalPrivacy =>
@@ -16187,7 +16187,7 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get spatialResultReviewBody =>
-      'Pred objavo preglej neobjavljeni rezultat. Z objavo izbrane prostorske različice dodaš v javni arhiv art.kubus, kjer jih sodelujoča vozlišča ohranjajo na voljo. Izvorni zajem ostane lokalno na tvojem vozlišču kubus Node. Če rezultat ostane neobjavljen, potrdiš zaključeno računsko nalogo, ne da bi ga dodal v javni arhiv; njegov CID v Kubo je nenaveden, ne pa kriptografsko zaseben, če ga izve druga oseba.';
+      'Pred objavo preglej neobjavljeni rezultat. Z objavo izbrane prostorske različice dodaš v javni arhiv art.kubus, kjer jih sodelujoča vozlišča ohranjajo na voljo. Izvorni zajem ostane lokalno na tvojem vozlišču kubus node. Če rezultat ostane neobjavljen, potrdiš zaključeno računsko nalogo, ne da bi ga dodal v javni arhiv; njegov CID v Kubo je nenaveden, ne pa kriptografsko zaseben, če ga izve druga oseba.';
 
   @override
   String get spatialResultKeepPrivate => 'Ohrani neobjavljeno';
@@ -16450,11 +16450,11 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get spatialCaptureNodeRequired =>
-      'Izvorni zajem ostane na tej napravi. Povežite kubus Node s prostorsko zmogljivostjo za prenos in lokalno obdelavo.';
+      'Izvorni zajem ostane na tej napravi. Povežite kubus node s prostorsko zmogljivostjo za prenos in lokalno obdelavo.';
 
   @override
   String get spatialCaptureNodeOutdated =>
-      'Ta kubus Node ne more prejeti pretočnega zajema. Posodobite vozlišče in poskusite znova.';
+      'Ta kubus node ne more prejeti pretočnega zajema. Posodobite vozlišče in poskusite znova.';
 
   @override
   String get spatialCaptureTransferFailed =>
@@ -16903,7 +16903,7 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get spatialProcessOwnNodeSubtitle =>
-      'Uporabite svoje seznanjeno vozlišče kubus Node.';
+      'Uporabite svoje seznanjeno vozlišče kubus node.';
 
   @override
   String get spatialProcessOwnNodeRemote => 'Povezano na daljavo';
@@ -17335,7 +17335,7 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get kubusAddNodeIntro =>
-      'Namestite kubus Node na računalnik in odprite njegovo stran za nastavitev. Prikaže osemmestno kodo. Vnesite jo tukaj in vozlišče pooblastite za ta račun.';
+      'Namestite kubus node na računalnik in odprite njegovo stran za nastavitev. Prikaže osemmestno kodo. Vnesite jo tukaj in vozlišče pooblastite za ta račun.';
 
   @override
   String get kubusAddNodeCodeLabel => 'Koda za nastavitev';
