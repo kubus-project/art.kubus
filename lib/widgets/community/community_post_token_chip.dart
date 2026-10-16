@@ -13,25 +13,29 @@ class CommunityPostTokenChip extends StatelessWidget {
   Widget build(BuildContext context) {
     final roles = KubusColorRoles.of(context);
     final radius = BorderRadius.circular(KubusRadius.control);
-    final chip = Ink(
-      padding: const EdgeInsets.symmetric(
-        horizontal: KubusSpacing.sm + KubusSpacing.xxs,
-        vertical: KubusSpacing.xs,
-      ),
-      decoration: BoxDecoration(
-        color: roles.surfaceRaised,
-        borderRadius: radius,
-        border: Border.all(color: roles.rule, width: KubusSizes.hairline),
-      ),
-      child: Text(
-        label,
-        style: KubusTextStyles.navMetaLabel.copyWith(
-          fontWeight: FontWeight.w500,
-          color: roles.foreground,
-        ),
+    const padding = EdgeInsets.symmetric(
+      horizontal: KubusSpacing.sm + KubusSpacing.xxs,
+      vertical: KubusSpacing.xs,
+    );
+    final decoration = BoxDecoration(
+      color: roles.surfaceRaised,
+      borderRadius: radius,
+      border: Border.all(color: roles.rule, width: KubusSizes.hairline),
+    );
+    final text = Text(
+      label,
+      style: KubusTextStyles.navMetaLabel.copyWith(
+        fontWeight: FontWeight.w500,
+        color: roles.foreground,
       ),
     );
-    if (onTap == null) return chip;
+    // A static chip has no Material of its own. Ink would paint on the nearest
+    // Material ancestor, which inside a post card sits behind the card's opaque
+    // surface and hides the fill and border, so it is an ordinary decorated box.
+    if (onTap == null) {
+      return Container(padding: padding, decoration: decoration, child: text);
+    }
+    final chip = Ink(padding: padding, decoration: decoration, child: text);
     return Semantics(
       button: true,
       label: label,

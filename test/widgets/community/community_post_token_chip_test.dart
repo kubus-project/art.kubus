@@ -37,5 +37,30 @@ void main() {
       await tester.tap(find.text('#Art'));
       expect(tapped, 1);
     });
+
+    testWidgets(
+        'a static chip keeps its fill above an opaque card on ${roles.surface}',
+        (tester) async {
+      await tester.pumpWidget(MaterialApp(
+        theme: ThemeData(extensions: [roles]),
+        home: Scaffold(
+          body: Container(
+            color: roles.surface,
+            child: const CommunityPostTokenChip(label: '#Art'),
+          ),
+        ),
+      ));
+      // Ink would paint on the Scaffold's Material, behind the card above.
+      expect(find.byType(Ink), findsNothing);
+      final decorated = tester.widgetList<Container>(find.descendant(
+        of: find.byType(CommunityPostTokenChip),
+        matching: find.byType(Container),
+      ));
+      expect(
+        decorated.any((box) =>
+            (box.decoration as BoxDecoration?)?.color == roles.surfaceRaised),
+        isTrue,
+      );
+    });
   }
 }

@@ -1672,6 +1672,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       _kubusMapController.ids.layers.locationAccuracyLayerId,
       kubusLocationAccuracyProperties(color: themeProvider.accentColor),
     );
+    await _layersManager?.refreshLocationAccent(themeProvider.accentColor);
     if (!mounted) return;
     _renderCoordinator.requestStyleUpdate(force: true);
   }

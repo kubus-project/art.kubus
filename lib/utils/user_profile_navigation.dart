@@ -174,10 +174,18 @@ class UserProfileNavigation {
     }
   }
 
+  static final RegExp _uuid = RegExp(
+    r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$',
+  );
+
   static String _identityKey(String? identifier) {
     final value = WalletUtils.canonical(identifier);
     if (value.isEmpty) return '';
-    // Wallet keys are case-sensitive; account IDs are treated as
+    // A UUID is an account ID and is case-insensitive. It must be recognised
+    // before the wallet heuristic, which accepts any 32+ character
+    // `[a-zA-Z0-9_-]` string (a hyphenated UUID included) and would keep its case.
+    if (_uuid.hasMatch(value)) return value.toLowerCase();
+    // Wallet keys are case-sensitive; other account IDs are treated as
     // case-insensitive stable identifiers.
     return WalletUtils.looksLikeWallet(value) ? value : value.toLowerCase();
   }

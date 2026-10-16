@@ -197,11 +197,69 @@ void main() {
     expect(pushedScreen, isA<desktop_visitor.UserProfileScreen>());
     expect(pushedScreen, isNot(isA<desktop_owner.ProfileScreen>()));
   });
+
+  testWidgets('an upper-case UUID still reaches the owner profile',
+      (tester) async {
+    const lowerId = 'abcdef12-3456-4abc-8def-0123456789ab';
+    final owner = _ownerProfile(userId: lowerId);
+    final screen = await _openDesktop(tester, owner, lowerId.toUpperCase());
+
+    expect(screen, isA<desktop_owner.ProfileScreen>());
+  });
+
+  testWidgets('wallet addresses stay case-sensitive for ownership',
+      (tester) async {
+    final screen =
+        await _openDesktop(tester, _ownerProfile(), _wallet.toLowerCase());
+
+    expect(screen, isA<desktop_visitor.UserProfileScreen>());
+  });
 }
 
-UserProfile _ownerProfile() => UserProfile(
+Future<Widget?> _openDesktop(
+  WidgetTester tester,
+  UserProfile owner,
+  String targetId,
+) async {
+  final profileProvider = ProfileProvider()..setCurrentUser(owner);
+  Widget? pushedScreen;
+  await tester.pumpWidget(
+    ChangeNotifierProvider<ProfileProvider>.value(
+      value: profileProvider,
+      child: MaterialApp(
+        home: MediaQuery(
+          data: const MediaQueryData(size: Size(1440, 900)),
+          child: DesktopShellScope(
+            pushScreen: (screen) => pushedScreen = screen,
+            popScreen: () {},
+            navigateToRoute: (_) {},
+            openNotifications: () {},
+            openFunctionsPanel: (_, {content}) {},
+            setFunctionsPanelContent: (_) {},
+            closeFunctionsPanel: () {},
+            canPop: false,
+            child: Builder(
+              builder: (context) => Scaffold(
+                body: TextButton(
+                  onPressed: () =>
+                      UserProfileNavigation.open(context, userId: targetId),
+                  child: const Text('Open profile'),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    ),
+  );
+  await tester.tap(find.text('Open profile'));
+  await tester.pump();
+  return pushedScreen;
+}
+
+UserProfile _ownerProfile({String userId = _accountId}) => UserProfile(
       id: _wallet,
-      userId: _accountId,
+      userId: userId,
       walletAddress: _wallet,
       publicActorId: 'public:$_wallet',
       username: 'current_artist',

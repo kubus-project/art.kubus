@@ -881,6 +881,22 @@ class MapLayersThemeSpec {
   final Color? pendingFill;
   final Color? pendingStroke;
 
+  /// The same spec with a new accent; every other colour is carried over.
+  MapLayersThemeSpec withLocationFill(Color fill) => MapLayersThemeSpec(
+        locationFill: fill,
+        locationStroke: locationStroke,
+        walkingRouteColor: walkingRouteColor,
+        walkingRouteCasingColor: walkingRouteCasingColor,
+        walkingLocationGlyphColor: walkingLocationGlyphColor,
+        walkingLocationGlyphStrokeColor: walkingLocationGlyphStrokeColor,
+        isometricPedestalTop: isometricPedestalTop,
+        isometricPedestalLeft: isometricPedestalLeft,
+        isometricPedestalRight: isometricPedestalRight,
+        isometricPedestalStroke: isometricPedestalStroke,
+        pendingFill: pendingFill,
+        pendingStroke: pendingStroke,
+      );
+
   Color get resolvedWalkingRouteColor => walkingRouteColor ?? locationFill;
   Color get resolvedWalkingRouteCasingColor =>
       walkingRouteCasingColor ?? locationStroke;
@@ -999,6 +1015,9 @@ class MapLayersManager {
   int? _initializedForStyleEpoch;
   MapRenderMode _currentMode = MapRenderMode.twoD;
   MapLayersThemeSpec? _themeSpec;
+  // The accent the pulse paint and the heading cone were built with. Both are
+  // baked at creation, so a later accent change has to refresh them explicitly.
+  Color? _locationDecorationFill;
   Map<String, dynamic> _walkingRouteData = _emptyFeatureCollection();
   bool _walkingNavigationVisible = false;
 
@@ -1041,6 +1060,37 @@ class MapLayersManager {
 
   void updateThemeSpec(MapLayersThemeSpec spec) {
     _themeSpec = spec;
+  }
+
+  /// The heading cone is a bitmap, so each accent gets its own image id.
+  String _locationHeadingImageIdFor(Color fill) =>
+      '${_ids.locationHeadingImageId}_${fill.toARGB32().toRadixString(16)}';
+
+  /// Re-colours the location pulse and heading cone after an accent change that
+  /// did not reload the style. The dot and accuracy circle are re-coloured by
+  /// the caller; these two keep their creation-time colour otherwise.
+  Future<void> refreshLocationAccent(Color fill) async {
+    final spec = _themeSpec;
+    if (spec == null) return;
+    _themeSpec = spec.withLocationFill(fill);
+    if (_locationDecorationFill == null || _locationDecorationFill == fill) {
+      return;
+    }
+    final epoch = _initializedForStyleEpoch;
+    final hex = MapLibreStyleUtils.hexRgb(fill);
+    await safeSetLayerProperties(
+      _ids.locationPulseLayerId,
+      ml.CircleLayerProperties(circleColor: hex, circleStrokeColor: hex),
+    );
+    if (!hasLayer(_ids.locationHeadingLayerId)) return;
+    await _ensureLocationHeadingImageRegistered(_themeSpec!);
+    if (_initializedForStyleEpoch != epoch) return;
+    await safeSetLayoutProperty(
+      _ids.locationHeadingLayerId,
+      'icon-image',
+      _locationHeadingImageIdFor(fill),
+    );
+    _locationDecorationFill = fill;
   }
 
   /// Call this whenever the style is (re)loaded and `styleEpoch` increments.
@@ -1998,7 +2048,7 @@ class MapLayersManager {
       _ids.locationSourceId,
       _ids.locationHeadingLayerId,
       ml.SymbolLayerProperties(
-        iconImage: _ids.locationHeadingImageId,
+        iconImage: _locationHeadingImageIdFor(theme.locationFill),
         iconSize: 0.5,
         iconRotate: const <Object>[
           'coalesce',
@@ -2035,6 +2085,7 @@ class MapLayersManager {
     );
     _addLayerCalls += 1;
     _layerIds.add(_ids.locationPulseLayerId);
+    _locationDecorationFill = theme.locationFill;
 
     await _controller.addCircleLayer(
       _ids.locationSourceId,
@@ -2264,7 +2315,7 @@ class MapLayersManager {
   Future<void> _ensureLocationHeadingImageRegistered(
     MapLayersThemeSpec theme,
   ) async {
-    final id = _ids.locationHeadingImageId;
+    final id = _locationHeadingImageIdFor(theme.locationFill);
     if (_registeredImages.contains(id)) return;
     final epoch = _initializedForStyleEpoch;
     final recorder = ui.PictureRecorder();
