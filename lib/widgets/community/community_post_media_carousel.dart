@@ -112,10 +112,12 @@ class _CommunityPostMediaCarouselState
   final Map<int, double> _naturalAspects = <int, double>{};
   int _index = 0;
   bool _hovering = false;
+  late Map<String, double> _videoAspects;
 
   @override
   void initState() {
     super.initState();
+    _captureVideoAspect();
     _probeImages();
   }
 
@@ -125,8 +127,22 @@ class _CommunityPostMediaCarouselState
     if (!_sameMedia(oldWidget.mediaUrls, widget.mediaUrls)) {
       _disposeProbes();
       _naturalAspects.clear();
+      _captureVideoAspect();
       _index = math.min(_index, math.max(0, widget.mediaUrls.length - 1));
       _probeImages();
+    }
+  }
+
+  void _captureVideoAspect() {
+    _videoAspects = <String, double>{};
+    for (final url in widget.mediaUrls.where(communityMediaUrlIsVideo)) {
+      final sourceUrl = communityMediaVideoSourceUrl(url);
+      final knownAspect = communityMediaVideoAspect(url) ??
+          CommunityPostVideoSlide.knownAspects[sourceUrl];
+      _videoAspects[url] =
+          knownAspect != null && knownAspect.isFinite && knownAspect > 0
+              ? knownAspect
+              : kCommunityVideoStageFallbackAspect;
     }
   }
 
@@ -271,12 +287,12 @@ class _CommunityPostMediaCarouselState
     final count = widget.mediaUrls.length;
     final multiple = count > 1;
 
-    final singleVideo =
-        count == 1 && communityMediaUrlIsVideo(widget.mediaUrls[0]);
+    final activeVideo = communityMediaUrlIsVideo(widget.mediaUrls[_index]);
+    final hasVideo = widget.mediaUrls.any(communityMediaUrlIsVideo);
     final stageAspect = kCommunityMediaStageAspect;
 
     Widget sizedStage(Widget child) {
-      if (!singleVideo) {
+      if (!hasVideo) {
         return AspectRatio(aspectRatio: stageAspect, child: child);
       }
       return LayoutBuilder(
@@ -294,21 +310,31 @@ class _CommunityPostMediaCarouselState
                     media.padding.vertical -
                     media.viewInsets.bottom,
               );
-          // Mobile reserves a stable viewing stage independent of metadata.
-          // The player contains every source aspect, including unknown media.
-          // Desktop retains its bounded feed stage. Resizing is deliberate;
-          // loading a poster/controller can never move the scroll anchor.
-          final mobile = media.size.shortestSide < 600;
-          final height = mobile
-              ? usableHeight
-              : math.min(
-                  math.max(
-                    kCommunityVideoStageMinHeight,
-                    stageWidth / kCommunityVideoStageFallbackAspect,
-                  ),
-                  usableHeight * kCommunityVideoStageViewportFraction,
-                );
-          return SizedBox(height: height, child: child);
+          // Keep the stage geometry fixed for this mounted carousel. A source
+          // aspect known before the first frame gives portrait clips the full
+          // usable viewport and keeps panoramas compact; otherwise the stable
+          // 16:9 fallback avoids a jump when player metadata arrives.
+          final aspect = _videoAspects[widget.mediaUrls[_index]] ??
+              kCommunityVideoStageFallbackAspect;
+          final videoHeight = math.min(
+            math.max(kCommunityVideoStageMinHeight, stageWidth / aspect),
+            usableHeight *
+                (media.size.shortestSide < 600
+                    ? 1
+                    : kCommunityVideoStageViewportFraction),
+          );
+          final height = activeVideo ? videoHeight : stageWidth / stageAspect;
+          // Moving between an image and a clip (or between clips of different
+          // shapes) is the only time the stage resizes, and it eases once for
+          // that deliberate page change. Metadata arriving later never moves it.
+          return AnimatedContainer(
+            duration: MediaQuery.disableAnimationsOf(context)
+                ? Duration.zero
+                : const Duration(milliseconds: 220),
+            curve: Curves.easeOutCubic,
+            height: height,
+            child: child,
+          );
         },
       );
     }

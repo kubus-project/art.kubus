@@ -766,6 +766,8 @@ class _ProfileScreenState extends State<ProfileScreen>
               : isArtist
                   ? l10n.settingsRoleArtistTitle
                   : l10n.navigationScreenProfile,
+          avatarEditLabel: l10n.profileEditAvatarClickToChange,
+          onAvatarEdit: _editProfile,
           avatarRadius: avatarRadius,
           avatar: AvatarWidget(
             wallet: wallet,

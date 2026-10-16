@@ -443,7 +443,7 @@ extension _SettingsScreenStatePart3 on _SettingsScreenState {
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text(
+            KubusFamilyBrandText(
               'art.kubus',
               style: KubusTypography.inter(
                 fontSize: 18,

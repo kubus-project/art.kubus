@@ -1,9 +1,60 @@
 import 'package:art_kubus/utils/design_tokens.dart';
 import 'package:art_kubus/widgets/common/kubus_screen_header.dart';
+import 'package:art_kubus/widgets/common/kubus_family_brand.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  test('family brand span styles only standalone kubus words', () {
+    const copy = 'art.kubus | kubus Node | kubus | kubus2 | package_kubus';
+    const headingStyle = TextStyle(
+      fontWeight: FontWeight.w700,
+      fontStyle: FontStyle.italic,
+    );
+    final span = KubusFamilyBrandText.span(copy, style: headingStyle);
+    final emphasized = span.children!
+        .whereType<TextSpan>()
+        .where((part) => part.style?.fontWeight == FontWeight.w800)
+        .toList();
+    final artPrefix = span.children!.whereType<TextSpan>().singleWhere(
+          (part) => part.text == 'art.',
+        );
+    final nodeSuffix = span.children!.whereType<TextSpan>().singleWhere(
+          (part) => part.text == ' Node',
+        );
+
+    expect(span.toPlainText(), copy);
+    expect(emphasized.map((part) => part.text), ['kubus', 'kubus', 'kubus']);
+    expect(
+      emphasized.every((part) => part.style?.fontStyle == FontStyle.italic),
+      isTrue,
+    );
+    expect(artPrefix.style?.fontWeight, FontWeight.w400);
+    expect(artPrefix.style?.fontStyle, FontStyle.normal);
+    expect(nodeSuffix.style?.fontWeight, FontWeight.w400);
+    expect(nodeSuffix.style?.fontStyle, FontStyle.normal);
+    expect(span.style, headingStyle);
+    expect(KubusFamilyBrandText.containsBrandToken('kubus-node'), isFalse);
+    expect(KubusFamilyBrandText.containsBrandToken('art.kubus'), isTrue);
+  });
+
+  testWidgets('family brand text exposes one complete accessible phrase',
+      (tester) async {
+    const copy = 'art.kubus | kubus Node | kubus-node';
+    final semantics = tester.ensureSemantics();
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: Scaffold(body: KubusFamilyBrandText(copy)),
+      ),
+    );
+
+    expect(
+      tester.getSemantics(find.byType(KubusFamilyBrandText)).label,
+      copy,
+    );
+    semantics.dispose();
+  });
+
   testWidgets(
       'KubusHeaderText uses standardized screen title and subtitle sizes on wide layouts',
       (tester) async {
@@ -132,5 +183,56 @@ void main() {
 
     expect(title.style?.fontSize, lessThan(KubusHeaderMetrics.screenTitle));
     expect(title.maxLines, 2);
+  });
+
+  testWidgets('header titles stay plain unless the caller opts in to branding',
+      (tester) async {
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: Scaffold(
+          body: Column(
+            children: [
+              KubusHeaderText(title: 'Kubus Smith'),
+              KubusHeaderText(title: 'art.kubus', brandTitle: true),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    // A user-authored title mentioning kubus is a single plain run.
+    expect(find.text('Kubus Smith'), findsOneWidget);
+    final branded = tester
+        .widgetList<RichText>(find.byType(RichText))
+        .firstWhere((r) => r.text.toPlainText() == 'art.kubus');
+    var emphasised = false;
+    branded.text.visitChildren((span) {
+      if (span is TextSpan && span.style?.fontWeight == FontWeight.w800) {
+        emphasised = true;
+      }
+      return true;
+    });
+    expect(emphasised, isTrue);
+  });
+
+  test('family brand span leaves hosts, package ids and paths plain', () {
+    for (final plain in const [
+      'art.kubus.site',
+      'https://art.kubus.site/app',
+      'com.kubus.app',
+      'www.kubus.site',
+      'api/kubus/v1',
+      'support@kubus.site',
+    ]) {
+      expect(
+        KubusFamilyBrandText.containsBrandToken(plain),
+        isFalse,
+        reason: plain,
+      );
+      expect(KubusFamilyBrandText.span(plain).toPlainText(), plain);
+    }
+    // A sentence-ending full stop does not make the brand a host name.
+    expect(KubusFamilyBrandText.containsBrandToken('Join art.kubus.'), isTrue);
+    expect(KubusFamilyBrandText.containsBrandToken('Open kubus Node'), isTrue);
   });
 }

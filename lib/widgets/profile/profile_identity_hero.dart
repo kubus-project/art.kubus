@@ -27,15 +27,16 @@ import 'profile_cover_field.dart';
 ///   overlap is a constant too and cannot drift with text scale.
 /// * Identity uses restrained contextual glass over the cover. On mobile its
 ///   dark surface and light foreground remain invariant across app themes.
-/// * The shared [ProfileIdentityBlock] carries the name, full handle,
-///   verification and role on both layouts.
+/// * The name and full handle stay in the shared identity block. Desktop keeps
+///   adjacent role and verification badges; mobile carries both in the single
+///   lower-right avatar badge.
 /// * Relationship and owner actions belong to the same composition. Wide
 ///   layouts place them beside the identity; phone layouts give them a
 ///   full-width run immediately below the avatar/identity group, so they do
 ///   not compete with the narrow text measure.
-/// * The role is said once. Artist and institution accounts carry their role
-///   badge inside the identity block, so the hero's role eyebrow is shown only
-///   for an account without a role badge.
+/// * The role is said once. Desktop shows role badges beside the name; mobile
+///   uses the avatar badge and does not repeat roles in the identity plate.
+///   The role eyebrow is reserved for an account without a role badge.
 /// * The avatar overlaps the cover. On ordinary phone widths the shared
 ///   identity block wraps beside it, and actions follow below the group.
 /// * The avatar is mounted bare: its own shape plus a soft neutral shadow for
@@ -57,6 +58,8 @@ class ProfileIdentityHero extends StatelessWidget {
     this.coverImageUrl,
     this.coverSemanticLabel,
     this.roleLabel,
+    this.avatarEditLabel,
+    this.onAvatarEdit,
     this.actions,
     this.identityStatus,
     this.density = ProfileIdentityDensity.compact,
@@ -90,6 +93,10 @@ class ProfileIdentityHero extends StatelessWidget {
   /// already carried by a badge. Ignored for artists and institutions: their
   /// [ProfileIdentityBlock] badge is the one public role indicator.
   final String? roleLabel;
+
+  /// Optional owner action. The avatar remains unchanged for public visitors.
+  final String? avatarEditLabel;
+  final VoidCallback? onAvatarEdit;
 
   /// Follow / Message. Normally [ProfileRelationshipActions].
   final Widget? actions;
@@ -238,6 +245,8 @@ class ProfileIdentityHero extends StatelessWidget {
                       isVerified: mobile && isVerified,
                       isArtist: mobile && isArtist,
                       isInstitution: mobile && isInstitution,
+                      editLabel: onAvatarEdit == null ? null : avatarEditLabel,
+                      onEdit: onAvatarEdit,
                       child: avatar),
                   const SizedBox(width: KubusSpacing.md),
                   // Content stays as wide as its identity, not as wide as the
@@ -276,6 +285,8 @@ class ProfileIdentityHero extends StatelessWidget {
                       isVerified: mobile && isVerified,
                       isArtist: mobile && isArtist,
                       isInstitution: mobile && isInstitution,
+                      editLabel: onAvatarEdit == null ? null : avatarEditLabel,
+                      onEdit: onAvatarEdit,
                       child: avatar,
                     ),
                   ),
@@ -337,6 +348,8 @@ class ProfileAvatarMount extends StatelessWidget {
     this.isVerified = false,
     this.isArtist = false,
     this.isInstitution = false,
+    this.editLabel,
+    this.onEdit,
   });
 
   final double radius;
@@ -344,33 +357,36 @@ class ProfileAvatarMount extends StatelessWidget {
   final bool isVerified;
   final bool isArtist;
   final bool isInstitution;
+  final String? editLabel;
+  final VoidCallback? onEdit;
 
   @override
   Widget build(BuildContext context) {
     final roles = KubusColorRoles.of(context);
     final l10n = AppLocalizations.of(context)!;
+    final hasRole = isArtist || isInstitution;
     final roleColor = isInstitution
         ? roles.institutionBadgeAccent
         : isArtist
             ? roles.artistBadgeAccent
-            : roles.userAccent;
+            : roles.success;
     final roleIcon = isInstitution
         ? Icons.account_balance_rounded
         : isArtist
             ? Icons.brush_rounded
-            : Icons.person_rounded;
-    final roleLabel = isInstitution
-        ? l10n.badgeInstitutionLabel
-        : isArtist
-            ? l10n.badgeArtistLabel
-            : '';
-    final badgeLabel = [roleLabel, if (isVerified) l10n.peopleVerifiedLabel]
-        .where((label) => label.isNotEmpty)
-        .join(', ');
+            : Icons.verified_rounded;
+    final roleLabels = <String>[
+      if (isArtist) l10n.badgeArtistLabel,
+      if (isInstitution) l10n.badgeInstitutionLabel,
+    ];
+    final badgeLabel = [
+      ...roleLabels,
+      if (isVerified) l10n.peopleVerifiedLabel,
+    ].where((label) => label.isNotEmpty).join(', ');
     final badgeForeground = roleColor.computeLuminance() > 0.179
         ? KubusColorRoles.light.foreground
         : KubusColorRoles.dark.foreground;
-    return DecoratedBox(
+    Widget avatar = DecoratedBox(
       key: const ValueKey<String>('profile-hero-avatar-mount'),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(
@@ -388,27 +404,68 @@ class ProfileAvatarMount extends StatelessWidget {
         clipBehavior: Clip.none,
         children: [
           child,
-          if (isVerified || isArtist || isInstitution)
+          if (isVerified || hasRole)
             Positioned(
               right: 0,
               bottom: 0,
-              child: DecoratedBox(
-                key: const ValueKey<String>('profile-avatar-role-badge'),
-                decoration: BoxDecoration(
-                  color: roleColor,
-                  borderRadius: BorderRadius.circular(
-                    AvatarWidget.shapeRadiusFor(
-                        radius: KubusHeaderMetrics.actionIcon / 2 +
-                            KubusSpacing.xs),
-                  ),
-                ),
-                child: Padding(
-                  padding: const EdgeInsets.all(KubusSpacing.xs),
-                  child: Icon(
-                    roleIcon,
-                    color: badgeForeground,
-                    size: KubusHeaderMetrics.actionIcon,
-                    semanticLabel: badgeLabel,
+              child: Semantics(
+                label: badgeLabel,
+                child: ExcludeSemantics(
+                  child: DecoratedBox(
+                    key: const ValueKey<String>('profile-avatar-role-badge'),
+                    decoration: BoxDecoration(
+                      color: roleColor,
+                      borderRadius: BorderRadius.circular(
+                        AvatarWidget.shapeRadiusFor(
+                            radius: KubusHeaderMetrics.actionIcon / 2 +
+                                KubusSpacing.xs),
+                      ),
+                    ),
+                    child: SizedBox(
+                      width: isArtist && isInstitution ? 28 : 20,
+                      height: 20,
+                      child: Stack(
+                        clipBehavior: Clip.none,
+                        children: [
+                          Center(
+                            child: isArtist && isInstitution
+                                ? Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                        Icon(Icons.brush_rounded,
+                                            color: badgeForeground, size: 12),
+                                        Icon(Icons.account_balance_rounded,
+                                            color: badgeForeground, size: 12),
+                                      ])
+                                : Icon(
+                                    roleIcon,
+                                    color: badgeForeground,
+                                    size: 14,
+                                  ),
+                          ),
+                          if (isVerified && hasRole)
+                            Positioned(
+                              top: -KubusSpacing.xxs,
+                              right: -KubusSpacing.xxs,
+                              child: DecoratedBox(
+                                decoration: BoxDecoration(
+                                  color: roles.success,
+                                  shape: BoxShape.circle,
+                                  border: Border.all(
+                                    color: badgeForeground,
+                                    width: KubusSizes.hairline,
+                                  ),
+                                ),
+                                child: Icon(
+                                  Icons.check_rounded,
+                                  size: KubusSpacing.sm,
+                                  color: roles.onActive,
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
                   ),
                 ),
               ),
@@ -416,6 +473,47 @@ class ProfileAvatarMount extends StatelessWidget {
         ],
       ),
     );
+    final editLabel = this.editLabel?.trim();
+    if (onEdit != null && editLabel != null && editLabel.isNotEmpty) {
+      avatar = Tooltip(
+        message: editLabel,
+        child: Semantics(
+          button: true,
+          label: editLabel,
+          child: InkWell(
+            onTap: onEdit,
+            borderRadius: BorderRadius.circular(
+              AvatarWidget.shapeRadiusFor(radius: radius),
+            ),
+            child: Stack(
+              clipBehavior: Clip.none,
+              children: [
+                avatar,
+                Positioned(
+                  left: 0,
+                  bottom: 0,
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      color: roles.active,
+                      borderRadius: BorderRadius.circular(KubusRadius.xs),
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.all(KubusSpacing.xs),
+                      child: Icon(
+                        Icons.edit_outlined,
+                        size: KubusSpacing.md,
+                        color: roles.onActive,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+    return avatar;
   }
 }
 

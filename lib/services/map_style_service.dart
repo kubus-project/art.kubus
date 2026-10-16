@@ -169,6 +169,46 @@ class MapStyleService {
       if (decoded is! Map<String, dynamic>) return styleJson;
       if (decoded.containsKey('projection')) return styleJson;
       decoded['projection'] = const <String, Object>{'type': 'globe'};
+      final layers = decoded['layers'];
+      String? background;
+      if (layers is List) {
+        for (final layer in layers.whereType<Map>()) {
+          if (layer['type'] != 'background') continue;
+          // A background layer may omit `paint` or `background-color` and rely
+          // on the MapLibre default, which is black.
+          final paint = layer['paint'];
+          background =
+              (paint is Map ? paint['background-color']?.toString() : null) ??
+                  '#000000';
+          break;
+        }
+      }
+      final hex = background?.replaceFirst('#', '');
+      final value = hex?.length == 6 ? int.tryParse(hex!, radix: 16) : null;
+      final dark = value != null &&
+          (((value >> 16) & 255) + ((value >> 8) & 255) + (value & 255)) < 384;
+      final ground = dark ? '#000000' : '#ffffff';
+      if (layers is List) {
+        for (final layer in layers.whereType<Map>()) {
+          if (layer['type'] != 'background') continue;
+          final paint = layer['paint'];
+          if (paint is Map) {
+            paint['background-color'] = ground;
+          } else {
+            layer['paint'] = <String, Object>{'background-color': ground};
+          }
+        }
+      }
+      // A globe's sky otherwise paints over the canvas background. Theme
+      // controls that ground only; astronomical illumination has its own owner.
+      decoded['sky'] = <String, Object>{
+        'sky-color': ground,
+        'horizon-color': ground,
+        'fog-color': ground,
+        'sky-horizon-blend': 0,
+        'horizon-fog-blend': 0,
+        'atmosphere-blend': 0,
+      };
       return jsonEncode(decoded);
     } on FormatException {
       return styleJson;

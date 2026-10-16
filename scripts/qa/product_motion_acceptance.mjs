@@ -32,7 +32,9 @@ import { fileURLToPath } from 'node:url';
 import { chromium, firefox } from 'playwright';
 import {
   FLOAT_PERIOD_MS,
+  MAX_PHASE_GAP_FRACTION,
   MIN_SETTLED_FRAMES,
+  getNextSampleDelayMs,
   getSamplingDeadlineMs,
   getSettledSamplingCoverage,
 } from './product_motion_sampling.mjs';
@@ -78,7 +80,7 @@ const STILL_MAX = 0.6; // peak-to-peak when it must not move
 const SHADOW_MIN = 1.2; // accent shadow below the tile
 const REST_TOLERANCE = 0.6; // back at rest after exit
 const SETTLE_MS = 600; // entry (180 ms) is over
-const MAX_HOLD_MS = 60000;
+const MAX_HOLD_MS = 90000;
 
 const MIME = {
   '.html': 'text/html; charset=utf-8',
@@ -241,7 +243,9 @@ async function measureCase(page, helper, c) {
   const captureDurations = [];
   let sampleDeadlineMs = 25000;
   // Keep the 14-frame and full-period requirements. If Firefox captures are
-  // slow under CI load, extend this window from measured latency up to 60 sec.
+  // slow under CI load, extend this window from measured latency up to 90 sec.
+  // Firefox diagnostics recorded ~4.9 sec per capture: a 60 sec cap cannot
+  // supply 14 painted samples. Sample counts and pixel thresholds stay fixed.
   while (true) {
     const elapsed = Date.now() - t0;
     const coverage = getSettledSamplingCoverage(hoverFrames, {
@@ -249,19 +253,30 @@ async function measureCase(page, helper, c) {
     });
     if (elapsed >= holdMs && coverage.complete) break;
     if (elapsed >= sampleDeadlineMs) break;
+    // Slow browsers capture at a steady cadence that can be a whole number of
+    // float periods; steer each capture to an unsampled phase so the settled
+    // samples really cover the cycle. The pixel thresholds are untouched.
+    const phaseDelayMs = hoverFrames.length
+      ? getNextSampleDelayMs(hoverFrames, {
+          settleMs: SETTLE_MS,
+          nowMs: elapsed,
+          expectedCaptureMs: captureDurations.at(-1) ?? 0,
+        })
+      : 0;
+    if (phaseDelayMs) await page.waitForTimeout(phaseDelayMs);
     const captureStarted = Date.now();
     const b64 = await shot();
     const captureEnded = Date.now();
     const captureMs = captureEnded - captureStarted;
     captureDurations.push(captureMs);
-    const recentCaptures = captureDurations.slice(-5).sort((a, b) => a - b);
-    const medianCaptureMs = recentCaptures[Math.floor(recentCaptures.length / 2)];
+    const recentCaptureMs = Math.max(...captureDurations.slice(-5));
     sampleDeadlineMs = Math.max(
       sampleDeadlineMs,
-      getSamplingDeadlineMs(medianCaptureMs, {
+      getSamplingDeadlineMs(recentCaptureMs, {
         holdMs,
         settleMs: SETTLE_MS,
         maxHoldMs: MAX_HOLD_MS,
+        phaseWaitMs: FLOAT_PERIOD_MS / 4,
       }),
     );
     hoverFrames.push({ t: (captureStarted + captureEnded) / 2 - t0, b64 });
@@ -308,6 +323,7 @@ async function measureCase(page, helper, c) {
     settledSpanMs: settled.length > 1 ? settled.at(-1).t - settled[0].t : 0,
     captureMsMean: +stats(captureDurations).mean.toFixed(1),
     captureMsMax: Math.max(...captureDurations),
+    maxPhaseGapMs: +getSettledSamplingCoverage(hoverFrames, { settleMs: SETTLE_MS }).maxPhaseGapMs.toFixed(0),
     sampleDeadlineMs,
     entry: hover.filter((m) => m.t < 400).map((m) => ({ t: m.t, dy: +m.dy.toFixed(2) })),
     liftMean: +lift.mean.toFixed(2),
@@ -324,6 +340,9 @@ function judge(r) {
   const failures = [];
   if (r.settledFrames < MIN_SETTLED_FRAMES) {
     failures.push(`only ${r.settledFrames} settled pixel samples; need ${MIN_SETTLED_FRAMES}`);
+  }
+  if (r.maxPhaseGapMs > FLOAT_PERIOD_MS * MAX_PHASE_GAP_FRACTION) {
+    failures.push(`samples leave a ${r.maxPhaseGapMs}ms hole in the ${FLOAT_PERIOD_MS}ms float phase`);
   }
   if (r.settledSpanMs < FLOAT_PERIOD_MS) {
     failures.push(`settled samples span ${r.settledSpanMs}ms; need a full ${FLOAT_PERIOD_MS}ms float period`);

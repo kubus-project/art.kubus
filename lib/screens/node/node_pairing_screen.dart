@@ -13,6 +13,7 @@ import '../../providers/kubus_node_provider.dart';
 import '../../utils/design_tokens.dart';
 import '../../utils/node_state_presentation.dart';
 import '../../widgets/common/kubus_glass_icon_button.dart';
+import '../../widgets/common/kubus_family_brand.dart';
 import '../../widgets/glass_components.dart';
 import '../../widgets/inline_loading.dart';
 import '../../widgets/kubus_button.dart';
@@ -311,7 +312,7 @@ class _NodePairingScreenState extends State<NodePairingScreen> {
           style: Theme.of(context).textTheme.headlineSmall,
         ),
         const SizedBox(height: KubusSpacing.sm),
-        Text(_l10n.kubusNodePairBody),
+        KubusFamilyBrandText(_l10n.kubusNodePairBody),
         const SizedBox(height: KubusSpacing.lg),
         TextField(
           controller: _manualController,

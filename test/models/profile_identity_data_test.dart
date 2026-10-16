@@ -66,13 +66,28 @@ void main() {
     expect(identity.label, 'abcdef...7890');
   });
 
-  test('community identity navigates by wallet before internal user UUID', () {
+  test('community identity navigates by canonical account ID before wallet',
+      () {
     final identity = ProfileIdentityData.fromIdentityPayload({
       'author': {
         'userId': '11111111-1111-4111-8111-111111111111',
         'walletAddress': 'ArtistWallet111111111111111111111111111111111',
         'displayName': 'Artist User',
         'username': 'artist_user',
+      },
+    }, fallbackLabel: 'Unknown author');
+
+    expect(
+      identity.navigationIdentifier,
+      '11111111-1111-4111-8111-111111111111',
+    );
+  });
+
+  test('wallet-only identity retains its linked wallet route', () {
+    final identity = ProfileIdentityData.fromIdentityPayload({
+      'author': {
+        'walletAddress': 'ArtistWallet111111111111111111111111111111111',
+        'displayName': 'Artist User',
       },
     }, fallbackLabel: 'Unknown author');
 

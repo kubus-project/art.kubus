@@ -68,6 +68,8 @@ ProfileIdentityHero _hero({
   bool isVerified = false,
   String? roleLabel = 'Artist profile',
   bool withActions = true,
+  VoidCallback? onAvatarEdit,
+  String? avatarEditLabel,
   String? coverImageUrl,
 }) {
   return ProfileIdentityHero(
@@ -78,6 +80,8 @@ ProfileIdentityHero _hero({
     isVerified: isVerified,
     roleLabel: roleLabel,
     coverImageUrl: coverImageUrl,
+    avatarEditLabel: avatarEditLabel,
+    onAvatarEdit: onAvatarEdit,
     avatarRadius: 44,
     avatar: Container(
       key: _avatarKey,
@@ -120,6 +124,13 @@ void main() {
       expect(name.style!.color, KubusColorRoles.dark.foreground);
       expect(handle.style!.color, KubusColorRoles.dark.foregroundMuted);
       expect(find.byIcon(Icons.brush_rounded), findsOneWidget);
+      expect(find.byIcon(Icons.check_rounded), findsOneWidget);
+      final badgeSemantics = tester.ensureSemantics();
+      expect(
+        find.bySemanticsLabel('Artist, Verified'),
+        findsOneWidget,
+      );
+      badgeSemantics.dispose();
       final badge = tester.getRect(
           find.byKey(const ValueKey<String>('profile-avatar-role-badge')));
       final avatar = tester.getRect(find.byKey(_avatarKey));
@@ -155,7 +166,7 @@ void main() {
               : KubusColorRoles.dark.artistBadgeAccent);
       final icon = tester.widget<Icon>(find.byIcon(
           institution ? Icons.account_balance_rounded : Icons.brush_rounded));
-      expect(icon.semanticLabel, institution ? 'Institution' : 'Artist');
+      expect(icon.semanticLabel, isNull);
       expect(find.text(institution ? 'INSTITUTION' : 'ARTIST'), findsNothing);
       final semantics = tester.ensureSemantics();
       expect(find.bySemanticsLabel(institution ? 'Institution' : 'Artist'),
@@ -165,6 +176,48 @@ void main() {
       expect(tester.takeException(), isNull);
     });
   }
+
+  testWidgets('dual role and verification share one truthful avatar badge',
+      (tester) async {
+    await tester.pumpWidget(
+      _harness(
+        _hero(isArtist: true, isInstitution: true, isVerified: true),
+        width: 390,
+      ),
+    );
+    await tester.pump();
+
+    expect(
+      find.byKey(const ValueKey<String>('profile-avatar-role-badge')),
+      findsOneWidget,
+    );
+    expect(find.byIcon(Icons.account_balance_rounded), findsOneWidget);
+    expect(find.byIcon(Icons.check_rounded), findsOneWidget);
+    final semantics = tester.ensureSemantics();
+    expect(
+      find.bySemanticsLabel('Artist, Institution, Verified'),
+      findsOneWidget,
+    );
+    semantics.dispose();
+  });
+
+  testWidgets('owner avatar exposes an edit action', (tester) async {
+    var edits = 0;
+    await tester.pumpWidget(
+      _harness(
+        _hero(
+          onAvatarEdit: () => edits++,
+          avatarEditLabel: 'Tap to change avatar',
+        ),
+        width: 390,
+      ),
+    );
+    await tester.pump();
+
+    expect(find.byIcon(Icons.edit_outlined), findsOneWidget);
+    await tester.tap(find.byKey(_avatarKey));
+    expect(edits, 1);
+  });
 
   testWidgets('the identity plate shrinks to its content on desktop', (
     tester,
