@@ -1,0 +1,794 @@
+{
+ "schema": 1,
+ "note": "Chromium 5.24 hardware GL (RTX 3080 Ti, ANGLE D3D11), headless; frozen HTTP replay; serial, alternating before/after per round",
+ "before": {
+  "sha": "c8a742e9"
+ },
+ "after": {
+  "sha": "304e0b08 (lib identical to 41a97d6f)"
+ },
+ "appearance": [
+  {
+   "cfg": "after",
+   "viewport": "chromium-390-light",
+   "cache": "cold",
+   "covers": {
+    "count": 31,
+    "firstAfterZoom13Ms": 55,
+    "lastAfterZoom13Ms": 3437
+   },
+   "canonical": {
+    "count": 51,
+    "firstAfterZoom13Ms": 0,
+    "lastAfterZoom13Ms": 0
+   },
+   "cameraCompletionMs": 2863
+  },
+  {
+   "cfg": "after",
+   "viewport": "chromium-390-light",
+   "cache": "warm",
+   "covers": {
+    "count": 40,
+    "firstAfterZoom13Ms": 0,
+    "lastAfterZoom13Ms": 481
+   },
+   "canonical": {
+    "count": 51,
+    "firstAfterZoom13Ms": 0,
+    "lastAfterZoom13Ms": 0
+   },
+   "cameraCompletionMs": 2816
+  },
+  {
+   "cfg": "after",
+   "viewport": "chromium-1440-light",
+   "cache": "cold",
+   "covers": {
+    "count": 27,
+    "firstAfterZoom13Ms": 375,
+    "lastAfterZoom13Ms": 3260
+   },
+   "canonical": {
+    "count": 54,
+    "firstAfterZoom13Ms": 0,
+    "lastAfterZoom13Ms": 0
+   },
+   "cameraCompletionMs": 2822
+  },
+  {
+   "cfg": "after",
+   "viewport": "chromium-1440-light",
+   "cache": "warm",
+   "covers": {
+    "count": 43,
+    "firstAfterZoom13Ms": 0,
+    "lastAfterZoom13Ms": 1220
+   },
+   "canonical": {
+    "count": 54,
+    "firstAfterZoom13Ms": 0,
+    "lastAfterZoom13Ms": 0
+   },
+   "cameraCompletionMs": 2862
+  },
+  {
+   "cfg": "after",
+   "viewport": "chromium-390-light",
+   "cache": "cold",
+   "covers": {
+    "count": 32,
+    "firstAfterZoom13Ms": 0,
+    "lastAfterZoom13Ms": 3421
+   },
+   "canonical": {
+    "count": 51,
+    "firstAfterZoom13Ms": 0,
+    "lastAfterZoom13Ms": 0
+   },
+   "cameraCompletionMs": 2824
+  },
+  {
+   "cfg": "after",
+   "viewport": "chromium-390-light",
+   "cache": "warm",
+   "covers": {
+    "count": 40,
+    "firstAfterZoom13Ms": 0,
+    "lastAfterZoom13Ms": 441
+   },
+   "canonical": {
+    "count": 51,
+    "firstAfterZoom13Ms": 0,
+    "lastAfterZoom13Ms": 0
+   },
+   "cameraCompletionMs": 2847
+  },
+  {
+   "cfg": "after",
+   "viewport": "chromium-1440-light",
+   "cache": "cold",
+   "covers": {
+    "count": 27,
+    "firstAfterZoom13Ms": 366,
+    "lastAfterZoom13Ms": 3249
+   },
+   "canonical": {
+    "count": 54,
+    "firstAfterZoom13Ms": 0,
+    "lastAfterZoom13Ms": 0
+   },
+   "cameraCompletionMs": 2845
+  },
+  {
+   "cfg": "after",
+   "viewport": "chromium-1440-light",
+   "cache": "warm",
+   "covers": {
+    "count": 43,
+    "firstAfterZoom13Ms": 0,
+    "lastAfterZoom13Ms": 1243
+   },
+   "canonical": {
+    "count": 54,
+    "firstAfterZoom13Ms": 0,
+    "lastAfterZoom13Ms": 0
+   },
+   "cameraCompletionMs": 2870
+  },
+  {
+   "cfg": "after",
+   "viewport": "chromium-390-light",
+   "cache": "cold",
+   "covers": {
+    "count": 31,
+    "firstAfterZoom13Ms": 57,
+    "lastAfterZoom13Ms": 3431
+   },
+   "canonical": {
+    "count": 51,
+    "firstAfterZoom13Ms": 0,
+    "lastAfterZoom13Ms": 0
+   },
+   "cameraCompletionMs": 2846
+  },
+  {
+   "cfg": "after",
+   "viewport": "chromium-390-light",
+   "cache": "warm",
+   "covers": {
+    "count": 40,
+    "firstAfterZoom13Ms": 0,
+    "lastAfterZoom13Ms": 476
+   },
+   "canonical": {
+    "count": 51,
+    "firstAfterZoom13Ms": 0,
+    "lastAfterZoom13Ms": 0
+   },
+   "cameraCompletionMs": 2815
+  },
+  {
+   "cfg": "after",
+   "viewport": "chromium-1440-light",
+   "cache": "cold",
+   "covers": {
+    "count": 26,
+    "firstAfterZoom13Ms": 316,
+    "lastAfterZoom13Ms": 3175
+   },
+   "canonical": {
+    "count": 54,
+    "firstAfterZoom13Ms": 0,
+    "lastAfterZoom13Ms": 0
+   },
+   "cameraCompletionMs": 2824
+  },
+  {
+   "cfg": "after",
+   "viewport": "chromium-1440-light",
+   "cache": "warm",
+   "covers": {
+    "count": 42,
+    "firstAfterZoom13Ms": 0,
+    "lastAfterZoom13Ms": 1005
+   },
+   "canonical": {
+    "count": 53,
+    "firstAfterZoom13Ms": 0,
+    "lastAfterZoom13Ms": 0
+   },
+   "cameraCompletionMs": 2853
+  },
+  {
+   "cfg": "before",
+   "viewport": "chromium-390-light",
+   "cache": "cold",
+   "covers": {
+    "count": 27,
+    "firstAfterZoom13Ms": 305,
+    "lastAfterZoom13Ms": 3371
+   },
+   "canonical": {
+    "count": 51,
+    "firstAfterZoom13Ms": 0,
+    "lastAfterZoom13Ms": 0
+   },
+   "cameraCompletionMs": 2843
+  },
+  {
+   "cfg": "before",
+   "viewport": "chromium-390-light",
+   "cache": "warm",
+   "covers": {
+    "count": 40,
+    "firstAfterZoom13Ms": 0,
+    "lastAfterZoom13Ms": 1396
+   },
+   "canonical": {
+    "count": 51,
+    "firstAfterZoom13Ms": 0,
+    "lastAfterZoom13Ms": 0
+   },
+   "cameraCompletionMs": 2832
+  },
+  {
+   "cfg": "before",
+   "viewport": "chromium-1440-light",
+   "cache": "cold",
+   "covers": {
+    "count": 27,
+    "firstAfterZoom13Ms": 439,
+    "lastAfterZoom13Ms": 3403
+   },
+   "canonical": {
+    "count": 54,
+    "firstAfterZoom13Ms": 0,
+    "lastAfterZoom13Ms": 0
+   },
+   "cameraCompletionMs": 2852
+  },
+  {
+   "cfg": "before",
+   "viewport": "chromium-1440-light",
+   "cache": "warm",
+   "covers": {
+    "count": 43,
+    "firstAfterZoom13Ms": 0,
+    "lastAfterZoom13Ms": 1840
+   },
+   "canonical": {
+    "count": 54,
+    "firstAfterZoom13Ms": 0,
+    "lastAfterZoom13Ms": 0
+   },
+   "cameraCompletionMs": 2830
+  },
+  {
+   "cfg": "before",
+   "viewport": "chromium-390-light",
+   "cache": "cold",
+   "covers": {
+    "count": 26,
+    "firstAfterZoom13Ms": 300,
+    "lastAfterZoom13Ms": 3286
+   },
+   "canonical": {
+    "count": 51,
+    "firstAfterZoom13Ms": 0,
+    "lastAfterZoom13Ms": 0
+   },
+   "cameraCompletionMs": 2833
+  },
+  {
+   "cfg": "before",
+   "viewport": "chromium-390-light",
+   "cache": "warm",
+   "covers": {
+    "count": 39,
+    "firstAfterZoom13Ms": 0,
+    "lastAfterZoom13Ms": 1377
+   },
+   "canonical": {
+    "count": 51,
+    "firstAfterZoom13Ms": 0,
+    "lastAfterZoom13Ms": 0
+   },
+   "cameraCompletionMs": 2848
+  },
+  {
+   "cfg": "before",
+   "viewport": "chromium-1440-light",
+   "cache": "cold",
+   "covers": {
+    "count": 24,
+    "firstAfterZoom13Ms": 425,
+    "lastAfterZoom13Ms": 3218
+   },
+   "canonical": {
+    "count": 54,
+    "firstAfterZoom13Ms": 0,
+    "lastAfterZoom13Ms": 0
+   },
+   "cameraCompletionMs": 2827
+  },
+  {
+   "cfg": "before",
+   "viewport": "chromium-1440-light",
+   "cache": "warm",
+   "covers": {
+    "count": 43,
+    "firstAfterZoom13Ms": 0,
+    "lastAfterZoom13Ms": 1981
+   },
+   "canonical": {
+    "count": 54,
+    "firstAfterZoom13Ms": 0,
+    "lastAfterZoom13Ms": 0
+   },
+   "cameraCompletionMs": 2868
+  },
+  {
+   "cfg": "before",
+   "viewport": "chromium-390-light",
+   "cache": "cold",
+   "covers": {
+    "count": 26,
+    "firstAfterZoom13Ms": 306,
+    "lastAfterZoom13Ms": 3195
+   },
+   "canonical": {
+    "count": 51,
+    "firstAfterZoom13Ms": 0,
+    "lastAfterZoom13Ms": 0
+   },
+   "cameraCompletionMs": 2843
+  },
+  {
+   "cfg": "before",
+   "viewport": "chromium-390-light",
+   "cache": "warm",
+   "covers": {
+    "count": 40,
+    "firstAfterZoom13Ms": 0,
+    "lastAfterZoom13Ms": 1460
+   },
+   "canonical": {
+    "count": 51,
+    "firstAfterZoom13Ms": 0,
+    "lastAfterZoom13Ms": 0
+   },
+   "cameraCompletionMs": 2842
+  },
+  {
+   "cfg": "before",
+   "viewport": "chromium-1440-light",
+   "cache": "cold",
+   "covers": {
+    "count": 25,
+    "firstAfterZoom13Ms": 365,
+    "lastAfterZoom13Ms": 3390
+   },
+   "canonical": {
+    "count": 54,
+    "firstAfterZoom13Ms": 0,
+    "lastAfterZoom13Ms": 0
+   },
+   "cameraCompletionMs": 2843
+  },
+  {
+   "cfg": "before",
+   "viewport": "chromium-1440-light",
+   "cache": "warm",
+   "covers": {
+    "count": 43,
+    "firstAfterZoom13Ms": 0,
+    "lastAfterZoom13Ms": 1935
+   },
+   "canonical": {
+    "count": 54,
+    "firstAfterZoom13Ms": 0,
+    "lastAfterZoom13Ms": 0
+   },
+   "cameraCompletionMs": 2829
+  }
+ ],
+ "frames": [
+  {
+   "cfg": "after",
+   "viewport": "390x844",
+   "all": {
+    "frames": 1586,
+    "p50": 16.7,
+    "p90": 16.7,
+    "p95": 16.8,
+    "p99": 33.3,
+    "max": 300,
+    "over33": 10,
+    "over50": 4,
+    "missed60HzFrames": 82
+   },
+   "setData": {
+    "calls": 139,
+    "totalMs": 6.2,
+    "max": 0.2
+   },
+   "images": {
+    "addImageDuringPath": 93,
+    "removeImage": 0,
+    "peakActive": 96
+   },
+   "cover": {
+    "requests": 36,
+    "decodedKb": 522
+   },
+   "covers": {
+    "registered": 43,
+    "registeredWhileMoving": 25
+   }
+  },
+  {
+   "cfg": "after",
+   "viewport": "1440x900",
+   "all": {
+    "frames": 1593,
+    "p50": 16.7,
+    "p90": 16.7,
+    "p95": 16.8,
+    "p99": 16.8,
+    "max": 300,
+    "over33": 11,
+    "over50": 4,
+    "missed60HzFrames": 71
+   },
+   "setData": {
+    "calls": 129,
+    "totalMs": 5.8,
+    "max": 0.2
+   },
+   "images": {
+    "addImageDuringPath": 97,
+    "removeImage": 0,
+    "peakActive": 100
+   },
+   "cover": {
+    "requests": 28,
+    "decodedKb": 462
+   },
+   "covers": {
+    "registered": 43,
+    "registeredWhileMoving": 20
+   }
+  },
+  {
+   "cfg": "after",
+   "viewport": "390x844",
+   "all": {
+    "frames": 1582,
+    "p50": 16.7,
+    "p90": 16.7,
+    "p95": 16.8,
+    "p99": 33.4,
+    "max": 216.7,
+    "over33": 13,
+    "over50": 6,
+    "missed60HzFrames": 82
+   },
+   "setData": {
+    "calls": 142,
+    "totalMs": 6.8,
+    "max": 0.2
+   },
+   "images": {
+    "addImageDuringPath": 93,
+    "removeImage": 0,
+    "peakActive": 96
+   },
+   "cover": {
+    "requests": 36,
+    "decodedKb": 522
+   },
+   "covers": {
+    "registered": 43,
+    "registeredWhileMoving": 24
+   }
+  },
+  {
+   "cfg": "after",
+   "viewport": "1440x900",
+   "all": {
+    "frames": 1604,
+    "p50": 16.7,
+    "p90": 16.7,
+    "p95": 16.8,
+    "p99": 33.2,
+    "max": 316.7,
+    "over33": 13,
+    "over50": 3,
+    "missed60HzFrames": 60
+   },
+   "setData": {
+    "calls": 133,
+    "totalMs": 5.4,
+    "max": 0.3
+   },
+   "images": {
+    "addImageDuringPath": 97,
+    "removeImage": 0,
+    "peakActive": 100
+   },
+   "cover": {
+    "requests": 28,
+    "decodedKb": 462
+   },
+   "covers": {
+    "registered": 43,
+    "registeredWhileMoving": 21
+   }
+  },
+  {
+   "cfg": "after",
+   "viewport": "390x844",
+   "all": {
+    "frames": 1579,
+    "p50": 16.7,
+    "p90": 16.7,
+    "p95": 16.8,
+    "p99": 33.3,
+    "max": 316.5,
+    "over33": 12,
+    "over50": 5,
+    "missed60HzFrames": 86
+   },
+   "setData": {
+    "calls": 136,
+    "totalMs": 5.9,
+    "max": 0.7
+   },
+   "images": {
+    "addImageDuringPath": 93,
+    "removeImage": 0,
+    "peakActive": 96
+   },
+   "cover": {
+    "requests": 36,
+    "decodedKb": 522
+   },
+   "covers": {
+    "registered": 43,
+    "registeredWhileMoving": 25
+   }
+  },
+  {
+   "cfg": "after",
+   "viewport": "1440x900",
+   "all": {
+    "frames": 1595,
+    "p50": 16.7,
+    "p90": 16.7,
+    "p95": 16.8,
+    "p99": 16.8,
+    "max": 333.4,
+    "over33": 10,
+    "over50": 4,
+    "missed60HzFrames": 69
+   },
+   "setData": {
+    "calls": 128,
+    "totalMs": 5.4,
+    "max": 0.3
+   },
+   "images": {
+    "addImageDuringPath": 97,
+    "removeImage": 0,
+    "peakActive": 100
+   },
+   "cover": {
+    "requests": 28,
+    "decodedKb": 462
+   },
+   "covers": {
+    "registered": 43,
+    "registeredWhileMoving": 20
+   }
+  },
+  {
+   "cfg": "before",
+   "viewport": "390x844",
+   "all": {
+    "frames": 1582,
+    "p50": 16.7,
+    "p90": 16.7,
+    "p95": 16.8,
+    "p99": 33.4,
+    "max": 300,
+    "over33": 14,
+    "over50": 6,
+    "missed60HzFrames": 79
+   },
+   "setData": {
+    "calls": 161,
+    "totalMs": 6.4,
+    "max": 0.2
+   },
+   "images": {
+    "addImageDuringPath": 93,
+    "removeImage": 0,
+    "peakActive": 96
+   },
+   "cover": {
+    "requests": 36,
+    "decodedKb": 522
+   },
+   "covers": {
+    "registered": 43,
+    "registeredWhileMoving": 17
+   }
+  },
+  {
+   "cfg": "before",
+   "viewport": "1440x900",
+   "all": {
+    "frames": 1598,
+    "p50": 16.7,
+    "p90": 16.7,
+    "p95": 16.8,
+    "p99": 33.2,
+    "max": 300,
+    "over33": 7,
+    "over50": 5,
+    "missed60HzFrames": 66
+   },
+   "setData": {
+    "calls": 142,
+    "totalMs": 5.1,
+    "max": 0.3
+   },
+   "images": {
+    "addImageDuringPath": 97,
+    "removeImage": 0,
+    "peakActive": 100
+   },
+   "cover": {
+    "requests": 28,
+    "decodedKb": 462
+   },
+   "covers": {
+    "registered": 43,
+    "registeredWhileMoving": 11
+   }
+  },
+  {
+   "cfg": "before",
+   "viewport": "390x844",
+   "all": {
+    "frames": 1587,
+    "p50": 16.7,
+    "p90": 16.7,
+    "p95": 16.8,
+    "p99": 33.3,
+    "max": 300,
+    "over33": 12,
+    "over50": 4,
+    "missed60HzFrames": 82
+   },
+   "setData": {
+    "calls": 169,
+    "totalMs": 8.3,
+    "max": 0.2
+   },
+   "images": {
+    "addImageDuringPath": 93,
+    "removeImage": 0,
+    "peakActive": 96
+   },
+   "cover": {
+    "requests": 36,
+    "decodedKb": 522
+   },
+   "covers": {
+    "registered": 43,
+    "registeredWhileMoving": 19
+   }
+  },
+  {
+   "cfg": "before",
+   "viewport": "1440x900",
+   "all": {
+    "frames": 1591,
+    "p50": 16.7,
+    "p90": 16.7,
+    "p95": 16.8,
+    "p99": 33.2,
+    "max": 316.7,
+    "over33": 11,
+    "over50": 5,
+    "missed60HzFrames": 74
+   },
+   "setData": {
+    "calls": 137,
+    "totalMs": 7.4,
+    "max": 1.2
+   },
+   "images": {
+    "addImageDuringPath": 97,
+    "removeImage": 0,
+    "peakActive": 100
+   },
+   "cover": {
+    "requests": 28,
+    "decodedKb": 462
+   },
+   "covers": {
+    "registered": 43,
+    "registeredWhileMoving": 10
+   }
+  },
+  {
+   "cfg": "before",
+   "viewport": "390x844",
+   "all": {
+    "frames": 1593,
+    "p50": 16.7,
+    "p90": 16.7,
+    "p95": 16.8,
+    "p99": 33.3,
+    "max": 316.7,
+    "over33": 9,
+    "over50": 6,
+    "missed60HzFrames": 73
+   },
+   "setData": {
+    "calls": 160,
+    "totalMs": 6.6,
+    "max": 0.1
+   },
+   "images": {
+    "addImageDuringPath": 93,
+    "removeImage": 0,
+    "peakActive": 96
+   },
+   "cover": {
+    "requests": 36,
+    "decodedKb": 522
+   },
+   "covers": {
+    "registered": 43,
+    "registeredWhileMoving": 19
+   }
+  },
+  {
+   "cfg": "before",
+   "viewport": "1440x900",
+   "all": {
+    "frames": 1608,
+    "p50": 16.7,
+    "p90": 16.7,
+    "p95": 16.8,
+    "p99": 16.8,
+    "max": 316.6,
+    "over33": 7,
+    "over50": 5,
+    "missed60HzFrames": 57
+   },
+   "setData": {
+    "calls": 139,
+    "totalMs": 5,
+    "max": 0.3
+   },
+   "images": {
+    "addImageDuringPath": 97,
+    "removeImage": 0,
+    "peakActive": 100
+   },
+   "cover": {
+    "requests": 28,
+    "decodedKb": 462
+   },
+   "covers": {
+    "registered": 43,
+    "registeredWhileMoving": 10
+   }
+  }
+ ]
+}

@@ -86,8 +86,8 @@ The first paired mobile trace publishes split/merge motion episodes over about
 **source-state publication spans**, not a separately measured first painted pixel.
 Cold cover replacement can continue after topology settles (up to about 1.5 s
 after the camera endpoint in these runs); warm replacement work is largely absent.
-The canonical marker remains present during replacement. A separate precise
-rendered marker-appearance latency measurement remains outstanding.
+The canonical marker remains present during replacement. Rendered cover-appearance
+latency is measured in [Cold-cover appearance](#cold-cover-appearance) below.
 
 ## Rendered evidence
 
@@ -125,3 +125,55 @@ Physical Android/iOS frame, compass and interaction acceptance remains pending.
 These results do not establish live protected-account acceptance, deployment,
 merge, production acceptance or 0.8.3 release readiness. Original user screenshot
 attachments were unavailable; no generated capture is treated as an approved baseline.
+
+## Cold-cover appearance
+
+Question: does prefetching through the continuous zoom approach and the shorter
+64 ms cover-work spacing (`41a97d6f`) make covers appear sooner without worse
+frame stalls? Compared builds: before = `c8a742e9` (parent of the change),
+after = `304e0b08` (identical `lib/`). Release web builds, `main.dart.js` SHA256
+`bbda62e8...330e` (before) and `d313a690...093b` (after). Chromium, hardware GL
+(RTX 3080 Ti via ANGLE/D3D11, headless), the same frozen HTTP responses and
+300-marker fixture, identical camera endpoints, one browser at a time,
+before/after alternating per round, no builds or other browsers running. Raw rows:
+[cold-cover-results.json](cold-cover-results.json). Not a physical-device result.
+
+**Appearance** (3 paired runs each; the camera eases 10.5 to 13.4 over 2.8 s; times
+are after the camera first crosses zoom 13; "n" is distinct covers painted by the
+end):
+
+| Viewport / cache | Build | n | First cover ms | Last cover ms |
+| --- | --- | --- | --- | --- |
+| 390 cold | Before | 26-27 | 300-306 | 3195-3371 |
+| 390 cold | After | 31-32 | 0-57 | 3421-3437 |
+| 390 warm | Before | 39-40 | 0 | 1377-1460 |
+| 390 warm | After | 40 | 0 | 441-481 |
+| 1440 cold | Before | 24-27 | 365-439 | 3218-3403 |
+| 1440 cold | After | 26-27 | 316-375 | 3175-3260 |
+| 1440 warm | Before | 43 | 0 | 1840-1981 |
+| 1440 warm | After | 42-43 | 0 | 1005-1243 |
+
+Canonical markers are present at zoom 13 in both builds (54 of 54, first at 0 ms),
+so a cover never replaces a missing base marker. The cold last-cover time stays
+bound by fetch/decode of the replayed images; the change moves the first covers
+earlier, lets more of them land during the zoom, and cuts warm completion to
+roughly a third (390) or about 60 percent (1440) of the previous time.
+
+**Frame pacing and cost** (topology path, 3 paired runs per cell, rAF intervals):
+
+| Viewport | Build | p95 ms | frames over 50 ms | max ms | marker source writes | image adds / peak active |
+| --- | --- | --- | --- | --- | --- | --- |
+| 390 | Before | 16.8 | 4-6 | 300-316.7 | 160-169 | 93 / 96 |
+| 390 | After | 16.8 | 4-6 | 216.7-316.5 | 136-142 | 93 / 96 |
+| 1440 | Before | 16.8 | 5 | 300-316.7 | 137-142 | 97 / 100 |
+| 1440 | After | 16.8 | 3-4 | 300-333.4 | 128-133 | 97 / 100 |
+
+Severe stalls do not regress (the roughly 300 ms outlier is the same in both and
+unrelated to cover work), marker source writes are equal or slightly lower, and
+image registrations, peak active images and decoded cover memory (36 requests,
+522 KB at 390) are unchanged, so the cover budgets are preserved. Estimated missed
+60 Hz frames overlap between builds (390: 73-82 before, 82-86 after; 1440: 57-74
+before, 60-71 after); this run does not claim a frame-pacing improvement. Each
+configuration was run as its own process because repeated hardware-GL launches in
+one process produced a blank first page in this environment (no measured run was
+discarded). A one-request fixture miss at 1440 px appears in both builds.
