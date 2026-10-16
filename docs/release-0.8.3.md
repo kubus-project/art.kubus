@@ -1,8 +1,9 @@
 # art.kubus 0.8.3: stabilization
 
-Status: **release candidate prepared, not merged, not tagged, not released.**
-Maturity stays 0.8.x-alpha. Version files still read 0.8.2 and are bumped in the
-release-preparation commit (see "Version bump"), not in the feature changes.
+Status: **the five packages are merged into `dev` (#303); the version is bumped to 0.8.3
+(build `261016.01`, 2026-10-16) in the release-preparation commit; not tagged, not
+released, not promoted to `master`.** Maturity stays 0.8.x-alpha. The version bump is
+its own commit (see "Version bump"), not part of the feature changes.
 
 0.8.3 is a corrective release on top of 0.8.2 (`v0.8.2`, `v0.8.2.1`; production is
 `master` `4181b4d2`). It corrects map cluster motion and marker loading, the globe
