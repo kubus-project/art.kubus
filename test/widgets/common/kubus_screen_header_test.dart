@@ -178,15 +178,61 @@ void main() {
       ),
     );
 
-    final title = tester.widgetList<RichText>(find.byType(RichText)).firstWhere(
-          (richText) =>
-              richText.text.toPlainText() == 'Very Long Kubus Header Title',
-        );
+    final title =
+        tester.widget<Text>(find.text('Very Long Kubus Header Title'));
 
-    expect(
-      title.text.style?.fontSize,
-      lessThan(KubusHeaderMetrics.screenTitle),
-    );
+    expect(title.style?.fontSize, lessThan(KubusHeaderMetrics.screenTitle));
     expect(title.maxLines, 2);
+  });
+
+  testWidgets('header titles stay plain unless the caller opts in to branding',
+      (tester) async {
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: Scaffold(
+          body: Column(
+            children: [
+              KubusHeaderText(title: 'Kubus Smith'),
+              KubusHeaderText(title: 'art.kubus', brandTitle: true),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    // A user-authored title mentioning kubus is a single plain run.
+    expect(find.text('Kubus Smith'), findsOneWidget);
+    final branded = tester
+        .widgetList<RichText>(find.byType(RichText))
+        .firstWhere((r) => r.text.toPlainText() == 'art.kubus');
+    var emphasised = false;
+    branded.text.visitChildren((span) {
+      if (span is TextSpan && span.style?.fontWeight == FontWeight.w800) {
+        emphasised = true;
+      }
+      return true;
+    });
+    expect(emphasised, isTrue);
+  });
+
+  test('family brand span leaves hosts, package ids and paths plain', () {
+    for (final plain in const [
+      'art.kubus.site',
+      'https://art.kubus.site/app',
+      'com.kubus.app',
+      'www.kubus.site',
+      'api/kubus/v1',
+      'support@kubus.site',
+    ]) {
+      expect(
+        KubusFamilyBrandText.containsBrandToken(plain),
+        isFalse,
+        reason: plain,
+      );
+      expect(KubusFamilyBrandText.span(plain).toPlainText(), plain);
+    }
+    // A sentence-ending full stop does not make the brand a host name.
+    expect(KubusFamilyBrandText.containsBrandToken('Join art.kubus.'), isTrue);
+    expect(KubusFamilyBrandText.containsBrandToken('Open kubus node'), isTrue);
   });
 }

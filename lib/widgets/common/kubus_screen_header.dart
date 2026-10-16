@@ -120,10 +120,15 @@ class KubusHeaderTitleBlock extends StatelessWidget {
     this.maxTitleLines = 2,
     this.maxSubtitleLines = 2,
     this.minHeight,
+    this.brandTitle = false,
   });
 
   final String title;
   final String? subtitle;
+
+  /// Styles kubus-family names in [title]. Only set this for authored brand
+  /// copy; titles can carry user content, which must stay plain text.
+  final bool brandTitle;
   final bool compact;
   final Color? titleColor;
   final Color? subtitleColor;
@@ -179,7 +184,7 @@ class KubusHeaderTitleBlock extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                if (KubusFamilyBrandText.containsBrandToken(title))
+                if (brandTitle)
                   KubusFamilyBrandText(
                     title,
                     style: resolvedTitleStyle,
@@ -229,10 +234,14 @@ class KubusHeaderText extends StatelessWidget {
     this.subtitleStyle,
     this.maxTitleLines = 2,
     this.maxSubtitleLines = 2,
+    this.brandTitle = false,
   });
 
   final String title;
   final String? subtitle;
+
+  /// See [KubusHeaderTitleBlock.brandTitle].
+  final bool brandTitle;
   final KubusHeaderKind kind;
   final bool compact;
   final Color? titleColor;
@@ -254,6 +263,7 @@ class KubusHeaderText extends StatelessWidget {
     return KubusHeaderTitleBlock(
       title: title,
       subtitle: subtitle,
+      brandTitle: brandTitle,
       compact: compact || isSection,
       titleColor: titleColor,
       subtitleColor: subtitleColor,

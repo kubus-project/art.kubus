@@ -91,16 +91,39 @@ class KubusFamilyBrandText extends StatelessWidget {
   static bool _isWordCharacter(String character) =>
       RegExp(r'[A-Za-z0-9_-]').hasMatch(character);
 
-  static bool _isBrandWord(String text, Match match) =>
-      (match.start == 0 || !_isWordCharacter(text[match.start - 1])) &&
-      (match.end == text.length || !_isWordCharacter(text[match.end]));
+  static bool _isBrandWord(String text, Match match) {
+    final start = match.start;
+    final end = match.end;
+    if (start > 0 && _isWordCharacter(text[start - 1])) return false;
+    if (end < text.length && _isWordCharacter(text[end])) return false;
+    // Hosts, package ids and paths contain the token without being the brand:
+    // com.kubus.app, www.kubus.site, art.kubus.site, kubus/api, user@kubus.
+    if (start > 0 &&
+        _isIdentifierJoiner(text[start - 1]) &&
+        _artPrefixStart(text, start) == null) {
+      return false;
+    }
+    if (end < text.length) {
+      final next = text[end];
+      if (next == '/' || next == '@') return false;
+      if (next == '.' && end + 1 < text.length) {
+        if (_isWordCharacter(text[end + 1])) return false;
+      }
+    }
+    return true;
+  }
+
+  static bool _isIdentifierJoiner(String character) =>
+      character == '.' || character == '/' || character == '@';
 
   static int? _artPrefixStart(String text, int kubusStart) {
     const prefix = 'art.';
     final start = kubusStart - prefix.length;
     if (start < 0 ||
         text.substring(start, kubusStart).toLowerCase() != prefix ||
-        (start > 0 && _isWordCharacter(text[start - 1]))) {
+        (start > 0 &&
+            (_isWordCharacter(text[start - 1]) ||
+                _isIdentifierJoiner(text[start - 1])))) {
       return null;
     }
     return start;
