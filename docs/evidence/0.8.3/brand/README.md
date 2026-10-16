@@ -20,7 +20,7 @@ accessibility gap.
 | Surface | Capture |
 | --- | --- |
 | Node screen, mobile, dark, Slovenian | [node-chromium-dark-sl-390](screenshots/node-chromium-dark-sl-390.png) |
-| Node screen, mobile, light, English (Firefox) | [node-firefox-light-en-1440](screenshots/node-firefox-light-en-1440.png) (1440 px) |
+| Node screen, 1440 px, light, English (Firefox) | [node-firefox-light-en-1440](screenshots/node-firefox-light-en-1440.png) |
 | Artwork detail app bar, mobile, dark, English | [artwork-chromium-dark-en-390](screenshots/artwork-chromium-dark-en-390.png) |
 | Artwork detail app bar, desktop, light, Slovenian (Firefox) | [artwork-firefox-light-sl-1440](screenshots/artwork-firefox-light-sl-1440.png) |
 | Desktop navigation, light, English | [shell-chromium-light-en-1440](screenshots/shell-chromium-light-en-1440.png) |
