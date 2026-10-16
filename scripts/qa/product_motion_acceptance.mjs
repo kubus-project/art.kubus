@@ -78,7 +78,7 @@ const STILL_MAX = 0.6; // peak-to-peak when it must not move
 const SHADOW_MIN = 1.2; // accent shadow below the tile
 const REST_TOLERANCE = 0.6; // back at rest after exit
 const SETTLE_MS = 600; // entry (180 ms) is over
-const MAX_HOLD_MS = 60000;
+const MAX_HOLD_MS = 90000;
 
 const MIME = {
   '.html': 'text/html; charset=utf-8',
@@ -241,7 +241,9 @@ async function measureCase(page, helper, c) {
   const captureDurations = [];
   let sampleDeadlineMs = 25000;
   // Keep the 14-frame and full-period requirements. If Firefox captures are
-  // slow under CI load, extend this window from measured latency up to 60 sec.
+  // slow under CI load, extend this window from measured latency up to 90 sec.
+  // Firefox diagnostics recorded ~4.9 sec per capture: a 60 sec cap cannot
+  // supply 14 painted samples. Sample counts and pixel thresholds stay fixed.
   while (true) {
     const elapsed = Date.now() - t0;
     const coverage = getSettledSamplingCoverage(hoverFrames, {
@@ -254,11 +256,10 @@ async function measureCase(page, helper, c) {
     const captureEnded = Date.now();
     const captureMs = captureEnded - captureStarted;
     captureDurations.push(captureMs);
-    const recentCaptures = captureDurations.slice(-5).sort((a, b) => a - b);
-    const medianCaptureMs = recentCaptures[Math.floor(recentCaptures.length / 2)];
+    const recentCaptureMs = Math.max(...captureDurations.slice(-5));
     sampleDeadlineMs = Math.max(
       sampleDeadlineMs,
-      getSamplingDeadlineMs(medianCaptureMs, {
+      getSamplingDeadlineMs(recentCaptureMs, {
         holdMs,
         settleMs: SETTLE_MS,
         maxHoldMs: MAX_HOLD_MS,
