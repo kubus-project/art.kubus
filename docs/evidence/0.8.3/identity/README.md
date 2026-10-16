@@ -57,4 +57,3 @@ The earlier owner matrix recorded 16 browser/theme/browser-locale/motion context
 The corrected artist-owner browser pass was separately recorded as eight Chromium/Firefox cases at 390 and 1440 px in both themes. A focused identity/navigation/art-discovery suite was separately reported as 35 passing tests. Neither result substitutes for the rendered evidence above.
 
 The baseline/current browser runner, reports and semantic snapshots are under `output/qa/identity-browser-baseline-current/`. Slovenian reports and snapshots are under `output/qa/identity-sl/`. These fixture runs do not prove live authentication, backend persistence, production deployment, or physical-device behavior. No original user reference screenshots were available in this session, so this set cannot be assessed against those missing references.
-
