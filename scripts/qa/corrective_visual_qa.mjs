@@ -14,10 +14,24 @@ const mediaRoot = path.resolve(process.env.QA_MEDIA_ROOT || path.join(root, 'out
 const out = path.resolve(process.env.QA_OUT || path.join(root, 'output/playwright/corrective'));
 const port = Number(process.env.QA_PORT || 8893);
 const origin = `http://127.0.0.1:${port}`;
+const entryUrl = (pathname, locale) => {
+  const language = locale.split('-')[0].toLowerCase();
+  const url = new URL(pathname, origin);
+  const segments = url.pathname.split('/');
+  if (['en', 'sl'].includes(segments[1])) {
+    if (language === 'sl') segments[1] = 'sl';
+  } else if (language === 'sl') {
+    segments.splice(1, 0, 'sl');
+  }
+  url.pathname = segments.join('/');
+  url.searchParams.set('lang', language);
+  return url.toString();
+};
 const list = (name, fallback) => (process.env[name] || fallback).split(',');
 const ownerId = '22222222-2222-4222-8222-222222222222';
 const visitorId = '33333333-3333-4333-8333-333333333333';
 const artworkId = '11111111-1111-4111-8111-111111111111';
+const groupId = '99999999-9999-4999-8999-999999999999';
 const wallet = 'ArtistWallet111111111111111111111111111111111';
 const mediaHost = 'https://qa-media.kubus.site';
 const profile = (id) => ({
@@ -27,11 +41,16 @@ const profile = (id) => ({
   bio: 'Browser fixture for the 0.8.3 visual regression pass.',
   avatar: `${mediaHost}/artwork.png`,
   coverImage: `${mediaHost}/artwork.png`,
+  postsCount: 4, posts_count: 4,
   isArtist: true, isInstitution: true, isVerified: true,
   preferences: { privacy: 'public', language: 'en', persona: 'creator' },
   createdAt: '2026-01-10T10:00:00Z', updatedAt: '2026-10-01T10:00:00Z',
 });
 const shapes = { portrait: 9 / 16, landscape: 16 / 9, square: 1, ultrawide: 21 / 9 };
+const group = { id: groupId, name: 'Fixture Group', slug: 'fixture-group',
+  description: 'Local browser fixture; no production group is created.',
+  isPublic: true, ownerWallet: visitorId, memberCount: 3,
+  isMember: false, isOwner: false, coverImage: `${mediaHost}/artwork.png` };
 const artwork = { id: artworkId, title: 'Recorded Artwork', artist: 'Recorded Artist',
   description: 'QA fixture: artist differs from uploader.', artistName: 'Recorded Artist',
   metadata: { artistUserId: ownerId }, imageUrl: `${mediaHost}/artwork.png`,
@@ -53,9 +72,13 @@ if (process.env.QA_SAME_ARTWORK === 'true') posts.unshift({ ...posts[0],
   id: '77777777-7777-4777-8777-777777777777', content: 'Still view of the same recorded artwork',
   mediaUrls: [`${mediaHost}/artwork.png`] });
 if (process.env.QA_MEDIA_MODE === 'mixed') posts[0].mediaUrls.push(`${mediaHost}/artwork.png`);
-if (process.env.QA_MEDIA_MODE === 'quoted') posts.unshift({ ...posts[0],
-  id: '88888888-8888-4888-8888-888888888888', content: 'Quoted art video', mediaUrls: [],
-  postType: 'shared_post', originalPostId: posts[0].id, originalPost: posts[0] });
+if (process.env.QA_MEDIA_MODE === 'quoted' && posts.length) {
+  const originalPost = { ...posts[0], author: profile(visitorId),
+    content: 'Original portrait video', category: 'art' };
+  posts.splice(0, posts.length, { ...posts[0],
+    id: '88888888-8888-4888-8888-888888888888', content: 'Quoted art video',
+    mediaUrls: [], postType: 'repost', originalPostId: originalPost.id, originalPost });
+}
 
 const types = { '.html': 'text/html', '.js': 'text/javascript', '.mjs': 'text/javascript',
   '.json': 'application/json', '.wasm': 'application/wasm', '.png': 'image/png',
@@ -104,6 +127,14 @@ try {
                   else if (/\/auth\/.*(me|session)/.test(url.pathname)) data = { user: profile(ownerId), profile: profile(ownerId) };
                   else if (/\/community\/posts\/[a-z0-9-]+$/.test(url.pathname)) data = posts[0];
                   else if (/\/community\/(posts|art-feed)/.test(url.pathname)) data = posts;
+                  else if (url.pathname === '/api/groups') data = [group];
+                  else if (url.pathname.endsWith(`/groups/${groupId}/posts`)) data = posts;
+                  else if (url.pathname.includes(`/groups/${groupId}`)) data = group;
+                  else if (/\/stats\/user\//.test(url.pathname)) data = {
+                    entityType: 'user', entityId: ownerId, scope: 'public',
+                    counters: { posts: 4, followers: 0, following: 0, publicStreetArtAdded: 0 },
+                    metrics: ['posts', 'followers', 'following', 'publicStreetArtAdded'],
+                    generatedAt: new Date().toISOString() };
                   else if (/\/artworks\//.test(url.pathname)) data = artwork;
                   else if (url.pathname === '/api/artworks') data = [artwork];
                   else if (url.pathname.endsWith('/config')) data = { communityMultiMediaEnabled: true };
@@ -122,7 +153,7 @@ try {
               let failure;
               let stageBeforeActivation;
               try {
-                await page.goto(`${origin}${process.env.QA_PATH || '/community'}`, { waitUntil: 'domcontentloaded' });
+                await page.goto(entryUrl(process.env.QA_PATH || '/community', locale), { waitUntil: 'domcontentloaded' });
                 await page.waitForSelector('flutter-view', { timeout: 60000 });
                 await page.waitForTimeout(10000);
                 const placeholder = page.locator('flt-semantics-placeholder');
@@ -135,10 +166,23 @@ try {
                   await page.mouse.click(box.x + box.width/2, box.y + box.height/2);
                   await page.waitForTimeout(3000);
                 }
+                const preopenSteps = (process.env.QA_PREOPEN_STEPS || process.env.QA_PREOPEN || '')
+                  .split('|').map(step => step.trim()).filter(Boolean);
+                for (const preopenStep of preopenSteps) {
+                  const named = page.getByRole('button', { name: new RegExp(preopenStep) }).first();
+                  const target = await named.count() ? named : page.getByText(preopenStep, { exact: true }).first();
+                  const box = await target.boundingBox({ timeout: 2000 }).catch(() => null);
+                  if (!box) {
+                    await fs.writeFile(path.join(out, `${name}-preopen-failure.yml`), await page.locator('body').ariaSnapshot());
+                    throw new Error(`Navigation entry missing: ${preopenStep}`);
+                  }
+                  await page.mouse.click(box.x+box.width/2, box.y+box.height/2);
+                  await page.waitForTimeout(3000);
+                }
                 await page.screenshot({ path: path.join(out, `${name}-initial.png`) });
                 const initial = await page.locator('body').ariaSnapshot();
                 await fs.writeFile(path.join(out, `${name}-initial.yml`), initial);
-                const mediaStage = page.getByRole('group', { name: 'Media 1 of 1', exact: true }).first();
+                const mediaStage = page.getByRole('group', { name: /^Media 1 of \d+$/ }).first();
                 const stageBefore = await mediaStage.count() ? await mediaStage.boundingBox() : null;
                 // Caller supplies a semantic label for bounded navigation QA.
                 if (process.env.QA_CLICK) {
@@ -156,6 +200,14 @@ try {
                     await page.waitForTimeout(500);
                     box = await target.boundingBox();
                     if (!box) throw new Error('Action disappeared while scrolling');
+                  }
+                  const extraScroll = Number(process.env.QA_SCROLL_STAGE || 0);
+                  if (extraScroll > 0) {
+                    await page.mouse.move(width / 2, 500);
+                    await page.mouse.wheel(0, extraScroll);
+                    await page.waitForTimeout(500);
+                    box = await target.boundingBox();
+                    if (!box) throw new Error('Action disappeared while revealing its stage');
                   }
                   stageBeforeActivation = await mediaStage.count() ? await mediaStage.boundingBox() : null;
                   if (!isPlay || /Play video/.test(await target.getAttribute('aria-label') || await target.innerText()))
@@ -180,6 +232,12 @@ try {
                   p.readyState >= 2 && !p.paused && afterPlayback[i]?.time > p.time)))
                   throw new Error('Video did not advance through the playback interval');
                 const stageAfter = await mediaStage.count() ? await mediaStage.boundingBox() : null;
+                const maxViewportHeight = await page.evaluate(() => window.innerHeight);
+                const clippedSemanticBounds = stageAfter ? {
+                  top: Math.max(0, stageAfter.y),
+                  bottom: Math.min(maxViewportHeight, stageAfter.y + stageAfter.height),
+                  height: Math.max(0, Math.min(maxViewportHeight, stageAfter.y + stageAfter.height) - Math.max(0, stageAfter.y)),
+                } : null;
                 let fullscreen;
                 if (process.env.QA_FULLSCREEN === 'true') {
                   await page.setViewportSize({ width, height: width < 768 ? 844 : 900 });
@@ -225,7 +283,8 @@ try {
                   captures.push({ width: captureWidth, overflow: await page.evaluate(() => document.documentElement.scrollWidth > innerWidth) });
                 }
                 results.push({ name, errors, writesBlocked, requests, playback, afterPlayback,
-                  stageBefore, stageBeforeActivation, stageAfter, fullscreen, captures,
+                  stageBefore, stageBeforeActivation, stageAfter, maxViewportHeight,
+                  clippedSemanticBounds, fullscreen, captures,
                   semanticText: initial, overflow: await page.evaluate(() => document.documentElement.scrollWidth > innerWidth) });
               } catch (e) {
                 failure = e.message; results.push({ name, failure, errors, requests });

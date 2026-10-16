@@ -1,0 +1,168 @@
+{
+  "evidence": "local production artifact with deterministic API/media fixtures",
+  "webRoot": "C:\\kubus-build\\083-web-90200b56",
+  "results": [
+    {
+      "name": "chromium-dark-en-US-reduce-390",
+      "errors": [],
+      "writesBlocked": [
+        "/api/presence/batch",
+        "/api/analytics/app",
+        "/api/analytics/app"
+      ],
+      "requests": [
+        {
+          "method": "GET",
+          "path": "/api/artworks",
+          "search": "?page=1&limit=100"
+        },
+        {
+          "method": "GET",
+          "path": "/api/community/posts",
+          "search": "?page=1&limit=24&followingOnly=false&surface=discover&sort=hybrid"
+        },
+        {
+          "method": "GET",
+          "path": "/api/profiles/22222222-2222-4222-8222-222222222222",
+          "search": ""
+        },
+        {
+          "method": "POST",
+          "path": "/api/presence/batch",
+          "search": ""
+        },
+        {
+          "method": "POST",
+          "path": "/api/analytics/app",
+          "search": ""
+        },
+        {
+          "method": "POST",
+          "path": "/api/analytics/app",
+          "search": ""
+        }
+      ],
+      "playback": [
+        {
+          "width": 180,
+          "height": 320,
+          "time": 3.852028,
+          "paused": false,
+          "muted": false,
+          "readyState": 4,
+          "rect": {
+            "x": 153.91796875,
+            "y": 430,
+            "width": 84.15625,
+            "height": 149.625,
+            "top": 430,
+            "right": 238.07421875,
+            "bottom": 579.625,
+            "left": 153.91796875
+          }
+        }
+      ],
+      "afterPlayback": [
+        {
+          "time": 5.876682,
+          "paused": false
+        }
+      ],
+      "stageBefore": null,
+      "stageBeforeActivation": null,
+      "stageAfter": null,
+      "maxViewportHeight": 844,
+      "clippedSemanticBounds": null,
+      "fullscreen": "- button \"Exit full screen\"\n- slider \"Video position\": \"50\"\n- button \"Pause video\"\n- button \"Mute video\"\n- text: 0:06 of 0:08\n- button \"Exit full screen\"",
+      "captures": [
+        {
+          "width": 390,
+          "overflow": false
+        }
+      ],
+      "semanticText": "- group:\n  - text: Community Connect with artists and collectors\n  - button\n  - button\n  - textbox \"community_search_input\" [disabled]\n  - textbox \"Search…\"\n  - tablist:\n    - tab \"Following\"\n    - tab \"Discover\" [selected]\n    - tab \"Groups\"\n    - tab \"Art\"\n  - tabpanel:\n    - group:\n      - button \"Art is everywhere. Help put it on the map. Discover local art, document what you find, and connect with the people behind it. Join art.kubus\":\n        - button\n      - group \"Just now Art\":\n        - button \"Alexandra Katarina Longname Artist Institution @visual-qa-owner\"\n        - button\n        - button \"Quoted art video\"\n        - group \"Just now Original portrait video\":\n          - button \"Visitor Artist Artist Institution @visual-qa-visitor\"\n          - group \"Video player\":\n            - button \"Play video\"\n        - button \"2 likes\"\n        - switch \"Like, 2 likes, not liked\"\n        - button \"Comment, 0 comments\"\n        - button \"Repost\"\n        - button \"Share\"\n        - switch \"Save, not saved\"\n- group \"Main navigation\":\n  - button \"Map\"\n  - button \"AR\"\n  - button \"Community\"\n  - button \"Home\"\n  - button \"Account\"\n- button \"New post\"",
+      "overflow": false
+    },
+    {
+      "name": "firefox-dark-en-US-reduce-390",
+      "errors": [],
+      "writesBlocked": [
+        "/api/presence/batch",
+        "/api/analytics/app",
+        "/api/analytics/app"
+      ],
+      "requests": [
+        {
+          "method": "GET",
+          "path": "/api/artworks",
+          "search": "?page=1&limit=100"
+        },
+        {
+          "method": "GET",
+          "path": "/api/profiles/22222222-2222-4222-8222-222222222222",
+          "search": ""
+        },
+        {
+          "method": "GET",
+          "path": "/api/community/posts",
+          "search": "?page=1&limit=24&followingOnly=false&surface=discover&sort=hybrid"
+        },
+        {
+          "method": "POST",
+          "path": "/api/presence/batch",
+          "search": ""
+        },
+        {
+          "method": "POST",
+          "path": "/api/analytics/app",
+          "search": ""
+        },
+        {
+          "method": "POST",
+          "path": "/api/analytics/app",
+          "search": ""
+        }
+      ],
+      "playback": [
+        {
+          "width": 180,
+          "height": 320,
+          "time": 3.967082,
+          "paused": false,
+          "muted": false,
+          "readyState": 4,
+          "rect": {
+            "x": 153.9166717529297,
+            "y": 430,
+            "width": 84.16665649414062,
+            "height": 149.63333129882812,
+            "top": 430,
+            "right": 238.0833282470703,
+            "bottom": 579.6333312988281,
+            "left": 153.9166717529297
+          }
+        }
+      ],
+      "afterPlayback": [
+        {
+          "time": 5.968022,
+          "paused": false
+        }
+      ],
+      "stageBefore": null,
+      "stageBeforeActivation": null,
+      "stageAfter": null,
+      "maxViewportHeight": 844,
+      "clippedSemanticBounds": null,
+      "fullscreen": "- button \"Exit full screen\"\n- slider \"Video position\": \"50\"\n- button \"Pause video\"\n- button \"Mute video\"\n- text: 0:06 of 0:08\n- button \"Exit full screen\"",
+      "captures": [
+        {
+          "width": 390,
+          "overflow": false
+        }
+      ],
+      "semanticText": "- group:\n  - text: Community Connect with artists and collectors\n  - button\n  - button\n  - textbox \"community_search_input\" [disabled]\n  - textbox \"Search…\"\n  - tablist:\n    - tab \"Following\"\n    - tab \"Discover\" [selected]\n    - tab \"Groups\"\n    - tab \"Art\"\n  - tabpanel:\n    - group:\n      - button \"Art is everywhere. Help put it on the map. Discover local art, document what you find, and connect with the people behind it. Join art.kubus\":\n        - button\n      - group \"Just now Art\":\n        - button \"Alexandra Katarina Longname Artist Institution @visual-qa-owner\"\n        - button\n        - button \"Quoted art video\"\n        - group \"Just now Original portrait video\":\n          - button \"Visitor Artist Artist Institution @visual-qa-visitor\"\n          - group \"Video player\":\n            - button \"Play video\"\n        - button \"2 likes\"\n        - switch \"Like, 2 likes, not liked\"\n        - button \"Comment, 0 comments\"\n        - button \"Repost\"\n        - button \"Share\"\n        - switch \"Save, not saved\"\n- group \"Main navigation\":\n  - button \"Map\"\n  - button \"AR\"\n  - button \"Community\"\n  - button \"Home\"\n  - button \"Account\"\n- button \"New post\"",
+      "overflow": false
+    }
+  ]
+}
