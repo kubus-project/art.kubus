@@ -126,7 +126,10 @@ class ProfileIdentityData {
       wallet: wallet,
     );
     final normalizedUsername = CreatorDisplayFormat.normalizeUsername(username);
-    final normalizedUserId = WalletUtils.canonical(userId);
+    // Legacy wallet-only payloads still carry a stable linked identifier.
+    // Prefer an explicit account ID whenever both identifiers are available.
+    final normalizedUserId = WalletUtils.canonical(
+        (userId ?? '').trim().isNotEmpty ? userId : wallet);
     final walletSeed = WalletUtils.canonical(
       (wallet ?? '').trim().isNotEmpty ? wallet : normalizedUserId,
     );
