@@ -67,15 +67,23 @@ order with no textual conflicts): #298, #300, #299, #301, #291.
 
 ## Feature flags
 
-| Flag | Release default | 0.8.3 position |
-| --- | --- | --- |
-| `COMMUNITY_MULTI_MEDIA_ENABLED` (compile-time `--dart-define`; CI input `community_multi_media_enabled`) | off | Unchanged. Not enabled by this release. |
-| `KUBUS_SUPPORT_TICKETS_ENABLED` | repository variable | Unchanged. |
-| `KUBUS_COMMUNITY_VIDEO_AUTOPLAY_ENABLED`, `KUBUS_COMMUNITY_VIDEO_POSTERS_ENABLED` | repository variables | Unchanged. |
+| Flag | Source default | Pipeline default | 0.8.3 position |
+| --- | --- | --- | --- |
+| `COMMUNITY_MULTI_MEDIA_ENABLED` (compile-time `--dart-define`; CI input `community_multi_media_enabled`) | `!isProduction`: off in a release build made without the define | **on**: `prepare_public_build_config.mjs` defaults it to `true`; the `web-artifact`, `deploy-development` and `release-production` inputs default to `true`; a push to `dev` builds the enabled artifact | Unchanged from 0.8.2. Live production (`app.kubus.site`, source `4181b4d2`) serves `kubus-community-build.json` with `COMMUNITY_MULTI_MEDIA_ENABLED: true`, autoplay `true` and posters `true`. `false` stays the emergency rollback input. |
+| `KUBUS_SUPPORT_TICKETS_ENABLED` | repository variable | fail closed when unset | Unchanged. |
+| `KUBUS_COMMUNITY_VIDEO_AUTOPLAY_ENABLED`, `KUBUS_COMMUNITY_VIDEO_POSTERS_ENABLED` | repository variables | per variable | Unchanged. |
 
-With the multi-media flag off a post shows only its first item ("Media 1 of 1"), so
-a two-item carousel cannot be accepted on a build made without the define. Both
-configurations were built from the candidate and checked (see "Evidence").
+The Dart default describes only a build that skips the pipeline; it does not
+describe any deployed artifact. The deployed configuration is whatever the build
+metadata file `kubus-community-build.json` in the artifact records, and the
+release check is to read that file from the running site, not to infer it from a
+default. Backend `art.kubus-backend#79` is live on every writable instance (see
+[release-0.8.2.md](release-0.8.2.md)).
+
+With the flag off a post shows only its first item ("Media 1 of 1"), so a
+two-item carousel cannot be accepted on a build made without the define. Both
+configurations were built from the candidate and checked (see "Evidence"); the
+flag-on build is the one that matches what is deployed.
 
 ## Candidate and evidence
 
@@ -97,7 +105,7 @@ protected `dev -> master` path produces.
 | PRODUCT motion | 10 of 10 sampling unit tests, and 9 of 9 gallery cases in each of Chromium and Firefox with normal and reduced motion. The sampling fix, thresholds and phase-coverage gate are unchanged. |
 | Globe and location | 16 contexts (2 browsers, light and dark, EN and SL, normal and reduced motion): 758 of 760 checks first run; the one failing context passed 3 of 3 reruns and on the earlier combined build, recorded as a flake. |
 | Map search | Product defect found and fixed in #298: a search left every server-overview bubble on the map. After the fix the `ui` flow removes the markers (0 dots) and Reset all restores them (23 at 390 px, 59 at 1440 px) in both browsers. The 1440 px layout-swap failure was a harness tap that opened a marker's detail page; the harness now taps a marker-free point. Both failures were identical on the `febffbe5` baseline. |
-| Map main flow | **Not re-established today.** Two checks (selected badge pixels at far zoom; layers after the theme switch) fail on the candidate, on the byte-identical earlier combined build that passed 192 checks at 12:45Z, and on the untouched `febffbe5` baseline. The pixel check is time-of-day dependent (passes with the page clock at 12:45Z, fails at 16:40Z). The 192-check result stands for the unchanged map code; no fresh pass is claimed. See `docs/evidence/0.8.3/combined-validation.md` on #298. |
+| Map main flow | Re-established offline with the clock pinned (fixture, `QA_CLOCK`): candidate `d36d07e3` passes 24/24 in Chromium at 1440 and 390 px and 23/23 in Firefox at 1440 px at both 12:45Z and 16:40Z. The two earlier failures were harness defects, not product defects: the badge-pixel check read through the globe's night shade (clock dependent) and the theme-switch check raced the style swap. The untouched `dev` baseline fails the selection-continuity checks at 1440 px, which #298 fixes. The corrected harness and evidence are a follow-up change (`test/083-main-flow-offline`), not part of the five packages. Light scheme only in that matrix; the 192-check earlier pass covered both. |
 | Wordmark | Chromium and Firefox, light and dark, EN and SL, 390 and 1440 px, four to five surfaces: renders and accessible labels in `docs/evidence/0.8.3/brand/` on #291. Onboarding headings are not rendered (they need an authenticated new-account state). |
 
 Exact-head CI at the PR heads, read from GitHub on 2026-10-16: #299, #300 and #301
@@ -145,9 +153,12 @@ Merges, staging and production each need their own authorisation. None is implie
 by this document.
 
 1. **Merge** the five PRs into `dev` in the order above. Each must have passing
-   exact-head CI at its current head; GitHub shows them BEHIND `dev`, which is not a
-   failure, and the candidate merged without conflicts. After each merge, confirm the
-   next PR is still mergeable.
+   exact-head CI at its current head. The `dev` ruleset requires branches to be up
+   to date before merging (`strict_required_status_checks_policy`), so the BEHIND
+   state is a merge blocker, not only a label: after the first merge each later PR
+   needs `dev` merged into its branch (a new head and a new required run) unless the
+   owner's ruleset bypass is used. The candidate merged without textual conflicts.
+   After each merge, confirm the next PR is still mergeable.
 2. **Version bump** on a `release/0.8.3` branch from the merged `dev`:
    `npm run sync:all-versions` after editing `version.json` (`version` `0.8.3`, a new
    `buildNumber` and `buildDate`); it rewrites `pubspec.yaml`, `lib/config/config.dart`
