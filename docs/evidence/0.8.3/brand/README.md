@@ -30,7 +30,10 @@ accessibility gap.
 
 ## What the renders show
 
-- `kubus` is weight 800 italic. `art.` and `node` stay regular, including inside
+- Correction (0.8.3 integration): the product name is `kubus Node` with a capital N,
+  as in `AGENTS.md`. The renders and report in this folder were captured while the
+  copy still read `kubus node`; only the spelling changed, not the typography.
+- `kubus` is weight 800 italic. `art.` and `Node` stay regular, including inside
   the bold node-screen hero line ("Poganjaj del omrežja art.**kubus** na svoji opremi").
 - The accessibility tree exposes each name as one complete string (`art.kubus`,
   `kubus node`, and the full hero and group labels), not as split runs

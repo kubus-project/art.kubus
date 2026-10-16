@@ -233,6 +233,6 @@ void main() {
     }
     // A sentence-ending full stop does not make the brand a host name.
     expect(KubusFamilyBrandText.containsBrandToken('Join art.kubus.'), isTrue);
-    expect(KubusFamilyBrandText.containsBrandToken('Open kubus node'), isTrue);
+    expect(KubusFamilyBrandText.containsBrandToken('Open kubus Node'), isTrue);
   });
 }

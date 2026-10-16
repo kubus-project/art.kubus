@@ -57,7 +57,7 @@ void main() {
         // `DefaultTextStyle.fallback()` — 48px monospace with a double yellow
         // underline — which is exactly how it rendered on the S22.
         final scannerCopy = find.text(
-          'Open Devices in your kubus node interface and scan the code it '
+          'Open Devices in your kubus Node interface and scan the code it '
           'shows.',
         );
         expect(scannerCopy, findsOneWidget);

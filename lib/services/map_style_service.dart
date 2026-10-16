@@ -174,8 +174,12 @@ class MapStyleService {
       if (layers is List) {
         for (final layer in layers.whereType<Map>()) {
           if (layer['type'] != 'background') continue;
+          // A background layer may omit `paint` or `background-color` and rely
+          // on the MapLibre default, which is black.
           final paint = layer['paint'];
-          if (paint is Map) background = paint['background-color']?.toString();
+          background =
+              (paint is Map ? paint['background-color']?.toString() : null) ??
+                  '#000000';
           break;
         }
       }
@@ -187,7 +191,12 @@ class MapStyleService {
       if (layers is List) {
         for (final layer in layers.whereType<Map>()) {
           if (layer['type'] != 'background') continue;
-          (layer['paint'] as Map)['background-color'] = ground;
+          final paint = layer['paint'];
+          if (paint is Map) {
+            paint['background-color'] = ground;
+          } else {
+            layer['paint'] = <String, Object>{'background-color': ground};
+          }
         }
       }
       // A globe's sky otherwise paints over the canvas background. Theme

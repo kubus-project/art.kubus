@@ -35,7 +35,7 @@ Future<SpatialProcessorChoice?> _openAndTapOwnNode(
   );
   await tester.tap(find.text('open'));
   await tester.pumpAndSettle();
-  await tester.tap(find.text('This kubus node'));
+  await tester.tap(find.text('This kubus Node'));
   await tester.pumpAndSettle();
   return result;
 }
@@ -61,7 +61,7 @@ void main() {
       await tester.tap(find.text('open'));
       await tester.pumpAndSettle();
 
-      final tile = find.text('This kubus node');
+      final tile = find.text('This kubus Node');
       expect(tile, findsOneWidget);
       final opacity = tester.widget<Opacity>(
         find.ancestor(of: tile, matching: find.byType(Opacity)).first,

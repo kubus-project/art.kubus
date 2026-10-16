@@ -38,8 +38,8 @@ composition instead of clipping values or reducing all text to fit.
 
 In visible authored product copy, emphasize the standalone `kubus` word in the
 family names with Sofia Sans weight 800 and italic styling. This applies to
-`art.kubus`, `kubus node`, and standalone `kubus` references. Within the first
-two names, keep the `art.` prefix and ` node` suffix at weight 400 and normal
+`art.kubus`, `kubus Node`, and standalone `kubus` references. Within the first
+two names, keep the `art.` prefix and ` Node` suffix at weight 400 and normal
 style, even when the surrounding heading is bold italic. Other prose retains its
 surrounding text style.
 Render these references through `KubusFamilyBrandText` or its `span` helper so

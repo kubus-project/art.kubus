@@ -42,7 +42,7 @@ void main() {
   testWidgets('kubus Node dashboard renders at mobile width', (tester) async {
     await pumpDashboard(tester, const Size(390, 844));
 
-    expect(find.text('kubus node'), findsWidgets);
+    expect(find.text('kubus Node'), findsWidgets);
     await tester.drag(find.byType(ListView), const Offset(0, -600));
     await tester.pump();
     expect(find.byType(SegmentedButton<int>), findsOneWidget);
@@ -52,7 +52,7 @@ void main() {
   testWidgets('kubus Node dashboard renders at desktop width', (tester) async {
     await pumpDashboard(tester, const Size(1440, 900));
 
-    expect(find.text('kubus node'), findsWidgets);
+    expect(find.text('kubus Node'), findsWidgets);
     expect(find.byType(SegmentedButton<int>), findsOneWidget);
     expect(tester.takeException(), isNull);
   });

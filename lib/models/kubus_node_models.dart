@@ -251,7 +251,7 @@ class KubusComputeCandidate {
   factory KubusComputeCandidate.fromJson(Map<String, dynamic> json) =>
       KubusComputeCandidate(
         nodeId: (json['nodeId'] ?? '').toString(),
-        label: (json['label'] ?? 'kubus node').toString(),
+        label: (json['label'] ?? 'kubus Node').toString(),
         encryptionPublicKey: (json['encryptionPublicKey'] ?? '').toString(),
         signingPublicKey: (json['signingPublicKey'] ?? '').toString(),
         gpu: json['gpu'] is Map<String, dynamic>
