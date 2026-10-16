@@ -1,0 +1,221 @@
+{
+  "evidence": "local production artifact with deterministic API/media fixtures",
+  "webRoot": "C:\\kubus-build\\083-web-3f6ee7bd",
+  "results": [
+    {
+      "name": "chromium-dark-en-US-reduce-390",
+      "errors": [],
+      "writesBlocked": [
+        "/api/presence/batch",
+        "/api/analytics/app",
+        "/api/presence/batch"
+      ],
+      "requests": [
+        {
+          "method": "GET",
+          "path": "/api/artworks",
+          "search": "?page=1&limit=100"
+        },
+        {
+          "method": "GET",
+          "path": "/api/community/posts",
+          "search": "?page=1&limit=24&followingOnly=false&surface=discover&sort=hybrid"
+        },
+        {
+          "method": "GET",
+          "path": "/api/profiles/22222222-2222-4222-8222-222222222222",
+          "search": ""
+        },
+        {
+          "method": "POST",
+          "path": "/api/presence/batch",
+          "search": ""
+        },
+        {
+          "method": "POST",
+          "path": "/api/analytics/app",
+          "search": ""
+        },
+        {
+          "method": "GET",
+          "path": "/api/community/posts",
+          "search": "?page=1&limit=30&surface=discover&sort=recent"
+        },
+        {
+          "method": "GET",
+          "path": "/api/exhibitions",
+          "search": "?limit=20&offset=0"
+        },
+        {
+          "method": "POST",
+          "path": "/api/presence/batch",
+          "search": ""
+        }
+      ],
+      "playback": [
+        {
+          "width": 180,
+          "height": 320,
+          "time": 3.929293,
+          "paused": false,
+          "muted": false,
+          "readyState": 4,
+          "rect": {
+            "x": 25,
+            "y": 236,
+            "width": 340,
+            "height": 604.4375,
+            "top": 236,
+            "right": 365,
+            "bottom": 840.4375,
+            "left": 25
+          }
+        }
+      ],
+      "afterPlayback": [
+        {
+          "time": 5.947979,
+          "paused": false
+        }
+      ],
+      "stageBefore": null,
+      "stageBeforeActivation": {
+        "x": 25,
+        "y": 236,
+        "width": 340,
+        "height": 604.4375
+      },
+      "stageAfter": {
+        "x": 25,
+        "y": 236,
+        "width": 340,
+        "height": 604.4375
+      },
+      "captures": [
+        {
+          "width": 390,
+          "overflow": false
+        }
+      ],
+      "semanticText": "- group:\n  - text: Community Connect with artists and collectors\n  - button\n  - button\n  - textbox \"community_search_input\" [disabled]\n  - textbox \"Search…\"\n  - tablist:\n    - tab \"Following\"\n    - tab \"Discover\"\n    - tab \"Groups\"\n    - tab \"Art\" [selected]\n  - tabpanel\n- group \"Main navigation\":\n  - button \"Map\"\n  - button \"AR\"\n  - button \"Community\"\n  - button \"Home\"\n  - button \"Account\"\n- button \"Create\"",
+      "overflow": false
+    },
+    {
+      "name": "firefox-dark-en-US-reduce-390",
+      "errors": [],
+      "writesBlocked": [
+        "/api/presence/batch",
+        "/api/analytics/app"
+      ],
+      "requests": [
+        {
+          "method": "GET",
+          "path": "/api/artworks",
+          "search": "?page=1&limit=100"
+        },
+        {
+          "method": "GET",
+          "path": "/api/profiles/22222222-2222-4222-8222-222222222222",
+          "search": ""
+        },
+        {
+          "method": "GET",
+          "path": "/api/community/posts",
+          "search": "?page=1&limit=24&followingOnly=false&surface=discover&sort=hybrid"
+        },
+        {
+          "method": "POST",
+          "path": "/api/presence/batch",
+          "search": ""
+        },
+        {
+          "method": "POST",
+          "path": "/api/analytics/app",
+          "search": ""
+        },
+        {
+          "method": "GET",
+          "path": "/api/community/posts",
+          "search": "?page=1&limit=30&surface=discover&sort=recent"
+        },
+        {
+          "method": "GET",
+          "path": "/api/community/art-feed",
+          "search": "?lat=46.0569&lng=14.505799999999994&radiusKm=3.00&limit=30&page=1&sort=hybrid&includeGeneral=true"
+        },
+        {
+          "method": "GET",
+          "path": "/api/community/art-feed",
+          "search": "?lat=46.0569&lng=14.505799999999994&radiusKm=15.00&limit=30&page=1&sort=hybrid&includeGeneral=true"
+        },
+        {
+          "method": "GET",
+          "path": "/api/community/art-feed",
+          "search": "?lat=46.0569&lng=14.505799999999994&radiusKm=60.00&limit=30&page=1&sort=hybrid&includeGeneral=true"
+        },
+        {
+          "method": "GET",
+          "path": "/api/community/art-feed",
+          "search": "?lat=46.0569&lng=14.505799999999994&radiusKm=250.00&limit=30&page=1&sort=hybrid&includeGeneral=true"
+        },
+        {
+          "method": "GET",
+          "path": "/api/exhibitions",
+          "search": "?limit=20&offset=0&lat=46.0569&lng=14.505799999999994&radiusKm=250"
+        }
+      ],
+      "playback": [
+        {
+          "width": 180,
+          "height": 320,
+          "time": 3.968207,
+          "paused": false,
+          "muted": false,
+          "readyState": 4,
+          "rect": {
+            "x": 25,
+            "y": 116,
+            "width": 340,
+            "height": 604.4500122070312,
+            "top": 116,
+            "right": 365,
+            "bottom": 720.4500122070312,
+            "left": 25
+          }
+        }
+      ],
+      "afterPlayback": [
+        {
+          "time": 5.984061,
+          "paused": false
+        }
+      ],
+      "stageBefore": {
+        "x": 25,
+        "y": 466,
+        "width": 340,
+        "height": 378
+      },
+      "stageBeforeActivation": {
+        "x": 25,
+        "y": 116,
+        "width": 340,
+        "height": 604.4500122070312
+      },
+      "stageAfter": {
+        "x": 25,
+        "y": 116,
+        "width": 340,
+        "height": 604.4500122070312
+      },
+      "captures": [
+        {
+          "width": 390,
+          "overflow": false
+        }
+      ],
+      "semanticText": "- group:\n  - text: Community Connect with artists and collectors\n  - button\n  - button\n  - textbox \"community_search_input\" [disabled]\n  - textbox \"Search…\"\n  - tablist:\n    - tab \"Following\"\n    - tab \"Discover\"\n    - tab \"Groups\"\n    - tab \"Art\" [selected]\n  - tabpanel:\n    - group:\n      - group \"Discover art Around the area you were viewing on the map · Within 250 km\":\n        - button \"Use my location\"\n      - 'group \"Nearby · 0.0 km away Alexandra Katarina Longname Artist Institution @visual-qa-owner Just now - art portrait video — #Art #Ljubljana Ljubljana\"':\n        - button \"Share\"\n        - group \"Media 1 of 1\":\n          - group \"Video player\":\n            - button \"Play video\"\n- group \"Main navigation\":\n  - button \"Map\"\n  - button \"AR\"\n  - button \"Community\"\n  - button \"Home\"\n  - button \"Account\"\n- button \"Create\"",
+      "overflow": false
+    }
+  ]
+}

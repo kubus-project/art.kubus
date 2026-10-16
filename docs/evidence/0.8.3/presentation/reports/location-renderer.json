@@ -1,0 +1,924 @@
+{
+  "label": "083-location-renderer-v2",
+  "startedAt": "2026-10-15T20:59:39.474Z",
+  "runs": [
+    {
+      "tag": "chromium-light-en-US-reduce",
+      "checks": [
+        {
+          "name": "390: exact theme globe ground",
+          "ok": true,
+          "detail": "{\"background\":\"rgb(255, 255, 255)\",\"active\":\"true\",\"solar\":\"-8.760356,-138.523367\",\"radius\":\"182.67491876619113\",\"mapCount\":1}"
+        },
+        {
+          "name": "390: fitted solar field present",
+          "ok": true,
+          "detail": "{\"background\":\"rgb(255, 255, 255)\",\"active\":\"true\",\"solar\":\"-8.760356,-138.523367\",\"radius\":\"182.67491876619113\",\"mapCount\":1}"
+        },
+        {
+          "name": "390: solar clock follows motion preference",
+          "ok": true,
+          "detail": "-8.760356,-138.523367 -> -8.760356,-138.523367"
+        },
+        {
+          "name": "390: static measured accuracy",
+          "ok": true,
+          "detail": "{\"pulse\":0,\"radius\":5,\"rotation\":\"map\",\"headingOpacity\":[\"case\",[\"has\",\"headingDegrees\"],1,0],\"accuracy\":0.12}"
+        },
+        {
+          "name": "390: cone rotates with north, missing heading is hidden",
+          "ok": true,
+          "detail": "{\"pulse\":0,\"radius\":5,\"rotation\":\"map\",\"headingOpacity\":[\"case\",[\"has\",\"headingDegrees\"],1,0],\"accuracy\":0.12}"
+        },
+        {
+          "name": "390: reduced pulse is static",
+          "ok": true,
+          "detail": "{\"pulse\":0,\"radius\":5,\"rotation\":\"map\",\"headingOpacity\":[\"case\",[\"has\",\"headingDegrees\"],1,0],\"accuracy\":0.12}"
+        },
+        {
+          "name": "emulated fix supplies a real point",
+          "ok": true,
+          "detail": "{\"data\":{\"type\":\"FeatureCollection\",\"features\":[{\"id\":\"me\",\"type\":\"Feature\",\"geometry\":{\"type\":\"Point\",\"coordinates\":[14.505800000000022,46.0569]},\"properties\":{\"id\":\"me\",\"accuracyRadiusZ0\":0.00027616160471039816},\"source\":null,\"layer\":null}]},\"radius\":5}"
+        },
+        {
+          "name": "browser does not invent device heading",
+          "ok": true,
+          "detail": "{\"type\":\"FeatureCollection\",\"features\":[{\"id\":\"me\",\"type\":\"Feature\",\"geometry\":{\"type\":\"Point\",\"coordinates\":[14.505800000000022,46.0569]},\"properties\":{\"id\":\"me\",\"accuracyRadiusZ0\":0.00027616160471039816},\"source\":null,\"layer\":null}]}"
+        },
+        {
+          "name": "pulse uses paint without source writes",
+          "ok": true,
+          "detail": "{\"first\":5,\"radius\":5,\"writes\":0}"
+        },
+        {
+          "name": "chromium-light-en-US-reduce-390: no horizontal page overflow",
+          "ok": true,
+          "detail": "{\"scrollWidth\":390,\"innerWidth\":390}"
+        },
+        {
+          "name": "no uncaught page errors",
+          "ok": true,
+          "detail": ""
+        }
+      ],
+      "screenshots": [
+        "output/playwright/spatial/083-location-renderer-v2/chromium-light-en-US-reduce-390-globe.png",
+        "output/playwright/spatial/083-location-renderer-v2/chromium-light-en-US-reduce-390-location.png",
+        "output/playwright/spatial/083-location-renderer-v2/chromium-light-en-US-reduce-390-renderer-heading-0-bearing-0.png",
+        "output/playwright/spatial/083-location-renderer-v2/chromium-light-en-US-reduce-390-renderer-heading-90-bearing-0.png",
+        "output/playwright/spatial/083-location-renderer-v2/chromium-light-en-US-reduce-390-renderer-heading-90-bearing-90.png"
+      ],
+      "console": [],
+      "failed": false,
+      "network": {
+        "analyticsSwallowed": 2,
+        "writesBlocked": [],
+        "failedRequests": [
+          "GET https://bapi.kubus.site/health/writable"
+        ]
+      },
+      "presentation": [
+        {
+          "width": 390,
+          "background": "rgb(255, 255, 255)",
+          "active": "true",
+          "solar": "-8.760356,-138.523367",
+          "radius": "182.67491876619113",
+          "mapCount": 1
+        }
+      ],
+      "locationProbe": {
+        "evidence": "emulated fix; synthetic heading renderer probe, not sensor acceptance",
+        "first": {
+          "data": {
+            "type": "FeatureCollection",
+            "features": [
+              {
+                "id": "me",
+                "type": "Feature",
+                "geometry": {
+                  "type": "Point",
+                  "coordinates": [
+                    14.505800000000022,
+                    46.0569
+                  ]
+                },
+                "properties": {
+                  "id": "me",
+                  "accuracyRadiusZ0": 0.00027616160471039816
+                },
+                "source": null,
+                "layer": null
+              }
+            ]
+          },
+          "radius": 5
+        },
+        "second": {
+          "radius": 5,
+          "writes": 0
+        }
+      }
+    },
+    {
+      "tag": "chromium-light-en-US-no-preference",
+      "checks": [
+        {
+          "name": "390: exact theme globe ground",
+          "ok": true,
+          "detail": "{\"background\":\"rgb(255, 255, 255)\",\"active\":\"true\",\"solar\":\"-8.760423,-138.590043\",\"radius\":\"182.67491876619113\",\"mapCount\":1}"
+        },
+        {
+          "name": "390: fitted solar field present",
+          "ok": true,
+          "detail": "{\"background\":\"rgb(255, 255, 255)\",\"active\":\"true\",\"solar\":\"-8.760423,-138.590043\",\"radius\":\"182.67491876619113\",\"mapCount\":1}"
+        },
+        {
+          "name": "390: solar clock follows motion preference",
+          "ok": true,
+          "detail": "-8.760423,-138.590043 -> -8.760427,-138.594211"
+        },
+        {
+          "name": "390: static measured accuracy",
+          "ok": true,
+          "detail": "{\"pulse\":0.29357325443786986,\"radius\":5.150769230769231,\"rotation\":\"map\",\"headingOpacity\":[\"case\",[\"has\",\"headingDegrees\"],1,0],\"accuracy\":0.12}"
+        },
+        {
+          "name": "390: cone rotates with north, missing heading is hidden",
+          "ok": true,
+          "detail": "{\"pulse\":0.29357325443786986,\"radius\":5.150769230769231,\"rotation\":\"map\",\"headingOpacity\":[\"case\",[\"has\",\"headingDegrees\"],1,0],\"accuracy\":0.12}"
+        },
+        {
+          "name": "emulated fix supplies a real point",
+          "ok": true,
+          "detail": "{\"data\":{\"type\":\"FeatureCollection\",\"features\":[{\"id\":\"me\",\"type\":\"Feature\",\"geometry\":{\"type\":\"Point\",\"coordinates\":[14.505800000000022,46.0569]},\"properties\":{\"id\":\"me\",\"accuracyRadiusZ0\":0.00027616160471039816},\"source\":null,\"layer\":null}]},\"radius\":6.319230769230769}"
+        },
+        {
+          "name": "browser does not invent device heading",
+          "ok": true,
+          "detail": "{\"type\":\"FeatureCollection\",\"features\":[{\"id\":\"me\",\"type\":\"Feature\",\"geometry\":{\"type\":\"Point\",\"coordinates\":[14.505800000000022,46.0569]},\"properties\":{\"id\":\"me\",\"accuracyRadiusZ0\":0.00027616160471039816},\"source\":null,\"layer\":null}]}"
+        },
+        {
+          "name": "pulse uses paint without source writes",
+          "ok": true,
+          "detail": "{\"first\":6.319230769230769,\"radius\":8.946923076923078,\"writes\":0}"
+        },
+        {
+          "name": "chromium-light-en-US-no-preference-390: no horizontal page overflow",
+          "ok": true,
+          "detail": "{\"scrollWidth\":390,\"innerWidth\":390}"
+        },
+        {
+          "name": "no uncaught page errors",
+          "ok": true,
+          "detail": ""
+        }
+      ],
+      "screenshots": [
+        "output/playwright/spatial/083-location-renderer-v2/chromium-light-en-US-no-preference-390-globe.png",
+        "output/playwright/spatial/083-location-renderer-v2/chromium-light-en-US-no-preference-390-location.png",
+        "output/playwright/spatial/083-location-renderer-v2/chromium-light-en-US-no-preference-390-renderer-heading-0-bearing-0.png",
+        "output/playwright/spatial/083-location-renderer-v2/chromium-light-en-US-no-preference-390-renderer-heading-90-bearing-0.png",
+        "output/playwright/spatial/083-location-renderer-v2/chromium-light-en-US-no-preference-390-renderer-heading-90-bearing-90.png"
+      ],
+      "console": [],
+      "failed": false,
+      "network": {
+        "analyticsSwallowed": 1,
+        "writesBlocked": [],
+        "failedRequests": [
+          "GET https://bapi.kubus.site/health/writable",
+          "GET https://tiles-a.basemaps.cartocdn.com/vectortiles/carto.streets/v1/2/0/0.mvt"
+        ]
+      },
+      "presentation": [
+        {
+          "width": 390,
+          "background": "rgb(255, 255, 255)",
+          "active": "true",
+          "solar": "-8.760423,-138.590043",
+          "radius": "182.67491876619113",
+          "mapCount": 1
+        }
+      ],
+      "locationProbe": {
+        "evidence": "emulated fix; synthetic heading renderer probe, not sensor acceptance",
+        "first": {
+          "data": {
+            "type": "FeatureCollection",
+            "features": [
+              {
+                "id": "me",
+                "type": "Feature",
+                "geometry": {
+                  "type": "Point",
+                  "coordinates": [
+                    14.505800000000022,
+                    46.0569
+                  ]
+                },
+                "properties": {
+                  "id": "me",
+                  "accuracyRadiusZ0": 0.00027616160471039816
+                },
+                "source": null,
+                "layer": null
+              }
+            ]
+          },
+          "radius": 6.319230769230769
+        },
+        "second": {
+          "radius": 8.946923076923078,
+          "writes": 0
+        }
+      }
+    },
+    {
+      "tag": "chromium-dark-en-US-reduce",
+      "checks": [
+        {
+          "name": "390: exact theme globe ground",
+          "ok": true,
+          "detail": "{\"background\":\"rgb(0, 0, 0)\",\"active\":\"true\",\"solar\":\"-8.760481,-138.648385\",\"radius\":\"182.67491876619113\",\"mapCount\":1}"
+        },
+        {
+          "name": "390: fitted solar field present",
+          "ok": true,
+          "detail": "{\"background\":\"rgb(0, 0, 0)\",\"active\":\"true\",\"solar\":\"-8.760481,-138.648385\",\"radius\":\"182.67491876619113\",\"mapCount\":1}"
+        },
+        {
+          "name": "390: solar clock follows motion preference",
+          "ok": true,
+          "detail": "-8.760481,-138.648385 -> -8.760481,-138.648385"
+        },
+        {
+          "name": "390: static measured accuracy",
+          "ok": true,
+          "detail": "{\"pulse\":0,\"radius\":5,\"rotation\":\"map\",\"headingOpacity\":[\"case\",[\"has\",\"headingDegrees\"],1,0],\"accuracy\":0.12}"
+        },
+        {
+          "name": "390: cone rotates with north, missing heading is hidden",
+          "ok": true,
+          "detail": "{\"pulse\":0,\"radius\":5,\"rotation\":\"map\",\"headingOpacity\":[\"case\",[\"has\",\"headingDegrees\"],1,0],\"accuracy\":0.12}"
+        },
+        {
+          "name": "390: reduced pulse is static",
+          "ok": true,
+          "detail": "{\"pulse\":0,\"radius\":5,\"rotation\":\"map\",\"headingOpacity\":[\"case\",[\"has\",\"headingDegrees\"],1,0],\"accuracy\":0.12}"
+        },
+        {
+          "name": "emulated fix supplies a real point",
+          "ok": true,
+          "detail": "{\"data\":{\"type\":\"FeatureCollection\",\"features\":[{\"id\":\"me\",\"type\":\"Feature\",\"geometry\":{\"type\":\"Point\",\"coordinates\":[14.505800000000022,46.0569]},\"properties\":{\"id\":\"me\",\"accuracyRadiusZ0\":0.00027616160471039816},\"source\":null,\"layer\":null}]},\"radius\":5}"
+        },
+        {
+          "name": "browser does not invent device heading",
+          "ok": true,
+          "detail": "{\"type\":\"FeatureCollection\",\"features\":[{\"id\":\"me\",\"type\":\"Feature\",\"geometry\":{\"type\":\"Point\",\"coordinates\":[14.505800000000022,46.0569]},\"properties\":{\"id\":\"me\",\"accuracyRadiusZ0\":0.00027616160471039816},\"source\":null,\"layer\":null}]}"
+        },
+        {
+          "name": "pulse uses paint without source writes",
+          "ok": true,
+          "detail": "{\"first\":5,\"radius\":5,\"writes\":0}"
+        },
+        {
+          "name": "chromium-dark-en-US-reduce-390: no horizontal page overflow",
+          "ok": true,
+          "detail": "{\"scrollWidth\":390,\"innerWidth\":390}"
+        },
+        {
+          "name": "no uncaught page errors",
+          "ok": true,
+          "detail": ""
+        }
+      ],
+      "screenshots": [
+        "output/playwright/spatial/083-location-renderer-v2/chromium-dark-en-US-reduce-390-globe.png",
+        "output/playwright/spatial/083-location-renderer-v2/chromium-dark-en-US-reduce-390-location.png",
+        "output/playwright/spatial/083-location-renderer-v2/chromium-dark-en-US-reduce-390-renderer-heading-0-bearing-0.png",
+        "output/playwright/spatial/083-location-renderer-v2/chromium-dark-en-US-reduce-390-renderer-heading-90-bearing-0.png",
+        "output/playwright/spatial/083-location-renderer-v2/chromium-dark-en-US-reduce-390-renderer-heading-90-bearing-90.png"
+      ],
+      "console": [],
+      "failed": false,
+      "network": {
+        "analyticsSwallowed": 2,
+        "writesBlocked": [],
+        "failedRequests": [
+          "GET https://bapi.kubus.site/health/writable"
+        ]
+      },
+      "presentation": [
+        {
+          "width": 390,
+          "background": "rgb(0, 0, 0)",
+          "active": "true",
+          "solar": "-8.760481,-138.648385",
+          "radius": "182.67491876619113",
+          "mapCount": 1
+        }
+      ],
+      "locationProbe": {
+        "evidence": "emulated fix; synthetic heading renderer probe, not sensor acceptance",
+        "first": {
+          "data": {
+            "type": "FeatureCollection",
+            "features": [
+              {
+                "id": "me",
+                "type": "Feature",
+                "geometry": {
+                  "type": "Point",
+                  "coordinates": [
+                    14.505800000000022,
+                    46.0569
+                  ]
+                },
+                "properties": {
+                  "id": "me",
+                  "accuracyRadiusZ0": 0.00027616160471039816
+                },
+                "source": null,
+                "layer": null
+              }
+            ]
+          },
+          "radius": 5
+        },
+        "second": {
+          "radius": 5,
+          "writes": 0
+        }
+      }
+    },
+    {
+      "tag": "chromium-dark-en-US-no-preference",
+      "checks": [
+        {
+          "name": "390: exact theme globe ground",
+          "ok": true,
+          "detail": "{\"background\":\"rgb(0, 0, 0)\",\"active\":\"true\",\"solar\":\"-8.760545,-138.710895\",\"radius\":\"182.67491876619113\",\"mapCount\":1}"
+        },
+        {
+          "name": "390: fitted solar field present",
+          "ok": true,
+          "detail": "{\"background\":\"rgb(0, 0, 0)\",\"active\":\"true\",\"solar\":\"-8.760545,-138.710895\",\"radius\":\"182.67491876619113\",\"mapCount\":1}"
+        },
+        {
+          "name": "390: solar clock follows motion preference",
+          "ok": true,
+          "detail": "-8.760545,-138.710895 -> -8.760549,-138.715062"
+        },
+        {
+          "name": "390: static measured accuracy",
+          "ok": true,
+          "detail": "{\"pulse\":0.0000011094674556212937,\"radius\":18.973076923076924,\"rotation\":\"map\",\"headingOpacity\":[\"case\",[\"has\",\"headingDegrees\"],1,0],\"accuracy\":0.12}"
+        },
+        {
+          "name": "390: cone rotates with north, missing heading is hidden",
+          "ok": true,
+          "detail": "{\"pulse\":0.0000011094674556212937,\"radius\":18.973076923076924,\"rotation\":\"map\",\"headingOpacity\":[\"case\",[\"has\",\"headingDegrees\"],1,0],\"accuracy\":0.12}"
+        },
+        {
+          "name": "emulated fix supplies a real point",
+          "ok": true,
+          "detail": "{\"data\":{\"type\":\"FeatureCollection\",\"features\":[{\"id\":\"me\",\"type\":\"Feature\",\"geometry\":{\"type\":\"Point\",\"coordinates\":[14.505800000000022,46.0569]},\"properties\":{\"id\":\"me\",\"accuracyRadiusZ0\":0.00027616160471039816},\"source\":null,\"layer\":null}]},\"radius\":6.082307692307692}"
+        },
+        {
+          "name": "browser does not invent device heading",
+          "ok": true,
+          "detail": "{\"type\":\"FeatureCollection\",\"features\":[{\"id\":\"me\",\"type\":\"Feature\",\"geometry\":{\"type\":\"Point\",\"coordinates\":[14.505800000000022,46.0569]},\"properties\":{\"id\":\"me\",\"accuracyRadiusZ0\":0.00027616160471039816},\"source\":null,\"layer\":null}]}"
+        },
+        {
+          "name": "pulse uses paint without source writes",
+          "ok": true,
+          "detail": "{\"first\":6.082307692307692,\"radius\":8.801538461538462,\"writes\":0}"
+        },
+        {
+          "name": "chromium-dark-en-US-no-preference-390: no horizontal page overflow",
+          "ok": true,
+          "detail": "{\"scrollWidth\":390,\"innerWidth\":390}"
+        },
+        {
+          "name": "no uncaught page errors",
+          "ok": true,
+          "detail": ""
+        }
+      ],
+      "screenshots": [
+        "output/playwright/spatial/083-location-renderer-v2/chromium-dark-en-US-no-preference-390-globe.png",
+        "output/playwright/spatial/083-location-renderer-v2/chromium-dark-en-US-no-preference-390-location.png",
+        "output/playwright/spatial/083-location-renderer-v2/chromium-dark-en-US-no-preference-390-renderer-heading-0-bearing-0.png",
+        "output/playwright/spatial/083-location-renderer-v2/chromium-dark-en-US-no-preference-390-renderer-heading-90-bearing-0.png",
+        "output/playwright/spatial/083-location-renderer-v2/chromium-dark-en-US-no-preference-390-renderer-heading-90-bearing-90.png"
+      ],
+      "console": [],
+      "failed": false,
+      "network": {
+        "analyticsSwallowed": 1,
+        "writesBlocked": [],
+        "failedRequests": [
+          "GET https://bapi.kubus.site/health/writable"
+        ]
+      },
+      "presentation": [
+        {
+          "width": 390,
+          "background": "rgb(0, 0, 0)",
+          "active": "true",
+          "solar": "-8.760545,-138.710895",
+          "radius": "182.67491876619113",
+          "mapCount": 1
+        }
+      ],
+      "locationProbe": {
+        "evidence": "emulated fix; synthetic heading renderer probe, not sensor acceptance",
+        "first": {
+          "data": {
+            "type": "FeatureCollection",
+            "features": [
+              {
+                "id": "me",
+                "type": "Feature",
+                "geometry": {
+                  "type": "Point",
+                  "coordinates": [
+                    14.505800000000022,
+                    46.0569
+                  ]
+                },
+                "properties": {
+                  "id": "me",
+                  "accuracyRadiusZ0": 0.00027616160471039816
+                },
+                "source": null,
+                "layer": null
+              }
+            ]
+          },
+          "radius": 6.082307692307692
+        },
+        "second": {
+          "radius": 8.801538461538462,
+          "writes": 0
+        }
+      }
+    },
+    {
+      "tag": "firefox-light-en-US-reduce",
+      "checks": [
+        {
+          "name": "390: exact theme globe ground",
+          "ok": true,
+          "detail": "{\"background\":\"rgb(255, 255, 255)\",\"active\":\"true\",\"solar\":\"-8.760609,-138.773405\",\"radius\":\"182.6749187661911\",\"mapCount\":1}"
+        },
+        {
+          "name": "390: fitted solar field present",
+          "ok": true,
+          "detail": "{\"background\":\"rgb(255, 255, 255)\",\"active\":\"true\",\"solar\":\"-8.760609,-138.773405\",\"radius\":\"182.6749187661911\",\"mapCount\":1}"
+        },
+        {
+          "name": "390: solar clock follows motion preference",
+          "ok": true,
+          "detail": "-8.760609,-138.773405 -> -8.760609,-138.773405"
+        },
+        {
+          "name": "390: static measured accuracy",
+          "ok": true,
+          "detail": "{\"pulse\":0,\"radius\":5,\"rotation\":\"map\",\"headingOpacity\":[\"case\",[\"has\",\"headingDegrees\"],1,0],\"accuracy\":0.12}"
+        },
+        {
+          "name": "390: cone rotates with north, missing heading is hidden",
+          "ok": true,
+          "detail": "{\"pulse\":0,\"radius\":5,\"rotation\":\"map\",\"headingOpacity\":[\"case\",[\"has\",\"headingDegrees\"],1,0],\"accuracy\":0.12}"
+        },
+        {
+          "name": "390: reduced pulse is static",
+          "ok": true,
+          "detail": "{\"pulse\":0,\"radius\":5,\"rotation\":\"map\",\"headingOpacity\":[\"case\",[\"has\",\"headingDegrees\"],1,0],\"accuracy\":0.12}"
+        },
+        {
+          "name": "emulated fix supplies a real point",
+          "ok": true,
+          "detail": "{\"data\":{\"type\":\"FeatureCollection\",\"features\":[{\"id\":\"me\",\"type\":\"Feature\",\"geometry\":{\"type\":\"Point\",\"coordinates\":[14.505800000000022,46.0569]},\"properties\":{\"id\":\"me\",\"accuracyRadiusZ0\":0.00027616160471039827},\"source\":null,\"layer\":null}]},\"radius\":5}"
+        },
+        {
+          "name": "browser does not invent device heading",
+          "ok": true,
+          "detail": "{\"type\":\"FeatureCollection\",\"features\":[{\"id\":\"me\",\"type\":\"Feature\",\"geometry\":{\"type\":\"Point\",\"coordinates\":[14.505800000000022,46.0569]},\"properties\":{\"id\":\"me\",\"accuracyRadiusZ0\":0.00027616160471039827},\"source\":null,\"layer\":null}]}"
+        },
+        {
+          "name": "pulse uses paint without source writes",
+          "ok": true,
+          "detail": "{\"first\":5,\"radius\":5,\"writes\":0}"
+        },
+        {
+          "name": "firefox-light-en-US-reduce-390: no horizontal page overflow",
+          "ok": true,
+          "detail": "{\"scrollWidth\":390,\"innerWidth\":390}"
+        },
+        {
+          "name": "no uncaught page errors",
+          "ok": true,
+          "detail": ""
+        }
+      ],
+      "screenshots": [
+        "output/playwright/spatial/083-location-renderer-v2/firefox-light-en-US-reduce-390-globe.png",
+        "output/playwright/spatial/083-location-renderer-v2/firefox-light-en-US-reduce-390-location.png",
+        "output/playwright/spatial/083-location-renderer-v2/firefox-light-en-US-reduce-390-renderer-heading-0-bearing-0.png",
+        "output/playwright/spatial/083-location-renderer-v2/firefox-light-en-US-reduce-390-renderer-heading-90-bearing-0.png",
+        "output/playwright/spatial/083-location-renderer-v2/firefox-light-en-US-reduce-390-renderer-heading-90-bearing-90.png"
+      ],
+      "console": [],
+      "failed": false,
+      "network": {
+        "analyticsSwallowed": 2,
+        "writesBlocked": [],
+        "failedRequests": []
+      },
+      "presentation": [
+        {
+          "width": 390,
+          "background": "rgb(255, 255, 255)",
+          "active": "true",
+          "solar": "-8.760609,-138.773405",
+          "radius": "182.6749187661911",
+          "mapCount": 1
+        }
+      ],
+      "locationProbe": {
+        "evidence": "emulated fix; synthetic heading renderer probe, not sensor acceptance",
+        "first": {
+          "data": {
+            "type": "FeatureCollection",
+            "features": [
+              {
+                "id": "me",
+                "type": "Feature",
+                "geometry": {
+                  "type": "Point",
+                  "coordinates": [
+                    14.505800000000022,
+                    46.0569
+                  ]
+                },
+                "properties": {
+                  "id": "me",
+                  "accuracyRadiusZ0": 0.00027616160471039827
+                },
+                "source": null,
+                "layer": null
+              }
+            ]
+          },
+          "radius": 5
+        },
+        "second": {
+          "radius": 5,
+          "writes": 0
+        }
+      }
+    },
+    {
+      "tag": "firefox-light-en-US-no-preference",
+      "checks": [
+        {
+          "name": "390: exact theme globe ground",
+          "ok": true,
+          "detail": "{\"background\":\"rgb(255, 255, 255)\",\"active\":\"true\",\"solar\":\"-8.760679,-138.840082\",\"radius\":\"182.6749187661911\",\"mapCount\":1}"
+        },
+        {
+          "name": "390: fitted solar field present",
+          "ok": true,
+          "detail": "{\"background\":\"rgb(255, 255, 255)\",\"active\":\"true\",\"solar\":\"-8.760679,-138.840082\",\"radius\":\"182.6749187661911\",\"mapCount\":1}"
+        },
+        {
+          "name": "390: solar clock follows motion preference",
+          "ok": true,
+          "detail": "-8.760679,-138.840082 -> -8.760683,-138.844249"
+        },
+        {
+          "name": "390: static measured accuracy",
+          "ok": true,
+          "detail": "{\"pulse\":0.2771450147928994,\"radius\":5.543846153846154,\"rotation\":\"map\",\"headingOpacity\":[\"case\",[\"has\",\"headingDegrees\"],1,0],\"accuracy\":0.12}"
+        },
+        {
+          "name": "390: cone rotates with north, missing heading is hidden",
+          "ok": true,
+          "detail": "{\"pulse\":0.2771450147928994,\"radius\":5.543846153846154,\"rotation\":\"map\",\"headingOpacity\":[\"case\",[\"has\",\"headingDegrees\"],1,0],\"accuracy\":0.12}"
+        },
+        {
+          "name": "emulated fix supplies a real point",
+          "ok": true,
+          "detail": "{\"data\":{\"type\":\"FeatureCollection\",\"features\":[{\"id\":\"me\",\"type\":\"Feature\",\"geometry\":{\"type\":\"Point\",\"coordinates\":[14.505800000000022,46.0569]},\"properties\":{\"id\":\"me\",\"accuracyRadiusZ0\":0.00027616160471039827},\"source\":null,\"layer\":null}]},\"radius\":5.904615384615385}"
+        },
+        {
+          "name": "browser does not invent device heading",
+          "ok": true,
+          "detail": "{\"type\":\"FeatureCollection\",\"features\":[{\"id\":\"me\",\"type\":\"Feature\",\"geometry\":{\"type\":\"Point\",\"coordinates\":[14.505800000000022,46.0569]},\"properties\":{\"id\":\"me\",\"accuracyRadiusZ0\":0.00027616160471039827},\"source\":null,\"layer\":null}]}"
+        },
+        {
+          "name": "pulse uses paint without source writes",
+          "ok": true,
+          "detail": "{\"first\":5.904615384615385,\"radius\":8.419230769230769,\"writes\":0}"
+        },
+        {
+          "name": "firefox-light-en-US-no-preference-390: no horizontal page overflow",
+          "ok": true,
+          "detail": "{\"scrollWidth\":390,\"innerWidth\":390}"
+        },
+        {
+          "name": "no uncaught page errors",
+          "ok": true,
+          "detail": ""
+        }
+      ],
+      "screenshots": [
+        "output/playwright/spatial/083-location-renderer-v2/firefox-light-en-US-no-preference-390-globe.png",
+        "output/playwright/spatial/083-location-renderer-v2/firefox-light-en-US-no-preference-390-location.png",
+        "output/playwright/spatial/083-location-renderer-v2/firefox-light-en-US-no-preference-390-renderer-heading-0-bearing-0.png",
+        "output/playwright/spatial/083-location-renderer-v2/firefox-light-en-US-no-preference-390-renderer-heading-90-bearing-0.png",
+        "output/playwright/spatial/083-location-renderer-v2/firefox-light-en-US-no-preference-390-renderer-heading-90-bearing-90.png"
+      ],
+      "console": [],
+      "failed": false,
+      "network": {
+        "analyticsSwallowed": 1,
+        "writesBlocked": [],
+        "failedRequests": []
+      },
+      "presentation": [
+        {
+          "width": 390,
+          "background": "rgb(255, 255, 255)",
+          "active": "true",
+          "solar": "-8.760679,-138.840082",
+          "radius": "182.6749187661911",
+          "mapCount": 1
+        }
+      ],
+      "locationProbe": {
+        "evidence": "emulated fix; synthetic heading renderer probe, not sensor acceptance",
+        "first": {
+          "data": {
+            "type": "FeatureCollection",
+            "features": [
+              {
+                "id": "me",
+                "type": "Feature",
+                "geometry": {
+                  "type": "Point",
+                  "coordinates": [
+                    14.505800000000022,
+                    46.0569
+                  ]
+                },
+                "properties": {
+                  "id": "me",
+                  "accuracyRadiusZ0": 0.00027616160471039827
+                },
+                "source": null,
+                "layer": null
+              }
+            ]
+          },
+          "radius": 5.904615384615385
+        },
+        "second": {
+          "radius": 8.419230769230769,
+          "writes": 0
+        }
+      }
+    },
+    {
+      "tag": "firefox-dark-en-US-reduce",
+      "checks": [
+        {
+          "name": "390: exact theme globe ground",
+          "ok": true,
+          "detail": "{\"background\":\"rgb(0, 0, 0)\",\"active\":\"true\",\"solar\":\"-8.760739,-138.898424\",\"radius\":\"182.6749187661911\",\"mapCount\":1}"
+        },
+        {
+          "name": "390: fitted solar field present",
+          "ok": true,
+          "detail": "{\"background\":\"rgb(0, 0, 0)\",\"active\":\"true\",\"solar\":\"-8.760739,-138.898424\",\"radius\":\"182.6749187661911\",\"mapCount\":1}"
+        },
+        {
+          "name": "390: solar clock follows motion preference",
+          "ok": true,
+          "detail": "-8.760739,-138.898424 -> -8.760739,-138.898424"
+        },
+        {
+          "name": "390: static measured accuracy",
+          "ok": true,
+          "detail": "{\"pulse\":0,\"radius\":5,\"rotation\":\"map\",\"headingOpacity\":[\"case\",[\"has\",\"headingDegrees\"],1,0],\"accuracy\":0.12}"
+        },
+        {
+          "name": "390: cone rotates with north, missing heading is hidden",
+          "ok": true,
+          "detail": "{\"pulse\":0,\"radius\":5,\"rotation\":\"map\",\"headingOpacity\":[\"case\",[\"has\",\"headingDegrees\"],1,0],\"accuracy\":0.12}"
+        },
+        {
+          "name": "390: reduced pulse is static",
+          "ok": true,
+          "detail": "{\"pulse\":0,\"radius\":5,\"rotation\":\"map\",\"headingOpacity\":[\"case\",[\"has\",\"headingDegrees\"],1,0],\"accuracy\":0.12}"
+        },
+        {
+          "name": "emulated fix supplies a real point",
+          "ok": true,
+          "detail": "{\"data\":{\"type\":\"FeatureCollection\",\"features\":[{\"id\":\"me\",\"type\":\"Feature\",\"geometry\":{\"type\":\"Point\",\"coordinates\":[14.505800000000022,46.0569]},\"properties\":{\"id\":\"me\",\"accuracyRadiusZ0\":0.00027616160471039827},\"source\":null,\"layer\":null}]},\"radius\":5}"
+        },
+        {
+          "name": "browser does not invent device heading",
+          "ok": true,
+          "detail": "{\"type\":\"FeatureCollection\",\"features\":[{\"id\":\"me\",\"type\":\"Feature\",\"geometry\":{\"type\":\"Point\",\"coordinates\":[14.505800000000022,46.0569]},\"properties\":{\"id\":\"me\",\"accuracyRadiusZ0\":0.00027616160471039827},\"source\":null,\"layer\":null}]}"
+        },
+        {
+          "name": "pulse uses paint without source writes",
+          "ok": true,
+          "detail": "{\"first\":5,\"radius\":5,\"writes\":0}"
+        },
+        {
+          "name": "firefox-dark-en-US-reduce-390: no horizontal page overflow",
+          "ok": true,
+          "detail": "{\"scrollWidth\":390,\"innerWidth\":390}"
+        },
+        {
+          "name": "no uncaught page errors",
+          "ok": true,
+          "detail": ""
+        }
+      ],
+      "screenshots": [
+        "output/playwright/spatial/083-location-renderer-v2/firefox-dark-en-US-reduce-390-globe.png",
+        "output/playwright/spatial/083-location-renderer-v2/firefox-dark-en-US-reduce-390-location.png",
+        "output/playwright/spatial/083-location-renderer-v2/firefox-dark-en-US-reduce-390-renderer-heading-0-bearing-0.png",
+        "output/playwright/spatial/083-location-renderer-v2/firefox-dark-en-US-reduce-390-renderer-heading-90-bearing-0.png",
+        "output/playwright/spatial/083-location-renderer-v2/firefox-dark-en-US-reduce-390-renderer-heading-90-bearing-90.png"
+      ],
+      "console": [],
+      "failed": false,
+      "network": {
+        "analyticsSwallowed": 2,
+        "writesBlocked": [],
+        "failedRequests": []
+      },
+      "presentation": [
+        {
+          "width": 390,
+          "background": "rgb(0, 0, 0)",
+          "active": "true",
+          "solar": "-8.760739,-138.898424",
+          "radius": "182.6749187661911",
+          "mapCount": 1
+        }
+      ],
+      "locationProbe": {
+        "evidence": "emulated fix; synthetic heading renderer probe, not sensor acceptance",
+        "first": {
+          "data": {
+            "type": "FeatureCollection",
+            "features": [
+              {
+                "id": "me",
+                "type": "Feature",
+                "geometry": {
+                  "type": "Point",
+                  "coordinates": [
+                    14.505800000000022,
+                    46.0569
+                  ]
+                },
+                "properties": {
+                  "id": "me",
+                  "accuracyRadiusZ0": 0.00027616160471039827
+                },
+                "source": null,
+                "layer": null
+              }
+            ]
+          },
+          "radius": 5
+        },
+        "second": {
+          "radius": 5,
+          "writes": 0
+        }
+      }
+    },
+    {
+      "tag": "firefox-dark-en-US-no-preference",
+      "checks": [
+        {
+          "name": "390: exact theme globe ground",
+          "ok": true,
+          "detail": "{\"background\":\"rgb(0, 0, 0)\",\"active\":\"true\",\"solar\":\"-8.760808,-138.965101\",\"radius\":\"182.6749187661911\",\"mapCount\":1}"
+        },
+        {
+          "name": "390: fitted solar field present",
+          "ok": true,
+          "detail": "{\"background\":\"rgb(0, 0, 0)\",\"active\":\"true\",\"solar\":\"-8.760808,-138.965101\",\"radius\":\"182.6749187661911\",\"mapCount\":1}"
+        },
+        {
+          "name": "390: solar clock follows motion preference",
+          "ok": true,
+          "detail": "-8.760808,-138.965101 -> -8.760812,-138.969268"
+        },
+        {
+          "name": "390: static measured accuracy",
+          "ok": true,
+          "detail": "{\"pulse\":0.0165675,\"radius\":15.71,\"rotation\":\"map\",\"headingOpacity\":[\"case\",[\"has\",\"headingDegrees\"],1,0],\"accuracy\":0.12}"
+        },
+        {
+          "name": "390: cone rotates with north, missing heading is hidden",
+          "ok": true,
+          "detail": "{\"pulse\":0.0165675,\"radius\":15.71,\"rotation\":\"map\",\"headingOpacity\":[\"case\",[\"has\",\"headingDegrees\"],1,0],\"accuracy\":0.12}"
+        },
+        {
+          "name": "emulated fix supplies a real point",
+          "ok": true,
+          "detail": "{\"data\":{\"type\":\"FeatureCollection\",\"features\":[{\"id\":\"me\",\"type\":\"Feature\",\"geometry\":{\"type\":\"Point\",\"coordinates\":[14.505800000000022,46.0569]},\"properties\":{\"id\":\"me\",\"accuracyRadiusZ0\":0.00027616160471039827},\"source\":null,\"layer\":null}]},\"radius\":15.71}"
+        },
+        {
+          "name": "browser does not invent device heading",
+          "ok": true,
+          "detail": "{\"type\":\"FeatureCollection\",\"features\":[{\"id\":\"me\",\"type\":\"Feature\",\"geometry\":{\"type\":\"Point\",\"coordinates\":[14.505800000000022,46.0569]},\"properties\":{\"id\":\"me\",\"accuracyRadiusZ0\":0.00027616160471039827},\"source\":null,\"layer\":null}]}"
+        },
+        {
+          "name": "pulse uses paint without source writes",
+          "ok": true,
+          "detail": "{\"first\":15.71,\"radius\":18.39153846153846,\"writes\":0}"
+        },
+        {
+          "name": "firefox-dark-en-US-no-preference-390: no horizontal page overflow",
+          "ok": true,
+          "detail": "{\"scrollWidth\":390,\"innerWidth\":390}"
+        },
+        {
+          "name": "no uncaught page errors",
+          "ok": true,
+          "detail": ""
+        }
+      ],
+      "screenshots": [
+        "output/playwright/spatial/083-location-renderer-v2/firefox-dark-en-US-no-preference-390-globe.png",
+        "output/playwright/spatial/083-location-renderer-v2/firefox-dark-en-US-no-preference-390-location.png",
+        "output/playwright/spatial/083-location-renderer-v2/firefox-dark-en-US-no-preference-390-renderer-heading-0-bearing-0.png",
+        "output/playwright/spatial/083-location-renderer-v2/firefox-dark-en-US-no-preference-390-renderer-heading-90-bearing-0.png",
+        "output/playwright/spatial/083-location-renderer-v2/firefox-dark-en-US-no-preference-390-renderer-heading-90-bearing-90.png"
+      ],
+      "console": [],
+      "failed": false,
+      "network": {
+        "analyticsSwallowed": 1,
+        "writesBlocked": [],
+        "failedRequests": []
+      },
+      "presentation": [
+        {
+          "width": 390,
+          "background": "rgb(0, 0, 0)",
+          "active": "true",
+          "solar": "-8.760808,-138.965101",
+          "radius": "182.6749187661911",
+          "mapCount": 1
+        }
+      ],
+      "locationProbe": {
+        "evidence": "emulated fix; synthetic heading renderer probe, not sensor acceptance",
+        "first": {
+          "data": {
+            "type": "FeatureCollection",
+            "features": [
+              {
+                "id": "me",
+                "type": "Feature",
+                "geometry": {
+                  "type": "Point",
+                  "coordinates": [
+                    14.505800000000022,
+                    46.0569
+                  ]
+                },
+                "properties": {
+                  "id": "me",
+                  "accuracyRadiusZ0": 0.00027616160471039827
+                },
+                "source": null,
+                "layer": null
+              }
+            ]
+          },
+          "radius": 15.71
+        },
+        "second": {
+          "radius": 18.39153846153846,
+          "writes": 0
+        }
+      }
+    }
+  ],
+  "failed": false
+}

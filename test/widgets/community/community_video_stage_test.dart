@@ -62,7 +62,8 @@ void main() {
           const CommunityPostMediaCarousel(mediaUrls: [url]),
         ));
         await tester.pumpAndSettle();
-        expect(_stageHeight(tester), closeTo(600 / 16 * 9, 0.6));
+        expect(_stageHeight(tester),
+            closeTo(math.min(600 / c.$2, 900 * 0.72), 0.6));
       });
     }
 
@@ -73,7 +74,7 @@ void main() {
         const CommunityPostMediaCarousel(mediaUrls: [url]),
       ));
       await tester.pumpAndSettle();
-      expect(_stageHeight(tester), closeTo(600 * 9 / 16, 0.6));
+      expect(_stageHeight(tester), closeTo(600 * 9 / 32, 0.6));
     });
 
     testWidgets('a narrow mobile stage uses available height, not a minimum',
@@ -84,7 +85,7 @@ void main() {
         width: 160,
       ));
       await tester.pumpAndSettle();
-      expect(_stageHeight(tester), 900);
+      expect(_stageHeight(tester), closeTo(kCommunityVideoStageMinHeight, 0.6));
     });
 
     testWidgets('an unknown clip starts at 16:9', (tester) async {
@@ -137,16 +138,38 @@ void main() {
       expect(play.bottom, lessThanOrEqualTo(stage.bottom));
     });
 
-    testWidgets('mixed media keeps the stable 4:3 stage on every page',
+    testWidgets('mixed portrait and landscape videos use each frozen aspect',
         (tester) async {
-      CommunityPostVideoSlide.knownAspects[url] = 32 / 9;
+      const landscapeUrl = 'https://example.test/uploads/landscape.mp4';
+      CommunityPostVideoSlide.knownAspects[url] = 9 / 16;
+      CommunityPostVideoSlide.knownAspects[landscapeUrl] = 16 / 9;
       await tester.pumpWidget(_harness(
         const CommunityPostMediaCarousel(
-          mediaUrls: [url, 'https://example.test/uploads/a.jpg'],
+          mediaUrls: [url, landscapeUrl],
         ),
       ));
       await tester.pumpAndSettle();
-      expect(_stageHeight(tester), closeTo(450, 0.6));
+      final portraitStage = tester.getRect(find.byType(ClipRRect).first);
+      expect(portraitStage.height, closeTo(900 * 0.72, 0.6));
+      final play = tester.getRect(find.byTooltip('Play video').first);
+      expect(play.top, greaterThanOrEqualTo(portraitStage.top));
+      expect(play.bottom, lessThanOrEqualTo(portraitStage.bottom));
+
+      // The carousel snapshots each media URL's shape at mount. A later
+      // session-cache update cannot resize the next page unexpectedly.
+      CommunityPostVideoSlide.knownAspects[landscapeUrl] = 9 / 16;
+      await tester.drag(find.byType(PageView), const Offset(-500, 0));
+      await tester.pumpAndSettle();
+
+      final landscapeStage = tester.getRect(find.byType(ClipRRect).first);
+      expect(landscapeStage.height, closeTo(600 / (16 / 9), 0.6));
+      expect(find.text('2 / 2'), findsOneWidget);
+
+      await tester.drag(find.byType(PageView), const Offset(500, 0));
+      await tester.pumpAndSettle();
+      expect(tester.getRect(find.byType(ClipRRect).first).height,
+          closeTo(portraitStage.height, 0.6));
+      expect(find.text('1 / 2'), findsOneWidget);
     });
 
     testWidgets('loaded metadata does not change stage height or anchor',
@@ -229,11 +252,13 @@ void main() {
               ),
             ));
             await tester.pumpAndSettle();
-            final expected = viewport.height -
+            final usable = viewport.height -
                 topInset -
                 chromeHeight -
                 bottomInset -
                 (detail ? kToolbarHeight : 0);
+            final expected =
+                math.min(viewport.width / (aspect ?? 16 / 9), usable);
             final before = tester.getRect(find.byType(ClipRRect).first);
             expect(before.height, closeTo(expected, 0.6));
             expect(

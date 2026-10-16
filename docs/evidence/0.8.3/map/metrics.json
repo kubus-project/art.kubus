@@ -1,0 +1,5798 @@
+{
+  "dense": {
+    "browserName": "chromium",
+    "glMode": "hardware",
+    "perfPath": "topology",
+    "runsPerCell": 2,
+    "summary": [
+      {
+        "config": "before-febffbe5",
+        "viewport": "390x844",
+        "maplibre": "5.24.0",
+        "projection": "globe",
+        "renderer": "ANGLE (NVIDIA, NVIDIA GeForce RTX 3080 Ti (0x00002208) Direct3D11 vs_5_0 ps_5_0, D3D11)",
+        "p50": 16.7,
+        "p90": 16.8,
+        "p95": 116.7,
+        "p99": 350,
+        "max": 2483.3,
+        "over33": 70,
+        "over50": 68,
+        "frames": 856,
+        "renderP50": 1.4,
+        "renderP95": 3.6,
+        "renderTotalMs": 1649.9,
+        "longTasks": 76,
+        "longTaskMs": 18987,
+        "setDataCalls": 69,
+        "setDataMs": 3.4,
+        "addImage": 81,
+        "readPixelsCalls": 174,
+        "readPixelsMs": 96.8,
+        "featuresAtZoomIn": 4988,
+        "featuresAtPan": 4988,
+        "imagesAtEnd": 84,
+        "coverRequests": 36,
+        "coverKb": 522,
+        "segP95": {
+          "cold-split": 16.8,
+          "idle-cold-split": 233.3,
+          "cold-reversal": 233.3,
+          "cold-reverse-in": 133.4,
+          "idle-cold-reverse-in": 233.4,
+          "cold-pan": 16.8,
+          "idle-cold-pan": 100.1,
+          "cold-merge": 50.1,
+          "idle-cold-merge": 416.7,
+          "warm-split": 16.8,
+          "idle-warm-split": 16.8,
+          "warm-reversal": 16.8,
+          "warm-reverse-in": 16.8,
+          "idle-warm-reverse-in": 16.8,
+          "warm-pan": 16.8,
+          "idle-warm-pan": 100,
+          "warm-merge": 116.6,
+          "idle-warm-merge": 66.6
+        },
+        "segOver50": {
+          "cold-split": 1,
+          "idle-cold-split": 21,
+          "cold-reversal": 5,
+          "cold-reverse-in": 11,
+          "idle-cold-reverse-in": 6,
+          "cold-pan": 1,
+          "idle-cold-pan": 2,
+          "cold-merge": 3,
+          "idle-cold-merge": 2,
+          "warm-split": 1,
+          "idle-warm-split": 5,
+          "warm-reversal": 1,
+          "warm-reverse-in": 3,
+          "idle-warm-reverse-in": 1,
+          "warm-pan": 0,
+          "idle-warm-pan": 2,
+          "warm-merge": 3,
+          "idle-warm-merge": 3
+        },
+        "coverImages": 33,
+        "coverImagesWhileMoving": 9,
+        "firstCoverAfter": {
+          "idle-cold-split": 203.6,
+          "idle-cold-reverse-in": 137.6,
+          "idle-cold-pan": null,
+          "idle-cold-merge": null,
+          "idle-warm-split": 27.2,
+          "idle-warm-reverse-in": null,
+          "idle-warm-pan": null,
+          "idle-warm-merge": null
+        },
+        "lastCoverAfter": {
+          "idle-cold-split": 2782.2,
+          "idle-cold-reverse-in": 402.1,
+          "idle-cold-pan": null,
+          "idle-cold-merge": null,
+          "idle-warm-split": 27.2,
+          "idle-warm-reverse-in": null,
+          "idle-warm-pan": null,
+          "idle-warm-merge": null
+        },
+        "gauges": {
+          "peakDecodedCount": 35,
+          "peakDecodedBytes": 1885056,
+          "registeredImages": 33
+        },
+        "phases": {
+          "fetchDecode": {
+            "n": 46,
+            "p50": 258.7,
+            "p95": 2916.7
+          },
+          "renderPng": {
+            "n": 33,
+            "p50": 2.6,
+            "p95": 10.8
+          },
+          "addImage": {
+            "n": 33,
+            "p50": 1.5,
+            "p95": 3
+          },
+          "resyncDelay": {
+            "n": 16,
+            "p50": 260.3,
+            "p95": 2520.9
+          }
+        },
+        "p95Spread": [
+          116.6,
+          116.7
+        ]
+      },
+      {
+        "config": "after-c5e1c419",
+        "viewport": "390x844",
+        "maplibre": "5.24.0",
+        "projection": "globe",
+        "renderer": "ANGLE (NVIDIA, NVIDIA GeForce RTX 3080 Ti (0x00002208) Direct3D11 vs_5_0 ps_5_0, D3D11)",
+        "p50": 16.7,
+        "p90": 16.7,
+        "p95": 16.8,
+        "p99": 16.8,
+        "max": 183.3,
+        "over33": 5,
+        "over50": 4,
+        "frames": 1632,
+        "renderP50": 1.4,
+        "renderP95": 3.9,
+        "renderTotalMs": 2957.9,
+        "longTasks": 6,
+        "longTaskMs": 1151,
+        "setDataCalls": 176,
+        "setDataMs": 6.5,
+        "addImage": 93,
+        "readPixelsCalls": 264,
+        "readPixelsMs": 96.2,
+        "featuresAtZoomIn": 42,
+        "featuresAtPan": 42,
+        "imagesAtEnd": 97,
+        "coverRequests": 36,
+        "coverKb": 522,
+        "segP95": {
+          "cold-split": 16.8,
+          "idle-cold-split": 16.8,
+          "cold-reversal": 16.7,
+          "cold-reverse-in": 16.8,
+          "idle-cold-reverse-in": 16.7,
+          "cold-pan": 16.7,
+          "idle-cold-pan": 16.7,
+          "cold-merge": 16.7,
+          "idle-cold-merge": 16.8,
+          "warm-split": 16.8,
+          "idle-warm-split": 16.8,
+          "warm-reversal": 16.8,
+          "warm-reverse-in": 16.7,
+          "idle-warm-reverse-in": 16.8,
+          "warm-pan": 16.8,
+          "idle-warm-pan": 16.7,
+          "warm-merge": 16.8,
+          "idle-warm-merge": 16.7
+        },
+        "segOver50": {
+          "cold-split": 1,
+          "idle-cold-split": 1,
+          "cold-reversal": 0,
+          "cold-reverse-in": 1,
+          "idle-cold-reverse-in": 0,
+          "cold-pan": 0,
+          "idle-cold-pan": 0,
+          "cold-merge": 0,
+          "idle-cold-merge": 0,
+          "warm-split": 0,
+          "idle-warm-split": 0,
+          "warm-reversal": 0,
+          "warm-reverse-in": 1,
+          "idle-warm-reverse-in": 0,
+          "warm-pan": 0,
+          "idle-warm-pan": 0,
+          "warm-merge": 0,
+          "idle-warm-merge": 0
+        },
+        "coverImages": 43,
+        "coverImagesWhileMoving": 19,
+        "firstCoverAfter": {
+          "idle-cold-split": 14.4,
+          "idle-cold-reverse-in": null,
+          "idle-cold-pan": null,
+          "idle-cold-merge": null,
+          "idle-warm-split": null,
+          "idle-warm-reverse-in": null,
+          "idle-warm-pan": null,
+          "idle-warm-merge": null
+        },
+        "lastCoverAfter": {
+          "idle-cold-split": 861.6,
+          "idle-cold-reverse-in": null,
+          "idle-cold-pan": null,
+          "idle-cold-merge": null,
+          "idle-warm-split": null,
+          "idle-warm-reverse-in": null,
+          "idle-warm-pan": null,
+          "idle-warm-merge": null
+        },
+        "gauges": {
+          "peakDecodedCount": 41,
+          "peakDecodedBytes": 2216832,
+          "registeredImages": 43
+        },
+        "phases": {
+          "fetchDecode": {
+            "n": 52,
+            "p50": 17.1,
+            "p95": 88.1
+          },
+          "renderPng": {
+            "n": 43,
+            "p50": 2.3,
+            "p95": 7.7
+          },
+          "addImage": {
+            "n": 43,
+            "p50": 1.5,
+            "p95": 1.6
+          },
+          "resyncDelay": {
+            "n": 16,
+            "p50": 147.8,
+            "p95": 235.4
+          }
+        },
+        "p95Spread": [
+          16.7,
+          16.8
+        ]
+      },
+      {
+        "config": "before-febffbe5",
+        "viewport": "1440x900",
+        "maplibre": "5.24.0",
+        "projection": "globe",
+        "renderer": "ANGLE (NVIDIA, NVIDIA GeForce RTX 3080 Ti (0x00002208) Direct3D11 vs_5_0 ps_5_0, D3D11)",
+        "p50": 16.7,
+        "p90": 50,
+        "p95": 116.7,
+        "p99": 750,
+        "max": 2583.3,
+        "over33": 82,
+        "over50": 78,
+        "frames": 807,
+        "renderP50": 1.6,
+        "renderP95": 5.3,
+        "renderTotalMs": 1914,
+        "longTasks": 89,
+        "longTaskMs": 20520,
+        "setDataCalls": 83,
+        "setDataMs": 9.7,
+        "addImage": 97,
+        "readPixelsCalls": 185,
+        "readPixelsMs": 120.2,
+        "featuresAtZoomIn": 4988,
+        "featuresAtPan": 4988,
+        "imagesAtEnd": 100,
+        "coverRequests": 28,
+        "coverKb": 462,
+        "segP95": {
+          "cold-split": 16.8,
+          "idle-cold-split": 200,
+          "cold-reversal": 216.6,
+          "cold-reverse-in": 150,
+          "idle-cold-reverse-in": 216.7,
+          "cold-pan": 133.3,
+          "idle-cold-pan": 216.6,
+          "cold-merge": 16.8,
+          "idle-cold-merge": 33.4,
+          "warm-split": 16.8,
+          "idle-warm-split": 16.8,
+          "warm-reversal": 16.8,
+          "warm-reverse-in": 16.8,
+          "idle-warm-reverse-in": 83.3,
+          "warm-pan": 16.8,
+          "idle-warm-pan": 16.8,
+          "warm-merge": 16.8,
+          "idle-warm-merge": 50
+        },
+        "segOver50": {
+          "cold-split": 1,
+          "idle-cold-split": 22,
+          "cold-reversal": 4,
+          "cold-reverse-in": 13,
+          "idle-cold-reverse-in": 8,
+          "cold-pan": 10,
+          "idle-cold-pan": 6,
+          "cold-merge": 2,
+          "idle-cold-merge": 1,
+          "warm-split": 1,
+          "idle-warm-split": 4,
+          "warm-reversal": 1,
+          "warm-reverse-in": 3,
+          "idle-warm-reverse-in": 2,
+          "warm-pan": 0,
+          "idle-warm-pan": 1,
+          "warm-merge": 2,
+          "idle-warm-merge": 1
+        },
+        "coverImages": 43,
+        "coverImagesWhileMoving": 14,
+        "firstCoverAfter": {
+          "idle-cold-split": 238.8,
+          "idle-cold-reverse-in": 261.5,
+          "idle-cold-pan": 20.4,
+          "idle-cold-merge": null,
+          "idle-warm-split": null,
+          "idle-warm-reverse-in": null,
+          "idle-warm-pan": null,
+          "idle-warm-merge": null
+        },
+        "lastCoverAfter": {
+          "idle-cold-split": 2823.8,
+          "idle-cold-reverse-in": 874.2,
+          "idle-cold-pan": 146.4,
+          "idle-cold-merge": null,
+          "idle-warm-split": null,
+          "idle-warm-reverse-in": null,
+          "idle-warm-pan": null,
+          "idle-warm-merge": null
+        },
+        "gauges": {
+          "peakDecodedCount": 41,
+          "peakDecodedBytes": 2216832,
+          "registeredImages": 43
+        },
+        "phases": {
+          "fetchDecode": {
+            "n": 52,
+            "p50": 129.3,
+            "p95": 2860.3
+          },
+          "renderPng": {
+            "n": 43,
+            "p50": 2.7,
+            "p95": 11.2
+          },
+          "addImage": {
+            "n": 43,
+            "p50": 1.5,
+            "p95": 2.8
+          },
+          "resyncDelay": {
+            "n": 18,
+            "p50": 249.7,
+            "p95": 2697.8
+          }
+        },
+        "p95Spread": [
+          116.7,
+          116.7
+        ]
+      },
+      {
+        "config": "after-c5e1c419",
+        "viewport": "1440x900",
+        "maplibre": "5.24.0",
+        "projection": "globe",
+        "renderer": "ANGLE (NVIDIA, NVIDIA GeForce RTX 3080 Ti (0x00002208) Direct3D11 vs_5_0 ps_5_0, D3D11)",
+        "p50": 16.7,
+        "p90": 16.7,
+        "p95": 16.8,
+        "p99": 16.8,
+        "max": 183.3,
+        "over33": 4,
+        "over50": 4,
+        "frames": 1631,
+        "renderP50": 1.6,
+        "renderP95": 3.3,
+        "renderTotalMs": 3352.5,
+        "longTasks": 6,
+        "longTaskMs": 1170,
+        "setDataCalls": 145,
+        "setDataMs": 5.7,
+        "addImage": 97,
+        "readPixelsCalls": 268,
+        "readPixelsMs": 114.8,
+        "featuresAtZoomIn": 55,
+        "featuresAtPan": 55,
+        "imagesAtEnd": 101,
+        "coverRequests": 28,
+        "coverKb": 462,
+        "segP95": {
+          "cold-split": 16.8,
+          "idle-cold-split": 16.8,
+          "cold-reversal": 16.8,
+          "cold-reverse-in": 16.8,
+          "idle-cold-reverse-in": 16.7,
+          "cold-pan": 16.8,
+          "idle-cold-pan": 16.7,
+          "cold-merge": 16.8,
+          "idle-cold-merge": 16.8,
+          "warm-split": 16.8,
+          "idle-warm-split": 16.8,
+          "warm-reversal": 16.7,
+          "warm-reverse-in": 16.7,
+          "idle-warm-reverse-in": 16.7,
+          "warm-pan": 16.8,
+          "idle-warm-pan": 16.7,
+          "warm-merge": 16.7,
+          "idle-warm-merge": 16.8
+        },
+        "segOver50": {
+          "cold-split": 1,
+          "idle-cold-split": 1,
+          "cold-reversal": 0,
+          "cold-reverse-in": 1,
+          "idle-cold-reverse-in": 0,
+          "cold-pan": 0,
+          "idle-cold-pan": 0,
+          "cold-merge": 0,
+          "idle-cold-merge": 0,
+          "warm-split": 0,
+          "idle-warm-split": 0,
+          "warm-reversal": 0,
+          "warm-reverse-in": 1,
+          "idle-warm-reverse-in": 0,
+          "warm-pan": 0,
+          "idle-warm-pan": 0,
+          "warm-merge": 0,
+          "idle-warm-merge": 0
+        },
+        "coverImages": 43,
+        "coverImagesWhileMoving": 11,
+        "firstCoverAfter": {
+          "idle-cold-split": 43.8,
+          "idle-cold-reverse-in": null,
+          "idle-cold-pan": null,
+          "idle-cold-merge": null,
+          "idle-warm-split": null,
+          "idle-warm-reverse-in": null,
+          "idle-warm-pan": null,
+          "idle-warm-merge": null
+        },
+        "lastCoverAfter": {
+          "idle-cold-split": 1080.5,
+          "idle-cold-reverse-in": null,
+          "idle-cold-pan": null,
+          "idle-cold-merge": null,
+          "idle-warm-split": null,
+          "idle-warm-reverse-in": null,
+          "idle-warm-pan": null,
+          "idle-warm-merge": null
+        },
+        "gauges": {
+          "peakDecodedCount": 41,
+          "peakDecodedBytes": 2216832,
+          "registeredImages": 43
+        },
+        "phases": {
+          "fetchDecode": {
+            "n": 52,
+            "p50": 17,
+            "p95": 103.5
+          },
+          "renderPng": {
+            "n": 43,
+            "p50": 2.9,
+            "p95": 8.3
+          },
+          "addImage": {
+            "n": 43,
+            "p50": 1.5,
+            "p95": 2.5
+          },
+          "resyncDelay": {
+            "n": 13,
+            "p50": 149.4,
+            "p95": 157.7
+          }
+        },
+        "p95Spread": [
+          16.8,
+          16.8
+        ]
+      }
+    ],
+    "runs": [
+      {
+        "config": "before-febffbe5",
+        "viewport": "390x844",
+        "run": 0,
+        "info": {
+          "maplibre": "5.24.0",
+          "projection": "globe",
+          "renderer": "ANGLE (NVIDIA, NVIDIA GeForce RTX 3080 Ti (0x00002208) Direct3D11 vs_5_0 ps_5_0, D3D11)"
+        },
+        "all": {
+          "frames": 837,
+          "p50": 16.7,
+          "p90": 16.8,
+          "p95": 116.7,
+          "p99": 349.9,
+          "max": 2483.3,
+          "over33": 70,
+          "over50": 68,
+          "missed60HzFrames": 1083
+        },
+        "bySeg": {
+          "cold-split": {
+            "frames": 36,
+            "p50": 16.7,
+            "p90": 16.7,
+            "p95": 16.8,
+            "p99": 949.9,
+            "max": 949.9,
+            "over33": 1,
+            "over50": 1,
+            "missed60HzFrames": 56
+          },
+          "idle-cold-split": {
+            "frames": 36,
+            "p50": 116.6,
+            "p90": 150,
+            "p95": 233.3,
+            "p99": 2483.3,
+            "max": 2483.3,
+            "over33": 21,
+            "over50": 21,
+            "missed60HzFrames": 291
+          },
+          "cold-reversal": {
+            "frames": 5,
+            "p50": 150,
+            "p90": 233.3,
+            "p95": 233.3,
+            "p99": 233.3,
+            "max": 233.3,
+            "over33": 5,
+            "over50": 5,
+            "missed60HzFrames": 41
+          },
+          "cold-reverse-in": {
+            "frames": 34,
+            "p50": 16.7,
+            "p90": 133.3,
+            "p95": 133.4,
+            "p99": 200,
+            "max": 200,
+            "over33": 10,
+            "over50": 10,
+            "missed60HzFrames": 67
+          },
+          "idle-cold-reverse-in": {
+            "frames": 17,
+            "p50": 16.7,
+            "p90": 133.2,
+            "p95": 233.4,
+            "p99": 233.4,
+            "max": 233.4,
+            "over33": 6,
+            "over50": 6,
+            "missed60HzFrames": 42
+          },
+          "cold-pan": {
+            "frames": 74,
+            "p50": 16.7,
+            "p90": 16.7,
+            "p95": 16.8,
+            "p99": 116.6,
+            "max": 116.6,
+            "over33": 1,
+            "over50": 1,
+            "missed60HzFrames": 6
+          },
+          "idle-cold-pan": {
+            "frames": 37,
+            "p50": 16.7,
+            "p90": 16.7,
+            "p95": 100.1,
+            "p99": 116.7,
+            "max": 116.7,
+            "over33": 2,
+            "over50": 2,
+            "missed60HzFrames": 11
+          },
+          "cold-merge": {
+            "frames": 54,
+            "p50": 16.7,
+            "p90": 16.7,
+            "p95": 50.1,
+            "p99": 1549.8,
+            "max": 1549.8,
+            "over33": 3,
+            "over50": 3,
+            "missed60HzFrames": 100
+          },
+          "idle-cold-merge": {
+            "frames": 18,
+            "p50": 16.7,
+            "p90": 349.9,
+            "p95": 416.7,
+            "p99": 416.7,
+            "max": 416.7,
+            "over33": 3,
+            "over50": 2,
+            "missed60HzFrames": 46
+          },
+          "warm-split": {
+            "frames": 37,
+            "p50": 16.7,
+            "p90": 16.7,
+            "p95": 16.8,
+            "p99": 916.5,
+            "max": 916.5,
+            "over33": 1,
+            "over50": 1,
+            "missed60HzFrames": 54
+          },
+          "idle-warm-split": {
+            "frames": 134,
+            "p50": 16.7,
+            "p90": 16.7,
+            "p95": 16.8,
+            "p99": 216.6,
+            "max": 2300,
+            "over33": 5,
+            "over50": 5,
+            "missed60HzFrames": 167
+          },
+          "warm-reversal": {
+            "frames": 24,
+            "p50": 16.7,
+            "p90": 16.7,
+            "p95": 16.7,
+            "p99": 16.7,
+            "max": 16.7,
+            "over33": 0,
+            "over50": 0,
+            "missed60HzFrames": 0
+          },
+          "warm-reverse-in": {
+            "frames": 93,
+            "p50": 16.7,
+            "p90": 16.8,
+            "p95": 16.8,
+            "p99": 200,
+            "max": 200,
+            "over33": 3,
+            "over50": 3,
+            "missed60HzFrames": 22
+          },
+          "idle-warm-reverse-in": {
+            "frames": 43,
+            "p50": 16.7,
+            "p90": 16.7,
+            "p95": 16.8,
+            "p99": 100.1,
+            "max": 100.1,
+            "over33": 1,
+            "over50": 1,
+            "missed60HzFrames": 5
+          },
+          "warm-pan": {
+            "frames": 72,
+            "p50": 16.7,
+            "p90": 16.7,
+            "p95": 16.7,
+            "p99": 16.8,
+            "max": 16.8,
+            "over33": 0,
+            "over50": 0,
+            "missed60HzFrames": 0
+          },
+          "idle-warm-pan": {
+            "frames": 37,
+            "p50": 16.7,
+            "p90": 16.8,
+            "p95": 100,
+            "p99": 116.7,
+            "max": 116.7,
+            "over33": 2,
+            "over50": 2,
+            "missed60HzFrames": 12
+          },
+          "warm-merge": {
+            "frames": 45,
+            "p50": 16.7,
+            "p90": 16.7,
+            "p95": 116.6,
+            "p99": 1716.5,
+            "max": 1716.5,
+            "over33": 3,
+            "over50": 3,
+            "missed60HzFrames": 114
+          },
+          "idle-warm-merge": {
+            "frames": 41,
+            "p50": 16.7,
+            "p90": 16.8,
+            "p95": 50,
+            "p99": 750.1,
+            "max": 750.1,
+            "over33": 3,
+            "over50": 2,
+            "missed60HzFrames": 49
+          }
+        },
+        "render": {
+          "calls": 911,
+          "p50": 1.4,
+          "p95": 3.6,
+          "max": 151.8,
+          "totalMs": 1649.9
+        },
+        "longTasks": {
+          "count": 76,
+          "totalMs": 18987,
+          "max": 2481
+        },
+        "setData": {
+          "calls": 69,
+          "markerCalls": 69,
+          "totalMs": 3.4,
+          "max": 0.2,
+          "maxFeatures": 4988
+        },
+        "readPixels": {
+          "calls": 172,
+          "totalMs": 87.1,
+          "max": 6.7
+        },
+        "images": {
+          "addImageDuringPath": 81,
+          "removeImage": 0,
+          "peakActive": 84
+        },
+        "counts": [
+          {
+            "seg": "cold",
+            "features": 4988,
+            "images": 82,
+            "rendered": 42
+          },
+          {
+            "seg": "warm",
+            "features": 4988,
+            "images": 84,
+            "rendered": 42
+          }
+        ],
+        "idles": [
+          {
+            "seg": "idle-cold-split",
+            "t": 14271.100000023842,
+            "zoom": 13.4,
+            "center": {
+              "lng": 14.505800000000022,
+              "lat": 46.0569
+            }
+          },
+          {
+            "seg": "idle-cold-reverse-in",
+            "t": 19831.700000047684,
+            "zoom": 13.4,
+            "center": {
+              "lng": 14.505800000000136,
+              "lat": 46.0569000000001
+            }
+          },
+          {
+            "seg": "idle-cold-pan",
+            "t": 21886.200000047684,
+            "zoom": 13.4,
+            "center": {
+              "lng": 14.508800000000065,
+              "lat": 46.05789999999999
+            }
+          },
+          {
+            "seg": "idle-cold-merge",
+            "t": 25508.600000023842,
+            "zoom": 10.50000019333757,
+            "center": {
+              "lng": 14.50580000000269,
+              "lat": 46.056900000007026
+            }
+          },
+          {
+            "seg": "idle-warm-split",
+            "t": 30241.900000035763,
+            "zoom": 13.4,
+            "center": {
+              "lng": 14.505800000002637,
+              "lat": 46.056900000007026
+            }
+          },
+          {
+            "seg": "idle-warm-reverse-in",
+            "t": 35165.90000003576,
+            "zoom": 13.4,
+            "center": {
+              "lng": 14.505800000001386,
+              "lat": 46.056900000007005
+            }
+          },
+          {
+            "seg": "idle-warm-pan",
+            "t": 37172.60000002384,
+            "zoom": 13.4,
+            "center": {
+              "lng": 14.508800000000065,
+              "lat": 46.05789999999999
+            }
+          },
+          {
+            "seg": "idle-warm-merge",
+            "t": 41340.80000001192,
+            "zoom": 10.500000060887068,
+            "center": {
+              "lng": 14.50579999999507,
+              "lat": 46.056899999993746
+            }
+          }
+        ],
+        "video": "page@ff49b074faef835e8bc016faef9349bd.webm",
+        "cover": {
+          "requests": 36,
+          "decodedKb": 522
+        },
+        "covers": {
+          "registered": 33,
+          "registeredWhileMoving": 9,
+          "firstCoverAfter": {
+            "idle-cold-split": 192.3,
+            "idle-cold-reverse-in": 137.6,
+            "idle-cold-pan": null,
+            "idle-cold-merge": null,
+            "idle-warm-split": 27.2,
+            "idle-warm-reverse-in": null,
+            "idle-warm-pan": null,
+            "idle-warm-merge": null
+          },
+          "lastCoverAfter": {
+            "idle-cold-split": 2782.2,
+            "idle-cold-reverse-in": 402.1,
+            "idle-cold-pan": null,
+            "idle-cold-merge": null,
+            "idle-warm-split": 27.2,
+            "idle-warm-reverse-in": null,
+            "idle-warm-pan": null,
+            "idle-warm-merge": null
+          },
+          "gauges": {
+            "peakDecodedCount": 35,
+            "peakDecodedBytes": 1885056,
+            "registeredImages": 33
+          },
+          "phases": {
+            "fetchDecode": {
+              "n": 46,
+              "p50": 258.7,
+              "p95": 2916.7
+            },
+            "renderPng": {
+              "n": 33,
+              "p50": 2.5,
+              "p95": 7.9
+            },
+            "addImage": {
+              "n": 33,
+              "p50": 1.5,
+              "p95": 3
+            },
+            "resyncDelay": {
+              "n": 16,
+              "p50": 258.1,
+              "p95": 2520.9
+            }
+          }
+        },
+        "fixture": {
+          "hits": 143,
+          "misses": 1
+        },
+        "pathFixture": {
+          "hits": 95,
+          "misses": 0
+        }
+      },
+      {
+        "config": "after-c5e1c419",
+        "viewport": "390x844",
+        "run": 0,
+        "info": {
+          "maplibre": "5.24.0",
+          "projection": "globe",
+          "renderer": "ANGLE (NVIDIA, NVIDIA GeForce RTX 3080 Ti (0x00002208) Direct3D11 vs_5_0 ps_5_0, D3D11)"
+        },
+        "all": {
+          "frames": 1632,
+          "p50": 16.7,
+          "p90": 16.7,
+          "p95": 16.7,
+          "p99": 16.8,
+          "max": 183.3,
+          "over33": 4,
+          "over50": 4,
+          "missed60HzFrames": 27
+        },
+        "bySeg": {
+          "cold-split": {
+            "frames": 155,
+            "p50": 16.7,
+            "p90": 16.7,
+            "p95": 16.7,
+            "p99": 33.3,
+            "max": 183.3,
+            "over33": 1,
+            "over50": 1,
+            "missed60HzFrames": 12
+          },
+          "idle-cold-split": {
+            "frames": 149,
+            "p50": 16.7,
+            "p90": 16.7,
+            "p95": 16.7,
+            "p99": 16.8,
+            "max": 100,
+            "over33": 1,
+            "over50": 1,
+            "missed60HzFrames": 5
+          },
+          "cold-reversal": {
+            "frames": 30,
+            "p50": 16.7,
+            "p90": 16.7,
+            "p95": 16.7,
+            "p99": 16.8,
+            "max": 16.8,
+            "over33": 0,
+            "over50": 0,
+            "missed60HzFrames": 0
+          },
+          "cold-reverse-in": {
+            "frames": 103,
+            "p50": 16.7,
+            "p90": 16.7,
+            "p95": 16.8,
+            "p99": 16.8,
+            "max": 99.9,
+            "over33": 1,
+            "over50": 1,
+            "missed60HzFrames": 5
+          },
+          "idle-cold-reverse-in": {
+            "frames": 44,
+            "p50": 16.7,
+            "p90": 16.7,
+            "p95": 16.7,
+            "p99": 16.8,
+            "max": 16.8,
+            "over33": 0,
+            "over50": 0,
+            "missed60HzFrames": 0
+          },
+          "cold-pan": {
+            "frames": 72,
+            "p50": 16.7,
+            "p90": 16.7,
+            "p95": 16.7,
+            "p99": 16.8,
+            "max": 16.8,
+            "over33": 0,
+            "over50": 0,
+            "missed60HzFrames": 0
+          },
+          "idle-cold-pan": {
+            "frames": 43,
+            "p50": 16.7,
+            "p90": 16.7,
+            "p95": 16.7,
+            "p99": 16.8,
+            "max": 16.8,
+            "over33": 0,
+            "over50": 0,
+            "missed60HzFrames": 0
+          },
+          "cold-merge": {
+            "frames": 169,
+            "p50": 16.7,
+            "p90": 16.7,
+            "p95": 16.7,
+            "p99": 16.8,
+            "max": 16.8,
+            "over33": 0,
+            "over50": 0,
+            "missed60HzFrames": 0
+          },
+          "idle-cold-merge": {
+            "frames": 43,
+            "p50": 16.7,
+            "p90": 16.7,
+            "p95": 16.8,
+            "p99": 16.8,
+            "max": 16.8,
+            "over33": 0,
+            "over50": 0,
+            "missed60HzFrames": 0
+          },
+          "warm-split": {
+            "frames": 168,
+            "p50": 16.7,
+            "p90": 16.7,
+            "p95": 16.8,
+            "p99": 16.8,
+            "max": 16.8,
+            "over33": 0,
+            "over50": 0,
+            "missed60HzFrames": 0
+          },
+          "idle-warm-split": {
+            "frames": 152,
+            "p50": 16.7,
+            "p90": 16.7,
+            "p95": 16.7,
+            "p99": 16.8,
+            "max": 16.8,
+            "over33": 0,
+            "over50": 0,
+            "missed60HzFrames": 0
+          },
+          "warm-reversal": {
+            "frames": 30,
+            "p50": 16.7,
+            "p90": 16.7,
+            "p95": 16.8,
+            "p99": 16.8,
+            "max": 16.8,
+            "over33": 0,
+            "over50": 0,
+            "missed60HzFrames": 0
+          },
+          "warm-reverse-in": {
+            "frames": 104,
+            "p50": 16.7,
+            "p90": 16.7,
+            "p95": 16.7,
+            "p99": 16.8,
+            "max": 100.1,
+            "over33": 1,
+            "over50": 1,
+            "missed60HzFrames": 5
+          },
+          "idle-warm-reverse-in": {
+            "frames": 43,
+            "p50": 16.7,
+            "p90": 16.7,
+            "p95": 16.8,
+            "p99": 16.8,
+            "max": 16.8,
+            "over33": 0,
+            "over50": 0,
+            "missed60HzFrames": 0
+          },
+          "warm-pan": {
+            "frames": 72,
+            "p50": 16.7,
+            "p90": 16.7,
+            "p95": 16.8,
+            "p99": 16.8,
+            "max": 16.8,
+            "over33": 0,
+            "over50": 0,
+            "missed60HzFrames": 0
+          },
+          "idle-warm-pan": {
+            "frames": 44,
+            "p50": 16.7,
+            "p90": 16.7,
+            "p95": 16.7,
+            "p99": 16.8,
+            "max": 16.8,
+            "over33": 0,
+            "over50": 0,
+            "missed60HzFrames": 0
+          },
+          "warm-merge": {
+            "frames": 168,
+            "p50": 16.7,
+            "p90": 16.7,
+            "p95": 16.7,
+            "p99": 16.8,
+            "max": 16.8,
+            "over33": 0,
+            "over50": 0,
+            "missed60HzFrames": 0
+          },
+          "idle-warm-merge": {
+            "frames": 43,
+            "p50": 16.7,
+            "p90": 16.7,
+            "p95": 16.7,
+            "p99": 16.8,
+            "max": 16.8,
+            "over33": 0,
+            "over50": 0,
+            "missed60HzFrames": 0
+          }
+        },
+        "render": {
+          "calls": 1710,
+          "p50": 1.4,
+          "p95": 3.9,
+          "max": 166.1,
+          "totalMs": 2957.9
+        },
+        "longTasks": {
+          "count": 6,
+          "totalMs": 1151,
+          "max": 493
+        },
+        "setData": {
+          "calls": 176,
+          "markerCalls": 176,
+          "totalMs": 6.5,
+          "max": 0.2,
+          "maxFeatures": 1690
+        },
+        "readPixels": {
+          "calls": 264,
+          "totalMs": 96.2,
+          "max": 6.7
+        },
+        "images": {
+          "addImageDuringPath": 93,
+          "removeImage": 0,
+          "peakActive": 97
+        },
+        "counts": [
+          {
+            "seg": "cold",
+            "features": 42,
+            "images": 96,
+            "rendered": 42
+          },
+          {
+            "seg": "warm",
+            "features": 42,
+            "images": 97,
+            "rendered": 42
+          }
+        ],
+        "idles": [
+          {
+            "seg": "idle-cold-split",
+            "t": 12924.5,
+            "zoom": 13.4,
+            "center": {
+              "lng": 14.505800000000022,
+              "lat": 46.0569
+            }
+          },
+          {
+            "seg": "idle-cold-reverse-in",
+            "t": 17788.19999998808,
+            "zoom": 13.4,
+            "center": {
+              "lng": 14.505799999999113,
+              "lat": 46.05690000000067
+            }
+          },
+          {
+            "seg": "idle-cold-pan",
+            "t": 19722.099999964237,
+            "zoom": 13.4,
+            "center": {
+              "lng": 14.508800000000065,
+              "lat": 46.05789999999999
+            }
+          },
+          {
+            "seg": "idle-cold-merge",
+            "t": 23242.399999976158,
+            "zoom": 10.50000000002007,
+            "center": {
+              "lng": 14.505799999999542,
+              "lat": 46.05690000000725
+            }
+          },
+          {
+            "seg": "idle-warm-split",
+            "t": 26771.69999998808,
+            "zoom": 13.4,
+            "center": {
+              "lng": 14.505799999999567,
+              "lat": 46.05690000000725
+            }
+          },
+          {
+            "seg": "idle-warm-reverse-in",
+            "t": 31621,
+            "zoom": 13.4,
+            "center": {
+              "lng": 14.505799999998885,
+              "lat": 46.056900000006976
+            }
+          },
+          {
+            "seg": "idle-warm-pan",
+            "t": 33538.5,
+            "zoom": 13.4,
+            "center": {
+              "lng": 14.508800000000065,
+              "lat": 46.05789999999999
+            }
+          },
+          {
+            "seg": "idle-warm-merge",
+            "t": 37058.5,
+            "zoom": 10.500000000022004,
+            "center": {
+              "lng": 14.505800000001523,
+              "lat": 46.056899999994705
+            }
+          }
+        ],
+        "video": "page@bf9832a95d49ea42f404cc6fa49959ab.webm",
+        "cover": {
+          "requests": 36,
+          "decodedKb": 522
+        },
+        "covers": {
+          "registered": 43,
+          "registeredWhileMoving": 19,
+          "firstCoverAfter": {
+            "idle-cold-split": 14.4,
+            "idle-cold-reverse-in": null,
+            "idle-cold-pan": null,
+            "idle-cold-merge": null,
+            "idle-warm-split": null,
+            "idle-warm-reverse-in": null,
+            "idle-warm-pan": null,
+            "idle-warm-merge": null
+          },
+          "lastCoverAfter": {
+            "idle-cold-split": 811.6,
+            "idle-cold-reverse-in": null,
+            "idle-cold-pan": null,
+            "idle-cold-merge": null,
+            "idle-warm-split": null,
+            "idle-warm-reverse-in": null,
+            "idle-warm-pan": null,
+            "idle-warm-merge": null
+          },
+          "gauges": {
+            "peakDecodedCount": 41,
+            "peakDecodedBytes": 2216832,
+            "registeredImages": 43
+          },
+          "phases": {
+            "fetchDecode": {
+              "n": 52,
+              "p50": 15,
+              "p95": 88.1
+            },
+            "renderPng": {
+              "n": 43,
+              "p50": 2.3,
+              "p95": 7.7
+            },
+            "addImage": {
+              "n": 43,
+              "p50": 1.5,
+              "p95": 1.6
+            },
+            "resyncDelay": {
+              "n": 16,
+              "p50": 146.6,
+              "p95": 235.4
+            }
+          }
+        },
+        "fixture": {
+          "hits": 149,
+          "misses": 0
+        },
+        "pathFixture": {
+          "hits": 100,
+          "misses": 0
+        }
+      },
+      {
+        "config": "before-febffbe5",
+        "viewport": "390x844",
+        "run": 1,
+        "info": {
+          "maplibre": "5.24.0",
+          "projection": "globe",
+          "renderer": "ANGLE (NVIDIA, NVIDIA GeForce RTX 3080 Ti (0x00002208) Direct3D11 vs_5_0 ps_5_0, D3D11)"
+        },
+        "all": {
+          "frames": 856,
+          "p50": 16.7,
+          "p90": 16.8,
+          "p95": 116.6,
+          "p99": 350,
+          "max": 2433.3,
+          "over33": 69,
+          "over50": 67,
+          "missed60HzFrames": 1036
+        },
+        "bySeg": {
+          "cold-split": {
+            "frames": 36,
+            "p50": 16.7,
+            "p90": 16.7,
+            "p95": 16.8,
+            "p99": 966.6,
+            "max": 966.6,
+            "over33": 1,
+            "over50": 1,
+            "missed60HzFrames": 57
+          },
+          "idle-cold-split": {
+            "frames": 35,
+            "p50": 100.1,
+            "p90": 150,
+            "p95": 216.6,
+            "p99": 2433.3,
+            "max": 2433.3,
+            "over33": 21,
+            "over50": 21,
+            "missed60HzFrames": 283
+          },
+          "cold-reversal": {
+            "frames": 5,
+            "p50": 133.3,
+            "p90": 233.3,
+            "p95": 233.3,
+            "p99": 233.3,
+            "max": 233.3,
+            "over33": 5,
+            "over50": 5,
+            "missed60HzFrames": 39
+          },
+          "cold-reverse-in": {
+            "frames": 32,
+            "p50": 16.7,
+            "p90": 133.2,
+            "p95": 133.4,
+            "p99": 150,
+            "max": 150,
+            "over33": 11,
+            "over50": 11,
+            "missed60HzFrames": 70
+          },
+          "idle-cold-reverse-in": {
+            "frames": 27,
+            "p50": 16.7,
+            "p90": 116.6,
+            "p95": 116.6,
+            "p99": 233.4,
+            "max": 233.4,
+            "over33": 5,
+            "over50": 5,
+            "missed60HzFrames": 35
+          },
+          "cold-pan": {
+            "frames": 72,
+            "p50": 16.7,
+            "p90": 16.7,
+            "p95": 16.7,
+            "p99": 16.8,
+            "max": 16.8,
+            "over33": 0,
+            "over50": 0,
+            "missed60HzFrames": 0
+          },
+          "idle-cold-pan": {
+            "frames": 37,
+            "p50": 16.7,
+            "p90": 16.7,
+            "p95": 100.1,
+            "p99": 116.7,
+            "max": 116.7,
+            "over33": 2,
+            "over50": 2,
+            "missed60HzFrames": 11
+          },
+          "cold-merge": {
+            "frames": 55,
+            "p50": 16.7,
+            "p90": 16.8,
+            "p95": 50,
+            "p99": 1549.9,
+            "max": 1549.9,
+            "over33": 3,
+            "over50": 2,
+            "missed60HzFrames": 99
+          },
+          "idle-cold-merge": {
+            "frames": 20,
+            "p50": 16.7,
+            "p90": 350,
+            "p95": 383.3,
+            "p99": 383.3,
+            "max": 383.3,
+            "over33": 3,
+            "over50": 2,
+            "missed60HzFrames": 44
+          },
+          "warm-split": {
+            "frames": 37,
+            "p50": 16.7,
+            "p90": 16.8,
+            "p95": 16.8,
+            "p99": 916.6,
+            "max": 916.6,
+            "over33": 1,
+            "over50": 1,
+            "missed60HzFrames": 54
+          },
+          "idle-warm-split": {
+            "frames": 136,
+            "p50": 16.7,
+            "p90": 16.7,
+            "p95": 16.8,
+            "p99": 200,
+            "max": 2249.9,
+            "over33": 5,
+            "over50": 5,
+            "missed60HzFrames": 161
+          },
+          "warm-reversal": {
+            "frames": 25,
+            "p50": 16.7,
+            "p90": 16.8,
+            "p95": 16.8,
+            "p99": 100,
+            "max": 100,
+            "over33": 1,
+            "over50": 1,
+            "missed60HzFrames": 5
+          },
+          "warm-reverse-in": {
+            "frames": 93,
+            "p50": 16.7,
+            "p90": 16.7,
+            "p95": 16.8,
+            "p99": 116.7,
+            "max": 116.7,
+            "over33": 3,
+            "over50": 3,
+            "missed60HzFrames": 16
+          },
+          "idle-warm-reverse-in": {
+            "frames": 44,
+            "p50": 16.7,
+            "p90": 16.7,
+            "p95": 16.7,
+            "p99": 99.9,
+            "max": 99.9,
+            "over33": 1,
+            "over50": 1,
+            "missed60HzFrames": 5
+          },
+          "warm-pan": {
+            "frames": 72,
+            "p50": 16.7,
+            "p90": 16.7,
+            "p95": 16.8,
+            "p99": 16.8,
+            "max": 16.8,
+            "over33": 0,
+            "over50": 0,
+            "missed60HzFrames": 0
+          },
+          "idle-warm-pan": {
+            "frames": 38,
+            "p50": 16.7,
+            "p90": 16.8,
+            "p95": 100,
+            "p99": 116.6,
+            "max": 116.6,
+            "over33": 2,
+            "over50": 2,
+            "missed60HzFrames": 11
+          },
+          "warm-merge": {
+            "frames": 51,
+            "p50": 16.7,
+            "p90": 16.7,
+            "p95": 16.8,
+            "p99": 1533.4,
+            "max": 1533.4,
+            "over33": 2,
+            "over50": 2,
+            "missed60HzFrames": 97
+          },
+          "idle-warm-merge": {
+            "frames": 41,
+            "p50": 16.7,
+            "p90": 16.8,
+            "p95": 66.6,
+            "p99": 733.3,
+            "max": 733.3,
+            "over33": 3,
+            "over50": 3,
+            "missed60HzFrames": 49
+          }
+        },
+        "render": {
+          "calls": 928,
+          "p50": 1.4,
+          "p95": 3.3,
+          "max": 151.7,
+          "totalMs": 1631
+        },
+        "longTasks": {
+          "count": 73,
+          "totalMs": 18202,
+          "max": 2438
+        },
+        "setData": {
+          "calls": 68,
+          "markerCalls": 68,
+          "totalMs": 3.2,
+          "max": 0.2,
+          "maxFeatures": 4988
+        },
+        "readPixels": {
+          "calls": 174,
+          "totalMs": 96.8,
+          "max": 10.1
+        },
+        "images": {
+          "addImageDuringPath": 81,
+          "removeImage": 0,
+          "peakActive": 84
+        },
+        "counts": [
+          {
+            "seg": "cold",
+            "features": 4988,
+            "images": 82,
+            "rendered": 42
+          },
+          {
+            "seg": "warm",
+            "features": 4988,
+            "images": 84,
+            "rendered": 42
+          }
+        ],
+        "idles": [
+          {
+            "seg": "idle-cold-split",
+            "t": 14224,
+            "zoom": 13.4,
+            "center": {
+              "lng": 14.505800000000022,
+              "lat": 46.0569
+            }
+          },
+          {
+            "seg": "idle-cold-reverse-in",
+            "t": 19657.80000001192,
+            "zoom": 13.4,
+            "center": {
+              "lng": 14.505800000001386,
+              "lat": 46.05690000000101
+            }
+          },
+          {
+            "seg": "idle-cold-pan",
+            "t": 21655.899999976158,
+            "zoom": 13.4,
+            "center": {
+              "lng": 14.508800000000065,
+              "lat": 46.05789999999999
+            }
+          },
+          {
+            "seg": "idle-cold-merge",
+            "t": 25285.399999976158,
+            "zoom": 10.500000196568495,
+            "center": {
+              "lng": 14.505799999996874,
+              "lat": 46.056899999995444
+            }
+          },
+          {
+            "seg": "idle-warm-split",
+            "t": 29946.19999998808,
+            "zoom": 13.4,
+            "center": {
+              "lng": 14.505799999996839,
+              "lat": 46.056899999995444
+            }
+          },
+          {
+            "seg": "idle-warm-reverse-in",
+            "t": 34875.59999996424,
+            "zoom": 13.4,
+            "center": {
+              "lng": 14.505799999998544,
+              "lat": 46.056899999994556
+            }
+          },
+          {
+            "seg": "idle-warm-pan",
+            "t": 36889.80000001192,
+            "zoom": 13.4,
+            "center": {
+              "lng": 14.508800000000065,
+              "lat": 46.05789999999999
+            }
+          },
+          {
+            "seg": "idle-warm-merge",
+            "t": 40866.59999996424,
+            "zoom": 10.500000336602545,
+            "center": {
+              "lng": 14.505799999999287,
+              "lat": 46.05690000000405
+            }
+          }
+        ],
+        "video": "page@614b45954dfd3f8f2ae3906e694b5574.webm",
+        "cover": {
+          "requests": 36,
+          "decodedKb": 522
+        },
+        "covers": {
+          "registered": 33,
+          "registeredWhileMoving": 9,
+          "firstCoverAfter": {
+            "idle-cold-split": 203.6,
+            "idle-cold-reverse-in": 15.2,
+            "idle-cold-pan": null,
+            "idle-cold-merge": null,
+            "idle-warm-split": 24.3,
+            "idle-warm-reverse-in": null,
+            "idle-warm-pan": null,
+            "idle-warm-merge": null
+          },
+          "lastCoverAfter": {
+            "idle-cold-split": 2702.6,
+            "idle-cold-reverse-in": 170.2,
+            "idle-cold-pan": null,
+            "idle-cold-merge": null,
+            "idle-warm-split": 24.3,
+            "idle-warm-reverse-in": null,
+            "idle-warm-pan": null,
+            "idle-warm-merge": null
+          },
+          "gauges": {
+            "peakDecodedCount": 35,
+            "peakDecodedBytes": 1885056,
+            "registeredImages": 33
+          },
+          "phases": {
+            "fetchDecode": {
+              "n": 46,
+              "p50": 250.8,
+              "p95": 2807.6
+            },
+            "renderPng": {
+              "n": 33,
+              "p50": 2.6,
+              "p95": 10.8
+            },
+            "addImage": {
+              "n": 33,
+              "p50": 1.5,
+              "p95": 1.8
+            },
+            "resyncDelay": {
+              "n": 14,
+              "p50": 260.3,
+              "p95": 2449.8
+            }
+          }
+        },
+        "fixture": {
+          "hits": 143,
+          "misses": 1
+        },
+        "pathFixture": {
+          "hits": 95,
+          "misses": 0
+        }
+      },
+      {
+        "config": "after-c5e1c419",
+        "viewport": "390x844",
+        "run": 1,
+        "info": {
+          "maplibre": "5.24.0",
+          "projection": "globe",
+          "renderer": "ANGLE (NVIDIA, NVIDIA GeForce RTX 3080 Ti (0x00002208) Direct3D11 vs_5_0 ps_5_0, D3D11)"
+        },
+        "all": {
+          "frames": 1631,
+          "p50": 16.7,
+          "p90": 16.7,
+          "p95": 16.8,
+          "p99": 16.8,
+          "max": 183.3,
+          "over33": 5,
+          "over50": 4,
+          "missed60HzFrames": 28
+        },
+        "bySeg": {
+          "cold-split": {
+            "frames": 156,
+            "p50": 16.7,
+            "p90": 16.7,
+            "p95": 16.8,
+            "p99": 33.4,
+            "max": 183.3,
+            "over33": 2,
+            "over50": 1,
+            "missed60HzFrames": 11
+          },
+          "idle-cold-split": {
+            "frames": 147,
+            "p50": 16.7,
+            "p90": 16.7,
+            "p95": 16.8,
+            "p99": 16.8,
+            "max": 99.9,
+            "over33": 1,
+            "over50": 1,
+            "missed60HzFrames": 5
+          },
+          "cold-reversal": {
+            "frames": 31,
+            "p50": 16.7,
+            "p90": 16.7,
+            "p95": 16.7,
+            "p99": 16.8,
+            "max": 16.8,
+            "over33": 0,
+            "over50": 0,
+            "missed60HzFrames": 0
+          },
+          "cold-reverse-in": {
+            "frames": 102,
+            "p50": 16.7,
+            "p90": 16.7,
+            "p95": 16.8,
+            "p99": 16.8,
+            "max": 116.7,
+            "over33": 1,
+            "over50": 1,
+            "missed60HzFrames": 6
+          },
+          "idle-cold-reverse-in": {
+            "frames": 44,
+            "p50": 16.7,
+            "p90": 16.7,
+            "p95": 16.7,
+            "p99": 16.7,
+            "max": 16.7,
+            "over33": 0,
+            "over50": 0,
+            "missed60HzFrames": 0
+          },
+          "cold-pan": {
+            "frames": 72,
+            "p50": 16.7,
+            "p90": 16.7,
+            "p95": 16.7,
+            "p99": 16.8,
+            "max": 16.8,
+            "over33": 0,
+            "over50": 0,
+            "missed60HzFrames": 0
+          },
+          "idle-cold-pan": {
+            "frames": 44,
+            "p50": 16.7,
+            "p90": 16.7,
+            "p95": 16.7,
+            "p99": 16.8,
+            "max": 16.8,
+            "over33": 0,
+            "over50": 0,
+            "missed60HzFrames": 0
+          },
+          "cold-merge": {
+            "frames": 168,
+            "p50": 16.7,
+            "p90": 16.7,
+            "p95": 16.7,
+            "p99": 16.8,
+            "max": 16.8,
+            "over33": 0,
+            "over50": 0,
+            "missed60HzFrames": 0
+          },
+          "idle-cold-merge": {
+            "frames": 43,
+            "p50": 16.7,
+            "p90": 16.7,
+            "p95": 16.7,
+            "p99": 16.7,
+            "max": 16.7,
+            "over33": 0,
+            "over50": 0,
+            "missed60HzFrames": 0
+          },
+          "warm-split": {
+            "frames": 168,
+            "p50": 16.7,
+            "p90": 16.7,
+            "p95": 16.8,
+            "p99": 16.8,
+            "max": 16.8,
+            "over33": 0,
+            "over50": 0,
+            "missed60HzFrames": 0
+          },
+          "idle-warm-split": {
+            "frames": 152,
+            "p50": 16.7,
+            "p90": 16.7,
+            "p95": 16.8,
+            "p99": 16.8,
+            "max": 16.8,
+            "over33": 0,
+            "over50": 0,
+            "missed60HzFrames": 0
+          },
+          "warm-reversal": {
+            "frames": 30,
+            "p50": 16.7,
+            "p90": 16.7,
+            "p95": 16.7,
+            "p99": 16.7,
+            "max": 16.7,
+            "over33": 0,
+            "over50": 0,
+            "missed60HzFrames": 0
+          },
+          "warm-reverse-in": {
+            "frames": 103,
+            "p50": 16.7,
+            "p90": 16.7,
+            "p95": 16.7,
+            "p99": 16.8,
+            "max": 116.8,
+            "over33": 1,
+            "over50": 1,
+            "missed60HzFrames": 6
+          },
+          "idle-warm-reverse-in": {
+            "frames": 44,
+            "p50": 16.7,
+            "p90": 16.7,
+            "p95": 16.7,
+            "p99": 16.8,
+            "max": 16.8,
+            "over33": 0,
+            "over50": 0,
+            "missed60HzFrames": 0
+          },
+          "warm-pan": {
+            "frames": 72,
+            "p50": 16.7,
+            "p90": 16.7,
+            "p95": 16.7,
+            "p99": 16.8,
+            "max": 16.8,
+            "over33": 0,
+            "over50": 0,
+            "missed60HzFrames": 0
+          },
+          "idle-warm-pan": {
+            "frames": 44,
+            "p50": 16.7,
+            "p90": 16.7,
+            "p95": 16.7,
+            "p99": 16.8,
+            "max": 16.8,
+            "over33": 0,
+            "over50": 0,
+            "missed60HzFrames": 0
+          },
+          "warm-merge": {
+            "frames": 168,
+            "p50": 16.7,
+            "p90": 16.7,
+            "p95": 16.8,
+            "p99": 16.8,
+            "max": 16.8,
+            "over33": 0,
+            "over50": 0,
+            "missed60HzFrames": 0
+          },
+          "idle-warm-merge": {
+            "frames": 43,
+            "p50": 16.7,
+            "p90": 16.7,
+            "p95": 16.7,
+            "p99": 16.8,
+            "max": 16.8,
+            "over33": 0,
+            "over50": 0,
+            "missed60HzFrames": 0
+          }
+        },
+        "render": {
+          "calls": 1710,
+          "p50": 1.4,
+          "p95": 3.7,
+          "max": 155.9,
+          "totalMs": 2939.9
+        },
+        "longTasks": {
+          "count": 6,
+          "totalMs": 1142,
+          "max": 481
+        },
+        "setData": {
+          "calls": 173,
+          "markerCalls": 173,
+          "totalMs": 5.5,
+          "max": 0.2,
+          "maxFeatures": 1690
+        },
+        "readPixels": {
+          "calls": 264,
+          "totalMs": 90.5,
+          "max": 4.7
+        },
+        "images": {
+          "addImageDuringPath": 93,
+          "removeImage": 0,
+          "peakActive": 97
+        },
+        "counts": [
+          {
+            "seg": "cold",
+            "features": 42,
+            "images": 96,
+            "rendered": 42
+          },
+          {
+            "seg": "warm",
+            "features": 42,
+            "images": 97,
+            "rendered": 42
+          }
+        ],
+        "idles": [
+          {
+            "seg": "idle-cold-split",
+            "t": 12905.5,
+            "zoom": 13.4,
+            "center": {
+              "lng": 14.505800000000022,
+              "lat": 46.0569
+            }
+          },
+          {
+            "seg": "idle-cold-reverse-in",
+            "t": 17755.599999964237,
+            "zoom": 13.4,
+            "center": {
+              "lng": 14.505800000000136,
+              "lat": 46.056900000000894
+            }
+          },
+          {
+            "seg": "idle-cold-pan",
+            "t": 19688.30000001192,
+            "zoom": 13.4,
+            "center": {
+              "lng": 14.508800000000065,
+              "lat": 46.05789999999999
+            }
+          },
+          {
+            "seg": "idle-cold-merge",
+            "t": 23208.30000001192,
+            "zoom": 10.500000000115655,
+            "center": {
+              "lng": 14.50579999999837,
+              "lat": 46.05690000000059
+            }
+          },
+          {
+            "seg": "idle-warm-split",
+            "t": 26738.5,
+            "zoom": 13.4,
+            "center": {
+              "lng": 14.505799999998317,
+              "lat": 46.05690000000059
+            }
+          },
+          {
+            "seg": "idle-warm-reverse-in",
+            "t": 31588.19999998808,
+            "zoom": 13.4,
+            "center": {
+              "lng": 14.505799999997407,
+              "lat": 46.05690000000075
+            }
+          },
+          {
+            "seg": "idle-warm-pan",
+            "t": 33522.19999998808,
+            "zoom": 13.4,
+            "center": {
+              "lng": 14.508800000000065,
+              "lat": 46.05789999999999
+            }
+          },
+          {
+            "seg": "idle-warm-merge",
+            "t": 37040.89999997616,
+            "zoom": 10.500000000036884,
+            "center": {
+              "lng": 14.505799999998018,
+              "lat": 46.056899999998194
+            }
+          }
+        ],
+        "video": "page@172c01f82f1cb512653fbfae0c1e94a4.webm",
+        "cover": {
+          "requests": 36,
+          "decodedKb": 522
+        },
+        "covers": {
+          "registered": 43,
+          "registeredWhileMoving": 18,
+          "firstCoverAfter": {
+            "idle-cold-split": 13.6,
+            "idle-cold-reverse-in": null,
+            "idle-cold-pan": null,
+            "idle-cold-merge": null,
+            "idle-warm-split": null,
+            "idle-warm-reverse-in": null,
+            "idle-warm-pan": null,
+            "idle-warm-merge": null
+          },
+          "lastCoverAfter": {
+            "idle-cold-split": 861.6,
+            "idle-cold-reverse-in": null,
+            "idle-cold-pan": null,
+            "idle-cold-merge": null,
+            "idle-warm-split": null,
+            "idle-warm-reverse-in": null,
+            "idle-warm-pan": null,
+            "idle-warm-merge": null
+          },
+          "gauges": {
+            "peakDecodedCount": 41,
+            "peakDecodedBytes": 2216832,
+            "registeredImages": 43
+          },
+          "phases": {
+            "fetchDecode": {
+              "n": 52,
+              "p50": 17.1,
+              "p95": 79.2
+            },
+            "renderPng": {
+              "n": 43,
+              "p50": 2.2,
+              "p95": 5.9
+            },
+            "addImage": {
+              "n": 43,
+              "p50": 1.5,
+              "p95": 1.6
+            },
+            "resyncDelay": {
+              "n": 15,
+              "p50": 147.8,
+              "p95": 224.3
+            }
+          }
+        },
+        "fixture": {
+          "hits": 149,
+          "misses": 0
+        },
+        "pathFixture": {
+          "hits": 100,
+          "misses": 0
+        }
+      },
+      {
+        "config": "before-febffbe5",
+        "viewport": "1440x900",
+        "run": 0,
+        "info": {
+          "maplibre": "5.24.0",
+          "projection": "globe",
+          "renderer": "ANGLE (NVIDIA, NVIDIA GeForce RTX 3080 Ti (0x00002208) Direct3D11 vs_5_0 ps_5_0, D3D11)"
+        },
+        "all": {
+          "frames": 807,
+          "p50": 16.7,
+          "p90": 49.9,
+          "p95": 116.7,
+          "p99": 233.3,
+          "max": 2566.6,
+          "over33": 81,
+          "over50": 78,
+          "missed60HzFrames": 1139
+        },
+        "bySeg": {
+          "cold-split": {
+            "frames": 37,
+            "p50": 16.7,
+            "p90": 16.8,
+            "p95": 16.8,
+            "p99": 933.3,
+            "max": 933.3,
+            "over33": 1,
+            "over50": 1,
+            "missed60HzFrames": 55
+          },
+          "idle-cold-split": {
+            "frames": 35,
+            "p50": 116.6,
+            "p90": 149.9,
+            "p95": 200,
+            "p99": 2566.6,
+            "max": 2566.6,
+            "over33": 22,
+            "over50": 22,
+            "missed60HzFrames": 294
+          },
+          "cold-reversal": {
+            "frames": 13,
+            "p50": 16.7,
+            "p90": 116.7,
+            "p95": 216.6,
+            "p99": 216.6,
+            "max": 216.6,
+            "over33": 4,
+            "over50": 4,
+            "missed60HzFrames": 29
+          },
+          "cold-reverse-in": {
+            "frames": 30,
+            "p50": 16.7,
+            "p90": 133.4,
+            "p95": 149.9,
+            "p99": 233.3,
+            "max": 233.3,
+            "over33": 11,
+            "over50": 11,
+            "missed60HzFrames": 73
+          },
+          "idle-cold-reverse-in": {
+            "frames": 16,
+            "p50": 33.3,
+            "p90": 133.4,
+            "p95": 216.7,
+            "p99": 216.7,
+            "max": 216.7,
+            "over33": 7,
+            "over50": 7,
+            "missed60HzFrames": 50
+          },
+          "cold-pan": {
+            "frames": 10,
+            "p50": 116.7,
+            "p90": 133.3,
+            "p95": 133.3,
+            "p99": 133.3,
+            "max": 133.3,
+            "over33": 10,
+            "over50": 10,
+            "missed60HzFrames": 61
+          },
+          "idle-cold-pan": {
+            "frames": 17,
+            "p50": 16.7,
+            "p90": 133.3,
+            "p95": 216.6,
+            "p99": 216.6,
+            "max": 216.6,
+            "over33": 6,
+            "over50": 6,
+            "missed60HzFrames": 45
+          },
+          "cold-merge": {
+            "frames": 53,
+            "p50": 16.7,
+            "p90": 16.8,
+            "p95": 16.8,
+            "p99": 1533.3,
+            "max": 1533.3,
+            "over33": 2,
+            "over50": 2,
+            "missed60HzFrames": 96
+          },
+          "idle-cold-merge": {
+            "frames": 43,
+            "p50": 16.7,
+            "p90": 16.8,
+            "p95": 33.4,
+            "p99": 750,
+            "max": 750,
+            "over33": 2,
+            "over50": 1,
+            "missed60HzFrames": 47
+          },
+          "warm-split": {
+            "frames": 37,
+            "p50": 16.7,
+            "p90": 16.7,
+            "p95": 16.7,
+            "p99": 949.9,
+            "max": 949.9,
+            "over33": 1,
+            "over50": 1,
+            "missed60HzFrames": 56
+          },
+          "idle-warm-split": {
+            "frames": 142,
+            "p50": 16.7,
+            "p90": 16.7,
+            "p95": 16.8,
+            "p99": 200,
+            "max": 2333.3,
+            "over33": 4,
+            "over50": 4,
+            "missed60HzFrames": 160
+          },
+          "warm-reversal": {
+            "frames": 26,
+            "p50": 16.7,
+            "p90": 16.8,
+            "p95": 16.8,
+            "p99": 100,
+            "max": 100,
+            "over33": 1,
+            "over50": 1,
+            "missed60HzFrames": 5
+          },
+          "warm-reverse-in": {
+            "frames": 95,
+            "p50": 16.7,
+            "p90": 16.7,
+            "p95": 16.8,
+            "p99": 100.1,
+            "max": 100.1,
+            "over33": 3,
+            "over50": 3,
+            "missed60HzFrames": 14
+          },
+          "idle-warm-reverse-in": {
+            "frames": 44,
+            "p50": 16.7,
+            "p90": 16.7,
+            "p95": 16.8,
+            "p99": 83.4,
+            "max": 83.4,
+            "over33": 1,
+            "over50": 1,
+            "missed60HzFrames": 4
+          },
+          "warm-pan": {
+            "frames": 72,
+            "p50": 16.7,
+            "p90": 16.7,
+            "p95": 16.8,
+            "p99": 16.8,
+            "max": 16.8,
+            "over33": 0,
+            "over50": 0,
+            "missed60HzFrames": 0
+          },
+          "idle-warm-pan": {
+            "frames": 44,
+            "p50": 16.7,
+            "p90": 16.7,
+            "p95": 16.8,
+            "p99": 83.4,
+            "max": 83.4,
+            "over33": 1,
+            "over50": 1,
+            "missed60HzFrames": 4
+          },
+          "warm-merge": {
+            "frames": 51,
+            "p50": 16.7,
+            "p90": 16.8,
+            "p95": 16.8,
+            "p99": 1533.3,
+            "max": 1533.3,
+            "over33": 2,
+            "over50": 2,
+            "missed60HzFrames": 97
+          },
+          "idle-warm-merge": {
+            "frames": 42,
+            "p50": 16.7,
+            "p90": 16.8,
+            "p95": 50,
+            "p99": 766.6,
+            "max": 766.6,
+            "over33": 3,
+            "over50": 1,
+            "missed60HzFrames": 49
+          }
+        },
+        "render": {
+          "calls": 882,
+          "p50": 1.5,
+          "p95": 5,
+          "max": 153.7,
+          "totalMs": 1848.1
+        },
+        "longTasks": {
+          "count": 89,
+          "totalMs": 20060,
+          "max": 2564
+        },
+        "setData": {
+          "calls": 83,
+          "markerCalls": 83,
+          "totalMs": 3.8,
+          "max": 0.2,
+          "maxFeatures": 4988
+        },
+        "readPixels": {
+          "calls": 185,
+          "totalMs": 120.1,
+          "max": 9.9
+        },
+        "images": {
+          "addImageDuringPath": 97,
+          "removeImage": 0,
+          "peakActive": 100
+        },
+        "counts": [
+          {
+            "seg": "cold",
+            "features": 4988,
+            "images": 99,
+            "rendered": 55
+          },
+          {
+            "seg": "warm",
+            "features": 4988,
+            "images": 100,
+            "rendered": 55
+          }
+        ],
+        "idles": [
+          {
+            "seg": "idle-cold-split",
+            "t": 14324,
+            "zoom": 13.4,
+            "center": {
+              "lng": 14.505800000000022,
+              "lat": 46.0569
+            }
+          },
+          {
+            "seg": "idle-cold-reverse-in",
+            "t": 19802.5,
+            "zoom": 13.4,
+            "center": {
+              "lng": 14.505799999998317,
+              "lat": 46.05689999999919
+            }
+          },
+          {
+            "seg": "idle-cold-pan",
+            "t": 22066.099999964237,
+            "zoom": 13.4,
+            "center": {
+              "lng": 14.508800000000065,
+              "lat": 46.05789999999999
+            }
+          },
+          {
+            "seg": "idle-cold-merge",
+            "t": 26045.5,
+            "zoom": 10.500000349891923,
+            "center": {
+              "lng": 14.50580000000048,
+              "lat": 46.05689999999897
+            }
+          },
+          {
+            "seg": "idle-warm-split",
+            "t": 30829,
+            "zoom": 13.4,
+            "center": {
+              "lng": 14.505800000000477,
+              "lat": 46.05689999999897
+            }
+          },
+          {
+            "seg": "idle-warm-reverse-in",
+            "t": 35770.30000001192,
+            "zoom": 13.4,
+            "center": {
+              "lng": 14.505799999996725,
+              "lat": 46.05689999999899
+            }
+          },
+          {
+            "seg": "idle-warm-pan",
+            "t": 37770,
+            "zoom": 13.4,
+            "center": {
+              "lng": 14.508800000000065,
+              "lat": 46.05789999999999
+            }
+          },
+          {
+            "seg": "idle-warm-merge",
+            "t": 41755.39999997616,
+            "zoom": 10.50000034397629,
+            "center": {
+              "lng": 14.505799999996695,
+              "lat": 46.05689999999432
+            }
+          }
+        ],
+        "video": "page@08c2e07fa06efeb9e50a9a118e12e4cd.webm",
+        "cover": {
+          "requests": 28,
+          "decodedKb": 462
+        },
+        "covers": {
+          "registered": 43,
+          "registeredWhileMoving": 14,
+          "firstCoverAfter": {
+            "idle-cold-split": 214.2,
+            "idle-cold-reverse-in": 261.5,
+            "idle-cold-pan": 20.2,
+            "idle-cold-merge": null,
+            "idle-warm-split": null,
+            "idle-warm-reverse-in": null,
+            "idle-warm-pan": null,
+            "idle-warm-merge": null
+          },
+          "lastCoverAfter": {
+            "idle-cold-split": 2823.8,
+            "idle-cold-reverse-in": 774,
+            "idle-cold-pan": 146.4,
+            "idle-cold-merge": null,
+            "idle-warm-split": null,
+            "idle-warm-reverse-in": null,
+            "idle-warm-pan": null,
+            "idle-warm-merge": null
+          },
+          "gauges": {
+            "peakDecodedCount": 41,
+            "peakDecodedBytes": 2216832,
+            "registeredImages": 43
+          },
+          "phases": {
+            "fetchDecode": {
+              "n": 52,
+              "p50": 66.8,
+              "p95": 2823.3
+            },
+            "renderPng": {
+              "n": 43,
+              "p50": 2.5,
+              "p95": 11.2
+            },
+            "addImage": {
+              "n": 43,
+              "p50": 1.4,
+              "p95": 1.8
+            },
+            "resyncDelay": {
+              "n": 18,
+              "p50": 249.7,
+              "p95": 2527.6
+            }
+          }
+        },
+        "fixture": {
+          "hits": 177,
+          "misses": 1
+        },
+        "pathFixture": {
+          "hits": 124,
+          "misses": 0
+        }
+      },
+      {
+        "config": "after-c5e1c419",
+        "viewport": "1440x900",
+        "run": 0,
+        "info": {
+          "maplibre": "5.24.0",
+          "projection": "globe",
+          "renderer": "ANGLE (NVIDIA, NVIDIA GeForce RTX 3080 Ti (0x00002208) Direct3D11 vs_5_0 ps_5_0, D3D11)"
+        },
+        "all": {
+          "frames": 1630,
+          "p50": 16.7,
+          "p90": 16.7,
+          "p95": 16.8,
+          "p99": 16.8,
+          "max": 166.6,
+          "over33": 4,
+          "over50": 4,
+          "missed60HzFrames": 27
+        },
+        "bySeg": {
+          "cold-split": {
+            "frames": 157,
+            "p50": 16.7,
+            "p90": 16.7,
+            "p95": 16.8,
+            "p99": 33.3,
+            "max": 166.6,
+            "over33": 1,
+            "over50": 1,
+            "missed60HzFrames": 10
+          },
+          "idle-cold-split": {
+            "frames": 146,
+            "p50": 16.7,
+            "p90": 16.7,
+            "p95": 16.8,
+            "p99": 16.8,
+            "max": 116.7,
+            "over33": 1,
+            "over50": 1,
+            "missed60HzFrames": 6
+          },
+          "cold-reversal": {
+            "frames": 31,
+            "p50": 16.7,
+            "p90": 16.7,
+            "p95": 16.8,
+            "p99": 16.8,
+            "max": 16.8,
+            "over33": 0,
+            "over50": 0,
+            "missed60HzFrames": 0
+          },
+          "cold-reverse-in": {
+            "frames": 102,
+            "p50": 16.7,
+            "p90": 16.7,
+            "p95": 16.8,
+            "p99": 16.8,
+            "max": 116.6,
+            "over33": 1,
+            "over50": 1,
+            "missed60HzFrames": 6
+          },
+          "idle-cold-reverse-in": {
+            "frames": 44,
+            "p50": 16.7,
+            "p90": 16.7,
+            "p95": 16.7,
+            "p99": 16.8,
+            "max": 16.8,
+            "over33": 0,
+            "over50": 0,
+            "missed60HzFrames": 0
+          },
+          "cold-pan": {
+            "frames": 72,
+            "p50": 16.7,
+            "p90": 16.7,
+            "p95": 16.8,
+            "p99": 16.8,
+            "max": 16.8,
+            "over33": 0,
+            "over50": 0,
+            "missed60HzFrames": 0
+          },
+          "idle-cold-pan": {
+            "frames": 44,
+            "p50": 16.7,
+            "p90": 16.7,
+            "p95": 16.7,
+            "p99": 16.8,
+            "max": 16.8,
+            "over33": 0,
+            "over50": 0,
+            "missed60HzFrames": 0
+          },
+          "cold-merge": {
+            "frames": 168,
+            "p50": 16.7,
+            "p90": 16.7,
+            "p95": 16.8,
+            "p99": 16.8,
+            "max": 16.8,
+            "over33": 0,
+            "over50": 0,
+            "missed60HzFrames": 0
+          },
+          "idle-cold-merge": {
+            "frames": 43,
+            "p50": 16.7,
+            "p90": 16.7,
+            "p95": 16.8,
+            "p99": 16.8,
+            "max": 16.8,
+            "over33": 0,
+            "over50": 0,
+            "missed60HzFrames": 0
+          },
+          "warm-split": {
+            "frames": 168,
+            "p50": 16.7,
+            "p90": 16.7,
+            "p95": 16.8,
+            "p99": 16.8,
+            "max": 16.8,
+            "over33": 0,
+            "over50": 0,
+            "missed60HzFrames": 0
+          },
+          "idle-warm-split": {
+            "frames": 152,
+            "p50": 16.7,
+            "p90": 16.7,
+            "p95": 16.7,
+            "p99": 16.8,
+            "max": 16.8,
+            "over33": 0,
+            "over50": 0,
+            "missed60HzFrames": 0
+          },
+          "warm-reversal": {
+            "frames": 30,
+            "p50": 16.7,
+            "p90": 16.7,
+            "p95": 16.7,
+            "p99": 16.7,
+            "max": 16.7,
+            "over33": 0,
+            "over50": 0,
+            "missed60HzFrames": 0
+          },
+          "warm-reverse-in": {
+            "frames": 103,
+            "p50": 16.7,
+            "p90": 16.7,
+            "p95": 16.7,
+            "p99": 16.8,
+            "max": 100,
+            "over33": 1,
+            "over50": 1,
+            "missed60HzFrames": 5
+          },
+          "idle-warm-reverse-in": {
+            "frames": 43,
+            "p50": 16.7,
+            "p90": 16.7,
+            "p95": 16.7,
+            "p99": 16.8,
+            "max": 16.8,
+            "over33": 0,
+            "over50": 0,
+            "missed60HzFrames": 0
+          },
+          "warm-pan": {
+            "frames": 72,
+            "p50": 16.7,
+            "p90": 16.7,
+            "p95": 16.7,
+            "p99": 16.8,
+            "max": 16.8,
+            "over33": 0,
+            "over50": 0,
+            "missed60HzFrames": 0
+          },
+          "idle-warm-pan": {
+            "frames": 44,
+            "p50": 16.7,
+            "p90": 16.7,
+            "p95": 16.7,
+            "p99": 16.8,
+            "max": 16.8,
+            "over33": 0,
+            "over50": 0,
+            "missed60HzFrames": 0
+          },
+          "warm-merge": {
+            "frames": 168,
+            "p50": 16.7,
+            "p90": 16.7,
+            "p95": 16.7,
+            "p99": 16.8,
+            "max": 16.8,
+            "over33": 0,
+            "over50": 0,
+            "missed60HzFrames": 0
+          },
+          "idle-warm-merge": {
+            "frames": 43,
+            "p50": 16.7,
+            "p90": 16.7,
+            "p95": 16.8,
+            "p99": 16.8,
+            "max": 16.8,
+            "over33": 0,
+            "over50": 0,
+            "missed60HzFrames": 0
+          }
+        },
+        "render": {
+          "calls": 1710,
+          "p50": 1.6,
+          "p95": 3.2,
+          "max": 148.7,
+          "totalMs": 3228
+        },
+        "longTasks": {
+          "count": 6,
+          "totalMs": 1170,
+          "max": 478
+        },
+        "setData": {
+          "calls": 145,
+          "markerCalls": 145,
+          "totalMs": 5.7,
+          "max": 0.1,
+          "maxFeatures": 1690
+        },
+        "readPixels": {
+          "calls": 268,
+          "totalMs": 114.8,
+          "max": 7
+        },
+        "images": {
+          "addImageDuringPath": 97,
+          "removeImage": 0,
+          "peakActive": 101
+        },
+        "counts": [
+          {
+            "seg": "cold",
+            "features": 55,
+            "images": 101,
+            "rendered": 55
+          },
+          {
+            "seg": "warm",
+            "features": 55,
+            "images": 101,
+            "rendered": 55
+          }
+        ],
+        "idles": [
+          {
+            "seg": "idle-cold-split",
+            "t": 12844.699999988079,
+            "zoom": 13.4,
+            "center": {
+              "lng": 14.505800000000022,
+              "lat": 46.0569
+            }
+          },
+          {
+            "seg": "idle-cold-reverse-in",
+            "t": 17694.399999976158,
+            "zoom": 13.4,
+            "center": {
+              "lng": 14.505799999998544,
+              "lat": 46.05689999999973
+            }
+          },
+          {
+            "seg": "idle-cold-pan",
+            "t": 19628.099999964237,
+            "zoom": 13.4,
+            "center": {
+              "lng": 14.508800000000065,
+              "lat": 46.05789999999999
+            }
+          },
+          {
+            "seg": "idle-cold-merge",
+            "t": 23148.099999964237,
+            "zoom": 10.50000000014359,
+            "center": {
+              "lng": 14.505800000002944,
+              "lat": 46.05689999999919
+            }
+          },
+          {
+            "seg": "idle-warm-split",
+            "t": 26678.299999952316,
+            "zoom": 13.4,
+            "center": {
+              "lng": 14.505800000002978,
+              "lat": 46.05689999999919
+            }
+          },
+          {
+            "seg": "idle-warm-reverse-in",
+            "t": 31509.69999998808,
+            "zoom": 13.4,
+            "center": {
+              "lng": 14.505800000003433,
+              "lat": 46.05689999999868
+            }
+          },
+          {
+            "seg": "idle-warm-pan",
+            "t": 33427,
+            "zoom": 13.4,
+            "center": {
+              "lng": 14.508800000000065,
+              "lat": 46.05789999999999
+            }
+          },
+          {
+            "seg": "idle-warm-merge",
+            "t": 36947.69999998808,
+            "zoom": 10.500000000014989,
+            "center": {
+              "lng": 14.505800000001116,
+              "lat": 46.05689999998861
+            }
+          }
+        ],
+        "video": "page@43fb750c27ac007adea1f3965fea2af4.webm",
+        "cover": {
+          "requests": 28,
+          "decodedKb": 462
+        },
+        "covers": {
+          "registered": 43,
+          "registeredWhileMoving": 11,
+          "firstCoverAfter": {
+            "idle-cold-split": 11,
+            "idle-cold-reverse-in": null,
+            "idle-cold-pan": null,
+            "idle-cold-merge": null,
+            "idle-warm-split": null,
+            "idle-warm-reverse-in": null,
+            "idle-warm-pan": null,
+            "idle-warm-merge": null
+          },
+          "lastCoverAfter": {
+            "idle-cold-split": 1080.5,
+            "idle-cold-reverse-in": null,
+            "idle-cold-pan": null,
+            "idle-cold-merge": null,
+            "idle-warm-split": null,
+            "idle-warm-reverse-in": null,
+            "idle-warm-pan": null,
+            "idle-warm-merge": null
+          },
+          "gauges": {
+            "peakDecodedCount": 41,
+            "peakDecodedBytes": 2216832,
+            "registeredImages": 43
+          },
+          "phases": {
+            "fetchDecode": {
+              "n": 52,
+              "p50": 17,
+              "p95": 103.5
+            },
+            "renderPng": {
+              "n": 43,
+              "p50": 2.9,
+              "p95": 8.3
+            },
+            "addImage": {
+              "n": 43,
+              "p50": 1.5,
+              "p95": 1.6
+            },
+            "resyncDelay": {
+              "n": 13,
+              "p50": 147.9,
+              "p95": 152.3
+            }
+          }
+        },
+        "fixture": {
+          "hits": 182,
+          "misses": 1
+        },
+        "pathFixture": {
+          "hits": 129,
+          "misses": 0
+        }
+      },
+      {
+        "config": "before-febffbe5",
+        "viewport": "1440x900",
+        "run": 1,
+        "info": {
+          "maplibre": "5.24.0",
+          "projection": "globe",
+          "renderer": "ANGLE (NVIDIA, NVIDIA GeForce RTX 3080 Ti (0x00002208) Direct3D11 vs_5_0 ps_5_0, D3D11)"
+        },
+        "all": {
+          "frames": 786,
+          "p50": 16.7,
+          "p90": 50,
+          "p95": 116.7,
+          "p99": 750,
+          "max": 2583.3,
+          "over33": 82,
+          "over50": 78,
+          "missed60HzFrames": 1169
+        },
+        "bySeg": {
+          "cold-split": {
+            "frames": 36,
+            "p50": 16.7,
+            "p90": 16.8,
+            "p95": 16.8,
+            "p99": 966.6,
+            "max": 966.6,
+            "over33": 1,
+            "over50": 1,
+            "missed60HzFrames": 57
+          },
+          "idle-cold-split": {
+            "frames": 41,
+            "p50": 49.9,
+            "p90": 133.3,
+            "p95": 150.1,
+            "p99": 2583.3,
+            "max": 2583.3,
+            "over33": 21,
+            "over50": 20,
+            "missed60HzFrames": 282
+          },
+          "cold-reversal": {
+            "frames": 4,
+            "p50": 133.3,
+            "p90": 133.4,
+            "p95": 133.4,
+            "p99": 133.4,
+            "max": 133.4,
+            "over33": 4,
+            "over50": 4,
+            "missed60HzFrames": 25
+          },
+          "cold-reverse-in": {
+            "frames": 21,
+            "p50": 116.6,
+            "p90": 150,
+            "p95": 150,
+            "p99": 216.6,
+            "max": 216.6,
+            "over33": 13,
+            "over50": 13,
+            "missed60HzFrames": 91
+          },
+          "idle-cold-reverse-in": {
+            "frames": 8,
+            "p50": 133.3,
+            "p90": 200,
+            "p95": 200,
+            "p99": 200,
+            "max": 200,
+            "over33": 8,
+            "over50": 8,
+            "missed60HzFrames": 57
+          },
+          "cold-pan": {
+            "frames": 19,
+            "p50": 33.3,
+            "p90": 116.7,
+            "p95": 116.7,
+            "p99": 116.7,
+            "max": 116.7,
+            "over33": 9,
+            "over50": 9,
+            "missed60HzFrames": 52
+          },
+          "idle-cold-pan": {
+            "frames": 23,
+            "p50": 16.7,
+            "p90": 133.4,
+            "p95": 150.1,
+            "p99": 233.3,
+            "max": 233.3,
+            "over33": 5,
+            "over50": 5,
+            "missed60HzFrames": 42
+          },
+          "cold-merge": {
+            "frames": 51,
+            "p50": 16.7,
+            "p90": 16.8,
+            "p95": 16.8,
+            "p99": 1533.4,
+            "max": 1533.4,
+            "over33": 2,
+            "over50": 2,
+            "missed60HzFrames": 97
+          },
+          "idle-cold-merge": {
+            "frames": 43,
+            "p50": 16.7,
+            "p90": 16.7,
+            "p95": 33.4,
+            "p99": 766.6,
+            "max": 766.6,
+            "over33": 2,
+            "over50": 1,
+            "missed60HzFrames": 48
+          },
+          "warm-split": {
+            "frames": 38,
+            "p50": 16.7,
+            "p90": 16.8,
+            "p95": 16.8,
+            "p99": 1000,
+            "max": 1000,
+            "over33": 1,
+            "over50": 1,
+            "missed60HzFrames": 59
+          },
+          "idle-warm-split": {
+            "frames": 141,
+            "p50": 16.7,
+            "p90": 16.7,
+            "p95": 16.8,
+            "p99": 216.7,
+            "max": 2483.2,
+            "over33": 4,
+            "over50": 4,
+            "missed60HzFrames": 172
+          },
+          "warm-reversal": {
+            "frames": 25,
+            "p50": 16.7,
+            "p90": 16.7,
+            "p95": 16.7,
+            "p99": 99.9,
+            "max": 99.9,
+            "over33": 1,
+            "over50": 1,
+            "missed60HzFrames": 5
+          },
+          "warm-reverse-in": {
+            "frames": 86,
+            "p50": 16.7,
+            "p90": 16.8,
+            "p95": 16.8,
+            "p99": 183.3,
+            "max": 183.3,
+            "over33": 3,
+            "over50": 3,
+            "missed60HzFrames": 23
+          },
+          "idle-warm-reverse-in": {
+            "frames": 39,
+            "p50": 16.7,
+            "p90": 16.8,
+            "p95": 83.3,
+            "p99": 116.7,
+            "max": 116.7,
+            "over33": 2,
+            "over50": 2,
+            "missed60HzFrames": 10
+          },
+          "warm-pan": {
+            "frames": 72,
+            "p50": 16.7,
+            "p90": 16.7,
+            "p95": 16.7,
+            "p99": 16.8,
+            "max": 16.8,
+            "over33": 0,
+            "over50": 0,
+            "missed60HzFrames": 0
+          },
+          "idle-warm-pan": {
+            "frames": 44,
+            "p50": 16.7,
+            "p90": 16.7,
+            "p95": 16.8,
+            "p99": 83.4,
+            "max": 83.4,
+            "over33": 1,
+            "over50": 1,
+            "missed60HzFrames": 4
+          },
+          "warm-merge": {
+            "frames": 52,
+            "p50": 16.7,
+            "p90": 16.7,
+            "p95": 16.8,
+            "p99": 1550,
+            "max": 1550,
+            "over33": 2,
+            "over50": 2,
+            "missed60HzFrames": 98
+          },
+          "idle-warm-merge": {
+            "frames": 43,
+            "p50": 16.7,
+            "p90": 16.8,
+            "p95": 33.4,
+            "p99": 750,
+            "max": 750,
+            "over33": 3,
+            "over50": 1,
+            "missed60HzFrames": 47
+          }
+        },
+        "render": {
+          "calls": 861,
+          "p50": 1.6,
+          "p95": 5.3,
+          "max": 158.7,
+          "totalMs": 1914
+        },
+        "longTasks": {
+          "count": 88,
+          "totalMs": 20520,
+          "max": 2574
+        },
+        "setData": {
+          "calls": 83,
+          "markerCalls": 83,
+          "totalMs": 9.7,
+          "max": 5.5,
+          "maxFeatures": 4988
+        },
+        "readPixels": {
+          "calls": 183,
+          "totalMs": 120.2,
+          "max": 6.2
+        },
+        "images": {
+          "addImageDuringPath": 97,
+          "removeImage": 0,
+          "peakActive": 100
+        },
+        "counts": [
+          {
+            "seg": "cold",
+            "features": 4988,
+            "images": 99,
+            "rendered": 55
+          },
+          {
+            "seg": "warm",
+            "features": 4988,
+            "images": 100,
+            "rendered": 55
+          }
+        ],
+        "idles": [
+          {
+            "seg": "idle-cold-split",
+            "t": 14373,
+            "zoom": 13.4,
+            "center": {
+              "lng": 14.505800000000022,
+              "lat": 46.0569
+            }
+          },
+          {
+            "seg": "idle-cold-reverse-in",
+            "t": 19658.400000035763,
+            "zoom": 13.4,
+            "center": {
+              "lng": 14.505799999997862,
+              "lat": 46.0568999999995
+            }
+          },
+          {
+            "seg": "idle-cold-pan",
+            "t": 21955.600000023842,
+            "zoom": 13.4,
+            "center": {
+              "lng": 14.508800000000065,
+              "lat": 46.05789999999999
+            }
+          },
+          {
+            "seg": "idle-cold-merge",
+            "t": 25953.100000023842,
+            "zoom": 10.500000349671756,
+            "center": {
+              "lng": 14.505799999994716,
+              "lat": 46.05690000000081
+            }
+          },
+          {
+            "seg": "idle-warm-split",
+            "t": 30976.100000023842,
+            "zoom": 13.4,
+            "center": {
+              "lng": 14.505799999994679,
+              "lat": 46.05690000000081
+            }
+          },
+          {
+            "seg": "idle-warm-reverse-in",
+            "t": 35912.30000001192,
+            "zoom": 13.4,
+            "center": {
+              "lng": 14.505799999994224,
+              "lat": 46.056900000000496
+            }
+          },
+          {
+            "seg": "idle-warm-pan",
+            "t": 37922.80000001192,
+            "zoom": 13.4,
+            "center": {
+              "lng": 14.508800000000065,
+              "lat": 46.05789999999999
+            }
+          },
+          {
+            "seg": "idle-warm-merge",
+            "t": 41924.10000002384,
+            "zoom": 10.500000315200166,
+            "center": {
+              "lng": 14.505799999999336,
+              "lat": 46.05689999999126
+            }
+          }
+        ],
+        "video": "page@d040a43a346404d1d337eeb85e493983.webm",
+        "cover": {
+          "requests": 28,
+          "decodedKb": 462
+        },
+        "covers": {
+          "registered": 43,
+          "registeredWhileMoving": 14,
+          "firstCoverAfter": {
+            "idle-cold-split": 238.8,
+            "idle-cold-reverse-in": 17.5,
+            "idle-cold-pan": 20.4,
+            "idle-cold-merge": null,
+            "idle-warm-split": null,
+            "idle-warm-reverse-in": null,
+            "idle-warm-pan": null,
+            "idle-warm-merge": null
+          },
+          "lastCoverAfter": {
+            "idle-cold-split": 2622.1,
+            "idle-cold-reverse-in": 874.2,
+            "idle-cold-pan": 58.5,
+            "idle-cold-merge": null,
+            "idle-warm-split": null,
+            "idle-warm-reverse-in": null,
+            "idle-warm-pan": null,
+            "idle-warm-merge": null
+          },
+          "gauges": {
+            "peakDecodedCount": 41,
+            "peakDecodedBytes": 2216832,
+            "registeredImages": 43
+          },
+          "phases": {
+            "fetchDecode": {
+              "n": 52,
+              "p50": 129.3,
+              "p95": 2860.3
+            },
+            "renderPng": {
+              "n": 43,
+              "p50": 2.7,
+              "p95": 7.3
+            },
+            "addImage": {
+              "n": 43,
+              "p50": 1.5,
+              "p95": 2.8
+            },
+            "resyncDelay": {
+              "n": 18,
+              "p50": 249,
+              "p95": 2697.8
+            }
+          }
+        },
+        "fixture": {
+          "hits": 183,
+          "misses": 1
+        },
+        "pathFixture": {
+          "hits": 130,
+          "misses": 0
+        }
+      },
+      {
+        "config": "after-c5e1c419",
+        "viewport": "1440x900",
+        "run": 1,
+        "info": {
+          "maplibre": "5.24.0",
+          "projection": "globe",
+          "renderer": "ANGLE (NVIDIA, NVIDIA GeForce RTX 3080 Ti (0x00002208) Direct3D11 vs_5_0 ps_5_0, D3D11)"
+        },
+        "all": {
+          "frames": 1631,
+          "p50": 16.7,
+          "p90": 16.7,
+          "p95": 16.8,
+          "p99": 16.8,
+          "max": 183.3,
+          "over33": 4,
+          "over50": 3,
+          "missed60HzFrames": 27
+        },
+        "bySeg": {
+          "cold-split": {
+            "frames": 156,
+            "p50": 16.7,
+            "p90": 16.7,
+            "p95": 16.8,
+            "p99": 33.4,
+            "max": 183.3,
+            "over33": 1,
+            "over50": 1,
+            "missed60HzFrames": 11
+          },
+          "idle-cold-split": {
+            "frames": 146,
+            "p50": 16.7,
+            "p90": 16.7,
+            "p95": 16.7,
+            "p99": 16.8,
+            "max": 116.6,
+            "over33": 1,
+            "over50": 1,
+            "missed60HzFrames": 6
+          },
+          "cold-reversal": {
+            "frames": 31,
+            "p50": 16.7,
+            "p90": 16.7,
+            "p95": 16.7,
+            "p99": 16.8,
+            "max": 16.8,
+            "over33": 0,
+            "over50": 0,
+            "missed60HzFrames": 0
+          },
+          "cold-reverse-in": {
+            "frames": 98,
+            "p50": 16.7,
+            "p90": 16.7,
+            "p95": 16.8,
+            "p99": 150,
+            "max": 150,
+            "over33": 2,
+            "over50": 1,
+            "missed60HzFrames": 10
+          },
+          "idle-cold-reverse-in": {
+            "frames": 44,
+            "p50": 16.7,
+            "p90": 16.7,
+            "p95": 16.7,
+            "p99": 16.8,
+            "max": 16.8,
+            "over33": 0,
+            "over50": 0,
+            "missed60HzFrames": 0
+          },
+          "cold-pan": {
+            "frames": 72,
+            "p50": 16.7,
+            "p90": 16.7,
+            "p95": 16.7,
+            "p99": 16.8,
+            "max": 16.8,
+            "over33": 0,
+            "over50": 0,
+            "missed60HzFrames": 0
+          },
+          "idle-cold-pan": {
+            "frames": 44,
+            "p50": 16.7,
+            "p90": 16.7,
+            "p95": 16.7,
+            "p99": 16.8,
+            "max": 16.8,
+            "over33": 0,
+            "over50": 0,
+            "missed60HzFrames": 0
+          },
+          "cold-merge": {
+            "frames": 168,
+            "p50": 16.7,
+            "p90": 16.7,
+            "p95": 16.7,
+            "p99": 16.8,
+            "max": 16.8,
+            "over33": 0,
+            "over50": 0,
+            "missed60HzFrames": 0
+          },
+          "idle-cold-merge": {
+            "frames": 43,
+            "p50": 16.7,
+            "p90": 16.7,
+            "p95": 16.7,
+            "p99": 16.8,
+            "max": 16.8,
+            "over33": 0,
+            "over50": 0,
+            "missed60HzFrames": 0
+          },
+          "warm-split": {
+            "frames": 168,
+            "p50": 16.7,
+            "p90": 16.7,
+            "p95": 16.8,
+            "p99": 16.8,
+            "max": 16.8,
+            "over33": 0,
+            "over50": 0,
+            "missed60HzFrames": 0
+          },
+          "idle-warm-split": {
+            "frames": 152,
+            "p50": 16.7,
+            "p90": 16.7,
+            "p95": 16.8,
+            "p99": 16.8,
+            "max": 16.8,
+            "over33": 0,
+            "over50": 0,
+            "missed60HzFrames": 0
+          },
+          "warm-reversal": {
+            "frames": 30,
+            "p50": 16.7,
+            "p90": 16.7,
+            "p95": 16.7,
+            "p99": 16.8,
+            "max": 16.8,
+            "over33": 0,
+            "over50": 0,
+            "missed60HzFrames": 0
+          },
+          "warm-reverse-in": {
+            "frames": 108,
+            "p50": 16.7,
+            "p90": 16.7,
+            "p95": 16.7,
+            "p99": 16.8,
+            "max": 16.8,
+            "over33": 0,
+            "over50": 0,
+            "missed60HzFrames": 0
+          },
+          "idle-warm-reverse-in": {
+            "frames": 44,
+            "p50": 16.7,
+            "p90": 16.7,
+            "p95": 16.7,
+            "p99": 16.8,
+            "max": 16.8,
+            "over33": 0,
+            "over50": 0,
+            "missed60HzFrames": 0
+          },
+          "warm-pan": {
+            "frames": 72,
+            "p50": 16.7,
+            "p90": 16.7,
+            "p95": 16.8,
+            "p99": 16.8,
+            "max": 16.8,
+            "over33": 0,
+            "over50": 0,
+            "missed60HzFrames": 0
+          },
+          "idle-warm-pan": {
+            "frames": 44,
+            "p50": 16.7,
+            "p90": 16.7,
+            "p95": 16.7,
+            "p99": 16.8,
+            "max": 16.8,
+            "over33": 0,
+            "over50": 0,
+            "missed60HzFrames": 0
+          },
+          "warm-merge": {
+            "frames": 168,
+            "p50": 16.7,
+            "p90": 16.7,
+            "p95": 16.7,
+            "p99": 16.8,
+            "max": 16.8,
+            "over33": 0,
+            "over50": 0,
+            "missed60HzFrames": 0
+          },
+          "idle-warm-merge": {
+            "frames": 43,
+            "p50": 16.7,
+            "p90": 16.7,
+            "p95": 16.8,
+            "p99": 16.8,
+            "max": 16.8,
+            "over33": 0,
+            "over50": 0,
+            "missed60HzFrames": 0
+          }
+        },
+        "render": {
+          "calls": 1710,
+          "p50": 1.6,
+          "p95": 3.3,
+          "max": 161.8,
+          "totalMs": 3352.5
+        },
+        "longTasks": {
+          "count": 5,
+          "totalMs": 1141,
+          "max": 494
+        },
+        "setData": {
+          "calls": 141,
+          "markerCalls": 141,
+          "totalMs": 5.5,
+          "max": 0.2,
+          "maxFeatures": 1690
+        },
+        "readPixels": {
+          "calls": 268,
+          "totalMs": 111.4,
+          "max": 3.5
+        },
+        "images": {
+          "addImageDuringPath": 97,
+          "removeImage": 0,
+          "peakActive": 101
+        },
+        "counts": [
+          {
+            "seg": "cold",
+            "features": 55,
+            "images": 101,
+            "rendered": 55
+          },
+          {
+            "seg": "warm",
+            "features": 55,
+            "images": 101,
+            "rendered": 55
+          }
+        ],
+        "idles": [
+          {
+            "seg": "idle-cold-split",
+            "t": 12892.599999964237,
+            "zoom": 13.4,
+            "center": {
+              "lng": 14.505800000000022,
+              "lat": 46.0569
+            }
+          },
+          {
+            "seg": "idle-cold-reverse-in",
+            "t": 17744.19999998808,
+            "zoom": 13.4,
+            "center": {
+              "lng": 14.50579999999627,
+              "lat": 46.056899999999445
+            }
+          },
+          {
+            "seg": "idle-cold-pan",
+            "t": 19677.099999964237,
+            "zoom": 13.4,
+            "center": {
+              "lng": 14.508800000000065,
+              "lat": 46.05789999999999
+            }
+          },
+          {
+            "seg": "idle-cold-merge",
+            "t": 23195.19999998808,
+            "zoom": 10.5000000001475,
+            "center": {
+              "lng": 14.505800000001013,
+              "lat": 46.05690000000411
+            }
+          },
+          {
+            "seg": "idle-warm-split",
+            "t": 26725.30000001192,
+            "zoom": 13.4,
+            "center": {
+              "lng": 14.505800000001045,
+              "lat": 46.05690000000411
+            }
+          },
+          {
+            "seg": "idle-warm-reverse-in",
+            "t": 31557.099999964237,
+            "zoom": 13.4,
+            "center": {
+              "lng": 14.505800000001273,
+              "lat": 46.056900000003395
+            }
+          },
+          {
+            "seg": "idle-warm-pan",
+            "t": 33491.09999996424,
+            "zoom": 13.4,
+            "center": {
+              "lng": 14.508800000000065,
+              "lat": 46.05789999999999
+            }
+          },
+          {
+            "seg": "idle-warm-merge",
+            "t": 37012.39999997616,
+            "zoom": 10.500000000038938,
+            "center": {
+              "lng": 14.505800000002182,
+              "lat": 46.05690000000208
+            }
+          }
+        ],
+        "video": "page@e2fbe59aafe68d430b6637994a8c5596.webm",
+        "cover": {
+          "requests": 28,
+          "decodedKb": 462
+        },
+        "covers": {
+          "registered": 43,
+          "registeredWhileMoving": 11,
+          "firstCoverAfter": {
+            "idle-cold-split": 43.8,
+            "idle-cold-reverse-in": null,
+            "idle-cold-pan": null,
+            "idle-cold-merge": null,
+            "idle-warm-split": null,
+            "idle-warm-reverse-in": null,
+            "idle-warm-pan": null,
+            "idle-warm-merge": null
+          },
+          "lastCoverAfter": {
+            "idle-cold-split": 1080.3,
+            "idle-cold-reverse-in": null,
+            "idle-cold-pan": null,
+            "idle-cold-merge": null,
+            "idle-warm-split": null,
+            "idle-warm-reverse-in": null,
+            "idle-warm-pan": null,
+            "idle-warm-merge": null
+          },
+          "gauges": {
+            "peakDecodedCount": 41,
+            "peakDecodedBytes": 2216832,
+            "registeredImages": 43
+          },
+          "phases": {
+            "fetchDecode": {
+              "n": 52,
+              "p50": 14.2,
+              "p95": 90.4
+            },
+            "renderPng": {
+              "n": 43,
+              "p50": 2.9,
+              "p95": 4.5
+            },
+            "addImage": {
+              "n": 43,
+              "p50": 1.5,
+              "p95": 2.5
+            },
+            "resyncDelay": {
+              "n": 12,
+              "p50": 149.4,
+              "p95": 157.7
+            }
+          }
+        },
+        "fixture": {
+          "hits": 180,
+          "misses": 1
+        },
+        "pathFixture": {
+          "hits": 127,
+          "misses": 0
+        }
+      }
+    ]
+  },
+  "sparse": {
+    "browserName": "chromium",
+    "glMode": "hardware",
+    "perfPath": "topology",
+    "runsPerCell": 1,
+    "summary": [
+      {
+        "config": "before-febffbe5",
+        "viewport": "390x844",
+        "maplibre": "5.24.0",
+        "projection": "globe",
+        "renderer": "ANGLE (NVIDIA, NVIDIA GeForce RTX 3080 Ti (0x00002208) Direct3D11 vs_5_0 ps_5_0, D3D11)",
+        "p50": 16.7,
+        "p90": 16.7,
+        "p95": 16.8,
+        "p99": 100,
+        "max": 2416.5,
+        "over33": 29,
+        "over50": 29,
+        "frames": 1104,
+        "renderP50": 1.1,
+        "renderP95": 1.7,
+        "renderTotalMs": 1614.9,
+        "longTasks": 34,
+        "longTaskMs": 13892,
+        "setDataCalls": 18,
+        "setDataMs": 1.1,
+        "addImage": 48,
+        "readPixelsCalls": 166,
+        "readPixelsMs": 33.6,
+        "featuresAtZoomIn": 4988,
+        "featuresAtPan": 4988,
+        "imagesAtEnd": 51,
+        "coverRequests": 11,
+        "coverKb": 61,
+        "segP95": {
+          "cold-split": 16.8,
+          "idle-cold-split": 16.8,
+          "cold-reversal": 16.8,
+          "cold-reverse-in": 16.8,
+          "idle-cold-reverse-in": 16.7,
+          "cold-pan": 16.8,
+          "idle-cold-pan": 16.8,
+          "cold-merge": 66.6,
+          "idle-cold-merge": 350.1,
+          "warm-split": 16.8,
+          "idle-warm-split": 16.8,
+          "warm-reversal": 16.7,
+          "warm-reverse-in": 16.8,
+          "idle-warm-reverse-in": 16.7,
+          "warm-pan": 16.8,
+          "idle-warm-pan": 16.8,
+          "warm-merge": 16.8,
+          "idle-warm-merge": 16.8
+        },
+        "segOver50": {
+          "cold-split": 1,
+          "idle-cold-split": 4,
+          "cold-reversal": 1,
+          "cold-reverse-in": 3,
+          "idle-cold-reverse-in": 1,
+          "cold-pan": 0,
+          "idle-cold-pan": 1,
+          "cold-merge": 3,
+          "idle-cold-merge": 2,
+          "warm-split": 1,
+          "idle-warm-split": 2,
+          "warm-reversal": 1,
+          "warm-reverse-in": 3,
+          "idle-warm-reverse-in": 1,
+          "warm-pan": 0,
+          "idle-warm-pan": 1,
+          "warm-merge": 2,
+          "idle-warm-merge": 2
+        },
+        "coverImages": 0,
+        "coverImagesWhileMoving": 0,
+        "firstCoverAfter": {
+          "idle-cold-split": null,
+          "idle-cold-reverse-in": null,
+          "idle-cold-pan": null,
+          "idle-cold-merge": null,
+          "idle-warm-split": null,
+          "idle-warm-reverse-in": null,
+          "idle-warm-pan": null,
+          "idle-warm-merge": null
+        },
+        "lastCoverAfter": {
+          "idle-cold-split": null,
+          "idle-cold-reverse-in": null,
+          "idle-cold-pan": null,
+          "idle-cold-merge": null,
+          "idle-warm-split": null,
+          "idle-warm-reverse-in": null,
+          "idle-warm-pan": null,
+          "idle-warm-merge": null
+        },
+        "gauges": {},
+        "phases": {
+          "fetchDecode": {
+            "n": 2,
+            "p50": 2488.9,
+            "p95": 2488.9
+          },
+          "renderPng": {
+            "n": 0,
+            "p50": null,
+            "p95": null
+          },
+          "addImage": {
+            "n": 0,
+            "p50": null,
+            "p95": null
+          },
+          "resyncDelay": {
+            "n": 1,
+            "p50": 147.7,
+            "p95": 147.7
+          }
+        },
+        "p95Spread": [
+          16.8,
+          16.8
+        ]
+      },
+      {
+        "config": "after-c5e1c419",
+        "viewport": "390x844",
+        "maplibre": "5.24.0",
+        "projection": "globe",
+        "renderer": "ANGLE (NVIDIA, NVIDIA GeForce RTX 3080 Ti (0x00002208) Direct3D11 vs_5_0 ps_5_0, D3D11)",
+        "p50": 16.7,
+        "p90": 16.7,
+        "p95": 16.8,
+        "p99": 16.8,
+        "max": 116.6,
+        "over33": 4,
+        "over50": 4,
+        "frames": 1635,
+        "renderP50": 1.2,
+        "renderP95": 1.8,
+        "renderTotalMs": 2349,
+        "longTasks": 6,
+        "longTaskMs": 1007,
+        "setDataCalls": 34,
+        "setDataMs": 0.9,
+        "addImage": 50,
+        "readPixelsCalls": 222,
+        "readPixelsMs": 35.2,
+        "featuresAtZoomIn": 2,
+        "featuresAtPan": 2,
+        "imagesAtEnd": 54,
+        "coverRequests": 11,
+        "coverKb": 61,
+        "segP95": {
+          "cold-split": 16.8,
+          "idle-cold-split": 16.8,
+          "cold-reversal": 16.8,
+          "cold-reverse-in": 16.7,
+          "idle-cold-reverse-in": 16.7,
+          "cold-pan": 16.8,
+          "idle-cold-pan": 16.8,
+          "cold-merge": 16.8,
+          "idle-cold-merge": 16.7,
+          "warm-split": 16.7,
+          "idle-warm-split": 16.8,
+          "warm-reversal": 16.7,
+          "warm-reverse-in": 16.7,
+          "idle-warm-reverse-in": 16.7,
+          "warm-pan": 16.8,
+          "idle-warm-pan": 16.7,
+          "warm-merge": 16.7,
+          "idle-warm-merge": 16.7
+        },
+        "segOver50": {
+          "cold-split": 2,
+          "idle-cold-split": 1,
+          "cold-reversal": 0,
+          "cold-reverse-in": 1,
+          "idle-cold-reverse-in": 0,
+          "cold-pan": 0,
+          "idle-cold-pan": 0,
+          "cold-merge": 0,
+          "idle-cold-merge": 0,
+          "warm-split": 0,
+          "idle-warm-split": 0,
+          "warm-reversal": 0,
+          "warm-reverse-in": 0,
+          "idle-warm-reverse-in": 0,
+          "warm-pan": 0,
+          "idle-warm-pan": 0,
+          "warm-merge": 0,
+          "idle-warm-merge": 0
+        },
+        "coverImages": 0,
+        "coverImagesWhileMoving": 0,
+        "firstCoverAfter": {
+          "idle-cold-split": null,
+          "idle-cold-reverse-in": null,
+          "idle-cold-pan": null,
+          "idle-cold-merge": null,
+          "idle-warm-split": null,
+          "idle-warm-reverse-in": null,
+          "idle-warm-pan": null,
+          "idle-warm-merge": null
+        },
+        "lastCoverAfter": {
+          "idle-cold-split": null,
+          "idle-cold-reverse-in": null,
+          "idle-cold-pan": null,
+          "idle-cold-merge": null,
+          "idle-warm-split": null,
+          "idle-warm-reverse-in": null,
+          "idle-warm-pan": null,
+          "idle-warm-merge": null
+        },
+        "gauges": {},
+        "phases": {
+          "fetchDecode": {
+            "n": 2,
+            "p50": 10.6,
+            "p95": 10.6
+          },
+          "renderPng": {
+            "n": 0,
+            "p50": null,
+            "p95": null
+          },
+          "addImage": {
+            "n": 0,
+            "p50": null,
+            "p95": null
+          },
+          "resyncDelay": {
+            "n": 1,
+            "p50": 152.2,
+            "p95": 152.2
+          }
+        },
+        "p95Spread": [
+          16.8,
+          16.8
+        ]
+      },
+      {
+        "config": "before-febffbe5",
+        "viewport": "1440x900",
+        "maplibre": "5.24.0",
+        "projection": "globe",
+        "renderer": "ANGLE (NVIDIA, NVIDIA GeForce RTX 3080 Ti (0x00002208) Direct3D11 vs_5_0 ps_5_0, D3D11)",
+        "p50": 16.7,
+        "p90": 16.7,
+        "p95": 16.8,
+        "p99": 100,
+        "max": 2466.6,
+        "over33": 27,
+        "over50": 26,
+        "frames": 1129,
+        "renderP50": 1.3,
+        "renderP95": 2.2,
+        "renderTotalMs": 1928.4,
+        "longTasks": 30,
+        "longTaskMs": 13812,
+        "setDataCalls": 18,
+        "setDataMs": 1,
+        "addImage": 54,
+        "readPixelsCalls": 175,
+        "readPixelsMs": 37.1,
+        "featuresAtZoomIn": 4988,
+        "featuresAtPan": 4988,
+        "imagesAtEnd": 57,
+        "coverRequests": 4,
+        "coverKb": 20,
+        "segP95": {
+          "cold-split": 16.7,
+          "idle-cold-split": 16.8,
+          "cold-reversal": 16.8,
+          "cold-reverse-in": 16.8,
+          "idle-cold-reverse-in": 16.8,
+          "cold-pan": 16.7,
+          "idle-cold-pan": 16.7,
+          "cold-merge": 16.7,
+          "idle-cold-merge": 16.8,
+          "warm-split": 16.8,
+          "idle-warm-split": 16.7,
+          "warm-reversal": 16.7,
+          "warm-reverse-in": 16.8,
+          "idle-warm-reverse-in": 16.7,
+          "warm-pan": 16.8,
+          "idle-warm-pan": 16.8,
+          "warm-merge": 16.8,
+          "idle-warm-merge": 16.8
+        },
+        "segOver50": {
+          "cold-split": 1,
+          "idle-cold-split": 4,
+          "cold-reversal": 1,
+          "cold-reverse-in": 3,
+          "idle-cold-reverse-in": 1,
+          "cold-pan": 0,
+          "idle-cold-pan": 1,
+          "cold-merge": 2,
+          "idle-cold-merge": 1,
+          "warm-split": 1,
+          "idle-warm-split": 2,
+          "warm-reversal": 1,
+          "warm-reverse-in": 3,
+          "idle-warm-reverse-in": 1,
+          "warm-pan": 0,
+          "idle-warm-pan": 1,
+          "warm-merge": 2,
+          "idle-warm-merge": 1
+        },
+        "coverImages": 0,
+        "coverImagesWhileMoving": 0,
+        "firstCoverAfter": {
+          "idle-cold-split": null,
+          "idle-cold-reverse-in": null,
+          "idle-cold-pan": null,
+          "idle-cold-merge": null,
+          "idle-warm-split": null,
+          "idle-warm-reverse-in": null,
+          "idle-warm-pan": null,
+          "idle-warm-merge": null
+        },
+        "lastCoverAfter": {
+          "idle-cold-split": null,
+          "idle-cold-reverse-in": null,
+          "idle-cold-pan": null,
+          "idle-cold-merge": null,
+          "idle-warm-split": null,
+          "idle-warm-reverse-in": null,
+          "idle-warm-pan": null,
+          "idle-warm-merge": null
+        },
+        "gauges": {},
+        "phases": {
+          "fetchDecode": {
+            "n": 2,
+            "p50": 2522,
+            "p95": 2522
+          },
+          "renderPng": {
+            "n": 0,
+            "p50": null,
+            "p95": null
+          },
+          "addImage": {
+            "n": 0,
+            "p50": null,
+            "p95": null
+          },
+          "resyncDelay": {
+            "n": 1,
+            "p50": 141.4,
+            "p95": 141.4
+          }
+        },
+        "p95Spread": [
+          16.8,
+          16.8
+        ]
+      },
+      {
+        "config": "after-c5e1c419",
+        "viewport": "1440x900",
+        "maplibre": "5.24.0",
+        "projection": "globe",
+        "renderer": "ANGLE (NVIDIA, NVIDIA GeForce RTX 3080 Ti (0x00002208) Direct3D11 vs_5_0 ps_5_0, D3D11)",
+        "p50": 16.7,
+        "p90": 16.7,
+        "p95": 16.7,
+        "p99": 16.8,
+        "max": 166.6,
+        "over33": 4,
+        "over50": 4,
+        "frames": 1633,
+        "renderP50": 1.4,
+        "renderP95": 2.2,
+        "renderTotalMs": 2702.4,
+        "longTasks": 6,
+        "longTaskMs": 1174,
+        "setDataCalls": 33,
+        "setDataMs": 1.6,
+        "addImage": 54,
+        "readPixelsCalls": 225,
+        "readPixelsMs": 37.6,
+        "featuresAtZoomIn": 2,
+        "featuresAtPan": 2,
+        "imagesAtEnd": 58,
+        "coverRequests": 4,
+        "coverKb": 20,
+        "segP95": {
+          "cold-split": 16.8,
+          "idle-cold-split": 16.8,
+          "cold-reversal": 16.7,
+          "cold-reverse-in": 16.8,
+          "idle-cold-reverse-in": 16.8,
+          "cold-pan": 16.7,
+          "idle-cold-pan": 16.8,
+          "cold-merge": 16.7,
+          "idle-cold-merge": 16.7,
+          "warm-split": 16.7,
+          "idle-warm-split": 16.7,
+          "warm-reversal": 16.7,
+          "warm-reverse-in": 16.8,
+          "idle-warm-reverse-in": 16.7,
+          "warm-pan": 16.8,
+          "idle-warm-pan": 16.7,
+          "warm-merge": 16.7,
+          "idle-warm-merge": 16.7
+        },
+        "segOver50": {
+          "cold-split": 1,
+          "idle-cold-split": 1,
+          "cold-reversal": 0,
+          "cold-reverse-in": 1,
+          "idle-cold-reverse-in": 0,
+          "cold-pan": 0,
+          "idle-cold-pan": 0,
+          "cold-merge": 0,
+          "idle-cold-merge": 0,
+          "warm-split": 0,
+          "idle-warm-split": 0,
+          "warm-reversal": 0,
+          "warm-reverse-in": 1,
+          "idle-warm-reverse-in": 0,
+          "warm-pan": 0,
+          "idle-warm-pan": 0,
+          "warm-merge": 0,
+          "idle-warm-merge": 0
+        },
+        "coverImages": 0,
+        "coverImagesWhileMoving": 0,
+        "firstCoverAfter": {
+          "idle-cold-split": null,
+          "idle-cold-reverse-in": null,
+          "idle-cold-pan": null,
+          "idle-cold-merge": null,
+          "idle-warm-split": null,
+          "idle-warm-reverse-in": null,
+          "idle-warm-pan": null,
+          "idle-warm-merge": null
+        },
+        "lastCoverAfter": {
+          "idle-cold-split": null,
+          "idle-cold-reverse-in": null,
+          "idle-cold-pan": null,
+          "idle-cold-merge": null,
+          "idle-warm-split": null,
+          "idle-warm-reverse-in": null,
+          "idle-warm-pan": null,
+          "idle-warm-merge": null
+        },
+        "gauges": {},
+        "phases": {
+          "fetchDecode": {
+            "n": 2,
+            "p50": 12.1,
+            "p95": 12.1
+          },
+          "renderPng": {
+            "n": 0,
+            "p50": null,
+            "p95": null
+          },
+          "addImage": {
+            "n": 0,
+            "p50": null,
+            "p95": null
+          },
+          "resyncDelay": {
+            "n": 1,
+            "p50": 141.3,
+            "p95": 141.3
+          }
+        },
+        "p95Spread": [
+          16.7,
+          16.7
+        ]
+      }
+    ],
+    "runs": [
+      {
+        "config": "before-febffbe5",
+        "viewport": "390x844",
+        "run": 0,
+        "info": {
+          "maplibre": "5.24.0",
+          "projection": "globe",
+          "renderer": "ANGLE (NVIDIA, NVIDIA GeForce RTX 3080 Ti (0x00002208) Direct3D11 vs_5_0 ps_5_0, D3D11)"
+        },
+        "all": {
+          "frames": 1104,
+          "p50": 16.7,
+          "p90": 16.7,
+          "p95": 16.8,
+          "p99": 100,
+          "max": 2416.5,
+          "over33": 29,
+          "over50": 29,
+          "missed60HzFrames": 759
+        },
+        "bySeg": {
+          "cold-split": {
+            "frames": 37,
+            "p50": 16.7,
+            "p90": 16.7,
+            "p95": 16.8,
+            "p99": 933.4,
+            "max": 933.4,
+            "over33": 1,
+            "over50": 1,
+            "missed60HzFrames": 55
+          },
+          "idle-cold-split": {
+            "frames": 144,
+            "p50": 16.7,
+            "p90": 16.7,
+            "p95": 16.8,
+            "p99": 216.7,
+            "max": 2416.5,
+            "over33": 4,
+            "over50": 4,
+            "missed60HzFrames": 164
+          },
+          "cold-reversal": {
+            "frames": 26,
+            "p50": 16.7,
+            "p90": 16.7,
+            "p95": 16.8,
+            "p99": 83.3,
+            "max": 83.3,
+            "over33": 1,
+            "over50": 1,
+            "missed60HzFrames": 4
+          },
+          "cold-reverse-in": {
+            "frames": 95,
+            "p50": 16.7,
+            "p90": 16.7,
+            "p95": 16.8,
+            "p99": 100,
+            "max": 100,
+            "over33": 3,
+            "over50": 3,
+            "missed60HzFrames": 13
+          },
+          "idle-cold-reverse-in": {
+            "frames": 44,
+            "p50": 16.7,
+            "p90": 16.7,
+            "p95": 16.7,
+            "p99": 100,
+            "max": 100,
+            "over33": 1,
+            "over50": 1,
+            "missed60HzFrames": 5
+          },
+          "cold-pan": {
+            "frames": 72,
+            "p50": 16.7,
+            "p90": 16.7,
+            "p95": 16.8,
+            "p99": 16.8,
+            "max": 16.8,
+            "over33": 0,
+            "over50": 0,
+            "missed60HzFrames": 0
+          },
+          "idle-cold-pan": {
+            "frames": 43,
+            "p50": 16.7,
+            "p90": 16.7,
+            "p95": 16.8,
+            "p99": 99.9,
+            "max": 99.9,
+            "over33": 1,
+            "over50": 1,
+            "missed60HzFrames": 5
+          },
+          "cold-merge": {
+            "frames": 54,
+            "p50": 16.7,
+            "p90": 16.7,
+            "p95": 66.6,
+            "p99": 1550,
+            "max": 1550,
+            "over33": 3,
+            "over50": 3,
+            "missed60HzFrames": 100
+          },
+          "idle-cold-merge": {
+            "frames": 22,
+            "p50": 16.7,
+            "p90": 16.7,
+            "p95": 350.1,
+            "p99": 366.7,
+            "max": 366.7,
+            "over33": 2,
+            "over50": 2,
+            "missed60HzFrames": 41
+          },
+          "warm-split": {
+            "frames": 38,
+            "p50": 16.7,
+            "p90": 16.8,
+            "p95": 16.8,
+            "p99": 916.6,
+            "max": 916.6,
+            "over33": 1,
+            "over50": 1,
+            "missed60HzFrames": 54
+          },
+          "idle-warm-split": {
+            "frames": 152,
+            "p50": 16.7,
+            "p90": 16.7,
+            "p95": 16.8,
+            "p99": 216.6,
+            "max": 2300,
+            "over33": 2,
+            "over50": 2,
+            "missed60HzFrames": 149
+          },
+          "warm-reversal": {
+            "frames": 26,
+            "p50": 16.7,
+            "p90": 16.7,
+            "p95": 16.7,
+            "p99": 100,
+            "max": 100,
+            "over33": 1,
+            "over50": 1,
+            "missed60HzFrames": 5
+          },
+          "warm-reverse-in": {
+            "frames": 95,
+            "p50": 16.7,
+            "p90": 16.7,
+            "p95": 16.8,
+            "p99": 100,
+            "max": 100,
+            "over33": 3,
+            "over50": 3,
+            "missed60HzFrames": 13
+          },
+          "idle-warm-reverse-in": {
+            "frames": 43,
+            "p50": 16.7,
+            "p90": 16.7,
+            "p95": 16.7,
+            "p99": 100,
+            "max": 100,
+            "over33": 1,
+            "over50": 1,
+            "missed60HzFrames": 5
+          },
+          "warm-pan": {
+            "frames": 72,
+            "p50": 16.7,
+            "p90": 16.7,
+            "p95": 16.8,
+            "p99": 16.8,
+            "max": 16.8,
+            "over33": 0,
+            "over50": 0,
+            "missed60HzFrames": 0
+          },
+          "idle-warm-pan": {
+            "frames": 43,
+            "p50": 16.7,
+            "p90": 16.8,
+            "p95": 16.8,
+            "p99": 100,
+            "max": 100,
+            "over33": 1,
+            "over50": 1,
+            "missed60HzFrames": 5
+          },
+          "warm-merge": {
+            "frames": 54,
+            "p50": 16.7,
+            "p90": 16.8,
+            "p95": 16.8,
+            "p99": 1549.9,
+            "max": 1549.9,
+            "over33": 2,
+            "over50": 2,
+            "missed60HzFrames": 96
+          },
+          "idle-warm-merge": {
+            "frames": 44,
+            "p50": 16.7,
+            "p90": 16.7,
+            "p95": 16.8,
+            "p99": 716.6,
+            "max": 716.6,
+            "over33": 2,
+            "over50": 2,
+            "missed60HzFrames": 45
+          }
+        },
+        "render": {
+          "calls": 1177,
+          "p50": 1.1,
+          "p95": 1.7,
+          "max": 149.9,
+          "totalMs": 1614.9
+        },
+        "longTasks": {
+          "count": 34,
+          "totalMs": 13892,
+          "max": 2412
+        },
+        "setData": {
+          "calls": 18,
+          "markerCalls": 18,
+          "totalMs": 1.1,
+          "max": 0.2,
+          "maxFeatures": 4988
+        },
+        "readPixels": {
+          "calls": 166,
+          "totalMs": 33.6,
+          "max": 1.8
+        },
+        "images": {
+          "addImageDuringPath": 48,
+          "removeImage": 0,
+          "peakActive": 51
+        },
+        "counts": [
+          {
+            "seg": "cold",
+            "features": 4988,
+            "images": 51,
+            "rendered": 2
+          },
+          {
+            "seg": "warm",
+            "features": 4988,
+            "images": 51,
+            "rendered": 2
+          }
+        ],
+        "idles": [
+          {
+            "seg": "idle-cold-split",
+            "t": 14198.600000023842,
+            "zoom": 13.4,
+            "center": {
+              "lng": 14.355000000000018,
+              "lat": 46.239
+            }
+          },
+          {
+            "seg": "idle-cold-reverse-in",
+            "t": 19119.200000047684,
+            "zoom": 13.4,
+            "center": {
+              "lng": 14.354999999997744,
+              "lat": 46.23900000000086
+            }
+          },
+          {
+            "seg": "idle-cold-pan",
+            "t": 21137.5,
+            "zoom": 13.4,
+            "center": {
+              "lng": 14.357999999999947,
+              "lat": 46.24000000000004
+            }
+          },
+          {
+            "seg": "idle-cold-merge",
+            "t": 24752.100000023842,
+            "zoom": 10.500000187995012,
+            "center": {
+              "lng": 14.354999999999459,
+              "lat": 46.23899999999634
+            }
+          },
+          {
+            "seg": "idle-warm-split",
+            "t": 29493.5,
+            "zoom": 13.4,
+            "center": {
+              "lng": 14.35499999999945,
+              "lat": 46.23899999999634
+            }
+          },
+          {
+            "seg": "idle-warm-reverse-in",
+            "t": 34412.5,
+            "zoom": 13.4,
+            "center": {
+              "lng": 14.354999999998881,
+              "lat": 46.23899999999773
+            }
+          },
+          {
+            "seg": "idle-warm-pan",
+            "t": 36419,
+            "zoom": 13.4,
+            "center": {
+              "lng": 14.357999999999947,
+              "lat": 46.24000000000004
+            }
+          },
+          {
+            "seg": "idle-warm-merge",
+            "t": 40392.200000047684,
+            "zoom": 10.50000031012976,
+            "center": {
+              "lng": 14.35500000000002,
+              "lat": 46.238999999998605
+            }
+          }
+        ],
+        "video": null,
+        "cover": {
+          "requests": 11,
+          "decodedKb": 61
+        },
+        "covers": {
+          "registered": 0,
+          "registeredWhileMoving": 0,
+          "firstCoverAfter": {
+            "idle-cold-split": null,
+            "idle-cold-reverse-in": null,
+            "idle-cold-pan": null,
+            "idle-cold-merge": null,
+            "idle-warm-split": null,
+            "idle-warm-reverse-in": null,
+            "idle-warm-pan": null,
+            "idle-warm-merge": null
+          },
+          "lastCoverAfter": {
+            "idle-cold-split": null,
+            "idle-cold-reverse-in": null,
+            "idle-cold-pan": null,
+            "idle-cold-merge": null,
+            "idle-warm-split": null,
+            "idle-warm-reverse-in": null,
+            "idle-warm-pan": null,
+            "idle-warm-merge": null
+          },
+          "gauges": {},
+          "phases": {
+            "fetchDecode": {
+              "n": 2,
+              "p50": 2488.9,
+              "p95": 2488.9
+            },
+            "renderPng": {
+              "n": 0,
+              "p50": null,
+              "p95": null
+            },
+            "addImage": {
+              "n": 0,
+              "p50": null,
+              "p95": null
+            },
+            "resyncDelay": {
+              "n": 1,
+              "p50": 147.7,
+              "p95": 147.7
+            }
+          }
+        },
+        "fixture": {
+          "hits": 100,
+          "misses": 1
+        },
+        "pathFixture": {
+          "hits": 52,
+          "misses": 0
+        }
+      },
+      {
+        "config": "after-c5e1c419",
+        "viewport": "390x844",
+        "run": 0,
+        "info": {
+          "maplibre": "5.24.0",
+          "projection": "globe",
+          "renderer": "ANGLE (NVIDIA, NVIDIA GeForce RTX 3080 Ti (0x00002208) Direct3D11 vs_5_0 ps_5_0, D3D11)"
+        },
+        "all": {
+          "frames": 1635,
+          "p50": 16.7,
+          "p90": 16.7,
+          "p95": 16.8,
+          "p99": 16.8,
+          "max": 116.6,
+          "over33": 4,
+          "over50": 4,
+          "missed60HzFrames": 21
+        },
+        "bySeg": {
+          "cold-split": {
+            "frames": 157,
+            "p50": 16.7,
+            "p90": 16.7,
+            "p95": 16.8,
+            "p99": 66.6,
+            "max": 100,
+            "over33": 2,
+            "over50": 2,
+            "missed60HzFrames": 10
+          },
+          "idle-cold-split": {
+            "frames": 147,
+            "p50": 16.7,
+            "p90": 16.7,
+            "p95": 16.8,
+            "p99": 16.8,
+            "max": 100,
+            "over33": 1,
+            "over50": 1,
+            "missed60HzFrames": 5
+          },
+          "cold-reversal": {
+            "frames": 30,
+            "p50": 16.7,
+            "p90": 16.8,
+            "p95": 16.8,
+            "p99": 16.8,
+            "max": 16.8,
+            "over33": 0,
+            "over50": 0,
+            "missed60HzFrames": 0
+          },
+          "cold-reverse-in": {
+            "frames": 102,
+            "p50": 16.7,
+            "p90": 16.7,
+            "p95": 16.7,
+            "p99": 16.8,
+            "max": 116.6,
+            "over33": 1,
+            "over50": 1,
+            "missed60HzFrames": 6
+          },
+          "idle-cold-reverse-in": {
+            "frames": 43,
+            "p50": 16.7,
+            "p90": 16.7,
+            "p95": 16.7,
+            "p99": 16.8,
+            "max": 16.8,
+            "over33": 0,
+            "over50": 0,
+            "missed60HzFrames": 0
+          },
+          "cold-pan": {
+            "frames": 72,
+            "p50": 16.7,
+            "p90": 16.7,
+            "p95": 16.8,
+            "p99": 16.8,
+            "max": 16.8,
+            "over33": 0,
+            "over50": 0,
+            "missed60HzFrames": 0
+          },
+          "idle-cold-pan": {
+            "frames": 43,
+            "p50": 16.7,
+            "p90": 16.7,
+            "p95": 16.8,
+            "p99": 16.8,
+            "max": 16.8,
+            "over33": 0,
+            "over50": 0,
+            "missed60HzFrames": 0
+          },
+          "cold-merge": {
+            "frames": 169,
+            "p50": 16.7,
+            "p90": 16.7,
+            "p95": 16.8,
+            "p99": 16.8,
+            "max": 16.8,
+            "over33": 0,
+            "over50": 0,
+            "missed60HzFrames": 0
+          },
+          "idle-cold-merge": {
+            "frames": 43,
+            "p50": 16.7,
+            "p90": 16.7,
+            "p95": 16.7,
+            "p99": 16.7,
+            "max": 16.7,
+            "over33": 0,
+            "over50": 0,
+            "missed60HzFrames": 0
+          },
+          "warm-split": {
+            "frames": 168,
+            "p50": 16.7,
+            "p90": 16.7,
+            "p95": 16.7,
+            "p99": 16.8,
+            "max": 16.8,
+            "over33": 0,
+            "over50": 0,
+            "missed60HzFrames": 0
+          },
+          "idle-warm-split": {
+            "frames": 152,
+            "p50": 16.7,
+            "p90": 16.7,
+            "p95": 16.8,
+            "p99": 16.8,
+            "max": 16.8,
+            "over33": 0,
+            "over50": 0,
+            "missed60HzFrames": 0
+          },
+          "warm-reversal": {
+            "frames": 31,
+            "p50": 16.7,
+            "p90": 16.7,
+            "p95": 16.7,
+            "p99": 16.7,
+            "max": 16.7,
+            "over33": 0,
+            "over50": 0,
+            "missed60HzFrames": 0
+          },
+          "warm-reverse-in": {
+            "frames": 108,
+            "p50": 16.7,
+            "p90": 16.7,
+            "p95": 16.7,
+            "p99": 16.8,
+            "max": 16.8,
+            "over33": 0,
+            "over50": 0,
+            "missed60HzFrames": 0
+          },
+          "idle-warm-reverse-in": {
+            "frames": 43,
+            "p50": 16.7,
+            "p90": 16.7,
+            "p95": 16.7,
+            "p99": 16.8,
+            "max": 16.8,
+            "over33": 0,
+            "over50": 0,
+            "missed60HzFrames": 0
+          },
+          "warm-pan": {
+            "frames": 72,
+            "p50": 16.7,
+            "p90": 16.7,
+            "p95": 16.8,
+            "p99": 16.8,
+            "max": 16.8,
+            "over33": 0,
+            "over50": 0,
+            "missed60HzFrames": 0
+          },
+          "idle-warm-pan": {
+            "frames": 44,
+            "p50": 16.7,
+            "p90": 16.7,
+            "p95": 16.7,
+            "p99": 16.7,
+            "max": 16.7,
+            "over33": 0,
+            "over50": 0,
+            "missed60HzFrames": 0
+          },
+          "warm-merge": {
+            "frames": 168,
+            "p50": 16.7,
+            "p90": 16.7,
+            "p95": 16.7,
+            "p99": 16.8,
+            "max": 16.8,
+            "over33": 0,
+            "over50": 0,
+            "missed60HzFrames": 0
+          },
+          "idle-warm-merge": {
+            "frames": 43,
+            "p50": 16.7,
+            "p90": 16.7,
+            "p95": 16.7,
+            "p99": 16.8,
+            "max": 16.8,
+            "over33": 0,
+            "over50": 0,
+            "missed60HzFrames": 0
+          }
+        },
+        "render": {
+          "calls": 1716,
+          "p50": 1.2,
+          "p95": 1.8,
+          "max": 113.9,
+          "totalMs": 2349
+        },
+        "longTasks": {
+          "count": 6,
+          "totalMs": 1007,
+          "max": 466
+        },
+        "setData": {
+          "calls": 34,
+          "markerCalls": 34,
+          "totalMs": 0.9,
+          "max": 0.2,
+          "maxFeatures": 1690
+        },
+        "readPixels": {
+          "calls": 222,
+          "totalMs": 35.2,
+          "max": 1.5
+        },
+        "images": {
+          "addImageDuringPath": 50,
+          "removeImage": 0,
+          "peakActive": 54
+        },
+        "counts": [
+          {
+            "seg": "cold",
+            "features": 2,
+            "images": 54,
+            "rendered": 2
+          },
+          {
+            "seg": "warm",
+            "features": 2,
+            "images": 54,
+            "rendered": 2
+          }
+        ],
+        "idles": [
+          {
+            "seg": "idle-cold-split",
+            "t": 12807.199999988079,
+            "zoom": 13.4,
+            "center": {
+              "lng": 14.355000000000018,
+              "lat": 46.239
+            }
+          },
+          {
+            "seg": "idle-cold-reverse-in",
+            "t": 17640.900000035763,
+            "zoom": 13.4,
+            "center": {
+              "lng": 14.354999999997403,
+              "lat": 46.239000000000374
+            }
+          },
+          {
+            "seg": "idle-cold-pan",
+            "t": 19557,
+            "zoom": 13.4,
+            "center": {
+              "lng": 14.357999999999947,
+              "lat": 46.24000000000004
+            }
+          },
+          {
+            "seg": "idle-cold-merge",
+            "t": 23080.900000035763,
+            "zoom": 10.500000000007967,
+            "center": {
+              "lng": 14.354999999998274,
+              "lat": 46.23899999999713
+            }
+          },
+          {
+            "seg": "idle-warm-split",
+            "t": 26610.30000001192,
+            "zoom": 13.4,
+            "center": {
+              "lng": 14.354999999998313,
+              "lat": 46.23899999999713
+            }
+          },
+          {
+            "seg": "idle-warm-reverse-in",
+            "t": 31457.100000023842,
+            "zoom": 13.4,
+            "center": {
+              "lng": 14.35499999999979,
+              "lat": 46.238999999997304
+            }
+          },
+          {
+            "seg": "idle-warm-pan",
+            "t": 33373.30000001192,
+            "zoom": 13.4,
+            "center": {
+              "lng": 14.357999999999947,
+              "lat": 46.24000000000004
+            }
+          },
+          {
+            "seg": "idle-warm-merge",
+            "t": 36895.69999998808,
+            "zoom": 10.500000000013426,
+            "center": {
+              "lng": 14.355000000004459,
+              "lat": 46.23900000000124
+            }
+          }
+        ],
+        "video": null,
+        "cover": {
+          "requests": 11,
+          "decodedKb": 61
+        },
+        "covers": {
+          "registered": 0,
+          "registeredWhileMoving": 0,
+          "firstCoverAfter": {
+            "idle-cold-split": null,
+            "idle-cold-reverse-in": null,
+            "idle-cold-pan": null,
+            "idle-cold-merge": null,
+            "idle-warm-split": null,
+            "idle-warm-reverse-in": null,
+            "idle-warm-pan": null,
+            "idle-warm-merge": null
+          },
+          "lastCoverAfter": {
+            "idle-cold-split": null,
+            "idle-cold-reverse-in": null,
+            "idle-cold-pan": null,
+            "idle-cold-merge": null,
+            "idle-warm-split": null,
+            "idle-warm-reverse-in": null,
+            "idle-warm-pan": null,
+            "idle-warm-merge": null
+          },
+          "gauges": {},
+          "phases": {
+            "fetchDecode": {
+              "n": 2,
+              "p50": 10.6,
+              "p95": 10.6
+            },
+            "renderPng": {
+              "n": 0,
+              "p50": null,
+              "p95": null
+            },
+            "addImage": {
+              "n": 0,
+              "p50": null,
+              "p95": null
+            },
+            "resyncDelay": {
+              "n": 1,
+              "p50": 152.2,
+              "p95": 152.2
+            }
+          }
+        },
+        "fixture": {
+          "hits": 101,
+          "misses": 0
+        },
+        "pathFixture": {
+          "hits": 52,
+          "misses": 0
+        }
+      },
+      {
+        "config": "before-febffbe5",
+        "viewport": "1440x900",
+        "run": 0,
+        "info": {
+          "maplibre": "5.24.0",
+          "projection": "globe",
+          "renderer": "ANGLE (NVIDIA, NVIDIA GeForce RTX 3080 Ti (0x00002208) Direct3D11 vs_5_0 ps_5_0, D3D11)"
+        },
+        "all": {
+          "frames": 1129,
+          "p50": 16.7,
+          "p90": 16.7,
+          "p95": 16.8,
+          "p99": 100,
+          "max": 2466.6,
+          "over33": 27,
+          "over50": 26,
+          "missed60HzFrames": 759
+        },
+        "bySeg": {
+          "cold-split": {
+            "frames": 36,
+            "p50": 16.7,
+            "p90": 16.7,
+            "p95": 16.7,
+            "p99": 983.3,
+            "max": 983.3,
+            "over33": 1,
+            "over50": 1,
+            "missed60HzFrames": 58
+          },
+          "idle-cold-split": {
+            "frames": 144,
+            "p50": 16.7,
+            "p90": 16.7,
+            "p95": 16.8,
+            "p99": 183.3,
+            "max": 2466.6,
+            "over33": 4,
+            "over50": 4,
+            "missed60HzFrames": 166
+          },
+          "cold-reversal": {
+            "frames": 27,
+            "p50": 16.7,
+            "p90": 16.8,
+            "p95": 16.8,
+            "p99": 83.3,
+            "max": 83.3,
+            "over33": 1,
+            "over50": 1,
+            "missed60HzFrames": 4
+          },
+          "cold-reverse-in": {
+            "frames": 94,
+            "p50": 16.7,
+            "p90": 16.7,
+            "p95": 16.8,
+            "p99": 100,
+            "max": 100,
+            "over33": 3,
+            "over50": 3,
+            "missed60HzFrames": 14
+          },
+          "idle-cold-reverse-in": {
+            "frames": 44,
+            "p50": 16.7,
+            "p90": 16.7,
+            "p95": 16.8,
+            "p99": 83.3,
+            "max": 83.3,
+            "over33": 1,
+            "over50": 1,
+            "missed60HzFrames": 4
+          },
+          "cold-pan": {
+            "frames": 72,
+            "p50": 16.7,
+            "p90": 16.7,
+            "p95": 16.7,
+            "p99": 16.8,
+            "max": 16.8,
+            "over33": 0,
+            "over50": 0,
+            "missed60HzFrames": 0
+          },
+          "idle-cold-pan": {
+            "frames": 44,
+            "p50": 16.7,
+            "p90": 16.7,
+            "p95": 16.7,
+            "p99": 83.3,
+            "max": 83.3,
+            "over33": 1,
+            "over50": 1,
+            "missed60HzFrames": 4
+          },
+          "cold-merge": {
+            "frames": 54,
+            "p50": 16.7,
+            "p90": 16.7,
+            "p95": 16.7,
+            "p99": 1499.9,
+            "max": 1499.9,
+            "over33": 2,
+            "over50": 2,
+            "missed60HzFrames": 93
+          },
+          "idle-cold-merge": {
+            "frames": 44,
+            "p50": 16.7,
+            "p90": 16.7,
+            "p95": 16.8,
+            "p99": 749.9,
+            "max": 749.9,
+            "over33": 1,
+            "over50": 1,
+            "missed60HzFrames": 45
+          },
+          "warm-split": {
+            "frames": 38,
+            "p50": 16.7,
+            "p90": 16.8,
+            "p95": 16.8,
+            "p99": 950,
+            "max": 950,
+            "over33": 1,
+            "over50": 1,
+            "missed60HzFrames": 56
+          },
+          "idle-warm-split": {
+            "frames": 152,
+            "p50": 16.7,
+            "p90": 16.7,
+            "p95": 16.7,
+            "p99": 200,
+            "max": 2299.9,
+            "over33": 2,
+            "over50": 2,
+            "missed60HzFrames": 148
+          },
+          "warm-reversal": {
+            "frames": 26,
+            "p50": 16.7,
+            "p90": 16.7,
+            "p95": 16.7,
+            "p99": 83.2,
+            "max": 83.2,
+            "over33": 1,
+            "over50": 1,
+            "missed60HzFrames": 4
+          },
+          "warm-reverse-in": {
+            "frames": 95,
+            "p50": 16.7,
+            "p90": 16.8,
+            "p95": 16.8,
+            "p99": 116.8,
+            "max": 116.8,
+            "over33": 3,
+            "over50": 3,
+            "missed60HzFrames": 14
+          },
+          "idle-warm-reverse-in": {
+            "frames": 44,
+            "p50": 16.7,
+            "p90": 16.7,
+            "p95": 16.7,
+            "p99": 83.3,
+            "max": 83.3,
+            "over33": 1,
+            "over50": 1,
+            "missed60HzFrames": 4
+          },
+          "warm-pan": {
+            "frames": 72,
+            "p50": 16.7,
+            "p90": 16.7,
+            "p95": 16.8,
+            "p99": 16.8,
+            "max": 16.8,
+            "over33": 0,
+            "over50": 0,
+            "missed60HzFrames": 0
+          },
+          "idle-warm-pan": {
+            "frames": 45,
+            "p50": 16.7,
+            "p90": 16.7,
+            "p95": 16.8,
+            "p99": 83.3,
+            "max": 83.3,
+            "over33": 1,
+            "over50": 1,
+            "missed60HzFrames": 4
+          },
+          "warm-merge": {
+            "frames": 53,
+            "p50": 16.7,
+            "p90": 16.7,
+            "p95": 16.8,
+            "p99": 1516.6,
+            "max": 1516.6,
+            "over33": 2,
+            "over50": 2,
+            "missed60HzFrames": 94
+          },
+          "idle-warm-merge": {
+            "frames": 45,
+            "p50": 16.7,
+            "p90": 16.7,
+            "p95": 16.8,
+            "p99": 766.7,
+            "max": 766.7,
+            "over33": 2,
+            "over50": 1,
+            "missed60HzFrames": 47
+          }
+        },
+        "render": {
+          "calls": 1207,
+          "p50": 1.3,
+          "p95": 2.2,
+          "max": 153,
+          "totalMs": 1928.4
+        },
+        "longTasks": {
+          "count": 30,
+          "totalMs": 13812,
+          "max": 2468
+        },
+        "setData": {
+          "calls": 18,
+          "markerCalls": 18,
+          "totalMs": 1,
+          "max": 0.1,
+          "maxFeatures": 4988
+        },
+        "readPixels": {
+          "calls": 175,
+          "totalMs": 37.1,
+          "max": 1.8
+        },
+        "images": {
+          "addImageDuringPath": 54,
+          "removeImage": 0,
+          "peakActive": 57
+        },
+        "counts": [
+          {
+            "seg": "cold",
+            "features": 4988,
+            "images": 57,
+            "rendered": 2
+          },
+          {
+            "seg": "warm",
+            "features": 4988,
+            "images": 57,
+            "rendered": 2
+          }
+        ],
+        "idles": [
+          {
+            "seg": "idle-cold-split",
+            "t": 14298.299999952316,
+            "zoom": 13.4,
+            "center": {
+              "lng": 14.355000000000018,
+              "lat": 46.239
+            }
+          },
+          {
+            "seg": "idle-cold-reverse-in",
+            "t": 19226.399999976158,
+            "zoom": 13.4,
+            "center": {
+              "lng": 14.3549999999982,
+              "lat": 46.23899999999989
+            }
+          },
+          {
+            "seg": "idle-cold-pan",
+            "t": 21224.599999964237,
+            "zoom": 13.4,
+            "center": {
+              "lng": 14.357999999999947,
+              "lat": 46.24000000000004
+            }
+          },
+          {
+            "seg": "idle-cold-merge",
+            "t": 25162.399999976158,
+            "zoom": 10.50000040719717,
+            "center": {
+              "lng": 14.355000000000892,
+              "lat": 46.23900000000627
+            }
+          },
+          {
+            "seg": "idle-warm-split",
+            "t": 29919,
+            "zoom": 13.4,
+            "center": {
+              "lng": 14.355000000000928,
+              "lat": 46.23900000000627
+            }
+          },
+          {
+            "seg": "idle-warm-reverse-in",
+            "t": 34842.89999997616,
+            "zoom": 13.4,
+            "center": {
+              "lng": 14.354999999997744,
+              "lat": 46.23900000000677
+            }
+          },
+          {
+            "seg": "idle-warm-pan",
+            "t": 36842,
+            "zoom": 13.4,
+            "center": {
+              "lng": 14.357999999999947,
+              "lat": 46.24000000000004
+            }
+          },
+          {
+            "seg": "idle-warm-merge",
+            "t": 40828.5,
+            "zoom": 10.500000387820018,
+            "center": {
+              "lng": 14.355000000004022,
+              "lat": 46.23900000000736
+            }
+          }
+        ],
+        "video": null,
+        "cover": {
+          "requests": 4,
+          "decodedKb": 20
+        },
+        "covers": {
+          "registered": 0,
+          "registeredWhileMoving": 0,
+          "firstCoverAfter": {
+            "idle-cold-split": null,
+            "idle-cold-reverse-in": null,
+            "idle-cold-pan": null,
+            "idle-cold-merge": null,
+            "idle-warm-split": null,
+            "idle-warm-reverse-in": null,
+            "idle-warm-pan": null,
+            "idle-warm-merge": null
+          },
+          "lastCoverAfter": {
+            "idle-cold-split": null,
+            "idle-cold-reverse-in": null,
+            "idle-cold-pan": null,
+            "idle-cold-merge": null,
+            "idle-warm-split": null,
+            "idle-warm-reverse-in": null,
+            "idle-warm-pan": null,
+            "idle-warm-merge": null
+          },
+          "gauges": {},
+          "phases": {
+            "fetchDecode": {
+              "n": 2,
+              "p50": 2522,
+              "p95": 2522
+            },
+            "renderPng": {
+              "n": 0,
+              "p50": null,
+              "p95": null
+            },
+            "addImage": {
+              "n": 0,
+              "p50": null,
+              "p95": null
+            },
+            "resyncDelay": {
+              "n": 1,
+              "p50": 141.4,
+              "p95": 141.4
+            }
+          }
+        },
+        "fixture": {
+          "hits": 114,
+          "misses": 1
+        },
+        "pathFixture": {
+          "hits": 61,
+          "misses": 0
+        }
+      },
+      {
+        "config": "after-c5e1c419",
+        "viewport": "1440x900",
+        "run": 0,
+        "info": {
+          "maplibre": "5.24.0",
+          "projection": "globe",
+          "renderer": "ANGLE (NVIDIA, NVIDIA GeForce RTX 3080 Ti (0x00002208) Direct3D11 vs_5_0 ps_5_0, D3D11)"
+        },
+        "all": {
+          "frames": 1633,
+          "p50": 16.7,
+          "p90": 16.7,
+          "p95": 16.7,
+          "p99": 16.8,
+          "max": 166.6,
+          "over33": 4,
+          "over50": 4,
+          "missed60HzFrames": 26
+        },
+        "bySeg": {
+          "cold-split": {
+            "frames": 157,
+            "p50": 16.7,
+            "p90": 16.7,
+            "p95": 16.8,
+            "p99": 33.3,
+            "max": 166.6,
+            "over33": 1,
+            "over50": 1,
+            "missed60HzFrames": 10
+          },
+          "idle-cold-split": {
+            "frames": 147,
+            "p50": 16.7,
+            "p90": 16.7,
+            "p95": 16.8,
+            "p99": 16.8,
+            "max": 100,
+            "over33": 1,
+            "over50": 1,
+            "missed60HzFrames": 5
+          },
+          "cold-reversal": {
+            "frames": 30,
+            "p50": 16.7,
+            "p90": 16.7,
+            "p95": 16.7,
+            "p99": 16.8,
+            "max": 16.8,
+            "over33": 0,
+            "over50": 0,
+            "missed60HzFrames": 0
+          },
+          "cold-reverse-in": {
+            "frames": 102,
+            "p50": 16.7,
+            "p90": 16.7,
+            "p95": 16.8,
+            "p99": 16.8,
+            "max": 116.6,
+            "over33": 1,
+            "over50": 1,
+            "missed60HzFrames": 6
+          },
+          "idle-cold-reverse-in": {
+            "frames": 44,
+            "p50": 16.7,
+            "p90": 16.7,
+            "p95": 16.8,
+            "p99": 16.8,
+            "max": 16.8,
+            "over33": 0,
+            "over50": 0,
+            "missed60HzFrames": 0
+          },
+          "cold-pan": {
+            "frames": 72,
+            "p50": 16.7,
+            "p90": 16.7,
+            "p95": 16.7,
+            "p99": 16.8,
+            "max": 16.8,
+            "over33": 0,
+            "over50": 0,
+            "missed60HzFrames": 0
+          },
+          "idle-cold-pan": {
+            "frames": 44,
+            "p50": 16.7,
+            "p90": 16.7,
+            "p95": 16.8,
+            "p99": 16.8,
+            "max": 16.8,
+            "over33": 0,
+            "over50": 0,
+            "missed60HzFrames": 0
+          },
+          "cold-merge": {
+            "frames": 168,
+            "p50": 16.7,
+            "p90": 16.7,
+            "p95": 16.7,
+            "p99": 16.8,
+            "max": 16.8,
+            "over33": 0,
+            "over50": 0,
+            "missed60HzFrames": 0
+          },
+          "idle-cold-merge": {
+            "frames": 43,
+            "p50": 16.7,
+            "p90": 16.7,
+            "p95": 16.7,
+            "p99": 16.8,
+            "max": 16.8,
+            "over33": 0,
+            "over50": 0,
+            "missed60HzFrames": 0
+          },
+          "warm-split": {
+            "frames": 168,
+            "p50": 16.7,
+            "p90": 16.7,
+            "p95": 16.7,
+            "p99": 16.8,
+            "max": 16.8,
+            "over33": 0,
+            "over50": 0,
+            "missed60HzFrames": 0
+          },
+          "idle-warm-split": {
+            "frames": 152,
+            "p50": 16.7,
+            "p90": 16.7,
+            "p95": 16.7,
+            "p99": 16.8,
+            "max": 16.8,
+            "over33": 0,
+            "over50": 0,
+            "missed60HzFrames": 0
+          },
+          "warm-reversal": {
+            "frames": 30,
+            "p50": 16.7,
+            "p90": 16.7,
+            "p95": 16.7,
+            "p99": 16.7,
+            "max": 16.7,
+            "over33": 0,
+            "over50": 0,
+            "missed60HzFrames": 0
+          },
+          "warm-reverse-in": {
+            "frames": 104,
+            "p50": 16.7,
+            "p90": 16.7,
+            "p95": 16.8,
+            "p99": 16.8,
+            "max": 100,
+            "over33": 1,
+            "over50": 1,
+            "missed60HzFrames": 5
+          },
+          "idle-warm-reverse-in": {
+            "frames": 44,
+            "p50": 16.7,
+            "p90": 16.7,
+            "p95": 16.7,
+            "p99": 16.8,
+            "max": 16.8,
+            "over33": 0,
+            "over50": 0,
+            "missed60HzFrames": 0
+          },
+          "warm-pan": {
+            "frames": 72,
+            "p50": 16.7,
+            "p90": 16.7,
+            "p95": 16.8,
+            "p99": 16.8,
+            "max": 16.8,
+            "over33": 0,
+            "over50": 0,
+            "missed60HzFrames": 0
+          },
+          "idle-warm-pan": {
+            "frames": 44,
+            "p50": 16.7,
+            "p90": 16.7,
+            "p95": 16.7,
+            "p99": 16.8,
+            "max": 16.8,
+            "over33": 0,
+            "over50": 0,
+            "missed60HzFrames": 0
+          },
+          "warm-merge": {
+            "frames": 168,
+            "p50": 16.7,
+            "p90": 16.7,
+            "p95": 16.7,
+            "p99": 16.8,
+            "max": 16.8,
+            "over33": 0,
+            "over50": 0,
+            "missed60HzFrames": 0
+          },
+          "idle-warm-merge": {
+            "frames": 44,
+            "p50": 16.7,
+            "p90": 16.7,
+            "p95": 16.7,
+            "p99": 16.8,
+            "max": 16.8,
+            "over33": 0,
+            "over50": 0,
+            "missed60HzFrames": 0
+          }
+        },
+        "render": {
+          "calls": 1713,
+          "p50": 1.4,
+          "p95": 2.2,
+          "max": 150,
+          "totalMs": 2702.4
+        },
+        "longTasks": {
+          "count": 6,
+          "totalMs": 1174,
+          "max": 468
+        },
+        "setData": {
+          "calls": 33,
+          "markerCalls": 33,
+          "totalMs": 1.6,
+          "max": 0.4,
+          "maxFeatures": 1690
+        },
+        "readPixels": {
+          "calls": 225,
+          "totalMs": 37.6,
+          "max": 2.2
+        },
+        "images": {
+          "addImageDuringPath": 54,
+          "removeImage": 0,
+          "peakActive": 58
+        },
+        "counts": [
+          {
+            "seg": "cold",
+            "features": 2,
+            "images": 58,
+            "rendered": 2
+          },
+          {
+            "seg": "warm",
+            "features": 2,
+            "images": 58,
+            "rendered": 2
+          }
+        ],
+        "idles": [
+          {
+            "seg": "idle-cold-split",
+            "t": 12857.5,
+            "zoom": 13.4,
+            "center": {
+              "lng": 14.355000000000018,
+              "lat": 46.239
+            }
+          },
+          {
+            "seg": "idle-cold-reverse-in",
+            "t": 17692.19999998808,
+            "zoom": 13.4,
+            "center": {
+              "lng": 14.354999999999336,
+              "lat": 46.23900000000049
+            }
+          },
+          {
+            "seg": "idle-cold-pan",
+            "t": 19625.69999998808,
+            "zoom": 13.4,
+            "center": {
+              "lng": 14.357999999999947,
+              "lat": 46.24000000000004
+            }
+          },
+          {
+            "seg": "idle-cold-merge",
+            "t": 23147.69999998808,
+            "zoom": 10.500000000082242,
+            "center": {
+              "lng": 14.355000000001125,
+              "lat": 46.238999999996864
+            }
+          },
+          {
+            "seg": "idle-warm-split",
+            "t": 26673.5,
+            "zoom": 13.4,
+            "center": {
+              "lng": 14.355000000001155,
+              "lat": 46.238999999996864
+            }
+          },
+          {
+            "seg": "idle-warm-reverse-in",
+            "t": 31526.100000023842,
+            "zoom": 13.4,
+            "center": {
+              "lng": 14.355000000001382,
+              "lat": 46.238999999997446
+            }
+          },
+          {
+            "seg": "idle-warm-pan",
+            "t": 33458.5,
+            "zoom": 13.4,
+            "center": {
+              "lng": 14.357999999999947,
+              "lat": 46.24000000000004
+            }
+          },
+          {
+            "seg": "idle-warm-merge",
+            "t": 36980.80000001192,
+            "zoom": 10.500000000028889,
+            "center": {
+              "lng": 14.354999999994607,
+              "lat": 46.239000000001404
+            }
+          }
+        ],
+        "video": null,
+        "cover": {
+          "requests": 4,
+          "decodedKb": 20
+        },
+        "covers": {
+          "registered": 0,
+          "registeredWhileMoving": 0,
+          "firstCoverAfter": {
+            "idle-cold-split": null,
+            "idle-cold-reverse-in": null,
+            "idle-cold-pan": null,
+            "idle-cold-merge": null,
+            "idle-warm-split": null,
+            "idle-warm-reverse-in": null,
+            "idle-warm-pan": null,
+            "idle-warm-merge": null
+          },
+          "lastCoverAfter": {
+            "idle-cold-split": null,
+            "idle-cold-reverse-in": null,
+            "idle-cold-pan": null,
+            "idle-cold-merge": null,
+            "idle-warm-split": null,
+            "idle-warm-reverse-in": null,
+            "idle-warm-pan": null,
+            "idle-warm-merge": null
+          },
+          "gauges": {},
+          "phases": {
+            "fetchDecode": {
+              "n": 2,
+              "p50": 12.1,
+              "p95": 12.1
+            },
+            "renderPng": {
+              "n": 0,
+              "p50": null,
+              "p95": null
+            },
+            "addImage": {
+              "n": 0,
+              "p50": null,
+              "p95": null
+            },
+            "resyncDelay": {
+              "n": 1,
+              "p50": 141.3,
+              "p95": 141.3
+            }
+          }
+        },
+        "fixture": {
+          "hits": 113,
+          "misses": 1
+        },
+        "pathFixture": {
+          "hits": 60,
+          "misses": 0
+        }
+      }
+    ]
+  }
+}

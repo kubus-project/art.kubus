@@ -106,6 +106,24 @@ List<ArtDiscoveryItem> _rank(
     );
 
 void main() {
+  test('a qualifying artwork video is not suppressed by an earlier still post',
+      () {
+    final still = _post('still', artworkId: 'work', likes: 5);
+    final video = _post('video', artworkId: 'work')
+        .copyWith(mediaUrls: ['https://example.test/work.mp4']);
+    final duplicateVideo = _post('duplicate-video', artworkId: 'work')
+        .copyWith(mediaUrls: ['https://example.test/work.mp4']);
+    final items = _rank(
+        ArtDiscoveryCandidates(publicPosts: [still, video, duplicateVideo]));
+    expect(items.where((item) => item.kind == ArtDiscoveryKind.post),
+        hasLength(2));
+    expect(items.any((item) => item.id == 'still'), isTrue);
+    expect(
+        items.any(
+            (item) => item.post!.mediaUrls.any((url) => url.endsWith('.mp4'))),
+        isTrue);
+  });
+
   group('personalised signals', () {
     test('a followed artist outranks a fresher stranger', () {
       final items = _rank(

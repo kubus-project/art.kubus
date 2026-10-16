@@ -184,6 +184,60 @@ void main() {
       expect(controller.calls.length, greaterThan(firstCallCount));
     });
 
+    test('refreshLocationAccent re-colours the pulse and the heading cone',
+        () async {
+      final controller = _FakeMapLayersController();
+      const ids = MapLayersIds(
+        markerSourceId: 'kubus_markers',
+        markerLayerId: 'kubus_marker_layer',
+        markerHitboxLayerId: 'kubus_marker_hitbox_layer',
+        markerHitboxImageId: 'kubus_hitbox_square_transparent',
+        markerDotLayerId: 'kubus_marker_dot_layer',
+        markerPulseLayerId: 'kubus_marker_pulse_layer',
+        cubeLayerId: 'kubus_marker_cubes_layer',
+        cubeIconLayerId: 'kubus_marker_cubes_icon_layer',
+        locationSourceId: 'kubus_user_location',
+        locationLayerId: 'kubus_user_location_layer',
+      );
+      final manager = MapLayersManager(
+        controller: controller,
+        ids: ids,
+        debugTracing: false,
+      );
+      manager.onNewStyle(styleEpoch: 1);
+      manager.updateThemeSpec(
+        const MapLayersThemeSpec(
+          locationFill: Colors.blue,
+          locationStroke: Colors.white,
+        ),
+      );
+      await manager.ensureInitialized(styleEpoch: 1);
+
+      // Unchanged accent: nothing to redo.
+      final settled = controller.calls.length;
+      await manager.refreshLocationAccent(Colors.blue);
+      expect(controller.calls.length, settled);
+
+      await manager.refreshLocationAccent(Colors.red);
+      final after = controller.calls.sublist(settled);
+      expect(after, contains('setLayerProperties:${ids.locationPulseLayerId}'));
+      expect(
+        after.where(
+            (c) => c.startsWith('addImage:${ids.locationHeadingImageId}_')),
+        hasLength(1),
+      );
+      expect(
+        after,
+        contains('setLayoutProperty:${ids.locationHeadingLayerId}:icon-image'),
+      );
+      expect(manager.locationAccentColor, Colors.red);
+
+      // The same new accent again is already applied.
+      final applied = controller.calls.length;
+      await manager.refreshLocationAccent(Colors.red);
+      expect(controller.calls.length, applied);
+    });
+
     test('safe setters are no-ops for unknown layers', () async {
       final controller = _FakeMapLayersController();
       const ids = MapLayersIds(

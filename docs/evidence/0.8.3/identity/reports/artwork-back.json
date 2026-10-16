@@ -1,0 +1,427 @@
+{
+  "evidence": "local production artifact with deterministic API/media fixtures",
+  "webRoot": "C:\\kubus-build\\083-web-90200b56",
+  "results": [
+    {
+      "name": "chromium-light-en-US-reduce-1440",
+      "errors": [],
+      "writesBlocked": [
+        "/api/presence/ping",
+        "/api/saved/batch-status",
+        "/api/artworks/11111111-1111-4111-8111-111111111111/view",
+        "/api/analytics/app",
+        "/api/saved/batch-status",
+        "/api/presence/batch",
+        "/api/analytics/app",
+        "/api/saved/batch-status",
+        "/api/artworks/11111111-1111-4111-8111-111111111111/view",
+        "/api/analytics/app"
+      ],
+      "requests": [
+        {
+          "method": "GET",
+          "path": "/api/profiles/ArtistWallet111111111111111111111111111111111",
+          "search": ""
+        },
+        {
+          "method": "GET",
+          "path": "/api/achievements/user/ArtistWallet111111111111111111111111111111111",
+          "search": ""
+        },
+        {
+          "method": "GET",
+          "path": "/api/profiles/ArtistWallet111111111111111111111111111111111",
+          "search": ""
+        },
+        {
+          "method": "GET",
+          "path": "/api/profiles/ArtistWallet111111111111111111111111111111111",
+          "search": ""
+        },
+        {
+          "method": "GET",
+          "path": "/api/dao/reviews/ArtistWallet111111111111111111111111111111111",
+          "search": ""
+        },
+        {
+          "method": "GET",
+          "path": "/api/achievements/user/ArtistWallet111111111111111111111111111111111",
+          "search": ""
+        },
+        {
+          "method": "GET",
+          "path": "/api/stats/user/ArtistWallet111111111111111111111111111111111",
+          "search": "?metrics=collections%2Cfollowers%2Cfollowing%2Cposts%2Cartworks%2CnftsMinted%2CachievementsUnlocked&scope=public"
+        },
+        {
+          "method": "GET",
+          "path": "/api/stats/user/ArtistWallet111111111111111111111111111111111",
+          "search": "?metrics=collections%2CachievementsUnlocked%2CachievementTokensTotal&scope=public"
+        },
+        {
+          "method": "GET",
+          "path": "/api/wallet-backup",
+          "search": "?walletAddress=ArtistWallet111111111111111111111111111111111"
+        },
+        {
+          "method": "GET",
+          "path": "/api/profiles/ArtistWallet111111111111111111111111111111111",
+          "search": ""
+        },
+        {
+          "method": "GET",
+          "path": "/api/achievements/user/ArtistWallet111111111111111111111111111111111",
+          "search": ""
+        },
+        {
+          "method": "GET",
+          "path": "/api/profiles/ArtistWallet111111111111111111111111111111111",
+          "search": ""
+        },
+        {
+          "method": "GET",
+          "path": "/api/dao/reviews/ArtistWallet111111111111111111111111111111111",
+          "search": ""
+        },
+        {
+          "method": "GET",
+          "path": "/api/art-markers/mine",
+          "search": ""
+        },
+        {
+          "method": "GET",
+          "path": "/api/collab/invites",
+          "search": ""
+        },
+        {
+          "method": "POST",
+          "path": "/api/presence/ping",
+          "search": ""
+        },
+        {
+          "method": "GET",
+          "path": "/api/saved",
+          "search": "?limit=100&type=artwork"
+        },
+        {
+          "method": "GET",
+          "path": "/api/profiles/me",
+          "search": ""
+        },
+        {
+          "method": "GET",
+          "path": "/api/public/home-rails",
+          "search": "?locale=en"
+        },
+        {
+          "method": "GET",
+          "path": "/api/artworks",
+          "search": "?page=1&limit=100"
+        },
+        {
+          "method": "GET",
+          "path": "/api/stats/platform/global",
+          "search": "?metrics=artworks%2CarEnabledArtworks%2Cposts%2Cgroups&scope=public"
+        },
+        {
+          "method": "GET",
+          "path": "/api/stats/user/ArtistWallet111111111111111111111111111111111",
+          "search": "?metrics=artworks%2CviewsReceived%2ClikesReceived%2Cfollowers%2Cfollowing%2ClikesGiven%2CvisitorsReceived%2CeventsHosted&scope=public"
+        },
+        {
+          "method": "GET",
+          "path": "/api/stats/user/ArtistWallet111111111111111111111111111111111",
+          "search": "?metrics=artworksDiscovered%2CarSessions&scope=private"
+        },
+        {
+          "method": "GET",
+          "path": "/api/exhibitions",
+          "search": "?limit=50&offset=0&mine=true"
+        },
+        {
+          "method": "GET",
+          "path": "/api/stats/user/ArtistWallet111111111111111111111111111111111/series",
+          "search": "?metric=viewsReceived&bucket=month&timeframe=all&from=2020-01-01T00%3A00%3A00.000Z&to=2026-10-17T00%3A00%3A00.000Z&groupBy=targetType&scope=private"
+        },
+        {
+          "method": "GET",
+          "path": "/api/notifications",
+          "search": "?page=1&limit=100&unreadOnly=false"
+        },
+        {
+          "method": "GET",
+          "path": "/api/artworks/11111111-1111-4111-8111-111111111111",
+          "search": ""
+        },
+        {
+          "method": "GET",
+          "path": "/api/saved",
+          "search": "?limit=100&type=community_post"
+        },
+        {
+          "method": "GET",
+          "path": "/api/availability/operator-tokens",
+          "search": "?walletAddress=ArtistWallet111111111111111111111111111111111"
+        },
+        {
+          "method": "GET",
+          "path": "/api/achievements/me",
+          "search": ""
+        },
+        {
+          "method": "GET",
+          "path": "/api/events",
+          "search": "?limit=20&offset=0"
+        },
+        {
+          "method": "GET",
+          "path": "/api/auth/account-security-status",
+          "search": ""
+        },
+        {
+          "method": "GET",
+          "path": "/api/profiles/artistwallet111111111111111111111111111111111/collectibles",
+          "search": ""
+        },
+        {
+          "method": "GET",
+          "path": "/api/wallet-backup",
+          "search": "?walletAddress=ArtistWallet111111111111111111111111111111111"
+        },
+        {
+          "method": "GET",
+          "path": "/api/profiles/ArtistWallet111111111111111111111111111111111",
+          "search": ""
+        },
+        {
+          "method": "GET",
+          "path": "/api/exhibitions",
+          "search": "?limit=50&offset=0&mine=true"
+        },
+        {
+          "method": "GET",
+          "path": "/api/art-markers/mine",
+          "search": ""
+        },
+        {
+          "method": "GET",
+          "path": "/api/app/promotion-config",
+          "search": ""
+        },
+        {
+          "method": "GET",
+          "path": "/api/institutions",
+          "search": "?limit=100&offset=0"
+        },
+        {
+          "method": "GET",
+          "path": "/api/collab/invites",
+          "search": ""
+        },
+        {
+          "method": "POST",
+          "path": "/api/saved/batch-status",
+          "search": ""
+        },
+        {
+          "method": "GET",
+          "path": "/api/saved",
+          "search": "?limit=100&type=event"
+        },
+        {
+          "method": "GET",
+          "path": "/api/availability/account/operator-dashboard",
+          "search": ""
+        },
+        {
+          "method": "GET",
+          "path": "/api/dao/reviews/ArtistWallet111111111111111111111111111111111",
+          "search": ""
+        },
+        {
+          "method": "GET",
+          "path": "/api/events",
+          "search": "?limit=100&offset=0"
+        },
+        {
+          "method": "GET",
+          "path": "/api/saved",
+          "search": "?limit=100&type=collection"
+        },
+        {
+          "method": "POST",
+          "path": "/api/artworks/11111111-1111-4111-8111-111111111111/view",
+          "search": ""
+        },
+        {
+          "method": "GET",
+          "path": "/api/artworks/11111111-1111-4111-8111-111111111111/comments",
+          "search": "?page=1&limit=100"
+        },
+        {
+          "method": "GET",
+          "path": "/api/artworks/11111111-1111-4111-8111-111111111111/comments",
+          "search": "?page=1&limit=100"
+        },
+        {
+          "method": "GET",
+          "path": "/api/profiles/22222222-2222-4222-8222-222222222222",
+          "search": ""
+        },
+        {
+          "method": "GET",
+          "path": "/api/artworks/11111111-1111-4111-8111-111111111111/spatial",
+          "search": ""
+        },
+        {
+          "method": "GET",
+          "path": "/api/collab/artwork/11111111-1111-4111-8111-111111111111/members",
+          "search": ""
+        },
+        {
+          "method": "GET",
+          "path": "/api/messages",
+          "search": ""
+        },
+        {
+          "method": "GET",
+          "path": "/api/saved",
+          "search": "?limit=100&type=exhibition"
+        },
+        {
+          "method": "GET",
+          "path": "/api/profiles/ArtistWallet111111111111111111111111111111111",
+          "search": ""
+        },
+        {
+          "method": "GET",
+          "path": "/api/saved",
+          "search": "?limit=100&type=artist"
+        },
+        {
+          "method": "GET",
+          "path": "/api/achievements/user/ArtistWallet111111111111111111111111111111111",
+          "search": ""
+        },
+        {
+          "method": "GET",
+          "path": "/api/saved",
+          "search": "?limit=100&type=institution"
+        },
+        {
+          "method": "GET",
+          "path": "/api/saved",
+          "search": "?limit=100&type=group"
+        },
+        {
+          "method": "GET",
+          "path": "/api/saved",
+          "search": "?limit=100&type=marker"
+        },
+        {
+          "method": "POST",
+          "path": "/api/analytics/app",
+          "search": ""
+        },
+        {
+          "method": "GET",
+          "path": "/api/profiles/ArtistWallet111111111111111111111111111111111/artworks",
+          "search": "?limit=6&offset=0"
+        },
+        {
+          "method": "GET",
+          "path": "/api/stats/user/ArtistWallet111111111111111111111111111111111",
+          "search": "?metrics=artworks%2CnftsMinted%2CpublicStreetArtAdded&scope=public"
+        },
+        {
+          "method": "GET",
+          "path": "/api/community/posts",
+          "search": "?page=1&limit=50&authorWallet=ArtistWallet111111111111111111111111111111111"
+        },
+        {
+          "method": "GET",
+          "path": "/api/attestations/me",
+          "search": "?limit=100"
+        },
+        {
+          "method": "GET",
+          "path": "/api/stats/user/ArtistWallet111111111111111111111111111111111",
+          "search": "?metrics=artworksDiscovered&scope=private"
+        },
+        {
+          "method": "GET",
+          "path": "/api/stats/user/ArtistWallet111111111111111111111111111111111",
+          "search": "?metrics=collections%2Cfollowers%2Cfollowing%2Cposts%2Cartworks%2CnftsMinted%2CachievementsUnlocked&scope=public"
+        },
+        {
+          "method": "POST",
+          "path": "/api/saved/batch-status",
+          "search": ""
+        },
+        {
+          "method": "GET",
+          "path": "/api/attestations/me",
+          "search": "?limit=100"
+        },
+        {
+          "method": "POST",
+          "path": "/api/presence/batch",
+          "search": ""
+        },
+        {
+          "method": "POST",
+          "path": "/api/analytics/app",
+          "search": ""
+        },
+        {
+          "method": "POST",
+          "path": "/api/saved/batch-status",
+          "search": ""
+        },
+        {
+          "method": "GET",
+          "path": "/api/artworks/11111111-1111-4111-8111-111111111111/comments",
+          "search": "?page=1&limit=100"
+        },
+        {
+          "method": "POST",
+          "path": "/api/artworks/11111111-1111-4111-8111-111111111111/view",
+          "search": ""
+        },
+        {
+          "method": "GET",
+          "path": "/api/artworks/11111111-1111-4111-8111-111111111111/comments",
+          "search": "?page=1&limit=100"
+        },
+        {
+          "method": "GET",
+          "path": "/api/profiles/22222222-2222-4222-8222-222222222222",
+          "search": ""
+        },
+        {
+          "method": "GET",
+          "path": "/api/collab/artwork/11111111-1111-4111-8111-111111111111/members",
+          "search": ""
+        },
+        {
+          "method": "POST",
+          "path": "/api/analytics/app",
+          "search": ""
+        }
+      ],
+      "playback": [],
+      "afterPlayback": [],
+      "stageBefore": null,
+      "stageBeforeActivation": null,
+      "stageAfter": null,
+      "captures": [
+        {
+          "width": 1440,
+          "overflow": false
+        }
+      ],
+      "semanticText": "- button \"Back\"\n- text: art.kubus\n- button \"More\"\n- group:\n  - button \"Open Recorded Artwork image\"\n  - text: Recorded Artwork\n  - group \"by\":\n    - button \"Recorded Artist\"\n  - text: 46.0569, 14.5058 Social\n  - switch \"Like\"\n  - switch \"Save\"\n  - button \"Comments\"\n  - text: Place and movement\n  - button \"Show on map\"\n  - button \"Navigate\"\n  - text: Description\n  - button \"Share\"\n  - text: \"QA fixture: artist differs from uploader. Spatial archive No spatial record yet.\"\n  - button \"Capture spatial data\"\n  - text: Details 1\n  - button \"Collaboration\"\n  - text: Comments (0)\n  - button \"Expand\"\n  - button \"Refresh\"",
+      "overflow": false
+    }
+  ]
+}

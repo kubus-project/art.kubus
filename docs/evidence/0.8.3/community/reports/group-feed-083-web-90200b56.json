@@ -1,0 +1,250 @@
+{
+  "evidence": "local production artifact with deterministic API/media fixtures",
+  "webRoot": "C:\\kubus-build\\083-web-90200b56",
+  "results": [
+    {
+      "name": "chromium-dark-en-US-reduce-390",
+      "errors": [],
+      "writesBlocked": [
+        "/api/presence/batch",
+        "/api/analytics/app",
+        "/api/analytics/app",
+        "/api/presence/batch",
+        "/api/analytics/app"
+      ],
+      "requests": [
+        {
+          "method": "GET",
+          "path": "/api/artworks",
+          "search": "?page=1&limit=100"
+        },
+        {
+          "method": "GET",
+          "path": "/api/community/posts",
+          "search": "?page=1&limit=24&followingOnly=false&surface=discover&sort=hybrid"
+        },
+        {
+          "method": "GET",
+          "path": "/api/profiles/22222222-2222-4222-8222-222222222222",
+          "search": ""
+        },
+        {
+          "method": "POST",
+          "path": "/api/presence/batch",
+          "search": ""
+        },
+        {
+          "method": "POST",
+          "path": "/api/analytics/app",
+          "search": ""
+        },
+        {
+          "method": "GET",
+          "path": "/api/groups",
+          "search": "?page=1&limit=20"
+        },
+        {
+          "method": "GET",
+          "path": "/api/groups/99999999-9999-4999-8999-999999999999/posts",
+          "search": "?page=1&limit=30"
+        },
+        {
+          "method": "POST",
+          "path": "/api/analytics/app",
+          "search": ""
+        },
+        {
+          "method": "POST",
+          "path": "/api/presence/batch",
+          "search": ""
+        },
+        {
+          "method": "POST",
+          "path": "/api/analytics/app",
+          "search": ""
+        }
+      ],
+      "playback": [
+        {
+          "width": 180,
+          "height": 320,
+          "time": 3.988043,
+          "paused": false,
+          "muted": false,
+          "readyState": 4,
+          "rect": {
+            "x": 45,
+            "y": 134,
+            "width": 300,
+            "height": 533.328125,
+            "top": 134,
+            "right": 345,
+            "bottom": 667.328125,
+            "left": 45
+          }
+        }
+      ],
+      "afterPlayback": [
+        {
+          "time": 5.991952,
+          "paused": false
+        }
+      ],
+      "stageBefore": {
+        "x": 45,
+        "y": 484,
+        "width": 300,
+        "height": 360
+      },
+      "stageBeforeActivation": {
+        "x": 45,
+        "y": 134,
+        "width": 300,
+        "height": 533.328125
+      },
+      "stageAfter": {
+        "x": 45,
+        "y": 134,
+        "width": 300,
+        "height": 533.328125
+      },
+      "maxViewportHeight": 844,
+      "clippedSemanticBounds": {
+        "top": 134,
+        "bottom": 667.328125,
+        "height": 533.328125
+      },
+      "fullscreen": "- button \"Exit full screen\"\n- slider \"Video position\": \"50\"\n- button \"Pause video\"\n- button \"Mute video\"\n- text: 0:06 of 0:08\n- button \"Exit full screen\"",
+      "captures": [
+        {
+          "width": 390,
+          "overflow": false
+        }
+      ],
+      "semanticText": "- button \"Back\"\n- heading \"Fixture Group\" [level=2]\n- button \"Join\"\n- group:\n  - group \"Fixture Group Local browser fixture; no production group is created.\":\n    - checkbox \"3 members\"\n    - checkbox \"Public\"\n  - group \"Sign in to post.\":\n    - button \"Sign in\"\n  - 'group \"Just now Art #Art #Ljubljana Ljubljana\"':\n    - button \"Visitor Artist Artist Institution @visual-qa-visitor\"\n    - button\n    - 'button \"portrait video — #Art #Ljubljana\"'\n    - group \"Media 1 of 1\":\n      - group \"Video player\":\n        - button \"Play video\"",
+      "overflow": false
+    },
+    {
+      "name": "firefox-dark-en-US-reduce-390",
+      "errors": [],
+      "writesBlocked": [
+        "/api/presence/batch",
+        "/api/analytics/app",
+        "/api/analytics/app",
+        "/api/presence/batch",
+        "/api/analytics/app"
+      ],
+      "requests": [
+        {
+          "method": "GET",
+          "path": "/api/artworks",
+          "search": "?page=1&limit=100"
+        },
+        {
+          "method": "GET",
+          "path": "/api/profiles/22222222-2222-4222-8222-222222222222",
+          "search": ""
+        },
+        {
+          "method": "GET",
+          "path": "/api/community/posts",
+          "search": "?page=1&limit=24&followingOnly=false&surface=discover&sort=hybrid"
+        },
+        {
+          "method": "POST",
+          "path": "/api/presence/batch",
+          "search": ""
+        },
+        {
+          "method": "POST",
+          "path": "/api/analytics/app",
+          "search": ""
+        },
+        {
+          "method": "GET",
+          "path": "/api/groups",
+          "search": "?page=1&limit=20"
+        },
+        {
+          "method": "GET",
+          "path": "/api/groups/99999999-9999-4999-8999-999999999999/posts",
+          "search": "?page=1&limit=30"
+        },
+        {
+          "method": "POST",
+          "path": "/api/analytics/app",
+          "search": ""
+        },
+        {
+          "method": "POST",
+          "path": "/api/presence/batch",
+          "search": ""
+        },
+        {
+          "method": "POST",
+          "path": "/api/analytics/app",
+          "search": ""
+        }
+      ],
+      "playback": [
+        {
+          "width": 180,
+          "height": 320,
+          "time": 3.965754,
+          "paused": false,
+          "muted": false,
+          "readyState": 4,
+          "rect": {
+            "x": 45,
+            "y": 134,
+            "width": 300,
+            "height": 533.3333129882812,
+            "top": 134,
+            "right": 345,
+            "bottom": 667.3333129882812,
+            "left": 45
+          }
+        }
+      ],
+      "afterPlayback": [
+        {
+          "time": 5.974525,
+          "paused": false
+        }
+      ],
+      "stageBefore": {
+        "x": 45,
+        "y": 484,
+        "width": 300,
+        "height": 360
+      },
+      "stageBeforeActivation": {
+        "x": 45,
+        "y": 134,
+        "width": 300,
+        "height": 533.3333129882812
+      },
+      "stageAfter": {
+        "x": 45,
+        "y": 134,
+        "width": 300,
+        "height": 533.3333129882812
+      },
+      "maxViewportHeight": 844,
+      "clippedSemanticBounds": {
+        "top": 134,
+        "bottom": 667.3333129882812,
+        "height": 533.3333129882812
+      },
+      "fullscreen": "- button \"Exit full screen\"\n- slider \"Video position\": \"50\"\n- button \"Pause video\"\n- button \"Mute video\"\n- text: 0:06 of 0:08\n- button \"Exit full screen\"",
+      "captures": [
+        {
+          "width": 390,
+          "overflow": false
+        }
+      ],
+      "semanticText": "- button \"Back\"\n- heading \"Fixture Group\" [level=2]\n- button \"Join\"\n- group:\n  - group \"Fixture Group Local browser fixture; no production group is created.\":\n    - checkbox \"3 members\"\n    - checkbox \"Public\"\n  - group \"Sign in to post.\":\n    - button \"Sign in\"\n  - 'group \"Just now Art #Art #Ljubljana Ljubljana\"':\n    - button \"Visitor Artist Artist Institution @visual-qa-visitor\"\n    - button\n    - 'button \"portrait video — #Art #Ljubljana\"'\n    - group \"Media 1 of 1\":\n      - group \"Video player\":\n        - button \"Play video\"",
+      "overflow": false
+    }
+  ]
+}

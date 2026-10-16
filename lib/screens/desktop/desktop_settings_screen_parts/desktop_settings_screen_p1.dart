@@ -823,7 +823,7 @@ extension _DesktopSettingsScreenStatePart1 on _DesktopSettingsScreenState {
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text(
+            KubusFamilyBrandText(
               l10n.appTitle,
               style: KubusTextStyles.sheetTitle.copyWith(
                 color: Theme.of(context).colorScheme.onSurface,
@@ -843,7 +843,7 @@ extension _DesktopSettingsScreenStatePart1 on _DesktopSettingsScreenState {
               ),
             ),
             const SizedBox(height: 16),
-            Text(
+            KubusFamilyBrandText(
               l10n.settingsCopyright(DateTime.now().year),
               style: KubusTextStyles.sectionSubtitle.copyWith(
                 color: Theme.of(context)

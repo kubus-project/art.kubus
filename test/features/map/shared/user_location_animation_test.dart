@@ -89,4 +89,27 @@ void main() {
       animator.dispose();
     });
   });
+  test('heading rotates over north on the shortest arc and pauses offscreen',
+      () {
+    fakeAsync((clock) {
+      final animator = KubusUserLocationAnimator(
+          nowMs: () => clock.elapsed.inMilliseconds, write: (_, __) async {});
+      animator.update(const LatLng(46, 14),
+          styleEpoch: 1, reduceMotion: false, headingDegrees: 350);
+      clock.flushMicrotasks();
+      animator.update(const LatLng(46, 14),
+          styleEpoch: 1, reduceMotion: false, headingDegrees: 10);
+      clock.flushMicrotasks();
+      clock.elapse(const Duration(milliseconds: 132));
+      expect(animator.headingDegrees!, anyOf(lessThan(11), greaterThan(349)));
+      animator.pause();
+      expect(clock.pendingTimers, isEmpty);
+      animator.update(const LatLng(46, 14),
+          styleEpoch: 1, reduceMotion: true, headingDegrees: 90);
+      clock.flushMicrotasks();
+      expect(animator.headingDegrees, 90);
+      expect(clock.pendingTimers, isEmpty);
+      animator.dispose();
+    });
+  });
 }
