@@ -19,6 +19,7 @@
 // through; analytics and every write are answered locally so no telemetry
 // reaches production and nothing is created.
 import fs from 'node:fs/promises';
+import crypto from 'node:crypto';
 import http from 'node:http';
 import os from 'node:os';
 import path from 'node:path';
@@ -92,17 +93,41 @@ function startServer() {
 }
 
 const apiOrigin = process.env.QA_API_ORIGIN || 'https://api.kubus.site';
+const markerFixture = process.env.QA_MARKER_FIXTURE
+  ? await fs.readFile(process.env.QA_MARKER_FIXTURE, 'utf8') : null;
 
 async function containNetwork(context) {
-  const log = { analyticsSwallowed: 0, writesBlocked: [], failedRequests: [] };
+  const log = { analyticsSwallowed: 0, writesBlocked: [], failedRequests: [], fixtureHits: 0, fixtureMisses: [] };
   await context.route('**/*', async (route) => {
     const request = route.request();
     const url = new URL(request.url());
     const sameOrigin = url.origin === appUrl;
+    if (['blob:', 'data:'].includes(url.protocol)) return route.continue();
     const isApi = sameOrigin
       ? url.pathname.startsWith('/api/')
       : url.origin === new URL(apiOrigin).origin;
     if (sameOrigin && !isApi) return route.continue();
+    if (markerFixture && request.method() === 'GET' && isApi && url.pathname === '/api/art-markers')
+      return route.fulfill({ status: 200, contentType: 'application/json', body: markerFixture,
+        headers: { 'access-control-allow-origin': request.headers().origin || appUrl } });
+    // Optional replay of the controlled benchmark's public byte fixture. A
+    // missing response fails closed, rather than adding unequal live latency.
+    if (process.env.QA_HTTP_FIXTURE && ['GET', 'HEAD'].includes(request.method())) {
+      const target = new URL(sameOrigin ? `${apiOrigin}${url.pathname}${url.search}` : request.url());
+      if (target.pathname === '/api/media/proxy') target.searchParams.delete('sid');
+      const key = crypto.createHash('sha1').update(`GET ${target}`).digest('hex');
+      try {
+        const meta = JSON.parse(await fs.readFile(path.join(process.env.QA_HTTP_FIXTURE, `${key}.json`), 'utf8'));
+        const body = await fs.readFile(path.join(process.env.QA_HTTP_FIXTURE, `${key}.bin`));
+        log.fixtureHits++;
+        return route.fulfill({ status: meta.status, body, headers: { ...meta.headers,
+          'access-control-allow-origin': request.headers().origin || appUrl,
+          'access-control-allow-credentials': 'true' } });
+      } catch {
+        log.fixtureMisses.push(`${target.hostname}${target.pathname}`);
+        return route.fulfill({ status: 503, body: '' });
+      }
+    }
     if (isApi) {
       if (/\/api\/analytics\b/.test(url.pathname)) {
         log.analyticsSwallowed += 1;
@@ -382,9 +407,8 @@ async function selectionContinuity(page, viewport, tag, run) {
     await snap(page, `${tag}-sel-z${String(zoom).replace('.', '_')}`, run);
   }
   run.selectionLevels = levels;
-  if (viewport.width <= 480) {
-    // Phone keeps the selection through gestures; desktop dismisses it by
-    // design (anchored overlay), so the zoom-out invariant is a phone check.
+  {
+    // Selection is stable through topology/camera changes on both layouts.
     check(
       run,
       `${tag}: the selected marker stays an individual marker at every zoom`,
@@ -445,7 +469,7 @@ async function themeSwitchKeepsState(page, tag, run, id, scheme) {
   if (id) {
     const s = await selectionState(page, id);
     run.afterThemeSwitch = s;
-    check(run, `${tag}: the selection pin survives the theme switch`, s.hasMarkerLayer, JSON.stringify(s));
+    check(run, `${tag}: the selection pin survives the theme switch`, s.opacityPinsSelection, JSON.stringify(s));
   }
   await snap(page, `${tag}-after-theme-${next}`, run);
   await page.emulateMedia({ colorScheme: scheme });
@@ -618,6 +642,14 @@ async function sourceIconMix(page) {
       const family = icon.startsWith('mc_') ? 'cover' : icon.startsWith('mk_') ? 'marker' : icon.startsWith('cl_') ? 'clusterIcon' : 'blank';
       const key = `${f.properties?.kind}:${family}`;
       mix[key] = (mix[key] || 0) + 1;
+    }
+    // Covers now paint over the canonical marker in their own stable layer.
+    // Inspect that rendered pass instead of expecting the base icon to change.
+    if (map.getLayer('kubus_marker_layer_cover')) {
+      const covers = map.queryRenderedFeatures(undefined, { layers: ['kubus_marker_layer_cover'] })
+        .filter(f => Number(f.properties?.coverReveal) > 0 && Number(f.properties?.entryOpacity ?? 1) > 0 &&
+          f.properties?.coverIcon && map.hasImage(String(f.properties.coverIcon)));
+      if (covers.length) mix['marker:cover'] = covers.length;
     }
     return mix;
   });
@@ -1354,6 +1386,70 @@ async function zoomScenario(browserName, scheme, report) {
 }
 
 await fs.mkdir(outDir, { recursive: true });
+// Separate availability probe: polling is intentionally excluded from the
+// controlled rAF benchmark. Uses the renderer's existing layers and camera.
+async function appearanceScenario(browserName, viewport, scheme, report) {
+  const browser = await (browserName === 'firefox' ? firefox : chromium).launch({ headless: true });
+  const context = await browser.newContext({ viewport, colorScheme: scheme });
+  await context.addInitScript(HOOK);
+  const run = { tag: `${browserName}-${viewport.width}-${scheme}`, checks: [], screenshots: [], failed: false };
+  report.runs.push(run);
+  run.network = await containNetwork(context);
+  const page = await context.newPage();
+  try {
+    await page.goto(`${appUrl}/map?lang=en`);
+    await waitForMap(page);
+    await settle(page, 2500);
+    run.appearance = await page.evaluate(async () => {
+      const map = window.__maps.at(-1), hold = ms => new Promise(r => setTimeout(r, ms));
+      const results = [];
+      for (const cache of ['cold', 'warm']) {
+        map.stop(); map.jumpTo({ zoom: 10.5, center: [14.5058, 46.0569] });
+        await hold(1800);
+        const started = performance.now(), markers = new Map(), covers = new Map();
+        let crossed = null, ended = null;
+        const sample = () => {
+          if (map.getZoom() < 13) return;
+          const now = performance.now(); crossed ??= now;
+          for (const [layer, target, cover] of [
+            ['kubus_marker_layer', markers, false], ['kubus_marker_layer_cover', covers, true],
+          ]) {
+            if (!map.getLayer(layer)) continue;
+            for (const f of map.queryRenderedFeatures(undefined, { layers: [layer] })) {
+              const p = f.properties || {}, icon = cover ? p.coverIcon : p.icon;
+              if (p.kind !== 'marker' || !(Number(p.entryOpacity ?? 1) > 0) ||
+                  (cover && !(Number(p.coverReveal ?? 1) > 0)) || !icon || !map.hasImage(icon)) continue;
+              const id = String(p.id ?? f.id);
+              if (!target.has(id)) target.set(id, now);
+              if (!cover && /^mc_/.test(icon) && !covers.has(id)) covers.set(id, now);
+            }
+          }
+        };
+        map.on('render', sample);
+        await new Promise(resolve => {
+          map.once('moveend', () => { ended = performance.now(); resolve(); });
+          map.easeTo({ zoom: 13.4, duration: 2800 });
+        });
+        await hold(2200); sample(); map.off('render', sample);
+        const timing = values => values.size ? {
+          count: values.size, firstAfterZoom13Ms: Math.round(Math.min(...values.values()) - crossed),
+          lastAfterZoom13Ms: Math.round(Math.max(...values.values()) - crossed),
+        } : null;
+        results.push({ cache, crossedAfterStartMs: crossed == null ? null : Math.round(crossed-started),
+          cameraCompletionMs: Math.round(ended-started), canonical: timing(markers), covers: timing(covers) });
+      }
+      return results;
+    });
+    check(run, 'canonical markers are rendered on both cold and warm paths',
+      run.appearance.every(row => row.canonical?.count > 0), JSON.stringify(run.appearance));
+    await snap(page, `${run.tag}-appearance`, run);
+  } catch (error) { run.failed = true; run.error = String(error); }
+  finally {
+    await browser.close();
+    await fs.writeFile(path.join(outDir, 'report.json'), JSON.stringify(report, null, 2));
+  }
+}
+
 // Focused solar/location presentation matrix. Location is browser emulation;
 // heading symbol rotation is a renderer probe, never native compass acceptance.
 async function presentationScenario(browserName, scheme, locale, motion, report) {
@@ -1371,8 +1467,12 @@ async function presentationScenario(browserName, scheme, locale, motion, report)
   const page = await context.newPage();
   page.on('pageerror', (e) => run.console.push(String(e)));
   try {
-    await page.goto(`${appUrl}/map`);
+    await page.goto(`${appUrl}/map?lang=${locale.split('-')[0]}`);
     await waitForMap(page);
+    await enableSemantics(page);
+    const uiLabels = await semanticsText(page);
+    check(run, 'requested app language is rendered', locale.startsWith('sl')
+      ? /I\u0161\u010di|Zemljevid|Iskanje/.test(uiLabels) : /Search artworks|Map/.test(uiLabels), uiLabels.slice(0, 220));
     await settle(page, 2500);
     for (const width of list('QA_PRESENTATION_WIDTHS', '320,360,390,430,768,1440,1920').map(Number)) {
       await page.setViewportSize({ width, height: width >= 768 ? 1024 : 844 });
@@ -1449,15 +1549,64 @@ async function presentationScenario(browserName, scheme, locale, motion, report)
       }
       await noHorizontalOverflow(page, `${tag}-${width}`, run);
     }
+    if (process.env.QA_PRESENTATION_EDGES === 'true') {
+      for (const [lng, lat] of [[179, 0], [0, 80], [0, -80]]) {
+        await page.evaluate(({ lng, lat }) => window.__maps.at(-1).jumpTo({
+          zoom: 1.8, center: [lng, lat], bearing: 0, pitch: 0,
+        }), { lng, lat });
+        await settle(page, 2000);
+        const state = await page.evaluate(() => {
+          const c = window.__maps.at(-1).getContainer().querySelector('.kubus-globe-atmosphere');
+          return { active: c?.dataset.active, solar: c?.dataset.subsolar, radius: Number(c?.dataset.radius) };
+        });
+        check(run, `solar field at ${lng},${lat}`, state.active === 'true' && Number.isFinite(state.radius), JSON.stringify(state));
+        await snap(page, `${tag}-solar-${lng}-${lat}`, run);
+      }
+      await page.evaluate(() => new Promise((resolve, reject) => {
+        const m = window.__maps.at(-1), host = m.getContainer();
+        window.__presentationDisplay = host.style.display;
+        const timeout = setTimeout(() => { observer.disconnect(); reject(new Error('Offscreen intersection was not delivered')); }, 5000);
+        const observer = new IntersectionObserver(entries => {
+          if (entries.some(entry => !entry.isIntersecting)) { clearTimeout(timeout); observer.disconnect(); resolve(); }
+        });
+        observer.observe(host);
+        host.style.display = 'none';
+      }));
+      // Intersection delivery is asynchronous. Measure the paused interval
+      // after both observers have consumed the actual visibility change.
+      await settle(page, 150);
+      const hidden = await page.evaluate(() => window.__maps.at(-1).getContainer()
+        .querySelector('.kubus-globe-atmosphere')?.dataset.subsolar);
+      await settle(page, 2200);
+      const stopped = await page.evaluate(() => window.__maps.at(-1).getContainer()
+        .querySelector('.kubus-globe-atmosphere')?.dataset.subsolar);
+      check(run, 'offscreen renderer pauses solar updates', hidden === stopped, `${hidden} -> ${stopped}`);
+      await page.evaluate(() => {
+        const m = window.__maps.at(-1);
+        m.getContainer().style.display = window.__presentationDisplay;
+        m.resize();
+      });
+      await settle(page, 2000);
+      check(run, 'visible renderer resumes solar field', await page.evaluate(() =>
+        window.__maps.at(-1).getContainer().querySelector('.kubus-globe-atmosphere')?.dataset.active === 'true'));
+    }
     check(run, 'no uncaught page errors', run.console.length === 0, run.console.join(' | '));
   } catch (error) { run.failed = true; run.error = String(error); }
-  finally { await browser.close(); }
+  finally {
+    await browser.close();
+    await fs.writeFile(path.join(outDir, 'report.json'), JSON.stringify(report, null, 2));
+    console.log(`${tag}: ${run.failed ? 'FAILED' : 'passed'} (${run.checks.length} checks)`);
+  }
 }
 
 const server = await startServer();
-const report = { label, startedAt: new Date().toISOString(), runs: [], failed: false };
+const report = { label, startedAt: new Date().toISOString(),
+  webRoot, markerFixture: process.env.QA_MARKER_FIXTURE || null, runs: [], failed: false };
 try {
-  if (process.env.QA_FLOW === 'presentation') {
+  if (process.env.QA_FLOW === 'appearance') {
+    for (const name of browsers) for (const viewport of viewports) for (const scheme of schemes)
+      await appearanceScenario(name, viewport, scheme, report);
+  } else if (process.env.QA_FLOW === 'presentation') {
     for (const name of browsers) for (const scheme of schemes)
       for (const locale of list('QA_LOCALES', 'en-US,sl-SI'))
         for (const motion of list('QA_MOTION', 'reduce,no-preference'))
