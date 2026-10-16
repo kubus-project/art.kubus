@@ -1,0 +1,29 @@
+base-c1440-1245 chromium-1440x900-light checks 24 failed ["the selected marker stays an individual marker at every zoom","the badge stays pinned visible for the selection at far zoom","the selected badge is actually drawn at far zoom (pixels)","the selection pin survives the theme switch"] badge - reinstallMs 1627 pageerrors 1
+base-c1440-1245 chromium-1440x900-light-offline-tiles checks 2 failed [] badge - reinstallMs undefined pageerrors 0
+cand-c1440-1245 chromium-1440x900-light checks 24 failed [] badge 356/832 reinstallMs 3782 pageerrors 6
+cand-c1440-1245 chromium-1440x900-light-offline-tiles checks 2 failed [] badge - reinstallMs undefined pageerrors 0
+base-c390-1245 chromium-390x844-light checks 24 failed [] badge 315/832 reinstallMs 2861 pageerrors 12
+base-c390-1245 chromium-390x844-light-offline-tiles checks 2 failed [] badge - reinstallMs undefined pageerrors 0
+cand-c390-1245 chromium-390x844-light checks 24 failed [] badge 350/832 reinstallMs 3019 pageerrors 6
+cand-c390-1245 chromium-390x844-light-offline-tiles checks 2 failed [] badge - reinstallMs undefined pageerrors 0
+cand-f1440-1245 firefox-1440x900-light checks 23 failed [] badge 286/832 reinstallMs 3631 pageerrors 0
+cand-f1440-1245 firefox-1440x900-light-offline-tiles checks 2 failed [] badge - reinstallMs undefined pageerrors 0
+base-c1440-1640 chromium-1440x900-light checks 24 failed ["the selected marker stays an individual marker at every zoom","the badge stays pinned visible for the selection at far zoom","the selected badge is actually drawn at far zoom (pixels)","the selection pin survives the theme switch"] badge - reinstallMs 1601 pageerrors 6
+base-c1440-1640 chromium-1440x900-light-offline-tiles checks 2 failed [] badge - reinstallMs undefined pageerrors 0
+cand-c1440-1640 chromium-1440x900-light checks 24 failed [] badge 360/832 reinstallMs 4388 pageerrors 6
+cand-c1440-1640 chromium-1440x900-light-offline-tiles checks 2 failed [] badge - reinstallMs undefined pageerrors 0
+base-c390-1640 chromium-390x844-light checks 24 failed [] badge 326/832 reinstallMs 2652 pageerrors 8
+base-c390-1640 chromium-390x844-light-offline-tiles checks 2 failed [] badge - reinstallMs undefined pageerrors 0
+cand-c390-1640 chromium-390x844-light checks 24 failed [] badge 290/832 reinstallMs 4156 pageerrors 12
+cand-c390-1640 chromium-390x844-light-offline-tiles checks 2 failed [] badge - reinstallMs undefined pageerrors 0
+cand-f1440-1640 firefox-1440x900-light checks 23 failed [] badge 285/832 reinstallMs 2897 pageerrors 0
+cand-f1440-1640 firefox-1440x900-light-offline-tiles checks 2 failed [] badge - reinstallMs undefined pageerrors 0
+base-old-c1440-1640 chromium-1440x900-light checks 24 failed ["the selected marker stays an individual marker at every zoom","the badge stays pinned visible for the selection at far zoom","the selected badge is actually drawn at far zoom (pixels)","the selection pin survives the theme switch"] badge - reinstallMs 1542 pageerrors 6
+base-old-c1440-1640 chromium-1440x900-light-offline-tiles checks 2 failed [] badge - reinstallMs undefined pageerrors 0
+cand-old-c1440-1640 chromium-1440x900-light checks 24 failed ["the selected badge is actually drawn at far zoom (pixels)"] badge 0/832 reinstallMs 3440 pageerrors 6
+cand-old-c1440-1640 chromium-1440x900-light-offline-tiles checks 2 failed [] badge - reinstallMs undefined pageerrors 0
+cand-rep2-c1440-1640 chromium-1440x900-light checks 24 failed [] badge 295/832 reinstallMs 3055 pageerrors 6
+cand-rep2-c1440-1640 chromium-1440x900-light-offline-tiles checks 2 failed [] badge - reinstallMs undefined pageerrors 0
+cand-rep3-c1440-1640 chromium-1440x900-light checks 24 failed [] badge 404/832 reinstallMs 3233 pageerrors 6
+cand-rep3-c1440-1640 chromium-1440x900-light-offline-tiles checks 2 failed [] badge - reinstallMs undefined pageerrors 0
+DONE
