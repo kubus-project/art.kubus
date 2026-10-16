@@ -18,9 +18,15 @@ const entryUrl = (pathname, locale) => {
   const language = locale.split('-')[0].toLowerCase();
   const url = new URL(pathname, origin);
   const segments = url.pathname.split('/');
+  // Bare shell routes (/community, /map, ...) are the only entries the app wraps
+  // in AppInitializer. A language prefix exists only for public entity pages, so
+  // `/sl/community` falls through to the default entry (the Map and its first-run
+  // coach card) and is not an entry a Slovenian user can reach. Those routes
+  // select the language with `lang` alone.
+  const shellRoutes = ['community', 'map', 'main', 'analytics'];
   if (['en', 'sl'].includes(segments[1])) {
     if (language === 'sl') segments[1] = 'sl';
-  } else if (language === 'sl') {
+  } else if (language === 'sl' && !shellRoutes.includes(segments[1])) {
     segments.splice(1, 0, 'sl');
   }
   url.pathname = segments.join('/');
@@ -155,6 +161,9 @@ try {
                 const token = `${encode({ alg: 'none', typ: 'JWT' })}.${encode({ sub: ownerId, userId: ownerId, walletAddress: wallet, exp: Math.floor(Date.now()/1000)+3600 })}.fixture`;
                 localStorage.setItem('flutter.jwt_token', JSON.stringify(token));
                 localStorage.setItem('flutter.wallet_address', JSON.stringify(wallet));
+                // Mobile cold entry can open the Map tab, whose first-run coach
+                // card would cover the surface under test.
+                localStorage.setItem('flutter.map_onboarding_mobile_seen_v2', JSON.stringify(true));
               }, { ownerId, wallet });
               let failure;
               let stageBeforeActivation;
@@ -225,6 +234,8 @@ try {
                   await fs.writeFile(path.join(out, `${name}-action.yml`), actionText);
                   if (process.env.QA_EXPECT_OWNER === 'true' && !/Edit profile|Uredi profil/i.test(actionText))
                     throw new Error('Owner navigation did not reach canonical edit actions');
+                  if (process.env.QA_EXPECT_OWNER === 'true' && /button "(Follow|Sledi|Message|Sporoči)"/.test(actionText))
+                    throw new Error('Owner profile exposes visitor Follow/Message actions');
                 }
                 const playback = await page.evaluate(() => {
                   const deep = root => [...root.querySelectorAll('*')].flatMap(el => [el, ...(el.shadowRoot ? deep(el.shadowRoot) : [])]);
