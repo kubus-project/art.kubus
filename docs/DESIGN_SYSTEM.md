@@ -215,7 +215,10 @@ system and semantic guards remain active despite their historical filenames.
 Chromium and Firefox. Preserve 14 settled samples over at least one full 2200 ms
 cycle, rise ≥1.5 px, normal peak-to-peak ≥1 px, reduced peak-to-peak ≤0.6 px, accent
 shadow, disabled stillness and return to rest. Adaptive capture deadlines account
-for slow screenshots; insufficient samples remain inconclusive failures. A hover
+for slow screenshots; insufficient samples remain inconclusive failures. Captures are
+steered to unsampled float phases (no phase hole above a quarter period), because a
+steady cadence of whole periods (Firefox paints take about 4.4 s, two periods) otherwise
+samples one phase and reads a still tile as a failure. A hover
 change updates code, this contract, widget tests and browser acceptance together.
 
 ## Brand Identity / Wordmark Typography
