@@ -150,7 +150,8 @@ by this document.
    next PR is still mergeable.
 2. **Version bump** on a `release/0.8.3` branch from the merged `dev`:
    `npm run sync:all-versions` after editing `version.json` (`version` `0.8.3`, a new
-   `buildNumber` and `buildDate`), then `npm run check:versions`. The bump is a
+   `buildNumber` and `buildDate`); it rewrites `pubspec.yaml`, `lib/config/config.dart`
+   and `package.json` and does not honor a dry-run flag. Then `npm run check:versions`. The bump is a
    release-preparation commit, as in 0.8.1.
 3. **Staging.** `deploy-development.yml` runs on every push to `dev` and can be
    dispatched on the exact `dev` head, with the `development-web` environment.
