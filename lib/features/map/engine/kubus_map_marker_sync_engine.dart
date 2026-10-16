@@ -954,8 +954,9 @@ class KubusMapMarkerSyncEngine {
   /// Warms (downloads + decodes, never rasterises) the first
   /// [KubusMarkerLod.coverPrefetchLimit] covers the display stage will show, so
   /// they are ready when the visitor zooms in. Bounded by that limit, the
-  /// loader's concurrency and cache, and only while the camera is idle: a
-  /// settled camera means a stable candidate set.
+  /// loader's concurrency and cache. This also runs during the approach:
+  /// continuous zoom must not skip the entire prefetch band. It never
+  /// rasterises or registers an image, and stale queued demand is cancelled.
   ///
   /// Returns the cover URLs the warm-up set wants (queued or already cached),
   /// so the caller can keep them when it prunes queued loads.
@@ -968,7 +969,6 @@ class KubusMapMarkerSyncEngine {
   }) {
     if (!KubusMarkerLod.allowsCoverPrefetch(zoom)) return const <String>[];
     if (KubusMarkerLod.allowsCovers(zoom)) return const <String>[];
-    if (host.kubusMapController.cameraIsMoving) return const <String>[];
     final ids = KubusMarkerLod.selectCoverMarkerIds(
       candidates: candidates,
       selectedId: selectedId,
@@ -980,7 +980,7 @@ class KubusMapMarkerSyncEngine {
       for (final marker in candidates) marker.id: marker,
     };
     final width = _coverFetchWidthPx;
-    // A settled camera replaces the warm-up set: prefetches planned for an
+    // The current viewport replaces the warm-up set: prefetches planned for an
     // earlier view that have not started yet must not delay this one.
     _coverLoader.cancelPendingPrefetches();
     final warm = <String>[];
