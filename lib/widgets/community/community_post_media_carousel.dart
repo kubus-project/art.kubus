@@ -112,7 +112,7 @@ class _CommunityPostMediaCarouselState
   final Map<int, double> _naturalAspects = <int, double>{};
   int _index = 0;
   bool _hovering = false;
-  double? _initialVideoAspect;
+  late Map<String, double> _videoAspects;
 
   @override
   void initState() {
@@ -134,12 +134,16 @@ class _CommunityPostMediaCarouselState
   }
 
   void _captureVideoAspect() {
-    final video = widget.mediaUrls.where(communityMediaUrlIsVideo).firstOrNull;
-    _initialVideoAspect = video == null
-        ? null
-        : communityMediaVideoAspect(video) ??
-            CommunityPostVideoSlide
-                .knownAspects[communityMediaVideoSourceUrl(video)];
+    _videoAspects = <String, double>{};
+    for (final url in widget.mediaUrls.where(communityMediaUrlIsVideo)) {
+      final sourceUrl = communityMediaVideoSourceUrl(url);
+      final knownAspect = communityMediaVideoAspect(url) ??
+          CommunityPostVideoSlide.knownAspects[sourceUrl];
+      _videoAspects[url] =
+          knownAspect != null && knownAspect.isFinite && knownAspect > 0
+              ? knownAspect
+              : kCommunityVideoStageFallbackAspect;
+    }
   }
 
   @override
@@ -283,12 +287,11 @@ class _CommunityPostMediaCarouselState
     final count = widget.mediaUrls.length;
     final multiple = count > 1;
 
-    final singleVideo =
-        count == 1 && communityMediaUrlIsVideo(widget.mediaUrls[0]);
+    final activeVideo = communityMediaUrlIsVideo(widget.mediaUrls[_index]);
     final stageAspect = kCommunityMediaStageAspect;
 
     Widget sizedStage(Widget child) {
-      if (!singleVideo) {
+      if (!activeVideo) {
         return AspectRatio(aspectRatio: stageAspect, child: child);
       }
       return LayoutBuilder(
@@ -310,11 +313,8 @@ class _CommunityPostMediaCarouselState
           // aspect known before the first frame gives portrait clips the full
           // usable viewport and keeps panoramas compact; otherwise the stable
           // 16:9 fallback avoids a jump when player metadata arrives.
-          final aspect = _initialVideoAspect != null &&
-                  _initialVideoAspect!.isFinite &&
-                  _initialVideoAspect! > 0
-              ? _initialVideoAspect!
-              : kCommunityVideoStageFallbackAspect;
+          final aspect = _videoAspects[widget.mediaUrls[_index]] ??
+              kCommunityVideoStageFallbackAspect;
           final height = math.min(
             math.max(kCommunityVideoStageMinHeight, stageWidth / aspect),
             usableHeight *

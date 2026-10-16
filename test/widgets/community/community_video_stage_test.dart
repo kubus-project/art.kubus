@@ -138,16 +138,38 @@ void main() {
       expect(play.bottom, lessThanOrEqualTo(stage.bottom));
     });
 
-    testWidgets('mixed media keeps the stable 4:3 stage on every page',
+    testWidgets('mixed portrait and landscape videos use each frozen aspect',
         (tester) async {
-      CommunityPostVideoSlide.knownAspects[url] = 32 / 9;
+      const landscapeUrl = 'https://example.test/uploads/landscape.mp4';
+      CommunityPostVideoSlide.knownAspects[url] = 9 / 16;
+      CommunityPostVideoSlide.knownAspects[landscapeUrl] = 16 / 9;
       await tester.pumpWidget(_harness(
         const CommunityPostMediaCarousel(
-          mediaUrls: [url, 'https://example.test/uploads/a.jpg'],
+          mediaUrls: [url, landscapeUrl],
         ),
       ));
       await tester.pumpAndSettle();
-      expect(_stageHeight(tester), closeTo(450, 0.6));
+      final portraitStage = tester.getRect(find.byType(ClipRRect).first);
+      expect(portraitStage.height, closeTo(900 * 0.72, 0.6));
+      final play = tester.getRect(find.byTooltip('Play video').first);
+      expect(play.top, greaterThanOrEqualTo(portraitStage.top));
+      expect(play.bottom, lessThanOrEqualTo(portraitStage.bottom));
+
+      // The carousel snapshots each media URL's shape at mount. A later
+      // session-cache update cannot resize the next page unexpectedly.
+      CommunityPostVideoSlide.knownAspects[landscapeUrl] = 9 / 16;
+      await tester.drag(find.byType(PageView), const Offset(-500, 0));
+      await tester.pumpAndSettle();
+
+      final landscapeStage = tester.getRect(find.byType(ClipRRect).first);
+      expect(landscapeStage.height, closeTo(600 / (16 / 9), 0.6));
+      expect(find.text('2 / 2'), findsOneWidget);
+
+      await tester.drag(find.byType(PageView), const Offset(500, 0));
+      await tester.pumpAndSettle();
+      expect(tester.getRect(find.byType(ClipRRect).first).height,
+          closeTo(portraitStage.height, 0.6));
+      expect(find.text('1 / 2'), findsOneWidget);
     });
 
     testWidgets('loaded metadata does not change stage height or anchor',
