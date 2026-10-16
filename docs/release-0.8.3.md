@@ -24,8 +24,24 @@ accepted** and **released** are never inferred from one another.
 | [#301](https://github.com/kubus-project/art.kubus/pull/301) | Community video geometry, Art-feed videos, hashtag contrast | `cdee7298` | passed |
 | [#291](https://github.com/kubus-project/art.kubus/pull/291) | Family wordmark typography | `2199de0e` | passed |
 
-Merge order (each is a non-rewriting merge; the candidate was assembled in this
-order with no textual conflicts): #298, #300, #299, #301, #291.
+Integration: the five packages reach `dev` through **one integration pull request,
+[#303](https://github.com/kubus-project/art.kubus/pull/303)**, built from `dev`
+`332e13a9` with `git merge --no-ff` of the exact heads above in this order, with no
+textual conflicts: #298, #300, #299, #301, #291. The `dev` ruleset requires branches to
+be up to date, so five sequential merges would each have needed a refreshed head and a
+new required run, and five development deployments. #303 is merged with a **merge
+commit** so all five original heads stay reachable from `dev` and the five pull requests
+are recorded as merged. The merged SHAs are recorded in "Merged state" below once it lands.
+
+Three review findings were still open on #300, #299 and #301. All three were confirmed
+against the code and fixed on the integration branch (commit `affd4696`), each with a
+regression test:
+
+| Finding | Package | Fix |
+| --- | --- | --- |
+| The location pulse and the heading cone kept their creation-time colour after an accent change without a style reload | #300 | `MapLayersManager.refreshLocationAccent` re-colours the pulse paint and registers a colour-keyed heading image; both map screens call it from the theme resync |
+| A hyphenated UUID matched the generic long-string branch of the wallet heuristic, so its case was kept and an upper-case UUID of the signed-in account opened a visitor profile | #299 | A UUID is recognised first and compared case-insensitively; wallet addresses stay case-sensitive |
+| A static (non-tappable) token chip used `Ink` with no `Material`, which paints behind the post card's opaque surface and loses its fill and border | #301 | The static chip is a decorated `Container`; the tappable chip is unchanged |
 
 ### What changes for people
 
@@ -152,13 +168,13 @@ re-run and the final head `55e2a528` carries its own run).
 Merges, staging and production each need their own authorisation. None is implied
 by this document.
 
-1. **Merge** the five PRs into `dev` in the order above. Each must have passing
-   exact-head CI at its current head. The `dev` ruleset requires branches to be up
-   to date before merging (`strict_required_status_checks_policy`), so the BEHIND
-   state is a merge blocker, not only a label: after the first merge each later PR
-   needs `dev` merged into its branch (a new head and a new required run) unless the
-   owner's ruleset bypass is used. The candidate merged without textual conflicts.
-   After each merge, confirm the next PR is still mergeable.
+1. **Merge** the integration pull request #303 into `dev` with a merge commit, once
+   its required run at the exact head is green. The `dev` ruleset requires branches to
+   be up to date before merging (`strict_required_status_checks_policy`), which is why
+   the five packages are integrated in one pull request and not merged one by one
+   (each later one would have needed `dev` merged into its branch and a new required
+   run, unless the owner's ruleset bypass were used). Confirm afterwards that #298,
+   #300, #299, #301 and #291 show as merged.
 2. **Version bump** on a `release/0.8.3` branch from the merged `dev`:
    `npm run sync:all-versions` after editing `version.json` (`version` `0.8.3`, a new
    `buildNumber` and `buildDate`); it rewrites `pubspec.yaml`, `lib/config/config.dart`
