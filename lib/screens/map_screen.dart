@@ -1078,6 +1078,8 @@ class _MapScreenState extends State<MapScreen>
     });
   }
 
+  bool _searchRestrictsMarkers = false;
+
   void _handleMapSearchControllerChanged() {
     if (!mounted) return;
     _sessionMemory?.rememberQuery(_mapSearchController.state.query);
@@ -1114,6 +1116,16 @@ class _MapScreenState extends State<MapScreen>
     // markers + clusters, not just the nearby list.
     _applyVisibleMarkers();
     _requestMarkerVisualSync(force: true);
+    // The far-zoom overview cannot express a text query (see
+    // _overviewAllowedByFilters). Crossing between an empty and a non-empty
+    // query must reload so the overview is dropped, or restored, instead of
+    // leaving every bubble on a map the search says it has restricted.
+    final searchRestrictsMarkers =
+        _mapSearchController.state.query.trim().isNotEmpty;
+    if (searchRestrictsMarkers != _searchRestrictsMarkers) {
+      _searchRestrictsMarkers = searchRestrictsMarkers;
+      unawaited(_loadMarkersForCurrentView(force: true));
+    }
   }
 
   void _handleMapTutorialStateChanged() {

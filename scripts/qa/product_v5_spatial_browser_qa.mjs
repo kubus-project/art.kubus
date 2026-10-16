@@ -921,6 +921,32 @@ async function entityAndBack(page, viewport, tag, run) {
   );
 }
 
+/**
+ * Screen point (viewport CSS px) with no marker, cluster or hitbox near it, so a
+ * tap there dismisses an open dropdown without selecting anything. A fixed point
+ * is not safe at street zoom: a marker under it opens its detail page.
+ */
+async function findEmptyMapPoint(page, viewport) {
+  const point = await page.evaluate(() => {
+    const map = window.__maps[window.__maps.length - 1];
+    const rect = map.getCanvas().getBoundingClientRect();
+    const layers = ['kubus_marker_hitbox_layer', 'kubus_marker_dot_layer'].filter((id) => map.getLayer(id));
+    const taken = map.queryRenderedFeatures(undefined, { layers }).map((f) => map.project(f.geometry.coordinates));
+    const clearance = 80;
+    let best = null;
+    for (let fx = 0.3; fx <= 0.9; fx += 0.05) {
+      for (let fy = 0.3; fy <= 0.8; fy += 0.05) {
+        const x = rect.width * fx;
+        const y = rect.height * fy;
+        const nearest = taken.reduce((m, p) => Math.min(m, Math.hypot(p.x - x, p.y - y)), Infinity);
+        if (!best || nearest > best.nearest) best = { nearest, x: rect.left + x, y: rect.top + y };
+      }
+    }
+    return best;
+  });
+  return point && point.nearest >= 60 ? point : { x: viewport.width * 0.6, y: viewport.height * 0.55, nearest: 0 };
+}
+
 /** A layout swap (phone <-> wide) recreates the map screen: the state must follow. */
 async function layoutSwap(page, viewport, tag, run, words) {
   await page.evaluate(() => {
@@ -933,7 +959,8 @@ async function layoutSwap(page, viewport, tag, run, words) {
   await page.waitForTimeout(700);
   await page.keyboard.type('Ljubljana', { delay: 50 });
   await settle(page, 2500);
-  await page.mouse.click(viewport.width * 0.6, viewport.height * 0.55);
+  const dismiss = await findEmptyMapPoint(page, viewport);
+  await page.mouse.click(dismiss.x, dismiss.y);
   await settle(page, 2500);
   const target = await findMarkerTarget(page);
   if (!target) {
