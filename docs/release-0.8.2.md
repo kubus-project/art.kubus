@@ -1,9 +1,18 @@
 # art.kubus 0.8.2: community media
 
-Status: **draft, not released.** This document describes the Community media
-slice that is part of the 0.8.2 release. Version files (`version.json`,
-`pubspec.yaml`, `package.json` and the app version constant) are bumped in the
-release-preparation commit, as in 0.8.1, not in this feature change.
+Status: **released.** `v0.8.2` was published on 2026-10-15 and the hotfix
+`v0.8.2.1` (Support Center web refresh and auth-return routing, #296) the same
+day; production is `master` at `4181b4d2`. The sections up to and including
+"Final integration state" are the development record as it stood while the
+release was assembled. Their "remaining", "not merged" and "not deployed"
+statements describe that moment, not the shipped state. The shipped contract is
+in "Release outcome" at the end of this document, and the next release is
+described in [release-0.8.3.md](release-0.8.3.md).
+
+This document describes the Community media slice that is part of the 0.8.2
+release. Version files (`version.json`, `pubspec.yaml`, `package.json` and the
+app version constant) are bumped in the release-preparation commit, as in 0.8.1,
+not in this feature change.
 
 ## Community posts with several photos and videos
 
@@ -309,3 +318,66 @@ Statuses are separate: **implemented**, **merged**, **deployed**, **tested**, **
 
 ### Remaining before production (unchanged order, owner decisions)
 Merge #279 and redeploy development, then repeat the Support lifecycle on the live host with an authorised test account (admin reply with unsaved edits, status and assignment, requester-visible updates, user reply, closure, account switch), then version bump, `dev` to `master`, tag, signed builds and physical-device checks. Nothing in this section authorises a production release.
+
+## Release outcome
+
+Recorded 2026-10-16 from the repository and its tags. Statuses stay separate:
+implemented, merged, tested, deployed and released are not inferred from one
+another.
+
+- **Released:** `v0.8.2` and `v0.8.2.1` (GitHub releases dated 2026-10-15).
+  Production web is `master` `4181b4d2`, a merge-commit release, and `dev` contains
+  `master` (no commits only on `master`).
+- **Not part of 0.8.2:** the wallet-optional participation stack (#254, #256, #280
+  and backend #81, #82, #88) and the progressive spatial viewer (#258). They are
+  tracked for 0.9 and stay isolated; see [release-0.8.3.md](release-0.8.3.md).
+- **Superseded documentation:** PR #266 carried a 2026-10-10 snapshot of this file
+  with every package listed as open. Its tables are obsolete. The two sections
+  below are the parts of it that remain true contracts, carried over unchanged
+  from that snapshot (written against app #260 `2d8679c1` and backend #84
+  `d27bf9b`); re-check the resolver code before relying on a detail.
+
+### Cross-repo media contract
+
+Backend column: public page output from backend #84 (`d27bf9b`). App column: resolver
+output from app #260 (`2d8679c1`).
+
+| Stored reference | Backend #84 (public output) | App #260 (Flutter) |
+| --- | --- | --- |
+| `https://<public host>/...` | kept | kept |
+| `/uploads/`, `/profiles/`, `/avatars/`, bare file name | `https://` media origin: `SEO_MEDIA_BASE_URL`, else `HTTP_BASE_URL`, else `https://api.kubus.site` | rewritten to the storage API host (bare name becomes `<api>/uploads/<name>`) |
+| Same path on another https host | kept as given | kept as given, never rewritten |
+| `ipfs://<cid>`, `/ipfs/<cid>`, bare `bafy...` | first https gateway from `IPFS_GATEWAY_URL`, then `https://ipfs.io/ipfs/` | gateway chain `dweb.link`, `ipfs.io`, `pinata` (from `StorageConfig`), stepping on failure |
+| Bare `Qm...` (CIDv0) | not a CID: `isLikelyCid` recognises `bafy...` only | a CID, same gateway chain |
+| `http://` | dropped | dropped (dev builds: only the storage origin itself) |
+| `//host`, backslash forms, `user:pass@`, IP literals, `localhost`, single-label hosts, `*.local`, `*.internal`, `..` segments, control characters | dropped | dropped |
+| `javascript:`, `data:`, `blob:`, other schemes | dropped | dropped |
+| Loopback (`localhost`, `127.*`) | dropped | dropped in release builds; rewritten to the storage host in dev builds |
+| Literal `null` or `undefined` | no media | placeholder |
+| Post video | `<video>` only with a video extension, the `#kubus-media=video` marker, or a stored `video/*` type | extension or marker only (the community API returns no per-post media type yet) |
+
+Known intentional differences:
+
+1. Gateway order and set. The app tries `dweb.link` first. The backend uses the
+   configured https gateway first, then `ipfs.io`.
+2. Bare `Qm...` CIDs. The app treats them as CIDs. The backend does not, because
+   `isLikelyCid` is not widened in this release.
+3. Own-host rewrite only. Both sides rewrite the API or media origin and nothing
+   else. A third-party https `/uploads` path is kept as stored.
+4. Loopback. The app rewrites loopback to the storage host in dev builds only. The
+   backend always drops it.
+5. Video detection. The backend also reads a stored `video/*` type. The app does not,
+   until the community API returns one.
+
+### Invariants kept
+
+- A cultural artist is never the uploader, owner, contributor, wallet holder,
+  importer or photographer. Backend #84 removes the `artist_name` fallback from the
+  uploader display name and stops profile saves from writing `artworks.artist_name`
+  (I-02, G). Admin shows recorded artist and uploader as separate fields.
+- Unknown stays unknown. `Unknown artist`, and its Slovenian equivalents, are
+  unattributed in the backend (B) and render as "Unknown artist" in the app (#251). A
+  wallet never reads as the artist.
+- No backfill. Historical rows where the uploader was stored as the artist are not
+  repaired (owner decision, #84).
+- An unsafe media field falls through to the next field and never renders (#260, #84).
