@@ -43,6 +43,23 @@ regression test:
 | A hyphenated UUID matched the generic long-string branch of the wallet heuristic, so its case was kept and an upper-case UUID of the signed-in account opened a visitor profile | #299 | A UUID is recognised first and compared case-insensitively; wallet addresses stay case-sensitive |
 | A static (non-tappable) token chip used `Ink` with no `Material`, which paints behind the post card's opaque surface and loses its fill and border | #301 | The static chip is a decorated `Container`; the tappable chip is unchanged |
 
+### Merged state
+
+| Item | Value |
+| --- | --- |
+| Integration pull request | [#303](https://github.com/kubus-project/art.kubus/pull/303), merged with a merge commit on 2026-10-16 |
+| `dev` after the merge | `d0862d9127e546d5ff76937d6dc3776405de7a3a` |
+| Integration branch head | `36d0e844b90dc2cb49e43c3ae4bd071b64794864` (required run: every job green, 0 unresolved threads) |
+| #298, #300, #299, #301, #291 | recorded as merged by GitHub at the same instant (their heads are ancestors of `dev`) |
+| `master` | `4181b4d2`, unchanged; `origin/master...origin/dev` reads 0 on the master side |
+
+The integration branch carries two commits on top of the five merges, both from
+review: `affd4696` (the three findings above) and `36d0e844` (a globe-ground style
+with no `paint` no longer throws; the product name is `kubus Node`, capital N, in both
+locales and the Node model fallback). One review finding was declined: `video.path()`
+in the performance script does not hang with the pinned Playwright 1.61.1. The full
+suite ran in the required check at `36d0e844`, not only in the candidate.
+
 ### What changes for people
 
 - **Map.** Cluster splits and merges keep the dissolving parent and retarget from the
