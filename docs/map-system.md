@@ -82,6 +82,9 @@ while the camera moves. Coalesced cover refreshes must publish usable artwork wi
 a bounded window without rebuilding GeoJSON for every image. Preserve disposal,
 stale-work preconditions and pending-request delivery. Tune pacing and coalescing
 only against paired measurements of latency, source writes and frame distribution.
+Bounded fetch/decode prefetch also runs during the continuous zoom approach;
+requiring camera idle would skip that band entirely. Prefetch never rasterizes or
+registers icons, and changed viewport demand cancels stale queued work.
 
 `KubusCachedImage` and the shared failure registry support card/detail continuity.
 Keep image dimensions stable and retain decoded content during refresh. A cover
@@ -100,8 +103,9 @@ entity route keeps the map mounted, so Back preserves camera, filters, search an
 appropriate selection. `KubusMapSessionMemory` carries in-memory camera/search/
 filter/selection state across responsive layout swaps and is cleared at signout.
 It is not process-death persistence. Explicit targets and walking navigation retain
-their established precedence. Desktop gesture-dismissal and phone selection behavior
-are intentional layout policies rather than two selection systems.
+their established precedence. Both layouts preserve the selected marker through
+zoom/pan topology changes and style reloads. Background taps, explicit dismissal,
+and removal of the actual record still clear selection; camera motion alone does not.
 
 Nearby sheet extent and scroll position belong to its existing controller lifecycle.
 Marker overlays must not recreate it on unrelated updates. Floating controls follow
