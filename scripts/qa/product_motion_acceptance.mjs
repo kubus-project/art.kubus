@@ -32,7 +32,9 @@ import { fileURLToPath } from 'node:url';
 import { chromium, firefox } from 'playwright';
 import {
   FLOAT_PERIOD_MS,
+  MAX_PHASE_GAP_FRACTION,
   MIN_SETTLED_FRAMES,
+  getNextSampleDelayMs,
   getSamplingDeadlineMs,
   getSettledSamplingCoverage,
 } from './product_motion_sampling.mjs';
@@ -251,6 +253,17 @@ async function measureCase(page, helper, c) {
     });
     if (elapsed >= holdMs && coverage.complete) break;
     if (elapsed >= sampleDeadlineMs) break;
+    // Slow browsers capture at a steady cadence that can be a whole number of
+    // float periods; steer each capture to an unsampled phase so the settled
+    // samples really cover the cycle. The pixel thresholds are untouched.
+    const phaseDelayMs = hoverFrames.length
+      ? getNextSampleDelayMs(hoverFrames, {
+          settleMs: SETTLE_MS,
+          nowMs: elapsed,
+          expectedCaptureMs: captureDurations.at(-1) ?? 0,
+        })
+      : 0;
+    if (phaseDelayMs) await page.waitForTimeout(phaseDelayMs);
     const captureStarted = Date.now();
     const b64 = await shot();
     const captureEnded = Date.now();
@@ -263,6 +276,7 @@ async function measureCase(page, helper, c) {
         holdMs,
         settleMs: SETTLE_MS,
         maxHoldMs: MAX_HOLD_MS,
+        phaseWaitMs: FLOAT_PERIOD_MS / 4,
       }),
     );
     hoverFrames.push({ t: (captureStarted + captureEnded) / 2 - t0, b64 });
@@ -309,6 +323,7 @@ async function measureCase(page, helper, c) {
     settledSpanMs: settled.length > 1 ? settled.at(-1).t - settled[0].t : 0,
     captureMsMean: +stats(captureDurations).mean.toFixed(1),
     captureMsMax: Math.max(...captureDurations),
+    maxPhaseGapMs: +getSettledSamplingCoverage(hoverFrames, { settleMs: SETTLE_MS }).maxPhaseGapMs.toFixed(0),
     sampleDeadlineMs,
     entry: hover.filter((m) => m.t < 400).map((m) => ({ t: m.t, dy: +m.dy.toFixed(2) })),
     liftMean: +lift.mean.toFixed(2),
@@ -325,6 +340,9 @@ function judge(r) {
   const failures = [];
   if (r.settledFrames < MIN_SETTLED_FRAMES) {
     failures.push(`only ${r.settledFrames} settled pixel samples; need ${MIN_SETTLED_FRAMES}`);
+  }
+  if (r.maxPhaseGapMs > FLOAT_PERIOD_MS * MAX_PHASE_GAP_FRACTION) {
+    failures.push(`samples leave a ${r.maxPhaseGapMs}ms hole in the ${FLOAT_PERIOD_MS}ms float phase`);
   }
   if (r.settledSpanMs < FLOAT_PERIOD_MS) {
     failures.push(`settled samples span ${r.settledSpanMs}ms; need a full ${FLOAT_PERIOD_MS}ms float period`);
