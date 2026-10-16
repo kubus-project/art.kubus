@@ -519,8 +519,11 @@ void main() {
         ));
 
     Future<void> swipe(WidgetTester tester, {bool forward = true}) async {
-      await tester.drag(
-        find.byType(PageView),
+      // Start in the top band of the stage: a playing clip's timeline and
+      // volume tracks own horizontal drags, so the pager is grabbed above them.
+      final stage = tester.getRect(find.byType(PageView));
+      await tester.dragFrom(
+        Offset(stage.center.dx, stage.top + 24),
         Offset(forward ? -500 : 500, 0),
       );
       await tester.pumpAndSettle(const Duration(milliseconds: 100));
@@ -571,24 +574,87 @@ void main() {
       expect(platform.live, hasLength(1));
     });
 
-    _testPlayer('image to video to image keeps the stage still and silent',
+    _testPlayer(
+        'image to video to image keeps each page stage still and silent',
         (tester) async {
       await tester.pumpWidget(carousel());
-      final stage = tester.getRect(find.byType(PageView));
+      // Both clips share the 16:9 fallback; the image page uses the 4:3 stage.
+      final videoStage = tester.getRect(find.byType(PageView));
+      expect(videoStage.height, closeTo(390 / (16 / 9), 0.5));
       await swipe(tester);
+      expect(tester.getRect(find.byType(PageView)), videoStage,
+          reason: 'two clips of one shape share one stage');
       await swipe(tester);
       expect(find.text('3 / 3'), findsOneWidget);
-      expect(tester.getRect(find.byType(PageView)), stage);
+      final imageStage = tester.getRect(find.byType(PageView));
+      expect(imageStage.height, closeTo(390 / kCommunityMediaStageAspect, 0.5));
+      expect(imageStage.width, videoStage.width);
       expect(platform.players, isEmpty, reason: 'images never create a player');
 
       await swipe(tester, forward: false);
+      expect(tester.getRect(find.byType(PageView)), videoStage);
       await play(tester);
-      expect(tester.getRect(find.byType(PageView)), stage);
+      expect(tester.getRect(find.byType(PageView)), videoStage,
+          reason: 'loading the player does not move the stage');
       final player = platform.live.single;
       await swipe(tester);
       expect(player.disposed, isTrue);
       expect(platform.playingNow, isEmpty);
-      expect(tester.getRect(find.byType(PageView)), stage);
+      expect(tester.getRect(find.byType(PageView)), imageStage);
+    });
+
+    Future<List<double>> stageHeightsAcrossPageChange(
+      WidgetTester tester, {
+      required bool reducedMotion,
+    }) async {
+      await tester.pumpWidget(MediaQuery(
+        data: MediaQueryData(
+          size: const Size(800, 600),
+          disableAnimations: reducedMotion,
+        ),
+        child: carousel(),
+      ));
+      await swipe(tester);
+      final heights = <double>[tester.getRect(find.byType(PageView)).height];
+      final stage = tester.getRect(find.byType(PageView));
+      await tester.dragFrom(
+        Offset(stage.center.dx, stage.top + 24),
+        const Offset(-500, 0),
+      );
+      for (var i = 0; i < 40; i++) {
+        await tester.pump(const Duration(milliseconds: 20));
+        heights.add(tester.getRect(find.byType(PageView)).height);
+      }
+      return heights;
+    }
+
+    _testPlayer('the stage eases once when the page change alters its shape',
+        (tester) async {
+      final heights =
+          await stageHeightsAcrossPageChange(tester, reducedMotion: false);
+      final start = heights.first;
+      final end = 390 / kCommunityMediaStageAspect;
+      expect(heights.last, closeTo(end, 0.5));
+      for (var i = 1; i < heights.length; i++) {
+        expect(heights[i], greaterThanOrEqualTo(heights[i - 1] - 0.01),
+            reason: 'one monotonic ease, never a bounce');
+      }
+      expect(heights.any((h) => h > start + 1 && h < end - 1), isTrue,
+          reason: 'the resize is spread over frames, not a single jump');
+    });
+
+    _testPlayer('the stage changes shape without easing under reduced motion',
+        (tester) async {
+      final heights =
+          await stageHeightsAcrossPageChange(tester, reducedMotion: true);
+      final start = heights.first;
+      final end = 390 / kCommunityMediaStageAspect;
+      expect(heights.last, closeTo(end, 0.5));
+      expect(
+          heights
+              .every((h) => (h - start).abs() < 0.5 || (h - end).abs() < 0.5),
+          isTrue,
+          reason: 'only the two settled shapes ever appear');
     });
 
     _testPlayer('portrait to landscape and back reshapes only the player',

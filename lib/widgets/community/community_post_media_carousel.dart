@@ -288,10 +288,11 @@ class _CommunityPostMediaCarouselState
     final multiple = count > 1;
 
     final activeVideo = communityMediaUrlIsVideo(widget.mediaUrls[_index]);
+    final hasVideo = widget.mediaUrls.any(communityMediaUrlIsVideo);
     final stageAspect = kCommunityMediaStageAspect;
 
     Widget sizedStage(Widget child) {
-      if (!activeVideo) {
+      if (!hasVideo) {
         return AspectRatio(aspectRatio: stageAspect, child: child);
       }
       return LayoutBuilder(
@@ -315,14 +316,25 @@ class _CommunityPostMediaCarouselState
           // 16:9 fallback avoids a jump when player metadata arrives.
           final aspect = _videoAspects[widget.mediaUrls[_index]] ??
               kCommunityVideoStageFallbackAspect;
-          final height = math.min(
+          final videoHeight = math.min(
             math.max(kCommunityVideoStageMinHeight, stageWidth / aspect),
             usableHeight *
                 (media.size.shortestSide < 600
                     ? 1
                     : kCommunityVideoStageViewportFraction),
           );
-          return SizedBox(height: height, child: child);
+          final height = activeVideo ? videoHeight : stageWidth / stageAspect;
+          // Moving between an image and a clip (or between clips of different
+          // shapes) is the only time the stage resizes, and it eases once for
+          // that deliberate page change. Metadata arriving later never moves it.
+          return AnimatedContainer(
+            duration: MediaQuery.disableAnimationsOf(context)
+                ? Duration.zero
+                : const Duration(milliseconds: 220),
+            curve: Curves.easeOutCubic,
+            height: height,
+            child: child,
+          );
         },
       );
     }

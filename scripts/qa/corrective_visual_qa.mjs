@@ -71,7 +71,11 @@ const posts = Object.entries(shapes).filter(([shape]) => !process.env.QA_SHAPE |
 if (process.env.QA_SAME_ARTWORK === 'true') posts.unshift({ ...posts[0],
   id: '77777777-7777-4777-8777-777777777777', content: 'Still view of the same recorded artwork',
   mediaUrls: [`${mediaHost}/artwork.png`] });
-if (process.env.QA_MEDIA_MODE === 'mixed') posts[0].mediaUrls.push(`${mediaHost}/artwork.png`);
+if (process.env.QA_MEDIA_MODE === 'mixed') posts[0].mediaUrls.push(`${mediaHost}/gallery-image.png`);
+if (process.env.QA_MEDIA_MODE === 'video-pair' && posts.length) {
+  const landscape = 16 / 9;
+  posts[0].mediaUrls.push(`${mediaHost}/landscape.webm#kubus-media=video&kubus-aspect=${landscape}&kubus-poster=${encodeURIComponent(`${mediaHost}/landscape.png`)}`);
+}
 if (process.env.QA_MEDIA_MODE === 'quoted' && posts.length) {
   const originalPost = { ...posts[0], author: profile(visitorId),
     content: 'Original portrait video', category: 'art' };
@@ -108,14 +112,16 @@ try {
                 colorScheme: theme, locale, reducedMotion: motion,
                 geolocation: { latitude: 46.0569, longitude: 14.5058 }, permissions: ['geolocation'] });
               const page = await context.newPage();
-              const requests = []; const errors = []; const writesBlocked = [];
+              const requests = []; const mediaRequests = []; const errors = []; const writesBlocked = [];
               page.on('pageerror', e => errors.push(e.message));
               await context.route('**/*', async route => {
                 const request = route.request(); const url = new URL(request.url());
                 if (url.origin === origin || url.protocol === 'blob:' || url.protocol === 'data:') return route.continue();
                 if (url.origin === mediaHost) {
                   const filename = path.basename(url.pathname);
-                  try { return route.fulfill({ status: 200, contentType: filename.endsWith('.png') ? 'image/png' : 'video/webm', body: await fs.readFile(path.join(mediaRoot, filename)) }); }
+                  mediaRequests.push(filename);
+                  const fixtureFilename = filename === 'gallery-image.png' ? 'artwork.png' : filename;
+                  try { return route.fulfill({ status: 200, contentType: filename.endsWith('.png') ? 'image/png' : 'video/webm', body: await fs.readFile(path.join(mediaRoot, fixtureFilename)) }); }
                   catch { return route.fulfill({ status: 404, body: '' }); }
                 }
                 if (url.pathname.startsWith('/api/')) {
@@ -152,6 +158,7 @@ try {
               }, { ownerId, wallet });
               let failure;
               let stageBeforeActivation;
+              const pageSwitches = [];
               try {
                 await page.goto(entryUrl(process.env.QA_PATH || '/community', locale), { waitUntil: 'domcontentloaded' });
                 await page.waitForSelector('flutter-view', { timeout: 60000 });
@@ -251,6 +258,42 @@ try {
                   await page.keyboard.press('Escape');
                   await page.waitForTimeout(500);
                 }
+                for (const pageNumber of (process.env.QA_PAGE_SEQUENCE || '')
+                  .split(',').map(value => value.trim()).filter(Boolean)) {
+                  const pageIndex = Number(pageNumber) - 1;
+                  const currentStage = page.getByRole('group', { name: /^Media \d+ of \d+$/ }).first();
+                  const currentBounds = await currentStage.boundingBox();
+                  if (!currentBounds) throw new Error('Carousel stage missing before requested page switch');
+                  const controlX = pageIndex === 0
+                    ? currentBounds.x + 24
+                    : currentBounds.x + currentBounds.width - 24;
+                  const controlY = currentBounds.y + currentBounds.height / 2;
+                  await page.mouse.move(controlX, controlY);
+                  await page.waitForTimeout(400);
+                  const direction = pageIndex === 0 ? 'Previous media' : 'Next media';
+                  const arrowButton = page.getByRole('button', { name: new RegExp(direction) }).first();
+                  const arrowBounds = await arrowButton.boundingBox({ timeout: 1500 }).catch(() => null);
+                  if (arrowBounds) await page.mouse.click(arrowBounds.x + arrowBounds.width / 2,
+                    arrowBounds.y + arrowBounds.height / 2);
+                  await page.waitForTimeout(800);
+                  const stage = page.getByRole('group', { name: /^Media \d+ of \d+$/ }).first();
+                  const stageBounds = await stage.boundingBox();
+                  const switchText = await page.locator('body').ariaSnapshot();
+                  const totalPages = Number((initial.match(/Media 1 of (\d+)/) || [])[1] || 1);
+                  if (!new RegExp(`Art ${pageIndex + 1} \/ ${totalPages}`).test(switchText))
+                    throw new Error(`Carousel did not reach media page ${pageIndex + 1}`);
+                  const videoRects = await page.evaluate(() => {
+                    const deep = root => [...root.querySelectorAll('*')].flatMap(el => [el, ...(el.shadowRoot ? deep(el.shadowRoot) : [])]);
+                    return deep(document).filter(v => v.tagName === 'VIDEO').map(v => ({
+                      width: v.videoWidth, height: v.videoHeight, time: v.currentTime,
+                      paused: v.paused, rect: v.getBoundingClientRect().toJSON() }));
+                  });
+                  const videoControl = page.getByRole('button', { name: /^(Play|Pause) video$/ }).first();
+                  const videoControlBounds = await videoControl.boundingBox().catch(() => null);
+                  pageSwitches.push({ page: pageIndex + 1, stage: stageBounds, videoRects, videoControlBounds });
+                  await page.screenshot({ path: path.join(out, `${name}-page-${pageIndex + 1}.png`) });
+                  await fs.writeFile(path.join(out, `${name}-page-${pageIndex + 1}.yml`), switchText);
+                }
                 if (process.env.QA_HASHTAG_PROBE === 'true') {
                   const tag = page.getByRole('button', { name: '#Art', exact: true }).first();
                   for (let i = 0; !(await tag.count()) && i < 6; i++) {
@@ -282,7 +325,7 @@ try {
                   await page.screenshot({ path: path.join(out, `${name}-width-${captureWidth}.png`) });
                   captures.push({ width: captureWidth, overflow: await page.evaluate(() => document.documentElement.scrollWidth > innerWidth) });
                 }
-                results.push({ name, errors, writesBlocked, requests, playback, afterPlayback,
+                results.push({ name, errors, writesBlocked, requests, mediaRequests, playback, afterPlayback, pageSwitches,
                   stageBefore, stageBeforeActivation, stageAfter, maxViewportHeight,
                   clippedSemanticBounds, fullscreen, captures,
                   semanticText: initial, overflow: await page.evaluate(() => document.documentElement.scrollWidth > innerWidth) });
