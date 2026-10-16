@@ -7,6 +7,7 @@ import '../models/artwork.dart';
 import '../models/exhibition.dart';
 import '../utils/wallet_utils.dart';
 import 'community_interactions.dart';
+import 'community_post_media.dart';
 
 /// What an Art discovery entry is.
 enum ArtDiscoveryKind { post, artwork, exhibition }
@@ -498,7 +499,15 @@ abstract final class ArtDiscoveryRanker {
       // One post per artwork and no near-identical copies of the same text.
       if (chosen.kind == ArtDiscoveryKind.post) {
         final ref = chosen.artworkRefId;
-        if (ref != null && ref.isNotEmpty && !seenArtworkPosts.add(ref)) {
+        // A video of an artwork is a distinct media contribution from a still
+        // post about it. Keep one of each; duplicate videos still collapse.
+        final mediaKind =
+            communityPostMediaUrls(chosen.post!).any(communityMediaUrlIsVideo)
+                ? 'video'
+                : 'still';
+        if (ref != null &&
+            ref.isNotEmpty &&
+            !seenArtworkPosts.add('$ref:$mediaKind')) {
           continue;
         }
         final copyKey = _copyKey(chosen);

@@ -15,6 +15,7 @@ import '../../utils/profile_identity_navigation.dart';
 import '../profile_identity_summary.dart';
 import 'community_author_role_badges.dart';
 import 'community_post_caption.dart';
+import 'community_post_token_chip.dart';
 import 'community_post_media_carousel.dart';
 import '../common/kubus_focus_ring.dart';
 import '../../models/pending_action_intent.dart';
