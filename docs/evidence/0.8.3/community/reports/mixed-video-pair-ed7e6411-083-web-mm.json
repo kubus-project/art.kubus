@@ -1,0 +1,1038 @@
+{
+  "evidence": "local production artifact with deterministic API/media fixtures",
+  "webRoot": "C:\\kubus-build\\083-web-community-mm",
+  "results": [
+    {
+      "name": "chromium-light-en-US-no-preference-320",
+      "errors": [],
+      "writesBlocked": [
+        "/api/presence/batch",
+        "/api/analytics/app"
+      ],
+      "requests": [
+        {
+          "method": "GET",
+          "path": "/api/artworks",
+          "search": "?page=1&limit=100"
+        },
+        {
+          "method": "GET",
+          "path": "/api/community/posts",
+          "search": "?page=1&limit=24&followingOnly=false&surface=discover&sort=hybrid"
+        },
+        {
+          "method": "POST",
+          "path": "/api/presence/batch",
+          "search": ""
+        },
+        {
+          "method": "POST",
+          "path": "/api/analytics/app",
+          "search": ""
+        }
+      ],
+      "mediaRequests": [
+        "artwork.png",
+        "artwork.png",
+        "portrait.png",
+        "portrait.webm",
+        "portrait.webm",
+        "landscape.png",
+        "landscape.webm",
+        "portrait.webm"
+      ],
+      "playback": [
+        {
+          "width": 180,
+          "height": 320,
+          "time": 3.988078,
+          "paused": false,
+          "muted": false,
+          "readyState": 4,
+          "rect": {
+            "x": 45,
+            "y": 221,
+            "width": 230,
+            "height": 408.875,
+            "top": 221,
+            "right": 275,
+            "bottom": 629.875,
+            "left": 45
+          }
+        }
+      ],
+      "afterPlayback": [
+        {
+          "time": 6.002077,
+          "paused": false
+        }
+      ],
+      "pageSwitches": [
+        {
+          "page": 2,
+          "stage": {
+            "x": 45,
+            "y": 313.625,
+            "width": 230,
+            "height": 129.375
+          },
+          "videoRects": [
+            {
+              "width": 320,
+              "height": 180,
+              "time": 0.342708,
+              "paused": false,
+              "rect": {
+                "x": 45,
+                "y": 313.625,
+                "width": 230,
+                "height": 129.375,
+                "top": 313.625,
+                "right": 275,
+                "bottom": 443,
+                "left": 45
+              }
+            }
+          ],
+          "videoControlBounds": {
+            "x": 53,
+            "y": 397,
+            "width": 44,
+            "height": 44
+          }
+        },
+        {
+          "page": 1,
+          "stage": {
+            "x": 45,
+            "y": 313.625,
+            "width": 230,
+            "height": 408.875
+          },
+          "videoRects": [
+            {
+              "width": 180,
+              "height": 320,
+              "time": 0.36794,
+              "paused": false,
+              "rect": {
+                "x": 45,
+                "y": 313.625,
+                "width": 230,
+                "height": 408.875,
+                "top": 313.625,
+                "right": 275,
+                "bottom": 722.5,
+                "left": 45
+              }
+            }
+          ],
+          "videoControlBounds": {
+            "x": 53,
+            "y": 676.513916015625,
+            "width": 44,
+            "height": 44
+          }
+        }
+      ],
+      "stageBefore": {
+        "x": 45,
+        "y": 571,
+        "width": 230,
+        "height": 273
+      },
+      "stageBeforeActivation": {
+        "x": 45,
+        "y": 221,
+        "width": 230,
+        "height": 408.875
+      },
+      "stageAfter": {
+        "x": 45,
+        "y": 221,
+        "width": 230,
+        "height": 408.875
+      },
+      "maxViewportHeight": 844,
+      "clippedSemanticBounds": {
+        "top": 221,
+        "bottom": 629.875,
+        "height": 408.875
+      },
+      "captures": [
+        {
+          "width": 320,
+          "overflow": false
+        }
+      ],
+      "semanticText": "- group:\n  - text: Community Connect with artists and collectors\n  - button\n  - button\n  - textbox \"community_search_input\" [disabled]\n  - textbox \"Search…\"\n  - tablist:\n    - tab \"Following\"\n    - tab \"Discover\" [selected]\n    - tab \"Groups\"\n    - tab \"Art\"\n  - tabpanel:\n    - group:\n      - button \"Art is everywhere. Help put it on the map. Discover local art, document what you find, and connect with the people behind it. Join art.kubus\":\n        - button\n      - group \"Just now Art 1 / 2\":\n        - button \"Alexandra Katarina Longname Artist Institution @visual-qa-owner\"\n        - button\n        - 'button \"portrait video — #Art #Ljubljana\"'\n        - group \"Media 1 of 2\":\n          - group \"Video player\":\n            - button \"Play video\"\n        - button \"#Art\"\n        - button \"#Ljubljana\"\n        - button \"Ljubljana\"\n- group \"Main navigation\":\n  - button \"Map\"\n  - button \"AR\"\n  - button \"Community\"\n  - button \"Home\"\n  - button \"Account\"\n- button \"New post\"",
+      "overflow": false
+    },
+    {
+      "name": "chromium-light-en-US-no-preference-390",
+      "errors": [],
+      "writesBlocked": [
+        "/api/presence/batch",
+        "/api/analytics/app"
+      ],
+      "requests": [
+        {
+          "method": "GET",
+          "path": "/api/artworks",
+          "search": "?page=1&limit=100"
+        },
+        {
+          "method": "GET",
+          "path": "/api/community/posts",
+          "search": "?page=1&limit=24&followingOnly=false&surface=discover&sort=hybrid"
+        },
+        {
+          "method": "POST",
+          "path": "/api/presence/batch",
+          "search": ""
+        },
+        {
+          "method": "POST",
+          "path": "/api/analytics/app",
+          "search": ""
+        }
+      ],
+      "mediaRequests": [
+        "artwork.png",
+        "artwork.png",
+        "portrait.png",
+        "portrait.webm",
+        "landscape.png",
+        "landscape.webm",
+        "portrait.webm"
+      ],
+      "playback": [
+        {
+          "width": 180,
+          "height": 320,
+          "time": 4.215041,
+          "paused": false,
+          "muted": true,
+          "readyState": 4,
+          "rect": {
+            "x": 45,
+            "y": 193,
+            "width": 300,
+            "height": 533.328125,
+            "top": 193,
+            "right": 345,
+            "bottom": 726.328125,
+            "left": 45
+          }
+        }
+      ],
+      "afterPlayback": [
+        {
+          "time": 6.229073,
+          "paused": false
+        }
+      ],
+      "pageSwitches": [
+        {
+          "page": 2,
+          "stage": {
+            "x": 45,
+            "y": 274.25,
+            "width": 300,
+            "height": 168.75
+          },
+          "videoRects": [
+            {
+              "width": 320,
+              "height": 180,
+              "time": 0.265696,
+              "paused": false,
+              "rect": {
+                "x": 45,
+                "y": 274.25,
+                "width": 300,
+                "height": 168.75,
+                "top": 274.25,
+                "right": 345,
+                "bottom": 443,
+                "left": 45
+              }
+            }
+          ],
+          "videoControlBounds": {
+            "x": 53,
+            "y": 397,
+            "width": 44,
+            "height": 44
+          }
+        },
+        {
+          "page": 1,
+          "stage": {
+            "x": 45,
+            "y": 274.25,
+            "width": 300,
+            "height": 533.328125
+          },
+          "videoRects": [
+            {
+              "width": 180,
+              "height": 320,
+              "time": 0.281213,
+              "paused": false,
+              "rect": {
+                "x": 45,
+                "y": 274.25,
+                "width": 300,
+                "height": 533.328125,
+                "top": 274.25,
+                "right": 345,
+                "bottom": 807.578125,
+                "left": 45
+              }
+            }
+          ],
+          "videoControlBounds": {
+            "x": 53,
+            "y": 761.5833740234375,
+            "width": 44,
+            "height": 44
+          }
+        }
+      ],
+      "stageBefore": {
+        "x": 45,
+        "y": 543,
+        "width": 300,
+        "height": 301
+      },
+      "stageBeforeActivation": {
+        "x": 45,
+        "y": 193,
+        "width": 300,
+        "height": 533.328125
+      },
+      "stageAfter": {
+        "x": 45,
+        "y": 193,
+        "width": 300,
+        "height": 533.328125
+      },
+      "maxViewportHeight": 844,
+      "clippedSemanticBounds": {
+        "top": 193,
+        "bottom": 726.328125,
+        "height": 533.328125
+      },
+      "captures": [
+        {
+          "width": 390,
+          "overflow": false
+        }
+      ],
+      "semanticText": "- group:\n  - text: Community Connect with artists and collectors\n  - button\n  - button\n  - textbox \"community_search_input\" [disabled]\n  - textbox \"Search…\"\n  - tablist:\n    - tab \"Following\"\n    - tab \"Discover\" [selected]\n    - tab \"Groups\"\n    - tab \"Art\"\n  - tabpanel:\n    - group:\n      - button \"Art is everywhere. Help put it on the map. Discover local art, document what you find, and connect with the people behind it. Join art.kubus\":\n        - button\n      - group \"Just now Art 1 / 2\":\n        - button \"Alexandra Katarina Longname Artist Institution @visual-qa-owner\"\n        - button\n        - 'button \"portrait video — #Art #Ljubljana\"'\n        - group \"Media 1 of 2\":\n          - group \"Video player\":\n            - button \"Play video\"\n- group \"Main navigation\":\n  - button \"Map\"\n  - button \"AR\"\n  - button \"Community\"\n  - button \"Home\"\n  - button \"Account\"\n- button \"New post\"",
+      "overflow": false
+    },
+    {
+      "name": "chromium-light-en-US-no-preference-1440",
+      "errors": [],
+      "writesBlocked": [
+        "/api/presence/batch",
+        "/api/analytics/app"
+      ],
+      "requests": [
+        {
+          "method": "GET",
+          "path": "/api/community/posts",
+          "search": "?page=1&limit=24&followingOnly=false&surface=discover&sort=hybrid"
+        },
+        {
+          "method": "POST",
+          "path": "/api/presence/batch",
+          "search": ""
+        },
+        {
+          "method": "GET",
+          "path": "/api/community/tags/trending",
+          "search": "?limit=24&timeframe=30"
+        },
+        {
+          "method": "GET",
+          "path": "/api/public/home-rails",
+          "search": "?locale=en"
+        },
+        {
+          "method": "GET",
+          "path": "/api/search/trending",
+          "search": "?limit=24"
+        },
+        {
+          "method": "GET",
+          "path": "/api/profiles/artists/list",
+          "search": "?limit=20&offset=0"
+        },
+        {
+          "method": "GET",
+          "path": "/api/search",
+          "search": "?q=art&type=profiles&limit=20&page=1"
+        },
+        {
+          "method": "POST",
+          "path": "/api/analytics/app",
+          "search": ""
+        }
+      ],
+      "mediaRequests": [
+        "artwork.png",
+        "portrait.png",
+        "portrait.webm",
+        "portrait.webm",
+        "landscape.png",
+        "landscape.webm",
+        "portrait.webm"
+      ],
+      "playback": [
+        {
+          "width": 180,
+          "height": 320,
+          "time": 3.974446,
+          "paused": false,
+          "muted": false,
+          "readyState": 4,
+          "rect": {
+            "x": 467.75,
+            "y": 149,
+            "width": 364.5,
+            "height": 648,
+            "top": 149,
+            "right": 832.25,
+            "bottom": 797,
+            "left": 467.75
+          }
+        }
+      ],
+      "afterPlayback": [
+        {
+          "time": 5.984391,
+          "paused": false
+        }
+      ],
+      "pageSwitches": [
+        {
+          "page": 2,
+          "stage": {
+            "x": 265,
+            "y": 149,
+            "width": 770,
+            "height": 433.125
+          },
+          "videoRects": [
+            {
+              "width": 320,
+              "height": 180,
+              "time": 0.187348,
+              "paused": false,
+              "rect": {
+                "x": 265,
+                "y": 149,
+                "width": 770,
+                "height": 433.125,
+                "top": 149,
+                "right": 1035,
+                "bottom": 582.125,
+                "left": 265
+              }
+            }
+          ],
+          "videoControlBounds": {
+            "x": 273,
+            "y": 536.125,
+            "width": 44,
+            "height": 44
+          }
+        },
+        {
+          "page": 1,
+          "stage": {
+            "x": 265,
+            "y": 149,
+            "width": 770,
+            "height": 648
+          },
+          "videoRects": [
+            {
+              "width": 180,
+              "height": 320,
+              "time": 0.271847,
+              "paused": false,
+              "rect": {
+                "x": 467.75,
+                "y": 149,
+                "width": 364.5,
+                "height": 648,
+                "top": 149,
+                "right": 832.25,
+                "bottom": 797,
+                "left": 467.75
+              }
+            }
+          ],
+          "videoControlBounds": {
+            "x": 475.75,
+            "y": 751,
+            "width": 44,
+            "height": 44
+          }
+        }
+      ],
+      "stageBefore": {
+        "x": 265,
+        "y": 499,
+        "width": 770,
+        "height": 401
+      },
+      "stageBeforeActivation": {
+        "x": 265,
+        "y": 149,
+        "width": 770,
+        "height": 648
+      },
+      "stageAfter": {
+        "x": 265,
+        "y": 149,
+        "width": 770,
+        "height": 648
+      },
+      "maxViewportHeight": 900,
+      "clippedSemanticBounds": {
+        "top": 149,
+        "bottom": 797,
+        "height": 648
+      },
+      "captures": [
+        {
+          "width": 1440,
+          "overflow": false
+        }
+      ],
+      "semanticText": "- text: art.kubus\n- img\n- text: Art platform\n- button \"Collapse navigation\"\n- group:\n  - button \"Home\"\n  - button \"Explore\"\n  - button \"Connect\"\n  - button \"Infrastructure\"\n- button \"Wallet\"\n- button\n- button\n- button \"Sign in\"\n- group:\n  - text: Community Connect with artists and collectors\n  - textbox \"desktop_community_search_input\" [disabled]\n  - textbox \"Search posts, users, tags...\"\n  - tablist:\n    - tab \"Discover\" [selected]\n    - tab \"Following\"\n    - tab \"Groups\"\n    - tab \"Art\"\n  - text: Sort\n  - checkbox \"Hybrid\" [checked]\n  - checkbox \"Recent\"\n  - checkbox \"Top\"\n  - tabpanel:\n    - group:\n      - button \"Art is everywhere. Help put it on the map. Discover local art, document what you find, and connect with the people behind it. Join art.kubus\":\n        - button\n      - group \"Just now Art 1 / 2\":\n        - button \"Alexandra Katarina Longname Artist Institution @visual-qa-owner\"\n        - button\n        - 'button \"portrait video — #Art #Ljubljana\"'\n        - group \"Media 1 of 2\":\n          - group \"Video player\":\n            - button \"Play video\"\n- button \"Post\"\n- button \"Feed\"\n- button \"Messages\"\n- group:\n  - group \"What's happening?\":\n    - button \"U\"\n  - group \"Trending Based on recent posts\":\n    - button\n    - 'group \"#1 #Art 1 tagged posts\"':\n      - button \"Add to post\"\n    - 'group \"#2 #Ljubljana 1 tagged posts\"':\n      - button \"Add to post\"\n  - group \"Who to follow Follow artists to personalize your feed.\":\n    - button\n  - text: Active communities No communities found",
+      "overflow": false
+    },
+    {
+      "name": "firefox-light-en-US-no-preference-320",
+      "errors": [],
+      "writesBlocked": [
+        "/api/presence/batch",
+        "/api/analytics/app"
+      ],
+      "requests": [
+        {
+          "method": "GET",
+          "path": "/api/artworks",
+          "search": "?page=1&limit=100"
+        },
+        {
+          "method": "GET",
+          "path": "/api/community/posts",
+          "search": "?page=1&limit=24&followingOnly=false&surface=discover&sort=hybrid"
+        },
+        {
+          "method": "POST",
+          "path": "/api/presence/batch",
+          "search": ""
+        },
+        {
+          "method": "POST",
+          "path": "/api/analytics/app",
+          "search": ""
+        }
+      ],
+      "mediaRequests": [
+        "artwork.png",
+        "artwork.png",
+        "portrait.png",
+        "portrait.webm",
+        "portrait.webm",
+        "landscape.png",
+        "landscape.webm",
+        "portrait.webm"
+      ],
+      "playback": [
+        {
+          "width": 180,
+          "height": 320,
+          "time": 3.99471,
+          "paused": false,
+          "muted": false,
+          "readyState": 4,
+          "rect": {
+            "x": 45,
+            "y": 221,
+            "width": 230,
+            "height": 408.8833312988281,
+            "top": 221,
+            "right": 275,
+            "bottom": 629.8833312988281,
+            "left": 45
+          }
+        }
+      ],
+      "afterPlayback": [
+        {
+          "time": 5.999564,
+          "paused": false
+        }
+      ],
+      "pageSwitches": [
+        {
+          "page": 2,
+          "stage": {
+            "x": 45,
+            "y": 313.625,
+            "width": 230,
+            "height": 129.38333129882812
+          },
+          "videoRects": [
+            {
+              "width": 320,
+              "height": 180,
+              "time": 0.285577,
+              "paused": false,
+              "rect": {
+                "x": 45,
+                "y": 313.6333312988281,
+                "width": 230,
+                "height": 129.38333129882812,
+                "top": 313.6333312988281,
+                "right": 275,
+                "bottom": 443.01666259765625,
+                "left": 45
+              }
+            }
+          ],
+          "videoControlBounds": {
+            "x": 53,
+            "y": 397,
+            "width": 44,
+            "height": 44
+          }
+        },
+        {
+          "page": 1,
+          "stage": {
+            "x": 45,
+            "y": 313.625,
+            "width": 230,
+            "height": 408.88330078125
+          },
+          "videoRects": [
+            {
+              "width": 180,
+              "height": 320,
+              "time": 0.275675,
+              "paused": false,
+              "rect": {
+                "x": 45,
+                "y": 313.6333312988281,
+                "width": 230,
+                "height": 408.8833312988281,
+                "top": 313.6333312988281,
+                "right": 275,
+                "bottom": 722.5166625976562,
+                "left": 45
+              }
+            }
+          ],
+          "videoControlBounds": {
+            "x": 53,
+            "y": 676.513916015625,
+            "width": 44,
+            "height": 44
+          }
+        }
+      ],
+      "stageBefore": {
+        "x": 45,
+        "y": 571,
+        "width": 230,
+        "height": 273
+      },
+      "stageBeforeActivation": {
+        "x": 45,
+        "y": 221,
+        "width": 230,
+        "height": 408.88330078125
+      },
+      "stageAfter": {
+        "x": 45,
+        "y": 221,
+        "width": 230,
+        "height": 408.88330078125
+      },
+      "maxViewportHeight": 844,
+      "clippedSemanticBounds": {
+        "top": 221,
+        "bottom": 629.88330078125,
+        "height": 408.88330078125
+      },
+      "captures": [
+        {
+          "width": 320,
+          "overflow": false
+        }
+      ],
+      "semanticText": "- group:\n  - text: Community Connect with artists and collectors\n  - button\n  - button\n  - textbox \"community_search_input\" [disabled]\n  - textbox \"Search…\"\n  - tablist:\n    - tab \"Following\"\n    - tab \"Discover\" [selected]\n    - tab \"Groups\"\n    - tab \"Art\"\n  - tabpanel:\n    - group:\n      - button \"Art is everywhere. Help put it on the map. Discover local art, document what you find, and connect with the people behind it. Join art.kubus\":\n        - button\n      - group \"1m ago Art 1 / 2\":\n        - button \"Alexandra Katarina Longname Artist Institution @visual-qa-owner\"\n        - button\n        - 'button \"portrait video — #Art #Ljubljana\"'\n        - group \"Media 1 of 2\":\n          - group \"Video player\":\n            - button \"Play video\"\n        - button \"#Art\"\n        - button \"#Ljubljana\"\n        - button \"Ljubljana\"\n- group \"Main navigation\":\n  - button \"Map\"\n  - button \"AR\"\n  - button \"Community\"\n  - button \"Home\"\n  - button \"Account\"\n- button \"New post\"",
+      "overflow": false
+    },
+    {
+      "name": "firefox-light-en-US-no-preference-390",
+      "errors": [],
+      "writesBlocked": [
+        "/api/presence/batch",
+        "/api/analytics/app"
+      ],
+      "requests": [
+        {
+          "method": "GET",
+          "path": "/api/artworks",
+          "search": "?page=1&limit=100"
+        },
+        {
+          "method": "GET",
+          "path": "/api/community/posts",
+          "search": "?page=1&limit=24&followingOnly=false&surface=discover&sort=hybrid"
+        },
+        {
+          "method": "POST",
+          "path": "/api/presence/batch",
+          "search": ""
+        },
+        {
+          "method": "POST",
+          "path": "/api/analytics/app",
+          "search": ""
+        }
+      ],
+      "mediaRequests": [
+        "artwork.png",
+        "artwork.png",
+        "portrait.png",
+        "portrait.webm",
+        "landscape.png",
+        "landscape.webm",
+        "portrait.webm"
+      ],
+      "playback": [
+        {
+          "width": 180,
+          "height": 320,
+          "time": 4.193105,
+          "paused": false,
+          "muted": true,
+          "readyState": 4,
+          "rect": {
+            "x": 45,
+            "y": 193,
+            "width": 300,
+            "height": 533.3333129882812,
+            "top": 193,
+            "right": 345,
+            "bottom": 726.3333129882812,
+            "left": 45
+          }
+        }
+      ],
+      "afterPlayback": [
+        {
+          "time": 6.241659,
+          "paused": false
+        }
+      ],
+      "pageSwitches": [
+        {
+          "page": 2,
+          "stage": {
+            "x": 45,
+            "y": 274.25,
+            "width": 300,
+            "height": 168.75
+          },
+          "videoRects": [
+            {
+              "width": 320,
+              "height": 180,
+              "time": 0.236722,
+              "paused": false,
+              "rect": {
+                "x": 45,
+                "y": 274.25,
+                "width": 300,
+                "height": 168.75,
+                "top": 274.25,
+                "right": 345,
+                "bottom": 443,
+                "left": 45
+              }
+            }
+          ],
+          "videoControlBounds": {
+            "x": 53,
+            "y": 397,
+            "width": 44,
+            "height": 44
+          }
+        },
+        {
+          "page": 1,
+          "stage": {
+            "x": 45,
+            "y": 274.25,
+            "width": 300,
+            "height": 533.3333129882812
+          },
+          "videoRects": [
+            {
+              "width": 180,
+              "height": 320,
+              "time": 0.225126,
+              "paused": false,
+              "rect": {
+                "x": 45,
+                "y": 274.25,
+                "width": 300,
+                "height": 533.3333129882812,
+                "top": 274.25,
+                "right": 345,
+                "bottom": 807.5833129882812,
+                "left": 45
+              }
+            }
+          ],
+          "videoControlBounds": {
+            "x": 53,
+            "y": 761.5833740234375,
+            "width": 44,
+            "height": 44
+          }
+        }
+      ],
+      "stageBefore": {
+        "x": 45,
+        "y": 543,
+        "width": 300,
+        "height": 301
+      },
+      "stageBeforeActivation": {
+        "x": 45,
+        "y": 193,
+        "width": 300,
+        "height": 533.3333129882812
+      },
+      "stageAfter": {
+        "x": 45,
+        "y": 193,
+        "width": 300,
+        "height": 533.3333129882812
+      },
+      "maxViewportHeight": 844,
+      "clippedSemanticBounds": {
+        "top": 193,
+        "bottom": 726.3333129882812,
+        "height": 533.3333129882812
+      },
+      "captures": [
+        {
+          "width": 390,
+          "overflow": false
+        }
+      ],
+      "semanticText": "- group:\n  - text: Community Connect with artists and collectors\n  - button\n  - button\n  - textbox \"community_search_input\" [disabled]\n  - textbox \"Search…\"\n  - tablist:\n    - tab \"Following\"\n    - tab \"Discover\" [selected]\n    - tab \"Groups\"\n    - tab \"Art\"\n  - tabpanel:\n    - group:\n      - button \"Art is everywhere. Help put it on the map. Discover local art, document what you find, and connect with the people behind it. Join art.kubus\":\n        - button\n      - group \"1m ago Art 1 / 2\":\n        - button \"Alexandra Katarina Longname Artist Institution @visual-qa-owner\"\n        - button\n        - 'button \"portrait video — #Art #Ljubljana\"'\n        - group \"Media 1 of 2\":\n          - group \"Video player\":\n            - button \"Play video\"\n- group \"Main navigation\":\n  - button \"Map\"\n  - button \"AR\"\n  - button \"Community\"\n  - button \"Home\"\n  - button \"Account\"\n- button \"New post\"",
+      "overflow": false
+    },
+    {
+      "name": "firefox-light-en-US-no-preference-1440",
+      "errors": [],
+      "writesBlocked": [
+        "/api/presence/batch",
+        "/api/analytics/app"
+      ],
+      "requests": [
+        {
+          "method": "GET",
+          "path": "/api/community/posts",
+          "search": "?page=1&limit=24&followingOnly=false&surface=discover&sort=hybrid"
+        },
+        {
+          "method": "POST",
+          "path": "/api/presence/batch",
+          "search": ""
+        },
+        {
+          "method": "GET",
+          "path": "/api/community/tags/trending",
+          "search": "?limit=24&timeframe=30"
+        },
+        {
+          "method": "GET",
+          "path": "/api/public/home-rails",
+          "search": "?locale=en"
+        },
+        {
+          "method": "GET",
+          "path": "/api/search/trending",
+          "search": "?limit=24"
+        },
+        {
+          "method": "GET",
+          "path": "/api/profiles/artists/list",
+          "search": "?limit=20&offset=0"
+        },
+        {
+          "method": "GET",
+          "path": "/api/search",
+          "search": "?q=art&type=profiles&limit=20&page=1"
+        },
+        {
+          "method": "POST",
+          "path": "/api/analytics/app",
+          "search": ""
+        }
+      ],
+      "mediaRequests": [
+        "artwork.png",
+        "portrait.png",
+        "portrait.webm",
+        "portrait.webm",
+        "landscape.png",
+        "landscape.webm",
+        "portrait.webm"
+      ],
+      "playback": [
+        {
+          "width": 180,
+          "height": 320,
+          "time": 4.063062,
+          "paused": false,
+          "muted": false,
+          "readyState": 4,
+          "rect": {
+            "x": 467.75,
+            "y": 149,
+            "width": 364.5,
+            "height": 648,
+            "top": 149,
+            "right": 832.25,
+            "bottom": 797,
+            "left": 467.75
+          }
+        }
+      ],
+      "afterPlayback": [
+        {
+          "time": 6.067666,
+          "paused": false
+        }
+      ],
+      "pageSwitches": [
+        {
+          "page": 2,
+          "stage": {
+            "x": 265,
+            "y": 149,
+            "width": 770,
+            "height": 433.13330078125
+          },
+          "videoRects": [
+            {
+              "width": 320,
+              "height": 180,
+              "time": 0.237727,
+              "paused": false,
+              "rect": {
+                "x": 265,
+                "y": 149,
+                "width": 770,
+                "height": 433.1333312988281,
+                "top": 149,
+                "right": 1035,
+                "bottom": 582.1333312988281,
+                "left": 265
+              }
+            }
+          ],
+          "videoControlBounds": {
+            "x": 273,
+            "y": 536.125,
+            "width": 44,
+            "height": 44
+          }
+        },
+        {
+          "page": 1,
+          "stage": {
+            "x": 265,
+            "y": 149,
+            "width": 770,
+            "height": 648
+          },
+          "videoRects": [
+            {
+              "width": 180,
+              "height": 320,
+              "time": 0.287923,
+              "paused": false,
+              "rect": {
+                "x": 467.75,
+                "y": 149,
+                "width": 364.5,
+                "height": 648,
+                "top": 149,
+                "right": 832.25,
+                "bottom": 797,
+                "left": 467.75
+              }
+            }
+          ],
+          "videoControlBounds": {
+            "x": 475.75,
+            "y": 751,
+            "width": 44,
+            "height": 44
+          }
+        }
+      ],
+      "stageBefore": {
+        "x": 265,
+        "y": 499,
+        "width": 770,
+        "height": 401
+      },
+      "stageBeforeActivation": {
+        "x": 265,
+        "y": 149,
+        "width": 770,
+        "height": 648
+      },
+      "stageAfter": {
+        "x": 265,
+        "y": 149,
+        "width": 770,
+        "height": 648
+      },
+      "maxViewportHeight": 900,
+      "clippedSemanticBounds": {
+        "top": 149,
+        "bottom": 797,
+        "height": 648
+      },
+      "captures": [
+        {
+          "width": 1440,
+          "overflow": false
+        }
+      ],
+      "semanticText": "- text: art.kubus\n- img\n- text: Art platform\n- button \"Collapse navigation\"\n- group:\n  - button \"Home\"\n  - button \"Explore\"\n  - button \"Connect\"\n  - button \"Infrastructure\"\n- button \"Wallet\"\n- button\n- button\n- button \"Sign in\"\n- group:\n  - text: Community Connect with artists and collectors\n  - textbox \"desktop_community_search_input\" [disabled]\n  - textbox \"Search posts, users, tags...\"\n  - tablist:\n    - tab \"Discover\" [selected]\n    - tab \"Following\"\n    - tab \"Groups\"\n    - tab \"Art\"\n  - text: Sort\n  - checkbox \"Hybrid\" [checked]\n  - checkbox \"Recent\"\n  - checkbox \"Top\"\n  - tabpanel:\n    - group:\n      - button \"Art is everywhere. Help put it on the map. Discover local art, document what you find, and connect with the people behind it. Join art.kubus\":\n        - button\n      - group \"2m ago Art 1 / 2\":\n        - button \"Alexandra Katarina Longname Artist Institution @visual-qa-owner\"\n        - button\n        - 'button \"portrait video — #Art #Ljubljana\"'\n        - group \"Media 1 of 2\":\n          - group \"Video player\":\n            - button \"Play video\"\n- button \"Post\"\n- button \"Feed\"\n- button \"Messages\"\n- group:\n  - group \"What's happening?\":\n    - button \"U\"\n  - group \"Trending Based on recent posts\":\n    - button\n    - 'group \"#1 #Art 1 tagged posts\"':\n      - button \"Add to post\"\n    - 'group \"#2 #Ljubljana 1 tagged posts\"':\n      - button \"Add to post\"\n  - group \"Who to follow Follow artists to personalize your feed.\":\n    - button\n  - text: Active communities No communities found",
+      "overflow": false
+    }
+  ]
+}

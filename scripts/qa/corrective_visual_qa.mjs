@@ -261,7 +261,8 @@ try {
                 for (const pageNumber of (process.env.QA_PAGE_SEQUENCE || '')
                   .split(',').map(value => value.trim()).filter(Boolean)) {
                   const pageIndex = Number(pageNumber) - 1;
-                  const currentStage = page.getByRole('group', { name: /^Media \d+ of \d+$/ }).first();
+                  // The carousel is a group on a video page and a button on an image page.
+                  const currentStage = page.getByRole('group', { name: /^Media \d+ of \d+$/ }).or(page.getByRole('button', { name: /^Media \d+ of \d+$/ })).first();
                   const currentBounds = await currentStage.boundingBox();
                   if (!currentBounds) throw new Error('Carousel stage missing before requested page switch');
                   const controlX = pageIndex === 0
@@ -276,7 +277,7 @@ try {
                   if (arrowBounds) await page.mouse.click(arrowBounds.x + arrowBounds.width / 2,
                     arrowBounds.y + arrowBounds.height / 2);
                   await page.waitForTimeout(800);
-                  const stage = page.getByRole('group', { name: /^Media \d+ of \d+$/ }).first();
+                  const stage = page.getByRole('group', { name: /^Media \d+ of \d+$/ }).or(page.getByRole('button', { name: /^Media \d+ of \d+$/ })).first();
                   const stageBounds = await stage.boundingBox();
                   const switchText = await page.locator('body').ariaSnapshot();
                   const totalPages = Number((initial.match(/Media 1 of (\d+)/) || [])[1] || 1);
