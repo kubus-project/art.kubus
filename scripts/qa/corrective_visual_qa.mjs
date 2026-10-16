@@ -193,6 +193,30 @@ try {
                   await page.keyboard.press('Escape');
                   await page.waitForTimeout(500);
                 }
+                if (process.env.QA_HASHTAG_PROBE === 'true') {
+                  const tag = page.getByRole('button', { name: '#Art', exact: true }).first();
+                  for (let i = 0; !(await tag.count()) && i < 6; i++) {
+                    await page.mouse.move(width/2, 500); await page.mouse.wheel(0, 200);
+                    await page.waitForTimeout(300);
+                  }
+                  let box = await tag.boundingBox();
+                  for (let i = 0; box && box.y > 680 && i < 6; i++) {
+                    await page.mouse.move(width/2, 500); await page.mouse.wheel(0, 250);
+                    await page.waitForTimeout(300); box = await tag.boundingBox();
+                  }
+                  if (!box) throw new Error('Hashtag control missing');
+                  await page.mouse.move(2, 2);
+                  await page.screenshot({ path: path.join(out, `${name}-tag-normal.png`) });
+                  await page.mouse.move(box.x+box.width/2, box.y+box.height/2);
+                  await page.waitForTimeout(200);
+                  await page.screenshot({ path: path.join(out, `${name}-tag-hover.png`) });
+                  await tag.focus(); await page.waitForTimeout(200);
+                  await page.screenshot({ path: path.join(out, `${name}-tag-focus.png`) });
+                  await page.mouse.click(box.x+box.width/2, box.y+box.height/2);
+                  await page.waitForTimeout(600);
+                  await page.screenshot({ path: path.join(out, `${name}-tag-filter.png`) });
+                  await fs.writeFile(path.join(out, `${name}-tag-filter.yml`), await page.locator('body').ariaSnapshot());
+                }
                 const captures = [];
                 for (const captureWidth of list('QA_CAPTURE_WIDTHS', String(width)).map(Number)) {
                   await page.setViewportSize({ width: captureWidth, height: captureWidth < 768 ? 844 : 900 });
