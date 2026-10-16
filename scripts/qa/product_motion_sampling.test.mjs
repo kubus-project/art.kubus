@@ -65,3 +65,21 @@ test('sampling deadline expands for slow captures and stays within its hard cap'
   assert.equal(getSamplingDeadlineMs(3000, options), 48600);
   assert.equal(getSamplingDeadlineMs(5000, options), options.maxHoldMs);
 });
+
+test('CI-length captures can collect required painted frames without relaxing coverage', () => {
+  const options = { holdMs: 3200, settleMs: 600, maxHoldMs: 90000 };
+  const captureDurations = [4900, 4800, 5100, 4700, 5000];
+  let elapsed = 0;
+  const frames = Array.from({ length: MIN_SETTLED_FRAMES }, (_, index) => {
+    const duration = captureDurations[index % captureDurations.length];
+    const t = elapsed + duration / 2;
+    elapsed += duration;
+    return { t };
+  });
+  const deadline = getSamplingDeadlineMs(Math.max(...captureDurations), options);
+  assert.ok(elapsed > 60000, 'the previous cap stopped before sufficient captures');
+  assert.ok(elapsed <= deadline && deadline <= options.maxHoldMs);
+  assert.equal(getSettledSamplingCoverage(frames, options).complete, true);
+  assert.equal(getSettledSamplingCoverage(frames.slice(0, -1), options).complete, false);
+  assert.equal(getSamplingDeadlineMs(20000, options), options.maxHoldMs);
+});
