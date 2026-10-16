@@ -108,6 +108,10 @@ export function attachGlobeAtmosphere(map) {
     if (hex) {
       const rgb = [0,2,4].map((i) => parseInt(hex.slice(i, i+2),16));
       const ground = rgb.reduce((s,v) => s+v,0) < 384 ? '#000000' : '#ffffff';
+      // The shared WebGL recovery CSS uses this variable with !important.
+      // Scope the normal fallback to this map so it cannot tint the transparent
+      // exterior of the globe over the exact theme ground.
+      host.style.setProperty('--kubus-map-fallback', ground);
       map.getCanvas().style.backgroundColor = ground;
       map.getCanvasContainer().style.backgroundColor = ground;
     }
