@@ -85,7 +85,7 @@ suite ran in the required check at `36d0e844`, not only in the candidate.
   for 220 ms between an image and a clip (none under reduced motion) and do not
   jump on late metadata. The Art feed keeps one still and one video per artwork.
   Hashtag chips have readable contrast in both themes.
-- **Wordmark.** `kubus` is weight 800 italic and `art.` and `node` stay regular,
+- **Wordmark.** `kubus` is weight 800 italic and `art.` and `Node` stay regular,
   through `KubusFamilyBrandText`. Headers never detect the brand themselves, because
   their titles can carry user content; `brandTitle: true` is an explicit opt-in.
   Hosts, package identifiers and paths stay plain.
@@ -194,10 +194,16 @@ by this document.
    run, unless the owner's ruleset bypass were used). Confirm afterwards that #298,
    #300, #299, #301 and #291 show as merged.
 2. **Version bump** on a `release/0.8.3` branch from the merged `dev`:
-   `npm run sync:all-versions` after editing `version.json` (`version` `0.8.3`, a new
-   `buildNumber` and `buildDate`); it rewrites `pubspec.yaml`, `lib/config/config.dart`
-   and `package.json` and does not honor a dry-run flag. Then `npm run check:versions`. The bump is a
-   release-preparation commit, as in 0.8.1.
+   `node scripts/sync_all_versions.mjs --target frontend` after editing `version.json`
+   (`version` `0.8.3`, a new `buildNumber` and `buildDate`); it rewrites `pubspec.yaml`,
+   `lib/config/config.dart` and `package.json` and does not honor a dry-run flag. Then
+   `node scripts/sync_all_versions.mjs --check --target frontend`. Use the frontend
+   target for both: this release changes no backend, and the unscoped
+   `npm run sync:all-versions` / `npm run check:versions` also reach the `backend`
+   submodule and the sibling repositories. In a checkout without them (CI uses
+   `submodules: false`) the sync stops at the first missing sibling after leaving an
+   untracked `backend/version.json` that makes the unscoped check pass only locally.
+   The bump is a release-preparation commit, as in 0.8.1.
 3. **Staging.** `deploy-development.yml` runs on every push to `dev` and can be
    dispatched on the exact `dev` head, with the `development-web` environment.
    Choose the `community_multi_media_enabled` input deliberately. After the run,
