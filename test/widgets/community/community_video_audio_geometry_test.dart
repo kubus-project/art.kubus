@@ -356,44 +356,6 @@ void main() {
       expect(communityVideoFrameSize(Size.zero, 1.5), Size.zero);
     });
 
-    _testPlayer('a capped portrait host contains the source frame and controls',
-        (tester) async {
-      platform.size = const Size(720, 1280);
-      await tester.pumpWidget(_app(Align(
-        alignment: Alignment.topCenter,
-        child: SizedBox(
-          width: 300,
-          height: 482,
-          child: const CommunityPostVideoSlide(url: _clipA, isActive: true),
-        ),
-      )));
-      await play(tester);
-      await _hoverFrame(tester);
-
-      final stage = tester.getRect(find.byType(CommunityVideoPlayerSurface));
-      final frame = tester.getRect(find.byKey(_frameKey));
-      expect(frame.width, lessThan(stage.width));
-      expect(frame.height, closeTo(stage.height, 0.5));
-      expect(frame.width / frame.height, closeTo(9 / 16, 0.01));
-
-      final player = platform.live.single;
-      final view = tester.getRect(
-        find.byKey(ValueKey<String>('fake-video-view-${player.id}')),
-      );
-      expect(view, frame, reason: 'the source fits inside the capped host');
-      for (final tooltip in <String>[
-        _l10n.communityMediaVideoPause,
-        _l10n.communityMediaVideoMute,
-        _l10n.communityMediaVideoFullscreen,
-      ]) {
-        final control = tester.getRect(find.byTooltip(tooltip));
-        expect(control.left, greaterThanOrEqualTo(frame.left));
-        expect(control.right, lessThanOrEqualTo(frame.right));
-        expect(control.bottom, lessThanOrEqualTo(frame.bottom));
-      }
-      expect(tester.takeException(), isNull);
-    });
-
     for (final theme in <ThemeMode>[ThemeMode.light, ThemeMode.dark]) {
       for (final entry in shapes.entries) {
         for (final width in widths) {

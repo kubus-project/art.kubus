@@ -342,18 +342,9 @@ class _CommunityVideoPlayerSurfaceState
                 valueListenable: controller,
                 builder: (context, value, _) {
                   if (!value.isInitialized) return const SizedBox.shrink();
-                  // The frame may be shorter than the source aspect when its
-                  // host caps portrait media to the usable viewport. Give the
-                  // platform view its real dimensions, then contain that view
-                  // in the same frame used by the poster and controls.
-                  return FittedBox(
-                    fit: BoxFit.contain,
-                    child: SizedBox(
-                      width: value.size.width,
-                      height: value.size.height,
-                      child: VideoPlayer(controller),
-                    ),
-                  );
+                  // The frame already has the clip's aspect, so the video
+                  // fills it exactly: no bars, no crop.
+                  return SizedBox.expand(child: VideoPlayer(controller));
                 },
               ),
             Positioned.fill(
