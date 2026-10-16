@@ -121,7 +121,7 @@ async function installFixture(context, config, stats) {
   await context.route('**/*', async (route) => {
     const request = route.request();
     const url = new URL(request.url());
-    if (url.origin === appUrl && !url.pathname.startsWith('/api/')) return route.continue();
+    if (['blob:', 'data:'].includes(url.protocol) || (url.origin === appUrl && !url.pathname.startsWith('/api/'))) return route.continue();
     if (/\/api\/analytics\b/.test(url.pathname)) return route.fulfill({ status: 204, body: '' });
     if (request.method() === 'OPTIONS') {
       return route.fulfill({
@@ -150,7 +150,12 @@ async function installFixture(context, config, stats) {
     }
     // The app-origin /api path maps to the real API origin so it caches the same.
     const target = url.origin === appUrl ? `${apiOrigin}${url.pathname}${url.search}` : request.url();
-    const key = cacheKey('GET', target);
+    const fixtureUrl = new URL(target);
+    // The media proxy's sid is per-page telemetry, not part of image identity.
+    // Key the byte fixture by the actual media request so a fresh session does
+    // not fetch every cover again during a supposedly replayed comparison.
+    if (fixtureUrl.pathname === '/api/media/proxy') fixtureUrl.searchParams.delete('sid');
+    const key = cacheKey('GET', fixtureUrl.toString());
     const metaFile = path.join(fixtureDir, `${key}.json`);
     const bodyFile = path.join(fixtureDir, `${key}.bin`);
     const cors = {
@@ -341,9 +346,12 @@ const TOPOLOGY_PATH = async ({ center }) => {
   const tick = (now) => { frames.push({ d: now-last, seg: window.__perf.segment }); last=now; if(running) requestAnimationFrame(tick); };
   const hold = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
   const ease = async (seg, opts) => {
+    // easeTo stops an in-flight move synchronously. Consume that old moveend
+    // before listening for the new path's completion (critical on reversal).
+    map.stop();
     window.__perf.segment = seg;
     await new Promise((resolve) => { map.once('moveend', resolve); map.easeTo(opts); });
-    idles.push({ seg: `idle-${seg}`, t: performance.now() });
+    idles.push({ seg: `idle-${seg}`, t: performance.now(), zoom: map.getZoom(), center: map.getCenter() });
     window.__perf.segment = `idle-${seg}`;
     await hold(700);
   };
@@ -500,6 +508,7 @@ async function oneRun(config, viewport, runIndex) {
       window.__kubusCoverPerf.length = 0;
     });
 
+    const fixtureAtStart = { ...stats };
     const result = perfPath === 'topology' ? await page.evaluate(TOPOLOGY_PATH, {
       center: (process.env.PERF_CENTER || '14.5058,46.0569').split(',').map(Number),
     }) : perfPath === 'covers' ? await page.evaluate(COVER_PATH) : await page.evaluate(
@@ -632,6 +641,7 @@ async function oneRun(config, viewport, runIndex) {
       cover,
       covers,
       fixture: stats,
+      pathFixture: { hits: stats.hits - fixtureAtStart.hits, misses: stats.misses - fixtureAtStart.misses },
     };
   } finally {
     await browser.close();
