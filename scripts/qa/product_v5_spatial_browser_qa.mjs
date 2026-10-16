@@ -1360,6 +1360,7 @@ async function presentationScenario(browserName, scheme, locale, motion, report)
   const browser = await (browserName === 'firefox' ? firefox : chromium).launch({ headless: true });
   const context = await browser.newContext({ viewport: { width: 390, height: 844 },
     colorScheme: scheme, locale, reducedMotion: motion,
+    ...(process.env.QA_VIDEO === 'true' ? { recordVideo: { dir: path.join(outDir, 'videos'), size: { width: 390, height: 844 } } } : {}),
     geolocation: { latitude: 46.0569, longitude: 14.5058, accuracy: 15 },
     permissions: ['geolocation'] });
   const tag = `${browserName}-${scheme}-${locale}-${motion}`;
@@ -1384,7 +1385,8 @@ async function presentationScenario(browserName, scheme, locale, motion, report)
       await settle(page, 1200);
       const before = await page.evaluate(() => {
         const m = window.__maps.at(-1), c = m.getContainer().querySelector('.kubus-globe-atmosphere');
-        return { background: m.getCanvas().style.backgroundColor, active: c?.dataset.active,
+        return { background: getComputedStyle(m.getCanvas()).backgroundColor, active: c?.dataset.active,
+          sky: m.getSky?.(), styleSky: m.getStyle()?.sky,
           solar: c?.dataset.subsolar, radius: c?.dataset.radius, mapCount: window.__maps.length,
           zoom: m.getZoom(), center: m.getCenter(), pitch: m.getPitch(), visible: globalThis.kubusMapPresentationActive };
       });
