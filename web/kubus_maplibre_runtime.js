@@ -50,13 +50,15 @@
   globalThis.kubusMapLibreRuntimeReady = loadScript(
     "kubus-maplibre-runtime-script",
     `/local/maplibre-gl/maplibre-gl-csp.js?v=${buildVersion}`,
-  ).then(() => {
+  ).then(async () => {
     if (!globalThis.maplibregl) {
       throw new Error("MapLibre runtime did not expose maplibregl");
     }
     globalThis.maplibregl.setWorkerUrl(
       `/local/maplibre-gl/maplibre-gl-csp-worker.js?v=${buildVersion}`,
     );
+    const atmosphere = await import(`/kubus_globe_atmosphere.mjs?v=${buildVersion}`);
+    atmosphere.installGlobeAtmosphere(globalThis.maplibregl);
     return loadScript(
       "kubus-webgl-context-handler",
       `/webgl_context_handler.js?v=${buildVersion}`,

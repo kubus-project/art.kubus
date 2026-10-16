@@ -85,7 +85,6 @@ import '../utils/user_profile_navigation.dart';
 import '../widgets/map_marker_dialog.dart';
 import '../providers/tile_providers.dart';
 import '../widgets/art_map_view.dart';
-import 'dart:ui' as ui;
 import '../services/backend_api_service.dart';
 import '../services/contextual_auth_gate.dart';
 import '../services/map_data_controller.dart';
@@ -178,63 +177,6 @@ class _MapTutorialTargetRectResult {
   final bool ready;
   final String reason;
   final Rect? rect;
-}
-
-/// Custom painter for the direction cone indicator
-class DirectionConePainter extends CustomPainter {
-  final Color color;
-
-  DirectionConePainter({required this.color});
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = color.withValues(alpha: 0.25)
-      ..style = PaintingStyle.fill;
-
-    final strokePaint = Paint()
-      ..color = color.withValues(alpha: 0.45)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.5;
-
-    // Center of the size
-    final center = Offset(size.width / 2, size.height / 2);
-
-    // Draw cone pointing upward (will be rotated by the parent Transform)
-    // Cone dimensions: 60-degree spread angle.
-    final coneAngle = math.pi / 3; // 60 degrees in radians
-    final coneLength = size.height * 0.8;
-
-    // Calculate the two edges of the cone
-    final leftEdge = Offset(
-      center.dx - coneLength * math.sin(coneAngle / 2),
-      center.dy + coneLength * math.cos(coneAngle / 2),
-    );
-
-    final rightEdge = Offset(
-      center.dx + coneLength * math.sin(coneAngle / 2),
-      center.dy + coneLength * math.cos(coneAngle / 2),
-    );
-
-    // Draw the cone as a filled path
-    final conePath = ui.Path()
-      ..moveTo(center.dx, center.dy)
-      ..lineTo(leftEdge.dx, leftEdge.dy)
-      ..arcToPoint(
-        rightEdge,
-        radius: Radius.circular(coneLength * math.sin(coneAngle / 2) * 2),
-        clockwise: false,
-      )
-      ..close();
-
-    canvas.drawPath(conePath, paint);
-    canvas.drawPath(conePath, strokePaint);
-  }
-
-  @override
-  bool shouldRepaint(DirectionConePainter oldDelegate) {
-    return oldDelegate.color != color;
-  }
 }
 
 class MapScreen extends StatefulWidget {
@@ -390,8 +332,9 @@ class _MapScreenState extends State<MapScreen>
 
   // Map search (shared controller + UI)
   late final KubusSearchController _mapSearchController;
-  final FocusNode _mapSearchFocusNode =
-      FocusNode(debugLabel: 'mobile_map_search');
+  final FocusNode _mapSearchFocusNode = FocusNode(
+    debugLabel: 'mobile_map_search',
+  );
 
   KubusMapFilterState _filterState = KubusMapFilterState.defaults();
   Map<ArtMarkerType, bool> get _markerLayerVisibility => <ArtMarkerType, bool>{
@@ -632,7 +575,7 @@ class _MapScreenState extends State<MapScreen>
       isDarkMode: themeProvider.isDarkMode,
       themeSpec: MapLayersThemeSpec(
         locationFill: themeProvider.accentColor,
-        locationStroke: scheme.surface,
+        locationStroke: Colors.white,
         isometricPedestalTop: scheme.surfaceContainerHighest,
         isometricPedestalLeft: scheme.surfaceContainerHigh,
         isometricPedestalRight: scheme.surfaceContainer,
@@ -1351,8 +1294,9 @@ class _MapScreenState extends State<MapScreen>
     if (_initialLocaleResolved) return;
     _initialLocaleResolved = true;
 
-    final viewport =
-        MapInitialViewport.forLocale(Localizations.localeOf(context));
+    final viewport = MapInitialViewport.forLocale(
+      Localizations.localeOf(context),
+    );
     _cameraCenter = widget.initialCenter ?? viewport.initialCenter;
     _lastZoom = widget.initialZoom ?? viewport.initialZoom;
 
@@ -1401,7 +1345,8 @@ class _MapScreenState extends State<MapScreen>
     if (loaded == null) {
       loaded = marker;
       setState(
-          () => _artMarkers = List<ArtMarker>.from(_artMarkers)..add(marker));
+        () => _artMarkers = List<ArtMarker>.from(_artMarkers)..add(marker),
+      );
       _applyVisibleMarkers();
     }
     _handleMarkerTap(loaded);
@@ -1811,6 +1756,9 @@ class _MapScreenState extends State<MapScreen>
   }
 
   void _pausePolling() {
+    _userLocationAnimator.pause();
+    _headingExpiryTimer?.cancel();
+    _direction = null;
     _timer?.cancel();
     _perf.timerStopped('location_timer');
     _proximityCheckTimer?.cancel();
@@ -1858,6 +1806,7 @@ class _MapScreenState extends State<MapScreen>
   }
 
   void _resumePolling() {
+    if (_styleInitialized) unawaited(_syncUserLocation());
     final mobileSub = _mobileLocationSubscription;
     if (mobileSub != null) {
       try {
@@ -1983,9 +1932,11 @@ class _MapScreenState extends State<MapScreen>
 
     _pendingTargetMarkerLoad = null;
     _pendingTargetMarkerLoadCompleter = null;
-    unawaited(_loadMarkersAroundTargetNow(position).whenComplete(() {
-      if (!completer.isCompleted) completer.complete();
-    }));
+    unawaited(
+      _loadMarkersAroundTargetNow(position).whenComplete(() {
+        if (!completer.isCompleted) completer.complete();
+      }),
+    );
   }
 
   void _handleMapViewPreferencesChanged() {
@@ -2354,8 +2305,12 @@ class _MapScreenState extends State<MapScreen>
           _perf.subscriptionStopped('compass');
           _compassSubscription = compassStream.listen((CompassEvent event) {
             if (mounted) {
-              _updateDirection(KubusMapSourceSyncHelpers.reliableHeading(
-                  event.heading, event.accuracy));
+              _updateDirection(
+                KubusMapSourceSyncHelpers.reliableHeading(
+                  event.heading,
+                  event.accuracy,
+                ),
+              );
             }
           });
           _perf.subscriptionStarted('compass');
@@ -3143,8 +3098,10 @@ class _MapScreenState extends State<MapScreen>
   }
 
   void _setSheetBlocking(bool value, double extent) {
-    final normalizedExtent =
-        extent.clamp(_nearbySheetMinExtent, _nearbySheetMax);
+    final normalizedExtent = extent.clamp(
+      _nearbySheetMinExtent,
+      _nearbySheetMax,
+    );
     final previousExtent = _nearbySheetExtentNotifier.value;
     if ((previousExtent - normalizedExtent).abs() > 0.0001) {
       _nearbySheetExtentNotifier.value = normalizedExtent;
@@ -4151,8 +4108,10 @@ class _MapScreenState extends State<MapScreen>
     if (!mounted) return;
     _headingExpiryTimer?.cancel();
     if (heading != null) {
-      _headingExpiryTimer =
-          Timer(const Duration(seconds: 10), () => _updateDirection(null));
+      _headingExpiryTimer = Timer(
+        const Duration(seconds: 10),
+        () => _updateDirection(null),
+      );
       final now = DateTime.now().millisecondsSinceEpoch;
       final delta = _direction == null
           ? 360.0
@@ -4675,10 +4634,19 @@ class _MapScreenState extends State<MapScreen>
   Future<void> _syncUserLocation() async {
     if (!mounted || !_styleInitialized) return;
     final media = MediaQuery.maybeOf(context);
-    await _userLocationAnimator.update(_currentPosition,
-        styleEpoch: _kubusMapController.styleEpoch,
-        reduceMotion: media?.disableAnimations == true ||
-            media?.accessibleNavigation == true);
+    await _userLocationAnimator.update(
+      _currentPosition,
+      styleEpoch: _kubusMapController.styleEpoch,
+      headingDegrees: _hasLiveLocationFix &&
+              _currentPositionTimestampMs != null &&
+              DateTime.now().millisecondsSinceEpoch -
+                      _currentPositionTimestampMs! <
+                  30000
+          ? _direction
+          : null,
+      reduceMotion: media?.disableAnimations == true ||
+          media?.accessibleNavigation == true,
+    );
   }
 
   Future<void> _writeUserLocation(LatLng? position, int epoch) async {
@@ -4692,7 +4660,8 @@ class _MapScreenState extends State<MapScreen>
       position: position,
       accuracyMeters:
           _hasLiveLocationFix ? _currentPositionAccuracyMeters : null,
-      headingDegrees: _hasLiveLocationFix ? _direction : null,
+      headingDegrees:
+          _hasLiveLocationFix ? _userLocationAnimator.headingDegrees : null,
     );
   }
 
@@ -6249,10 +6218,9 @@ class _MapScreenState extends State<MapScreen>
           topChromeBottom: topChromeBottom,
           railHeight: railHeight,
         );
-        _scheduleMobileRailMeasurement(Size(
-          MediaQuery.sizeOf(context).width,
-          viewportHeight,
-        ));
+        _scheduleMobileRailMeasurement(
+          Size(MediaQuery.sizeOf(context).width, viewportHeight),
+        );
         // Keep the rail out of the hit-test and semantics trees until its
         // first layout provides a real size. Visibility still lays it out and
         // retains its state, so the post-frame measurement can reveal it as
@@ -6302,7 +6270,8 @@ class _MapScreenState extends State<MapScreen>
                         isometricViewActive: _isometricViewEnabled,
                         onToggleIsometricView: () {
                           unawaited(
-                              _setIsometricViewEnabled(!_isometricViewEnabled));
+                            _setIsometricViewEnabled(!_isometricViewEnabled),
+                          );
                         },
                         isometricViewTooltipWhenActive:
                             l10n.mapIsometricViewDisableTooltip,
@@ -6489,9 +6458,13 @@ class _MapScreenState extends State<MapScreen>
     );
   }
 
-  Widget _buildBottomSheet(ThemeData theme, List<Artwork> artworks,
-      double discoveryProgress, bool isLoading,
-      {required double reservedBottom}) {
+  Widget _buildBottomSheet(
+    ThemeData theme,
+    List<Artwork> artworks,
+    double discoveryProgress,
+    bool isLoading, {
+    required double reservedBottom,
+  }) {
     final sheet = Align(
       // Keeps this subtree's element across context-surface transitions so the
       // sheet is never re-inflated underneath _sheetController. See
@@ -6501,9 +6474,7 @@ class _MapScreenState extends State<MapScreen>
       child: Padding(
         // Nearby remains a peek above the persistent mobile navigation rather
         // than being partially covered by it at short heights.
-        padding: EdgeInsets.only(
-          bottom: reservedBottom,
-        ),
+        padding: EdgeInsets.only(bottom: reservedBottom),
         child: NotificationListener<DraggableScrollableNotification>(
           onNotification: (notification) {
             _handleSheetExtentNotification(notification.extent);

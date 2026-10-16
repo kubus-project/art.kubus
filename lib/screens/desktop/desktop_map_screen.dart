@@ -6,6 +6,7 @@ import 'dart:math' as math;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
+import 'package:flutter_compass/flutter_compass.dart';
 import 'package:flutter/services.dart';
 import 'package:maplibre_gl/maplibre_gl.dart' as ml;
 import 'package:latlong2/latlong.dart';
@@ -310,6 +311,9 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
   bool _isLoadingMarkers = false; // Tracks the latest marker request
   int _markerRequestId = 0;
   MarkerSubjectLoader get _subjectLoader => MarkerSubjectLoader(context);
+  StreamSubscription<CompassEvent>? _compassSubscription;
+  Timer? _headingExpiryTimer;
+  double? _deviceHeading;
   LatLng? _userLocation;
   double? _userLocationAccuracyMeters;
   int? _userLocationTimestampMs;
@@ -402,8 +406,9 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       MapScreenConstants.markerRefreshInterval;
 
   late final KubusSearchController _mapSearchController;
-  final FocusNode _mapSearchFocusNode =
-      FocusNode(debugLabel: 'desktop_map_search');
+  final FocusNode _mapSearchFocusNode = FocusNode(
+    debugLabel: 'desktop_map_search',
+  );
   late final MapViewPreferencesController _mapViewPreferencesController;
   late final MapTutorialCoordinator _mapTutorialCoordinator;
   TutorialOverlayController? _tutorialOverlayController;
@@ -516,6 +521,27 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
   @override
   void initState() {
     super.initState();
+    if (!kIsWeb &&
+        (defaultTargetPlatform == TargetPlatform.android ||
+            defaultTargetPlatform == TargetPlatform.iOS)) {
+      _compassSubscription = FlutterCompass.events?.listen((event) {
+        if (!mounted || !_pollingEnabled) return;
+        final heading = KubusMapSourceSyncHelpers.reliableHeading(
+          event.heading,
+          event.accuracy,
+        );
+        _headingExpiryTimer?.cancel();
+        if (heading != null) {
+          _headingExpiryTimer = Timer(const Duration(seconds: 10), () {
+            _deviceHeading = null;
+            unawaited(_syncUserLocation());
+          });
+        }
+        if (heading == _deviceHeading) return;
+        _deviceHeading = heading;
+        unawaited(_syncUserLocation());
+      });
+    }
     KeyboardActivationTracker.install();
     _cameraCenter =
         widget.initialCenter ?? MapInitialViewport.europe.initialCenter;
@@ -992,7 +1018,8 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     if (loaded == null) {
       loaded = marker;
       setState(
-          () => _artMarkers = List<ArtMarker>.from(_artMarkers)..add(marker));
+        () => _artMarkers = List<ArtMarker>.from(_artMarkers)..add(marker),
+      );
       _applyVisibleMarkers();
     }
     _handleMarkerTap(loaded);
@@ -1819,6 +1846,10 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
   }
 
   void _pausePolling() {
+    _userLocationAnimator.pause();
+    _compassSubscription?.pause();
+    _headingExpiryTimer?.cancel();
+    _deviceHeading = null;
     _mapDataCoordinator.cancelPending();
     _mapSearchController.dismissOverlay();
 
@@ -1842,6 +1873,8 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
   }
 
   void _resumePolling() {
+    if (_styleInitialized) unawaited(_syncUserLocation());
+    if (_compassSubscription?.isPaused == true) _compassSubscription?.resume();
     final createdSub = _markerStreamSub;
     if (createdSub != null) {
       try {
@@ -2005,7 +2038,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       isDarkMode: themeProvider.isDarkMode,
       themeSpec: MapLayersThemeSpec(
         locationFill: themeProvider.accentColor,
-        locationStroke: scheme.surface,
+        locationStroke: Colors.white,
         isometricPedestalTop: scheme.surfaceContainerHighest,
         isometricPedestalLeft: scheme.surfaceContainerHigh,
         isometricPedestalRight: scheme.surfaceContainer,
@@ -2049,10 +2082,18 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
   Future<void> _syncUserLocation() async {
     if (!mounted || !_styleInitialized) return;
     final media = MediaQuery.maybeOf(context);
-    await _userLocationAnimator.update(_userLocation,
-        styleEpoch: _kubusMapController.styleEpoch,
-        reduceMotion: media?.disableAnimations == true ||
-            media?.accessibleNavigation == true);
+    await _userLocationAnimator.update(
+      _userLocation,
+      styleEpoch: _kubusMapController.styleEpoch,
+      headingDegrees: _userLocationTimestampMs != null &&
+              DateTime.now().millisecondsSinceEpoch -
+                      _userLocationTimestampMs! <
+                  30000
+          ? _deviceHeading
+          : null,
+      reduceMotion: media?.disableAnimations == true ||
+          media?.accessibleNavigation == true,
+    );
   }
 
   Future<void> _writeUserLocation(LatLng? position, int epoch) async {
@@ -2065,6 +2106,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       featureId: 'me',
       position: position,
       accuracyMeters: _userLocationAccuracyMeters,
+      headingDegrees: _userLocationAnimator.headingDegrees,
     );
   }
 
@@ -2408,6 +2450,8 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
   @override
   void dispose() {
     _userLocationAnimator.dispose();
+    _compassSubscription?.cancel();
+    _headingExpiryTimer?.cancel();
     if (widget.walkingNavigationIntent != null) {
       _walkingNavigationProvider?.stopOwned(_walkingNavigationLease);
     }
@@ -3049,8 +3093,9 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
         // Hostless: there is no surface to pad inside of, and the panel inset
         // already holds the row off the side edges. Horizontal inner padding
         // only took width away from the field; the vertical rhythm is kept.
-        sidePanelInnerPadding:
-            const EdgeInsets.symmetric(vertical: KubusSpacing.md),
+        sidePanelInnerPadding: const EdgeInsets.symmetric(
+          vertical: KubusSpacing.md,
+        ),
         rightInset: nearbyPanelOpen ? contextPanelWidth : 0,
         // The shell rail owns the brand mark; the map header is title only.
         leading: Semantics(

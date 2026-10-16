@@ -90,3 +90,16 @@ void setWebMapGroundColorImpl(int argb) {
   style.setProperty('--kubus-map-fallback-opaque', 'rgb($r, $g, $b)');
   style.setProperty('--kubus-map-fallback-subtle', 'rgba($r, $g, $b, 0.92)');
 }
+
+void setWebMapPresentationActiveImpl(bool active, {required String owner}) {
+  final object = JSObject.fromInteropObject(web.window);
+  final currentOwner =
+      object.getProperty<JSString?>('kubusMapPresentationOwner'.toJS)?.toDart;
+  if (!active && currentOwner != owner) return;
+  final currentActive =
+      object.getProperty<JSBoolean?>('kubusMapPresentationActive'.toJS)?.toDart;
+  if (currentOwner == owner && currentActive == active) return;
+  object.setProperty('kubusMapPresentationOwner'.toJS, owner.toJS);
+  object.setProperty('kubusMapPresentationActive'.toJS, active.toJS);
+  web.window.dispatchEvent(web.Event('kubus-map-presentation-change'));
+}

@@ -153,6 +153,27 @@ void main() {
       expect(decoded['version'], 8);
     });
 
+    test('globe ground is exactly black or white, independently of solar state',
+        () {
+      for (final entry
+          in {'#101418': '#000000', '#e5eff3': '#ffffff'}.entries) {
+        final stamped =
+            jsonDecode(MapStyleService.withGlobeProjection(jsonEncode({
+          'version': 8,
+          'sources': {},
+          'layers': [
+            {
+              'id': 'background',
+              'type': 'background',
+              'paint': {'background-color': entry.key}
+            }
+          ],
+        })));
+        expect(stamped['layers'][0]['paint']['background-color'], entry.value);
+        expect(stamped['sky']['sky-color'], entry.value);
+      }
+    });
+
     test('leaves a style that already declares a projection alone', () {
       const own =
           '{"version":8,"projection":{"type":"mercator"},"sources":{},"layers":[]}';
