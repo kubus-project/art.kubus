@@ -43,6 +43,7 @@ import '../../providers/locale_provider.dart';
 import '../../utils/app_color_utils.dart';
 import '../../utils/kubus_color_roles.dart';
 import '../../widgets/common/kubus_screen_header.dart';
+import '../../widgets/common/kubus_family_brand.dart';
 import '../../widgets/glass_components.dart';
 import '../../widgets/wallet_custody_status_panel.dart';
 import '../../utils/design_tokens.dart';

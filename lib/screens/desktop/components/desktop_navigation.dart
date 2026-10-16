@@ -13,6 +13,7 @@ import '../../../utils/kubus_color_roles.dart';
 import '../../../utils/kubus_labs_feature.dart';
 import '../../../widgets/common/kubus_labs_adornment.dart';
 import '../../../widgets/common/kubus_focus_ring.dart';
+import '../../../widgets/common/kubus_family_brand.dart';
 
 /// Navigation item data model
 enum DesktopNavLabelKey {
@@ -232,7 +233,7 @@ class _DesktopNavigationState extends State<DesktopNavigation>
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
+                  KubusFamilyBrandText(
                     l10n.appTitle,
                     maxLines: 1,
                     softWrap: false,

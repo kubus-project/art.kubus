@@ -1,0 +1,61 @@
+{
+  "webRoot": "C:\\kubus-build\\083-rc-out\\web-mm-on-v2",
+  "results": [
+    {
+      "name": "settings-chromium-light-en-1440",
+      "errors": [],
+      "labels": [
+        "- text: art.kubus"
+      ]
+    },
+    {
+      "name": "settings-chromium-light-sl-1440",
+      "errors": [],
+      "labels": [
+        "- text: art.kubus"
+      ]
+    },
+    {
+      "name": "settings-chromium-dark-en-1440",
+      "errors": [],
+      "labels": [
+        "- text: art.kubus"
+      ]
+    },
+    {
+      "name": "settings-chromium-dark-sl-1440",
+      "errors": [],
+      "labels": [
+        "- text: art.kubus"
+      ]
+    },
+    {
+      "name": "settings-firefox-light-en-1440",
+      "errors": [],
+      "labels": [
+        "- text: art.kubus"
+      ]
+    },
+    {
+      "name": "settings-firefox-light-sl-1440",
+      "errors": [],
+      "labels": [
+        "- text: art.kubus"
+      ]
+    },
+    {
+      "name": "settings-firefox-dark-en-1440",
+      "errors": [],
+      "labels": [
+        "- text: art.kubus"
+      ]
+    },
+    {
+      "name": "settings-firefox-dark-sl-1440",
+      "errors": [],
+      "labels": [
+        "- text: art.kubus"
+      ]
+    }
+  ]
+}

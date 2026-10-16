@@ -12052,13 +12052,13 @@ abstract class AppLocalizations {
   /// No description provided for @availabilityNodeTitle.
   ///
   /// In en, this message translates to:
-  /// **'kubus Node'**
+  /// **'kubus node'**
   String get availabilityNodeTitle;
 
   /// No description provided for @availabilityNodeNavTitle.
   ///
   /// In en, this message translates to:
-  /// **'kubus Node'**
+  /// **'kubus node'**
   String get availabilityNodeNavTitle;
 
   /// No description provided for @availabilityNodeNavSubtitle.
@@ -12082,7 +12082,7 @@ abstract class AppLocalizations {
   /// No description provided for @kubusNodeHeroBody.
   ///
   /// In en, this message translates to:
-  /// **'kubus Node keeps public cultural records available, serves archive files through the network and can process spatial captures locally. Private source files stay on your hardware; publishing adds only selected processed variants.'**
+  /// **'kubus node keeps public cultural records available, serves archive files through the network and can process spatial captures locally. Private source files stay on your hardware; publishing adds only selected processed variants.'**
   String get kubusNodeHeroBody;
 
   /// No description provided for @kubusNodePrivacyBody.
@@ -12136,7 +12136,7 @@ abstract class AppLocalizations {
   /// No description provided for @kubusNodeNotPaired.
   ///
   /// In en, this message translates to:
-  /// **'No local kubus Node paired'**
+  /// **'No local kubus node paired'**
   String get kubusNodeNotPaired;
 
   /// No description provided for @kubusNodeUnavailable.
@@ -12250,7 +12250,7 @@ abstract class AppLocalizations {
   /// No description provided for @kubusNodePairBody.
   ///
   /// In en, this message translates to:
-  /// **'Open Devices in your kubus Node interface and scan the code it shows. This device receives only a limited local credential.'**
+  /// **'Open Devices in your kubus node interface and scan the code it shows. This device receives only a limited local credential.'**
   String get kubusNodePairBody;
 
   /// No description provided for @kubusNodePairingPayload.
@@ -12262,7 +12262,7 @@ abstract class AppLocalizations {
   /// No description provided for @kubusNodePairAction.
   ///
   /// In en, this message translates to:
-  /// **'Pair kubus Node'**
+  /// **'Pair kubus node'**
   String get kubusNodePairAction;
 
   /// No description provided for @kubusNodeUnpairAction.
@@ -12274,7 +12274,7 @@ abstract class AppLocalizations {
   /// No description provided for @kubusNodePairedToast.
   ///
   /// In en, this message translates to:
-  /// **'kubus Node paired'**
+  /// **'kubus node paired'**
   String get kubusNodePairedToast;
 
   /// No description provided for @kubusNodePairFailed.
@@ -12304,7 +12304,7 @@ abstract class AppLocalizations {
   /// No description provided for @kubusNodeStateJoiningBody.
   ///
   /// In en, this message translates to:
-  /// **'kubus Node is synchronising and verifying its public archive contribution.'**
+  /// **'kubus node is synchronising and verifying its public archive contribution.'**
   String get kubusNodeStateJoiningBody;
 
   /// No description provided for @kubusNodeStateDegraded.
@@ -12328,7 +12328,7 @@ abstract class AppLocalizations {
   /// No description provided for @kubusNodeStateLockedBody.
   ///
   /// In en, this message translates to:
-  /// **'Spatial processing becomes available when this kubus Node is actively contributing to the public archive.'**
+  /// **'Spatial processing becomes available when this kubus node is actively contributing to the public archive.'**
   String get kubusNodeStateLockedBody;
 
   /// No description provided for @kubusNodeStateUnconfigured.
@@ -12352,13 +12352,13 @@ abstract class AppLocalizations {
   /// No description provided for @kubusNodeStateOfflineBody.
   ///
   /// In en, this message translates to:
-  /// **'The app cannot reach this kubus Node right now. It stays paired and reconnects automatically.'**
+  /// **'The app cannot reach this kubus node right now. It stays paired and reconnects automatically.'**
   String get kubusNodeStateOfflineBody;
 
   /// No description provided for @kubusNodeReciprocity.
   ///
   /// In en, this message translates to:
-  /// **'kubus Node gives you local spatial processing while your node contributes storage and availability to the shared public archive.'**
+  /// **'kubus node gives you local spatial processing while your node contributes storage and availability to the shared public archive.'**
   String get kubusNodeReciprocity;
 
   /// No description provided for @kubusNodeCheckStatusAction.
@@ -12406,7 +12406,7 @@ abstract class AppLocalizations {
   /// No description provided for @kubusNodeEntryTitle.
   ///
   /// In en, this message translates to:
-  /// **'kubus Node'**
+  /// **'kubus node'**
   String get kubusNodeEntryTitle;
 
   /// No description provided for @kubusNodeEntrySubtitle.
@@ -12442,13 +12442,13 @@ abstract class AppLocalizations {
   /// No description provided for @kubusNodeEntryConnectCta.
   ///
   /// In en, this message translates to:
-  /// **'Connect or set up a kubus Node'**
+  /// **'Connect or set up a kubus node'**
   String get kubusNodeEntryConnectCta;
 
   /// No description provided for @kubusNodeEntryOpenCta.
   ///
   /// In en, this message translates to:
-  /// **'Open kubus Node'**
+  /// **'Open kubus node'**
   String get kubusNodeEntryOpenCta;
 
   /// No description provided for @kubusNodeEntryAttention.
@@ -12466,7 +12466,7 @@ abstract class AppLocalizations {
   /// No description provided for @kubusNodeScanBody.
   ///
   /// In en, this message translates to:
-  /// **'Open Devices in your kubus Node interface and scan the code it shows.'**
+  /// **'Open Devices in your kubus node interface and scan the code it shows.'**
   String get kubusNodeScanBody;
 
   /// No description provided for @kubusNodeScanManualAction.
@@ -12484,7 +12484,7 @@ abstract class AppLocalizations {
   /// No description provided for @kubusNodeScanInvalid.
   ///
   /// In en, this message translates to:
-  /// **'That is not a kubus Node pairing code.'**
+  /// **'That is not a kubus node pairing code.'**
   String get kubusNodeScanInvalid;
 
   /// No description provided for @kubusNodeConfirmTitle.
@@ -12562,7 +12562,7 @@ abstract class AppLocalizations {
   /// No description provided for @kubusNodeNoNodeTitle.
   ///
   /// In en, this message translates to:
-  /// **'No kubus Node connected'**
+  /// **'No kubus node connected'**
   String get kubusNodeNoNodeTitle;
 
   /// No description provided for @kubusNodeStoredLabel.
@@ -12682,7 +12682,7 @@ abstract class AppLocalizations {
   /// No description provided for @spatialProgressLocalBody.
   ///
   /// In en, this message translates to:
-  /// **'Processing on your kubus Node.'**
+  /// **'Processing on your kubus node.'**
   String get spatialProgressLocalBody;
 
   /// No description provided for @spatialProgressRemoteBody.
@@ -12694,7 +12694,7 @@ abstract class AppLocalizations {
   /// No description provided for @spatialProgressLeaveHint.
   ///
   /// In en, this message translates to:
-  /// **'You can leave this screen. Processing continues on your kubus Node.'**
+  /// **'You can leave this screen. Processing continues on your kubus node.'**
   String get spatialProgressLeaveHint;
 
   /// No description provided for @spatialFailedTitle.
@@ -12712,7 +12712,7 @@ abstract class AppLocalizations {
   /// No description provided for @spatialFailedLocalBody.
   ///
   /// In en, this message translates to:
-  /// **'Processing did not finish. Your original capture is still available on your kubus Node.'**
+  /// **'Processing did not finish. Your original capture is still available on your kubus node.'**
   String get spatialFailedLocalBody;
 
   /// No description provided for @spatialFailedTryAnother.
@@ -27757,7 +27757,7 @@ abstract class AppLocalizations {
   /// No description provided for @spatialProcessLocalTitle.
   ///
   /// In en, this message translates to:
-  /// **'This kubus Node'**
+  /// **'This kubus node'**
   String get spatialProcessLocalTitle;
 
   /// No description provided for @spatialProcessLocalPrivacy.
@@ -27865,7 +27865,7 @@ abstract class AppLocalizations {
   /// No description provided for @spatialResultReviewBody.
   ///
   /// In en, this message translates to:
-  /// **'Review the unpublished result before publishing. Publishing adds the selected spatial variants to the public art.kubus archive so participating nodes can keep them available. Your source capture remains local on your kubus Node. Keeping the result unpublished acknowledges the completed compute job without adding it to the public archive; its Kubo CID is unlisted, not cryptographically private, if someone else learns it.'**
+  /// **'Review the unpublished result before publishing. Publishing adds the selected spatial variants to the public art.kubus archive so participating nodes can keep them available. Your source capture remains local on your kubus node. Keeping the result unpublished acknowledges the completed compute job without adding it to the public archive; its Kubo CID is unlisted, not cryptographically private, if someone else learns it.'**
   String get spatialResultReviewBody;
 
   /// No description provided for @spatialResultKeepPrivate.
@@ -28297,13 +28297,13 @@ abstract class AppLocalizations {
   /// No description provided for @spatialCaptureNodeRequired.
   ///
   /// In en, this message translates to:
-  /// **'Your source capture stays on this device. Pair a spatial-capable kubus Node to transfer and process it locally.'**
+  /// **'Your source capture stays on this device. Pair a spatial-capable kubus node to transfer and process it locally.'**
   String get spatialCaptureNodeRequired;
 
   /// No description provided for @spatialCaptureNodeOutdated.
   ///
   /// In en, this message translates to:
-  /// **'This kubus Node cannot receive a streamed capture. Update the node and try again.'**
+  /// **'This kubus node cannot receive a streamed capture. Update the node and try again.'**
   String get spatialCaptureNodeOutdated;
 
   /// No description provided for @spatialCaptureTransferFailed.
@@ -29119,7 +29119,7 @@ abstract class AppLocalizations {
   /// No description provided for @spatialProcessOwnNodeSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Use your paired kubus Node.'**
+  /// **'Use your paired kubus node.'**
   String get spatialProcessOwnNodeSubtitle;
 
   /// No description provided for @spatialProcessOwnNodeRemote.
@@ -29767,7 +29767,7 @@ abstract class AppLocalizations {
   /// No description provided for @kubusNetworkStagingExplanation.
   ///
   /// In en, this message translates to:
-  /// **'Network processing currently uses your kubus Node to securely stage the encrypted capture.'**
+  /// **'Network processing currently uses your kubus node to securely stage the encrypted capture.'**
   String get kubusNetworkStagingExplanation;
 
   /// No description provided for @kubusMyNodesDiscoveryFailed.
@@ -29779,7 +29779,7 @@ abstract class AppLocalizations {
   /// No description provided for @kubusMyNodesEmpty.
   ///
   /// In en, this message translates to:
-  /// **'This account has no registered Nodes. Set up a kubus Node to continue.'**
+  /// **'This account has no registered Nodes. Set up a kubus node to continue.'**
   String get kubusMyNodesEmpty;
 
   /// No description provided for @kubusMyNodesAvailable.
@@ -29845,7 +29845,7 @@ abstract class AppLocalizations {
   /// No description provided for @kubusAddNodeIntro.
   ///
   /// In en, this message translates to:
-  /// **'Install kubus Node on your computer and open its setup page. It shows an eight-character code. Enter that code here to authorize the Node for this account.'**
+  /// **'Install kubus node on your computer and open its setup page. It shows an eight-character code. Enter that code here to authorize the Node for this account.'**
   String get kubusAddNodeIntro;
 
   /// No description provided for @kubusAddNodeCodeLabel.

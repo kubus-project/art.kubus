@@ -32,6 +32,7 @@ import '../../widgets/common/kubus_action_tile.dart';
 import '../../widgets/common/kubus_shadow_safe_strip.dart';
 import '../../widgets/common/kubus_stat_card.dart';
 import '../../widgets/common/kubus_screen_header.dart';
+import '../../widgets/common/kubus_family_brand.dart';
 import '../../widgets/detail/detail_shell_components.dart';
 import '../../widgets/glass_components.dart';
 import '../../widgets/home/home_discovery_intro.dart';
@@ -2290,7 +2291,7 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
           children: [
             const AppLogo(width: 32, height: 32),
             const SizedBox(width: 12),
-            Text(
+            KubusFamilyBrandText(
               'art.kubus',
               style: KubusTextStyles.sectionTitle.copyWith(
                 color: Theme.of(context).colorScheme.onSurface,

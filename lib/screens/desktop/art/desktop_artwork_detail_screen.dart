@@ -313,6 +313,7 @@ class _DesktopArtworkDetailScreenState
                 ? AppBar(
                     title: KubusHeaderText(
                       title: 'art.kubus',
+                      brandTitle: true,
                       kind: KubusHeaderKind.screen,
                       compact: true,
                     ),

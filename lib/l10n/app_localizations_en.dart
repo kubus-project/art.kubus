@@ -6878,10 +6878,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get walletHomeSecureWalletAction => 'Secure wallet';
 
   @override
-  String get availabilityNodeTitle => 'kubus Node';
+  String get availabilityNodeTitle => 'kubus node';
 
   @override
-  String get availabilityNodeNavTitle => 'kubus Node';
+  String get availabilityNodeNavTitle => 'kubus node';
 
   @override
   String get availabilityNodeNavSubtitle =>
@@ -6897,7 +6897,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get kubusNodeHeroBody =>
-      'kubus Node keeps public cultural records available, serves archive files through the network and can process spatial captures locally. Private source files stay on your hardware; publishing adds only selected processed variants.';
+      'kubus node keeps public cultural records available, serves archive files through the network and can process spatial captures locally. Private source files stay on your hardware; publishing adds only selected processed variants.';
 
   @override
   String get kubusNodePrivacyBody =>
@@ -6925,7 +6925,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get kubusNodeOffline => 'Offline';
 
   @override
-  String get kubusNodeNotPaired => 'No local kubus Node paired';
+  String get kubusNodeNotPaired => 'No local kubus node paired';
 
   @override
   String get kubusNodeUnavailable => 'Node unavailable';
@@ -6987,19 +6987,19 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get kubusNodePairBody =>
-      'Open Devices in your kubus Node interface and scan the code it shows. This device receives only a limited local credential.';
+      'Open Devices in your kubus node interface and scan the code it shows. This device receives only a limited local credential.';
 
   @override
   String get kubusNodePairingPayload => 'Pairing payload';
 
   @override
-  String get kubusNodePairAction => 'Pair kubus Node';
+  String get kubusNodePairAction => 'Pair kubus node';
 
   @override
   String get kubusNodeUnpairAction => 'Forget paired node';
 
   @override
-  String get kubusNodePairedToast => 'kubus Node paired';
+  String get kubusNodePairedToast => 'kubus node paired';
 
   @override
   String get kubusNodePairFailed => 'Pairing failed';
@@ -7016,7 +7016,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get kubusNodeStateJoiningBody =>
-      'kubus Node is synchronising and verifying its public archive contribution.';
+      'kubus node is synchronising and verifying its public archive contribution.';
 
   @override
   String get kubusNodeStateDegraded => 'Connection interrupted';
@@ -7030,7 +7030,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get kubusNodeStateLockedBody =>
-      'Spatial processing becomes available when this kubus Node is actively contributing to the public archive.';
+      'Spatial processing becomes available when this kubus node is actively contributing to the public archive.';
 
   @override
   String get kubusNodeStateUnconfigured => 'Setup required';
@@ -7044,11 +7044,11 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get kubusNodeStateOfflineBody =>
-      'The app cannot reach this kubus Node right now. It stays paired and reconnects automatically.';
+      'The app cannot reach this kubus node right now. It stays paired and reconnects automatically.';
 
   @override
   String get kubusNodeReciprocity =>
-      'kubus Node gives you local spatial processing while your node contributes storage and availability to the shared public archive.';
+      'kubus node gives you local spatial processing while your node contributes storage and availability to the shared public archive.';
 
   @override
   String get kubusNodeCheckStatusAction => 'Check node status';
@@ -7073,7 +7073,7 @@ class AppLocalizationsEn extends AppLocalizations {
       'GPU detected, but the spatial worker is not responding.';
 
   @override
-  String get kubusNodeEntryTitle => 'kubus Node';
+  String get kubusNodeEntryTitle => 'kubus node';
 
   @override
   String get kubusNodeEntrySubtitle =>
@@ -7095,10 +7095,10 @@ class AppLocalizationsEn extends AppLocalizations {
       'Receive verified KUB8 contribution records';
 
   @override
-  String get kubusNodeEntryConnectCta => 'Connect or set up a kubus Node';
+  String get kubusNodeEntryConnectCta => 'Connect or set up a kubus node';
 
   @override
-  String get kubusNodeEntryOpenCta => 'Open kubus Node';
+  String get kubusNodeEntryOpenCta => 'Open kubus node';
 
   @override
   String get kubusNodeEntryAttention => 'Node needs attention';
@@ -7108,7 +7108,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get kubusNodeScanBody =>
-      'Open Devices in your kubus Node interface and scan the code it shows.';
+      'Open Devices in your kubus node interface and scan the code it shows.';
 
   @override
   String get kubusNodeScanManualAction => 'Enter code manually';
@@ -7118,7 +7118,7 @@ class AppLocalizationsEn extends AppLocalizations {
       'Camera access is needed to scan the pairing code.';
 
   @override
-  String get kubusNodeScanInvalid => 'That is not a kubus Node pairing code.';
+  String get kubusNodeScanInvalid => 'That is not a kubus node pairing code.';
 
   @override
   String get kubusNodeConfirmTitle => 'Connect to this node?';
@@ -7164,7 +7164,7 @@ class AppLocalizationsEn extends AppLocalizations {
       'Keep the capture locally or process it later.';
 
   @override
-  String get kubusNodeNoNodeTitle => 'No kubus Node connected';
+  String get kubusNodeNoNodeTitle => 'No kubus node connected';
 
   @override
   String get kubusNodeStoredLabel => 'Stored';
@@ -7224,14 +7224,14 @@ class AppLocalizationsEn extends AppLocalizations {
   String get spatialStageVerifying => 'Verifying';
 
   @override
-  String get spatialProgressLocalBody => 'Processing on your kubus Node.';
+  String get spatialProgressLocalBody => 'Processing on your kubus node.';
 
   @override
   String get spatialProgressRemoteBody => 'Processing on the Kubus network.';
 
   @override
   String get spatialProgressLeaveHint =>
-      'You can leave this screen. Processing continues on your kubus Node.';
+      'You can leave this screen. Processing continues on your kubus node.';
 
   @override
   String get spatialFailedTitle => 'Processing stopped';
@@ -7242,7 +7242,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get spatialFailedLocalBody =>
-      'Processing did not finish. Your original capture is still available on your kubus Node.';
+      'Processing did not finish. Your original capture is still available on your kubus node.';
 
   @override
   String get spatialFailedTryAnother => 'Try another node';
@@ -15961,7 +15961,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get spatialProcessTitle => 'Process spatial capture';
 
   @override
-  String get spatialProcessLocalTitle => 'This kubus Node';
+  String get spatialProcessLocalTitle => 'This kubus node';
 
   @override
   String get spatialProcessLocalPrivacy =>
@@ -16026,7 +16026,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get spatialResultReviewBody =>
-      'Review the unpublished result before publishing. Publishing adds the selected spatial variants to the public art.kubus archive so participating nodes can keep them available. Your source capture remains local on your kubus Node. Keeping the result unpublished acknowledges the completed compute job without adding it to the public archive; its Kubo CID is unlisted, not cryptographically private, if someone else learns it.';
+      'Review the unpublished result before publishing. Publishing adds the selected spatial variants to the public art.kubus archive so participating nodes can keep them available. Your source capture remains local on your kubus node. Keeping the result unpublished acknowledges the completed compute job without adding it to the public archive; its Kubo CID is unlisted, not cryptographically private, if someone else learns it.';
 
   @override
   String get spatialResultKeepPrivate => 'Keep unpublished';
@@ -16284,11 +16284,11 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get spatialCaptureNodeRequired =>
-      'Your source capture stays on this device. Pair a spatial-capable kubus Node to transfer and process it locally.';
+      'Your source capture stays on this device. Pair a spatial-capable kubus node to transfer and process it locally.';
 
   @override
   String get spatialCaptureNodeOutdated =>
-      'This kubus Node cannot receive a streamed capture. Update the node and try again.';
+      'This kubus node cannot receive a streamed capture. Update the node and try again.';
 
   @override
   String get spatialCaptureTransferFailed =>
@@ -16733,7 +16733,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get spatialEditAssociationConfirm => 'Change association';
 
   @override
-  String get spatialProcessOwnNodeSubtitle => 'Use your paired kubus Node.';
+  String get spatialProcessOwnNodeSubtitle => 'Use your paired kubus node.';
 
   @override
   String get spatialProcessOwnNodeRemote => 'Connected remotely';
@@ -17114,7 +17114,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get kubusNetworkStagingExplanation =>
-      'Network processing currently uses your kubus Node to securely stage the encrypted capture.';
+      'Network processing currently uses your kubus node to securely stage the encrypted capture.';
 
   @override
   String get kubusMyNodesDiscoveryFailed =>
@@ -17122,7 +17122,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get kubusMyNodesEmpty =>
-      'This account has no registered Nodes. Set up a kubus Node to continue.';
+      'This account has no registered Nodes. Set up a kubus node to continue.';
 
   @override
   String get kubusMyNodesAvailable => 'Available to connect remotely';
@@ -17159,7 +17159,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get kubusAddNodeIntro =>
-      'Install kubus Node on your computer and open its setup page. It shows an eight-character code. Enter that code here to authorize the Node for this account.';
+      'Install kubus node on your computer and open its setup page. It shows an eight-character code. Enter that code here to authorize the Node for this account.';
 
   @override
   String get kubusAddNodeCodeLabel => 'Setup code';
