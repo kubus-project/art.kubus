@@ -431,7 +431,7 @@ class _InfoPanel extends StatelessWidget {
             KubusFamilyBrandText(l10n.kubusNodeHeroTitle,
                 style: Theme.of(context).textTheme.headlineMedium),
             const SizedBox(height: KubusSpacing.sm),
-            KubusFamilyBrandText(l10n.kubusNodeHeroBody),
+            Text(l10n.kubusNodeHeroBody),
             const SizedBox(height: KubusSpacing.md),
             Row(
               children: [
