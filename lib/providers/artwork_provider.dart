@@ -617,9 +617,11 @@ class ArtworkProvider extends ChangeNotifier {
       model3DURL: updates['model3DURL'] as String?,
       model3DCID: updates['model3DCID'] as String?,
       arEnabled: updates['isAREnabled'] as bool?,
-      price: updates.containsKey('price') ? number(updates['price']) : null,
-      arScale:
-          updates.containsKey('arScale') ? number(updates['arScale']) : null,
+      price: number(updates['price']),
+      arScale: number(updates['arScale']),
+      clearPrice: updates.containsKey('price') && updates['price'] == null,
+      clearArScale:
+          updates.containsKey('arScale') && updates['arScale'] == null,
       position: (lat != null || lng != null)
           ? LatLng(
               lat ?? base.position.latitude,
