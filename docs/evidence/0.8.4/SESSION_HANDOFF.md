@@ -7,8 +7,14 @@ Date: 2026-10-17. Phase: A (finish 0.8.3) at the owner-approval gate; C started 
 - `dev` `74923da19503c46d0fc8b2491e2e8a17bda56e84` (after #307 `85c5699a` and #308 `74923da1`).
 - `master` `4181b4d28dc628ca3dc44091804d759b10f04588` (production, `kubus-web-revision.txt` matches).
 - Open release PR: #306 (`dev` to `master`, merge commit only). Review threads: 3 of 3 resolved.
-  Exact-head run 39064711730: every job green except the Flutter job, still running at the
-  last check. Deploy run 39064707394 promoted `74923da1` to staging.
+  Exact-head run 39064711730: all required jobs green (2026-10-18), PR CLEAN. Deploy run
+  39064707394 promoted `74923da1` to staging.
+- Open docs PR #309 (`docs/083-final-record` `7604f471` into `dev`): CLEAN, required checks green,
+  merge denied to the agent (owner merges). Merging it moves `dev`, so #306 then needs fresh exact-head CI.
+- Production preflight 2026-10-18: `production-web` requires reviewer `kubus-project`; secrets and
+  variables present; `app.kubus.site` pinned to 89.58.21.59 serves `4181b4d2` with all three Community
+  flags true; `api.kubus.site` is 0.8.2. The workflow checks the artifact SHA256SUMS and revision,
+  pins the host fingerprint, keeps TLS verification on and rolls back on a failed smoke.
 - Staging is behind Basic Auth: the served revision and the authenticated flows below were
   not read from this environment.
 
