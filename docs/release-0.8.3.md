@@ -61,6 +61,61 @@ locales and the Node model fallback). One review finding was declined: `video.pa
 in the performance script does not hang with the pinned Playwright 1.61.1. The full
 suite ran in the required check at `36d0e844`, not only in the candidate.
 
+### P0 correction: artwork Save blanked the app (release blocker)
+
+Reported on `dev.kubus.site`: editing an existing artwork on desktop and pressing Save
+left a blank screen. It is a 0.8.3 blocker and is corrected on
+`fix/083-artwork-save-black-screen` (target `dev`); the correction is **implemented,
+tested and browser validated, not yet merged, deployed or owner accepted**.
+
+| Item | Value |
+| --- | --- |
+| Starting point | `dev` `ba2f6760`, `master` `4181b4d2` (both re-fetched first) |
+| Root cause | The desktop editor is pushed into the shell's own screen stack (`DesktopShellScope.pushScreen`), which is not a Navigator route. `_save()` closed it with `Navigator.of(context).pop()`, which ignores the shell's `PopScope` and removes the route that hosts the whole shell. |
+| Reproduced | Unfixed `ba2f6760` built for web and driven in Chromium against the real local 0.8.2 backend: PUT 200, the value is persisted, no "Saved" toast, blank page (`docs/evidence/0.8.3/artwork-save/before-dev-ba2f6760-desktop-blank-after-save.png`). |
+| Second defect | `ArtworkProvider.updateArtwork` returned null for a failed write, and the screen then accepted `refreshArtwork()` (the unchanged record) as proof of a save, so a failed write could report "Saved" and leave. A bare `{"success": true}` was also parsed into an artwork with an empty id. |
+
+What changed (no backend or schema change; compatible with the 0.8.2 backend):
+
+- The editor closes through the navigation that opened it: the desktop workspace only
+  through `DesktopShellScope.popScreen` (never falling back to `Navigator.pop` while a
+  shell is present), a standalone route through its Navigator but never the last route,
+  and a `bodyOnly` editor closes nothing.
+- `ArtworkProvider.saveArtwork` returns an explicit result: **confirmed** (artwork
+  returned), **acknowledged** (HTTP 200 without a usable artwork and a failed read-back;
+  the write happened, the cache is patched with the edits and the portfolio refresh
+  fetches the record), **failed** (typed: network, timeout, 401, 403, 409, 429, 400/404/422,
+  5xx) or **already in flight**. A failed write never reads the old record back.
+  `updateArtwork` remains as a thin wrapper.
+- `BackendApiService.updateArtwork` throws `BackendApiRequestException` with the HTTP
+  status, and only trusts a payload that carries an artwork id.
+- On failure the editor stays open with every typed value and shows a contextual message
+  from existing strings (no new l10n). Saving with nothing changed sends nothing. The
+  portfolio refresh and success toast do not depend on the editor still being mounted.
+
+Tests: `test/screens/art/artwork_edit_save_navigation_test.dart` (real Save button on the
+workspace, detail-to-editor stack, acknowledged payload, 400/401/403/409/429/500, timeout and
+offline, stale read after a failed write, no changes, double tap, leaving mid-request,
+cover and AR upload failures, standalone route, never popping the app root, shell scope
+without a stack) and `test/services/backend_api_update_artwork_test.dart` (HTTP to typed
+result). The first test was red on `ba2f6760`. Full suite on the first fix commit: 5177
+passed, 27 skipped, 0 failed.
+
+Rendered validation (release web build of head `4be499bb`, real local 0.8.2 backend,
+disposable account and artwork): Chromium and Firefox at 1440 px (desktop workspace) and
+390 px (mobile route), EN light and SL dark, success and a forced HTTP 500. All 16 runs
+pass: the editor opens, a changed title is saved, the app shell stays visible, the user
+returns to the Artist Studio (desktop) or the artwork detail (mobile), the new title is
+shown and survives a reload, and a failed save keeps the editor and the typed value with
+an error toast and an unchanged server record; no `pageerror`. Results and screenshots are
+in `docs/evidence/0.8.3/artwork-save/`.
+
+Known limitations: after Save the desktop studio is rebuilt on its persona's default tab
+(Create for a creator), not the Gallery tab, as for any in-shell Back; the first open of the
+Artist Studio gallery rendered "0 artworks" until the tab was revisited in the local rig
+(observed, not investigated, not part of this change); a save in flight when the user
+opens another in-shell screen over the editor would close that screen instead.
+
 ### What changes for people
 
 - **Map.** Cluster splits and merges keep the dissolving parent and retarget from the
