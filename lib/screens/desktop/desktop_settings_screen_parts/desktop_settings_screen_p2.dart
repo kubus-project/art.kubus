@@ -349,9 +349,9 @@ extension _DesktopSettingsScreenStatePart2 on _DesktopSettingsScreenState {
       return;
     }
 
-    await gate.lock(SecurityLockReason.sensitiveAction);
-    final settled = await gate.waitForResolution();
-    if (settled == null || !settled.isSuccess) {
+    // Only a local PIN or biometric check may switch the requirement off; a
+    // sign-in that resolves an already-pending token lock proves nothing.
+    if (!await gate.requireSensitiveActionVerification()) {
       if (mounted) _applyState(() => _requirePin = true);
       return;
     }

@@ -182,7 +182,9 @@ class SecurityGateProvider extends ChangeNotifier
         return;
       }
       if (autoLockSeconds == 0) return;
-      if (elapsed.inSeconds >= autoLockSeconds) {
+      // A negative elapsed time means the clock was set back while the app was
+      // in the background; treat that as expired, never as "just left".
+      if (elapsed.isNegative || elapsed.inSeconds >= autoLockSeconds) {
         await lock(SecurityLockReason.autoLock);
       }
     } catch (e) {
@@ -228,7 +230,13 @@ class SecurityGateProvider extends ChangeNotifier
       return;
     }
     final wallet = _walletProvider;
-    final hasPin = await wallet?.hasPin() ?? false;
+    bool hasPin;
+    try {
+      hasPin = await wallet?.hasPinOrThrow() ?? false;
+    } catch (_) {
+      // An unreadable PIN store is not "no PIN": lock rather than skip.
+      hasPin = true;
+    }
     final canUseBiometrics =
         biometricsEnabled && (await wallet?.canUseBiometrics() ?? false);
     if (reason == SecurityLockReason.autoLock &&

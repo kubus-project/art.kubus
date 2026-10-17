@@ -159,6 +159,16 @@ class PinManagement {
         (!clearBiometrics || !stored.biometricAuth);
   }
 
+  /// The gate's local verification; a gate that throws counts as a refusal so
+  /// nothing here ever throws.
+  Future<bool> _verified() async {
+    try {
+      return await _gate.requireSensitiveActionVerification();
+    } catch (_) {
+      return false;
+    }
+  }
+
   Future<void> _reloadGate() async {
     try {
       await _gate.reloadSettings();
@@ -181,9 +191,11 @@ class PinManagement {
     } catch (_) {
       return _storageFailed;
     }
-    if (replacing && !await _gate.requireSensitiveActionVerification()) {
-      return _authFailed;
-    }
+    // Always asked, including for a first PIN: with biometrics as the only
+    // factor, an unlocked session could otherwise add a PIN of its own choosing
+    // and then unlock sensitive actions with it. The gate returns at once when
+    // the device has no local factor at all, so a plain first PIN stays free.
+    if (!await _verified()) return _authFailed;
 
     try {
       await _storage.setPin(pin);
@@ -219,9 +231,7 @@ class PinManagement {
     } catch (_) {
       return _storageFailed;
     }
-    if (present && !await _gate.requireSensitiveActionVerification()) {
-      return _authFailed;
-    }
+    if (present && !await _verified()) return _authFailed;
 
     if (present) {
       try {

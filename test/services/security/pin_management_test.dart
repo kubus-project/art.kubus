@@ -38,10 +38,12 @@ class _Gate implements PinGatePort {
   int verifications = 0;
   int reloads = 0;
   bool reloadThrows = false;
+  bool throws = false;
 
   @override
   Future<bool> requireSensitiveActionVerification() async {
     verifications++;
+    if (throws) throw StateError('gate failed');
     return authenticates;
   }
 
@@ -117,15 +119,39 @@ void main() {
   });
 
   group('setting a first PIN', () {
-    test('stores it, turns the requirement on and needs no authentication',
-        () async {
+    test(
+        'stores it and turns the requirement on; the gate passes at once '
+        'when no factor exists', () async {
       final r = _rig();
       final result = await r.management.setOrReplacePin('4821', '4821');
       expect(result.isSuccess, isTrue);
       expect(r.storage.pin, '4821');
-      expect(r.gate.verifications, 0);
+      expect(r.gate.verifications, 1);
       expect(r.settings.state.requirePin, isTrue);
       expect(r.gate.reloads, 1);
+    });
+
+    test('a first PIN is refused when another factor does not verify',
+        () async {
+      // Biometrics are the only factor: an unlocked session must not be able to
+      // add a PIN of its own and unlock sensitive actions with it.
+      final r = _rig(biometric: true)..gate.authenticates = false;
+      final result = await r.management.setOrReplacePin('4821', '4821');
+      expect(result.outcome, PinManagementOutcome.authenticationFailed);
+      expect(r.storage.pin, isNull);
+      expect(r.storage.writes, 0);
+      expect(r.settings.saves, 0);
+    });
+
+    test('a gate that throws refuses the change instead of escaping', () async {
+      final r = _rig(existingPin: '1111');
+      r.gate.throws = true;
+      final result = await r.management.setOrReplacePin('4821', '4821');
+      expect(result.outcome, PinManagementOutcome.authenticationFailed);
+      expect(r.storage.pin, '1111');
+      final removed = await r.management.removePin();
+      expect(removed.outcome, PinManagementOutcome.authenticationFailed);
+      expect(r.storage.pin, '1111');
     });
 
     test('an invalid PIN writes nothing and does not ask for authentication',
