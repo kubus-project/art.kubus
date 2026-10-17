@@ -3,8 +3,10 @@
 Status: **the five packages are merged into `dev` (#303); the version is bumped to 0.8.3
 (build `261016.01`, 2026-10-16) in the release-preparation commit (#304); the P0 artwork
 Save correction is merged (#305, merge commit `090ae390`) and the development deployment
-of `090ae390` succeeded. Owner acceptance on the authenticated development site is still
-owed. Not tagged, not released; the promotion pull request is #306 (`dev` to `master`).**
+of `090ae390` succeeded. The release-review corrections (#308) and the release-record
+correction (#307) are merged; `dev` is `74923da1`. Owner acceptance on the authenticated
+development site is still owed. Not tagged, not released; the promotion pull request is
+#306 (`dev` to `master`).**
 Maturity stays 0.8.x-alpha. The version bump is its own commit (see "Version bump"),
 not part of the feature changes.
 
@@ -63,6 +65,24 @@ with no `paint` no longer throws; the product name is `kubus Node`, capital N, i
 locales and the Node model fallback). One review finding was declined: `video.path()`
 in the performance script does not hang with the pinned Playwright 1.61.1. The full
 suite ran in the required check at `36d0e844`, not only in the candidate.
+
+### Release-review corrections (#307, #308)
+
+Three review findings on the release pull request #306 were confirmed and corrected
+on `dev` before the release; #307 corrected this record and #308 carries the code.
+
+| Finding | Correction |
+| --- | --- |
+| The optional globe-atmosphere module was awaited inside `kubusMapLibreRuntimeReady`, so a failed request left the whole web map on its loading backdrop | The import is isolated in a `try`; a failure is recorded on `kubusGlobeAtmosphereError` and the map opens without the night shade. `scripts/qa/maplibre_runtime_atmosphere.test.mjs` runs the real script in a `vm` and fails on the previous code. |
+| Mixed-media carousels resized as the user swiped, against the 4:3 stage contract | Only a single-video post adapts its stage; every multi-item carousel keeps one 4:3 stage. `community_video_stage_test.dart` and `community_video_audio_geometry_test.dart` assert it. |
+| Running Node prose was wrapped in `KubusFamilyBrandText`, making the embedded wordmark bold italic | The Node entry subtitle, both pairing bodies and the operator hero body are plain `Text`. |
+
+| Item | Value |
+| --- | --- |
+| #307 (release record) | squash merge `85c5699a` |
+| #308 (corrections) | squash merge `74923da1`; required checks green at its validated head |
+| `dev` after both | `74923da19503c46d0fc8b2491e2e8a17bda56e84` |
+| Development deployment | `deploy-development` run 39064707394 built and promoted `74923da1` and verified the artifact checksum manifest including `kubus-web-revision.txt`. `dev.kubus.site` is behind Basic Auth, so the served revision could not be read independently without the staging credentials. |
 
 ### P0 correction: artwork Save blanked the app (release blocker)
 
@@ -143,9 +163,10 @@ opens another in-shell screen over the editor would close that screen instead.
   sees a visitor profile. Roles, verification and presence are separate. The recorded
   artist is a link and is never inferred from the uploader. The dark cover-led
   identity panel from #289 is preserved.
-- **Community.** Single and mixed-media stages follow the active item's aspect, ease
-  for 220 ms between an image and a clip (none under reduced motion) and do not
-  jump on late metadata. The Art feed keeps one still and one video per artwork.
+- **Community.** A post whose only item is a video sizes its stage to the clip, and
+  every multi-item carousel (images, videos or both) keeps one fixed 4:3 stage that does
+  not change as the user swipes, with the clip contained and fullscreen available. Late
+  metadata does not move the feed. The Art feed keeps one still and one video per artwork.
   Hashtag chips have readable contrast in both themes.
 - **Wordmark.** `kubus` is weight 800 italic and `art.` and `Node` stay regular,
   through `KubusFamilyBrandText`. Headers never detect the brand themselves, because

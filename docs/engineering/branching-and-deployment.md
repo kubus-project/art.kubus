@@ -168,7 +168,7 @@ After a successful release, the rollback script for that source revision remains
 
 ### Netcup candidate smoke before DNS cutover
 
-The runner pins the approved Netcup IP for `app.kubus.site` or `dev.kubus.site` in its local hosts file, preserving the real hostname and SNI while Cloudflare still serves Domenca. TLS verification remains enabled. The existing application smoke, source revision and rollback behavior remain in force. Netcup currently presents an untrusted certificate, so a protected CI deployment must wait for a trusted origin certificate. The old Domenca LiteSpeed/Imunify360 `415` incident and its WAF exception runbook are historical; do not copy its bypass configuration to Netcup without a new observed filter requirement.
+The runner pins the approved Netcup IP for `app.kubus.site` or `dev.kubus.site` in its local hosts file, preserving the real hostname and SNI while Cloudflare still serves Domenca. TLS verification remains enabled. The existing application smoke, source revision and rollback behavior remain in force. The Netcup origin now presents a trusted certificate (verified on 2026-10-17 by pinning `89.58.21.59` for `app.kubus.site` with verification on) and three protected production deployments succeeded on 2026-10-15; TLS verification must stay enabled. The old Domenca LiteSpeed/Imunify360 `415` incident and its WAF exception runbook are historical; do not copy its bypass configuration to Netcup without a new observed filter requirement.
 
 ## Mobile releases
 
