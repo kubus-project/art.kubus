@@ -6,7 +6,7 @@ import '../../services/user_service.dart';
 import '../../utils/design_tokens.dart';
 import '../../utils/kubus_color_roles.dart';
 import '../../utils/wallet_utils.dart';
-import '../avatar_widget.dart';
+import '../identity/kubus_identity_avatar.dart';
 import '../empty_state_card.dart';
 import '../kubus_snackbar.dart';
 import '../states/kubus_product_states.dart';
@@ -205,23 +205,20 @@ class ProfilePersonRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
     final roles = KubusColorRoles.of(context);
-    final roleLabel = switch (entry.role) {
-      ProfilePersonRole.artist => l10n.peopleRoleArtist,
-      ProfilePersonRole.institution => l10n.peopleRoleInstitution,
-      null => null,
-    };
-
     final identity = Row(
       children: [
-        ExcludeSemantics(
-          child: AvatarWidget(
-            wallet: entry.wallet,
-            avatarUrl: entry.avatarUrl,
-            radius: 22,
-            enableProfileNavigation: false,
-          ),
+        // The role and verification marks sit on the avatar and carry their
+        // own spoken label (KubusIdentityAvatar), so the row has no second
+        // text for them.
+        KubusIdentityAvatar(
+          wallet: entry.wallet,
+          avatarUrl: entry.avatarUrl,
+          radius: 22,
+          enableProfileNavigation: false,
+          isArtist: entry.role == ProfilePersonRole.artist,
+          isInstitution: entry.role == ProfilePersonRole.institution,
+          isVerified: entry.isVerified,
         ),
         const SizedBox(width: KubusSpacing.sm + KubusSpacing.xs),
         Expanded(
@@ -229,50 +226,20 @@ class ProfilePersonRow extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
-              Row(
-                children: [
-                  Flexible(
-                    child: Text(
-                      entry.primary,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: KubusTextStyles.detailBody.copyWith(
-                        color: roles.foreground,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
-                  if (entry.isVerified) ...[
-                    const SizedBox(width: KubusSpacing.xs),
-                    Icon(
-                      Icons.verified,
-                      size: 16,
-                      color: roles.foregroundMuted,
-                      semanticLabel: l10n.peopleVerifiedLabel,
-                    ),
-                  ],
-                ],
+              Text(
+                entry.primary,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: KubusTextStyles.detailBody.copyWith(
+                  color: roles.foreground,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
-              if (roleLabel != null || entry.secondary != null)
+              if (entry.secondary != null)
                 Padding(
                   padding: const EdgeInsets.only(top: KubusSpacing.xxs),
-                  child: Text.rich(
-                    TextSpan(
-                      children: [
-                        if (roleLabel != null)
-                          TextSpan(
-                            text: roleLabel.toUpperCase(),
-                            style: KubusTextStyles.metadataRegister.copyWith(
-                              color: roles.foregroundMuted,
-                              letterSpacing: 0.4,
-                            ),
-                          ),
-                        if (roleLabel != null && entry.secondary != null)
-                          const TextSpan(text: '  ·  '),
-                        if (entry.secondary != null)
-                          TextSpan(text: entry.secondary),
-                      ],
-                    ),
+                  child: Text(
+                    entry.secondary!,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: KubusTextStyles.detailCaption.copyWith(

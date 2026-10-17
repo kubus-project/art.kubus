@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import '../models/profile_identity_data.dart';
 import '../utils/profile_package_prefetcher.dart';
 import '../utils/user_profile_navigation.dart';
-import 'avatar_widget.dart';
+import 'identity/kubus_identity_avatar.dart';
 
 export '../models/profile_identity_data.dart';
 
@@ -92,7 +92,10 @@ class ProfileIdentitySummary extends StatelessWidget {
     final child = switch (layout) {
       ProfileIdentityLayout.row => Row(
           children: [
-            AvatarWidget(
+            KubusIdentityAvatar(
+              isArtist: identity.isArtist,
+              isInstitution: identity.isInstitution,
+              isVerified: identity.isVerified,
               avatarUrl: identity.avatarUrl,
               wallet: identity.navigationIdentifier ??
                   identity.username ??
@@ -125,7 +128,10 @@ class ProfileIdentitySummary extends StatelessWidget {
       ProfileIdentityLayout.stacked => Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            AvatarWidget(
+            KubusIdentityAvatar(
+              isArtist: identity.isArtist,
+              isInstitution: identity.isInstitution,
+              isVerified: identity.isVerified,
               avatarUrl: identity.avatarUrl,
               wallet: identity.navigationIdentifier ??
                   identity.username ??

@@ -11,6 +11,14 @@ class ProfileIdentityData {
   final String walletSeed;
   final String? avatarUrl;
 
+  /// Roles the source payload states for this account. They are presentation
+  /// facts for the shared avatar badge: false means "not stated", never a
+  /// claim that the account lacks the role, and they are never inferred from a
+  /// name, a handle or a wallet. An artist role does not imply verification.
+  final bool isArtist;
+  final bool isInstitution;
+  final bool isVerified;
+
   const ProfileIdentityData({
     required this.label,
     required this.walletSeed,
@@ -18,7 +26,12 @@ class ProfileIdentityData {
     this.username,
     this.userId,
     this.avatarUrl,
+    this.isArtist = false,
+    this.isInstitution = false,
+    this.isVerified = false,
   });
+
+  bool get hasRoleBadge => isArtist || isInstitution || isVerified;
 
   String? get navigationIdentifier {
     final normalizedUserId = (userId ?? '').trim();
@@ -62,6 +75,9 @@ class ProfileIdentityData {
     String? userId,
     String? walletSeed,
     String? avatarUrl,
+    bool? isArtist,
+    bool? isInstitution,
+    bool? isVerified,
   }) {
     return ProfileIdentityData(
       label: label ?? this.label,
@@ -70,6 +86,9 @@ class ProfileIdentityData {
       userId: userId ?? this.userId,
       walletSeed: walletSeed ?? this.walletSeed,
       avatarUrl: avatarUrl ?? this.avatarUrl,
+      isArtist: isArtist ?? this.isArtist,
+      isInstitution: isInstitution ?? this.isInstitution,
+      isVerified: isVerified ?? this.isVerified,
     );
   }
 

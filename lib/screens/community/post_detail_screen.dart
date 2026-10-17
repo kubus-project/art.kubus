@@ -41,7 +41,6 @@ import '../../widgets/community/community_comment_row.dart';
 import '../../widgets/community/community_composer_character_counter.dart';
 import '../../widgets/community/community_post_card.dart';
 import '../../widgets/community/community_post_media_carousel.dart';
-import '../../widgets/community/community_author_role_badges.dart';
 import '../../widgets/community/community_post_options_sheet.dart';
 import '../../widgets/community/community_subject_picker.dart';
 import '../../widgets/public_entity_takeover_ready.dart';
@@ -1824,11 +1823,6 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                                       fontSize: 11,
                                       color: theme.colorScheme.onSurface
                                           .withValues(alpha: 0.5),
-                                    ),
-                                    titleSuffix: CommunityAuthorRoleBadges(
-                                      post: _post!,
-                                      fontSize: 9.5,
-                                      iconOnly: true,
                                     ),
                                   ),
                                 ),

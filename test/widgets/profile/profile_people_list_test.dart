@@ -138,11 +138,21 @@ void main() {
 
   testWidgets('role context only when known; no wallet data or stats',
       (tester) async {
+    final semantics = tester.ensureSemantics();
     await _pump(tester, entries: const [_ana, _gallery, _unknown]);
-    expect(find.textContaining('ARTIST'), findsOneWidget);
-    expect(find.textContaining('INSTITUTION'), findsOneWidget);
+    // Roles are marks on the avatar (two known roles, none for the unknown
+    // account) with a spoken label, not extra text in the row.
+    expect(find.byKey(const ValueKey<String>('profile-avatar-role-badge')),
+        findsNWidgets(2));
+    expect(find.bySemanticsLabel(RegExp('Artist', caseSensitive: false)),
+        findsOneWidget);
+    expect(find.bySemanticsLabel(RegExp('Institution', caseSensitive: false)),
+        findsOneWidget);
+    expect(find.textContaining('ARTIST'), findsNothing);
+    expect(find.textContaining('INSTITUTION'), findsNothing);
     expect(find.textContaining('KUB8'), findsNothing);
     expect(find.textContaining('SOL'), findsNothing);
+    semantics.dispose();
   });
 
   testWidgets('empty, loading and error states use the shared patterns',

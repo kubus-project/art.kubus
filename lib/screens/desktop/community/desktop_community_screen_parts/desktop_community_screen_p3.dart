@@ -738,11 +738,6 @@ extension _DesktopCommunityScreenStatePart3 on _DesktopCommunityScreenState {
                   subtitleStyle: KubusTextStyles.navMetaLabel.copyWith(
                     color: scheme.onSurface.withValues(alpha: 0.62),
                   ),
-                  titleSuffix: CommunityAuthorRoleBadges(
-                    post: displayPost,
-                    fontSize: 8,
-                    iconOnly: true,
-                  ),
                 ),
               ),
             ],

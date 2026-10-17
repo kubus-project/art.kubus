@@ -90,15 +90,21 @@ class CommunityPost {
     this.feedPin = CommunityFeedPinMetadata.none,
     this.hybridScore,
     this.achievementResult,
-  }) : authorIdentityData = authorIdentityData ??
-            _legacyAuthorIdentity(
-              fallbackLabel: 'Unknown author',
-              authorId: authorId,
-              authorWallet: authorWallet,
-              authorName: authorName,
-              authorAvatar: authorAvatar,
-              authorUsername: authorUsername,
-            );
+  }) : authorIdentityData = (authorIdentityData ??
+                _legacyAuthorIdentity(
+                  fallbackLabel: 'Unknown author',
+                  authorId: authorId,
+                  authorWallet: authorWallet,
+                  authorName: authorName,
+                  authorAvatar: authorAvatar,
+                  authorUsername: authorUsername,
+                ))
+            // The post's role flags are the authoritative statement of the
+            // author's roles; the shared avatar badge reads them from here.
+            .copyWith(
+          isArtist: authorIsArtist,
+          isInstitution: authorIsInstitution,
+        );
 
   String get authorId =>
       authorIdentityData.userId ?? authorIdentityData.walletSeed;

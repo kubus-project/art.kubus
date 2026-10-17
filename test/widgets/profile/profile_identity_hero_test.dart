@@ -285,7 +285,10 @@ void main() {
         tester
             .widget<ProfileIdentityBlock>(find.byType(ProfileIdentityBlock))
             .showRoleBadges,
-        isTrue);
+        isFalse,
+        reason: 'the role is shown once, on the avatar, at every width');
+    expect(find.byKey(const ValueKey<String>('profile-avatar-role-badge')),
+        findsOneWidget);
   });
 
   testWidgets('an institution shows one role signal too', (tester) async {

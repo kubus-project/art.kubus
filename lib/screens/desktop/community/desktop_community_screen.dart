@@ -38,7 +38,6 @@ import '../../../widgets/community/community_compose_intent_resumer.dart';
 import '../../../widgets/community/post_like_settlement.dart';
 import '../../../services/pending_action_executor.dart';
 import '../../../widgets/community/community_post_card.dart';
-import '../../../widgets/community/community_author_role_badges.dart';
 import '../../../widgets/community/community_post_options_sheet.dart';
 import '../../../widgets/community/community_subject_picker.dart';
 import '../../../utils/app_animations.dart';
