@@ -488,6 +488,10 @@ class Artwork {
     int? ratingsCount,
     Map<String, dynamic>? metadata,
     PromotionMetadata? promotion,
+    // `copyWith` keeps the old value for a null argument; these flags are the
+    // only way to explicitly clear a nullable field.
+    bool clearPrice = false,
+    bool clearArScale = false,
   }) {
     return Artwork(
       id: id ?? this.id,
@@ -503,7 +507,7 @@ class Artwork {
       isPublic: isPublic ?? this.isPublic,
       isActive: isActive ?? this.isActive,
       isForSale: isForSale ?? this.isForSale,
-      price: price ?? this.price,
+      price: clearPrice ? null : (price ?? this.price),
       currency: currency ?? this.currency,
       isNft: isNft ?? this.isNft,
       nftMintAddress: nftMintAddress ?? this.nftMintAddress,
@@ -520,7 +524,7 @@ class Artwork {
       arStatus: arStatus ?? this.arStatus,
       model3DCID: model3DCID ?? this.model3DCID,
       model3DURL: model3DURL ?? this.model3DURL,
-      arScale: arScale ?? this.arScale,
+      arScale: clearArScale ? null : (arScale ?? this.arScale),
       arRotation: arRotation ?? this.arRotation,
       arEnableAnimation: arEnableAnimation ?? this.arEnableAnimation,
       arAnimationName: arAnimationName ?? this.arAnimationName,

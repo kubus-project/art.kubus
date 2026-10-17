@@ -59,16 +59,31 @@ enum ArtworkEditChrome {
   bodyOnly,
 }
 
+/// Signature of the upload used for a replacement cover or AR model.
+typedef EditorUpload = Future<Map<String, dynamic>> Function({
+  required List<int> fileBytes,
+  required String fileName,
+  required String fileType,
+  Map<String, String>? metadata,
+});
+
 class ArtworkEditScreen extends StatefulWidget {
   final String artworkId;
 
   /// Which chrome this instance owns. See [ArtworkEditChrome].
   final ArtworkEditChrome chrome;
 
+  /// Uploads a cover or AR model and returns the backend's upload response.
+  /// Defaults to [BackendApiService.uploadFile]; tests inject a deterministic
+  /// one because the real uploader retries on real timers.
+  @visibleForTesting
+  final EditorUpload? uploadFile;
+
   const ArtworkEditScreen({
     super.key,
     required this.artworkId,
     this.chrome = ArtworkEditChrome.standalone,
+    this.uploadFile,
   });
 
   /// True where the editor sits inside a desktop workspace rather than being
@@ -593,6 +608,29 @@ class _ArtworkEditScreenState extends State<ArtworkEditScreen> {
     }
   }
 
+  Future<Map<String, dynamic>> _uploadFile({
+    required List<int> fileBytes,
+    required String fileName,
+    required String fileType,
+    Map<String, String>? metadata,
+  }) {
+    final inject = widget.uploadFile;
+    if (inject != null) {
+      return inject(
+        fileBytes: fileBytes,
+        fileName: fileName,
+        fileType: fileType,
+        metadata: metadata,
+      );
+    }
+    return BackendApiService().uploadFile(
+      fileBytes: fileBytes,
+      fileName: fileName,
+      fileType: fileType,
+      metadata: metadata,
+    );
+  }
+
   Future<void> _save() async {
     if (_isSaving) return;
 
@@ -600,6 +638,11 @@ class _ArtworkEditScreenState extends State<ArtworkEditScreen> {
     final messenger = ScaffoldMessenger.of(context);
     final provider = context.read<ArtworkProvider>();
     final profileProvider = context.read<ProfileProvider>();
+    final refresh = context.read<AppRefreshProvider>();
+    // Navigation handles are taken before any await: the in-shell stack and
+    // the route are the ones this editor was opened into.
+    final shellScope = DesktopShellScope.of(context);
+    final navigator = Navigator.of(context);
     final artwork = provider.getArtworkById(widget.artworkId);
     if (artwork == null) {
       messenger.showKubusSnackBar(
@@ -659,7 +702,12 @@ class _ArtworkEditScreenState extends State<ArtworkEditScreen> {
     }
 
     final locationName = _locationNameController.text.trim();
-    if (locationName.isNotEmpty) {
+    final currentLocationName = (artwork.metadata?['locationName'] ??
+            artwork.metadata?['location_name'] ??
+            '')
+        .toString()
+        .trim();
+    if (locationName.isNotEmpty && locationName != currentLocationName) {
       updates['locationName'] = locationName;
     }
 
@@ -691,11 +739,20 @@ class _ArtworkEditScreenState extends State<ArtworkEditScreen> {
       updates['isAREnabled'] = _arEnabled;
     }
 
+    final hasUploads =
+        _nextCoverBytes != null || (_arEnabled && _nextModelBytes != null);
+    if (updates.isEmpty && !hasUploads) {
+      // Nothing differs from the saved record: there is nothing to send and
+      // nothing to announce, so just leave the way the editor was opened.
+      _closeEditor(shellScope: shellScope, navigator: navigator);
+      return;
+    }
+
     setState(() => _isSaving = true);
 
     try {
       if (_nextCoverBytes != null) {
-        final upload = await BackendApiService().uploadFile(
+        final upload = await _uploadFile(
           fileBytes: _nextCoverBytes!,
           fileName: _nextCoverName ?? 'artwork_cover.jpg',
           fileType: 'image',
@@ -717,7 +774,7 @@ class _ArtworkEditScreenState extends State<ArtworkEditScreen> {
       }
 
       if (_arEnabled && _nextModelBytes != null) {
-        final upload = await BackendApiService().uploadFile(
+        final upload = await _uploadFile(
           fileBytes: _nextModelBytes!,
           fileName: _nextModelName ?? 'ar_model.glb',
           fileType: 'model',
@@ -738,32 +795,92 @@ class _ArtworkEditScreenState extends State<ArtworkEditScreen> {
         }
       }
 
-      final updated = await provider.updateArtwork(widget.artworkId, updates);
-      if (!mounted) return;
+      final result = await provider.saveArtwork(widget.artworkId, updates);
 
-      final resolved =
-          updated ?? await provider.refreshArtwork(widget.artworkId);
-      if (!mounted) return;
+      if (result.status == ArtworkUpdateStatus.alreadyInFlight) {
+        // The first request is still running and will report for itself.
+        return;
+      }
 
-      if (resolved == null) {
+      if (!result.succeeded) {
+        // The write did not happen: say so, keep the editor and every field
+        // the user typed, and do not leave.
         messenger.showKubusSnackBar(
-          SnackBar(content: Text(l10n.commonActionFailedToast)),
+          SnackBar(content: Text(_failureMessage(l10n, result.failure))),
         );
         return;
       }
 
-      context.read<AppRefreshProvider>().triggerPortfolio();
+      // The backend accepted the write. This part must not depend on the
+      // editor still being on screen: the user may have navigated away while
+      // the request ran, and the portfolio still has to learn about the edit.
+      refresh.triggerPortfolio();
       messenger
           .showKubusSnackBar(SnackBar(content: Text(l10n.commonSavedToast)));
-      Navigator.of(context).pop();
-    } catch (_) {
+      if (!mounted) return;
+      _closeEditor(shellScope: shellScope, navigator: navigator);
+    } catch (error) {
       if (!mounted) return;
       messenger.showKubusSnackBar(
-          SnackBar(content: Text(l10n.commonActionFailedToast)));
+        SnackBar(
+          content: Text(
+            _failureMessage(l10n, classifyArtworkUpdateFailure(error)),
+          ),
+        ),
+      );
     } finally {
       if (mounted) {
         setState(() => _isSaving = false);
       }
+    }
+  }
+
+  /// A contextual message for a failed save, drawn from existing strings.
+  String _failureMessage(AppLocalizations l10n, ArtworkUpdateFailure? failure) {
+    switch (failure) {
+      case ArtworkUpdateFailure.unauthorized:
+        return l10n.communityCommentAuthRequiredToast;
+      case ArtworkUpdateFailure.forbidden:
+        return l10n.activationActionUnauthorizedToast;
+      case ArtworkUpdateFailure.network:
+      case ArtworkUpdateFailure.timeout:
+        return l10n.commonNetworkErrorToast;
+      case ArtworkUpdateFailure.rateLimited:
+        return l10n.stateRateLimitDescription;
+      case ArtworkUpdateFailure.conflict:
+      case ArtworkUpdateFailure.rejected:
+      case ArtworkUpdateFailure.server:
+      case ArtworkUpdateFailure.unknown:
+      case null:
+        return l10n.commonActionFailedToast;
+    }
+  }
+
+  /// Closes the editor through the navigation that opened it.
+  ///
+  /// The desktop workspace is not a Navigator route: it lives in the shell's
+  /// own screen stack, so `Navigator.pop` would remove the route hosting the
+  /// whole shell (a black screen). It is closed through the shell scope.
+  /// A standalone editor is a route of its own and closes through its
+  /// Navigator, but never the last route. A bodyOnly editor renders no Save of
+  /// its own and leaves navigation to its host, so it closes nothing.
+  void _closeEditor({
+    required DesktopShellScope? shellScope,
+    required NavigatorState navigator,
+  }) {
+    switch (widget.chrome) {
+      case ArtworkEditChrome.workspace:
+        if (shellScope != null) {
+          // Never fall back to the Navigator here: with a shell present its
+          // only route is the shell itself.
+          shellScope.popScreen();
+        } else if (navigator.canPop()) {
+          navigator.pop();
+        }
+      case ArtworkEditChrome.standalone:
+        if (navigator.canPop()) navigator.pop();
+      case ArtworkEditChrome.bodyOnly:
+        break;
     }
   }
 
