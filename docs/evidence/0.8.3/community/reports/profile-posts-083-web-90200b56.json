@@ -1,0 +1,300 @@
+{
+  "evidence": "local production artifact with deterministic API/media fixtures",
+  "webRoot": "C:\\kubus-build\\083-web-90200b56",
+  "results": [
+    {
+      "name": "chromium-dark-en-US-reduce-390",
+      "errors": [],
+      "writesBlocked": [
+        "/api/presence/batch",
+        "/api/analytics/app",
+        "/api/analytics/app",
+        "/api/presence/batch",
+        "/api/analytics/app"
+      ],
+      "requests": [
+        {
+          "method": "GET",
+          "path": "/api/artworks",
+          "search": "?page=1&limit=100"
+        },
+        {
+          "method": "GET",
+          "path": "/api/community/posts",
+          "search": "?page=1&limit=24&followingOnly=false&surface=discover&sort=hybrid"
+        },
+        {
+          "method": "GET",
+          "path": "/api/profiles/22222222-2222-4222-8222-222222222222",
+          "search": ""
+        },
+        {
+          "method": "POST",
+          "path": "/api/presence/batch",
+          "search": ""
+        },
+        {
+          "method": "POST",
+          "path": "/api/analytics/app",
+          "search": ""
+        },
+        {
+          "method": "GET",
+          "path": "/api/profiles/33333333-3333-4333-8333-333333333333",
+          "search": ""
+        },
+        {
+          "method": "GET",
+          "path": "/api/achievements/users/33333333-3333-4333-8333-333333333333",
+          "search": ""
+        },
+        {
+          "method": "GET",
+          "path": "/api/stats/user/33333333-3333-4333-8333-333333333333",
+          "search": "?metrics=posts%2Cfollowers%2Cfollowing%2CpublicStreetArtAdded&scope=public"
+        },
+        {
+          "method": "GET",
+          "path": "/api/community/posts",
+          "search": "?page=1&limit=20&authorWallet=33333333-3333-4333-8333-333333333333"
+        },
+        {
+          "method": "GET",
+          "path": "/api/profiles/33333333-3333-4333-8333-333333333333/artworks",
+          "search": "?limit=6&offset=0"
+        },
+        {
+          "method": "GET",
+          "path": "/api/collections",
+          "search": "?page=1&limit=6&walletAddress=33333333-3333-4333-8333-333333333333"
+        },
+        {
+          "method": "GET",
+          "path": "/api/events",
+          "search": "?limit=100&offset=0"
+        },
+        {
+          "method": "POST",
+          "path": "/api/analytics/app",
+          "search": ""
+        },
+        {
+          "method": "POST",
+          "path": "/api/presence/batch",
+          "search": ""
+        },
+        {
+          "method": "POST",
+          "path": "/api/analytics/app",
+          "search": ""
+        }
+      ],
+      "playback": [
+        {
+          "width": 180,
+          "height": 320,
+          "time": 3.888024,
+          "paused": false,
+          "muted": false,
+          "readyState": 4,
+          "rect": {
+            "x": 45,
+            "y": 222,
+            "width": 300,
+            "height": 533.328125,
+            "top": 222,
+            "right": 345,
+            "bottom": 755.328125,
+            "left": 45
+          }
+        }
+      ],
+      "afterPlayback": [
+        {
+          "time": 5.894741,
+          "paused": false
+        }
+      ],
+      "stageBefore": {
+        "x": 45,
+        "y": 1762,
+        "width": 300,
+        "height": 533.328125
+      },
+      "stageBeforeActivation": {
+        "x": 45,
+        "y": 222,
+        "width": 300,
+        "height": 533.328125
+      },
+      "stageAfter": {
+        "x": 45,
+        "y": 222,
+        "width": 300,
+        "height": 533.328125
+      },
+      "maxViewportHeight": 844,
+      "clippedSemanticBounds": {
+        "top": 222,
+        "bottom": 755.328125,
+        "height": 533.328125
+      },
+      "fullscreen": "- button \"Exit full screen\"\n- slider \"Video position\": \"50\"\n- button \"Pause video\"\n- button \"Mute video\"\n- text: 0:06 of 0:08\n- button \"Exit full screen\"\n- text: Mute video",
+      "captures": [
+        {
+          "width": 390,
+          "overflow": false
+        }
+      ],
+      "semanticText": "- button \"Back\"\n- heading \"Visitor Artist\" [level=2]\n- button \"More\"\n- group:\n  - img \"Visitor Artist\"\n  - img\n  - text: Artist, Institution, Verified Visitor Artist @visual-qa-visitor\n  - button \"Follow\"\n  - button \"Message\"\n  - text: Browser fixture for the 0.8.3 visual regression pass. Joined 1/2026 4 Posts\n  - button \"0 Followers\"\n  - button \"0 Following\"\n  - button \"0 Artworks\"\n  - text: Artist highlights Latest drops from Visitor Artist. Artworks\n  - group \"No Artworks. Visitor Artist hasn't published any artworks yet.\": No Artworks Visitor Artist hasn't published any artworks yet.\n  - text: Collections\n  - group \"No Collections. Visitor Artist hasn't curated collections yet.\": No Collections Visitor Artist hasn't curated collections yet.\n  - text: Events Upcoming experiences featuring Visitor Artist.\n  - group \"No Events. No upcoming events from Visitor Artist just yet.\": No Events No upcoming events from Visitor Artist just yet.\n  - text: 0 Added Public Art Posts\n  - button \"Visitor Artist Artist Institution @visual-qa-visitor\"\n  - text: Just now Art\n  - 'button \"portrait video — #Art #Ljubljana\"'\n  - group \"Media 1 of 1\":\n    - group \"Video player\":\n      - button \"Play video\"\n  - text: \"#Art #Ljubljana Ljubljana Recorded Artwork Linked Artwork 2 likes\"\n  - switch \"Like, 2 likes, not liked\" [disabled]\n  - button \"Comment, 0 comments\" [disabled]\n  - button \"Repost\" [disabled]\n  - button \"Share\" [disabled]\n  - switch \"Save, not saved\" [disabled]\n  - button \"View all posts\"",
+      "overflow": false
+    },
+    {
+      "name": "firefox-dark-en-US-reduce-390",
+      "errors": [],
+      "writesBlocked": [
+        "/api/presence/batch",
+        "/api/analytics/app",
+        "/api/analytics/app",
+        "/api/presence/batch",
+        "/api/analytics/app"
+      ],
+      "requests": [
+        {
+          "method": "GET",
+          "path": "/api/artworks",
+          "search": "?page=1&limit=100"
+        },
+        {
+          "method": "GET",
+          "path": "/api/profiles/22222222-2222-4222-8222-222222222222",
+          "search": ""
+        },
+        {
+          "method": "GET",
+          "path": "/api/community/posts",
+          "search": "?page=1&limit=24&followingOnly=false&surface=discover&sort=hybrid"
+        },
+        {
+          "method": "POST",
+          "path": "/api/presence/batch",
+          "search": ""
+        },
+        {
+          "method": "POST",
+          "path": "/api/analytics/app",
+          "search": ""
+        },
+        {
+          "method": "GET",
+          "path": "/api/profiles/33333333-3333-4333-8333-333333333333",
+          "search": ""
+        },
+        {
+          "method": "GET",
+          "path": "/api/achievements/users/33333333-3333-4333-8333-333333333333",
+          "search": ""
+        },
+        {
+          "method": "GET",
+          "path": "/api/stats/user/33333333-3333-4333-8333-333333333333",
+          "search": "?metrics=posts%2Cfollowers%2Cfollowing%2CpublicStreetArtAdded&scope=public"
+        },
+        {
+          "method": "GET",
+          "path": "/api/community/posts",
+          "search": "?page=1&limit=20&authorWallet=33333333-3333-4333-8333-333333333333"
+        },
+        {
+          "method": "GET",
+          "path": "/api/profiles/33333333-3333-4333-8333-333333333333/artworks",
+          "search": "?limit=6&offset=0"
+        },
+        {
+          "method": "GET",
+          "path": "/api/collections",
+          "search": "?page=1&limit=6&walletAddress=33333333-3333-4333-8333-333333333333"
+        },
+        {
+          "method": "GET",
+          "path": "/api/events",
+          "search": "?limit=100&offset=0"
+        },
+        {
+          "method": "POST",
+          "path": "/api/analytics/app",
+          "search": ""
+        },
+        {
+          "method": "POST",
+          "path": "/api/presence/batch",
+          "search": ""
+        },
+        {
+          "method": "POST",
+          "path": "/api/analytics/app",
+          "search": ""
+        }
+      ],
+      "playback": [
+        {
+          "width": 180,
+          "height": 320,
+          "time": 4.01227,
+          "paused": false,
+          "muted": false,
+          "readyState": 4,
+          "rect": {
+            "x": 45,
+            "y": 222,
+            "width": 300,
+            "height": 533.3333129882812,
+            "top": 222,
+            "right": 345,
+            "bottom": 755.3333129882812,
+            "left": 45
+          }
+        }
+      ],
+      "afterPlayback": [
+        {
+          "time": 6.00867,
+          "paused": false
+        }
+      ],
+      "stageBefore": {
+        "x": 45,
+        "y": 1762,
+        "width": 300,
+        "height": 533.333251953125
+      },
+      "stageBeforeActivation": {
+        "x": 45,
+        "y": 222,
+        "width": 300,
+        "height": 533.3333129882812
+      },
+      "stageAfter": {
+        "x": 45,
+        "y": 222,
+        "width": 300,
+        "height": 533.3333129882812
+      },
+      "maxViewportHeight": 844,
+      "clippedSemanticBounds": {
+        "top": 222,
+        "bottom": 755.3333129882812,
+        "height": 533.3333129882812
+      },
+      "fullscreen": "- button \"Exit full screen\"\n- slider \"Video position\": \"50\"\n- button \"Pause video\"\n- button \"Mute video\"\n- text: 0:06 of 0:08\n- button \"Exit full screen\"\n- text: Mute video",
+      "captures": [
+        {
+          "width": 390,
+          "overflow": false
+        }
+      ],
+      "semanticText": "- button \"Back\"\n- heading \"Visitor Artist\" [level=2]\n- button \"More\"\n- group:\n  - img \"Visitor Artist\"\n  - img\n  - text: Artist, Institution, Verified Visitor Artist @visual-qa-visitor\n  - button \"Follow\"\n  - button \"Message\"\n  - text: Browser fixture for the 0.8.3 visual regression pass. Joined 1/2026 4 Posts\n  - button \"0 Followers\"\n  - button \"0 Following\"\n  - button \"0 Artworks\"\n  - text: Artist highlights Latest drops from Visitor Artist. Artworks\n  - group \"No Artworks. Visitor Artist hasn't published any artworks yet.\": No Artworks Visitor Artist hasn't published any artworks yet.\n  - text: Collections\n  - group \"No Collections. Visitor Artist hasn't curated collections yet.\": No Collections Visitor Artist hasn't curated collections yet.\n  - text: Events Upcoming experiences featuring Visitor Artist.\n  - group \"No Events. No upcoming events from Visitor Artist just yet.\": No Events No upcoming events from Visitor Artist just yet.\n  - text: 0 Added Public Art Posts\n  - button \"Visitor Artist Artist Institution @visual-qa-visitor\"\n  - text: Just now Art\n  - 'button \"portrait video — #Art #Ljubljana\"'\n  - group \"Media 1 of 1\":\n    - group \"Video player\":\n      - button \"Play video\"\n  - text: \"#Art #Ljubljana Ljubljana Recorded Artwork Linked Artwork 2 likes\"\n  - switch \"Like, 2 likes, not liked\" [disabled]\n  - button \"Comment, 0 comments\" [disabled]\n  - button \"Repost\" [disabled]\n  - button \"Share\" [disabled]\n  - switch \"Save, not saved\" [disabled]\n  - button \"View all posts\"",
+      "overflow": false
+    }
+  ]
+}

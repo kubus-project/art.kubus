@@ -113,6 +113,7 @@ class _FakeMapState implements KubusMapController {
   final List<KubusRenderedMarker> rendered;
   MapMarkerOverview? overview;
   int epoch = 7;
+  bool moving = false;
 
   @override
   KubusMapControllerIds get ids => _controllerIds;
@@ -121,7 +122,7 @@ class _FakeMapState implements KubusMapController {
   @override
   int get styleEpoch => epoch;
   @override
-  bool get cameraIsMoving => false;
+  bool get cameraIsMoving => moving;
   @override
   bool get hasExpandedSameLocation => false;
   @override
@@ -155,6 +156,7 @@ class _FakeHost implements KubusMapMarkerSyncHost {
   int afterSyncs = 0;
   int resyncRequests = 0;
   bool mounted = true;
+  double zoom = 13;
 
   @override
   ml.MapLibreMapController? get mapController => _mapController;
@@ -171,9 +173,9 @@ class _FakeHost implements KubusMapMarkerSyncHost {
   @override
   KubusMapController get kubusMapController => mapState;
   @override
-  double get syncZoom => 13;
+  double get syncZoom => zoom;
   @override
-  double get clusterTopologyZoom => 13;
+  double get clusterTopologyZoom => zoom;
   @override
   MapMarkerOverview? get markerOverview => overview;
   @override
@@ -304,6 +306,42 @@ Widget _testApp(ThemeProvider theme, ValueChanged<BuildContext> onBuild) =>
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
+
+  testWidgets(
+      'continuous zoom warms covers before display without registering them',
+      (tester) async {
+    final images = <String>{};
+    _addCanonicalIcons(images);
+    final controller = _FakeMapController();
+    final state = _FakeMapState(
+        registeredMapImages: images, manager: _FakeLayersManager())
+      ..moving = true
+      ..rendered.clear()
+      ..rendered.addAll(_rendered(metadata: const {
+        'imageUrl': 'https://images.example.test/approach.png',
+      }));
+    final host = _FakeHost(mapController: controller, mapState: state)
+      ..zoom = 12;
+    final theme = ThemeProvider();
+    await tester
+        .pumpWidget(_testApp(theme, (context) => host.context = context));
+    final image = await tester.runAsync(_coverImage);
+    var fetchCalls = 0;
+    final loader = KubusMarkerCoverLoader(fetch: (url, width) async {
+      fetchCalls++;
+      return image;
+    });
+    final engine = KubusMapMarkerSyncEngine(host, coverLoader: loader);
+    addTearDown(engine.dispose);
+    await engine.syncMarkers(themeProvider: theme);
+    await tester
+        .runAsync(() => Future<void>.delayed(const Duration(milliseconds: 50)));
+    expect(fetchCalls, 1, reason: 'the moving approach must not skip prefetch');
+    expect(controller.addedImageIds.where(MapMarkerIconIds.isCover), isEmpty,
+        reason: 'prefetch only decodes; it must not rasterise cover icons');
+    expect(host.sourceWrites, greaterThan(0),
+        reason: 'canonical geometry is not delayed');
+  });
 
   testWidgets('cover reveal preserves identity, entry and canonical fallback',
       (tester) async {

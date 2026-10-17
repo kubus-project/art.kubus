@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../utils/design_tokens.dart';
+import 'kubus_family_brand.dart';
 import '../artist_badge.dart';
 import '../institution_badge.dart';
 
@@ -41,8 +42,9 @@ class KubusGreetingIdentityBlock extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
 
-    final effectiveGreetingStyle = (greetingStyle ?? KubusTextStyles.navMetaLabel)
-        .copyWith(color: scheme.onSurface.withValues(alpha: 0.62));
+    final effectiveGreetingStyle =
+        (greetingStyle ?? KubusTextStyles.navMetaLabel)
+            .copyWith(color: scheme.onSurface.withValues(alpha: 0.62));
     final baseNameStyle = (displayNameStyle ?? KubusTextStyles.heroTitle)
         .copyWith(color: scheme.onSurface);
 
@@ -64,7 +66,8 @@ class KubusGreetingIdentityBlock extends StatelessWidget {
               child: LayoutBuilder(
                 builder: (context, constraints) {
                   final availableWidth = constraints.maxWidth;
-                  final resolvedNameStyle = KubusTextStyles.responsiveTitleStyle(
+                  final resolvedNameStyle =
+                      KubusTextStyles.responsiveTitleStyle(
                     context,
                     baseNameStyle,
                     availableWidth: availableWidth,
@@ -117,10 +120,15 @@ class KubusHeaderTitleBlock extends StatelessWidget {
     this.maxTitleLines = 2,
     this.maxSubtitleLines = 2,
     this.minHeight,
+    this.brandTitle = false,
   });
 
   final String title;
   final String? subtitle;
+
+  /// Styles kubus-family names in [title]. Only set this for authored brand
+  /// copy; titles can carry user content, which must stay plain text.
+  final bool brandTitle;
   final bool compact;
   final Color? titleColor;
   final Color? subtitleColor;
@@ -176,12 +184,20 @@ class KubusHeaderTitleBlock extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Text(
-                  title,
-                  style: resolvedTitleStyle,
-                  maxLines: effectiveTitleLines,
-                  overflow: TextOverflow.ellipsis,
-                ),
+                if (brandTitle)
+                  KubusFamilyBrandText(
+                    title,
+                    style: resolvedTitleStyle,
+                    maxLines: effectiveTitleLines,
+                    overflow: TextOverflow.ellipsis,
+                  )
+                else
+                  Text(
+                    title,
+                    style: resolvedTitleStyle,
+                    maxLines: effectiveTitleLines,
+                    overflow: TextOverflow.ellipsis,
+                  ),
                 if (resolvedSubtitle != null &&
                     resolvedSubtitle.isNotEmpty) ...[
                   SizedBox(
@@ -218,10 +234,14 @@ class KubusHeaderText extends StatelessWidget {
     this.subtitleStyle,
     this.maxTitleLines = 2,
     this.maxSubtitleLines = 2,
+    this.brandTitle = false,
   });
 
   final String title;
   final String? subtitle;
+
+  /// See [KubusHeaderTitleBlock.brandTitle].
+  final bool brandTitle;
   final KubusHeaderKind kind;
   final bool compact;
   final Color? titleColor;
@@ -243,6 +263,7 @@ class KubusHeaderText extends StatelessWidget {
     return KubusHeaderTitleBlock(
       title: title,
       subtitle: subtitle,
+      brandTitle: brandTitle,
       compact: compact || isSection,
       titleColor: titleColor,
       subtitleColor: subtitleColor,

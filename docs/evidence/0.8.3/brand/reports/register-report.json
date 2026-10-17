@@ -1,0 +1,45 @@
+{
+  "webRoot": "C:\\kubus-build\\083-rc-out\\web-mm-on-v2",
+  "results": [
+    {
+      "name": "register-chromium-light-en-390",
+      "errors": [],
+      "labels": []
+    },
+    {
+      "name": "register-chromium-light-en-1440",
+      "errors": [],
+      "labels": []
+    },
+    {
+      "name": "register-chromium-light-sl-390",
+      "errors": [],
+      "labels": []
+    },
+    {
+      "name": "register-chromium-light-sl-1440",
+      "errors": [],
+      "labels": []
+    },
+    {
+      "name": "register-chromium-dark-en-390",
+      "errors": [],
+      "labels": []
+    },
+    {
+      "name": "register-chromium-dark-en-1440",
+      "errors": [],
+      "labels": []
+    },
+    {
+      "name": "register-chromium-dark-sl-390",
+      "errors": [],
+      "labels": []
+    },
+    {
+      "name": "register-chromium-dark-sl-1440",
+      "errors": [],
+      "labels": []
+    }
+  ]
+}

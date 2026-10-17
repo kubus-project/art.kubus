@@ -131,7 +131,6 @@ class KubusMapMarkerSyncEngine {
   // until the next style reload clears the images.
   int _coverImagesRegistered = 0;
   final Map<String, int> _coverRevealStarted = {};
-  bool _coverAnimationActive = false;
 
   /// The markers the latest plan wants a cover for. A cover that finishes
   /// loading after the camera has moved on is dropped, never drawn offscreen.
@@ -152,8 +151,9 @@ class KubusMapMarkerSyncEngine {
     _coverLoader.dispose();
   }
 
-  final _clusterTransition = KubusClusterTopologyTransition(
+  late final _clusterTransition = KubusClusterTopologyTransition(
     durationMs: MapMarkerCollisionConfig.entryRegroupDurationMs,
+    nowMs: _nowMs,
   );
   Timer? _topologyFrameTimer;
 
@@ -225,7 +225,6 @@ class KubusMapMarkerSyncEngine {
       // canonical geometry. The selected marker is pinned out of clusters at
       // every level so it can never be absorbed into a count badge.
       final needsArtwork = KubusMarkerLod.needsMarkerArtwork(zoom);
-      _coverAnimationActive = false;
       final selectedId = host.kubusMapController.selectedMarkerId;
       final pinned = <String>{
         if (selectedId != null && selectedId.isNotEmpty) selectedId,
@@ -312,6 +311,11 @@ class KubusMapMarkerSyncEngine {
         shouldAbort: () => !isFresh(),
         pinnedMarkerIds: pinned,
         buildMarkerFeature: (marker) {
+          if (!pinned.contains(marker.id) &&
+              (renderById[marker.id]?.entryOpacity ?? 0) <= 0 &&
+              !mapController.visibleMarkerIds.contains(marker.id)) {
+            return Future.value(<String, dynamic>{});
+          }
           if (!needsArtwork && !pinned.contains(marker.id)) {
             return Future<Map<String, dynamic>>.value(
               kubusFarMarkerFeature(
@@ -341,6 +345,13 @@ class KubusMapMarkerSyncEngine {
           );
         },
         buildClusterFeature: (cluster) {
+          // Group using the complete data first, so panning cannot move a
+          // cluster's centroid/count. Omit only wholly invisible source nodes.
+          if (kubusClusterEntryValues(cluster, renderById).opacity <= 0 &&
+              !cluster.markers.any((marker) =>
+                  mapController.visibleMarkerIds.contains(marker.id))) {
+            return Future.value(<String, dynamic>{});
+          }
           if (!needsArtwork) {
             final entry = kubusClusterEntryValues(cluster, renderById);
             return kubusFarClusterFeature(
@@ -367,22 +378,8 @@ class KubusMapMarkerSyncEngine {
       );
       if (!isCurrentSource()) return;
 
-      _applyClusterTopologyTransition(features, reduceMotion: reduceMotion);
-      final collection = <String, dynamic>{
-        'type': 'FeatureCollection',
-        'features': features,
-      };
-      if (!isCurrentSource()) return;
-      final layersManager = host.kubusMapController.layersManager;
-      if (layersManager != null) {
-        final didWrite = await layersManager.upsertMarkerData(collection);
-        if (!isCurrentSource()) return;
-        if (didWrite) host.onMarkerSourceWrite();
-      } else if (kDebugMode) {
-        AppConfig.debugPrint(
-          '${host.debugLabel}: marker sync skipped without layers manager',
-        );
-      }
+      await _publishVisualFrame(features,
+          reduceMotion: reduceMotion, isCurrentSource: isCurrentSource);
 
       if (!isCurrentSource()) return;
       await host.afterMarkerSync(themeProvider);
@@ -563,17 +560,8 @@ class KubusMapMarkerSyncEngine {
     }
     if (shouldAbort() || !isCurrentSource()) return;
 
-    _applyClusterTopologyTransition(features, reduceMotion: reduceMotion);
-    if (!isCurrentSource()) return;
-    final layersManager = host.kubusMapController.layersManager;
-    if (layersManager != null) {
-      final didWrite = await layersManager.upsertMarkerData(<String, dynamic>{
-        'type': 'FeatureCollection',
-        'features': features,
-      });
-      if (shouldAbort() || !isCurrentSource()) return;
-      if (didWrite) host.onMarkerSourceWrite();
-    }
+    await _publishVisualFrame(features,
+        reduceMotion: reduceMotion, isCurrentSource: isCurrentSource);
     if (shouldAbort() || !isCurrentSource()) return;
     await host.afterMarkerSync(themeProvider);
     if (shouldAbort() || !isCurrentSource()) return;
@@ -585,27 +573,58 @@ class KubusMapMarkerSyncEngine {
     }
   }
 
-  void _applyClusterTopologyTransition(List<Map<String, dynamic>> features,
-      {required bool reduceMotion}) {
+  /// Reuses a canonical feature plan for animation frames. Camera/data/selection
+  /// requests replace the plan; ticks never re-cluster, re-resolve covers or
+  /// rasterise/register icons. Geometry still uses the supported source API.
+  Future<void> _publishVisualFrame(List<Map<String, dynamic>> canonical,
+      {required bool reduceMotion,
+      required bool Function() isCurrentSource}) async {
+    if (!isCurrentSource()) return;
+    _topologyFrameTimer?.cancel();
+    _topologyFrameTimer = null;
+    final features = <Map<String, dynamic>>[
+      for (final feature in canonical)
+        {
+          ...feature,
+          'geometry': Map<String, dynamic>.from(feature['geometry'] as Map),
+          'properties': Map<String, dynamic>.from(feature['properties'] as Map),
+        },
+    ];
+    var coverActive = false;
+    for (final feature in features) {
+      final properties = feature['properties'] as Map;
+      final icon = properties['coverIcon'];
+      if (icon is! String) continue;
+      final started = _coverRevealStarted.putIfAbsent(icon, _nowMs);
+      final progress = reduceMotion
+          ? 1.0
+          : ((_nowMs() - started) / 220).clamp(0.0, 1.0).toDouble();
+      properties['coverReveal'] = progress;
+      coverActive = coverActive || progress < 1;
+    }
     final topologyActive =
         _clusterTransition.apply(features, reduceMotion: reduceMotion);
-    final active = topologyActive || _coverAnimationActive;
-    if (!active) {
-      _topologyFrameTimer?.cancel();
-      _topologyFrameTimer = null;
-      return;
-    }
-    if (_topologyFrameTimer != null) return;
-    final epoch = _topologyStyleEpoch;
-    _topologyFrameTimer = Timer(const Duration(milliseconds: 32), () {
-      _topologyFrameTimer = null;
-      if (!_disposed &&
-          host.hostMounted &&
-          host.styleInitialized &&
-          host.kubusMapController.styleEpoch == epoch) {
-        host.requestMarkerResync();
-      }
+    final manager = host.kubusMapController.layersManager;
+    if (manager == null || !isCurrentSource()) return;
+    final didWrite = await manager.upsertMarkerData({
+      'type': 'FeatureCollection',
+      'features': features,
     });
+    if (!isCurrentSource()) return;
+    if (didWrite) host.onMarkerSourceWrite();
+    if (topologyActive || coverActive) {
+      _topologyFrameTimer = Timer(const Duration(milliseconds: 32), () {
+        _topologyFrameTimer = null;
+        unawaited(_publishVisualFrame(canonical,
+                reduceMotion: reduceMotion, isCurrentSource: isCurrentSource)
+            .catchError((Object error) {
+          if (kDebugMode) {
+            AppConfig.debugPrint(
+                '${host.debugLabel}: transition paint failed: $error');
+          }
+        }));
+      });
+    }
   }
 
   /// Pre-registers marker icons in batched parallel to avoid waterfall.
@@ -663,7 +682,6 @@ class KubusMapMarkerSyncEngine {
     if (activeController == null) return const <String, dynamic>{};
     final abort = shouldAbort ?? () => !host.hostMounted;
     if (abort()) return const <String, dynamic>{};
-
     final media = MediaQuery.maybeOf(host.hostContext);
     final reduceMotion =
         media?.disableAnimations == true || media?.accessibleNavigation == true;
@@ -693,13 +711,10 @@ class KubusMapMarkerSyncEngine {
       // entry, replacing its identity or changing its size/anchor/hitbox.
       properties['coverIcon'] = cover.base;
       properties['coverIconSelected'] = cover.selected ?? cover.base;
-      final now = _nowMs();
-      final started = _coverRevealStarted.putIfAbsent(cover.base, () => now);
-      final progress = reduceMotion
+      final started = _coverRevealStarted.putIfAbsent(cover.base, _nowMs);
+      properties['coverReveal'] = reduceMotion
           ? 1.0
-          : ((now - started) / 220).clamp(0.0, 1.0).toDouble();
-      properties['coverReveal'] = progress;
-      _coverAnimationActive = _coverAnimationActive || progress < 1;
+          : ((_nowMs() - started) / 220).clamp(0.0, 1.0).toDouble();
     }
     return feature;
   }
@@ -939,8 +954,9 @@ class KubusMapMarkerSyncEngine {
   /// Warms (downloads + decodes, never rasterises) the first
   /// [KubusMarkerLod.coverPrefetchLimit] covers the display stage will show, so
   /// they are ready when the visitor zooms in. Bounded by that limit, the
-  /// loader's concurrency and cache, and only while the camera is idle: a
-  /// settled camera means a stable candidate set.
+  /// loader's concurrency and cache. This also runs during the approach:
+  /// continuous zoom must not skip the entire prefetch band. It never
+  /// rasterises or registers an image, and stale queued demand is cancelled.
   ///
   /// Returns the cover URLs the warm-up set wants (queued or already cached),
   /// so the caller can keep them when it prunes queued loads.
@@ -953,7 +969,6 @@ class KubusMapMarkerSyncEngine {
   }) {
     if (!KubusMarkerLod.allowsCoverPrefetch(zoom)) return const <String>[];
     if (KubusMarkerLod.allowsCovers(zoom)) return const <String>[];
-    if (host.kubusMapController.cameraIsMoving) return const <String>[];
     final ids = KubusMarkerLod.selectCoverMarkerIds(
       candidates: candidates,
       selectedId: selectedId,
@@ -965,7 +980,7 @@ class KubusMapMarkerSyncEngine {
       for (final marker in candidates) marker.id: marker,
     };
     final width = _coverFetchWidthPx;
-    // A settled camera replaces the warm-up set: prefetches planned for an
+    // The current viewport replaces the warm-up set: prefetches planned for an
     // earlier view that have not started yet must not delay this one.
     _coverLoader.cancelPendingPrefetches();
     final warm = <String>[];

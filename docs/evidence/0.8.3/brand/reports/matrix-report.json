@@ -1,0 +1,445 @@
+{
+  "webRoot": "C:\\kubus-build\\083-rc-out\\web-mm-on-v2",
+  "results": [
+    {
+      "name": "onboarding-chromium-light-en-390",
+      "errors": [],
+      "labels": []
+    },
+    {
+      "name": "onboarding-chromium-light-en-1440",
+      "errors": [],
+      "labels": [
+        "- text: art.kubus"
+      ]
+    },
+    {
+      "name": "node-chromium-light-en-390",
+      "errors": [],
+      "labels": [
+        "- heading \"kubus node\" [level=2]",
+        "- group \"kubus node kubus node Run part of the art.kubus network on hardware you control. Keep the public archive available Process spatial captures locally Use network GPU capacity when needed Receive verified KUB8 contribution records kubus node gives you local spatial processing while your node contributes storage and availability to the shared public archive.\":"
+      ]
+    },
+    {
+      "name": "node-chromium-light-en-1440",
+      "errors": [],
+      "labels": [
+        "- heading \"kubus node\" [level=2]",
+        "- group \"kubus node kubus node Run part of the art.kubus network on hardware you control. Keep the public archive available Process spatial captures locally Use network GPU capacity when needed Receive verified KUB8 contribution records kubus node gives you local spatial processing while your node contributes storage and availability to the shared public archive.\":"
+      ]
+    },
+    {
+      "name": "artwork-chromium-light-en-390",
+      "errors": [],
+      "labels": [
+        "- heading \"art.kubus\" [level=2]"
+      ]
+    },
+    {
+      "name": "artwork-chromium-light-en-1440",
+      "errors": [],
+      "labels": [
+        "- text: art.kubus Art platform"
+      ]
+    },
+    {
+      "name": "shell-chromium-light-en-1440",
+      "errors": [],
+      "labels": [
+        "- text: art.kubus"
+      ]
+    },
+    {
+      "name": "settings-chromium-light-en-1440",
+      "failure": "Missing control /^(Settings|Nastavitve)$/",
+      "errors": [],
+      "labels": []
+    },
+    {
+      "name": "onboarding-chromium-light-sl-390",
+      "errors": [],
+      "labels": []
+    },
+    {
+      "name": "onboarding-chromium-light-sl-1440",
+      "errors": [],
+      "labels": [
+        "- text: art.kubus"
+      ]
+    },
+    {
+      "name": "node-chromium-light-sl-390",
+      "errors": [],
+      "labels": [
+        "- heading \"kubus node\" [level=2]",
+        "- group \"kubus node kubus node Poganjaj del omrežja art.kubus na svoji opremi. Ohranjaj javni arhiv dostopen Prostorske zajeme obdelaj lokalno Po potrebi uporabi zmogljivost GPU v omrežju Prejmi preverjene zapise prispevka KUB8 kubus node ti omogoča lokalno prostorsko obdelavo, tvoje vozlišče pa v zameno prispeva prostor in dostopnost skupnemu javnemu arhivu.\":"
+      ]
+    },
+    {
+      "name": "node-chromium-light-sl-1440",
+      "errors": [],
+      "labels": [
+        "- heading \"kubus node\" [level=2]",
+        "- group \"kubus node kubus node Poganjaj del omrežja art.kubus na svoji opremi. Ohranjaj javni arhiv dostopen Prostorske zajeme obdelaj lokalno Po potrebi uporabi zmogljivost GPU v omrežju Prejmi preverjene zapise prispevka KUB8 kubus node ti omogoča lokalno prostorsko obdelavo, tvoje vozlišče pa v zameno prispeva prostor in dostopnost skupnemu javnemu arhivu.\":"
+      ]
+    },
+    {
+      "name": "artwork-chromium-light-sl-390",
+      "errors": [],
+      "labels": [
+        "- heading \"art.kubus\" [level=2]"
+      ]
+    },
+    {
+      "name": "artwork-chromium-light-sl-1440",
+      "errors": [],
+      "labels": [
+        "- text: art.kubus Umetniška platforma"
+      ]
+    },
+    {
+      "name": "shell-chromium-light-sl-1440",
+      "errors": [],
+      "labels": [
+        "- text: art.kubus"
+      ]
+    },
+    {
+      "name": "settings-chromium-light-sl-1440",
+      "failure": "Missing control /^(Settings|Nastavitve)$/",
+      "errors": [],
+      "labels": []
+    },
+    {
+      "name": "onboarding-chromium-dark-en-390",
+      "errors": [],
+      "labels": []
+    },
+    {
+      "name": "onboarding-chromium-dark-en-1440",
+      "errors": [],
+      "labels": [
+        "- text: art.kubus"
+      ]
+    },
+    {
+      "name": "node-chromium-dark-en-390",
+      "errors": [],
+      "labels": [
+        "- heading \"kubus node\" [level=2]",
+        "- group \"kubus node kubus node Run part of the art.kubus network on hardware you control. Keep the public archive available Process spatial captures locally Use network GPU capacity when needed Receive verified KUB8 contribution records kubus node gives you local spatial processing while your node contributes storage and availability to the shared public archive.\":"
+      ]
+    },
+    {
+      "name": "node-chromium-dark-en-1440",
+      "errors": [],
+      "labels": [
+        "- heading \"kubus node\" [level=2]",
+        "- group \"kubus node kubus node Run part of the art.kubus network on hardware you control. Keep the public archive available Process spatial captures locally Use network GPU capacity when needed Receive verified KUB8 contribution records kubus node gives you local spatial processing while your node contributes storage and availability to the shared public archive.\":"
+      ]
+    },
+    {
+      "name": "artwork-chromium-dark-en-390",
+      "errors": [],
+      "labels": [
+        "- heading \"art.kubus\" [level=2]"
+      ]
+    },
+    {
+      "name": "artwork-chromium-dark-en-1440",
+      "errors": [],
+      "labels": [
+        "- text: art.kubus Art platform"
+      ]
+    },
+    {
+      "name": "shell-chromium-dark-en-1440",
+      "errors": [],
+      "labels": [
+        "- text: art.kubus"
+      ]
+    },
+    {
+      "name": "settings-chromium-dark-en-1440",
+      "failure": "Missing control /^(Settings|Nastavitve)$/",
+      "errors": [],
+      "labels": []
+    },
+    {
+      "name": "onboarding-chromium-dark-sl-390",
+      "errors": [],
+      "labels": []
+    },
+    {
+      "name": "onboarding-chromium-dark-sl-1440",
+      "errors": [],
+      "labels": [
+        "- text: art.kubus"
+      ]
+    },
+    {
+      "name": "node-chromium-dark-sl-390",
+      "errors": [],
+      "labels": [
+        "- heading \"kubus node\" [level=2]",
+        "- group \"kubus node kubus node Poganjaj del omrežja art.kubus na svoji opremi. Ohranjaj javni arhiv dostopen Prostorske zajeme obdelaj lokalno Po potrebi uporabi zmogljivost GPU v omrežju Prejmi preverjene zapise prispevka KUB8 kubus node ti omogoča lokalno prostorsko obdelavo, tvoje vozlišče pa v zameno prispeva prostor in dostopnost skupnemu javnemu arhivu.\":"
+      ]
+    },
+    {
+      "name": "node-chromium-dark-sl-1440",
+      "errors": [],
+      "labels": [
+        "- heading \"kubus node\" [level=2]",
+        "- group \"kubus node kubus node Poganjaj del omrežja art.kubus na svoji opremi. Ohranjaj javni arhiv dostopen Prostorske zajeme obdelaj lokalno Po potrebi uporabi zmogljivost GPU v omrežju Prejmi preverjene zapise prispevka KUB8 kubus node ti omogoča lokalno prostorsko obdelavo, tvoje vozlišče pa v zameno prispeva prostor in dostopnost skupnemu javnemu arhivu.\":"
+      ]
+    },
+    {
+      "name": "artwork-chromium-dark-sl-390",
+      "errors": [],
+      "labels": [
+        "- heading \"art.kubus\" [level=2]"
+      ]
+    },
+    {
+      "name": "artwork-chromium-dark-sl-1440",
+      "errors": [],
+      "labels": [
+        "- text: art.kubus Umetniška platforma"
+      ]
+    },
+    {
+      "name": "shell-chromium-dark-sl-1440",
+      "errors": [],
+      "labels": [
+        "- text: art.kubus"
+      ]
+    },
+    {
+      "name": "settings-chromium-dark-sl-1440",
+      "failure": "Missing control /^(Settings|Nastavitve)$/",
+      "errors": [],
+      "labels": []
+    },
+    {
+      "name": "onboarding-firefox-light-en-390",
+      "errors": [],
+      "labels": []
+    },
+    {
+      "name": "onboarding-firefox-light-en-1440",
+      "errors": [],
+      "labels": [
+        "- text: art.kubus"
+      ]
+    },
+    {
+      "name": "node-firefox-light-en-390",
+      "errors": [],
+      "labels": [
+        "- heading \"kubus node\" [level=2]",
+        "- group \"kubus node kubus node Run part of the art.kubus network on hardware you control. Keep the public archive available Process spatial captures locally Use network GPU capacity when needed Receive verified KUB8 contribution records kubus node gives you local spatial processing while your node contributes storage and availability to the shared public archive.\":"
+      ]
+    },
+    {
+      "name": "node-firefox-light-en-1440",
+      "errors": [],
+      "labels": [
+        "- heading \"kubus node\" [level=2]",
+        "- group \"kubus node kubus node Run part of the art.kubus network on hardware you control. Keep the public archive available Process spatial captures locally Use network GPU capacity when needed Receive verified KUB8 contribution records kubus node gives you local spatial processing while your node contributes storage and availability to the shared public archive.\":"
+      ]
+    },
+    {
+      "name": "artwork-firefox-light-en-390",
+      "errors": [],
+      "labels": [
+        "- heading \"art.kubus\" [level=2]"
+      ]
+    },
+    {
+      "name": "artwork-firefox-light-en-1440",
+      "errors": [],
+      "labels": [
+        "- text: art.kubus Art platform"
+      ]
+    },
+    {
+      "name": "shell-firefox-light-en-1440",
+      "errors": [],
+      "labels": [
+        "- text: art.kubus"
+      ]
+    },
+    {
+      "name": "settings-firefox-light-en-1440",
+      "failure": "Missing control /^(Settings|Nastavitve)$/",
+      "errors": [],
+      "labels": []
+    },
+    {
+      "name": "onboarding-firefox-light-sl-390",
+      "errors": [],
+      "labels": []
+    },
+    {
+      "name": "onboarding-firefox-light-sl-1440",
+      "errors": [],
+      "labels": [
+        "- text: art.kubus"
+      ]
+    },
+    {
+      "name": "node-firefox-light-sl-390",
+      "errors": [],
+      "labels": [
+        "- heading \"kubus node\" [level=2]",
+        "- group \"kubus node kubus node Poganjaj del omrežja art.kubus na svoji opremi. Ohranjaj javni arhiv dostopen Prostorske zajeme obdelaj lokalno Po potrebi uporabi zmogljivost GPU v omrežju Prejmi preverjene zapise prispevka KUB8 kubus node ti omogoča lokalno prostorsko obdelavo, tvoje vozlišče pa v zameno prispeva prostor in dostopnost skupnemu javnemu arhivu.\":"
+      ]
+    },
+    {
+      "name": "node-firefox-light-sl-1440",
+      "errors": [],
+      "labels": [
+        "- heading \"kubus node\" [level=2]",
+        "- group \"kubus node kubus node Poganjaj del omrežja art.kubus na svoji opremi. Ohranjaj javni arhiv dostopen Prostorske zajeme obdelaj lokalno Po potrebi uporabi zmogljivost GPU v omrežju Prejmi preverjene zapise prispevka KUB8 kubus node ti omogoča lokalno prostorsko obdelavo, tvoje vozlišče pa v zameno prispeva prostor in dostopnost skupnemu javnemu arhivu.\":"
+      ]
+    },
+    {
+      "name": "artwork-firefox-light-sl-390",
+      "errors": [],
+      "labels": [
+        "- heading \"art.kubus\" [level=2]"
+      ]
+    },
+    {
+      "name": "artwork-firefox-light-sl-1440",
+      "errors": [],
+      "labels": [
+        "- text: art.kubus Umetniška platforma"
+      ]
+    },
+    {
+      "name": "shell-firefox-light-sl-1440",
+      "errors": [],
+      "labels": [
+        "- text: art.kubus"
+      ]
+    },
+    {
+      "name": "settings-firefox-light-sl-1440",
+      "failure": "Missing control /^(Settings|Nastavitve)$/",
+      "errors": [],
+      "labels": []
+    },
+    {
+      "name": "onboarding-firefox-dark-en-390",
+      "errors": [],
+      "labels": []
+    },
+    {
+      "name": "onboarding-firefox-dark-en-1440",
+      "errors": [],
+      "labels": [
+        "- text: art.kubus"
+      ]
+    },
+    {
+      "name": "node-firefox-dark-en-390",
+      "errors": [],
+      "labels": [
+        "- heading \"kubus node\" [level=2]",
+        "- group \"kubus node kubus node Run part of the art.kubus network on hardware you control. Keep the public archive available Process spatial captures locally Use network GPU capacity when needed Receive verified KUB8 contribution records kubus node gives you local spatial processing while your node contributes storage and availability to the shared public archive.\":"
+      ]
+    },
+    {
+      "name": "node-firefox-dark-en-1440",
+      "errors": [],
+      "labels": [
+        "- heading \"kubus node\" [level=2]",
+        "- group \"kubus node kubus node Run part of the art.kubus network on hardware you control. Keep the public archive available Process spatial captures locally Use network GPU capacity when needed Receive verified KUB8 contribution records kubus node gives you local spatial processing while your node contributes storage and availability to the shared public archive.\":"
+      ]
+    },
+    {
+      "name": "artwork-firefox-dark-en-390",
+      "errors": [],
+      "labels": [
+        "- heading \"art.kubus\" [level=2]"
+      ]
+    },
+    {
+      "name": "artwork-firefox-dark-en-1440",
+      "errors": [],
+      "labels": [
+        "- text: art.kubus Art platform"
+      ]
+    },
+    {
+      "name": "shell-firefox-dark-en-1440",
+      "errors": [],
+      "labels": [
+        "- text: art.kubus"
+      ]
+    },
+    {
+      "name": "settings-firefox-dark-en-1440",
+      "failure": "Missing control /^(Settings|Nastavitve)$/",
+      "errors": [],
+      "labels": []
+    },
+    {
+      "name": "onboarding-firefox-dark-sl-390",
+      "errors": [],
+      "labels": []
+    },
+    {
+      "name": "onboarding-firefox-dark-sl-1440",
+      "errors": [],
+      "labels": [
+        "- text: art.kubus"
+      ]
+    },
+    {
+      "name": "node-firefox-dark-sl-390",
+      "errors": [],
+      "labels": [
+        "- heading \"kubus node\" [level=2]",
+        "- group \"kubus node kubus node Poganjaj del omrežja art.kubus na svoji opremi. Ohranjaj javni arhiv dostopen Prostorske zajeme obdelaj lokalno Po potrebi uporabi zmogljivost GPU v omrežju Prejmi preverjene zapise prispevka KUB8 kubus node ti omogoča lokalno prostorsko obdelavo, tvoje vozlišče pa v zameno prispeva prostor in dostopnost skupnemu javnemu arhivu.\":"
+      ]
+    },
+    {
+      "name": "node-firefox-dark-sl-1440",
+      "errors": [],
+      "labels": [
+        "- heading \"kubus node\" [level=2]",
+        "- group \"kubus node kubus node Poganjaj del omrežja art.kubus na svoji opremi. Ohranjaj javni arhiv dostopen Prostorske zajeme obdelaj lokalno Po potrebi uporabi zmogljivost GPU v omrežju Prejmi preverjene zapise prispevka KUB8 kubus node ti omogoča lokalno prostorsko obdelavo, tvoje vozlišče pa v zameno prispeva prostor in dostopnost skupnemu javnemu arhivu.\":"
+      ]
+    },
+    {
+      "name": "artwork-firefox-dark-sl-390",
+      "errors": [],
+      "labels": [
+        "- heading \"art.kubus\" [level=2]"
+      ]
+    },
+    {
+      "name": "artwork-firefox-dark-sl-1440",
+      "errors": [],
+      "labels": [
+        "- text: art.kubus Umetniška platforma"
+      ]
+    },
+    {
+      "name": "shell-firefox-dark-sl-1440",
+      "errors": [],
+      "labels": [
+        "- text: art.kubus"
+      ]
+    },
+    {
+      "name": "settings-firefox-dark-sl-1440",
+      "failure": "Missing control /^(Settings|Nastavitve)$/",
+      "errors": [],
+      "labels": []
+    }
+  ]
+}

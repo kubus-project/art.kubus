@@ -1,5 +1,24 @@
 # Map system
 
+## Globe and user-location presentation
+
+The web globe uses the public site's astronomical solar model (UTC subsolar
+position), with a camera-projected soft night field. Theme controls the exact
+black/white ground, never the sun. The field fades into the local map and pauses
+when hidden, backgrounded or reduced motion is requested. Reduced motion retains
+the correct solar state at entry; native flat maps do not gain a decorative globe.
+
+Location layers share one real fix: the contrasting dot, a separate paint-only
+expanding ring, measured accuracy and a screen-sized north-aligned heading sector.
+The ring is decorative and never changes measured accuracy. Missing compass data
+hides the sector. Device heading is never inferred from camera bearing or walking
+course. Heading expires after ten seconds and requires a fix younger than thirty
+seconds. The compass plugin's Android high-confidence status maps to 15 degrees;
+its medium/low statuses (30/45) fail the shared 25-degree reliability threshold.
+iOS supplies native heading accuracy. Browser geolocation emulation cannot accept
+either native sensor implementation. Offscreen maps pause the shared animation;
+reduced motion retains a static fix, accuracy and reliable heading.
+
 This is the durable technical contract for the shared product map. It complements
 [Architecture](ARCHITECTURE.md), [Design system](DESIGN_SYSTEM.md) and the
 [guest-first entry contract](GUEST_FIRST_ENTRY.md). Historical measurements are
@@ -82,6 +101,9 @@ while the camera moves. Coalesced cover refreshes must publish usable artwork wi
 a bounded window without rebuilding GeoJSON for every image. Preserve disposal,
 stale-work preconditions and pending-request delivery. Tune pacing and coalescing
 only against paired measurements of latency, source writes and frame distribution.
+Bounded fetch/decode prefetch also runs during the continuous zoom approach;
+requiring camera idle would skip that band entirely. Prefetch never rasterizes or
+registers icons, and changed viewport demand cancels stale queued work.
 
 `KubusCachedImage` and the shared failure registry support card/detail continuity.
 Keep image dimensions stable and retain decoded content during refresh. A cover
@@ -100,8 +122,9 @@ entity route keeps the map mounted, so Back preserves camera, filters, search an
 appropriate selection. `KubusMapSessionMemory` carries in-memory camera/search/
 filter/selection state across responsive layout swaps and is cleared at signout.
 It is not process-death persistence. Explicit targets and walking navigation retain
-their established precedence. Desktop gesture-dismissal and phone selection behavior
-are intentional layout policies rather than two selection systems.
+their established precedence. Both layouts preserve the selected marker through
+zoom/pan topology changes and style reloads. Background taps, explicit dismissal,
+and removal of the actual record still clear selection; camera motion alone does not.
 
 Nearby sheet extent and scroll position belong to its existing controller lifecycle.
 Marker overlays must not recreate it on unrelated updates. Floating controls follow

@@ -45,6 +45,7 @@ import '../../services/share/share_service.dart';
 import '../../services/share/share_types.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
 import '../../widgets/common/subject_options_sheet.dart';
+import '../../widgets/common/kubus_family_brand.dart';
 import '../../widgets/glass_components.dart';
 import '../../widgets/common/keyboard_inset_padding.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
@@ -472,7 +473,7 @@ class _ArtDetailScreenState extends State<ArtDetailScreen> {
       pinned: true,
       backgroundColor: scheme.surface,
       surfaceTintColor: Colors.transparent,
-      title: const Text('art.kubus'),
+      title: const KubusFamilyBrandText('art.kubus'),
       leading: IconButton(
         onPressed: () => Navigator.pop(context),
         tooltip: MaterialLocalizations.of(context).backButtonTooltip,

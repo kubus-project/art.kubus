@@ -153,6 +153,46 @@ void main() {
       expect(decoded['version'], 8);
     });
 
+    test('globe ground is exactly black or white, independently of solar state',
+        () {
+      for (final entry
+          in {'#101418': '#000000', '#e5eff3': '#ffffff'}.entries) {
+        final stamped =
+            jsonDecode(MapStyleService.withGlobeProjection(jsonEncode({
+          'version': 8,
+          'sources': {},
+          'layers': [
+            {
+              'id': 'background',
+              'type': 'background',
+              'paint': {'background-color': entry.key}
+            }
+          ],
+        })));
+        expect(stamped['layers'][0]['paint']['background-color'], entry.value);
+        expect(stamped['sky']['sky-color'], entry.value);
+      }
+    });
+
+    test('a background layer without paint keeps the MapLibre default ground',
+        () {
+      for (final layer in <Map<String, Object>>[
+        {'id': 'background', 'type': 'background'},
+        {'id': 'background', 'type': 'background', 'paint': <String, Object>{}},
+      ]) {
+        final stamped =
+            jsonDecode(MapStyleService.withGlobeProjection(jsonEncode({
+          'version': 8,
+          'sources': {},
+          'layers': [layer],
+        })));
+        // MapLibre's default background is black, so the ground is black, and
+        // the paint object is created instead of throwing on a missing one.
+        expect(stamped['layers'][0]['paint']['background-color'], '#000000');
+        expect(stamped['sky']['sky-color'], '#000000');
+      }
+    });
+
     test('leaves a style that already declares a projection alone', () {
       const own =
           '{"version":8,"projection":{"type":"mercator"},"sources":{},"layers":[]}';

@@ -51,6 +51,11 @@ class KubusMapOverviewController {
   /// zoom (a little under [exitZoom]).
   static const double reenterZoom = 7.7;
 
+  /// Keep genuine regional distribution at globe scale. A 56px overview cell
+  /// at zoom 1.5 spans thousands of kilometres; querying at least zoom 3 keeps
+  /// those records in separate, exact geographic aggregates without sampling.
+  static double aggregationZoom(double zoom) => zoom.clamp(3.0, 24.0);
+
   /// Failed overview fetches are not retried for this long.
   static const Duration failureBackoff = Duration(seconds: 20);
 
@@ -103,7 +108,7 @@ class KubusMapOverviewController {
   /// The grid level a zoom maps to (the backend's half-step levels), so a refetch
   /// happens when the level changes, not on every fractional zoom.
   static int levelForZoom(double zoom) =>
-      ((zoom.isFinite ? zoom : 0) * 2).floor().clamp(0, 24);
+      (aggregationZoom(zoom.isFinite ? zoom : 0) * 2).floor().clamp(0, 24);
 
   /// Whether [zoom] calls for the overview, given the current mode.
   ///
@@ -182,7 +187,7 @@ class KubusMapOverviewController {
       if (sharesInFlight) {
         fetched = await shared;
       } else {
-        final request = _fetch(queryBounds, zoom);
+        final request = _fetch(queryBounds, aggregationZoom(zoom));
         _inFlight = request;
         _inFlightBounds = queryBounds;
         _inFlightLevel = level;

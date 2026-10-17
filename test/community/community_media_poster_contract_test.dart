@@ -23,6 +23,25 @@ CommunityPost _post({List<String> mediaUrls = const [], String? imageUrl}) =>
     );
 
 void main() {
+  test(
+      'recorded video aspect survives a cold reference without changing playback URL',
+      () {
+    final reference = communityMediaReferenceForPost(
+        'https://example.test/a.mp4',
+        isVideo: true,
+        aspectRatio: 9 / 16);
+    expect(communityMediaVideoAspect(reference), closeTo(9 / 16, 0.000001));
+    expect(
+        communityMediaVideoSourceUrl(reference), 'https://example.test/a.mp4');
+    expect(
+        communityMediaVideoAspect('https://example.test/a.jpg#kubus-aspect=1'),
+        isNull);
+    expect(
+        communityMediaVideoAspect(
+            'https://example.test/a.mp4#kubus-aspect=NaN'),
+        isNull);
+  });
+
   group('poster hint: reading', () {
     test('a poster after the video hint is returned, decoded once', () {
       expect(communityMediaPosterReference(_hinted(_video, _poster)), _poster);
