@@ -578,17 +578,17 @@ void main() {
         'image to video to image keeps each page stage still and silent',
         (tester) async {
       await tester.pumpWidget(carousel());
-      // Both clips share the 16:9 fallback; the image page uses the 4:3 stage.
+      // A multi-item carousel keeps one 4:3 stage on every page.
       final videoStage = tester.getRect(find.byType(PageView));
-      expect(videoStage.height, closeTo(390 / (16 / 9), 0.5));
+      expect(videoStage.height, closeTo(390 / kCommunityMediaStageAspect, 0.5));
       await swipe(tester);
       expect(tester.getRect(find.byType(PageView)), videoStage,
-          reason: 'two clips of one shape share one stage');
+          reason: 'two clips share one stage');
       await swipe(tester);
       expect(find.text('3 / 3'), findsOneWidget);
       final imageStage = tester.getRect(find.byType(PageView));
-      expect(imageStage.height, closeTo(390 / kCommunityMediaStageAspect, 0.5));
-      expect(imageStage.width, videoStage.width);
+      expect(imageStage, videoStage,
+          reason: 'the image page uses the same stage as the clips');
       expect(platform.players, isEmpty, reason: 'images never create a player');
 
       await swipe(tester, forward: false);
@@ -628,66 +628,43 @@ void main() {
       return heights;
     }
 
-    _testPlayer('the stage eases once when the page change alters its shape',
-        (tester) async {
-      final heights =
-          await stageHeightsAcrossPageChange(tester, reducedMotion: false);
-      final start = heights.first;
-      final end = 390 / kCommunityMediaStageAspect;
-      expect(heights.last, closeTo(end, 0.5));
-      for (var i = 1; i < heights.length; i++) {
-        expect(heights[i], greaterThanOrEqualTo(heights[i - 1] - 0.01),
-            reason: 'one monotonic ease, never a bounce');
-      }
-      expect(heights.any((h) => h > start + 1 && h < end - 1), isTrue,
-          reason: 'the resize is spread over frames, not a single jump');
-    });
+    for (final reducedMotion in <bool>[false, true]) {
+      _testPlayer(
+          'the stage never resizes across a page change '
+          '(reducedMotion=$reducedMotion)', (tester) async {
+        final heights = await stageHeightsAcrossPageChange(
+          tester,
+          reducedMotion: reducedMotion,
+        );
+        final stable = 390 / kCommunityMediaStageAspect;
+        expect(heights.every((h) => (h - stable).abs() < 0.5), isTrue,
+            reason: 'no frame of the swipe moves the surrounding feed');
+      });
+    }
 
-    _testPlayer('the stage changes shape without easing under reduced motion',
-        (tester) async {
-      final heights =
-          await stageHeightsAcrossPageChange(tester, reducedMotion: true);
-      final start = heights.first;
-      final end = 390 / kCommunityMediaStageAspect;
-      expect(heights.last, closeTo(end, 0.5));
-      expect(
-          heights
-              .every((h) => (h - start).abs() < 0.5 || (h - end).abs() < 0.5),
-          isTrue,
-          reason: 'only the two settled shapes ever appear');
-    });
-
-    _testPlayer(
-        'portrait to landscape and back reshapes the stage with the clip',
+    _testPlayer('portrait to landscape and back reshapes only the player',
         (tester) async {
       platform.sizeFor = (uri) => uri.endsWith('/a.mp4')
           ? const Size(720, 1280)
           : const Size(1280, 720);
       await tester.pumpWidget(carousel());
-      final fallbackStage = tester.getRect(find.byType(PageView));
+      final stage = tester.getRect(find.byType(PageView));
 
       await play(tester);
-      // The unknown clip took its real portrait shape once.
-      final portraitStage = tester.getRect(find.byType(PageView));
-      expect(portraitStage.height, greaterThan(fallbackStage.height + 1));
-      expect(portraitStage.width, fallbackStage.width);
       var frame = tester.getRect(find.byKey(_frameKey));
       expect(frame.width / frame.height, closeTo(9 / 16, 0.01));
-      expect(frame.height, closeTo(portraitStage.height, 0.5));
+      expect(frame.height, closeTo(stage.height, 0.5));
 
       await swipe(tester);
       await play(tester);
-      final landscapeStage = tester.getRect(find.byType(PageView));
       frame = tester.getRect(find.byKey(_frameKey));
       expect(frame.width / frame.height, closeTo(16 / 9, 0.01));
-      expect(frame.width, closeTo(landscapeStage.width, 0.5));
-      expect(frame.height, closeTo(landscapeStage.height, 0.5),
-          reason: 'a landscape clip has no empty bars in its stage');
+      expect(frame.width, closeTo(stage.width, 0.5));
+      expect(tester.getRect(find.byType(PageView)), stage,
+          reason: 'the outer carousel does not change with the clip');
 
       await swipe(tester, forward: false);
       await play(tester);
-      // The first clip's shape is remembered: no second correction.
-      expect(tester.getRect(find.byType(PageView)), portraitStage);
       frame = tester.getRect(find.byKey(_frameKey));
       expect(frame.width / frame.height, closeTo(9 / 16, 0.01));
     });
