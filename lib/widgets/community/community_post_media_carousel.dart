@@ -287,12 +287,16 @@ class _CommunityPostMediaCarouselState
     final count = widget.mediaUrls.length;
     final multiple = count > 1;
 
-    final activeVideo = communityMediaUrlIsVideo(widget.mediaUrls[_index]);
-    final hasVideo = widget.mediaUrls.any(communityMediaUrlIsVideo);
+    // Only a post whose single item is a video adapts its stage to the clip.
+    // Every carousel (images, videos or both) keeps one 4:3 stage for all of
+    // its pages, so swiping never moves the feed; a clip that does not fit
+    // that stage is contained and can be opened fullscreen from its controls.
+    final singleVideo =
+        !multiple && communityMediaUrlIsVideo(widget.mediaUrls.first);
     final stageAspect = kCommunityMediaStageAspect;
 
     Widget sizedStage(Widget child) {
-      if (!hasVideo) {
+      if (!singleVideo) {
         return AspectRatio(aspectRatio: stageAspect, child: child);
       }
       return LayoutBuilder(
@@ -310,31 +314,20 @@ class _CommunityPostMediaCarouselState
                     media.padding.vertical -
                     media.viewInsets.bottom,
               );
-          // Keep the stage geometry fixed for this mounted carousel. A source
+          // Keep the stage geometry fixed for this mounted post. A source
           // aspect known before the first frame gives portrait clips the full
           // usable viewport and keeps panoramas compact; otherwise the stable
           // 16:9 fallback avoids a jump when player metadata arrives.
-          final aspect = _videoAspects[widget.mediaUrls[_index]] ??
+          final aspect = _videoAspects[widget.mediaUrls.first] ??
               kCommunityVideoStageFallbackAspect;
-          final videoHeight = math.min(
+          final height = math.min(
             math.max(kCommunityVideoStageMinHeight, stageWidth / aspect),
             usableHeight *
                 (media.size.shortestSide < 600
                     ? 1
                     : kCommunityVideoStageViewportFraction),
           );
-          final height = activeVideo ? videoHeight : stageWidth / stageAspect;
-          // Moving between an image and a clip (or between clips of different
-          // shapes) is the only time the stage resizes, and it eases once for
-          // that deliberate page change. Metadata arriving later never moves it.
-          return AnimatedContainer(
-            duration: MediaQuery.disableAnimationsOf(context)
-                ? Duration.zero
-                : const Duration(milliseconds: 220),
-            curve: Curves.easeOutCubic,
-            height: height,
-            child: child,
-          );
+          return SizedBox(height: height, child: child);
         },
       );
     }
