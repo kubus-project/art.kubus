@@ -16,6 +16,7 @@ import '../../services/backend_api_service.dart';
 import '../../services/encrypted_wallet_backup_service.dart';
 import '../../services/passkey_error_mapper.dart';
 import '../../services/passkey_protection_service.dart';
+import '../../services/security/pin_management.dart';
 import '../../services/settings_service.dart';
 import '../../services/wallet_backup_passkey_service.dart';
 import '../../services/wallet_recovery_flow_service.dart';
@@ -182,17 +183,9 @@ class _SecurityHubViewState extends State<SecurityHubView> {
     final walletProvider = context.read<WalletProvider>();
     final gate = context.read<SecurityGateProvider>();
     final messenger = ScaffoldMessenger.of(context);
+    final l10n = AppLocalizations.of(context)!;
     final resolvedPin = (pin ?? _pinController.text).trim();
     final resolvedConfirm = (confirm ?? _confirmController.text).trim();
-
-    if (resolvedPin.length < 4 || resolvedConfirm.length < 4) {
-      setState(() => _inlineError = 'PIN must be at least 4 digits.');
-      return;
-    }
-    if (resolvedPin != resolvedConfirm) {
-      setState(() => _inlineError = 'PIN entries do not match.');
-      return;
-    }
 
     setState(() {
       _busy = true;
@@ -200,15 +193,27 @@ class _SecurityHubViewState extends State<SecurityHubView> {
     });
 
     try {
-      await walletProvider.setPin(resolvedPin);
+      final result = await PinManagement(wallet: walletProvider, gate: gate)
+          .setOrReplacePin(resolvedPin, resolvedConfirm);
+      if (!mounted) return;
+      if (!result.isSuccess) {
+        setState(() => _inlineError = switch (result.outcome) {
+              PinManagementOutcome.invalid => switch (result.issue) {
+                  PinFormatIssue.tooShort => l10n.settingsPinMinLengthError,
+                  PinFormatIssue.mismatch => l10n.settingsPinMismatchError,
+                  _ => l10n.settingsPinInvalidFormatError,
+                },
+              PinManagementOutcome.authenticationFailed => null,
+              _ => l10n.settingsPinSetFailedToast,
+            });
+        return;
+      }
       final current = await SettingsService.loadSettings();
-      await SettingsService.saveSettings(current.copyWith(requirePin: true));
-      await gate.reloadSettings();
       if (!mounted) return;
       await _refresh();
       if (!mounted) return;
       messenger.showKubusSnackBar(
-        const SnackBar(content: Text('PIN set.')),
+        SnackBar(content: Text(l10n.settingsPinSetSuccessToast)),
         tone: KubusSnackBarTone.success,
       );
       final canOfferBiometrics = _isRequiredSetup &&
@@ -224,7 +229,37 @@ class _SecurityHubViewState extends State<SecurityHubView> {
       }
     } catch (_) {
       if (!mounted) return;
-      setState(() => _inlineError = 'Could not set PIN.');
+      setState(() => _inlineError = l10n.settingsPinSetFailedToast);
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  Future<void> _removePin() async {
+    if (_busy) return;
+    final walletProvider = context.read<WalletProvider>();
+    final gate = context.read<SecurityGateProvider>();
+    final messenger = ScaffoldMessenger.of(context);
+    final l10n = AppLocalizations.of(context)!;
+    setState(() {
+      _busy = true;
+      _inlineError = null;
+    });
+    try {
+      final result =
+          await PinManagement(wallet: walletProvider, gate: gate).removePin();
+      if (!mounted) return;
+      if (result.outcome == PinManagementOutcome.authenticationFailed) return;
+      if (!result.isSuccess) {
+        setState(() => _inlineError = l10n.settingsPinClearFailedToast);
+        return;
+      }
+      await _refresh();
+      if (!mounted) return;
+      messenger.showKubusSnackBar(
+        SnackBar(content: Text(l10n.settingsPinClearedToast)),
+        tone: KubusSnackBarTone.success,
+      );
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -1115,7 +1150,18 @@ class _SecurityHubViewState extends State<SecurityHubView> {
             _hasPin ? SecurityHubStatus.secured : SecurityHubStatus.recommended,
         statusLabel: _hasPin ? 'Active' : 'Recommended',
         actions: _hasPin
-            ? const <SecurityMethodAction>[]
+            ? [
+                SecurityMethodAction(
+                  label: l10n?.settingsSetPinDialogTitle ?? 'Change PIN',
+                  icon: Icons.lock_reset_rounded,
+                  onPressed: _busy ? null : _showPinSheet,
+                ),
+                SecurityMethodAction(
+                  label: l10n?.settingsClearPinButton ?? 'Remove PIN',
+                  icon: Icons.lock_open_rounded,
+                  onPressed: _busy ? null : _removePin,
+                ),
+              ]
             : [
                 SecurityMethodAction(
                   label: 'Set PIN',

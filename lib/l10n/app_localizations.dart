@@ -5383,6 +5383,18 @@ abstract class AppLocalizations {
   /// **'Failed to set PIN'**
   String get settingsPinSetFailedToast;
 
+  /// No description provided for @settingsPinInvalidFormatError.
+  ///
+  /// In en, this message translates to:
+  /// **'A PIN must be 4 to 12 digits'**
+  String get settingsPinInvalidFormatError;
+
+  /// No description provided for @settingsPinClearFailedToast.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not remove the PIN'**
+  String get settingsPinClearFailedToast;
+
   /// No description provided for @settingsClearCacheDialogTitle.
   ///
   /// In en, this message translates to:

@@ -3044,6 +3044,13 @@ class AppLocalizationsSl extends AppLocalizations {
   String get settingsPinSetFailedToast => 'PIN ni bilo mogoče nastaviti';
 
   @override
+  String get settingsPinInvalidFormatError =>
+      'PIN mora imeti od 4 do 12 številk';
+
+  @override
+  String get settingsPinClearFailedToast => 'PIN-a ni bilo mogoče odstraniti';
+
+  @override
   String get settingsClearCacheDialogTitle => 'Počisti predpomnilnik';
 
   @override

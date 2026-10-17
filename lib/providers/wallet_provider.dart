@@ -407,6 +407,9 @@ class WalletProvider extends ChangeNotifier {
       await _pinAuth.clearPin();
     } catch (e) {
       _walletLog('failed to clear PIN: $e');
+      // The caller must know: reporting a cleared PIN that is still stored
+      // would leave the UI and the lock out of step.
+      rethrow;
     }
   }
 

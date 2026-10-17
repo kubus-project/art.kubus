@@ -1107,6 +1107,8 @@
   "settingsPinMismatchError": "PINs do not match",
   "settingsPinSetSuccessToast": "PIN set successfully",
   "settingsPinSetFailedToast": "Failed to set PIN",
+  "settingsPinInvalidFormatError": "A PIN must be 4 to 12 digits",
+  "settingsPinClearFailedToast": "Could not remove the PIN",
   "settingsClearCacheDialogTitle": "Clear cache",
   "settingsClearCacheDialogBody": "This will clear temporary files and may improve performance.",
   "settingsCacheClearedToast": "Cache cleared successfully",

@@ -825,22 +825,25 @@ extension _SettingsScreenStatePart2 on _SettingsScreenState {
               final messenger = ScaffoldMessenger.of(context);
               // Clearing PIN requires verification. If the user forgot it, they
               // must logout and re-login.
-              await gate.lock(SecurityLockReason.sensitiveAction);
-              final settled = await gate.waitForResolution();
-              if (settled == null || !settled.isSuccess) {
+              final result = await PinManagement(
+                wallet: walletProvider,
+                gate: gate,
+              ).removePin();
+              if (!mounted) return;
+              if (result.outcome == PinManagementOutcome.authenticationFailed) {
                 return;
               }
-
-              await walletProvider.clearPin();
-              if (!mounted) return;
+              if (!result.isSuccess) {
+                messenger.showKubusSnackBar(
+                    SnackBar(content: Text(l10n.settingsPinClearFailedToast)));
+                return;
+              }
               _applyState(() {
                 _requirePin = false;
                 _biometricAuth = false;
                 _useBiometricsOnUnlock = true;
                 _hasPin = false;
               });
-              await _saveAllSettings();
-              await gate.reloadSettings();
               navigator.pop();
               messenger.showKubusSnackBar(
                   SnackBar(content: Text(l10n.settingsPinClearedToast)));
@@ -859,36 +862,39 @@ extension _SettingsScreenStatePart2 on _SettingsScreenState {
               final messenger = ScaffoldMessenger.of(context);
               final pin = pinController.text.trim();
               final confirm = confirmController.text.trim();
-              if (pin.length < 4 || confirm.length < 4) {
-                messenger.showKubusSnackBar(
-                    SnackBar(content: Text(l10n.settingsPinMinLengthError)));
+              final result = await PinManagement(
+                wallet: walletProvider,
+                gate: gate,
+              ).setOrReplacePin(pin, confirm);
+              if (!mounted) return;
+              if (!result.isSuccess) {
+                final message = switch (result.outcome) {
+                  PinManagementOutcome.invalid => switch (result.issue) {
+                      PinFormatIssue.tooShort => l10n.settingsPinMinLengthError,
+                      PinFormatIssue.mismatch => l10n.settingsPinMismatchError,
+                      _ => l10n.settingsPinInvalidFormatError,
+                    },
+                  PinManagementOutcome.authenticationFailed => null,
+                  _ => l10n.settingsPinSetFailedToast,
+                };
+                if (message != null) {
+                  messenger.showKubusSnackBar(SnackBar(content: Text(message)));
+                }
                 return;
               }
-              if (pin != confirm) {
-                messenger.showKubusSnackBar(
-                    SnackBar(content: Text(l10n.settingsPinMismatchError)));
-                return;
-              }
-              try {
-                await walletProvider.setPin(pin);
-                if (!mounted) return;
-                final hasPin = await walletProvider.hasPin();
-                final biometricsSupported =
-                    await walletProvider.canUseBiometrics();
-                if (!mounted) return;
-                _applyState(() {
-                  _hasPin = hasPin;
-                  _biometricsSupported = biometricsSupported;
-                });
-                await gate.reloadSettings();
-                navigator.pop();
-                messenger.showKubusSnackBar(
-                    SnackBar(content: Text(l10n.settingsPinSetSuccessToast)));
-              } catch (e) {
-                if (!mounted) return;
-                messenger.showKubusSnackBar(
-                    SnackBar(content: Text(l10n.settingsPinSetFailedToast)));
-              }
+              final hasPin = await walletProvider.hasPin();
+              final biometricsSupported =
+                  await walletProvider.canUseBiometrics();
+              final settings = await SettingsService.loadSettings();
+              if (!mounted) return;
+              _applyState(() {
+                _hasPin = hasPin;
+                _requirePin = settings.requirePin;
+                _biometricsSupported = biometricsSupported;
+              });
+              navigator.pop();
+              messenger.showKubusSnackBar(
+                  SnackBar(content: Text(l10n.settingsPinSetSuccessToast)));
             },
             child: Text(l10n.commonSave,
                 style: KubusTypography.inter(

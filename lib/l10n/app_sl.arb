@@ -1103,6 +1103,8 @@
   "settingsPinMismatchError": "PIN-a se ne ujemata",
   "settingsPinSetSuccessToast": "PIN je uspešno nastavljen",
   "settingsPinSetFailedToast": "PIN ni bilo mogoče nastaviti",
+  "settingsPinInvalidFormatError": "PIN mora imeti od 4 do 12 številk",
+  "settingsPinClearFailedToast": "PIN-a ni bilo mogoče odstraniti",
   "settingsClearCacheDialogTitle": "Počisti predpomnilnik",
   "settingsClearCacheDialogBody": "To bo počistilo začasne datoteke in lahko izboljša delovanje.",
   "settingsCacheClearedToast": "Predpomnilnik je uspešno počiščen",

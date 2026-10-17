@@ -3022,6 +3022,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsPinSetFailedToast => 'Failed to set PIN';
 
   @override
+  String get settingsPinInvalidFormatError => 'A PIN must be 4 to 12 digits';
+
+  @override
+  String get settingsPinClearFailedToast => 'Could not remove the PIN';
+
+  @override
   String get settingsClearCacheDialogTitle => 'Clear cache';
 
   @override
