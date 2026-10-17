@@ -379,8 +379,9 @@ class SecurityGateProvider extends ChangeNotifier
     // (which returns true when no exp claim is present).
     final inMemoryToken = (BackendApiService().getAuthToken() ?? '').trim();
     final hasValidInMemorySession = _tokenHasFutureExpiry(inMemoryToken);
-    final storedToken =
-        prefs != null ? (AuthGatingService.readStoredAccessToken(prefs) ?? '').trim() : '';
+    final storedToken = prefs != null
+        ? (AuthGatingService.readStoredAccessToken(prefs) ?? '').trim()
+        : '';
     final hasValidStoredSession = _tokenHasFutureExpiry(storedToken);
     if (hasValidInMemorySession || hasValidStoredSession) {
       _cooldownUntil = DateTime.now().add(_promptCooldown);
@@ -498,6 +499,7 @@ class SecurityGateProvider extends ChangeNotifier
         try {
           await BackendApiService().loadAuthToken();
         } catch (_) {}
+        _lastResolutionWasLocal = false;
         _completeAndReset(const AuthReauthResult(AuthReauthOutcome.success));
         return true;
       }
@@ -568,9 +570,20 @@ class SecurityGateProvider extends ChangeNotifier
     }
   }
 
+  /// Whether the last lock was resolved by local authentication (PIN or
+  /// biometric). Signing in again renews the session but proves nothing about
+  /// the person holding the device, so it never satisfies a sensitive action.
+  bool _lastResolutionWasLocal = false;
+
   Future<bool> requireSensitiveActionVerification() async {
     final wallet = _walletProvider;
-    final hasPin = await wallet?.hasPin() ?? false;
+    bool hasPin;
+    try {
+      hasPin = await wallet?.hasPinOrThrow() ?? false;
+    } catch (_) {
+      // The PIN store could not be read: fail closed. "Unknown" is not "none".
+      return false;
+    }
     final canUseBiometrics =
         biometricsEnabled && (await wallet?.canUseBiometrics() ?? false);
 
@@ -580,7 +593,7 @@ class SecurityGateProvider extends ChangeNotifier
     }
 
     final settled = await _inFlight?.future;
-    return settled?.isSuccess ?? false;
+    return (settled?.isSuccess ?? false) && _lastResolutionWasLocal;
   }
 
   Future<bool> _finalizeUnlockAfterLocalVerification() async {
@@ -597,6 +610,7 @@ class SecurityGateProvider extends ChangeNotifier
       await _attemptManagedWalletReconnect(refreshBackendSession: false);
     }
 
+    _lastResolutionWasLocal = true;
     _completeAndReset(const AuthReauthResult(AuthReauthOutcome.success));
     return true;
   }
@@ -669,6 +683,14 @@ class SecurityGateProvider extends ChangeNotifier
       if (stored != null && stored.trim().isNotEmpty) return stored.trim();
     } catch (_) {}
     return null;
+  }
+
+  /// Resolves the pending lock as the overlay would after a successful unlock
+  /// ([localAuthentication] true: PIN or biometric) or after signing in again.
+  @visibleForTesting
+  void completeForTesting({required bool localAuthentication}) {
+    _lastResolutionWasLocal = localAuthentication;
+    _completeAndReset(const AuthReauthResult(AuthReauthOutcome.success));
   }
 
   void _completeAndReset(AuthReauthResult result) {

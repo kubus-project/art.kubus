@@ -86,6 +86,31 @@ String? prfOutputFromResponse(Map<String, dynamic>? response) {
   return output.isEmpty ? null : output;
 }
 
+/// A copy of a WebAuthn response that is safe to send to the backend: the PRF
+/// output (`clientExtensionResults.prf.first` / `results`) is removed.
+///
+/// That output is the secret the wallet recovery key is wrapped with; it must
+/// be used on this device only. A server that saw it, together with the wrapped
+/// key it stores, could unwrap the recovery phrase. `prf.enabled` stays, as it
+/// only says that the authenticator supports PRF.
+Map<String, dynamic> withoutPrfOutput(Map<String, dynamic> response) {
+  final copy = Map<String, dynamic>.from(response);
+  final extensions = copy['clientExtensionResults'];
+  if (extensions is Map) {
+    final extensionsCopy = Map<String, dynamic>.from(extensions);
+    final prf = extensionsCopy['prf'];
+    if (prf is Map) {
+      extensionsCopy['prf'] = <String, dynamic>{
+        for (final entry in prf.entries)
+          if (entry.key != 'first' && entry.key != 'results')
+            entry.key.toString(): entry.value,
+      };
+    }
+    copy['clientExtensionResults'] = extensionsCopy;
+  }
+  return copy;
+}
+
 Future<Map<String, dynamic>> createWalletBackupPasskeyCredential(
   Map<String, dynamic> creationOptions,
 ) =>

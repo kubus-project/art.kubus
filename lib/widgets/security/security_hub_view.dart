@@ -418,8 +418,29 @@ class _SecurityHubViewState extends State<SecurityHubView> {
     }
   }
 
+  /// Adding or removing a passkey changes who can reach the account and, for a
+  /// wallet recovery passkey, wraps the recovery phrase for a new key. It needs
+  /// the same current local authentication as showing the phrase or changing the
+  /// backup.
+  Future<bool> _requireLocalAuthentication() async {
+    final gate = context.read<SecurityGateProvider>();
+    final messenger = ScaffoldMessenger.of(context);
+    final l10n = AppLocalizations.of(context)!;
+    final verified = await gate.requireSensitiveActionVerification();
+    if (!mounted) return false;
+    if (!verified) {
+      messenger.showKubusSnackBar(
+        SnackBar(content: Text(l10n.securityHubAuthenticationFailed)),
+        tone: KubusSnackBarTone.error,
+      );
+      return false;
+    }
+    return true;
+  }
+
   Future<void> _createAccountPasskey() async {
     if (_busy) return;
+    if (!await _requireLocalAuthentication() || !mounted) return;
     final l10n = AppLocalizations.of(context)!;
     final messenger = ScaffoldMessenger.of(context);
     setState(() => _busy = true);
@@ -456,6 +477,7 @@ class _SecurityHubViewState extends State<SecurityHubView> {
       action: l10n.accountPasskeyRemoveAction,
     );
     if (!confirmed || !mounted) return;
+    if (!await _requireLocalAuthentication() || !mounted) return;
     final messenger = ScaffoldMessenger.of(context);
     setState(() => _busy = true);
     try {
@@ -483,6 +505,7 @@ class _SecurityHubViewState extends State<SecurityHubView> {
 
   Future<void> _createWalletRecoveryPasskey() async {
     if (_busy) return;
+    if (!await _requireLocalAuthentication() || !mounted) return;
     final walletProvider = context.read<WalletProvider>();
     final messenger = ScaffoldMessenger.of(context);
     final l10n = AppLocalizations.of(context)!;
@@ -534,6 +557,7 @@ class _SecurityHubViewState extends State<SecurityHubView> {
       action: l10n.securityHubRemoveRecoveryPasskeyAction,
     );
     if (!confirmed || !mounted) return;
+    if (!await _requireLocalAuthentication() || !mounted) return;
     final walletProvider = context.read<WalletProvider>();
     final messenger = ScaffoldMessenger.of(context);
     setState(() => _busy = true);

@@ -421,6 +421,11 @@ class WalletProvider extends ChangeNotifier {
     }
   }
 
+  /// Whether a PIN is stored, throwing when the store cannot be read. Security
+  /// decisions (replace, remove, gate a sensitive action) use this instead of
+  /// [hasPin], because "could not read" must never be treated as "no PIN".
+  Future<bool> hasPinOrThrow() => _pinAuth.hasPin();
+
   Future<PinVerifyResult> verifyPinDetailed(String pin) async {
     try {
       return await _pinAuth.verifyPin(pin);
@@ -1400,7 +1405,7 @@ class WalletProvider extends ChangeNotifier {
     final assertion = await getWalletBackupPasskeyAssertion(options);
     await _apiService.recovery.verifyPasskeyAuth(
       walletAddress: targetWallet,
-      responsePayload: assertion,
+      responsePayload: withoutPrfOutput(assertion),
     );
     await refreshEncryptedWalletBackupStatus(walletAddress: targetWallet);
     return true;
@@ -1461,7 +1466,7 @@ class WalletProvider extends ChangeNotifier {
       }
       final verifyResponse = await _apiService.recovery.verifyPasskeyRecover(
         walletAddress: targetWallet,
-        responsePayload: assertion.response!,
+        responsePayload: withoutPrfOutput(assertion.response!),
       );
 
       if (verifyResponse['verified'] != true) {
@@ -1595,7 +1600,7 @@ class WalletProvider extends ChangeNotifier {
     final verifyResponse = await _apiService.recovery.verifyPasskeyRegistration(
       walletAddress: targetWallet,
       nickname: nickname,
-      responsePayload: credential,
+      responsePayload: withoutPrfOutput(credential),
       encryptedWrappedRecoveryKey: wrapped.encryptedWrappedRecoveryKey,
       encryptedWrappedRecoveryKeyNonce:
           wrapped.encryptedWrappedRecoveryKeyNonce,

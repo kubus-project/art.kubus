@@ -8,10 +8,15 @@ class _Storage implements PinStoragePort {
   bool failDelete = false;
   bool deleteSilentlyKeepsPin = false;
   bool writeSilentlyDropsPin = false;
+  bool failRead = false;
+  bool deleteThenThrow = false;
   int writes = 0;
 
   @override
-  Future<bool> hasPin() async => pin != null;
+  Future<bool> hasPin() async {
+    if (failRead) throw StateError('secure storage read failed');
+    return pin != null;
+  }
 
   @override
   Future<void> setPin(String value) async {
@@ -24,6 +29,7 @@ class _Storage implements PinStoragePort {
   Future<void> clearPin() async {
     if (failDelete) throw StateError('secure storage delete failed');
     if (!deleteSilentlyKeepsPin) pin = null;
+    if (deleteThenThrow) throw StateError('lockout key delete failed');
   }
 }
 
@@ -31,6 +37,7 @@ class _Gate implements PinGatePort {
   bool authenticates = true;
   int verifications = 0;
   int reloads = 0;
+  bool reloadThrows = false;
 
   @override
   Future<bool> requireSensitiveActionVerification() async {
@@ -39,21 +46,31 @@ class _Gate implements PinGatePort {
   }
 
   @override
-  Future<void> reloadSettings() async => reloads++;
+  Future<void> reloadSettings() async {
+    reloads++;
+    if (reloadThrows) throw StateError('gate reload failed');
+  }
 }
 
 class _Settings extends PinSettingsStore {
   _Settings(this.state);
   SettingsState state;
   int saves = 0;
+  bool dropWrites = false;
+  bool saveThrows = false;
+  bool loadThrows = false;
 
   @override
-  Future<SettingsState> load() async => state;
+  Future<SettingsState> load() async {
+    if (loadThrows) throw StateError('settings unreadable');
+    return state;
+  }
 
   @override
   Future<void> save(SettingsState value) async {
     saves++;
-    state = value;
+    if (saveThrows) throw StateError('settings write failed');
+    if (!dropWrites) state = value;
   }
 }
 
@@ -228,4 +245,107 @@ void main() {
       expect(r.settings.saves, 0);
     });
   });
+
+  group('an unreadable store is a failure, never "no PIN"', () {
+    test('replacing does not skip authentication and writes nothing', () async {
+      final r = _rig(existingPin: '1111', requirePin: true)
+        ..storage.failRead = true;
+      final result = await r.management.setOrReplacePin('2222', '2222');
+      expect(result.outcome, PinManagementOutcome.storageFailed);
+      expect(r.storage.writes, 0);
+      expect(r.storage.pin, '1111');
+      expect(r.settings.saves, 0);
+    });
+
+    test('removing does not report a PIN cleared that is still stored',
+        () async {
+      final r = _rig(existingPin: '1111', requirePin: true)
+        ..storage.failRead = true;
+      final result = await r.management.removePin();
+      expect(result.outcome, PinManagementOutcome.storageFailed);
+      expect(r.storage.pin, '1111');
+      expect(r.settings.state.requirePin, isTrue);
+    });
+
+    test('a read-back that fails after the write is a failure', () async {
+      final r = _rig();
+      final storage = r.storage;
+      // Readable before the write, unreadable after it.
+      final management = PinManagement.withPorts(
+        storage: _ReadFailsAfterWrite(storage),
+        gate: r.gate,
+        settings: r.settings,
+      );
+      final result = await management.setOrReplacePin('4821', '4821');
+      expect(result.outcome, PinManagementOutcome.storageFailed);
+    });
+  });
+
+  group('partial and persisted-state failures', () {
+    test('a leftover lockout key failing after the hash is gone is a success',
+        () async {
+      final r = _rig(existingPin: '1111', requirePin: true)
+        ..storage.deleteThenThrow = true;
+      final result = await r.management.removePin();
+      expect(result.isSuccess, isTrue);
+      expect(r.storage.pin, isNull);
+      expect(r.settings.state.requirePin, isFalse);
+    });
+
+    test('removing with no PIN repairs a stale requirement without asking',
+        () async {
+      final r = _rig(requirePin: true);
+      final result = await r.management.removePin();
+      expect(result.isSuccess, isTrue);
+      expect(r.gate.verifications, 0);
+      expect(r.settings.state.requirePin, isFalse);
+    });
+
+    test('a requirement that does not persist is reported', () async {
+      final r = _rig()..settings.dropWrites = true;
+      final result = await r.management.setOrReplacePin('4821', '4821');
+      expect(result.outcome, PinManagementOutcome.storageFailed);
+    });
+
+    test('settings errors never escape as exceptions', () async {
+      final first = _rig()..settings.saveThrows = true;
+      expect((await first.management.setOrReplacePin('4821', '4821')).outcome,
+          PinManagementOutcome.storageFailed);
+      final second = _rig(existingPin: '1111', requirePin: true)
+        ..settings.loadThrows = true;
+      expect((await second.management.removePin()).outcome,
+          PinManagementOutcome.storageFailed);
+    });
+
+    test('a failing gate reload does not undo or hide a completed change',
+        () async {
+      final r = _rig(existingPin: '1111', requirePin: true)
+        ..gate.reloadThrows = true;
+      final result = await r.management.removePin();
+      expect(result.isSuccess, isTrue);
+      expect(r.storage.pin, isNull);
+    });
+  });
+}
+
+/// Readable until the first write, then every read throws.
+class _ReadFailsAfterWrite implements PinStoragePort {
+  _ReadFailsAfterWrite(this._inner);
+  final _Storage _inner;
+  bool _written = false;
+
+  @override
+  Future<bool> hasPin() async {
+    if (_written) throw StateError('read failed after write');
+    return _inner.hasPin();
+  }
+
+  @override
+  Future<void> setPin(String pin) async {
+    await _inner.setPin(pin);
+    _written = true;
+  }
+
+  @override
+  Future<void> clearPin() => _inner.clearPin();
 }

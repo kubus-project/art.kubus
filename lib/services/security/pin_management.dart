@@ -13,7 +13,9 @@
 ///    deleted the outcome is [PinManagementOutcome.storageFailed] and the
 ///    persisted `requirePin` setting is left as it was, so the UI never reports
 ///    a state that is not on disk.
-///  * Nothing here logs a PIN.
+///  * "Could not read the PIN store" is a failure, never "no PIN": an unreadable
+///    store cannot be used to skip the authentication step.
+///  * Nothing here throws to the caller and nothing logs a PIN.
 library;
 
 import 'package:flutter/foundation.dart';
@@ -76,6 +78,7 @@ class PinSettingsStore {
 
 /// What [PinManagement] needs from the wallet's PIN storage.
 abstract interface class PinStoragePort {
+  /// Whether a PIN is stored. Throws when the store cannot be read.
   Future<bool> hasPin();
   Future<void> setPin(String pin);
   Future<void> clearPin();
@@ -93,7 +96,7 @@ class _WalletPinStorage implements PinStoragePort {
   final WalletProvider _wallet;
 
   @override
-  Future<bool> hasPin() => _wallet.hasPin();
+  Future<bool> hasPin() => _wallet.hasPinOrThrow();
   @override
   Future<void> setPin(String pin) => _wallet.setPin(pin);
   @override
@@ -110,6 +113,11 @@ class _GateAdapter implements PinGatePort {
   @override
   Future<void> reloadSettings() => _gate.reloadSettings();
 }
+
+const _storageFailed = PinManagementResult(PinManagementOutcome.storageFailed);
+const _authFailed =
+    PinManagementResult(PinManagementOutcome.authenticationFailed);
+const _done = PinManagementResult(PinManagementOutcome.success);
 
 class PinManagement {
   PinManagement({
@@ -133,6 +141,32 @@ class PinManagement {
   final PinGatePort _gate;
   final PinSettingsStore _settings;
 
+  /// Stores the PIN requirement and reads it back, so a setting that did not
+  /// persist is reported rather than assumed.
+  Future<bool> _persistRequirePin(bool value,
+      {bool clearBiometrics = false}) async {
+    final current = await _settings.load();
+    final needsChange = current.requirePin != value ||
+        (clearBiometrics && current.biometricAuth);
+    if (!needsChange) return true;
+    await _settings.save(current.copyWith(
+      requirePin: value,
+      biometricAuth: clearBiometrics ? false : null,
+      useBiometricsOnUnlock: clearBiometrics ? true : null,
+    ));
+    final stored = await _settings.load();
+    return stored.requirePin == value &&
+        (!clearBiometrics || !stored.biometricAuth);
+  }
+
+  Future<void> _reloadGate() async {
+    try {
+      await _gate.reloadSettings();
+    } catch (_) {
+      // The gate only refreshes its in-memory copy; the stored state is right.
+    }
+  }
+
   /// Sets the first PIN or replaces the existing one.
   Future<PinManagementResult> setOrReplacePin(
       String pin, String confirm) async {
@@ -141,61 +175,77 @@ class PinManagement {
       return PinManagementResult(PinManagementOutcome.invalid, issue: issue);
     }
 
-    final replacing = await _storage.hasPin();
+    final bool replacing;
+    try {
+      replacing = await _storage.hasPin();
+    } catch (_) {
+      return _storageFailed;
+    }
     if (replacing && !await _gate.requireSensitiveActionVerification()) {
-      return const PinManagementResult(
-          PinManagementOutcome.authenticationFailed);
+      return _authFailed;
     }
 
     try {
       await _storage.setPin(pin);
     } catch (_) {
-      return const PinManagementResult(PinManagementOutcome.storageFailed);
+      return _storageFailed;
     }
-    if (!await _storage.hasPin()) {
-      return const PinManagementResult(PinManagementOutcome.storageFailed);
+    try {
+      if (!await _storage.hasPin()) return _storageFailed;
+    } catch (_) {
+      return _storageFailed;
     }
 
     // A first PIN turns the PIN requirement on; replacing one leaves the user's
     // existing requirement choice alone.
     if (!replacing) {
-      final current = await _settings.load();
-      if (!current.requirePin) {
-        await _settings.save(current.copyWith(requirePin: true));
+      try {
+        if (!await _persistRequirePin(true)) return _storageFailed;
+      } catch (_) {
+        return _storageFailed;
       }
     }
-    await _gate.reloadSettings();
-    return const PinManagementResult(PinManagementOutcome.success);
+    await _reloadGate();
+    return _done;
   }
 
   /// Removes the PIN, the PIN requirement and biometric app unlock, as the
   /// settings dialogs always did: biometrics fall back to the PIN, so the two
   /// are switched off together.
   Future<PinManagementResult> removePin() async {
-    if (!await _storage.hasPin()) {
-      return const PinManagementResult(PinManagementOutcome.success);
+    final bool present;
+    try {
+      present = await _storage.hasPin();
+    } catch (_) {
+      return _storageFailed;
     }
-    if (!await _gate.requireSensitiveActionVerification()) {
-      return const PinManagementResult(
-          PinManagementOutcome.authenticationFailed);
+    if (present && !await _gate.requireSensitiveActionVerification()) {
+      return _authFailed;
+    }
+
+    if (present) {
+      try {
+        await _storage.clearPin();
+      } catch (_) {
+        // The hash is deleted first, so a later key may have failed while the
+        // PIN itself is already gone; the read-back below decides.
+      }
+      try {
+        if (await _storage.hasPin()) return _storageFailed;
+      } catch (_) {
+        return _storageFailed;
+      }
     }
 
     try {
-      await _storage.clearPin();
+      // Also repairs a stale requirement left behind with no PIN to back it.
+      if (!await _persistRequirePin(false, clearBiometrics: present)) {
+        return _storageFailed;
+      }
     } catch (_) {
-      return const PinManagementResult(PinManagementOutcome.storageFailed);
+      return _storageFailed;
     }
-    if (await _storage.hasPin()) {
-      return const PinManagementResult(PinManagementOutcome.storageFailed);
-    }
-
-    final current = await _settings.load();
-    await _settings.save(current.copyWith(
-      requirePin: false,
-      biometricAuth: false,
-      useBiometricsOnUnlock: true,
-    ));
-    await _gate.reloadSettings();
-    return const PinManagementResult(PinManagementOutcome.success);
+    await _reloadGate();
+    return _done;
   }
 }
