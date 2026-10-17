@@ -1,3 +1,4 @@
+import '../../widgets/glass_components.dart';
 import 'dart:async';
 
 import 'package:art_kubus/utils/design_tokens.dart';
@@ -669,7 +670,7 @@ class _DesktopShellState extends State<DesktopShell>
     const functionsPanelWidthMedium = 300.0;
 
     void openCanonicalPublicEntryNavigation() {
-      showDialog<void>(
+      showKubusDialog<void>(
         context: context,
         builder: (dialogContext) {
           final roles = KubusColorRoles.of(dialogContext);
