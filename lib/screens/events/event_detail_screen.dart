@@ -26,6 +26,7 @@ import '../../utils/creator_shell_navigation.dart';
 import '../../utils/map_navigation.dart';
 import '../../utils/media_url_resolver.dart';
 import '../../widgets/common/kubus_cached_image.dart';
+import '../../widgets/common/kubus_family_brand.dart';
 import '../../utils/kubus_color_roles.dart';
 import '../../widgets/collaboration_panel.dart';
 import '../../widgets/promotion/promotion_builder_sheet.dart';
@@ -426,7 +427,7 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
               elevation: 0,
               // The brand bar keeps Back; the event title is the one title,
               // in the body (as on the artwork and profile detail screens).
-              title: Text(
+              title: KubusFamilyBrandText(
                 'art.kubus',
                 style: KubusTextStyles.screenTitle,
               ),

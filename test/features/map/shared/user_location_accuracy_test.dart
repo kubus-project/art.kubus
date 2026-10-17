@@ -22,11 +22,9 @@ void main() {
       headingDegrees: 0,
     );
     final features = data['features'] as List;
-    expect(features.map((feature) => feature['id']), ['me', 'me_heading']);
-    final ring = features.last['geometry']['coordinates'][0] as List;
-    expect(ring.first, ring.last);
-    expect(ring[6][1], greaterThan(46));
-    expect(ring[6][0], closeTo(14, 0.000001));
+    expect(features.map((feature) => feature['id']), ['me']);
+    expect(features.single['properties']['headingDegrees'], 0);
+    expect(features.single['geometry']['type'], 'Point');
   });
   test('accuracy field uses live meters and stable location identity', () {
     final data = KubusMapSourceSyncHelpers.pointFeatureCollection(

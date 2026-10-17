@@ -1,0 +1,358 @@
+{
+  "evidence": "local production artifact with deterministic API/media fixtures",
+  "webRoot": "C:\\kubus-build\\083-web-90200b56",
+  "results": [
+    {
+      "name": "chromium-light-en-US-reduce-390",
+      "errors": [],
+      "writesBlocked": [
+        "/api/presence/batch",
+        "/api/analytics/app",
+        "/api/presence/batch"
+      ],
+      "requests": [
+        {
+          "method": "GET",
+          "path": "/api/artworks",
+          "search": "?page=1&limit=100"
+        },
+        {
+          "method": "GET",
+          "path": "/api/community/posts",
+          "search": "?page=1&limit=24&followingOnly=false&surface=discover&sort=hybrid"
+        },
+        {
+          "method": "GET",
+          "path": "/api/profiles/22222222-2222-4222-8222-222222222222",
+          "search": ""
+        },
+        {
+          "method": "POST",
+          "path": "/api/presence/batch",
+          "search": ""
+        },
+        {
+          "method": "POST",
+          "path": "/api/analytics/app",
+          "search": ""
+        },
+        {
+          "method": "GET",
+          "path": "/api/community/posts",
+          "search": "?page=1&limit=30&surface=discover&sort=recent"
+        },
+        {
+          "method": "GET",
+          "path": "/api/exhibitions",
+          "search": "?limit=20&offset=0"
+        },
+        {
+          "method": "POST",
+          "path": "/api/presence/batch",
+          "search": ""
+        },
+        {
+          "method": "GET",
+          "path": "/api/search",
+          "search": "?q=%23Art&type=posts&limit=12&page=1"
+        },
+        {
+          "method": "GET",
+          "path": "/api/search/suggestions",
+          "search": "?q=%23Art&limit=12&include=collections"
+        }
+      ],
+      "playback": [],
+      "afterPlayback": [],
+      "stageBefore": null,
+      "stageAfter": null,
+      "captures": [
+        {
+          "width": 390,
+          "overflow": false
+        }
+      ],
+      "semanticText": "- group:\n  - text: Community Connect with artists and collectors\n  - button\n  - button\n  - textbox \"community_search_input\" [disabled]\n  - textbox \"Search…\"\n  - tablist:\n    - tab \"Following\"\n    - tab \"Discover\"\n    - tab \"Groups\"\n    - tab \"Art\" [selected]\n  - tabpanel\n- group \"Main navigation\":\n  - button \"Map\"\n  - button \"AR\"\n  - button \"Community\"\n  - button \"Home\"\n  - button \"Account\"\n- button \"Create\"",
+      "overflow": false
+    },
+    {
+      "name": "chromium-dark-en-US-reduce-390",
+      "errors": [],
+      "writesBlocked": [
+        "/api/presence/batch",
+        "/api/analytics/app",
+        "/api/presence/batch"
+      ],
+      "requests": [
+        {
+          "method": "GET",
+          "path": "/api/artworks",
+          "search": "?page=1&limit=100"
+        },
+        {
+          "method": "GET",
+          "path": "/api/community/posts",
+          "search": "?page=1&limit=24&followingOnly=false&surface=discover&sort=hybrid"
+        },
+        {
+          "method": "GET",
+          "path": "/api/profiles/22222222-2222-4222-8222-222222222222",
+          "search": ""
+        },
+        {
+          "method": "POST",
+          "path": "/api/presence/batch",
+          "search": ""
+        },
+        {
+          "method": "POST",
+          "path": "/api/analytics/app",
+          "search": ""
+        },
+        {
+          "method": "GET",
+          "path": "/api/community/posts",
+          "search": "?page=1&limit=30&surface=discover&sort=recent"
+        },
+        {
+          "method": "GET",
+          "path": "/api/exhibitions",
+          "search": "?limit=20&offset=0"
+        },
+        {
+          "method": "POST",
+          "path": "/api/presence/batch",
+          "search": ""
+        },
+        {
+          "method": "GET",
+          "path": "/api/search",
+          "search": "?q=%23Art&type=posts&limit=12&page=1"
+        },
+        {
+          "method": "GET",
+          "path": "/api/search/suggestions",
+          "search": "?q=%23Art&limit=12&include=collections"
+        }
+      ],
+      "playback": [],
+      "afterPlayback": [],
+      "stageBefore": null,
+      "stageAfter": null,
+      "captures": [
+        {
+          "width": 390,
+          "overflow": false
+        }
+      ],
+      "semanticText": "- group:\n  - text: Community Connect with artists and collectors\n  - button\n  - button\n  - textbox \"community_search_input\" [disabled]\n  - textbox \"Search…\"\n  - tablist:\n    - tab \"Following\"\n    - tab \"Discover\"\n    - tab \"Groups\"\n    - tab \"Art\" [selected]\n  - tabpanel\n- group \"Main navigation\":\n  - button \"Map\"\n  - button \"AR\"\n  - button \"Community\"\n  - button \"Home\"\n  - button \"Account\"\n- button \"Create\"",
+      "overflow": false
+    },
+    {
+      "name": "firefox-light-en-US-reduce-390",
+      "errors": [],
+      "writesBlocked": [
+        "/api/presence/batch",
+        "/api/analytics/app",
+        "/api/presence/batch"
+      ],
+      "requests": [
+        {
+          "method": "GET",
+          "path": "/api/artworks",
+          "search": "?page=1&limit=100"
+        },
+        {
+          "method": "GET",
+          "path": "/api/profiles/22222222-2222-4222-8222-222222222222",
+          "search": ""
+        },
+        {
+          "method": "GET",
+          "path": "/api/community/posts",
+          "search": "?page=1&limit=24&followingOnly=false&surface=discover&sort=hybrid"
+        },
+        {
+          "method": "POST",
+          "path": "/api/presence/batch",
+          "search": ""
+        },
+        {
+          "method": "POST",
+          "path": "/api/analytics/app",
+          "search": ""
+        },
+        {
+          "method": "GET",
+          "path": "/api/community/posts",
+          "search": "?page=1&limit=30&surface=discover&sort=recent"
+        },
+        {
+          "method": "GET",
+          "path": "/api/community/art-feed",
+          "search": "?lat=46.0569&lng=14.5058&radiusKm=3.00&limit=30&page=1&sort=hybrid&includeGeneral=true"
+        },
+        {
+          "method": "GET",
+          "path": "/api/community/art-feed",
+          "search": "?lat=46.0569&lng=14.5058&radiusKm=15.00&limit=30&page=1&sort=hybrid&includeGeneral=true"
+        },
+        {
+          "method": "GET",
+          "path": "/api/community/art-feed",
+          "search": "?lat=46.0569&lng=14.5058&radiusKm=60.00&limit=30&page=1&sort=hybrid&includeGeneral=true"
+        },
+        {
+          "method": "GET",
+          "path": "/api/community/art-feed",
+          "search": "?lat=46.0569&lng=14.5058&radiusKm=250.00&limit=30&page=1&sort=hybrid&includeGeneral=true"
+        },
+        {
+          "method": "GET",
+          "path": "/api/exhibitions",
+          "search": "?limit=20&offset=0&lat=46.0569&lng=14.5058&radiusKm=250"
+        },
+        {
+          "method": "POST",
+          "path": "/api/presence/batch",
+          "search": ""
+        },
+        {
+          "method": "GET",
+          "path": "/api/search",
+          "search": "?q=%23Art&type=posts&limit=12&page=1"
+        },
+        {
+          "method": "GET",
+          "path": "/api/search/suggestions",
+          "search": "?q=%23Art&limit=12&include=collections"
+        }
+      ],
+      "playback": [],
+      "afterPlayback": [],
+      "stageBefore": {
+        "x": 25,
+        "y": 416,
+        "width": 340,
+        "height": 428
+      },
+      "stageAfter": {
+        "x": 25,
+        "y": 416,
+        "width": 340,
+        "height": 428
+      },
+      "captures": [
+        {
+          "width": 390,
+          "overflow": false
+        }
+      ],
+      "semanticText": "- group:\n  - text: Community Connect with artists and collectors\n  - button\n  - button\n  - textbox \"community_search_input\" [disabled]\n  - textbox \"Search…\"\n  - tablist:\n    - tab \"Following\"\n    - tab \"Discover\"\n    - tab \"Groups\"\n    - tab \"Art\" [selected]\n  - tabpanel:\n    - group:\n      - text: Discover art Around your location · Within 250 km\n      - 'group \"Nearby · 0.0 km away Alexandra Katarina Longname Artist Institution @visual-qa-owner 1m ago - art portrait video — #Art #Ljubljana Ljubljana\"':\n        - button \"Share\"\n        - group \"Media 1 of 1\":\n          - group \"Video player\":\n            - button \"Play video\"\n- group \"Main navigation\":\n  - button \"Map\"\n  - button \"AR\"\n  - button \"Community\"\n  - button \"Home\"\n  - button \"Account\"\n- button \"Create\"",
+      "overflow": false
+    },
+    {
+      "name": "firefox-dark-en-US-reduce-390",
+      "errors": [],
+      "writesBlocked": [
+        "/api/presence/batch",
+        "/api/analytics/app",
+        "/api/presence/batch"
+      ],
+      "requests": [
+        {
+          "method": "GET",
+          "path": "/api/artworks",
+          "search": "?page=1&limit=100"
+        },
+        {
+          "method": "GET",
+          "path": "/api/profiles/22222222-2222-4222-8222-222222222222",
+          "search": ""
+        },
+        {
+          "method": "GET",
+          "path": "/api/community/posts",
+          "search": "?page=1&limit=24&followingOnly=false&surface=discover&sort=hybrid"
+        },
+        {
+          "method": "POST",
+          "path": "/api/presence/batch",
+          "search": ""
+        },
+        {
+          "method": "POST",
+          "path": "/api/analytics/app",
+          "search": ""
+        },
+        {
+          "method": "GET",
+          "path": "/api/community/posts",
+          "search": "?page=1&limit=30&surface=discover&sort=recent"
+        },
+        {
+          "method": "GET",
+          "path": "/api/community/art-feed",
+          "search": "?lat=46.0569&lng=14.505799999999994&radiusKm=3.00&limit=30&page=1&sort=hybrid&includeGeneral=true"
+        },
+        {
+          "method": "GET",
+          "path": "/api/community/art-feed",
+          "search": "?lat=46.0569&lng=14.505799999999994&radiusKm=15.00&limit=30&page=1&sort=hybrid&includeGeneral=true"
+        },
+        {
+          "method": "GET",
+          "path": "/api/community/art-feed",
+          "search": "?lat=46.0569&lng=14.505799999999994&radiusKm=60.00&limit=30&page=1&sort=hybrid&includeGeneral=true"
+        },
+        {
+          "method": "GET",
+          "path": "/api/community/art-feed",
+          "search": "?lat=46.0569&lng=14.505799999999994&radiusKm=250.00&limit=30&page=1&sort=hybrid&includeGeneral=true"
+        },
+        {
+          "method": "GET",
+          "path": "/api/exhibitions",
+          "search": "?limit=20&offset=0&lat=46.0569&lng=14.505799999999994&radiusKm=250"
+        },
+        {
+          "method": "POST",
+          "path": "/api/presence/batch",
+          "search": ""
+        },
+        {
+          "method": "GET",
+          "path": "/api/search",
+          "search": "?q=%23Art&type=posts&limit=12&page=1"
+        },
+        {
+          "method": "GET",
+          "path": "/api/search/suggestions",
+          "search": "?q=%23Art&limit=12&include=collections"
+        }
+      ],
+      "playback": [],
+      "afterPlayback": [],
+      "stageBefore": {
+        "x": 25,
+        "y": 466,
+        "width": 340,
+        "height": 378
+      },
+      "stageAfter": {
+        "x": 25,
+        "y": 466,
+        "width": 340,
+        "height": 378
+      },
+      "captures": [
+        {
+          "width": 390,
+          "overflow": false
+        }
+      ],
+      "semanticText": "- group:\n  - text: Community Connect with artists and collectors\n  - button\n  - button\n  - textbox \"community_search_input\" [disabled]\n  - textbox \"Search…\"\n  - tablist:\n    - tab \"Following\"\n    - tab \"Discover\"\n    - tab \"Groups\"\n    - tab \"Art\" [selected]\n  - tabpanel:\n    - group:\n      - group \"Discover art Around the area you were viewing on the map · Within 250 km\":\n        - button \"Use my location\"\n      - 'group \"Nearby · 0.0 km away Alexandra Katarina Longname Artist Institution @visual-qa-owner 1m ago - art portrait video — #Art #Ljubljana Ljubljana\"':\n        - button \"Share\"\n        - group \"Media 1 of 1\":\n          - group \"Video player\":\n            - button \"Play video\"\n- group \"Main navigation\":\n  - button \"Map\"\n  - button \"AR\"\n  - button \"Community\"\n  - button \"Home\"\n  - button \"Account\"\n- button \"Create\"",
+      "overflow": false
+    }
+  ]
+}

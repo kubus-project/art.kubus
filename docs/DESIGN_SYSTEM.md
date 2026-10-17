@@ -34,6 +34,23 @@ lead, labels follow, secondary context comes next, and decoration comes last.
 Allow labels and long names to wrap. Increased system text scale must grow the
 composition instead of clipping values or reducing all text to fit.
 
+### kubus family wordmark
+
+In visible authored product copy, emphasize the standalone `kubus` word in the
+family names with Sofia Sans weight 800 and italic styling. This applies to
+`art.kubus`, `kubus Node`, and standalone `kubus` references. Within the first
+two names, keep the `art.` prefix and ` Node` suffix at weight 400 and normal
+style, even when the surrounding heading is bold italic. Other prose retains its
+surrounding text style.
+Render these references through `KubusFamilyBrandText` or its `span` helper so
+matching is escaped and consistent. Apply it only to authored brand copy and
+screen identity. URLs, package identifiers, protocol and signing values, and
+user-authored content retain their original rendering and exact text.
+Header widgets (`KubusHeaderText`, `KubusHeaderTitleBlock`) never detect the
+brand on their own, because their titles can carry user content; pass
+`brandTitle: true` only for authored brand copy. The matcher also leaves hosts,
+package identifiers and paths (`art.kubus.site`, `com.kubus.app`) plain.
+
 ## Color and themes
 
 Use `Theme.of(context).colorScheme`, the selected theme accent and shared semantic
@@ -127,6 +144,12 @@ accessible label only when verified; a role icon never grants verification.
 The mobile avatar badge is the single role/verification indicator, including its
 accessible label; do not repeat role chips inside the identity panel. Desktop
 keeps its name-adjacent role badges.
+When an account has both artist and institution roles, show both glyphs and announce both roles in the
+single mobile badge. A verified role badge keeps the role glyph and adds a small
+check; a verified account without a role uses the verification glyph. Desktop
+continues to show each role and verification beside the name. Owner avatars
+provide a labelled edit action, separate from presence and role/verification
+indicators.
 Preserve the canonical rounded-square avatar and the separate upper-right active
 presence indicator. Presence appears only for fresh, visible provider data; do not
 invent an online status or cover it with the identity badge.
@@ -137,16 +160,20 @@ media contract supports it. `BoxFit.cover` must have appropriate parent constrai
 Keep avatar overlap and viewport geometry stable through asynchronous load and
 failure. Missing-cover fallback and failed authored-cover framing are distinct.
 
-Single-video Community stages on mobile reserve the usable content viewport before
-scrolling, excluding safe areas and persistent navigation/composer chrome. Posters,
-loading and playback share that stable height; metadata must not move the scroll
-anchor. Fit every video aspect whole without distortion or blanket cover cropping.
-Desktop retains its viewport cap; quoted previews and mixed carousels retain their
-compact and shared stage geometry.
-Every full-size Community card host captures its bounded viewing height before
-scrolling, including group feeds, profile history/previews and desktop panes.
-Modal previews capture the remaining space below persistent controls; do not
-fall back to device height inside an unbounded scroll child.
+Single-video Community stages use the recorded media aspect (then an aspect
+already learned this session), bounded by the measured usable host viewport.
+Portrait videos may fill that usable height on phones; landscape, square and
+ultrawide videos use a proportionate stage with room for controls. Desktop keeps
+its viewport cap. Poster and player share the same geometry. When the reference
+has no geometry, the stable 16:9 fallback does not resize after playback metadata
+arrives. This fallback cannot establish correct cold portrait sizing; existing
+media needs recorded geometry before that case can be accepted.
+Mixed carousels retain one 4:3 stage and quoted previews remain compact.
+
+Hashtags and mentions use semantic foreground on the raised surface. Interactive
+chips have the shared accent hover/focus response and keyboard activation; plain
+metadata remains readable when no action is available. A selected-state visual
+is used only by a surface that actually owns selection.
 
 ## PRODUCT hover motion
 
@@ -215,5 +242,18 @@ system and semantic guards remain active despite their historical filenames.
 Chromium and Firefox. Preserve 14 settled samples over at least one full 2200 ms
 cycle, rise ≥1.5 px, normal peak-to-peak ≥1 px, reduced peak-to-peak ≤0.6 px, accent
 shadow, disabled stillness and return to rest. Adaptive capture deadlines account
-for slow screenshots; insufficient samples remain inconclusive failures. A hover
+for slow screenshots; insufficient samples remain inconclusive failures. Captures are
+steered to unsampled float phases (no phase hole above a quarter period), because a
+steady cadence of whole periods (Firefox paints take about 4.4 s, two periods) otherwise
+samples one phase and reads a still tile as a failure. A hover
 change updates code, this contract, widget tests and browser acceptance together.
+
+## Brand Identity / Wordmark Typography
+
+Official wordmarks are art.***kubus***, ***kubus*** and ***kubus*** Node: only `kubus` is bold
+italic; `art.` and capitalized `Node` are regular upright. Apply this beside the existing
+graphical logo in headers and explicitly designed brand compositions. Running text stays plain
+(art.kubus, kubus, kubus Node); technical identifiers retain exact spelling. Future frontend,
+redesign and branding work must preserve the [canonical wordmark
+specification](https://github.com/kubus-project/art.kubus.site/blob/master/docs/CONTENT-AND-BRAND.md#2-brand-identity--wordmark-typography),
+including genuine font faces, responsive alignment and one combined accessible name.

@@ -62,7 +62,8 @@ void main() {
           const CommunityPostMediaCarousel(mediaUrls: [url]),
         ));
         await tester.pumpAndSettle();
-        expect(_stageHeight(tester), closeTo(600 / 16 * 9, 0.6));
+        expect(_stageHeight(tester),
+            closeTo(math.min(600 / c.$2, 900 * 0.72), 0.6));
       });
     }
 
@@ -73,7 +74,7 @@ void main() {
         const CommunityPostMediaCarousel(mediaUrls: [url]),
       ));
       await tester.pumpAndSettle();
-      expect(_stageHeight(tester), closeTo(600 * 9 / 16, 0.6));
+      expect(_stageHeight(tester), closeTo(600 * 9 / 32, 0.6));
     });
 
     testWidgets('a narrow mobile stage uses available height, not a minimum',
@@ -84,7 +85,7 @@ void main() {
         width: 160,
       ));
       await tester.pumpAndSettle();
-      expect(_stageHeight(tester), 900);
+      expect(_stageHeight(tester), closeTo(kCommunityVideoStageMinHeight, 0.6));
     });
 
     testWidgets('an unknown clip starts at 16:9', (tester) async {
@@ -137,16 +138,53 @@ void main() {
       expect(play.bottom, lessThanOrEqualTo(stage.bottom));
     });
 
-    testWidgets('mixed media keeps the stable 4:3 stage on every page',
+    testWidgets('a multi-video carousel keeps one 4:3 stage on every page',
         (tester) async {
-      CommunityPostVideoSlide.knownAspects[url] = 32 / 9;
+      const landscapeUrl = 'https://example.test/uploads/landscape.mp4';
+      CommunityPostVideoSlide.knownAspects[url] = 9 / 16;
+      CommunityPostVideoSlide.knownAspects[landscapeUrl] = 16 / 9;
       await tester.pumpWidget(_harness(
         const CommunityPostMediaCarousel(
-          mediaUrls: [url, 'https://example.test/uploads/a.jpg'],
+          mediaUrls: [url, landscapeUrl],
         ),
       ));
       await tester.pumpAndSettle();
-      expect(_stageHeight(tester), closeTo(450, 0.6));
+      final first = tester.getRect(find.byType(ClipRRect).first);
+      expect(first.height, closeTo(600 / kCommunityMediaStageAspect, 0.6));
+      final play = tester.getRect(find.byTooltip('Play video').first);
+      expect(play.top, greaterThanOrEqualTo(first.top));
+      expect(play.bottom, lessThanOrEqualTo(first.bottom));
+
+      await tester.drag(find.byType(PageView), const Offset(-500, 0));
+      await tester.pumpAndSettle();
+      final second = tester.getRect(find.byTooltip('Play video').first);
+      final landscapeStage = tester.getRect(find.byType(ClipRRect).first);
+      expect(landscapeStage, first, reason: 'swiping never moves the feed');
+      expect(second.bottom, lessThanOrEqualTo(landscapeStage.bottom));
+      expect(find.text('2 / 2'), findsOneWidget);
+
+      await tester.drag(find.byType(PageView), const Offset(500, 0));
+      await tester.pumpAndSettle();
+      expect(tester.getRect(find.byType(ClipRRect).first), first);
+      expect(find.text('1 / 2'), findsOneWidget);
+    });
+
+    testWidgets('a mixed image and portrait video carousel keeps one stage',
+        (tester) async {
+      const imageUrl = 'https://example.test/uploads/still.jpg';
+      CommunityPostVideoSlide.knownAspects[url] = 9 / 16;
+      await tester.pumpWidget(_harness(
+        const CommunityPostMediaCarousel(mediaUrls: [imageUrl, url]),
+      ));
+      await tester.pumpAndSettle();
+      final first = tester.getRect(find.byType(ClipRRect).first);
+      expect(first.height, closeTo(600 / kCommunityMediaStageAspect, 0.6));
+
+      await tester.drag(find.byType(PageView), const Offset(-500, 0));
+      await tester.pumpAndSettle();
+      expect(tester.getRect(find.byType(ClipRRect).first), first,
+          reason: 'a tall clip is contained in the stage, not the stage in it');
+      expect(find.text('2 / 2'), findsOneWidget);
     });
 
     testWidgets('loaded metadata does not change stage height or anchor',
@@ -229,11 +267,13 @@ void main() {
               ),
             ));
             await tester.pumpAndSettle();
-            final expected = viewport.height -
+            final usable = viewport.height -
                 topInset -
                 chromeHeight -
                 bottomInset -
                 (detail ? kToolbarHeight : 0);
+            final expected =
+                math.min(viewport.width / (aspect ?? 16 / 9), usable);
             final before = tester.getRect(find.byType(ClipRRect).first);
             expect(before.height, closeTo(expected, 0.6));
             expect(

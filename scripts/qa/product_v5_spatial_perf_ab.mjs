@@ -57,7 +57,7 @@ const configs = (process.env.PERF_CONFIGS || '')
   .filter(Boolean)
   .map((s, i) => {
     const [name, dir] = s.split('=');
-    return { name, dir: path.resolve(dir), port: 8110 + i };
+    return { name, dir: path.resolve(dir), port: Number(process.env.PERF_PORT || 8110) + i };
   });
 const viewports = (process.env.PERF_VIEWPORTS || '1440x900,390x844').split(',').map((v) => {
   const [width, height] = v.split('x').map(Number);
@@ -121,7 +121,7 @@ async function installFixture(context, config, stats) {
   await context.route('**/*', async (route) => {
     const request = route.request();
     const url = new URL(request.url());
-    if (url.origin === appUrl && !url.pathname.startsWith('/api/')) return route.continue();
+    if (['blob:', 'data:'].includes(url.protocol) || (url.origin === appUrl && !url.pathname.startsWith('/api/'))) return route.continue();
     if (/\/api\/analytics\b/.test(url.pathname)) return route.fulfill({ status: 204, body: '' });
     if (request.method() === 'OPTIONS') {
       return route.fulfill({
@@ -150,7 +150,12 @@ async function installFixture(context, config, stats) {
     }
     // The app-origin /api path maps to the real API origin so it caches the same.
     const target = url.origin === appUrl ? `${apiOrigin}${url.pathname}${url.search}` : request.url();
-    const key = cacheKey('GET', target);
+    const fixtureUrl = new URL(target);
+    // The media proxy's sid is per-page telemetry, not part of image identity.
+    // Key the byte fixture by the actual media request so a fresh session does
+    // not fetch every cover again during a supposedly replayed comparison.
+    if (fixtureUrl.pathname === '/api/media/proxy') fixtureUrl.searchParams.delete('sid');
+    const key = cacheKey('GET', fixtureUrl.toString());
     const metaFile = path.join(fixtureDir, `${key}.json`);
     const bodyFile = path.join(fixtureDir, `${key}.bin`);
     const cors = {
@@ -176,12 +181,14 @@ async function installFixture(context, config, stats) {
       delete headers['content-encoding'];
       delete headers['content-length'];
       delete headers['transfer-encoding'];
-      if (response.status() === 200) {
-        await fs.writeFile(bodyFile, body);
-        await fs.writeFile(metaFile, JSON.stringify({ url: target, status: 200, headers }));
-      }
+      // Failed covers/tiles are part of the fixture too: both artifacts must
+      // see the same failure, without a fresh network retry skewing one run.
+      await fs.writeFile(bodyFile, body);
+      await fs.writeFile(metaFile, JSON.stringify({ url: target, status: response.status(), headers }));
       return route.fulfill({ status: response.status(), headers: { ...headers, ...cors }, body });
     } catch {
+      await fs.writeFile(bodyFile, '');
+      await fs.writeFile(metaFile, JSON.stringify({ url: target, status: 503, headers: {} }));
       return route.fulfill({ status: 503, body: '' });
     }
   });
@@ -203,6 +210,10 @@ const HOOK = () => {
     addImageNames: [],
     removeImage: 0,
     longTasks: [],
+    markerFrames: [],
+    sourceLoaded: [],
+    peakActiveImages: 0,
+    lastMarkerCount: 0,
     segment: 'boot',
   };
   try {
@@ -230,7 +241,13 @@ const HOOK = () => {
       proto.__perfHooked = true;
       const setStyle = proto.setStyle;
       proto.setStyle = function (...args) {
-        if (!window.__maps.includes(this)) window.__maps.push(this);
+        if (!window.__maps.includes(this)) {
+          window.__maps.push(this);
+          this.on('sourcedata', e => {
+            if (e.sourceId === 'kubus_markers' && e.isSourceLoaded)
+              window.__perf.sourceLoaded.push({ t: performance.now(), seg: window.__perf.segment });
+          });
+        }
         return setStyle.apply(this, args);
       };
       if (typeof proto._render === 'function') {
@@ -246,7 +263,9 @@ const HOOK = () => {
       proto.addImage = function (...args) {
         window.__perf.addImage += 1;
         window.__perf.addImageNames.push({ id: String(args[0]), t: performance.now(), seg: window.__perf.segment });
-        return addImage.apply(this, args);
+        const result = addImage.apply(this, args);
+        window.__perf.peakActiveImages = Math.max(window.__perf.peakActiveImages, this.listImages().length);
+        return result;
       };
       const removeImage = proto.removeImage;
       if (removeImage) {
@@ -268,6 +287,20 @@ const HOOK = () => {
             try {
               features = typeof data === 'string' ? -2 : (data.features || []).length;
             } catch {}
+            if (id === 'kubus_markers' && data && typeof data === 'object') {
+              window.__perf.lastMarkerCount = features;
+              if (window.__perf.markerFrames.length < 2000) window.__perf.markerFrames.push({
+                t: performance.now(), seg: window.__perf.segment, count: features,
+                features: (data.features || []).slice(0, 256).map((f) => ({
+                  id: f.id, p: f.geometry?.coordinates,
+                  opacity: f.properties?.entryOpacity,
+                  scale: f.properties?.entryScale,
+                  coverReveal: f.properties?.coverReveal,
+                  retiring: f.properties?.transitionRetiring === true,
+                  selected: f.properties?.isSelected,
+                })),
+              });
+            }
             window.__perf.setData.push({
               id,
               d: performance.now() - t0,
@@ -298,10 +331,49 @@ function summarise(deltas) {
     max: fix(s[s.length - 1]),
     over33: s.filter((d) => d > 33.4).length,
     over50: s.filter((d) => d > 50).length,
+    missed60HzFrames: s.reduce((n, d) => n + Math.max(0, Math.round(d / (1000 / 60)) - 1), 0),
   };
 }
 
 const COVER_SEGMENTS = ['approach', 'idle-13', 'deepen', 'idle-14.6', 'pan', 'idle-pan', 'zoom-out'];
+
+// Slow split, immediate reversal, merge and pan; repeated in one page to expose
+// warm decoded/registered media independently of the replayed HTTP fixture.
+const TOPOLOGY_PATH = async ({ center }) => {
+  const map = window.__maps.at(-1);
+  const frames = [], counts = [], idles = [];
+  let running = true, last = performance.now();
+  const tick = (now) => { frames.push({ d: now-last, seg: window.__perf.segment }); last=now; if(running) requestAnimationFrame(tick); };
+  const hold = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+  const ease = async (seg, opts) => {
+    // easeTo stops an in-flight move synchronously. Consume that old moveend
+    // before listening for the new path's completion (critical on reversal).
+    map.stop();
+    window.__perf.segment = seg;
+    await new Promise((resolve) => { map.once('moveend', resolve); map.easeTo(opts); });
+    idles.push({ seg: `idle-${seg}`, t: performance.now(), zoom: map.getZoom(), center: map.getCenter() });
+    window.__perf.segment = `idle-${seg}`;
+    await hold(700);
+  };
+  map.jumpTo({ zoom: 10.5, center });
+  await hold(1800);
+  requestAnimationFrame(tick);
+  for (const cache of ['cold', 'warm']) {
+    await ease(`${cache}-split`, { zoom: 13.4, duration: 2800 });
+    await hold(1800);
+    window.__perf.segment = `${cache}-reversal`;
+    map.easeTo({ zoom: 11.5, duration: 1400 });
+    await hold(500);
+    await ease(`${cache}-reverse-in`, { zoom: 13.4, duration: 1800 });
+    await ease(`${cache}-pan`, { center: [center[0]+0.003, center[1]+0.001], duration: 1200 });
+    counts.push({ seg: cache, features: window.__perf.lastMarkerCount, images: map.listImages().length,
+      rendered: map.queryRenderedFeatures(undefined, { layers: ['kubus_marker_dot_layer'] }).length });
+    await ease(`${cache}-merge`, { zoom: 10.5, center, duration: 2800 });
+  }
+  running = false;
+  frames.shift();
+  return { frames, counts, idles };
+};
 
 /** Street-approach path for cover-heavy measurement (runs in the page). */
 const COVER_PATH = () =>
@@ -375,6 +447,7 @@ async function oneRun(config, viewport, runIndex) {
       locale: 'en-US',
       hasTouch: browserName === 'chromium' && viewport.width <= 480,
       isMobile: false,
+      ...(process.env.PERF_VIDEO === 'true' ? { recordVideo: { dir: path.join(outDir, 'videos'), size: viewport } } : {}),
     });
     await installFixture(context, config, stats);
     await context.addInitScript(HOOK);
@@ -435,7 +508,10 @@ async function oneRun(config, viewport, runIndex) {
       window.__kubusCoverPerf.length = 0;
     });
 
-    const result = perfPath === 'covers' ? await page.evaluate(COVER_PATH) : await page.evaluate(
+    const fixtureAtStart = { ...stats };
+    const result = perfPath === 'topology' ? await page.evaluate(TOPOLOGY_PATH, {
+      center: (process.env.PERF_CENTER || '14.5058,46.0569').split(',').map(Number),
+    }) : perfPath === 'covers' ? await page.evaluate(COVER_PATH) : await page.evaluate(
       () =>
         new Promise((resolve) => {
           const map = window.__maps[window.__maps.length - 1];
@@ -451,7 +527,7 @@ async function oneRun(config, viewport, runIndex) {
           const snapshot = (seg) => {
             let features = -1;
             try {
-              features = map.querySourceFeatures('kubus_markers').length;
+              features = window.__perf.lastMarkerCount;
             } catch {}
             counts.push({ seg, features, images: map.listImages ? map.listImages().length : -1 });
           };
@@ -520,7 +596,7 @@ async function oneRun(config, viewport, runIndex) {
     };
 
     const bySeg = {};
-    for (const seg of perfPath === 'covers' ? COVER_SEGMENTS : ['zoom-in', 'pan', 'zoom-out']) {
+    for (const seg of perfPath === 'topology' ? [...new Set(result.frames.map((f) => f.seg))] : perfPath === 'covers' ? COVER_SEGMENTS : ['zoom-in', 'pan', 'zoom-out']) {
       bySeg[seg] = summarise(result.frames.filter((f) => f.seg === seg).map((f) => f.d));
     }
     const render = perf.renderMs.map((r) => r.d).sort((a, b) => a - b);
@@ -546,6 +622,7 @@ async function oneRun(config, viewport, runIndex) {
       },
       setData: {
         calls: setData.length,
+        markerCalls: setData.filter(s => s.id === 'kubus_markers').length,
         totalMs: fix(setData.reduce((s, t) => s + t.d, 0)),
         max: fix(Math.max(0, ...setData.map((t) => t.d))),
         maxFeatures: Math.max(-1, ...setData.map((t) => t.features)),
@@ -555,11 +632,16 @@ async function oneRun(config, viewport, runIndex) {
         totalMs: fix(perf.readPixels.reduce((s, r) => s + r.d, 0)),
         max: fix(Math.max(0, ...perf.readPixels.map((r) => r.d))),
       },
-      images: { addImageDuringPath: perf.addImage - perf.addImageAtStart, removeImage: perf.removeImage },
+      images: { addImageDuringPath: perf.addImage - perf.addImageAtStart, removeImage: perf.removeImage, peakActive: perf.peakActiveImages },
       counts: result.counts,
+      idles: result.idles,
+      markerFrames: perf.markerFrames,
+      sourceLoaded: perf.sourceLoaded,
+      video: process.env.PERF_VIDEO === 'true' ? await page.video()?.path() : null,
       cover,
       covers,
       fixture: stats,
+      pathFixture: { hits: stats.hits - fixtureAtStart.hits, misses: stats.misses - fixtureAtStart.misses },
     };
   } finally {
     await browser.close();
@@ -638,7 +720,7 @@ for (const vp of viewports) {
       readPixelsMs: m((r) => r.readPixels.totalMs),
       featuresAtZoomIn: m((r) => r.counts[0]?.features),
       featuresAtPan: m((r) => r.counts[1]?.features),
-      imagesAtEnd: m((r) => r.counts[2]?.images),
+      imagesAtEnd: m((r) => r.counts.at(-1)?.images),
       coverRequests: m((r) => r.cover.requests),
       coverKb: m((r) => r.cover.decodedKb),
       segP95: Object.fromEntries(Object.keys(cell[0].bySeg).map((s) => [s, m((r) => r.bySeg[s].p95)])),

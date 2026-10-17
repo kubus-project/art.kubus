@@ -38,6 +38,7 @@ import 'package:art_kubus/widgets/auth_entry_controls.dart';
 import 'package:art_kubus/widgets/auth_methods_panel.dart';
 import 'package:art_kubus/widgets/auth_title_row.dart';
 import 'package:art_kubus/widgets/common/keyboard_inset_padding.dart';
+import 'package:art_kubus/widgets/common/kubus_family_brand.dart';
 import 'package:art_kubus/widgets/glass_components.dart';
 import 'package:art_kubus/widgets/common/kubus_context_icon.dart';
 import 'package:art_kubus/widgets/kubus_button.dart';
@@ -3599,13 +3600,11 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
                       const AppLogo(width: 38, height: 38),
                       const SizedBox(width: KubusSpacing.sm),
                       Expanded(
-                        child: Text(
+                        child: KubusFamilyBrandText(
                           l10n.onboardingWelcomeTitle,
                           style:
                               Theme.of(context).textTheme.titleLarge?.copyWith(
                                     color: scheme.onSurface,
-                                    fontWeight: FontWeight.w800,
-                                    fontStyle: FontStyle.italic,
                                     height: 1.05,
                                   ),
                         ),
@@ -4211,12 +4210,10 @@ class _WelcomeHeroColumn extends StatelessWidget {
       children: [
         KubusHeroIcon(Icons.explore_outlined),
         const SizedBox(height: KubusSpacing.xl),
-        Text(
+        KubusFamilyBrandText(
           title,
           style: Theme.of(context).textTheme.displaySmall?.copyWith(
                 color: scheme.onSurface,
-                fontWeight: FontWeight.w800,
-                fontStyle: FontStyle.italic,
                 height: 1.02,
               ),
         ),

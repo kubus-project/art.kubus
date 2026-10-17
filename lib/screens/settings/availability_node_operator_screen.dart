@@ -15,6 +15,7 @@ import '../../l10n/app_localizations.dart';
 import '../../utils/app_color_utils.dart';
 import '../../utils/design_tokens.dart';
 import '../../widgets/glass_components.dart';
+import '../../widgets/common/kubus_family_brand.dart';
 
 class AvailabilityNodeOperatorScreen extends StatelessWidget {
   const AvailabilityNodeOperatorScreen({super.key});
@@ -251,7 +252,7 @@ class _AvailabilityNodeOperatorBodyState
     ];
 
     return Scaffold(
-      appBar: AppBar(title: Text(l10n.availabilityNodeTitle)),
+      appBar: AppBar(title: KubusFamilyBrandText(l10n.availabilityNodeTitle)),
       body: ListView(
         padding: EdgeInsets.symmetric(
           horizontal: MediaQuery.sizeOf(context).width > 900
@@ -427,7 +428,7 @@ class _InfoPanel extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(l10n.kubusNodeHeroTitle,
+            KubusFamilyBrandText(l10n.kubusNodeHeroTitle,
                 style: Theme.of(context).textTheme.headlineMedium),
             const SizedBox(height: KubusSpacing.sm),
             Text(l10n.kubusNodeHeroBody),

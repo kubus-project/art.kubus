@@ -2160,22 +2160,10 @@ class KubusMapController {
   /// full entry animation is still in flight are left untouched so the
   /// staggered initial pop-in never gets interrupted.
   void animateMarkerRegroup() {
-    if (_reduceMotion) return;
-    if (!_viewportStateInitialized) return;
-    if (_visibleMarkerIds.isEmpty) return;
-
-    final nowMs = DateTime.now().millisecondsSinceEpoch;
-    final ids = <String>[];
-    for (final id in _visibleMarkerIds) {
-      final existing = _entryAnimationByMarkerId[id];
-      if (existing != null &&
-          nowMs - existing.revealAtMs < existing.durationMs + 120) {
-        continue;
-      }
-      ids.add(id);
-    }
-    if (ids.isEmpty) return;
-    _scheduleEntryAnimations(ids, staggered: true, soft: true);
+    // The existing topology transition owns split/merge opacity and position.
+    // Replaying a per-record entrance here gives siblings different clocks
+    // and needlessly rebuilds their source for a second animation.
+    _requestMarkerDataSync(force: true);
   }
 
   /// Detailed markers arriving to replace the overview dots the map was just

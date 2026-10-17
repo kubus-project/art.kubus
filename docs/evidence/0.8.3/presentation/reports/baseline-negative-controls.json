@@ -1,0 +1,107 @@
+{
+  "label": "083-presentation-baseline",
+  "startedAt": "2026-10-16T08:57:58.970Z",
+  "webRoot": "C:\\kubus-build\\083-baseline-web",
+  "markerFixture": null,
+  "runs": [
+    {
+      "tag": "chromium-light-en-US-reduce",
+      "checks": [
+        {
+          "name": "requested app language is rendered",
+          "ok": true,
+          "detail": "Show filters FiltersExpand Discovery path, 0/52 Discovery path · 0/52 ExpandMap tools Map toolsCenter on me Center on meAdd map marker Add map markerNearby art and places. Map area. Expand Nearby art and places Map areaM"
+        },
+        {
+          "name": "390: exact theme globe ground",
+          "ok": false,
+          "detail": "{\"background\":\"rgb(230, 238, 244)\",\"mapCount\":1,\"zoom\":1.35,\"center\":{\"lng\":0,\"lat\":10},\"pitch\":0}"
+        },
+        {
+          "name": "390: fitted solar field present",
+          "ok": false,
+          "detail": "{\"background\":\"rgb(230, 238, 244)\",\"mapCount\":1,\"zoom\":1.35,\"center\":{\"lng\":0,\"lat\":10},\"pitch\":0}"
+        },
+        {
+          "name": "390: solar clock follows motion preference",
+          "ok": true,
+          "detail": "undefined -> undefined"
+        }
+      ],
+      "screenshots": [
+        "output/playwright/spatial/083-presentation-baseline/chromium-light-en-US-reduce-390-globe.png"
+      ],
+      "console": [],
+      "failed": true,
+      "network": {
+        "analyticsSwallowed": 1,
+        "writesBlocked": [],
+        "failedRequests": []
+      },
+      "presentation": [
+        {
+          "width": 390,
+          "background": "rgb(230, 238, 244)",
+          "mapCount": 1,
+          "zoom": 1.35,
+          "center": {
+            "lng": 0,
+            "lat": 10
+          },
+          "pitch": 0
+        }
+      ],
+      "error": "Error: page.evaluate: TypeError: Cannot read properties of undefined (reading 'getPaintProperty')\n    at vy.getPaintProperty (http://127.0.0.1:8097/local/maplibre-gl/maplibre-gl-csp.js?v=4280104798:5:713613)\n    at Xb.getPaintProperty (http://127.0.0.1:8097/local/maplibre-gl/maplibre-gl-csp.js?v=4280104798:5:916007)\n    at eval (eval at evaluate (:303:30), <anonymous>:3:27)\n    at UtilityScript.evaluate (<anonymous>:305:16)\n    at UtilityScript.<anonymous> (<anonymous>:1:44)"
+    },
+    {
+      "tag": "chromium-dark-en-US-reduce",
+      "checks": [
+        {
+          "name": "requested app language is rendered",
+          "ok": true,
+          "detail": "Show filters FiltersExpand Discovery path, 0/52 Discovery path · 0/52 ExpandMap tools Map toolsCenter on me Center on meAdd map marker Add map markerNearby art and places. Map area. Expand Nearby art and places Map areaM"
+        },
+        {
+          "name": "390: exact theme globe ground",
+          "ok": false,
+          "detail": "{\"background\":\"rgb(8, 28, 32)\",\"mapCount\":1,\"zoom\":1.35,\"center\":{\"lng\":0,\"lat\":10},\"pitch\":0}"
+        },
+        {
+          "name": "390: fitted solar field present",
+          "ok": false,
+          "detail": "{\"background\":\"rgb(8, 28, 32)\",\"mapCount\":1,\"zoom\":1.35,\"center\":{\"lng\":0,\"lat\":10},\"pitch\":0}"
+        },
+        {
+          "name": "390: solar clock follows motion preference",
+          "ok": true,
+          "detail": "undefined -> undefined"
+        }
+      ],
+      "screenshots": [
+        "output/playwright/spatial/083-presentation-baseline/chromium-dark-en-US-reduce-390-globe.png"
+      ],
+      "console": [],
+      "failed": true,
+      "network": {
+        "analyticsSwallowed": 1,
+        "writesBlocked": [],
+        "failedRequests": []
+      },
+      "presentation": [
+        {
+          "width": 390,
+          "background": "rgb(8, 28, 32)",
+          "mapCount": 1,
+          "zoom": 1.35,
+          "center": {
+            "lng": 0,
+            "lat": 10
+          },
+          "pitch": 0
+        }
+      ],
+      "error": "Error: page.evaluate: TypeError: Cannot read properties of undefined (reading 'getPaintProperty')\n    at vy.getPaintProperty (http://127.0.0.1:8097/local/maplibre-gl/maplibre-gl-csp.js?v=4280104798:5:713613)\n    at Xb.getPaintProperty (http://127.0.0.1:8097/local/maplibre-gl/maplibre-gl-csp.js?v=4280104798:5:916007)\n    at eval (eval at evaluate (:303:30), <anonymous>:3:27)\n    at UtilityScript.evaluate (<anonymous>:305:16)\n    at UtilityScript.<anonymous> (<anonymous>:1:44)"
+    }
+  ],
+  "failed": true
+}

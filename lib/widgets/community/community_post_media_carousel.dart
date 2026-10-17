@@ -112,10 +112,12 @@ class _CommunityPostMediaCarouselState
   final Map<int, double> _naturalAspects = <int, double>{};
   int _index = 0;
   bool _hovering = false;
+  late Map<String, double> _videoAspects;
 
   @override
   void initState() {
     super.initState();
+    _captureVideoAspect();
     _probeImages();
   }
 
@@ -125,8 +127,22 @@ class _CommunityPostMediaCarouselState
     if (!_sameMedia(oldWidget.mediaUrls, widget.mediaUrls)) {
       _disposeProbes();
       _naturalAspects.clear();
+      _captureVideoAspect();
       _index = math.min(_index, math.max(0, widget.mediaUrls.length - 1));
       _probeImages();
+    }
+  }
+
+  void _captureVideoAspect() {
+    _videoAspects = <String, double>{};
+    for (final url in widget.mediaUrls.where(communityMediaUrlIsVideo)) {
+      final sourceUrl = communityMediaVideoSourceUrl(url);
+      final knownAspect = communityMediaVideoAspect(url) ??
+          CommunityPostVideoSlide.knownAspects[sourceUrl];
+      _videoAspects[url] =
+          knownAspect != null && knownAspect.isFinite && knownAspect > 0
+              ? knownAspect
+              : kCommunityVideoStageFallbackAspect;
     }
   }
 
@@ -271,8 +287,12 @@ class _CommunityPostMediaCarouselState
     final count = widget.mediaUrls.length;
     final multiple = count > 1;
 
+    // Only a post whose single item is a video adapts its stage to the clip.
+    // Every carousel (images, videos or both) keeps one 4:3 stage for all of
+    // its pages, so swiping never moves the feed; a clip that does not fit
+    // that stage is contained and can be opened fullscreen from its controls.
     final singleVideo =
-        count == 1 && communityMediaUrlIsVideo(widget.mediaUrls[0]);
+        !multiple && communityMediaUrlIsVideo(widget.mediaUrls.first);
     final stageAspect = kCommunityMediaStageAspect;
 
     Widget sizedStage(Widget child) {
@@ -294,20 +314,19 @@ class _CommunityPostMediaCarouselState
                     media.padding.vertical -
                     media.viewInsets.bottom,
               );
-          // Mobile reserves a stable viewing stage independent of metadata.
-          // The player contains every source aspect, including unknown media.
-          // Desktop retains its bounded feed stage. Resizing is deliberate;
-          // loading a poster/controller can never move the scroll anchor.
-          final mobile = media.size.shortestSide < 600;
-          final height = mobile
-              ? usableHeight
-              : math.min(
-                  math.max(
-                    kCommunityVideoStageMinHeight,
-                    stageWidth / kCommunityVideoStageFallbackAspect,
-                  ),
-                  usableHeight * kCommunityVideoStageViewportFraction,
-                );
+          // Keep the stage geometry fixed for this mounted post. A source
+          // aspect known before the first frame gives portrait clips the full
+          // usable viewport and keeps panoramas compact; otherwise the stable
+          // 16:9 fallback avoids a jump when player metadata arrives.
+          final aspect = _videoAspects[widget.mediaUrls.first] ??
+              kCommunityVideoStageFallbackAspect;
+          final height = math.min(
+            math.max(kCommunityVideoStageMinHeight, stageWidth / aspect),
+            usableHeight *
+                (media.size.shortestSide < 600
+                    ? 1
+                    : kCommunityVideoStageViewportFraction),
+          );
           return SizedBox(height: height, child: child);
         },
       );

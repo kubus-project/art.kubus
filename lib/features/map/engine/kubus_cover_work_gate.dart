@@ -29,7 +29,7 @@ import 'kubus_cover_perf_probe.dart';
 class KubusCoverWorkGate {
   KubusCoverWorkGate({
     this.spacing = const Duration(milliseconds: 24),
-    this.motionSpacing = const Duration(milliseconds: 140),
+    this.motionSpacing = const Duration(milliseconds: 64),
     this.isPaced,
     this.resyncDelay = const Duration(milliseconds: 140),
     this.resyncMaxWait = const Duration(milliseconds: 450),
@@ -41,8 +41,9 @@ class KubusCoverWorkGate {
   /// Pause after each job while [isPaced] is true (the camera is moving).
   ///
   /// A cover job measured 4 ms median, 10 ms p95 (raster plus readback) and
-  /// 1.4 ms to register in the Slice C web probe, so one every ~150 ms costs a
-  /// moving camera well under one frame in ten.
+  /// 1.4 ms to register in the Slice C web probe. With the canonical source
+  /// plan cached and invisible source payload removed, a 64 ms breather keeps
+  /// jobs on separate frames without a multi-second cover staircase on zoom.
   final Duration motionSpacing;
 
   /// Whether jobs currently run at [motionSpacing]; null means never.

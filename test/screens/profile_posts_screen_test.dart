@@ -211,7 +211,7 @@ void main() {
     expect(find.byType(AppBar), findsOneWidget);
   });
 
-  testWidgets('mobile history video reserves its real app bar and safe area',
+  testWidgets('mobile history video fits width inside its usable viewport',
       (tester) async {
     CommunityVideoAutoplay.enabledOverride = false;
     addTearDown(() => CommunityVideoAutoplay.enabledOverride = null);
@@ -221,7 +221,9 @@ void main() {
     final frame = find.byType(CommunityPostMediaCarousel);
     expect(frame, findsOneWidget);
     final usableHeight = 844 - tester.getSize(find.byType(AppBar)).height - 34;
-    expect(tester.getSize(frame).height, closeTo(usableHeight, 0.6));
+    final frameSize = tester.getSize(frame);
+    expect(frameSize.height, closeTo(frameSize.width / (16 / 9), 0.6));
+    expect(frameSize.height, lessThanOrEqualTo(usableHeight));
     expect(tester.takeException(), isNull);
   });
 }

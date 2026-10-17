@@ -442,13 +442,20 @@ void main() {
         const ValueKey<String>('profile-avatar-role-badge'),
       );
       expect(badge, findsOneWidget);
-      final icon = tester.widget<Icon>(find.descendant(
-        of: badge,
-        matching: find.byType(Icon),
-      ));
-      // Institution is the primary display role for a dual-role account.
-      expect(icon.icon, Icons.account_balance_rounded);
-      expect(icon.semanticLabel, contains('Institution'));
+      expect(
+          find.descendant(
+              of: badge, matching: find.byIcon(Icons.account_balance_rounded)),
+          findsOneWidget);
+      expect(
+          find.descendant(
+              of: badge, matching: find.byIcon(Icons.brush_rounded)),
+          findsOneWidget);
+      final semantics = tester.ensureSemantics();
+      expect(
+          find.bySemanticsLabel(
+              RegExp(r'^Artist, Institution(?:, Verified)?$')),
+          findsOneWidget);
+      semantics.dispose();
       final identity = tester.widget<ProfileIdentityBlock>(
         find.byType(ProfileIdentityBlock).first,
       );

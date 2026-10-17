@@ -80,3 +80,13 @@ entry points concise, and requirements in one canonical owner. Do not create per
 implementation waves. Use issues/PRs for transient work; validate references and migrate
 meaningful contract tests when documentation moves. Never discard security, compatibility
 or measured engineering knowledge merely to reduce a file count.
+
+## Official wordmark convention
+
+Official wordmarks are art.***kubus***, ***kubus*** and ***kubus*** Node: only `kubus` is bold
+italic; `art.` and capitalized `Node` are regular upright. Apply this beside the existing
+graphical logo in headers and explicitly designed brand compositions. Running text stays plain
+(art.kubus, kubus, kubus Node); technical identifiers retain exact spelling. Future frontend,
+redesign and branding work must preserve the [canonical wordmark
+specification](docs/DESIGN_SYSTEM.md#brand-identity--wordmark-typography), including genuine
+font faces, responsive alignment and one combined accessible name.
