@@ -870,7 +870,9 @@ class _ArtworkEditScreenState extends State<ArtworkEditScreen> {
   }) {
     switch (widget.chrome) {
       case ArtworkEditChrome.workspace:
-        if (shellScope != null && shellScope.canPop) {
+        if (shellScope != null) {
+          // Never fall back to the Navigator here: with a shell present its
+          // only route is the shell itself.
           shellScope.popScreen();
         } else if (navigator.canPop()) {
           navigator.pop();

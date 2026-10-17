@@ -528,6 +528,48 @@ void main() {
     });
   });
 
+  group('shell scope without an in-shell stack', () {
+    testWidgets(
+        'a workspace editor under a shell scope only ever calls popScreen: '
+        'the Navigator route that hosts the shell is never popped',
+        (tester) async {
+      final rig = _Rig();
+      rig.api.onUpdate = (updates) => _artwork(title: 'New title');
+      rig.tolerateCollabDropdownOverflow();
+      var popScreenCalls = 0;
+      await _setSize(tester, const Size(1440, 900));
+      await tester.pumpWidget(
+        rig.app(
+          _Base(
+            child: DesktopShellScope(
+              pushScreen: (_) {},
+              popScreen: () => popScreenCalls += 1,
+              navigateToRoute: (_) {},
+              openNotifications: () {},
+              openFunctionsPanel: (_, {content}) {},
+              setFunctionsPanelContent: (_) {},
+              closeFunctionsPanel: () {},
+              canPop: false,
+              child: Scaffold(body: _workspaceEditor),
+            ),
+          ),
+        ),
+      );
+      await tester.tap(find.text('OPEN'));
+      await _settle(tester);
+      await _editTitle(tester, 'New title');
+
+      await tester.tap(_saveButton);
+      await _settle(tester);
+
+      expect(popScreenCalls, 1);
+      // The hosting route is still on screen: nothing called Navigator.pop.
+      expect(find.byType(ArtworkEditScreen), findsOneWidget);
+      expect(find.text('OPEN'), findsNothing);
+      expect(tester.takeException(), isNull);
+    });
+  });
+
   group('upload failures before the write', () {
     testWidgets(
         'a cover upload that fails keeps the editor and the typed values and '
