@@ -657,29 +657,37 @@ void main() {
           reason: 'only the two settled shapes ever appear');
     });
 
-    _testPlayer('portrait to landscape and back reshapes only the player',
+    _testPlayer(
+        'portrait to landscape and back reshapes the stage with the clip',
         (tester) async {
       platform.sizeFor = (uri) => uri.endsWith('/a.mp4')
           ? const Size(720, 1280)
           : const Size(1280, 720);
       await tester.pumpWidget(carousel());
-      final stage = tester.getRect(find.byType(PageView));
+      final fallbackStage = tester.getRect(find.byType(PageView));
 
       await play(tester);
+      // The unknown clip took its real portrait shape once.
+      final portraitStage = tester.getRect(find.byType(PageView));
+      expect(portraitStage.height, greaterThan(fallbackStage.height + 1));
+      expect(portraitStage.width, fallbackStage.width);
       var frame = tester.getRect(find.byKey(_frameKey));
       expect(frame.width / frame.height, closeTo(9 / 16, 0.01));
-      expect(frame.height, closeTo(stage.height, 0.5));
+      expect(frame.height, closeTo(portraitStage.height, 0.5));
 
       await swipe(tester);
       await play(tester);
+      final landscapeStage = tester.getRect(find.byType(PageView));
       frame = tester.getRect(find.byKey(_frameKey));
       expect(frame.width / frame.height, closeTo(16 / 9, 0.01));
-      expect(frame.width, closeTo(stage.width, 0.5));
-      expect(tester.getRect(find.byType(PageView)), stage,
-          reason: 'the outer carousel does not change with the clip');
+      expect(frame.width, closeTo(landscapeStage.width, 0.5));
+      expect(frame.height, closeTo(landscapeStage.height, 0.5),
+          reason: 'a landscape clip has no empty bars in its stage');
 
       await swipe(tester, forward: false);
       await play(tester);
+      // The first clip's shape is remembered: no second correction.
+      expect(tester.getRect(find.byType(PageView)), portraitStage);
       frame = tester.getRect(find.byKey(_frameKey));
       expect(frame.width / frame.height, closeTo(9 / 16, 0.01));
     });

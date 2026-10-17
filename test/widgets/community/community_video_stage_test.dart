@@ -1,11 +1,15 @@
 // ignore_for_file: depend_on_referenced_packages
 
 import 'dart:math' as math;
+import 'dart:ui' as ui;
 
 import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:art_kubus/widgets/community/community_post_media_carousel.dart';
 import 'package:art_kubus/widgets/community/community_post_video_slide.dart';
 import 'package:art_kubus/widgets/community/community_video_autoplay.dart';
+import 'package:art_kubus/community/community_post_media.dart';
+import 'package:art_kubus/utils/media_url_resolver.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:video_player_platform_interface/video_player_platform_interface.dart';
@@ -36,6 +40,60 @@ double _maximumStageHeight(double viewportHeight) =>
 
 double _stageHeight(WidgetTester tester) =>
     tester.getSize(find.byType(ClipRRect).first).height;
+
+const _frameKey = ValueKey<String>('community-video-frame');
+
+VideoPlayerPlatform? _previousPlatform;
+
+FakeVideoPlayerPlatform _installFake(Size size) {
+  final platform = FakeVideoPlayerPlatform(size: size);
+  _previousPlatform = VideoPlayerPlatform.instance;
+  VideoPlayerPlatform.instance = platform;
+  CommunityVideoAutoplay.enabledOverride = true;
+  return platform;
+}
+
+void _restore(FakeVideoPlayerPlatform _) {
+  final previous = _previousPlatform;
+  if (previous != null) VideoPlayerPlatform.instance = previous;
+  CommunityVideoAutoplay.enabledOverride = null;
+}
+
+/// Lets the autoplaying fake player initialize and the stage finish easing.
+Future<void> _settleVideo(WidgetTester tester) async {
+  for (var i = 0; i < 30; i++) {
+    await tester.pump(const Duration(milliseconds: 50));
+    await tester.runAsync(
+      () => Future<void>.delayed(const Duration(milliseconds: 4)),
+    );
+  }
+  await tester.pumpAndSettle();
+}
+
+/// Puts a decoded picture of [width] x [height] into the image cache under the
+/// display URL of [url], so the carousel's poster probe resolves it offline.
+Future<void> _preloadImage(
+  WidgetTester tester,
+  String url,
+  int width,
+  int height,
+) async {
+  final resolved = MediaUrlResolver.resolveDisplayUrl(url)!;
+  final image = await tester.runAsync(() {
+    final recorder = ui.PictureRecorder();
+    ui.Canvas(recorder).drawRect(
+      ui.Rect.fromLTWH(0, 0, width.toDouble(), height.toDouble()),
+      ui.Paint(),
+    );
+    return recorder.endRecording().toImage(width, height);
+  });
+  PaintingBinding.instance.imageCache.putIfAbsent(
+    NetworkImage(resolved),
+    () => OneFrameImageStreamCompleter(
+      SynchronousFuture<ImageInfo>(ImageInfo(image: image!)),
+    ),
+  );
+}
 
 void main() {
   setUp(() {
@@ -172,36 +230,164 @@ void main() {
       expect(find.text('1 / 2'), findsOneWidget);
     });
 
-    testWidgets('loaded metadata does not change stage height or anchor',
+    testWidgets(
+        'player metadata corrects an unknown clip once and keeps the anchor',
         (tester) async {
-      final previous = VideoPlayerPlatform.instance;
-      final platform = FakeVideoPlayerPlatform(size: const Size(3200, 900));
-      VideoPlayerPlatform.instance = platform;
-      CommunityVideoAutoplay.enabledOverride = true;
-      addTearDown(() {
-        VideoPlayerPlatform.instance = previous;
-        CommunityVideoAutoplay.enabledOverride = null;
-      });
+      final platform = _installFake(const Size(1080, 1920));
+      addTearDown(() => _restore(platform));
       await tester.pumpWidget(_harness(
         const CommunityPostMediaCarousel(mediaUrls: [url]),
+        width: 390,
       ));
       await tester.pump();
       final initialHeight = _stageHeight(tester);
       final initialTop = tester.getTopLeft(find.byType(ClipRRect).first).dy;
-      expect(initialHeight, closeTo(600 * 9 / 16, 0.6),
-          reason: 'unknown shape uses the stable fallback stage');
-      for (var i = 0; i < 30; i++) {
-        await tester.pump(const Duration(milliseconds: 50));
-        await tester.runAsync(
-          () => Future<void>.delayed(const Duration(milliseconds: 4)),
-        );
-      }
-      await tester.pumpAndSettle();
-      expect(_stageHeight(tester), closeTo(initialHeight, 0.6));
+      expect(initialHeight, closeTo(390 * 9 / 16, 0.6),
+          reason: 'unknown shape starts at the 16:9 fallback');
+      await _settleVideo(tester);
+      // A 9:16 clip now has its own tall stage (capped by the 900 px viewport),
+      // anchored at the same top, and the visible frame uses the whole width.
+      expect(_stageHeight(tester), closeTo(math.min(390 * 16 / 9, 900), 0.6));
       expect(tester.getTopLeft(find.byType(ClipRRect).first).dy,
           closeTo(initialTop, 0.6));
+      final frame = tester.getSize(find.byKey(_frameKey));
+      expect(frame.width, closeTo(390, 1));
+      expect(frame.height, closeTo(390 * 16 / 9, 1));
+      expect(CommunityPostVideoSlide.knownAspects[url], closeTo(9 / 16, 0.01));
+      // A second report of the same shape never resizes again.
+      final settled = tester.getRect(find.byType(ClipRRect).first);
+      await _settleVideo(tester);
+      expect(tester.getRect(find.byType(ClipRRect).first), settled);
+    });
+
+    testWidgets('an ultrawide player report compacts a fallback stage once',
+        (tester) async {
+      final platform = _installFake(const Size(3200, 900));
+      addTearDown(() => _restore(platform));
+      await tester.pumpWidget(_harness(
+        const CommunityPostMediaCarousel(mediaUrls: [url]),
+      ));
+      await tester.pump();
+      expect(_stageHeight(tester), closeTo(600 * 9 / 16, 0.6));
+      final top = tester.getTopLeft(find.byType(ClipRRect).first).dy;
+      await _settleVideo(tester);
+      expect(_stageHeight(tester), closeTo(600 * 900 / 3200, 0.6));
+      expect(tester.getTopLeft(find.byType(ClipRRect).first).dy,
+          closeTo(top, 0.6));
       expect(CommunityPostVideoSlide.knownAspects[url], closeTo(32 / 9, 0.01));
     });
+
+    testWidgets(
+        'a recorded aspect is used at once; the player may correct it once',
+        (tester) async {
+      const hinted =
+          'https://example.test/uploads/hinted.mp4#kubus-aspect=0.5625';
+      // The recorded hint says 9:16 but the file is really square.
+      final platform = _installFake(const Size(1000, 1000));
+      addTearDown(() => _restore(platform));
+      await tester.pumpWidget(_harness(
+        const CommunityPostMediaCarousel(mediaUrls: [hinted]),
+      ));
+      await tester.pump();
+      expect(_stageHeight(tester),
+          closeTo(math.min(600 / 0.5625, 900 * 0.72), 0.6));
+      await _settleVideo(tester);
+      expect(_stageHeight(tester), closeTo(600, 0.6));
+    });
+
+    testWidgets('metadata within the tolerance never resizes the stage',
+        (tester) async {
+      const hinted =
+          'https://example.test/uploads/close.mp4#kubus-aspect=1.7778';
+      final platform = _installFake(const Size(1920, 1080));
+      addTearDown(() => _restore(platform));
+      await tester.pumpWidget(_harness(
+        const CommunityPostMediaCarousel(mediaUrls: [hinted]),
+      ));
+      await tester.pump();
+      final before = tester.getRect(find.byType(ClipRRect).first);
+      await _settleVideo(tester);
+      expect(tester.getRect(find.byType(ClipRRect).first), before);
+    });
+
+    testWidgets(
+        'a portrait poster gives an unknown clip a portrait stage before '
+        'the player ever loads', (tester) async {
+      const posterUrl = 'https://example.test/uploads/poster-portrait.jpg';
+      final reference = communityMediaReferenceForPost(
+        'https://example.test/uploads/legacy.mp4',
+        isVideo: true,
+        posterUrl: posterUrl,
+      );
+      await _preloadImage(tester, posterUrl, 90, 160);
+      await tester.pumpWidget(_harness(
+        CommunityPostMediaCarousel(mediaUrls: [reference]),
+        width: 390,
+      ));
+      await tester.pumpAndSettle();
+      expect(_stageHeight(tester), closeTo(math.min(390 * 16 / 9, 900), 0.6));
+    });
+
+    testWidgets('a poster never overrides a recorded aspect', (tester) async {
+      const posterUrl = 'https://example.test/uploads/poster-square.jpg';
+      final base = communityMediaReferenceForPost(
+        'https://example.test/uploads/known.mp4',
+        isVideo: true,
+        posterUrl: posterUrl,
+      );
+      final reference = '$base&kubus-aspect=1.777778';
+      await _preloadImage(tester, posterUrl, 100, 100);
+      await tester.pumpWidget(_harness(
+        CommunityPostMediaCarousel(mediaUrls: [reference]),
+      ));
+      await tester.pumpAndSettle();
+      expect(_stageHeight(tester), closeTo(600 * 9 / 16, 0.6));
+    });
+  });
+
+  group('visible video frame on phones and desktops', () {
+    // The stage is only a container; what the viewer sees is the frame. For each
+    // width and clip shape the frame must use at least 90% of the width the
+    // viewport cap allows (the cap is the usable height on phones and 72% of it
+    // on wide screens), with no overflow.
+    const url = 'https://example.test/uploads/legacy-clip.mp4';
+    for (final width in <double>[320, 390, 430, 768, 1440]) {
+      for (final shape in <(String, Size)>[
+        ('9:16', const Size(1080, 1920)),
+        ('4:5', const Size(1080, 1350)),
+        ('1:1', const Size(1000, 1000)),
+        ('16:9', const Size(1920, 1080)),
+        ('21:9', const Size(2100, 900)),
+      ]) {
+        testWidgets(
+            'legacy ${shape.$1} clip at $width px fills its feasible width',
+            (tester) async {
+          final platform = _installFake(shape.$2);
+          addTearDown(() => _restore(platform));
+          const viewportHeight = 800.0;
+          tester.view.physicalSize = Size(width, viewportHeight);
+          tester.view.devicePixelRatio = 1;
+          addTearDown(tester.view.resetPhysicalSize);
+          addTearDown(tester.view.resetDevicePixelRatio);
+          await tester.pumpWidget(_harness(
+            const CommunityPostMediaCarousel(mediaUrls: [url]),
+            width: width,
+            viewportHeight: viewportHeight,
+          ));
+          await tester.pump();
+          await _settleVideo(tester);
+          final aspect = shape.$2.width / shape.$2.height;
+          final cap = viewportHeight * (width < 600 ? 1 : 0.72);
+          final feasibleWidth = math.min(width, cap * aspect);
+          final frame = tester.getSize(find.byKey(_frameKey));
+          expect(frame.width / feasibleWidth, greaterThanOrEqualTo(0.9),
+              reason: '${shape.$1} at $width: frame ${frame.width}x'
+                  '${frame.height}, feasible $feasibleWidth');
+          expect(frame.width, lessThanOrEqualTo(width + 0.5));
+          expect(tester.takeException(), isNull);
+        });
+      }
+    }
   });
 
   group('usable mobile viewport in feed and detail', () {

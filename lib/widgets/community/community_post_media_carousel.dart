@@ -15,8 +15,16 @@ import 'community_post_video_slide.dart';
 /// same stage, so changing slides never moves the feed.
 const double kCommunityMediaStageAspect = 4 / 3;
 
-/// Stable desktop stage shape, independent of poster or playback metadata.
+/// Initial stage shape for a clip whose geometry is not known yet. It is only
+/// a starting point: the poster's shape and then the player's real shape each
+/// replace it at most once (see `_VideoAspectSource`), so a portrait clip is
+/// never left in a landscape stage.
 const double kCommunityVideoStageFallbackAspect = 16 / 9;
+
+/// A newly learned shape must differ from the shown one by more than this
+/// share before the stage is resized, so sub-pixel metadata noise never moves
+/// the feed.
+const double kCommunityVideoStageAspectTolerance = 0.03;
 
 /// The stage never gets shallower than this, so the player controls always
 /// have room, however wide the clip is.
@@ -78,6 +86,21 @@ const double kCommunityMediaCompactAspect = 16 / 9;
 /// portraits and wide panoramas are not cropped away.
 const double _coverTolerance = 1.25;
 
+/// Where a video's stage shape came from. Sources only move upward: each
+/// later, more trustworthy source may replace an earlier one once, and nothing
+/// replaces the player's real dimensions.
+enum _VideoAspectSource {
+  /// The stable 16:9 start for a clip nothing is known about.
+  fallback,
+
+  /// The post's recorded `kubus-aspect` hint or a shape learned earlier this
+  /// session, or the poster's own proportions.
+  hinted,
+
+  /// The real dimensions reported by the player once it has loaded.
+  player,
+}
+
 /// The ordered media of one Community post, shown as a swipeable carousel.
 ///
 /// One item renders as a plain stage with no page indicators. Several items
@@ -110,6 +133,10 @@ class _CommunityPostMediaCarouselState
   final FocusNode _focusNode = FocusNode(debugLabel: 'community-media');
   final Map<int, _NaturalSizeProbe> _probes = <int, _NaturalSizeProbe>{};
   final Map<int, double> _naturalAspects = <int, double>{};
+  final Map<String, _NaturalSizeProbe> _posterProbes =
+      <String, _NaturalSizeProbe>{};
+  final Map<String, _VideoAspectSource> _videoAspectSources =
+      <String, _VideoAspectSource>{};
   int _index = 0;
   bool _hovering = false;
   late Map<String, double> _videoAspects;
@@ -119,6 +146,7 @@ class _CommunityPostMediaCarouselState
     super.initState();
     _captureVideoAspect();
     _probeImages();
+    _probePosters();
   }
 
   @override
@@ -128,6 +156,7 @@ class _CommunityPostMediaCarouselState
       _disposeProbes();
       _naturalAspects.clear();
       _captureVideoAspect();
+      _probePosters();
       _index = math.min(_index, math.max(0, widget.mediaUrls.length - 1));
       _probeImages();
     }
@@ -135,14 +164,61 @@ class _CommunityPostMediaCarouselState
 
   void _captureVideoAspect() {
     _videoAspects = <String, double>{};
+    _videoAspectSources.clear();
     for (final url in widget.mediaUrls.where(communityMediaUrlIsVideo)) {
       final sourceUrl = communityMediaVideoSourceUrl(url);
       final knownAspect = communityMediaVideoAspect(url) ??
           CommunityPostVideoSlide.knownAspects[sourceUrl];
+      final known =
+          knownAspect != null && knownAspect.isFinite && knownAspect > 0;
       _videoAspects[url] =
-          knownAspect != null && knownAspect.isFinite && knownAspect > 0
-              ? knownAspect
-              : kCommunityVideoStageFallbackAspect;
+          known ? knownAspect : kCommunityVideoStageFallbackAspect;
+      _videoAspectSources[url] =
+          known ? _VideoAspectSource.hinted : _VideoAspectSource.fallback;
+    }
+  }
+
+  /// Learns a clip's real shape. A source only replaces a less trustworthy one,
+  /// and only when the shape really differs, so each clip's stage changes at
+  /// most twice (poster, then player) and normally once. The stage eases to the
+  /// new height; the page and its anchor do not move.
+  void _learnVideoAspect(
+    String url,
+    double aspect,
+    _VideoAspectSource source,
+  ) {
+    if (!mounted || !aspect.isFinite || aspect <= 0) return;
+    final current = _videoAspectSources[url];
+    final shown = _videoAspects[url];
+    if (current == null || shown == null) return;
+    if (source.index <= current.index) return;
+    // A clip with a recorded or already-learned shape keeps it unless the
+    // player contradicts it; the poster never overrides a known shape.
+    if (source == _VideoAspectSource.hinted &&
+        current != _VideoAspectSource.fallback) {
+      return;
+    }
+    final ratio = aspect / shown;
+    final differs = (ratio - 1).abs() > kCommunityVideoStageAspectTolerance;
+    setState(() {
+      _videoAspectSources[url] = source;
+      if (differs) _videoAspects[url] = aspect;
+    });
+  }
+
+  void _probePosters() {
+    for (final url in widget.mediaUrls.where(communityMediaUrlIsVideo)) {
+      if (_videoAspectSources[url] != _VideoAspectSource.fallback) continue;
+      final reference = communityMediaPosterReference(url);
+      final resolved = reference == null
+          ? null
+          : MediaUrlResolver.resolveDisplayUrl(reference);
+      if (resolved == null) continue;
+      _posterProbes[url] = _NaturalSizeProbe(
+        NetworkImage(resolved),
+        onSize: (aspect) =>
+            _learnVideoAspect(url, aspect, _VideoAspectSource.hinted),
+      );
     }
   }
 
@@ -184,6 +260,10 @@ class _CommunityPostMediaCarouselState
       probe.dispose();
     }
     _probes.clear();
+    for (final probe in _posterProbes.values) {
+      probe.dispose();
+    }
+    _posterProbes.clear();
   }
 
   BoxFit _fitFor(int index) {
@@ -310,10 +390,10 @@ class _CommunityPostMediaCarouselState
                     media.padding.vertical -
                     media.viewInsets.bottom,
               );
-          // Keep the stage geometry fixed for this mounted carousel. A source
-          // aspect known before the first frame gives portrait clips the full
-          // usable viewport and keeps panoramas compact; otherwise the stable
-          // 16:9 fallback avoids a jump when player metadata arrives.
+          // A shape known before the first frame gives portrait clips the full
+          // usable viewport and keeps panoramas compact. A clip nothing is
+          // known about starts at 16:9 and takes its real shape once, from the
+          // poster or the player; the stage eases there and then stays put.
           final aspect = _videoAspects[widget.mediaUrls[_index]] ??
               kCommunityVideoStageFallbackAspect;
           final videoHeight = math.min(
@@ -486,6 +566,8 @@ class _CommunityPostMediaCarouselState
         url: url,
         isActive: isActive,
         autoplay: autoplay,
+        onAspect: (aspect) =>
+            _learnVideoAspect(url, aspect, _VideoAspectSource.player),
       );
     }
     return _CommunityMediaImageSlide(url: url, fit: fit, onTap: onTap);
