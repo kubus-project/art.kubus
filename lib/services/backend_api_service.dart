@@ -1932,6 +1932,32 @@ class BackendApiService
     return uri.replace(queryParameters: qp);
   }
 
+  /// Decodes a JSON object, or null when [body] is not valid JSON or not an
+  /// object (a gateway or captive-portal page answering with 200 and HTML).
+  Map<String, dynamic>? _tryDecodeJsonObject(String body) {
+    try {
+      final decoded = jsonDecode(body);
+      return decoded is Map<String, dynamic> ? decoded : null;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// Whether a failed primary read may be retried against the Orbit mirror:
+  /// an outage (timeout, gateway or server error), never an answer. A 4xx is
+  /// the API's decision (not found, not allowed, invalid) and a stale mirror
+  /// must not overrule it.
+  bool _isOrbitFallbackStatus(int statusCode) =>
+      statusCode == 408 || statusCode >= 500;
+
+  /// A public read with an optional Orbit mirror fallback.
+  ///
+  /// Every failure leaves here as an [Exception] whose message begins with the
+  /// primary failure in the form `_isFallbackEligibleReadError` and
+  /// `_tryParseRequestFailedStatus` understand (`Request failed: <code>`, or the
+  /// transport error text). That is what lets `_performPublicRead` move on to
+  /// the secondary backend and the public snapshot when both the primary API
+  /// and its Orbit mirror are down, instead of surfacing a raw exception.
   Future<Map<String, dynamic>> _fetchJson(
     Uri uri, {
     bool includeAuth = true,
@@ -1951,6 +1977,7 @@ class BackendApiService
 
     final headers = _getHeaders(includeAuth: includeAuth);
     http.Response? primaryResponse;
+    late final String primaryFailure;
     try {
       primaryResponse = await _request(
         'GET',
@@ -1960,37 +1987,7 @@ class BackendApiService
         isIdempotent: true,
         allowImplicitBackendFailover: allowImplicitBackendFailover,
       );
-      if (_isSuccessStatus(primaryResponse.statusCode)) {
-        if (_isExhibitionsPath(uri)) {
-          _exhibitionsApiAvailable = true;
-        }
-        return jsonDecode(primaryResponse.body) as Map<String, dynamic>;
-      }
-      if (primaryResponse.statusCode == 429) {
-        _markRateLimited(key, primaryResponse, defaultWindowMs: 900000);
-        throw Exception(_rateLimitMessage(key));
-      }
-
-      if (_isExhibitionsRootPath(uri) &&
-          (primaryResponse.statusCode == 404 ||
-              primaryResponse.statusCode == 405 ||
-              primaryResponse.statusCode == 501)) {
-        // Provisional routes can appear during staged deploys; keep the next
-        // request retryable instead of pinning the process to unavailable.
-        _exhibitionsApiAvailable = null;
-      }
-
-      _debugLogThrottled(
-        'fetch_json_status:${uri.path}:${primaryResponse.statusCode}',
-        'BackendApiService: ${uri.path} failed with status ${primaryResponse.statusCode}',
-      );
-      if (!allowOrbitFallback) {
-        throw Exception('Request failed: ${primaryResponse.statusCode}');
-      }
     } catch (e) {
-      if (primaryResponse?.statusCode == 429) {
-        rethrow; // Do not attempt Orbit fallback when rate limited.
-      }
       if (!allowOrbitFallback) {
         _debugLogThrottled(
           'fetch_json_error:${uri.path}',
@@ -2002,23 +1999,69 @@ class BackendApiService
         'fetch_json_fallback_error:${uri.path}',
         'BackendApiService: primary request error for ${uri.path}, trying Orbit fallback -> $e',
       );
+      primaryFailure = 'Request failed for ${uri.toString()}: $e';
     }
 
-    if (!allowOrbitFallback) {
-      throw Exception('Request failed for ${uri.toString()}');
+    if (primaryResponse != null) {
+      final status = primaryResponse.statusCode;
+      if (_isSuccessStatus(status)) {
+        final decoded = _tryDecodeJsonObject(primaryResponse.body);
+        if (decoded != null) {
+          if (_isExhibitionsPath(uri)) {
+            _exhibitionsApiAvailable = true;
+          }
+          return decoded;
+        }
+        primaryFailure = 'Invalid JSON response from ${uri.path}';
+        if (!allowOrbitFallback) throw Exception(primaryFailure);
+      } else {
+        if (status == 429) {
+          _markRateLimited(key, primaryResponse, defaultWindowMs: 900000);
+          throw Exception(_rateLimitMessage(key));
+        }
+
+        if (_isExhibitionsRootPath(uri) &&
+            (status == 404 || status == 405 || status == 501)) {
+          // Provisional routes can appear during staged deploys; keep the next
+          // request retryable instead of pinning the process to unavailable.
+          _exhibitionsApiAvailable = null;
+        }
+
+        _debugLogThrottled(
+          'fetch_json_status:${uri.path}:$status',
+          'BackendApiService: ${uri.path} failed with status $status',
+        );
+        if (!allowOrbitFallback || !_isOrbitFallbackStatus(status)) {
+          throw Exception('Request failed: $status');
+        }
+        primaryFailure = 'Request failed: $status';
+      }
     }
 
     final fallbackUri = _withOrbitSource(uri);
-    final fallbackResponse = await _request(
-      'GET',
-      fallbackUri,
-      includeAuth: includeAuth,
-      headers: headers,
-      isIdempotent: true,
-      allowImplicitBackendFailover: allowImplicitBackendFailover,
-    );
+    final http.Response fallbackResponse;
+    try {
+      fallbackResponse = await _request(
+        'GET',
+        fallbackUri,
+        includeAuth: includeAuth,
+        headers: headers,
+        isIdempotent: true,
+        allowImplicitBackendFailover: allowImplicitBackendFailover,
+      );
+    } catch (e) {
+      _debugLogThrottled(
+        'fetch_json_orbit_error:${fallbackUri.path}',
+        'BackendApiService: Orbit fallback request error for ${fallbackUri.path}: $e',
+      );
+      throw Exception('$primaryFailure (Orbit fallback unavailable: $e)');
+    }
     if (_isSuccessStatus(fallbackResponse.statusCode)) {
-      final data = jsonDecode(fallbackResponse.body) as Map<String, dynamic>;
+      final data = _tryDecodeJsonObject(fallbackResponse.body);
+      if (data == null) {
+        throw Exception(
+            '$primaryFailure (Orbit fallback returned an invalid response)');
+      }
       data['source'] = data['source'] ?? 'orbitdb';
       return data;
     }
@@ -2030,7 +2073,8 @@ class BackendApiService
       'fetch_json_orbit_failed:${fallbackUri.path}:${fallbackResponse.statusCode}',
       'BackendApiService: Orbit fallback failed ${fallbackResponse.statusCode} for ${fallbackUri.path}',
     );
-    throw Exception('Orbit fallback failed: ${fallbackResponse.statusCode}');
+    throw Exception(
+        '$primaryFailure (Orbit fallback failed: ${fallbackResponse.statusCode})');
   }
 
   String _normalizeApiBaseUrl(String rawBaseUrl) {
@@ -2286,6 +2330,7 @@ class BackendApiService
           message.contains('failed host lookup') ||
           message.contains('connection closed') ||
           message.contains('network') ||
+          message.contains('invalid json response') ||
           message.contains('cors');
     }
 
