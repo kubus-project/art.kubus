@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
@@ -541,42 +542,91 @@ class ArtworkProvider extends ChangeNotifier {
     }
   }
 
-  Future<Artwork?> updateArtwork(
+  /// Saves [updates] to an artwork and says precisely what happened.
+  ///
+  /// The result separates a confirmed write, a write the backend acknowledged
+  /// without a usable payload, a failed write and a duplicate request, so a
+  /// caller never has to guess success from "did I get an artwork back".
+  /// A failed write never falls back to re-reading the old record: that read
+  /// would succeed and be mistaken for a save.
+  Future<ArtworkUpdateResult> saveArtwork(
     String artworkId,
     Map<String, dynamic> updates,
   ) async {
     final id = artworkId.trim();
-    if (id.isEmpty) return null;
+    if (id.isEmpty) {
+      return const ArtworkUpdateResult.failed(ArtworkUpdateFailure.rejected);
+    }
     final operation = 'update_artwork_$id';
-    if (isLoading(operation)) return null;
+    if (isLoading(operation)) {
+      return const ArtworkUpdateResult.alreadyInFlight();
+    }
     _setLoading(operation, true);
     try {
       final updated = await _backendApi.updateArtwork(id, updates);
       if (updated != null) {
-        addOrUpdateArtwork(updated);
-        final wallet = updated.walletAddress;
-        if (wallet != null && wallet.trim().isNotEmpty) {
-          ProfilePackageMutationTracker.artworkChanged(updated);
-        }
-        return updated;
+        _commitSavedArtwork(updated);
+        return ArtworkUpdateResult.confirmed(updated);
       }
-      try {
-        final refreshed = await _backendApi.getArtwork(id);
-        addOrUpdateArtwork(refreshed);
-        return refreshed;
-      } catch (_) {
-        final cached = getArtworkById(id);
-        if (cached != null) {
-          return cached;
-        }
-      }
-      return null;
+      // HTTP 200 with no usable artwork and no read-back: the write happened
+      // but its result is unknown. Keep the user's edits visible locally; the
+      // portfolio refresh that follows fetches the authoritative record.
+      final cached = getArtworkById(id);
+      final patched =
+          cached == null ? null : _applyUpdatesLocally(cached, updates);
+      if (patched != null) _commitSavedArtwork(patched);
+      return ArtworkUpdateResult.acknowledged(patched);
     } catch (e) {
+      final failure = classifyArtworkUpdateFailure(e);
       _setError('Failed to update artwork: $e');
-      return null;
+      return ArtworkUpdateResult.failed(failure);
     } finally {
       _setLoading(operation, false);
     }
+  }
+
+  /// Legacy shape of [saveArtwork]: the saved artwork, or null on any failure.
+  Future<Artwork?> updateArtwork(
+    String artworkId,
+    Map<String, dynamic> updates,
+  ) async {
+    final result = await saveArtwork(artworkId, updates);
+    return result.succeeded ? result.artwork : null;
+  }
+
+  void _commitSavedArtwork(Artwork artwork) {
+    addOrUpdateArtwork(artwork);
+    final wallet = artwork.walletAddress;
+    if (wallet != null && wallet.trim().isNotEmpty) {
+      ProfilePackageMutationTracker.artworkChanged(artwork);
+    }
+  }
+
+  Artwork _applyUpdatesLocally(Artwork base, Map<String, dynamic> updates) {
+    double? number(Object? v) => v is num ? v.toDouble() : null;
+    final lat = number(updates['latitude']);
+    final lng = number(updates['longitude']);
+    final tags = updates['tags'];
+    return base.copyWith(
+      title: updates['title'] as String?,
+      artist: updates['artistName'] as String?,
+      description: updates['description'] as String?,
+      category: updates['category'] as String?,
+      tags: tags is List ? tags.map((e) => e.toString()).toList() : null,
+      imageUrl: updates['imageUrl'] as String?,
+      model3DURL: updates['model3DURL'] as String?,
+      model3DCID: updates['model3DCID'] as String?,
+      arEnabled: updates['isAREnabled'] as bool?,
+      price: updates.containsKey('price') ? number(updates['price']) : null,
+      arScale:
+          updates.containsKey('arScale') ? number(updates['arScale']) : null,
+      position: (lat != null || lng != null)
+          ? LatLng(
+              lat ?? base.position.latitude,
+              lng ?? base.position.longitude,
+            )
+          : null,
+    );
   }
 
   /// Like/Unlike artwork
@@ -1289,4 +1339,95 @@ class ViewHistoryEntry {
       markerId: json['markerId']?.toString(),
     );
   }
+}
+
+/// What an artwork save did. See [ArtworkProvider.saveArtwork].
+enum ArtworkUpdateStatus {
+  /// The backend returned the updated artwork.
+  confirmed,
+
+  /// The backend acknowledged the write (HTTP 200) but returned no usable
+  /// artwork and the read-back failed. The write happened.
+  acknowledged,
+
+  /// The write did not happen.
+  failed,
+
+  /// Another save for the same artwork is still running; nothing was sent.
+  alreadyInFlight,
+}
+
+/// Why a save failed, for choosing a contextual message.
+enum ArtworkUpdateFailure {
+  /// Transport failure: offline, DNS, connection reset.
+  network,
+  timeout,
+
+  /// 401: the session is missing or expired.
+  unauthorized,
+
+  /// 403: signed in, but not allowed to edit this artwork.
+  forbidden,
+
+  /// 409: the record changed underneath the edit.
+  conflict,
+
+  /// 429
+  rateLimited,
+
+  /// 400/404/422: the backend refused these values.
+  rejected,
+
+  /// 5xx
+  server,
+  unknown,
+}
+
+ArtworkUpdateFailure classifyArtworkUpdateFailure(Object error) {
+  if (error is TimeoutException) return ArtworkUpdateFailure.timeout;
+  if (error is BackendApiRequestException) {
+    final code = error.statusCode;
+    if (code == 0) return ArtworkUpdateFailure.network;
+    if (code == 504 || code == 408 || code == 524) {
+      return ArtworkUpdateFailure.timeout;
+    }
+    if (code == 401) return ArtworkUpdateFailure.unauthorized;
+    if (code == 403) return ArtworkUpdateFailure.forbidden;
+    if (code == 409) return ArtworkUpdateFailure.conflict;
+    if (code == 429) return ArtworkUpdateFailure.rateLimited;
+    if (code == 400 || code == 404 || code == 422) {
+      return ArtworkUpdateFailure.rejected;
+    }
+    if (code >= 500) return ArtworkUpdateFailure.server;
+  }
+  return ArtworkUpdateFailure.unknown;
+}
+
+class ArtworkUpdateResult {
+  const ArtworkUpdateResult._(this.status, this.artwork, this.failure);
+
+  const ArtworkUpdateResult.confirmed(Artwork artwork)
+      : this._(ArtworkUpdateStatus.confirmed, artwork, null);
+
+  const ArtworkUpdateResult.acknowledged(Artwork? artwork)
+      : this._(ArtworkUpdateStatus.acknowledged, artwork, null);
+
+  const ArtworkUpdateResult.failed(ArtworkUpdateFailure failure)
+      : this._(ArtworkUpdateStatus.failed, null, failure);
+
+  const ArtworkUpdateResult.alreadyInFlight()
+      : this._(ArtworkUpdateStatus.alreadyInFlight, null, null);
+
+  final ArtworkUpdateStatus status;
+
+  /// The saved record. Always set when [status] is confirmed; for an
+  /// acknowledged write it is the local cache with the edits applied.
+  final Artwork? artwork;
+
+  final ArtworkUpdateFailure? failure;
+
+  /// True when the backend accepted the write.
+  bool get succeeded =>
+      status == ArtworkUpdateStatus.confirmed ||
+      status == ArtworkUpdateStatus.acknowledged;
 }

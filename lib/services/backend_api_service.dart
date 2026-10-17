@@ -5289,14 +5289,21 @@ class BackendApiService
 
   /// Update an artwork
   /// PUT /api/artworks/:id
+  ///
+  /// Returns the updated artwork on a confirmed write. Returns null **only**
+  /// when the backend acknowledged the write with HTTP 200 but sent no usable
+  /// artwork and the read-back also failed: the write happened, its result is
+  /// unknown. Every failed write throws a [BackendApiRequestException] carrying
+  /// the HTTP status (or 504 for a timeout, 0 for a transport failure).
   @override
   Future<Artwork?> updateArtwork(
     String artworkId,
     Map<String, dynamic> updates,
   ) async {
+    final path = '/api/artworks/$artworkId';
     try {
       await _ensureAuthWithStoredWallet();
-      final uri = Uri.parse('$baseUrl/api/artworks/$artworkId');
+      final uri = Uri.parse('$baseUrl$path');
       final response = await _put(
         uri,
         headers: _getHeaders(),
@@ -5308,7 +5315,11 @@ class BackendApiService
           preferredKeys: const <String>['artwork'],
         );
         if (payload != null) {
-          return parseArtworkFromBackendJson(payload);
+          // A bare acknowledgement ({"success": true}) falls through the
+          // entity extraction as the whole envelope; it parses to an artwork
+          // with no id. Only an identified artwork is a usable payload.
+          final parsed = parseArtworkFromBackendJson(payload);
+          if (parsed.id.trim().isNotEmpty) return parsed;
         }
         try {
           return await getArtwork(artworkId);
@@ -5318,12 +5329,18 @@ class BackendApiService
         }
         return null;
       }
-      throw Exception(
-        'Failed to update artwork: ${response.statusCode} ${response.body}',
+      throw BackendApiRequestException(
+        statusCode: response.statusCode,
+        path: path,
+        body: response.body,
       );
-    } catch (e) {
-      AppConfig.debugPrint('BackendApiService.updateArtwork failed: $e');
-      rethrow;
+    } catch (error, stackTrace) {
+      _throwTypedMutationFailure(
+        error: error,
+        stackTrace: stackTrace,
+        operation: 'BackendApiService.updateArtwork',
+        path: path,
+      );
     }
   }
 
