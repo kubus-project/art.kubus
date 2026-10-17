@@ -5007,6 +5007,172 @@
   "securityHubWalletRecoveryPasskeyRemoveFailedToast": "Could not remove wallet recovery passkey. Try again.",
   "securityHubPasskeyAlreadyRegistered": "This passkey is already registered.",
   "securityHubBrowserPromptCancelledOrTimedOut": "Browser prompt cancelled or timed out.",
+  "securityHubStatusSecured": "Secured",
+  "securityHubStatusRecommended": "Recommended",
+  "securityHubStatusFailed": "Failed",
+  "securityHubStatusDestructive": "Destructive",
+  "securityHubStatusActive": "Active",
+  "securityHubStatusMissing": "Missing",
+  "securityHubStatusLinked": "Linked",
+  "securityHubStatusChecked": "Checked",
+  "securityHubStatusReady": "Ready",
+  "securityHubStatusReadOnly": "Read-only",
+  "securityHubBackUpOffline": "Back up offline",
+  "securityHubEnableBiometrics": "Enable biometrics",
+  "securityHubVerifyBackup": "Verify",
+  "securityHubSavePin": "Save PIN",
+  "securityHubSetPin": "Set PIN",
+  "securityHubSetLocalPin": "Set local PIN",
+  "securityHubBiometricUnlock": "Biometric unlock",
+  "securityHubBiometricUnlockEnabled": "Biometric unlock enabled.",
+  "securityHubBiometricsUnavailable": "Biometrics unavailable.",
+  "securityHubBiometricApprovalFailed": "Biometric approval failed.",
+  "securityHubAuthenticationFailed": "Authentication failed.",
+  "securityHubActionFailed": "Action failed. Try again.",
+  "securityHubWalletAccess": "Wallet access",
+  "securityHubWalletAccessState": "Wallet access state",
+  "securityHubLocalSigner": "Local signer",
+  "securityHubLocalSignerReady": "Local signer ready",
+  "securityHubSecurityKey": "Security key",
+  "securityHubSetUpBackupFirst": "Set up backup first",
+  "securityHubUpdateBackup": "Update backup",
+  "securityHubSaveEncryptedBackup": "Save encrypted backup",
+  "securityHubRestoreAccess": "Restore access",
+  "securityHubAddAccountPasskey": "Add account passkey",
+  "securityHubAccountPasskeyAdded": "Account sign-in passkey added.",
+  "securityHubAccountPasskeyRemoved": "Account sign-in passkey removed.",
+  "securityHubRemoveAccountPasskeyTitle": "Remove account sign-in passkey?",
+  "securityHubSecureThisDevice": "Secure this device",
+  "securityHubConfirmRequired": "Confirm required",
+  "securityHubNever": "Never",
+  "securityHubLastUsedNever": "Last used never",
+  "securityHubLinkedDevice": "Linked device",
+  "securityHubRecoveryAvailable": "Recovery available",
+  "securityHubAccountOnly": "Account only",
+  "securityHubCurrentAccountWallet": "Current account wallet",
+  "securityHubNoWallet": "No wallet",
+  "securityHubLocalSecuritySettingsUnavailable": "Local security settings are temporarily unavailable.",
+  "securityHubWalletSecurityStatusRefreshFailed": "Wallet security status could not be refreshed.",
+  "securityHubEncryptedBackupStatusRefreshFailed": "Encrypted wallet backup status could not be refreshed.",
+  "securityHubAccountPasskeyStatusUnavailable": "Account passkey status is temporarily unavailable.",
+  "securityHubWalletRecoveryPasskeyDefaultName": "Wallet recovery passkey",
+  "securityHubWalletRecoveryPasskeyDescription": "Used to restore local wallet access from encrypted backup.",
+  "securityHubAccountSignInDescription": "Used to sign into art.kubus without email, Google, or wallet signature.",
+  "securityHubPinDescription": "Protects sensitive account and wallet actions on this device.",
+  "securityHubCreateBackupDescription": "Choose a recovery password. It decrypts the wallet backup on a new device.",
+  "securityHubVerifyBackupDescription": "Enter the recovery password to verify this backup can be decrypted locally.",
+  "securityHubBiometricUnlockPromptDescription": "Enable biometric unlock on this device, or skip it for now.",
+  "securityHubEncryptedBackupDescription": "Create a password-protected encrypted backup for recovery.",
+  "securityHubRecoveryPhraseOfflineDescription": "Store the recovery phrase offline before you rely on this wallet.",
+  "securityHubDeleteBackupRowDescription": "Removes the encrypted server backup for the current wallet.",
+  "securityHubDeleteBackupDialogBody": "This removes the encrypted server backup for the current wallet. Keep the recovery phrase stored safely offline.",
+  "securityHubRemoveWalletRecoveryPasskeyBody": "This device passkey will no longer unlock the encrypted wallet backup.",
+  "securityHubRemoveRecoveryPasskeyAction": "Remove recovery passkey",
+  "securityHubRemoveAccountPasskeyBody": "This passkey will no longer sign into art.kubus on this account.",
+  "securityHubRestoreSigningBeforeTransfers": "Restore signing before transfers",
+  "securityHubEncryptedBackupRestoreDescription": "Encrypted backup can restore local wallet access.",
+  "securityHubEncryptedBackupAvailableDescription": "Encrypted wallet backup is available for recovery.",
+  "securityHubEncryptedBackupDisabledDescription": "Encrypted wallet backup is disabled in this build.",
+  "securityHubSetUpLocalUnlockDescription": "Set up local unlock before sensitive wallet and account actions.",
+  "securityHubSetUpLocalUnlockStepsDescription": "Set up local unlock, passkeys, and wallet recovery before you continue.",
+  "securityHubSummaryDescription": "Manage account sign-in, device unlock, wallet access, encrypted backups, and recovery credentials in one place.",
+  "securityHubLocalWalletCanSign": "Local wallet can sign",
+  "securityHubLocalWalletSignerAvailable": "Local wallet signer is available on this device.",
+  "securityHubNoLocalSignerAvailable": "No local signer is available on this device.",
+  "securityHubNoExternalSignerConnected": "No external wallet signer is connected.",
+  "securityHubNoRecoveryPhraseActionRequired": "No recovery phrase action is currently required.",
+  "securityHubNoWalletConnectedOnDevice": "No wallet is connected on this device.",
+  "securityHubNoWalletRecoveryPasskeys": "No wallet recovery passkeys are registered.",
+  "securityHubPinStaysOnDevice": "PIN stays on this device and protects sensitive wallet actions.",
+  "securityHubPrfSupported": "PRF supported",
+  "securityHubPrfNotSupported": "PRF not supported",
+  "securityHubRecoveryMaterialEncrypted": "Recovery material encrypted",
+  "securityHubNoEncryptedRecoveryMaterial": "No encrypted recovery material",
+  "securityHubSignInRecoverySeparate": "Sign-in and wallet recovery are managed separately",
+  "securityHubPrfUnsupportedBrowser": "This browser does not expose wallet-recovery PRF support.",
+  "securityHubThisDeviceCanSign": "This device can sign wallet actions.",
+  "securityHubWalletAccessReadOnlyOrNotConnected": "Wallet access is read-only or not connected.",
+  "securityHubWalletRecoveryPasskeyAdded": "Wallet recovery passkey \"{passkeyName}\" added.",
+  "@securityHubWalletRecoveryPasskeyAdded": {
+    "placeholders": {
+      "passkeyName": {}
+    }
+  },
+  "securityHubCreatedOn": "Created {date}",
+  "@securityHubCreatedOn": {
+    "placeholders": {
+      "date": {}
+    }
+  },
+  "securityHubCreatedAndLastUsed": "Created {createdDate}. Last used {lastUsedDate}.",
+  "@securityHubCreatedAndLastUsed": {
+    "placeholders": {
+      "createdDate": {},
+      "lastUsedDate": {}
+    }
+  },
+  "securityHubLastUsedOn": "Last used {date}",
+  "@securityHubLastUsedOn": {
+    "placeholders": {
+      "date": {}
+    }
+  },
+  "securityHubLastVerifiedOn": "Last verified {date}",
+  "@securityHubLastVerifiedOn": {
+    "placeholders": {
+      "date": {}
+    }
+  },
+  "securityHubPasskeyStatusSummary": "{lastActivity}. {prfLabel}. {recoveryMaterial}.",
+  "@securityHubPasskeyStatusSummary": {
+    "placeholders": {
+      "lastActivity": {},
+      "prfLabel": {},
+      "recoveryMaterial": {}
+    }
+  },
+  "securityHubPasskeyCounts": "{accountCount} account / {recoveryCount} recovery",
+  "@securityHubPasskeyCounts": {
+    "placeholders": {
+      "accountCount": {
+        "type": "int"
+      },
+      "recoveryCount": {
+        "type": "int"
+      }
+    }
+  },
+  "securityHubRegisteredCount": "{count} registered",
+  "@securityHubRegisteredCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "securityHubPasskeyPurpose": "Purpose: {purpose}",
+  "@securityHubPasskeyPurpose": {
+    "placeholders": {
+      "purpose": {}
+    }
+  },
+  "securityHubPasskeyPurposePrfCapable": "Purpose: {purpose} - PRF capable",
+  "@securityHubPasskeyPurposePrfCapable": {
+    "placeholders": {
+      "purpose": {}
+    }
+  },
+  "securityHubExternalWalletHelper": "External wallet: {walletName}",
+  "@securityHubExternalWalletHelper": {
+    "placeholders": {
+      "walletName": {}
+    }
+  },
+  "securityHubExternalWalletConnected": "External wallet connected.",
+  "securityHubExternalSignerConnected": "External signer connected",
+  "securityHubConnectOrRestoreWallet": "Connect or restore a wallet",
+  "securityHubDeleteBackupAction": "Delete backup",
+  "securityHubBiometricUnlockDescription": "Uses this device biometric prompt after a local PIN exists.",
   "walletRecoveryFallbackTitle": "Restore wallet access",
   "walletRecoveryPasskeyFailedTitle": "Passkey recovery failed",
   "walletRecoveryPasskeyUnavailableTitle": "Passkey recovery unavailable",

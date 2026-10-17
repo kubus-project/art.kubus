@@ -12136,6 +12136,382 @@ class AppLocalizationsSl extends AppLocalizations {
       'Poziv brskalnika je bil preklican ali je potekel.';
 
   @override
+  String get securityHubStatusSecured => 'Zavarovano';
+
+  @override
+  String get securityHubStatusRecommended => 'Priporočeno';
+
+  @override
+  String get securityHubStatusFailed => 'Neuspešno';
+
+  @override
+  String get securityHubStatusDestructive => 'Nevarno';
+
+  @override
+  String get securityHubStatusActive => 'Aktivno';
+
+  @override
+  String get securityHubStatusMissing => 'Manjka';
+
+  @override
+  String get securityHubStatusLinked => 'Povezano';
+
+  @override
+  String get securityHubStatusChecked => 'Preverjeno';
+
+  @override
+  String get securityHubStatusReady => 'Pripravljeno';
+
+  @override
+  String get securityHubStatusReadOnly => 'Samo za branje';
+
+  @override
+  String get securityHubBackUpOffline => 'Shrani brez povezave';
+
+  @override
+  String get securityHubEnableBiometrics => 'Omogoči biometrijo';
+
+  @override
+  String get securityHubVerifyBackup => 'Preveri';
+
+  @override
+  String get securityHubSavePin => 'Shrani PIN';
+
+  @override
+  String get securityHubSetPin => 'Nastavi PIN';
+
+  @override
+  String get securityHubSetLocalPin => 'Nastavi lokalni PIN';
+
+  @override
+  String get securityHubBiometricUnlock => 'Biometrično odklepanje';
+
+  @override
+  String get securityHubBiometricUnlockEnabled =>
+      'Biometrično odklepanje je omogočeno.';
+
+  @override
+  String get securityHubBiometricsUnavailable =>
+      'Biometrija na tej napravi ni na voljo.';
+
+  @override
+  String get securityHubBiometricApprovalFailed =>
+      'Biometrična potrditev ni uspela.';
+
+  @override
+  String get securityHubAuthenticationFailed =>
+      'Preverjanje identitete ni uspelo.';
+
+  @override
+  String get securityHubActionFailed => 'Dejanje ni uspelo. Poskusi znova.';
+
+  @override
+  String get securityHubWalletAccess => 'Dostop do denarnice';
+
+  @override
+  String get securityHubWalletAccessState => 'Stanje dostopa do denarnice';
+
+  @override
+  String get securityHubLocalSigner => 'Lokalni podpisnik';
+
+  @override
+  String get securityHubLocalSignerReady => 'Lokalni podpisnik je pripravljen';
+
+  @override
+  String get securityHubSecurityKey => 'Varnostni ključ';
+
+  @override
+  String get securityHubSetUpBackupFirst => 'Najprej nastavi kopijo';
+
+  @override
+  String get securityHubUpdateBackup => 'Posodobi kopijo';
+
+  @override
+  String get securityHubSaveEncryptedBackup => 'Shrani šifrirano kopijo';
+
+  @override
+  String get securityHubRestoreAccess => 'Obnovi dostop';
+
+  @override
+  String get securityHubAddAccountPasskey => 'Dodaj passkey za račun';
+
+  @override
+  String get securityHubAccountPasskeyAdded =>
+      'Passkey za prijavo v račun je dodan.';
+
+  @override
+  String get securityHubAccountPasskeyRemoved =>
+      'Passkey za prijavo v račun je odstranjen.';
+
+  @override
+  String get securityHubRemoveAccountPasskeyTitle =>
+      'Odstrani passkey za prijavo v račun?';
+
+  @override
+  String get securityHubSecureThisDevice => 'Zavaruj to napravo';
+
+  @override
+  String get securityHubConfirmRequired => 'Potrditev je potrebna';
+
+  @override
+  String get securityHubNever => 'Nikoli';
+
+  @override
+  String get securityHubLastUsedNever => 'Nazadnje uporabljen: nikoli';
+
+  @override
+  String get securityHubLinkedDevice => 'Povezana naprava';
+
+  @override
+  String get securityHubRecoveryAvailable => 'Obnova je na voljo';
+
+  @override
+  String get securityHubAccountOnly => 'Samo račun';
+
+  @override
+  String get securityHubCurrentAccountWallet => 'Trenutna denarnica računa';
+
+  @override
+  String get securityHubNoWallet => 'Ni denarnice';
+
+  @override
+  String get securityHubLocalSecuritySettingsUnavailable =>
+      'Lokalne varnostne nastavitve trenutno niso na voljo.';
+
+  @override
+  String get securityHubWalletSecurityStatusRefreshFailed =>
+      'Varnostnega stanja denarnice ni bilo mogoče osvežiti.';
+
+  @override
+  String get securityHubEncryptedBackupStatusRefreshFailed =>
+      'Stanja šifrirane kopije denarnice ni bilo mogoče osvežiti.';
+
+  @override
+  String get securityHubAccountPasskeyStatusUnavailable =>
+      'Stanje passkeyja za prijavo v račun trenutno ni na voljo.';
+
+  @override
+  String get securityHubWalletRecoveryPasskeyDefaultName =>
+      'Passkey za obnovo denarnice';
+
+  @override
+  String get securityHubWalletRecoveryPasskeyDescription =>
+      'Služi za obnovo lokalnega dostopa do denarnice iz šifrirane kopije.';
+
+  @override
+  String get securityHubAccountSignInDescription =>
+      'Služi za prijavo v art.kubus brez e-pošte, Googla ali podpisa denarnice.';
+
+  @override
+  String get securityHubPinDescription =>
+      'Varuje občutljiva dejanja z računom in denarnico na tej napravi.';
+
+  @override
+  String get securityHubCreateBackupDescription =>
+      'Izberi obnovitveno geslo. Z njim se kopija denarnice odklene na novi napravi.';
+
+  @override
+  String get securityHubVerifyBackupDescription =>
+      'Vnesi obnovitveno geslo, da preveriš, ali se ta kopija lahko odklene lokalno.';
+
+  @override
+  String get securityHubBiometricUnlockPromptDescription =>
+      'Omogoči biometrično odklepanje na tej napravi ali ga zaenkrat preskoči.';
+
+  @override
+  String get securityHubEncryptedBackupDescription =>
+      'Ustvari šifrirano kopijo, zaščiteno z geslom, za obnovo.';
+
+  @override
+  String get securityHubRecoveryPhraseOfflineDescription =>
+      'Preden se zaneseš na to denarnico, obnovitveno frazo shrani brez povezave.';
+
+  @override
+  String get securityHubDeleteBackupRowDescription =>
+      'Odstrani šifrirano strežniško kopijo za trenutno denarnico.';
+
+  @override
+  String get securityHubDeleteBackupDialogBody =>
+      'To odstrani šifrirano strežniško kopijo za trenutno denarnico. Obnovitveno frazo hrani varno brez povezave.';
+
+  @override
+  String get securityHubRemoveWalletRecoveryPasskeyBody =>
+      'Ta passkey za napravo ne bo več odklepal šifrirane kopije denarnice.';
+
+  @override
+  String get securityHubRemoveRecoveryPasskeyAction =>
+      'Odstrani passkey za obnovo';
+
+  @override
+  String get securityHubRemoveAccountPasskeyBody =>
+      'Ta passkey se ne bo več uporabljal za prijavo v art.kubus na tem računu.';
+
+  @override
+  String get securityHubRestoreSigningBeforeTransfers =>
+      'Pred prenosi obnovi podpisovanje';
+
+  @override
+  String get securityHubEncryptedBackupRestoreDescription =>
+      'Šifrirana kopija lahko obnovi lokalni dostop do denarnice.';
+
+  @override
+  String get securityHubEncryptedBackupAvailableDescription =>
+      'Šifrirana kopija denarnice je na voljo za obnovo.';
+
+  @override
+  String get securityHubEncryptedBackupDisabledDescription =>
+      'Šifrirana kopija denarnice je v tej različici onemogočena.';
+
+  @override
+  String get securityHubSetUpLocalUnlockDescription =>
+      'Pred občutljivimi dejanji z denarnico in računom nastavi lokalno odklepanje.';
+
+  @override
+  String get securityHubSetUpLocalUnlockStepsDescription =>
+      'Pred nadaljevanjem nastavi lokalno odklepanje, passkeye in obnovo denarnice.';
+
+  @override
+  String get securityHubSummaryDescription =>
+      'Prijavo v račun, odklepanje naprave, dostop do denarnice, šifrirane kopije in obnovitvene poverilnice upravljaj na enem mestu.';
+
+  @override
+  String get securityHubLocalWalletCanSign =>
+      'Lokalna denarnica lahko podpisuje';
+
+  @override
+  String get securityHubLocalWalletSignerAvailable =>
+      'Lokalni podpisnik denarnice je na tej napravi na voljo.';
+
+  @override
+  String get securityHubNoLocalSignerAvailable =>
+      'Na tej napravi lokalni podpisnik ni na voljo.';
+
+  @override
+  String get securityHubNoExternalSignerConnected =>
+      'Zunanji podpisnik denarnice ni povezan.';
+
+  @override
+  String get securityHubNoRecoveryPhraseActionRequired =>
+      'Trenutno ni potrebno nobeno dejanje z obnovitveno frazo.';
+
+  @override
+  String get securityHubNoWalletConnectedOnDevice =>
+      'Na tej napravi ni povezane denarnice.';
+
+  @override
+  String get securityHubNoWalletRecoveryPasskeys =>
+      'Ni registriranih passkeyjev za obnovo denarnice.';
+
+  @override
+  String get securityHubPinStaysOnDevice =>
+      'PIN ostane na tej napravi in varuje občutljiva dejanja z denarnico.';
+
+  @override
+  String get securityHubPrfSupported => 'PRF je podprt';
+
+  @override
+  String get securityHubPrfNotSupported => 'PRF ni podprt';
+
+  @override
+  String get securityHubRecoveryMaterialEncrypted =>
+      'Obnovitveni podatki so šifrirani';
+
+  @override
+  String get securityHubNoEncryptedRecoveryMaterial =>
+      'Ni šifriranih obnovitvenih podatkov';
+
+  @override
+  String get securityHubSignInRecoverySeparate =>
+      'Prijava in obnova denarnice se upravljata ločeno';
+
+  @override
+  String get securityHubPrfUnsupportedBrowser =>
+      'Ta brskalnik ne podpira PRF za obnovo denarnice.';
+
+  @override
+  String get securityHubThisDeviceCanSign =>
+      'Ta naprava lahko podpisuje dejanja z denarnico.';
+
+  @override
+  String get securityHubWalletAccessReadOnlyOrNotConnected =>
+      'Dostop do denarnice je samo za branje ali ni povezan.';
+
+  @override
+  String securityHubWalletRecoveryPasskeyAdded(Object passkeyName) {
+    return 'Passkey za obnovo denarnice \"$passkeyName\" je dodan.';
+  }
+
+  @override
+  String securityHubCreatedOn(Object date) {
+    return 'Ustvarjeno $date';
+  }
+
+  @override
+  String securityHubCreatedAndLastUsed(
+      Object createdDate, Object lastUsedDate) {
+    return 'Ustvarjeno $createdDate. Nazadnje uporabljeno $lastUsedDate.';
+  }
+
+  @override
+  String securityHubLastUsedOn(Object date) {
+    return 'Nazadnje uporabljeno $date';
+  }
+
+  @override
+  String securityHubLastVerifiedOn(Object date) {
+    return 'Nazadnje preverjeno $date';
+  }
+
+  @override
+  String securityHubPasskeyStatusSummary(
+      Object lastActivity, Object prfLabel, Object recoveryMaterial) {
+    return '$lastActivity. $prfLabel. $recoveryMaterial.';
+  }
+
+  @override
+  String securityHubPasskeyCounts(int accountCount, int recoveryCount) {
+    return '$accountCount za račun / $recoveryCount za obnovo';
+  }
+
+  @override
+  String securityHubRegisteredCount(int count) {
+    return 'Registrirano: $count';
+  }
+
+  @override
+  String securityHubPasskeyPurpose(Object purpose) {
+    return 'Namen: $purpose';
+  }
+
+  @override
+  String securityHubPasskeyPurposePrfCapable(Object purpose) {
+    return 'Namen: $purpose - podpira PRF';
+  }
+
+  @override
+  String securityHubExternalWalletHelper(Object walletName) {
+    return 'Zunanja denarnica: $walletName';
+  }
+
+  @override
+  String get securityHubExternalWalletConnected =>
+      'Zunanja denarnica je povezana.';
+
+  @override
+  String get securityHubExternalSignerConnected =>
+      'Zunanji podpisnik je povezan';
+
+  @override
+  String get securityHubConnectOrRestoreWallet => 'Poveži ali obnovi denarnico';
+
+  @override
+  String get securityHubDeleteBackupAction => 'Izbriši kopijo';
+
+  @override
+  String get securityHubBiometricUnlockDescription =>
+      'Uporablja biometrično potrditev te naprave, potem ko obstaja lokalni PIN.';
+
+  @override
   String get walletRecoveryFallbackTitle => 'Obnovi dostop do denarnice';
 
   @override

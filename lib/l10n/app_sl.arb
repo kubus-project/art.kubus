@@ -4719,6 +4719,172 @@
   "securityHubWalletRecoveryPasskeyRemoveFailedToast": "Passkeyja za obnovitev denarnice ni bilo mogoče odstraniti. Poskusi znova.",
   "securityHubPasskeyAlreadyRegistered": "Ta passkey je že registriran.",
   "securityHubBrowserPromptCancelledOrTimedOut": "Poziv brskalnika je bil preklican ali je potekel.",
+  "securityHubStatusSecured": "Zavarovano",
+  "securityHubStatusRecommended": "Priporočeno",
+  "securityHubStatusFailed": "Neuspešno",
+  "securityHubStatusDestructive": "Nevarno",
+  "securityHubStatusActive": "Aktivno",
+  "securityHubStatusMissing": "Manjka",
+  "securityHubStatusLinked": "Povezano",
+  "securityHubStatusChecked": "Preverjeno",
+  "securityHubStatusReady": "Pripravljeno",
+  "securityHubStatusReadOnly": "Samo za branje",
+  "securityHubBackUpOffline": "Shrani brez povezave",
+  "securityHubEnableBiometrics": "Omogoči biometrijo",
+  "securityHubVerifyBackup": "Preveri",
+  "securityHubSavePin": "Shrani PIN",
+  "securityHubSetPin": "Nastavi PIN",
+  "securityHubSetLocalPin": "Nastavi lokalni PIN",
+  "securityHubBiometricUnlock": "Biometrično odklepanje",
+  "securityHubBiometricUnlockEnabled": "Biometrično odklepanje je omogočeno.",
+  "securityHubBiometricsUnavailable": "Biometrija na tej napravi ni na voljo.",
+  "securityHubBiometricApprovalFailed": "Biometrična potrditev ni uspela.",
+  "securityHubAuthenticationFailed": "Preverjanje identitete ni uspelo.",
+  "securityHubActionFailed": "Dejanje ni uspelo. Poskusi znova.",
+  "securityHubWalletAccess": "Dostop do denarnice",
+  "securityHubWalletAccessState": "Stanje dostopa do denarnice",
+  "securityHubLocalSigner": "Lokalni podpisnik",
+  "securityHubLocalSignerReady": "Lokalni podpisnik je pripravljen",
+  "securityHubSecurityKey": "Varnostni ključ",
+  "securityHubSetUpBackupFirst": "Najprej nastavi kopijo",
+  "securityHubUpdateBackup": "Posodobi kopijo",
+  "securityHubSaveEncryptedBackup": "Shrani šifrirano kopijo",
+  "securityHubRestoreAccess": "Obnovi dostop",
+  "securityHubAddAccountPasskey": "Dodaj passkey za račun",
+  "securityHubAccountPasskeyAdded": "Passkey za prijavo v račun je dodan.",
+  "securityHubAccountPasskeyRemoved": "Passkey za prijavo v račun je odstranjen.",
+  "securityHubRemoveAccountPasskeyTitle": "Odstrani passkey za prijavo v račun?",
+  "securityHubSecureThisDevice": "Zavaruj to napravo",
+  "securityHubConfirmRequired": "Potrditev je potrebna",
+  "securityHubNever": "Nikoli",
+  "securityHubLastUsedNever": "Nazadnje uporabljen: nikoli",
+  "securityHubLinkedDevice": "Povezana naprava",
+  "securityHubRecoveryAvailable": "Obnova je na voljo",
+  "securityHubAccountOnly": "Samo račun",
+  "securityHubCurrentAccountWallet": "Trenutna denarnica računa",
+  "securityHubNoWallet": "Ni denarnice",
+  "securityHubLocalSecuritySettingsUnavailable": "Lokalne varnostne nastavitve trenutno niso na voljo.",
+  "securityHubWalletSecurityStatusRefreshFailed": "Varnostnega stanja denarnice ni bilo mogoče osvežiti.",
+  "securityHubEncryptedBackupStatusRefreshFailed": "Stanja šifrirane kopije denarnice ni bilo mogoče osvežiti.",
+  "securityHubAccountPasskeyStatusUnavailable": "Stanje passkeyja za prijavo v račun trenutno ni na voljo.",
+  "securityHubWalletRecoveryPasskeyDefaultName": "Passkey za obnovo denarnice",
+  "securityHubWalletRecoveryPasskeyDescription": "Služi za obnovo lokalnega dostopa do denarnice iz šifrirane kopije.",
+  "securityHubAccountSignInDescription": "Služi za prijavo v art.kubus brez e-pošte, Googla ali podpisa denarnice.",
+  "securityHubPinDescription": "Varuje občutljiva dejanja z računom in denarnico na tej napravi.",
+  "securityHubCreateBackupDescription": "Izberi obnovitveno geslo. Z njim se kopija denarnice odklene na novi napravi.",
+  "securityHubVerifyBackupDescription": "Vnesi obnovitveno geslo, da preveriš, ali se ta kopija lahko odklene lokalno.",
+  "securityHubBiometricUnlockPromptDescription": "Omogoči biometrično odklepanje na tej napravi ali ga zaenkrat preskoči.",
+  "securityHubEncryptedBackupDescription": "Ustvari šifrirano kopijo, zaščiteno z geslom, za obnovo.",
+  "securityHubRecoveryPhraseOfflineDescription": "Preden se zaneseš na to denarnico, obnovitveno frazo shrani brez povezave.",
+  "securityHubDeleteBackupRowDescription": "Odstrani šifrirano strežniško kopijo za trenutno denarnico.",
+  "securityHubDeleteBackupDialogBody": "To odstrani šifrirano strežniško kopijo za trenutno denarnico. Obnovitveno frazo hrani varno brez povezave.",
+  "securityHubRemoveWalletRecoveryPasskeyBody": "Ta passkey za napravo ne bo več odklepal šifrirane kopije denarnice.",
+  "securityHubRemoveRecoveryPasskeyAction": "Odstrani passkey za obnovo",
+  "securityHubRemoveAccountPasskeyBody": "Ta passkey se ne bo več uporabljal za prijavo v art.kubus na tem računu.",
+  "securityHubRestoreSigningBeforeTransfers": "Pred prenosi obnovi podpisovanje",
+  "securityHubEncryptedBackupRestoreDescription": "Šifrirana kopija lahko obnovi lokalni dostop do denarnice.",
+  "securityHubEncryptedBackupAvailableDescription": "Šifrirana kopija denarnice je na voljo za obnovo.",
+  "securityHubEncryptedBackupDisabledDescription": "Šifrirana kopija denarnice je v tej različici onemogočena.",
+  "securityHubSetUpLocalUnlockDescription": "Pred občutljivimi dejanji z denarnico in računom nastavi lokalno odklepanje.",
+  "securityHubSetUpLocalUnlockStepsDescription": "Pred nadaljevanjem nastavi lokalno odklepanje, passkeye in obnovo denarnice.",
+  "securityHubSummaryDescription": "Prijavo v račun, odklepanje naprave, dostop do denarnice, šifrirane kopije in obnovitvene poverilnice upravljaj na enem mestu.",
+  "securityHubLocalWalletCanSign": "Lokalna denarnica lahko podpisuje",
+  "securityHubLocalWalletSignerAvailable": "Lokalni podpisnik denarnice je na tej napravi na voljo.",
+  "securityHubNoLocalSignerAvailable": "Na tej napravi lokalni podpisnik ni na voljo.",
+  "securityHubNoExternalSignerConnected": "Zunanji podpisnik denarnice ni povezan.",
+  "securityHubNoRecoveryPhraseActionRequired": "Trenutno ni potrebno nobeno dejanje z obnovitveno frazo.",
+  "securityHubNoWalletConnectedOnDevice": "Na tej napravi ni povezane denarnice.",
+  "securityHubNoWalletRecoveryPasskeys": "Ni registriranih passkeyjev za obnovo denarnice.",
+  "securityHubPinStaysOnDevice": "PIN ostane na tej napravi in varuje občutljiva dejanja z denarnico.",
+  "securityHubPrfSupported": "PRF je podprt",
+  "securityHubPrfNotSupported": "PRF ni podprt",
+  "securityHubRecoveryMaterialEncrypted": "Obnovitveni podatki so šifrirani",
+  "securityHubNoEncryptedRecoveryMaterial": "Ni šifriranih obnovitvenih podatkov",
+  "securityHubSignInRecoverySeparate": "Prijava in obnova denarnice se upravljata ločeno",
+  "securityHubPrfUnsupportedBrowser": "Ta brskalnik ne podpira PRF za obnovo denarnice.",
+  "securityHubThisDeviceCanSign": "Ta naprava lahko podpisuje dejanja z denarnico.",
+  "securityHubWalletAccessReadOnlyOrNotConnected": "Dostop do denarnice je samo za branje ali ni povezan.",
+  "securityHubWalletRecoveryPasskeyAdded": "Passkey za obnovo denarnice \"{passkeyName}\" je dodan.",
+  "@securityHubWalletRecoveryPasskeyAdded": {
+    "placeholders": {
+      "passkeyName": {}
+    }
+  },
+  "securityHubCreatedOn": "Ustvarjeno {date}",
+  "@securityHubCreatedOn": {
+    "placeholders": {
+      "date": {}
+    }
+  },
+  "securityHubCreatedAndLastUsed": "Ustvarjeno {createdDate}. Nazadnje uporabljeno {lastUsedDate}.",
+  "@securityHubCreatedAndLastUsed": {
+    "placeholders": {
+      "createdDate": {},
+      "lastUsedDate": {}
+    }
+  },
+  "securityHubLastUsedOn": "Nazadnje uporabljeno {date}",
+  "@securityHubLastUsedOn": {
+    "placeholders": {
+      "date": {}
+    }
+  },
+  "securityHubLastVerifiedOn": "Nazadnje preverjeno {date}",
+  "@securityHubLastVerifiedOn": {
+    "placeholders": {
+      "date": {}
+    }
+  },
+  "securityHubPasskeyStatusSummary": "{lastActivity}. {prfLabel}. {recoveryMaterial}.",
+  "@securityHubPasskeyStatusSummary": {
+    "placeholders": {
+      "lastActivity": {},
+      "prfLabel": {},
+      "recoveryMaterial": {}
+    }
+  },
+  "securityHubPasskeyCounts": "{accountCount} za račun / {recoveryCount} za obnovo",
+  "@securityHubPasskeyCounts": {
+    "placeholders": {
+      "accountCount": {
+        "type": "int"
+      },
+      "recoveryCount": {
+        "type": "int"
+      }
+    }
+  },
+  "securityHubRegisteredCount": "Registrirano: {count}",
+  "@securityHubRegisteredCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "securityHubPasskeyPurpose": "Namen: {purpose}",
+  "@securityHubPasskeyPurpose": {
+    "placeholders": {
+      "purpose": {}
+    }
+  },
+  "securityHubPasskeyPurposePrfCapable": "Namen: {purpose} - podpira PRF",
+  "@securityHubPasskeyPurposePrfCapable": {
+    "placeholders": {
+      "purpose": {}
+    }
+  },
+  "securityHubExternalWalletHelper": "Zunanja denarnica: {walletName}",
+  "@securityHubExternalWalletHelper": {
+    "placeholders": {
+      "walletName": {}
+    }
+  },
+  "securityHubExternalWalletConnected": "Zunanja denarnica je povezana.",
+  "securityHubExternalSignerConnected": "Zunanji podpisnik je povezan",
+  "securityHubConnectOrRestoreWallet": "Poveži ali obnovi denarnico",
+  "securityHubDeleteBackupAction": "Izbriši kopijo",
+  "securityHubBiometricUnlockDescription": "Uporablja biometrično potrditev te naprave, potem ko obstaja lokalni PIN.",
   "walletRecoveryFallbackTitle": "Obnovi dostop do denarnice",
   "walletRecoveryPasskeyFailedTitle": "Obnova s passkeyjem ni uspela",
   "walletRecoveryPasskeyUnavailableTitle": "Obnova s passkeyjem ni na voljo",
