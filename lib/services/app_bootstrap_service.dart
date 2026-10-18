@@ -20,7 +20,6 @@ import '../providers/kubus_node_provider.dart';
 import '../providers/spatial_library_provider.dart';
 import '../providers/presence_provider.dart';
 import '../providers/promotion_provider.dart';
-import '../providers/profile_provider.dart';
 import '../providers/saved_items_provider.dart';
 import '../providers/stats_provider.dart';
 import '../providers/task_provider.dart';
@@ -49,7 +48,6 @@ class AppBootstrapService {
     // Providers
     final artworkProvider = context.read<ArtworkProvider>();
     final navigationProvider = context.read<NavigationProvider>();
-    final profileProvider = context.read<ProfileProvider>();
     final walletProvider = context.read<WalletProvider>();
     final web3Provider = context.read<Web3Provider>();
     final cacheProvider = context.read<CacheProvider>();
