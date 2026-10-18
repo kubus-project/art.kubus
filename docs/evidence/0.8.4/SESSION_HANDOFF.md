@@ -1,31 +1,36 @@
 # 0.8.4 session handoff
 
-Date: 2026-10-17. Phase: A (finish 0.8.3) at the owner-approval gate; C started locally.
+Date: 2026-10-18. Phase: 0.8.3 is RELEASED to production; closeout (ancestry, record, tag) in progress.
 
-## GitHub state
+## Release state
 
-- `dev` `74923da19503c46d0fc8b2491e2e8a17bda56e84` (after #307 `85c5699a` and #308 `74923da1`).
-- `master` `4181b4d28dc628ca3dc44091804d759b10f04588` (production, `kubus-web-revision.txt` matches).
-- Open release PR: #306 (`dev` to `master`, merge commit only). Review threads: 3 of 3 resolved.
-  Exact-head run 39064711730: all required jobs green (2026-10-18), PR CLEAN. Deploy run
-  39064707394 promoted `74923da1` to staging.
-- Open docs PR #309 (`docs/083-final-record` `7604f471` into `dev`): CLEAN, required checks green,
-  merge denied to the agent (owner merges). Merging it moves `dev`, so #306 then needs fresh exact-head CI.
-- Production preflight 2026-10-18: `production-web` requires reviewer `kubus-project`; secrets and
-  variables present; `app.kubus.site` pinned to 89.58.21.59 serves `4181b4d2` with all three Community
-  flags true; `api.kubus.site` is 0.8.2. The workflow checks the artifact SHA256SUMS and revision,
-  pins the host fingerprint, keeps TLS verification on and rolls back on a failed smoke.
-- Staging is behind Basic Auth: the served revision and the authenticated flows below were
-  not read from this environment.
+- Production `master` `2f93f64e61ccf5ac8923cf625b5f8b3a4c30eeaf` (PR #306, merge commit). Production
+  deployment run 39080160967 succeeded (exact-SHA build, local and production smoke, rollback skipped).
+  Do not redeploy.
+- Live check 2026-10-18: `app.kubus.site/kubus-web-revision.txt` = `2f93f64e`; `kubus-community-build.json`
+  has `COMMUNITY_MULTI_MEDIA_ENABLED`, `COMMUNITY_VIDEO_AUTOPLAY_ENABLED`, `COMMUNITY_VIDEO_POSTERS_ENABLED`
+  all true; `/`, `/map`, `/community` return 200; canonical `https://app.kubus.site/en`.
+- `dev` `74923da1` (before reconciliation). Master-to-dev reconciliation: PR #311
+  (`chore/sync-master-into-dev-20261018`, merge `244c764e`, empty tree diff, parents 74923da1 + 2f93f64e).
+  Merge with a merge commit only. Before: `master...dev` = `1 0`; after merge it must be `0 N`;
+  confirm with `npm run verify:branch-reconciliation`.
+- Docs PR #309 (`docs/083-final-record` `7604f471`): needs the staging/production wording updated
+  after #311 lands (production is now complete) and a dev merge into its branch if behind.
+- Tag `v0.8.3`: NOT created. A `v*` tag push triggers `mobile-release.yml` with publish=true,
+  prerelease=false: protected `android-release` and `ios-release` signing, and a public GitHub Release.
+  Needs explicit owner authorisation; tag the master SHA `2f93f64e`, never a later commit. Latest
+  release is `v0.8.2.1`; `pubspec.yaml` is `0.8.3+26101601`.
 
-## Owner acceptance still owed (authenticated `dev.kubus.site`)
+## Acceptance
 
-Artwork edit then Save (returns to a working app, persists after reload, a failed save keeps
-the editor and the typed input); mixed-media carousel keeps a stable 4:3 stage; a single video
-keeps its source aspect; Node prose is plain text; map search, cluster animation and selected
-markers; owner profile navigation; core map starts with the atmosphere module blocked.
+Authenticated artwork Save after the hotfix has NOT been exercised on a live environment (staging is
+behind Basic Auth). Local browser evidence only. Owner acceptance owed: artwork edit, Save (app stays
+usable, persists after reload, failed save keeps the editor); mixed-media carousel keeps a stable 4:3
+stage; single video keeps its aspect; Node prose plain text; map search, cluster animation, selected
+markers; owner profile navigation. Legacy portrait video sizing on phones remains a 0.8.4 defect.
+Physical-device acceptance outstanding.
 
-## Worktrees (all under C:/kubus-build, nothing pushed, nothing deleted)
+## Worktrees (all under C:/kubus-build, nothing pushed except the reconcile branch, nothing deleted)
 
 | Branch | Worktree | Head | State |
 | --- | --- | --- | --- |
@@ -66,16 +71,13 @@ PIN hash storage.
 
 ## Outstanding approvals
 
-Owner: merge #306 with a merge commit, authorise the protected `release-production.yml`
-deployment on the resulting master SHA, record the tag. Optional before the release: merge the
-`docs/083-final-record` corrections (restarts #306's exact-head CI).
+Owner: merge #311 (merge commit, NOT squash/rebase), then #309; decide on the `v0.8.3` tag
+(mobile signing + public GitHub Release side effects); live authenticated Save acceptance.
 
 ## Next three actions
 
-1. When the Flutter job is green, send the owner the #306 approval request; after the
-   authorised release, dispatch production, verify `kubus-web-revision.txt`, and open the
-   non-squash master-to-dev reconcile PR.
-2. Third security review of `7c212838`, then push the security branch as a draft PR.
-3. Measure the visible portrait-video size on the merged video branch in Chromium and
-   Firefox, then push it as a draft PR; validate the badge and fallback branches on an
-   integrated build.
+1. Third security review of `7c212838`, then push `fix/084-security-settings` as a draft PR.
+2. Measure the visible portrait-video size on `fix/084-community-video-sizing` in Chromium and Firefox
+   (`QA_CLICK="Play video"` plus a bounding-box measurement), then push as a draft PR.
+3. Validate the badge and fallback branches on an integrated build off post-reconcile `dev`, then
+   push as draft PRs; continue map QA, accessibility, dialogs, onboarding.
