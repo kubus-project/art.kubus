@@ -323,3 +323,50 @@ test('the unsigned iOS build is manual, secret-free and never publishes', () => 
   assert.match(unsigned, /\^v\[0-9A-Za-z\._-\]\+\$/);
   assert.match(unsigned, /\[ "\$ref" = dev \] \|\| \[ "\$ref" = master \]/);
 });
+
+function jobBlock(content, name) {
+  const start = content.indexOf(`\n  ${name}:\n`);
+  assert.ok(start >= 0, `job ${name} is missing`);
+  const rest = content.slice(start + 1);
+  const next = rest.slice(1).search(/\n  [a-z][a-z-]*:\n/);
+  return next < 0 ? rest : rest.slice(0, next + 1);
+}
+
+test('every release tag builds Android and iOS, and iOS is never skipped', () => {
+  const mobile = workflow('mobile-release.yml');
+  const source = jobBlock(mobile, 'source');
+  // A tag push always builds both platforms; the repository variable only
+  // chooses between a signed and an explicitly unsigned IPA.
+  assert.match(source, /ios_mode=unsigned; \[ "\$IOS_RELEASE_ENABLED" = true \] && ios_mode=signed/);
+  assert.match(source, /build_android=true; build_ios=true/);
+  assert.doesNotMatch(source, /build_ios=false; \[ "\$IOS_RELEASE_ENABLED"/);
+  assert.match(jobBlock(mobile, 'ios'), /if: \$\{\{ needs\.source\.outputs\.ios_mode == 'signed' \}\}/);
+  assert.match(jobBlock(mobile, 'ios-unsigned'), /if: \$\{\{ needs\.source\.outputs\.ios_mode == 'unsigned' \}\}/);
+  // Publishing from a partial manual run is refused before anything builds.
+  assert.match(source, /targets=both, so a published release never lacks a platform/);
+});
+
+test('the unsigned release IPA job holds no secrets and no signing environment', () => {
+  const job = jobBlock(workflow('mobile-release.yml'), 'ios-unsigned');
+  assert.doesNotMatch(job, /secrets\.|environment:|contents: write|release-action|gh release/);
+  assert.match(job, /flutter build ipa --release --no-codesign/);
+  assert.match(job, /embedded\.mobileprovision/);
+  assert.match(job, /"signed":false/);
+  assert.match(job, /-unsigned"/);
+  assert.match(job, /name: ios-release-\$\{\{ needs\.source\.outputs\.sha \}\}/);
+});
+
+test('publishing requires both platforms and verifies the manifest before and after', () => {
+  const publish = jobBlock(workflow('mobile-release.yml'), 'publish');
+  assert.match(publish, /needs: \[source, android, ios, ios-unsigned\]/);
+  assert.match(publish, /needs\.source\.outputs\.build_android == 'true'/);
+  assert.match(publish, /needs\.source\.outputs\.build_ios == 'true'/);
+  assert.match(publish, /needs\.android\.result == 'success'/);
+  assert.match(publish, /needs\.ios\.result == 'success' \|\| needs\.ios-unsigned\.result == 'success'/);
+  // A skipped platform job must never be accepted as success.
+  assert.doesNotMatch(publish, /result == 'skipped'/);
+  assert.ok(publish.indexOf('release_manifest.mjs build') < publish.indexOf('release-action'));
+  assert.ok(publish.indexOf('release-action') < publish.indexOf('Verify the published release'));
+  assert.match(publish, /gh release download/);
+  assert.match(publish, /release_manifest\.mjs verify --dir published/);
+});

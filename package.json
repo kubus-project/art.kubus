@@ -18,7 +18,7 @@
     "verify:deploy": "node ./scripts/deploy/run_atomic_web_release_test.mjs",
     "verify:branch-reconciliation": "node ./scripts/ci/check_branch_reconciliation.mjs",
     "verify:account-node-contract": "node --test scripts/ci/account_node_contract.test.mjs",
-    "verify:ci": "node --test ./scripts/ci/workflow_contracts.test.mjs ./scripts/ci/branch_reconciliation.test.mjs ./scripts/ci/web_artifact_reproducibility.test.mjs ./scripts/deploy/deployment_contracts.test.mjs ./scripts/deploy/inspect_ios_profile.test.mjs && npm run verify:deploy",
+    "verify:ci": "node --test ./scripts/ci/workflow_contracts.test.mjs ./scripts/ci/branch_reconciliation.test.mjs ./scripts/ci/web_artifact_reproducibility.test.mjs ./scripts/deploy/deployment_contracts.test.mjs ./scripts/deploy/inspect_ios_profile.test.mjs ./scripts/deploy/release_manifest.test.mjs && npm run verify:deploy",
     "verify": "node ./scripts/verify.mjs all",
     "verify:all": "node ./scripts/verify.mjs all",
     "verify:architecture": "npm run guard:architecture",
