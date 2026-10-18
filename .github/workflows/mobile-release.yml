@@ -4,13 +4,19 @@ on:
     tags: ['v*']
   workflow_dispatch:
     inputs:
-      release_tag: { description: 'New v-prefixed release tag', required: true, type: string }
-      publish_github_release: { description: 'Publish an immutable GitHub Release', required: false, default: false, type: boolean }
+      release_tag: { description: 'Existing v-prefixed release tag whose commit is on master', required: true, type: string }
+      targets:
+        description: 'Platforms to build and sign'
+        required: true
+        default: android
+        type: choice
+        options: [android, ios, both]
+      publish_github_release: { description: 'Publish a new immutable GitHub Release for the tag (refused when one exists)', required: false, default: false, type: boolean }
       prerelease: { description: 'Mark as prerelease', required: false, default: true, type: boolean }
 permissions:
   contents: read
 concurrency:
-  group: mobile-release-${{ github.ref_name }}
+  group: mobile-release-${{ inputs.release_tag || github.ref_name }}
   cancel-in-progress: false
 env:
   FLUTTER_VERSION: '3.44.2'
@@ -25,6 +31,8 @@ jobs:
       tag: ${{ steps.source.outputs.tag }}
       publish: ${{ steps.source.outputs.publish }}
       prerelease: ${{ steps.source.outputs.prerelease }}
+      build_android: ${{ steps.source.outputs.build_android }}
+      build_ios: ${{ steps.source.outputs.build_ios }}
       version: ${{ steps.metadata.outputs.version }}
       build_number: ${{ steps.metadata.outputs.build_number }}
       build_date: ${{ steps.metadata.outputs.build_date }}
@@ -34,25 +42,55 @@ jobs:
       - id: source
         shell: bash
         env:
+          GH_TOKEN: ${{ github.token }}
           EVENT_NAME: ${{ github.event_name }}
-          SOURCE_SHA: ${{ github.sha }}
+          EVENT_REF: ${{ github.ref }}
+          EVENT_SHA: ${{ github.sha }}
           PUSH_TAG: ${{ github.ref_name }}
           MANUAL_TAG: ${{ inputs.release_tag }}
+          MANUAL_TARGETS: ${{ inputs.targets }}
           MANUAL_PUBLISH: ${{ inputs.publish_github_release }}
           MANUAL_PRERELEASE: ${{ inputs.prerelease }}
+          # Repository-level variable: a job-level `if` cannot read
+          # environment-scoped variables, so it must not live in ios-release.
+          IOS_RELEASE_ENABLED: ${{ vars.IOS_RELEASE_ENABLED }}
         run: |
           set -euo pipefail
+          fail() { echo "::error::$1"; exit 1; }
           git fetch --no-tags origin master
-          git merge-base --is-ancestor "$SOURCE_SHA" origin/master
           if [ "$EVENT_NAME" = push ]; then
             tag="$PUSH_TAG"; publish=true; prerelease=false
-            test "$(git rev-parse "$tag^{commit}")" = "$SOURCE_SHA"
+            build_android=true
+            build_ios=false; [ "$IOS_RELEASE_ENABLED" = true ] && build_ios=true
           else
+            # Manual runs rebuild an existing release tag. The signing
+            # environments admit master only, so the workflow definition is
+            # the reviewed one on master; the built source is the tag's commit.
+            [ "$EVENT_REF" = refs/heads/master ] || fail "Run manual mobile releases from master (dispatched from $EVENT_REF)."
             tag="$MANUAL_TAG"; publish="$MANUAL_PUBLISH"; prerelease="$MANUAL_PRERELEASE"
+            case "$MANUAL_TARGETS" in
+              android) build_android=true; build_ios=false ;;
+              ios) build_android=false; build_ios=true ;;
+              both) build_android=true; build_ios=true ;;
+              *) fail "Unknown targets value: $MANUAL_TARGETS" ;;
+            esac
           fi
-          [[ "$tag" =~ ^v[0-9A-Za-z._-]+$ ]]
-          [[ "$tag" != *..* ]]
-          printf 'sha=%s\ntag=%s\npublish=%s\nprerelease=%s\n' "$SOURCE_SHA" "$tag" "$publish" "$prerelease" >> "$GITHUB_OUTPUT"
+          [[ "$tag" =~ ^v[0-9A-Za-z._-]+$ ]] || fail "Release tag must be v-prefixed: $tag"
+          [[ "$tag" != *..* ]] || fail "Release tag must not contain '..': $tag"
+          [[ "$publish" =~ ^(true|false)$ && "$prerelease" =~ ^(true|false)$ ]] || fail 'publish and prerelease must be booleans'
+          git fetch --no-tags --force origin "refs/tags/$tag:refs/tags/$tag" || fail "Tag $tag does not exist on origin."
+          sha="$(git rev-parse --verify "refs/tags/$tag^{commit}")"
+          if [ "$EVENT_NAME" = push ]; then
+            [ "$sha" = "$EVENT_SHA" ] || fail "Tag $tag moved during the run."
+          fi
+          git merge-base --is-ancestor "$sha" origin/master || fail "Tag $tag ($sha) is not contained by master."
+          if [ "$publish" = true ] && gh release view "$tag" --repo "$GITHUB_REPOSITORY" > /dev/null 2>&1; then
+            fail "A GitHub Release for $tag already exists; rebuild with publish_github_release=false to get workflow artifacts only."
+          fi
+          # Version metadata must come from the tagged source, not the dispatching branch.
+          git checkout --quiet --detach "$sha"
+          printf 'sha=%s\ntag=%s\npublish=%s\nprerelease=%s\nbuild_android=%s\nbuild_ios=%s\n' "$sha" "$tag" "$publish" "$prerelease" "$build_android" "$build_ios" >> "$GITHUB_OUTPUT"
+          echo "Mobile release source: $tag -> $sha (android=$build_android, ios=$build_ios, publish=$publish)" >> "$GITHUB_STEP_SUMMARY"
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: ${{ env.NODE_VERSION }}
@@ -63,6 +101,7 @@ jobs:
   android:
     name: Sign Android APK and AAB
     needs: source
+    if: ${{ needs.source.outputs.build_android == 'true' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 50
     environment: android-release
@@ -145,7 +184,7 @@ jobs:
   ios:
     name: Sign iOS IPA
     needs: source
-    if: ${{ vars.IOS_RELEASE_ENABLED == 'true' }}
+    if: ${{ needs.source.outputs.build_ios == 'true' }}
     runs-on: macos-15
     timeout-minutes: 50
     environment: ios-release
@@ -154,10 +193,29 @@ jobs:
         with:
           ref: ${{ needs.source.outputs.sha }}
           submodules: false
+      # The signing tools come from this workflow's own revision so a manual
+      # rebuild of an older tag still runs the reviewed signing checks.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v4
+        with:
+          ref: ${{ github.sha }}
+          path: .release-tools
+          sparse-checkout: scripts/deploy
+          submodules: false
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: ${{ env.NODE_VERSION }}
           package-manager-cache: false
+      # Signing is validated before the toolchain is installed so missing or
+      # mismatched credentials fail in seconds rather than after a build.
+      - name: Configure protected iOS signing
+        env:
+          IOS_DISTRIBUTION_CERTIFICATE_BASE64: ${{ secrets.IOS_DISTRIBUTION_CERTIFICATE_BASE64 }}
+          IOS_DISTRIBUTION_CERTIFICATE_PASSWORD: ${{ secrets.IOS_DISTRIBUTION_CERTIFICATE_PASSWORD }}
+          IOS_PROVISIONING_PROFILE_BASE64: ${{ secrets.IOS_PROVISIONING_PROFILE_BASE64 }}
+          IOS_TEAM_ID: ${{ vars.IOS_TEAM_ID }}
+          IOS_BUNDLE_ID: ${{ vars.IOS_BUNDLE_ID }}
+          IOS_EXPORT_METHOD: ${{ vars.IOS_EXPORT_METHOD }}
+        run: bash .release-tools/scripts/deploy/configure_ios_signing.sh
       - run: npm install --global "npm@${NPM_VERSION}"
       - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2
         with: { flutter-version: '3.44.2', channel: stable, cache: true }
@@ -177,32 +235,49 @@ jobs:
           KUBUS_COMMUNITY_VIDEO_POSTERS_ENABLED: ${{ vars.KUBUS_COMMUNITY_VIDEO_POSTERS_ENABLED }}
           KUBUS_SUPPORT_TICKETS_ENABLED: ${{ vars.KUBUS_SUPPORT_TICKETS_ENABLED }}
         run: node scripts/prepare_public_build_config.mjs
-      - name: Configure protected iOS signing
-        env:
-          IOS_DISTRIBUTION_CERTIFICATE_BASE64: ${{ secrets.IOS_DISTRIBUTION_CERTIFICATE_BASE64 }}
-          IOS_DISTRIBUTION_CERTIFICATE_PASSWORD: ${{ secrets.IOS_DISTRIBUTION_CERTIFICATE_PASSWORD }}
-          IOS_PROVISIONING_PROFILE_BASE64: ${{ secrets.IOS_PROVISIONING_PROFILE_BASE64 }}
-          IOS_TEAM_ID: ${{ vars.IOS_TEAM_ID }}
-          IOS_BUNDLE_ID: ${{ vars.IOS_BUNDLE_ID }}
-          IOS_EXPORT_METHOD: ${{ vars.IOS_EXPORT_METHOD }}
-        run: bash scripts/deploy/configure_ios_signing.sh
       - name: Build signed IPA
         run: flutter build ipa --release --build-name="${{ needs.source.outputs.version }}" --build-number="${{ needs.source.outputs.build_number }}" --export-options-plist="$IOS_EXPORT_OPTIONS" --dart-define-from-file=.dart_tool/public-build-defines.json
       - name: Verify and package IPA
         shell: bash
         env:
           EXPECTED_BUNDLE_ID: ${{ vars.IOS_BUNDLE_ID }}
+          EXPECTED_TEAM_ID: ${{ vars.IOS_TEAM_ID }}
+          EXPECTED_VERSION: ${{ needs.source.outputs.version }}
+          EXPECTED_BUILD_NUMBER: ${{ needs.source.outputs.build_number }}
+          RELEASE_TAG: ${{ needs.source.outputs.tag }}
+          SOURCE_SHA: ${{ needs.source.outputs.sha }}
         run: |
           set -euo pipefail
+          fail() { echo "::error::$1"; exit 1; }
+          plist() { /usr/libexec/PlistBuddy -c "Print :$1" "$2"; }
           ipa="$(find build/ios/ipa -type f -name '*.ipa' -print -quit)"
-          test -f "$ipa"
+          [ -f "$ipa" ] || fail 'flutter build ipa produced no IPA'
           extraction="$RUNNER_TEMP/ipa"
           unzip -q "$ipa" -d "$extraction"
           app="$extraction/Payload/Runner.app"
-          /usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$app/Info.plist" | grep -Fx "$EXPECTED_BUNDLE_ID"
+          [ "$(plist CFBundleIdentifier "$app/Info.plist")" = "$EXPECTED_BUNDLE_ID" ] || fail 'IPA bundle identifier does not match IOS_BUNDLE_ID'
+          [ "$(plist CFBundleShortVersionString "$app/Info.plist")" = "$EXPECTED_VERSION" ] || fail 'IPA version does not match the tagged source'
+          [ "$(plist CFBundleVersion "$app/Info.plist")" = "$EXPECTED_BUILD_NUMBER" ] || fail 'IPA build number does not match the release metadata'
           codesign --verify --deep --strict --verbose=2 "$app"
+          signature="$(codesign -dvv "$app" 2>&1)"
+          grep -Fqx "TeamIdentifier=$EXPECTED_TEAM_ID" <<< "$signature" || fail 'IPA is signed by a different team'
+          grep -E '^Authority=' <<< "$signature"
+          embedded="$RUNNER_TEMP/embedded-profile.plist"
+          security cms -D -i "$app/embedded.mobileprovision" > "$embedded"
+          [ "$(plist UUID "$embedded")" = "$IOS_PROFILE_UUID" ] || fail 'IPA embeds a different provisioning profile'
+          entitlements="$RUNNER_TEMP/signed-entitlements.plist"
+          codesign -d --entitlements - --xml "$app" > "$entitlements" 2>/dev/null
+          [ "$(plist application-identifier "$entitlements")" = "$EXPECTED_TEAM_ID.$EXPECTED_BUNDLE_ID" ] || fail 'signed application identifier does not match'
+          case "$IOS_EXPORT_METHOD_RESOLVED" in
+            development|debugging) ;;
+            *) [ "$(plist get-task-allow "$entitlements" 2>/dev/null || echo false)" = false ] || fail 'distribution IPA allows debugging (get-task-allow)' ;;
+          esac
+          rm -f "$embedded" "$entitlements"
           mkdir -p release/ios
-          cp "$ipa" "release/ios/art.kubus-${{ needs.source.outputs.tag }}-${{ needs.source.outputs.sha }}.ipa"
+          base="art.kubus-$RELEASE_TAG-$SOURCE_SHA"
+          cp "$ipa" "release/ios/$base.ipa"
+          printf '{"tag":"%s","source_sha":"%s","version":"%s","build_number":"%s","bundle_id":"%s","team_id":"%s","export_method":"%s","run_id":"%s"}\n' \
+            "$RELEASE_TAG" "$SOURCE_SHA" "$EXPECTED_VERSION" "$EXPECTED_BUILD_NUMBER" "$EXPECTED_BUNDLE_ID" "$EXPECTED_TEAM_ID" "$IOS_EXPORT_METHOD_RESOLVED" "$GITHUB_RUN_ID" > "release/ios/$base.ios-build.json"
           (cd release/ios && shasum -a 256 ./* > SHA256SUMS)
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
@@ -215,8 +290,13 @@ jobs:
         shell: bash
         run: |
           set +e
-          security delete-keychain "$IOS_SIGNING_KEYCHAIN" 2>/dev/null || true
+          [ -n "${IOS_SIGNING_KEYCHAIN:-}" ] && security delete-keychain "$IOS_SIGNING_KEYCHAIN" 2>/dev/null
+          [ -n "${IOS_INSTALLED_PROFILE:-}" ] && rm -f "$IOS_INSTALLED_PROFILE"
+          # Word splitting is intended: a space-separated list of RUNNER_TEMP paths.
+          [ -n "${IOS_SIGNING_TEMP_FILES:-}" ] && rm -f $IOS_SIGNING_TEMP_FILES
           rm -f ios/Flutter/Release-CI.xcconfig
+          rm -rf "$RUNNER_TEMP/ipa"
+          exit 0
 
   publish:
     name: Publish immutable GitHub Release
@@ -224,9 +304,10 @@ jobs:
     if: >-
       ${{
         always() &&
+        needs.source.result == 'success' &&
         needs.source.outputs.publish == 'true' &&
-        needs.android.result == 'success' &&
-        (needs.ios.result == 'success' || needs.ios.result == 'skipped')
+        (needs.android.result == 'success' || (needs.source.outputs.build_android != 'true' && needs.android.result == 'skipped')) &&
+        (needs.ios.result == 'success' || (needs.source.outputs.build_ios != 'true' && needs.ios.result == 'skipped'))
       }}
     runs-on: ubuntu-24.04
     permissions:
@@ -238,11 +319,20 @@ jobs:
           pattern: '*-release-${{ needs.source.outputs.sha }}'
           path: release
           merge-multiple: false
-      - name: Verify release checksums
+      - name: Verify checksums and assemble release files
         shell: bash
         run: |
           set -euo pipefail
           find release -name SHA256SUMS -print0 | while IFS= read -r -d '' manifest; do (cd "$(dirname "$manifest")" && sha256sum -c SHA256SUMS); done
+          # One SHA256SUMS per release: the per-platform manifests share a
+          # file name and would collide as release assets.
+          mkdir -p dist
+          while IFS= read -r -d '' file; do
+            name="$(basename "$file")"
+            [ ! -e "dist/$name" ] || { echo "::error::duplicate release file name $name"; exit 1; }
+            cp "$file" "dist/$name"
+          done < <(find release -type f ! -name SHA256SUMS -print0)
+          (cd dist && sha256sum ./* > SHA256SUMS && cat SHA256SUMS)
       - uses: ncipollo/release-action@339a81892b84b4eeb0f6e744e4574d79d0d9b8dd # v1
         with:
           tag: ${{ needs.source.outputs.tag }}
@@ -252,4 +342,4 @@ jobs:
           generateReleaseNotes: true
           allowUpdates: false
           replacesArtifacts: false
-          artifacts: release/**/*
+          artifacts: dist/*

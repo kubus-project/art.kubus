@@ -281,6 +281,7 @@ test('all third-party actions are pinned to immutable commit SHAs', () => {
     'deploy-development.yml',
     'release-production.yml',
     'mobile-release.yml',
+    'ios-unsigned-build.yml',
     'scheduled-quality.yml',
     'pages.yml',
     'web-artifact.yml',
@@ -304,4 +305,21 @@ test('mobile and scheduled work remain outside normal branch deployment', () => 
   assert.doesNotMatch(mobile, /pull_request:/);
   assert.match(scheduled, /cron:\s*['"][^'"]+['"]/);
   assert.doesNotMatch(scheduled, /SFTP_|HTTP_BASIC_/);
+});
+
+test('the unsigned iOS build is manual, secret-free and never publishes', () => {
+  const unsigned = workflow('ios-unsigned-build.yml');
+  const triggers = unsigned.slice(unsigned.indexOf('\non:'), unsigned.indexOf('\npermissions:'));
+  assert.match(triggers, /workflow_dispatch:/);
+  assert.doesNotMatch(triggers, /\bpush:|pull_request|workflow_run|schedule:/);
+  assert.match(unsigned, /permissions:\s*\n\s*contents: read/);
+  assert.doesNotMatch(unsigned, /contents: write|secrets\.|environment:|release-action|gh release/);
+  assert.match(unsigned, /flutter build ipa --release --no-codesign/);
+  assert.match(unsigned, /embedded\.mobileprovision/);
+  // Only the master definition runs, before any source is resolved.
+  assert.match(unsigned, /\[ "\$EVENT_REF" = refs\/heads\/master \] \|\| fail/);
+  assert.ok(unsigned.indexOf('refs/heads/master ] || fail') < unsigned.indexOf('ref="$SOURCE_REF"'));
+  // Only release tags or the two integration branches are built.
+  assert.match(unsigned, /\^v\[0-9A-Za-z\._-\]\+\$/);
+  assert.match(unsigned, /\[ "\$ref" = dev \] \|\| \[ "\$ref" = master \]/);
 });

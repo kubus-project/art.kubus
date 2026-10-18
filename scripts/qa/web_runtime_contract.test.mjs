@@ -240,12 +240,32 @@ test('mobile publication is explicit, master-derived, and immutable', () => {
   const mobile = workflow('mobile-release.yml');
 
   assert.match(mobile, /tags: \['v\*'\]/);
-  assert.match(mobile, /git merge-base --is-ancestor "\$SOURCE_SHA" origin\/master/);
+  assert.match(mobile, /git merge-base --is-ancestor "\$sha" origin\/master/);
   assert.doesNotMatch(mobile, /workflow_run|branches:\s*\[?master/);
   assert.match(mobile, /environment: android-release/);
   assert.match(mobile, /environment: ios-release/);
   assert.match(mobile, /allowUpdates:\s*false/);
   assert.match(mobile, /replacesArtifacts:\s*false/);
+  // A publishing run refuses a tag that already has a release before building.
+  assert.match(mobile, /\[ "\$publish" = true \] && gh release view "\$tag"/);
+  // Per-platform SHA256SUMS are merged into one asset instead of colliding.
+  assert.match(mobile, /find release -type f ! -name SHA256SUMS -print0/);
+  assert.match(mobile, /artifacts: dist\/\*/);
+});
+
+test('manual mobile builds resolve the requested tag commit from master', () => {
+  const mobile = workflow('mobile-release.yml');
+  const source = mobile.slice(mobile.indexOf('\n  source:'), mobile.indexOf('\n  android:'));
+
+  assert.match(mobile, /targets:[\s\S]*?options: \[android, ios, both\]/);
+  assert.match(source, /\[ "\$EVENT_REF" = refs\/heads\/master \] \|\| fail/);
+  assert.match(source, /sha="\$\(git rev-parse --verify "refs\/tags\/\$tag\^\{commit\}"\)"/);
+  assert.doesNotMatch(source, /SOURCE_SHA: \$\{\{ github\.sha \}\}/);
+  // Version metadata is read from the tagged tree, so the checkout precedes it.
+  assert.ok(source.indexOf('git checkout --quiet --detach "$sha"') > 0);
+  assert.ok(source.indexOf('git checkout --quiet --detach "$sha"') < source.indexOf('resolve_ci_build_metadata.mjs'));
+  assert.match(source, /IOS_RELEASE_ENABLED: \$\{\{ vars\.IOS_RELEASE_ENABLED \}\}/);
+  assert.match(mobile, /if: \$\{\{ needs\.source\.outputs\.build_android == 'true' \}\}/);
 });
 
 test('iOS publication signs a configured IPA from exact CI inputs before attaching it', () => {
@@ -258,11 +278,26 @@ test('iOS publication signs a configured IPA from exact CI inputs before attachi
     'utf8',
   );
 
-  assert.match(mobile, /if: \$\{\{ vars\.IOS_RELEASE_ENABLED == 'true' \}\}/);
+  const iosJob = mobile.slice(mobile.indexOf('\n  ios:'), mobile.indexOf('\n  publish:'));
+  assert.match(iosJob, /if: \$\{\{ needs\.source\.outputs\.build_ios == 'true' \}\}/);
   assert.match(mobile, /environment: ios-release/);
   assert.match(mobile, /IOS_DISTRIBUTION_CERTIFICATE_BASE64/);
   assert.match(mobile, /IOS_PROVISIONING_PROFILE_BASE64/);
-  assert.match(signing, /\[ "\$profile_app_id" = "\$IOS_TEAM_ID\.\$IOS_BUNDLE_ID" \]/);
+  // Signing tools come from the workflow revision and run before the toolchain.
+  assert.match(iosJob, /ref: \$\{\{ github\.sha \}\}\r?\n\s+path: \.release-tools\r?\n\s+sparse-checkout: scripts\/deploy/);
+  assert.ok(iosJob.indexOf('configure_ios_signing.sh') < iosJob.indexOf('subosito/flutter-action'));
+  assert.match(signing, /inspect_ios_profile\.mjs/);
+  // Cleanup targets are exported before any decoded material is written.
+  assert.ok(signing.indexOf('IOS_SIGNING_KEYCHAIN=') < signing.indexOf('base64 --decode'));
+  assert.match(signing, /rm -f "\$certificate_path"/);
+  // The identity is the matched certificate's own name, never a fixed role.
+  assert.match(signing, /CODE_SIGN_IDENTITY\[sdk=iphoneos\*\] = \$signing_identity/);
+  assert.doesNotMatch(signing, /CODE_SIGN_IDENTITY\[sdk=iphoneos\*\] = Apple Distribution/);
+  assert.match(iosJob, /CFBundleShortVersionString/);
+  assert.match(iosJob, /TeamIdentifier=\$EXPECTED_TEAM_ID/);
+  assert.match(iosJob, /\$IOS_PROFILE_UUID/);
+  assert.match(iosJob, /get-task-allow/);
+  assert.match(iosJob, /ios-build\.json/);
   assert.match(mobile, /flutter build ipa --release/);
   assert.match(mobile, /codesign --verify --deep --strict/);
   assert.match(mobile, /ncipollo\/release-action@[0-9a-f]{40}/);
