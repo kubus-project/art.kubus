@@ -1998,7 +1998,56 @@ class WalletProvider extends ChangeNotifier {
     return handled;
   }
 
-  Future<void> _loadData() async {
+  /// Loads balances, tokens and history when a wallet-dependent screen opens.
+  ///
+  /// Startup restores the wallet identity without this network sync, so a
+  /// screen that shows wallet values asks for it here. A load of the same
+  /// wallet on the same network within [maxAge] is reused, and a load already
+  /// in flight is joined rather than repeated.
+  Future<void> ensureWalletData({
+    Duration maxAge = const Duration(minutes: 2),
+  }) {
+    final key = _walletDataKey;
+    if (key == null) return Future<void>.value();
+    final loadedAt = _walletDataLoadedAt;
+    if (_walletDataLoadedKey == key &&
+        loadedAt != null &&
+        DateTime.now().difference(loadedAt) < maxAge) {
+      return Future<void>.value();
+    }
+    return _loadData();
+  }
+
+  String? get _walletDataKey {
+    final address = (_currentWalletAddress ?? '').trim();
+    if (address.isEmpty) return null;
+    return '${_solanaWalletService.currentNetwork}|$address';
+  }
+
+  Future<void>? _walletDataLoad;
+  String? _walletDataLoadKey;
+  String? _walletDataLoadedKey;
+  DateTime? _walletDataLoadedAt;
+
+  Future<void> _loadData() {
+    // One balance/token/history sync per wallet and network at a time: the
+    // initializer, cached-wallet import and screens may all ask together.
+    final key = _walletDataKey ?? '';
+    final inFlight = _walletDataLoad;
+    if (inFlight != null && _walletDataLoadKey == key) return inFlight;
+    final load = _loadDataUncoalesced(key);
+    _walletDataLoad = load;
+    _walletDataLoadKey = key;
+    load.whenComplete(() {
+      if (identical(_walletDataLoad, load)) {
+        _walletDataLoad = null;
+        _walletDataLoadKey = null;
+      }
+    }).ignore();
+    return load;
+  }
+
+  Future<void> _loadDataUncoalesced(String key) async {
     _isLoading = true;
     _sessionPhase = WalletSessionPhase.restoring;
     notifyListeners();
@@ -2009,6 +2058,11 @@ class WalletProvider extends ChangeNotifier {
       _walletLog('_loadData: loading from blockchain');
       await _loadFromBlockchain();
       _clearLastError();
+      // _loadFromBlockchain reports failure by leaving no wallet.
+      if (key.isNotEmpty && _wallet != null) {
+        _walletDataLoadedKey = key;
+        _walletDataLoadedAt = DateTime.now();
+      }
     } catch (e) {
       _walletLog('error loading wallet data: $e');
       _setLastError(e);

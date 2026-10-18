@@ -64,6 +64,13 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
     );
     _tabController = TabController(length: _tabs.length, vsync: this);
     _animationController.forward();
+    // Wallet values sync when a wallet screen opens, not at app start.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      Provider.of<WalletProvider>(context, listen: false)
+          .ensureWalletData()
+          .ignore();
+    });
   }
 
   @override
