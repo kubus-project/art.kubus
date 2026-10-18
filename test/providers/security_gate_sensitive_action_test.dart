@@ -173,6 +173,17 @@ void main() {
       });
     }
 
+    test('explicit logout fully unlocks an auto-locked gate', () async {
+      await signedInGate();
+      await gate.lock(SecurityLockReason.autoLock);
+      expect(gate.isLocked, isTrue);
+
+      await gate.logout();
+
+      expect(gate.isLocked, isFalse);
+      expect(gate.lockReason, isNull);
+    });
+
     test('still releases a pending sensitive-action prompt', () async {
       await signedInGate();
       final pending = gate.requireSensitiveActionVerification();
