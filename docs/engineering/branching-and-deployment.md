@@ -102,11 +102,19 @@ Enforcement:
 
 `pr-validation.yml` is the only ordinary pull-request workflow. It classifies changed paths into `full`, `frontend`, `web`, `backend`, `android`, `ios`, `docs`, `versioning`, `ci`, `deployment`, and `agents`.
 
-- PRs to `dev` run affected guardrails, Flutter/Node tests, web smoke, routing, platform compilation, backend compatibility, and documentation checks.
-- PRs to `master` are release candidates. Only same-repository `dev` and `hotfix/*` heads are accepted, and the complete release validation tier runs.
-- `PR validation required` always runs and accepts only `success` or legitimate `skipped` results from every declared dependency.
+- PRs to `dev` that are **ready for review** run the full tier: affected guardrails, Flutter/Node tests, the PRODUCT motion browser gate, web smoke, routing, platform compilation, backend compatibility, and documentation checks.
+- **Draft** PRs to `dev` run the inexpensive draft tier: guardrails, path classification, documentation checks, Flutter analysis/format/lint, the Flutter test suite, backend compatibility, and the Apache routing contract. They skip the Android build, the iOS build, the release web build with browser smoke, the PRODUCT motion browser gate, and the second community feature-flag test pass. Marking the PR ready fires `ready_for_review`, which runs the full tier on the same head automatically.
+- PRs to `master` are release candidates. Only same-repository `dev` and `hotfix/*` heads are accepted, and the complete release validation tier runs whether or not the PR is a draft.
+- `PR validation required` always runs and accepts only `success` or legitimate `skipped` results from every declared dependency. It states its tier in the job summary and in its `tier`/`scope` outputs; a draft run reports `draft tier: platform builds not run`. On a full-tier run whose classifier set `full` (master PRs, manual runs, and CI or workflow changes), a skipped job is rejected, so a skip can never stand in for a build. A draft-tier run skips the platform jobs by design, even when the classifier selected them, and lists each one as `not run by tier`.
 - PR jobs never reference deployment, Basic Auth, or mobile-signing secrets. The read-only backend checkout key is used only by the backend compatibility boundary, never by deployment jobs or fork PRs.
 - Weekly/manual `scheduled-quality.yml` owns expensive browser, dependency, platform, migration, architecture, and documentation checks.
+
+### Why a draft-tier result can never merge a PR
+
+- The tier is decided in `changes` by `scripts/ci/pr_validation_tier.mjs`, which reads the PR's **live** draft state from the API at run start, not the event payload alone. A stale payload therefore cannot downgrade a PR that is now ready (it runs full), and an unreadable state fails closed to full.
+- The aggregator re-reads the live state after all jobs finish and fails when a draft-tier run finds the PR ready for review, so a run that started while the PR was a draft cannot go green for a ready PR. If this race is hit, the `ready_for_review` run (or a new push) supplies the verdict; re-run the failed aggregator only after that run is green.
+- Draft PRs cannot be merged. Readiness always fires `ready_for_review`, which starts a full-tier run that cancels any in-flight draft-tier run.
+- Concurrency stays one group per PR with cancellation. Because the tier follows live state, a full-tier run is only ever superseded by a newer run of the same PR (a newer push or `ready_for_review`), never by a stale draft-tier run. `converted_to_draft` is intentionally not a trigger.
 
 CI failures must be investigated. Do not bypass a required check, convert failure to success, or weaken validation to make a branch mergeable.
 

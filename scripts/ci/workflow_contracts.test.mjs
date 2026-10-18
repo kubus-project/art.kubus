@@ -5,7 +5,8 @@ import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 
 import { classifyPaths } from './classify_changed_paths.mjs';
-import { validateJobResults } from './validate_job_results.mjs';
+import { assertDraftTierStillValid, fetchLiveDraft, resolveTier } from './pr_validation_tier.mjs';
+import { describeSkippedJobs, validateJobResults } from './validate_job_results.mjs';
 import { validatePrSource } from './validate_pr_source.mjs';
 
 const repositoryRoot = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
@@ -408,4 +409,137 @@ test('a GitHub Release stays a draft until every asset is uploaded and verified'
   assert.match(withdraw, /exit 1\s*$/);
   // Publication never triggers a web deployment.
   assert.doesNotMatch(workflow('mobile-release.yml'), /release-production|deploy-web-artifact|workflow_run/);
+});
+
+// ---- Tiered PR validation (draft tier vs full tier) -------------------------
+
+test('tier: draft PRs into dev get the draft tier, decided by the live PR state', () => {
+  const draft = resolveTier({ eventName: 'pull_request', baseRef: 'dev', payloadDraft: true, liveDraft: true });
+  assert.equal(draft.tier, 'draft');
+  assert.equal(draft.platformBuilds, false);
+  assert.match(draft.scope, /draft tier: platform builds not run/);
+  const ready = resolveTier({ eventName: 'pull_request', baseRef: 'dev', payloadDraft: false, liveDraft: false });
+  assert.equal(ready.tier, 'full');
+  assert.equal(ready.platformBuilds, true);
+});
+
+test('tier: a stale draft payload on a PR that is now ready runs the full tier', () => {
+  const result = resolveTier({ eventName: 'pull_request', baseRef: 'dev', payloadDraft: true, liveDraft: false });
+  assert.equal(result.tier, 'full');
+});
+
+test('tier: a ready payload on a PR that has since gone back to draft runs the draft tier', () => {
+  const result = resolveTier({ eventName: 'pull_request', baseRef: 'dev', payloadDraft: false, liveDraft: true });
+  assert.equal(result.tier, 'draft');
+});
+
+test('tier: an unreadable live state fails closed to the full tier, whatever the payload says', () => {
+  for (const payloadDraft of [true, false, undefined]) {
+    for (const liveDraft of [null, undefined, 'maybe']) {
+      assert.equal(resolveTier({ eventName: 'pull_request', baseRef: 'dev', payloadDraft, liveDraft }).tier, 'full');
+    }
+  }
+});
+
+test('tier: master PRs and manual runs are always full, draft or not', () => {
+  for (const draft of [true, false]) {
+    assert.equal(resolveTier({ eventName: 'pull_request', baseRef: 'master', payloadDraft: draft, liveDraft: draft }).tier, 'full');
+  }
+  assert.equal(resolveTier({ eventName: 'workflow_dispatch', baseRef: '', payloadDraft: undefined, liveDraft: undefined }).tier, 'full');
+});
+
+test('tier: the aggregator refuses a draft-tier result unless the PR is still confirmed draft into dev', () => {
+  assertDraftTierStillValid({ tier: 'draft', baseRef: 'dev', liveDraft: true });
+  assertDraftTierStillValid({ tier: 'full', baseRef: 'master', liveDraft: false });
+  assert.throws(() => assertDraftTierStillValid({ tier: 'draft', baseRef: 'dev', liveDraft: false }), /ready for review/);
+  assert.throws(() => assertDraftTierStillValid({ tier: 'draft', baseRef: 'dev', liveDraft: null }), /could not be confirmed/);
+  assert.throws(() => assertDraftTierStillValid({ tier: 'draft', baseRef: 'master', liveDraft: true }), /master/);
+  assert.throws(() => assertDraftTierStillValid({ tier: 'bogus', baseRef: 'dev', liveDraft: true }), /Unknown validation tier/);
+});
+
+test('tier: live draft state is read from the PR API and any failure is reported as unknown', async () => {
+  const calls = [];
+  const ok = (draft) => async (url, init) => {
+    calls.push({ url, init });
+    return { ok: true, json: async () => ({ draft }) };
+  };
+  const args = { repository: 'kubus-project/art.kubus', number: '7', token: 't' };
+  assert.equal(await fetchLiveDraft({ ...args, fetchImpl: ok(true) }), true);
+  assert.equal(await fetchLiveDraft({ ...args, fetchImpl: ok(false) }), false);
+  assert.match(calls[0].url, /\/repos\/kubus-project\/art\.kubus\/pulls\/7$/);
+  assert.equal(calls[0].init.headers.Authorization, 'Bearer t');
+  assert.equal(await fetchLiveDraft({ ...args, fetchImpl: async () => ({ ok: false, status: 403 }) }), null);
+  assert.equal(await fetchLiveDraft({ ...args, fetchImpl: async () => { throw new Error('network'); } }), null);
+  assert.equal(await fetchLiveDraft({ ...args, fetchImpl: ok('yes') }), null);
+  assert.equal(await fetchLiveDraft({ ...args, token: '', fetchImpl: ok(true) }), null);
+});
+
+test('aggregate: draft tier accepts skipped platform jobs but never lets them vouch for a full run', () => {
+  const needs = {
+    changes: { result: 'success' },
+    flutter_quality: { result: 'success' },
+    web_artifact: { result: 'skipped' },
+    android: { result: 'skipped' },
+    ios: { result: 'skipped' },
+  };
+  const expected = Object.keys(needs);
+  validateJobResults(needs, expected, { tier: 'draft' });
+  // The same skipped platform jobs are not acceptable when a full run must have executed everything.
+  assert.throws(() => validateJobResults(needs, expected, { tier: 'full', fullRun: true }), /android: skipped/);
+  // A path-filtered full-tier run on dev may still skip jobs the classifier did not select.
+  validateJobResults(needs, expected, { tier: 'full', fullRun: false });
+  // Draft tier must not hide a failure.
+  assert.throws(() => validateJobResults({ ...needs, flutter_quality: { result: 'failure' } }, expected, { tier: 'draft' }));
+  assert.throws(() => validateJobResults(needs, expected, { tier: 'bogus' }), /Unknown validation tier/);
+});
+
+test('aggregate: skipped platform jobs are reported as not run by tier in a draft run', () => {
+  const needs = {
+    flutter_quality: { result: 'success' },
+    web_artifact: { result: 'skipped' },
+    android: { result: 'skipped' },
+    ios: { result: 'skipped' },
+    web_routing: { result: 'success' },
+  };
+  const expected = Object.keys(needs);
+  assert.deepEqual(describeSkippedJobs(needs, expected, 'draft'), [
+    '- `web_artifact`: not run by tier (draft tier: platform builds and browser smoke not run)',
+    '- `android`: not run by tier (draft tier: platform builds and browser smoke not run)',
+    '- `ios`: not run by tier (draft tier: platform builds and browser smoke not run)',
+  ]);
+  // The same skips in a full run are path-classification skips, never reported as tier skips.
+  const fullLines = describeSkippedJobs(needs, expected, 'full');
+  assert.equal(fullLines.length, 3);
+  assert.ok(fullLines.every((line) => line.endsWith('skipped by path classification')));
+});
+
+test('PR validation workflow wires the tiers without weakening the required check', () => {
+  const content = workflow('pr-validation.yml');
+  assert.match(content, /types:\s*\[opened, synchronize, reopened, ready_for_review\]/);
+  assert.match(content, /name:\s*PR validation required/);
+  assert.match(content, /node scripts\/ci\/pr_validation_tier\.mjs/);
+  // Concurrency still cancels superseded runs of the same PR.
+  assert.match(content, /group:\s*pr-validation-\$\{\{ github\.event\.pull_request\.number \|\| github\.ref_name \}\}\s+cancel-in-progress:\s*true/);
+  const job = (name, next) => content.slice(content.indexOf(`\n  ${name}:`), next ? content.indexOf(`\n  ${next}:`) : undefined);
+  for (const [name, next] of [['web_artifact', 'backend_contract'], ['android', 'ios'], ['ios', 'web_routing']]) {
+    assert.match(job(name, next), /needs\.changes\.outputs\.tier == 'full'/, `${name} must be gated on the full tier`);
+  }
+  // The cheap real signals stay in the draft tier.
+  for (const [name, next] of [['guardrails', 'documentation'], ['documentation', 'flutter_quality'], ['backend_contract', 'android'], ['web_routing', 'required']]) {
+    assert.doesNotMatch(job(name, next), /outputs\.tier/, `${name} must run in the draft tier`);
+  }
+  const flutter = job('flutter_quality', 'web_artifact');
+  assert.doesNotMatch(flutter.slice(0, flutter.indexOf('steps:')), /outputs\.tier/);
+  assert.match(flutter, /flutter analyze --fatal-infos --fatal-warnings/);
+  assert.match(flutter, /flutter test --coverage; else flutter test/);
+  for (const step of ['PRODUCT motion acceptance', 'Community feature flag contracts in both configurations']) {
+    const at = flutter.indexOf(`- name: ${step}`);
+    assert.ok(at > 0, `${step} step exists`);
+    assert.match(flutter.slice(at, at + 220), /if:\s*\$\{\{ needs\.changes\.outputs\.tier == 'full' \}\}/, `${step} must be full-tier only`);
+  }
+  const required = content.slice(content.indexOf('\n  required:'));
+  assert.match(required, /pull-requests:\s*read/);
+  assert.match(required, /TIER:\s*\$\{\{ needs\.changes\.outputs\.tier \}\}/);
+  assert.match(required, /FULL_RUN:\s*\$\{\{ needs\.changes\.outputs\.full \}\}/);
+  assert.match(required, /tier: \$\{\{ steps\.aggregate\.outputs\.tier \}\}/);
 });
