@@ -197,24 +197,38 @@ class PinManagement {
     // the device has no local factor at all, so a plain first PIN stays free.
     if (!await _verified()) return _authFailed;
 
+    // A first PIN is kept only together with its requirement. A PIN left
+    // stored after a failed step would make the retry a replacement, which
+    // never turns the requirement on, so app lock would stay off for good.
+    Future<PinManagementResult> failed() async {
+      if (!replacing) {
+        try {
+          await _storage.clearPin();
+        } catch (_) {
+          // Nothing more to undo; the failure is still reported.
+        }
+      }
+      return _storageFailed;
+    }
+
     try {
       await _storage.setPin(pin);
     } catch (_) {
-      return _storageFailed;
+      return failed();
     }
     try {
-      if (!await _storage.hasPin()) return _storageFailed;
+      if (!await _storage.hasPin()) return failed();
     } catch (_) {
-      return _storageFailed;
+      return failed();
     }
 
     // A first PIN turns the PIN requirement on; replacing one leaves the user's
     // existing requirement choice alone.
     if (!replacing) {
       try {
-        if (!await _persistRequirePin(true)) return _storageFailed;
+        if (!await _persistRequirePin(true)) return failed();
       } catch (_) {
-        return _storageFailed;
+        return failed();
       }
     }
     await _reloadGate();

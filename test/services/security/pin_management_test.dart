@@ -10,6 +10,7 @@ class _Storage implements PinStoragePort {
   bool writeSilentlyDropsPin = false;
   bool failRead = false;
   bool deleteThenThrow = false;
+  bool writeThenThrow = false;
   int writes = 0;
 
   @override
@@ -23,6 +24,7 @@ class _Storage implements PinStoragePort {
     writes++;
     if (failWrite) throw StateError('secure storage write failed');
     if (!writeSilentlyDropsPin) pin = value;
+    if (writeThenThrow) throw StateError('lockout key reset failed');
   }
 
   @override
@@ -331,6 +333,33 @@ void main() {
       final r = _rig()..settings.dropWrites = true;
       final result = await r.management.setOrReplacePin('4821', '4821');
       expect(result.outcome, PinManagementOutcome.storageFailed);
+      expect(r.storage.pin, isNull,
+          reason: 'a first PIN without its requirement is rolled back');
+    });
+
+    test('a first PIN whose write fails after storing the hash is rolled back',
+        () async {
+      final r = _rig()..storage.writeThenThrow = true;
+      final result = await r.management.setOrReplacePin('4821', '4821');
+      expect(result.outcome, PinManagementOutcome.storageFailed);
+      expect(r.storage.pin, isNull);
+      expect(r.settings.state.requirePin, isFalse);
+
+      // The retry is a first PIN again, so it turns the requirement on.
+      r.storage.writeThenThrow = false;
+      final retry = await r.management.setOrReplacePin('4821', '4821');
+      expect(retry.isSuccess, isTrue);
+      expect(r.storage.pin, '4821');
+      expect(r.settings.state.requirePin, isTrue);
+    });
+
+    test('a failed replacement keeps the existing PIN', () async {
+      final r = _rig(existingPin: '1111', requirePin: true)
+        ..storage.failWrite = true;
+      final result = await r.management.setOrReplacePin('4821', '4821');
+      expect(result.outcome, PinManagementOutcome.storageFailed);
+      expect(r.storage.pin, '1111');
+      expect(r.settings.state.requirePin, isTrue);
     });
 
     test('settings errors never escape as exceptions', () async {
