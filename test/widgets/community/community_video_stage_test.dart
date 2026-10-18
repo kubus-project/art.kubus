@@ -138,7 +138,7 @@ void main() {
       expect(play.bottom, lessThanOrEqualTo(stage.bottom));
     });
 
-    testWidgets('mixed portrait and landscape videos use each frozen aspect',
+    testWidgets('a multi-video carousel keeps one 4:3 stage on every page',
         (tester) async {
       const landscapeUrl = 'https://example.test/uploads/landscape.mp4';
       CommunityPostVideoSlide.knownAspects[url] = 9 / 16;
@@ -149,27 +149,42 @@ void main() {
         ),
       ));
       await tester.pumpAndSettle();
-      final portraitStage = tester.getRect(find.byType(ClipRRect).first);
-      expect(portraitStage.height, closeTo(900 * 0.72, 0.6));
+      final first = tester.getRect(find.byType(ClipRRect).first);
+      expect(first.height, closeTo(600 / kCommunityMediaStageAspect, 0.6));
       final play = tester.getRect(find.byTooltip('Play video').first);
-      expect(play.top, greaterThanOrEqualTo(portraitStage.top));
-      expect(play.bottom, lessThanOrEqualTo(portraitStage.bottom));
+      expect(play.top, greaterThanOrEqualTo(first.top));
+      expect(play.bottom, lessThanOrEqualTo(first.bottom));
 
-      // The carousel snapshots each media URL's shape at mount. A later
-      // session-cache update cannot resize the next page unexpectedly.
-      CommunityPostVideoSlide.knownAspects[landscapeUrl] = 9 / 16;
       await tester.drag(find.byType(PageView), const Offset(-500, 0));
       await tester.pumpAndSettle();
-
+      final second = tester.getRect(find.byTooltip('Play video').first);
       final landscapeStage = tester.getRect(find.byType(ClipRRect).first);
-      expect(landscapeStage.height, closeTo(600 / (16 / 9), 0.6));
+      expect(landscapeStage, first, reason: 'swiping never moves the feed');
+      expect(second.bottom, lessThanOrEqualTo(landscapeStage.bottom));
       expect(find.text('2 / 2'), findsOneWidget);
 
       await tester.drag(find.byType(PageView), const Offset(500, 0));
       await tester.pumpAndSettle();
-      expect(tester.getRect(find.byType(ClipRRect).first).height,
-          closeTo(portraitStage.height, 0.6));
+      expect(tester.getRect(find.byType(ClipRRect).first), first);
       expect(find.text('1 / 2'), findsOneWidget);
+    });
+
+    testWidgets('a mixed image and portrait video carousel keeps one stage',
+        (tester) async {
+      const imageUrl = 'https://example.test/uploads/still.jpg';
+      CommunityPostVideoSlide.knownAspects[url] = 9 / 16;
+      await tester.pumpWidget(_harness(
+        const CommunityPostMediaCarousel(mediaUrls: [imageUrl, url]),
+      ));
+      await tester.pumpAndSettle();
+      final first = tester.getRect(find.byType(ClipRRect).first);
+      expect(first.height, closeTo(600 / kCommunityMediaStageAspect, 0.6));
+
+      await tester.drag(find.byType(PageView), const Offset(-500, 0));
+      await tester.pumpAndSettle();
+      expect(tester.getRect(find.byType(ClipRRect).first), first,
+          reason: 'a tall clip is contained in the stage, not the stage in it');
+      expect(find.text('2 / 2'), findsOneWidget);
     });
 
     testWidgets('loaded metadata does not change stage height or anchor',
