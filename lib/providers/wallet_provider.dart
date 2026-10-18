@@ -426,6 +426,11 @@ class WalletProvider extends ChangeNotifier {
   /// [hasPin], because "could not read" must never be treated as "no PIN".
   Future<bool> hasPinOrThrow() => _pinAuth.hasPin();
 
+  /// Read-only check that the stored PIN hash is the one for [pin]. It is not
+  /// an attempt: it does not touch the failure counters or a running lockout.
+  /// Throws when the store cannot be read.
+  Future<bool> matchesStoredPin(String pin) => _pinAuth.matchesStoredPin(pin);
+
   Future<PinVerifyResult> verifyPinDetailed(String pin) async {
     try {
       return await _pinAuth.verifyPin(pin);

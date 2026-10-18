@@ -28,6 +28,12 @@ class _Storage implements PinStoragePort {
   }
 
   @override
+  Future<bool> matchesPin(String value) async {
+    if (failRead) throw StateError('secure storage read failed');
+    return pin == value;
+  }
+
+  @override
   Future<void> clearPin() async {
     if (failDelete) throw StateError('secure storage delete failed');
     if (!deleteSilentlyKeepsPin) pin = null;
@@ -309,6 +315,45 @@ void main() {
     });
   });
 
+  group('replace is verified against the new PIN', () {
+    test('a replacement that leaves the old PIN stored is a failure', () async {
+      final r = _rig(existingPin: '1111', requirePin: true)
+        ..storage.writeSilentlyDropsPin = true;
+      final result = await r.management.setOrReplacePin('2222', '2222');
+      expect(result.outcome, PinManagementOutcome.storageFailed);
+      expect(r.storage.pin, '1111');
+    });
+
+    test('a replacement whose cleanup failed is applied, and says so',
+        () async {
+      final r = _rig(existingPin: '1111', requirePin: true)
+        ..storage.writeThenThrow = true;
+      final result = await r.management.setOrReplacePin('2222', '2222');
+      expect(result.isSuccess, isTrue);
+      expect(result.cleanupFailed, isTrue);
+      expect(r.storage.pin, '2222');
+    });
+  });
+
+  group('operations are serialized', () {
+    test('a failed first PIN rolling back cannot delete a concurrent PIN',
+        () async {
+      final storage = _SlowStorage();
+      final r = _rig();
+      final management = PinManagement.withPorts(
+        storage: storage,
+        gate: r.gate,
+        settings: r.settings,
+      );
+      final first = management.setOrReplacePin('1111', '1111');
+      final second = management.setOrReplacePin('2222', '2222');
+      final results = await Future.wait([first, second]);
+      expect(results[0].outcome, PinManagementOutcome.storageFailed);
+      expect(results[1].isSuccess, isTrue);
+      expect(storage.pin, '2222');
+    });
+  });
+
   group('partial and persisted-state failures', () {
     test('a leftover lockout key failing after the hash is gone is a success',
         () async {
@@ -396,6 +441,12 @@ class _ReadFailsAfterWrite implements PinStoragePort {
   }
 
   @override
+  Future<bool> matchesPin(String pin) async {
+    if (_written) throw StateError('read failed after write');
+    return _inner.matchesPin(pin);
+  }
+
+  @override
   Future<void> setPin(String pin) async {
     await _inner.setPin(pin);
     _written = true;
@@ -403,4 +454,37 @@ class _ReadFailsAfterWrite implements PinStoragePort {
 
   @override
   Future<void> clearPin() => _inner.clearPin();
+}
+
+/// Yields between steps and rejects the PIN 1111, so an interleaved rollback
+/// would be visible.
+class _SlowStorage implements PinStoragePort {
+  String? pin;
+
+  Future<void> _tick() => Future<void>.delayed(Duration.zero);
+
+  @override
+  Future<bool> hasPin() async {
+    await _tick();
+    return pin != null;
+  }
+
+  @override
+  Future<bool> matchesPin(String value) async {
+    await _tick();
+    return pin == value;
+  }
+
+  @override
+  Future<void> setPin(String value) async {
+    await _tick();
+    if (value == '1111') throw StateError('write failed');
+    pin = value;
+  }
+
+  @override
+  Future<void> clearPin() async {
+    await _tick();
+    pin = null;
+  }
 }

@@ -60,10 +60,14 @@ enum PinManagementOutcome {
 }
 
 class PinManagementResult {
-  const PinManagementResult(this.outcome, {this.issue});
+  const PinManagementResult(this.outcome,
+      {this.issue, this.cleanupFailed = false});
 
   final PinManagementOutcome outcome;
   final PinFormatIssue? issue;
+
+  /// The change is in effect, but resetting the old attempt counters failed.
+  final bool cleanupFailed;
 
   bool get isSuccess => outcome == PinManagementOutcome.success;
 }
@@ -82,6 +86,10 @@ abstract interface class PinStoragePort {
   Future<bool> hasPin();
   Future<void> setPin(String pin);
   Future<void> clearPin();
+
+  /// Whether the stored hash is the one for [pin]. Read-only; throws when the
+  /// store cannot be read.
+  Future<bool> matchesPin(String pin);
 }
 
 /// What [PinManagement] needs from the security gate.
@@ -101,6 +109,8 @@ class _WalletPinStorage implements PinStoragePort {
   Future<void> setPin(String pin) => _wallet.setPin(pin);
   @override
   Future<void> clearPin() => _wallet.clearPin();
+  @override
+  Future<bool> matchesPin(String pin) => _wallet.matchesStoredPin(pin);
 }
 
 class _GateAdapter implements PinGatePort {
@@ -141,6 +151,17 @@ class PinManagement {
   final PinGatePort _gate;
   final PinSettingsStore _settings;
 
+  /// Tail of the queue that serializes every public mutating operation, so a
+  /// first-PIN rollback can never interleave with another change.
+  Future<void> _queue = Future<void>.value();
+
+  Future<PinManagementResult> _serialized(
+      Future<PinManagementResult> Function() operation) {
+    final run = _queue.then((_) => operation());
+    _queue = run.then<void>((_) {}, onError: (_) {});
+    return run;
+  }
+
   /// Stores the PIN requirement and reads it back, so a setting that did not
   /// persist is reported rather than assumed.
   Future<bool> _persistRequirePin(bool value,
@@ -178,8 +199,15 @@ class PinManagement {
   }
 
   /// Sets the first PIN or replaces the existing one.
-  Future<PinManagementResult> setOrReplacePin(
-      String pin, String confirm) async {
+  Future<PinManagementResult> setOrReplacePin(String pin, String confirm) =>
+      _serialized(() => _setOrReplace(pin, confirm));
+
+  /// Removes the PIN, the PIN requirement and biometric app unlock, as the
+  /// settings dialogs always did: biometrics fall back to the PIN, so the two
+  /// are switched off together.
+  Future<PinManagementResult> removePin() => _serialized(_remove);
+
+  Future<PinManagementResult> _setOrReplace(String pin, String confirm) async {
     final issue = PinPolicy.validate(pin, confirm);
     if (issue != null) {
       return PinManagementResult(PinManagementOutcome.invalid, issue: issue);
@@ -214,10 +242,23 @@ class PinManagement {
     try {
       await _storage.setPin(pin);
     } catch (_) {
-      return failed();
+      if (!replacing) return failed();
+      // The new hash may be in place even though the call threw (a later
+      // counter reset failed). Only the new hash counts as the change.
+      try {
+        if (await _storage.matchesPin(pin)) {
+          await _reloadGate();
+          return const PinManagementResult(PinManagementOutcome.success,
+              cleanupFailed: true);
+        }
+      } catch (_) {
+        return _storageFailed;
+      }
+      return _storageFailed;
     }
+    // Read back the exact new PIN, not merely that some hash exists.
     try {
-      if (!await _storage.hasPin()) return failed();
+      if (!await _storage.matchesPin(pin)) return failed();
     } catch (_) {
       return failed();
     }
@@ -235,10 +276,7 @@ class PinManagement {
     return _done;
   }
 
-  /// Removes the PIN, the PIN requirement and biometric app unlock, as the
-  /// settings dialogs always did: biometrics fall back to the PIN, so the two
-  /// are switched off together.
-  Future<PinManagementResult> removePin() async {
+  Future<PinManagementResult> _remove() async {
     final bool present;
     try {
       present = await _storage.hasPin();
