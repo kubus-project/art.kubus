@@ -174,7 +174,7 @@ The runner pins the approved Netcup IP for `app.kubus.site` or `dev.kubus.site` 
 
 `mobile-release.yml` is independent from web deployment. A `v*` tag push, or a manual run dispatched from `master` naming an existing `v*` tag, builds that tag's commit, which must be contained by `master`. It signs the Android APK/AAB in `android-release` and, when enabled, an IPA in `ios-release`, verifies checksums and signatures, and publishes a GitHub Release only in publishing mode. Pull requests never receive signing material.
 
-A manual run chooses `targets` (`android`, `ios` or `both`) and publishes only with `publish_github_release=true`; it is refused before building when a release for the tag already exists, so rebuilding a released tag yields workflow artifacts only. To rebuild `v0.8.3`, dispatch from `master` with `release_tag=v0.8.3`; the run resolves `2f93f64e`. A tag push runs the iOS job only when the repository variable `IOS_RELEASE_ENABLED` is `true` (see [`DEPLOYMENT_GATES.md`](../DEPLOYMENT_GATES.md#mobile-environments) for the signing settings).
+A manual run chooses `targets` (`android`, `ios` or `both`) and publishes only with `publish_github_release=true`; it is refused before building when a release for the tag already exists, so rebuilding a released tag yields workflow artifacts only. To rebuild `v0.8.3`, dispatch from `master` with `release_tag=v0.8.3`; the run resolves `2f93f64e`. A tag push runs the iOS job only when the repository variable `IOS_RELEASE_ENABLED` is `true` (see [`DEPLOYMENT_GATES.md`](../DEPLOYMENT_GATES.md#mobile-environments) for the signing settings). Without Apple signing material, `ios-unsigned-build.yml` produces an unsigned test IPA for sideloading instead.
 
 ## Environments and configuration
 

@@ -1,0 +1,115 @@
+name: iOS unsigned build
+# Builds an UNSIGNED IPA for testing without an Apple Developer Program
+# membership: sideloading tools (Sideloadly, AltStore) re-sign it on install
+# with the tester's own Apple ID. It needs no secrets or signing environment
+# and never publishes a GitHub Release; the IPA is a workflow artifact only.
+# Signed, distributable IPAs come from mobile-release.yml.
+on:
+  workflow_dispatch:
+    inputs:
+      source_ref:
+        description: 'A v* release tag, or the dev or master branch'
+        required: true
+        default: master
+        type: string
+permissions:
+  contents: read
+concurrency:
+  group: ios-unsigned-${{ inputs.source_ref }}
+  cancel-in-progress: true
+env:
+  FLUTTER_VERSION: '3.44.2'
+  NODE_VERSION: '22.15.0'
+  NPM_VERSION: '11.7.0'
+jobs:
+  ipa:
+    name: Build unsigned IPA
+    runs-on: macos-15
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v4
+        with: { fetch-depth: 0, submodules: false }
+      - id: source
+        name: Resolve the source commit
+        shell: bash
+        env:
+          SOURCE_REF: ${{ inputs.source_ref }}
+        run: |
+          set -euo pipefail
+          fail() { echo "::error::$1"; exit 1; }
+          ref="$SOURCE_REF"
+          if [[ "$ref" =~ ^v[0-9A-Za-z._-]+$ && "$ref" != *..* ]]; then
+            sha="$(git rev-parse -q --verify "refs/tags/$ref^{commit}")" || fail "Tag $ref does not exist."
+          elif [ "$ref" = dev ] || [ "$ref" = master ]; then
+            sha="$(git rev-parse --verify "refs/remotes/origin/$ref^{commit}")"
+          else
+            fail "source_ref must be a v* tag, dev or master (got: $ref)."
+          fi
+          git checkout --quiet --detach "$sha"
+          label="$(printf '%s' "$ref" | tr -c 'A-Za-z0-9._-' '-')"
+          printf 'sha=%s\nref=%s\nlabel=%s\n' "$sha" "$ref" "$label" >> "$GITHUB_OUTPUT"
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          package-manager-cache: false
+      - run: npm install --global "npm@${NPM_VERSION}"
+      - id: metadata
+        run: node scripts/resolve_ci_build_metadata.mjs --github-output "$GITHUB_OUTPUT"
+      - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2
+        with: { flutter-version: '3.44.2', channel: stable, cache: true }
+      - run: flutter pub get
+      - name: Prepare build configuration
+        env:
+          KUBUS_BACKEND_URL: ${{ vars.KUBUS_BACKEND_URL }}
+          KUBUS_GOOGLE_CLIENT_ID: ${{ vars.KUBUS_GOOGLE_CLIENT_ID }}
+          KUBUS_GOOGLE_WEB_CLIENT_ID: ${{ vars.KUBUS_GOOGLE_WEB_CLIENT_ID }}
+          KUBUS_GOOGLE_IOS_CLIENT_ID: ${{ vars.KUBUS_GOOGLE_IOS_CLIENT_ID }}
+          KUBUS_WALLETCONNECT_PROJECT_ID: ${{ vars.KUBUS_WALLETCONNECT_PROJECT_ID }}
+          KUBUS_APP_VERSION: ${{ steps.metadata.outputs.version }}
+          KUBUS_BUILD_NUMBER: ${{ steps.metadata.outputs.build_number }}
+          KUBUS_BUILD_DATE: ${{ steps.metadata.outputs.build_date }}
+          KUBUS_ANALYTICS_APP_ENABLED: ${{ vars.KUBUS_ANALYTICS_APP_ENABLED }}
+          KUBUS_COMMUNITY_VIDEO_AUTOPLAY_ENABLED: ${{ vars.KUBUS_COMMUNITY_VIDEO_AUTOPLAY_ENABLED }}
+          KUBUS_COMMUNITY_VIDEO_POSTERS_ENABLED: ${{ vars.KUBUS_COMMUNITY_VIDEO_POSTERS_ENABLED }}
+          KUBUS_SUPPORT_TICKETS_ENABLED: ${{ vars.KUBUS_SUPPORT_TICKETS_ENABLED }}
+        run: node scripts/prepare_public_build_config.mjs
+      - name: Build the archive without code signing
+        run: flutter build ipa --release --no-codesign --build-name="${{ steps.metadata.outputs.version }}" --build-number="${{ steps.metadata.outputs.build_number }}" --dart-define-from-file=.dart_tool/public-build-defines.json
+      - name: Package and verify the unsigned IPA
+        shell: bash
+        env:
+          EXPECTED_BUNDLE_ID: ${{ vars.IOS_BUNDLE_ID || 'com.art.kubus' }}
+          EXPECTED_VERSION: ${{ steps.metadata.outputs.version }}
+          EXPECTED_BUILD_NUMBER: ${{ steps.metadata.outputs.build_number }}
+          SOURCE_REF: ${{ steps.source.outputs.ref }}
+          SOURCE_LABEL: ${{ steps.source.outputs.label }}
+          SOURCE_SHA: ${{ steps.source.outputs.sha }}
+        run: |
+          set -euo pipefail
+          fail() { echo "::error::$1"; exit 1; }
+          plist() { /usr/libexec/PlistBuddy -c "Print :$1" "$2"; }
+          app="build/ios/archive/Runner.xcarchive/Products/Applications/Runner.app"
+          [ -d "$app" ] || fail 'flutter build ipa --no-codesign produced no Runner.app'
+          [ "$(plist CFBundleIdentifier "$app/Info.plist")" = "$EXPECTED_BUNDLE_ID" ] || fail 'bundle identifier does not match'
+          [ "$(plist CFBundleShortVersionString "$app/Info.plist")" = "$EXPECTED_VERSION" ] || fail 'version does not match the source'
+          [ "$(plist CFBundleVersion "$app/Info.plist")" = "$EXPECTED_BUILD_NUMBER" ] || fail 'build number does not match the metadata'
+          [ ! -e "$app/embedded.mobileprovision" ] || fail 'an unsigned build must not embed a provisioning profile'
+          staging="$RUNNER_TEMP/unsigned-ipa"
+          mkdir -p "$staging/Payload" release/ios-unsigned
+          cp -R "$app" "$staging/Payload/"
+          base="art.kubus-$SOURCE_LABEL-$SOURCE_SHA-unsigned"
+          (cd "$staging" && zip -qry "$GITHUB_WORKSPACE/release/ios-unsigned/$base.ipa" Payload)
+          printf '{"source_ref":"%s","source_sha":"%s","version":"%s","build_number":"%s","bundle_id":"%s","signed":false,"run_id":"%s"}\n' \
+            "$SOURCE_REF" "$SOURCE_SHA" "$EXPECTED_VERSION" "$EXPECTED_BUILD_NUMBER" "$EXPECTED_BUNDLE_ID" "$GITHUB_RUN_ID" > "release/ios-unsigned/$base.build.json"
+          (cd release/ios-unsigned && shasum -a 256 ./* > SHA256SUMS && cat SHA256SUMS)
+          {
+            echo "### Unsigned IPA: $SOURCE_REF ($SOURCE_SHA)"
+            echo
+            echo "Version $EXPECTED_VERSION ($EXPECTED_BUILD_NUMBER), bundle \`$EXPECTED_BUNDLE_ID\`. Not signed: install it with a sideloading tool such as Sideloadly or AltStore, which re-signs it with your own Apple ID (a free Apple ID's install expires after 7 days)."
+          } >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: ios-unsigned-${{ steps.source.outputs.label }}-${{ steps.source.outputs.sha }}
+          path: release/ios-unsigned
+          if-no-files-found: error
+          retention-days: 14
