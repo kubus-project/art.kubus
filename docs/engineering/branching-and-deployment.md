@@ -168,11 +168,20 @@ After a successful release, the rollback script for that source revision remains
 
 ### Netcup candidate smoke before DNS cutover
 
-The runner pins the approved Netcup IP for `app.kubus.site` or `dev.kubus.site` in its local hosts file, preserving the real hostname and SNI while Cloudflare still serves Domenca. TLS verification remains enabled. The existing application smoke, source revision and rollback behavior remain in force. Netcup currently presents an untrusted certificate, so a protected CI deployment must wait for a trusted origin certificate. The old Domenca LiteSpeed/Imunify360 `415` incident and its WAF exception runbook are historical; do not copy its bypass configuration to Netcup without a new observed filter requirement.
+The runner pins the approved Netcup IP for `app.kubus.site` or `dev.kubus.site` in its local hosts file, preserving the real hostname and SNI while Cloudflare still serves Domenca. TLS verification remains enabled. The existing application smoke, source revision and rollback behavior remain in force. The Netcup origin now presents a trusted certificate (verified on 2026-10-17 by pinning `89.58.21.59` for `app.kubus.site` with verification on) and three protected production deployments succeeded on 2026-10-15; TLS verification must stay enabled. The old Domenca LiteSpeed/Imunify360 `415` incident and its WAF exception runbook are historical; do not copy its bypass configuration to Netcup without a new observed filter requirement.
 
 ## Mobile releases
 
-`mobile-release.yml` is independent from web deployment. A `v*` tag or explicit manual run resolves a commit already contained by `master`, builds and signs Android APK/AAB in `android-release`, optionally signs an IPA in `ios-release`, verifies checksums and signatures, and publishes GitHub Release metadata only when the workflow is explicitly in publishing mode. Pull requests never receive signing material.
+`mobile-release.yml` is independent from web deployment. A `v*` tag push, or a manual run dispatched from `master` naming an existing `v*` tag, builds that tag's commit, which must be contained by `master`. It signs the Android APK/AAB in `android-release` and builds an iOS IPA on every tag: signed in `ios-release` when the repository variable `IOS_RELEASE_ENABLED` is `true`, otherwise an explicitly **unsigned** IPA (`ios-unsigned` job, no secrets) that a tester re-signs with their own Apple ID. iOS is never skipped, and an unsigned IPA is never described as a signed or distributable release. The publish job needs the Android job and one iOS job to succeed, builds `release-manifest.json` with `scripts/deploy/release_manifest.mjs` (which refuses a missing platform file), publishes a GitHub Release only in publishing mode, and does so draft-first: the release is created as a draft, its uploaded assets are re-downloaded and verified against the manifest and `SHA256SUMS`, and only then is it made public and verified once more. A failure leaves no public incomplete release. Pull requests never receive signing material.
+
+A manual run chooses `targets` (`android`, `ios` or `both`) and publishes only with `publish_github_release=true` and `targets=both`; it is refused before building when a release for the tag already exists, so rebuilding a released tag yields workflow artifacts only. To rebuild `v0.8.3`, dispatch from `master` with `release_tag=v0.8.3`; the run resolves `2f93f64e`. See [`DEPLOYMENT_GATES.md`](../DEPLOYMENT_GATES.md#mobile-environments) for the signing settings. The standalone `ios-unsigned-build.yml` still builds an unsigned test IPA of a tag, `dev` or `master` on demand.
+
+### Release checklist for every version
+
+1. Promote `dev` to `master` with a merge commit, deploy the Web application through `release-production.yml`, and verify the served revision.
+2. Create the annotated `vX.Y.Z` tag on the verified `master` commit. The tag push starts `mobile-release.yml`.
+3. Confirm the run finished with Android and iOS both green and that the GitHub Release lists the APK, AAB, IPA, `release-manifest.json` and `SHA256SUMS`. The job summary states whether the IPA is signed.
+4. Reconcile `master` into `dev` through a non-squash pull request and run `npm run verify:branch-reconciliation`.
 
 ## Environments and configuration
 
@@ -180,8 +189,8 @@ Required environments:
 
 - `development-web`, restricted to `dev`
 - `production-web`, restricted to `master` and protected by explicit approval
-- `android-release`, restricted to release tags/manual trusted refs
-- `ios-release`, restricted to release tags/manual trusted refs
+- `android-release`, restricted to `v*` tags and `master`, with required reviewers
+- `ios-release`, restricted to `v*` tags and `master`, with required reviewers
 
 Both web environments define these variables with environment-specific values:
 
