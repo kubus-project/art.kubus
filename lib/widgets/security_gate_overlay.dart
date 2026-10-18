@@ -27,15 +27,26 @@ class _SecurityGateOverlayState extends State<SecurityGateOverlay> {
     return Consumer<SecurityGateProvider>(
       builder: (context, gate, child) {
         final animationTheme = context.animationTheme;
+        // While locked or still deciding, the app underneath is covered: it
+        // is excluded from semantics and focus and receives no pointers.
+        final covering = gate.isLocked || gate.isLockDecisionPending;
         return Listener(
           behavior: HitTestBehavior.translucent,
           onPointerDown: (_) => gate.onUserInteraction(),
           child: Stack(
             children: [
-              child ?? const SizedBox.shrink(),
+              // Always wrapped (excluding toggles) so the child's element tree
+              // is stable when the decision completes.
+              ExcludeSemantics(
+                excluding: covering,
+                child: ExcludeFocus(
+                  excluding: covering,
+                  child: child ?? const SizedBox.shrink(),
+                ),
+              ),
               Positioned.fill(
                 child: IgnorePointer(
-                  ignoring: !gate.isLocked,
+                  ignoring: !covering,
                   child: AnimatedSwitcher(
                     duration: animationTheme.medium,
                     switchInCurve: animationTheme.fadeCurve,
@@ -47,8 +58,13 @@ class _SecurityGateOverlayState extends State<SecurityGateOverlay> {
                     child: gate.isLocked
                         ? const _SecurityLockOverlay(
                             key: ValueKey('security_locked'))
-                        : const SizedBox.shrink(
-                            key: ValueKey('security_unlocked')),
+                        : gate.isLockDecisionPending
+                            ? _LockDecisionCover(
+                                key: const ValueKey('security_deciding'),
+                                color: Theme.of(context).colorScheme.surface,
+                              )
+                            : const SizedBox.shrink(
+                                key: ValueKey('security_unlocked')),
                   ),
                 ),
               ),
@@ -57,6 +73,24 @@ class _SecurityGateOverlayState extends State<SecurityGateOverlay> {
         );
       },
       child: widget.child,
+    );
+  }
+}
+
+/// Opaque cover shown only while the lock decision is pending. It carries no
+/// PIN field and no buttons; it just hides and absorbs input.
+class _LockDecisionCover extends StatelessWidget {
+  const _LockDecisionCover({super.key, required this.color});
+
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return AbsorbPointer(
+      child: ColoredBox(
+        color: color,
+        child: const SizedBox.expand(),
+      ),
     );
   }
 }

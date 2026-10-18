@@ -52,6 +52,15 @@ class SecurityGateProvider extends ChangeNotifier
 
   Completer<void>? _initializeCompleter;
   bool _hasLocalAccount = false;
+  bool _accountStateUnknown = false;
+
+  /// Lock decisions still running. Starts at one: the cold-start decision
+  /// stays pending until [initialize] settles it. Each resume adds one.
+  int _pendingLockDecisions = 1;
+
+  /// True until the cold-start or resume decision has finished. The UI must
+  /// cover the app while this holds so no restored route is interactive.
+  bool get isLockDecisionPending => _pendingLockDecisions > 0;
 
   bool get isLocked => _locked;
   SecurityLockReason? get lockReason => _lockReason;
@@ -94,7 +103,9 @@ class SecurityGateProvider extends ChangeNotifier
         if (kDebugMode) {
           debugPrint('SecurityGateProvider.initialize failed: $e');
         }
+        await _lockAfterUnreadableDecision(SecurityLockReason.autoLock);
       } finally {
+        _endLockDecision();
         if (!completer.isCompleted) completer.complete();
       }
     }();
@@ -113,9 +124,21 @@ class SecurityGateProvider extends ChangeNotifier
     try {
       final resolved = prefs ?? await SharedPreferences.getInstance();
       _hasLocalAccount = AuthGatingService.hasLocalAccountSync(prefs: resolved);
+      _accountStateUnknown = false;
     } catch (_) {
       _hasLocalAccount = false;
+      _accountStateUnknown = true;
     }
+  }
+
+  void _beginLockDecision() {
+    _pendingLockDecisions++;
+    notifyListeners();
+  }
+
+  void _endLockDecision() {
+    if (_pendingLockDecisions > 0) _pendingLockDecisions--;
+    notifyListeners();
   }
 
   void onUserInteraction() {
@@ -147,7 +170,10 @@ class SecurityGateProvider extends ChangeNotifier
         unawaited(_enqueueLifecycle(_recordDeparture));
         return;
       case AppLifecycleState.resumed:
-        unawaited(_enqueueLifecycle(_handleResumed));
+        // Covered synchronously, before any awaited read can let the restored
+        // route be interactive.
+        _beginLockDecision();
+        unawaited(_enqueueLifecycle(_runResumeDecision));
         return;
       case AppLifecycleState.inactive:
       case AppLifecycleState.detached:
@@ -189,16 +215,59 @@ class SecurityGateProvider extends ChangeNotifier
     return elapsed.inSeconds >= seconds;
   }
 
+  Future<void> _runResumeDecision() async {
+    try {
+      await _handleResumed();
+    } finally {
+      _endLockDecision();
+    }
+  }
+
   /// Applies the app lock when the process starts. A process that was
   /// reclaimed in the background must not come back unlocked.
   Future<void> _enforceColdStartLock() async {
-    int? departureMs;
     try {
-      departureMs = await _takeDeparture();
-    } catch (_) {}
-    if (!_shouldAutoLock()) return;
-    if (_awayLongEnough(departureMs)) {
-      await lock(SecurityLockReason.autoLock);
+      final departureMs = await _takeDeparture();
+      if (_accountStateUnknown) {
+        throw StateError('local account state is unreadable');
+      }
+      if (!_shouldAutoLock()) return;
+      if (_awayLongEnough(departureMs)) {
+        await lock(SecurityLockReason.autoLock);
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('SecurityGateProvider._enforceColdStartLock failed: $e');
+      }
+      await _lockAfterUnreadableDecision(SecurityLockReason.autoLock);
+    }
+  }
+
+  /// A decision that could not be read must fail closed. Locks when the last
+  /// known settings required a PIN, or, with no settings loaded, when the
+  /// persisted flag says so or cannot be read. Ignores [_hasLocalAccount]:
+  /// that flag is exactly what may be unreadable here.
+  Future<void> _lockAfterUnreadableDecision(SecurityLockReason reason) async {
+    try {
+      final loaded = _settings;
+      final bool wantLock;
+      if (loaded != null) {
+        wantLock = loaded.requirePin && loaded.autoLockSeconds != 0;
+      } else {
+        try {
+          final prefs = await SharedPreferences.getInstance();
+          wantLock = prefs.getBool('requirePin') ??
+              SettingsState.defaults().requirePin;
+        } catch (_) {
+          // Unreadable flag: a PIN is presumed to exist, so lock.
+          await _applyLock(reason);
+          return;
+        }
+      }
+      if (!wantLock) return;
+      await _applyLock(reason);
+    } catch (_) {
+      // The lock itself could not be applied; nothing further to do here.
     }
   }
 
@@ -227,6 +296,9 @@ class SecurityGateProvider extends ChangeNotifier
       }
 
       await reloadSettings();
+      if (_accountStateUnknown) {
+        throw StateError('local account state is unreadable');
+      }
 
       if (!_shouldAutoLock()) return;
       // No recorded departure on a warm resume means the app never left the
@@ -239,6 +311,7 @@ class SecurityGateProvider extends ChangeNotifier
       if (kDebugMode) {
         debugPrint('SecurityGateProvider._handleResumed failed: $e');
       }
+      await _lockAfterUnreadableDecision(SecurityLockReason.autoLock);
     }
   }
 
@@ -277,6 +350,11 @@ class SecurityGateProvider extends ChangeNotifier
         !_hasLocalAccount) {
       return;
     }
+    await _applyLock(reason, context: context);
+  }
+
+  Future<void> _applyLock(SecurityLockReason reason,
+      {AuthFailureContext? context}) async {
     final wallet = _walletProvider;
     bool hasPin;
     try {
