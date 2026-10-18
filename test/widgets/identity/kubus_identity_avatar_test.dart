@@ -1,7 +1,11 @@
 import 'package:art_kubus/l10n/app_localizations.dart';
+import 'package:art_kubus/models/profile_identity_data.dart';
+import 'package:art_kubus/models/user.dart';
+import 'package:art_kubus/services/user_service.dart';
 import 'package:art_kubus/widgets/identity/kubus_identity_avatar.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 const _badgeKey = ValueKey<String>('profile-avatar-role-badge');
 const _verifiedKey = ValueKey<String>('profile-avatar-verified');
@@ -44,7 +48,121 @@ Widget _avatar({
       allowFabricatedFallback: true,
     );
 
+User _cachedUser({
+  bool isArtist = false,
+  bool isInstitution = false,
+  bool isVerified = false,
+}) =>
+    User(
+      id: _wallet,
+      name: 'Cached',
+      username: 'cached',
+      bio: '',
+      followersCount: 0,
+      followingCount: 0,
+      postsCount: 0,
+      isFollowing: false,
+      isVerified: isVerified,
+      isArtist: isArtist,
+      isInstitution: isInstitution,
+      joinedDate: '',
+    );
+
 void main() {
+  group('roles from the profile cache (no network)', () {
+    setUp(() {
+      SharedPreferences.setMockInitialValues(<String, Object>{});
+    });
+
+    tearDown(() async {
+      await UserService.clearCache();
+    });
+
+    testWidgets(
+        'a cached artist profile marks an avatar the payload is silent '
+        'about', (tester) async {
+      UserService.setUsersInCacheAuthoritative(
+        [_cachedUser(isArtist: true, isVerified: true)],
+      );
+      await tester.pumpWidget(_app(_avatar()));
+      await tester.pump();
+      expect(find.byKey(_badgeKey), findsOneWidget);
+      expect(find.byKey(_verifiedKey), findsOneWidget);
+      expect(find.byIcon(Icons.brush_rounded), findsOneWidget);
+    });
+
+    testWidgets('a cached profile with no roles draws nothing', (tester) async {
+      UserService.setUsersInCacheAuthoritative([_cachedUser()]);
+      await tester.pumpWidget(_app(_avatar()));
+      await tester.pump();
+      expect(find.byKey(_badgeKey), findsNothing);
+    });
+
+    testWidgets('stated roles and cached roles add up to a dual role',
+        (tester) async {
+      UserService.setUsersInCacheAuthoritative(
+        [_cachedUser(isInstitution: true)],
+      );
+      await tester.pumpWidget(_app(_avatar(isArtist: true)));
+      await tester.pump();
+      expect(find.byIcon(Icons.brush_rounded), findsOneWidget);
+      expect(find.byIcon(Icons.account_balance_rounded), findsOneWidget);
+    });
+
+    testWidgets('opting out ignores the cache', (tester) async {
+      UserService.setUsersInCacheAuthoritative([_cachedUser(isArtist: true)]);
+      await tester.pumpWidget(_app(KubusIdentityAvatar(
+        wallet: _wallet,
+        resolveCachedRoles: false,
+        fetchMissingAvatar: false,
+        enableProfileNavigation: false,
+      )));
+      await tester.pump();
+      expect(find.byKey(_badgeKey), findsNothing);
+    });
+
+    testWidgets('fromIdentity carries the stated roles of the identity',
+        (tester) async {
+      final identity = ProfileIdentityData.fromIdentityPayload(
+        {
+          'author': {
+            'id': 'u9',
+            'walletAddress': _wallet,
+            'displayName': 'Ana Artist',
+            'roles': {'institution': true},
+          },
+        },
+        fallbackLabel: 'Unknown',
+      );
+      await tester.pumpWidget(_app(KubusIdentityAvatar.fromIdentity(
+        identity,
+        radius: 20,
+        enableProfileNavigation: false,
+        fetchMissingAvatar: false,
+      )));
+      await tester.pump();
+      expect(find.byIcon(Icons.account_balance_rounded), findsOneWidget);
+      expect(find.byIcon(Icons.brush_rounded), findsNothing);
+    });
+
+    testWidgets('a name that sounds like a role is not a role', (tester) async {
+      final identity = ProfileIdentityData.fromValues(
+        fallbackLabel: 'Unknown',
+        displayName: 'Official Museum Artist (verified)',
+        username: 'verified_artist',
+        wallet: _wallet,
+      );
+      await tester.pumpWidget(_app(KubusIdentityAvatar.fromIdentity(
+        identity,
+        radius: 20,
+        enableProfileNavigation: false,
+        fetchMissingAvatar: false,
+      )));
+      await tester.pump();
+      expect(find.byKey(_badgeKey), findsNothing);
+    });
+  });
+
   group('presence of the badge', () {
     testWidgets('an account with no stated role draws no badge at all',
         (tester) async {
