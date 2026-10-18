@@ -57,8 +57,15 @@
     globalThis.maplibregl.setWorkerUrl(
       `/local/maplibre-gl/maplibre-gl-csp-worker.js?v=${buildVersion}`,
     );
-    const atmosphere = await import(`/kubus_globe_atmosphere.mjs?v=${buildVersion}`);
-    atmosphere.installGlobeAtmosphere(globalThis.maplibregl);
+    // The night shade and glare are decoration. A module that fails to load
+    // (a transient or partially cached deployment) must not reject the runtime
+    // promise: MapLibre itself is loaded and the map has to open without it.
+    try {
+      const atmosphere = await import(`/kubus_globe_atmosphere.mjs?v=${buildVersion}`);
+      atmosphere.installGlobeAtmosphere(globalThis.maplibregl);
+    } catch (error) {
+      globalThis.kubusGlobeAtmosphereError = String(error && error.message || error);
+    }
     return loadScript(
       "kubus-webgl-context-handler",
       `/webgl_context_handler.js?v=${buildVersion}`,
