@@ -5,7 +5,7 @@ import '../../../providers/notification_provider.dart';
 import '../../../providers/profile_provider.dart';
 import '../../../providers/collab_provider.dart';
 import '../../../config/config.dart';
-import '../../../widgets/avatar_widget.dart';
+import '../../../widgets/identity/kubus_identity_avatar.dart';
 import '../../../widgets/app_logo.dart';
 import '../../../utils/app_animations.dart';
 import '../../../utils/design_tokens.dart';
@@ -959,9 +959,11 @@ class _DesktopNavigationState extends State<DesktopNavigation>
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       if (profileProvider.isSignedIn)
-                        AvatarWidget(
+                        KubusIdentityAvatar(
                           wallet: user?.walletAddress ?? '',
                           avatarUrl: user?.avatar,
+                          isArtist: user?.isArtist ?? false,
+                          isInstitution: user?.isInstitution ?? false,
                           radius: widget.isExpanded ? 17 : 16,
                           allowFabricatedFallback: true,
                           enableProfileNavigation: false,

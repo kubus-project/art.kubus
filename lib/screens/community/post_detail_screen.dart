@@ -16,7 +16,7 @@ import '../../utils/search_suggestions.dart';
 import '../../community/community_interactions.dart';
 import '../../community/community_post_media.dart';
 import '../../community/community_post_text_limits.dart';
-import '../../widgets/avatar_widget.dart';
+import '../../widgets/identity/kubus_identity_avatar.dart';
 import '../../widgets/common/keyboard_inset_padding.dart';
 import '../../models/pending_action_intent.dart';
 import '../../services/backend_api_service.dart';
@@ -675,14 +675,10 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                         return ListTile(
                           onTap: () => openProfileIdentity(context, identity),
                           contentPadding: EdgeInsets.zero,
-                          leading: AvatarWidget(
-                            wallet: identity.navigationIdentifier ??
-                                identity.username ??
-                                identity.walletSeed,
-                            fetchMissingAvatar: identity.canOpenProfile,
-                            avatarUrl: identity.avatarUrl,
+                          leading: KubusIdentityAvatar.fromIdentity(
+                            identity,
                             radius: 20,
-                            enableProfileNavigation: false,
+                            allowFabricatedFallback: false,
                           ),
                           title: Text(
                             identity.label.isNotEmpty
@@ -835,14 +831,10 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                         return ListTile(
                           onTap: () => openProfileIdentity(context, identity),
                           contentPadding: EdgeInsets.zero,
-                          leading: AvatarWidget(
-                            wallet: identity.navigationIdentifier ??
-                                identity.username ??
-                                identity.walletSeed,
-                            fetchMissingAvatar: identity.canOpenProfile,
-                            avatarUrl: identity.avatarUrl,
+                          leading: KubusIdentityAvatar.fromIdentity(
+                            identity,
                             radius: 20,
-                            enableProfileNavigation: false,
+                            allowFabricatedFallback: false,
                           ),
                           title: Text(
                             identity.label.isNotEmpty
@@ -985,14 +977,10 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
 
                       return ListTile(
                         onTap: () => openProfileIdentity(context, identity),
-                        leading: AvatarWidget(
-                          wallet: identity.navigationIdentifier ??
-                              identity.username ??
-                              identity.walletSeed,
-                          fetchMissingAvatar: identity.canOpenProfile,
-                          avatarUrl: identity.avatarUrl,
+                        leading: KubusIdentityAvatar.fromIdentity(
+                          identity,
                           radius: 20,
-                          enableProfileNavigation: false,
+                          allowFabricatedFallback: false,
                         ),
                         title: Text(
                           identity.label,

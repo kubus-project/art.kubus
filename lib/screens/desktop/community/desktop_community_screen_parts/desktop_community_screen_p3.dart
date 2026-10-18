@@ -1083,14 +1083,9 @@ extension _DesktopCommunityScreenStatePart3 on _DesktopCommunityScreenState {
 
                       return ListTile(
                         onTap: () => openProfileIdentity(context, identity),
-                        leading: AvatarWidget(
-                          wallet: identity.navigationIdentifier ??
-                              identity.username ??
-                              identity.walletSeed,
-                          fetchMissingAvatar: identity.canOpenProfile,
-                          avatarUrl: identity.avatarUrl,
+                        leading: KubusIdentityAvatar.fromIdentity(
+                          identity,
                           radius: 20,
-                          enableProfileNavigation: false,
                           allowFabricatedFallback: false,
                         ),
                         title: Text(

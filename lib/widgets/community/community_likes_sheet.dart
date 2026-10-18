@@ -5,7 +5,7 @@ import '../../l10n/app_localizations.dart';
 import '../../models/profile_identity_data.dart';
 import '../../utils/design_tokens.dart';
 import '../../utils/profile_identity_navigation.dart';
-import '../avatar_widget.dart';
+import '../identity/kubus_identity_avatar.dart';
 import '../common/kubus_glass_icon_button.dart';
 import '../common/kubus_screen_header.dart';
 import '../empty_state_card.dart';
@@ -181,9 +181,12 @@ Future<void> showCommunityLikesSheet({
                               }
                             },
                             contentPadding: EdgeInsets.zero,
-                            leading: AvatarWidget(
+                            leading: KubusIdentityAvatar(
                               wallet: identity.walletSeed,
                               avatarUrl: identity.avatarUrl,
+                              isArtist: identity.isArtist,
+                              isInstitution: identity.isInstitution,
+                              isVerified: identity.isVerified,
                               radius: 20,
                               enableProfileNavigation: false,
                               fetchMissingAvatar: false,

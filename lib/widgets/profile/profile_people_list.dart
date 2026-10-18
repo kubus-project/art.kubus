@@ -11,9 +11,6 @@ import '../empty_state_card.dart';
 import '../kubus_snackbar.dart';
 import '../states/kubus_product_states.dart';
 
-/// Role of a listed person, shown only when the app actually knows it.
-enum ProfilePersonRole { artist, institution }
-
 /// One row of a followers/following list.
 @immutable
 class ProfilePersonEntry {
@@ -23,7 +20,8 @@ class ProfilePersonEntry {
     this.secondary,
     this.avatarUrl,
     this.isVerified = false,
-    this.role,
+    this.isArtist = false,
+    this.isInstitution = false,
     this.username,
   });
 
@@ -34,7 +32,11 @@ class ProfilePersonEntry {
   final String? secondary;
   final String? avatarUrl;
   final bool isVerified;
-  final ProfilePersonRole? role;
+
+  /// Roles the payload or cached profile states; both can hold at once.
+  /// False is "not stated", never inferred.
+  final bool isArtist;
+  final bool isInstitution;
   final String? username;
 }
 
@@ -216,8 +218,8 @@ class ProfilePersonRow extends StatelessWidget {
           avatarUrl: entry.avatarUrl,
           radius: 22,
           enableProfileNavigation: false,
-          isArtist: entry.role == ProfilePersonRole.artist,
-          isInstitution: entry.role == ProfilePersonRole.institution,
+          isArtist: entry.isArtist,
+          isInstitution: entry.isInstitution,
           isVerified: entry.isVerified,
         ),
         const SizedBox(width: KubusSpacing.sm + KubusSpacing.xs),

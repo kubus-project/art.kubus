@@ -98,7 +98,7 @@ extension _DesktopCommunityScreenStatePart4 on _DesktopCommunityScreenState {
             children: [
               Stack(
                 children: [
-                  AvatarWidget(
+                  KubusIdentityAvatar(
                     avatarUrl: conversation.displayAvatar,
                     wallet: avatarWallet,
                     radius: 24,
@@ -635,9 +635,11 @@ extension _DesktopCommunityScreenStatePart4 on _DesktopCommunityScreenState {
                 padding: const EdgeInsets.all(14),
                 child: Row(
                   children: [
-                    AvatarWidget(
+                    KubusIdentityAvatar(
                       avatarUrl: user?.avatar,
                       wallet: user?.walletAddress ?? '',
+                      isArtist: user?.isArtist ?? false,
+                      isInstitution: user?.isInstitution ?? false,
                       radius: 18,
                       allowFabricatedFallback: true,
                     ),

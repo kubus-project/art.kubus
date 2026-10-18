@@ -18,7 +18,7 @@ import '../../utils/user_profile_navigation.dart';
 import '../../widgets/inline_loading.dart';
 import '../../widgets/app_loading.dart';
 import '../../widgets/topbar_icon.dart';
-import '../../widgets/avatar_widget.dart';
+import '../../widgets/identity/kubus_identity_avatar.dart';
 import '../../widgets/common/keyboard_inset_padding.dart';
 import '../../widgets/empty_state_card.dart';
 import '../../widgets/profile_identity_summary.dart';

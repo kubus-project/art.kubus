@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../config/config.dart';
+import '../models/user.dart';
 import '../models/user_presence.dart';
 import '../providers/presence_provider.dart';
 import '../services/user_service.dart';
@@ -40,6 +41,11 @@ class AvatarWidget extends StatefulWidget {
   final bool? isOnline;
   final Color? statusColor;
 
+  /// Called once the avatar's own profile lookup settles (only when this widget
+  /// fetches, see [fetchMissingAvatar]). It lets a parent re-read what the
+  /// shared profile cache now says about the account without a second request.
+  final ValueChanged<User?>? onProfileResolved;
+
   const AvatarWidget({
     super.key,
     this.avatarUrl,
@@ -57,6 +63,7 @@ class AvatarWidget extends StatefulWidget {
     this.showStatusIndicator = true,
     this.isOnline,
     this.statusColor,
+    this.onProfileResolved,
   });
 
   @override
@@ -142,6 +149,7 @@ class _AvatarWidgetState extends State<AvatarWidget>
         includeAchievements: false,
       );
       if (!mounted) return;
+      widget.onProfileResolved?.call(u);
 
       final p = u?.profileImageUrl;
       if (p != null && p.isNotEmpty) {

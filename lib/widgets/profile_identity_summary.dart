@@ -92,31 +92,33 @@ class ProfileIdentitySummary extends StatelessWidget {
     final child = switch (layout) {
       ProfileIdentityLayout.row => Row(
           children: [
-            KubusIdentityAvatar(
-              isArtist: identity.isArtist,
-              isInstitution: identity.isInstitution,
-              isVerified: identity.isVerified,
-              avatarUrl: identity.avatarUrl,
-              wallet: identity.navigationIdentifier ??
-                  identity.username ??
-                  identity.walletSeed,
-              displayName: identity.avatarInitialsSource,
-              radius: avatarRadius,
-              allowFabricatedFallback: allowFabricatedFallback,
-              // A display-only avatar seed is not a profile identifier.
-              fetchMissingAvatar: fetchMissingAvatar && identity.canOpenProfile,
-              enableProfileNavigation:
-                  enableProfileNavigation && identity.canOpenProfile,
-            ),
-            const SizedBox(width: 12),
+            // Avatar badge, name and handle are announced as one identity
+            // (name, handle, roles, verification); the trailing control keeps
+            // its own semantics.
             Expanded(
-              child: _IdentityTextBlock(
-                label: identity.label,
-                handle: identity.handle,
-                titleStyle: effectiveTitleStyle,
-                subtitleStyle: effectiveSubtitleStyle,
-                textAlign: effectiveTextAlign,
-                titleSuffix: titleSuffix,
+              child: MergeSemantics(
+                child: Row(
+                  children: [
+                    KubusIdentityAvatar.fromIdentity(
+                      identity,
+                      radius: avatarRadius,
+                      allowFabricatedFallback: allowFabricatedFallback,
+                      fetchMissingAvatar: fetchMissingAvatar,
+                      enableProfileNavigation: enableProfileNavigation,
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: _IdentityTextBlock(
+                        label: identity.label,
+                        handle: identity.handle,
+                        titleStyle: effectiveTitleStyle,
+                        subtitleStyle: effectiveSubtitleStyle,
+                        textAlign: effectiveTextAlign,
+                        titleSuffix: titleSuffix,
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
             if (trailing != null) ...[
@@ -128,31 +130,29 @@ class ProfileIdentitySummary extends StatelessWidget {
       ProfileIdentityLayout.stacked => Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            KubusIdentityAvatar(
-              isArtist: identity.isArtist,
-              isInstitution: identity.isInstitution,
-              isVerified: identity.isVerified,
-              avatarUrl: identity.avatarUrl,
-              wallet: identity.navigationIdentifier ??
-                  identity.username ??
-                  identity.walletSeed,
-              displayName: identity.avatarInitialsSource,
-              radius: avatarRadius,
-              allowFabricatedFallback: allowFabricatedFallback,
-              // A display-only avatar seed is not a profile identifier.
-              fetchMissingAvatar: fetchMissingAvatar && identity.canOpenProfile,
-              enableProfileNavigation:
-                  enableProfileNavigation && identity.canOpenProfile,
-            ),
-            const SizedBox(height: 10),
-            _IdentityTextBlock(
-              label: identity.label,
-              handle: identity.handle,
-              titleStyle: effectiveTitleStyle,
-              subtitleStyle: effectiveSubtitleStyle,
-              textAlign: effectiveTextAlign,
-              titleSuffix: titleSuffix,
-              centerTitleRow: true,
+            MergeSemantics(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  KubusIdentityAvatar.fromIdentity(
+                    identity,
+                    radius: avatarRadius,
+                    allowFabricatedFallback: allowFabricatedFallback,
+                    fetchMissingAvatar: fetchMissingAvatar,
+                    enableProfileNavigation: enableProfileNavigation,
+                  ),
+                  const SizedBox(height: 10),
+                  _IdentityTextBlock(
+                    label: identity.label,
+                    handle: identity.handle,
+                    titleStyle: effectiveTitleStyle,
+                    subtitleStyle: effectiveSubtitleStyle,
+                    textAlign: effectiveTextAlign,
+                    titleSuffix: titleSuffix,
+                    centerTitleRow: true,
+                  ),
+                ],
+              ),
             ),
             if (trailing != null) ...[
               const SizedBox(height: 10),

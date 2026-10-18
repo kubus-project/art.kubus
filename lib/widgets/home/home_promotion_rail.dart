@@ -6,7 +6,7 @@ import '../../utils/design_tokens.dart';
 import '../../utils/kubus_color_roles.dart';
 import '../../utils/kubus_entity_semantics.dart';
 import '../../utils/media_url_resolver.dart';
-import '../../widgets/avatar_widget.dart';
+import '../identity/kubus_identity_avatar.dart';
 import '../../widgets/common/kubus_entity_card.dart';
 import '../../widgets/staggered_fade_slide.dart';
 
@@ -171,10 +171,13 @@ class _HomePromotionRailCard extends StatelessWidget {
         // is. A person always gets one, fabricated from their wallet if the
         // account has not set a picture.
         leading: isPerson || hasMark
-            ? AvatarWidget(
+            ? KubusIdentityAvatar(
                 wallet: data.walletSeed,
                 displayName: data.label,
                 avatarUrl: data.avatarUrl,
+                isArtist: data.isArtist,
+                isInstitution: data.isInstitution,
+                isVerified: data.isVerified,
                 radius: profileAvatarRadius,
                 borderWidth: 0,
                 allowFabricatedFallback: isPerson,

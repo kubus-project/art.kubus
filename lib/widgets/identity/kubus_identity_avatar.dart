@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 
 import '../../l10n/app_localizations.dart';
+import '../../models/profile_identity_data.dart';
+import '../../services/user_service.dart';
 import '../../utils/design_tokens.dart';
 import '../../utils/kubus_color_roles.dart';
+import '../../utils/wallet_utils.dart';
 import '../avatar_widget.dart';
 
 /// The one drawing of an account's artist / institution / verified marks.
@@ -159,9 +162,14 @@ class KubusAvatarRoleBadge extends StatelessWidget {
 
 /// An [AvatarWidget] with the canonical role badge on its lower-right corner.
 ///
-/// Use this wherever an account's avatar appears and its roles are known. With
-/// no role and no verification it renders exactly like a plain [AvatarWidget].
-class KubusIdentityAvatar extends StatelessWidget {
+/// Use this wherever an account's avatar appears. Roles come from, in order of
+/// authority, what the caller states ([isArtist] / [isInstitution] /
+/// [isVerified], usually from the source payload) and what the shared profile
+/// cache ([UserService.getCachedUser]) already holds for the account. The
+/// cache is read, never fetched: no profile request is made on behalf of the
+/// badge. With no stated role and no verification it renders exactly like a
+/// plain [AvatarWidget].
+class KubusIdentityAvatar extends StatefulWidget {
   const KubusIdentityAvatar({
     super.key,
     required this.wallet,
@@ -171,15 +179,54 @@ class KubusIdentityAvatar extends StatelessWidget {
     this.isArtist = false,
     this.isInstitution = false,
     this.isVerified = false,
+    this.resolveCachedRoles = true,
     this.enableProfileNavigation = true,
     this.allowFabricatedFallback = false,
     this.fetchMissingAvatar = true,
     this.showStatusIndicator = true,
     this.isOnline,
+    this.isLoading = false,
     this.heroTag,
     this.borderWidth = 0,
     this.borderColor,
+    this.cornerRadiusFactor = AvatarWidget.defaultCornerRadiusFactor,
   });
+
+  /// The avatar of an account described by [identity]: wallet seed, initials,
+  /// profile-fetch policy and stated roles are derived the one canonical way.
+  factory KubusIdentityAvatar.fromIdentity(
+    ProfileIdentityData identity, {
+    Key? key,
+    double radius = 20,
+    bool allowFabricatedFallback = true,
+    bool fetchMissingAvatar = true,
+    bool enableProfileNavigation = false,
+    bool resolveCachedRoles = true,
+    bool showStatusIndicator = true,
+    bool? isOnline,
+    String? heroTag,
+  }) =>
+      KubusIdentityAvatar(
+        key: key,
+        wallet: identity.navigationIdentifier ??
+            identity.username ??
+            identity.walletSeed,
+        avatarUrl: identity.avatarUrl,
+        displayName: identity.avatarInitialsSource,
+        radius: radius,
+        isArtist: identity.isArtist,
+        isInstitution: identity.isInstitution,
+        isVerified: identity.isVerified,
+        resolveCachedRoles: resolveCachedRoles,
+        allowFabricatedFallback: allowFabricatedFallback,
+        // A display-only avatar seed is not a profile identifier.
+        fetchMissingAvatar: fetchMissingAvatar && identity.canOpenProfile,
+        enableProfileNavigation:
+            enableProfileNavigation && identity.canOpenProfile,
+        showStatusIndicator: showStatusIndicator,
+        isOnline: isOnline,
+        heroTag: heroTag,
+      );
 
   final String wallet;
   final String? avatarUrl;
@@ -188,36 +235,75 @@ class KubusIdentityAvatar extends StatelessWidget {
   final bool isArtist;
   final bool isInstitution;
   final bool isVerified;
+
+  /// Add the roles the shared profile cache holds for [wallet]. Turn off only
+  /// where the caller has a fuller statement of its own (an owner's profile).
+  final bool resolveCachedRoles;
   final bool enableProfileNavigation;
   final bool allowFabricatedFallback;
   final bool fetchMissingAvatar;
   final bool showStatusIndicator;
   final bool? isOnline;
+  final bool isLoading;
   final String? heroTag;
   final double borderWidth;
   final Color? borderColor;
+  final double cornerRadiusFactor;
+
+  @override
+  State<KubusIdentityAvatar> createState() => _KubusIdentityAvatarState();
+}
+
+class _KubusIdentityAvatarState extends State<KubusIdentityAvatar> {
+  /// Roles of [KubusIdentityAvatar.wallet] in the profile cache. Read-only.
+  ProfileIdentityRoles _cachedRoles() {
+    if (!widget.resolveCachedRoles) return ProfileIdentityRoles.none;
+    final raw = widget.wallet.trim();
+    if (raw.isEmpty) return ProfileIdentityRoles.none;
+    final user = UserService.getCachedUser(raw) ??
+        UserService.getCachedUser(WalletUtils.normalize(raw));
+    if (user == null) return ProfileIdentityRoles.none;
+    return ProfileIdentityRoles(
+      isArtist: user.isArtist,
+      isInstitution: user.isInstitution,
+      isVerified: user.isVerified,
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
+    final roles = ProfileIdentityRoles(
+      isArtist: widget.isArtist,
+      isInstitution: widget.isInstitution,
+      isVerified: widget.isVerified,
+    ).merge(_cachedRoles());
     final avatar = AvatarWidget(
-      wallet: wallet,
-      avatarUrl: avatarUrl,
-      displayName: displayName,
-      radius: radius,
-      enableProfileNavigation: enableProfileNavigation,
-      allowFabricatedFallback: allowFabricatedFallback,
-      fetchMissingAvatar: fetchMissingAvatar,
-      showStatusIndicator: showStatusIndicator,
-      isOnline: isOnline,
-      heroTag: heroTag,
-      borderWidth: borderWidth,
-      borderColor: borderColor,
+      wallet: widget.wallet,
+      avatarUrl: widget.avatarUrl,
+      displayName: widget.displayName,
+      radius: widget.radius,
+      enableProfileNavigation: widget.enableProfileNavigation,
+      allowFabricatedFallback: widget.allowFabricatedFallback,
+      fetchMissingAvatar: widget.fetchMissingAvatar,
+      showStatusIndicator: widget.showStatusIndicator,
+      isOnline: widget.isOnline,
+      isLoading: widget.isLoading,
+      heroTag: widget.heroTag,
+      borderWidth: widget.borderWidth,
+      borderColor: widget.borderColor,
+      cornerRadiusFactor: widget.cornerRadiusFactor,
+      // The avatar's own lookup fills the profile cache; re-read it then.
+      onProfileResolved: widget.resolveCachedRoles
+          ? (_) {
+              if (mounted) setState(() {});
+            }
+          : null,
     );
     final badge = KubusAvatarRoleBadge(
-      avatarRadius: radius,
-      isArtist: isArtist,
-      isInstitution: isInstitution,
-      isVerified: isVerified,
+      avatarRadius: widget.radius,
+      isArtist: roles.isArtist,
+      isInstitution: roles.isInstitution,
+      isVerified: roles.isVerified,
     );
     if (!badge.isVisible) return avatar;
     return Stack(
