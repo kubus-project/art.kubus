@@ -65,6 +65,14 @@ uses its frozen aspect, capped to the usable viewport, with the stable 16:9 fall
 when none is known) and eases once for that page change; metadata arriving after
 first paint never moves it, and reduced motion changes shape without easing.
 
+Superseded before release (review of PR #306): the measurements below were taken
+with a stage that followed the active slide. That contradicted the design
+contract that mixed carousels keep one 4:3 stage, because swiping resized the
+feed. The final contract is: only a post whose single item is a video adapts its
+stage to the clip; every multi-item carousel keeps one 4:3 stage on every page,
+and a clip that does not fit is contained and opens fullscreen from its controls.
+The tables below therefore show the replaced geometry and are kept as history.
+
 | Width | Portrait to landscape clip | Back to portrait | Portrait clip to image |
 | --- | --- | --- | --- |
 | 320 | stage 230x129, video 230x129 | 230x409, video 230x409 | image stage 230x173, no player |

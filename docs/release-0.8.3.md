@@ -1,9 +1,12 @@
 # art.kubus 0.8.3: stabilization
 
 Status: **the five packages are merged into `dev` (#303); the version is bumped to 0.8.3
-(build `261016.01`, 2026-10-16) in the release-preparation commit; not tagged, not
-released, not promoted to `master`.** Maturity stays 0.8.x-alpha. The version bump is
-its own commit (see "Version bump"), not part of the feature changes.
+(build `261016.01`, 2026-10-16) in the release-preparation commit (#304); the P0 artwork
+Save correction is merged (#305, merge commit `090ae390`) and the development deployment
+of `090ae390` succeeded. Owner acceptance on the authenticated development site is still
+owed. Not tagged, not released; the promotion pull request is #306 (`dev` to `master`).**
+Maturity stays 0.8.x-alpha. The version bump is its own commit (see "Version bump"),
+not part of the feature changes.
 
 0.8.3 is a corrective release on top of 0.8.2 (`v0.8.2`, `v0.8.2.1`; production is
 `master` `4181b4d2`). It corrects map cluster motion and marker loading, the globe
@@ -65,8 +68,12 @@ suite ran in the required check at `36d0e844`, not only in the candidate.
 
 Reported on `dev.kubus.site`: editing an existing artwork on desktop and pressing Save
 left a blank screen. It is a 0.8.3 blocker and is corrected on
-`fix/083-artwork-save-black-screen` (target `dev`); the correction is **implemented,
-tested and browser validated, not yet merged, deployed or owner accepted**.
+`fix/083-artwork-save-black-screen` and merged into `dev` as #305 (merge commit
+`090ae390`). It is **implemented, tested, browser validated on a local compatible
+backend, exact-head CI green (run 39026179071), merged and deployed to development**
+(`deploy-development` run 39028288595 smoke-tested revision `090ae390`). It is **not
+owner accepted**: the local browser runs used a disposable fixture account, not the
+authenticated development site.
 
 | Item | Value |
 | --- | --- |
@@ -225,6 +232,11 @@ re-run and the final head `55e2a528` carries its own run).
   frame-time code.
 - **Legacy videos** without recorded aspect keep a documented 16:9 fallback. No
   dimensions are invented and no backend migration is proposed to hide this.
+  **Owner-reported on a phone: a portrait legacy clip renders as a very narrow player
+  inside a much wider post.** The stage keeps its stable 16:9 geometry while the player
+  fits the real portrait video inside it, so the visible frame is small. The 0.8.3
+  geometry tests establish a stable stage and no layout shift, not an adequate visible
+  video size. This is a known defect of 0.8.3, tracked for 0.8.4.
 - **Onboarding heading wordmark** is covered by source and widget tests, not by a
   render: the branded onboarding steps need an authenticated new-account state that
   the fixture runs cannot enter.
