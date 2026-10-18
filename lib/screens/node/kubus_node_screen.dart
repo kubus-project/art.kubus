@@ -119,8 +119,8 @@ class _KubusNodeScreenState extends State<KubusNodeScreen> {
                 ],
               ),
               const SizedBox(height: KubusSpacing.sm),
-              KubusFamilyBrandText(_l10n.kubusNodeEntrySubtitle,
-                  style: textTheme.bodyLarge),
+              // Running text stays plain; the wordmark is for headers.
+              Text(_l10n.kubusNodeEntrySubtitle, style: textTheme.bodyLarge),
               const SizedBox(height: KubusSpacing.lg),
               for (final feature in [
                 _l10n.kubusNodeEntryFeatureArchive,
@@ -957,7 +957,7 @@ class _SetupSection extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              KubusFamilyBrandText(l10n.kubusNodePairBody,
+              Text(l10n.kubusNodePairBody,
                   style: Theme.of(context).textTheme.bodyMedium),
               const SizedBox(height: KubusSpacing.md),
               Wrap(
