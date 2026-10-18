@@ -71,6 +71,43 @@ class SettingsService {
     await prefs.setBool('publicProfile', state.publicProfile);
   }
 
+  /// Load-modify-save of the stored settings for a single change. Returns the
+  /// stored state read back after the write, so callers can confirm it stuck.
+  static Future<SettingsState> updateStoredSettings(
+    SettingsState Function(SettingsState current) change,
+  ) async {
+    final current = await loadSettings();
+    await saveSettings(change(current));
+    return loadSettings();
+  }
+
+  /// Keeps the stored security fields in [state] instead of the values a
+  /// (possibly stale) settings screen holds. Each security field is written only
+  /// by its own change handler, so a generic save never writes it back.
+  static SettingsState withStoredSecurityFields(
+    SettingsState state,
+    SettingsState stored,
+  ) {
+    return state.copyWith(
+      requirePin: stored.requirePin,
+      biometricAuth: stored.biometricAuth,
+      biometricsDeclined: stored.biometricsDeclined,
+      autoLockTime: stored.autoLockTime,
+      autoLockSeconds: stored.autoLockSeconds,
+    );
+  }
+
+  /// True when moving the auto-lock from [current] to [next] lengthens the
+  /// lock or removes it. Seconds: negative is "immediately", 0 is "never".
+  static bool isAutoLockLoosening(int current, int next) =>
+      _autoLockStrictness(next) > _autoLockStrictness(current);
+
+  static int _autoLockStrictness(int seconds) {
+    if (seconds < 0) return -1;
+    if (seconds == 0) return 1 << 40; // never locks automatically
+    return seconds;
+  }
+
   static Future<void> saveProfileVisibility(String visibility) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('profileVisibility', visibility);

@@ -122,8 +122,12 @@ extension _DesktopSettingsScreenStatePart1 on _DesktopSettingsScreenState {
     }
   }
 
+  // Security fields are kept as stored; their own change handlers write them.
   Future<void> _saveSettings() async {
-    await SettingsService.saveSettings(_buildSettingsState());
+    final stored = await SettingsService.loadSettings();
+    await SettingsService.saveSettings(
+      SettingsService.withStoredSecurityFields(_buildSettingsState(), stored),
+    );
   }
 
   SettingsState _buildSettingsState() {

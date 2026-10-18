@@ -270,6 +270,19 @@ extension _DesktopSettingsScreenStatePart2 on _DesktopSettingsScreenState {
     final l10n = AppLocalizations.of(context)!;
     final walletProvider = Provider.of<WalletProvider>(context, listen: false);
     final gate = Provider.of<SecurityGateProvider>(context, listen: false);
+    if (!value) {
+      // Switching biometric unlock off weakens the lock: verify first.
+      if (!await gate.requireSensitiveActionVerification()) {
+        if (mounted) {
+          _applyState(() => _biometricAuth = true);
+          ScaffoldMessenger.of(context).showKubusSnackBar(
+            SnackBar(content: Text(l10n.securityHubAuthenticationFailed)),
+            tone: KubusSnackBarTone.error,
+          );
+        }
+        return;
+      }
+    }
     if (value) {
       final hasPin = await walletProvider.hasPin();
       if (!hasPin) {
@@ -279,7 +292,8 @@ extension _DesktopSettingsScreenStatePart2 on _DesktopSettingsScreenState {
             SnackBar(content: Text(l10n.settingsPinSetFailedToast)),
           );
         }
-        await _saveSettings();
+        await SettingsService.updateStoredSettings(
+            (current) => current.copyWith(biometricAuth: false));
         await gate.reloadSettings();
         return;
       }
@@ -291,7 +305,8 @@ extension _DesktopSettingsScreenStatePart2 on _DesktopSettingsScreenState {
             SnackBar(content: Text(l10n.settingsBiometricUnavailableToast)),
           );
         }
-        await _saveSettings();
+        await SettingsService.updateStoredSettings(
+            (current) => current.copyWith(biometricAuth: false));
         await gate.reloadSettings();
         return;
       }
@@ -303,12 +318,29 @@ extension _DesktopSettingsScreenStatePart2 on _DesktopSettingsScreenState {
             SnackBar(content: Text(l10n.settingsBiometricFailedToast)),
           );
         }
-        await _saveSettings();
+        await SettingsService.updateStoredSettings(
+            (current) => current.copyWith(biometricAuth: false));
         await gate.reloadSettings();
         return;
       }
     }
+    final stored = await SettingsService.updateStoredSettings(
+      (current) => current.copyWith(
+        biometricAuth: value,
+        useBiometricsOnUnlock: value ? current.useBiometricsOnUnlock : true,
+        biometricsDeclined: value ? false : current.biometricsDeclined,
+      ),
+    );
+    await gate.reloadSettings();
     if (!mounted) return;
+    if (stored.biometricAuth != value) {
+      _applyState(() => _biometricAuth = !value);
+      ScaffoldMessenger.of(context).showKubusSnackBar(
+        SnackBar(content: Text(l10n.securityHubActionFailed)),
+        tone: KubusSnackBarTone.error,
+      );
+      return;
+    }
     _applyState(() {
       _biometricAuth = value;
       if (!value) {
@@ -318,8 +350,6 @@ extension _DesktopSettingsScreenStatePart2 on _DesktopSettingsScreenState {
         _biometricsDeclined = false;
       }
     });
-    await _saveSettings();
-    await gate.reloadSettings();
   }
 
   Future<void> _toggleRequirePin(bool value) async {
@@ -339,12 +369,23 @@ extension _DesktopSettingsScreenStatePart2 on _DesktopSettingsScreenState {
           SnackBar(content: Text(l10n.settingsPinSetFailedToast)),
         );
         _applyState(() => _requirePin = false);
-        await _saveSettings();
+        await SettingsService.updateStoredSettings(
+            (current) => current.copyWith(requirePin: false));
         await gate.reloadSettings();
         return;
       }
+      final stored = await SettingsService.updateStoredSettings(
+          (current) => current.copyWith(requirePin: true));
+      if (!mounted) return;
+      if (!stored.requirePin) {
+        ScaffoldMessenger.of(context).showKubusSnackBar(
+          SnackBar(content: Text(l10n.securityHubActionFailed)),
+          tone: KubusSnackBarTone.error,
+        );
+        _applyState(() => _requirePin = false);
+        return;
+      }
       _applyState(() => _requirePin = true);
-      await _saveSettings();
       await gate.reloadSettings();
       return;
     }
@@ -356,9 +397,18 @@ extension _DesktopSettingsScreenStatePart2 on _DesktopSettingsScreenState {
       return;
     }
 
+    final stored = await SettingsService.updateStoredSettings(
+        (current) => current.copyWith(requirePin: false));
     if (!mounted) return;
+    if (stored.requirePin) {
+      _applyState(() => _requirePin = true);
+      ScaffoldMessenger.of(context).showKubusSnackBar(
+        SnackBar(content: Text(l10n.securityHubActionFailed)),
+        tone: KubusSnackBarTone.error,
+      );
+      return;
+    }
     _applyState(() => _requirePin = false);
-    await _saveSettings();
     await gate.reloadSettings();
   }
 

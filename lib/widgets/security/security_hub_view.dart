@@ -399,9 +399,21 @@ class _SecurityHubViewState extends State<SecurityHubView> {
   Future<void> _skipBiometrics() async {
     if (_busy) return;
     final gate = context.read<SecurityGateProvider>();
+    final l10n = AppLocalizations.of(context)!;
     setState(() => _busy = true);
     try {
       final current = await SettingsService.loadSettings();
+      // Turning off biometric unlock that is currently on weakens the lock:
+      // verify first. Skipping it while it is off only adds the PIN requirement.
+      if (current.biometricAuth &&
+          !await gate.requireSensitiveActionVerification()) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showKubusSnackBar(
+          SnackBar(content: Text(l10n.securityHubAuthenticationFailed)),
+          tone: KubusSnackBarTone.error,
+        );
+        return;
+      }
       await SettingsService.saveSettings(current.copyWith(
         requirePin: true,
         biometricAuth: false,
