@@ -10,7 +10,7 @@ Date: 2026-10-18. Phase: 0.8.3 is RELEASED to production; closeout (ancestry, re
 - Live check 2026-10-18: `app.kubus.site/kubus-web-revision.txt` = `2f93f64e`; `kubus-community-build.json`
   has `COMMUNITY_MULTI_MEDIA_ENABLED`, `COMMUNITY_VIDEO_AUTOPLAY_ENABLED`, `COMMUNITY_VIDEO_POSTERS_ENABLED`
   all true; `/`, `/map`, `/community` return 200; canonical `https://app.kubus.site/en`.
-- `dev` `74923da1` (before reconciliation). Master-to-dev reconciliation: PR #311
+- `dev` `74923da1` (before reconciliation). Master-to-dev reconciliation: PR #311 MERGED (dev a56fd943)
   (`chore/sync-master-into-dev-20261018`, merge `244c764e`, empty tree diff, parents 74923da1 + 2f93f64e).
   Merge with a merge commit only. Before: `master...dev` = `1 0`; after merge it must be `0 N`;
   confirm with `npm run verify:branch-reconciliation`.
