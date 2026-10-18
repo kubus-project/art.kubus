@@ -41,6 +41,24 @@ const OTHER_TEAM_CERTIFICATE = [
   '/dRP',
 ].join('');
 
+const DEVELOPMENT_CERTIFICATE = [
+  'MIID7TCCAtWgAwIBAgIUGQWzXi0KZ/mA52+B0LfGLk14FYEwDQYJKoZIhvcNAQELBQAwgYUxGjAYBgoJkiaJk/IsZAEBDApB',
+  'QkNERTEyMzQ1MTEwLwYDVQQDDChBcHBsZSBEZXZlbG9wbWVudDogVGVzdCBEZXYgKFpaMTEyMjMzNDQpMRMwEQYDVQQLDApB',
+  'QkNERTEyMzQ1MRIwEAYDVQQKDAlUZXN0IFRlYW0xCzAJBgNVBAYTAlNJMB4XDTI2MTAxODExNDUxMVoXDTM2MTAxNTExNDUx',
+  'MVowgYUxGjAYBgoJkiaJk/IsZAEBDApBQkNERTEyMzQ1MTEwLwYDVQQDDChBcHBsZSBEZXZlbG9wbWVudDogVGVzdCBEZXYg',
+  'KFpaMTEyMjMzNDQpMRMwEQYDVQQLDApBQkNERTEyMzQ1MRIwEAYDVQQKDAlUZXN0IFRlYW0xCzAJBgNVBAYTAlNJMIIBIjAN',
+  'BgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEArLlcjBK4opfHffanucotmYIzb/T96JYfOZfYGsH/LkoKvVa0efjnoPxyqMbm',
+  'tS+XO6dQM8mcO3ZLhsXV3D/Ad5RPNMfvdiVF3TXm0V+/wn2/EaYokwXYlKgZr20kDMN4Exhu4fLeVdDOouo+XTPZ3AKV1X5M',
+  '0HjaWJUdk6FdVtcaX6+GGJTLPnq1jKavXBh4WCCHtC0zvkStuNn1ciq9OsB4t2e7K6sDTJbvA1P1WXdFi1hJ8v519tExFAY7',
+  'UUGa5kQGlnrSgtK65FrFnq3ymqahKZPjOaXICHThLiziK8akwTbQlq9qnIje4EPcWGI1cbVFTQqgPGrrSwiQ9bNazwIDAQAB',
+  'o1MwUTAdBgNVHQ4EFgQUxD9z2MB+r4Nl1kxOaoqwNet0yk4wHwYDVR0jBBgwFoAUxD9z2MB+r4Nl1kxOaoqwNet0yk4wDwYD',
+  'VR0TAQH/BAUwAwEB/zANBgkqhkiG9w0BAQsFAAOCAQEAm7po25qJzTaQUMUg7+NMkFcIj1HFrdy0q8HFJ8lOclm6ezt/dyVe',
+  'dKeqbZaeV8EbDtg9Xlm8I0HWhDonebkQ2LZl+PGnFFdoI10KRAeeE9w0mP42zIo2MHumMqtz+xrYtaS8NYphQYhKGwTBiejx',
+  'Xx5Cki8B/nsgQqZS9TBdPblbqM44IBlRpcp7PtP8hYR1GDo+A36ul1LFG2lAubVXG46yvmw13nJVRiS52fE4Ee8sMKvT7Tor',
+  'Mlsdevkp9OhGh2tGwbgsrPZTowJRiR0ZqovTW/REcdUKa8C55BNzZt3A7h1w6Dv8Zkjwo20Y23DHbsVTq41GvoVBXz3eAJr5',
+  'ng==',
+].join('');
+
 const TEAM = 'ABCDE12345';
 const BUNDLE = 'com.art.kubus';
 const NOW = new Date('2026-10-18T12:00:00Z');
@@ -124,6 +142,7 @@ test('accepts a matching App Store profile and reports only public facts', () =>
   assert.equal(result.facts.kind, 'app-store');
   assert.equal(result.facts.expires, '2027-10-18T12:00:00.000Z');
   assert.match(result.facts.certificate_expires, /^20\d\d-/);
+  assert.equal(result.facts.signing_identity, 'Apple Distribution: Test Team (ABCDE12345)');
   assert.deepEqual(inspect(profileXml(), { exportMethod: 'app-store-connect' }).errors, []);
 });
 
@@ -167,6 +186,35 @@ test('matches the profile kind to the export method', () => {
   assert.equal(profileKind(parsePlist(development)), 'development');
   assert.equal(profileKind(parsePlist(profileXml({ allDevices: true }))), 'enterprise');
   assert.match(inspect(profileXml(), { exportMethod: 'store' }).errors.join('\n'), /is not one of/);
+});
+
+test('a development export signs with the Apple Development certificate it was given', () => {
+  const development = profileXml({
+    devices: ['00008110-000A1B2C3D4E5F60'],
+    getTaskAllow: true,
+    certificates: [DEVELOPMENT_CERTIFICATE],
+  });
+  const identity = { identityHashes: [sha1(DEVELOPMENT_CERTIFICATE)] };
+  for (const exportMethod of ['debugging', 'development']) {
+    const result = inspect(development, { exportMethod, ...identity });
+    assert.deepEqual(result.errors, [], exportMethod);
+    assert.equal(result.facts.signing_identity, 'Apple Development: Test Dev (ZZ11223344)');
+  }
+});
+
+test('rejects a certificate whose role does not fit the profile', () => {
+  const developmentWithDistribution = profileXml({
+    devices: ['00008110-000A1B2C3D4E5F60'],
+    getTaskAllow: true,
+  });
+  assert.match(
+    inspect(developmentWithDistribution, { exportMethod: 'debugging' }).errors.join('\n'),
+    /is not an Apple Development certificate/,
+  );
+  const storeWithDevelopment = profileXml({ certificates: [DEVELOPMENT_CERTIFICATE] });
+  const result = inspect(storeWithDevelopment, { identityHashes: [sha1(DEVELOPMENT_CERTIFICATE)] });
+  assert.match(result.errors.join('\n'), /is not an Apple Distribution certificate/);
+  assert.equal(result.facts.signing_identity, '');
 });
 
 test('rejects malformed property lists', () => {

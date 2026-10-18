@@ -290,6 +290,9 @@ test('iOS publication signs a configured IPA from exact CI inputs before attachi
   // Cleanup targets are exported before any decoded material is written.
   assert.ok(signing.indexOf('IOS_SIGNING_KEYCHAIN=') < signing.indexOf('base64 --decode'));
   assert.match(signing, /rm -f "\$certificate_path"/);
+  // The identity is the matched certificate's own name, never a fixed role.
+  assert.match(signing, /CODE_SIGN_IDENTITY\[sdk=iphoneos\*\] = \$signing_identity/);
+  assert.doesNotMatch(signing, /CODE_SIGN_IDENTITY\[sdk=iphoneos\*\] = Apple Distribution/);
   assert.match(iosJob, /CFBundleShortVersionString/);
   assert.match(iosJob, /TeamIdentifier=\$EXPECTED_TEAM_ID/);
   assert.match(iosJob, /\$IOS_PROFILE_UUID/);

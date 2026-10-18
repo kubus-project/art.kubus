@@ -68,6 +68,9 @@ node "$(dirname "${BASH_SOURCE[0]}")/inspect_ios_profile.mjs" \
   --identity-hashes "$identity_hashes" \
   --output "$profile_facts"
 profile_uuid="$(sed -n 's/^uuid=//p' "$profile_facts")"
+# Exact common name of the certificate the profile was matched against: an
+# Apple Development identity for development exports, Apple Distribution otherwise.
+signing_identity="$(sed -n 's/^signing_identity=//p' "$profile_facts")"
 
 profile_dir="$HOME/Library/MobileDevice/Provisioning Profiles"
 installed_profile="$profile_dir/$profile_uuid.mobileprovision"
@@ -80,7 +83,7 @@ echo "IOS_INSTALLED_PROFILE=$installed_profile" >> "$GITHUB_ENV"
   echo "DEVELOPMENT_TEAM = $IOS_TEAM_ID"
   echo 'CODE_SIGN_STYLE = Manual'
   echo "PROVISIONING_PROFILE_SPECIFIER = $profile_uuid"
-  echo 'CODE_SIGN_IDENTITY[sdk=iphoneos*] = Apple Distribution'
+  echo "CODE_SIGN_IDENTITY[sdk=iphoneos*] = $signing_identity"
 } > ios/Flutter/Release-CI.xcconfig
 
 {

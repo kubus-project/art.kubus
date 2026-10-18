@@ -16,6 +16,14 @@ const EXPORT_METHOD_KINDS = {
   enterprise: 'enterprise',
 };
 const EXPIRY_WARNING_DAYS = 30;
+// Certificate common-name prefixes per role, current and legacy Apple names.
+const DEVELOPMENT_IDENTITY = /^(Apple Development|iPhone Developer|iOS Development): /;
+const DISTRIBUTION_IDENTITY = /^(Apple Distribution|iPhone Distribution|iOS Distribution): /;
+
+function commonName(certificate) {
+  const line = certificate.subject.split('\n').find((part) => part.startsWith('CN='));
+  return line ? line.slice(3) : '';
+}
 
 function decodeXmlText(text) {
   return text
@@ -124,9 +132,20 @@ export function inspectProfile(profile, { teamId, bundleId, exportMethod, identi
     errors.push('no certificate in the profile matches a signing identity imported from IOS_DISTRIBUTION_CERTIFICATE_BASE64');
   }
   let certificateExpires = null;
+  let signingIdentity = '';
+  // A development export signs with a development certificate, every other
+  // export with a distribution certificate. The exact common name goes to
+  // CODE_SIGN_IDENTITY so Xcode selects this certificate and no other.
+  const wantedRole = kind === 'development' ? DEVELOPMENT_IDENTITY : DISTRIBUTION_IDENTITY;
   for (const der of matching) {
     const certificate = new X509Certificate(der);
     const validTo = new Date(certificate.validTo);
+    const name = commonName(certificate);
+    if (!wantedRole.test(name)) {
+      errors.push(`the signing certificate "${name}" is not ${kind === 'development' ? 'an Apple Development' : 'an Apple Distribution'} certificate, which a ${kind} profile needs`);
+    } else if (!signingIdentity) {
+      signingIdentity = name;
+    }
     if (!certificate.subject.split('\n').includes(`OU=${teamId}`)) {
       errors.push('the matching signing certificate belongs to a different team');
     }
@@ -147,6 +166,7 @@ export function inspectProfile(profile, { teamId, bundleId, exportMethod, identi
       kind,
       expires: expires && !Number.isNaN(expires.getTime()) ? expires.toISOString() : '',
       certificate_expires: certificateExpires ? certificateExpires.toISOString() : '',
+      signing_identity: signingIdentity,
     },
   };
 }
@@ -169,6 +189,11 @@ if (import.meta.url === pathToFileURL(process.argv[1]).href) {
   if (result.errors.length > 0) process.exit(1);
   if (!/^[0-9A-Fa-f-]{36}$/.test(result.facts.uuid)) {
     console.log('::error::profile UUID is missing or malformed');
+    process.exit(1);
+  }
+  // The name lands in an xcconfig line, so it must be a single plain line.
+  if (!/^[^\r\n=;]+$/.test(result.facts.signing_identity)) {
+    console.log('::error::the signing certificate has no usable common name');
     process.exit(1);
   }
   const facts = Object.entries(result.facts).map(([key, value]) => `${key}=${value}\n`).join('');
