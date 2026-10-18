@@ -91,4 +91,95 @@ void main() {
     gate.cancel();
     expect(await result, isFalse);
   });
+
+  group('a stronger lock replaces a pending sensitive prompt', () {
+    Future<void> signedInGate() async {
+      SharedPreferences.setMockInitialValues(<String, Object>{
+        'jwt_token': 'stored-token',
+      });
+      await gate.reloadSettings();
+    }
+
+    for (final reason in <SecurityLockReason>[
+      SecurityLockReason.autoLock,
+      SecurityLockReason.tokenExpired,
+    ]) {
+      test('${reason.name} survives Cancel', () async {
+        await signedInGate();
+        final pending = gate.requireSensitiveActionVerification();
+        await Future<void>.delayed(Duration.zero);
+        expect(gate.lockReason, SecurityLockReason.sensitiveAction);
+
+        await gate.lock(reason);
+        expect(gate.lockReason, reason);
+
+        gate.cancel();
+        expect(gate.isLocked, isTrue,
+            reason: 'Cancel never unlocks an auto-locked or expired gate');
+        // The waiting action is refused rather than left hanging.
+        expect(await pending, isFalse);
+        expect(gate.isResolving, isTrue);
+
+        gate.completeForTesting(localAuthentication: true);
+        expect(gate.isLocked, isFalse);
+      });
+    }
+
+    test('a refused sensitive action is not credited with the later unlock',
+        () async {
+      await signedInGate();
+      final pending = gate.requireSensitiveActionVerification();
+      await Future<void>.delayed(Duration.zero);
+      await gate.lock(SecurityLockReason.autoLock);
+      gate.completeForTesting(localAuthentication: true);
+      expect(await pending, isFalse);
+    });
+
+    test('a weaker request does not downgrade an existing lock', () async {
+      await signedInGate();
+      await gate.lock(SecurityLockReason.autoLock);
+      final pending = gate.requireSensitiveActionVerification();
+      await Future<void>.delayed(Duration.zero);
+      expect(gate.lockReason, SecurityLockReason.autoLock);
+      gate.cancel();
+      expect(gate.isLocked, isTrue);
+      gate.completeForTesting(localAuthentication: true);
+      expect(await pending, isTrue);
+    });
+  });
+
+  group('AuthSessionCoordinator.reset', () {
+    Future<void> signedInGate() async {
+      SharedPreferences.setMockInitialValues(<String, Object>{
+        'jwt_token': 'stored-token',
+      });
+      await gate.reloadSettings();
+    }
+
+    for (final reason in <SecurityLockReason>[
+      SecurityLockReason.autoLock,
+      SecurityLockReason.tokenExpired,
+    ]) {
+      test('does not clear a ${reason.name} lock', () async {
+        await signedInGate();
+        await gate.lock(reason);
+        expect(gate.isLocked, isTrue);
+
+        gate.reset();
+
+        expect(gate.isLocked, isTrue);
+        expect(gate.lockReason, reason);
+        expect(gate.isResolving, isTrue);
+      });
+    }
+
+    test('still releases a pending sensitive-action prompt', () async {
+      await signedInGate();
+      final pending = gate.requireSensitiveActionVerification();
+      await Future<void>.delayed(Duration.zero);
+      gate.reset();
+      expect(gate.isLocked, isFalse);
+      expect(await pending, isFalse);
+    });
+  });
 }

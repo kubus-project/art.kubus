@@ -297,6 +297,22 @@ class SecurityGateProvider extends ChangeNotifier
     }
 
     if (_locked && _inFlight != null) {
+      if (_lockReason == SecurityLockReason.sensitiveAction &&
+          reason != SecurityLockReason.sensitiveAction) {
+        // An auto-lock or expired session outranks a pending sensitive prompt:
+        // that prompt may be cancelled, this lock may not. The waiting action
+        // is refused and must be retried after unlocking.
+        final sensitive = _inFlight;
+        _inFlight = Completer<AuthReauthResult>();
+        _lockReason = reason;
+        _authFailureContext = context;
+        if (sensitive != null && !sensitive.isCompleted) {
+          sensitive
+              .complete(const AuthReauthResult(AuthReauthOutcome.cancelled));
+        }
+        notifyListeners();
+        return;
+      }
       _lockReason ??= reason;
       _authFailureContext ??= context;
       notifyListeners();
@@ -356,6 +372,15 @@ class SecurityGateProvider extends ChangeNotifier
   @override
   void reset() {
     _cooldownUntil = null;
+    final reason = _lockReason;
+    if (_locked &&
+        (reason == SecurityLockReason.autoLock ||
+            reason == SecurityLockReason.tokenExpired)) {
+      // Clearing the HTTP session must not open a locked app. Only a local
+      // unlock or logout() releases these locks.
+      notifyListeners();
+      return;
+    }
     _busy = false;
     _locked = false;
     _lockReason = null;
@@ -373,7 +398,15 @@ class SecurityGateProvider extends ChangeNotifier
   @override
   Future<AuthReauthResult> handleAuthFailure(AuthFailureContext context) async {
     final existing = _inFlight;
-    if (existing != null) return existing.future;
+    if (existing != null) {
+      if (_lockReason != SecurityLockReason.sensitiveAction) {
+        return existing.future;
+      }
+      // An expired session outranks a pending sensitive prompt.
+      await lock(SecurityLockReason.tokenExpired, context: context);
+      return _inFlight?.future ??
+          const AuthReauthResult(AuthReauthOutcome.failed);
+    }
 
     final now = DateTime.now();
     final cooldownUntil = _cooldownUntil;
