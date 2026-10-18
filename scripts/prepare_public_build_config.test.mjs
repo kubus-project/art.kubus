@@ -124,8 +124,9 @@ test('an empty repository variable keeps both video switches on', () => {
   } finally { rmSync(root, { recursive: true, force: true }); }
 });
 
-// Every release path that runs the prepare step must map both repository variables.
-for (const [name, expected] of [['web-artifact.yml', 1], ['mobile-release.yml', 2], ['ios-unsigned-build.yml', 1]]) {
+// Every release path that runs the prepare step must map both repository variables
+// (mobile-release.yml: Android, signed iOS and unsigned iOS).
+for (const [name, expected] of [['web-artifact.yml', 1], ['mobile-release.yml', 3], ['ios-unsigned-build.yml', 1]]) {
   test(`${name} maps the video repository variables into every prepare step`, () => {
     const text = workflow(name);
     const autoplay = 'KUBUS_COMMUNITY_VIDEO_AUTOPLAY_ENABLED: ${{ vars.KUBUS_COMMUNITY_VIDEO_AUTOPLAY_ENABLED }}';
