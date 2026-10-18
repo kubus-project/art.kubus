@@ -26,11 +26,18 @@ enum SecurityLockReason {
 
 class SecurityGateProvider extends ChangeNotifier
     implements AuthSessionCoordinator {
+  /// Upper bound for one cold-start or resume lock decision. Past it the
+  /// decision locks fail-closed so the opaque cover cannot stay up forever.
+  static const Duration defaultLockDecisionTimeout = Duration(seconds: 5);
+
   SecurityGateProvider({
     Duration promptCooldown = const Duration(seconds: 8),
-  }) : _promptCooldown = promptCooldown;
+    Duration lockDecisionTimeout = defaultLockDecisionTimeout,
+  })  : _promptCooldown = promptCooldown,
+        _lockDecisionTimeout = lockDecisionTimeout;
 
   final Duration _promptCooldown;
+  final Duration _lockDecisionTimeout;
 
   ProfileProvider? _profileProvider;
   WalletProvider? _walletProvider;
@@ -96,16 +103,10 @@ class SecurityGateProvider extends ChangeNotifier
 
     () async {
       try {
-        await reloadSettings();
-        _resetInactivityTimer();
-        await _enqueueLifecycle(_enforceColdStartLock);
-      } catch (e) {
-        if (kDebugMode) {
-          debugPrint('SecurityGateProvider.initialize failed: $e');
-        }
-        await _lockAfterUnreadableDecision(SecurityLockReason.autoLock);
+        // The cold-start decision (its settings read included) is bounded and
+        // ends the pending count it started with, exactly once.
+        await _enqueueLifecycle(() => _runLockDecision(_enforceColdStartLock));
       } finally {
-        _endLockDecision();
         if (!completer.isCompleted) completer.complete();
       }
     }();
@@ -215,9 +216,21 @@ class SecurityGateProvider extends ChangeNotifier
     return elapsed.inSeconds >= seconds;
   }
 
-  Future<void> _runResumeDecision() async {
+  Future<void> _runResumeDecision() => _runLockDecision(_handleResumed);
+
+  /// Runs one lock decision under [_lockDecisionTimeout]. The decision's
+  /// pending count is ended here, once, in `finally`. The body never ends it,
+  /// so an orphaned body that finishes after a timeout cannot decrement the
+  /// counter or clear a newer decision's cover. On timeout or error the
+  /// decision fails closed, and the lifecycle chain moves on.
+  Future<void> _runLockDecision(Future<void> Function() body) async {
     try {
-      await _handleResumed();
+      await body().timeout(_lockDecisionTimeout);
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('SecurityGateProvider lock decision bounded: $e');
+      }
+      await _lockAfterUnreadableDecision(SecurityLockReason.autoLock);
     } finally {
       _endLockDecision();
     }
@@ -227,6 +240,8 @@ class SecurityGateProvider extends ChangeNotifier
   /// reclaimed in the background must not come back unlocked.
   Future<void> _enforceColdStartLock() async {
     try {
+      await reloadSettings();
+      _resetInactivityTimer();
       final departureMs = await _takeDeparture();
       if (_accountStateUnknown) {
         throw StateError('local account state is unreadable');
@@ -248,6 +263,33 @@ class SecurityGateProvider extends ChangeNotifier
   /// persisted flag says so or cannot be read. Ignores [_hasLocalAccount]:
   /// that flag is exactly what may be unreadable here.
   Future<void> _lockAfterUnreadableDecision(SecurityLockReason reason) async {
+    try {
+      await _lockAfterUnreadableDecisionUnbounded(reason)
+          .timeout(_lockDecisionTimeout);
+    } catch (_) {
+      // The fallback itself hung (its prefs read or PIN check). Lock directly,
+      // without awaiting anything, unless loaded settings say no PIN is needed.
+      final loaded = _settings;
+      if (loaded == null ||
+          (loaded.requirePin && loaded.autoLockSeconds != 0)) {
+        _engageLockDirectly(reason);
+      }
+    }
+  }
+
+  /// Sets the locked state without awaiting the wallet. Only the fail-closed
+  /// fallback uses it, when the PIN check itself cannot complete.
+  void _engageLockDirectly(SecurityLockReason reason) {
+    if (_locked) return;
+    _locked = true;
+    _lockReason = reason;
+    _authFailureContext = null;
+    _inFlight ??= Completer<AuthReauthResult>();
+    notifyListeners();
+  }
+
+  Future<void> _lockAfterUnreadableDecisionUnbounded(
+      SecurityLockReason reason) async {
     try {
       final loaded = _settings;
       final bool wantLock;
