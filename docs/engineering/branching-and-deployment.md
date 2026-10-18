@@ -172,7 +172,9 @@ The runner pins the approved Netcup IP for `app.kubus.site` or `dev.kubus.site` 
 
 ## Mobile releases
 
-`mobile-release.yml` is independent from web deployment. A `v*` tag or explicit manual run resolves a commit already contained by `master`, builds and signs Android APK/AAB in `android-release`, optionally signs an IPA in `ios-release`, verifies checksums and signatures, and publishes GitHub Release metadata only when the workflow is explicitly in publishing mode. Pull requests never receive signing material.
+`mobile-release.yml` is independent from web deployment. A `v*` tag push, or a manual run dispatched from `master` naming an existing `v*` tag, builds that tag's commit, which must be contained by `master`. It signs the Android APK/AAB in `android-release` and, when enabled, an IPA in `ios-release`, verifies checksums and signatures, and publishes a GitHub Release only in publishing mode. Pull requests never receive signing material.
+
+A manual run chooses `targets` (`android`, `ios` or `both`) and publishes only with `publish_github_release=true`; it is refused before building when a release for the tag already exists, so rebuilding a released tag yields workflow artifacts only. To rebuild `v0.8.3`, dispatch from `master` with `release_tag=v0.8.3`; the run resolves `2f93f64e`. A tag push runs the iOS job only when the repository variable `IOS_RELEASE_ENABLED` is `true` (see [`DEPLOYMENT_GATES.md`](../DEPLOYMENT_GATES.md#mobile-environments) for the signing settings). Without Apple signing material, `ios-unsigned-build.yml` produces an unsigned test IPA for sideloading instead.
 
 ## Environments and configuration
 
@@ -180,8 +182,8 @@ Required environments:
 
 - `development-web`, restricted to `dev`
 - `production-web`, restricted to `master` and protected by explicit approval
-- `android-release`, restricted to release tags/manual trusted refs
-- `ios-release`, restricted to release tags/manual trusted refs
+- `android-release`, restricted to `v*` tags and `master`, with required reviewers
+- `ios-release`, restricted to `v*` tags and `master`, with required reviewers
 
 Both web environments define these variables with environment-specific values:
 
