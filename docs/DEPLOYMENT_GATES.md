@@ -7,7 +7,7 @@ The canonical branch and release model is documented in [`engineering/branching-
 - `pr-validation.yml` runs unprivileged validation for PRs into `dev` and release-candidate PRs into `master`. It never references web deployment, Basic Auth, or mobile-signing secrets.
 - `deploy-development.yml` accepts only the exact current `dev` SHA and enters `development-web`.
 - `release-production.yml` accepts only the exact current `master` SHA and enters protected `production-web`.
-- `mobile-release.yml` accepts a `v*` tag or explicit manual run whose exact commit is contained by `master`; signing occurs only inside `android-release` or `ios-release`.
+- `mobile-release.yml` accepts a `v*` tag push, or a manual run dispatched from `master` that names an existing `v*` tag; either way it builds that tag's commit, which must be contained by `master`. Signing occurs only inside `android-release` or `ios-release`.
 - `scheduled-quality.yml` runs expensive trusted-source validation weekly or manually.
 
 Build and privileged deployment are separate jobs. A web artifact is named `flutter-web-<development|production>-<sha>`, contains `kubus-web-revision.txt`, `kubus-deployment-metadata.json`, and `SHA256SUMS`, and is consumed only when all three identities agree.
@@ -42,9 +42,13 @@ Development smoke verifies Basic Auth, `/app`, localized routes, the exact revis
 
 `android-release` contains `ANDROID_KEYSTORE_BASE64`, `ANDROID_KEY_ALIAS`, `ANDROID_KEYSTORE_PASSWORD`, and `ANDROID_KEY_PASSWORD`. It builds and verifies signed APK and AAB packages.
 
-When `IOS_RELEASE_ENABLED=true`, `ios-release` contains `IOS_DISTRIBUTION_CERTIFICATE_BASE64`, `IOS_DISTRIBUTION_CERTIFICATE_PASSWORD`, and `IOS_PROVISIONING_PROFILE_BASE64`, plus `IOS_TEAM_ID`, `IOS_BUNDLE_ID`, and optional `IOS_EXPORT_METHOD`. The workflow validates the profile identity, uses an ephemeral keychain, verifies the signed IPA, and removes signing material in an always-run cleanup step.
+`ios-release` contains the secrets `IOS_DISTRIBUTION_CERTIFICATE_BASE64` (base64 of the Apple Distribution `.p12`), `IOS_DISTRIBUTION_CERTIFICATE_PASSWORD` and `IOS_PROVISIONING_PROFILE_BASE64` (base64 of the explicit-App-ID `.mobileprovision`). The variables `IOS_TEAM_ID`, `IOS_BUNDLE_ID` (`com.art.kubus`, matching `ios/Flutter/Release.xcconfig`) and optional `IOS_EXPORT_METHOD` (default `app-store`) may live in the environment or the repository.
 
-GitHub Release publication uses immutable tags and artifacts and is separate from all web deployments. No mobile signing or publication occurs for pull requests.
+`IOS_RELEASE_ENABLED=true` must be a **repository** variable: it decides whether a tag push runs the iOS job, and a job-level `if` cannot read environment-scoped variables, so a copy inside `ios-release` is ignored. A manual run with `targets` `ios` or `both` runs the iOS job without it, which is how signing is proven before tag builds include iOS.
+
+Before installing the toolchain the job names every missing setting, imports the certificate into an ephemeral keychain, and checks with `scripts/deploy/inspect_ios_profile.mjs` that the profile is for `IOS_TEAM_ID.IOS_BUNDLE_ID` (no wildcard), is unexpired, contains the imported certificate, belongs to the same team, and matches the export method (App Store, ad hoc, development or enterprise). The certificate must fit the profile: Apple Development for `development`/`debugging`, Apple Distribution for every other method. Xcode is pointed at that certificate by its exact common name. After the build it verifies the bundle ID, version and build number against the tagged source, the code signature and team, the embedded profile UUID, the signed application identifier and, for distribution, `get-task-allow` false, then records the tag, commit and version in `<name>.ios-build.json` beside the IPA. An always-run cleanup step deletes the keychain, the installed profile and every decoded file, also after a failure. The signing scripts run from the workflow's own revision, so rebuilding an older tag still runs the current checks.
+
+GitHub Release publication uses immutable tags and artifacts and is separate from all web deployments. A tag push publishes; a manual run publishes only with `publish_github_release=true`, and the run is refused before building when a release for that tag already exists. The release carries one combined `SHA256SUMS`. No mobile signing or publication occurs for pull requests; pull requests compile iOS without code signing (`flutter build ios --release --no-codesign`), which proves compilation only and never produces a distributable IPA. Nothing is uploaded to App Store Connect or TestFlight.
 
 ## Recovery
 
