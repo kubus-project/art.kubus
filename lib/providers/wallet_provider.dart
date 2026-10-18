@@ -563,6 +563,8 @@ class WalletProvider extends ChangeNotifier {
   /// retry is made after a failure. Callers that must not leave a phrase behind
   /// persist a pending purge when this returns false.
   Future<bool> clearCachedMnemonic() async {
+    // No phrase should be imported once it is being removed.
+    _cancelImportRetry();
     for (var attempt = 1; attempt <= 2; attempt++) {
       try {
         // Bounded like every other secure-storage call: a hung platform call
@@ -799,6 +801,11 @@ class WalletProvider extends ChangeNotifier {
     }
   }
 
+  void _cancelImportRetry() {
+    _importRetryTimer?.cancel();
+    _importRetryTimer = null;
+  }
+
   void _scheduleImportRetry(String mnemonic) {
     try {
       if (_importRetryAttempts >= _maxImportRetryAttempts) {
@@ -813,7 +820,8 @@ class WalletProvider extends ChangeNotifier {
       _walletLog('scheduling mnemonic import retry in ${delay.inSeconds}s');
       _importRetryTimer = Timer(delay, () async {
         // Only retry if still have cached mnemonic and not imported yet
-        final cached = await _secureStorage.read(key: 'cached_mnemonic');
+        // Same gate as readCachedMnemonic: a pending purge yields null here too.
+        final cached = await readCachedMnemonic();
         if (cached == null) return;
         final ok = await _attemptImportFromCache(cached,
             derived: _cachedDerivedCandidate);
@@ -4124,8 +4132,7 @@ class WalletProvider extends ChangeNotifier {
     } catch (_) {}
     // Cancel any pending import retry timers
     try {
-      _importRetryTimer?.cancel();
-      _importRetryTimer = null;
+      _cancelImportRetry();
       _importRetryAttempts = 0;
     } catch (_) {}
 
