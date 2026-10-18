@@ -281,6 +281,7 @@ test('all third-party actions are pinned to immutable commit SHAs', () => {
     'deploy-development.yml',
     'release-production.yml',
     'mobile-release.yml',
+    'ios-unsigned-build.yml',
     'scheduled-quality.yml',
     'pages.yml',
     'web-artifact.yml',
@@ -304,4 +305,107 @@ test('mobile and scheduled work remain outside normal branch deployment', () => 
   assert.doesNotMatch(mobile, /pull_request:/);
   assert.match(scheduled, /cron:\s*['"][^'"]+['"]/);
   assert.doesNotMatch(scheduled, /SFTP_|HTTP_BASIC_/);
+});
+
+test('the unsigned iOS build is manual, secret-free and never publishes', () => {
+  const unsigned = workflow('ios-unsigned-build.yml');
+  const triggers = unsigned.slice(unsigned.indexOf('\non:'), unsigned.indexOf('\npermissions:'));
+  assert.match(triggers, /workflow_dispatch:/);
+  assert.doesNotMatch(triggers, /\bpush:|pull_request|workflow_run|schedule:/);
+  assert.match(unsigned, /permissions:\s*\n\s*contents: read/);
+  assert.doesNotMatch(unsigned, /contents: write|secrets\.|environment:|release-action|gh release/);
+  assert.match(unsigned, /flutter build ipa --release --no-codesign/);
+  assert.match(unsigned, /embedded\.mobileprovision/);
+  // Only the master definition runs, before any source is resolved.
+  assert.match(unsigned, /\[ "\$EVENT_REF" = refs\/heads\/master \] \|\| fail/);
+  assert.ok(unsigned.indexOf('refs/heads/master ] || fail') < unsigned.indexOf('ref="$SOURCE_REF"'));
+  // Only release tags or the two integration branches are built.
+  assert.match(unsigned, /\^v\[0-9A-Za-z\._-\]\+\$/);
+  assert.match(unsigned, /\[ "\$ref" = dev \] \|\| \[ "\$ref" = master \]/);
+});
+
+function jobBlock(content, name) {
+  const start = content.indexOf(`\n  ${name}:\n`);
+  assert.ok(start >= 0, `job ${name} is missing`);
+  const rest = content.slice(start + 1);
+  const next = rest.slice(1).search(/\n  [a-z][a-z-]*:\n/);
+  return next < 0 ? rest : rest.slice(0, next + 1);
+}
+
+test('every release tag builds Android and iOS, and iOS is never skipped', () => {
+  const mobile = workflow('mobile-release.yml');
+  const source = jobBlock(mobile, 'source');
+  // A tag push always builds both platforms; the repository variable only
+  // chooses between a signed and an explicitly unsigned IPA.
+  assert.match(source, /ios_mode=unsigned; \[ "\$IOS_RELEASE_ENABLED" = true \] && ios_mode=signed/);
+  assert.match(source, /build_android=true; build_ios=true/);
+  assert.doesNotMatch(source, /build_ios=false; \[ "\$IOS_RELEASE_ENABLED"/);
+  assert.match(jobBlock(mobile, 'ios'), /if: \$\{\{ needs\.source\.outputs\.ios_mode == 'signed' \}\}/);
+  assert.match(jobBlock(mobile, 'ios-unsigned'), /if: \$\{\{ needs\.source\.outputs\.ios_mode == 'unsigned' \}\}/);
+  // Publishing from a partial manual run is refused before anything builds.
+  assert.match(source, /targets=both, so a published release never lacks a platform/);
+});
+
+test('the unsigned release IPA job holds no secrets and no signing environment', () => {
+  const job = jobBlock(workflow('mobile-release.yml'), 'ios-unsigned');
+  assert.doesNotMatch(job, /secrets\.|environment:|contents: write|release-action|gh release/);
+  assert.match(job, /flutter build ipa --release --no-codesign/);
+  assert.match(job, /embedded\.mobileprovision/);
+  assert.match(job, /"signed":false/);
+  assert.match(job, /-unsigned"/);
+  assert.match(job, /name: ios-release-\$\{\{ needs\.source\.outputs\.sha \}\}/);
+});
+
+test('publishing requires both platforms and verifies the manifest before and after', () => {
+  const publish = jobBlock(workflow('mobile-release.yml'), 'publish');
+  assert.match(publish, /needs: \[source, android, ios, ios-unsigned\]/);
+  assert.match(publish, /needs\.source\.outputs\.build_android == 'true'/);
+  assert.match(publish, /needs\.source\.outputs\.build_ios == 'true'/);
+  assert.match(publish, /needs\.android\.result == 'success'/);
+  assert.match(publish, /needs\.ios\.result == 'success' \|\| needs\.ios-unsigned\.result == 'success'/);
+  // A skipped platform job must never be accepted as success.
+  assert.doesNotMatch(publish, /result == 'skipped'/);
+  assert.ok(publish.indexOf('release_manifest.mjs build') < publish.indexOf('release-action'));
+  assert.ok(publish.indexOf('release-action') < publish.indexOf('Verify the published release'));
+  assert.match(publish, /gh release download/);
+  assert.match(publish, /release_manifest\.mjs verify --dir published/);
+});
+
+test('a GitHub Release stays a draft until every asset is uploaded and verified', () => {
+  const publish = jobBlock(workflow('mobile-release.yml'), 'publish');
+  const at = (needle) => {
+    const index = publish.indexOf(needle);
+    assert.ok(index >= 0, `publish job lacks: ${needle}`);
+    return index;
+  };
+  // The action creates only a draft and any upload error fails the run.
+  const action = publish.slice(at('ncipollo/release-action'), at('Verify the uploaded draft'));
+  assert.match(action, /draft: true/);
+  assert.match(action, /artifactErrorsFailBuild: true/);
+  assert.match(action, /allowUpdates: false/);
+  assert.match(action, /replacesArtifacts: false/);
+  // immutableCreate would publish inside the action, before verification.
+  assert.doesNotMatch(publish, /immutableCreate: true|skipIfReleaseExists: true|omitDraftDuringUpdate: true/);
+  // A retry can neither reuse nor overwrite an existing release or draft.
+  assert.ok(at('Refuse to reuse an existing release') < at('ncipollo/release-action'));
+  assert.match(publish.slice(at('Refuse to reuse an existing release'), at('ncipollo/release-action')), /exit 1/);
+  // Order: assemble and verify files, upload draft, verify draft, publish, verify public.
+  const order = ['release_manifest.mjs verify --dir dist', 'ncipollo/release-action', 'Verify the uploaded draft', 'draft=false', 'Verify the published release'].map(at);
+  assert.deepEqual(order, [...order].sort((a, b) => a - b));
+  // The draft's own bytes are checked, not just its file names.
+  assert.match(publish.slice(at('Verify the uploaded draft'), at('draft=false')), /sha256sum -c SHA256SUMS[\s\S]*release_manifest\.mjs verify --dir draft-check/);
+  // Success is reported only by the final verification step.
+  const verify = publish.slice(at('Verify the published release'), at('Withdraw an unverified release'));
+  assert.match(verify, /echo 'verified=true'/);
+  assert.ok(verify.indexOf("verified=true") > verify.indexOf('release_manifest.mjs verify'));
+  assert.doesNotMatch(publish.slice(0, at('Verify the published release')), /### Release .* published/);
+  // A failure leaves nothing public: drafts are deleted, public releases returned to draft.
+  const withdraw = publish.slice(at('Withdraw an unverified release'));
+  assert.match(withdraw, /steps\.precheck\.outcome == 'success'/);
+  assert.match(withdraw, /steps\.verify\.outputs\.verified != 'true'/);
+  assert.match(withdraw, /-X DELETE/);
+  assert.match(withdraw, /-F draft=true/);
+  assert.match(withdraw, /exit 1\s*$/);
+  // Publication never triggers a web deployment.
+  assert.doesNotMatch(workflow('mobile-release.yml'), /release-production|deploy-web-artifact|workflow_run/);
 });
