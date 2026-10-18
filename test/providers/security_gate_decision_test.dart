@@ -121,6 +121,24 @@ void main() {
       expect(gate.isLockDecisionPending, isFalse);
     });
 
+    test('biometrics-only lock still locks when the resume read fails',
+        () async {
+      final gate = _gate(prefs: {
+        'requirePin': false,
+        'biometricAuth': true,
+        _tsKey: _agoMs(const Duration(seconds: 5)),
+      });
+      await gate.initialize();
+      expect(gate.isLocked, isFalse);
+
+      gate.failReloads = true;
+      gate.onAppLifecycleChanged(AppLifecycleState.resumed);
+      await gate.lifecycleIdleForTesting;
+
+      expect(gate.isLocked, isTrue);
+      expect(gate.isLockDecisionPending, isFalse);
+    });
+
     test('cold start with settings read throwing and a PIN present locks',
         () async {
       final gate = _gate();

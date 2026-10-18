@@ -186,12 +186,18 @@ class SecurityGateProvider extends ChangeNotifier
   /// event that precedes `resumed` on the return transition must not move it.
   Future<void> _recordDeparture() async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      if (prefs.getInt(_departureKey) != null) return;
-      await prefs.setInt(_departureKey, DateTime.now().millisecondsSinceEpoch);
+      await _writeDeparture().timeout(_lockDecisionTimeout);
     } catch (_) {
-      // Best-effort only; a missing timestamp locks on the next start.
+      // Best-effort only, and bounded: a hung write must not stall the
+      // lifecycle chain. The departure is then lost, which the resume decision
+      // treats as "no timestamp".
     }
+  }
+
+  Future<void> _writeDeparture() async {
+    final prefs = await SharedPreferences.getInstance();
+    if (prefs.getInt(_departureKey) != null) return;
+    await prefs.setInt(_departureKey, DateTime.now().millisecondsSinceEpoch);
   }
 
   static const String _departureKey = 'last_inactive_ts';
@@ -270,8 +276,7 @@ class SecurityGateProvider extends ChangeNotifier
       // The fallback itself hung (its prefs read or PIN check). Lock directly,
       // without awaiting anything, unless loaded settings say no PIN is needed.
       final loaded = _settings;
-      if (loaded == null ||
-          (loaded.requirePin && loaded.autoLockSeconds != 0)) {
+      if (loaded == null || _appLockRequired(loaded)) {
         _engageLockDirectly(reason);
       }
     }
@@ -294,7 +299,7 @@ class SecurityGateProvider extends ChangeNotifier
       final loaded = _settings;
       final bool wantLock;
       if (loaded != null) {
-        wantLock = loaded.requirePin && loaded.autoLockSeconds != 0;
+        wantLock = _appLockRequired(loaded);
       } else {
         try {
           final prefs = await SharedPreferences.getInstance();
@@ -359,11 +364,13 @@ class SecurityGateProvider extends ChangeNotifier
 
   bool _shouldAutoLock() {
     if (!_hasLocalAccount) return false;
-    if (!requirePin && !biometricsEnabled) return false;
-    final seconds = autoLockSeconds;
-    if (seconds == 0) return false;
-    return true;
+    return _appLockRequired(settings);
   }
+
+  /// Whether the settings call for the app lock. Shared by [_shouldAutoLock]
+  /// and the fail-closed fallback, so both decide the same way.
+  static bool _appLockRequired(SettingsState s) =>
+      (s.requirePin || s.biometricAuth) && s.autoLockSeconds != 0;
 
   void _resetInactivityTimer() {
     _inactivityTimer?.cancel();

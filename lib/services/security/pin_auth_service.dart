@@ -131,10 +131,12 @@ class PinAuthService {
       });
 
   Future<void> _clearCounters() async {
-    await _store.delete(failedAttemptsKey);
+    // Lockout keys go first: if a later delete fails, no lockout can outlive
+    // a correct PIN, and the failed-attempt count is what remains to retry.
     await _store.delete(lockoutUntilMsKey);
     await _store.delete(lockoutWrittenMsKey);
     await _store.delete(lockoutStageKey);
+    await _store.delete(failedAttemptsKey);
   }
 
   /// Whether [pin] matches the stored hash. Read-only: it never counts as an

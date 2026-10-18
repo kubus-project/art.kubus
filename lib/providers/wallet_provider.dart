@@ -194,6 +194,9 @@ class WalletProvider extends ChangeNotifier {
   );
   // Cached mnemonic import retry
   Timer? _importRetryTimer;
+  // Bumped whenever a scheduled retry is superseded, cancelled or succeeds,
+  // so a callback already past its timer cannot import after that.
+  int _importRetryGeneration = 0;
   int _importRetryAttempts = 0;
   static const int _maxImportRetryAttempts = 3;
   static const Duration _baseImportRetryDelay = Duration(seconds: 5);
@@ -791,8 +794,7 @@ class WalletProvider extends ChangeNotifier {
       _cachedDerivedCandidate = null;
       // reset retry state
       _importRetryAttempts = 0;
-      _importRetryTimer?.cancel();
-      _importRetryTimer = null;
+      _invalidateImportRetry();
       return true;
     } catch (e, stackTrace) {
       _walletLog('import attempt failed: $e\n$stackTrace');
@@ -801,7 +803,10 @@ class WalletProvider extends ChangeNotifier {
     }
   }
 
-  void _cancelImportRetry() {
+  void _cancelImportRetry() => _invalidateImportRetry();
+
+  void _invalidateImportRetry() {
+    _importRetryGeneration++;
     _importRetryTimer?.cancel();
     _importRetryTimer = null;
   }
@@ -813,7 +818,8 @@ class WalletProvider extends ChangeNotifier {
         return;
       }
 
-      _importRetryTimer?.cancel();
+      _invalidateImportRetry();
+      final generation = _importRetryGeneration;
       final multiplier = _importRetryAttempts + 1;
       final delay =
           Duration(seconds: _baseImportRetryDelay.inSeconds * multiplier);
@@ -822,7 +828,16 @@ class WalletProvider extends ChangeNotifier {
         // Only retry if still have cached mnemonic and not imported yet
         // Same gate as readCachedMnemonic: a pending purge yields null here too.
         final cached = await readCachedMnemonic();
+        // The read is awaited, so a purge or a newer schedule may have started
+        // meanwhile. Drop the phrase unless this retry is still current and no
+        // purge is pending.
+        if (generation != _importRetryGeneration) return;
         if (cached == null) return;
+        final prefs = await SharedPreferences.getInstance();
+        if (generation != _importRetryGeneration ||
+            prefs.getBool(pendingMnemonicPurgeKey) == true) {
+          return;
+        }
         final ok = await _attemptImportFromCache(cached,
             derived: _cachedDerivedCandidate);
         if (!ok) {

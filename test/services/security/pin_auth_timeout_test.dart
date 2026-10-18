@@ -49,6 +49,19 @@ class _HangAfterStore extends _MemoryStore {
       });
 }
 
+/// Hangs every delete of one key; everything else behaves like memory.
+class _DeleteHangStore extends _MemoryStore {
+  _DeleteHangStore(this.hangKey);
+
+  final String hangKey;
+
+  @override
+  Future<void> delete(String key) {
+    if (key == hangKey) return Completer<void>().future;
+    return super.delete(key);
+  }
+}
+
 const _policy = PinLockoutPolicy(
   maxAttempts: 3,
   iterations: 10000,
@@ -169,5 +182,27 @@ void main() {
 
     final again = await service.verifyPin('0000');
     expect(again.remainingAttempts, _policy.maxAttempts - 1);
+  });
+
+  test('a correct PIN clears lockout keys even if the count delete hangs',
+      () async {
+    final healthy = _MemoryStore();
+    await PinAuthService(store: healthy, policy: _policy).setPin('1234');
+    final store = _DeleteHangStore(PinAuthService.failedAttemptsKey)
+      ..values.addAll(healthy.values);
+    final service = PinAuthService(
+      store: store,
+      policy: _policy,
+      operationTimeout: timeout,
+    );
+    store.values[PinAuthService.failedAttemptsKey] = '0';
+    store.values[PinAuthService.lockoutStageKey] = '1';
+
+    await expectLater(
+      service.verifyPin('1234'),
+      throwsA(isA<TimeoutException>()),
+    );
+    // The stage is cleared before the count, so the hang cannot leave it.
+    expect(store.values.containsKey(PinAuthService.lockoutStageKey), isFalse);
   });
 }
