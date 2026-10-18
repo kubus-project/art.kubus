@@ -347,6 +347,8 @@ class WalletProvider extends ChangeNotifier {
       return didAuthenticate
           ? BiometricAuthOutcome.success
           : BiometricAuthOutcome.cancelled;
+    } on LocalAuthException catch (e) {
+      return _outcomeForLocalAuthCode(e.code);
     } on PlatformException catch (e) {
       final code = e.code.toLowerCase();
       if (code.contains('notavailable') || code.contains('not_available')) {
@@ -384,6 +386,32 @@ class WalletProvider extends ChangeNotifier {
     } catch (e) {
       _walletLog('biometric auth error: $e');
       return BiometricAuthOutcome.error;
+    }
+  }
+
+  /// Maps local_auth 3.x exception codes onto [BiometricAuthOutcome].
+  static BiometricAuthOutcome _outcomeForLocalAuthCode(
+      LocalAuthExceptionCode code) {
+    switch (code) {
+      case LocalAuthExceptionCode.userCanceled:
+      case LocalAuthExceptionCode.systemCanceled:
+      case LocalAuthExceptionCode.timeout:
+        return BiometricAuthOutcome.cancelled;
+      case LocalAuthExceptionCode.noBiometricsEnrolled:
+      case LocalAuthExceptionCode.noBiometricHardware:
+      case LocalAuthExceptionCode.noCredentialsSet:
+        return BiometricAuthOutcome.notAvailable;
+      case LocalAuthExceptionCode.temporaryLockout:
+      case LocalAuthExceptionCode.biometricLockout:
+        return BiometricAuthOutcome.lockedOut;
+      case LocalAuthExceptionCode.userRequestedFallback:
+        return BiometricAuthOutcome.failed;
+      case LocalAuthExceptionCode.authInProgress:
+      case LocalAuthExceptionCode.uiUnavailable:
+      case LocalAuthExceptionCode.biometricHardwareTemporarilyUnavailable:
+      case LocalAuthExceptionCode.deviceError:
+      case LocalAuthExceptionCode.unknownError:
+        return BiometricAuthOutcome.error;
     }
   }
 

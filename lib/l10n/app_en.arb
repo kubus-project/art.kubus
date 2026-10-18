@@ -1092,6 +1092,7 @@
   },
   "settingsBiometricUnavailableToast": "Biometric unlock not available on this device.",
   "settingsBiometricFailedToast": "Biometric authentication failed.",
+  "biometricIdentityPromptReason": "Authenticate to continue",
   "settingsExportRecoveryPhraseDialogTitle": "Export recovery phrase",
   "settingsExportRecoveryPhraseDialogBody": "Only view your phrase in private. We never store it, and anyone with it can move your assets.",
   "settingsExportRecoveryPhraseDialogConfirm": "Confirm you are ready before revealing the words.",

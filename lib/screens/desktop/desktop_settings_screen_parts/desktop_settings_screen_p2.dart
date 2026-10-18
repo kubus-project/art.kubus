@@ -310,7 +310,9 @@ extension _DesktopSettingsScreenStatePart2 on _DesktopSettingsScreenState {
         await gate.reloadSettings();
         return;
       }
-      final ok = await walletProvider.authenticateWithBiometrics();
+      final ok = await walletProvider.authenticateWithBiometrics(
+        localizedReason: l10n.biometricIdentityPromptReason,
+      );
       if (!ok) {
         if (mounted) {
           _applyState(() => _biometricAuth = false);

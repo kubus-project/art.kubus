@@ -1088,6 +1088,7 @@
   },
   "settingsBiometricUnavailableToast": "Biometrično odklepanje na tej napravi ni na voljo.",
   "settingsBiometricFailedToast": "Biometrično preverjanje ni uspelo.",
+  "biometricIdentityPromptReason": "Za nadaljevanje potrdite svojo identiteto",
   "settingsExportRecoveryPhraseDialogTitle": "Izvozi obnovitveno frazo",
   "settingsExportRecoveryPhraseDialogBody": "Frazo si oglej samo na zasebnem mestu. Nikoli je ne shranjujemo. Kdor jo ima, lahko premakne tvoja sredstva.",
   "settingsExportRecoveryPhraseDialogConfirm": "Potrdi, da si pripravljen/a, preden pokažemo besede.",

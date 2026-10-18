@@ -363,7 +363,9 @@ class _SecurityHubViewState extends State<SecurityHubView> {
         );
         return;
       }
-      final ok = await walletProvider.authenticateWithBiometrics();
+      final ok = await walletProvider.authenticateWithBiometrics(
+        localizedReason: l10n.biometricIdentityPromptReason,
+      );
       if (!mounted) return;
       if (!ok) {
         messenger.showKubusSnackBar(

@@ -2972,6 +2972,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsBiometricFailedToast => 'Biometric authentication failed.';
 
   @override
+  String get biometricIdentityPromptReason => 'Authenticate to continue';
+
+  @override
   String get settingsExportRecoveryPhraseDialogTitle =>
       'Export recovery phrase';
 

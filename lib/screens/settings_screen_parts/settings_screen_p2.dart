@@ -613,7 +613,9 @@ extension _SettingsScreenStatePart2 on _SettingsScreenState {
         return;
       }
       // Optional: require one successful auth when enabling
-      final ok = await walletProvider.authenticateWithBiometrics();
+      final ok = await walletProvider.authenticateWithBiometrics(
+        localizedReason: l10n.biometricIdentityPromptReason,
+      );
       if (!ok) {
         if (mounted) {
           ScaffoldMessenger.of(context).showKubusSnackBar(

@@ -5293,6 +5293,12 @@ abstract class AppLocalizations {
   /// **'Biometric authentication failed.'**
   String get settingsBiometricFailedToast;
 
+  /// No description provided for @biometricIdentityPromptReason.
+  ///
+  /// In en, this message translates to:
+  /// **'Authenticate to continue'**
+  String get biometricIdentityPromptReason;
+
   /// No description provided for @settingsExportRecoveryPhraseDialogTitle.
   ///
   /// In en, this message translates to:

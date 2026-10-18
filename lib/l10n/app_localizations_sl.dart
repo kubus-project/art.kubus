@@ -2994,6 +2994,10 @@ class AppLocalizationsSl extends AppLocalizations {
       'Biometrično preverjanje ni uspelo.';
 
   @override
+  String get biometricIdentityPromptReason =>
+      'Za nadaljevanje potrdite svojo identiteto';
+
+  @override
   String get settingsExportRecoveryPhraseDialogTitle =>
       'Izvozi obnovitveno frazo';
 
