@@ -438,20 +438,68 @@ jobs:
             --ios-mode "$IOS_MODE" --notes-out "$RUNNER_TEMP/release-notes.md"
           (cd dist && sha256sum ./* > SHA256SUMS && cat SHA256SUMS)
           node scripts/deploy/release_manifest.mjs verify --dir dist --tag "$RELEASE_TAG" --sha "$SOURCE_SHA"
-      - uses: ncipollo/release-action@339a81892b84b4eeb0f6e744e4574d79d0d9b8dd # v1
+      # A release becomes public in one step, after every asset is proven.
+      # Never reuse an existing release or leftover draft for this tag: the
+      # asset set of a release is never edited, replaced or appended to.
+      - id: precheck
+        name: Refuse to reuse an existing release for the tag
+        shell: bash
+        run: |
+          set -euo pipefail
+          existing="$(gh api "repos/$GITHUB_REPOSITORY/releases" --paginate | jq -r --arg tag "$RELEASE_TAG" '.[] | select(.tag_name == $tag) | "\(.id) draft=\(.draft)"')"
+          if [ -n "$existing" ]; then
+            echo "::error::A release or draft for $RELEASE_TAG already exists ($existing). Inspect it and delete a stale draft yourself; this workflow never overwrites or completes one."
+            exit 1
+          fi
+      # The release is created as a DRAFT and every upload error fails the
+      # run. immutableCreate is deliberately not used: it would publish
+      # inside the action, before this workflow has verified the uploaded
+      # assets.
+      - id: draft
+        uses: ncipollo/release-action@339a81892b84b4eeb0f6e744e4574d79d0d9b8dd # v1
         with:
           tag: ${{ needs.source.outputs.tag }}
           commit: ${{ needs.source.outputs.sha }}
           name: art.kubus ${{ needs.source.outputs.tag }}
           prerelease: ${{ needs.source.outputs.prerelease }}
+          draft: true
           bodyFile: ${{ runner.temp }}/release-notes.md
           generateReleaseNotes: true
           allowUpdates: false
           replacesArtifacts: false
+          artifactErrorsFailBuild: true
           artifacts: dist/*
-      # The release is not reported complete until the published assets, as
-      # GitHub serves them, match the manifest and checksums.
-      - name: Verify the published release
+      - name: Verify the uploaded draft
+        shell: bash
+        env:
+          RELEASE_ID: ${{ steps.draft.outputs.id }}
+        run: |
+          set -euo pipefail
+          fail() { echo "::error::$1"; exit 1; }
+          [ -n "$RELEASE_ID" ] || fail 'The release action reported no release id.'
+          api="repos/$GITHUB_REPOSITORY/releases/$RELEASE_ID"
+          [ "$(gh api "$api" --jq .draft)" = true ] || fail 'The release is not a draft, so it cannot be verified before publication.'
+          [ "$(gh api "$api" --jq '[.assets[] | select(.state != "uploaded")] | length')" = 0 ] || fail 'An asset is not fully uploaded.'
+          [ "$(gh api "$api" --jq '.assets | length')" = "$(find dist -type f | wc -l)" ] || fail 'The draft does not carry exactly the assembled files.'
+          mkdir draft-check
+          gh api "$api" --jq '.assets[] | "\(.id) \(.name)"' | while read -r id name; do
+            gh api -H 'Accept: application/octet-stream' "repos/$GITHUB_REPOSITORY/releases/assets/$id" > "draft-check/$name"
+          done
+          (cd draft-check && sha256sum -c SHA256SUMS)
+          node scripts/deploy/release_manifest.mjs verify --dir draft-check --tag "$RELEASE_TAG" --sha "$SOURCE_SHA"
+      - id: publish
+        name: Publish the verified draft
+        shell: bash
+        env:
+          RELEASE_ID: ${{ steps.draft.outputs.id }}
+        run: |
+          set -euo pipefail
+          gh api -X PATCH "repos/$GITHUB_REPOSITORY/releases/$RELEASE_ID" -F draft=false > /dev/null
+          echo 'published=true' >> "$GITHUB_OUTPUT"
+      # Only this step may report the release complete: the assets as GitHub
+      # now serves them publicly must match the manifest and checksums.
+      - id: verify
+        name: Verify the published release
         shell: bash
         run: |
           set -euo pipefail
@@ -459,8 +507,31 @@ jobs:
           gh release download "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --dir published
           (cd published && sha256sum -c SHA256SUMS)
           node scripts/deploy/release_manifest.mjs verify --dir published --tag "$RELEASE_TAG" --sha "$SOURCE_SHA"
+          echo 'verified=true' >> "$GITHUB_OUTPUT"
           {
             echo "### Release $RELEASE_TAG published"
             echo "Android APK + AAB (signed) and iOS IPA ($IOS_MODE) verified against \`SHA256SUMS\` and \`release-manifest.json\`."
             [ "$IOS_MODE" = signed ] || echo "The iOS IPA is **unsigned**: it needs re-signing before it can be installed."
           } >> "$GITHUB_STEP_SUMMARY"
+      # Any failure after the pre-check leaves nothing public: an unpublished
+      # draft is deleted so a retry starts clean, and a release that went public
+      # but failed verification is returned to draft. The pre-check proved no
+      # release for this tag existed, and runs for one tag are serialised, so
+      # any release found for the tag here was created by this run (the action
+      # sets its id output only after uploading, so the lookup is by tag).
+      - name: Withdraw an unverified release
+        if: ${{ always() && steps.precheck.outcome == 'success' && steps.verify.outputs.verified != 'true' }}
+        shell: bash
+        run: |
+          set +e
+          gh api "repos/$GITHUB_REPOSITORY/releases" --paginate | jq -r --arg tag "$RELEASE_TAG" '.[] | select(.tag_name == $tag) | "\(.id) \(.draft)"' | while read -r id draft; do
+            api="repos/$GITHUB_REPOSITORY/releases/$id"
+            if [ "$draft" = true ]; then
+              gh api -X DELETE "$api" && echo "::warning::Removed the unpublished draft release for $RELEASE_TAG; nothing was made public."
+            elif gh api -X PATCH "$api" -F draft=true > /dev/null; then
+              echo "::error::Release $RELEASE_TAG failed verification after publication and was returned to draft. It is NOT a complete release."
+            else
+              echo "::error::Release $RELEASE_TAG is public but FAILED verification and could not be returned to draft. Treat it as incomplete and fix it by hand."
+            fi
+          done
+          exit 1

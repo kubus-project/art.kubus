@@ -370,3 +370,42 @@ test('publishing requires both platforms and verifies the manifest before and af
   assert.match(publish, /gh release download/);
   assert.match(publish, /release_manifest\.mjs verify --dir published/);
 });
+
+test('a GitHub Release stays a draft until every asset is uploaded and verified', () => {
+  const publish = jobBlock(workflow('mobile-release.yml'), 'publish');
+  const at = (needle) => {
+    const index = publish.indexOf(needle);
+    assert.ok(index >= 0, `publish job lacks: ${needle}`);
+    return index;
+  };
+  // The action creates only a draft and any upload error fails the run.
+  const action = publish.slice(at('ncipollo/release-action'), at('Verify the uploaded draft'));
+  assert.match(action, /draft: true/);
+  assert.match(action, /artifactErrorsFailBuild: true/);
+  assert.match(action, /allowUpdates: false/);
+  assert.match(action, /replacesArtifacts: false/);
+  // immutableCreate would publish inside the action, before verification.
+  assert.doesNotMatch(publish, /immutableCreate: true|skipIfReleaseExists: true|omitDraftDuringUpdate: true/);
+  // A retry can neither reuse nor overwrite an existing release or draft.
+  assert.ok(at('Refuse to reuse an existing release') < at('ncipollo/release-action'));
+  assert.match(publish.slice(at('Refuse to reuse an existing release'), at('ncipollo/release-action')), /exit 1/);
+  // Order: assemble and verify files, upload draft, verify draft, publish, verify public.
+  const order = ['release_manifest.mjs verify --dir dist', 'ncipollo/release-action', 'Verify the uploaded draft', 'draft=false', 'Verify the published release'].map(at);
+  assert.deepEqual(order, [...order].sort((a, b) => a - b));
+  // The draft's own bytes are checked, not just its file names.
+  assert.match(publish.slice(at('Verify the uploaded draft'), at('draft=false')), /sha256sum -c SHA256SUMS[\s\S]*release_manifest\.mjs verify --dir draft-check/);
+  // Success is reported only by the final verification step.
+  const verify = publish.slice(at('Verify the published release'), at('Withdraw an unverified release'));
+  assert.match(verify, /echo 'verified=true'/);
+  assert.ok(verify.indexOf("verified=true") > verify.indexOf('release_manifest.mjs verify'));
+  assert.doesNotMatch(publish.slice(0, at('Verify the published release')), /### Release .* published/);
+  // A failure leaves nothing public: drafts are deleted, public releases returned to draft.
+  const withdraw = publish.slice(at('Withdraw an unverified release'));
+  assert.match(withdraw, /steps\.precheck\.outcome == 'success'/);
+  assert.match(withdraw, /steps\.verify\.outputs\.verified != 'true'/);
+  assert.match(withdraw, /-X DELETE/);
+  assert.match(withdraw, /-F draft=true/);
+  assert.match(withdraw, /exit 1\s*$/);
+  // Publication never triggers a web deployment.
+  assert.doesNotMatch(workflow('mobile-release.yml'), /release-production|deploy-web-artifact|workflow_run/);
+});
