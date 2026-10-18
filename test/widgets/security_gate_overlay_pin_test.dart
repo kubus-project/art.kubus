@@ -1,3 +1,4 @@
+import 'package:flutter/services.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:art_kubus/providers/locale_provider.dart';
 import 'package:art_kubus/providers/notification_provider.dart';
@@ -63,11 +64,25 @@ Future<void> _pumpLockedOverlay(
   await tester.pump();
 }
 
+/// The overlay reads the PIN lockout from secure storage as soon as it opens.
+/// Without a platform answer that read stays in flight, and the bounded
+/// queue timeout in PinAuthService is still armed when the test ends. An empty
+/// store answers immediately, so no timer outlives the test.
+const MethodChannel _secureStorage =
+    MethodChannel('plugins.it_nomads.com/flutter_secure_storage');
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   setUp(() {
     SharedPreferences.setMockInitialValues(<String, Object>{});
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(_secureStorage, (call) async => null);
+  });
+
+  tearDown(() {
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(_secureStorage, null);
   });
 
   testWidgets('an unreadable PIN store still offers the PIN field',

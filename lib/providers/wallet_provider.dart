@@ -565,10 +565,21 @@ class WalletProvider extends ChangeNotifier {
   Future<bool> clearCachedMnemonic() async {
     for (var attempt = 1; attempt <= 2; attempt++) {
       try {
-        await _secureStorage.delete(key: 'cached_mnemonic');
-        await _secureStorage.delete(key: 'cached_mnemonic_ts');
-        final phrase = await _secureStorage.read(key: 'cached_mnemonic');
-        final ts = await _secureStorage.read(key: 'cached_mnemonic_ts');
+        // Bounded like every other secure-storage call: a hung platform call
+        // counts as a failed purge (the pending flag retries it at startup)
+        // instead of holding up logout or disconnect.
+        await _secureStorage
+            .delete(key: 'cached_mnemonic')
+            .timeout(_secureStorageOpTimeout);
+        await _secureStorage
+            .delete(key: 'cached_mnemonic_ts')
+            .timeout(_secureStorageOpTimeout);
+        final phrase = await _secureStorage
+            .read(key: 'cached_mnemonic')
+            .timeout(_secureStorageOpTimeout);
+        final ts = await _secureStorage
+            .read(key: 'cached_mnemonic_ts')
+            .timeout(_secureStorageOpTimeout);
         if (phrase == null && ts == null) return true;
         _walletLog(
             'cached mnemonic still present after delete (attempt $attempt)');
