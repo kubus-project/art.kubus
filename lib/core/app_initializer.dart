@@ -388,7 +388,13 @@ class _AppInitializerState extends State<AppInitializer> {
       await _safeStep<void>(
         'wallet.restoreAccountShell',
         () =>
-            walletProvider.restoreAccountShellFromBackend(allowRefresh: false),
+            walletProvider.restoreAccountShellFromBackend(
+              allowRefresh: false,
+              // Account identity is enough for routing. The wallet provider
+              // has already restored its local state during initialize();
+              // don't issue a second blockchain balance/history load here.
+              loadWalletData: false,
+            ),
         timeout: const Duration(seconds: 8),
       );
       StartupTrace.mark('wallet restore end');
