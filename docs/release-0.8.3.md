@@ -1,11 +1,21 @@
 # art.kubus 0.8.3: stabilization
 
-Status: **the five packages are merged into `dev` (#303); the version is bumped to 0.8.3
-(build `261016.01`, 2026-10-16) in the release-preparation commit; not tagged, not
-released, not promoted to `master`.** Maturity stays 0.8.x-alpha. The version bump is
-its own commit (see "Version bump"), not part of the feature changes.
+Status: **RELEASED to production.** The five packages were merged into `dev` (#303), the
+version is bumped to 0.8.3 (build `261016.01`, 2026-10-16, #304), the P0 artwork Save
+correction is merged (#305) and the release-review corrections (#308) and record
+correction (#307) are merged. The release PR #306 (`dev` to `master`, merge commit) produced
+`master` `2f93f64e`; the protected production deployment (run 39080160967) built that exact
+SHA, passed local and production smoke and left rollback unused. `master` was reconciled back
+into `dev` by #311 (merge commit, ancestry only). Tag `v0.8.3` points at `2f93f64e`; its
+mobile release run (39119513841) signed the Android APK and AAB and published the GitHub
+Release `v0.8.3` with those two files and `SHA256SUMS`. The iOS IPA job was skipped (the
+signing gate is not enabled), so 0.8.3 ships no IPA. **Not yet verified:** authenticated
+artwork Save on a live environment (local browser evidence only; owner acceptance owed) and
+physical-device acceptance. Legacy portrait video sizing on phones stays a 0.8.4 defect.**
+Maturity stays 0.8.x-alpha. The version bump is its own commit (see "Version bump"),
+not part of the feature changes.
 
-0.8.3 is a corrective release on top of 0.8.2 (`v0.8.2`, `v0.8.2.1`; production is
+0.8.3 is a corrective release on top of 0.8.2 (`v0.8.2`, `v0.8.2.1`; production before this release was
 `master` `4181b4d2`). It corrects map cluster motion and marker loading, the globe
 and the user-location marker, owner profile routing and artwork authorship,
 Community video geometry and the Art feed, and the family wordmark. It adds no new
@@ -52,7 +62,7 @@ regression test:
 | `dev` after the merge | `d0862d9127e546d5ff76937d6dc3776405de7a3a` |
 | Integration branch head | `36d0e844b90dc2cb49e43c3ae4bd071b64794864` (required run: every job green, 0 unresolved threads) |
 | #298, #300, #299, #301, #291 | recorded as merged by GitHub at the same instant (their heads are ancestors of `dev`) |
-| `master` | `4181b4d2`, unchanged; `origin/master...origin/dev` reads 0 on the master side |
+| `master` | `4181b4d2` at integration time; `2f93f64e` after release (#306) |
 
 The integration branch carries two commits on top of the five merges, both from
 review: `affd4696` (the three findings above) and `36d0e844` (a globe-ground style
@@ -61,12 +71,34 @@ locales and the Node model fallback). One review finding was declined: `video.pa
 in the performance script does not hang with the pinned Playwright 1.61.1. The full
 suite ran in the required check at `36d0e844`, not only in the candidate.
 
+### Release-review corrections (#307, #308)
+
+Three review findings on the release pull request #306 were confirmed and corrected
+on `dev` before the release; #307 corrected this record and #308 carries the code.
+
+| Finding | Correction |
+| --- | --- |
+| The optional globe-atmosphere module was awaited inside `kubusMapLibreRuntimeReady`, so a failed request left the whole web map on its loading backdrop | The import is isolated in a `try`; a failure is recorded on `kubusGlobeAtmosphereError` and the map opens without the night shade. `scripts/qa/maplibre_runtime_atmosphere.test.mjs` runs the real script in a `vm` and fails on the previous code. |
+| Mixed-media carousels resized as the user swiped, against the 4:3 stage contract | Only a single-video post adapts its stage; every multi-item carousel keeps one 4:3 stage. `community_video_stage_test.dart` and `community_video_audio_geometry_test.dart` assert it. |
+| Running Node prose was wrapped in `KubusFamilyBrandText`, making the embedded wordmark bold italic | The Node entry subtitle, both pairing bodies and the operator hero body are plain `Text`. |
+
+| Item | Value |
+| --- | --- |
+| #307 (release record) | squash merge `85c5699a` |
+| #308 (corrections) | squash merge `74923da1`; required checks green at its validated head |
+| `dev` after both | `74923da19503c46d0fc8b2491e2e8a17bda56e84` |
+| Development deployment | `deploy-development` run 39064707394 built and promoted `74923da1` and verified the artifact checksum manifest including `kubus-web-revision.txt`. `dev.kubus.site` is behind Basic Auth, so the served revision could not be read independently without the staging credentials. |
+
 ### P0 correction: artwork Save blanked the app (release blocker)
 
 Reported on `dev.kubus.site`: editing an existing artwork on desktop and pressing Save
 left a blank screen. It is a 0.8.3 blocker and is corrected on
-`fix/083-artwork-save-black-screen` (target `dev`); the correction is **implemented,
-tested and browser validated, not yet merged, deployed or owner accepted**.
+`fix/083-artwork-save-black-screen` and merged into `dev` as #305 (merge commit
+`090ae390`). It is **implemented, tested, browser validated on a local compatible
+backend, exact-head CI green (run 39026179071), merged and deployed to development**
+(`deploy-development` run 39028288595 smoke-tested revision `090ae390`). It is **not
+owner accepted**: the local browser runs used a disposable fixture account, not the
+authenticated development site.
 
 | Item | Value |
 | --- | --- |
@@ -136,9 +168,10 @@ opens another in-shell screen over the editor would close that screen instead.
   sees a visitor profile. Roles, verification and presence are separate. The recorded
   artist is a link and is never inferred from the uploader. The dark cover-led
   identity panel from #289 is preserved.
-- **Community.** Single and mixed-media stages follow the active item's aspect, ease
-  for 220 ms between an image and a clip (none under reduced motion) and do not
-  jump on late metadata. The Art feed keeps one still and one video per artwork.
+- **Community.** A post whose only item is a video sizes its stage to the clip, and
+  every multi-item carousel (images, videos or both) keeps one fixed 4:3 stage that does
+  not change as the user swipes, with the clip contained and fullscreen available. Late
+  metadata does not move the feed. The Art feed keeps one still and one video per artwork.
   Hashtag chips have readable contrast in both themes.
 - **Wordmark.** `kubus` is weight 800 italic and `art.` and `Node` stay regular,
   through `KubusFamilyBrandText`. Headers never detect the brand themselves, because
@@ -158,7 +191,7 @@ opens another in-shell screen over the editor would close that screen instead.
 
 | Flag | Source default | Pipeline default | 0.8.3 position |
 | --- | --- | --- | --- |
-| `COMMUNITY_MULTI_MEDIA_ENABLED` (compile-time `--dart-define`; CI input `community_multi_media_enabled`) | `!isProduction`: off in a release build made without the define | **on**: `prepare_public_build_config.mjs` defaults it to `true`; the `web-artifact`, `deploy-development` and `release-production` inputs default to `true`; a push to `dev` builds the enabled artifact | Unchanged from 0.8.2. Live production (`app.kubus.site`, source `4181b4d2`) serves `kubus-community-build.json` with `COMMUNITY_MULTI_MEDIA_ENABLED: true`, autoplay `true` and posters `true`. `false` stays the emergency rollback input. |
+| `COMMUNITY_MULTI_MEDIA_ENABLED` (compile-time `--dart-define`; CI input `community_multi_media_enabled`) | `!isProduction`: off in a release build made without the define | **on**: `prepare_public_build_config.mjs` defaults it to `true`; the `web-artifact`, `deploy-development` and `release-production` inputs default to `true`; a push to `dev` builds the enabled artifact | Unchanged from 0.8.2. Live production (`app.kubus.site`, source `2f93f64e`, verified 2026-10-18) serves `kubus-community-build.json` with `COMMUNITY_MULTI_MEDIA_ENABLED: true`, autoplay `true` and posters `true`. `false` stays the emergency rollback input. |
 | `KUBUS_SUPPORT_TICKETS_ENABLED` | repository variable | fail closed when unset | Unchanged. |
 | `KUBUS_COMMUNITY_VIDEO_AUTOPLAY_ENABLED`, `KUBUS_COMMUNITY_VIDEO_POSTERS_ENABLED` | repository variables | per variable | Unchanged. |
 
@@ -225,6 +258,11 @@ re-run and the final head `55e2a528` carries its own run).
   frame-time code.
 - **Legacy videos** without recorded aspect keep a documented 16:9 fallback. No
   dimensions are invented and no backend migration is proposed to hide this.
+  **Owner-reported on a phone: a portrait legacy clip renders as a very narrow player
+  inside a much wider post.** The stage keeps its stable 16:9 geometry while the player
+  fits the real portrait video inside it, so the visible frame is small. The 0.8.3
+  geometry tests establish a stable stage and no layout shift, not an adequate visible
+  video size. This is a known defect of 0.8.3, tracked for 0.8.4.
 - **Onboarding heading wordmark** is covered by source and widget tests, not by a
   render: the branded onboarding steps need an authenticated new-account state that
   the fixture runs cannot enter.
@@ -270,8 +308,9 @@ by this document.
    protected production deployment. Afterwards reconcile `master` back into `dev`
    (`git rev-list --left-right --cherry-pick --count origin/master...origin/dev` must
    read `0` for the first number).
-5. **Android and iOS** release builds compile in CI without signing. Signed builds,
-   store submission and physical-device acceptance are separate and not done.
+5. **Android and iOS** release builds compile in CI without signing. The `v0.8.3` tag
+   produced signed Android files only; a signed iOS IPA, store submission and
+   physical-device acceptance are separate and not done.
 
 ### Rollback
 
