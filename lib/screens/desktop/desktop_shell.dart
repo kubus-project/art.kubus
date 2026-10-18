@@ -1,4 +1,3 @@
-import '../../widgets/glass_components.dart';
 import 'dart:async';
 
 import 'package:art_kubus/utils/design_tokens.dart';
@@ -23,6 +22,7 @@ import '../../services/contextual_auth_gate.dart';
 import '../../services/telemetry/telemetry_service.dart';
 import '../../utils/kubus_color_roles.dart';
 import '../../utils/kubus_labs_feature.dart';
+import '../../widgets/glass_components.dart';
 import 'desktop_home_screen.dart';
 import 'desktop_map_screen.dart';
 import 'community/desktop_community_screen.dart';
