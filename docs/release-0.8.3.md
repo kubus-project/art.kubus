@@ -1,16 +1,19 @@
 # art.kubus 0.8.3: stabilization
 
-Status: **the five packages are merged into `dev` (#303); the version is bumped to 0.8.3
-(build `261016.01`, 2026-10-16) in the release-preparation commit (#304); the P0 artwork
-Save correction is merged (#305, merge commit `090ae390`) and the development deployment
-of `090ae390` succeeded. The release-review corrections (#308) and the release-record
-correction (#307) are merged; `dev` is `74923da1`. Owner acceptance on the authenticated
-development site is still owed. Not tagged, not released; the promotion pull request is
-#306 (`dev` to `master`).**
+Status: **RELEASED to production.** The five packages were merged into `dev` (#303), the
+version is bumped to 0.8.3 (build `261016.01`, 2026-10-16, #304), the P0 artwork Save
+correction is merged (#305) and the release-review corrections (#308) and record
+correction (#307) are merged. The release PR #306 (`dev` to `master`, merge commit) produced
+`master` `2f93f64e`; the protected production deployment (run 39080160967) built that exact
+SHA, passed local and production smoke and left rollback unused. `master` was reconciled back
+into `dev` by #311 (merge commit, ancestry only). Tag `v0.8.3` points at `2f93f64e`; its
+mobile release run needs the protected signing approvals. **Not yet verified:** authenticated
+artwork Save on a live environment (local browser evidence only; owner acceptance owed) and
+physical-device acceptance. Legacy portrait video sizing on phones stays a 0.8.4 defect.**
 Maturity stays 0.8.x-alpha. The version bump is its own commit (see "Version bump"),
 not part of the feature changes.
 
-0.8.3 is a corrective release on top of 0.8.2 (`v0.8.2`, `v0.8.2.1`; production is
+0.8.3 is a corrective release on top of 0.8.2 (`v0.8.2`, `v0.8.2.1`; production before this release was
 `master` `4181b4d2`). It corrects map cluster motion and marker loading, the globe
 and the user-location marker, owner profile routing and artwork authorship,
 Community video geometry and the Art feed, and the family wordmark. It adds no new
@@ -57,7 +60,7 @@ regression test:
 | `dev` after the merge | `d0862d9127e546d5ff76937d6dc3776405de7a3a` |
 | Integration branch head | `36d0e844b90dc2cb49e43c3ae4bd071b64794864` (required run: every job green, 0 unresolved threads) |
 | #298, #300, #299, #301, #291 | recorded as merged by GitHub at the same instant (their heads are ancestors of `dev`) |
-| `master` | `4181b4d2`, unchanged; `origin/master...origin/dev` reads 0 on the master side |
+| `master` | `4181b4d2` at integration time; `2f93f64e` after release (#306) |
 
 The integration branch carries two commits on top of the five merges, both from
 review: `affd4696` (the three findings above) and `36d0e844` (a globe-ground style
@@ -186,7 +189,7 @@ opens another in-shell screen over the editor would close that screen instead.
 
 | Flag | Source default | Pipeline default | 0.8.3 position |
 | --- | --- | --- | --- |
-| `COMMUNITY_MULTI_MEDIA_ENABLED` (compile-time `--dart-define`; CI input `community_multi_media_enabled`) | `!isProduction`: off in a release build made without the define | **on**: `prepare_public_build_config.mjs` defaults it to `true`; the `web-artifact`, `deploy-development` and `release-production` inputs default to `true`; a push to `dev` builds the enabled artifact | Unchanged from 0.8.2. Live production (`app.kubus.site`, source `4181b4d2`) serves `kubus-community-build.json` with `COMMUNITY_MULTI_MEDIA_ENABLED: true`, autoplay `true` and posters `true`. `false` stays the emergency rollback input. |
+| `COMMUNITY_MULTI_MEDIA_ENABLED` (compile-time `--dart-define`; CI input `community_multi_media_enabled`) | `!isProduction`: off in a release build made without the define | **on**: `prepare_public_build_config.mjs` defaults it to `true`; the `web-artifact`, `deploy-development` and `release-production` inputs default to `true`; a push to `dev` builds the enabled artifact | Unchanged from 0.8.2. Live production (`app.kubus.site`, source `2f93f64e`, verified 2026-10-18) serves `kubus-community-build.json` with `COMMUNITY_MULTI_MEDIA_ENABLED: true`, autoplay `true` and posters `true`. `false` stays the emergency rollback input. |
 | `KUBUS_SUPPORT_TICKETS_ENABLED` | repository variable | fail closed when unset | Unchanged. |
 | `KUBUS_COMMUNITY_VIDEO_AUTOPLAY_ENABLED`, `KUBUS_COMMUNITY_VIDEO_POSTERS_ENABLED` | repository variables | per variable | Unchanged. |
 
