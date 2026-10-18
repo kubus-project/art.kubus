@@ -33,10 +33,15 @@ jobs:
         name: Resolve the source commit
         shell: bash
         env:
+          EVENT_REF: ${{ github.ref }}
           SOURCE_REF: ${{ inputs.source_ref }}
         run: |
           set -euo pipefail
           fail() { echo "::error::$1"; exit 1; }
+          # The packaging and checks below are this workflow's own steps, so
+          # only the reviewed definition on master may label an artifact with
+          # a release or branch commit.
+          [ "$EVENT_REF" = refs/heads/master ] || fail "Run this workflow from master (dispatched from $EVENT_REF)."
           ref="$SOURCE_REF"
           if [[ "$ref" =~ ^v[0-9A-Za-z._-]+$ && "$ref" != *..* ]]; then
             sha="$(git rev-parse -q --verify "refs/tags/$ref^{commit}")" || fail "Tag $ref does not exist."
