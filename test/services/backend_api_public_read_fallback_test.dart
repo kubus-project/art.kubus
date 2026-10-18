@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:art_kubus/config/config.dart';
+import 'package:art_kubus/services/auth_session_coordinator.dart';
 import 'package:art_kubus/services/backend_api_service.dart';
 import 'package:art_kubus/services/public_fallback_service.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -206,6 +207,30 @@ void main() {
     });
 
     test(
+        'an authentication failure is surfaced as 401 and never reaches '
+        'the mirror', () async {
+      final coordinator = _SettlingCoordinator();
+      BackendApiService().bindAuthCoordinator(coordinator);
+      addTearDown(() => coordinator.resolving = false);
+      backend((host, orbit) => ok());
+      Object? result;
+      try {
+        result = await BackendApiService().getArtworks(
+          walletAddress: '0xabc$id',
+          includePrivateForWallet: true,
+        );
+      } catch (e) {
+        result = e;
+      }
+      expect(
+        result,
+        isA<BackendApiRequestException>()
+            .having((e) => e.statusCode, 'statusCode', 401),
+      );
+      expect(trace().where((t) => t.endsWith('+orbit')), isEmpty);
+    });
+
+    test(
         '500: the mirror is tried but a plain server error does not '
         'leave the primary API', () async {
       backend((host, orbit) => status(500));
@@ -214,4 +239,24 @@ void main() {
       expect(trace(), ['primary', 'primary+orbit']);
     });
   });
+}
+
+/// An auth layer whose in-flight re-authentication settles as failed.
+class _SettlingCoordinator implements AuthSessionCoordinator {
+  bool resolving = true;
+
+  @override
+  bool get isResolving => resolving;
+
+  @override
+  Future<AuthReauthResult> handleAuthFailure(
+          AuthFailureContext context) async =>
+      const AuthReauthResult(AuthReauthOutcome.failed);
+
+  @override
+  Future<AuthReauthResult?> waitForResolution() async =>
+      const AuthReauthResult(AuthReauthOutcome.failed, message: 'expired');
+
+  @override
+  void reset() {}
 }

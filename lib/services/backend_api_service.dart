@@ -1995,6 +1995,13 @@ class BackendApiService
         );
         rethrow;
       }
+      if (e is BackendApiRequestException &&
+          !_isOrbitFallbackStatus(e.statusCode)) {
+        // An answer from the API or its auth layer (for example an expired
+        // session that could not be renewed), not an outage: the mirror must
+        // not hide it.
+        rethrow;
+      }
       _debugLogThrottled(
         'fetch_json_fallback_error:${uri.path}',
         'BackendApiService: primary request error for ${uri.path}, trying Orbit fallback -> $e',
