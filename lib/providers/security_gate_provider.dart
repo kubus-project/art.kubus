@@ -89,6 +89,7 @@ class SecurityGateProvider extends ChangeNotifier
       try {
         await reloadSettings();
         _resetInactivityTimer();
+        await _enqueueLifecycle(_enforceColdStartLock);
       } catch (e) {
         if (kDebugMode) {
           debugPrint('SecurityGateProvider.initialize failed: $e');
@@ -122,29 +123,89 @@ class SecurityGateProvider extends ChangeNotifier
     _resetInactivityTimer();
   }
 
+  /// Lifecycle work is serialised so the departure timestamp is written,
+  /// read and cleared in the order the engine delivered the events.
+  Future<void> _lifecycleChain = Future<void>.value();
+
+  Future<void> _enqueueLifecycle(Future<void> Function() task) {
+    final next = _lifecycleChain.then((_) => task()).catchError((Object e) {
+      if (kDebugMode) debugPrint('SecurityGateProvider lifecycle task: $e');
+    });
+    _lifecycleChain = next;
+    return next;
+  }
+
+  @visibleForTesting
+  Future<void> get lifecycleIdleForTesting => _lifecycleChain;
+
   void onAppLifecycleChanged(AppLifecycleState state) {
-    if (state == AppLifecycleState.paused ||
-        state == AppLifecycleState.inactive) {
-      unawaited(_persistInactiveTimestamp());
-      return;
-    }
-    if (state == AppLifecycleState.resumed) {
-      unawaited(_handleResumed());
+    switch (state) {
+      case AppLifecycleState.paused:
+      case AppLifecycleState.hidden:
+        // The app really left the foreground. `inactive` is also delivered on
+        // the way back, so it is never used to record the departure.
+        unawaited(_enqueueLifecycle(_recordDeparture));
+        return;
+      case AppLifecycleState.resumed:
+        unawaited(_enqueueLifecycle(_handleResumed));
+        return;
+      case AppLifecycleState.inactive:
+      case AppLifecycleState.detached:
+        return;
     }
   }
 
-  Future<void> _persistInactiveTimestamp() async {
+  /// Records when the app was left. The first departure wins: the `hidden`
+  /// event that precedes `resumed` on the return transition must not move it.
+  Future<void> _recordDeparture() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      await prefs.setInt(
-          'last_inactive_ts', DateTime.now().millisecondsSinceEpoch);
+      if (prefs.getInt(_departureKey) != null) return;
+      await prefs.setInt(_departureKey, DateTime.now().millisecondsSinceEpoch);
     } catch (_) {
-      // Best-effort only.
+      // Best-effort only; a missing timestamp locks on the next start.
+    }
+  }
+
+  static const String _departureKey = 'last_inactive_ts';
+
+  /// Reads and clears the persisted departure time.
+  Future<int?> _takeDeparture() async {
+    final prefs = await SharedPreferences.getInstance();
+    final value = prefs.getInt(_departureKey);
+    await prefs.remove(_departureKey);
+    return value;
+  }
+
+  /// Whether the time away from the app calls for a lock. A missing, future or
+  /// unreadable departure time counts as "unknown", which locks.
+  bool _awayLongEnough(int? departureMs) {
+    final seconds = autoLockSeconds;
+    if (seconds < 0) return true;
+    if (departureMs == null) return true;
+    final elapsed = DateTime.now()
+        .difference(DateTime.fromMillisecondsSinceEpoch(departureMs));
+    if (elapsed.isNegative) return true;
+    return elapsed.inSeconds >= seconds;
+  }
+
+  /// Applies the app lock when the process starts. A process that was
+  /// reclaimed in the background must not come back unlocked.
+  Future<void> _enforceColdStartLock() async {
+    int? departureMs;
+    try {
+      departureMs = await _takeDeparture();
+    } catch (_) {}
+    if (!_shouldAutoLock()) return;
+    if (_awayLongEnough(departureMs)) {
+      await lock(SecurityLockReason.autoLock);
     }
   }
 
   Future<void> _handleResumed() async {
     try {
+      final departureMs = await _takeDeparture();
+
       // Check if we're on an auth-related route that shouldn't trigger auto-lock
       final navigator = appNavigatorKey.currentState;
       if (navigator != null && navigator.mounted) {
@@ -165,26 +226,13 @@ class SecurityGateProvider extends ChangeNotifier
         }
       }
 
-      final prefs = await SharedPreferences.getInstance();
-      final lastInactiveMs = prefs.getInt('last_inactive_ts');
-      await prefs.remove('last_inactive_ts');
-
       await reloadSettings();
 
       if (!_shouldAutoLock()) return;
-      if (lastInactiveMs == null) return;
-
-      final elapsed = DateTime.now()
-          .difference(DateTime.fromMillisecondsSinceEpoch(lastInactiveMs));
-      if (autoLockSeconds < 0) {
-        // Immediate: any backgrounding locks.
-        await lock(SecurityLockReason.autoLock);
-        return;
-      }
-      if (autoLockSeconds == 0) return;
-      // A negative elapsed time means the clock was set back while the app was
-      // in the background; treat that as expired, never as "just left".
-      if (elapsed.isNegative || elapsed.inSeconds >= autoLockSeconds) {
+      // No recorded departure on a warm resume means the app never left the
+      // foreground (the first `resumed` of a launch); cold start handles that.
+      if (departureMs == null) return;
+      if (_awayLongEnough(departureMs)) {
         await lock(SecurityLockReason.autoLock);
       }
     } catch (e) {

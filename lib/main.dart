@@ -1562,6 +1562,7 @@ class _ArtKubusState extends State<ArtKubus> with WidgetsBindingObserver {
     collabProvider.handleAppForegroundChanged(isForeground);
     PublicFallbackService().setAppForeground(isForeground);
     if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.hidden ||
         state == AppLifecycleState.inactive) {
       securityGate.onAppLifecycleChanged(state);
     } else if (state == AppLifecycleState.resumed) {
