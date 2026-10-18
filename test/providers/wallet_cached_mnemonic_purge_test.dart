@@ -1,5 +1,6 @@
 import 'package:flutter/services.dart';
 import 'package:art_kubus/providers/wallet_provider.dart';
+import 'package:art_kubus/services/settings_service.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -16,6 +17,9 @@ class _Wallet extends WalletProvider {
 class _FakeSecureStorage {
   final Map<String, String> values = <String, String>{};
   int failingDeletes = 0;
+
+  /// Number of upcoming reads that throw; a large value makes reads fail.
+  int failingReads = 0;
   final List<String> deleteKeys = <String>[];
 
   void install() {
@@ -25,6 +29,10 @@ class _FakeSecureStorage {
       final key = args['key'] as String?;
       switch (call.method) {
         case 'read':
+          if (failingReads > 0) {
+            failingReads--;
+            throw PlatformException(code: 'unavailable', message: 'locked');
+          }
           return values[key];
         case 'write':
           values[key!] = args['value'] as String;
@@ -144,5 +152,80 @@ void main() {
     expect(prefs.getBool('pending_mnemonic_purge'), isTrue);
     expect(wallet.currentWalletAddress, isNull);
     expect(storage.values['cached_mnemonic'], 'phrase');
+  });
+
+  test('readCachedMnemonic returns null while a purge is pending and purges',
+      () async {
+    storage.values['cached_mnemonic'] = 'phrase';
+    storage.values['cached_mnemonic_ts'] = '1';
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('pending_mnemonic_purge', true);
+
+    expect(await wallet.readCachedMnemonic(), isNull);
+    expect(storage.values, isEmpty);
+    expect(prefs.getBool('pending_mnemonic_purge'), isNull);
+  });
+
+  test(
+      'readCachedMnemonic returns null and keeps the flag when the purge fails',
+      () async {
+    storage.values['cached_mnemonic'] = 'phrase';
+    storage.failingDeletes = 1000;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('pending_mnemonic_purge', true);
+
+    expect(await wallet.readCachedMnemonic(), isNull);
+    expect(prefs.getBool('pending_mnemonic_purge'), isTrue);
+    expect(storage.values['cached_mnemonic'], 'phrase');
+  });
+
+  test('readCachedMnemonic returns the phrase when no purge is pending',
+      () async {
+    storage.values['cached_mnemonic'] = 'phrase';
+
+    expect(await wallet.readCachedMnemonic(), 'phrase');
+  });
+
+  test('reset keeps a failed purge flag alive through prefs.clear', () async {
+    storage.values['cached_mnemonic'] = 'phrase';
+    storage.failingDeletes = 1000;
+    await wallet.disconnectWallet(preserveAuthenticatedWallet: false);
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('unrelated', 'x');
+
+    await SettingsService.clearPreferencesKeepingPendingPurgeForTesting(
+      walletProvider: wallet,
+    );
+
+    expect(prefs.getString('unrelated'), isNull);
+    expect(prefs.getBool('pending_mnemonic_purge'), isTrue);
+    expect(storage.values['cached_mnemonic'], 'phrase');
+  });
+
+  test('reset keeps the flag when the phrase survives but the flag was unset',
+      () async {
+    storage.values['cached_mnemonic'] = 'phrase';
+    storage.failingDeletes = 0;
+    final prefs = await SharedPreferences.getInstance();
+    // Simulate a read-back that fails: the phrase may still be present.
+    storage.failingReads = 1000;
+
+    await SettingsService.clearPreferencesKeepingPendingPurgeForTesting(
+      walletProvider: wallet,
+    );
+
+    expect(prefs.getBool('pending_mnemonic_purge'), isTrue);
+  });
+
+  test('reset sets no flag when the phrase is verifiably absent', () async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('unrelated', 'x');
+
+    await SettingsService.clearPreferencesKeepingPendingPurgeForTesting(
+      walletProvider: wallet,
+    );
+
+    expect(prefs.getString('unrelated'), isNull);
+    expect(prefs.getBool('pending_mnemonic_purge'), isNull);
   });
 }

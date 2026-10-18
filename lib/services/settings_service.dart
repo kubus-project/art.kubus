@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../config/config.dart';
@@ -213,10 +214,33 @@ class SettingsService {
       notificationProvider: notificationProvider,
       profileProvider: profileProvider,
     );
+    await _clearPreferencesKeepingPendingPurge(walletProvider: walletProvider);
     final prefs = await SharedPreferences.getInstance();
-    await prefs.clear();
     await OnboardingStateService.reset(prefs: prefs);
   }
+
+  /// Clears all preferences, but keeps a pending recovery-phrase purge alive
+  /// when the phrase may still be in secure storage. Without this, prefs.clear
+  /// would delete the flag and the next start could import the phrase.
+  static Future<void> _clearPreferencesKeepingPendingPurge({
+    required WalletProvider walletProvider,
+  }) async {
+    final prefs = await SharedPreferences.getInstance();
+    final keepPurge =
+        prefs.getBool(WalletProvider.pendingMnemonicPurgeKey) == true ||
+            await walletProvider.cachedMnemonicMayRemain();
+    await prefs.clear();
+    if (keepPurge) {
+      await prefs.setBool(WalletProvider.pendingMnemonicPurgeKey, true);
+    }
+  }
+
+  /// Test seam for the prefs-clearing step of [resetApp].
+  @visibleForTesting
+  static Future<void> clearPreferencesKeepingPendingPurgeForTesting({
+    required WalletProvider walletProvider,
+  }) =>
+      _clearPreferencesKeepingPendingPurge(walletProvider: walletProvider);
 }
 
 class SettingsState {
