@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { spawnSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import test from 'node:test';
@@ -89,10 +90,11 @@ test('master provenance permits same-repository dev and hotfix only', () => {
 });
 
 test('aggregate accepts success/skipped and rejects failure, cancellation, or missing jobs', () => {
-  validateJobResults({ a: { result: 'success' }, b: { result: 'skipped' } }, ['a', 'b']);
-  assert.throws(() => validateJobResults({ a: { result: 'failure' } }, ['a']));
-  assert.throws(() => validateJobResults({ a: { result: 'cancelled' } }, ['a']));
-  assert.throws(() => validateJobResults({}, ['a']));
+  const full = { tier: 'full' };
+  validateJobResults({ a: { result: 'success' }, b: { result: 'skipped' } }, ['a', 'b'], full);
+  assert.throws(() => validateJobResults({ a: { result: 'failure' } }, ['a'], full));
+  assert.throws(() => validateJobResults({ a: { result: 'cancelled' } }, ['a'], full));
+  assert.throws(() => validateJobResults({}, ['a'], full));
 });
 
 test('PR validation is deployment-secret-free and has a stable aggregate', () => {
@@ -448,12 +450,37 @@ test('tier: master PRs and manual runs are always full, draft or not', () => {
   assert.equal(resolveTier({ eventName: 'workflow_dispatch', baseRef: '', payloadDraft: undefined, liveDraft: undefined }).tier, 'full');
 });
 
+test('tier: any base other than dev fails closed to the full tier, even a draft with a readable state', () => {
+  for (const baseRef of ['release/0.8.4', 'feature/x', '', undefined]) {
+    const result = resolveTier({ eventName: 'pull_request', baseRef, payloadDraft: true, liveDraft: true });
+    assert.equal(result.tier, 'full', `base ${baseRef} must run full`);
+  }
+  assert.equal(resolveTier({ eventName: 'pull_request', baseRef: 'dev', payloadDraft: true, liveDraft: true }).tier, 'draft');
+});
+
+test('tier: the aggregator refuses a draft-tier result for any base other than dev', () => {
+  assert.throws(() => assertDraftTierStillValid({ tier: 'draft', baseRef: 'release/0.8.4', liveDraft: true }), /only validate a PR into dev/);
+  assert.throws(() => assertDraftTierStillValid({ tier: 'draft', baseRef: undefined, liveDraft: true }), /only validate a PR into dev/);
+});
+
+test('aggregate: a missing tier is an error, never treated as full', () => {
+  const needs = { flutter_quality: { result: 'success' } };
+  assert.throws(() => validateJobResults(needs, ['flutter_quality'], {}), /Unknown validation tier: missing/);
+  const script = resolve(dirname(fileURLToPath(import.meta.url)), 'validate_job_results.mjs');
+  const run = spawnSync(process.execPath, [script], {
+    env: { ...process.env, NEEDS_JSON: JSON.stringify(needs), EXPECTED_JOBS: 'flutter_quality', TIER: '', GITHUB_STEP_SUMMARY: '', GITHUB_OUTPUT: '' },
+    encoding: 'utf8',
+  });
+  assert.notEqual(run.status, 0);
+  assert.match(run.stderr, /Unknown validation tier: missing/);
+});
+
 test('tier: the aggregator refuses a draft-tier result unless the PR is still confirmed draft into dev', () => {
   assertDraftTierStillValid({ tier: 'draft', baseRef: 'dev', liveDraft: true });
   assertDraftTierStillValid({ tier: 'full', baseRef: 'master', liveDraft: false });
   assert.throws(() => assertDraftTierStillValid({ tier: 'draft', baseRef: 'dev', liveDraft: false }), /ready for review/);
   assert.throws(() => assertDraftTierStillValid({ tier: 'draft', baseRef: 'dev', liveDraft: null }), /could not be confirmed/);
-  assert.throws(() => assertDraftTierStillValid({ tier: 'draft', baseRef: 'master', liveDraft: true }), /master/);
+  assert.throws(() => assertDraftTierStillValid({ tier: 'draft', baseRef: 'master', liveDraft: true }), /only validate a PR into dev/);
   assert.throws(() => assertDraftTierStillValid({ tier: 'bogus', baseRef: 'dev', liveDraft: true }), /Unknown validation tier/);
 });
 

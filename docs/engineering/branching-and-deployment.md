@@ -114,6 +114,7 @@ Enforcement:
 - The tier is decided in `changes` by `scripts/ci/pr_validation_tier.mjs`, which reads the PR's **live** draft state from the API at run start, not the event payload alone. A stale payload therefore cannot downgrade a PR that is now ready (it runs full), and an unreadable state fails closed to full.
 - The aggregator re-reads the live state after all jobs finish and fails when a draft-tier run finds the PR ready for review, so a run that started while the PR was a draft cannot go green for a ready PR. If this race is hit, the `ready_for_review` run (or a new push) supplies the verdict; re-run the failed aggregator only after that run is green.
 - Draft PRs cannot be merged. Readiness always fires `ready_for_review`, which starts a full-tier run that cancels any in-flight draft-tier run.
+- There is a window of seconds between a green draft-tier run and the `ready_for_review` run registering its check, during which the old green check remains on the same SHA. This is not absolute protection: the real merge gate remains required up-to-date branches, review, and the full-tier run on the same head.
 - Concurrency stays one group per PR with cancellation. Because the tier follows live state, a full-tier run is only ever superseded by a newer run of the same PR (a newer push or `ready_for_review`), never by a stale draft-tier run. `converted_to_draft` is intentionally not a trigger.
 
 CI failures must be investigated. Do not bypass a required check, convert failure to success, or weaken validation to make a branch mergeable.

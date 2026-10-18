@@ -28,7 +28,7 @@ export function describeSkippedJobs(needs, expectedJobs, tier) {
 // `tier` is the validation tier the run executed. `fullRun` means the run was meant to execute
 // every job (master PRs and manual runs): there a skipped job is not proof of anything, so every
 // declared job must have succeeded. Otherwise a skip is legitimate (path filter or draft tier).
-export function validateJobResults(needs, expectedJobs, { tier = 'full', fullRun = false } = {}) {
+export function validateJobResults(needs, expectedJobs, { tier, fullRun = false } = {}) {
   if (tier !== 'full' && tier !== 'draft') throw new Error(`Unknown validation tier: ${tier || 'missing'}`);
   const requireExecution = tier === 'full' && fullRun;
   const failures = [];
@@ -48,9 +48,10 @@ async function main() {
   const env = process.env;
   const needs = JSON.parse(env.NEEDS_JSON || '{}');
   const expected = (env.EXPECTED_JOBS || '').split(',').map((value) => value.trim()).filter(Boolean);
-  const tier = env.TIER || 'full';
+  // No default: a missing tier means the tier job did not run, and must not be treated as full.
+  const tier = env.TIER || '';
   const fullRun = env.FULL_RUN === 'true';
-  const scope = tier === 'draft' ? DRAFT_SCOPE : FULL_SCOPE;
+  const scope = tier === 'draft' ? DRAFT_SCOPE : tier === 'full' ? FULL_SCOPE : 'no tier reported';
   try {
     validateJobResults(needs, expected, { tier, fullRun });
     if (tier === 'draft') {

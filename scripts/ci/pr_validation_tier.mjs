@@ -33,6 +33,8 @@ export function resolveTier({ eventName, baseRef, payloadDraft, liveDraft }) {
   const full = (reason) => ({ tier: 'full', platformBuilds: true, scope: FULL_SCOPE, reason });
   if (eventName !== 'pull_request') return full('not a pull_request event');
   if (baseRef === 'master') return full('PRs into master are release candidates and always run the full tier');
+  // Only dev is eligible for the draft tier; any other base fails closed.
+  if (baseRef !== 'dev') return full(`PR base ${baseRef || 'unknown'} is not dev, failing closed to the full tier`);
   if (live === null) return full('live draft state unreadable, failing closed to the full tier');
   if (live === false) {
     return full(payload === true ? 'event payload said draft but the PR is now ready for review' : 'PR is ready for review');
@@ -50,7 +52,7 @@ export function resolveTier({ eventName, baseRef, payloadDraft, liveDraft }) {
 export function assertDraftTierStillValid({ tier, baseRef, liveDraft }) {
   if (tier === 'full') return;
   if (tier !== 'draft') throw new Error(`Unknown validation tier: ${tier || 'missing'}`);
-  if (baseRef === 'master') throw new Error('A draft-tier result cannot validate a PR into master.');
+  if (baseRef !== 'dev') throw new Error(`A draft-tier result can only validate a PR into dev, not ${baseRef || 'an unknown base'}.`);
   const live = parseDraft(liveDraft);
   if (live === null) throw new Error('The draft-tier result could not be confirmed: the PR draft state is unreadable.');
   if (live === false) {
