@@ -204,22 +204,26 @@ class PinAuthService {
 
   Future<PinVerifyResult> _verifyPin(String pin) async {
     final remainingLockoutSeconds = await _lockoutRemaining();
-    final stored = await _store.read(pinHashKey);
-
-    final base = verifyPinAgainstStoredHash(
-      pin,
-      stored,
-      remainingLockoutSeconds: remainingLockoutSeconds,
-    );
-
-    if (base.outcome == PinVerifyOutcome.lockedOut) {
+    if (remainingLockoutSeconds > 0) {
       return PinVerifyResult(
         PinVerifyOutcome.lockedOut,
-        remainingLockoutSeconds: base.remainingLockoutSeconds,
+        remainingLockoutSeconds: remainingLockoutSeconds,
         remainingAttempts: 0,
         maxAttempts: _policy.maxAttempts,
       );
     }
+
+    final stored = await _store.read(pinHashKey);
+
+    // A guess against a recognised hash is counted BEFORE the hash is
+    // compared, so the count (and any lockout it triggers) never depends on a
+    // write that happens after the compare. A match clears it again below.
+    final raw = (stored ?? '').trim();
+    final _FailedAttemptPlan? plan = raw.isNotEmpty && _isRecognizedHash(raw)
+        ? await _recordFailedAttempt()
+        : null;
+
+    final base = verifyPinAgainstStoredHash(pin, stored);
 
     if (base.isSuccess) {
       await _clearCounters();
@@ -233,7 +237,7 @@ class PinAuthService {
       );
     }
 
-    if (base.outcome != PinVerifyOutcome.incorrect) {
+    if (base.outcome != PinVerifyOutcome.incorrect || plan == null) {
       return PinVerifyResult(
         base.outcome,
         remainingLockoutSeconds: base.remainingLockoutSeconds,
@@ -243,19 +247,44 @@ class PinAuthService {
       );
     }
 
-    // Incorrect PIN: increment failed attempts.
+    if (!plan.lockout) {
+      return PinVerifyResult(
+        PinVerifyOutcome.incorrect,
+        remainingAttempts: plan.remainingAttempts,
+        maxAttempts: _policy.maxAttempts,
+      );
+    }
+
+    final remaining = await _lockoutRemaining();
+    return PinVerifyResult(
+      PinVerifyOutcome.lockedOut,
+      remainingLockoutSeconds: remaining,
+      remainingAttempts: 0,
+      maxAttempts: _policy.maxAttempts,
+    );
+  }
+
+  static final RegExp _legacyHashPattern = RegExp(r'^[0-9a-f]{64}$');
+
+  /// Hash formats [verifyPinAgainstStoredHash] can compare. Anything else is
+  /// an error, not a wrong guess, so it is never counted.
+  static bool _isRecognizedHash(String raw) =>
+      PinHashV1.tryParse(raw) != null || _legacyHashPattern.hasMatch(raw);
+
+  /// Persists one failed attempt. Writes the count, and at the limit the
+  /// escalated stage and lockout, exactly as a wrong guess always did.
+  Future<_FailedAttemptPlan> _recordFailedAttempt() async {
     final failedStr = await _store.read(failedAttemptsKey);
     var failed = int.tryParse(failedStr ?? '0') ?? 0;
     failed += 1;
 
-    final remainingAttempts =
-        (_policy.maxAttempts - failed).clamp(0, _policy.maxAttempts);
     if (failed < _policy.maxAttempts) {
       await _store.write(failedAttemptsKey, failed.toString());
-      return PinVerifyResult(
-        PinVerifyOutcome.incorrect,
+      final remainingAttempts =
+          (_policy.maxAttempts - failed).clamp(0, _policy.maxAttempts).toInt();
+      return _FailedAttemptPlan(
+        lockout: false,
         remainingAttempts: remainingAttempts,
-        maxAttempts: _policy.maxAttempts,
       );
     }
 
@@ -271,13 +300,17 @@ class PinAuthService {
     await _store.write(failedAttemptsKey, (_policy.maxAttempts - 1).toString());
     await _store.write(lockoutStageKey, nextStage.toString());
     await _writeLockout(nowMs, nowMs + duration.inMilliseconds);
-
-    final remaining = await _lockoutRemaining();
-    return PinVerifyResult(
-      PinVerifyOutcome.lockedOut,
-      remainingLockoutSeconds: remaining,
-      remainingAttempts: 0,
-      maxAttempts: _policy.maxAttempts,
-    );
+    return const _FailedAttemptPlan(lockout: true, remainingAttempts: 0);
   }
+}
+
+/// Outcome of counting one guess before its hash is compared.
+class _FailedAttemptPlan {
+  const _FailedAttemptPlan({
+    required this.lockout,
+    required this.remainingAttempts,
+  });
+
+  final bool lockout;
+  final int remainingAttempts;
 }
