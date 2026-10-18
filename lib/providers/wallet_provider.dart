@@ -500,27 +500,67 @@ class WalletProvider extends ChangeNotifier {
             value: DateTime.now().millisecondsSinceEpoch.toString(),
           )
           .timeout(_secureStorageOpTimeout);
+      // A newly cached phrase overwrites any phrase a pending purge targeted.
+      await _setPendingMnemonicPurge(false);
     } catch (e) {
       _walletLog('failed to cache mnemonic: $e');
     }
   }
 
-  Future<void> clearCachedMnemonic() async {
+  /// Deletes the cached recovery phrase and its timestamp. Returns true only
+  /// when both deletes completed and a read-back shows the phrase absent. One
+  /// retry is made after a failure. Callers that must not leave a phrase behind
+  /// persist a pending purge when this returns false.
+  Future<bool> clearCachedMnemonic() async {
+    for (var attempt = 1; attempt <= 2; attempt++) {
+      try {
+        await _secureStorage.delete(key: 'cached_mnemonic');
+        await _secureStorage.delete(key: 'cached_mnemonic_ts');
+        final phrase = await _secureStorage.read(key: 'cached_mnemonic');
+        final ts = await _secureStorage.read(key: 'cached_mnemonic_ts');
+        if (phrase == null && ts == null) return true;
+        _walletLog(
+            'cached mnemonic still present after delete (attempt $attempt)');
+      } catch (e) {
+        _walletLog('failed to clear cached mnemonic (attempt $attempt): $e');
+      }
+    }
+    return false;
+  }
+
+  static const String _pendingMnemonicPurgeKey = 'pending_mnemonic_purge';
+
+  /// Persists or clears the "purge the cached phrase at next startup" flag.
+  Future<void> _setPendingMnemonicPurge(bool pending) async {
     try {
-      await _secureStorage
-          .delete(key: 'cached_mnemonic')
-          .timeout(_secureStorageOpTimeout);
-      await _secureStorage
-          .delete(key: 'cached_mnemonic_ts')
-          .timeout(_secureStorageOpTimeout);
+      final prefs = await SharedPreferences.getInstance();
+      if (pending) {
+        await prefs.setBool(_pendingMnemonicPurgeKey, true);
+      } else {
+        await prefs.remove(_pendingMnemonicPurgeKey);
+      }
     } catch (e) {
-      _walletLog('failed to clear cached mnemonic: $e');
+      _walletLog('failed to update pending mnemonic purge flag: $e');
     }
   }
+
+  /// Test seam for the startup cached-wallet path.
+  @visibleForTesting
+  Future<void> loadCachedWalletForTesting() => _loadCachedWallet();
 
   Future<void> _loadCachedWallet() async {
     try {
       _walletLog('_loadCachedWallet: starting cached wallet check');
+      final prefs = await SharedPreferences.getInstance();
+      if (prefs.getBool(_pendingMnemonicPurgeKey) == true) {
+        // A logout could not delete the phrase. Purge it now and never import it.
+        final purged = await clearCachedMnemonic();
+        await _setPendingMnemonicPurge(!purged);
+        _walletLog(purged
+            ? 'pending mnemonic purge completed; not importing'
+            : 'pending mnemonic purge still failing; not importing');
+        return;
+      }
       final mnemonic = await _secureStorage
           .read(key: 'cached_mnemonic')
           .timeout(_secureStorageOpTimeout);
@@ -4016,7 +4056,9 @@ class WalletProvider extends ChangeNotifier {
     _clearEncryptedWalletBackupState();
     // Clear cached mnemonic on explicit disconnect for security
     try {
-      await clearCachedMnemonic();
+      final purged = await clearCachedMnemonic();
+      // If the phrase could not be deleted, purge it at next startup instead.
+      await _setPendingMnemonicPurge(!purged);
     } catch (_) {}
     // Cancel any pending import retry timers
     try {
