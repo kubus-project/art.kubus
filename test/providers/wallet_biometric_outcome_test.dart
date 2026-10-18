@@ -1,3 +1,5 @@
+// ignore_for_file: depend_on_referenced_packages
+
 import 'package:art_kubus/providers/wallet_provider.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';

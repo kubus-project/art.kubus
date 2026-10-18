@@ -181,8 +181,9 @@ class _SecurityLockOverlayState extends State<_SecurityLockOverlay> {
 
   String _biometricErrorMessage(
       BiometricAuthOutcome outcome, AppLocalizations l10n) {
-    if (outcome == BiometricAuthOutcome.notAvailable)
+    if (outcome == BiometricAuthOutcome.notAvailable) {
       return l10n.settingsBiometricUnavailableToast;
+    }
     if (outcome == BiometricAuthOutcome.lockedOut ||
         outcome == BiometricAuthOutcome.permanentlyLockedOut) {
       return l10n.settingsBiometricFailedToast;
