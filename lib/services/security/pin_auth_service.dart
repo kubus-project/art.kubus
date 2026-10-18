@@ -76,14 +76,22 @@ class PinAuthService {
     required PinKeyValueStore store,
     PinLockoutPolicy policy = const PinLockoutPolicy(),
     DateTime Function()? clock,
+    Duration operationTimeout = defaultOperationTimeout,
   })  : _store = store,
         _policy = policy,
-        _clock = clock ?? DateTime.now;
+        _clock = clock ?? DateTime.now,
+        _operationTimeout = operationTimeout;
+
+  /// Upper bound for one queued storage action. A hung secure-storage call
+  /// fails that action with a [TimeoutException] (callers treat it as an error,
+  /// never as "PIN correct" or "no PIN") instead of blocking every later one.
+  static const Duration defaultOperationTimeout = Duration(seconds: 10);
 
   final DateTime Function() _clock;
 
   final PinKeyValueStore _store;
   final PinLockoutPolicy _policy;
+  final Duration _operationTimeout;
 
   static const String pinHashKey = 'app_pin_hash';
   static const String failedAttemptsKey = 'app_pin_failed_attempts';
@@ -142,11 +150,13 @@ class PinAuthService {
   /// by every instance because they all front the same storage.
   static Future<void> _tail = Future<void>.value();
 
-  static Future<T> _exclusive<T>(Future<T> Function() action) {
+  Future<T> _exclusive<T>(Future<T> Function() action) {
     final previous = _tail;
     final done = Completer<void>();
     _tail = done.future;
-    return previous.then((_) => action()).whenComplete(done.complete);
+    return previous
+        .then((_) => action().timeout(_operationTimeout))
+        .whenComplete(done.complete);
   }
 
   Future<int> getLockoutRemainingSeconds() => _exclusive(_lockoutRemaining);

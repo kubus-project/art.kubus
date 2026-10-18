@@ -151,11 +151,12 @@ class PinManagement {
   final PinGatePort _gate;
   final PinSettingsStore _settings;
 
-  /// Tail of the queue that serializes every public mutating operation, so a
-  /// first-PIN rollback can never interleave with another change.
-  Future<void> _queue = Future<void>.value();
+  /// Tail of the queue that serializes every public mutating operation. It is
+  /// shared by all instances (screens create their own), so a first-PIN
+  /// rollback can never interleave with a change made from another screen.
+  static Future<void> _queue = Future<void>.value();
 
-  Future<PinManagementResult> _serialized(
+  static Future<PinManagementResult> _serialized(
       Future<PinManagementResult> Function() operation) {
     final run = _queue.then((_) => operation());
     _queue = run.then<void>((_) {}, onError: (_) {});

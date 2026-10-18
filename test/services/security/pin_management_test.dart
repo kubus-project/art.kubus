@@ -340,14 +340,22 @@ void main() {
         () async {
       final storage = _SlowStorage();
       final r = _rig();
-      final management = PinManagement.withPorts(
+      // Two instances, as two screens would create them.
+      final first = PinManagement.withPorts(
         storage: storage,
         gate: r.gate,
         settings: r.settings,
       );
-      final first = management.setOrReplacePin('1111', '1111');
-      final second = management.setOrReplacePin('2222', '2222');
-      final results = await Future.wait([first, second]);
+      final second = PinManagement.withPorts(
+        storage: storage,
+        gate: r.gate,
+        settings: r.settings,
+      );
+      final pending = [
+        first.setOrReplacePin('1111', '1111'),
+        second.setOrReplacePin('2222', '2222'),
+      ];
+      final results = await Future.wait(pending);
       expect(results[0].outcome, PinManagementOutcome.storageFailed);
       expect(results[1].isSuccess, isTrue);
       expect(storage.pin, '2222');
