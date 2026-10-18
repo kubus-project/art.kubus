@@ -1,7 +1,88 @@
+import 'package:flutter/foundation.dart';
+
 import '../utils/creator_display_format.dart';
 import '../utils/user_identity_display.dart';
 import '../utils/wallet_utils.dart';
 import 'promotion.dart';
+
+/// The artist / institution / verified statements a source makes about one
+/// account. `false` means "not stated", never "known not to have the role", so
+/// merging two sources can only add marks, and a mark is never inferred from a
+/// name, a handle, a wallet or the age of an account.
+@immutable
+class ProfileIdentityRoles {
+  const ProfileIdentityRoles({
+    this.isArtist = false,
+    this.isInstitution = false,
+    this.isVerified = false,
+  });
+
+  static const ProfileIdentityRoles none = ProfileIdentityRoles();
+
+  final bool isArtist;
+  final bool isInstitution;
+  final bool isVerified;
+
+  bool get hasRole => isArtist || isInstitution;
+  bool get any => hasRole || isVerified;
+
+  ProfileIdentityRoles merge(ProfileIdentityRoles other) =>
+      ProfileIdentityRoles(
+        isArtist: isArtist || other.isArtist,
+        isInstitution: isInstitution || other.isInstitution,
+        isVerified: isVerified || other.isVerified,
+      );
+
+  /// What an author object states, plus the author-prefixed flags a post or
+  /// comment envelope may carry beside it. Bare `isArtist` on the envelope is
+  /// deliberately ignored: it would not describe the author.
+  factory ProfileIdentityRoles.fromAuthorPayload(
+    Map<String, dynamic> author, {
+    Map<String, dynamic> envelope = const <String, dynamic>{},
+  }) {
+    final rolesRaw = author['roles'];
+    final roles = rolesRaw is Map
+        ? Map<String, dynamic>.from(rolesRaw)
+        : const <String, dynamic>{};
+    return ProfileIdentityRoles(
+      isArtist: _statedFlag(roles['artist']) ||
+          _statedFlag(author['isArtist']) ||
+          _statedFlag(author['is_artist']) ||
+          _statedFlag(envelope['authorIsArtist']) ||
+          _statedFlag(envelope['author_is_artist']),
+      isInstitution: _statedFlag(roles['institution']) ||
+          _statedFlag(author['isInstitution']) ||
+          _statedFlag(author['is_institution']) ||
+          _statedFlag(envelope['authorIsInstitution']) ||
+          _statedFlag(envelope['author_is_institution']),
+      isVerified: _statedFlag(author['isVerified']) ||
+          _statedFlag(author['is_verified']) ||
+          _statedFlag(envelope['authorIsVerified']) ||
+          _statedFlag(envelope['author_is_verified']),
+    );
+  }
+
+  /// What a profile row states about itself (bare keys are the account's own).
+  factory ProfileIdentityRoles.fromProfileMap(Map<String, dynamic> raw) =>
+      ProfileIdentityRoles.fromAuthorPayload(raw);
+
+  @override
+  bool operator ==(Object other) =>
+      other is ProfileIdentityRoles &&
+      other.isArtist == isArtist &&
+      other.isInstitution == isInstitution &&
+      other.isVerified == isVerified;
+
+  @override
+  int get hashCode => Object.hash(isArtist, isInstitution, isVerified);
+}
+
+bool _statedFlag(dynamic value) {
+  if (value is bool) return value;
+  if (value is num) return value != 0;
+  final text = value?.toString().trim().toLowerCase();
+  return text == 'true' || text == '1' || text == 'yes';
+}
 
 class ProfileIdentityData {
   final String label;
@@ -116,6 +197,7 @@ class ProfileIdentityData {
           userId,
         ]) ??
         '';
+    final roles = ProfileIdentityRoles.fromProfileMap(raw);
     final rawLabel = identity.name.trim();
     final label = rawLabel.isEmpty || rawLabel.toLowerCase() == 'unknown artist'
         ? fallbackLabel
@@ -127,6 +209,9 @@ class ProfileIdentityData {
       userId: userId,
       walletSeed: walletSeed.trim().isEmpty ? label : walletSeed.trim(),
       avatarUrl: _pickAvatarUrl(raw),
+      isArtist: roles.isArtist,
+      isInstitution: roles.isInstitution,
+      isVerified: roles.isVerified,
     );
   }
 
@@ -137,6 +222,7 @@ class ProfileIdentityData {
     String? userId,
     String? wallet,
     String? avatarUrl,
+    ProfileIdentityRoles roles = ProfileIdentityRoles.none,
   }) {
     final formatted = CreatorDisplayFormat.format(
       fallbackLabel: fallbackLabel,
@@ -159,6 +245,9 @@ class ProfileIdentityData {
       userId: normalizedUserId.isEmpty ? null : normalizedUserId,
       walletSeed: walletSeed.isEmpty ? formatted.primary : walletSeed,
       avatarUrl: _normalizeText(avatarUrl),
+      isArtist: roles.isArtist,
+      isInstitution: roles.isInstitution,
+      isVerified: roles.isVerified,
     );
   }
 
@@ -231,6 +320,7 @@ class ProfileIdentityData {
         'profileImage',
         'profile_image',
       ]),
+      roles: ProfileIdentityRoles.fromAuthorPayload(nested, envelope: json),
     );
   }
 
@@ -289,6 +379,7 @@ class ProfileIdentityData {
         userId: userId,
         wallet: item.profileTargetId ?? rawId,
         avatarUrl: _pickAvatarUrl(raw) ?? profileImageAsMark,
+        roles: ProfileIdentityRoles.fromProfileMap(raw),
       );
     }
 
@@ -301,6 +392,9 @@ class ProfileIdentityData {
         userId: profileTargetId,
         wallet: profileTargetId ?? item.id,
         avatarUrl: _pickLogoOrAvatarUrl(raw) ?? imageAsMark,
+        // The rail item *is* an institution entity: its type states the role.
+        roles: ProfileIdentityRoles.fromProfileMap(raw)
+            .merge(const ProfileIdentityRoles(isInstitution: true)),
       );
     }
 

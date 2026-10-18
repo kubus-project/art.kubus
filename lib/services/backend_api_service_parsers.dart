@@ -263,6 +263,7 @@ CommunityLikeUser _backendApiCommunityLikeUserFromBackendJson(
     username: username,
     avatarUrl: MediaUrlResolver.resolve(avatarCandidate),
     likedAt: likedAt,
+    roles: ProfileIdentityRoles.fromProfileMap(json),
   );
 }
 
