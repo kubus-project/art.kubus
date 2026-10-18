@@ -7,7 +7,9 @@ correction (#307) are merged. The release PR #306 (`dev` to `master`, merge comm
 `master` `2f93f64e`; the protected production deployment (run 39080160967) built that exact
 SHA, passed local and production smoke and left rollback unused. `master` was reconciled back
 into `dev` by #311 (merge commit, ancestry only). Tag `v0.8.3` points at `2f93f64e`; its
-mobile release run needs the protected signing approvals. **Not yet verified:** authenticated
+mobile release run (39119513841) signed the Android APK and AAB and published the GitHub
+Release `v0.8.3` with those two files and `SHA256SUMS`. The iOS IPA job was skipped (the
+signing gate is not enabled), so 0.8.3 ships no IPA. **Not yet verified:** authenticated
 artwork Save on a live environment (local browser evidence only; owner acceptance owed) and
 physical-device acceptance. Legacy portrait video sizing on phones stays a 0.8.4 defect.**
 Maturity stays 0.8.x-alpha. The version bump is its own commit (see "Version bump"),
@@ -306,8 +308,9 @@ by this document.
    protected production deployment. Afterwards reconcile `master` back into `dev`
    (`git rev-list --left-right --cherry-pick --count origin/master...origin/dev` must
    read `0` for the first number).
-5. **Android and iOS** release builds compile in CI without signing. Signed builds,
-   store submission and physical-device acceptance are separate and not done.
+5. **Android and iOS** release builds compile in CI without signing. The `v0.8.3` tag
+   produced signed Android files only; a signed iOS IPA, store submission and
+   physical-device acceptance are separate and not done.
 
 ### Rollback
 
