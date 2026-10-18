@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:art_kubus/models/wallet.dart';
 import 'package:art_kubus/providers/wallet_provider.dart';
 import 'package:art_kubus/services/solana_wallet_service.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -85,6 +86,23 @@ void main() {
     );
     await provider.ensureWalletData();
     expect(service.balanceCalls, 2);
+  });
+
+  test('a remembered read-only wallet restores without any RPC', () async {
+    FlutterSecureStorage.setMockInitialValues(<String, String>{});
+    SharedPreferences.setMockInitialValues(<String, Object>{
+      'wallet_address': _wallet,
+    });
+    final restoring = WalletProvider(
+      solanaWalletService: service,
+      deferInit: true,
+    );
+    await restoring.initialize();
+    expect(restoring.currentWalletAddress, _wallet);
+    expect(service.balanceCalls, 0, reason: 'startup must not sync');
+
+    await restoring.ensureWalletData();
+    expect(service.balanceCalls, 1, reason: 'a wallet screen loads it');
   });
 
   test('a failed sync is not treated as fresh', () async {

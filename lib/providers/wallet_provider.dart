@@ -651,9 +651,12 @@ class WalletProvider extends ChangeNotifier {
                 prefs.getString('wallet'))
             ?.trim();
         if (storedAddress != null && storedAddress.isNotEmpty) {
+          // Restore the remembered address only. Balances, tokens and history
+          // load when a wallet screen asks (ensureWalletData), so startup no
+          // longer waits on four Solana RPCs and a profile sync for an
+          // identity that cannot sign anything.
           _currentWalletAddress = storedAddress;
           _apiService.setPreferredWalletAddress(storedAddress);
-          await _loadData();
         }
       } catch (e) {
         _walletLog('fallback restore failed: $e');
