@@ -122,6 +122,11 @@ class CommunityPostMediaCarousel extends StatefulWidget {
 
   final bool compact;
 
+  /// Poster probes started since the last reset. Tests read it to prove that a
+  /// layout which cannot show a poster never downloads one.
+  @visibleForTesting
+  static int posterProbesStarted = 0;
+
   @override
   State<CommunityPostMediaCarousel> createState() =>
       _CommunityPostMediaCarouselState();
@@ -141,6 +146,14 @@ class _CommunityPostMediaCarouselState
   bool _hovering = false;
   late Map<String, double> _videoAspects;
 
+  /// Only a single video in a non-compact card adapts its stage to a learned
+  /// shape. Compact previews and multi-item carousels use fixed layouts, so
+  /// they never probe posters.
+  bool get _adaptsToVideoShape =>
+      !widget.compact &&
+      widget.mediaUrls.length == 1 &&
+      communityMediaUrlIsVideo(widget.mediaUrls.first);
+
   @override
   void initState() {
     super.initState();
@@ -159,6 +172,10 @@ class _CommunityPostMediaCarouselState
       _probePosters();
       _index = math.min(_index, math.max(0, widget.mediaUrls.length - 1));
       _probeImages();
+    } else if (oldWidget.compact != widget.compact) {
+      // Switching layout changes whether a poster can be shown at all.
+      _disposePosterProbes();
+      _probePosters();
     }
   }
 
@@ -207,6 +224,7 @@ class _CommunityPostMediaCarouselState
   }
 
   void _probePosters() {
+    if (!_adaptsToVideoShape) return;
     for (final url in widget.mediaUrls.where(communityMediaUrlIsVideo)) {
       if (_videoAspectSources[url] != _VideoAspectSource.fallback) continue;
       final reference = communityMediaPosterReference(url);
@@ -214,6 +232,7 @@ class _CommunityPostMediaCarouselState
           ? null
           : MediaUrlResolver.resolveDisplayUrl(reference);
       if (resolved == null) continue;
+      CommunityPostMediaCarousel.posterProbesStarted++;
       _posterProbes[url] = _NaturalSizeProbe(
         NetworkImage(resolved),
         onSize: (aspect) =>
@@ -260,6 +279,10 @@ class _CommunityPostMediaCarouselState
       probe.dispose();
     }
     _probes.clear();
+    _disposePosterProbes();
+  }
+
+  void _disposePosterProbes() {
     for (final probe in _posterProbes.values) {
       probe.dispose();
     }
@@ -371,8 +394,7 @@ class _CommunityPostMediaCarouselState
     // Every carousel (images, videos or both) keeps one 4:3 stage for all of
     // its pages, so swiping never moves the feed; a clip that does not fit
     // that stage is contained and can be opened fullscreen from its controls.
-    final singleVideo =
-        !multiple && communityMediaUrlIsVideo(widget.mediaUrls.first);
+    final singleVideo = !multiple && _adaptsToVideoShape;
     final stageAspect = kCommunityMediaStageAspect;
 
     Widget sizedStage(Widget child) {

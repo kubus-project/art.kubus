@@ -219,6 +219,70 @@ void main() {
     });
   });
 
+  group('poster probing', () {
+    final videos = <String>[
+      communityMediaReferenceForPost(
+        'https://example.test/uploads/one.mp4',
+        isVideo: true,
+        posterUrl: 'https://example.test/posters/one.jpg',
+      ),
+      communityMediaReferenceForPost(
+        'https://example.test/uploads/two.mp4',
+        isVideo: true,
+        posterUrl: 'https://example.test/posters/two.jpg',
+      ),
+    ];
+
+    setUp(() {
+      CommunityPostMediaCarousel.posterProbesStarted = 0;
+      CommunityVideoAutoplay.enabledOverride = false;
+    });
+    tearDown(() => CommunityVideoAutoplay.enabledOverride = null);
+
+    testWidgets('a multi-item carousel downloads no poster', (tester) async {
+      await tester.pumpWidget(_harness(
+        CommunityPostMediaCarousel(mediaUrls: videos),
+      ));
+      await tester.pump();
+
+      expect(CommunityPostMediaCarousel.posterProbesStarted, 0);
+    });
+
+    testWidgets('a compact card downloads no poster', (tester) async {
+      await tester.pumpWidget(_harness(
+        CommunityPostMediaCarousel(mediaUrls: videos, compact: true),
+      ));
+      await tester.pump();
+
+      expect(CommunityPostMediaCarousel.posterProbesStarted, 0);
+    });
+
+    testWidgets('a single non-compact video probes its poster once',
+        (tester) async {
+      await tester.pumpWidget(_harness(
+        CommunityPostMediaCarousel(mediaUrls: [videos.first]),
+      ));
+      await tester.pump();
+
+      expect(CommunityPostMediaCarousel.posterProbesStarted, 1);
+    });
+
+    testWidgets('switching a single video from compact probes only when shown',
+        (tester) async {
+      await tester.pumpWidget(_harness(
+        CommunityPostMediaCarousel(mediaUrls: [videos.first], compact: true),
+      ));
+      await tester.pump();
+      expect(CommunityPostMediaCarousel.posterProbesStarted, 0);
+
+      await tester.pumpWidget(_harness(
+        CommunityPostMediaCarousel(mediaUrls: [videos.first]),
+      ));
+      await tester.pump();
+      expect(CommunityPostMediaCarousel.posterProbesStarted, 1);
+    });
+  });
+
   group('adaptive caption', () {
     const style = TextStyle(fontSize: 14, height: 1.5);
     // Ahem (the test font) draws each glyph one font-size wide, so at 360 px and
