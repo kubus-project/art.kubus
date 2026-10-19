@@ -115,6 +115,18 @@ Scope rows worked this session:
   everything else staged `needs_review`; `test:public-art` 41/41 and now in CI.
 - **#95** backend: all checks green incl. the PostgreSQL contracts job. **#330** draft green.
 - **#327** marked ready (`63279355`): full tier running.
+- **#327 full tier**: `PR validation required` PASS at `63279355` (Android, iOS, release web +
+  smoke, guardrails); a duplicate Flutter job still pending = known UNSTABLE rollup quirk.
+  Ready for the owner's merge.
+- **#98** now `978a865`: `scripts/seedStreetArt.js` inserts NEW records hidden + `needs_review`
+  (when the column exists); re-runs never change existing visibility; `SEED_PUBLISH_IMPORTS=true`
+  is the explicit owner-approved publish mode; PG 6/6 in CI.
+- **#99** now `da57561`: approving a hidden `needs_review` record publishes it; undo hides it
+  again (PG 17/17). Together with #98 this is CD-15 for new imports: staged records are not
+  public, so they produce no public/SEO pages until approved. Legacy `unreviewed` records keep
+  today's contract (no mass de-index without an owner decision).
+- **admin.kubus #17** (`feat/084-review-deck` `07dafbd`): Review Deck; lint/typecheck/317
+  tests/build PASS; read-only Haiku review P2s fixed. Staging journey owed (owner env).
 - Disposable local DB for backend contracts: docker container `kubus-pg-084`
   (postgis/postgis:15-3.4, 127.0.0.1:55432, user artkubus). Remove when done.
 
