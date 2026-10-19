@@ -101,6 +101,14 @@ class ProfilePackageController extends ChangeNotifier {
 
   /// Full documented total, or null when the backend did not honour the scope.
   int? get documentedArtworksTotal => _documentedArtworksTotal;
+
+  /// The "Public art documented" tile: the documented set the profile lists,
+  /// or, on a backend without the authorship contract, the public-art markers
+  /// the profile added.
+  int get publicArtDocumentedCount =>
+      _documentedArtworksTotal ??
+      _package?.publicStats['documentedArtworks'] ??
+      _publicStreetArtAddedCount;
   List<Map<String, dynamic>> get artistCollections =>
       List<Map<String, dynamic>>.unmodifiable(_artistCollections);
   List<Map<String, dynamic>> get artistEvents =>
@@ -357,13 +365,23 @@ class ProfilePackageController extends ChangeNotifier {
           'followers',
           'following',
           'publicStreetArtAdded',
-          'authoredArtworks',
-          'documentedArtworks',
         ],
         scope: 'public',
         forceRefresh: forceRefresh,
       );
-      final counters = snapshot?.counters ?? const <String, int>{};
+      // Separate request: a backend without the authorship contract rejects
+      // unknown metrics, which must not cost the counters above.
+      final authorship = await statsProvider.ensureSnapshot(
+        entityType: 'user',
+        entityId: currentUser.id,
+        metrics: const <String>['authoredArtworks', 'documentedArtworks'],
+        scope: 'public',
+        forceRefresh: forceRefresh,
+      );
+      final counters = <String, int>{
+        ...?snapshot?.counters,
+        ...?authorship?.counters,
+      };
       final patch = <String, int>{};
       if (counters.containsKey('posts')) {
         patch['posts'] = counters['posts'] ?? 0;

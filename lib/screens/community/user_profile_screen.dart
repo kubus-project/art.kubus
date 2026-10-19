@@ -169,7 +169,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
       _posts = _profileController.posts;
       _postsLoading = _profileController.postsLoading;
       _postsError = _profileController.postsError;
-      _publicStreetArtAddedCount = _profileController.publicStreetArtAddedCount;
+      _publicStreetArtAddedCount = _profileController.publicArtDocumentedCount;
       _artistArtworks = _profileController.artistArtworks;
       _documentedArtworks = _profileController.documentedArtworks;
       _authoredArtworksTotal = _profileController.authoredArtworksTotal;

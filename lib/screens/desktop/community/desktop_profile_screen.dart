@@ -1234,6 +1234,13 @@ class _ProfileScreenState extends State<ProfileScreen>
           'publicStreetArtAdded'
         ];
         const privateMetrics = <String>['artworksDiscovered'];
+        // Requested on their own: a backend without the authorship
+        // contract rejects unknown metrics, which must not cost the
+        // other counters.
+        const authorshipMetrics = <String>[
+          'authoredArtworks',
+          'documentedArtworks',
+        ];
 
         if (wallet.isNotEmpty) {
           statsProvider.ensureSnapshot(
@@ -1247,6 +1254,12 @@ class _ProfileScreenState extends State<ProfileScreen>
             entityId: wallet,
             metrics: privateMetrics,
             scope: 'private',
+          );
+          statsProvider.ensureSnapshot(
+            entityType: 'user',
+            entityId: wallet,
+            metrics: authorshipMetrics,
+            scope: 'public',
           );
         }
 
@@ -1271,6 +1284,24 @@ class _ProfileScreenState extends State<ProfileScreen>
             publicSnapshot?.counters ?? const <String, int>{};
         final privateCounters =
             privateSnapshot?.counters ?? const <String, int>{};
+        final authorshipSnapshot = wallet.isEmpty
+            ? null
+            : statsProvider.getSnapshot(
+                entityType: 'user',
+                entityId: wallet,
+                metrics: authorshipMetrics,
+                scope: 'public',
+              );
+        final authorshipCounters =
+            authorshipSnapshot?.counters ?? const <String, int>{};
+        final authorshipLoading = wallet.isNotEmpty &&
+            statsProvider.isSnapshotLoading(
+              entityType: 'user',
+              entityId: wallet,
+              metrics: authorshipMetrics,
+              scope: 'public',
+            ) &&
+            authorshipSnapshot == null;
 
         final publicLoading = wallet.isNotEmpty &&
             statsProvider.isSnapshotLoading(
@@ -1291,19 +1322,20 @@ class _ProfileScreenState extends State<ProfileScreen>
 
         final discoveriesValue =
             privateCounters['artworksDiscovered'] ?? stats?.artworksDiscovered;
-        final createdValue = publicCounters['authoredArtworks'] ??
+        final createdValue = authorshipCounters['authoredArtworks'] ??
             publicCounters['artworks'] ??
             stats?.artworksCreated;
         final nftsOwnedValue = publicCounters['nftsMinted'] ?? stats?.nftsOwned;
         final publicStreetArtAddedValue =
-            publicCounters['publicStreetArtAdded'];
+            authorshipCounters['documentedArtworks'] ??
+                publicCounters['publicStreetArtAdded'];
 
         final discoveriesLabel = privateLoading
             ? '\u2026'
             : discoveriesValue == null
                 ? '\u2014'
                 : _formatStatCount(discoveriesValue);
-        final createdLabel = publicLoading
+        final createdLabel = publicLoading || authorshipLoading
             ? '\u2026'
             : createdValue == null
                 ? '\u2014'
@@ -1313,7 +1345,7 @@ class _ProfileScreenState extends State<ProfileScreen>
             : nftsOwnedValue == null
                 ? '\u2014'
                 : _formatStatCount(nftsOwnedValue);
-        final publicStreetArtAddedLabel = publicLoading
+        final publicStreetArtAddedLabel = publicLoading || authorshipLoading
             ? '\u2026'
             : publicStreetArtAddedValue == null
                 ? '\u2014'

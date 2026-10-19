@@ -595,25 +595,39 @@ class ProfilePackageService {
   }
 
   static Future<Map<String, int>> _loadPublicStats(String walletAddress) async {
+    // Two requests: a backend without the authorship contract rejects the
+    // authorship metrics with 400, which must not cost the base counters.
+    final results = await Future.wait(<Future<Map<String, int>>>[
+      _loadPublicStatsFor(walletAddress, const <String>[
+        'posts',
+        'followers',
+        'following',
+        'publicStreetArtAdded',
+      ]),
+      _loadPublicStatsFor(walletAddress, const <String>[
+        'authoredArtworks',
+        'documentedArtworks',
+      ]),
+    ]);
+    return <String, int>{...results[0], ...results[1]};
+  }
+
+  static Future<Map<String, int>> _loadPublicStatsFor(
+    String walletAddress,
+    List<String> metrics,
+  ) async {
     try {
       final snapshot = await StatsApiService().fetchSnapshot(
         entityType: 'user',
         entityId: walletAddress,
-        metrics: const <String>[
-          'posts',
-          'followers',
-          'following',
-          'publicStreetArtAdded',
-          'authoredArtworks',
-          'documentedArtworks',
-        ],
+        metrics: metrics,
         scope: 'public',
         forceRefresh: true,
       );
       return Map<String, int>.from(snapshot.counters);
     } catch (e) {
       if (kDebugMode) {
-        debugPrint('ProfilePackageService._loadPublicStats: $e');
+        debugPrint('ProfilePackageService._loadPublicStats($metrics): $e');
       }
       return const <String, int>{};
     }

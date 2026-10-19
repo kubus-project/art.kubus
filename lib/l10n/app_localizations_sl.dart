@@ -13969,7 +13969,7 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get profilePerformancePublicStreetArtAddedTitle =>
-      'Dodana javna umetnost';
+      'Dokumentirana javna umetnost';
 
   @override
   String get profileMenuSavedItemsTitle => 'Shranjene vsebine';

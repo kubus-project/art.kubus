@@ -13826,7 +13826,8 @@ class AppLocalizationsEn extends AppLocalizations {
       'Followers / following';
 
   @override
-  String get profilePerformancePublicStreetArtAddedTitle => 'Added Public Art';
+  String get profilePerformancePublicStreetArtAddedTitle =>
+      'Public art documented';
 
   @override
   String get profileMenuSavedItemsTitle => 'Saved items';
