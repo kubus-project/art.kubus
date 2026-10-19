@@ -2290,6 +2290,9 @@
     }
   },
   "userProfileArtworksTitle": "Artworks",
+  "profilePublicArtAddedTitle": "Public art added",
+  "profilePublicArtAddedSubtitle": "Artworks this profile documented on the map. They are credited to their own artists.",
+  "profileAuthoredArtworksCountLabel": "Authored artworks",
   "userProfileCollectionsTitle": "Collections",
   "userProfileEventsTitle": "Events",
   "userProfileEventsSubtitleFeaturing": "Upcoming experiences featuring {name}.",

@@ -22,6 +22,7 @@ import '../../providers/stats_provider.dart';
 import '../../providers/saved_items_provider.dart';
 import '../../providers/community_interactions_provider.dart';
 import '../../services/backend_api_service.dart';
+import '../../services/profile_package_service.dart';
 import '../../services/share/share_service.dart';
 import '../../services/share/share_types.dart';
 import '../../utils/media_url_resolver.dart';
@@ -84,6 +85,7 @@ class _ProfileScreenState extends State<ProfileScreen>
   bool _artistDataLoading = false;
   bool _artistDataLoaded = false;
   List<Map<String, dynamic>> _artistArtworks = [];
+  List<Map<String, dynamic>> _documentedArtworks = [];
   List<Map<String, dynamic>> _artistCollections = [];
   List<Map<String, dynamic>> _artistEvents = [];
 
@@ -991,13 +993,17 @@ class _ProfileScreenState extends State<ProfileScreen>
       _artistDataLoading = true;
       if (force) {
         _artistArtworks = [];
+        _documentedArtworks = [];
         _artistCollections = [];
         _artistEvents = [];
       }
     });
     try {
       final api = BackendApiService();
-      final artworks = await api.getArtistArtworks(walletAddress, limit: 6);
+      final sections = await ProfilePackageService.loadProfileArtworkSections(
+        walletAddress,
+        limit: 6,
+      );
       final collections = await api.getCollections(
         walletAddress: walletAddress,
         limit: 6,
@@ -1011,7 +1017,8 @@ class _ProfileScreenState extends State<ProfileScreen>
 
       if (!mounted) return;
       setState(() {
-        _artistArtworks = artworks;
+        _artistArtworks = sections.authored;
+        _documentedArtworks = sections.documented;
         _artistCollections = collections;
         _artistEvents = filteredEvents;
         _artistDataLoaded = true;
@@ -1096,6 +1103,19 @@ class _ProfileScreenState extends State<ProfileScreen>
             emptyIcon: Icons.image_outlined,
             builder: _buildArtworkCard,
           ),
+          if (_documentedArtworks.isNotEmpty) ...[
+            const SizedBox(height: 24),
+            _buildShowcaseSection(
+              title: AppLocalizations.of(context)!.profilePublicArtAddedTitle,
+              subtitle:
+                  AppLocalizations.of(context)!.profilePublicArtAddedSubtitle,
+              items: _documentedArtworks,
+              emptyLabel:
+                  AppLocalizations.of(context)!.profilePublicArtAddedSubtitle,
+              emptyIcon: Icons.image_outlined,
+              builder: _buildArtworkCard,
+            ),
+          ],
           const SizedBox(height: 24),
           _buildShowcaseSection(
             title: AppLocalizations.of(context)!.userProfileCollectionsTitle,
@@ -1165,6 +1185,7 @@ class _ProfileScreenState extends State<ProfileScreen>
 
   Widget _buildShowcaseSection({
     required String title,
+    String? subtitle,
     required List<Map<String, dynamic>> items,
     required Widget Function(Map<String, dynamic>) builder,
     required String emptyLabel,
@@ -1173,6 +1194,7 @@ class _ProfileScreenState extends State<ProfileScreen>
     final l10n = AppLocalizations.of(context)!;
     return SharedShowcaseSection<Map<String, dynamic>>(
       title: title,
+      subtitle: subtitle,
       items: items,
       itemBuilder: (context, item) => builder(item),
       isLoading: _artistDataLoading && !_artistDataLoaded,
@@ -1380,8 +1402,9 @@ class _ProfileScreenState extends State<ProfileScreen>
 
           final discoveriesValue = privateCounters['artworksDiscovered'] ??
               stats?.artworksDiscovered;
-          final createdValue =
-              publicCounters['artworks'] ?? stats?.artworksCreated;
+          final createdValue = publicCounters['authoredArtworks'] ??
+              publicCounters['artworks'] ??
+              stats?.artworksCreated;
           final nftsOwnedValue =
               publicCounters['nftsMinted'] ?? stats?.nftsOwned;
           final publicStreetArtAddedValue =

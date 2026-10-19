@@ -31,6 +31,29 @@ enum ProfilePackageCacheStatus {
 /// data. Extended packages contain posts and showcase data. UI/provider write
 /// paths should use ProfilePackageMutationTracker instead of calling cache
 /// invalidation or patch methods here directly.
+/// Authored and documented artwork sections of a creator profile.
+@immutable
+class ProfileArtworkSections {
+  const ProfileArtworkSections({
+    this.authored = const <Map<String, dynamic>>[],
+    this.documented = const <Map<String, dynamic>>[],
+    this.authoredTotal,
+    this.documentedTotal,
+  });
+
+  /// Artworks the profile authored; credited to this wallet.
+  final List<Map<String, dynamic>> authored;
+
+  /// Artworks this profile documented on the map; credited to their own artists.
+  final List<Map<String, dynamic>> documented;
+
+  /// Full authored total, or null when the backend did not honour the scope.
+  final int? authoredTotal;
+
+  /// Full documented total, or null when the backend did not honour the scope.
+  final int? documentedTotal;
+}
+
 class ProfilePackageService {
   ProfilePackageService._();
 
@@ -612,6 +635,51 @@ class ProfilePackageService {
     }
   }
 
+  /// Authored and documented artwork sections of a profile. Older backends
+  /// ignore `relationship` and answer with the legacy mixed list; that list is
+  /// kept as authored and documented stays empty so nothing is double-counted.
+  static Future<ProfileArtworkSections> loadProfileArtworkSections(
+    String walletAddress, {
+    int limit = 6,
+  }) async {
+    final api = BackendApiService();
+    final authoredFuture = api.getProfileArtworks(
+      walletAddress,
+      relationship: 'authored',
+      limit: limit,
+    );
+    // A documented-scope failure must not hide the authored showcase.
+    final documentedFuture = api
+        .getProfileArtworks(
+          walletAddress,
+          relationship: 'documented',
+          limit: limit,
+        )
+        .then<ProfileArtworksPage?>(
+          (page) => page,
+          onError: (_) => null,
+        );
+
+    final authored = await authoredFuture;
+    final documented = await documentedFuture;
+    final scopeHonoured = authored.relationshipHonoured;
+    final documentedHonoured =
+        scopeHonoured && documented != null && documented.relationshipHonoured;
+
+    return ProfileArtworkSections(
+      authored: authored.items
+          .map((item) => Map<String, dynamic>.from(item))
+          .toList(growable: false),
+      documented: documentedHonoured
+          ? documented.items
+              .map((item) => Map<String, dynamic>.from(item))
+              .toList(growable: false)
+          : const <Map<String, dynamic>>[],
+      authoredTotal: scopeHonoured ? authored.total : null,
+      documentedTotal: documentedHonoured ? documented.total : null,
+    );
+  }
+
   static Future<_ProfileShowcasePayload> _loadShowcase(
     User user,
     String walletAddress,
@@ -621,62 +689,30 @@ class ProfilePackageService {
 
     try {
       final api = BackendApiService();
-      final authoredFuture = api.getProfileArtworks(
-        walletAddress,
-        relationship: 'authored',
-        limit: 6,
-      );
-      // A documented-scope failure must not hide the authored showcase.
-      final documentedFuture = api
-          .getProfileArtworks(
-            walletAddress,
-            relationship: 'documented',
-            limit: 6,
-          )
-          .then<ProfileArtworksPage?>(
-            (page) => page,
-            onError: (_) => null,
-          );
       final collectionsFuture =
           api.getCollections(walletAddress: walletAddress, limit: 6);
       final eventsFuture = api.listEvents(limit: 100);
 
       final results = await Future.wait<dynamic>([
-        authoredFuture,
-        documentedFuture,
+        loadProfileArtworkSections(walletAddress, limit: 6),
         collectionsFuture,
         eventsFuture,
       ]);
 
-      final authored = results[0] as ProfileArtworksPage;
-      final documented = results[1] as ProfileArtworksPage?;
-      // Older backends ignore `relationship` and return the legacy mixed list
-      // for every scope. Keep that list as authored and never double-count it.
-      final scopeHonoured = authored.relationshipHonoured;
-      final documentedHonoured = scopeHonoured &&
-          documented != null &&
-          documented.relationshipHonoured;
-      final artworks = authored.items
-          .map((item) => Map<String, dynamic>.from(item))
-          .toList(growable: false);
-      final documentedArtworks = documentedHonoured
-          ? documented.items
-              .map((item) => Map<String, dynamic>.from(item))
-              .toList(growable: false)
-          : const <Map<String, dynamic>>[];
+      final sections = results[0] as ProfileArtworkSections;
 
-      final events = (results[3] as List<Map<String, dynamic>>)
+      final events = (results[2] as List<Map<String, dynamic>>)
           .where((event) => profileEventBelongsToWallet(event, walletAddress))
           .take(6)
           .map((event) => Map<String, dynamic>.from(event))
           .toList(growable: false);
 
       return _ProfileShowcasePayload(
-        artworks: artworks,
-        documentedArtworks: documentedArtworks,
-        authoredArtworksTotal: scopeHonoured ? authored.total : null,
-        documentedArtworksTotal: documentedHonoured ? documented.total : null,
-        collections: (results[2] as List<Map<String, dynamic>>)
+        artworks: sections.authored,
+        documentedArtworks: sections.documented,
+        authoredArtworksTotal: sections.authoredTotal,
+        documentedArtworksTotal: sections.documentedTotal,
+        collections: (results[1] as List<Map<String, dynamic>>)
             .map((item) => Map<String, dynamic>.from(item))
             .toList(growable: false),
         events: events,

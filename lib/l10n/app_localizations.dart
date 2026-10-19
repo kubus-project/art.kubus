@@ -10153,6 +10153,24 @@ abstract class AppLocalizations {
   /// **'Artworks'**
   String get userProfileArtworksTitle;
 
+  /// No description provided for @profilePublicArtAddedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Public art added'**
+  String get profilePublicArtAddedTitle;
+
+  /// No description provided for @profilePublicArtAddedSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Artworks this profile documented on the map. They are credited to their own artists.'**
+  String get profilePublicArtAddedSubtitle;
+
+  /// No description provided for @profileAuthoredArtworksCountLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Authored artworks'**
+  String get profileAuthoredArtworksCountLabel;
+
   /// No description provided for @userProfileCollectionsTitle.
   ///
   /// In en, this message translates to:

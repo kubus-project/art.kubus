@@ -5798,6 +5798,16 @@ class AppLocalizationsSl extends AppLocalizations {
   String get userProfileArtworksTitle => 'Umetnine';
 
   @override
+  String get profilePublicArtAddedTitle => 'Dodana javna umetnost';
+
+  @override
+  String get profilePublicArtAddedSubtitle =>
+      'Umetnine, ki jih je ta profil dodal na zemljevid. Pripisane so svojim avtorjem.';
+
+  @override
+  String get profileAuthoredArtworksCountLabel => 'Avtorska dela';
+
+  @override
   String get userProfileCollectionsTitle => 'Zbirke';
 
   @override

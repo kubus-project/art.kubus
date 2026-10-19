@@ -2237,6 +2237,9 @@
     }
   },
   "userProfileArtworksTitle": "Umetnine",
+  "profilePublicArtAddedTitle": "Dodana javna umetnost",
+  "profilePublicArtAddedSubtitle": "Umetnine, ki jih je ta profil dodal na zemljevid. Pripisane so svojim avtorjem.",
+  "profileAuthoredArtworksCountLabel": "Avtorska dela",
   "userProfileCollectionsTitle": "Zbirke",
   "userProfileEventsTitle": "Dogodki",
   "userProfileEventsSubtitleFeaturing": "Prihajajoče izkušnje z {name}.",

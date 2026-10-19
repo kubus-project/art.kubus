@@ -5747,6 +5747,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get userProfileArtworksTitle => 'Artworks';
 
   @override
+  String get profilePublicArtAddedTitle => 'Public art added';
+
+  @override
+  String get profilePublicArtAddedSubtitle =>
+      'Artworks this profile documented on the map. They are credited to their own artists.';
+
+  @override
+  String get profileAuthoredArtworksCountLabel => 'Authored artworks';
+
+  @override
   String get userProfileCollectionsTitle => 'Collections';
 
   @override
