@@ -718,6 +718,20 @@ extension _DesktopCommunityScreenStatePart6 on _DesktopCommunityScreenState {
     if (!canPost || !mounted) return;
 
     final l10n = AppLocalizations.of(context)!;
+    // Email-only accounts have no wallet; stop before any upload or request.
+    // The draft and media stay in the dialog.
+    if (await readCommunityPostingWallet() == null) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showKubusSnackBar(
+        SnackBar(
+          content: Text(l10n.communityConnectWalletFirstToast),
+          backgroundColor: Theme.of(context).colorScheme.error,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+    if (!mounted) return;
     final appModeProvider =
         Provider.of<AppModeProvider?>(context, listen: false);
     if (appModeProvider?.isIpfsFallbackMode ?? false) {
@@ -822,17 +836,19 @@ extension _DesktopCommunityScreenStatePart6 on _DesktopCommunityScreenState {
       }
     } catch (e) {
       if (mounted) {
+        final l10nError = AppLocalizations.of(context)!;
         ScaffoldMessenger.of(context).showKubusSnackBar(
           SnackBar(
-            content: Text(communityComposerFailureMessage(
-              AppLocalizations.of(context)!,
-              e,
-              unuploadedMediaCount: _composerMedia.hasFailedUploads
-                  ? _composerMedia.unuploadedCount
-                  : null,
-              fallback: AppLocalizations.of(context)!
-                  .desktopCommunityPostCreateFailedToast,
-            )),
+            content: Text(isCommunityWalletRequiredError(e)
+                ? l10nError.communityConnectWalletFirstToast
+                : communityComposerFailureMessage(
+                    l10nError,
+                    e,
+                    unuploadedMediaCount: _composerMedia.hasFailedUploads
+                        ? _composerMedia.unuploadedCount
+                        : null,
+                    fallback: l10nError.desktopCommunityPostCreateFailedToast,
+                  )),
             backgroundColor: Theme.of(context).colorScheme.error,
             behavior: SnackBarBehavior.floating,
           ),

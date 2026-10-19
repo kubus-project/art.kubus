@@ -287,6 +287,21 @@ extension _DesktopCommunityScreenStatePart5 on _DesktopCommunityScreenState {
       sourceScreen: 'desktop_community_screen',
     );
     if (!canPost || !mounted) return;
+    // Email-only accounts have no wallet; posting would only fail at the
+    // backend. Ask for a wallet up front, keeping the draft in the composer.
+    if (await readCommunityPostingWallet() == null) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showKubusSnackBar(
+        SnackBar(
+          content: Text(
+              AppLocalizations.of(context)!.communityConnectWalletFirstToast),
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: Theme.of(context).colorScheme.error,
+        ),
+      );
+      return;
+    }
+    if (!mounted) return;
     final appModeProvider =
         Provider.of<AppModeProvider?>(context, listen: false);
     if (appModeProvider?.isIpfsFallbackMode ?? false) {
