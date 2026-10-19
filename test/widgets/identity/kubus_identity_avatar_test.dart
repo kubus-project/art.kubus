@@ -1,14 +1,26 @@
+import 'dart:convert';
+
 import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:art_kubus/models/profile_identity_data.dart';
 import 'package:art_kubus/models/user.dart';
 import 'package:art_kubus/services/user_service.dart';
 import 'package:art_kubus/widgets/identity/kubus_identity_avatar.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:http/http.dart' as http;
+import 'package:http/testing.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+import 'package:art_kubus/services/backend_api_service.dart';
 
 const _badgeKey = ValueKey<String>('profile-avatar-role-badge');
 const _verifiedKey = ValueKey<String>('profile-avatar-verified');
+
+/// The secure-storage channel answers at once with nothing stored. Unmocked, the
+/// auth load behind the lookup's follow-state read leaves its 800 ms timeout pending.
+const _secureStorage =
+    MethodChannel('plugins.it_nomads.com/flutter_secure_storage');
 const _wallet = '7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU';
 
 Widget _app(
@@ -69,6 +81,70 @@ User _cachedUser({
     );
 
 void main() {
+  group("roles from the avatar's own profile lookup", () {
+    const profileId = '6f1c2b1e-4d3a-4b8e-9c7d-2a1b3c4d5e6f';
+    final api = BackendApiService();
+
+    setUp(() {
+      SharedPreferences.setMockInitialValues(<String, Object>{});
+      BackendApiService.disableHttpFailureDiagnosticsForTesting = true;
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(_secureStorage, (call) async => null);
+      api.setHttpClient(MockClient((request) async {
+        if (request.url.path == '/api/profiles/$profileId') {
+          // The profile is addressed by its UUID but states its wallet.
+          return http.Response(
+            jsonEncode(<String, dynamic>{
+              'id': profileId,
+              'walletAddress': _wallet,
+              'username': 'ana',
+              'displayName': 'Ana',
+              'roles': <String, dynamic>{'artist': true},
+            }),
+            200,
+            headers: <String, String>{'content-type': 'application/json'},
+          );
+        }
+        return http.Response('Not found', 404);
+      }));
+    });
+
+    tearDown(() async {
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(_secureStorage, null);
+      api.setHttpClient(
+          MockClient((_) async => http.Response('Not found', 404)));
+      BackendApiService.disableHttpFailureDiagnosticsForTesting = false;
+      await UserService.clearCache();
+    });
+
+    testWidgets(
+        'a UUID lookup whose user is cached under the wallet gains the roles '
+        'the payload omitted', (tester) async {
+      await tester.pumpWidget(_app(const KubusIdentityAvatar(
+        wallet: profileId,
+        radius: 22,
+        enableProfileNavigation: false,
+        fetchMissingAvatar: true,
+        allowFabricatedFallback: true,
+      )));
+      // Let the lookup complete, then rebuild with the resolved user.
+      for (var i = 0; i < 5 && find.byKey(_badgeKey).evaluate().isEmpty; i++) {
+        await tester.runAsync(
+            () => Future<void>.delayed(const Duration(milliseconds: 20)));
+        await tester.pump();
+      }
+      // The lookup cached the user under its wallet, not the UUID.
+      expect(UserService.getCachedUser(profileId), isNull);
+      expect(UserService.getCachedUser(_wallet)?.isArtist, isTrue);
+      expect(find.byKey(_badgeKey), findsOneWidget);
+      expect(find.byIcon(Icons.brush_rounded), findsOneWidget);
+      // Unmount and drain the lookup's pending timers before the test ends.
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump(const Duration(seconds: 1));
+    });
+  });
+
   group('roles from the profile cache (no network)', () {
     setUp(() {
       SharedPreferences.setMockInitialValues(<String, Object>{});

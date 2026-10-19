@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../l10n/app_localizations.dart';
 import '../../models/profile_identity_data.dart';
+import '../../models/user.dart';
 import '../../services/user_service.dart';
 import '../../utils/design_tokens.dart';
 import '../../utils/kubus_color_roles.dart';
@@ -255,9 +256,37 @@ class KubusIdentityAvatar extends StatefulWidget {
 }
 
 class _KubusIdentityAvatarState extends State<KubusIdentityAvatar> {
-  /// Roles of [KubusIdentityAvatar.wallet] in the profile cache. Read-only.
+  /// Roles of the profile the avatar's own lookup resolved. The lookup may
+  /// cache its user under a canonical wallet rather than [widget.wallet] (a
+  /// profile UUID, for one), so the returned user is the authority here.
+  ProfileIdentityRoles? _resolvedRoles;
+
+  @override
+  void didUpdateWidget(covariant KubusIdentityAvatar oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.wallet != widget.wallet) _resolvedRoles = null;
+  }
+
+  void _onProfileResolved(User? user) {
+    if (!mounted) return;
+    setState(() {
+      _resolvedRoles = user == null
+          ? null
+          : ProfileIdentityRoles(
+              isArtist: user.isArtist,
+              isInstitution: user.isInstitution,
+              isVerified: user.isVerified,
+            );
+    });
+  }
+
+  /// Roles of the profile this avatar shows: the resolved lookup when it
+  /// returned a user, otherwise [KubusIdentityAvatar.wallet] in the profile
+  /// cache. Read-only.
   ProfileIdentityRoles _cachedRoles() {
     if (!widget.resolveCachedRoles) return ProfileIdentityRoles.none;
+    final resolved = _resolvedRoles;
+    if (resolved != null) return resolved;
     final raw = widget.wallet.trim();
     if (raw.isEmpty) return ProfileIdentityRoles.none;
     final user = UserService.getCachedUser(raw) ??
@@ -292,12 +321,8 @@ class _KubusIdentityAvatarState extends State<KubusIdentityAvatar> {
       borderWidth: widget.borderWidth,
       borderColor: widget.borderColor,
       cornerRadiusFactor: widget.cornerRadiusFactor,
-      // The avatar's own lookup fills the profile cache; re-read it then.
-      onProfileResolved: widget.resolveCachedRoles
-          ? (_) {
-              if (mounted) setState(() {});
-            }
-          : null,
+      // The avatar's own lookup resolves the profile; take its roles.
+      onProfileResolved: widget.resolveCachedRoles ? _onProfileResolved : null,
     );
     final badge = KubusAvatarRoleBadge(
       avatarRadius: widget.radius,

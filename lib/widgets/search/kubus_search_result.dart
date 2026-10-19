@@ -126,7 +126,11 @@ class KubusSearchResult {
         KubusSearchResultKind.profile =>
           ProfileIdentityRoles.fromAuthorPayload(data, envelope: data),
         KubusSearchResultKind.post => ProfileIdentityRoles.fromAuthorPayload(
-            const <String, dynamic>{},
+            // The nested author object, when the payload carries one, states
+            // its roles; the envelope keeps the author-prefixed flags.
+            data['author'] is Map
+                ? Map<String, dynamic>.from(data['author'] as Map)
+                : const <String, dynamic>{},
             envelope: data,
           ),
         _ => ProfileIdentityRoles.none,
