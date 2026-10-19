@@ -5,6 +5,7 @@ The canonical branch and release model is documented in [`engineering/branching-
 ## Trust boundaries
 
 - `pr-validation.yml` runs unprivileged validation for PRs into `dev` and release-candidate PRs into `master`. It never references web deployment, Basic Auth, or mobile-signing secrets.
+  Draft PRs into `dev` get a reduced draft tier (no Android, iOS, release web build or browser smoke); ready-for-review PRs and every PR into `master` get the full tier, and a draft-tier result is never merge evidence (see the CI tiers section of the branching document).
 - `deploy-development.yml` accepts only the exact current `dev` SHA and enters `development-web`.
 - `release-production.yml` accepts only the exact current `master` SHA and enters protected `production-web`.
 - `mobile-release.yml` accepts a `v*` tag push, or a manual run dispatched from `master` that names an existing `v*` tag; either way it builds that tag's commit, which must be contained by `master`. Every release tag builds Android **and** iOS. Signing occurs only inside `android-release` or `ios-release`; with no Apple signing configured, the iOS package is an explicitly unsigned IPA built without secrets.
