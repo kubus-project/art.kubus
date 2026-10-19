@@ -150,3 +150,30 @@ no remote copy on 2026-10-18 (video, badges, a11y, dialogs, map, candidate);
 |---|---|---|---|
 | `art.kubus-backend` | `master` only | `b2dfef54` | **#93** draft `78df86a` bounded Orbit reads (WS-D); **#94** draft `01ffd59` (`fix/084-passkey-challenge-atomic`, G:/kubus-build-084/backend-passkey): atomic single-use challenges incl. wallet sign-in, forward-only sign count, PRF results stripped at any depth, purpose binding, registrant checked before consume; 14 suites / 115 tests, eslint clean; independent review 0 P0/P1, 2 P2 fixed. Needs Redis >= 6.2 |
 | `admin.kubus` | `master` | `bbabc713` | none |
+
+## Session 4 (2026-10-19 evening, Opus coordinator, "Complete Release Orchestration" brief)
+
+Baseline: app `dev` `9309b1ff` (#327 merged), backend `master` `c4115594` (#95 squash), admin
+`master` `bbabc713`.
+
+| WS | Repo | Branch / PR | Head | Status | Tests | Merge eligibility | Next |
+|---|---|---|---|---|---|---|---|
+| CD-05 SEO | backend | #96 | `daec86c` | merge of master: #95 squash tree == old `ba16f3a`, conflicts kept branch side, merge commit has zero tree change | PG 8 suites (68), parity, bootstrap, migration contract PASS; lint; test:ci 2039 pass + 1 auth timeout (known bcrypt-12 5 s timeout under load, also on master; CI green) | MERGEABLE, CI deterministic green, PG job pending | ready + merge after #99 order check |
+| CD-08 editorial | backend | #99 | `99a8754` | same zero-tree merge | PG 8 suites (79), parity, bootstrap (99 migrations, 137 tables), test:ci 2103 pass, lint | MERGEABLE | ready |
+| CD-10 import | backend | #98 | `12f8c36` | merge of master, CI yml union (both PG steps, both path sets) | PG 68, test:ci 2040 pass (idle rerun), public-art 41/41 | MERGEABLE | ready |
+| CD-07 audit | backend | #97 | `44e24c9` | standby target + in-session recovery guard + forced read-only + timeouts (`e8...` commit before merge) | fixture 21 cases / 19 checks PASS; guard verified locally (non-standby refused, write -> 25006) | READY (full CI running) | prod run BLOCKED_OWNER (classifier: Production Reads) |
+| CD-04 profile | app | #331 | `359224cd` | tile "Public art documented" / SL "Dokumentirana javna umetnost"; tile counts the documented set; owner screens now request authoredArtworks (were silently showing wallet-owned count); authorship metrics separate request (pre-0.8.4 backend 400s unknown metrics and wiped visitor counters) | gate: lock, format, analyze fatal, custom_lint, ratchet PASS; 190 tests | draft, CI pending | ready after green |
+| CD-12/13 institutions | backend | `feat/084-institution-identity` (stacked on #99), worktree `G:/kubus-build-084/backend-institutions` | `e46e270` | migration 109 + design doc (coordinator), snapshots + editorial institutions (Haiku) | parity, bootstrap 142 tables, editorial unit 70 + PG 18 | local only | public read visibility (Haiku, running), then claims service/routes |
+| candidate | backend | `integration/084-backend-candidate` (local, `G:/kubus-build-084/backend-candidate`) | `b68911c` | master + #96 + #99 + #98 + #97 + #93 + #94, union-resolved CI/package conflicts | not yet | disposable | staging backend |
+
+Frontend A3: `dev` merged locally into video `8392b714`, badges `13d52d2c`, dialogs `3baf9f49`,
+map `9a3e7170`, email-session `1ac5233b`, perf `6b7d5d61`; pairwise merge-tree of all nine
+0.8.4 frontend branches is conflict-free (any merge order works). Gates running.
+
+Production observations (2026-10-19 ~21:00, read-only, recorded for the owner, not acted on):
+Home `artkubus-backend` reports `unhealthy`; `artkubus-orbitdb` restart loop; Home standby
+`pg_is_in_recovery()=t`, `transaction_read_only=on`, but `now() - pg_last_xact_replay_timestamp()`
+= 624087 s (~7.2 days). The follow-up WAL receiver / pg_stat_replication read was DENIED by the
+classifier (Production Reads), so stalled replication vs. idle replay is unverified. If stalled, a
+failover would lose ~7 days. OWNER ACTION: check `pg_stat_wal_receiver` on Home and
+`pg_stat_replication` on Oracle.
