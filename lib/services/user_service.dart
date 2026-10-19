@@ -1838,11 +1838,11 @@ class UserService {
                 postsCount: 0,
                 isFollowing:
                     profileIsFollowing || followingSet.contains(wallet),
-                isVerified: profile['isVerified'] ?? false,
-                isArtist:
-                    profile['isArtist'] == true || profile['is_artist'] == true,
-                isInstitution: profile['isInstitution'] == true ||
-                    profile['is_institution'] == true,
+                isVerified:
+                    ProfileIdentityRoles.fromProfileMap(profile).isVerified,
+                isArtist: ProfileIdentityRoles.fromProfileMap(profile).isArtist,
+                isInstitution:
+                    ProfileIdentityRoles.fromProfileMap(profile).isInstitution,
                 showAchievements: _extractShowAchievements(profile),
                 joinedDate: profile['createdAt'] != null
                     ? 'Joined ${DateTime.parse(profile['createdAt']).month}/${DateTime.parse(profile['createdAt']).year}'
@@ -2030,11 +2030,11 @@ class UserService {
               followingCount: followingCount,
               postsCount: 0,
               isFollowing: profileIsFollowing || followingSet.contains(wallet),
-              isVerified: profile['isVerified'] ?? false,
-              isArtist:
-                  profile['isArtist'] == true || profile['is_artist'] == true,
-              isInstitution: profile['isInstitution'] == true ||
-                  profile['is_institution'] == true,
+              isVerified:
+                  ProfileIdentityRoles.fromProfileMap(profile).isVerified,
+              isArtist: ProfileIdentityRoles.fromProfileMap(profile).isArtist,
+              isInstitution:
+                  ProfileIdentityRoles.fromProfileMap(profile).isInstitution,
               showAchievements: _extractShowAchievements(profile),
               joinedDate: profile['createdAt'] != null
                   ? 'Joined ${DateTime.parse(profile['createdAt']).month}/${DateTime.parse(profile['createdAt']).year}'
