@@ -187,6 +187,30 @@
 
 Workstream K (startup perf) has no matrix rows. Owner decisions (class REQUIRES_OWNER_DECISION or owner): FE268-3, FE272-2, A-301-6, B-14, B-16, B-25, B-26; owner decisions attached to MISSING rows: B-01, B-02, B-10.
 
+## Addendum 2026-10-19: cultural data, authorship and moderation (workstream CD)
+
+Source: the owner's "Cultural Data, Authorship and Moderation Integration" addendum. Execution
+order follows its section 10. Design record for CD-01..CD-05:
+`G:/kubus-build-084/authorship-spec.md` (to be committed with the backend PR).
+
+| ID | Requirement | Severity | Class | Repo(s) | State / evidence | Release decision |
+|---|---|---|---|---|---|---|
+| CD-01 | Profile portfolio lists only authored works; documented public art is a separate relationship (data contract, not a Flutter filter) | P0 | MISSING | backend, app | Traced: `GET /api/profiles/:wallet/artworks` selects by `wallet_address` (profiles.js:1830). Backend branch `fix/084-artwork-authorship-scopes` in progress | 0.8.4 must |
+| CD-02 | Explicit, multi-author attribution model (linked profile or external credit, source, self-declared vs verified, evidence, review state) without inferring from wallet, importer, photographer or name | P0 | MISSING | backend | Additive `artwork_attributions` (migration 107), no backfill; legacy self-declared rule reused from the SEO repository | 0.8.4 must |
+| CD-03 | Relationship-aware query (`authored`/`documented`/`managed`), legacy default kept, counts = filtered items, private/draft never leak, cache partitioned | P0 | MISSING | backend | Spec ready; also fixes `total` ignoring `status` | 0.8.4 must |
+| CD-04 | Profile UI: Authored artworks / Public art added (/ Contributions where supported), EN/SL, mobile + desktop, owner + visitor; subject picker keeps managed records | P0 | MISSING | app | After CD-03 | 0.8.4 must |
+| CD-05 | Counts and SEO agree with the relationship model (stats `authoredArtworks` / `documentedArtworks`; SEO authored count includes explicit attributions) | P0 | MISSING | backend, app | Stats in CD-03 PR; SEO alignment in a separate PR | 0.8.4 must |
+| CD-06 | Contributions scope (metadata/photo/research contributions) | P2 | MISSING | backend, app | No contribution records exist yet; deferred until a contributions model exists | 0.8.4 should |
+| CD-07 | Read-only stratified cultural data audit (sources, categories, attribution gaps, media, licence, coordinates, duplicates, non-art, quality scores), reproducible, with candidate IDs and confidence | P1 | MISSING | backend (scripts) | Not started; needs read-only production DB access (owner) | 0.8.4 must (audit only) |
+| CD-08 | Additive editorial state (`unreviewed`..`archived`) + structured reasons, auditable reversible transitions, legacy compatibility policy, new imports staged | P1 | MISSING | backend, admin | Existing `migration:contract:editorial` CI gate to be inspected first | 0.8.4 must |
+| CD-09 | Artwork vs marker moderation independence; visibility propagation (API, map, search, snapshots, Orbit/IPFS, SEO) | P1 | MISSING | backend | Not started | 0.8.4 must |
+| CD-10 | Import exclusion policy: replace subject-based rejection with classification/provenance/legal/editorial evaluation; fixtures both ways | P1 | MISSING | backend (scripts/open-public-art) | Not started | 0.8.4 must |
+| CD-11 | Visual Moderation Studio: Review Deck, Map Audit, Data Inspector; one real staging journey with persistence, permissions, undo, public visibility | P1/P2 | MISSING | admin, backend | Not started; staging journey needs owner-authorised environment | 0.8.4 should |
+| CD-12 | Institution canonical identity + source reconciliation, small pilot dataset | P2 | MISSING | backend, admin | Not started; continue docs/INSTITUTION_EDITORIAL_LIFECYCLE.md | 0.8.4 should |
+| CD-13 | Institution claiming workflow (evidence, admin approval, revocation, audit), feature-gated | P2 | MISSING | backend, admin, app | Not started; public activation is owner-gated | 0.8.4 should (flag off) |
+| CD-14 | Street-art ingestion improvements, editorial staging before publication, licensing preserved | P2 | MISSING | backend (scripts) | Not started | 0.8.4 should |
+| CD-15 | SEO/public distribution independence of classification, review, visibility, index eligibility, authorship, claim status; unreviewed external records not indexable | P1/P2 | MISSING | backend | Not started; reuse profile/search indexing policies | 0.8.4 must for CD-01 parts |
+
 ## Spot-check changes on origin/dev 2190782e
 
 MISSING, PARTIAL or REGRESSION rows whose status changed in this pass:

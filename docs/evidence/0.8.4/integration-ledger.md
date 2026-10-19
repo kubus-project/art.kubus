@@ -30,6 +30,74 @@ owner-accepted, released. A blank cell means "not yet".
 Local merges of `origin/dev` `2190782e` into every branch above were clean
 (2026-10-18); none is pushed yet.
 
+## Session 2026-10-19 (3): drafts pushed on the cheap tier
+
+`origin/dev` `c53ab80e` (#322 squash-merged by the owner). `origin/dev` merged into every
+branch below with no conflicts; the merge touches only CI files (`.github/workflows`,
+`scripts/ci`, two docs), no `lib/` or `test/` file, so the pre-push local validation recorded
+above still applies to the feature content. Cross-branch overlap: only
+`lib/screens/desktop/components/desktop_navigation.dart` (badges + a11y); a merge-tree of
+the two is conflict-free.
+
+Draft tier verified on #325 (run on `d807cbd6`): Flutter quality, guardrails, provenance,
+Apache contract and surface resolution ran and passed; Android, iOS, release web + browser
+smoke, backend contract and docs jobs were skipped; the aggregate reported only
+`PR validation (draft tier, not merge evidence)`; no `PR validation required` context exists.
+
+| WS | PR | PR head | Local validation | CI tier / result | Review | Next |
+|---|---|---|---|---|---|---|
+| A video | #325 draft | `d807cbd6` | as above (`0cdc9432`) | draft / green | coordinator read: learn-once order fallback < poster < player, 3 % tolerance, eased only on the single-video stage, jump under reduced motion; no findings | Firefox QA on integrated candidate |
+| B badges | #326 draft | `73f90e89` | as above (`ef3f27be`) | draft / pending | Sonnet: 0 P0/P1; 3 P2 verified (role inferred from author `role`/`type` substrings; `??` precedence lets `roles.artist:false` hide `isArtist:true`; profile cache parses `== true` and `isVerified ?? false` can throw) -> fix in progress (Haiku) | push fix, re-run draft |
+| H a11y | #327 draft | `63279355` | as above (`0900e878`) | draft / pending | coordinator read: labels + Tooltip + Semantics, hit area unchanged; P3: unread count not in the bell label | |
+| H dialogs | #328 draft | `72bdb6b3` | as above (`edda7c92`) | draft / pending | coordinator read: `showKubusDialog` keeps root navigator + barrier dismiss; no findings | browser back/escape + artwork Save check on candidate |
+| E map | #329 draft | `9e5215fa` | as above (`0ade69d4`) | draft / pending | harness only | re-run on candidate |
+| K startup | #312 draft | `9b589b10` | 2026-10-19 @`9b589b10`: format (11 files), analyze --fatal-infos --fatal-warnings, custom_lint, ratchet PASS; wallet provider/screens/session/link tests 63 pass | draft / pending | | D4 open items |
+
+Scope rows worked this session:
+
+- **B-20** (P1, desktop email session shows Sign in): root cause verified at
+  `desktop_shell.dart:607-610`: profile hydration runs only with an auth wallet
+  (`loadProfile(authWallet)`); an email session without a wallet never hydrates, so
+  `ProfileProvider.isSignedIn` stays false and the rail shows Sign in and guest items. The
+  session loader `ProfileProvider.loadAuthenticatedProfile()` (`getMyProfile`) already exists.
+  Branch `fix/084-desktop-email-session` (worktree `G:/kubus-build-084/email-session`, from
+  `c53ab80e`), fix in progress (Haiku).
+- **B-18** (P1 like continuation): the backend `POST /community/posts/:id/like` is idempotent
+  (`likeCommunityPost` returns `created`; achievement and notification side effects run only
+  when `created === true` and carry idempotency keys). A duplicate POST after reload is
+  therefore a wasted request, not a data defect. Client race (scout, not verified): the done
+  marker is persisted only after the POST returns (`pending_action_provider.dart:186-200`), and
+  `_executedKeys` is in memory. "Mark sent before POST" was rejected because it can lose a like.
+  The user-visible half (Firefox shows not liked) needs a browser reproduction; suspect a stale
+  interactions refresh (`community_interactions_provider.dart:228-244`). Proposed severity: the
+  duplicate P3, the Firefox display P2 until reproduced.
+
+### Later in session 3
+
+- Draft CI: #325-#329 all green on the draft tier. #326 re-pushed `f05dd550` with the Sonnet
+  P2 fixes (`262c57c9` roles only from stated flags, one parser for posts and the profile
+  cache; `f05dd550` username/search lookups), green. #312 `9b589b10`: one failure in
+  `test/screens/community/feed_like_settlement_test.dart` (a real socket_io WebSocket close
+  left a 5 s fake-async timer). Passed 3/3 locally on #312 and on dev, #312 touches no socket
+  code, and the job re-run passed. Recorded as a FLAKY test with a socket leak (test-hygiene
+  follow-up), not a regression.
+- **B-20 -> #330** draft (`fix/084-desktop-email-session` `4c39abc2`): pure
+  `resolveDesktopProfileHydration`; 5 unit tests; desktop/analytics/architecture 76 pass;
+  analyze/custom_lint/ratchet/format PASS. Browser acceptance with an email-only account owed.
+- **CD-01..CD-03, CD-05 (backend) -> art.kubus-backend #95** draft
+  (`fix/084-artwork-authorship-scopes` `ba16f3a`): migration 107 `artwork_attributions` +
+  `idx_artworks_wallet_lower`; shared `artworkRelationshipSql.js` (SEO SQL proven
+  byte-identical); `?relationship=authored|documented|managed`; stats
+  `authoredArtworksCount`/`documentedArtworksCount`; real-PostgreSQL contract 14/14 on the
+  CI image; schema parity + bootstrap PASS; lint clean; full jest 2039 pass, 1 environmental
+  (`ipfsPatternReachability` 30 s subprocess under load; passes alone). Sonnet review: 0 P0/P1,
+  P2 full-table scan fixed (candidate prefilter + index), P3 tests added.
+- **CD-04 (Flutter)**: branch `fix/084-profile-authorship` (worktree
+  `G:/kubus-build-084/profile-authorship`, from `c53ab80e`); data layer F1 in progress
+  (`getProfileArtworks` + old-backend detection via the echoed `relationship`), then UI F2.
+- Disposable local DB for backend contracts: docker container `kubus-pg-084`
+  (postgis/postgis:15-3.4, 127.0.0.1:55432, user artkubus). Remove when done.
+
 ## Superseded / not to resubmit
 
 - `fix/084-web-runtime-and-prose` (`4e27e5e6`): landed in 0.8.3 through #308.

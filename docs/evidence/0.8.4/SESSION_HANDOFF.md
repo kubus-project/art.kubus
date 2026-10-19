@@ -34,7 +34,14 @@ UPDATE 2026-10-19 (session 2): #322 corrected at 71406fdf (draft tier reports as
   says FlutterSecureStorage.xml ciphertext would restore without its Keystore key; any future
   re-enable needs backup_rules.xml + data_extraction_rules.xml excluding secure storage and
   FlutterSharedPreferences in cloud-backup AND device-transfer, verified on a physical device.
-NEXT THREE ACTIONS (fresh session):
+UPDATE 2026-10-19 (session 3, art-kubus-73): dev c53ab80e (#322 merged). Drafts #325 video,
+  #326 badges (+review fixes), #327 a11y, #328 dialogs, #329 map, #330 B-20 email session,
+  backend #95 authorship (P0 addendum) all pushed; #325-#329 draft-tier green. Owner addendum
+  "Cultural Data, Authorship and Moderation" added as scope rows CD-01..CD-15. In progress:
+  Flutter CD-04 on fix/084-profile-authorship. Next after CD-04: SEO authored count (CD-05),
+  then the read-only data audit (CD-07, needs owner read-only DB access) and moderation state
+  (CD-08: inspect the existing `migration:contract:editorial` gate first).
+NEXT THREE ACTIONS (fresh session; superseded by the update above where they conflict):
   1. After #322 merges: merge dev into video/badges/a11y/dialogs/map, push each as a
      draft PR (cheap tier), one push each.
   2. Startup #312: push local 94f637b9, then finish the D4 open items listed in the
