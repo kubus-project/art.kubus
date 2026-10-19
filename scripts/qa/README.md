@@ -82,7 +82,17 @@ job):
 - The defines file may carry only known public keys (`STAGING_PUBLIC_DEFINE_KEYS`); an
   unknown key fails the build and the preflight.
 
-The admin dev server already binds `127.0.0.1:5174` (`vite.config.ts` in admin.kubus).
+The admin dev server already binds `127.0.0.1:5174` (`vite.config.ts` in admin.kubus), but its
+API, failover and HA-panel probes default to production. Start it with all four pinned:
+
+```powershell
+$env:VITE_API_BASE_URL='http://127.0.0.1:53101'; $env:VITE_API_FALLBACK_BASE_URL=$env:VITE_API_BASE_URL
+$env:VITE_HA_PRIMARY_BASE_URL=$env:VITE_API_BASE_URL; $env:VITE_HA_STANDBY_BASE_URL=$env:VITE_API_BASE_URL
+node node_modules/vite/bin/vite.js --host 127.0.0.1 --port 5174 --strictPort
+```
+
+The launcher also pins `ADMIN_MONITOR_TARGETS` (the backend's status monitor probes the
+production sites by default), `PUBLIC_API_URL`, `APP_URL` and `SEO_PUBLIC_BASE_URL`.
 
 ## Guest-first entry QA
 

@@ -103,6 +103,16 @@ export function buildBackendEnv(plan, parentEnv = process.env, secrets = { jwt: 
     ADMIN_WHITELIST_PATH: path.join(plan.privateDir, 'admin-whitelist.json'),
     CORS_ORIGIN: [plan.webOrigin, plan.adminOrigin].join(','),
     APP_BASE_URL: plan.webOrigin,
+    APP_URL: plan.webOrigin,
+    SEO_PUBLIC_BASE_URL: plan.webOrigin,
+    PUBLIC_API_URL: plan.apiOrigin,
+    // The admin status monitor probes these from the server. Its built-in default (and its
+    // fallback for an empty or invalid list) is the production sites and API hosts.
+    ADMIN_MONITOR_TARGETS: JSON.stringify([
+      { id: 'staging-api', label: 'staging API', url: `${plan.apiOrigin}/health` },
+      { id: 'staging-web', label: 'staging web', url: `${plan.webOrigin}/` },
+      { id: 'staging-admin', label: 'staging admin', url: `${plan.adminOrigin}/` },
+    ]),
     DEFAULT_STORAGE_PROVIDER: 'http',
     HTTP_BASE_URL: plan.apiOrigin,
     HTTP_STORAGE_PATH: path.join(plan.privateDir, 'uploads'),

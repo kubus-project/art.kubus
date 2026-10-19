@@ -126,6 +126,12 @@ test('backend environment comes from an allowlist plus explicit staging values',
   assert.equal(env.AWS_SECRET_ACCESS_KEY, undefined);
   assert.equal(env.HTTP_BASE_URL, STAGING);
   for (const value of Object.values(env)) assert.deepEqual(findProductionHostReferences(value), {});
+  // The admin status monitor falls back to production targets for an empty or invalid list.
+  const targets = JSON.parse(env.ADMIN_MONITOR_TARGETS);
+  assert.ok(targets.length > 0);
+  for (const t of targets) assert.ok(t.id && /^https?:\/\//.test(t.url) && parseStagingOrigin(new URL(t.url).origin), t.url);
+  assert.equal(env.PUBLIC_API_URL, STAGING);
+  assert.equal(env.SEO_PUBLIC_BASE_URL, WEB);
 });
 
 function listen(host) {
