@@ -2,6 +2,7 @@
 // credentials or writes. Generated clips are QA evidence, never product data.
 // QA_WEB_ROOT, QA_MEDIA_ROOT, QA_OUT, QA_BROWSERS, QA_WIDTHS, QA_THEMES,
 // QA_LOCALES, QA_MOTION, QA_PATH, QA_OWNER configure the bounded matrix.
+// QA_LEGACY_VIDEO=bare|poster serves clips without a recorded aspect.
 import fs from 'node:fs/promises';
 import http from 'node:http';
 import path from 'node:path';
@@ -66,7 +67,13 @@ const posts = Object.entries(shapes).filter(([shape]) => !process.env.QA_SHAPE |
   id: `66666666-6666-4666-8666-66666666666${i}`,
   author: profile(process.env.QA_AUTHOR === 'visitor' ? visitorId : i === 0 ? ownerId : visitorId),
   content: `${shape} video — #Art #Ljubljana`, category: 'art', tags: ['Art', 'Ljubljana'],
-  mediaUrls: [`${mediaHost}/${shape}.webm#kubus-media=video&kubus-aspect=${aspect}&kubus-poster=${encodeURIComponent(`${mediaHost}/${shape}.png`)}`],
+  // QA_LEGACY_VIDEO reproduces posts published before geometry was recorded:
+  // 'bare' is the plain file URL, 'poster' keeps only the video and poster hints.
+  mediaUrls: [process.env.QA_LEGACY_VIDEO === 'bare'
+    ? `${mediaHost}/${shape}.webm`
+    : process.env.QA_LEGACY_VIDEO === 'poster'
+      ? `${mediaHost}/${shape}.webm#kubus-media=video&kubus-poster=${encodeURIComponent(`${mediaHost}/${shape}.png`)}`
+      : `${mediaHost}/${shape}.webm#kubus-media=video&kubus-aspect=${aspect}&kubus-poster=${encodeURIComponent(`${mediaHost}/${shape}.png`)}`],
   timestamp: new Date(Date.now() - i * 60000).toISOString(),
   createdAt: new Date(Date.now() - i * 60000).toISOString(),
   artwork: { id: artworkId, title: 'Recorded Artwork', artist: 'Recorded Artist' },
