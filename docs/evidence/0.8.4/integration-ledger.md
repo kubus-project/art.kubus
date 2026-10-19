@@ -207,3 +207,99 @@ web `f20b2129` rebuilt with the backend pinned, served on `127.0.0.1:58180`; adm
 Production observations from session 4 (~21:00) carried forward unchanged as BLOCKED_OWNER: Home
 backend unhealthy, OrbitDB restart loop, Home standby replay timestamp ~7.2 days old (replication
 state unverified; an old replay timestamp can also mean an idle primary). Not re-checked.
+
+## Session 6 (2026-10-20 00:00-, "Integration, Safe Staging and Release Validation" brief)
+
+Baseline: app `dev` `9309b1ff`; backend `master` `29b2dc3` (#97 squash, merged by owner) ->
+`fec505ce` (#99 squash, merged this session with `--match-head-commit 99a8754c`).
+
+### Phase A - staging isolation (code, not documentation)
+
+| Workstream | Repo / PR | Head | Result |
+|---|---|---|---|
+| Isolation tooling | app **#332** draft (`test/084-staging-isolation`) | `84495380` | `scripts/qa/staging/{isolation,preflight,build_web,launch_backend,playwright_guard}.mjs`; `isolation.test.mjs` 12/12 in the guardrails job (asserts `config.dart` still reads the pinned keys); docs:doctor, workflow_contracts 45/45 |
+| Loopback binding | backend **#100** (`fix/084-loopback-listen-host`) | `850bf0fb` | optional `LISTEN_HOST`, invalid values stop startup, unset unchanged; 9/9; CI green, CLEAN |
+
+Live proof (2026-10-20): the launcher started a backend without `LISTEN_HOST` support, found port
+53101 answering on 5 external addresses (LAN 192.168.0.61, Tailscale 100.87.75.116 + fd7a:...,
+two Hyper-V/WSL) and stopped it (exit 1). With #100: loopback only; OS listener `127.0.0.1:53101`.
+Preflight PASSED on the rebuilt candidate (one bare `api.kubus.site` remains in the media
+resolver's direct-display allowlist: a host name, not an endpoint, reported as a note). Browser
+guard in Chromium + Firefox blocked `api`/`bapi.kubus.site` GETs and an off-staging POST, passed
+staging; the app itself POSTs Solana JSON-RPC (`api.devnet.solana.com`) at startup, which the guard
+blocks (reads included). Admin dev server already binds `127.0.0.1:5174`; it defaults to
+production too, so it is started with `VITE_API_BASE_URL`/`VITE_API_FALLBACK_BASE_URL` pinned.
+
+### Phase B - merges and stacks
+
+| PR | Head | State |
+|---|---|---|
+| app #325 video | `b9f993bd` | full tier failed only in PRODUCT motion acceptance (Firefox sampling coverage hole 579-604 ms under CI load; lift/bob/shadow in range; PR touches no motion code); one failed-job re-run requested (run 39325124258) |
+| app #326 badges | `a1e2ab33` | same motion-gate failure; re-run after #325's |
+| backend #99 | `99a8754c` | **MERGED** `fec505ce` (no file overlap with #97 verified first) |
+| backend #96 | `9a34bb8d` | master merged (rerere union of CI/package, filter set = exact union), PG 28/28, parity, lint; CI green; **marked ready**, not merged |
+| backend #98 | `7b8f7d68` | master merged (CI union), PG 23/23, public-art 41/41, lint; CI running |
+| backend **#101** draft institutions | `090a9160` | master merged: merge adds only #97's 7 files; diff vs master == institution commits (asserted); 125/125 PG+unit, parity, bootstrap 100/142; CI step for claims + public reads |
+| backend **#102** draft Studio S1 | `ef0aa4a` | base #101; diff = 13 Studio files; 48/48, bootstrap 101/143 |
+
+### Phase C - backend acceptance
+
+- **C1** (#101 `87d7e95`, `985754f`, `090a916`): search (2 queries) and home rails use one
+  `getPublicInstitutionPredicate()`; merged duplicates stay out of discovery; the predicate and the
+  SEO helper now **fail closed** (an empty column introspection used to degrade to `true`, i.e.
+  staged listings public). Admin promotion views keep every row. `is_active` is nullable default
+  true; NULL is hidden (as list/search already did; the home rail used to show it). SEO `i.*`
+  never reaches HTML (curated presentation objects). Tests 188 + SEO 214 pass.
+- **C2 email-only post**: REPRODUCED on staging (desktop Create post -> `POST /community/posts`
+  500, no message). Contract: posting is wallet-keyed (NOT NULL column, mobile gate, migration 103
+  of 0.8.2 never landed). Fix: backend **#103** `d17f561` (403 `WALLET_REQUIRED` before any write on
+  posts, reposts, group posts; 9 tests) + app **#333** `c3cfb197` (desktop asks for a wallet like
+  mobile; maps `WALLET_REQUIRED`; 325 tests). Verified on staging: email-only POST -> 403
+  WALLET_REQUIRED. Account-keyed posting stays an owner decision.
+- **C3 Studio S2**: GET /markers bbox read in progress (Haiku); nearby/evidence next; entity
+  search and the category write deferred.
+
+### Phase D - staging
+
+- Backup: `G:/kubus-build-backup/084-staging-db/staging084-pre109-20261020.dump` (pg_dump -Fc).
+- `staging084` migrated 108 -> **110** with `node src/db/migrate.js` from candidate 2; second run
+  applied 0; 101 ledger rows, no duplicates, 144 tables.
+- Backend candidate 2 `integration/084-backend-candidate-2` (local) `094121b` = master + #96 #98 #93
+  #94 #100 #101 #102 #103.
+- Mailpit `kubus-mail-084` on 127.0.0.1:51027 (SMTP) / 58027 (UI): verification mail delivered.
+- Frontend candidate 2 `integration/084-frontend-candidate-2` `999f5986` = dev + 11 0.8.4 branches;
+  analyze fatal clean; isolated build running.
+
+### Session 6 - later (end-of-session checkpoint)
+
+Merged this session: backend **#99** (`fec505ce`), app **#325** (`bb83fd2d`, after one failed-job
+re-run of the Firefox motion-coverage flake). New PRs: app #332 (isolation, `17304c50`+), #333
+(desktop wallet gate + copy, `7dee1efe`); backend #100 (LISTEN_HOST), #101 (institutions, draft),
+#102 (Studio S1 + S2a bbox read + title fix `5d2fc00`, draft, stacked on #101), #103
+(WALLET_REQUIRED). #96 marked ready (CLEAN). #98 draft CLEAN. #326 merged dev -> `3dec5397`, full tier
+running.
+
+Further isolation fixes found live and fixed in #332: the backend's admin status monitor probed the
+production sites/API from the server (ADMIN_MONITOR_TARGETS default) -> launcher pins staging
+targets + PUBLIC_API_URL/APP_URL/SEO_PUBLIC_BASE_URL; the old rig's AUTH_RATE_LIMIT did not raise
+the sign-in limiter (AUTH_RATE_LIMIT_MAX_REQUESTS, default 25/15 min) -> launcher sets it; admin dev
+server needs VITE_HA_PRIMARY/STANDBY_BASE_URL pinned (HA panel defaulted to bapi.kubus.site).
+
+Staging (all loopback, preflight PASSED): backend candidate 2 `0ae4430` (local), DB staging084 at
+migration 110 (backup pre109 dump), web candidate 2 `999f5986` (built with build_web.mjs; #333's
+copy commit 7dee1efe not yet in the build), admin #17 dev server, Mailpit 51027/58027.
+
+E2E results (scripts in G:/kubus-build-084/_staging, evidence under b18-out/ and admin-out/):
+
+| Journey | Result |
+|---|---|
+| Ordinary user: guest map -> register -> real verification mail -> verify -> sign in -> like/reload/unlike | PASS Chromium + Firefox at 1440 and 390 |
+| Email-only post (C2) | before fix: 500; after #103 + #333: no request, actionable message (copy corrected in 7dee1efe, not yet rebuilt) |
+| Moderator Review Deck: approve publishes, undo hides, history, reject with reason, stale-version conflict | PASS Chromium + Firefox (16 checks); UX P2 for admin #17: after a decision the deck advances and Undo is disabled (undo only from the decided queue) |
+| Map Audit API (S1+S2a): auth, bbox, duplicates, clusters, correction, replay, conflict, revert, CSRF | PASS 15/15 (after the artwork-less title fix) |
+| Artist authored vs documented lists | PASS; count assertion and institution search assertion FAILED in my script, likely wrong endpoint/regex - UNVERIFIED |
+| Institution list/claimState/merged resolution | PASS; claims cannot be exercised end-to-end: no claim HTTP routes yet |
+
+Not done: keyboard / reduced-motion pass on the candidate, video + badges harness re-run on
+candidate 2, Phase E full gates, physical devices. #315/#94 security PRs unchanged (own gates).
+Production observations unchanged, BLOCKED_OWNER (not re-checked).

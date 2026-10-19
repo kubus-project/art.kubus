@@ -5,6 +5,18 @@ and [scope-matrix.md](scope-matrix.md). Security findings are never written here
 live in the private draft advisory and `C:/kubus-build/_private/security/`.
 
 ```text
+LATEST (2026-10-20 ~01:30, session 6 "Integration, Safe Staging"): see integration-ledger.md
+  "Session 6". Merged: backend #99 fec505ce, app #325 bb83fd2d. Open: app #326 (full tier on
+  3dec5397), #331, #332, #333; backend #96 ready, #98, #100, #101, #102 (stacked), #103.
+  Staging: cd G:/kubus-build-084/staging-isolation; node scripts/qa/staging/launch_backend.mjs
+    --backend G:/kubus-build-084/backend-candidate-2 --private G:/kubus-build-084/_staging/_private
+    --database-url postgresql://artkubus:local-084-test@127.0.0.1:55432/staging084 ; then
+    node scripts/qa/staging/preflight.mjs --api http://127.0.0.1:53101 --web http://127.0.0.1:58180
+    --web-root G:/kubus-build-084/frontend-candidate-2/build/web --defines <same>/.dart_tool/public-build-defines.json
+  NEXT: 1. merge #326 when green; owner review of #100/#103/#96 (+#333,#332). 2. claim routes on
+    #101, then S2b nearby/evidence on #102. 3. rebuild candidate 2 with #333 7dee1efe and run the
+    keyboard/reduced-motion + video/badge harnesses, then Phase E gates.
+
 LATEST (2026-10-19 ~23:30, session 5 "Resume Interrupted Session", Opus coordinator):
   dev 9309b1ff, backend master c4115594, admin master bbabc713 (unchanged, verified live).
   Recovered + pushed (no PRs yet): backend feat/084-institution-identity 47d8a05 (claims
