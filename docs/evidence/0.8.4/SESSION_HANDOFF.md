@@ -24,6 +24,16 @@ AGENT DEFINITIONS: G:/WorkingDATA/art.kubus/.claude/agents/{haiku-scout,haiku-im
   sonnet-reviewer}.md - a fresh session launched from G:/WorkingDATA/art.kubus loads them
 SECURITY: findings + 2 deferred low items private:
   C:/kubus-build-084/_private/security/2026-10-19-review-5-084-security.md
+UPDATE 2026-10-19 (session 2): #322 corrected at 71406fdf (draft tier reports as non-required
+  'PR validation (draft tier, not merge evidence)'; full run 39228957912 green; probe PR #324
+  run 39233279590 proved the draft run produces no 'PR validation required'; thread resolved;
+  merge BLOCKED only by classifier denial of gh pr merge - OWNER MERGES #322 (squash)).
+  video/badges/a11y/dialogs/map each passed analyze --fatal-infos --fatal-warnings, custom_lint,
+  ratchet, format and focused tests locally (see ledger); NOT pushed - waiting for #322 on dev so
+  the drafts get the cheap tier. Android backup stays disabled: audit (inferred plugin file names)
+  says FlutterSecureStorage.xml ciphertext would restore without its Keystore key; any future
+  re-enable needs backup_rules.xml + data_extraction_rules.xml excluding secure storage and
+  FlutterSharedPreferences in cloud-backup AND device-transfer, verified on a physical device.
 NEXT THREE ACTIONS (fresh session):
   1. After #322 merges: merge dev into video/badges/a11y/dialogs/map, push each as a
      draft PR (cheap tier), one push each.
