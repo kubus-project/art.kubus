@@ -95,6 +95,26 @@ Scope rows worked this session:
 - **CD-04 (Flutter)**: branch `fix/084-profile-authorship` (worktree
   `G:/kubus-build-084/profile-authorship`, from `c53ab80e`); data layer F1 in progress
   (`getProfileArtworks` + old-backend detection via the echoed `relationship`), then UI F2.
+- **CD-04 -> #331** draft (`fix/084-profile-authorship` `045a15d4`): data layer with
+  old-backend detection, mobile + desktop owner/visitor sections, EN/SL, documented cards
+  credit the recorded artist; full suite 5192 pass / 27 skip at `fa83fc37`; browser QA
+  `scripts/qa/profile_authorship_qa.mjs` release build: scoped 4/4 Chromium + 1 Firefox PASS,
+  legacy 2/2 PASS. Open UX point: existing "Added Public Art" tile vs new "Public art added".
+- **CD-05 -> backend #96** draft, stacked on #95 (`55a8e0c`): SEO profile authored count and
+  related artworks use `AUTHORED_BY_PROFILE`; PG contract 11/11; SEO suites 251 pass.
+  Retarget to master after #95 merges (backend CI runs only for master-based PRs).
+- **CD-07 -> backend #97** draft (`audit/084-cultural-data` `e4abe8e`): read-only stratified
+  audit tooling, own allowlisted extractor; local fixture 21 assertions / 19 checks PASS.
+  NOT run on production (owner authorisation).
+- **CD-08** branch `feat/084-editorial-state` (stacked on #95; `236a732`, `d0a2aa6`, review
+  fixes in progress): migration 108 editorial state + `editorial_decisions`; decide/revert/
+  history admin routes; PG 10/10. Sonnet: 0 P0/P1; P2 revert drift + PATCH republish being
+  fixed. Not pushed yet.
+- **CD-10 -> backend #98** draft (`feat/084-import-evaluation` `38c4d43`): subject never
+  rejects; legal restriction (porn/obscene, extremist symbols) + non-art structure reject;
+  everything else staged `needs_review`; `test:public-art` 41/41 and now in CI.
+- **#95** backend: all checks green incl. the PostgreSQL contracts job. **#330** draft green.
+- **#327** marked ready (`63279355`): full tier running.
 - Disposable local DB for backend contracts: docker container `kubus-pg-084`
   (postgis/postgis:15-3.4, 127.0.0.1:55432, user artkubus). Remove when done.
 
