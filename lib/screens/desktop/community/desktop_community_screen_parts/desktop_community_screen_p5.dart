@@ -444,15 +444,19 @@ extension _DesktopCommunityScreenStatePart5 on _DesktopCommunityScreenState {
       if (mounted) {
         ScaffoldMessenger.of(context).showKubusSnackBar(
           SnackBar(
-            content: Text(communityComposerFailureMessage(
-              AppLocalizations.of(context)!,
-              e,
-              unuploadedMediaCount: _composerMedia.hasFailedUploads
-                  ? _composerMedia.unuploadedCount
-                  : null,
-              fallback: AppLocalizations.of(context)!
-                  .desktopCommunityPostPublishFailedToast,
-            )),
+            // A stale stored wallet can pass the pre-check; the backend's
+            // WALLET_REQUIRED answer still gets the actionable message.
+            content: Text(isCommunityWalletRequiredError(e)
+                ? AppLocalizations.of(context)!.communityConnectWalletFirstToast
+                : communityComposerFailureMessage(
+                    AppLocalizations.of(context)!,
+                    e,
+                    unuploadedMediaCount: _composerMedia.hasFailedUploads
+                        ? _composerMedia.unuploadedCount
+                        : null,
+                    fallback: AppLocalizations.of(context)!
+                        .desktopCommunityPostPublishFailedToast,
+                  )),
             behavior: SnackBarBehavior.floating,
             backgroundColor: Theme.of(context).colorScheme.error,
           ),
