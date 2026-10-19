@@ -68,6 +68,9 @@ class ProfilePackageController extends ChangeNotifier {
   bool _artistDataLoaded = false;
   bool _artistDataLoading = false;
   List<Map<String, dynamic>> _artistArtworks = <Map<String, dynamic>>[];
+  List<Map<String, dynamic>> _documentedArtworks = <Map<String, dynamic>>[];
+  int? _authoredArtworksTotal;
+  int? _documentedArtworksTotal;
   List<Map<String, dynamic>> _artistCollections = <Map<String, dynamic>>[];
   List<Map<String, dynamic>> _artistEvents = <Map<String, dynamic>>[];
   int _loadEpoch = 0;
@@ -90,6 +93,14 @@ class ProfilePackageController extends ChangeNotifier {
   bool get artistDataLoading => _artistDataLoading;
   List<Map<String, dynamic>> get artistArtworks =>
       List<Map<String, dynamic>>.unmodifiable(_artistArtworks);
+  List<Map<String, dynamic>> get documentedArtworks =>
+      List<Map<String, dynamic>>.unmodifiable(_documentedArtworks);
+
+  /// Full authored total, or null when the backend did not honour the scope.
+  int? get authoredArtworksTotal => _authoredArtworksTotal;
+
+  /// Full documented total, or null when the backend did not honour the scope.
+  int? get documentedArtworksTotal => _documentedArtworksTotal;
   List<Map<String, dynamic>> get artistCollections =>
       List<Map<String, dynamic>>.unmodifiable(_artistCollections);
   List<Map<String, dynamic>> get artistEvents =>
@@ -346,6 +357,8 @@ class ProfilePackageController extends ChangeNotifier {
           'followers',
           'following',
           'publicStreetArtAdded',
+          'authoredArtworks',
+          'documentedArtworks',
         ],
         scope: 'public',
         forceRefresh: forceRefresh,
@@ -363,6 +376,12 @@ class ProfilePackageController extends ChangeNotifier {
       }
       if (counters.containsKey('publicStreetArtAdded')) {
         patch['publicStreetArtAdded'] = counters['publicStreetArtAdded'] ?? 0;
+      }
+      if (counters.containsKey('authoredArtworks')) {
+        patch['authoredArtworks'] = counters['authoredArtworks'] ?? 0;
+      }
+      if (counters.containsKey('documentedArtworks')) {
+        patch['documentedArtworks'] = counters['documentedArtworks'] ?? 0;
       }
       patchStats(patch);
     } catch (e) {
@@ -581,6 +600,11 @@ class ProfilePackageController extends ChangeNotifier {
     _artistArtworks = extended.artistArtworks
         .map((item) => Map<String, dynamic>.from(item))
         .toList(growable: false);
+    _documentedArtworks = extended.documentedArtworks
+        .map((item) => Map<String, dynamic>.from(item))
+        .toList(growable: false);
+    _authoredArtworksTotal = extended.authoredArtworksTotal;
+    _documentedArtworksTotal = extended.documentedArtworksTotal;
     _artistCollections = extended.artistCollections
         .map((item) => Map<String, dynamic>.from(item))
         .toList(growable: false);

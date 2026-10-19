@@ -8,6 +8,7 @@ import '../config/config.dart';
 import '../community/community_interactions.dart';
 import '../models/achievement_progress.dart' as legacy;
 import '../models/achievements.dart' as backend;
+import '../models/profile_artworks_page.dart';
 import '../models/profile_package.dart';
 import '../models/user.dart';
 import '../utils/profile_showcase_normalizer.dart';
@@ -34,7 +35,7 @@ class ProfilePackageService {
   ProfilePackageService._();
 
   static const Duration cacheTtl = Duration(minutes: 5);
-  static const String _criticalCachePrefsKey = 'profile_critical_cache_v2';
+  static const String _criticalCachePrefsKey = 'profile_critical_cache_v3';
   static const int _maxPersistedPackages = 80;
 
   static final Map<String, ProfileCriticalPackage> _criticalCache =
@@ -561,6 +562,9 @@ class ProfilePackageService {
     return ProfileExtendedPackage(
       initialPosts: results[0] as List<CommunityPost>?,
       artistArtworks: showcase.artworks,
+      documentedArtworks: showcase.documentedArtworks,
+      authoredArtworksTotal: showcase.authoredArtworksTotal,
+      documentedArtworksTotal: showcase.documentedArtworksTotal,
       artistCollections: showcase.collections,
       artistEvents: showcase.events,
       fetchedAt: DateTime.now(),
@@ -577,6 +581,8 @@ class ProfilePackageService {
           'followers',
           'following',
           'publicStreetArtAdded',
+          'authoredArtworks',
+          'documentedArtworks',
         ],
         scope: 'public',
         forceRefresh: true,
@@ -615,28 +621,62 @@ class ProfilePackageService {
 
     try {
       final api = BackendApiService();
-      final artworksFuture = api.getArtistArtworks(walletAddress, limit: 6);
+      final authoredFuture = api.getProfileArtworks(
+        walletAddress,
+        relationship: 'authored',
+        limit: 6,
+      );
+      // A documented-scope failure must not hide the authored showcase.
+      final documentedFuture = api
+          .getProfileArtworks(
+            walletAddress,
+            relationship: 'documented',
+            limit: 6,
+          )
+          .then<ProfileArtworksPage?>(
+            (page) => page,
+            onError: (_) => null,
+          );
       final collectionsFuture =
           api.getCollections(walletAddress: walletAddress, limit: 6);
       final eventsFuture = api.listEvents(limit: 100);
 
       final results = await Future.wait<dynamic>([
-        artworksFuture,
+        authoredFuture,
+        documentedFuture,
         collectionsFuture,
         eventsFuture,
       ]);
 
-      final events = (results[2] as List<Map<String, dynamic>>)
+      final authored = results[0] as ProfileArtworksPage;
+      final documented = results[1] as ProfileArtworksPage?;
+      // Older backends ignore `relationship` and return the legacy mixed list
+      // for every scope. Keep that list as authored and never double-count it.
+      final scopeHonoured = authored.relationshipHonoured;
+      final documentedHonoured = scopeHonoured &&
+          documented != null &&
+          documented.relationshipHonoured;
+      final artworks = authored.items
+          .map((item) => Map<String, dynamic>.from(item))
+          .toList(growable: false);
+      final documentedArtworks = documentedHonoured
+          ? documented.items
+              .map((item) => Map<String, dynamic>.from(item))
+              .toList(growable: false)
+          : const <Map<String, dynamic>>[];
+
+      final events = (results[3] as List<Map<String, dynamic>>)
           .where((event) => profileEventBelongsToWallet(event, walletAddress))
           .take(6)
           .map((event) => Map<String, dynamic>.from(event))
           .toList(growable: false);
 
       return _ProfileShowcasePayload(
-        artworks: (results[0] as List<Map<String, dynamic>>)
-            .map((item) => Map<String, dynamic>.from(item))
-            .toList(growable: false),
-        collections: (results[1] as List<Map<String, dynamic>>)
+        artworks: artworks,
+        documentedArtworks: documentedArtworks,
+        authoredArtworksTotal: scopeHonoured ? authored.total : null,
+        documentedArtworksTotal: documentedHonoured ? documented.total : null,
+        collections: (results[2] as List<Map<String, dynamic>>)
             .map((item) => Map<String, dynamic>.from(item))
             .toList(growable: false),
         events: events,
@@ -816,11 +856,17 @@ class _ProfileLookup {
 class _ProfileShowcasePayload {
   const _ProfileShowcasePayload({
     this.artworks = const <Map<String, dynamic>>[],
+    this.documentedArtworks = const <Map<String, dynamic>>[],
+    this.authoredArtworksTotal,
+    this.documentedArtworksTotal,
     this.collections = const <Map<String, dynamic>>[],
     this.events = const <Map<String, dynamic>>[],
   });
 
   final List<Map<String, dynamic>> artworks;
+  final List<Map<String, dynamic>> documentedArtworks;
+  final int? authoredArtworksTotal;
+  final int? documentedArtworksTotal;
   final List<Map<String, dynamic>> collections;
   final List<Map<String, dynamic>> events;
 }
