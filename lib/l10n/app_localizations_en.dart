@@ -652,6 +652,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get commonNotifications => 'Notifications';
 
   @override
+  String get desktopNavCollabInvitesTooltip => 'Collaboration invites';
+
+  @override
   String get commonLabLabel => 'Lab';
 
   @override
