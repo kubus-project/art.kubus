@@ -7,6 +7,7 @@ import {
   appendOutput,
   appendSummary,
   assertDraftTierStillValid,
+  checkContextForTier,
   fetchLiveDraft,
 } from './pr_validation_tier.mjs';
 
@@ -60,12 +61,12 @@ async function main() {
       assertDraftTierStillValid({ tier, baseRef: env.BASE_REF, liveDraft });
     }
   } catch (error) {
-    appendSummary(env.GITHUB_STEP_SUMMARY, ['### PR validation required', `- Tier: **${tier}** (${scope})`, `- Verdict: **not accepted** - ${error.message}`]);
+    appendSummary(env.GITHUB_STEP_SUMMARY, [`### ${checkContextForTier(tier)}`, `- Tier: **${tier}** (${scope})`, `- Verdict: **not accepted** - ${error.message}`]);
     throw error;
   }
   appendOutput(env.GITHUB_OUTPUT, { tier, scope });
   appendSummary(env.GITHUB_STEP_SUMMARY, [
-    '### PR validation required',
+    `### ${checkContextForTier(tier)}`,
     `- Tier: **${tier}** (${scope})`,
     ...describeSkippedJobs(needs, expected, tier),
     tier === 'draft'

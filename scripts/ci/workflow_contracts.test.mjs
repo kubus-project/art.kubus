@@ -6,12 +6,33 @@ import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 
 import { classifyPaths } from './classify_changed_paths.mjs';
-import { assertDraftTierStillValid, fetchLiveDraft, resolveTier } from './pr_validation_tier.mjs';
+import {
+  DRAFT_CHECK_CONTEXT,
+  REQUIRED_CHECK_CONTEXT,
+  assertDraftTierStillValid,
+  checkContextForTier,
+  fetchLiveDraft,
+  resolveTier,
+} from './pr_validation_tier.mjs';
 import { describeSkippedJobs, validateJobResults } from './validate_job_results.mjs';
 import { validatePrSource } from './validate_pr_source.mjs';
 
 const repositoryRoot = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 const workflow = (name) => readFileSync(resolve(repositoryRoot, '.github/workflows', name), 'utf8');
+// Evaluates the `required` job's name expression in pr-validation.yml for a given tier output, as
+// the Actions runner does: `${{ needs.changes.outputs.tier == 'draft' && 'A' || 'B' }}`. The
+// accepted shape is deliberately narrow so a rewrite of the expression has to update this contract.
+function requiredJobContext(tier) {
+  const content = workflow('pr-validation.yml');
+  const job = content.slice(content.indexOf('\n  required:'));
+  const match = job.match(/\n    name: \$\{\{ needs\.changes\.outputs\.tier == '([^']+)' && '([^']+)' \|\| '([^']+)' \}\}/);
+  assert.ok(match, 'required job name must be the draft/required context expression');
+  const [, draftTier, draftName, requiredName] = match;
+  assert.equal(draftTier, 'draft');
+  assert.equal(draftName, DRAFT_CHECK_CONTEXT);
+  assert.equal(requiredName, REQUIRED_CHECK_CONTEXT);
+  return tier === draftTier ? draftName : requiredName;
+}
 const deployAction = () => readFileSync(resolve(repositoryRoot, '.github/actions/deploy-web-artifact/action.yml'), 'utf8');
 
 test('successful web release retains its host-side rollback command outside httpdocs', () => {
@@ -100,7 +121,7 @@ test('aggregate accepts success/skipped and rejects failure, cancellation, or mi
 test('PR validation is deployment-secret-free and has a stable aggregate', () => {
   const content = workflow('pr-validation.yml');
   assert.match(content, /branches:\s*\[dev, master\]/);
-  assert.match(content, /name:\s*PR validation required/);
+  assert.equal(requiredJobContext('full'), 'PR validation required');
   assert.doesNotMatch(content, /pull_request_target|workflow_run/);
   assert.doesNotMatch(content, /SFTP_|HTTP_BASIC_|SIGNING_|APPLE_/);
 });
@@ -543,7 +564,7 @@ test('aggregate: skipped platform jobs are reported as not run by tier in a draf
 test('PR validation workflow wires the tiers without weakening the required check', () => {
   const content = workflow('pr-validation.yml');
   assert.match(content, /types:\s*\[opened, synchronize, reopened, ready_for_review\]/);
-  assert.match(content, /name:\s*PR validation required/);
+  assert.equal(requiredJobContext('full'), 'PR validation required');
   assert.match(content, /node scripts\/ci\/pr_validation_tier\.mjs/);
   // Concurrency still cancels superseded runs of the same PR.
   assert.match(content, /group:\s*pr-validation-\$\{\{ github\.event\.pull_request\.number \|\| github\.ref_name \}\}\s+cancel-in-progress:\s*true/);
@@ -569,4 +590,91 @@ test('PR validation workflow wires the tiers without weakening the required chec
   assert.match(required, /TIER:\s*\$\{\{ needs\.changes\.outputs\.tier \}\}/);
   assert.match(required, /FULL_RUN:\s*\$\{\{ needs\.changes\.outputs\.full \}\}/);
   assert.match(required, /tier: \$\{\{ steps\.aggregate\.outputs\.tier \}\}/);
+});
+
+// ---- Draft results can never satisfy the required check ---------------------
+
+// The check context a run reports under, given the PR situation: the tier is resolved exactly as
+// the `changes` job does, then mapped through the workflow's own `required` job name expression.
+const contextFor = (situation) => requiredJobContext(resolveTier(situation).tier);
+const dev = { eventName: 'pull_request', baseRef: 'dev' };
+
+test('context: a draft PR into dev reports under the non-required draft context', () => {
+  const context = contextFor({ ...dev, payloadDraft: true, liveDraft: true });
+  assert.equal(context, DRAFT_CHECK_CONTEXT);
+  assert.notEqual(context, REQUIRED_CHECK_CONTEXT);
+  assert.equal(context, checkContextForTier('draft'));
+});
+
+test('context: draft to ready on the same SHA moves the result to the required context', () => {
+  // First run: opened as a draft. The result lands on the draft context only, so the required
+  // context has no result at all for this SHA and cannot be satisfied by it.
+  assert.equal(contextFor({ ...dev, payloadDraft: true, liveDraft: true }), DRAFT_CHECK_CONTEXT);
+  // ready_for_review on the same head: the payload and the live state both say ready.
+  assert.equal(contextFor({ ...dev, payloadDraft: false, liveDraft: false }), REQUIRED_CHECK_CONTEXT);
+  // A stale draft payload that races the transition still resolves from the live state.
+  assert.equal(contextFor({ ...dev, payloadDraft: true, liveDraft: false }), REQUIRED_CHECK_CONTEXT);
+});
+
+test('context: ready PRs into dev and every PR into master report under the required context', () => {
+  assert.equal(contextFor({ ...dev, payloadDraft: false, liveDraft: false }), REQUIRED_CHECK_CONTEXT);
+  for (const draft of [true, false]) {
+    assert.equal(contextFor({ eventName: 'pull_request', baseRef: 'master', payloadDraft: draft, liveDraft: draft }), REQUIRED_CHECK_CONTEXT);
+  }
+  assert.equal(contextFor({ eventName: 'workflow_dispatch', baseRef: '' }), REQUIRED_CHECK_CONTEXT);
+});
+
+test('context: a missing or unreadable tier fails closed onto the required context', () => {
+  for (const liveDraft of [null, undefined, 'maybe']) {
+    assert.equal(contextFor({ ...dev, payloadDraft: true, liveDraft }), REQUIRED_CHECK_CONTEXT);
+  }
+  // The tier output itself missing (the `changes` job failed or was skipped) is not 'draft'.
+  for (const tier of ['', undefined, null, 'bogus', 'Draft']) {
+    assert.equal(requiredJobContext(tier), REQUIRED_CHECK_CONTEXT);
+    assert.equal(checkContextForTier(tier), REQUIRED_CHECK_CONTEXT);
+  }
+  // ...and the aggregator then rejects it rather than reporting success there.
+  assert.throws(() => validateJobResults({ changes: { result: 'success' } }, ['changes'], { tier: '' }), /Unknown validation tier: missing/);
+  assert.throws(() => validateJobResults({ changes: { result: 'success' } }, ['changes'], { tier: undefined }), /Unknown validation tier: missing/);
+});
+
+test('context: failed, cancelled and missing jobs are never accepted in either tier', () => {
+  for (const tier of ['draft', 'full']) {
+    for (const fullRun of [false, true]) {
+      for (const result of ['failure', 'cancelled', undefined]) {
+        const needs = { guardrails: { result: 'success' }, flutter_quality: { result } };
+        assert.throws(
+          () => validateJobResults(needs, ['guardrails', 'flutter_quality'], { tier, fullRun }),
+          /Required job results were not acceptable: flutter_quality/,
+          `${tier}/${fullRun}/${result}`,
+        );
+      }
+    }
+  }
+  assert.throws(() => validateJobResults({ guardrails: { result: 'success' } }, ['guardrails', 'flutter_quality'], { tier: 'full' }), /flutter_quality: missing/);
+});
+
+test('context: the aggregator step fails the job for a missing tier or a cancelled dependency', () => {
+  const script = resolve(dirname(fileURLToPath(import.meta.url)), 'validate_job_results.mjs');
+  const run = (needs, tier) => spawnSync(process.execPath, [script], {
+    env: { ...process.env, NEEDS_JSON: JSON.stringify(needs), EXPECTED_JOBS: 'guardrails', TIER: tier, FULL_RUN: 'false', GITHUB_STEP_SUMMARY: '', GITHUB_OUTPUT: '' },
+    encoding: 'utf8',
+  });
+  assert.equal(run({ guardrails: { result: 'success' } }, 'full').status, 0);
+  assert.notEqual(run({ guardrails: { result: 'success' } }, '').status, 0);
+  assert.notEqual(run({ guardrails: { result: 'cancelled' } }, 'full').status, 0);
+  assert.notEqual(run({ guardrails: { result: 'failure' } }, 'draft').status, 0);
+});
+
+test('context: the workflow reserves the required name for non-draft tiers and nothing else uses it', () => {
+  const content = workflow('pr-validation.yml');
+  assert.equal(requiredJobContext('draft'), DRAFT_CHECK_CONTEXT);
+  assert.notEqual(DRAFT_CHECK_CONTEXT, REQUIRED_CHECK_CONTEXT);
+  assert.ok(!DRAFT_CHECK_CONTEXT.startsWith(REQUIRED_CHECK_CONTEXT), 'a prefix match must not let the draft context pass for the required one');
+  // No other job may be named like the required context, or a draft run could still publish it.
+  const names = [...content.matchAll(/\n    name: (.+)/g)].map((m) => m[1]);
+  assert.equal(names.filter((name) => name.includes(REQUIRED_CHECK_CONTEXT)).length, 1, 'exactly one job may carry the required name');
+  // The aggregate must run even when its dependencies fail, so the context always resolves.
+  const required = content.slice(content.indexOf('\n  required:'));
+  assert.match(required, /if:\s*\$\{\{ always\(\) \}\}/);
 });

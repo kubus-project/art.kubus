@@ -13,6 +13,19 @@ import { pathToFileURL } from 'node:url';
 //
 // A draft-tier result is never merge evidence. See docs/engineering/branching-and-deployment.md.
 
+// Check-run contexts the aggregate job reports under. Branch protection requires only
+// REQUIRED_CHECK_CONTEXT, which a draft-tier run must never produce. These strings are mirrored in
+// the `required` job name expression of pr-validation.yml; workflow_contracts.test.mjs keeps them
+// identical.
+export const REQUIRED_CHECK_CONTEXT = 'PR validation required';
+export const DRAFT_CHECK_CONTEXT = 'PR validation (draft tier, not merge evidence)';
+
+// Only an explicit draft tier selects the draft context; anything else (full, missing, unknown)
+// reports under the required context, where the aggregator then accepts or rejects it.
+export function checkContextForTier(tier) {
+  return tier === 'draft' ? DRAFT_CHECK_CONTEXT : REQUIRED_CHECK_CONTEXT;
+}
+
 export const DRAFT_SCOPE = 'draft tier: platform builds not run';
 export const FULL_SCOPE = 'full tier: every selected job ran';
 

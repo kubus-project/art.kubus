@@ -419,7 +419,13 @@ jobs:
         run: docker rm -f kubus-web
 
   required:
-    name: PR validation required
+    # The required context is reserved for full-tier results. A draft-tier run reports under a
+    # different, non-required context, so a green draft run can never satisfy branch protection,
+    # not even during the seconds before a ready_for_review run registers its own check. Only an
+    # explicit 'draft' tier selects the draft name; a missing or unknown tier keeps the required
+    # name and fails inside the aggregator (fail closed). Keep both names in sync with
+    # REQUIRED_CHECK_CONTEXT / DRAFT_CHECK_CONTEXT in scripts/ci/pr_validation_tier.mjs.
+    name: ${{ needs.changes.outputs.tier == 'draft' && 'PR validation (draft tier, not merge evidence)' || 'PR validation required' }}
     needs:
       - source_policy
       - changes
@@ -434,8 +440,8 @@ jobs:
     if: ${{ always() }}
     runs-on: ubuntu-24.04
     timeout-minutes: 3
-    # Re-reads the PR's live draft state so a draft-tier result can never stand for a PR that
-    # is ready for review.
+    # Re-reads the PR's live draft state so a draft-tier run that finishes after the PR became
+    # ready fails instead of reporting success.
     permissions:
       contents: read
       pull-requests: read
