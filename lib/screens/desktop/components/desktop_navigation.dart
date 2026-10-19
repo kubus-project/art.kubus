@@ -491,6 +491,7 @@ class _DesktopNavigationState extends State<DesktopNavigation>
 
   Widget _buildActionButtonsRow() {
     final animationTheme = context.animationTheme;
+    final l10n = AppLocalizations.of(context)!;
     return AnimatedOpacity(
       opacity: widget.expandAnimation.value,
       duration: const Duration(milliseconds: 150),
@@ -506,6 +507,7 @@ class _DesktopNavigationState extends State<DesktopNavigation>
                 builder: (context, pendingCount, _) {
                   return _buildIconOnlyActionButton(
                     icon: Icons.group_add_outlined,
+                    label: l10n.desktopNavCollabInvitesTooltip,
                     onTap: widget.onCollabInvitesTap!,
                     showBadge: pendingCount > 0,
                     badgeCount: pendingCount,
@@ -521,6 +523,7 @@ class _DesktopNavigationState extends State<DesktopNavigation>
           Expanded(
             child: _buildIconOnlyActionButton(
               icon: Icons.notifications_outlined,
+              label: l10n.commonNotifications,
               onTap: widget.onNotificationsTap,
               showBadge: true,
               isActive: widget.isNotificationsSelected,
@@ -533,6 +536,7 @@ class _DesktopNavigationState extends State<DesktopNavigation>
           Expanded(
             child: _buildIconOnlyActionButton(
               icon: Icons.settings_outlined,
+              label: l10n.navigationScreenSettings,
               onTap: widget.onSettingsTap,
               isActive: widget.isSettingsSelected,
               hoverKey: 'settings',
@@ -546,6 +550,7 @@ class _DesktopNavigationState extends State<DesktopNavigation>
 
   Widget _buildActionButtonsColumn() {
     final animationTheme = context.animationTheme;
+    final l10n = AppLocalizations.of(context)!;
     return Column(
       children: [
         // Collab invites (if enabled)
@@ -556,6 +561,7 @@ class _DesktopNavigationState extends State<DesktopNavigation>
             builder: (context, pendingCount, _) {
               return _buildCollapsedActionButton(
                 icon: Icons.group_add_outlined,
+                label: l10n.desktopNavCollabInvitesTooltip,
                 onTap: widget.onCollabInvitesTap!,
                 showBadge: pendingCount > 0,
                 badgeCount: pendingCount,
@@ -573,6 +579,7 @@ class _DesktopNavigationState extends State<DesktopNavigation>
         // Notifications
         _buildCollapsedActionButton(
           icon: Icons.notifications_outlined,
+          label: l10n.commonNotifications,
           onTap: widget.onNotificationsTap,
           showBadge: true,
           isActive: widget.isNotificationsSelected,
@@ -585,6 +592,7 @@ class _DesktopNavigationState extends State<DesktopNavigation>
         // Settings
         _buildCollapsedActionButton(
           icon: Icons.settings_outlined,
+          label: l10n.navigationScreenSettings,
           onTap: widget.onSettingsTap,
           isActive: widget.isSettingsSelected,
           hoverKey: 'settings',
@@ -596,6 +604,7 @@ class _DesktopNavigationState extends State<DesktopNavigation>
 
   Widget _buildIconOnlyActionButton({
     required IconData icon,
+    required String label,
     required VoidCallback onTap,
     bool showBadge = false,
     int badgeCount = 0,
@@ -604,113 +613,129 @@ class _DesktopNavigationState extends State<DesktopNavigation>
     required AppAnimationTheme animationTheme,
   }) {
     final isHovered = _hoveredActionButtons.contains(hoverKey);
-    return KubusFocusRing(
-      borderRadius: KubusRadius.circular(KubusRadius.sm),
-      child: MouseRegion(
-        onEnter: (_) => _setActionButtonHover(hoverKey, true),
-        onExit: (_) => _setActionButtonHover(hoverKey, false),
-        child: AnimatedContainer(
-          duration: animationTheme.short,
-          curve: animationTheme.defaultCurve,
-          decoration: BoxDecoration(
-            color: isActive
-                ? widget.activeAccent.withValues(alpha: 0.16)
-                : isHovered
-                    ? widget.activeAccent.withValues(alpha: 0.08)
-                    : Colors.transparent,
-            borderRadius: BorderRadius.circular(KubusRadius.sm),
-            border: Border.all(
-              color: isActive
-                  ? widget.activeAccent.withValues(alpha: 0.30)
-                  : isHovered
-                      ? widget.activeAccent.withValues(alpha: 0.12)
-                      : Colors.transparent,
-            ),
-          ),
-          child: Material(
-            color: Colors.transparent,
-            child: InkWell(
-              onTap: onTap,
-              borderRadius: BorderRadius.circular(KubusRadius.sm),
-              child: SizedBox(
-                width: KubusHeaderMetrics.actionHitArea,
-                height: KubusHeaderMetrics.actionHitArea,
-                child: Stack(
-                  clipBehavior: Clip.none,
-                  children: [
-                    Center(
-                      child: Icon(
-                        icon,
-                        color: isActive
-                            ? widget.activeAccent
-                            : Theme.of(context)
-                                .colorScheme
-                                .onSurface
-                                .withValues(alpha: 0.7),
-                        size: KubusChromeMetrics.navIcon,
-                      ),
-                    ),
-                    // Generic badge with count (for collab invites, etc.)
-                    if (showBadge && badgeCount > 0)
-                      Positioned(
-                        right: 0,
-                        top: 0,
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: KubusSpacing.xs,
-                            vertical: KubusSpacing.xxs,
-                          ),
-                          constraints: const BoxConstraints(
-                            minWidth: KubusSpacing.sm +
-                                KubusSpacing.xs +
-                                KubusSpacing.xxs,
-                            minHeight: KubusSpacing.sm +
-                                KubusSpacing.xs +
-                                KubusSpacing.xxs,
-                          ),
-                          decoration: BoxDecoration(
-                            color: Theme.of(context).colorScheme.error,
-                            borderRadius: BorderRadius.circular(KubusRadius.sm),
-                            border: Border.all(
-                              color: Theme.of(context).colorScheme.surface,
-                              width: 1,
-                            ),
-                          ),
-                          child: Center(
-                            child: Text(
-                              badgeCount > 99 ? '99+' : badgeCount.toString(),
-                              style: KubusTextStyles.compactBadge.copyWith(
-                                color: Theme.of(context).colorScheme.onError,
-                              ),
-                            ),
+    return Tooltip(
+      message: label,
+      excludeFromSemantics: true,
+      child: Semantics(
+        button: true,
+        selected: isActive,
+        label: label,
+        child: KubusFocusRing(
+          borderRadius: KubusRadius.circular(KubusRadius.sm),
+          child: MouseRegion(
+            onEnter: (_) => _setActionButtonHover(hoverKey, true),
+            onExit: (_) => _setActionButtonHover(hoverKey, false),
+            child: AnimatedContainer(
+              duration: animationTheme.short,
+              curve: animationTheme.defaultCurve,
+              decoration: BoxDecoration(
+                color: isActive
+                    ? widget.activeAccent.withValues(alpha: 0.16)
+                    : isHovered
+                        ? widget.activeAccent.withValues(alpha: 0.08)
+                        : Colors.transparent,
+                borderRadius: BorderRadius.circular(KubusRadius.sm),
+                border: Border.all(
+                  color: isActive
+                      ? widget.activeAccent.withValues(alpha: 0.30)
+                      : isHovered
+                          ? widget.activeAccent.withValues(alpha: 0.12)
+                          : Colors.transparent,
+                ),
+              ),
+              child: Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  onTap: onTap,
+                  borderRadius: BorderRadius.circular(KubusRadius.sm),
+                  child: SizedBox(
+                    width: KubusHeaderMetrics.actionHitArea,
+                    height: KubusHeaderMetrics.actionHitArea,
+                    child: Stack(
+                      clipBehavior: Clip.none,
+                      children: [
+                        Center(
+                          child: Icon(
+                            icon,
+                            color: isActive
+                                ? widget.activeAccent
+                                : Theme.of(context)
+                                    .colorScheme
+                                    .onSurface
+                                    .withValues(alpha: 0.7),
+                            size: KubusChromeMetrics.navIcon,
                           ),
                         ),
-                      ),
-                    // Notification badge (uses NotificationProvider)
-                    if (showBadge && badgeCount == 0)
-                      Selector<NotificationProvider, int>(
-                        selector: (_, np) => np.unreadCount,
-                        builder: (context, unreadCount, _) {
-                          if (unreadCount == 0) return const SizedBox.shrink();
-                          return Positioned(
+                        // Generic badge with count (for collab invites, etc.)
+                        if (showBadge && badgeCount > 0)
+                          Positioned(
                             right: 0,
                             top: 0,
                             child: Container(
-                              width: KubusChromeMetrics.navBadgeDot,
-                              height: KubusChromeMetrics.navBadgeDot,
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: KubusSpacing.xs,
+                                vertical: KubusSpacing.xxs,
+                              ),
+                              constraints: const BoxConstraints(
+                                minWidth: KubusSpacing.sm +
+                                    KubusSpacing.xs +
+                                    KubusSpacing.xxs,
+                                minHeight: KubusSpacing.sm +
+                                    KubusSpacing.xs +
+                                    KubusSpacing.xxs,
+                              ),
                               decoration: BoxDecoration(
-                                color: widget.activeAccent,
-                                shape: BoxShape.circle,
+                                color: Theme.of(context).colorScheme.error,
+                                borderRadius:
+                                    BorderRadius.circular(KubusRadius.sm),
                                 border: Border.all(
                                   color: Theme.of(context).colorScheme.surface,
                                   width: 1,
                                 ),
                               ),
+                              child: Center(
+                                child: Text(
+                                  badgeCount > 99
+                                      ? '99+'
+                                      : badgeCount.toString(),
+                                  style: KubusTextStyles.compactBadge.copyWith(
+                                    color:
+                                        Theme.of(context).colorScheme.onError,
+                                  ),
+                                ),
+                              ),
                             ),
-                          );
-                        },
-                      ),
-                  ],
+                          ),
+                        // Notification badge (uses NotificationProvider)
+                        if (showBadge && badgeCount == 0)
+                          Selector<NotificationProvider, int>(
+                            selector: (_, np) => np.unreadCount,
+                            builder: (context, unreadCount, _) {
+                              if (unreadCount == 0) {
+                                return const SizedBox.shrink();
+                              }
+                              return Positioned(
+                                right: 0,
+                                top: 0,
+                                child: Container(
+                                  width: KubusChromeMetrics.navBadgeDot,
+                                  height: KubusChromeMetrics.navBadgeDot,
+                                  decoration: BoxDecoration(
+                                    color: widget.activeAccent,
+                                    shape: BoxShape.circle,
+                                    border: Border.all(
+                                      color:
+                                          Theme.of(context).colorScheme.surface,
+                                      width: 1,
+                                    ),
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                      ],
+                    ),
+                  ),
                 ),
               ),
             ),
@@ -722,6 +747,7 @@ class _DesktopNavigationState extends State<DesktopNavigation>
 
   Widget _buildCollapsedActionButton({
     required IconData icon,
+    required String label,
     required VoidCallback onTap,
     bool showBadge = false,
     int badgeCount = 0,
@@ -731,115 +757,131 @@ class _DesktopNavigationState extends State<DesktopNavigation>
   }) {
     final isHovered = _hoveredActionButtons.contains(hoverKey);
     final collapsedButtonPadding = 7.0;
-    return KubusFocusRing(
-      borderRadius: KubusRadius.circular(KubusRadius.sm),
-      child: MouseRegion(
-        onEnter: (_) => _setActionButtonHover(hoverKey, true),
-        onExit: (_) => _setActionButtonHover(hoverKey, false),
-        child: AnimatedContainer(
-          duration: animationTheme.short,
-          curve: animationTheme.defaultCurve,
-          decoration: BoxDecoration(
-            color: isActive
-                ? widget.activeAccent.withValues(alpha: 0.16)
-                : isHovered
-                    ? widget.activeAccent.withValues(alpha: 0.08)
-                    : Colors.transparent,
-            borderRadius: BorderRadius.circular(KubusRadius.md),
-            border: Border.all(
-              color: isActive
-                  ? widget.activeAccent.withValues(alpha: 0.30)
-                  : isHovered
-                      ? widget.activeAccent.withValues(alpha: 0.12)
-                      : Colors.transparent,
-            ),
-          ),
-          child: Material(
-            color: Colors.transparent,
-            child: InkWell(
-              onTap: onTap,
-              borderRadius: BorderRadius.circular(KubusRadius.md),
-              child: SizedBox(
-                width:
-                    KubusHeaderMetrics.actionHitArea - collapsedButtonPadding,
-                height:
-                    KubusHeaderMetrics.actionHitArea - collapsedButtonPadding,
-                child: Stack(
-                  clipBehavior: Clip.none,
-                  children: [
-                    Center(
-                      child: Icon(
-                        icon,
-                        color: isActive
-                            ? widget.activeAccent
-                            : Theme.of(context)
-                                .colorScheme
-                                .onSurface
-                                .withValues(alpha: 0.7),
-                        size: KubusChromeMetrics.navIcon,
-                      ),
-                    ),
-                    // Generic badge with count (for collab invites, etc.)
-                    if (showBadge && badgeCount > 0)
-                      Positioned(
-                        right: 0,
-                        top: 0,
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: KubusSpacing.xs,
-                            vertical: KubusSpacing.xxs,
-                          ),
-                          constraints: const BoxConstraints(
-                            minWidth: KubusSpacing.sm +
-                                KubusSpacing.xs +
-                                KubusSpacing.xxs,
-                            minHeight: KubusSpacing.sm +
-                                KubusSpacing.xs +
-                                KubusSpacing.xxs,
-                          ),
-                          decoration: BoxDecoration(
-                            color: Theme.of(context).colorScheme.error,
-                            borderRadius: BorderRadius.circular(KubusRadius.sm),
-                            border: Border.all(
-                              color: Theme.of(context).colorScheme.surface,
-                              width: 1,
-                            ),
-                          ),
-                          child: Center(
-                            child: Text(
-                              badgeCount > 99 ? '99+' : badgeCount.toString(),
-                              style: KubusTextStyles.compactBadge.copyWith(
-                                color: Theme.of(context).colorScheme.onError,
-                              ),
-                            ),
+    return Tooltip(
+      message: label,
+      excludeFromSemantics: true,
+      child: Semantics(
+        button: true,
+        selected: isActive,
+        label: label,
+        child: KubusFocusRing(
+          borderRadius: KubusRadius.circular(KubusRadius.sm),
+          child: MouseRegion(
+            onEnter: (_) => _setActionButtonHover(hoverKey, true),
+            onExit: (_) => _setActionButtonHover(hoverKey, false),
+            child: AnimatedContainer(
+              duration: animationTheme.short,
+              curve: animationTheme.defaultCurve,
+              decoration: BoxDecoration(
+                color: isActive
+                    ? widget.activeAccent.withValues(alpha: 0.16)
+                    : isHovered
+                        ? widget.activeAccent.withValues(alpha: 0.08)
+                        : Colors.transparent,
+                borderRadius: BorderRadius.circular(KubusRadius.md),
+                border: Border.all(
+                  color: isActive
+                      ? widget.activeAccent.withValues(alpha: 0.30)
+                      : isHovered
+                          ? widget.activeAccent.withValues(alpha: 0.12)
+                          : Colors.transparent,
+                ),
+              ),
+              child: Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  onTap: onTap,
+                  borderRadius: BorderRadius.circular(KubusRadius.md),
+                  child: SizedBox(
+                    width: KubusHeaderMetrics.actionHitArea -
+                        collapsedButtonPadding,
+                    height: KubusHeaderMetrics.actionHitArea -
+                        collapsedButtonPadding,
+                    child: Stack(
+                      clipBehavior: Clip.none,
+                      children: [
+                        Center(
+                          child: Icon(
+                            icon,
+                            color: isActive
+                                ? widget.activeAccent
+                                : Theme.of(context)
+                                    .colorScheme
+                                    .onSurface
+                                    .withValues(alpha: 0.7),
+                            size: KubusChromeMetrics.navIcon,
                           ),
                         ),
-                      ),
-                    // Notification badge (uses NotificationProvider)
-                    if (showBadge && badgeCount == 0)
-                      Selector<NotificationProvider, int>(
-                        selector: (_, np) => np.unreadCount,
-                        builder: (context, unreadCount, _) {
-                          if (unreadCount == 0) return const SizedBox.shrink();
-                          return Positioned(
+                        // Generic badge with count (for collab invites, etc.)
+                        if (showBadge && badgeCount > 0)
+                          Positioned(
                             right: 0,
                             top: 0,
                             child: Container(
-                              width: KubusChromeMetrics.navBadgeDot,
-                              height: KubusChromeMetrics.navBadgeDot,
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: KubusSpacing.xs,
+                                vertical: KubusSpacing.xxs,
+                              ),
+                              constraints: const BoxConstraints(
+                                minWidth: KubusSpacing.sm +
+                                    KubusSpacing.xs +
+                                    KubusSpacing.xxs,
+                                minHeight: KubusSpacing.sm +
+                                    KubusSpacing.xs +
+                                    KubusSpacing.xxs,
+                              ),
                               decoration: BoxDecoration(
-                                color: widget.activeAccent,
-                                shape: BoxShape.circle,
+                                color: Theme.of(context).colorScheme.error,
+                                borderRadius:
+                                    BorderRadius.circular(KubusRadius.sm),
                                 border: Border.all(
                                   color: Theme.of(context).colorScheme.surface,
                                   width: 1,
                                 ),
                               ),
+                              child: Center(
+                                child: Text(
+                                  badgeCount > 99
+                                      ? '99+'
+                                      : badgeCount.toString(),
+                                  style: KubusTextStyles.compactBadge.copyWith(
+                                    color:
+                                        Theme.of(context).colorScheme.onError,
+                                  ),
+                                ),
+                              ),
                             ),
-                          );
-                        },
-                      ),
-                  ],
+                          ),
+                        // Notification badge (uses NotificationProvider)
+                        if (showBadge && badgeCount == 0)
+                          Selector<NotificationProvider, int>(
+                            selector: (_, np) => np.unreadCount,
+                            builder: (context, unreadCount, _) {
+                              if (unreadCount == 0) {
+                                return const SizedBox.shrink();
+                              }
+                              return Positioned(
+                                right: 0,
+                                top: 0,
+                                child: Container(
+                                  width: KubusChromeMetrics.navBadgeDot,
+                                  height: KubusChromeMetrics.navBadgeDot,
+                                  decoration: BoxDecoration(
+                                    color: widget.activeAccent,
+                                    shape: BoxShape.circle,
+                                    border: Border.all(
+                                      color:
+                                          Theme.of(context).colorScheme.surface,
+                                      width: 1,
+                                    ),
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                      ],
+                    ),
+                  ),
                 ),
               ),
             ),
