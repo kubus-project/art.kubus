@@ -177,3 +177,33 @@ Home `artkubus-backend` reports `unhealthy`; `artkubus-orbitdb` restart loop; Ho
 classifier (Production Reads), so stalled replication vs. idle replay is unverified. If stalled, a
 failover would lose ~7 days. OWNER ACTION: check `pg_stat_wal_receiver` on Home and
 `pg_stat_replication` on Oracle.
+
+## Session 5 (2026-10-19 22:30, recovery after the session-4 limit)
+
+Verified live, not taken from the session-4 narrative. App `dev` `9309b1ff`, backend `master`
+`c4115594`, admin `master` `bbabc713` (all unchanged). Every frontend feature worktree equals its
+remote head. Backups of every local-only branch and of the one uncommitted diff:
+`G:/kubus-build-backup/084-20261019-recovery/`.
+
+| WS | Repo | Branch / PR | Head | Status | Tests (this session, local) | Next |
+|---|---|---|---|---|---|---|
+| CD-12/13 institutions | backend | `feat/084-institution-identity` (pushed, no PR, stacked on #99) | `47d8a05` | claims service committed by the worker that hit the limit; verified here | claims PG + rules 25/25 on `kubus-pg-084`; lint clean | claim routes + evidence check (no network check yet); search lacks `merged_into_id IS NULL` (merged duplicates can surface); promotionService reads unfiltered (admin-created, lower risk); SEO fallback `i.*` reaches the row object |
+| CD-11 Studio S1 | backend | `feat/084-moderation-studio-api` (pushed, no PR, stacked on `0335c26`) | `d6dde04` | `4c6b7fd` migration 110 (worker had left it uncommitted; parity + bootstrap re-run: 101 migrations, 143 tables); `a44ebac` service; `d6dde04` router at `/api/admin/moderation-studio`, two export lines in adminModeration.js, CI step + filter | S1 PG + rules 26/26, routes 8/8, adminModeration* 84 pass / 3 skip, lint | `art_markers.geo` is GENERATED: the service writes only lat/lng (the spec said to write geo). S2 bounded reads not started |
+| CD-07 audit | backend | #97 | `c4caaff` | 3 Codex threads (2 P1, 1 P2) fixed, replied, resolved | fixture 75 seeded cases PASS; lint | CI on `c4caaff`; prod run BLOCKED_OWNER |
+| A video | app | #325 ready | `8392b714` | full tier `PR validation required` PASS (run 39308298666); red marks are the superseded draft run | | 1 Codex P2 (poster probing) in progress |
+| B badges | app | #326 ready | `13d52d2c` | full tier PASS (run 39308302012) | | 3 Codex P2 in progress |
+| CD-04 profile | app | #331 draft | `359224cd` | draft tier green, 0 threads | | ready when owner accepts the UX naming |
+| CD-05 / CD-08 / CD-10 | backend | #96 / #99 / #98 drafts | `daec86c` / `99a8754` / `12f8c36` | CLEAN, CI green, 0 threads | | ready-for-review is the owner's call; order #99 -> #96, #98 any time |
+
+B-18: not reproduced in 24 authenticated runs; latent stale-intent slot P3. Full record:
+[b18-like-continuation-qa.md](b18-like-continuation-qa.md).
+
+Staging (isolated, synthetic): backend `backend-candidate` `b68911c` on `127.0.0.1:53101` (the
+node process binds `::`, i.e. all interfaces; synthetic data only, note for the next restart),
+DB `kubus-pg-084`/`staging084` at migration **108** (109 and 110 are not in the candidate),
+web `f20b2129` rebuilt with the backend pinned, served on `127.0.0.1:58180`; admin dev server
+5174 NOT running. The first `f20b2129` build talked to production hosts (see the B-18 record).
+
+Production observations from session 4 (~21:00) carried forward unchanged as BLOCKED_OWNER: Home
+backend unhealthy, OrbitDB restart loop, Home standby replay timestamp ~7.2 days old (replication
+state unverified; an old replay timestamp can also mean an idle primary). Not re-checked.
