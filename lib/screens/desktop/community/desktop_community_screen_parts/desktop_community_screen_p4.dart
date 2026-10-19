@@ -96,42 +96,10 @@ extension _DesktopCommunityScreenStatePart4 on _DesktopCommunityScreenState {
           ),
           child: Row(
             children: [
-              Stack(
-                children: [
-                  KubusIdentityAvatar(
-                    avatarUrl: conversation.displayAvatar,
-                    wallet: avatarWallet,
-                    radius: 24,
-                    allowFabricatedFallback: true,
-                  ),
-                  if (hasUnread)
-                    Positioned(
-                      right: 0,
-                      bottom: 0,
-                      child: Container(
-                        width: 14,
-                        height: 14,
-                        decoration: BoxDecoration(
-                          color: scheme.primary,
-                          shape: BoxShape.circle,
-                          border: Border.all(
-                            color: Theme.of(context).colorScheme.surface,
-                            width: 2,
-                          ),
-                        ),
-                        child: Center(
-                          child: Text(
-                            '$unreadCount',
-                            style: TextStyle(
-                              fontSize: 8,
-                              fontWeight: FontWeight.bold,
-                              color: Theme.of(context).colorScheme.onSecondary,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                ],
+              ConversationAvatar(
+                avatarUrl: conversation.displayAvatar,
+                wallet: avatarWallet,
+                unreadCount: unreadCount,
               ),
               const SizedBox(width: 12),
               Expanded(
