@@ -131,6 +131,9 @@ export function buildBackendEnv(plan, parentEnv = process.env, secrets = { jwt: 
     EMAIL_OCTOPUS_WAITLIST_LIST_ID: 'isolated-unused',
     EMAIL_OCTOPUS_NEWSLETTER_LIST_ID: 'isolated-unused',
     AUTH_RATE_LIMIT: '200000',
+    // The sign-in limiter is a separate key (default 25 per 15 min across every auth route);
+    // a QA run signs in many synthetic accounts.
+    AUTH_RATE_LIMIT_MAX_REQUESTS: '2000',
     ANON_RATE_LIMIT: '200000',
     FEATURE_ENABLE_INSTITUTION_CLAIMS: 'true',
   };
