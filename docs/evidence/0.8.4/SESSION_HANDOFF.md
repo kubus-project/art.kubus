@@ -5,6 +5,26 @@ and [scope-matrix.md](scope-matrix.md). Security findings are never written here
 live in the private draft advisory and `C:/kubus-build/_private/security/`.
 
 ```text
+LATEST (2026-10-19 ~23:30, session 5 "Resume Interrupted Session", Opus coordinator):
+  dev 9309b1ff, backend master c4115594, admin master bbabc713 (unchanged, verified live).
+  Recovered + pushed (no PRs yet): backend feat/084-institution-identity 47d8a05 (claims
+  service, 25/25), feat/084-moderation-studio-api d6dde04 (migration 110 + S1 service + router,
+  34/34). #97 c4caaff: 3 Codex threads fixed + resolved. B-18 NOT reproduced (24 runs,
+  b18-like-continuation-qa.md). Staging web build was talking to production until rebuilt
+  with BACKEND_BASE_URL pinned (same doc). Backups: G:/kubus-build-backup/084-20261019-recovery.
+  #325 -> b9f993bd, #326 -> a1e2ab33 (all Codex threads fixed + resolved; full tier re-running).
+  OWNER: merges (#325, #326 once green; #97 CLEAN; #96/#98/#99 ready-for-review is the owner's
+    call), #97 production read, production health (Home backend, OrbitDB, standby replay).
+  NEXT THREE: 1. open draft PRs for feat/084-institution-identity (base: #99 branch) and
+    feat/084-moderation-studio-api (stacked) once #99 merges; add claim routes. 2. Studio S2
+    bounded reads (docs/MODERATION_STUDIO_API.md) + search merged_into_id filter. 3. Staging
+    journey: put migrations 109/110 into the backend candidate, migrate staging084, start the
+    admin dev server (5174), walk Review Deck / Map Audit with the synthetic admin.
+  RESUME QA: cd G:/kubus-build-084/_staging; node start-backend.cjs (if 53101 is down);
+    node serve-web.cjs G:/kubus-build-084/frontend-candidate/build/web 58180;
+    node b18-run.mjs firefox 3 300,1500,4000
+  Detail: integration-ledger.md "Session 5". Older blocks below are history.
+
 DATE: 2026-10-19 (session art-kubus-87, Opus coordinator, Haiku-first brief)
 CURRENT PHASE: Milestones 1-2 DONE. M1 security #315 (CLEAN, all green at 6953282f),
   backend #94 (01ffd59), CI tier #322 (READY, full run green). M2 video + badges
