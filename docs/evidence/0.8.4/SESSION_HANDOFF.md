@@ -6,27 +6,31 @@ live in the private draft advisory and `C:/kubus-build/_private/security/`.
 
 ```text
 DATE: 2026-10-19 (session art-kubus-87, Opus coordinator, Haiku-first brief)
-CURRENT PHASE: Milestone 1 DONE (security #315 pushed 975892d1, backend #94 01ffd59, CI tier #322 full-run green); next: badges
-DEV SHA: 2190782e   MASTER SHA: 841d92a3   (unchanged since 2026-10-18)
-OPEN PRS (this program): #315 security (draft, 975892d1 pushed),
-  #318 fallback (draft, CLEAN), #312 startup (draft, remote 4d4733ec, local 94f637b9),
-  #322 CI tier (READY, full run green, owner merge), backend #93 Orbit (draft), backend #94 passkey (draft, 01ffd59)
+CURRENT PHASE: Milestones 1-2 DONE. M1 security #315 (CLEAN, all green at 6953282f),
+  backend #94 (01ffd59), CI tier #322 (READY, full run green). M2 video + badges
+  committed and browser-verified (browser-qa-video-badges.md), not pushed.
+DEV SHA: 2190782e   MASTER SHA: 841d92a3   (unchanged)
+OPEN PRS (this program): #315 security (draft: device acceptance owed), #318 fallback
+  (draft, CLEAN), #312 startup (draft, remote 4d4733ec, local 94f637b9), #322 CI tier
+  (ready), backend #93 Orbit (draft), backend #94 passkey (draft)
+OWNER ACTIONS: review+merge #322 first (makes every later draft cheap); merges of all PRs
+  (classifier denies gh pr merge); one private security policy decision; device acceptance
+  for #315 (Android 8 biometric prompt, cold-start lock after OS kill, backup exclusion)
+UNPUSHED (all committed, clean): video 0cdc9432, badges ef3f27be, a11y 0900e878,
+  dialogs edda7c92, map 0ade69d4, perf 94f637b9, evidence (this branch)
+DISPOSABLE: G:/kubus-build-084/candidate-ui (chore/084-ui-candidate 040b3880 + build/web +
+  output/playwright evidence); delete when no longer needed
 AGENT DEFINITIONS: G:/WorkingDATA/art.kubus/.claude/agents/{haiku-scout,haiku-implementer,
-  sonnet-reviewer}.md (load in a fresh session launched from G:/WorkingDATA/art.kubus;
-  until then use general-purpose + model override)
-DIRTY FILES: G:/kubus-build-084/badges (36-file uncommitted role-badge implementation:
-  ProfileIdentityRoles + KubusIdentityAvatar surfaces; untested), G:/kubus-build-084/video
-  (untracked scripts/qa/community_video_sizing_qa.mjs), C:/kubus-build/084-candidate (kept)
-UNPUSHED: perf 94f637b9,
-  video, badges, a11y, dialogs, map (never pushed; bundle backup on G:)
-SECURITY: reviews 4+5 corrections pushed in #315; findings + deferrals private
-  (C:/kubus-build-084/_private/security/2026-10-19-review-5-084-security.md)
-OWNER DECISIONS OPEN: one security policy decision (see the private review only);
-  merges of every PR (classifier denies gh pr merge)
-NEXT THREE ACTIONS:
-  1. Watch #315 CI at 975892d1; fix exact failures only.
-  2. After #322 merges, push a11y/dialogs/map as drafts (cheap tier).
-  3. Badges: commit + focused tests + rendered QA of the in-flight diff; then video QA.
+  sonnet-reviewer}.md - a fresh session launched from G:/WorkingDATA/art.kubus loads them
+SECURITY: findings + 2 deferred low items private:
+  C:/kubus-build-084/_private/security/2026-10-19-review-5-084-security.md
+NEXT THREE ACTIONS (fresh session):
+  1. After #322 merges: merge dev into video/badges/a11y/dialogs/map, push each as a
+     draft PR (cheap tier), one push each.
+  2. Startup #312: push local 94f637b9, then finish the D4 open items listed in the
+     2026-10-18 memory (managed-wallet startup sync, _clearLastError, desktop RPC).
+  3. Re-read scope-matrix.md MISSING/PARTIAL rows (onboarding continuation, support/admin
+     compat, provenance/SEO, map harness) and pick the next smallest release blocker.
 ```
 
 ## Traps carried forward
