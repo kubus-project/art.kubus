@@ -1212,6 +1212,12 @@ abstract class AppLocalizations {
   /// **'Notifications'**
   String get commonNotifications;
 
+  /// No description provided for @desktopNavCollabInvitesTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Collaboration invites'**
+  String get desktopNavCollabInvitesTooltip;
+
   /// No description provided for @commonLabLabel.
   ///
   /// In en, this message translates to:
