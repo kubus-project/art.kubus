@@ -4439,6 +4439,7 @@
   "communityNameThisPlaceTitle": "Name this place",
   "communityNamePlaceHint": "e.g. City park",
   "communityConnectWalletFirstToast": "Sign in first; wallet access is only needed for wallet-linked actions.",
+  "communityPostingNeedsWalletToast": "Publishing community posts needs a connected wallet. You can connect one in Wallet.",
   "communityUnableToAuthenticateToast": "Unable to authenticate. Please try again.",
   "communityComposerAddContentToast": "Add text, an image, or a video.",
   "communityComposerSharedInGroupToast": "Posted in {groupName}",

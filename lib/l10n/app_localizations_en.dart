@@ -10838,6 +10838,10 @@ class AppLocalizationsEn extends AppLocalizations {
       'Sign in first; wallet access is only needed for wallet-linked actions.';
 
   @override
+  String get communityPostingNeedsWalletToast =>
+      'Publishing community posts needs a connected wallet. You can connect one in Wallet.';
+
+  @override
   String get communityUnableToAuthenticateToast =>
       'Unable to authenticate. Please try again.';
 

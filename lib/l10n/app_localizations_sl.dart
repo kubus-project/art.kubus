@@ -10939,6 +10939,10 @@ class AppLocalizationsSl extends AppLocalizations {
       'Najprej se prijavi; dostop do denarnice je potreben samo za dejanja, vezana nanjo.';
 
   @override
+  String get communityPostingNeedsWalletToast =>
+      'Za objavo v skupnosti potrebuješ povezano denarnico. Povežeš jo lahko v razdelku Denarnica.';
+
+  @override
   String get communityUnableToAuthenticateToast =>
       'Overitev ni uspela. Poskusi znova.';
 

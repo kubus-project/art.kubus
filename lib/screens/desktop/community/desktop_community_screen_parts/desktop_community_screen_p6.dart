@@ -724,7 +724,7 @@ extension _DesktopCommunityScreenStatePart6 on _DesktopCommunityScreenState {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showKubusSnackBar(
         SnackBar(
-          content: Text(l10n.communityConnectWalletFirstToast),
+          content: Text(l10n.communityPostingNeedsWalletToast),
           backgroundColor: Theme.of(context).colorScheme.error,
           behavior: SnackBarBehavior.floating,
         ),
@@ -840,7 +840,7 @@ extension _DesktopCommunityScreenStatePart6 on _DesktopCommunityScreenState {
         ScaffoldMessenger.of(context).showKubusSnackBar(
           SnackBar(
             content: Text(isCommunityWalletRequiredError(e)
-                ? l10nError.communityConnectWalletFirstToast
+                ? l10nError.communityPostingNeedsWalletToast
                 : communityComposerFailureMessage(
                     l10nError,
                     e,

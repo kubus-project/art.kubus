@@ -294,7 +294,7 @@ extension _DesktopCommunityScreenStatePart5 on _DesktopCommunityScreenState {
       ScaffoldMessenger.of(context).showKubusSnackBar(
         SnackBar(
           content: Text(
-              AppLocalizations.of(context)!.communityConnectWalletFirstToast),
+              AppLocalizations.of(context)!.communityPostingNeedsWalletToast),
           behavior: SnackBarBehavior.floating,
           backgroundColor: Theme.of(context).colorScheme.error,
         ),
@@ -447,7 +447,7 @@ extension _DesktopCommunityScreenStatePart5 on _DesktopCommunityScreenState {
             // A stale stored wallet can pass the pre-check; the backend's
             // WALLET_REQUIRED answer still gets the actionable message.
             content: Text(isCommunityWalletRequiredError(e)
-                ? AppLocalizations.of(context)!.communityConnectWalletFirstToast
+                ? AppLocalizations.of(context)!.communityPostingNeedsWalletToast
                 : communityComposerFailureMessage(
                     AppLocalizations.of(context)!,
                     e,
