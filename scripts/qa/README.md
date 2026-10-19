@@ -48,6 +48,42 @@ Older ad hoc scripts remain under `output/playwright/` for reference, but new
 or maintained browser QA should be added here and exposed through root
 `package.json` scripts.
 
+## Local staging (authenticated QA against a disposable backend)
+
+Signed-in browser QA runs only against a local backend with synthetic data. The rules
+are code in `scripts/qa/staging/` and are tested by `isolation.test.mjs` (CI guardrails
+job):
+
+- The web client reads `BACKEND_BASE_URL` and fails over to `BACKEND_STANDBY_BASE_URL`;
+  both default to production. `KUBUS_BACKEND_URL` alone does not move it. A staging build
+  pins all three:
+
+  ```powershell
+  $env:KUBUS_STAGING_API_ORIGIN='http://127.0.0.1:53101'
+  # plus the three public KUBUS_GOOGLE_*_CLIENT_ID values the public build requires
+  node scripts/qa/staging/build_web.mjs
+  ```
+
+  It refuses to run without a loopback origin and fails if `build/web/main.dart.js`
+  names `api.kubus.site` or `bapi.kubus.site`.
+- `launch_backend.mjs --backend <checkout> --private <dir outside the repo> --database-url
+  postgresql://...@127.0.0.1:<port>/<db>` starts the backend with `LISTEN_HOST=127.0.0.1`
+  (art.kubus-backend #100). The child environment is built from an allowlist. The launcher
+  refuses a backend tree with a `.env` file and a non-loopback database, and stops the
+  backend if its port answers on any external address.
+- `preflight.mjs --api <origin> --web <origin> --web-root build/web` must pass before a
+  browser opens. It checks the pinned defines, the artifact scan, `/health`, and that both
+  ports are reachable on loopback only.
+- Every staging browser context calls `installStagingGuard(context, { apiOrigin, webOrigin })`
+  from `playwright_guard.mjs`. The guard aborts any request to a production API host and
+  any write outside the two staging origins. A run fails if its blocked list is not empty.
+  Solana JSON-RPC uses POST even for reads, so wallet balance reads do not work under the
+  guard: no transaction can leave a staging run.
+- The defines file may carry only known public keys (`STAGING_PUBLIC_DEFINE_KEYS`); an
+  unknown key fails the build and the preflight.
+
+The admin dev server already binds `127.0.0.1:5174` (`vite.config.ts` in admin.kubus).
+
 ## Guest-first entry QA
 
 `guest_first_entry_browser_qa.mjs` drives a fresh-storage visitor through the
