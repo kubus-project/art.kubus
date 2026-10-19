@@ -105,6 +105,27 @@ List<DesktopNavItem> resolveDesktopNavItems(bool isSignedIn,
   return items;
 }
 
+/// How the shell loads the signed-in profile when it is not loaded yet.
+enum DesktopProfileHydration { none, wallet, session }
+
+/// A wallet session loads the wallet's profile. An email session without a
+/// wallet loads the profile from the session itself, once: a failed attempt is
+/// not retried on every rebuild. Pure, so it can be asserted without the shell.
+@visibleForTesting
+DesktopProfileHydration resolveDesktopProfileHydration({
+  required bool isSignedIn,
+  required String authWallet,
+  required bool hasAuthSession,
+  required bool sessionHydrationAttempted,
+}) {
+  if (isSignedIn) return DesktopProfileHydration.none;
+  if (authWallet.isNotEmpty) return DesktopProfileHydration.wallet;
+  if (hasAuthSession && !sessionHydrationAttempted) {
+    return DesktopProfileHydration.session;
+  }
+  return DesktopProfileHydration.none;
+}
+
 /// Main desktop shell that provides the sidebar navigation
 class DesktopShell extends StatefulWidget {
   final int initialIndex;
@@ -143,6 +164,7 @@ class _DesktopShellState extends State<DesktopShell>
   bool _pendingRouteCorrection = false;
   bool _pendingNavCollapse = false;
   bool _pendingProfileHydration = false;
+  bool _sessionProfileHydrationAttempted = false;
   PublicEntityTakeoverTarget? _canonicalPublicEntryTarget;
   bool _dispatchingInitialCanonicalEntry = false;
   bool? _lastCommunityViewActive;
@@ -606,14 +628,31 @@ class _DesktopShellState extends State<DesktopShell>
     );
     final authWallet =
         (BackendApiService().getCurrentAuthWalletAddress() ?? '').trim();
+    final hasAuthSession = BackendApiService().hasAuthSession;
+    if (!hasAuthSession) {
+      _sessionProfileHydrationAttempted = false;
+    }
+    final hydration = resolveDesktopProfileHydration(
+      isSignedIn: navState.isSignedIn,
+      authWallet: authWallet,
+      hasAuthSession: hasAuthSession,
+      sessionHydrationAttempted: _sessionProfileHydrationAttempted,
+    );
     final canHydrateAuthenticatedProfile =
-        !navState.isSignedIn && authWallet.isNotEmpty;
+        hydration != DesktopProfileHydration.none;
 
     if (canHydrateAuthenticatedProfile && !_pendingProfileHydration) {
       _pendingProfileHydration = true;
+      if (hydration == DesktopProfileHydration.session) {
+        _sessionProfileHydrationAttempted = true;
+      }
       WidgetsBinding.instance.addPostFrameCallback((_) async {
         try {
-          await profileProvider.loadProfile(authWallet);
+          if (hydration == DesktopProfileHydration.wallet) {
+            await profileProvider.loadProfile(authWallet);
+          } else {
+            await profileProvider.loadAuthenticatedProfile();
+          }
         } catch (_) {
         } finally {
           _pendingProfileHydration = false;
