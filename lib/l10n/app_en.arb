@@ -297,6 +297,7 @@
   "commonReplace": "Replace",
   "commonSearch": "Search",
   "commonNotifications": "Notifications",
+  "desktopNavCollabInvitesTooltip": "Collaboration invites",
   "commonLabLabel": "Lab",
   "commonShare": "Share",
   "shareOptionCreatePost": "Create community post",
