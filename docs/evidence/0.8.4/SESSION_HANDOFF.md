@@ -41,6 +41,19 @@ UPDATE 2026-10-19 (session 3, art-kubus-73): dev c53ab80e (#322 merged). Drafts 
   Flutter CD-04 on fix/084-profile-authorship. Next after CD-04: SEO authored count (CD-05),
   then the read-only data audit (CD-07, needs owner read-only DB access) and moderation state
   (CD-08: inspect the existing `migration:contract:editorial` gate first).
+CHECKPOINT 2026-10-19 evening (session 3): PRs opened this session -
+  art.kubus: #325 video, #326 badges, #327 a11y (READY, full tier), #328 dialogs, #329 map,
+    #330 B-20 email session, #331 CD-04 profile authorship (draft tier green where run)
+  art.kubus-backend: #95 CD-01/03/05 authorship (all green), #96 SEO authored (stacked on #95),
+    #97 CD-07 audit tooling (not run on prod), #98 CD-10 import evaluation,
+    #99 CD-08 editorial state (stacked on #95)
+  admin.kubus: #17 CD-11 Review Deck (first slice)
+  Merge order for backend: #95 -> retarget #96/#99 to master -> #97/#98 any time.
+  Remaining CD rows: CD-06 contributions (needs model), CD-09 propagation audit beyond
+  syncArtworkById, CD-11 Map Audit + Data Inspector + staging journey, CD-12/13 institutions,
+  CD-14 street-art ingestion, CD-15 SEO/index eligibility for unreviewed external records.
+  Owner gates: merges; prod read-only run of #97; staging admin journey for #17/#99;
+  UX naming "Added Public Art" tile vs "Public art added" section (#331).
 NEXT THREE ACTIONS (fresh session; superseded by the update above where they conflict):
   1. After #322 merges: merge dev into video/badges/a11y/dialogs/map, push each as a
      draft PR (cheap tier), one push each.
