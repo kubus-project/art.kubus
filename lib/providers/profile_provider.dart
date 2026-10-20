@@ -971,7 +971,9 @@ class ProfileProvider extends foundation.ChangeNotifier {
           : walletAddress;
 
       final profileData = {
-        'walletAddress': walletAddress,
+        // Email/Google sessions have no wallet: omit it so the backend derives
+        // the owner from the token instead of receiving an empty identifier.
+        if (walletAddress.isNotEmpty) 'walletAddress': walletAddress,
         if (effectiveUsername != null) 'username': effectiveUsername,
         if (effectiveDisplayName != null) 'displayName': effectiveDisplayName,
         if (effectiveBio != null) 'bio': effectiveBio,
@@ -1053,7 +1055,7 @@ class ProfileProvider extends foundation.ChangeNotifier {
             _currentUser?.copyWith(avatar: _convertSvgToRaster(resolved));
       } catch (_) {}
 
-      if (reloadStats) {
+      if (reloadStats && walletAddress.isNotEmpty) {
         unawaited(
           _loadBackendStats(walletAddress)
               .timeout(const Duration(seconds: 5))
@@ -1073,7 +1075,9 @@ class ProfileProvider extends foundation.ChangeNotifier {
 
       // Save to SharedPreferences
       final prefs = await _ensurePrefs();
-      await prefs.setString('wallet_address', walletAddress);
+      if (walletAddress.isNotEmpty) {
+        await prefs.setString('wallet_address', walletAddress);
+      }
       final persistedUsername = _currentUser?.username ??
           (profileJson['username']?.toString() ?? '').trim();
       if (persistedUsername.isNotEmpty) {
@@ -1114,7 +1118,9 @@ class ProfileProvider extends foundation.ChangeNotifier {
       try {
         EventBus().emitProfileUpdated(_currentUser);
       } catch (_) {}
-      ProfilePackageMutationTracker.profileChanged(walletAddress);
+      if (walletAddress.isNotEmpty) {
+        ProfilePackageMutationTracker.profileChanged(walletAddress);
+      }
       return true;
     } on TimeoutException catch (e) {
       _error =
@@ -1256,7 +1262,9 @@ class ProfileProvider extends foundation.ChangeNotifier {
         fileBytes: fileBytes,
         fileName: fileName,
         fileType: 'avatar',
-        metadata: {'walletAddress': walletAddress},
+        metadata: {
+          if (walletAddress.isNotEmpty) 'walletAddress': walletAddress,
+        },
       );
 
       // Normalize response: backend may wrap in { data: { url: ... } }
@@ -1356,7 +1364,9 @@ class ProfileProvider extends foundation.ChangeNotifier {
         fileBytes: fileBytes,
         fileName: fileName,
         fileType: fileType,
-        metadata: {'walletAddress': walletAddress},
+        metadata: {
+          if (walletAddress.isNotEmpty) 'walletAddress': walletAddress,
+        },
       );
 
       debugPrint('   API call completed successfully');
