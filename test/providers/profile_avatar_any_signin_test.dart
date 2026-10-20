@@ -46,9 +46,8 @@ class _EmailSessionApi implements ProfileBackendApi {
     required String fileType,
     Map<String, String>? metadata,
   }) async {
-    lastUploadMetadata = metadata == null
-        ? null
-        : Map<String, String>.from(metadata);
+    lastUploadMetadata =
+        metadata == null ? null : Map<String, String>.from(metadata);
     final error = uploadError;
     if (error != null) throw error;
     return uploadResponse;
@@ -171,8 +170,8 @@ void main() {
       ),
       throwsA(
         isA<ProfileRequestFailure>()
-            .having((f) => f.errorCode, 'errorCode',
-                'PROFILE_OWNERSHIP_MISMATCH')
+            .having(
+                (f) => f.errorCode, 'errorCode', 'PROFILE_OWNERSHIP_MISMATCH')
             .having((f) => f.statusCode, 'statusCode', 403),
       ),
     );
@@ -261,7 +260,8 @@ void main() {
     );
 
     expect(saved, isTrue);
-    expect(api.lastSavedProfile?['avatar'], '/uploads/profiles/avatars/fresh.png');
+    expect(
+        api.lastSavedProfile?['avatar'], '/uploads/profiles/avatars/fresh.png');
     expect(provider.currentUser?.avatar,
         contains('/uploads/profiles/avatars/fresh.png'));
   });
