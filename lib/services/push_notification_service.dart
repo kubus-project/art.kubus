@@ -487,7 +487,7 @@ class PushNotificationService {
         importance: Importance.defaultImportance,
         priority: Priority.defaultPriority,
         showWhen: true,
-        icon: '@mipmap/ic_launcher',
+        icon: '@drawable/ic_notification',
       ),
       iOS: const DarwinNotificationDetails(
         presentAlert: true,
