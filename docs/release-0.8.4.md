@@ -1,0 +1,99 @@
+# art.kubus 0.8.4: final 0.8 stabilization
+
+Status: **IN RELEASE** (updated as each step completes). Statuses are kept separate:
+**implemented**, **tested**, **reviewed**, **merged**, **deployed** and **released** are
+never inferred from one another. Maturity stays 0.8.x-alpha. The version bump is its own
+commit (build `261020.01`, 2026-10-20).
+
+0.8.4 closes the 0.8 line before 0.9. It adds no Web2.5 features. Walletless posting,
+account-ID direct messages and the other account-owned community work are preserved for
+0.9 (backend #104/#105/#106, app #340/#341); see "Deferred to 0.9".
+
+## Backend (art.kubus-backend): merged and deployed
+
+Integration PR [#110](https://github.com/kubus-project/art.kubus-backend/pull/110) was merged
+with a merge commit as `master` `c3925db2`.
+
+| PR | Scope |
+| --- | --- |
+| #107 | Security: revoke realtime conversation access when a member leaves |
+| #108 | Notifications on the wallet-keyed model (R07/R08/R10), unread summary, migration 112, forward-only read state, schema FK order |
+| #109 | R18: public pages enter the interactive app map; crawlable hub breadcrumb |
+| #94 | Single-use auth challenges, forward-only sign count, PRF results discarded |
+| #93 | Bounded Orbit public reads |
+| #96, #98, #101, #102 | SEO authored counts, import evaluation, institution identity and claims, Moderation Studio S1 |
+| #100, #103 | LISTEN_HOST binding; WALLET_REQUIRED 403 instead of 500 |
+
+**Deployed** to Oracle on 2026-10-20 at 19:07Z (`GIT_COMMIT` c3925db, healthy). Migrations 107, 108,
+109, 110 and 112 were applied (102 total). The compose invocation was proven by config hash
+before deploying. Rollback: image `artkubus-backend:rollback-pre-c3925db`, plus a database dump
+taken before migrating (125 MB, 133 tables). `app.kubus.site` reports
+`X-Kubus-Backend-Revision: c3925db`, and the R18 links are live.
+
+## App (art.kubus)
+
+Integration PR [#345](https://github.com/kubus-project/art.kubus/pull/345) was merged into
+`dev` with a merge commit as `7d7586e1`. It contains #326, #331, #332, #333, #335, #336, #337,
+#338, #339, #342, #312, #315, #318, #328, #329, #343 and #344. #325 and #334 were already in
+`dev`. An independent review (Claude Sonnet) approved it, and exact-head CI passed (one known
+flaky test was rerun).
+
+Corrections found by rendered QA on an isolated local staging stack and fixed before merge:
+- The desktop rail had gained an unapproved Messages entry. It was removed; the message
+  unread badge is on Connect, and the internal `/messages` route keeps Connect selected.
+- Restored sessions never initialized notification state, so returning users had no unread
+  badges. Warm-up and sign-in now initialize it.
+- Marking an older message read could move read state backwards (backend #108).
+- One desktop Solana RPC (`getTokenAccountsByOwner`) ran at startup for guests and walletless
+  accounts. Verified zero after the fix.
+- Light-mode dialog contrast: action labels measured 1.94:1 before and 5.62:1 after (WCAG AA).
+
+## Web family: merged and deployed as 0.8.4
+
+| Site | PR | Live revision | Performance fix |
+| --- | --- | --- | --- |
+| node.kubus.site | #15 | `3372106e` | Cache lifetimes: hashed JS/CSS and fonts 1 year immutable, images 1 week, HTML no-cache |
+| art.kubus.site | #34 | `ab2a2e45` | Full-page CLS removed (the main stylesheet had been loaded asynchronously); responsive map LCP image |
+| kubus.site | #18 | `e47aa114` | Responsive WebP archive images |
+
+Lighthouse 12.8.2 on art.kubus.site (live before, local production build after): `/en/map/` mobile
+went from 36 to 66, CLS 0.906 to 0, LCP 6.7 s to 4.0 s; home desktop went from 69 to 95,
+CLS 1.015 to 0.012.
+
+## Regression matrix (R01-R18)
+
+| ID | Item | Status |
+| --- | --- | --- |
+| R01/R02/R15 | Icon, app name, iOS location purpose | Merged (#334). Physical device check owed |
+| R03 | iOS Google sign-in | BLOCKED_OWNER (Google Sign-In configuration) |
+| R04/R06 | Avatar persistence, follow state | Merged (#336). Widget tests |
+| R05 | Generic profile eyebrow removed | Merged earlier (db141c54) |
+| R07/R08/R10 | Message and interaction notifications, unread badges | Merged (#338, backend #108 deployed). Rendered on local staging: Connect badge 4, cleared after reading |
+| R09 | EN/SL notification copy | Merged (#339). Widget tests |
+| R11 | Messaging redesign | Merged (#342). Rendered at 390/1440, light/dark, reduced motion; sent and received |
+| R12/R13 | Image decode bounds, glass | Merged (#337). Device check owed |
+| R14 | Artwork return keeps the bottom-bar tab | Merged (#335). Widget tests |
+| R16 | Comments navigation and scrolling | Merged (#335). Widget tests |
+| R17 | Dialog layout, contrast, dismissal | Merged (#344). Contrast measured on rendered screenshots |
+| R18 | SEO page to Flutter entry | Backend #109 deployed; links verified in production HTML |
+
+## Known limitations
+- iOS: no Apple Developer Program enrolment, so the IPA is unsigned and there is no TestFlight build.
+- On desktop, Enter in the message composer inserts a new line (pre-existing; the send button sends).
+- Hub SEO pages remain HTML by design; their primary CTA enters the app map, and `/map` ignores
+  a `markerId` query (place pages are used instead).
+- Follow-ups recorded in PRs: a forced notification re-init can be dropped during an in-flight
+  init; admin account deletion keeps conversation memberships; the email-session hydration flag
+  is not keyed to the user.
+
+## Deferred to 0.9
+Backend #104 (walletless posting, migration 111), #105 (account notifications), #106 (account
+messaging, migrations 113/114); app #340 (account messaging identity), #341 (R11 on the account
+model), and the walletless compose commit 83196e2c. **#108 ships `112_account_aware_notifications.sql`
+under the same filename as #105.** Reconcile any difference with a new migration, because 0.8.4's 112 is
+applied in production.
+
+## Rollback
+- Backend: retag `artkubus-backend:rollback-pre-c3925db`; restore the pre-migration dump if needed.
+- Web app: redeploy the previous `master` (`841d92a3`) through release-production.
+- Web family: redeploy the previous revision through each site's protected deploy.
