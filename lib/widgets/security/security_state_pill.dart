@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../l10n/app_localizations.dart';
 import '../../utils/design_tokens.dart';
 
 enum SecurityHubStatus {
@@ -23,14 +24,14 @@ extension SecurityHubStatusStyle on SecurityHubStatus {
     };
   }
 
-  String get defaultLabel {
+  String defaultLabel(AppLocalizations l10n) {
     return switch (this) {
-      SecurityHubStatus.secured => 'Secured',
-      SecurityHubStatus.available => 'Available',
-      SecurityHubStatus.recommended => 'Recommended',
-      SecurityHubStatus.failed => 'Failed',
-      SecurityHubStatus.disabled => 'Disabled',
-      SecurityHubStatus.destructive => 'Destructive',
+      SecurityHubStatus.secured => l10n.securityHubStatusSecured,
+      SecurityHubStatus.available => l10n.walletSecurityAvailable,
+      SecurityHubStatus.recommended => l10n.securityHubStatusRecommended,
+      SecurityHubStatus.failed => l10n.securityHubStatusFailed,
+      SecurityHubStatus.disabled => l10n.commonDisabled,
+      SecurityHubStatus.destructive => l10n.securityHubStatusDestructive,
     };
   }
 }
@@ -60,7 +61,7 @@ class SecurityStatePill extends StatelessWidget {
         border: Border.all(color: color.withValues(alpha: 0.24)),
       ),
       child: Text(
-        label ?? status.defaultLabel,
+        label ?? status.defaultLabel(AppLocalizations.of(context)!),
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
         style: Theme.of(context).textTheme.labelSmall?.copyWith(

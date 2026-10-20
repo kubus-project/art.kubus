@@ -26,6 +26,7 @@ import '../utils/design_tokens.dart';
 import '../utils/kubus_color_roles.dart';
 import '../services/backend_api_service.dart';
 import '../services/push_notification_service.dart';
+import '../services/security/pin_management.dart';
 import '../services/settings_service.dart';
 import '../widgets/platform_aware_widgets.dart';
 import '../widgets/common/keyboard_inset_padding.dart';

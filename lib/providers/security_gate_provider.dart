@@ -26,11 +26,18 @@ enum SecurityLockReason {
 
 class SecurityGateProvider extends ChangeNotifier
     implements AuthSessionCoordinator {
+  /// Upper bound for one cold-start or resume lock decision. Past it the
+  /// decision locks fail-closed so the opaque cover cannot stay up forever.
+  static const Duration defaultLockDecisionTimeout = Duration(seconds: 5);
+
   SecurityGateProvider({
     Duration promptCooldown = const Duration(seconds: 8),
-  }) : _promptCooldown = promptCooldown;
+    Duration lockDecisionTimeout = defaultLockDecisionTimeout,
+  })  : _promptCooldown = promptCooldown,
+        _lockDecisionTimeout = lockDecisionTimeout;
 
   final Duration _promptCooldown;
+  final Duration _lockDecisionTimeout;
 
   ProfileProvider? _profileProvider;
   WalletProvider? _walletProvider;
@@ -52,6 +59,15 @@ class SecurityGateProvider extends ChangeNotifier
 
   Completer<void>? _initializeCompleter;
   bool _hasLocalAccount = false;
+  bool _accountStateUnknown = false;
+
+  /// Lock decisions still running. Starts at one: the cold-start decision
+  /// stays pending until [initialize] settles it. Each resume adds one.
+  int _pendingLockDecisions = 1;
+
+  /// True until the cold-start or resume decision has finished. The UI must
+  /// cover the app while this holds so no restored route is interactive.
+  bool get isLockDecisionPending => _pendingLockDecisions > 0;
 
   bool get isLocked => _locked;
   SecurityLockReason? get lockReason => _lockReason;
@@ -87,12 +103,9 @@ class SecurityGateProvider extends ChangeNotifier
 
     () async {
       try {
-        await reloadSettings();
-        _resetInactivityTimer();
-      } catch (e) {
-        if (kDebugMode) {
-          debugPrint('SecurityGateProvider.initialize failed: $e');
-        }
+        // The cold-start decision (its settings read included) is bounded and
+        // ends the pending count it started with, exactly once.
+        await _enqueueLifecycle(() => _runLockDecision(_enforceColdStartLock));
       } finally {
         if (!completer.isCompleted) completer.complete();
       }
@@ -112,9 +125,21 @@ class SecurityGateProvider extends ChangeNotifier
     try {
       final resolved = prefs ?? await SharedPreferences.getInstance();
       _hasLocalAccount = AuthGatingService.hasLocalAccountSync(prefs: resolved);
+      _accountStateUnknown = false;
     } catch (_) {
       _hasLocalAccount = false;
+      _accountStateUnknown = true;
     }
+  }
+
+  void _beginLockDecision() {
+    _pendingLockDecisions++;
+    notifyListeners();
+  }
+
+  void _endLockDecision() {
+    if (_pendingLockDecisions > 0) _pendingLockDecisions--;
+    notifyListeners();
   }
 
   void onUserInteraction() {
@@ -122,29 +147,181 @@ class SecurityGateProvider extends ChangeNotifier
     _resetInactivityTimer();
   }
 
+  /// Lifecycle work is serialised so the departure timestamp is written,
+  /// read and cleared in the order the engine delivered the events.
+  Future<void> _lifecycleChain = Future<void>.value();
+
+  Future<void> _enqueueLifecycle(Future<void> Function() task) {
+    final next = _lifecycleChain.then((_) => task()).catchError((Object e) {
+      if (kDebugMode) debugPrint('SecurityGateProvider lifecycle task: $e');
+    });
+    _lifecycleChain = next;
+    return next;
+  }
+
+  @visibleForTesting
+  Future<void> get lifecycleIdleForTesting => _lifecycleChain;
+
   void onAppLifecycleChanged(AppLifecycleState state) {
-    if (state == AppLifecycleState.paused ||
-        state == AppLifecycleState.inactive) {
-      unawaited(_persistInactiveTimestamp());
-      return;
-    }
-    if (state == AppLifecycleState.resumed) {
-      unawaited(_handleResumed());
+    switch (state) {
+      case AppLifecycleState.paused:
+      case AppLifecycleState.hidden:
+        // The app really left the foreground. `inactive` is also delivered on
+        // the way back, so it is never used to record the departure.
+        unawaited(_enqueueLifecycle(_recordDeparture));
+        return;
+      case AppLifecycleState.resumed:
+        // Covered synchronously, before any awaited read can let the restored
+        // route be interactive.
+        _beginLockDecision();
+        unawaited(_enqueueLifecycle(_runResumeDecision));
+        return;
+      case AppLifecycleState.inactive:
+      case AppLifecycleState.detached:
+        return;
     }
   }
 
-  Future<void> _persistInactiveTimestamp() async {
+  /// Records when the app was left. The first departure wins: the `hidden`
+  /// event that precedes `resumed` on the return transition must not move it.
+  Future<void> _recordDeparture() async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setInt(
-          'last_inactive_ts', DateTime.now().millisecondsSinceEpoch);
+      await _writeDeparture().timeout(_lockDecisionTimeout);
     } catch (_) {
-      // Best-effort only.
+      // Best-effort only, and bounded: a hung write must not stall the
+      // lifecycle chain. The departure is then lost, which the resume decision
+      // treats as "no timestamp".
+    }
+  }
+
+  Future<void> _writeDeparture() async {
+    final prefs = await SharedPreferences.getInstance();
+    if (prefs.getInt(_departureKey) != null) return;
+    await prefs.setInt(_departureKey, DateTime.now().millisecondsSinceEpoch);
+  }
+
+  static const String _departureKey = 'last_inactive_ts';
+
+  /// Reads and clears the persisted departure time.
+  Future<int?> _takeDeparture() async {
+    final prefs = await SharedPreferences.getInstance();
+    final value = prefs.getInt(_departureKey);
+    await prefs.remove(_departureKey);
+    return value;
+  }
+
+  /// Whether the time away from the app calls for a lock. A missing, future or
+  /// unreadable departure time counts as "unknown", which locks.
+  bool _awayLongEnough(int? departureMs) {
+    final seconds = autoLockSeconds;
+    if (seconds < 0) return true;
+    if (departureMs == null) return true;
+    final elapsed = DateTime.now()
+        .difference(DateTime.fromMillisecondsSinceEpoch(departureMs));
+    if (elapsed.isNegative) return true;
+    return elapsed.inSeconds >= seconds;
+  }
+
+  Future<void> _runResumeDecision() => _runLockDecision(_handleResumed);
+
+  /// Runs one lock decision under [_lockDecisionTimeout]. The decision's
+  /// pending count is ended here, once, in `finally`. The body never ends it,
+  /// so an orphaned body that finishes after a timeout cannot decrement the
+  /// counter or clear a newer decision's cover. On timeout or error the
+  /// decision fails closed, and the lifecycle chain moves on.
+  Future<void> _runLockDecision(Future<void> Function() body) async {
+    try {
+      await body().timeout(_lockDecisionTimeout);
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('SecurityGateProvider lock decision bounded: $e');
+      }
+      await _lockAfterUnreadableDecision(SecurityLockReason.autoLock);
+    } finally {
+      _endLockDecision();
+    }
+  }
+
+  /// Applies the app lock when the process starts. A process that was
+  /// reclaimed in the background must not come back unlocked.
+  Future<void> _enforceColdStartLock() async {
+    try {
+      await reloadSettings();
+      _resetInactivityTimer();
+      final departureMs = await _takeDeparture();
+      if (_accountStateUnknown) {
+        throw StateError('local account state is unreadable');
+      }
+      if (!_shouldAutoLock()) return;
+      if (_awayLongEnough(departureMs)) {
+        await lock(SecurityLockReason.autoLock);
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('SecurityGateProvider._enforceColdStartLock failed: $e');
+      }
+      await _lockAfterUnreadableDecision(SecurityLockReason.autoLock);
+    }
+  }
+
+  /// A decision that could not be read must fail closed. Locks when the last
+  /// known settings required a PIN, or, with no settings loaded, when the
+  /// persisted flag says so or cannot be read. Ignores [_hasLocalAccount]:
+  /// that flag is exactly what may be unreadable here.
+  Future<void> _lockAfterUnreadableDecision(SecurityLockReason reason) async {
+    try {
+      await _lockAfterUnreadableDecisionUnbounded(reason)
+          .timeout(_lockDecisionTimeout);
+    } catch (_) {
+      // The fallback itself hung (its prefs read or PIN check). Lock directly,
+      // without awaiting anything, unless loaded settings say no PIN is needed.
+      final loaded = _settings;
+      if (loaded == null || _appLockRequired(loaded)) {
+        _engageLockDirectly(reason);
+      }
+    }
+  }
+
+  /// Sets the locked state without awaiting the wallet. Only the fail-closed
+  /// fallback uses it, when the PIN check itself cannot complete.
+  void _engageLockDirectly(SecurityLockReason reason) {
+    if (_locked) return;
+    _locked = true;
+    _lockReason = reason;
+    _authFailureContext = null;
+    _inFlight ??= Completer<AuthReauthResult>();
+    notifyListeners();
+  }
+
+  Future<void> _lockAfterUnreadableDecisionUnbounded(
+      SecurityLockReason reason) async {
+    try {
+      final loaded = _settings;
+      final bool wantLock;
+      if (loaded != null) {
+        wantLock = _appLockRequired(loaded);
+      } else {
+        try {
+          final prefs = await SharedPreferences.getInstance();
+          wantLock = prefs.getBool('requirePin') ??
+              SettingsState.defaults().requirePin;
+        } catch (_) {
+          // Unreadable flag: a PIN is presumed to exist, so lock.
+          await _applyLock(reason);
+          return;
+        }
+      }
+      if (!wantLock) return;
+      await _applyLock(reason);
+    } catch (_) {
+      // The lock itself could not be applied; nothing further to do here.
     }
   }
 
   Future<void> _handleResumed() async {
     try {
+      final departureMs = await _takeDeparture();
+
       // Check if we're on an auth-related route that shouldn't trigger auto-lock
       final navigator = appNavigatorKey.currentState;
       if (navigator != null && navigator.mounted) {
@@ -165,40 +342,35 @@ class SecurityGateProvider extends ChangeNotifier
         }
       }
 
-      final prefs = await SharedPreferences.getInstance();
-      final lastInactiveMs = prefs.getInt('last_inactive_ts');
-      await prefs.remove('last_inactive_ts');
-
       await reloadSettings();
+      if (_accountStateUnknown) {
+        throw StateError('local account state is unreadable');
+      }
 
       if (!_shouldAutoLock()) return;
-      if (lastInactiveMs == null) return;
-
-      final elapsed = DateTime.now()
-          .difference(DateTime.fromMillisecondsSinceEpoch(lastInactiveMs));
-      if (autoLockSeconds < 0) {
-        // Immediate: any backgrounding locks.
-        await lock(SecurityLockReason.autoLock);
-        return;
-      }
-      if (autoLockSeconds == 0) return;
-      if (elapsed.inSeconds >= autoLockSeconds) {
+      // No recorded departure on a warm resume means the app never left the
+      // foreground (the first `resumed` of a launch); cold start handles that.
+      if (departureMs == null) return;
+      if (_awayLongEnough(departureMs)) {
         await lock(SecurityLockReason.autoLock);
       }
     } catch (e) {
       if (kDebugMode) {
         debugPrint('SecurityGateProvider._handleResumed failed: $e');
       }
+      await _lockAfterUnreadableDecision(SecurityLockReason.autoLock);
     }
   }
 
   bool _shouldAutoLock() {
     if (!_hasLocalAccount) return false;
-    if (!requirePin && !biometricsEnabled) return false;
-    final seconds = autoLockSeconds;
-    if (seconds == 0) return false;
-    return true;
+    return _appLockRequired(settings);
   }
+
+  /// Whether the settings call for the app lock. Shared by [_shouldAutoLock]
+  /// and the fail-closed fallback, so both decide the same way.
+  static bool _appLockRequired(SettingsState s) =>
+      (s.requirePin || s.biometricAuth) && s.autoLockSeconds != 0;
 
   void _resetInactivityTimer() {
     _inactivityTimer?.cancel();
@@ -227,8 +399,19 @@ class SecurityGateProvider extends ChangeNotifier
         !_hasLocalAccount) {
       return;
     }
+    await _applyLock(reason, context: context);
+  }
+
+  Future<void> _applyLock(SecurityLockReason reason,
+      {AuthFailureContext? context}) async {
     final wallet = _walletProvider;
-    final hasPin = await wallet?.hasPin() ?? false;
+    bool hasPin;
+    try {
+      hasPin = await wallet?.hasPinOrThrow() ?? false;
+    } catch (_) {
+      // An unreadable PIN store is not "no PIN": lock rather than skip.
+      hasPin = true;
+    }
     final canUseBiometrics =
         biometricsEnabled && (await wallet?.canUseBiometrics() ?? false);
     if (reason == SecurityLockReason.autoLock &&
@@ -241,6 +424,22 @@ class SecurityGateProvider extends ChangeNotifier
     }
 
     if (_locked && _inFlight != null) {
+      if (_lockReason == SecurityLockReason.sensitiveAction &&
+          reason != SecurityLockReason.sensitiveAction) {
+        // An auto-lock or expired session outranks a pending sensitive prompt:
+        // that prompt may be cancelled, this lock may not. The waiting action
+        // is refused and must be retried after unlocking.
+        final sensitive = _inFlight;
+        _inFlight = Completer<AuthReauthResult>();
+        _lockReason = reason;
+        _authFailureContext = context;
+        if (sensitive != null && !sensitive.isCompleted) {
+          sensitive
+              .complete(const AuthReauthResult(AuthReauthOutcome.cancelled));
+        }
+        notifyListeners();
+        return;
+      }
       _lockReason ??= reason;
       _authFailureContext ??= context;
       notifyListeners();
@@ -300,6 +499,15 @@ class SecurityGateProvider extends ChangeNotifier
   @override
   void reset() {
     _cooldownUntil = null;
+    final reason = _lockReason;
+    if (_locked &&
+        (reason == SecurityLockReason.autoLock ||
+            reason == SecurityLockReason.tokenExpired)) {
+      // Clearing the HTTP session must not open a locked app. Only a local
+      // unlock or logout() releases these locks.
+      notifyListeners();
+      return;
+    }
     _busy = false;
     _locked = false;
     _lockReason = null;
@@ -317,7 +525,15 @@ class SecurityGateProvider extends ChangeNotifier
   @override
   Future<AuthReauthResult> handleAuthFailure(AuthFailureContext context) async {
     final existing = _inFlight;
-    if (existing != null) return existing.future;
+    if (existing != null) {
+      if (_lockReason != SecurityLockReason.sensitiveAction) {
+        return existing.future;
+      }
+      // An expired session outranks a pending sensitive prompt.
+      await lock(SecurityLockReason.tokenExpired, context: context);
+      return _inFlight?.future ??
+          const AuthReauthResult(AuthReauthOutcome.failed);
+    }
 
     final now = DateTime.now();
     final cooldownUntil = _cooldownUntil;
@@ -379,8 +595,9 @@ class SecurityGateProvider extends ChangeNotifier
     // (which returns true when no exp claim is present).
     final inMemoryToken = (BackendApiService().getAuthToken() ?? '').trim();
     final hasValidInMemorySession = _tokenHasFutureExpiry(inMemoryToken);
-    final storedToken =
-        prefs != null ? (AuthGatingService.readStoredAccessToken(prefs) ?? '').trim() : '';
+    final storedToken = prefs != null
+        ? (AuthGatingService.readStoredAccessToken(prefs) ?? '').trim()
+        : '';
     final hasValidStoredSession = _tokenHasFutureExpiry(storedToken);
     if (hasValidInMemorySession || hasValidStoredSession) {
       _cooldownUntil = DateTime.now().add(_promptCooldown);
@@ -498,6 +715,7 @@ class SecurityGateProvider extends ChangeNotifier
         try {
           await BackendApiService().loadAuthToken();
         } catch (_) {}
+        _lastResolutionWasLocal = false;
         _completeAndReset(const AuthReauthResult(AuthReauthOutcome.success));
         return true;
       }
@@ -568,9 +786,20 @@ class SecurityGateProvider extends ChangeNotifier
     }
   }
 
+  /// Whether the last lock was resolved by local authentication (PIN or
+  /// biometric). Signing in again renews the session but proves nothing about
+  /// the person holding the device, so it never satisfies a sensitive action.
+  bool _lastResolutionWasLocal = false;
+
   Future<bool> requireSensitiveActionVerification() async {
     final wallet = _walletProvider;
-    final hasPin = await wallet?.hasPin() ?? false;
+    bool hasPin;
+    try {
+      hasPin = await wallet?.hasPinOrThrow() ?? false;
+    } catch (_) {
+      // The PIN store could not be read: fail closed. "Unknown" is not "none".
+      return false;
+    }
     final canUseBiometrics =
         biometricsEnabled && (await wallet?.canUseBiometrics() ?? false);
 
@@ -580,7 +809,7 @@ class SecurityGateProvider extends ChangeNotifier
     }
 
     final settled = await _inFlight?.future;
-    return settled?.isSuccess ?? false;
+    return (settled?.isSuccess ?? false) && _lastResolutionWasLocal;
   }
 
   Future<bool> _finalizeUnlockAfterLocalVerification() async {
@@ -597,6 +826,7 @@ class SecurityGateProvider extends ChangeNotifier
       await _attemptManagedWalletReconnect(refreshBackendSession: false);
     }
 
+    _lastResolutionWasLocal = true;
     _completeAndReset(const AuthReauthResult(AuthReauthOutcome.success));
     return true;
   }
@@ -669,6 +899,14 @@ class SecurityGateProvider extends ChangeNotifier
       if (stored != null && stored.trim().isNotEmpty) return stored.trim();
     } catch (_) {}
     return null;
+  }
+
+  /// Resolves the pending lock as the overlay would after a successful unlock
+  /// ([localAuthentication] true: PIN or biometric) or after signing in again.
+  @visibleForTesting
+  void completeForTesting({required bool localAuthentication}) {
+    _lastResolutionWasLocal = localAuthentication;
+    _completeAndReset(const AuthReauthResult(AuthReauthOutcome.success));
   }
 
   void _completeAndReset(AuthReauthResult result) {

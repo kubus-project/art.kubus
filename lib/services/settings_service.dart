@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../config/config.dart';
@@ -69,6 +70,43 @@ class SettingsService {
 
     await prefs.setString('accountType', state.accountType);
     await prefs.setBool('publicProfile', state.publicProfile);
+  }
+
+  /// Load-modify-save of the stored settings for a single change. Returns the
+  /// stored state read back after the write, so callers can confirm it stuck.
+  static Future<SettingsState> updateStoredSettings(
+    SettingsState Function(SettingsState current) change,
+  ) async {
+    final current = await loadSettings();
+    await saveSettings(change(current));
+    return loadSettings();
+  }
+
+  /// Keeps the stored security fields in [state] instead of the values a
+  /// (possibly stale) settings screen holds. Each security field is written only
+  /// by its own change handler, so a generic save never writes it back.
+  static SettingsState withStoredSecurityFields(
+    SettingsState state,
+    SettingsState stored,
+  ) {
+    return state.copyWith(
+      requirePin: stored.requirePin,
+      biometricAuth: stored.biometricAuth,
+      biometricsDeclined: stored.biometricsDeclined,
+      autoLockTime: stored.autoLockTime,
+      autoLockSeconds: stored.autoLockSeconds,
+    );
+  }
+
+  /// True when moving the auto-lock from [current] to [next] lengthens the
+  /// lock or removes it. Seconds: negative is "immediately", 0 is "never".
+  static bool isAutoLockLoosening(int current, int next) =>
+      _autoLockStrictness(next) > _autoLockStrictness(current);
+
+  static int _autoLockStrictness(int seconds) {
+    if (seconds < 0) return -1;
+    if (seconds == 0) return 1 << 40; // never locks automatically
+    return seconds;
   }
 
   static Future<void> saveProfileVisibility(String visibility) async {
@@ -176,10 +214,33 @@ class SettingsService {
       notificationProvider: notificationProvider,
       profileProvider: profileProvider,
     );
+    await _clearPreferencesKeepingPendingPurge(walletProvider: walletProvider);
     final prefs = await SharedPreferences.getInstance();
-    await prefs.clear();
     await OnboardingStateService.reset(prefs: prefs);
   }
+
+  /// Clears all preferences, but keeps a pending recovery-phrase purge alive
+  /// when the phrase may still be in secure storage. Without this, prefs.clear
+  /// would delete the flag and the next start could import the phrase.
+  static Future<void> _clearPreferencesKeepingPendingPurge({
+    required WalletProvider walletProvider,
+  }) async {
+    final prefs = await SharedPreferences.getInstance();
+    final keepPurge =
+        prefs.getBool(WalletProvider.pendingMnemonicPurgeKey) == true ||
+            await walletProvider.cachedMnemonicMayRemain();
+    await prefs.clear();
+    if (keepPurge) {
+      await prefs.setBool(WalletProvider.pendingMnemonicPurgeKey, true);
+    }
+  }
+
+  /// Test seam for the prefs-clearing step of [resetApp].
+  @visibleForTesting
+  static Future<void> clearPreferencesKeepingPendingPurgeForTesting({
+    required WalletProvider walletProvider,
+  }) =>
+      _clearPreferencesKeepingPendingPurge(walletProvider: walletProvider);
 }
 
 class SettingsState {
