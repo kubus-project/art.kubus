@@ -3226,6 +3226,7 @@ class ChatProvider extends ChangeNotifier {
     // Optimistic update
     final reactorKey = _currentReactorKey();
     if (reactorKey == null) return;
+    final accountKey = _currentAccountKey();
     final generation = _sessionGeneration;
     final list = _messages[conversationId];
     if (list != null) {
@@ -3244,28 +3245,41 @@ class ChatProvider extends ChangeNotifier {
           if (existingReactionIndex >= 0) {
             final reaction = newReactions[existingReactionIndex];
             if (isReactionByCurrentUser(reaction)) {
-              // Remove reaction
+              // Remove only this session's entries; others keep their order.
               isRemoving = true;
-              final newReactors = reaction.reactors
-                  .where((r) => !_isCurrentReactorIdentity(r))
-                  .toList();
-              if (newReactors.isEmpty) {
+              final keep = <int>[
+                for (var r = 0; r < reaction.reactors.length; r++)
+                  if (!_isCurrentReactor(
+                      reaction.reactors[r], reaction.userIdAt(r)))
+                    r,
+              ];
+              if (keep.isEmpty) {
                 newReactions.removeAt(existingReactionIndex);
               } else {
+                final newReactors = [
+                  for (final r in keep) reaction.reactors[r]
+                ];
+                final newUserIds = [
+                  for (final r in keep) reaction.userIdAt(r),
+                ];
                 newReactions[existingReactionIndex] = MessageReaction(
                   emoji: emoji,
                   count: newReactors.length,
                   reactors: newReactors,
+                  reactorUserIds: newUserIds,
                 );
               }
             } else {
               // Add to existing reaction
               final newReactors = List<String>.from(reaction.reactors)
                 ..add(reactorKey);
+              final newUserIds = reaction.alignedReactorUserIds
+                ..add(accountKey);
               newReactions[existingReactionIndex] = MessageReaction(
                 emoji: emoji,
                 count: newReactors.length,
                 reactors: newReactors,
+                reactorUserIds: newUserIds,
               );
             }
           } else {
@@ -3275,6 +3289,7 @@ class ChatProvider extends ChangeNotifier {
                 emoji: emoji,
                 count: 1,
                 reactors: [reactorKey],
+                reactorUserIds: [accountKey],
               ),
             );
           }
@@ -3309,29 +3324,41 @@ class ChatProvider extends ChangeNotifier {
     }
   }
 
-  /// Stable identity this session reacts under. The account id is preferred;
-  /// the wallet is only the fallback for sessions without an account id.
-  String? _currentReactorKey() {
+  /// Account id this session reacts under, when one is known.
+  String? _currentAccountKey() {
     final accountId = _currentAccountId;
-    if (accountId != null && accountId.isNotEmpty) return accountId;
-    final wallet = (_currentWallet ?? '').trim();
-    return wallet.isEmpty ? null : wallet;
+    return accountId != null && accountId.isNotEmpty ? accountId : null;
   }
 
-  /// Whether a reactor entry belongs to the current session. The backend
-  /// stores reactions by wallet, so a wallet entry also counts as mine.
-  bool _isCurrentReactorIdentity(String reactor) {
+  /// Reactor key mirroring the backend summary: the wallet when the session
+  /// has one, otherwise the account id.
+  String? _currentReactorKey() {
+    final wallet = (_currentWallet ?? '').trim();
+    if (wallet.isNotEmpty) return wallet;
+    return _currentAccountKey();
+  }
+
+  /// Whether a reactor entry belongs to the current session. An entry with an
+  /// account id is matched by that id only; the wallet is consulted just for
+  /// legacy entries that carry no account id.
+  bool _isCurrentReactor(String reactor, String? reactorUserId) {
+    final userId = reactorUserId?.trim() ?? '';
+    if (userId.isNotEmpty) {
+      return userId == _currentAccountKey();
+    }
     final value = reactor.trim();
     if (value.isEmpty) return false;
-    final accountId = _currentAccountId;
-    if (accountId != null && accountId.isNotEmpty && value == accountId) {
-      return true;
-    }
     final wallet = (_currentWallet ?? '').trim();
     return wallet.isNotEmpty && WalletUtils.equals(value, wallet);
   }
 
   /// Whether the current session has reacted with [reaction].
-  bool isReactionByCurrentUser(MessageReaction reaction) =>
-      reaction.reactors.any(_isCurrentReactorIdentity);
+  bool isReactionByCurrentUser(MessageReaction reaction) {
+    for (var i = 0; i < reaction.reactors.length; i++) {
+      if (_isCurrentReactor(reaction.reactors[i], reaction.userIdAt(i))) {
+        return true;
+      }
+    }
+    return false;
+  }
 }
