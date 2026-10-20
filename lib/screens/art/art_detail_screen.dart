@@ -78,7 +78,47 @@ class ArtDetailScreen extends StatefulWidget {
 class _ArtDetailScreenState extends State<ArtDetailScreen> {
   late TextEditingController _commentController;
   late ScrollController _scrollController;
+  final GlobalKey _commentsSectionKey = GlobalKey();
   bool _showComments = false;
+
+  Future<void> _openCommentsAndScroll(ArtworkProvider provider) async {
+    final loading = provider.loadComments(widget.artworkId);
+    await _scrollToComments();
+    await loading;
+    if (!mounted || !_showComments) return;
+    await _scrollToComments();
+  }
+
+  Future<void> _scrollToComments() async {
+    await WidgetsBinding.instance.endOfFrame;
+    if (!mounted || !_scrollController.hasClients) return;
+    final reduceMotion = MediaQuery.disableAnimationsOf(context);
+    final duration =
+        reduceMotion ? Duration.zero : const Duration(milliseconds: 250);
+
+    for (var attempt = 0; attempt < 3; attempt++) {
+      final targetContext = _commentsSectionKey.currentContext;
+      if (targetContext != null) {
+        if (!targetContext.mounted) return;
+        await Scrollable.ensureVisible(
+          targetContext,
+          alignment: 0.08,
+          duration: duration,
+          curve: Curves.easeOutCubic,
+        );
+        return;
+      }
+
+      final position = _scrollController.position;
+      if (!position.hasContentDimensions) return;
+      await _scrollController.animateTo(
+        position.maxScrollExtent,
+        duration: duration,
+        curve: Curves.easeOutCubic,
+      );
+      await WidgetsBinding.instance.endOfFrame;
+    }
+  }
 
   String _publicReturnRoute(BuildContext context) {
     try {
@@ -641,9 +681,10 @@ class _ArtDetailScreenState extends State<ArtDetailScreen> {
                   selectedLabel: l10n.artworkDetailHideComments,
                   isSelected: _showComments,
                   onPressed: () {
-                    setState(() => _showComments = !_showComments);
-                    if (_showComments) {
-                      artworkProvider.loadComments(widget.artworkId);
+                    final shouldShow = !_showComments;
+                    setState(() => _showComments = shouldShow);
+                    if (shouldShow) {
+                      unawaited(_openCommentsAndScroll(artworkProvider));
                     }
                   },
                 ),
@@ -1496,9 +1537,13 @@ class _ArtDetailScreenState extends State<ArtDetailScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          '${l10n.commonComments} (${artwork.commentsCount})',
-          style: DetailTypography.sectionTitle(context),
+        KeyedSubtree(
+          key: _commentsSectionKey,
+          child: Text(
+            '${l10n.commonComments} (${artwork.commentsCount})',
+            key: const ValueKey('art-detail-comments-heading'),
+            style: DetailTypography.sectionTitle(context),
+          ),
         ),
         const SizedBox(height: DetailSpacing.lg),
         if (error != null)

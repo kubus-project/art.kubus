@@ -96,7 +96,6 @@ class ShareDeepLinkNavigation {
         await PostDetailScreen.openById(context, target.id);
         return;
       case ShareEntityType.artwork:
-        tabs?.setIndex(3);
         await openArtwork(context, target.id, source: 'share_deep_link');
         return;
       case ShareEntityType.profile:
@@ -147,7 +146,6 @@ class ShareDeepLinkNavigation {
         );
         return;
       case ShareEntityType.nft:
-        tabs?.setIndex(3);
         await openArtwork(context, target.id,
             source: 'share_deep_link', publicEntityType: ShareEntityType.nft);
         return;
