@@ -71,8 +71,7 @@ class _MessagesScreenState extends State<MessagesScreen> {
     );
     Future(() async {
       try {
-        final wallet =
-            profileProvider.currentUser?.walletAddress ??
+        final wallet = profileProvider.currentUser?.walletAddress ??
             (await SharedPreferences.getInstance()).getString('wallet_address');
         if (wallet != null && wallet.isNotEmpty) {
           // If we don't have a cached entry for any displayed participant, initialize persisted cache
@@ -104,9 +103,8 @@ class _MessagesScreenState extends State<MessagesScreen> {
           }
           // Seed with provider preloaded maps first
           if (avatars.isNotEmpty) {
-            final firstKey = avatars.keys.isNotEmpty
-                ? avatars.keys.first
-                : null;
+            final firstKey =
+                avatars.keys.isNotEmpty ? avatars.keys.first : null;
             if (firstKey != null) {
               _storeConversationAvatar(
                 c.id,
@@ -126,8 +124,7 @@ class _MessagesScreenState extends State<MessagesScreen> {
           if (convMap == null || convMap.isEmpty) {
             if (membersList.isNotEmpty) {
               final firstWallet = _resolveMemberWallet(membersList.first);
-              final cachedUser =
-                  UserService.getCachedUser(firstWallet) ??
+              final cachedUser = UserService.getCachedUser(firstWallet) ??
                   _chatProvider.getCachedUser(firstWallet);
               if (cachedUser != null) {
                 // Prefer an explicit profile image from cache; do not fabricate a placeholder here.
@@ -167,9 +164,8 @@ class _MessagesScreenState extends State<MessagesScreen> {
             }
             if (avatars.isNotEmpty) {
               // For direct conversations choose the avatar associated with the first avatar entry
-              final firstKey = avatars.keys.isNotEmpty
-                  ? avatars.keys.first
-                  : null;
+              final firstKey =
+                  avatars.keys.isNotEmpty ? avatars.keys.first : null;
               if (firstKey != null) {
                 _storeConversationAvatar(
                   c.id,
@@ -206,9 +202,8 @@ class _MessagesScreenState extends State<MessagesScreen> {
           }
         }
         // Also attempt to load avatars in batch (non-blocking) only for convs we selected
-        final toPrefetchConvs = allConvs
-            .where((c) => toPrefetchIds.contains(c.id))
-            .toList();
+        final toPrefetchConvs =
+            allConvs.where((c) => toPrefetchIds.contains(c.id)).toList();
         _loadConversationAvatars(targetConvs: toPrefetchConvs);
       }
     } catch (_) {}
@@ -251,7 +246,8 @@ class _MessagesScreenState extends State<MessagesScreen> {
           content: Text(
             AppLocalizations.of(
               context,
-            )!.messagesNotificationConversationUnavailable,
+            )!
+                .messagesNotificationConversationUnavailable,
           ),
         ),
       );
@@ -287,9 +283,8 @@ class _MessagesScreenState extends State<MessagesScreen> {
               _setConversationMembers(c.id, membersList);
             }
             if (avatars.isNotEmpty) {
-              final firstKey = avatars.keys.isNotEmpty
-                  ? avatars.keys.first
-                  : null;
+              final firstKey =
+                  avatars.keys.isNotEmpty ? avatars.keys.first : null;
               if (firstKey != null) {
                 _storeConversationAvatar(
                   c.id,
@@ -307,8 +302,7 @@ class _MessagesScreenState extends State<MessagesScreen> {
             if ((_conversationAvatars[c.id] ?? '').isEmpty) {
               if (membersList.isNotEmpty) {
                 final firstWallet = _resolveMemberWallet(membersList.first);
-                final cached =
-                    UserService.getCachedUser(firstWallet) ??
+                final cached = UserService.getCachedUser(firstWallet) ??
                     _chatProvider.getCachedUser(firstWallet);
                 if (cached != null) {
                   _storeConversationAvatar(
@@ -332,9 +326,8 @@ class _MessagesScreenState extends State<MessagesScreen> {
         }
         final recentIds = allConvs.take(5).map((c) => c.id).toSet();
         final toPrefetchIds = <String>{...unreadIds, ...recentIds};
-        final toPrefetchConvs = allConvs
-            .where((c) => toPrefetchIds.contains(c.id))
-            .toList();
+        final toPrefetchConvs =
+            allConvs.where((c) => toPrefetchIds.contains(c.id)).toList();
         _loadConversationAvatars(targetConvs: toPrefetchConvs);
       }
     } catch (_) {}
@@ -355,9 +348,8 @@ class _MessagesScreenState extends State<MessagesScreen> {
             _setConversationMembers(c.id, membersList);
           }
           if (avatars.isNotEmpty) {
-            final firstKey = avatars.keys.isNotEmpty
-                ? avatars.keys.first
-                : null;
+            final firstKey =
+                avatars.keys.isNotEmpty ? avatars.keys.first : null;
             if (firstKey != null) {
               _storeConversationAvatar(
                 c.id,
@@ -375,8 +367,7 @@ class _MessagesScreenState extends State<MessagesScreen> {
           if ((_conversationAvatars[c.id] ?? '').isEmpty) {
             if (membersList.isNotEmpty) {
               final firstWallet = _resolveMemberWallet(membersList.first);
-              final cachedUser =
-                  UserService.getCachedUser(firstWallet) ??
+              final cachedUser = UserService.getCachedUser(firstWallet) ??
                   _chatProvider.getCachedUser(firstWallet);
               if (cachedUser != null) {
                 _storeConversationAvatar(
@@ -440,7 +431,9 @@ class _MessagesScreenState extends State<MessagesScreen> {
       intent: CommunityComposeIntent.startChat,
       actionLabel: AppLocalizations.of(
         context,
-      )!.messagesEmptyStartChatAction.toLowerCase(),
+      )!
+          .messagesEmptyStartChatAction
+          .toLowerCase(),
       sourceScreen: 'messages_screen',
     );
     if (!allowed || !mounted) return;
@@ -565,27 +558,24 @@ class _MessagesScreenState extends State<MessagesScreen> {
       for (final c in toFetch) {
         // fetch members for this conversation
         futures.add(
-          _chatProvider
-              .fetchMembers(c.id)
-              .then((mbrs) {
-                final others = (mbrs as List)
-                    .map((entry) => _resolveMemberWallet(entry))
-                    .where(
-                      (w) => w.isNotEmpty && !WalletUtils.equals(w, myWallet),
-                    )
-                    .toList();
-                if (others.isNotEmpty) {
-                  convToWallet[c.id] = others;
-                  for (final w in others) {
-                    final canonical = WalletUtils.canonical(w);
-                    if (canonical.isEmpty) continue;
-                    if (walletCanonicals.add(canonical)) {
-                      wallets.add(w);
-                    }
-                  }
+          _chatProvider.fetchMembers(c.id).then((mbrs) {
+            final others = (mbrs as List)
+                .map((entry) => _resolveMemberWallet(entry))
+                .where(
+                  (w) => w.isNotEmpty && !WalletUtils.equals(w, myWallet),
+                )
+                .toList();
+            if (others.isNotEmpty) {
+              convToWallet[c.id] = others;
+              for (final w in others) {
+                final canonical = WalletUtils.canonical(w);
+                if (canonical.isEmpty) continue;
+                if (walletCanonicals.add(canonical)) {
+                  wallets.add(w);
                 }
-              })
-              .catchError((_) {}),
+              }
+            }
+          }).catchError((_) {}),
         );
       }
       // Limit concurrency: process in batches of 6
@@ -626,8 +616,7 @@ class _MessagesScreenState extends State<MessagesScreen> {
               avatar.isNotEmpty) {
             _storeConversationAvatar(c, avatar, walletHint: wallet);
           }
-          final shouldReplaceName =
-              (currentName == null ||
+          final shouldReplaceName = (currentName == null ||
               currentName.isEmpty ||
               WalletUtils.equals(currentName, wallet));
           if (shouldReplaceName) {
@@ -877,11 +866,10 @@ class _MessagesScreenState extends State<MessagesScreen> {
                           }
                           final otherWallet =
                               (!c.isGroup && memberWallets.isNotEmpty)
-                              ? memberWallets.first
-                              : '';
-                          String widgetWallet = otherWallet.isNotEmpty
-                              ? otherWallet
-                              : c.id;
+                                  ? memberWallets.first
+                                  : '';
+                          String widgetWallet =
+                              otherWallet.isNotEmpty ? otherWallet : c.id;
                           // Prefer provider preloaded avatars when available (avoid local per-screen duplication)
                           if ((avatar == null || avatar.isEmpty)) {
                             try {
@@ -891,7 +879,7 @@ class _MessagesScreenState extends State<MessagesScreen> {
                               ).getPreloadedProfileMapsForConversation(c.id);
                               final avatars =
                                   (pre['avatars'] as Map<String, String?>?) ??
-                                  {};
+                                      {};
                               if (avatars.isNotEmpty) {
                                 final firstKey = avatars.keys.isNotEmpty
                                     ? avatars.keys.first
@@ -941,12 +929,11 @@ class _MessagesScreenState extends State<MessagesScreen> {
                                 fallbackAvatar = cached.profileImageUrl!;
                               } else {
                                 try {
-                                  final pre = cp
-                                      .getPreloadedProfileMapsForConversation(
-                                        c.id,
-                                      );
-                                  final avatars =
-                                      (pre['avatars']
+                                  final pre =
+                                      cp.getPreloadedProfileMapsForConversation(
+                                    c.id,
+                                  );
+                                  final avatars = (pre['avatars']
                                           as Map<String, String?>?) ??
                                       {};
                                   if (avatars.containsKey(otherWallet)) {
@@ -970,15 +957,13 @@ class _MessagesScreenState extends State<MessagesScreen> {
                               // here; AvatarWidget will render a safe fallback.
                               final effectiveFallbackAvatar =
                                   _normalizeAvatarUrl(fallbackAvatar);
-                              final sanitizedFallback =
-                                  _isFabricatedAvatar(
-                                    effectiveFallbackAvatar,
-                                    otherWallet,
-                                  )
+                              final sanitizedFallback = _isFabricatedAvatar(
+                                effectiveFallbackAvatar,
+                                otherWallet,
+                              )
                                   ? null
                                   : effectiveFallbackAvatar;
-                              final isLoading =
-                                  (otherWallet.isNotEmpty &&
+                              final isLoading = (otherWallet.isNotEmpty &&
                                   cp.getCachedUser(otherWallet) == null &&
                                   UserService.getCachedUser(otherWallet) ==
                                       null &&
@@ -993,12 +978,11 @@ class _MessagesScreenState extends State<MessagesScreen> {
                               );
                             } else {
                               // No wallet available: render initials locally to avoid network call
-                              final name =
-                                  c.title ??
+                              final name = c.title ??
                                   (c.isGroup
                                       ? l10n.messagesFallbackGroupTitle
                                       : c.title ??
-                                            l10n.messagesFallbackConversationTitle);
+                                          l10n.messagesFallbackConversationTitle);
                               final parts = name.trim().split(RegExp(r'\s+'));
                               final initials = parts
                                   .where((p) => p.isNotEmpty)
@@ -1008,9 +992,9 @@ class _MessagesScreenState extends State<MessagesScreen> {
                                   .toUpperCase();
                               final isLoading =
                                   (_conversationNames[c.id] == null ||
-                                      _conversationNames[c.id]!.isEmpty) &&
-                                  (_convToWalletList[c.id]?.isNotEmpty ??
-                                      false);
+                                          _conversationNames[c.id]!.isEmpty) &&
+                                      (_convToWalletList[c.id]?.isNotEmpty ??
+                                          false);
                               leading = Stack(
                                 alignment: Alignment.center,
                                 children: [
@@ -1019,7 +1003,8 @@ class _MessagesScreenState extends State<MessagesScreen> {
                                     child: Text(
                                       initials.isNotEmpty
                                           ? initials
-                                          : l10n.messagesFallbackConversationInitial,
+                                          : l10n
+                                              .messagesFallbackConversationInitial,
                                     ),
                                   ),
                                   if (isLoading)
@@ -1048,9 +1033,9 @@ class _MessagesScreenState extends State<MessagesScreen> {
                             if (!c.isGroup) {
                               final fallbackWallet =
                                   (_convToWalletList[c.id] != null &&
-                                      _convToWalletList[c.id]!.isNotEmpty)
-                                  ? _convToWalletList[c.id]!.first
-                                  : '';
+                                          _convToWalletList[c.id]!.isNotEmpty)
+                                      ? _convToWalletList[c.id]!.first
+                                      : '';
                               final cached = (fallbackWallet.isNotEmpty)
                                   ? cp.getCachedUser(fallbackWallet)
                                   : null;
@@ -1070,7 +1055,7 @@ class _MessagesScreenState extends State<MessagesScreen> {
                               titleText = c.isGroup
                                   ? l10n.messagesFallbackGroupTitle
                                   : (_conversationNames[c.id] ??
-                                        l10n.messagesFallbackConversationTitle);
+                                      l10n.messagesFallbackConversationTitle);
                             }
                           }
                           Widget titleWidget;
@@ -1106,17 +1091,17 @@ class _MessagesScreenState extends State<MessagesScreen> {
                           }
                           final unreadCount = (cp.unreadCounts[c.id] ?? 0);
                           final scheme = Theme.of(context).colorScheme;
-                          final titleTextStyle = KubusTextStyles.profileName
-                              .copyWith(
-                                color: scheme.onSurface,
-                                fontWeight: unreadCount > 0
-                                    ? FontWeight.w800
-                                    : FontWeight.w600,
-                              );
-                          final subtitleStyle = KubusTextStyles.sectionSubtitle
-                              .copyWith(
-                                color: scheme.onSurface.withValues(alpha: 0.72),
-                              );
+                          final titleTextStyle =
+                              KubusTextStyles.profileName.copyWith(
+                            color: scheme.onSurface,
+                            fontWeight: unreadCount > 0
+                                ? FontWeight.w800
+                                : FontWeight.w600,
+                          );
+                          final subtitleStyle =
+                              KubusTextStyles.sectionSubtitle.copyWith(
+                            color: scheme.onSurface.withValues(alpha: 0.72),
+                          );
                           return Padding(
                             padding: EdgeInsets.zero,
                             child: _ConversationRowSurface(
@@ -1161,15 +1146,15 @@ class _MessagesScreenState extends State<MessagesScreen> {
                                     preNames[w] = _conversationNames[c.id];
                                   }
                                   if (!preAvatars.containsKey(w)) {
-                                    final cachedAvatar = _cacheProvider
-                                        .getAvatar(w);
+                                    final cachedAvatar =
+                                        _cacheProvider.getAvatar(w);
                                     if ((cachedAvatar ?? '').isNotEmpty) {
                                       preAvatars[w] = cachedAvatar;
                                     }
                                   }
                                   if (!preNames.containsKey(w)) {
-                                    final cachedName = _cacheProvider
-                                        .getDisplayName(w);
+                                    final cachedName =
+                                        _cacheProvider.getDisplayName(w);
                                     if ((cachedName ?? '').isNotEmpty) {
                                       preNames[w] = cachedName;
                                     }
@@ -1180,19 +1165,18 @@ class _MessagesScreenState extends State<MessagesScreen> {
                                 // is empty, try provider preloads or cached conv-to-wallet list. Also ensure
                                 // avatar/name entries exist for the primary member when possible.
                                 if (!mounted) return;
-                                List<String>? finalMembers = wallets.isNotEmpty
-                                    ? wallets
-                                    : null;
+                                List<String>? finalMembers =
+                                    wallets.isNotEmpty ? wallets : null;
                                 if (finalMembers == null) {
                                   try {
                                     final p = cp
                                         .getPreloadedProfileMapsForConversation(
-                                          c.id,
-                                        );
+                                      c.id,
+                                    );
                                     final inferred =
                                         (p['members'] as List<dynamic>?)
-                                            ?.cast<String>() ??
-                                        <String>[];
+                                                ?.cast<String>() ??
+                                            <String>[];
                                     if (inferred.isNotEmpty) {
                                       finalMembers = inferred;
                                     }
@@ -1245,16 +1229,15 @@ class _MessagesScreenState extends State<MessagesScreen> {
                                 }
 
                                 if (!context.mounted) return;
-                                ConversationNavigator.openConversationWithPreload(
+                                ConversationNavigator
+                                    .openConversationWithPreload(
                                   context,
                                   c,
                                   preloadedMembers: finalMembers,
-                                  preloadedAvatars: preAvatars.isNotEmpty
-                                      ? preAvatars
-                                      : null,
-                                  preloadedDisplayNames: preNames.isNotEmpty
-                                      ? preNames
-                                      : null,
+                                  preloadedAvatars:
+                                      preAvatars.isNotEmpty ? preAvatars : null,
+                                  preloadedDisplayNames:
+                                      preNames.isNotEmpty ? preNames : null,
                                 );
                               },
                               child: Row(
@@ -1285,9 +1268,9 @@ class _MessagesScreenState extends State<MessagesScreen> {
                                               textStyle: KubusTextStyles
                                                   .navMetaLabel
                                                   .copyWith(
-                                                    color: scheme.onSurface
-                                                        .withValues(alpha: 0.6),
-                                                  ),
+                                                color: scheme.onSurface
+                                                    .withValues(alpha: 0.6),
+                                              ),
                                             ),
                                           ),
                                         if ((c.lastMessage ?? '').isNotEmpty)
@@ -1308,15 +1291,15 @@ class _MessagesScreenState extends State<MessagesScreen> {
                                         c.lastMessageAt!,
                                       ),
                                       maxLines: 1,
-                                      style: KubusTextStyles.navMetaLabel
-                                          .copyWith(
-                                            color: scheme.onSurface.withValues(
-                                              alpha: 0.6,
-                                            ),
-                                            fontWeight: unreadCount > 0
-                                                ? FontWeight.w700
-                                                : FontWeight.w500,
-                                          ),
+                                      style:
+                                          KubusTextStyles.navMetaLabel.copyWith(
+                                        color: scheme.onSurface.withValues(
+                                          alpha: 0.6,
+                                        ),
+                                        fontWeight: unreadCount > 0
+                                            ? FontWeight.w700
+                                            : FontWeight.w500,
+                                      ),
                                     ),
                                   ],
                                   if (unreadCount > 0) ...[
@@ -1343,12 +1326,12 @@ class _MessagesScreenState extends State<MessagesScreen> {
                                             ? '99+'
                                             : '$unreadCount',
                                         textAlign: TextAlign.center,
-                                        style: KubusTextStyles.badgeCount
-                                            .copyWith(
-                                              color: KubusColorRoles.of(
-                                                context,
-                                              ).onActive,
-                                            ),
+                                        style:
+                                            KubusTextStyles.badgeCount.copyWith(
+                                          color: KubusColorRoles.of(
+                                            context,
+                                          ).onActive,
+                                        ),
                                       ),
                                     ),
                                   ],
@@ -1410,14 +1393,12 @@ class _MessagesScreenState extends State<MessagesScreen> {
               walletHint: cachedUser.id,
             );
           }
-          final shouldReplaceName =
-              (currentName == null ||
+          final shouldReplaceName = (currentName == null ||
               currentName.isEmpty ||
               WalletUtils.equals(currentName, cachedUser.id));
           if (shouldReplaceName) {
-            _conversationNames[conversationId] = cachedUser.name.isNotEmpty
-                ? cachedUser.name
-                : cachedUser.id;
+            _conversationNames[conversationId] =
+                cachedUser.name.isNotEmpty ? cachedUser.name : cachedUser.id;
           }
           _persistWalletProfile(
             cachedUser.id,
@@ -1446,14 +1427,12 @@ class _MessagesScreenState extends State<MessagesScreen> {
                 walletHint: u.id,
               );
             }
-            final shouldReplaceName =
-                (currentName == null ||
+            final shouldReplaceName = (currentName == null ||
                 currentName.isEmpty ||
                 WalletUtils.equals(currentName, u.id));
             if (shouldReplaceName) {
-              _conversationNames[conversationId] = u.name.isNotEmpty
-                  ? u.name
-                  : u.id;
+              _conversationNames[conversationId] =
+                  u.name.isNotEmpty ? u.name : u.id;
             }
             _persistWalletProfile(u.id, avatar: avatar, displayName: u.name);
             debugPrint(
@@ -1597,8 +1576,7 @@ class _CreateConversationDialogState extends State<_CreateConversationDialog> {
                   // search may return results in different shapes; handle both
                   if (resp['results'] is Map<String, dynamic>) {
                     final data = resp['results'] as Map<String, dynamic>;
-                    final profiles =
-                        (data['profiles'] as List<dynamic>?) ??
+                    final profiles = (data['profiles'] as List<dynamic>?) ??
                         (data['results'] as List<dynamic>?) ??
                         [];
                     for (final d in profiles) {
@@ -1647,13 +1625,13 @@ class _CreateConversationDialogState extends State<_CreateConversationDialog> {
                   final avatar = s['avatar'] ?? s['avatar_url'] ?? '';
                   final effectiveAvatar =
                       (avatar != null && avatar.toString().isNotEmpty)
-                      ? avatar.toString()
-                      : null;
+                          ? avatar.toString()
+                          : null;
                   // Prefer adding the wallet address when available; otherwise fall back to username
                   final walletAddr =
                       (s['wallet_address'] ?? s['wallet'] ?? s['walletAddress'])
-                          ?.toString() ??
-                      '';
+                              ?.toString() ??
+                          '';
                   final addValue = walletAddr.isNotEmpty
                       ? walletAddr
                       : (username ?? '').toString();
@@ -1664,11 +1642,10 @@ class _CreateConversationDialogState extends State<_CreateConversationDialog> {
                     ),
                     leading: KubusIdentityAvatar(
                       avatarUrl: effectiveAvatar,
-                      wallet:
-                          (walletAddr.isNotEmpty
-                                  ? walletAddr
-                                  : (username ?? ''))
-                              .toString(),
+                      wallet: (walletAddr.isNotEmpty
+                              ? walletAddr
+                              : (username ?? ''))
+                          .toString(),
                       radius: 20,
                       allowFabricatedFallback: false,
                       enableProfileNavigation: false,
