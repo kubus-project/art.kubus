@@ -88,6 +88,7 @@ import '../../../widgets/community/contextual_contribution_card.dart';
 import '../../../widgets/common/kubus_screen_header.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
 import 'package:art_kubus/widgets/community/community_post_delete.dart';
+import 'package:art_kubus/widgets/community/community_posting_wallet.dart';
 import 'package:art_kubus/widgets/community/community_art_discovery_feed.dart';
 import 'package:art_kubus/community/art_discovery.dart';
 import 'package:art_kubus/community/art_discovery_sources.dart';

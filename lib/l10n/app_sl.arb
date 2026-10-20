@@ -4154,6 +4154,7 @@
   "communityNameThisPlaceTitle": "Poimenuj ta kraj",
   "communityNamePlaceHint": "npr. Mestni park",
   "communityConnectWalletFirstToast": "Najprej se prijavi; dostop do denarnice je potreben samo za dejanja, vezana nanjo.",
+  "communityPostingNeedsWalletToast": "Za objavo v skupnosti potrebuješ povezano denarnico. Povežeš jo lahko v razdelku Denarnica.",
   "communityUnableToAuthenticateToast": "Overitev ni uspela. Poskusi znova.",
   "communityComposerAddContentToast": "Dodaj besedilo, sliko ali video.",
   "communityComposerSharedInGroupToast": "Objavljeno v {groupName}",
