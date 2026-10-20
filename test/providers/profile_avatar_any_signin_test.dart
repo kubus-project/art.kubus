@@ -67,9 +67,11 @@ class _EmailSessionApi implements ProfileBackendApi {
   Future<Map<String, dynamic>> getProfileByWallet(String walletAddress) async =>
       <String, dynamic>{'success': false, 'status': 404};
 
+  Map<String, dynamic>? myProfile;
+
   @override
   Future<Map<String, dynamic>> getMyProfile() async =>
-      <String, dynamic>{'success': false, 'status': 404};
+      myProfile ?? <String, dynamic>{'success': false, 'status': 404};
 
   @override
   Future<Map<String, dynamic>> updateProfile(
@@ -279,5 +281,40 @@ void main() {
 
     expect(provider.currentUser?.avatar,
         contains('/uploads/profiles/avatars/kept.png'));
+  });
+
+  test('a restored email session with no wallet is signed in on initialize',
+      () async {
+    final api = _EmailSessionApi()
+      ..myProfile = <String, dynamic>{
+        'success': true,
+        'data': <String, dynamic>{
+          'id': 'profile-email',
+          'userId': 'user-email',
+          'walletAddress': null,
+          'username': 'alice',
+          'displayName': 'Alice',
+          'avatar': '/uploads/profiles/avatars/kept.png',
+          'createdAt': '2026-03-31T00:00:00.000Z',
+          'updatedAt': '2026-03-31T00:00:00.000Z',
+        },
+      };
+    BackendApiService().setAuthTokenForTesting('email-session-token');
+    addTearDown(() => BackendApiService().setAuthTokenForTesting(null));
+    final provider = ProfileProvider(apiService: api);
+
+    await provider.initialize();
+
+    expect(provider.isSignedIn, isTrue);
+    expect(provider.currentUser?.username, 'alice');
+  });
+
+  test('initialize with no wallet and no session stays signed out', () async {
+    BackendApiService().setAuthTokenForTesting(null);
+    final provider = ProfileProvider(apiService: _EmailSessionApi());
+
+    await provider.initialize();
+
+    expect(provider.isSignedIn, isFalse);
   });
 }

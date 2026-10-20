@@ -613,6 +613,12 @@ class ProfileProvider extends foundation.ChangeNotifier {
       await loadProfile(walletAddress);
       // Load additional stats from backend
       await _loadBackendStats(walletAddress);
+    } else if (BackendApiService().hasAuthSession) {
+      // A restored email or Google session has no wallet; restore it from the
+      // token so the account screens (and Edit profile) are reachable.
+      try {
+        await loadAuthenticatedProfile();
+      } catch (_) {}
     }
 
     notifyListeners();
