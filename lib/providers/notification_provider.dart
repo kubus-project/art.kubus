@@ -21,36 +21,35 @@ class NotificationProvider extends ChangeNotifier {
 
   // Community notifications (likes, comments, follows)
   int _communityUnreadCount = 0;
+  int _messageUnreadCount = 0;
 
   bool _hasNew = false;
   int _lastNotifVersion = 0;
   int _lastGlobalVersion = 0;
   AppRefreshProvider? _boundRefreshProvider;
   VoidCallback? _refreshListener;
-  String? _lastNotifHash;
-  DateTime? _lastNotifTimestamp;
   bool _initialized = false;
   bool _initializing = false;
   bool _refreshInFlight = false;
   bool _socketListenersRegistered = false;
+  bool _summarySocketListenerRegistered = false;
   bool _connectListenerRegistered = false;
   String? _currentWallet;
+  String? _currentAccountId;
+  int _summaryRevision = 0;
+  int _summaryRequestVersion = 0;
+  final Set<String> _shownEventIds = <String>{};
   Timer? _scheduledServerSync;
   DateTime? _scheduledServerSyncDueAt;
   Timer? _cadenceTimer;
   Duration? _cadenceInterval;
   DateTime? _lastSubscriptionCheckAt;
   DateTime? _lastServerSync;
-  static const String _prefsUnreadPrefix = 'notifications_unread_count_';
   final Duration _minServerSyncInterval = const Duration(seconds: 8);
   final Duration _degradedForegroundCadence = const Duration(seconds: 55);
   final Duration _degradedBackgroundCadence = const Duration(seconds: 150);
   final Duration _healthySocketCadence = const Duration(minutes: 5);
   final Duration _subscriptionCheckInterval = const Duration(minutes: 3);
-  final Duration _reconnectAuthoritativeSyncMinInterval =
-      const Duration(seconds: 20);
-  final Duration _activeSurfaceSocketSyncMinInterval =
-      const Duration(seconds: 20);
 
   int _debugCadenceTicks = 0;
   int _debugSyncs = 0;
@@ -65,8 +64,11 @@ class NotificationProvider extends ChangeNotifier {
     return languageCode == 'sl' ? AppLocalizationsSl() : AppLocalizationsEn();
   }
 
-  // Only community notifications (messages handled by ChatProvider)
+  // Counts are always taken from the backend summary. ChatProvider owns
+  // conversation row state; this provider supplies app-wide unread totals.
   int get unreadCount => _communityUnreadCount;
+  int get messageUnreadCount => _messageUnreadCount;
+  int get totalUnreadCount => _communityUnreadCount + _messageUnreadCount;
   bool get hasNew => _hasNew;
 
   NotificationProvider() {
@@ -95,63 +97,48 @@ class NotificationProvider extends ChangeNotifier {
             'NotificationProvider.initialize: skipping protected init - no restored auth session',
           );
         }
-        final previousWallet = _currentWallet;
-        _resetSessionState(
-          clearUnreadCount: true,
-        );
-        await _persistUnreadCount(0, walletOverride: previousWallet);
+        _resetSessionState(clearUnreadCount: true);
         return;
       }
 
       final resolvedWallet = await _resolveWallet(walletOverride);
       final normalizedWallet = WalletUtils.normalize(resolvedWallet);
-      final walletChanged = normalizedWallet.isNotEmpty &&
-          !WalletUtils.equals(normalizedWallet, _currentWallet);
+      final claims = _backend.getCurrentAuthTokenClaims();
+      final rawAccountId =
+          (claims?['id'] ?? claims?['user_id'] ?? claims?['sub'])
+              ?.toString()
+              .trim();
+      final accountId =
+          rawAccountId == null || rawAccountId.isEmpty ? null : rawAccountId;
+      final walletChanged =
+          _initialized && !WalletUtils.equals(normalizedWallet, _currentWallet);
+      final accountChanged = _initialized && accountId != _currentAccountId;
 
       debugPrint(
-          'NotificationProvider.initialize: wallet=$normalizedWallet, changed=$walletChanged');
+        'NotificationProvider.initialize: wallet=$normalizedWallet, changed=$walletChanged',
+      );
 
       // Always register listeners (idempotent)
       _registerSocketListeners();
 
-      if (_initialized && !force && !walletChanged) {
+      if (_initialized && !force && !walletChanged && !accountChanged) {
         debugPrint(
-            'NotificationProvider.initialize: already initialized, skipping');
+          'NotificationProvider.initialize: already initialized, skipping',
+        );
         return;
       }
 
-      if (normalizedWallet.isEmpty) {
-        debugPrint(
-            'NotificationProvider.initialize: wallet not available yet, listeners registered');
-        final previousWallet = _currentWallet;
-        _resetSessionState(
-          clearUnreadCount: true,
-        );
-        await _persistUnreadCount(0, walletOverride: previousWallet);
-        return;
-      }
-
-      if (walletChanged &&
-          _currentWallet != null &&
-          _currentWallet!.isNotEmpty) {
-        _resetSessionState(
-          clearUnreadCount: true,
-        );
+      if ((_initialized && walletChanged) || accountChanged) {
+        _resetSessionState(clearUnreadCount: true);
       } else {
         _stopAutoRefreshLoop();
         _scheduledServerSync?.cancel();
         _scheduledServerSync = null;
         _scheduledServerSyncDueAt = null;
       }
-      _currentWallet = normalizedWallet;
+      _currentWallet = normalizedWallet.isEmpty ? null : normalizedWallet;
+      _currentAccountId = accountId;
       _initialized = true;
-
-      // Hydrate immediate unread count from cache for snappy UI updates
-      try {
-        await _hydrateUnreadFromCache(_currentWallet!);
-      } catch (e) {
-        debugPrint('NotificationProvider.initialize: hydrate cache failed: $e');
-      }
 
       // Ensure socket connection is alive. ChatProvider already connects, but
       // calling connect() again is safe and will no-op when already connected.
@@ -161,32 +148,40 @@ class NotificationProvider extends ChangeNotifier {
         try {
           if (_currentWallet != null && _currentWallet!.isNotEmpty) {
             var ok = await _socket.connectAndSubscribe(
-                _backend.baseUrl, _currentWallet!);
+              _backend.baseUrl,
+              _currentWallet!,
+            );
             debugPrint(
-                'NotificationProvider.initialize: connectAndSubscribe result: $ok');
+              'NotificationProvider.initialize: connectAndSubscribe result: $ok',
+            );
             debugPrint(
-                'NotificationProvider.initialize: socket currentSubscribedWallet=${_socket.currentSubscribedWallet}');
+              'NotificationProvider.initialize: socket currentSubscribedWallet=${_socket.currentSubscribedWallet}',
+            );
             if (!ok) {
               debugPrint(
-                  'NotificationProvider.initialize: connectAndSubscribe failed, falling back to subscribeUser');
+                'NotificationProvider.initialize: connectAndSubscribe failed, falling back to subscribeUser',
+              );
               _socket.subscribeUser(_currentWallet!);
             }
           }
         } catch (e) {
           debugPrint(
-              'NotificationProvider.initialize: subscribe to user room failed: $e');
+            'NotificationProvider.initialize: subscribe to user room failed: $e',
+          );
         }
         debugPrint('NotificationProvider.initialize: socket connected');
       } catch (e) {
         debugPrint(
-            'NotificationProvider.initialize: socket connect failed: $e');
+          'NotificationProvider.initialize: socket connect failed: $e',
+        );
       }
 
       // Refresh unread count immediately so UI reflects backend state.
       await refresh(force: true);
       _ensureCadenceTimer(forceRestart: true);
       debugPrint(
-          'NotificationProvider.initialize: COMPLETE, unread=$_communityUnreadCount');
+        'NotificationProvider.initialize: COMPLETE, unread=$_communityUnreadCount',
+      );
     } finally {
       _initializing = false;
     }
@@ -208,8 +203,21 @@ class NotificationProvider extends ChangeNotifier {
       }
     } catch (e) {
       debugPrint(
-          'NotificationProvider._resolveWallet: getMyProfile failed: $e');
+        'NotificationProvider._resolveWallet: getMyProfile failed: $e',
+      );
     }
+
+    // A cached wallet can belong to the account that used this device before
+    // the current walletless account. Never use it as a room identity when the
+    // authenticated token names an account but has no wallet claim.
+    final claims = _backend.getCurrentAuthTokenClaims();
+    final accountId = (claims?['id'] ?? claims?['user_id'] ?? claims?['sub'])
+        ?.toString()
+        .trim();
+    if (accountId != null && accountId.isNotEmpty) return null;
+
+    final tokenWallet = _backend.getCurrentAuthWalletAddress();
+    if (tokenWallet != null && tokenWallet.isNotEmpty) return tokenWallet;
 
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -228,30 +236,36 @@ class NotificationProvider extends ChangeNotifier {
       _socketListenersRegistered = true;
       debugPrint('NotificationProvider: notification listener registered');
     }
+    if (!_summarySocketListenerRegistered) {
+      _socket.addUnreadSummaryListener(_handleUnreadSummary);
+      _summarySocketListenerRegistered = true;
+    }
     if (!_connectListenerRegistered) {
       _socket.addConnectListener(_handleSocketReconnect);
       _connectListenerRegistered = true;
     }
   }
 
-  void _resetSessionState({
-    required bool clearUnreadCount,
-  }) {
+  void _resetSessionState({required bool clearUnreadCount}) {
     _scheduledServerSync?.cancel();
     _scheduledServerSync = null;
     _scheduledServerSyncDueAt = null;
     _stopAutoRefreshLoop();
     _lastSubscriptionCheckAt = null;
     _refreshInFlight = false;
-    _lastNotifHash = null;
-    _lastNotifTimestamp = null;
     _lastServerSync = null;
     _currentWallet = null;
+    _currentAccountId = null;
     _initialized = false;
+    _summaryRevision++;
+    _summaryRequestVersion++;
+    _shownEventIds.clear();
 
     if (clearUnreadCount) {
-      final changed = _communityUnreadCount != 0 || _hasNew;
+      final changed =
+          _communityUnreadCount != 0 || _messageUnreadCount != 0 || _hasNew;
       _communityUnreadCount = 0;
+      _messageUnreadCount = 0;
       _hasNew = false;
       if (changed) {
         notifyListeners();
@@ -262,29 +276,26 @@ class NotificationProvider extends ChangeNotifier {
   }
 
   void _handleSocketReconnect() {
-    final wallet = _currentWallet;
-    if (wallet != null && wallet.isNotEmpty) {
-      unawaited(
-        _socket.connectAndSubscribe(_backend.baseUrl, wallet).then((ok) {
-          if (!ok) {
-            _socket.subscribeUser(wallet);
-          }
-        }).catchError((e) {
-          debugPrint('NotificationProvider: reconnect resubscribe failed: $e');
-        }),
-      );
-    }
+    unawaited(_refreshAfterSocketReconnect());
+  }
 
-    // When socket reconnects (after background or connectivity issues), refresh
-    // the unread count so badges remain accurate without waiting for the next
-    // server push event.
-    if (_hasAuthContext) {
-      if (_shouldForceReconnectSync()) {
-        unawaited(refresh(force: true));
-      } else {
-        _maybeCheckSubscription();
+  Future<void> _refreshAfterSocketReconnect() async {
+    final wallet = _currentWallet;
+    if (!_hasAuthContext) return;
+    if (wallet != null && wallet.isNotEmpty) {
+      try {
+        final ok = await _socket.connectAndSubscribe(
+          _backend.baseUrl,
+          wallet,
+        );
+        if (!ok) _socket.subscribeUser(wallet);
+      } catch (e) {
+        debugPrint('NotificationProvider: reconnect resubscribe failed: $e');
       }
     }
+    // Account rooms are joined from the authenticated socket token, so a
+    // walletless account still receives summaries after reconnect.
+    await refresh(force: true);
   }
 
   void _ensureCadenceTimer({bool forceRestart = false}) {
@@ -306,11 +317,11 @@ class NotificationProvider extends ChangeNotifier {
     _cadenceInterval = interval;
     if (kDebugMode) {
       debugPrint(
-          'NotificationProvider: cadence interval set to ${interval.inSeconds}s');
+        'NotificationProvider: cadence interval set to ${interval.inSeconds}s',
+      );
     }
     _cadenceTimer = Timer.periodic(interval, (_) {
       if (!_initialized) return;
-      if (_currentWallet == null || _currentWallet!.isEmpty) return;
       if (!_isForeground) return;
       _debugCadenceTicks++;
       _maybeCheckSubscription();
@@ -323,7 +334,6 @@ class NotificationProvider extends ChangeNotifier {
 
   Duration? _computeCadenceInterval() {
     if (!_initialized) return null;
-    if (_currentWallet == null || _currentWallet!.isEmpty) return null;
     if (!_isForeground) return null;
     if (_isSocketHealthyForNotifications()) {
       return _isNotificationsSurfaceActive ? _healthySocketCadence : null;
@@ -345,8 +355,10 @@ class NotificationProvider extends ChangeNotifier {
 
   bool _isSocketHealthyForNotifications() {
     final expectedWallet = WalletUtils.canonical(_currentWallet);
-    if (expectedWallet.isEmpty) return false;
     if (!_socket.isConnected) return false;
+    // Account rooms are joined from the authenticated socket token. A
+    // walletless signed-in account is healthy as soon as its socket connects.
+    if (expectedWallet.isEmpty) return _hasAuthToken;
     final subscribed = WalletUtils.canonical(_socket.currentSubscribedWallet);
     return subscribed.isNotEmpty && subscribed == expectedWallet;
   }
@@ -380,9 +392,6 @@ class NotificationProvider extends ChangeNotifier {
   }
 
   void _scheduleServerSync({Duration? delay, bool force = false}) {
-    if ((_currentWallet == null || _currentWallet!.isEmpty) && !_initializing) {
-      return;
-    }
     if (!_hasAuthContext) {
       return;
     }
@@ -424,73 +433,7 @@ class NotificationProvider extends ChangeNotifier {
     return _minServerSyncInterval - elapsed;
   }
 
-  bool _shouldForceReconnectSync() {
-    final lastSync = _lastServerSync;
-    if (lastSync == null) return true;
-    return DateTime.now().difference(lastSync) >=
-        _reconnectAuthoritativeSyncMinInterval;
-  }
-
-  bool _shouldSyncActiveSurfaceSocketEvent() {
-    if (!_isNotificationsSurfaceActive) return false;
-    final lastSync = _lastServerSync;
-    if (lastSync == null) return true;
-    return DateTime.now().difference(lastSync) >=
-        _activeSurfaceSocketSyncMinInterval;
-  }
-
-  String _unreadCacheKey(String wallet) {
-    final canonical = WalletUtils.canonical(wallet);
-    return '$_prefsUnreadPrefix$canonical';
-  }
-
-  Future<void> _hydrateUnreadFromCache(String wallet) async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final cached = prefs.getInt(_unreadCacheKey(wallet));
-      if (cached != null) {
-        final changed =
-            cached != _communityUnreadCount || _hasNew != (cached > 0);
-        _communityUnreadCount = cached;
-        _hasNew = cached > 0;
-        if (changed) {
-          notifyListeners();
-        }
-      }
-    } catch (e) {
-      debugPrint('NotificationProvider: failed to hydrate unread cache: $e');
-    }
-  }
-
-  Future<void> _persistUnreadCount(int count, {String? walletOverride}) async {
-    final wallet = walletOverride ?? _currentWallet;
-    if (wallet == null || wallet.isEmpty) return;
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setInt(_unreadCacheKey(wallet), count);
-    } catch (e) {
-      debugPrint('NotificationProvider: failed to persist unread cache: $e');
-    }
-  }
-
   Future<void> refresh({bool force = false}) async {
-    if ((_currentWallet == null || _currentWallet!.isEmpty) && !_initializing) {
-      if (!_hasAuthToken) {
-        return;
-      }
-      try {
-        final resolved = await _resolveWallet(null);
-        if (resolved != null && resolved.isNotEmpty) {
-          await initialize(walletOverride: resolved, force: true);
-          if (_initialized) {
-            return;
-          }
-        }
-      } catch (e) {
-        debugPrint('NotificationProvider.refresh: wallet rehydrate failed: $e');
-      }
-    }
-
     if (!_hasAuthContext) {
       return;
     }
@@ -505,10 +448,6 @@ class NotificationProvider extends ChangeNotifier {
   }
 
   Future<void> _syncUnreadCount({bool force = false}) async {
-    if ((_currentWallet == null || _currentWallet!.isEmpty) && !_initializing) {
-      return;
-    }
-
     if (!_hasAuthContext) {
       return;
     }
@@ -528,28 +467,33 @@ class NotificationProvider extends ChangeNotifier {
       final token = _backend.getAuthToken();
       if (!hasSession || token == null || token.isEmpty) {
         debugPrint(
-            'NotificationProvider.refresh: skipping unread fetch - no auth token available');
-        final previousWallet = _currentWallet;
-        _resetSessionState(
-          clearUnreadCount: true,
+          'NotificationProvider.refresh: skipping unread fetch - no auth token available',
         );
-        await _persistUnreadCount(0, walletOverride: previousWallet);
+        _resetSessionState(clearUnreadCount: true);
         return;
       }
 
-      final count = await _backend.getUnreadNotificationCount();
-      final oldCount = _communityUnreadCount;
-      _communityUnreadCount = count;
-      _hasNew = count > 0;
-      _lastServerSync = DateTime.now();
-      await _persistUnreadCount(count);
-
-      debugPrint('NotificationProvider.refresh: count=$count (was $oldCount)');
-      _debugSyncs++;
-
-      if (count != oldCount || (_hasNew != (oldCount > 0))) {
-        notifyListeners();
+      final requestVersion = ++_summaryRequestVersion;
+      final observedRevision = _summaryRevision;
+      final summary = await _backend.getUnreadNotificationSummary();
+      if (summary == null ||
+          requestVersion != _summaryRequestVersion ||
+          observedRevision != _summaryRevision) {
+        return;
       }
+      _applyUnreadSummary(<String, dynamic>{
+        'notifications': <String, dynamic>{
+          'unreadCount': summary.notificationsUnreadCount,
+        },
+        'messages': <String, dynamic>{
+          'unreadCount': summary.messagesUnreadCount,
+        },
+        'totalUnreadCount': summary.totalUnreadCount,
+        if (summary.generatedAt != null)
+          'generatedAt': summary.generatedAt!.toIso8601String(),
+      });
+      _lastServerSync = DateTime.now();
+      _debugSyncs++;
     } catch (e) {
       debugPrint('NotificationProvider.refresh error: $e');
     } finally {
@@ -558,50 +502,63 @@ class NotificationProvider extends ChangeNotifier {
   }
 
   void _handleSocketNotification(Map<String, dynamic> data) {
+    if (!_hasAuthContext) return;
     try {
       final typeRaw = (data['type'] ?? data['event'] ?? data['action'])
               ?.toString()
               .toLowerCase() ??
           '';
-      debugPrint(
-          'NotificationProvider._handleSocketNotification: type=$typeRaw, data=$data');
-
       final isReadEvent = typeRaw.contains('read') && !typeRaw.contains('new');
-
       if (isReadEvent) {
-        debugPrint('NotificationProvider: read-all event received');
-        _communityUnreadCount = 0;
-        _hasNew = false;
-        notifyListeners();
-        unawaited(_persistUnreadCount(0));
-        final socketHealthy = _isSocketHealthyForNotifications();
-        final shouldSyncServer =
-            !socketHealthy || _isNotificationsSurfaceActive;
-        if (shouldSyncServer) {
-          _scheduleServerSync(
-            delay: socketHealthy
-                ? const Duration(seconds: 2)
-                : const Duration(seconds: 1),
-          );
-        }
+        _summaryRevision++;
+        _scheduleServerSync(
+          delay: const Duration(milliseconds: 300),
+          force: true,
+        );
         return;
       }
+      _summaryRevision++;
+      _scheduleServerSync(
+        delay: const Duration(milliseconds: 300),
+        force: true,
+      );
 
-      // Increment for new notification
-      _communityUnreadCount++;
-      _hasNew = true;
-      debugPrint(
-          'NotificationProvider: new notification, count now $_communityUnreadCount');
-
-      // Force immediate UI update
-      notifyListeners();
-      unawaited(_persistUnreadCount(_communityUnreadCount));
-
-      // Show local push notification
+      // Message notifications are represented by the chat transport and its
+      // message-specific local notification. The summary event updates their
+      // badge count; displaying this row as well would duplicate the DM alert.
+      if (typeRaw == 'message' || typeRaw == 'dm') return;
       unawaited(handleIncomingNotification(data));
     } catch (e) {
       debugPrint('NotificationProvider._handleSocketNotification error: $e');
     }
+  }
+
+  void _handleUnreadSummary(Map<String, dynamic> payload) {
+    if (!_hasAuthContext) return;
+    _summaryRevision++;
+    _summaryRequestVersion++;
+    _scheduledServerSync?.cancel();
+    _scheduledServerSync = null;
+    _scheduledServerSyncDueAt = null;
+    _applyUnreadSummary(payload);
+    _lastServerSync = DateTime.now();
+  }
+
+  void _applyUnreadSummary(Map<String, dynamic> payload) {
+    final summary = NotificationUnreadSummary.fromJson(payload);
+    final notifications = summary.notificationsUnreadCount < 0
+        ? 0
+        : summary.notificationsUnreadCount;
+    final messages =
+        summary.messagesUnreadCount < 0 ? 0 : summary.messagesUnreadCount;
+    if (notifications == _communityUnreadCount &&
+        messages == _messageUnreadCount) {
+      return;
+    }
+    _communityUnreadCount = notifications;
+    _messageUnreadCount = messages;
+    _hasNew = notifications > 0;
+    notifyListeners();
   }
 
   /// Bind to the AppRefreshProvider to receive global or specific refresh triggers.
@@ -664,7 +621,9 @@ class NotificationProvider extends ChangeNotifier {
           if (globalChanged && !socketHealthy) {
             _scheduleServerSync();
           }
-        } catch (e) {/* ignore */}
+        } catch (e) {
+          /* ignore */
+        }
       };
       appRefresh.addListener(_refreshListener!);
       _ensureCadenceTimer(forceRestart: true);
@@ -680,32 +639,22 @@ class NotificationProvider extends ChangeNotifier {
       };
 
   void increment([int by = 1]) {
-    _communityUnreadCount += by;
-    _hasNew = true;
-    debugPrint(
-        'NotificationProvider.increment: by=$by, total=$_communityUnreadCount');
-    notifyListeners();
-    _scheduleServerSync(delay: const Duration(seconds: 1));
-    unawaited(_persistUnreadCount(_communityUnreadCount));
+    if (by > 0) unawaited(refresh(force: true));
   }
 
   void reset() {
-    _communityUnreadCount = 0;
-    _hasNew = false;
-    debugPrint('NotificationProvider.reset');
-    notifyListeners();
-    unawaited(_persistUnreadCount(0));
+    if (_hasAuthContext) {
+      unawaited(refresh(force: true));
+      return;
+    }
+    _resetSessionState(clearUnreadCount: true);
   }
 
   Future<void> markViewed({bool syncServer = true}) async {
-    _communityUnreadCount = 0;
-    _hasNew = false;
-    debugPrint('NotificationProvider.markViewed');
-    notifyListeners();
-    unawaited(_persistUnreadCount(0));
     if (syncServer) {
       try {
         await _backend.markAllNotificationsAsRead();
+        await refresh(force: true);
       } catch (e) {
         debugPrint('NotificationProvider.markViewed: backend sync failed: $e');
       }
@@ -713,19 +662,10 @@ class NotificationProvider extends ChangeNotifier {
   }
 
   /// Centralized handler for incoming socket `notification:new` events.
-  /// - Performs dedup checks, increments immediate unread count, refreshes authoritative value,
-  ///   and shows a local notification when appropriate.
+  /// - Deduplicates stable event IDs and shows localized local copy. Unread
+  ///   counts are updated only from the authoritative summary endpoint/event.
   Future<void> handleIncomingNotification(Map<String, dynamic> payload) async {
     try {
-      // Refresh authoritative data only when socket path is not currently
-      // sufficient (degraded socket) or the notifications surface is active.
-      final socketHealthy = _isSocketHealthyForNotifications();
-      if (!socketHealthy) {
-        _scheduleServerSync(delay: const Duration(milliseconds: 600));
-      } else if (_shouldSyncActiveSurfaceSocketEvent()) {
-        _scheduleServerSync(delay: const Duration(seconds: 2));
-      }
-
       // Parse notification type and relevant payload fields
       // Work on a mutable copy for potential raw wrappers
       var parsedPayload = Map<String, dynamic>.from(payload);
@@ -757,6 +697,23 @@ class NotificationProvider extends ChangeNotifier {
       final data = (parsedPayload['data'] is Map)
           ? Map<String, dynamic>.from(parsedPayload['data'] as Map)
           : <String, dynamic>{};
+      final eventId = (parsedPayload['eventId'] ??
+              parsedPayload['event_id'] ??
+              data['eventId'] ??
+              parsedPayload['id'])
+          ?.toString()
+          .trim();
+      if (eventId != null && eventId.isNotEmpty) {
+        if (_shownEventIds.contains(eventId)) return;
+        _shownEventIds.add(eventId);
+        if (_shownEventIds.length > 512) {
+          _shownEventIds.remove(_shownEventIds.first);
+        }
+      }
+
+      // ChatProvider owns the message transport and presents one localized DM
+      // alert per stable message ID. Avoid a second alert from this row event.
+      if (normalizedType == 'message' || normalizedType == 'dm') return;
       final postId =
           (data['postId'] ?? data['targetId'] ?? parsedPayload['postId'])
               ?.toString();
@@ -784,21 +741,6 @@ class NotificationProvider extends ChangeNotifier {
               parsedPayload['userId'])
           ?.toString();
 
-      // Deduplicate repeated events within a short time window
-      final dedupeSource = followerWallet?.isNotEmpty == true
-          ? followerWallet
-          : (userName ?? '');
-      final dedupeHash =
-          [normalizedType, postId ?? '', dedupeSource ?? ''].join('|');
-      if (_lastNotifHash == dedupeHash &&
-          _lastNotifTimestamp != null &&
-          DateTime.now().difference(_lastNotifTimestamp!).inSeconds < 3) {
-        // Skip duplicate
-        return;
-      }
-      _lastNotifHash = dedupeHash;
-      _lastNotifTimestamp = DateTime.now();
-
       // Show local notification for community interactions and other types
       try {
         final l10n = _l10n;
@@ -817,28 +759,32 @@ class NotificationProvider extends ChangeNotifier {
         switch (normalizedType) {
           case 'comment':
             await _pushService.showCommunityInteractionNotification(
-                postId: postId ?? '',
-                type: 'comment',
-                userName: userName ?? l10n.notificationSomeoneFallback,
-                comment: comment);
+              postId: postId ?? '',
+              type: 'comment',
+              userName: userName ?? l10n.notificationSomeoneFallback,
+              comment: comment,
+            );
             break;
           case 'like':
             await _pushService.showCommunityInteractionNotification(
-                postId: postId ?? '',
-                type: 'like',
-                userName: userName ?? l10n.notificationSomeoneFallback);
+              postId: postId ?? '',
+              type: 'like',
+              userName: userName ?? l10n.notificationSomeoneFallback,
+            );
             break;
           case 'share':
             await _pushService.showCommunityInteractionNotification(
-                postId: postId ?? '',
-                type: 'share',
-                userName: userName ?? l10n.notificationSomeoneFallback);
+              postId: postId ?? '',
+              type: 'share',
+              userName: userName ?? l10n.notificationSomeoneFallback,
+            );
             break;
           case 'mention':
             await _pushService.showCommunityInteractionNotification(
-                postId: postId ?? '',
-                type: 'mention',
-                userName: userName ?? l10n.notificationSomeoneFallback);
+              postId: postId ?? '',
+              type: 'mention',
+              userName: userName ?? l10n.notificationSomeoneFallback,
+            );
             break;
           case 'follow':
           case 'follower':
@@ -856,44 +802,49 @@ class NotificationProvider extends ChangeNotifier {
             break;
           case 'reward':
             await _pushService.showRewardNotification(
-                title: l10n.notificationRecognitionRecordedTitle,
-                amount: payload['amount'] is num
-                    ? (payload['amount'] as num).toInt()
-                    : int.tryParse(payload['amount']?.toString() ?? '') ?? 0,
-                reason: payload['reason']?.toString() ?? '',
-                currency: (payload['currency'] ?? payload['rewardCurrency'])
-                    ?.toString());
+              title: l10n.notificationRecognitionRecordedTitle,
+              amount: payload['amount'] is num
+                  ? (payload['amount'] as num).toInt()
+                  : int.tryParse(payload['amount']?.toString() ?? '') ?? 0,
+              reason: payload['reason']?.toString() ?? '',
+              currency: (payload['currency'] ?? payload['rewardCurrency'])
+                  ?.toString(),
+            );
             break;
           case 'artwork_discovery':
             await _pushService.showArtworkDiscoveryNotification(
-                artworkId: payload['artworkId']?.toString() ?? '',
-                title: payload['title'] ?? '',
-                artist: payload['artist'] ?? '');
+              artworkId: payload['artworkId']?.toString() ?? '',
+              title: payload['title'] ?? '',
+              artist: payload['artist'] ?? '',
+            );
             break;
           case 'nft_minting':
             await _pushService.showNFTMintingNotification(
-                artworkId: payload['artworkId']?.toString() ?? '',
-                artworkTitle: payload['artworkTitle'] ?? '',
-                status: payload['status'] ?? '',
-                transactionId: payload['transactionId']?.toString());
+              artworkId: payload['artworkId']?.toString() ?? '',
+              artworkTitle: payload['artworkTitle'] ?? '',
+              status: payload['status'] ?? '',
+              transactionId: payload['transactionId']?.toString(),
+            );
             break;
           case 'trading':
             await _pushService.showTradingNotification(
-                tradeId: payload['tradeId']?.toString() ?? '',
-                type: payload['tradeType'] ?? 'sale',
-                artworkTitle: payload['artworkTitle'] ?? '',
-                amount: (payload['amount'] is num)
-                    ? (payload['amount'] as num).toDouble()
-                    : 0.0,
-                buyerName: payload['buyerName'],
-                sellerName: payload['sellerName']);
+              tradeId: payload['tradeId']?.toString() ?? '',
+              type: payload['tradeType'] ?? 'sale',
+              artworkTitle: payload['artworkTitle'] ?? '',
+              amount: (payload['amount'] is num)
+                  ? (payload['amount'] as num).toDouble()
+                  : 0.0,
+              buyerName: payload['buyerName'],
+              sellerName: payload['sellerName'],
+            );
             break;
           case 'achievement':
             await _pushService.showAchievementNotification(
-                achievementId: payload['achievementId']?.toString() ?? '',
-                title: payload['title'] ?? l10n.notificationAchievementFallback,
-                description: payload['description'] ?? '',
-                rewardTokens: payload['rewardTokens'] ?? 0);
+              achievementId: payload['achievementId']?.toString() ?? '',
+              title: payload['title'] ?? l10n.notificationAchievementFallback,
+              description: payload['description'] ?? '',
+              rewardTokens: payload['rewardTokens'] ?? 0,
+            );
             break;
           default:
             // For other types, do not show a local notification but we already updated UI counters
@@ -901,7 +852,8 @@ class NotificationProvider extends ChangeNotifier {
         }
       } catch (e) {
         debugPrint(
-            'NotificationProvider: failed to show local notification: $e');
+          'NotificationProvider: failed to show local notification: $e',
+        );
       }
     } catch (e) {
       // ignore
@@ -913,6 +865,10 @@ class NotificationProvider extends ChangeNotifier {
     if (_socketListenersRegistered) {
       _socket.removeNotificationListener(_handleSocketNotification);
       _socketListenersRegistered = false;
+    }
+    if (_summarySocketListenerRegistered) {
+      _socket.removeUnreadSummaryListener(_handleUnreadSummary);
+      _summarySocketListenerRegistered = false;
     }
     if (_connectListenerRegistered) {
       _socket.removeConnectListener(_handleSocketReconnect);
@@ -937,6 +893,8 @@ class NotificationProvider extends ChangeNotifier {
         'hasAuthContext': _hasAuthContext,
         'currentWallet': _currentWallet ?? '',
         'unreadCount': _communityUnreadCount,
+        'messageUnreadCount': _messageUnreadCount,
+        'totalUnreadCount': totalUnreadCount,
         'hasNew': _hasNew,
         'refreshBound': _refreshListener != null,
         'socketListenersRegistered': _socketListenersRegistered,
@@ -945,6 +903,26 @@ class NotificationProvider extends ChangeNotifier {
         'scheduledSyncActive': _scheduledServerSync?.isActive ?? false,
         'currentSubscribedWallet': _socket.currentSubscribedWallet ?? '',
       };
+
+  @visibleForTesting
+  void setAuthenticatedSessionForTesting({String? wallet}) {
+    _currentWallet = wallet;
+    _initialized = true;
+  }
+
+  @visibleForTesting
+  void handleUnreadSummaryForTesting(Map<String, dynamic> payload) {
+    _handleUnreadSummary(payload);
+  }
+
+  @visibleForTesting
+  void handleNotificationForTesting(Map<String, dynamic> payload) {
+    _handleSocketNotification(payload);
+  }
+
+  @visibleForTesting
+  Future<void> handleSocketReconnectForTesting() =>
+      _refreshAfterSocketReconnect();
 
   void _maybeCheckSubscription() {
     final now = DateTime.now();
@@ -959,7 +937,8 @@ class NotificationProvider extends ChangeNotifier {
       final subscribed = WalletUtils.canonical(_socket.currentSubscribedWallet);
       if (subscribed.isEmpty || subscribed != expectedWallet) {
         debugPrint(
-            'NotificationProvider: subscription check mismatch (subscribed=$subscribed expected=$_currentWallet), attempting resubscribe');
+          'NotificationProvider: subscription check mismatch (subscribed=$subscribed expected=$_currentWallet), attempting resubscribe',
+        );
         _socket
             .connectAndSubscribe(_backend.baseUrl, _currentWallet!)
             .then((ok) {

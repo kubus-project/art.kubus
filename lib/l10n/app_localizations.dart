@@ -64,10 +64,13 @@ import 'app_localizations_sl.dart';
 abstract class AppLocalizations {
   AppLocalizations(String locale) : localeName = _supportedLocaleName(locale);
 
+  // Keep this guard after `flutter gen-l10n`: the generator's default locale
+  // normalization does not trim input or fall back to the app's supported
+  // locales, and this constructor is used directly by non-widget callers.
   static String _supportedLocaleName(String locale) {
-    final localeName = intl.Intl.canonicalizedLocale(locale.trim());
-    return switch (localeName) {
-      'en' || 'sl' => localeName,
+    final normalizedLocale = intl.Intl.canonicalizedLocale(locale.trim());
+    return switch (normalizedLocale) {
+      'en' || 'sl' => normalizedLocale,
       _ => 'sl',
     };
   }
@@ -102,7 +105,7 @@ abstract class AppLocalizations {
   /// A list of this localizations delegate's supported locales.
   static const List<Locale> supportedLocales = <Locale>[
     Locale('en'),
-    Locale('sl')
+    Locale('sl'),
   ];
 
   /// No description provided for @appTagline.
@@ -338,7 +341,9 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Digital editions of {artworkTitle} by {artistName}'**
   String archiveObjectSeriesDefaultDescription(
-      Object artworkTitle, Object artistName);
+    Object artworkTitle,
+    Object artistName,
+  );
 
   /// No description provided for @archiveObjectSeriesCreateFailed.
   ///
@@ -387,7 +392,11 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Achievement unlocked\n{title}{extra}\n+{amount} {currency} recognition'**
   String communityAchievementUnlockedToast(
-      Object title, Object extra, Object amount, Object currency);
+    Object title,
+    Object extra,
+    Object amount,
+    Object currency,
+  );
 
   /// No description provided for @communityViewAchievementsAction.
   ///
@@ -478,7 +487,9 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Digital edition {status} for {title}'**
   String recentActivityArchiveObjectStatusDescription(
-      Object status, Object title);
+    Object status,
+    Object title,
+  );
 
   /// No description provided for @recentActivityFallbackArtworkTitle.
   ///
@@ -4697,7 +4708,10 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Account: {accountStatus} · Wallet: {walletStatus} · Access: {signerStatus}'**
   String walletSessionStatusSummary(
-      Object accountStatus, Object walletStatus, Object signerStatus);
+    Object accountStatus,
+    Object walletStatus,
+    Object signerStatus,
+  );
 
   /// No description provided for @walletActionSignInRequiredToast.
   ///
@@ -13410,7 +13424,10 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{token} · {amount} · {date}'**
   String receiveTokenSidebarTransferSubtitle(
-      Object token, Object amount, Object date);
+    Object token,
+    Object amount,
+    Object date,
+  );
 
   /// No description provided for @sendTokenTitle.
   ///
@@ -13507,7 +13524,10 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{token} · {amount} · {date}'**
   String sendTokenSidebarRecipientSubtitle(
-      Object token, Object amount, Object date);
+    Object token,
+    Object amount,
+    Object date,
+  );
 
   /// No description provided for @sendTokenSidebarSummaryTitle.
   ///
@@ -13682,7 +13702,10 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{amount} {token} submitted. Tx: {signature}'**
   String sendTokenSendSuccessWithSignatureToast(
-      Object amount, Object token, Object signature);
+    Object amount,
+    Object token,
+    Object signature,
+  );
 
   /// No description provided for @sendTokenSendFailedToast.
   ///
@@ -16785,7 +16808,9 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Open details for {title}, token {tokenId}'**
   String marketplaceOpenCollectibleDetailsSemantic(
-      Object title, Object tokenId);
+    Object title,
+    Object tokenId,
+  );
 
   /// No description provided for @marketplaceShareTooltip.
   ///
@@ -17596,7 +17621,9 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Are you sure you want to delegate your {votingPower} voting power to {delegateName}?'**
   String daoDelegateVotingPowerDialogBody(
-      Object votingPower, Object delegateName);
+    Object votingPower,
+    Object delegateName,
+  );
 
   /// No description provided for @daoDelegationBenefitsTitle.
   ///
@@ -21359,7 +21386,10 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Swap submitted: {fromToken} ? {toToken}. Tx: {signature}'**
   String walletSwapSubmittedToastWithSignature(
-      Object fromToken, Object toToken, Object signature);
+    Object fromToken,
+    Object toToken,
+    Object signature,
+  );
 
   /// No description provided for @walletTransactionConfirmationsLabel.
   ///
@@ -22069,6 +22099,12 @@ abstract class AppLocalizations {
   /// **'Connect'**
   String get desktopShellNavConnect;
 
+  /// No description provided for @desktopShellNavMessages.
+  ///
+  /// In en, this message translates to:
+  /// **'Messages'**
+  String get desktopShellNavMessages;
+
   /// No description provided for @desktopShellNavCreate.
   ///
   /// In en, this message translates to:
@@ -22224,6 +22260,48 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Main navigation'**
   String get mobileNavSemanticLabel;
+
+  /// No description provided for @mobileNavCommunityUnreadSemantics.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} unread messages and notifications'**
+  String mobileNavCommunityUnreadSemantics(int count);
+
+  /// No description provided for @desktopMessagesUnreadSemantics.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} unread messages'**
+  String desktopMessagesUnreadSemantics(int count);
+
+  /// No description provided for @notificationDirectMessageTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'New message from {senderName}'**
+  String notificationDirectMessageTitle(String senderName);
+
+  /// No description provided for @notificationDirectMessageFallbackSender.
+  ///
+  /// In en, this message translates to:
+  /// **'Someone'**
+  String get notificationDirectMessageFallbackSender;
+
+  /// No description provided for @notificationDirectMessageEmptyBody.
+  ///
+  /// In en, this message translates to:
+  /// **'You have a new message.'**
+  String get notificationDirectMessageEmptyBody;
+
+  /// No description provided for @notificationMessagesChannelName.
+  ///
+  /// In en, this message translates to:
+  /// **'Messages'**
+  String get notificationMessagesChannelName;
+
+  /// No description provided for @messagesNotificationConversationUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'This conversation is no longer available.'**
+  String get messagesNotificationConversationUnavailable;
 
   /// No description provided for @desktopNavWalletEntry.
   ///
@@ -24888,7 +24966,9 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Activity was recorded on {activeBuckets} of {totalBuckets} buckets.'**
   String analyticsRecommendationConsistencyDescription(
-      Object activeBuckets, Object totalBuckets);
+    Object activeBuckets,
+    Object totalBuckets,
+  );
 
   /// No description provided for @analyticsRecommendationReverseDecline.
   ///
@@ -25213,7 +25293,9 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{totalVotes} votes · {supportPct}% support'**
   String daoProposalVotesSupportSummaryLabel(
-      Object totalVotes, Object supportPct);
+    Object totalVotes,
+    Object supportPct,
+  );
 
   /// No description provided for @commonSearchHint.
   ///
@@ -27626,7 +27708,10 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{activeBuckets} of {totalBuckets} intervals recorded {metric}.'**
   String analyticsInsightActivePatternDescription(
-      Object activeBuckets, Object totalBuckets, Object metric);
+    Object activeBuckets,
+    Object totalBuckets,
+    Object metric,
+  );
 
   /// No description provided for @analyticsInsightPeakTitle.
   ///
@@ -30555,7 +30640,11 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{source}: {amount} {currency}. {state}'**
   String marketplaceListingValueSemantic(
-      String source, String amount, String currency, String state);
+    String source,
+    String amount,
+    String currency,
+    String state,
+  );
 
   /// No description provided for @promotionBuilderSwitchNetwork.
   ///
@@ -31335,8 +31424,9 @@ AppLocalizations lookupAppLocalizations(Locale locale) {
   }
 
   throw FlutterError(
-      'AppLocalizations.delegate failed to load unsupported locale "$locale". This is likely '
-      'an issue with the localizations generation tool. Please file an issue '
-      'on GitHub with a reproducible sample app and the gen-l10n configuration '
-      'that was used.');
+    'AppLocalizations.delegate failed to load unsupported locale "$locale". This is likely '
+    'an issue with the localizations generation tool. Please file an issue '
+    'on GitHub with a reproducible sample app and the gen-l10n configuration '
+    'that was used.',
+  );
 }

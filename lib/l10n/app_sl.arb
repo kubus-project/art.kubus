@@ -4970,6 +4970,7 @@
   "desktopShellNavHome": "Domov",
   "desktopShellNavExplore": "Raziskuj",
   "desktopShellNavConnect": "Poveži",
+  "desktopShellNavMessages": "Sporočila",
   "desktopShellNavCreate": "Ustvari",
   "desktopShellNavOrganize": "Organiziraj",
   "desktopShellNavGovern": "Upravljaj",
@@ -4996,6 +4997,34 @@
   "mobileNavProfile": "Profil",
   "mobileNavAccount": "Račun",
   "mobileNavSemanticLabel": "Glavna navigacija",
+  "mobileNavCommunityUnreadSemantics": "neprebranih vsebin: {count}",
+  "@mobileNavCommunityUnreadSemantics": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "desktopMessagesUnreadSemantics": "Neprebrana sporočila: {count}",
+  "@desktopMessagesUnreadSemantics": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "notificationDirectMessageTitle": "Novo sporočilo od uporabnika {senderName}",
+  "@notificationDirectMessageTitle": {
+    "placeholders": {
+      "senderName": {
+        "type": "String"
+      }
+    }
+  },
+  "notificationDirectMessageFallbackSender": "Nekdo",
+  "notificationDirectMessageEmptyBody": "Prejeli ste novo sporočilo.",
+  "notificationMessagesChannelName": "Sporočila",
+  "messagesNotificationConversationUnavailable": "Ta pogovor ni več na voljo.",
   "desktopNavWalletEntry": "Denarnica",
   "daoHubAppBarTitle": "Skupnostno upravljanje",
   "labsDaoSemanticLabel": "Skupnostno upravljanje",

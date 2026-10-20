@@ -72,8 +72,11 @@ class DesktopBreakpoints {
 /// The destinations the navigation offers for this account state. Pure, so
 /// the capability/rollout rules can be asserted without pumping the shell.
 @visibleForTesting
-List<DesktopNavItem> resolveDesktopNavItems(bool isSignedIn,
-    {required bool isArtist, required bool isInstitution}) {
+List<DesktopNavItem> resolveDesktopNavItems(
+  bool isSignedIn, {
+  required bool isArtist,
+  required bool isInstitution,
+}) {
   if (!isSignedIn) {
     return _DesktopShellState._guestNavItems;
   }
@@ -170,6 +173,12 @@ class _DesktopShellState extends State<DesktopShell>
       route: '/community',
     ),
     DesktopNavItem(
+      icon: Icons.mail_outline,
+      activeIcon: Icons.mail,
+      labelKey: DesktopNavLabelKey.messages,
+      route: '/messages',
+    ),
+    DesktopNavItem(
       icon: Icons.palette_outlined,
       activeIcon: Icons.palette,
       labelKey: DesktopNavLabelKey.create,
@@ -243,8 +252,10 @@ class _DesktopShellState extends State<DesktopShell>
   void initState() {
     super.initState();
     _tutorialOverlayController = TutorialOverlayController();
-    _activeRoute = _signedInNavItems[
-            widget.initialIndex.clamp(0, _signedInNavItems.length - 1)]
+    _activeRoute = _signedInNavItems[widget.initialIndex.clamp(
+      0,
+      _signedInNavItems.length - 1,
+    )]
         .route;
     _navExpandController = AnimationController(
       duration: const Duration(milliseconds: 200),
@@ -426,7 +437,10 @@ class _DesktopShellState extends State<DesktopShell>
   }
 
   void _onNavItemSelected(
-      int index, List<DesktopNavItem> navItems, bool isSignedIn) {
+    int index,
+    List<DesktopNavItem> navItems,
+    bool isSignedIn,
+  ) {
     if (index < 0 || index >= navItems.length) return;
     final item = navItems[index];
 
@@ -463,7 +477,8 @@ class _DesktopShellState extends State<DesktopShell>
       final presenceProvider = context.read<PresenceProvider>();
       final collabProvider = context.read<CollabProvider>();
 
-      final isCommunity = _activeRoute == '/community';
+      final isCommunity =
+          _activeRoute == '/community' || _activeRoute == '/messages';
       final isProfileSubscreen =
           _screenStack.isNotEmpty && _screenStack.last is ProfileScreen;
       final notificationsOpen =
@@ -534,6 +549,8 @@ class _DesktopShellState extends State<DesktopShell>
         return const DesktopMapScreen();
       case '/community':
         return const DesktopCommunityScreen();
+      case '/messages':
+        return const DesktopCommunityScreen(initialShowMessages: true);
       case '/artist-studio':
         return const DesktopArtistStudioScreen();
       case '/institution':
@@ -560,6 +577,8 @@ class _DesktopShellState extends State<DesktopShell>
         return 'DesktopExplore';
       case '/community':
         return 'DesktopCommunity';
+      case '/messages':
+        return 'DesktopMessages';
       case '/artist-studio':
         return 'DesktopArtistStudio';
       case '/institution':
@@ -585,25 +604,27 @@ class _DesktopShellState extends State<DesktopShell>
     final screenName = hasStack
         ? _screenStack.last.runtimeType.toString()
         : _telemetryScreenNameForRoute(_activeRoute);
-    TelemetryService()
-        .setActiveScreen(screenName: screenName, screenRoute: screenRoute);
+    TelemetryService().setActiveScreen(
+      screenName: screenName,
+      screenRoute: screenRoute,
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    final profileProvider =
-        Provider.of<ProfileProvider>(context, listen: false);
-    final navState = context.select<ProfileProvider,
-        ({bool isSignedIn, bool isArtist, bool isInstitution})>(
-      (p) {
-        final user = p.currentUser;
-        return (
-          isSignedIn: p.isSignedIn,
-          isArtist: user?.isArtist ?? false,
-          isInstitution: user?.isInstitution ?? false,
-        );
-      },
+    final profileProvider = Provider.of<ProfileProvider>(
+      context,
+      listen: false,
     );
+    final navState = context.select<ProfileProvider,
+        ({bool isSignedIn, bool isArtist, bool isInstitution})>((p) {
+      final user = p.currentUser;
+      return (
+        isSignedIn: p.isSignedIn,
+        isArtist: user?.isArtist ?? false,
+        isInstitution: user?.isInstitution ?? false,
+      );
+    });
     final authWallet =
         (BackendApiService().getCurrentAuthWalletAddress() ?? '').trim();
     final canHydrateAuthenticatedProfile =
@@ -626,8 +647,11 @@ class _DesktopShellState extends State<DesktopShell>
     final isSignedIn = navState.isSignedIn;
     final isArtist = navState.isArtist;
     final isInstitution = navState.isInstitution;
-    final navItems = resolveDesktopNavItems(isSignedIn,
-        isArtist: isArtist, isInstitution: isInstitution);
+    final navItems = resolveDesktopNavItems(
+      isSignedIn,
+      isArtist: isArtist,
+      isInstitution: isInstitution,
+    );
     final isWalletRoute = _activeRoute == _walletRoute;
     final hasActiveRoute = navItems.any((item) => item.route == _activeRoute);
     final effectiveRoute =
@@ -647,8 +671,9 @@ class _DesktopShellState extends State<DesktopShell>
         });
       }
     }
-    final selectedIndex =
-        navItems.indexWhere((item) => item.route == effectiveRoute);
+    final selectedIndex = navItems.indexWhere(
+      (item) => item.route == effectiveRoute,
+    );
     // Navigation selection uses the family active role on every route; data
     // and feature colours stay inside their own screens.
     final activeAccent = KubusColorRoles.of(context).active;
@@ -740,239 +765,247 @@ class _DesktopShellState extends State<DesktopShell>
         child: TutorialOverlayScope(
           controller: _tutorialOverlayController,
           child: DesktopShellScope(
-              pushScreen: _pushScreenToStack,
-              popScreen: _popScreenFromStack,
-              navigateToRoute: _navigateToRoute,
-              openNotifications: () => unawaited(_toggleNotificationsPanel()),
-              openFunctionsPanel: _openFunctionsPanel,
-              setFunctionsPanelContent: _setFunctionsPanelContent,
-              closeFunctionsPanel: _closeFunctionsPanel,
-              canPop: _screenStack.isNotEmpty,
-              isCanonicalPublicEntry:
-                  isCanonicalPublicEntry && _screenStack.isNotEmpty,
-              onOpenPublicEntryNavigation: isCanonicalPublicEntry
-                  ? openCanonicalPublicEntryNavigation
-                  : null,
-              child: Builder(
-                builder: (shellContext) {
-                  _shellScopeContext = shellContext;
-                  DesktopShellRegistry.instance.register(shellContext);
-                  _maybeConsumePendingDeepLink(shellContext);
+            pushScreen: _pushScreenToStack,
+            popScreen: _popScreenFromStack,
+            navigateToRoute: _navigateToRoute,
+            openNotifications: () => unawaited(_toggleNotificationsPanel()),
+            openFunctionsPanel: _openFunctionsPanel,
+            setFunctionsPanelContent: _setFunctionsPanelContent,
+            closeFunctionsPanel: _closeFunctionsPanel,
+            canPop: _screenStack.isNotEmpty,
+            isCanonicalPublicEntry:
+                isCanonicalPublicEntry && _screenStack.isNotEmpty,
+            onOpenPublicEntryNavigation: isCanonicalPublicEntry
+                ? openCanonicalPublicEntryNavigation
+                : null,
+            child: Builder(
+              builder: (shellContext) {
+                _shellScopeContext = shellContext;
+                DesktopShellRegistry.instance.register(shellContext);
+                _maybeConsumePendingDeepLink(shellContext);
 
-                  return Stack(
-                    children: [
-                      Positioned.fill(
-                        child: ColoredBox(
-                          key: const ValueKey<String>(
-                              'desktop-shell-fallback-backdrop'),
-                          color: isCanonicalPublicEntry
-                              ? KubusColorRoles.of(context).surface
-                              : KubusColorRoles.of(context).ground,
+                return Stack(
+                  children: [
+                    Positioned.fill(
+                      child: ColoredBox(
+                        key: const ValueKey<String>(
+                          'desktop-shell-fallback-backdrop',
                         ),
+                        color: isCanonicalPublicEntry
+                            ? KubusColorRoles.of(context).surface
+                            : KubusColorRoles.of(context).ground,
                       ),
-                      Scaffold(
-                        backgroundColor: Colors.transparent,
-                        body: Row(
-                          children: [
-                            // Primary navigation rail anchored to the LEFT edge.
-                            if (!isCanonicalPublicEntry)
-                              AnimatedBuilder(
-                                animation: _navExpandAnimation,
-                                builder: (context, child) {
-                                  final expandedWidth = isLarge
-                                      ? DesktopNavigation.expandedWidthLarge
-                                      : DesktopNavigation.expandedWidthMedium;
-                                  final collapsedWidth =
-                                      DesktopNavigation.collapsedWidth;
-                                  final currentWidth = collapsedWidth +
-                                      (expandedWidth - collapsedWidth) *
-                                          _navExpandAnimation.value;
+                    ),
+                    Scaffold(
+                      backgroundColor: Colors.transparent,
+                      body: Row(
+                        children: [
+                          // Primary navigation rail anchored to the LEFT edge.
+                          if (!isCanonicalPublicEntry)
+                            AnimatedBuilder(
+                              animation: _navExpandAnimation,
+                              builder: (context, child) {
+                                final expandedWidth = isLarge
+                                    ? DesktopNavigation.expandedWidthLarge
+                                    : DesktopNavigation.expandedWidthMedium;
+                                final collapsedWidth =
+                                    DesktopNavigation.collapsedWidth;
+                                final currentWidth = collapsedWidth +
+                                    (expandedWidth - collapsedWidth) *
+                                        _navExpandAnimation.value;
 
-                                  final roles = KubusColorRoles.of(context);
+                                final roles = KubusColorRoles.of(context);
 
-                                  return ClipRect(
-                                    child: Container(
-                                      width: currentWidth,
-                                      decoration: BoxDecoration(
-                                        color: roles.surface,
-                                        border: Border(
-                                          right: BorderSide(
-                                            color: roles.rule,
-                                            width: KubusSizes.hairline,
-                                          ),
-                                        ),
-                                      ),
-                                      child: RepaintBoundary(
-                                        child: DesktopNavigation(
-                                          items: navItems,
-                                          activeAccent: activeAccent,
-                                          selectedIndex: selectedIndex < 0
-                                              ? 0
-                                              : selectedIndex,
-                                          onItemSelected: (index) =>
-                                              _onNavItemSelected(
-                                                  index, navItems, isSignedIn),
-                                          isExpanded: _isNavigationExpanded,
-                                          expandAnimation: _navExpandAnimation,
-                                          onToggleExpand: () =>
-                                              _toggleNavigation(
-                                                  userInitiated: true),
-                                          isProfileSelected: isProfileSelected,
-                                          isNotificationsSelected:
-                                              isNotificationsSelected,
-                                          isSettingsSelected:
-                                              isSettingsSelected,
-                                          isCollabInvitesSelected:
-                                              isCollabInvitesSelected,
-                                          onProfileTap: () =>
-                                              _showProfileMenu(context),
-                                          onSettingsTap: () =>
-                                              _showSettingsScreen(context),
-                                          onNotificationsTap: () => unawaited(
-                                              _toggleNotificationsPanel()),
-                                          onWalletTap: () =>
-                                              _handleWalletTap(isSignedIn),
-                                          onCollabInvitesTap: isSignedIn &&
-                                                  AppConfig.isFeatureEnabled(
-                                                      'collabInvites')
-                                              ? () => _showCollabInvites()
-                                              : null,
+                                return ClipRect(
+                                  child: Container(
+                                    width: currentWidth,
+                                    decoration: BoxDecoration(
+                                      color: roles.surface,
+                                      border: Border(
+                                        right: BorderSide(
+                                          color: roles.rule,
+                                          width: KubusSizes.hairline,
                                         ),
                                       ),
                                     ),
-                                  );
-                                },
-                              ),
-
-                            // Main content area (dominant workspace)
-                            Expanded(
-                              child: isCanonicalPublicEntry
-                                  ? Center(
-                                      child: ConstrainedBox(
-                                        constraints: const BoxConstraints(
-                                          maxWidth: 1216,
+                                    child: RepaintBoundary(
+                                      child: DesktopNavigation(
+                                        items: navItems,
+                                        activeAccent: activeAccent,
+                                        selectedIndex: selectedIndex < 0
+                                            ? 0
+                                            : selectedIndex,
+                                        onItemSelected: (index) =>
+                                            _onNavItemSelected(
+                                          index,
+                                          navItems,
+                                          isSignedIn,
                                         ),
-                                        child: _screenStack.isNotEmpty
-                                            ? _screenStack.last
-                                            : _buildCurrentScreen(
-                                                effectiveRoute),
+                                        isExpanded: _isNavigationExpanded,
+                                        expandAnimation: _navExpandAnimation,
+                                        onToggleExpand: () => _toggleNavigation(
+                                          userInitiated: true,
+                                        ),
+                                        isProfileSelected: isProfileSelected,
+                                        isNotificationsSelected:
+                                            isNotificationsSelected,
+                                        isSettingsSelected: isSettingsSelected,
+                                        isCollabInvitesSelected:
+                                            isCollabInvitesSelected,
+                                        onProfileTap: () =>
+                                            _showProfileMenu(context),
+                                        onSettingsTap: () =>
+                                            _showSettingsScreen(context),
+                                        onNotificationsTap: () => unawaited(
+                                          _toggleNotificationsPanel(),
+                                        ),
+                                        onWalletTap: () =>
+                                            _handleWalletTap(isSignedIn),
+                                        onCollabInvitesTap: isSignedIn &&
+                                                AppConfig.isFeatureEnabled(
+                                                  'collabInvites',
+                                                )
+                                            ? () => _showCollabInvites()
+                                            : null,
                                       ),
-                                    )
-                                  : _screenStack.isNotEmpty
-                                      ? _screenStack.last
-                                      : _buildCurrentScreen(effectiveRoute),
+                                    ),
+                                  ),
+                                );
+                              },
                             ),
 
-                            // Functions sidebar (contextual panels like Notifications)
-                            // Keep available on medium widths too, otherwise notification
-                            // actions can appear to do nothing on narrower desktop windows.
-                            if (!isCompact && !isCanonicalPublicEntry)
-                              AnimatedContainer(
-                                duration: const Duration(milliseconds: 220),
-                                curve: Curves.easeOutCubic,
-                                width: _functionsPanel ==
-                                        DesktopFunctionsPanel.none
-                                    ? 0
-                                    : (isLarge
-                                        ? functionsPanelWidthLarge
-                                        : (isExpanded
-                                            ? functionsPanelWidthExpanded
-                                            : functionsPanelWidthMedium)),
-                                child: ClipRect(
-                                  child: IgnorePointer(
-                                    ignoring: _functionsPanel ==
-                                        DesktopFunctionsPanel.none,
-                                    child: AnimatedOpacity(
-                                      opacity: _functionsPanel ==
-                                              DesktopFunctionsPanel.none
-                                          ? 0
-                                          : 1,
-                                      duration:
-                                          const Duration(milliseconds: 150),
-                                      child: Builder(
-                                        builder: (context) {
-                                          final panel = AnimatedSwitcher(
-                                            duration: const Duration(
-                                                milliseconds: 220),
-                                            switchInCurve: Curves.easeOutCubic,
-                                            switchOutCurve: Curves.easeInCubic,
-                                            child: switch (_functionsPanel) {
-                                              DesktopFunctionsPanel
-                                                    .notifications =>
-                                                DesktopNotificationsPanel(
-                                                  key: const ValueKey<String>(
-                                                      'functions_notifications'),
-                                                  onClose: _closeFunctionsPanel,
-                                                  onRefresh: () => context
-                                                      .read<
-                                                          RecentActivityProvider>()
-                                                      .refresh(force: true),
-                                                  onMarkAllRead: () async {
-                                                    final activityProvider =
-                                                        context.read<
-                                                            RecentActivityProvider>();
-                                                    await context
-                                                        .read<
-                                                            NotificationProvider>()
-                                                        .markViewed(
-                                                          syncServer: true,
-                                                        );
-                                                    activityProvider
-                                                        .markAllReadLocally();
-                                                  },
-                                                  onActivitySelected:
-                                                      (activity) async {
-                                                    final parentContext =
-                                                        context;
-                                                    _closeFunctionsPanel();
-                                                    await ActivityNavigation
-                                                        .open(parentContext,
-                                                            activity);
-                                                  },
-                                                ),
-                                              DesktopFunctionsPanel
-                                                    .exploreNearby =>
-                                                _functionsPanelContent ??
-                                                    const SizedBox.shrink(
-                                                      key: ValueKey<String>(
-                                                          'functions_explore_nearby_empty'),
-                                                    ),
-                                              DesktopFunctionsPanel.none =>
-                                                const SizedBox.shrink(
-                                                  key: ValueKey<String>(
-                                                      'functions_empty'),
-                                                ),
-                                            },
-                                          );
-
-                                          if (!kIsWeb ||
-                                              _functionsPanel ==
-                                                  DesktopFunctionsPanel.none) {
-                                            return RepaintBoundary(
-                                                child: panel);
-                                          }
-                                          return RepaintBoundary(
-                                            child: PointerInterceptor(
-                                                child: panel),
-                                          );
-                                        },
+                          // Main content area (dominant workspace)
+                          Expanded(
+                            child: isCanonicalPublicEntry
+                                ? Center(
+                                    child: ConstrainedBox(
+                                      constraints: const BoxConstraints(
+                                        maxWidth: 1216,
                                       ),
+                                      child: _screenStack.isNotEmpty
+                                          ? _screenStack.last
+                                          : _buildCurrentScreen(effectiveRoute),
+                                    ),
+                                  )
+                                : _screenStack.isNotEmpty
+                                    ? _screenStack.last
+                                    : _buildCurrentScreen(effectiveRoute),
+                          ),
+
+                          // Functions sidebar (contextual panels like Notifications)
+                          // Keep available on medium widths too, otherwise notification
+                          // actions can appear to do nothing on narrower desktop windows.
+                          if (!isCompact && !isCanonicalPublicEntry)
+                            AnimatedContainer(
+                              duration: const Duration(milliseconds: 220),
+                              curve: Curves.easeOutCubic,
+                              width:
+                                  _functionsPanel == DesktopFunctionsPanel.none
+                                      ? 0
+                                      : (isLarge
+                                          ? functionsPanelWidthLarge
+                                          : (isExpanded
+                                              ? functionsPanelWidthExpanded
+                                              : functionsPanelWidthMedium)),
+                              child: ClipRect(
+                                child: IgnorePointer(
+                                  ignoring: _functionsPanel ==
+                                      DesktopFunctionsPanel.none,
+                                  child: AnimatedOpacity(
+                                    opacity: _functionsPanel ==
+                                            DesktopFunctionsPanel.none
+                                        ? 0
+                                        : 1,
+                                    duration: const Duration(milliseconds: 150),
+                                    child: Builder(
+                                      builder: (context) {
+                                        final panel = AnimatedSwitcher(
+                                          duration: const Duration(
+                                            milliseconds: 220,
+                                          ),
+                                          switchInCurve: Curves.easeOutCubic,
+                                          switchOutCurve: Curves.easeInCubic,
+                                          child: switch (_functionsPanel) {
+                                            DesktopFunctionsPanel
+                                                  .notifications =>
+                                              DesktopNotificationsPanel(
+                                                key: const ValueKey<String>(
+                                                  'functions_notifications',
+                                                ),
+                                                onClose: _closeFunctionsPanel,
+                                                onRefresh: () => context
+                                                    .read<
+                                                        RecentActivityProvider>()
+                                                    .refresh(force: true),
+                                                onMarkAllRead: () async {
+                                                  final activityProvider =
+                                                      context.read<
+                                                          RecentActivityProvider>();
+                                                  await context
+                                                      .read<
+                                                          NotificationProvider>()
+                                                      .markViewed(
+                                                        syncServer: true,
+                                                      );
+                                                  activityProvider
+                                                      .markAllReadLocally();
+                                                },
+                                                onActivitySelected:
+                                                    (activity) async {
+                                                  final parentContext = context;
+                                                  _closeFunctionsPanel();
+                                                  await ActivityNavigation.open(
+                                                    parentContext,
+                                                    activity,
+                                                  );
+                                                },
+                                              ),
+                                            DesktopFunctionsPanel
+                                                  .exploreNearby =>
+                                              _functionsPanelContent ??
+                                                  const SizedBox.shrink(
+                                                    key: ValueKey<String>(
+                                                      'functions_explore_nearby_empty',
+                                                    ),
+                                                  ),
+                                            DesktopFunctionsPanel.none =>
+                                              const SizedBox.shrink(
+                                                key: ValueKey<String>(
+                                                  'functions_empty',
+                                                ),
+                                              ),
+                                          },
+                                        );
+
+                                        if (!kIsWeb ||
+                                            _functionsPanel ==
+                                                DesktopFunctionsPanel.none) {
+                                          return RepaintBoundary(child: panel);
+                                        }
+                                        return RepaintBoundary(
+                                          child: PointerInterceptor(
+                                            child: panel,
+                                          ),
+                                        );
+                                      },
                                     ),
                                   ),
                                 ),
                               ),
-                          ],
-                        ),
+                            ),
+                        ],
                       ),
-                      Positioned.fill(
-                        child: TutorialOverlayPresenter(
-                          controller: _tutorialOverlayController,
-                        ),
+                    ),
+                    Positioned.fill(
+                      child: TutorialOverlayPresenter(
+                        controller: _tutorialOverlayController,
                       ),
-                    ],
-                  );
-                },
-              )),
+                    ),
+                  ],
+                );
+              },
+            ),
+          ),
         ),
       ),
     );
@@ -988,8 +1021,10 @@ class _DesktopShellState extends State<DesktopShell>
     })();
     if (pending == null) return;
 
-    final signature = const ShareDeepLinkCodec()
-        .canonicalPathForTarget(pending, includeProofTokens: false);
+    final signature = const ShareDeepLinkCodec().canonicalPathForTarget(
+      pending,
+      includeProofTokens: false,
+    );
     final now = DateTime.now();
     final lastAt = _lastDeepLinkHandledAt;
     if (_lastDeepLinkSignature == signature &&
@@ -1035,16 +1070,16 @@ class _DesktopShellState extends State<DesktopShell>
   }
 
   void _showProfileMenu(BuildContext context) {
-    final profileProvider =
-        Provider.of<ProfileProvider>(context, listen: false);
+    final profileProvider = Provider.of<ProfileProvider>(
+      context,
+      listen: false,
+    );
     final shellScope = DesktopShellScope.of(context);
 
     if (!profileProvider.isSignedIn) {
-      Navigator.of(context).push(
-        MaterialPageRoute(
-          builder: (context) => const SignInScreen(),
-        ),
-      );
+      Navigator.of(
+        context,
+      ).push(MaterialPageRoute(builder: (context) => const SignInScreen()));
       return;
     }
 
@@ -1055,8 +1090,9 @@ class _DesktopShellState extends State<DesktopShell>
       return;
     }
 
-    Navigator.of(context)
-        .push(MaterialPageRoute(builder: (context) => const ProfileScreen()));
+    Navigator.of(
+      context,
+    ).push(MaterialPageRoute(builder: (context) => const ProfileScreen()));
   }
 
   void _showSettingsScreen(BuildContext context) {
