@@ -3,6 +3,16 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:art_kubus/widgets/community/community_posting_wallet.dart';
 
 void main() {
+  group('communityPostingRequiresWallet', () {
+    test('ordinary account-owned posts do not require a wallet', () {
+      expect(communityPostingRequiresWallet(isGroupPost: false), isFalse);
+    });
+
+    test('group posts keep the wallet membership gate', () {
+      expect(communityPostingRequiresWallet(isGroupPost: true), isTrue);
+    });
+  });
+
   group('readCommunityPostingWallet', () {
     test('returns null when no wallet key is stored', () async {
       SharedPreferences.setMockInitialValues(<String, Object>{});

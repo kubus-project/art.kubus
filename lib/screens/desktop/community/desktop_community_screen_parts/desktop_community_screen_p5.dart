@@ -287,9 +287,12 @@ extension _DesktopCommunityScreenStatePart5 on _DesktopCommunityScreenState {
       sourceScreen: 'desktop_community_screen',
     );
     if (!canPost || !mounted) return;
-    // Email-only accounts have no wallet; posting would only fail at the
-    // backend. Ask for a wallet up front, keeping the draft in the composer.
-    if (await readCommunityPostingWallet() == null) {
+    // Group membership remains wallet-keyed; ordinary posts use users.id.
+    final hub = Provider.of<CommunityHubProvider>(context, listen: false);
+    if (communityPostingRequiresWallet(
+          isGroupPost: hub.draft.targetGroup != null,
+        ) &&
+        await readCommunityPostingWallet() == null) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showKubusSnackBar(
         SnackBar(
@@ -320,7 +323,6 @@ extension _DesktopCommunityScreenStatePart5 on _DesktopCommunityScreenState {
     _applyState(() => _isPosting = true);
 
     try {
-      final hub = Provider.of<CommunityHubProvider>(context, listen: false);
       hub.setDraftCategory(_selectedCategory);
 
       final rawContent = _composeController.text.trim();

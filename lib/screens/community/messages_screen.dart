@@ -855,35 +855,51 @@ class _MessagesScreenState extends State<MessagesScreen> {
                         for (final wallet in memberWallets) {
                           _hydrateConversationFromCache(c.id, wallet);
                         }
-                      } catch (_) {}
-                    }
-                    avatar = _normalizeAvatarUrl(avatar);
-                    if (_isFabricatedAvatar(avatar, widgetWallet)) {
-                      avatar = null;
-                    }
-                    Widget leading;
-                    if (avatar != null && avatar.isNotEmpty) {
-                      final isLoading =
-                          false; // explicit avatar provided -> not loading
-                      // If this is a direct conversation, prefer to associate the avatar
-                      // with the other participant's wallet so AvatarWidget can fetch
-                      // the authoritative profile. Fall back to conversation id when
-                      // unknown (group avatars or server-provided URLs).
-                      leading = KubusIdentityAvatar(
-                          avatarUrl: avatar,
-                          wallet: widgetWallet,
-                          radius: 20,
-                          isLoading: isLoading,
-                          allowFabricatedFallback: false,
-                        );
+                      }
+                      final otherWallet = (!c.isGroup && memberWallets.isNotEmpty)
+                          ? memberWallets.first
+                          : '';
+                      String widgetWallet =
+                          otherWallet.isNotEmpty ? otherWallet : c.id;
+                      // Prefer provider preloaded avatars when available (avoid local per-screen duplication)
+                      if ((avatar == null || avatar.isEmpty)) {
+                        try {
+                          final pre =
+                              Provider.of<ChatProvider>(context, listen: false)
+                                  .getPreloadedProfileMapsForConversation(c.id);
+                          final avatars =
+                              (pre['avatars'] as Map<String, String?>?) ?? {};
+                          if (avatars.isNotEmpty) {
+                            final firstKey =
+                                avatars.keys.isNotEmpty ? avatars.keys.first : '';
+                            if (firstKey.isNotEmpty) avatar = avatars[firstKey];
+                          }
+                        } catch (_) {}
+                      }
+                      avatar = _normalizeAvatarUrl(avatar);
+                      if (_isFabricatedAvatar(avatar, widgetWallet)) {
+                        avatar = null;
+                      }
+                      Widget leading;
+                      if (avatar != null && avatar.isNotEmpty) {
+                        final isLoading =
+                            false; // explicit avatar provided -> not loading
+                        // If this is a direct conversation, prefer to associate the avatar
+                        // with the other participant's wallet so KubusIdentityAvatar can fetch
+                        // the authoritative profile. Fall back to conversation id when
+                        // unknown (group avatars or server-provided URLs).
+                        leading = KubusIdentityAvatar(
+                            avatarUrl: avatar,
+                            wallet: widgetWallet,
+                            radius: 20,
+                            isLoading: isLoading,
+                            allowFabricatedFallback: false);
                       } else if (c.isGroup) {
                         if (memberWallets.isNotEmpty) {
                           leading = _buildGroupAvatar(memberWallets, 48);
                         } else {
                           leading = const KubusMonogramAvatar(
-                            radius: 20,
-                            child: Icon(Icons.group),
-                          );
+                              radius: 20, child: Icon(Icons.group));
                         }
                       } else {
                         // Fallback for one-to-one: use other participant's wallet if available
@@ -896,11 +912,10 @@ class _MessagesScreenState extends State<MessagesScreen> {
                             fallbackAvatar = cached.profileImageUrl!;
                           } else {
                             try {
-                              final pre = cp
-                                  .getPreloadedProfileMapsForConversation(c.id);
+                              final pre =
+                                  cp.getPreloadedProfileMapsForConversation(c.id);
                               final avatars =
-                                  (pre['avatars'] as Map<String, String?>?) ??
-                                      {};
+                                  (pre['avatars'] as Map<String, String?>?) ?? {};
                               if (avatars.containsKey(otherWallet)) {
                                 fallbackAvatar = avatars[otherWallet];
                               }
@@ -908,37 +923,33 @@ class _MessagesScreenState extends State<MessagesScreen> {
                             // As a last-resort, check persisted UserService cache synchronously
                             if (fallbackAvatar == null ||
                                 fallbackAvatar.isEmpty) {
-                              final persisted = UserService.getCachedUser(
-                                otherWallet,
-                              );
+                              final persisted =
+                                  UserService.getCachedUser(otherWallet);
                               if (persisted != null &&
-                                  (persisted.profileImageUrl ?? '')
-                                      .isNotEmpty) {
+                                  (persisted.profileImageUrl ?? '').isNotEmpty) {
                                 fallbackAvatar = persisted.profileImageUrl;
                               }
                             }
                           }
-                        }
-                        // Prefer any explicit avatar; do not fabricate a placeholder
-                        // here; AvatarWidget will render a safe fallback.
-                        final effectiveFallbackAvatar =
-                            _normalizeAvatarUrl(fallbackAvatar);
-                        final sanitizedFallback = _isFabricatedAvatar(
-                                effectiveFallbackAvatar, otherWallet)
-                            ? null
-                            : effectiveFallbackAvatar;
-                        final isLoading = (otherWallet.isNotEmpty &&
-                            cp.getCachedUser(otherWallet) == null &&
-                            UserService.getCachedUser(otherWallet) == null &&
-                            (_conversationAvatars[c.id] == null ||
-                                _conversationAvatars[c.id]!.isEmpty));
-                        leading = KubusIdentityAvatar(
-                            avatarUrl: sanitizedFallback,
-                            wallet: otherWallet,
-                            radius: 20,
-                            isLoading: isLoading,
-                            allowFabricatedFallback: false,
-                          );
+                          // Prefer any explicit avatar; do not fabricate a placeholder
+                          // here; KubusIdentityAvatar will render a safe fallback.
+                          final effectiveFallbackAvatar =
+                              _normalizeAvatarUrl(fallbackAvatar);
+                          final sanitizedFallback = _isFabricatedAvatar(
+                                  effectiveFallbackAvatar, otherWallet)
+                              ? null
+                              : effectiveFallbackAvatar;
+                          final isLoading = (otherWallet.isNotEmpty &&
+                              cp.getCachedUser(otherWallet) == null &&
+                              UserService.getCachedUser(otherWallet) == null &&
+                              (_conversationAvatars[c.id] == null ||
+                                  _conversationAvatars[c.id]!.isEmpty));
+                          leading = KubusIdentityAvatar(
+                              avatarUrl: sanitizedFallback,
+                              wallet: otherWallet,
+                              radius: 20,
+                              isLoading: isLoading,
+                              allowFabricatedFallback: false);
                         } else {
                           // No wallet available: render initials locally to avoid network call
                           final name = c.title ??
@@ -956,31 +967,22 @@ class _MessagesScreenState extends State<MessagesScreen> {
                           final isLoading = (_conversationNames[c.id] == null ||
                                   _conversationNames[c.id]!.isEmpty) &&
                               (_convToWalletList[c.id]?.isNotEmpty ?? false);
-                          leading = Stack(
-                            alignment: Alignment.center,
-                            children: [
-                              KubusMonogramAvatar(
+                          leading = Stack(alignment: Alignment.center, children: [
+                            KubusMonogramAvatar(
                                 radius: 20,
-                                child: Text(
-                                  initials.isNotEmpty
-                                      ? initials
-                                      : l10n
-                                          .messagesFallbackConversationInitial,
-                                ),
-                              ),
-                              if (isLoading)
-                                SizedBox(
+                                child: Text(initials.isNotEmpty
+                                    ? initials
+                                    : l10n.messagesFallbackConversationInitial)),
+                            if (isLoading)
+                              SizedBox(
                                   width: 20,
                                   height: 20,
                                   child: InlineLoading(
-                                    expand: true,
-                                    shape: BoxShape.circle,
-                                    tileSize: 4.0,
-                                    duration: Duration(milliseconds: 700),
-                                  ),
-                                ),
-                            ],
-                          );
+                                      expand: true,
+                                      shape: BoxShape.circle,
+                                      tileSize: 4.0,
+                                      duration: Duration(milliseconds: 700)))
+                          ]);
                         }
                         // If we still don't have avatar/name, try to proactively load members for this conversation
                       }

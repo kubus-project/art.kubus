@@ -62,6 +62,7 @@ import '../../community/community_post_text_limits.dart';
 import '../../community/community_upload_feedback.dart';
 import '../../widgets/community/community_composer_character_counter.dart';
 import '../../widgets/community/community_composer_media_tray.dart';
+import '../../widgets/community/community_posting_wallet.dart';
 import '../../providers/app_refresh_provider.dart';
 import '../../services/socket_service.dart';
 import '../../providers/notification_provider.dart';

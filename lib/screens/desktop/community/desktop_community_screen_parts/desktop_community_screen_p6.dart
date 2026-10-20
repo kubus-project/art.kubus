@@ -718,9 +718,12 @@ extension _DesktopCommunityScreenStatePart6 on _DesktopCommunityScreenState {
     if (!canPost || !mounted) return;
 
     final l10n = AppLocalizations.of(context)!;
-    // Email-only accounts have no wallet; stop before any upload or request.
-    // The draft and media stay in the dialog.
-    if (await readCommunityPostingWallet() == null) {
+    // Group membership remains wallet-keyed; ordinary posts use users.id.
+    final hub = Provider.of<CommunityHubProvider>(context, listen: false);
+    if (communityPostingRequiresWallet(
+          isGroupPost: hub.draft.targetGroup != null,
+        ) &&
+        await readCommunityPostingWallet() == null) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showKubusSnackBar(
         SnackBar(
@@ -747,7 +750,6 @@ extension _DesktopCommunityScreenStatePart6 on _DesktopCommunityScreenState {
     _applyState(() => _isPosting = true);
 
     try {
-      final hub = Provider.of<CommunityHubProvider>(context, listen: false);
       hub.setDraftCategory(_selectedCategory);
 
       final api = BackendApiService();

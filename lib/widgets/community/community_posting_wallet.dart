@@ -1,5 +1,9 @@
 import 'package:shared_preferences/shared_preferences.dart';
 
+/// Group posting still depends on wallet-keyed membership. Ordinary community
+/// posts are account-owned through the authenticated `users.id` identity.
+bool communityPostingRequiresWallet({required bool isGroupPost}) => isGroupPost;
+
 /// Wallet address stored for the current account, or null when the account
 /// has no wallet (email-only accounts). Mirrors the mobile posting gate.
 Future<String?> readCommunityPostingWallet() async {

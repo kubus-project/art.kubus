@@ -561,8 +561,12 @@ extension _CommunityScreenStatePart4 on _CommunityScreenState {
       return;
     }
 
-    final walletAddress = await _ensureWalletForPosting(sheetContext);
-    if (walletAddress == null) return;
+    if (communityPostingRequiresWallet(
+      isGroupPost: hub.draft.targetGroup != null,
+    )) {
+      final walletAddress = await _ensureWalletForPosting(sheetContext);
+      if (walletAddress == null) return;
+    }
     if (appModeProvider?.isIpfsFallbackMode ?? false) {
       messenger.showKubusSnackBar(
         SnackBar(

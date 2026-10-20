@@ -15,6 +15,7 @@ import '../../community/community_post_text_limits.dart';
 import '../../community/community_upload_feedback.dart';
 import '../../widgets/community/community_composer_character_counter.dart';
 import '../../widgets/community/community_composer_media_tray.dart';
+import '../../widgets/community/community_posting_wallet.dart';
 import '../../models/community_group.dart';
 import '../../models/community_subject.dart';
 import '../../providers/app_refresh_provider.dart';
@@ -431,6 +432,13 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
             kCommunityPostMaxCharacters,
           )),
         ),
+      );
+      return;
+    }
+    if (communityPostingRequiresWallet(isGroupPost: true) &&
+        await readCommunityPostingWallet() == null) {
+      messenger.showKubusSnackBar(
+        SnackBar(content: Text(l10n.communityPostingNeedsWalletToast)),
       );
       return;
     }

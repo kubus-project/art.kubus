@@ -5,6 +5,7 @@ import 'dart:typed_data';
 
 import 'package:art_kubus/config/config.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
+import 'package:art_kubus/models/user_profile.dart';
 import 'package:art_kubus/screens/community/community_screen.dart';
 import 'package:art_kubus/screens/community/group_feed_screen.dart';
 import 'package:art_kubus/screens/desktop/community/desktop_community_screen.dart';
@@ -36,17 +37,28 @@ import '../support/product_v5_qa_fixtures.dart';
 final bool _skipUnlessMulti = !AppConfig.enableCommunityMultiMedia;
 final _l10n = lookupAppLocalizations(const Locale('en'));
 final _wallet = qaOwner().walletAddress;
+const _walletlessAccountId = '11111111-1111-4111-8111-111111111111';
 
-String _jwt() {
+String _jwt({bool includeWallet = true}) {
   String b64(Map<String, Object?> m) =>
       base64Url.encode(utf8.encode(jsonEncode(m))).replaceAll('=', '');
   final exp = DateTime.now().add(const Duration(hours: 1));
   return '${b64({'alg': 'none'})}.'
       '${b64({
-        'walletAddress': _wallet,
+        if (includeWallet) 'walletAddress': _wallet,
+        if (!includeWallet) ...{
+          'id': _walletlessAccountId,
+          'userId': _walletlessAccountId,
+        },
         'exp': exp.millisecondsSinceEpoch ~/ 1000,
       })}.sig';
 }
+
+UserProfile _walletlessOwner() => qaOwner().copyWith(
+      id: _walletlessAccountId,
+      userId: _walletlessAccountId,
+      walletAddress: '',
+    );
 
 class _FakePicker extends ImagePickerPlatform {
   @override
@@ -83,6 +95,8 @@ class _Api {
   Completer<void>? holdCreate;
   final List<String> uploads = <String>[];
   final List<Map<String, dynamic>> creates = <Map<String, dynamic>>[];
+  final List<String?> createAuthorization = <String?>[];
+  bool walletlessActor = false;
   int created = 0;
 
   http.StreamedResponse _json(int status, Object body) => http.StreamedResponse(
@@ -129,6 +143,9 @@ class _Api {
             path.endsWith('/posts') && path.startsWith('/api/groups/'))) {
       final payload = jsonDecode(utf8.decode(bytes)) as Map<String, dynamic>;
       creates.add(payload);
+      createAuthorization.add(
+        request.headers['authorization'] ?? request.headers['Authorization'],
+      );
       await holdCreate?.future;
       if (createFailures > 0) {
         createFailures--;
@@ -144,7 +161,9 @@ class _Api {
           'mediaUrls': payload['mediaUrls'],
           'createdAt': DateTime(2026, 10, 8).toIso8601String(),
           'author': {
-            'walletAddress': _wallet,
+            if (walletlessActor) 'id': _walletlessAccountId,
+            if (walletlessActor) 'userId': _walletlessAccountId,
+            if (!walletlessActor) 'walletAddress': _wallet,
             'username': 'ana_kovac',
             'displayName': 'Ana Kovač',
           },
@@ -168,7 +187,11 @@ void main() {
       late _Api api;
       late _FakePicker picker;
 
-      Future<void> openComposer(WidgetTester tester, int photoCount) async {
+      Future<void> openComposer(
+        WidgetTester tester,
+        int photoCount, {
+        UserProfile? signedInProfile,
+      }) async {
         picker.files = <XFile>[
           for (var i = 0; i < photoCount; i++)
             XFile.fromData(
@@ -196,7 +219,7 @@ void main() {
           size: surface == 'mobile'
               ? const Size(390, 844)
               : const Size(1440, 1000),
-          signedInProfile: qaOwner(),
+          signedInProfile: signedInProfile ?? qaOwner(),
         );
         // The harness collects render errors; restore the handler so a failing
         // expect reports instead of hanging the test.
@@ -255,6 +278,47 @@ void main() {
           }
         }
       }
+
+      testWidgets('walletless accounts publish ordinary community posts',
+          (tester) async {
+        SharedPreferences.setMockInitialValues(<String, Object>{});
+        BackendApiService().setAuthTokenForTesting(_jwt(includeWallet: false));
+        api.walletlessActor = true;
+
+        await openComposer(tester, 1, signedInProfile: _walletlessOwner());
+        await tester.tap(postButton());
+        await _settle(tester, 60);
+
+        expect(api.uploads, ['photo-0.png']);
+        expect(api.creates, hasLength(1));
+        final authHeader = api.createAuthorization.single!;
+        expect(authHeader, startsWith('Bearer '));
+        final token = authHeader.substring('Bearer '.length);
+        final claims = jsonDecode(utf8.decode(base64Url.decode(
+          base64Url.normalize(token.split('.')[1]),
+        ))) as Map<String, dynamic>;
+        expect(claims['id'], _walletlessAccountId);
+        expect(claims.containsKey('walletAddress'), isFalse);
+        expect(find.text(_l10n.communityPostingNeedsWalletToast), findsNothing);
+        await flush(tester);
+      }, skip: surface == 'group');
+
+      testWidgets('walletless accounts cannot publish group posts',
+          (tester) async {
+        SharedPreferences.setMockInitialValues(<String, Object>{});
+        BackendApiService().setAuthTokenForTesting(_jwt(includeWallet: false));
+        api.walletlessActor = true;
+
+        await openComposer(tester, 1, signedInProfile: _walletlessOwner());
+        await tester.tap(postButton());
+        await _settle(tester, 40);
+
+        expect(api.uploads, isEmpty);
+        expect(api.creates, isEmpty);
+        expect(
+            find.text(_l10n.communityPostingNeedsWalletToast), findsOneWidget);
+        await flush(tester);
+      }, skip: surface != 'group');
 
       testWidgets('ten photos publish in order with one create request',
           (tester) async {
