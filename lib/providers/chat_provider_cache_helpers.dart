@@ -95,11 +95,23 @@ void _chatProviderResetSessionState(
   } catch (_) {}
 
   provider._openConversationId = null;
+  provider._sessionGeneration++;
   try {
     provider._socket.leaveAllConversations();
   } catch (_) {}
 
+  if (reason != 'dispose') {
+    try {
+      if (provider._currentAccountId != null) {
+        provider._socket.unsubscribeAccount(provider._currentAccountId!);
+      } else if ((provider._currentWallet ?? '').isNotEmpty) {
+        provider._socket.unsubscribeUser(provider._currentWallet!);
+      }
+    } catch (_) {}
+  }
+
   provider._currentWallet = null;
+  provider._currentAccountId = null;
   provider._conversations = [];
   provider._messages.clear();
   provider._messageCacheTouchMs.clear();

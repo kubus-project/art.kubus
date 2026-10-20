@@ -10,6 +10,7 @@ import '../l10n/app_localizations_en.dart';
 import '../l10n/app_localizations_sl.dart';
 import '../services/backend_api_service.dart';
 import '../services/socket_service.dart';
+import '../utils/account_identity.dart';
 import '../services/push_notification_service.dart';
 import '../utils/wallet_utils.dart';
 import 'app_refresh_provider.dart';
@@ -56,7 +57,9 @@ class NotificationProvider extends ChangeNotifier {
   int _debugSkippedSyncs = 0;
   bool get _hasAuthToken => (_backend.getAuthToken() ?? '').isNotEmpty;
   bool get _hasAuthContext =>
-      _hasAuthToken || ((_currentWallet ?? '').isNotEmpty);
+      _hasAuthToken ||
+      ((_currentWallet ?? '').isNotEmpty) ||
+      _currentAccountId != null;
 
   AppLocalizations get _l10n {
     final languageCode =
@@ -97,19 +100,22 @@ class NotificationProvider extends ChangeNotifier {
             'NotificationProvider.initialize: skipping protected init - no restored auth session',
           );
         }
+        if (_currentAccountId != null) {
+          _socket.unsubscribeAccount(_currentAccountId!);
+        } else if ((_currentWallet ?? '').isNotEmpty) {
+          _socket.unsubscribeUser(_currentWallet!);
+        }
         _resetSessionState(clearUnreadCount: true);
         return;
       }
 
-      final resolvedWallet = await _resolveWallet(walletOverride);
-      final normalizedWallet = WalletUtils.normalize(resolvedWallet);
       final claims = _backend.getCurrentAuthTokenClaims();
-      final rawAccountId =
-          (claims?['id'] ?? claims?['user_id'] ?? claims?['sub'])
-              ?.toString()
-              .trim();
-      final accountId =
-          rawAccountId == null || rawAccountId.isEmpty ? null : rawAccountId;
+      final accountId = accountUserIdFromClaims(claims);
+      final resolvedWallet = await _resolveWallet(
+        walletOverride,
+        accountId: accountId,
+      );
+      final normalizedWallet = WalletUtils.normalize(resolvedWallet);
       final walletChanged =
           _initialized && !WalletUtils.equals(normalizedWallet, _currentWallet);
       final accountChanged = _initialized && accountId != _currentAccountId;
@@ -129,6 +135,9 @@ class NotificationProvider extends ChangeNotifier {
       }
 
       if ((_initialized && walletChanged) || accountChanged) {
+        if (accountChanged && _currentAccountId != null) {
+          _socket.unsubscribeAccount(_currentAccountId!);
+        }
         _resetSessionState(clearUnreadCount: true);
       } else {
         _stopAutoRefreshLoop();
@@ -146,11 +155,18 @@ class NotificationProvider extends ChangeNotifier {
         await _socket.connect(_backend.baseUrl);
         // Ensure we are subscribed to user's room so incoming notifications are delivered
         try {
-          if (_currentWallet != null && _currentWallet!.isNotEmpty) {
-            var ok = await _socket.connectAndSubscribe(
-              _backend.baseUrl,
-              _currentWallet!,
-            );
+          final roomIdentity = _currentAccountId ?? _currentWallet;
+          if (roomIdentity != null && roomIdentity.isNotEmpty) {
+            final isAccountId = _currentAccountId != null;
+            var ok = isAccountId
+                ? await _socket.connectAndSubscribeAccount(
+                    _backend.baseUrl,
+                    roomIdentity,
+                  )
+                : await _socket.connectAndSubscribe(
+                    _backend.baseUrl,
+                    roomIdentity,
+                  );
             debugPrint(
               'NotificationProvider.initialize: connectAndSubscribe result: $ok',
             );
@@ -161,7 +177,11 @@ class NotificationProvider extends ChangeNotifier {
               debugPrint(
                 'NotificationProvider.initialize: connectAndSubscribe failed, falling back to subscribeUser',
               );
-              _socket.subscribeUser(_currentWallet!);
+              if (isAccountId) {
+                _socket.subscribeAccount(roomIdentity);
+              } else {
+                _socket.subscribeUser(roomIdentity);
+              }
             }
           }
         } catch (e) {
@@ -187,8 +207,10 @@ class NotificationProvider extends ChangeNotifier {
     }
   }
 
-  Future<String?> _resolveWallet(String? override) async {
-    if (override != null && override.isNotEmpty) return override;
+  Future<String?> _resolveWallet(
+    String? override, {
+    String? accountId,
+  }) async {
     try {
       if (_hasAuthToken) {
         final me = await _backend.getMyProfile();
@@ -210,11 +232,11 @@ class NotificationProvider extends ChangeNotifier {
     // A cached wallet can belong to the account that used this device before
     // the current walletless account. Never use it as a room identity when the
     // authenticated token names an account but has no wallet claim.
-    final claims = _backend.getCurrentAuthTokenClaims();
-    final accountId = (claims?['id'] ?? claims?['user_id'] ?? claims?['sub'])
-        ?.toString()
-        .trim();
-    if (accountId != null && accountId.isNotEmpty) return null;
+    // An authenticated account without a profile wallet must stay walletless;
+    // an override or persisted wallet may belong to the previous account.
+    if (accountId != null) return null;
+
+    if (override != null && override.isNotEmpty) return override;
 
     final tokenWallet = _backend.getCurrentAuthWalletAddress();
     if (tokenWallet != null && tokenWallet.isNotEmpty) return tokenWallet;
@@ -282,13 +304,23 @@ class NotificationProvider extends ChangeNotifier {
   Future<void> _refreshAfterSocketReconnect() async {
     final wallet = _currentWallet;
     if (!_hasAuthContext) return;
-    if (wallet != null && wallet.isNotEmpty) {
+    final accountId = _currentAccountId;
+    final identity = accountId ?? wallet;
+    if (identity != null && identity.isNotEmpty) {
       try {
-        final ok = await _socket.connectAndSubscribe(
-          _backend.baseUrl,
-          wallet,
-        );
-        if (!ok) _socket.subscribeUser(wallet);
+        final ok = accountId != null
+            ? await _socket.connectAndSubscribeAccount(
+                _backend.baseUrl,
+                accountId,
+              )
+            : await _socket.connectAndSubscribe(_backend.baseUrl, identity);
+        if (!ok) {
+          if (accountId != null) {
+            _socket.subscribeAccount(accountId);
+          } else {
+            _socket.subscribeUser(identity);
+          }
+        }
       } catch (e) {
         debugPrint('NotificationProvider: reconnect resubscribe failed: $e');
       }
@@ -354,11 +386,14 @@ class NotificationProvider extends ChangeNotifier {
   }
 
   bool _isSocketHealthyForNotifications() {
-    final expectedWallet = WalletUtils.canonical(_currentWallet);
     if (!_socket.isConnected) return false;
-    // Account rooms are joined from the authenticated socket token. A
-    // walletless signed-in account is healthy as soon as its socket connects.
-    if (expectedWallet.isEmpty) return _hasAuthToken;
+    final accountId = _currentAccountId;
+    if (accountId != null) {
+      return _socket.currentSubscribedIdentityIsAccount &&
+          _socket.currentSubscribedAccountId == accountId;
+    }
+    final expectedWallet = WalletUtils.canonical(_currentWallet);
+    if (expectedWallet.isEmpty) return false;
     final subscribed = WalletUtils.canonical(_socket.currentSubscribedWallet);
     return subscribed.isNotEmpty && subscribed == expectedWallet;
   }
@@ -892,6 +927,7 @@ class NotificationProvider extends ChangeNotifier {
         'initialized': _initialized,
         'hasAuthContext': _hasAuthContext,
         'currentWallet': _currentWallet ?? '',
+        'currentAccountId': _currentAccountId ?? '',
         'unreadCount': _communityUnreadCount,
         'messageUnreadCount': _messageUnreadCount,
         'totalUnreadCount': totalUnreadCount,
@@ -902,11 +938,13 @@ class NotificationProvider extends ChangeNotifier {
         'cadenceTimerActive': _cadenceTimer?.isActive ?? false,
         'scheduledSyncActive': _scheduledServerSync?.isActive ?? false,
         'currentSubscribedWallet': _socket.currentSubscribedWallet ?? '',
+        'currentSubscribedAccountId': _socket.currentSubscribedAccountId ?? '',
       };
 
   @visibleForTesting
-  void setAuthenticatedSessionForTesting({String? wallet}) {
+  void setAuthenticatedSessionForTesting({String? wallet, String? accountId}) {
     _currentWallet = wallet;
+    _currentAccountId = canonicalAccountUserId(accountId);
     _initialized = true;
   }
 
@@ -932,19 +970,30 @@ class NotificationProvider extends ChangeNotifier {
     }
     _lastSubscriptionCheckAt = now;
     try {
-      final expectedWallet = WalletUtils.canonical(_currentWallet);
-      if (expectedWallet.isEmpty) return;
-      final subscribed = WalletUtils.canonical(_socket.currentSubscribedWallet);
-      if (subscribed.isEmpty || subscribed != expectedWallet) {
+      final accountId = _currentAccountId;
+      final expectedIdentity =
+          accountId ?? WalletUtils.canonical(_currentWallet);
+      if (expectedIdentity.isEmpty) return;
+      final subscribed = _socket.currentSubscribedIdentity ?? '';
+      final correctlyTyped =
+          _socket.currentSubscribedIdentityIsAccount == (accountId != null);
+      if (subscribed.isEmpty ||
+          subscribed != expectedIdentity ||
+          !correctlyTyped) {
         debugPrint(
-          'NotificationProvider: subscription check mismatch (subscribed=$subscribed expected=$_currentWallet), attempting resubscribe',
+          'NotificationProvider: subscription check mismatch, attempting resubscribe',
         );
-        _socket
-            .connectAndSubscribe(_backend.baseUrl, _currentWallet!)
-            .then((ok) {
+        final future = accountId != null
+            ? _socket.connectAndSubscribeAccount(_backend.baseUrl, accountId)
+            : _socket.connectAndSubscribe(_backend.baseUrl, expectedIdentity);
+        future.then((ok) {
           debugPrint('NotificationProvider: connectAndSubscribe -> $ok');
           if (!ok) {
-            _socket.subscribeUser(_currentWallet!);
+            if (accountId != null) {
+              _socket.subscribeAccount(accountId);
+            } else {
+              _socket.subscribeUser(expectedIdentity);
+            }
           }
         }).catchError((e) {
           debugPrint('NotificationProvider: connectAndSubscribe error: $e');

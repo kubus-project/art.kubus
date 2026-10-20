@@ -161,6 +161,31 @@ void main() {
     expect(resolved.stableDisplayLabel, '0x1234...5678');
   });
 
+  test('account-only sender is presented as the current user without a wallet',
+      () {
+    final provider = ChatProvider();
+    addTearDown(provider.dispose);
+    const accountId = '6c421a31-405e-4d9e-8b74-9dc357fd13b2';
+    final accountOnlyMessage = ChatMessage.fromJson(<String, dynamic>{
+      'id': 'account-message-1',
+      'conversation_id': 'c1',
+      'sender_user_id': accountId,
+      'sender_wallet': null,
+      'message': 'hello from my account',
+      'created_at': '2026-10-20T12:00:00Z',
+    });
+
+    final presentation = resolveMessagePresentationForTesting(
+      message: accountOnlyMessage,
+      conversation: Conversation(id: 'c1'),
+      chatProvider: provider,
+      currentUserId: accountId,
+    );
+
+    expect(accountOnlyMessage.senderWallet, isEmpty);
+    expect(presentation.isMine, isTrue);
+  });
+
   test('Opening conversation seeds sender once, not once per bubble', () {
     final provider = ChatProvider();
     addTearDown(provider.dispose);

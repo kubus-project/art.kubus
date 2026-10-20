@@ -26,6 +26,7 @@ import '../models/collab_invite.dart';
 import '../models/street_art_claim.dart';
 import '../community/community_interactions.dart';
 import '../utils/wallet_utils.dart';
+import '../utils/account_identity.dart';
 import '../utils/search_suggestions.dart';
 import '../utils/media_url_resolver.dart';
 import '../utils/http_retry_after.dart';
@@ -3316,12 +3317,17 @@ class BackendApiService
     String? title,
     bool isGroup = false,
     List<String>? members,
+    List<String>? memberUserIds,
   }) =>
       _backendApiCreateConversationImpl(
         this,
         title: title,
         isGroup: isGroup,
         members: members,
+        memberUserIds: memberUserIds
+            ?.map(canonicalAccountUserId)
+            .whereType<String>()
+            .toList(growable: false),
       );
 
   /// Upload conversation avatar (attempt common endpoints)

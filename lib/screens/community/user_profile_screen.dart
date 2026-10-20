@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
 import 'profile_section_order.dart';
 import '../../utils/wallet_utils.dart';
+import '../../utils/account_identity.dart';
 import '../../widgets/app_loading.dart';
 import 'package:provider/provider.dart';
 import '../../models/profile_package.dart';
@@ -1074,7 +1075,20 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     final messenger = ScaffoldMessenger.of(context);
     final chatAuth = chatProvider.isAuthenticated;
     try {
-      final conv = await chatProvider.createConversation('', false, [user!.id]);
+      final targetAccountId = canonicalAccountUserId(widget.userId) ??
+          canonicalAccountUserId(user!.id);
+      final targetLegacyIdentity =
+          targetAccountId != null && canonicalAccountUserId(user!.id) != null
+              ? <String>[]
+              : <String>[user!.id];
+      final conv = await chatProvider.createConversation(
+        '',
+        false,
+        targetLegacyIdentity,
+        memberUserIds: targetAccountId == null
+            ? const <String>[]
+            : <String>[targetAccountId],
+      );
       if (conv != null) {
         if (!mounted) return;
         final preloaded = Provider.of<ChatProvider>(

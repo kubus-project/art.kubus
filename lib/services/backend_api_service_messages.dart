@@ -204,6 +204,7 @@ Future<Map<String, dynamic>> _backendApiCreateConversationImpl(
   String? title,
   bool isGroup = false,
   List<String>? members,
+  List<String>? memberUserIds,
 }) async {
   service._throwIfIpfsFallbackUnavailable('Messages');
   try {
@@ -213,6 +214,8 @@ Future<Map<String, dynamic>> _backendApiCreateConversationImpl(
       body: jsonEncode({
         'title': title,
         'members': members ?? <String>[],
+        if (!isGroup && memberUserIds != null && memberUserIds.isNotEmpty)
+          'memberUserIds': memberUserIds,
         'isGroup': isGroup,
       }),
     );
@@ -237,8 +240,8 @@ Future<Map<String, dynamic>> _backendApiUploadConversationAvatarImpl(
   void Function(UploadCompressionProgress progress)? onCompressionProgress,
 }) async {
   try {
-    var uri = Uri.parse(
-        '${service.baseUrl}/api/messages/$conversationId/avatar');
+    var uri =
+        Uri.parse('${service.baseUrl}/api/messages/$conversationId/avatar');
     var uploadBytes = Uint8List.fromList(bytes);
     var uploadFileName = filename;
     var uploadContentType = contentType;

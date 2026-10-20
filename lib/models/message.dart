@@ -1,5 +1,7 @@
 import 'dart:convert';
 
+import '../utils/account_identity.dart';
+
 class MessageReply {
   final String messageId;
   final String senderWallet;
@@ -59,6 +61,7 @@ class MessageReaction {
 class ChatMessage {
   final String id;
   final String conversationId;
+  final String? senderUserId;
   final String senderWallet;
   final String? senderUsername;
   final String? senderDisplayName;
@@ -107,6 +110,7 @@ class ChatMessage {
   ChatMessage({
     required this.id,
     required this.conversationId,
+    this.senderUserId,
     required this.senderWallet,
     this.senderUsername,
     this.senderDisplayName,
@@ -244,6 +248,9 @@ class ChatMessage {
       id: idStr,
       conversationId: (j['conversation_id'] as String?) ??
           (j['conversationId'] as String? ?? ''),
+      senderUserId: canonicalAccountUserId(
+        j['sender_user_id'] ?? j['senderUserId'],
+      ),
       senderWallet: (j['sender_wallet'] ??
               j['senderWallet'] ??
               j['wallet'] ??
@@ -281,10 +288,12 @@ class ChatMessage {
     int? readersCount,
     bool? readByCurrent,
     List<Map<String, dynamic>>? readers,
+    String? senderUserId,
   }) {
     return ChatMessage(
       id: id,
       conversationId: conversationId,
+      senderUserId: senderUserId ?? this.senderUserId,
       senderWallet: senderWallet,
       senderUsername: senderUsername,
       senderDisplayName: senderDisplayName,

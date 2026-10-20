@@ -4,6 +4,7 @@ Future<List<Map<String, dynamic>>> _chatProviderFetchMembers(
   ChatProvider provider,
   String conversationId,
 ) async {
+  final generation = provider._sessionGeneration;
   final now = DateTime.now().millisecondsSinceEpoch;
   final cache = provider._membersCache[conversationId];
   if (cache != null) {
@@ -18,16 +19,25 @@ Future<List<Map<String, dynamic>>> _chatProviderFetchMembers(
   if (provider._membersRequests.containsKey(conversationId)) {
     try {
       final existing = await provider._membersRequests[conversationId];
+      if (generation != provider._sessionGeneration) {
+        return <Map<String, dynamic>>[];
+      }
       if (existing != null) return existing;
     } catch (_) {
       // Fall through to a fresh fetch.
     } finally {
-      provider._membersRequests.remove(conversationId);
+      if (generation == provider._sessionGeneration) {
+        provider._membersRequests.remove(conversationId);
+      }
     }
   }
 
-  final completer = provider._api.fetchConversationMembers(conversationId).then(
+  late final Future<List<Map<String, dynamic>>> completer;
+  completer = provider._api.fetchConversationMembers(conversationId).then(
     (resp) {
+      if (generation != provider._sessionGeneration) {
+        return <Map<String, dynamic>>[];
+      }
       if (resp['success'] == true) {
         final list = (resp['data'] as List<dynamic>?) ?? [];
         provider._cacheMembers(
@@ -73,7 +83,11 @@ Future<List<Map<String, dynamic>>> _chatProviderFetchMembers(
       } catch (_) {}
       return <Map<String, dynamic>>[];
     },
-  ).whenComplete(() => provider._membersRequests.remove(conversationId));
+  ).whenComplete(() {
+    if (identical(provider._membersRequests[conversationId], completer)) {
+      provider._membersRequests.remove(conversationId);
+    }
+  });
 
   provider._membersRequests[conversationId] = completer;
   return await completer;
@@ -83,12 +97,14 @@ Future<void> _chatProviderPrefetchUsersForWallets(
   ChatProvider provider,
   List<String> wallets,
 ) async {
+  final generation = provider._sessionGeneration;
   try {
     debugPrint(
         'ChatProvider._prefetchUsersForWallets: wallets=${wallets.length}');
     final uniq = wallets.where((w) => w.isNotEmpty).toSet().toList();
     if (uniq.isEmpty) return;
     final users = await UserService.getUsersByWallets(uniq);
+    if (generation != provider._sessionGeneration) return;
     final updated = <String>[];
     for (final u in users) {
       if (u.id.isNotEmpty) {

@@ -30,6 +30,7 @@ import '../../widgets/avatar_widget.dart';
 import '../../widgets/inline_loading.dart';
 import '../../utils/creator_display_format.dart';
 import '../../utils/wallet_utils.dart';
+import '../../utils/account_identity.dart';
 import '../../utils/search_suggestions.dart';
 import '../../utils/media_url_resolver.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
@@ -91,9 +92,12 @@ ResolvedMessagePresentation resolveMessagePresentationForTesting({
   final normalizedCurrentWallet = WalletUtils.normalize(currentUserWallet);
   final normalizedCurrentId = WalletUtils.normalize(currentUserId);
   final normalizedSender = WalletUtils.normalize(message.senderWallet);
-  final isMine = normalizedSender.isNotEmpty &&
-      (normalizedSender == normalizedCurrentWallet ||
-          normalizedSender == normalizedCurrentId);
+  final currentAccountId = canonicalAccountUserId(currentUserId);
+  final isMine = (message.senderUserId != null &&
+          message.senderUserId == currentAccountId) ||
+      (normalizedSender.isNotEmpty &&
+          (normalizedSender == normalizedCurrentWallet ||
+              normalizedSender == normalizedCurrentId));
 
   return ResolvedMessagePresentation(
     rowKey: conversationMessageRowKey(message),
@@ -1677,7 +1681,8 @@ class _ConversationScreenState extends State<ConversationScreen> {
       conversation: widget.conversation,
       chatProvider: chatProvider,
       currentUserWallet: profileProvider.currentUser?.walletAddress,
-      currentUserId: profileProvider.currentUser?.id,
+      currentUserId: profileProvider.currentUser?.userId ??
+          profileProvider.currentUser?.id,
       currentUserDisplayName: profileProvider.currentUser?.displayName,
       currentUserAvatarUrl: profileProvider.currentUser?.avatar,
     );
