@@ -11,12 +11,16 @@ class KubusMobileNavigationDestination {
     required this.selectedIcon,
     required this.label,
     this.key,
+    this.badgeCount = 0,
+    this.badgeSemanticLabel,
   });
 
   final IconData icon;
   final IconData selectedIcon;
   final String label;
   final Key? key;
+  final int badgeCount;
+  final String? badgeSemanticLabel;
 }
 
 /// PRODUCT v5 mobile primary navigation.
@@ -99,7 +103,9 @@ class _KubusMobileNavigationItem extends StatelessWidget {
       key: destination.key,
       button: true,
       selected: selected,
-      label: destination.label,
+      label: destination.badgeCount > 0
+          ? '${destination.label}, ${destination.badgeSemanticLabel ?? destination.badgeCount}'
+          : destination.label,
       onTap: onTap,
       excludeSemantics: true,
       child: KubusFocusRing(
@@ -121,15 +127,63 @@ class _KubusMobileNavigationItem extends StatelessWidget {
                   color: selected ? roles.active : Colors.transparent,
                 ),
                 const SizedBox(height: KubusSpacing.xs),
-                Icon(
-                  selected ? destination.selectedIcon : destination.icon,
-                  size: 24,
-                  color: iconColor,
+                SizedBox(
+                  width: 24,
+                  height: 24,
+                  child: Stack(
+                    clipBehavior: Clip.none,
+                    children: [
+                      Align(
+                        alignment: Alignment.center,
+                        child: Icon(
+                          selected
+                              ? destination.selectedIcon
+                              : destination.icon,
+                          size: 24,
+                          color: iconColor,
+                        ),
+                      ),
+                      if (destination.badgeCount > 0)
+                        Positioned(
+                          top: -6,
+                          right: -9,
+                          child: Container(
+                            constraints: const BoxConstraints(
+                              minWidth: 16,
+                              minHeight: 16,
+                            ),
+                            padding: const EdgeInsets.symmetric(horizontal: 4),
+                            decoration: BoxDecoration(
+                              color: Theme.of(context).colorScheme.error,
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(
+                                color: roles.surfaceOverlay,
+                                width: 1,
+                              ),
+                            ),
+                            child: Center(
+                              child: Text(
+                                destination.badgeCount > 99
+                                    ? '99+'
+                                    : '${destination.badgeCount}',
+                                style: KubusTypography.content(
+                                  fontSize: 9,
+                                  fontWeight: FontWeight.w700,
+                                  color: Theme.of(context).colorScheme.onError,
+                                  height: 1,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
                 ),
                 const SizedBox(height: KubusSpacing.xxs),
                 Padding(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: KubusSpacing.xxs),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: KubusSpacing.xxs,
+                  ),
                   // Scale a long label down (e.g. "Community" at 320 px)
                   // rather than cutting it with an ellipsis.
                   child: FittedBox(
@@ -139,8 +193,9 @@ class _KubusMobileNavigationItem extends StatelessWidget {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       textAlign: TextAlign.center,
-                      textScaler: MediaQuery.textScalerOf(context)
-                          .clamp(maxScaleFactor: 1.3),
+                      textScaler: MediaQuery.textScalerOf(
+                        context,
+                      ).clamp(maxScaleFactor: 1.3),
                       style: KubusTypography.content(
                         fontSize: 11.5,
                         fontWeight:

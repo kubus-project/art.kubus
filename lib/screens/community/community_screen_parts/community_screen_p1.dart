@@ -66,16 +66,15 @@ extension _CommunityScreenStatePart1 on _CommunityScreenState {
   void _openGroupFeed(CommunityGroupSummary group) {
     Navigator.push(
       context,
-      MaterialPageRoute(
-        builder: (_) => GroupFeedScreen(group: group),
-      ),
+      MaterialPageRoute(builder: (_) => GroupFeedScreen(group: group)),
     );
   }
 
   Future<loc.LocationData?> _obtainCurrentLocation() async {
     final l10n = AppLocalizations.of(context)!;
-    final result = await GeolocatorWalkingLocationService.shared
-        .acquireLiveFix(requestPermission: true);
+    final result = await GeolocatorWalkingLocationService.shared.acquireLiveFix(
+      requestPermission: true,
+    );
     if (!mounted) return null;
     final fix = result.fix;
     if (result.isAvailable && fix != null) {
@@ -114,15 +113,17 @@ extension _CommunityScreenStatePart1 on _CommunityScreenState {
 
   void _showSnack(String message) {
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showKubusSnackBar(
-      SnackBar(content: Text(message)),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showKubusSnackBar(SnackBar(content: Text(message)));
   }
 
   String? _currentWalletAddress() {
     try {
-      return Provider.of<WalletProvider>(context, listen: false)
-          .currentWalletAddress;
+      return Provider.of<WalletProvider>(
+        context,
+        listen: false,
+      ).currentWalletAddress;
     } catch (_) {
       return null;
     }
@@ -142,7 +143,8 @@ extension _CommunityScreenStatePart1 on _CommunityScreenState {
     } catch (e) {
       if (kDebugMode) {
         debugPrint(
-            'CommunityScreen: auth token not ready for community posts: $e');
+          'CommunityScreen: auth token not ready for community posts: $e',
+        );
       }
     }
   }
@@ -152,11 +154,14 @@ extension _CommunityScreenStatePart1 on _CommunityScreenState {
     String sort = 'hybrid',
   }) async {
     final backendApi = BackendApiService();
-    final subjectProvider =
-        Provider.of<CommunitySubjectProvider>(context, listen: false);
+    final subjectProvider = Provider.of<CommunitySubjectProvider>(
+      context,
+      listen: false,
+    );
     if (kDebugMode) {
       debugPrint(
-          'CommunityScreen: active feed fetch ${followingOnly ? 'following' : 'discover'} limit=24');
+        'CommunityScreen: active feed fetch ${followingOnly ? 'following' : 'discover'} limit=24',
+      );
     }
     final posts = await backendApi.getCommunityPosts(
       page: 1,
@@ -167,8 +172,10 @@ extension _CommunityScreenStatePart1 on _CommunityScreenState {
     );
     if (mounted) {
       subjectProvider.primeFromPosts(posts);
-      final interactionsProvider =
-          Provider.of<CommunityInteractionsProvider>(context, listen: false);
+      final interactionsProvider = Provider.of<CommunityInteractionsProvider>(
+        context,
+        listen: false,
+      );
       interactionsProvider.hydratePostsFromServer(posts);
       _refreshViewerStates(posts);
     }
@@ -183,8 +190,10 @@ extension _CommunityScreenStatePart1 on _CommunityScreenState {
     }).toList();
   }
 
-  Future<void> _loadInitialFeeds(
-      {bool force = false, String? walletAddress}) async {
+  Future<void> _loadInitialFeeds({
+    bool force = false,
+    String? walletAddress,
+  }) async {
     if (_combinedFeedLoadInFlight && !force) return;
     _combinedFeedLoadInFlight = true;
     final resolvedWallet = walletAddress ?? _currentWalletAddress();
@@ -211,17 +220,17 @@ extension _CommunityScreenStatePart1 on _CommunityScreenState {
 
     List<CommunityPost>? posts;
     try {
-      posts = await _fetchCommunityFeed(
-        followingOnly: targetFollowing,
-      );
+      posts = await _fetchCommunityFeed(followingOnly: targetFollowing);
       if (kDebugMode) {
         debugPrint(
-            'CommunityScreen: loaded ${posts.length} ${targetFollowing ? 'following' : 'discover'} posts');
+          'CommunityScreen: loaded ${posts.length} ${targetFollowing ? 'following' : 'discover'} posts',
+        );
       }
     } catch (e) {
       if (kDebugMode) {
         debugPrint(
-            'CommunityScreen: error loading ${targetFollowing ? 'following' : 'discover'} feed: $e');
+          'CommunityScreen: error loading ${targetFollowing ? 'following' : 'discover'} feed: $e',
+        );
       }
     }
 
@@ -232,16 +241,18 @@ extension _CommunityScreenStatePart1 on _CommunityScreenState {
 
     _applyState(() {
       if (targetFollowing) {
-        _followingFeedPosts =
-            List<CommunityPost>.of(posts ?? const <CommunityPost>[]);
+        _followingFeedPosts = List<CommunityPost>.of(
+          posts ?? const <CommunityPost>[],
+        );
         _followingFeedLoaded = true;
         _isLoadingFollowingFeed = false;
         if (_activeFeed == CommunityFeedType.following) {
           _communityPosts = _followingFeedPosts;
         }
       } else {
-        _discoverFeedPosts =
-            List<CommunityPost>.of(posts ?? const <CommunityPost>[]);
+        _discoverFeedPosts = List<CommunityPost>.of(
+          posts ?? const <CommunityPost>[],
+        );
         _discoverFeedLoaded = true;
         _isLoadingDiscoverFeed = false;
         if (_activeFeed == CommunityFeedType.discover) {
@@ -264,8 +275,10 @@ extension _CommunityScreenStatePart1 on _CommunityScreenState {
     _combinedFeedLoadInFlight = false;
   }
 
-  Future<void> _loadCommunityData(
-      {bool? followingOnly, bool force = false}) async {
+  Future<void> _loadCommunityData({
+    bool? followingOnly,
+    bool force = false,
+  }) async {
     final bool targetFollowing =
         followingOnly ?? (_activeFeed == CommunityFeedType.following);
     final bool isActiveFeed =
@@ -296,12 +309,11 @@ extension _CommunityScreenStatePart1 on _CommunityScreenState {
 
     List<CommunityPost>? posts;
     try {
-      posts = await _fetchCommunityFeed(
-        followingOnly: targetFollowing,
-      );
+      posts = await _fetchCommunityFeed(followingOnly: targetFollowing);
       if (kDebugMode) {
         debugPrint(
-            'CommunityScreen: loaded ${posts.length} ${targetFollowing ? 'following' : 'discover'} posts');
+          'CommunityScreen: loaded ${posts.length} ${targetFollowing ? 'following' : 'discover'} posts',
+        );
       }
     } catch (e) {
       if (kDebugMode) {
@@ -313,8 +325,9 @@ extension _CommunityScreenStatePart1 on _CommunityScreenState {
 
     _applyState(() {
       if (targetFollowing) {
-        _followingFeedPosts =
-            List<CommunityPost>.of(posts ?? const <CommunityPost>[]);
+        _followingFeedPosts = List<CommunityPost>.of(
+          posts ?? const <CommunityPost>[],
+        );
         _followingFeedLoaded = true;
         _isLoadingFollowingFeed = false;
         if (isActiveFeed) {
@@ -322,8 +335,9 @@ extension _CommunityScreenStatePart1 on _CommunityScreenState {
           _isLoading = false;
         }
       } else {
-        _discoverFeedPosts =
-            List<CommunityPost>.of(posts ?? const <CommunityPost>[]);
+        _discoverFeedPosts = List<CommunityPost>.of(
+          posts ?? const <CommunityPost>[],
+        );
         _discoverFeedLoaded = true;
         _isLoadingDiscoverFeed = false;
         if (isActiveFeed) {
@@ -352,7 +366,8 @@ extension _CommunityScreenStatePart1 on _CommunityScreenState {
             _communityPosts = alternative;
             try {
               _tabController.animateTo(
-                  fallbackFeed == CommunityFeedType.following ? 0 : 1);
+                fallbackFeed == CommunityFeedType.following ? 0 : 1,
+              );
             } catch (_) {}
           });
         }
@@ -399,7 +414,8 @@ extension _CommunityScreenStatePart1 on _CommunityScreenState {
         } catch (e) {
           if (kDebugMode) {
             debugPrint(
-                'CommunityScreen: ensureAuthLoaded failed for $normalized: $e');
+              'CommunityScreen: ensureAuthLoaded failed for $normalized: $e',
+            );
           }
         }
       }
@@ -423,8 +439,10 @@ extension _CommunityScreenStatePart1 on _CommunityScreenState {
     _lastGlobalRefreshVersion = globalVersion;
     if (!shouldRefresh) return;
     try {
-      _lastWalletAddress = Provider.of<WalletProvider>(context, listen: false)
-          .currentWalletAddress;
+      _lastWalletAddress = Provider.of<WalletProvider>(
+        context,
+        listen: false,
+      ).currentWalletAddress;
     } catch (_) {}
     _reloadCommunityFeedsForWallet(
       walletAddress: _lastWalletAddress,
@@ -442,9 +460,8 @@ extension _CommunityScreenStatePart1 on _CommunityScreenState {
 
   void _schedulePostFeedStartupWork() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      unawaited(Future<void>.delayed(
-        const Duration(milliseconds: 250),
-        () async {
+      unawaited(
+        Future<void>.delayed(const Duration(milliseconds: 250), () async {
           if (!mounted) return;
 
           if (kDebugMode) {
@@ -452,13 +469,16 @@ extension _CommunityScreenStatePart1 on _CommunityScreenState {
           }
 
           try {
-            Provider.of<NavigationProvider>(context, listen: false)
-                .trackScreenVisit('community');
+            Provider.of<NavigationProvider>(
+              context,
+              listen: false,
+            ).trackScreenVisit('community');
           } catch (_) {}
 
           try {
-            SocketService()
-                .addNotificationListener(_onSocketNotificationForCommunity);
+            SocketService().addNotificationListener(
+              _onSocketNotificationForCommunity,
+            );
           } catch (_) {}
 
           try {
@@ -468,8 +488,10 @@ extension _CommunityScreenStatePart1 on _CommunityScreenState {
           } catch (_) {}
 
           try {
-            final provider =
-                Provider.of<NotificationProvider>(context, listen: false);
+            final provider = Provider.of<NotificationProvider>(
+              context,
+              listen: false,
+            );
             await provider.refresh();
             if (!mounted) return;
             _applyState(() {
@@ -482,11 +504,13 @@ extension _CommunityScreenStatePart1 on _CommunityScreenState {
             final cp = Provider.of<ChatProvider>(context, listen: false);
             await cp.initialize();
             if (!mounted) return;
-            _messageUnreadCount = cp.totalUnread;
-            cp.addListener(_onChatProviderChanged);
+            _messageUnreadCount = Provider.of<NotificationProvider>(
+              context,
+              listen: false,
+            ).messageUnreadCount;
           } catch (_) {}
-        },
-      ));
+        }),
+      );
     });
   }
 
@@ -581,16 +605,21 @@ extension _CommunityScreenStatePart1 on _CommunityScreenState {
     // Scroll to top for visibility
     try {
       if (_feedScrollController.hasClients) {
-        _feedScrollController.animateTo(0.0,
-            duration: const Duration(milliseconds: 300), curve: Curves.easeOut);
+        _feedScrollController.animateTo(
+          0.0,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeOut,
+        );
       }
     } catch (_) {}
   }
 
   void _onWalletProviderChanged() async {
     try {
-      final walletProvider =
-          Provider.of<WalletProvider>(context, listen: false);
+      final walletProvider = Provider.of<WalletProvider>(
+        context,
+        listen: false,
+      );
       final currentWallet = walletProvider.currentWalletAddress ?? '';
       final normalized = WalletUtils.normalize(currentWallet);
       final previous = WalletUtils.normalize(_lastWalletAddress);
@@ -606,9 +635,9 @@ extension _CommunityScreenStatePart1 on _CommunityScreenState {
       }
 
       if (_communityPosts.isNotEmpty) {
-        context
-            .read<CommunityInteractionsProvider>()
-            .hydratePostsFromServer(_communityPosts);
+        context.read<CommunityInteractionsProvider>().hydratePostsFromServer(
+              _communityPosts,
+            );
       }
     } catch (e) {
       if (kDebugMode) {
@@ -682,8 +711,8 @@ extension _CommunityScreenStatePart1 on _CommunityScreenState {
                     badgeCount: _bellUnreadCount,
                     badgeColor: themeProvider.accentColor,
                   ),
-                  Selector<ChatProvider, int>(
-                    selector: (_, cp) => cp.totalUnread,
+                  Selector<NotificationProvider, int>(
+                    selector: (_, np) => np.messageUnreadCount,
                     builder: (context, totalUnread, child) {
                       WidgetsBinding.instance.addPostFrameCallback((_) {
                         if (totalUnread > 0 && _messageScale.value == 1.0) {
@@ -748,10 +777,8 @@ extension _CommunityScreenStatePart1 on _CommunityScreenState {
     await CommunitySearchActions.handle(
       context,
       result,
-      onProfile: (userId) => UserProfileNavigation.open(
-        context,
-        userId: userId,
-      ),
+      onProfile: (userId) =>
+          UserProfileNavigation.open(context, userId: userId),
       onArtwork: (artworkId) =>
           openArtwork(context, artworkId, source: 'community_search'),
       onCollection: (collectionId, title) =>
@@ -786,7 +813,8 @@ extension _CommunityScreenStatePart1 on _CommunityScreenState {
   }
 
   Future<void> _onSocketNotificationForCommunity(
-      Map<String, dynamic> data) async {
+    Map<String, dynamic> data,
+  ) async {
     if (!mounted) return;
     try {
       _bellController.forward(from: 0.0);
@@ -798,10 +826,17 @@ extension _CommunityScreenStatePart1 on _CommunityScreenState {
   void _onNotificationProviderChange() {
     if (!mounted) return;
     try {
-      final provider =
-          Provider.of<NotificationProvider>(context, listen: false);
+      final provider = Provider.of<NotificationProvider>(
+        context,
+        listen: false,
+      );
+      final newMessageCount = provider.messageUnreadCount;
+      if (newMessageCount > _messageUnreadCount) {
+        _messagePulseController.forward(from: 0.0);
+      }
       _applyState(() {
         _bellUnreadCount = provider.unreadCount;
+        _messageUnreadCount = newMessageCount;
       });
     } catch (_) {}
   }
@@ -833,25 +868,10 @@ extension _CommunityScreenStatePart1 on _CommunityScreenState {
             0,
             (1 - slideCurve.value) * MediaQuery.of(context).size.height,
           ),
-          child: FadeTransition(
-            opacity: fadeCurve,
-            child: child,
-          ),
+          child: FadeTransition(opacity: fadeCurve, child: child),
         );
       },
     );
-  }
-
-  void _onChatProviderChanged() {
-    try {
-      final cp = Provider.of<ChatProvider>(context, listen: false);
-      final newCount = cp.totalUnread;
-      if (newCount > _messageUnreadCount) {
-        _messagePulseController.forward(from: 0.0);
-      }
-      _messageUnreadCount = newCount;
-      _applyState(() {});
-    } catch (_) {}
   }
 
   Widget _buildTabBar() {
@@ -866,8 +886,9 @@ extension _CommunityScreenStatePart1 on _CommunityScreenState {
     return LayoutBuilder(
       builder: (context, constraints) {
         final labelStyle = KubusTypography.textTheme.labelSmall;
-        final scaledLabelFontSize = MediaQuery.textScalerOf(context)
-            .scale(labelStyle?.fontSize ?? 10.0);
+        final scaledLabelFontSize = MediaQuery.textScalerOf(
+          context,
+        ).scale(labelStyle?.fontSize ?? 10.0);
         final labelLineHeight =
             scaledLabelFontSize * (labelStyle?.height ?? 1.2);
         final measuredTabHeight = KubusHeaderMetrics.actionIcon +
@@ -908,10 +929,8 @@ extension _CommunityScreenStatePart1 on _CommunityScreenState {
             labelStyle: KubusTypography.textTheme.labelSmall?.copyWith(
               fontWeight: FontWeight.w700,
             ),
-            unselectedLabelStyle:
-                KubusTypography.textTheme.labelSmall?.copyWith(
-              fontWeight: FontWeight.w600,
-            ),
+            unselectedLabelStyle: KubusTypography.textTheme.labelSmall
+                ?.copyWith(fontWeight: FontWeight.w600),
             dividerHeight: 0,
             overlayColor: WidgetStateProperty.all(Colors.transparent),
             tabs: [
@@ -919,10 +938,7 @@ extension _CommunityScreenStatePart1 on _CommunityScreenState {
                 Tab(
                   height: tabHeight,
                   iconMargin: const EdgeInsets.only(bottom: KubusSpacing.xxs),
-                  icon: Icon(
-                    tab.icon,
-                    size: KubusHeaderMetrics.actionIcon,
-                  ),
+                  icon: Icon(tab.icon, size: KubusHeaderMetrics.actionIcon),
                   child: Text(
                     tab.label,
                     maxLines: 2,
@@ -982,23 +998,25 @@ extension _CommunityScreenStatePart1 on _CommunityScreenState {
             padding: const EdgeInsets.only(
               bottom: KubusLayout.mainBottomNavBarHeight,
             ),
-            child: Column(children: [
-              Padding(
-                padding: const EdgeInsets.all(KubusSpacing.lg),
-                child: _buildContributionCard(),
-              ),
-              SizedBox(
-                height: MediaQuery.of(context).size.height * 0.6,
-                width: double.infinity,
-                child: EmptyStateCard(
-                  icon: emptyIcon,
-                  title: hasQuery ? l10n.commonNoResultsFound : emptyTitle,
-                  description: hasQuery
-                      ? l10n.communitySearchEmptyNoResults
-                      : emptySubtitle,
+            child: Column(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.all(KubusSpacing.lg),
+                  child: _buildContributionCard(),
                 ),
-              ),
-            ]),
+                SizedBox(
+                  height: MediaQuery.of(context).size.height * 0.6,
+                  width: double.infinity,
+                  child: EmptyStateCard(
+                    icon: emptyIcon,
+                    title: hasQuery ? l10n.commonNoResultsFound : emptyTitle,
+                    description: hasQuery
+                        ? l10n.communitySearchEmptyNoResults
+                        : emptySubtitle,
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       );
@@ -1046,16 +1064,19 @@ extension _CommunityScreenStatePart1 on _CommunityScreenState {
                         BoxShadow(
                           color: Colors.black.withValues(alpha: 0.08),
                           blurRadius: 6,
-                        )
+                        ),
                       ],
                     ),
                     child: Text(
-                      AppLocalizations.of(context)!.communityNewPostsBanner(
-                        _bufferedIncomingPosts.length,
-                      ),
+                      AppLocalizations.of(
+                        context,
+                      )!
+                          .communityNewPostsBanner(
+                              _bufferedIncomingPosts.length),
                       style: KubusTypography.inter(
-                          color: Theme.of(context).colorScheme.onPrimary,
-                          fontWeight: FontWeight.w700),
+                        color: Theme.of(context).colorScheme.onPrimary,
+                        fontWeight: FontWeight.w700,
+                      ),
                     ),
                   ),
                 ),
@@ -1110,16 +1131,16 @@ extension _CommunityScreenStatePart1 on _CommunityScreenState {
             if (hasGroups) ...hub.groups.map((group) => _buildGroupCard(group)),
             if (hub.groupsLoading && hasGroups)
               Padding(
-                padding: const EdgeInsets.symmetric(
-                  vertical: KubusSpacing.lg,
-                ),
+                padding: const EdgeInsets.symmetric(vertical: KubusSpacing.lg),
                 child: InlineLoading(
                   expand: false,
                   shape: BoxShape.circle,
                   progress: null,
                   tileSize: 3.5,
-                  color: Provider.of<ThemeProvider>(context, listen: false)
-                      .accentColor,
+                  color: Provider.of<ThemeProvider>(
+                    context,
+                    listen: false,
+                  ).accentColor,
                 ),
               ),
             if (!hub.groupsLoading && hasGroups && !hub.hasMoreGroups)
@@ -1129,10 +1150,9 @@ extension _CommunityScreenStatePart1 on _CommunityScreenState {
                   child: Text(
                     l10n.communityGroupsEndOfDirectory,
                     style: KubusTypography.textTheme.bodyMedium?.copyWith(
-                      color: Theme.of(context)
-                          .colorScheme
-                          .onSurface
-                          .withValues(alpha: 0.6),
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.onSurface.withValues(alpha: 0.6),
                     ),
                   ),
                 ),

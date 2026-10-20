@@ -2,7 +2,6 @@ import 'dart:async';
 import 'dart:isolate';
 import 'package:art_kubus/screens/events/event_detail_screen.dart';
 import 'package:art_kubus/screens/events/exhibition_detail_screen.dart';
-import 'package:art_kubus/models/protected_action_requirements.dart';
 import 'package:art_kubus/widgets/app_loading.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -92,6 +91,8 @@ import 'screens/onboarding/onboarding_flow_screen.dart';
 import 'screens/art/ar_screen.dart';
 import 'screens/art/artwork_detail_route.dart';
 import 'screens/desktop/desktop_shell.dart';
+import 'screens/desktop/community/desktop_community_screen.dart';
+import 'screens/community/messages_screen.dart';
 import 'screens/node/kubus_node_screen.dart';
 import 'screens/spatial/spatial_library_detail_screen.dart';
 import 'screens/spatial/spatial_library_screen.dart';
@@ -105,6 +106,7 @@ import 'services/guest_session_service.dart';
 import 'services/public_entity_takeover_bridge.dart';
 import 'services/push_notification_service.dart';
 import 'services/notification_handler.dart';
+import 'services/contextual_auth_gate.dart';
 import 'services/solana_wallet_service.dart';
 import 'services/socket_service.dart';
 import 'services/backend_api_service.dart';
@@ -126,7 +128,6 @@ import 'screens/debug/walking_route_render_harness_screen.dart';
 import 'providers/activation_prompt_provider.dart';
 import 'models/onboarding_completion_navigation.dart';
 import 'models/pending_action_intent.dart';
-import 'models/preferred_auth_method.dart';
 
 /// Global unhandled-error router.
 ///
@@ -426,8 +427,9 @@ class _AppLauncherState extends State<AppLauncher> {
         ChangeNotifierProvider<LocaleProvider>(
           create: (_) => LocaleProvider()
             ..initialize(
-              overrideLanguageCode:
-                  LocaleProvider.localeCodeFromUri(_launchUriForLocale()),
+              overrideLanguageCode: LocaleProvider.localeCodeFromUri(
+                _launchUriForLocale(),
+              ),
             ),
         ),
         ChangeNotifierProvider<GlassCapabilitiesProvider>(
@@ -1034,6 +1036,27 @@ class _ArtKubusState extends State<ArtKubus> with WidgetsBindingObserver {
             attendanceMarkerId: attendanceMarkerId,
           );
         },
+        '/messages': (context) {
+          final route = ModalRoute.of(context);
+          final args = route?.settings.arguments;
+          final uri = Uri.tryParse(route?.settings.name ?? '');
+          final rawConversationId = args is Map
+              ? (args['conversationId'] ??
+                  args['conversation_id'] ??
+                  args['targetId'])
+              : uri?.queryParameters['conversationId'];
+          final conversationId = rawConversationId?.toString().trim();
+          final initialConversationId =
+              conversationId != null && conversationId.isNotEmpty
+                  ? conversationId
+                  : null;
+          return DesktopBreakpoints.isDesktop(context)
+              ? DesktopCommunityScreen(
+                  initialShowMessages: true,
+                  initialConversationId: initialConversationId,
+                )
+              : MessagesScreen(initialConversationId: initialConversationId);
+        },
         '/exhibition': (context) {
           final args = ModalRoute.of(context)?.settings.arguments;
           String? exhibitionId;
@@ -1486,6 +1509,11 @@ class _ArtKubusState extends State<ArtKubus> with WidgetsBindingObserver {
     final navigator = appNavigatorKey.currentState;
     if (navigator == null) return;
 
+    if (route == '/messages') {
+      unawaited(_dispatchMessageNotificationRoute(navigator, params));
+      return;
+    }
+
     if (route == '/collab_invite') {
       final rawType = (params['entityType'] ?? '').toString();
       final rawId = (params['entityId'] ?? '').toString();
@@ -1530,6 +1558,37 @@ class _ArtKubusState extends State<ArtKubus> with WidgetsBindingObserver {
     } catch (_) {
       // Ignore unknown routes.
     }
+  }
+
+  Future<void> _dispatchMessageNotificationRoute(
+    NavigatorState navigator,
+    Map<String, dynamic> params,
+  ) async {
+    final context = navigator.context;
+    final rawConversationId = params['conversationId'] ??
+        params['conversation_id'] ??
+        params['targetId'];
+    final conversationId = rawConversationId?.toString().trim();
+    final safeConversationId = conversationId != null &&
+            conversationId.isNotEmpty &&
+            conversationId.length <= 128
+        ? conversationId
+        : null;
+    final arguments = <String, String>{
+      if (safeConversationId != null) 'conversationId': safeConversationId,
+    };
+
+    final l10n = AppLocalizations.of(context);
+    final allowed = await const ContextualAuthGate().ensureAuthenticated(
+      context,
+      requirements: ProtectedActionRequirements.accountOnly,
+      actionLabel: (l10n?.messagesTitle ?? 'messages').toLowerCase(),
+      returnRoute: '/messages',
+      returnArguments: arguments,
+      sourceScreen: 'notification_direct_message',
+    );
+    if (!allowed || !context.mounted || !navigator.mounted) return;
+    await navigator.pushNamed('/messages', arguments: arguments);
   }
 
   @override

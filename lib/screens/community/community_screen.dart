@@ -398,12 +398,6 @@ class _CommunityScreenState extends State<CommunityScreen>
     _bellController.dispose();
     _messagePulseController.dispose();
     try {
-      Provider.of<ChatProvider>(
-        context,
-        listen: false,
-      ).removeListener(_onChatProviderChanged);
-    } catch (_) {}
-    try {
       Provider.of<WalletProvider>(
         context,
         listen: false,
