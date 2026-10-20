@@ -178,8 +178,9 @@ class KubusEntityCard extends StatefulWidget {
   static const double baseEdge = 2;
 
   /// The paint-only media scale, present only where motion is allowed.
-  static const Key mediaScaleKey =
-      ValueKey<String>('kubus_entity_card_media_scale');
+  static const Key mediaScaleKey = ValueKey<String>(
+    'kubus_entity_card_media_scale',
+  );
 
   /// The paint-only hover lift, present only where motion is allowed.
   static const Key liftKey = ValueKey<String>('kubus_entity_card_lift');
@@ -398,6 +399,7 @@ class _KubusEntityCardState extends State<KubusEntityCard> {
             imageUrl: widget.imageUrl,
             fit: BoxFit.cover,
             filterQuality: FilterQuality.medium,
+            decodeToDisplaySize: true,
             cacheVersion: widget.cacheVersion,
             semanticLabel: widget.imageSemanticLabel,
             excludeFromSemantics: widget.imageSemanticLabel == null,
