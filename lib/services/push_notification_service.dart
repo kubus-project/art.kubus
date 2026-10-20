@@ -73,7 +73,7 @@ class PushNotificationService {
     if (_initialized) return;
 
     const AndroidInitializationSettings initializationSettingsAndroid =
-        AndroidInitializationSettings('@mipmap/ic_launcher');
+        AndroidInitializationSettings('@drawable/ic_notification');
 
     const DarwinInitializationSettings initializationSettingsIOS =
         DarwinInitializationSettings(
@@ -333,7 +333,7 @@ class PushNotificationService {
       importance: Importance.high,
       priority: Priority.high,
       showWhen: true,
-      icon: '@mipmap/ic_launcher',
+      icon: '@drawable/ic_notification',
       enableVibration: true,
       playSound: true,
     );
@@ -383,7 +383,7 @@ class PushNotificationService {
       importance: Importance.defaultImportance,
       priority: Priority.defaultPriority,
       showWhen: true,
-      icon: '@mipmap/ic_launcher',
+      icon: '@drawable/ic_notification',
     );
 
     const DarwinNotificationDetails iosDetails = DarwinNotificationDetails(
@@ -487,7 +487,7 @@ class PushNotificationService {
         importance: Importance.defaultImportance,
         priority: Priority.defaultPriority,
         showWhen: true,
-        icon: '@mipmap/ic_launcher',
+        icon: '@drawable/ic_notification',
       ),
       iOS: const DarwinNotificationDetails(
         presentAlert: true,
@@ -545,7 +545,7 @@ class PushNotificationService {
       importance: Importance.high,
       priority: Priority.high,
       showWhen: true,
-      icon: '@mipmap/ic_launcher',
+      icon: '@drawable/ic_notification',
       enableVibration: true,
       playSound: true,
     );
@@ -618,7 +618,7 @@ class PushNotificationService {
       importance: Importance.high,
       priority: Priority.high,
       showWhen: true,
-      icon: '@mipmap/ic_launcher',
+      icon: '@drawable/ic_notification',
       enableVibration: true,
       playSound: true,
     );
@@ -717,7 +717,7 @@ class PushNotificationService {
       importance: Importance.high,
       priority: Priority.high,
       showWhen: true,
-      icon: '@mipmap/ic_launcher',
+      icon: '@drawable/ic_notification',
       enableVibration: true,
       playSound: true,
     );
@@ -825,7 +825,7 @@ class PushNotificationService {
       importance: Importance.high,
       priority: Priority.high,
       showWhen: true,
-      icon: '@mipmap/ic_launcher',
+      icon: '@drawable/ic_notification',
       enableVibration: true,
       playSound: true,
     );
@@ -917,7 +917,7 @@ class PushNotificationService {
       importance: Importance.high,
       priority: Priority.high,
       showWhen: true,
-      icon: '@mipmap/ic_launcher',
+      icon: '@drawable/ic_notification',
       enableVibration: true,
       playSound: true,
     );
@@ -965,7 +965,7 @@ class PushNotificationService {
       importance: Importance.defaultImportance,
       priority: Priority.defaultPriority,
       showWhen: true,
-      icon: '@mipmap/ic_launcher',
+      icon: '@drawable/ic_notification',
     );
 
     const DarwinNotificationDetails iosDetails = DarwinNotificationDetails(
@@ -1090,7 +1090,7 @@ class PushNotificationService {
       importance: Importance.defaultImportance,
       priority: Priority.defaultPriority,
       showWhen: true,
-      icon: '@mipmap/ic_launcher',
+      icon: '@drawable/ic_notification',
     );
 
     const DarwinNotificationDetails iosDetails = DarwinNotificationDetails(
@@ -1167,7 +1167,7 @@ class PushNotificationService {
       importance: Importance.defaultImportance,
       priority: Priority.defaultPriority,
       showWhen: true,
-      icon: '@mipmap/ic_launcher',
+      icon: '@drawable/ic_notification',
     );
 
     const DarwinNotificationDetails iosDetails = DarwinNotificationDetails(
@@ -1238,7 +1238,7 @@ class PushNotificationService {
       importance: Importance.max,
       priority: Priority.max,
       showWhen: true,
-      icon: '@mipmap/ic_launcher',
+      icon: '@drawable/ic_notification',
       enableVibration: true,
       playSound: true,
     );
@@ -1331,7 +1331,7 @@ class PushNotificationService {
       importance: Importance.high,
       priority: Priority.high,
       showWhen: true,
-      icon: '@mipmap/ic_launcher',
+      icon: '@drawable/ic_notification',
       enableVibration: true,
       playSound: true,
     );
@@ -1427,7 +1427,7 @@ class PushNotificationService {
       importance: Importance.defaultImportance,
       priority: Priority.defaultPriority,
       showWhen: true,
-      icon: '@mipmap/ic_launcher',
+      icon: '@drawable/ic_notification',
     );
 
     const DarwinNotificationDetails iosDetails = DarwinNotificationDetails(
@@ -1530,7 +1530,7 @@ class PushNotificationService {
       importance: Importance.defaultImportance,
       priority: Priority.defaultPriority,
       showWhen: true,
-      icon: '@mipmap/ic_launcher',
+      icon: '@drawable/ic_notification',
     );
 
     const DarwinNotificationDetails iosDetails = DarwinNotificationDetails(
@@ -1615,7 +1615,7 @@ class PushNotificationService {
       importance: Importance.high,
       priority: Priority.high,
       showWhen: true,
-      icon: '@mipmap/ic_launcher',
+      icon: '@drawable/ic_notification',
     );
 
     const DarwinNotificationDetails iosDetails = DarwinNotificationDetails(
@@ -1708,7 +1708,7 @@ class PushNotificationService {
       importance: Importance.defaultImportance,
       priority: Priority.defaultPriority,
       showWhen: true,
-      icon: '@mipmap/ic_launcher',
+      icon: '@drawable/ic_notification',
     );
 
     const DarwinNotificationDetails iosDetails = DarwinNotificationDetails(
@@ -1800,7 +1800,7 @@ class PushNotificationService {
       importance: Importance.defaultImportance,
       priority: Priority.defaultPriority,
       showWhen: true,
-      icon: '@mipmap/ic_launcher',
+      icon: '@drawable/ic_notification',
     );
 
     const DarwinNotificationDetails iosDetails = DarwinNotificationDetails(
