@@ -540,8 +540,8 @@ void main() {
     );
     expect(state.debugIsUploadingAvatar, isFalse);
     expect(provider.savedAvatar, isNull);
-    expect(provider.currentUser?.avatar,
-        '/uploads/profiles/avatars/current.png');
+    expect(
+        provider.currentUser?.avatar, '/uploads/profiles/avatars/current.png');
   });
 
   testWidgets('missing wallet cover upload resets spinner and preview',
