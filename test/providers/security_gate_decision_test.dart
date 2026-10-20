@@ -235,4 +235,73 @@ void main() {
       });
     });
   });
+
+  group('orphaned lock decisions are fenced', () {
+    const timeout = Duration(seconds: 5);
+
+    test(
+        'a storage read finishing after the timeout cannot relock once the '
+        'fallback lock is released', () {
+      fakeAsync((async) {
+        final gate = _gate(
+          prefs: {_tsKey: _agoMs(const Duration(minutes: 10))},
+          timeout: timeout,
+        );
+        final orphan = Completer<SettingsState>();
+        gate.hangOn.add(orphan);
+        gate.initialize();
+        async.elapse(timeout);
+        async.flushMicrotasks();
+        expect(gate.isLocked, isTrue);
+
+        gate.completeForTesting(localAuthentication: true);
+        expect(gate.isLocked, isFalse);
+
+        orphan.complete(SettingsState.defaults()
+            .copyWith(requirePin: true, autoLockSeconds: 60));
+        async.flushMicrotasks();
+
+        expect(gate.isLocked, isFalse);
+        expect(gate.isLockDecisionPending, isFalse);
+      });
+    });
+
+    test(
+        'a stale settings read cannot overwrite settings from a newer decision',
+        () {
+      fakeAsync((async) {
+        final gate = _gate(timeout: timeout);
+        final orphan = Completer<SettingsState>();
+        gate.hangOn.add(orphan);
+        gate.initialize();
+        async.elapse(timeout);
+        async.flushMicrotasks();
+
+        final newer = Completer<SettingsState>()
+          ..complete(SettingsState.defaults()
+              .copyWith(requirePin: false, autoLockSeconds: 60));
+        gate.hangOn.add(newer);
+        gate.onAppLifecycleChanged(AppLifecycleState.resumed);
+        async.flushMicrotasks();
+        expect(gate.settings.requirePin, isFalse);
+
+        orphan.complete(SettingsState.defaults()
+            .copyWith(requirePin: true, autoLockSeconds: 60));
+        async.flushMicrotasks();
+
+        expect(gate.settings.requirePin, isFalse);
+        expect(gate.isLockDecisionPending, isFalse);
+      });
+    });
+
+    test('a decision that finishes in time still locks after a long absence',
+        () async {
+      final gate = _gate(
+        prefs: {_tsKey: _agoMs(const Duration(minutes: 10))},
+      );
+      await gate.initialize();
+      expect(gate.isLocked, isTrue);
+      expect(gate.isLockDecisionPending, isFalse);
+    });
+  });
 }
