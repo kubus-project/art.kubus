@@ -15,6 +15,7 @@ class _EmailSessionApi implements ProfileBackendApi {
   Map<String, String>? lastUploadMetadata;
   Object? uploadError;
   Object? saveError;
+  Map<String, dynamic>? saveResponseOverride;
   Map<String, dynamic> uploadResponse = <String, dynamic>{
     'uploadedUrl': '/uploads/profiles/avatars/fresh.png',
   };
@@ -29,6 +30,8 @@ class _EmailSessionApi implements ProfileBackendApi {
     final error = saveError;
     if (error != null) throw error;
     lastSavedProfile = Map<String, dynamic>.from(profileData);
+    final override = saveResponseOverride;
+    if (override != null) return override;
     return <String, dynamic>{
       'username': profileData['username'] ?? 'alice',
       'displayName': profileData['displayName'] ?? 'Alice',
@@ -316,5 +319,46 @@ void main() {
     await provider.initialize();
 
     expect(provider.isSignedIn, isFalse);
+  });
+
+  test('an email session syncs preferences through the owner-scoped save',
+      () async {
+    final api = _EmailSessionApi();
+    BackendApiService().setAuthTokenForTesting('email-session-token');
+    addTearDown(() => BackendApiService().setAuthTokenForTesting(null));
+    final provider = _emailProvider(api);
+
+    await provider.updatePreferences(privateProfile: true);
+
+    final sent = api.lastSavedProfile;
+    expect(sent, isNotNull);
+    expect(sent!.containsKey('walletAddress'), isFalse);
+    expect((sent['preferences'] as Map)['privacy'], 'private');
+    expect(provider.preferencesSaveError, isNull);
+  });
+
+  test('a walletless save response identified by its id is kept', () async {
+    final api = _EmailSessionApi()
+      ..saveResponseOverride = <String, dynamic>{
+        'success': true,
+        'data': <String, dynamic>{
+          'id': 'profile-email',
+          'userId': 'user-email',
+          'walletAddress': null,
+          'username': 'alice',
+          'displayName': 'Alice Server',
+          'bio': 'server bio',
+          'avatar': '',
+          'createdAt': '2026-03-31T00:00:00.000Z',
+          'updatedAt': '2026-03-31T00:00:00.000Z',
+        },
+      };
+    final provider = _emailProvider(api);
+
+    final ok = await provider.saveProfile(walletAddress: '', bio: 'mine');
+
+    expect(ok, isTrue);
+    expect(provider.currentUser?.displayName, 'Alice Server');
+    expect(provider.currentUser?.id, 'profile-email');
   });
 }

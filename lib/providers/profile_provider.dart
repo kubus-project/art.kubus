@@ -1077,7 +1077,12 @@ class ProfileProvider extends foundation.ChangeNotifier {
             (candidate['walletAddress'] ?? candidate['wallet_address'] ?? '')
                 .toString()
                 .trim();
-        if (candidateWallet.isEmpty) {
+        final candidateId = (candidate['id'] ?? '').toString().trim();
+        // A walletless (email/Google) account's profile is identified by its
+        // id; only a wallet save needs the wallet echoed back.
+        final identified = candidateWallet.isNotEmpty ||
+            (walletAddress.trim().isEmpty && candidateId.isNotEmpty);
+        if (!identified) {
           throw const FormatException(
             'saveProfile response missing walletAddress',
           );
@@ -1159,7 +1164,8 @@ class ProfileProvider extends foundation.ChangeNotifier {
       // Persist to UserService cache (and let ChatProvider be updated via EventBus)
       try {
         final u = _currentUser;
-        if (u != null) {
+        // The user cache is wallet-keyed; walletless accounts are not cached.
+        if (u != null && u.walletAddress.trim().isNotEmpty) {
           final joinedDate = u.createdAt.toIso8601String();
           UserService.setUsersInCacheAuthoritative([
             User(
@@ -1862,7 +1868,7 @@ class ProfileProvider extends foundation.ChangeNotifier {
     _pendingPreferencesSync = preferencesToSync;
     notifyListeners();
 
-    if (wallet.isEmpty) {
+    if (wallet.isEmpty && !BackendApiService().hasAuthSession) {
       if (epoch == _preferencesSaveEpoch) {
         _isSavingPreferences = false;
         _hasUnsyncedPreferences = true;
@@ -1875,10 +1881,18 @@ class ProfileProvider extends foundation.ChangeNotifier {
     }
 
     try {
-      await _apiService.updateProfile(
-        wallet,
-        {'preferences': preferencesToSync.toJson()},
-      );
+      if (wallet.isEmpty) {
+        // Email and Google sessions have no wallet route; the owner-scoped
+        // save resolves the profile from the session token.
+        await _apiService.saveProfile(
+          {'preferences': preferencesToSync.toJson()},
+        );
+      } else {
+        await _apiService.updateProfile(
+          wallet,
+          {'preferences': preferencesToSync.toJson()},
+        );
+      }
 
       if (epoch != _preferencesSaveEpoch) {
         final latest = _currentUser?.preferences ?? _cachedPreferences;
@@ -1890,7 +1904,9 @@ class ProfileProvider extends foundation.ChangeNotifier {
       }
 
       _clearPreferenceSyncState();
-      ProfilePackageMutationTracker.profileChanged(wallet);
+      if (wallet.isNotEmpty) {
+        ProfilePackageMutationTracker.profileChanged(wallet);
+      }
       notifyListeners();
       return true;
     } catch (e) {
