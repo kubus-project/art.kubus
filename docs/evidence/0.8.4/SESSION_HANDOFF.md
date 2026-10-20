@@ -5,7 +5,23 @@ and [scope-matrix.md](scope-matrix.md). Security findings are never written here
 live in the private draft advisory and `C:/kubus-build/_private/security/`.
 
 ```text
-LATEST (2026-10-20 ~01:30, session 6 "Integration, Safe Staging"): see integration-ledger.md
+LATEST (2026-10-20 02:00, recovery pass): see integration-ledger.md "Session 7" for live state.
+  App dev is bb83fd2dfc2d540ab5d4047289bc4b344a3ea55e; #325 is merged. #326 is OPEN at
+  3dec5397f86f8ab77eb63e88cb980cd6a6ecff04 with its full required CI green. #331 (359224cd),
+  #332 (17304c50) and #333 (7dee1efe) remain open drafts behind dev 9309b1ff. Backend master is
+  fec505cedc8df06ce9f3229dd7e6a631814afea3; this repository has no dev branch. #97/#99 merged;
+  #96/#98/#100/#101/#102/#103 remain open (#102 is draft/dirty on GitHub). No merge was made:
+  both repository playbooks require explicit user authorization. Session 6 staging results and
+  the pre-109 database backup remain preserved; they were not rerun in this recovery pass.
+  G REVIEW: `community_posts.author_id` already provides nullable FK `users.id` plus an index;
+  account-ID authorship is feasible without adding a second author column. Main-post owner/read
+  paths still key off wallet, and keyed submission replay is wallet-PK scoped. Keep group posts
+  wallet-gated until group membership has an account-ID contract. Root assigned a bounded backend
+  implementation in `G:/kubus-build-084/walletless-backend-084` from fetched live master; no merge
+  or production migration is authorized.
+  F REVIEW: overlap/rebase sequence is recorded in integration-ledger.md. No merge was made.
+
+SESSION 6 CHECKPOINT (2026-10-20 ~01:30; superseded by the live-state check below): see integration-ledger.md
   "Session 6". Merged: backend #99 fec505ce, app #325 bb83fd2d. Open: app #326 (full tier on
   3dec5397), #331, #332, #333; backend #96 ready, #98, #100, #101, #102 (stacked), #103.
   Staging: cd G:/kubus-build-084/staging-isolation; node scripts/qa/staging/launch_backend.mjs

@@ -303,3 +303,104 @@ E2E results (scripts in G:/kubus-build-084/_staging, evidence under b18-out/ and
 Not done: keyboard / reduced-motion pass on the candidate, video + badges harness re-run on
 candidate 2, Phase E full gates, physical devices. #315/#94 security PRs unchanged (own gates).
 Production observations unchanged, BLOCKED_OWNER (not re-checked).
+
+## Session 7 (2026-10-20 02:00, recovery and integration contract review)
+
+This pass re-fetched the app and backend remotes and checked GitHub PRs. It did not merge,
+deploy, mutate staging, or rerun Session 6 browser/database evidence. The evidence worktree is
+`docs/084-release-evidence` at `fecf61c0d63b9d1cf75614f8e9227367b8fa7b6b` (15 ahead / 2 behind
+its local `origin/dev`); preserve its history and reconcile before any push.
+
+| Repo / PR | Live state on 2026-10-20 | Exact head | CI / integration note |
+|---|---|---|---|
+| app dev / #325 | dev `bb83fd2dfc2d540ab5d4047289bc4b344a3ea55e`; #325 merged | #325 `b9f993bd03551f40b5a40f87d7419afea24dfa30` | live dev contains the merge |
+| app #326 | OPEN, non-draft, CLEAN | `3dec5397f86f8ab77eb63e88cb980cd6a6ecff04` | full required CI passed on run `39339219070`; review decision blank |
+| app #331 | OPEN draft, BEHIND | `359224cd00da5b29a9c88a20cf153625e9238267` | PR baseRefOid is `9309b1ffe95091298e444ea9a2348febe79c8c51`; only draft-tier validation passed, web/native/compatibility jobs skipped |
+| app #332 | OPEN draft, BEHIND | `17304c5016a4097d27a30ee4568b149849dc598b` | draft-tier pass; release web and native jobs skipped |
+| app #333 | OPEN draft, BEHIND | `7dee1efe1f696175b9e1cc6a59d36720b4270757` | draft-tier pass; release web and native jobs skipped |
+| backend master / #97, #99 | master `fec505cedc8df06ce9f3229dd7e6a631814afea3`; #97 and #99 merged | #97 `c4caafff405d4b0041cbadeadb3251bdf7f027b2`; #99 `99a8754c10d2d7049f51f70edeab49801c0a8610` | backend currently has no `dev` branch; app branching guide documents this as a separate migration |
+| backend #96, #98, #100, #101, #103 | OPEN; #96/#100/#103 non-draft; #98/#101 draft | `9a34bb8d`, `7b8f7d68`, `850bf0fb`, `090a9160`, `d17f5616` | their current applicable checks pass; #100/#103 skip the unrelated PostgreSQL job |
+| backend #102 | OPEN draft, DIRTY on GitHub; stacked on #101 | `5d2fc00df8bc027c02417fcd9f2de0ec6bdcddc5` | only GitGuardian is reported; backend worktree itself is clean. Preserve recovery patch `G:/kubus-build-backup/084-20261019-recovery/backend-studio-uncommitted.patch` for comparison; do not apply blindly |
+
+Relevant worktrees: app #326 `G:/kubus-build-084/badges` (clean); #331 `.../profile-authorship`
+(untracked QA outputs); #332 `.../staging-isolation`; #333 `.../desktop-post-gate`; integration
+candidate 2 `.../frontend-candidate-2` at `999f5986`. Backend #101 `.../backend-institutions`
+at `090a9160`; #102 `.../backend-studio` at `5d2fc00`; #103 `.../backend-wallet-required` at
+`d17f5616`; backend candidate 2 `.../backend-candidate-2` at `0ae4430`. Preserve every worktree.
+
+Wallet-required contract snapshot: backend #103 tests expect 403 `WALLET_REQUIRED` before a
+post/repost/group-post write for an authenticated account without a wallet; the Flutter #333
+preflight avoids upload/request and retains the compose draft, and maps the server code to the
+localized wallet prompt if local wallet state is stale. Both backend schema snapshots currently
+declare `community_posts.wallet_address NOT NULL`. This is the existing contract, not a product
+decision against account-ID authorship. The account-ID trace and migration design are recorded in
+the Session 7 review below. Do not treat `users.id` as a wallet value; never restore NOT NULL after
+walletless rows are accepted.
+
+Backups retained: `G:/kubus-build-backup/084-20261019-recovery` (local Git bundles, Studio patch,
+location-correction SQL), `G:/kubus-build-backup/084-staging-db/staging084-pre109-20261020.dump`,
+and the earlier `084-20261018/scope-part1.md` / `scope-part2.md`. Prior Session 6 staging/browser
+results remain historical evidence and were not rerun here. Repository playbooks require explicit
+user authorization for PR merges; green CI alone is not merge authorization.
+
+### Session 7 account-ID authorship and integration overlap review
+
+Research was read-only in the frontend candidate `G:/kubus-build-084/frontend-candidate` at
+`f20b2129405c149bf1a6c8a5ca1afb5f95617b4a` and backend #103 worktree
+`G:/kubus-build-084/backend-wallet-required` at `d17f56166c0d6067c8ce2f1c64c8c5cf706179e5`.
+Both remained clean. Root subsequently assigned implementation to a separate backend worktree;
+no source files were changed during this research pass.
+
+The account-ID design has an existing canonical key: `community_posts.author_id` is nullable UUID,
+indexed (`idx_posts_author`) and FK to `users(id)` in both `src/db/schema.sql` and
+`src/db/schema_complete.sql`. The FK currently cascades on account deletion. `communityPostService`
+does not populate it; post/repost create and post edit/delete/repost-delete ownership are wallet
+keyed. Feed/detail reads join profiles by `community_posts.wallet_address`, and emit the profile's
+`user_id` rather than the post's `author_id`. `wallet_address` is currently NOT NULL. The
+idempotency table migration `098_community_post_submissions.sql` uses `(wallet_address, operation,
+submission_key)` as a NOT NULL primary key, so making only the post wallet nullable would break
+keyed submissions.
+
+The existing auth `/bind-wallet` flow updates the same `users.id` row after rejecting a wallet
+already attached to another user (`src/routes/auth.js`, bind-wallet transaction). Thus `users.id`
+can remain the author across a wallet link. A safe ordinary-post implementation should populate
+`author_id` only from the authenticated account, retain nullable wallet metadata for existing
+clients, scope durable idempotency by account ID while preserving/reconciling old wallet-keyed
+records, make reads and owner predicates account-ID first with wallet fallback for legacy rows, and
+keep both schema snapshots in parity. Do not accept an author ID from request data. Group posts
+remain wallet-gated: `group_members` is keyed by `(group_id, wallet_address)` and membership checks
+use that key. The #103/#333 global gate is therefore superseded for ordinary posts, while the group
+gate remains until group membership is migrated as a separately reviewed contract. Existing
+`author_id` FK `ON DELETE CASCADE` is an account-deletion policy risk; preserve current deletion
+semantics unless account/content retention policy requires a separately reviewed change. Migration
+up/down and rollback tests must use isolated synthetic data and prove old posts/legacy wallet reads
+survive.
+
+Cross-repository acceptance needed: email-only authenticated create/read/edit/delete; legacy and
+wallet-backed author preservation; same-row wallet link with stable author ID; cross-account edit/
+delete denial; body-supplied owner spoof rejection; account-scoped idempotency replay/conflict;
+null-wallet author serializers in feed/detail/repost; and proof group posting plus blockchain
+actions remain gated. Existing #103 tests only prove 403/no insert for general post, repost and
+group routes; they do not prove account-ID authorship.
+
+File overlap and minimal integration sequence (computed from live PR changed-file lists on
+2026-10-20):
+
+| Repo / PRs | Exact shared paths | Integration consequence |
+|---|---|---|
+| app #326 x #333 | `lib/screens/desktop/community/desktop_community_screen.dart`; `lib/screens/desktop/community/desktop_community_screen_parts/desktop_community_screen_p5.dart` | Integrate/review the shared compose paths together; #333 wallet gate behavior is superseded for ordinary posts by the account-ID implementation. |
+| app #331 x #333 | `lib/l10n/app_en.arb`; `lib/l10n/app_localizations.dart`; `lib/l10n/app_localizations_en.dart`; `lib/l10n/app_localizations_sl.dart`; `lib/l10n/app_sl.arb` | Regenerate/reconcile localization after #331/#333 content is combined. |
+| app #332 | No changed paths overlap #326/#331/#333 | Staging isolation can be integrated independently, then full gates must run on updated dev. |
+| backend #96 x #98 | `.github/workflows/backend-ci.yml`; `package.json` | Serialize CI/package integration and re-run full backend checks. |
+| backend #96 x #101 | `.github/workflows/backend-ci.yml`; `package.json`; `__tests__/seoPublicPagesRepository.test.js`; `src/services/seoPublicPagesRepository.js` | Merge/rebase #96 before #101; inspect semantic hunks and repeat PG/full CI on the exact combined head. |
+| backend #98 x #101 | `.github/workflows/backend-ci.yml`; `package.json` | Reconcile package/CI deltas after #98 before final #101 validation. |
+| backend #101 x #102 | `.github/workflows/backend-ci.yml`; `package.json`; `src/db/schema.sql`; `src/db/schema_complete.sql` | #102 is stacked on #101; reconcile migration 109/110 schema parity and rerun PG + full CI after #101 base lands. |
+| backend #100 x #102 | `src/server.js` | Apply/review the loopback listen-host and Studio route changes together before #102 final CI. |
+| backend #103 x walletless implementation | `src/routes/community.js` and `src/routes/groups.js` are the ownership boundary | Preserve the group wallet gate while replacing the ordinary post/repost global wallet gate. |
+
+Recommended review order: app #326, then rebase/review #331, then reconcile #333 (or replace its
+ordinary-post gate in the separate walletless frontend task); #332 is independent. Backend #96
+before #98/#101 shared changes, #100 before #102's server change, #101 before stacked #102; integrate
+#103's group-only gate with walletless ordinary post ownership. Every integration changes the PR
+head/base evidence, so currently green exact-head CI must not be reused after a rebase or merge.
+No merge authorization was exercised by this ledger update.
