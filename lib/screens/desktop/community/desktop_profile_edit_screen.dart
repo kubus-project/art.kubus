@@ -680,7 +680,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen>
 
       // Email/Google sessions have no wallet, so reload the authenticated account.
       unawaited(wallet.isEmpty
-          ? profileProvider.loadAuthenticatedProfile()
+          ? profileProvider.loadAuthenticatedProfile().catchError((_) {})
           : profileProvider.loadProfile(wallet));
       if (kDebugMode) {
         final displayAvatarUrl =
