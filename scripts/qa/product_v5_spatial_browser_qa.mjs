@@ -97,7 +97,11 @@ const markerFixture = process.env.QA_MARKER_FIXTURE
   ? await fs.readFile(process.env.QA_MARKER_FIXTURE, 'utf8') : null;
 
 async function containNetwork(context) {
-  const log = { analyticsSwallowed: 0, writesBlocked: [], failedRequests: [], fixtureHits: 0, fixtureMisses: [] };
+  const log = { analyticsSwallowed: 0, writesBlocked: [], failedRequests: [], fixtureHits: 0, fixtureMisses: [], fixtureRecorded: 0 };
+  // Deterministic wall clock: the sun, the night terminator and every
+  // DateTime.now() in the app read this. `install` keeps time flowing (unlike
+  // setFixedTime, which would freeze timers and animation).
+  if (process.env.QA_CLOCK) await context.clock.install({ time: new Date(process.env.QA_CLOCK) });
   await context.route('**/*', async (route) => {
     const request = route.request();
     const url = new URL(request.url());
@@ -124,6 +128,23 @@ async function containNetwork(context) {
           'access-control-allow-origin': request.headers().origin || appUrl,
           'access-control-allow-credentials': 'true' } });
       } catch {
+        // QA_HTTP_FIXTURE_RECORD=1 fills the fixture once; every later run
+        // replays it and a miss fails closed instead of reaching the network.
+        if (process.env.QA_HTTP_FIXTURE_RECORD === '1') {
+          try {
+            const response = await route.fetch({ url: target.toString(), headers: { accept: request.headers().accept || '*/*' } });
+            const body = await response.body();
+            const headers = { ...response.headers() };
+            delete headers['content-encoding']; delete headers['content-length']; delete headers['transfer-encoding'];
+            await fs.mkdir(process.env.QA_HTTP_FIXTURE, { recursive: true });
+            await fs.writeFile(path.join(process.env.QA_HTTP_FIXTURE, `${key}.bin`), body);
+            await fs.writeFile(path.join(process.env.QA_HTTP_FIXTURE, `${key}.json`), JSON.stringify({ url: target.toString(), status: response.status(), headers }));
+            log.fixtureRecorded++;
+            return route.fulfill({ status: response.status(), headers: { ...headers,
+              'access-control-allow-origin': request.headers().origin || appUrl,
+              'access-control-allow-credentials': 'true' }, body });
+          } catch { /* fall through to the fail-closed miss */ }
+        }
         log.fixtureMisses.push(`${target.hostname}${target.pathname}`);
         return route.fulfill({ status: 503, body: '' });
       }
@@ -196,6 +217,9 @@ const HOOK = () => {
       const original = proto.setStyle;
       proto.setStyle = function (...args) {
         if (!window.__maps.includes(this)) window.__maps.push(this);
+        // Counts every style application (also a new Map's constructor), so a
+        // theme switch can be told apart from the style that was already there.
+        window.__styleApplied = (window.__styleApplied || 0) + 1;
         return original.apply(this, args);
       };
       clearInterval(timer);
@@ -343,7 +367,24 @@ async function selectedBadgePixels(page, markerId) {
   }, point);
   // Inside the badge (it floats above its point) and below the card's edge.
   const clip = { x: Math.max(0, screen.x - 16), y: Math.max(0, screen.y - 32), width: 32, height: 26 };
+  // The globe's night-side shade is a separate 2D canvas laid over the map
+  // (alpha up to 0.36 black below zoom 4.6), so it dims every map pixel under
+  // it, badge included, and the colour threshold below would depend on the
+  // time of day. This check asks whether the MAP draws the badge; the overlay
+  // has its own checks, so it is hidden for the read and then restored.
+  // QA_BADGE_KEEP_OVERLAY=1 keeps it, which reproduces the old clock dependence.
+  const keepOverlay = process.env.QA_BADGE_KEEP_OVERLAY === '1';
+  const overlays = keepOverlay ? 0 : await page.evaluate(() => {
+    const nodes = [...document.querySelectorAll('.kubus-globe-atmosphere')];
+    nodes.forEach((n) => { n.dataset.qaVisibility = n.style.visibility; n.style.visibility = 'hidden'; });
+    return nodes.length;
+  });
   const png = await page.screenshot({ clip });
+  if (overlays) {
+    await page.evaluate(() => document.querySelectorAll('.kubus-globe-atmosphere').forEach((n) => {
+      n.style.visibility = n.dataset.qaVisibility || ''; delete n.dataset.qaVisibility;
+    }));
+  }
   const count = await page.evaluate(async (b64) => {
     const img = new Image();
     img.src = `data:image/png;base64,${b64}`;
@@ -362,7 +403,7 @@ async function selectedBadgePixels(page, markerId) {
     }
     return { saturated, total: canvas.width * canvas.height };
   }, png.toString('base64'));
-  return { screen, ...count };
+  return { screen, overlayHidden: overlays, ...count };
 }
 
 /** Select a marker, then prove it stays a visible marker at every zoom level. */
@@ -402,8 +443,16 @@ async function selectionContinuity(page, viewport, tag, run) {
       window.__maps[window.__maps.length - 1].jumpTo({ zoom: z });
     }, zoom);
     await settle(page, 2600);
-    const s = await selectionState(page, target.id);
-    levels.push({ zoom, ...s });
+    // The marker plan is rebuilt after a camera jump and the source briefly
+    // holds nothing for the selected id; wait (bounded) for it to return, and
+    // record how long that took, instead of sampling one instant.
+    const jumped = Date.now();
+    let s = await selectionState(page, target.id);
+    while (s.inSource < 1 && Date.now() - jumped < 15000) {
+      await page.waitForTimeout(250);
+      s = await selectionState(page, target.id);
+    }
+    levels.push({ zoom, ...s, recoveredMs: Date.now() - jumped });
     await snap(page, `${tag}-sel-z${String(zoom).replace('.', '_')}`, run);
   }
   run.selectionLevels = levels;
@@ -440,24 +489,32 @@ async function selectionContinuity(page, viewport, tag, run) {
 async function themeSwitchKeepsState(page, tag, run, id, scheme) {
   run.step = 'theme-switch';
   const next = scheme === 'dark' ? 'light' : 'dark';
+  const appliedBefore = await page.evaluate(() => window.__styleApplied || 0);
   await page.emulateMedia({ colorScheme: next });
   // The product layers are re-installed once the new style has been applied.
-  // On the real GPU that is under 2.5 s; on SwiftShader (software GL, the
-  // worst case this suite also runs) the phone viewport needs up to ~17 s, so
-  // wait for the layers rather than for a fixed time. A run that never
-  // re-installs them still fails below.
+  // Wait for a style applied AFTER the switch to finish loading with the
+  // layers present: the previous style's layers are still there until then, so
+  // checking for the layer alone returns at once and reads the map mid-swap
+  // (where the style is momentarily undefined). Software GL can need ~17 s at
+  // a phone viewport, so the bound is generous; a run that never re-installs
+  // the layers still fails below.
   const swapStart = Date.now();
   await page
     .waitForFunction(
-      () => {
-        const map = window.__maps[window.__maps.length - 1];
-        return map && map.getLayer && map.getLayer('kubus_marker_layer');
+      (before) => {
+        try {
+          const map = window.__maps[window.__maps.length - 1];
+          return (window.__styleApplied || 0) > before && map.isStyleLoaded() && Boolean(map.getLayer('kubus_marker_layer'));
+        } catch {
+          return false;
+        }
       },
-      null,
-      { timeout: 45000 },
+      appliedBefore,
+      { timeout: 60000 },
     )
     .catch(() => {});
   run.themeSwitchReinstallMs = Date.now() - swapStart;
+  run.themeSwitchStyleApplications = (await page.evaluate(() => window.__styleApplied || 0)) - appliedBefore;
   await settle(page, 1500);
   const state = await page.evaluate(mapState);
   check(

@@ -151,7 +151,7 @@ class PasskeyProtectionService {
       final credential = await createWalletBackupPasskeyCredential(options);
       final prfSupported = prfOutputFromResponse(credential) != null;
       final verify = await api.verifyAccountPasskeyRegister(
-        responsePayload: credential,
+        responsePayload: withoutPrfOutput(credential),
         deviceLabel: deviceLabel,
         purpose: purpose,
         prfSupported: prfSupported,

@@ -18,8 +18,11 @@ import 'package:flutter_test/flutter_test.dart';
 /// before [BoxFit.cover] can crop it. [KubusCachedImage] must therefore drop
 /// one axis for any aspect-preserving fit so the decode keeps native aspect
 /// ratio and the fit does the cropping.
-({int? width, int? height}) _resizeDimsOf(WidgetTester tester) {
-  final image = tester.widget<Image>(find.byType(Image));
+({int? width, int? height}) _resizeDimsOf(
+  WidgetTester tester, {
+  int index = 0,
+}) {
+  final image = tester.widget<Image>(find.byType(Image).at(index));
   final provider = image.image;
   if (provider is ResizeImage) {
     return (width: provider.width, height: provider.height);
@@ -271,7 +274,9 @@ void main() {
                 cacheVersion: version,
                 semanticLabel: 'Artwork A',
                 placeholderBuilder: (_) => const ColoredBox(
-                    key: _placeholderKey, color: Color(0xFFFFFF00)),
+                  key: _placeholderKey,
+                  color: Color(0xFFFFFF00),
+                ),
               ),
             );
 
@@ -366,28 +371,22 @@ void main() {
               cacheVersion: version,
               semanticLabel: label,
               placeholderBuilder: (_) => const ColoredBox(
-                key: _placeholderKey,
-                color: Color(0xFFFFFF00),
-              ),
+                  key: _placeholderKey, color: Color(0xFFFFFF00)),
             ),
           );
 
-      await tester.pumpWidget(image(
-        'https://images.example.test/artwork-a.png',
-        'red',
-        'Artwork A',
-      ));
+      await tester.pumpWidget(
+        image('https://images.example.test/artwork-a.png', 'red', 'Artwork A'),
+      );
       await tester.runAsync(
         () => Future<void>.delayed(const Duration(milliseconds: 30)),
       );
       await tester.pump();
       _expectRed(await _centerPixel(tester));
 
-      await tester.pumpWidget(image(
-        'https://images.example.test/artwork-b.png',
-        'blue',
-        'Artwork B',
-      ));
+      await tester.pumpWidget(
+        image('https://images.example.test/artwork-b.png', 'blue', 'Artwork B'),
+      );
       await tester.runAsync(
         () => fixture.blueChunkSent.future.timeout(const Duration(seconds: 5)),
       );
@@ -396,7 +395,9 @@ void main() {
       expect(find.byKey(_placeholderKey), findsOneWidget);
       _expectYellow(await _centerPixel(tester));
       expect(
-          tester.widget<Image>(find.byType(Image)).semanticLabel, 'Artwork B');
+        tester.widget<Image>(find.byType(Image)).semanticLabel,
+        'Artwork B',
+      );
       expect(fixture.redRequests, 1);
       expect(fixture.blueRequests, 1);
 
@@ -437,9 +438,7 @@ void main() {
               imageUrl: imageUrl,
               cacheVersion: version,
               placeholderBuilder: (_) => const ColoredBox(
-                key: _placeholderKey,
-                color: Color(0xFFFFFF00),
-              ),
+                  key: _placeholderKey, color: Color(0xFFFFFF00)),
             ),
           );
 
@@ -510,6 +509,77 @@ void main() {
     expect(dims.width, isNull);
     expect(dims.height, 400);
   });
+
+  testWidgets(
+    'display-sized decodes use DPR pixels, cap large targets, and reuse keys',
+    (tester) async {
+      tester.view.devicePixelRatio = 3;
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      final png = await tester.runAsync(
+        () => _solidPng(const ui.Color(0xFFFF0000)),
+      );
+      final fixture = _ChunkedImageOverrides(red: png!, blue: png);
+      imageCache
+        ..clear()
+        ..clearLiveImages();
+      final previousClientProvider = debugNetworkImageHttpClientProvider;
+      debugNetworkImageHttpClientProvider =
+          () => fixture.createHttpClient(null);
+      const repeatedUrl = 'https://images.example.test/cover.png?v=red';
+
+      try {
+        Widget preview() => const SizedBox(
+              width: 44,
+              height: 44,
+              child: KubusCachedImage(
+                imageUrl: repeatedUrl,
+                fit: BoxFit.cover,
+                decodeToDisplaySize: true,
+              ),
+            );
+
+        await tester.pumpWidget(
+          MaterialApp(home: Row(children: [preview(), preview()])),
+        );
+
+        expect(_resizeDimsOf(tester, index: 0), (width: 132, height: null));
+        expect(_resizeDimsOf(tester, index: 1), (width: 132, height: null));
+
+        await tester.runAsync(
+          () => Future<void>.delayed(const Duration(milliseconds: 30)),
+        );
+        await tester.pump();
+        expect(
+          fixture.redRequests,
+          1,
+          reason: 'same URL and ResizeImage dimensions should share one load',
+        );
+
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Center(
+              child: SizedBox(
+                width: 600,
+                height: 400,
+                child: const KubusCachedImage(
+                  imageUrl: repeatedUrl,
+                  fit: BoxFit.cover,
+                  decodeToDisplaySize: true,
+                ),
+              ),
+            ),
+          ),
+        );
+        expect(_resizeDimsOf(tester), (width: 1440, height: null));
+      } finally {
+        debugNetworkImageHttpClientProvider = previousClientProvider;
+        imageCache
+          ..clear()
+          ..clearLiveImages();
+      }
+    },
+  );
 
   testWidgets('BoxFit.fill intentionally distorts and keeps both cache dims', (
     tester,

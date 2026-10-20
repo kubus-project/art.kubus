@@ -65,6 +65,52 @@ void main() {
     );
   });
 
+  test(
+      'a backend without the authorship contract keeps the base counters '
+      '(authorship metrics are requested separately)', () async {
+    final metricQueries = <String>[];
+    BackendApiService().setHttpClient(MockClient((request) async {
+      if (request.url.path.contains('/api/stats/user/')) {
+        final metrics = request.url.queryParameters['metrics'] ?? '';
+        metricQueries.add(metrics);
+        // Pre-0.8.4 backend: any unknown metric fails the whole snapshot.
+        if (metrics.contains('authoredArtworks') ||
+            metrics.contains('documentedArtworks')) {
+          return http.Response(
+            jsonEncode(<String, Object?>{
+              'success': false,
+              'error': 'Unsupported metric: authoredArtworks',
+            }),
+            400,
+            headers: const <String, String>{'content-type': 'application/json'},
+          );
+        }
+      }
+      return _mockProfilePackageResponse(request, wallet: wallet);
+    }));
+
+    final critical =
+        await ProfilePackageService.loadPublicProfileCriticalPackage(
+      wallet,
+      forceRefresh: true,
+    );
+
+    expect(critical, isNotNull);
+    expect(critical!.user.followersCount, 12);
+    expect(critical.publicStats['posts'], 3);
+    expect(critical.publicStats['publicStreetArtAdded'], 2);
+    expect(critical.publicStats.containsKey('authoredArtworks'), isFalse);
+    expect(critical.publicStats.containsKey('documentedArtworks'), isFalse);
+    expect(
+      metricQueries.where((m) => m.contains('followers')),
+      everyElement(isNot(contains('authoredArtworks'))),
+    );
+    expect(
+      metricQueries.where((m) => m.contains('authoredArtworks')),
+      isNotEmpty,
+    );
+  });
+
   test('canonical profile UUID loads wallet-scoped profile data', () async {
     const profileId = '22222222-2222-4222-8222-222222222222';
     final requests = <String>[];

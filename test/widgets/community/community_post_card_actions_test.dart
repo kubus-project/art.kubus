@@ -17,7 +17,13 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 
-CommunityPost _post({bool liked = false, bool saved = false}) => CommunityPost(
+CommunityPost _post({
+  bool liked = false,
+  bool saved = false,
+  bool artist = false,
+  bool institution = false,
+}) =>
+    CommunityPost(
       id: 'post-1',
       authorName: 'Ana Umetnica',
       authorUsername: 'ana',
@@ -28,6 +34,8 @@ CommunityPost _post({bool liked = false, bool saved = false}) => CommunityPost(
       shareCount: 1,
       isLiked: liked,
       isBookmarked: saved,
+      authorIsArtist: artist,
+      authorIsInstitution: institution,
     );
 
 Future<void> _pump(
@@ -85,6 +93,25 @@ class _ConfirmingLikeExecutor implements PendingActionExecutor {
 }
 
 void main() {
+  testWidgets('author roles are one badge on the avatar, never beside the name',
+      (tester) async {
+    await _pump(tester, _post(artist: true, institution: true));
+    expect(find.byKey(const ValueKey<String>('profile-avatar-role-badge')),
+        findsOneWidget);
+    final badge = tester.getRect(
+        find.byKey(const ValueKey<String>('profile-avatar-role-badge')));
+    final name = tester.getRect(find.text('Ana Umetnica'));
+    // Anchored to the avatar's corner, which is left of the author name.
+    expect(badge.right, lessThanOrEqualTo(name.left + 0.5));
+    expect(find.byIcon(Icons.brush_rounded), findsOneWidget);
+    expect(find.byIcon(Icons.account_balance_rounded), findsOneWidget);
+
+    await _pump(tester, _post());
+    expect(find.byKey(const ValueKey<String>('profile-avatar-role-badge')),
+        findsNothing);
+    expect(find.byIcon(Icons.brush_rounded), findsNothing);
+  });
+
   testWidgets('like and save are toggles; comment, repost and share are not',
       (tester) async {
     final handle = tester.ensureSemantics();

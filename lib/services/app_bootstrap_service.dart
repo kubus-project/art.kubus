@@ -15,12 +15,12 @@ import '../providers/events_provider.dart';
 import '../providers/exhibitions_provider.dart';
 import '../providers/institution_provider.dart';
 import '../providers/navigation_provider.dart';
+import '../providers/notification_provider.dart';
 import '../providers/marker_management_provider.dart';
 import '../providers/kubus_node_provider.dart';
 import '../providers/spatial_library_provider.dart';
 import '../providers/presence_provider.dart';
 import '../providers/promotion_provider.dart';
-import '../providers/profile_provider.dart';
 import '../providers/saved_items_provider.dart';
 import '../providers/stats_provider.dart';
 import '../providers/task_provider.dart';
@@ -49,7 +49,6 @@ class AppBootstrapService {
     // Providers
     final artworkProvider = context.read<ArtworkProvider>();
     final navigationProvider = context.read<NavigationProvider>();
-    final profileProvider = context.read<ProfileProvider>();
     final walletProvider = context.read<WalletProvider>();
     final web3Provider = context.read<Web3Provider>();
     final cacheProvider = context.read<CacheProvider>();
@@ -68,6 +67,7 @@ class AppBootstrapService {
     final availabilityOperatorProvider =
         context.read<AvailabilityOperatorProvider>();
     final promotionProvider = context.read<PromotionProvider>();
+    final notificationProvider = context.read<NotificationProvider>();
 
     await _runTask('wallet_init', walletProvider.initialize);
     await _runTask('app_mode', appModeProvider.initialize);
@@ -123,7 +123,8 @@ class AppBootstrapService {
       // previous run submitted but never got to verify, so the promotion is
       // never presented as unpaid to someone who already paid for it.
       _runTask('promotions', promotionProvider.loadConfig),
-      _runTask('artworks', () => artworkProvider.loadArtworks(refresh: true)),
+      // Reuse the Map/home provider cache rather than force a second page-1 query.
+      _runTask('artworks', () => artworkProvider.loadArtworks()),
       _runTask(
         'collectibles',
         () => collectiblesProvider.initialize(
@@ -138,6 +139,13 @@ class AppBootstrapService {
       ),
       _runTask('events', () => eventsProvider.initialize(refresh: true)),
     ];
+
+    // A restored session needs its notification state (authoritative unread
+    // summary, user-room socket) without waiting for Settings or a wallet
+    // reconnect; initialize() is a no-op without a session.
+    if (hasAuth) {
+      p1.add(_runTask('notifications', notificationProvider.initialize));
+    }
 
     if (AppConfig.isFeatureEnabled('collabInvites') && hasAuth) {
       p1.add(
@@ -175,13 +183,11 @@ class AppBootstrapService {
             ),
           ),
         );
-        p1.add(_runTask('wallet_refresh', () => walletProvider.refreshData()));
-        p1.add(
-          _runTask('profile_refresh', () async {
-            await profileProvider.loadProfile(resolvedWallet);
-            await profileProvider.refreshStats();
-          }),
-        );
+        // Do not globally refresh wallet balances/transactions or reload the
+        // profile a second time. Initializer already hydrates account/profile
+        // state; wallet and profile views own explicit foreground refreshes.
+        // In particular, refreshData() fans out into multiple Solana RPCs
+        // and off-chain metadata gateway requests on every app entry.
         p1.add(
           _runTask(
             'home_activity_stats_snapshot',

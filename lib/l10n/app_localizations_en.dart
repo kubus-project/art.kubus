@@ -250,6 +250,67 @@ class AppLocalizationsEn extends AppLocalizations {
   String get notificationAchievementFallback => 'Achievement';
 
   @override
+  String get notificationCommunityLikeTitle => 'New like';
+
+  @override
+  String notificationCommunityLikeBody(Object name) {
+    return '$name liked your post';
+  }
+
+  @override
+  String get notificationCommunityCommentTitle => 'New comment';
+
+  @override
+  String notificationCommunityCommentBody(Object name) {
+    return '$name commented on your post';
+  }
+
+  @override
+  String notificationCommunityCommentWithTextBody(Object name, Object comment) {
+    return '$name: $comment';
+  }
+
+  @override
+  String get notificationCommunityShareTitle => 'Post shared';
+
+  @override
+  String notificationCommunityShareBody(Object name) {
+    return '$name shared your post';
+  }
+
+  @override
+  String get notificationCommunityRepostTitle => 'New repost';
+
+  @override
+  String notificationCommunityRepostBody(Object name) {
+    return '$name reposted your post';
+  }
+
+  @override
+  String get notificationCommunityMentionTitle => 'You were mentioned';
+
+  @override
+  String notificationCommunityMentionBody(Object name) {
+    return '$name mentioned you in a post';
+  }
+
+  @override
+  String get notificationCommunityActivityTitle => 'New activity';
+
+  @override
+  String notificationCommunityActivityBody(Object name) {
+    return '$name interacted with your post';
+  }
+
+  @override
+  String get notificationFollowerTitle => 'New follower';
+
+  @override
+  String notificationFollowerBody(Object name) {
+    return '$name started following you';
+  }
+
+  @override
   String get notificationRecognitionRecordedTitle => 'Recognition recorded';
 
   @override
@@ -2975,6 +3036,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsBiometricFailedToast => 'Biometric authentication failed.';
 
   @override
+  String get biometricIdentityPromptReason => 'Authenticate to continue';
+
+  @override
   String get settingsExportRecoveryPhraseDialogTitle =>
       'Export recovery phrase';
 
@@ -3023,6 +3087,12 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get settingsPinSetFailedToast => 'Failed to set PIN';
+
+  @override
+  String get settingsPinInvalidFormatError => 'A PIN must be 4 to 12 digits';
+
+  @override
+  String get settingsPinClearFailedToast => 'Could not remove the PIN';
 
   @override
   String get settingsClearCacheDialogTitle => 'Clear cache';
@@ -5748,6 +5818,16 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get userProfileArtworksTitle => 'Artworks';
+
+  @override
+  String get profilePublicArtAddedTitle => 'Public art added';
+
+  @override
+  String get profilePublicArtAddedSubtitle =>
+      'Artworks this profile documented on the map. They are credited to their own artists.';
+
+  @override
+  String get profileAuthoredArtworksCountLabel => 'Authored artworks';
 
   @override
   String get userProfileCollectionsTitle => 'Collections';
@@ -10838,6 +10918,10 @@ class AppLocalizationsEn extends AppLocalizations {
       'Sign in first; wallet access is only needed for wallet-linked actions.';
 
   @override
+  String get communityPostingNeedsWalletToast =>
+      'Publishing community posts needs a connected wallet. You can connect one in Wallet.';
+
+  @override
   String get communityUnableToAuthenticateToast =>
       'Unable to authenticate. Please try again.';
 
@@ -12011,6 +12095,374 @@ class AppLocalizationsEn extends AppLocalizations {
       'Browser prompt cancelled or timed out.';
 
   @override
+  String get securityHubStatusSecured => 'Secured';
+
+  @override
+  String get securityHubStatusRecommended => 'Recommended';
+
+  @override
+  String get securityHubStatusFailed => 'Failed';
+
+  @override
+  String get securityHubStatusDestructive => 'Destructive';
+
+  @override
+  String get securityHubStatusActive => 'Active';
+
+  @override
+  String get securityHubStatusMissing => 'Missing';
+
+  @override
+  String get securityHubStatusLinked => 'Linked';
+
+  @override
+  String get securityHubStatusChecked => 'Checked';
+
+  @override
+  String get securityHubStatusReady => 'Ready';
+
+  @override
+  String get securityHubStatusReadOnly => 'Read-only';
+
+  @override
+  String get securityHubBackUpOffline => 'Back up offline';
+
+  @override
+  String get securityHubEnableBiometrics => 'Enable biometrics';
+
+  @override
+  String get securityHubVerifyBackup => 'Verify';
+
+  @override
+  String get securityHubSavePin => 'Save PIN';
+
+  @override
+  String get securityHubSetPin => 'Set PIN';
+
+  @override
+  String get securityHubSetLocalPin => 'Set local PIN';
+
+  @override
+  String get securityHubBiometricUnlock => 'Biometric unlock';
+
+  @override
+  String get securityHubBiometricUnlockEnabled => 'Biometric unlock enabled.';
+
+  @override
+  String get securityHubBiometricsUnavailable => 'Biometrics unavailable.';
+
+  @override
+  String get securityHubBiometricApprovalFailed => 'Biometric approval failed.';
+
+  @override
+  String get securityHubAuthenticationFailed => 'Authentication failed.';
+
+  @override
+  String get securityHubActionFailed => 'Action failed. Try again.';
+
+  @override
+  String get securityHubWalletAccess => 'Wallet access';
+
+  @override
+  String get securityHubWalletAccessState => 'Wallet access state';
+
+  @override
+  String get securityHubLocalSigner => 'Local signer';
+
+  @override
+  String get securityHubLocalSignerReady => 'Local signer ready';
+
+  @override
+  String get securityHubSecurityKey => 'Security key';
+
+  @override
+  String get securityHubSetUpBackupFirst => 'Set up backup first';
+
+  @override
+  String get securityHubUpdateBackup => 'Update backup';
+
+  @override
+  String get securityHubSaveEncryptedBackup => 'Save encrypted backup';
+
+  @override
+  String get securityHubRestoreAccess => 'Restore access';
+
+  @override
+  String get securityHubAddAccountPasskey => 'Add account passkey';
+
+  @override
+  String get securityHubAccountPasskeyAdded => 'Account sign-in passkey added.';
+
+  @override
+  String get securityHubAccountPasskeyRemoved =>
+      'Account sign-in passkey removed.';
+
+  @override
+  String get securityHubRemoveAccountPasskeyTitle =>
+      'Remove account sign-in passkey?';
+
+  @override
+  String get securityHubSecureThisDevice => 'Secure this device';
+
+  @override
+  String get securityHubConfirmRequired => 'Confirm required';
+
+  @override
+  String get securityHubNever => 'Never';
+
+  @override
+  String get securityHubLastUsedNever => 'Last used never';
+
+  @override
+  String get securityHubLinkedDevice => 'Linked device';
+
+  @override
+  String get securityHubRecoveryAvailable => 'Recovery available';
+
+  @override
+  String get securityHubAccountOnly => 'Account only';
+
+  @override
+  String get securityHubCurrentAccountWallet => 'Current account wallet';
+
+  @override
+  String get securityHubNoWallet => 'No wallet';
+
+  @override
+  String get securityHubLocalSecuritySettingsUnavailable =>
+      'Local security settings are temporarily unavailable.';
+
+  @override
+  String get securityHubWalletSecurityStatusRefreshFailed =>
+      'Wallet security status could not be refreshed.';
+
+  @override
+  String get securityHubEncryptedBackupStatusRefreshFailed =>
+      'Encrypted wallet backup status could not be refreshed.';
+
+  @override
+  String get securityHubAccountPasskeyStatusUnavailable =>
+      'Account passkey status is temporarily unavailable.';
+
+  @override
+  String get securityHubWalletRecoveryPasskeyDefaultName =>
+      'Wallet recovery passkey';
+
+  @override
+  String get securityHubWalletRecoveryPasskeyDescription =>
+      'Used to restore local wallet access from encrypted backup.';
+
+  @override
+  String get securityHubAccountSignInDescription =>
+      'Used to sign into art.kubus without email, Google, or wallet signature.';
+
+  @override
+  String get securityHubPinDescription =>
+      'Protects sensitive account and wallet actions on this device.';
+
+  @override
+  String get securityHubCreateBackupDescription =>
+      'Choose a recovery password. It decrypts the wallet backup on a new device.';
+
+  @override
+  String get securityHubVerifyBackupDescription =>
+      'Enter the recovery password to verify this backup can be decrypted locally.';
+
+  @override
+  String get securityHubBiometricUnlockPromptDescription =>
+      'Enable biometric unlock on this device, or skip it for now.';
+
+  @override
+  String get securityHubEncryptedBackupDescription =>
+      'Create a password-protected encrypted backup for recovery.';
+
+  @override
+  String get securityHubRecoveryPhraseOfflineDescription =>
+      'Store the recovery phrase offline before you rely on this wallet.';
+
+  @override
+  String get securityHubDeleteBackupRowDescription =>
+      'Removes the encrypted server backup for the current wallet.';
+
+  @override
+  String get securityHubDeleteBackupDialogBody =>
+      'This removes the encrypted server backup for the current wallet. Keep the recovery phrase stored safely offline.';
+
+  @override
+  String get securityHubRemoveWalletRecoveryPasskeyBody =>
+      'This device passkey will no longer unlock the encrypted wallet backup.';
+
+  @override
+  String get securityHubRemoveRecoveryPasskeyAction =>
+      'Remove recovery passkey';
+
+  @override
+  String get securityHubRemoveAccountPasskeyBody =>
+      'This passkey will no longer sign into art.kubus on this account.';
+
+  @override
+  String get securityHubRestoreSigningBeforeTransfers =>
+      'Restore signing before transfers';
+
+  @override
+  String get securityHubEncryptedBackupRestoreDescription =>
+      'Encrypted backup can restore local wallet access.';
+
+  @override
+  String get securityHubEncryptedBackupAvailableDescription =>
+      'Encrypted wallet backup is available for recovery.';
+
+  @override
+  String get securityHubEncryptedBackupDisabledDescription =>
+      'Encrypted wallet backup is disabled in this build.';
+
+  @override
+  String get securityHubSetUpLocalUnlockDescription =>
+      'Set up local unlock before sensitive wallet and account actions.';
+
+  @override
+  String get securityHubSetUpLocalUnlockStepsDescription =>
+      'Set up local unlock, passkeys, and wallet recovery before you continue.';
+
+  @override
+  String get securityHubSummaryDescription =>
+      'Manage account sign-in, device unlock, wallet access, encrypted backups, and recovery credentials in one place.';
+
+  @override
+  String get securityHubLocalWalletCanSign => 'Local wallet can sign';
+
+  @override
+  String get securityHubLocalWalletSignerAvailable =>
+      'Local wallet signer is available on this device.';
+
+  @override
+  String get securityHubNoLocalSignerAvailable =>
+      'No local signer is available on this device.';
+
+  @override
+  String get securityHubNoExternalSignerConnected =>
+      'No external wallet signer is connected.';
+
+  @override
+  String get securityHubNoRecoveryPhraseActionRequired =>
+      'No recovery phrase action is currently required.';
+
+  @override
+  String get securityHubNoWalletConnectedOnDevice =>
+      'No wallet is connected on this device.';
+
+  @override
+  String get securityHubNoWalletRecoveryPasskeys =>
+      'No wallet recovery passkeys are registered.';
+
+  @override
+  String get securityHubPinStaysOnDevice =>
+      'PIN stays on this device and protects sensitive wallet actions.';
+
+  @override
+  String get securityHubPrfSupported => 'PRF supported';
+
+  @override
+  String get securityHubPrfNotSupported => 'PRF not supported';
+
+  @override
+  String get securityHubRecoveryMaterialEncrypted =>
+      'Recovery material encrypted';
+
+  @override
+  String get securityHubNoEncryptedRecoveryMaterial =>
+      'No encrypted recovery material';
+
+  @override
+  String get securityHubSignInRecoverySeparate =>
+      'Sign-in and wallet recovery are managed separately';
+
+  @override
+  String get securityHubPrfUnsupportedBrowser =>
+      'This browser does not expose wallet-recovery PRF support.';
+
+  @override
+  String get securityHubThisDeviceCanSign =>
+      'This device can sign wallet actions.';
+
+  @override
+  String get securityHubWalletAccessReadOnlyOrNotConnected =>
+      'Wallet access is read-only or not connected.';
+
+  @override
+  String securityHubWalletRecoveryPasskeyAdded(Object passkeyName) {
+    return 'Wallet recovery passkey \"$passkeyName\" added.';
+  }
+
+  @override
+  String securityHubCreatedOn(Object date) {
+    return 'Created $date';
+  }
+
+  @override
+  String securityHubCreatedAndLastUsed(
+      Object createdDate, Object lastUsedDate) {
+    return 'Created $createdDate. Last used $lastUsedDate.';
+  }
+
+  @override
+  String securityHubLastUsedOn(Object date) {
+    return 'Last used $date';
+  }
+
+  @override
+  String securityHubLastVerifiedOn(Object date) {
+    return 'Last verified $date';
+  }
+
+  @override
+  String securityHubPasskeyStatusSummary(
+      Object lastActivity, Object prfLabel, Object recoveryMaterial) {
+    return '$lastActivity. $prfLabel. $recoveryMaterial.';
+  }
+
+  @override
+  String securityHubPasskeyCounts(int accountCount, int recoveryCount) {
+    return '$accountCount account / $recoveryCount recovery';
+  }
+
+  @override
+  String securityHubRegisteredCount(int count) {
+    return '$count registered';
+  }
+
+  @override
+  String securityHubPasskeyPurpose(Object purpose) {
+    return 'Purpose: $purpose';
+  }
+
+  @override
+  String securityHubPasskeyPurposePrfCapable(Object purpose) {
+    return 'Purpose: $purpose - PRF capable';
+  }
+
+  @override
+  String securityHubExternalWalletHelper(Object walletName) {
+    return 'External wallet: $walletName';
+  }
+
+  @override
+  String get securityHubExternalWalletConnected => 'External wallet connected.';
+
+  @override
+  String get securityHubExternalSignerConnected => 'External signer connected';
+
+  @override
+  String get securityHubConnectOrRestoreWallet => 'Connect or restore a wallet';
+
+  @override
+  String get securityHubDeleteBackupAction => 'Delete backup';
+
+  @override
+  String get securityHubBiometricUnlockDescription =>
+      'Uses this device biometric prompt after a local PIN exists.';
+
+  @override
   String get walletRecoveryFallbackTitle => 'Restore wallet access';
 
   @override
@@ -12640,6 +13092,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get desktopShellNavConnect => 'Connect';
 
   @override
+  String get desktopShellNavMessages => 'Messages';
+
+  @override
   String get desktopShellNavCreate => 'Create';
 
   @override
@@ -12716,6 +13171,34 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get mobileNavSemanticLabel => 'Main navigation';
+
+  @override
+  String mobileNavCommunityUnreadSemantics(int count) {
+    return '$count unread messages and notifications';
+  }
+
+  @override
+  String desktopMessagesUnreadSemantics(int count) {
+    return '$count unread messages';
+  }
+
+  @override
+  String notificationDirectMessageTitle(String senderName) {
+    return 'New message from $senderName';
+  }
+
+  @override
+  String get notificationDirectMessageFallbackSender => 'Someone';
+
+  @override
+  String get notificationDirectMessageEmptyBody => 'You have a new message.';
+
+  @override
+  String get notificationMessagesChannelName => 'Messages';
+
+  @override
+  String get messagesNotificationConversationUnavailable =>
+      'This conversation is no longer available.';
 
   @override
   String get desktopNavWalletEntry => 'Wallet';
@@ -13819,7 +14302,8 @@ class AppLocalizationsEn extends AppLocalizations {
       'Followers / following';
 
   @override
-  String get profilePerformancePublicStreetArtAddedTitle => 'Added Public Art';
+  String get profilePerformancePublicStreetArtAddedTitle =>
+      'Public art documented';
 
   @override
   String get profileMenuSavedItemsTitle => 'Saved items';

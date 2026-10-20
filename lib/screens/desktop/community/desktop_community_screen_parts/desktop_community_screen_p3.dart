@@ -738,11 +738,6 @@ extension _DesktopCommunityScreenStatePart3 on _DesktopCommunityScreenState {
                   subtitleStyle: KubusTextStyles.navMetaLabel.copyWith(
                     color: scheme.onSurface.withValues(alpha: 0.62),
                   ),
-                  titleSuffix: CommunityAuthorRoleBadges(
-                    post: displayPost,
-                    fontSize: 8,
-                    iconOnly: true,
-                  ),
                 ),
               ),
             ],
@@ -1088,14 +1083,9 @@ extension _DesktopCommunityScreenStatePart3 on _DesktopCommunityScreenState {
 
                       return ListTile(
                         onTap: () => openProfileIdentity(context, identity),
-                        leading: AvatarWidget(
-                          wallet: identity.navigationIdentifier ??
-                              identity.username ??
-                              identity.walletSeed,
-                          fetchMissingAvatar: identity.canOpenProfile,
-                          avatarUrl: identity.avatarUrl,
+                        leading: KubusIdentityAvatar.fromIdentity(
+                          identity,
                           radius: 20,
-                          enableProfileNavigation: false,
                           allowFabricatedFallback: false,
                         ),
                         title: Text(

@@ -98,6 +98,9 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
   bool _artistDataLoaded = false;
   int _publicStreetArtAddedCount = 0;
   List<Map<String, dynamic>> _artistArtworks = [];
+  List<Map<String, dynamic>> _documentedArtworks = const [];
+  int? _authoredArtworksTotal;
+  int? _authoredArtworksCounter;
   List<Map<String, dynamic>> _artistCollections = [];
   List<Map<String, dynamic>> _artistEvents = [];
   String? _failedCoverImageUrl;
@@ -166,8 +169,12 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
       _posts = _profileController.posts;
       _postsLoading = _profileController.postsLoading;
       _postsError = _profileController.postsError;
-      _publicStreetArtAddedCount = _profileController.publicStreetArtAddedCount;
+      _publicStreetArtAddedCount = _profileController.publicArtDocumentedCount;
       _artistArtworks = _profileController.artistArtworks;
+      _documentedArtworks = _profileController.documentedArtworks;
+      _authoredArtworksTotal = _profileController.authoredArtworksTotal;
+      _authoredArtworksCounter =
+          _profileController.package?.publicStats['authoredArtworks'];
       _artistCollections = _profileController.artistCollections;
       _artistEvents = _profileController.artistEvents;
       _artistDataLoaded = _profileController.artistDataLoaded;
@@ -242,6 +249,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     if (!authenticated || !mounted) return;
     final messenger = ScaffoldMessenger.of(context);
     final theme = Theme.of(context);
+    final requestedIsFollowing = !profile.isFollowing;
 
     setState(() => _isFollowMutationInFlight = true);
 
@@ -259,20 +267,31 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
       );
       if (!mounted) return;
 
-      final message = e.toString().contains('401')
-          ? l10n.userProfileSignInToFollowToast
-          : l10n.userProfileFollowUpdateFailedToast;
-
-      messenger.showKubusSnackBar(
-        SnackBar(
-          content: Text(message),
-          duration: const Duration(seconds: 3),
-          backgroundColor: theme.colorScheme.error,
-        ),
-      );
-
-      await _refreshFollowStateFromServer();
-      await _loadUserStats(skipFollowersOverwrite: true, forceRefresh: true);
+      final confirmedState = await _reconcileUncertainFollow(profile);
+      if (!mounted) return;
+      if (confirmedState == requestedIsFollowing) {
+        messenger.showKubusSnackBar(
+          SnackBar(
+            content: Text(requestedIsFollowing
+                ? l10n.userProfileNowFollowingToast(profile.name)
+                : l10n.userProfileUnfollowedToast(profile.name)),
+            duration: const Duration(seconds: 2),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+        _triggerCommunityRefresh();
+      } else {
+        final message = e.toString().contains('401')
+            ? l10n.userProfileSignInToFollowToast
+            : l10n.userProfileFollowUpdateFailedToast;
+        messenger.showKubusSnackBar(
+          SnackBar(
+            content: Text(message),
+            duration: const Duration(seconds: 3),
+            backgroundColor: theme.colorScheme.error,
+          ),
+        );
+      }
       if (mounted) {
         setState(() => _isFollowMutationInFlight = false);
       }
@@ -280,6 +299,37 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     }
 
     if (!mounted) return;
+
+    if (mutation.pending) {
+      final pendingTarget =
+          mutation.requestedIsFollowing ?? requestedIsFollowing;
+      final confirmedState = await _reconcileUncertainFollow(profile);
+      if (!mounted) return;
+      if (confirmedState == pendingTarget) {
+        messenger.showKubusSnackBar(
+          SnackBar(
+            content: Text(pendingTarget
+                ? l10n.userProfileNowFollowingToast(profile.name)
+                : l10n.userProfileUnfollowedToast(profile.name)),
+            duration: const Duration(seconds: 2),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+        _triggerCommunityRefresh();
+      } else {
+        messenger.showKubusSnackBar(
+          SnackBar(
+            content: Text(l10n.userProfileFollowUpdateFailedToast),
+            duration: const Duration(seconds: 3),
+            backgroundColor: theme.colorScheme.error,
+          ),
+        );
+      }
+      if (mounted) {
+        setState(() => _isFollowMutationInFlight = false);
+      }
+      return;
+    }
 
     final currentUser = user ?? profile;
 
@@ -309,10 +359,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
       ),
     );
 
-    try {
-      context.read<AppRefreshProvider>().triggerCommunity();
-      context.read<AppRefreshProvider>().triggerProfile();
-    } catch (_) {}
+    _triggerCommunityRefresh();
 
     await _loadUserStats(forceRefresh: true);
     if (!mounted) return;
@@ -335,6 +382,24 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
 
   Future<void> _refreshFollowStateFromServer() async {
     await _profileController.refreshFollowStateFromServer();
+  }
+
+  Future<bool?> _reconcileUncertainFollow(User profile) async {
+    final state = await UserService.fetchAuthoritativeFollowState(profile.id);
+    if (state != null) {
+      _profileController.patchUser((latest) => latest.copyWith(
+            isFollowing: state,
+          ));
+    }
+    await _loadUserStats(skipFollowersOverwrite: true, forceRefresh: true);
+    return state;
+  }
+
+  void _triggerCommunityRefresh() {
+    try {
+      context.read<AppRefreshProvider>().triggerCommunity();
+      context.read<AppRefreshProvider>().triggerProfile();
+    } catch (_) {}
   }
 
   @override
@@ -611,14 +676,14 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     );
   }
 
-  String _profileRoleLabel(
+  String? _profileRoleLabel(
     AppLocalizations l10n, {
     required bool isArtist,
     required bool isInstitution,
   }) {
     if (isInstitution) return l10n.settingsRoleInstitutionTitle;
     if (isArtist) return l10n.settingsRoleArtistTitle;
-    return l10n.userProfileTitle;
+    return null;
   }
 
   /// Practice before paperwork: the biography carries the weight, the practice
@@ -692,7 +757,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
         ? l10n.settingsRoleInstitutionTitle
         : isArtist
             ? l10n.settingsRoleArtistTitle
-            : l10n.userProfileTitle;
+            : null;
     final titleStyle = KubusTextStyles.responsiveTitleStyle(
       context,
       KubusTypography.content(fontSize: 40, fontWeight: FontWeight.w700),
@@ -703,13 +768,15 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const SizedBox(height: KubusSpacing.lg),
-        Text(
-          roleLabel.toUpperCase(),
-          style: KubusTextStyles.structuralLabel.copyWith(
-            color: roles.foregroundMuted,
+        if (roleLabel != null) ...[
+          Text(
+            roleLabel.toUpperCase(),
+            style: KubusTextStyles.structuralLabel.copyWith(
+              color: roles.foregroundMuted,
+            ),
           ),
-        ),
-        const SizedBox(height: KubusSpacing.sm),
+          const SizedBox(height: KubusSpacing.sm),
+        ],
         ProfileIdentityBlock(
           displayName: profile.name,
           handle: profile.username,
@@ -945,10 +1012,13 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
   }
 
   Widget _buildStatsRow(AppLocalizations l10n) {
-    final artworksCount = Provider.of<ArtworkProvider>(
+    final localArtworksCount = Provider.of<ArtworkProvider>(
       context,
       listen: true,
     ).artworksForWallet(user!.id).length;
+    final artworksCount = _authoredArtworksTotal ??
+        _authoredArtworksCounter ??
+        localArtworksCount;
 
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -1222,6 +1292,18 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
           emptyIcon: Icons.image_outlined,
           builder: _buildArtworkCard,
         ),
+        if (_documentedArtworks.isNotEmpty) ...[
+          const SizedBox(height: KubusSpacing.lg - KubusSpacing.xs),
+          _buildShowcaseSection(
+            l10n: l10n,
+            title: l10n.profilePublicArtAddedTitle,
+            subtitle: l10n.profilePublicArtAddedSubtitle,
+            items: _documentedArtworks,
+            emptyLabel: l10n.profilePublicArtAddedSubtitle,
+            emptyIcon: Icons.image_outlined,
+            builder: _buildArtworkCard,
+          ),
+        ],
         const SizedBox(height: KubusSpacing.lg - KubusSpacing.xs),
         _buildShowcaseSection(
           l10n: l10n,

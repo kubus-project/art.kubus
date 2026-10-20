@@ -16,6 +16,8 @@ import '../../models/conversation.dart';
 import '../../core/conversation_navigator.dart';
 import '../../widgets/avatar_widget.dart';
 import '../../widgets/inline_loading.dart';
+import '../../widgets/messaging/message_grouping.dart';
+import '../../widgets/activity_time_format.dart';
 import '../../widgets/empty_state_card.dart';
 import '../../widgets/user_activity_status_line.dart';
 import '../../widgets/app_mode_unavailable_state.dart';
@@ -30,9 +32,12 @@ import '../../utils/wallet_utils.dart';
 import '../../utils/media_url_resolver.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
 import '../../widgets/glass_components.dart';
+import '../../widgets/identity/kubus_identity_avatar.dart';
 
 class MessagesScreen extends StatefulWidget {
-  const MessagesScreen({super.key});
+  const MessagesScreen({super.key, this.initialConversationId});
+
+  final String? initialConversationId;
 
   @override
   State<MessagesScreen> createState() => _MessagesScreenState();
@@ -45,6 +50,8 @@ class _MessagesScreenState extends State<MessagesScreen> {
   final Map<String, String?> _conversationNames = {};
   final Map<String, List<String>> _convToWalletList = {};
   final Set<String> _pendingMemberLoads = {};
+  String? _lastOpenedInitialConversationId;
+  int _initialConversationIntentVersion = 0;
 
   @override
   void initState() {
@@ -52,11 +59,16 @@ class _MessagesScreenState extends State<MessagesScreen> {
     _chatProvider = Provider.of<ChatProvider>(context, listen: false);
     _cacheProvider = Provider.of<CacheProvider>(context, listen: false);
     _chatProvider.addListener(_onChatProviderChanged);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      unawaited(_openInitialConversation(widget.initialConversationId));
+    });
     // Persisted user cache initialization moved to profile/wallet flows; MessagesScreen reads cache if available.
     // However, to avoid flicker we ensure that the persisted cache is initialized here as soon as we detect a persisted wallet
     // and the in-memory cache is empty for that wallet (defensive initialization only).
-    final profileProvider =
-        Provider.of<ProfileProvider>(context, listen: false);
+    final profileProvider = Provider.of<ProfileProvider>(
+      context,
+      listen: false,
+    );
     Future(() async {
       try {
         final wallet = profileProvider.currentUser?.walletAddress ??
@@ -80,8 +92,9 @@ class _MessagesScreenState extends State<MessagesScreen> {
       final allConvs = _chatProvider.conversations;
       for (final c in allConvs) {
         try {
-          final pre =
-              _chatProvider.getPreloadedProfileMapsForConversation(c.id);
+          final pre = _chatProvider.getPreloadedProfileMapsForConversation(
+            c.id,
+          );
           final avatars = (pre['avatars'] as Map<String, String?>?) ?? {};
           final names = (pre['names'] as Map<String, String?>?) ?? {};
           final membersList = (pre['members'] as List<dynamic>? ?? const []);
@@ -93,8 +106,11 @@ class _MessagesScreenState extends State<MessagesScreen> {
             final firstKey =
                 avatars.keys.isNotEmpty ? avatars.keys.first : null;
             if (firstKey != null) {
-              _storeConversationAvatar(c.id, avatars[firstKey],
-                  walletHint: firstKey);
+              _storeConversationAvatar(
+                c.id,
+                avatars[firstKey],
+                walletHint: firstKey,
+              );
             }
           }
           if (names.isNotEmpty) {
@@ -114,8 +130,11 @@ class _MessagesScreenState extends State<MessagesScreen> {
                 // Prefer an explicit profile image from cache; do not fabricate a placeholder here.
                 if (cachedUser.profileImageUrl != null &&
                     cachedUser.profileImageUrl!.isNotEmpty) {
-                  _storeConversationAvatar(c.id, cachedUser.profileImageUrl,
-                      walletHint: cachedUser.id);
+                  _storeConversationAvatar(
+                    c.id,
+                    cachedUser.profileImageUrl,
+                    walletHint: cachedUser.id,
+                  );
                 }
                 _conversationNames[c.id] = cachedUser.name;
               }
@@ -134,8 +153,9 @@ class _MessagesScreenState extends State<MessagesScreen> {
         // the UI shows avatars and names immediately on first build, avoiding flicker.
         for (final c in allConvs) {
           try {
-            final pre =
-                _chatProvider.getPreloadedProfileMapsForConversation(c.id);
+            final pre = _chatProvider.getPreloadedProfileMapsForConversation(
+              c.id,
+            );
             final avatars = (pre['avatars'] as Map<String, String?>?) ?? {};
             final names = (pre['names'] as Map<String, String?>?) ?? {};
             final membersList = (pre['members'] as List<dynamic>? ?? const []);
@@ -147,8 +167,11 @@ class _MessagesScreenState extends State<MessagesScreen> {
               final firstKey =
                   avatars.keys.isNotEmpty ? avatars.keys.first : null;
               if (firstKey != null) {
-                _storeConversationAvatar(c.id, avatars[firstKey],
-                    walletHint: firstKey);
+                _storeConversationAvatar(
+                  c.id,
+                  avatars[firstKey],
+                  walletHint: firstKey,
+                );
               }
             }
             if (names.isNotEmpty) {
@@ -186,6 +209,63 @@ class _MessagesScreenState extends State<MessagesScreen> {
     } catch (_) {}
   }
 
+  @override
+  void didUpdateWidget(covariant MessagesScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.initialConversationId != widget.initialConversationId) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        unawaited(_openInitialConversation(widget.initialConversationId));
+      });
+    }
+  }
+
+  Future<void> _openInitialConversation(String? rawId) async {
+    final intentVersion = ++_initialConversationIntentVersion;
+    final conversationId = (rawId ?? '').trim();
+    if (conversationId.isEmpty ||
+        conversationId.length > 128 ||
+        conversationId == _lastOpenedInitialConversationId) {
+      return;
+    }
+    _lastOpenedInitialConversationId = conversationId;
+
+    var conversation = _findConversation(conversationId);
+    if (conversation == null) {
+      await _chatProvider.refreshConversations();
+      if (!mounted || intentVersion != _initialConversationIntentVersion) {
+        return;
+      }
+      conversation = _findConversation(conversationId);
+    }
+    if (!mounted || intentVersion != _initialConversationIntentVersion) {
+      return;
+    }
+    if (conversation == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            AppLocalizations.of(
+              context,
+            )!
+                .messagesNotificationConversationUnavailable,
+          ),
+        ),
+      );
+      return;
+    }
+    await ConversationNavigator.openConversationWithPreload(
+      context,
+      conversation,
+    );
+  }
+
+  Conversation? _findConversation(String conversationId) {
+    for (final conversation in _chatProvider.conversations) {
+      if (conversation.id == conversationId) return conversation;
+    }
+    return null;
+  }
+
   void _onChatProviderChanged() {
     try {
       final allConvs = _chatProvider.conversations;
@@ -193,8 +273,9 @@ class _MessagesScreenState extends State<MessagesScreen> {
       try {
         for (final c in allConvs) {
           try {
-            final pre =
-                _chatProvider.getPreloadedProfileMapsForConversation(c.id);
+            final pre = _chatProvider.getPreloadedProfileMapsForConversation(
+              c.id,
+            );
             final avatars = (pre['avatars'] as Map<String, String?>?) ?? {};
             final names = (pre['names'] as Map<String, String?>?) ?? {};
             final membersList = (pre['members'] as List<dynamic>? ?? const []);
@@ -205,8 +286,11 @@ class _MessagesScreenState extends State<MessagesScreen> {
               final firstKey =
                   avatars.keys.isNotEmpty ? avatars.keys.first : null;
               if (firstKey != null) {
-                _storeConversationAvatar(c.id, avatars[firstKey],
-                    walletHint: firstKey);
+                _storeConversationAvatar(
+                  c.id,
+                  avatars[firstKey],
+                  walletHint: firstKey,
+                );
               }
             }
             if (names.isNotEmpty) {
@@ -221,8 +305,11 @@ class _MessagesScreenState extends State<MessagesScreen> {
                 final cached = UserService.getCachedUser(firstWallet) ??
                     _chatProvider.getCachedUser(firstWallet);
                 if (cached != null) {
-                  _storeConversationAvatar(c.id, cached.profileImageUrl,
-                      walletHint: cached.id);
+                  _storeConversationAvatar(
+                    c.id,
+                    cached.profileImageUrl,
+                    walletHint: cached.id,
+                  );
                   _conversationNames[c.id] = cached.name;
                 }
               }
@@ -251,8 +338,9 @@ class _MessagesScreenState extends State<MessagesScreen> {
       final allConvs = _chatProvider.conversations;
       for (final c in allConvs) {
         try {
-          final pre =
-              _chatProvider.getPreloadedProfileMapsForConversation(c.id);
+          final pre = _chatProvider.getPreloadedProfileMapsForConversation(
+            c.id,
+          );
           final avatars = (pre['avatars'] as Map<String, String?>?) ?? {};
           final names = (pre['names'] as Map<String, String?>?) ?? {};
           final membersList = (pre['members'] as List<dynamic>? ?? const []);
@@ -263,8 +351,11 @@ class _MessagesScreenState extends State<MessagesScreen> {
             final firstKey =
                 avatars.keys.isNotEmpty ? avatars.keys.first : null;
             if (firstKey != null) {
-              _storeConversationAvatar(c.id, avatars[firstKey],
-                  walletHint: firstKey);
+              _storeConversationAvatar(
+                c.id,
+                avatars[firstKey],
+                walletHint: firstKey,
+              );
             }
           }
           if (names.isNotEmpty) {
@@ -279,8 +370,11 @@ class _MessagesScreenState extends State<MessagesScreen> {
               final cachedUser = UserService.getCachedUser(firstWallet) ??
                   _chatProvider.getCachedUser(firstWallet);
               if (cachedUser != null) {
-                _storeConversationAvatar(c.id, cachedUser.profileImageUrl,
-                    walletHint: cachedUser.id);
+                _storeConversationAvatar(
+                  c.id,
+                  cachedUser.profileImageUrl,
+                  walletHint: cachedUser.id,
+                );
                 _conversationNames[c.id] = cachedUser.name;
               }
             }
@@ -292,7 +386,9 @@ class _MessagesScreenState extends State<MessagesScreen> {
   }
 
   void _setConversationMembers(
-      String conversationId, Iterable<dynamic> members) {
+    String conversationId,
+    Iterable<dynamic> members,
+  ) {
     final normalized = _normalizeWalletEntries(members);
     if (normalized.isEmpty) return;
     _convToWalletList[conversationId] = normalized;
@@ -333,7 +429,9 @@ class _MessagesScreenState extends State<MessagesScreen> {
     final allowed = await ensureCommunityComposeAccess(
       context,
       intent: CommunityComposeIntent.startChat,
-      actionLabel: AppLocalizations.of(context)!
+      actionLabel: AppLocalizations.of(
+        context,
+      )!
           .messagesEmptyStartChatAction
           .toLowerCase(),
       sourceScreen: 'messages_screen',
@@ -407,8 +505,11 @@ class _MessagesScreenState extends State<MessagesScreen> {
     return MediaUrlResolver.resolve(raw);
   }
 
-  bool _storeConversationAvatar(String conversationId, String? avatarUrl,
-      {String? walletHint}) {
+  bool _storeConversationAvatar(
+    String conversationId,
+    String? avatarUrl, {
+    String? walletHint,
+  }) {
     final normalized = _normalizeAvatarUrl(avatarUrl);
     if (normalized == null || normalized.isEmpty) {
       _conversationAvatars.remove(conversationId);
@@ -437,15 +538,17 @@ class _MessagesScreenState extends State<MessagesScreen> {
     return false;
   }
 
-  Future<void> _loadConversationAvatars(
-      {List<Conversation>? targetConvs}) async {
+  Future<void> _loadConversationAvatars({
+    List<Conversation>? targetConvs,
+  }) async {
     try {
       final convs = targetConvs ?? _chatProvider.conversations;
       if (convs.isEmpty) return;
       // Determine wallets to fetch (for one-to-one conversations use other member
       final profile = Provider.of<ProfileProvider>(context, listen: false);
-      final myWallet =
-          WalletUtils.normalize(profile.currentUser?.walletAddress);
+      final myWallet = WalletUtils.normalize(
+        profile.currentUser?.walletAddress,
+      );
       final Map<String, List<String>> convToWallet = {};
       final Set<String> wallets = {};
       final Set<String> walletCanonicals = {};
@@ -454,22 +557,26 @@ class _MessagesScreenState extends State<MessagesScreen> {
       final toFetch = convs.take(25).toList();
       for (final c in toFetch) {
         // fetch members for this conversation
-        futures.add(_chatProvider.fetchMembers(c.id).then((mbrs) {
-          final others = (mbrs as List)
-              .map((entry) => _resolveMemberWallet(entry))
-              .where((w) => w.isNotEmpty && !WalletUtils.equals(w, myWallet))
-              .toList();
-          if (others.isNotEmpty) {
-            convToWallet[c.id] = others;
-            for (final w in others) {
-              final canonical = WalletUtils.canonical(w);
-              if (canonical.isEmpty) continue;
-              if (walletCanonicals.add(canonical)) {
-                wallets.add(w);
+        futures.add(
+          _chatProvider.fetchMembers(c.id).then((mbrs) {
+            final others = (mbrs as List)
+                .map((entry) => _resolveMemberWallet(entry))
+                .where(
+                  (w) => w.isNotEmpty && !WalletUtils.equals(w, myWallet),
+                )
+                .toList();
+            if (others.isNotEmpty) {
+              convToWallet[c.id] = others;
+              for (final w in others) {
+                final canonical = WalletUtils.canonical(w);
+                if (canonical.isEmpty) continue;
+                if (walletCanonicals.add(canonical)) {
+                  wallets.add(w);
+                }
               }
             }
-          }
-        }).catchError((_) {}));
+          }).catchError((_) {}),
+        );
       }
       // Limit concurrency: process in batches of 6
       const int batchSize = 6;
@@ -529,114 +636,145 @@ class _MessagesScreenState extends State<MessagesScreen> {
     final count = wallets.length;
     if (count == 0) {
       return KubusMonogramAvatar(
-          radius: size / 2, child: const Icon(Icons.group));
+        radius: size / 2,
+        child: const Icon(Icons.group),
+      );
     }
     // Positioning for 1..4 avatars
     if (count == 1) {
       // Let AvatarWidget handle loading and fallback; pass null for avatarUrl so it resolves the user's avatar via wallet.
       return SizedBox(
-          width: size,
-          height: size,
-          child: AvatarWidget(
-              avatarUrl: null,
-              wallet: wallets[0],
-              radius: size / 2,
-              allowFabricatedFallback: false));
+        width: size,
+        height: size,
+        child: AvatarWidget(
+          avatarUrl: null,
+          wallet: wallets[0],
+          radius: size / 2,
+          allowFabricatedFallback: false,
+        ),
+      );
     }
     // For 2 avatars: left/right
     if (count == 2) {
       return SizedBox(
-          width: size,
-          height: size,
-          child: Stack(children: [
+        width: size,
+        height: size,
+        child: Stack(
+          children: [
             Positioned(
-                left: 0,
-                top: size * 0.15,
-                child: AvatarWidget(
-                    avatarUrl: null,
-                    wallet: wallets[0],
-                    radius: size * 0.35,
-                    allowFabricatedFallback: false)),
+              left: 0,
+              top: size * 0.15,
+              child: AvatarWidget(
+                avatarUrl: null,
+                wallet: wallets[0],
+                radius: size * 0.35,
+                allowFabricatedFallback: false,
+              ),
+            ),
             Positioned(
-                right: 0,
-                top: size * 0.15,
-                child: AvatarWidget(
-                    avatarUrl: null,
-                    wallet: wallets[1],
-                    radius: size * 0.35,
-                    allowFabricatedFallback: false)),
-          ]));
+              right: 0,
+              top: size * 0.15,
+              child: AvatarWidget(
+                avatarUrl: null,
+                wallet: wallets[1],
+                radius: size * 0.35,
+                allowFabricatedFallback: false,
+              ),
+            ),
+          ],
+        ),
+      );
     }
     // For 3 avatars: triangle
     if (count == 3) {
       return SizedBox(
-          width: size,
-          height: size,
-          child: Stack(children: [
+        width: size,
+        height: size,
+        child: Stack(
+          children: [
             Positioned(
-                left: size * 0.25,
-                top: 0,
-                child: AvatarWidget(
-                    avatarUrl: null,
-                    wallet: wallets[0],
-                    radius: size * 0.28,
-                    allowFabricatedFallback: false)),
+              left: size * 0.25,
+              top: 0,
+              child: AvatarWidget(
+                avatarUrl: null,
+                wallet: wallets[0],
+                radius: size * 0.28,
+                allowFabricatedFallback: false,
+              ),
+            ),
             Positioned(
-                left: 0,
-                bottom: 0,
-                child: AvatarWidget(
-                    avatarUrl: null,
-                    wallet: wallets[1],
-                    radius: size * 0.28,
-                    allowFabricatedFallback: false)),
+              left: 0,
+              bottom: 0,
+              child: AvatarWidget(
+                avatarUrl: null,
+                wallet: wallets[1],
+                radius: size * 0.28,
+                allowFabricatedFallback: false,
+              ),
+            ),
             Positioned(
-                right: 0,
-                bottom: 0,
-                child: AvatarWidget(
-                    avatarUrl: null,
-                    wallet: wallets[2],
-                    radius: size * 0.28,
-                    allowFabricatedFallback: false)),
-          ]));
+              right: 0,
+              bottom: 0,
+              child: AvatarWidget(
+                avatarUrl: null,
+                wallet: wallets[2],
+                radius: size * 0.28,
+                allowFabricatedFallback: false,
+              ),
+            ),
+          ],
+        ),
+      );
     }
     // 4 or more: 2x2 grid using first 4
     return SizedBox(
-        width: size,
-        height: size,
-        child: Stack(children: [
+      width: size,
+      height: size,
+      child: Stack(
+        children: [
           Positioned(
-              left: 0,
-              top: 0,
-              child: AvatarWidget(
-                  avatarUrl: null,
-                  wallet: wallets[0],
-                  radius: size * 0.28,
-                  allowFabricatedFallback: false)),
+            left: 0,
+            top: 0,
+            child: AvatarWidget(
+              avatarUrl: null,
+              wallet: wallets[0],
+              radius: size * 0.28,
+              allowFabricatedFallback: false,
+            ),
+          ),
           Positioned(
-              right: 0,
-              top: 0,
-              child: AvatarWidget(
-                  avatarUrl: null,
-                  wallet: wallets[1],
-                  radius: size * 0.28,
-                  allowFabricatedFallback: false)),
+            right: 0,
+            top: 0,
+            child: AvatarWidget(
+              avatarUrl: null,
+              wallet: wallets[1],
+              radius: size * 0.28,
+              allowFabricatedFallback: false,
+            ),
+          ),
           Positioned(
-              left: 0,
-              bottom: 0,
-              child: AvatarWidget(
-                  avatarUrl: null,
-                  wallet: wallets[2],
-                  radius: size * 0.28,
-                  allowFabricatedFallback: false)),
+            left: 0,
+            bottom: 0,
+            child: AvatarWidget(
+              avatarUrl: null,
+              wallet: wallets[2],
+              radius: size * 0.28,
+              allowFabricatedFallback: false,
+            ),
+          ),
           Positioned(
-              right: 0,
-              bottom: 0,
-              child: AvatarWidget(
-                  avatarUrl: null,
-                  wallet: wallets[3],
-                  radius: size * 0.28,
-                  allowFabricatedFallback: false)),
-        ]));
+            right: 0,
+            bottom: 0,
+            child: AvatarWidget(
+              avatarUrl: null,
+              wallet: wallets[3],
+              radius: size * 0.28,
+              allowFabricatedFallback: false,
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -681,428 +819,532 @@ class _MessagesScreenState extends State<MessagesScreen> {
                 title: l10n.messagesTitle,
                 icon: Icons.chat_bubble_outline,
               )
-            : Consumer<ChatProvider>(builder: (context, cp, _) {
-                final convs = cp.conversations;
-                if (convs.isEmpty) {
-                  return Center(
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 16.0, vertical: 24.0),
-                      child: EmptyStateCard(
-                        icon: Icons.chat_bubble_outline,
-                        title: l10n.messagesEmptyNoConversationsTitle,
-                        description:
-                            l10n.messagesEmptyNoConversationsDescription,
-                        showAction: true,
-                        actionLabel: l10n.messagesEmptyStartChatAction,
-                        onAction: _startConversation,
-                      ),
-                    ),
-                  );
-                }
-                return ListView.builder(
-                  padding: const EdgeInsets.only(bottom: KubusSpacing.lg),
-                  itemCount: convs.length + 1,
-                  itemBuilder: (context, idx) {
-                    if (idx == 0) {
-                      return _buildConversationListHeader(l10n);
-                    }
-                    final c = convs[idx - 1];
-                    String? avatar =
-                        c.displayAvatar ?? _conversationAvatars[c.id];
-                    final memberWallets = _convToWalletList[c.id] ?? <String>[];
-                    if (memberWallets.isNotEmpty) {
-                      for (final wallet in memberWallets) {
-                        _hydrateConversationFromCache(c.id, wallet);
-                      }
-                    }
-                    final otherWallet = (!c.isGroup && memberWallets.isNotEmpty)
-                        ? memberWallets.first
-                        : '';
-                    String widgetWallet =
-                        otherWallet.isNotEmpty ? otherWallet : c.id;
-                    // Prefer provider preloaded avatars when available (avoid local per-screen duplication)
-                    if ((avatar == null || avatar.isEmpty)) {
-                      try {
-                        final pre =
-                            Provider.of<ChatProvider>(context, listen: false)
-                                .getPreloadedProfileMapsForConversation(c.id);
-                        final avatars =
-                            (pre['avatars'] as Map<String, String?>?) ?? {};
-                        if (avatars.isNotEmpty) {
-                          final firstKey =
-                              avatars.keys.isNotEmpty ? avatars.keys.first : '';
-                          if (firstKey.isNotEmpty) avatar = avatars[firstKey];
-                        }
-                      } catch (_) {}
-                    }
-                    avatar = _normalizeAvatarUrl(avatar);
-                    if (_isFabricatedAvatar(avatar, widgetWallet)) {
-                      avatar = null;
-                    }
-                    Widget leading;
-                    if (avatar != null && avatar.isNotEmpty) {
-                      final isLoading =
-                          false; // explicit avatar provided -> not loading
-                      // If this is a direct conversation, prefer to associate the avatar
-                      // with the other participant's wallet so AvatarWidget can fetch
-                      // the authoritative profile. Fall back to conversation id when
-                      // unknown (group avatars or server-provided URLs).
-                      leading = AvatarWidget(
-                          avatarUrl: avatar,
-                          wallet: widgetWallet,
-                          radius: 20,
-                          isLoading: isLoading,
-                          allowFabricatedFallback: false);
-                    } else if (c.isGroup) {
-                      if (memberWallets.isNotEmpty) {
-                        leading = _buildGroupAvatar(memberWallets, 48);
-                      } else {
-                        leading = const KubusMonogramAvatar(
-                            radius: 20, child: Icon(Icons.group));
-                      }
-                    } else {
-                      // Fallback for one-to-one: use other participant's wallet if available
-                      if (otherWallet.isNotEmpty) {
-                        // Prefer cached user profile avatar if available (ChatProvider cache first, then persisted cache)
-                        final cached = cp.getCachedUser(otherWallet);
-                        String? fallbackAvatar;
-                        if (cached != null &&
-                            (cached.profileImageUrl ?? '').isNotEmpty) {
-                          fallbackAvatar = cached.profileImageUrl!;
-                        } else {
-                          try {
-                            final pre =
-                                cp.getPreloadedProfileMapsForConversation(c.id);
-                            final avatars =
-                                (pre['avatars'] as Map<String, String?>?) ?? {};
-                            if (avatars.containsKey(otherWallet)) {
-                              fallbackAvatar = avatars[otherWallet];
-                            }
-                          } catch (_) {}
-                          // As a last-resort, check persisted UserService cache synchronously
-                          if (fallbackAvatar == null ||
-                              fallbackAvatar.isEmpty) {
-                            final persisted =
-                                UserService.getCachedUser(otherWallet);
-                            if (persisted != null &&
-                                (persisted.profileImageUrl ?? '').isNotEmpty) {
-                              fallbackAvatar = persisted.profileImageUrl;
-                            }
-                          }
-                        }
-                        // Prefer any explicit avatar; do not fabricate a placeholder
-                        // here; AvatarWidget will render a safe fallback.
-                        final effectiveFallbackAvatar =
-                            _normalizeAvatarUrl(fallbackAvatar);
-                        final sanitizedFallback = _isFabricatedAvatar(
-                                effectiveFallbackAvatar, otherWallet)
-                            ? null
-                            : effectiveFallbackAvatar;
-                        final isLoading = (otherWallet.isNotEmpty &&
-                            cp.getCachedUser(otherWallet) == null &&
-                            UserService.getCachedUser(otherWallet) == null &&
-                            (_conversationAvatars[c.id] == null ||
-                                _conversationAvatars[c.id]!.isEmpty));
-                        leading = AvatarWidget(
-                            avatarUrl: sanitizedFallback,
-                            wallet: otherWallet,
-                            radius: 20,
-                            isLoading: isLoading,
-                            allowFabricatedFallback: false);
-                      } else {
-                        // No wallet available: render initials locally to avoid network call
-                        final name = c.title ??
-                            (c.isGroup
-                                ? l10n.messagesFallbackGroupTitle
-                                : c.title ??
-                                    l10n.messagesFallbackConversationTitle);
-                        final parts = name.trim().split(RegExp(r'\s+'));
-                        final initials = parts
-                            .where((p) => p.isNotEmpty)
-                            .map((p) => p[0])
-                            .take(2)
-                            .join()
-                            .toUpperCase();
-                        final isLoading = (_conversationNames[c.id] == null ||
-                                _conversationNames[c.id]!.isEmpty) &&
-                            (_convToWalletList[c.id]?.isNotEmpty ?? false);
-                        leading = Stack(alignment: Alignment.center, children: [
-                          KubusMonogramAvatar(
-                              radius: 20,
-                              child: Text(initials.isNotEmpty
-                                  ? initials
-                                  : l10n.messagesFallbackConversationInitial)),
-                          if (isLoading)
-                            SizedBox(
-                                width: 20,
-                                height: 20,
-                                child: InlineLoading(
-                                    expand: true,
-                                    shape: BoxShape.circle,
-                                    tileSize: 4.0,
-                                    duration: Duration(milliseconds: 700)))
-                        ]);
-                      }
-                      // If we still don't have avatar/name, try to proactively load members for this conversation
-                    }
-                    if ((avatar == null || avatar.isEmpty) &&
-                        !_pendingMemberLoads.contains(c.id)) {
-                      _ensureConversationMembersLoaded(c.id);
-                    }
-                    // Determine title preferring conversation title, then cached user name for direct chats, then precomputed conversation name
-                    String titleText = c.title ?? '';
-                    if (titleText.isEmpty) {
-                      if (!c.isGroup) {
-                        final fallbackWallet =
-                            (_convToWalletList[c.id] != null &&
-                                    _convToWalletList[c.id]!.isNotEmpty)
-                                ? _convToWalletList[c.id]!.first
-                                : '';
-                        final cached = (fallbackWallet.isNotEmpty)
-                            ? cp.getCachedUser(fallbackWallet)
-                            : null;
-                        if (cached != null && cached.name.isNotEmpty) {
-                          titleText = cached.name;
-                        } else {
-                          final persisted =
-                              UserService.getCachedUser(fallbackWallet);
-                          if (persisted != null && persisted.name.isNotEmpty) {
-                            titleText = persisted.name;
-                          }
-                        }
-                      }
-                      if (titleText.isEmpty) {
-                        titleText = c.isGroup
-                            ? l10n.messagesFallbackGroupTitle
-                            : (_conversationNames[c.id] ??
-                                l10n.messagesFallbackConversationTitle);
-                      }
-                    }
-                    Widget titleWidget;
-                    if ((titleText.isEmpty ||
-                            titleText ==
-                                l10n.messagesFallbackConversationTitle) &&
-                        _convToWalletList[c.id]?.isNotEmpty == true) {
-                      final first =
-                          memberWallets.isNotEmpty ? memberWallets.first : '';
-                      final cached = cp.getCachedUser(first);
-                      if (cached == null &&
-                          (_conversationNames[c.id] == null ||
-                              _conversationNames[c.id]!.isEmpty)) {
-                        titleWidget = SizedBox(
-                            height: 16,
-                            width: 120,
-                            child: InlineLoading(
-                                expand: true,
-                                borderRadius: BorderRadius.circular(6),
-                                tileSize: 6.0));
-                      } else {
-                        titleWidget = Text(titleText.isNotEmpty
-                            ? titleText
-                            : l10n.messagesFallbackConversationTitle);
-                      }
-                    } else {
-                      titleWidget = Text(titleText);
-                    }
-                    final unreadCount = (cp.unreadCounts[c.id] ?? 0);
-                    final scheme = Theme.of(context).colorScheme;
-                    final titleTextStyle = KubusTextStyles.profileName.copyWith(
-                      color: scheme.onSurface,
-                      fontWeight:
-                          unreadCount > 0 ? FontWeight.w800 : FontWeight.w600,
-                    );
-                    final subtitleStyle =
-                        KubusTextStyles.sectionSubtitle.copyWith(
-                      color: scheme.onSurface.withValues(alpha: 0.72),
-                    );
-                    return Padding(
-                      padding: EdgeInsets.zero,
-                      child: _ConversationRowSurface(
-                        unreadCount: unreadCount,
-                        unreadLabel: l10n.messagesUnreadSemantic,
-                        onTap: () async {
-                          // Ensure member avatars/names are preloaded into ChatProvider cache; give a short timeout so navigation flows fast
-                          List<String> wallets = [];
-                          try {
-                            await _ensureConversationMembersLoaded(c.id)
-                                .timeout(const Duration(milliseconds: 700));
-                            wallets = _convToWalletList[c.id] ?? [];
-                          } catch (_) {
-                            wallets = _convToWalletList[c.id] ?? [];
-                          }
-                          // Capture context-friendly variables before any more async awaits
-                          // keep reference of provider 'cp' in closure if needed (no-op)
-                          // Build preloaded maps for avatars and display names from cached users and our screen-level caches
-                          final Map<String, String?> preAvatars = {};
-                          final Map<String, String?> preNames = {};
-                          for (final w in wallets) {
-                            final cached = cp.getCachedUser(w);
-                            if (cached != null) {
-                              if (cached.profileImageUrl != null &&
-                                  cached.profileImageUrl!.isNotEmpty) {
-                                preAvatars[w] = cached.profileImageUrl;
-                              }
-                              if (cached.name.isNotEmpty) {
-                                preNames[w] = cached.name;
-                              }
-                            }
-                            // also allow our screen-level maps as fallback
-                            if (!preAvatars.containsKey(w) &&
-                                (_conversationAvatars[c.id] ?? '').isNotEmpty) {
-                              preAvatars[w] = _conversationAvatars[c.id];
-                            }
-                            if (!preNames.containsKey(w) &&
-                                (_conversationNames[c.id] ?? '').isNotEmpty) {
-                              preNames[w] = _conversationNames[c.id];
-                            }
-                            if (!preAvatars.containsKey(w)) {
-                              final cachedAvatar = _cacheProvider.getAvatar(w);
-                              if ((cachedAvatar ?? '').isNotEmpty) {
-                                preAvatars[w] = cachedAvatar;
-                              }
-                            }
-                            if (!preNames.containsKey(w)) {
-                              final cachedName =
-                                  _cacheProvider.getDisplayName(w);
-                              if ((cachedName ?? '').isNotEmpty) {
-                                preNames[w] = cachedName;
-                              }
-                            }
-                          }
-                          // Defensive preloads: ensure we don't pass an empty members list (which blocks
-                          // ConversationScreen from falling back to provider-level preloads). If wallets
-                          // is empty, try provider preloads or cached conv-to-wallet list. Also ensure
-                          // avatar/name entries exist for the primary member when possible.
-                          if (!mounted) return;
-                          List<String>? finalMembers =
-                              wallets.isNotEmpty ? wallets : null;
-                          if (finalMembers == null) {
-                            try {
-                              final p = cp
-                                  .getPreloadedProfileMapsForConversation(c.id);
-                              final inferred = (p['members'] as List<dynamic>?)
-                                      ?.cast<String>() ??
-                                  <String>[];
-                              if (inferred.isNotEmpty) finalMembers = inferred;
-                            } catch (_) {}
-                          }
-                          // As last-resort, try screen-level conv->wallet mapping
-                          if ((finalMembers == null || finalMembers.isEmpty) &&
-                              (_convToWalletList[c.id]?.isNotEmpty ?? false)) {
-                            finalMembers =
-                                List<String>.from(_convToWalletList[c.id]!);
-                          }
-
-                          // Ensure avatars/names include an entry for the primary member when available
-                          if (finalMembers != null && finalMembers.isNotEmpty) {
-                            final primary = finalMembers.first;
-                            if (!preAvatars.containsKey(primary) ||
-                                (preAvatars[primary] == null ||
-                                    preAvatars[primary]!.isEmpty)) {
-                              // prefer ChatProvider cache, then our screen-level avatar cache
-                              final cached = cp.getCachedUser(primary);
-                              if (cached != null &&
-                                  (cached.profileImageUrl ?? '').isNotEmpty) {
-                                preAvatars[primary] = cached.profileImageUrl;
-                              } else if ((_conversationAvatars[c.id] ?? '')
-                                  .isNotEmpty) {
-                                preAvatars[primary] ??=
-                                    _conversationAvatars[c.id];
-                              }
-                            }
-                            if (!preNames.containsKey(primary) ||
-                                (preNames[primary] == null ||
-                                    preNames[primary]!.isEmpty)) {
-                              final cached = cp.getCachedUser(primary);
-                              if (cached != null && cached.name.isNotEmpty) {
-                                preNames[primary] = cached.name;
-                              } else if ((_conversationNames[c.id] ?? '')
-                                  .isNotEmpty) {
-                                preNames[primary] ??= _conversationNames[c.id];
-                              }
-                            }
-                          }
-
-                          if (!context.mounted) return;
-                          ConversationNavigator.openConversationWithPreload(
-                            context,
-                            c,
-                            preloadedMembers: finalMembers,
-                            preloadedAvatars:
-                                preAvatars.isNotEmpty ? preAvatars : null,
-                            preloadedDisplayNames:
-                                preNames.isNotEmpty ? preNames : null,
-                          );
-                        },
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.center,
-                          children: [
-                            leading,
-                            const SizedBox(width: KubusSpacing.md),
-                            Expanded(
-                              child: Column(
-                                mainAxisSize: MainAxisSize.min,
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  DefaultTextStyle(
-                                    style: titleTextStyle,
-                                    child: titleWidget,
-                                  ),
-                                  const SizedBox(height: KubusSpacing.xs),
-                                  if (!c.isGroup && otherWallet.isNotEmpty)
-                                    Padding(
-                                      padding: const EdgeInsets.only(
-                                          bottom: KubusSpacing.xxs),
-                                      child: UserActivityStatusLine(
-                                        walletAddress: otherWallet,
-                                        textAlign: TextAlign.start,
-                                        textStyle: KubusTextStyles.navMetaLabel
-                                            .copyWith(
-                                          color: scheme.onSurface
-                                              .withValues(alpha: 0.6),
-                                        ),
-                                      ),
-                                    ),
-                                  if ((c.lastMessage ?? '').isNotEmpty)
-                                    Text(
-                                      c.lastMessage ?? '',
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: subtitleStyle,
-                                    ),
-                                ],
-                              ),
-                            ),
-                            if (unreadCount > 0) ...[
-                              const SizedBox(width: KubusSpacing.sm),
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: KubusSpacing.sm,
-                                  vertical: KubusSpacing.xs + KubusSpacing.xxs,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: KubusColorRoles.of(context).active,
-                                  borderRadius:
-                                      BorderRadius.circular(KubusRadius.pill),
-                                ),
-                                constraints: const BoxConstraints(minWidth: 24),
-                                child: Text(
-                                  unreadCount > 99 ? '99+' : '$unreadCount',
-                                  textAlign: TextAlign.center,
-                                  style: KubusTextStyles.badgeCount.copyWith(
-                                    color: KubusColorRoles.of(context).onActive,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ],
+            : Consumer<ChatProvider>(
+                builder: (context, cp, _) {
+                  final convs = cp.conversations;
+                  if (convs.isEmpty) {
+                    return Center(
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16.0,
+                          vertical: 24.0,
+                        ),
+                        child: EmptyStateCard(
+                          icon: Icons.chat_bubble_outline,
+                          title: l10n.messagesEmptyNoConversationsTitle,
+                          description:
+                              l10n.messagesEmptyNoConversationsDescription,
+                          showAction: true,
+                          actionLabel: l10n.messagesEmptyStartChatAction,
+                          onAction: _startConversation,
                         ),
                       ),
                     );
-                  },
-                );
-              }),
+                  }
+                  // Wide layouts keep the conversation list to a readable column.
+                  return Center(
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(
+                        maxWidth: kMessagingColumnMaxWidth,
+                      ),
+                      child: ListView.builder(
+                        padding: const EdgeInsets.only(bottom: KubusSpacing.lg),
+                        itemCount: convs.length + 1,
+                        itemBuilder: (context, idx) {
+                          if (idx == 0) {
+                            return _buildConversationListHeader(l10n);
+                          }
+                          final c = convs[idx - 1];
+                          String? avatar =
+                              c.displayAvatar ?? _conversationAvatars[c.id];
+                          final memberWallets =
+                              _convToWalletList[c.id] ?? <String>[];
+                          if (memberWallets.isNotEmpty) {
+                            for (final wallet in memberWallets) {
+                              _hydrateConversationFromCache(c.id, wallet);
+                            }
+                          }
+                          final otherWallet =
+                              (!c.isGroup && memberWallets.isNotEmpty)
+                                  ? memberWallets.first
+                                  : '';
+                          String widgetWallet =
+                              otherWallet.isNotEmpty ? otherWallet : c.id;
+                          // Prefer provider preloaded avatars when available (avoid local per-screen duplication)
+                          if ((avatar == null || avatar.isEmpty)) {
+                            try {
+                              final pre = Provider.of<ChatProvider>(
+                                context,
+                                listen: false,
+                              ).getPreloadedProfileMapsForConversation(c.id);
+                              final avatars =
+                                  (pre['avatars'] as Map<String, String?>?) ??
+                                      {};
+                              if (avatars.isNotEmpty) {
+                                final firstKey = avatars.keys.isNotEmpty
+                                    ? avatars.keys.first
+                                    : '';
+                                if (firstKey.isNotEmpty) {
+                                  avatar = avatars[firstKey];
+                                }
+                              }
+                            } catch (_) {}
+                          }
+                          avatar = _normalizeAvatarUrl(avatar);
+                          if (_isFabricatedAvatar(avatar, widgetWallet)) {
+                            avatar = null;
+                          }
+                          Widget leading;
+                          if (avatar != null && avatar.isNotEmpty) {
+                            final isLoading =
+                                false; // explicit avatar provided -> not loading
+                            // If this is a direct conversation, prefer to associate the avatar
+                            // with the other participant's wallet so AvatarWidget can fetch
+                            // the authoritative profile. Fall back to conversation id when
+                            // unknown (group avatars or server-provided URLs).
+                            leading = KubusIdentityAvatar(
+                              avatarUrl: avatar,
+                              wallet: widgetWallet,
+                              radius: 20,
+                              isLoading: isLoading,
+                              allowFabricatedFallback: false,
+                            );
+                          } else if (c.isGroup) {
+                            if (memberWallets.isNotEmpty) {
+                              leading = _buildGroupAvatar(memberWallets, 48);
+                            } else {
+                              leading = const KubusMonogramAvatar(
+                                radius: 20,
+                                child: Icon(Icons.group),
+                              );
+                            }
+                          } else {
+                            // Fallback for one-to-one: use other participant's wallet if available
+                            if (otherWallet.isNotEmpty) {
+                              // Prefer cached user profile avatar if available (ChatProvider cache first, then persisted cache)
+                              final cached = cp.getCachedUser(otherWallet);
+                              String? fallbackAvatar;
+                              if (cached != null &&
+                                  (cached.profileImageUrl ?? '').isNotEmpty) {
+                                fallbackAvatar = cached.profileImageUrl!;
+                              } else {
+                                try {
+                                  final pre =
+                                      cp.getPreloadedProfileMapsForConversation(
+                                    c.id,
+                                  );
+                                  final avatars = (pre['avatars']
+                                          as Map<String, String?>?) ??
+                                      {};
+                                  if (avatars.containsKey(otherWallet)) {
+                                    fallbackAvatar = avatars[otherWallet];
+                                  }
+                                } catch (_) {}
+                                // As a last-resort, check persisted UserService cache synchronously
+                                if (fallbackAvatar == null ||
+                                    fallbackAvatar.isEmpty) {
+                                  final persisted = UserService.getCachedUser(
+                                    otherWallet,
+                                  );
+                                  if (persisted != null &&
+                                      (persisted.profileImageUrl ?? '')
+                                          .isNotEmpty) {
+                                    fallbackAvatar = persisted.profileImageUrl;
+                                  }
+                                }
+                              }
+                              // Prefer any explicit avatar; do not fabricate a placeholder
+                              // here; AvatarWidget will render a safe fallback.
+                              final effectiveFallbackAvatar =
+                                  _normalizeAvatarUrl(fallbackAvatar);
+                              final sanitizedFallback = _isFabricatedAvatar(
+                                effectiveFallbackAvatar,
+                                otherWallet,
+                              )
+                                  ? null
+                                  : effectiveFallbackAvatar;
+                              final isLoading = (otherWallet.isNotEmpty &&
+                                  cp.getCachedUser(otherWallet) == null &&
+                                  UserService.getCachedUser(otherWallet) ==
+                                      null &&
+                                  (_conversationAvatars[c.id] == null ||
+                                      _conversationAvatars[c.id]!.isEmpty));
+                              leading = KubusIdentityAvatar(
+                                avatarUrl: sanitizedFallback,
+                                wallet: otherWallet,
+                                radius: 20,
+                                isLoading: isLoading,
+                                allowFabricatedFallback: false,
+                              );
+                            } else {
+                              // No wallet available: render initials locally to avoid network call
+                              final name = c.title ??
+                                  (c.isGroup
+                                      ? l10n.messagesFallbackGroupTitle
+                                      : c.title ??
+                                          l10n.messagesFallbackConversationTitle);
+                              final parts = name.trim().split(RegExp(r'\s+'));
+                              final initials = parts
+                                  .where((p) => p.isNotEmpty)
+                                  .map((p) => p[0])
+                                  .take(2)
+                                  .join()
+                                  .toUpperCase();
+                              final isLoading =
+                                  (_conversationNames[c.id] == null ||
+                                          _conversationNames[c.id]!.isEmpty) &&
+                                      (_convToWalletList[c.id]?.isNotEmpty ??
+                                          false);
+                              leading = Stack(
+                                alignment: Alignment.center,
+                                children: [
+                                  KubusMonogramAvatar(
+                                    radius: 20,
+                                    child: Text(
+                                      initials.isNotEmpty
+                                          ? initials
+                                          : l10n
+                                              .messagesFallbackConversationInitial,
+                                    ),
+                                  ),
+                                  if (isLoading)
+                                    SizedBox(
+                                      width: 20,
+                                      height: 20,
+                                      child: InlineLoading(
+                                        expand: true,
+                                        shape: BoxShape.circle,
+                                        tileSize: 4.0,
+                                        duration: Duration(milliseconds: 700),
+                                      ),
+                                    ),
+                                ],
+                              );
+                            }
+                            // If we still don't have avatar/name, try to proactively load members for this conversation
+                          }
+                          if ((avatar == null || avatar.isEmpty) &&
+                              !_pendingMemberLoads.contains(c.id)) {
+                            _ensureConversationMembersLoaded(c.id);
+                          }
+                          // Determine title preferring conversation title, then cached user name for direct chats, then precomputed conversation name
+                          String titleText = c.title ?? '';
+                          if (titleText.isEmpty) {
+                            if (!c.isGroup) {
+                              final fallbackWallet =
+                                  (_convToWalletList[c.id] != null &&
+                                          _convToWalletList[c.id]!.isNotEmpty)
+                                      ? _convToWalletList[c.id]!.first
+                                      : '';
+                              final cached = (fallbackWallet.isNotEmpty)
+                                  ? cp.getCachedUser(fallbackWallet)
+                                  : null;
+                              if (cached != null && cached.name.isNotEmpty) {
+                                titleText = cached.name;
+                              } else {
+                                final persisted = UserService.getCachedUser(
+                                  fallbackWallet,
+                                );
+                                if (persisted != null &&
+                                    persisted.name.isNotEmpty) {
+                                  titleText = persisted.name;
+                                }
+                              }
+                            }
+                            if (titleText.isEmpty) {
+                              titleText = c.isGroup
+                                  ? l10n.messagesFallbackGroupTitle
+                                  : (_conversationNames[c.id] ??
+                                      l10n.messagesFallbackConversationTitle);
+                            }
+                          }
+                          Widget titleWidget;
+                          if ((titleText.isEmpty ||
+                                  titleText ==
+                                      l10n.messagesFallbackConversationTitle) &&
+                              _convToWalletList[c.id]?.isNotEmpty == true) {
+                            final first = memberWallets.isNotEmpty
+                                ? memberWallets.first
+                                : '';
+                            final cached = cp.getCachedUser(first);
+                            if (cached == null &&
+                                (_conversationNames[c.id] == null ||
+                                    _conversationNames[c.id]!.isEmpty)) {
+                              titleWidget = SizedBox(
+                                height: 16,
+                                width: 120,
+                                child: InlineLoading(
+                                  expand: true,
+                                  borderRadius: BorderRadius.circular(6),
+                                  tileSize: 6.0,
+                                ),
+                              );
+                            } else {
+                              titleWidget = Text(
+                                titleText.isNotEmpty
+                                    ? titleText
+                                    : l10n.messagesFallbackConversationTitle,
+                              );
+                            }
+                          } else {
+                            titleWidget = Text(titleText);
+                          }
+                          final unreadCount = (cp.unreadCounts[c.id] ?? 0);
+                          final scheme = Theme.of(context).colorScheme;
+                          final titleTextStyle =
+                              KubusTextStyles.profileName.copyWith(
+                            color: scheme.onSurface,
+                            fontWeight: unreadCount > 0
+                                ? FontWeight.w800
+                                : FontWeight.w600,
+                          );
+                          final subtitleStyle =
+                              KubusTextStyles.sectionSubtitle.copyWith(
+                            color: scheme.onSurface.withValues(alpha: 0.72),
+                          );
+                          return Padding(
+                            padding: EdgeInsets.zero,
+                            child: _ConversationRowSurface(
+                              unreadCount: unreadCount,
+                              unreadLabel: l10n.messagesUnreadSemantic,
+                              onTap: () async {
+                                // Ensure member avatars/names are preloaded into ChatProvider cache; give a short timeout so navigation flows fast
+                                List<String> wallets = [];
+                                try {
+                                  await _ensureConversationMembersLoaded(
+                                    c.id,
+                                  ).timeout(const Duration(milliseconds: 700));
+                                  wallets = _convToWalletList[c.id] ?? [];
+                                } catch (_) {
+                                  wallets = _convToWalletList[c.id] ?? [];
+                                }
+                                // Capture context-friendly variables before any more async awaits
+                                // keep reference of provider 'cp' in closure if needed (no-op)
+                                // Build preloaded maps for avatars and display names from cached users and our screen-level caches
+                                final Map<String, String?> preAvatars = {};
+                                final Map<String, String?> preNames = {};
+                                for (final w in wallets) {
+                                  final cached = cp.getCachedUser(w);
+                                  if (cached != null) {
+                                    if (cached.profileImageUrl != null &&
+                                        cached.profileImageUrl!.isNotEmpty) {
+                                      preAvatars[w] = cached.profileImageUrl;
+                                    }
+                                    if (cached.name.isNotEmpty) {
+                                      preNames[w] = cached.name;
+                                    }
+                                  }
+                                  // also allow our screen-level maps as fallback
+                                  if (!preAvatars.containsKey(w) &&
+                                      (_conversationAvatars[c.id] ?? '')
+                                          .isNotEmpty) {
+                                    preAvatars[w] = _conversationAvatars[c.id];
+                                  }
+                                  if (!preNames.containsKey(w) &&
+                                      (_conversationNames[c.id] ?? '')
+                                          .isNotEmpty) {
+                                    preNames[w] = _conversationNames[c.id];
+                                  }
+                                  if (!preAvatars.containsKey(w)) {
+                                    final cachedAvatar =
+                                        _cacheProvider.getAvatar(w);
+                                    if ((cachedAvatar ?? '').isNotEmpty) {
+                                      preAvatars[w] = cachedAvatar;
+                                    }
+                                  }
+                                  if (!preNames.containsKey(w)) {
+                                    final cachedName =
+                                        _cacheProvider.getDisplayName(w);
+                                    if ((cachedName ?? '').isNotEmpty) {
+                                      preNames[w] = cachedName;
+                                    }
+                                  }
+                                }
+                                // Defensive preloads: ensure we don't pass an empty members list (which blocks
+                                // ConversationScreen from falling back to provider-level preloads). If wallets
+                                // is empty, try provider preloads or cached conv-to-wallet list. Also ensure
+                                // avatar/name entries exist for the primary member when possible.
+                                if (!mounted) return;
+                                List<String>? finalMembers =
+                                    wallets.isNotEmpty ? wallets : null;
+                                if (finalMembers == null) {
+                                  try {
+                                    final p = cp
+                                        .getPreloadedProfileMapsForConversation(
+                                      c.id,
+                                    );
+                                    final inferred =
+                                        (p['members'] as List<dynamic>?)
+                                                ?.cast<String>() ??
+                                            <String>[];
+                                    if (inferred.isNotEmpty) {
+                                      finalMembers = inferred;
+                                    }
+                                  } catch (_) {}
+                                }
+                                // As last-resort, try screen-level conv->wallet mapping
+                                if ((finalMembers == null ||
+                                        finalMembers.isEmpty) &&
+                                    (_convToWalletList[c.id]?.isNotEmpty ??
+                                        false)) {
+                                  finalMembers = List<String>.from(
+                                    _convToWalletList[c.id]!,
+                                  );
+                                }
+
+                                // Ensure avatars/names include an entry for the primary member when available
+                                if (finalMembers != null &&
+                                    finalMembers.isNotEmpty) {
+                                  final primary = finalMembers.first;
+                                  if (!preAvatars.containsKey(primary) ||
+                                      (preAvatars[primary] == null ||
+                                          preAvatars[primary]!.isEmpty)) {
+                                    // prefer ChatProvider cache, then our screen-level avatar cache
+                                    final cached = cp.getCachedUser(primary);
+                                    if (cached != null &&
+                                        (cached.profileImageUrl ?? '')
+                                            .isNotEmpty) {
+                                      preAvatars[primary] =
+                                          cached.profileImageUrl;
+                                    } else if ((_conversationAvatars[c.id] ??
+                                            '')
+                                        .isNotEmpty) {
+                                      preAvatars[primary] ??=
+                                          _conversationAvatars[c.id];
+                                    }
+                                  }
+                                  if (!preNames.containsKey(primary) ||
+                                      (preNames[primary] == null ||
+                                          preNames[primary]!.isEmpty)) {
+                                    final cached = cp.getCachedUser(primary);
+                                    if (cached != null &&
+                                        cached.name.isNotEmpty) {
+                                      preNames[primary] = cached.name;
+                                    } else if ((_conversationNames[c.id] ?? '')
+                                        .isNotEmpty) {
+                                      preNames[primary] ??=
+                                          _conversationNames[c.id];
+                                    }
+                                  }
+                                }
+
+                                if (!context.mounted) return;
+                                ConversationNavigator
+                                    .openConversationWithPreload(
+                                  context,
+                                  c,
+                                  preloadedMembers: finalMembers,
+                                  preloadedAvatars:
+                                      preAvatars.isNotEmpty ? preAvatars : null,
+                                  preloadedDisplayNames:
+                                      preNames.isNotEmpty ? preNames : null,
+                                );
+                              },
+                              child: Row(
+                                crossAxisAlignment: CrossAxisAlignment.center,
+                                children: [
+                                  leading,
+                                  const SizedBox(width: KubusSpacing.md),
+                                  Expanded(
+                                    child: Column(
+                                      mainAxisSize: MainAxisSize.min,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        DefaultTextStyle(
+                                          style: titleTextStyle,
+                                          child: titleWidget,
+                                        ),
+                                        const SizedBox(height: KubusSpacing.xs),
+                                        if (!c.isGroup &&
+                                            otherWallet.isNotEmpty)
+                                          Padding(
+                                            padding: const EdgeInsets.only(
+                                              bottom: KubusSpacing.xxs,
+                                            ),
+                                            child: UserActivityStatusLine(
+                                              walletAddress: otherWallet,
+                                              textAlign: TextAlign.start,
+                                              textStyle: KubusTextStyles
+                                                  .navMetaLabel
+                                                  .copyWith(
+                                                color: scheme.onSurface
+                                                    .withValues(alpha: 0.6),
+                                              ),
+                                            ),
+                                          ),
+                                        if ((c.lastMessage ?? '').isNotEmpty)
+                                          Text(
+                                            c.lastMessage ?? '',
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: subtitleStyle,
+                                          ),
+                                      ],
+                                    ),
+                                  ),
+                                  if (c.lastMessageAt != null) ...[
+                                    const SizedBox(width: KubusSpacing.sm),
+                                    Text(
+                                      formatActivityTime(
+                                        context,
+                                        c.lastMessageAt!,
+                                      ),
+                                      maxLines: 1,
+                                      style:
+                                          KubusTextStyles.navMetaLabel.copyWith(
+                                        color: scheme.onSurface.withValues(
+                                          alpha: 0.6,
+                                        ),
+                                        fontWeight: unreadCount > 0
+                                            ? FontWeight.w700
+                                            : FontWeight.w500,
+                                      ),
+                                    ),
+                                  ],
+                                  if (unreadCount > 0) ...[
+                                    const SizedBox(width: KubusSpacing.sm),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: KubusSpacing.sm,
+                                        vertical:
+                                            KubusSpacing.xs + KubusSpacing.xxs,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: KubusColorRoles.of(
+                                          context,
+                                        ).active,
+                                        borderRadius: BorderRadius.circular(
+                                          KubusRadius.pill,
+                                        ),
+                                      ),
+                                      constraints: const BoxConstraints(
+                                        minWidth: 24,
+                                      ),
+                                      child: Text(
+                                        unreadCount > 99
+                                            ? '99+'
+                                            : '$unreadCount',
+                                        textAlign: TextAlign.center,
+                                        style:
+                                            KubusTextStyles.badgeCount.copyWith(
+                                          color: KubusColorRoles.of(
+                                            context,
+                                          ).onActive,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ],
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                  );
+                },
+              ),
       ),
     );
   }
@@ -1116,8 +1358,9 @@ class _MessagesScreenState extends State<MessagesScreen> {
       if (!mounted) return;
 
       final profile = Provider.of<ProfileProvider>(context, listen: false);
-      final myWallet =
-          WalletUtils.normalize(profile.currentUser?.walletAddress);
+      final myWallet = WalletUtils.normalize(
+        profile.currentUser?.walletAddress,
+      );
       final wallets = (mbrs as List)
           .map((entry) => _resolveMemberWallet(entry))
           .where((w) => w.isNotEmpty && !WalletUtils.equals(w, myWallet))
@@ -1144,8 +1387,11 @@ class _MessagesScreenState extends State<MessagesScreen> {
           final shouldReplaceAvatar =
               (currentAvatar == null || currentAvatar.isEmpty);
           if (shouldReplaceAvatar && avatar.isNotEmpty) {
-            _storeConversationAvatar(conversationId, avatar,
-                walletHint: cachedUser.id);
+            _storeConversationAvatar(
+              conversationId,
+              avatar,
+              walletHint: cachedUser.id,
+            );
           }
           final shouldReplaceName = (currentName == null ||
               currentName.isEmpty ||
@@ -1154,24 +1400,32 @@ class _MessagesScreenState extends State<MessagesScreen> {
             _conversationNames[conversationId] =
                 cachedUser.name.isNotEmpty ? cachedUser.name : cachedUser.id;
           }
-          _persistWalletProfile(cachedUser.id,
-              avatar: avatar, displayName: cachedUser.name);
+          _persistWalletProfile(
+            cachedUser.id,
+            avatar: avatar,
+            displayName: cachedUser.name,
+          );
         } else {
           final users = await UserService.getUsersByWallets(wallets);
           try {
             EventBus().emitProfilesUpdated(users);
           } catch (_) {}
           if (users.isNotEmpty) {
-            final u = users.firstWhere((x) => wallets.contains(x.id),
-                orElse: () => users.first);
+            final u = users.firstWhere(
+              (x) => wallets.contains(x.id),
+              orElse: () => users.first,
+            );
             final avatar = u.profileImageUrl ?? '';
             final currentAvatar = _conversationAvatars[conversationId];
             final currentName = _conversationNames[conversationId];
             final shouldReplaceAvatar =
                 (currentAvatar == null || currentAvatar.isEmpty);
             if (shouldReplaceAvatar && avatar.isNotEmpty) {
-              _storeConversationAvatar(conversationId, avatar,
-                  walletHint: u.id);
+              _storeConversationAvatar(
+                conversationId,
+                avatar,
+                walletHint: u.id,
+              );
             }
             final shouldReplaceName = (currentName == null ||
                 currentName.isEmpty ||
@@ -1182,7 +1436,8 @@ class _MessagesScreenState extends State<MessagesScreen> {
             }
             _persistWalletProfile(u.id, avatar: avatar, displayName: u.name);
             debugPrint(
-                'MessagesScreen: loaded members for $conversationId -> name=${_conversationNames[conversationId]}, avatar=${_conversationAvatars[conversationId]}');
+              'MessagesScreen: loaded members for $conversationId -> name=${_conversationNames[conversationId]}, avatar=${_conversationAvatars[conversationId]}',
+            );
           }
         }
       } catch (e) {
@@ -1192,7 +1447,8 @@ class _MessagesScreenState extends State<MessagesScreen> {
       if (mounted) setState(() {});
     } catch (e) {
       debugPrint(
-          'MessagesScreen: _ensureConversationMembersLoaded failed for $conversationId: $e');
+        'MessagesScreen: _ensureConversationMembersLoaded failed for $conversationId: $e',
+      );
     } finally {
       _pendingMemberLoads.remove(conversationId);
     }
@@ -1204,20 +1460,28 @@ class _MessagesScreenState extends State<MessagesScreen> {
     final cachedAvatar = _cacheProvider.getAvatar(normalizedWallet);
     if ((cachedAvatar ?? '').isNotEmpty &&
         ((_conversationAvatars[conversationId] ?? '').isEmpty)) {
-      _storeConversationAvatar(conversationId, cachedAvatar,
-          walletHint: normalizedWallet);
+      _storeConversationAvatar(
+        conversationId,
+        cachedAvatar,
+        walletHint: normalizedWallet,
+      );
     }
     final cachedName = _cacheProvider.getDisplayName(normalizedWallet);
     if ((cachedName ?? '').isNotEmpty &&
         ((_conversationNames[conversationId] ?? '').isEmpty ||
             WalletUtils.equals(
-                _conversationNames[conversationId], normalizedWallet))) {
+              _conversationNames[conversationId],
+              normalizedWallet,
+            ))) {
       _conversationNames[conversationId] = cachedName;
     }
   }
 
-  void _persistWalletProfile(String wallet,
-      {String? avatar, String? displayName}) {
+  void _persistWalletProfile(
+    String wallet, {
+    String? avatar,
+    String? displayName,
+  }) {
     final normalizedWallet = WalletUtils.normalize(wallet);
     if (normalizedWallet.isEmpty) return;
     final avatarPayload = <String, String?>{};
@@ -1229,10 +1493,12 @@ class _MessagesScreenState extends State<MessagesScreen> {
       namePayload[normalizedWallet] = displayName!.trim();
     }
     if (avatarPayload.isEmpty && namePayload.isEmpty) return;
-    unawaited(_cacheProvider.mergeProfiles(
-      avatars: avatarPayload.isEmpty ? null : avatarPayload,
-      displayNames: namePayload.isEmpty ? null : namePayload,
-    ));
+    unawaited(
+      _cacheProvider.mergeProfiles(
+        avatars: avatarPayload.isEmpty ? null : avatarPayload,
+        displayNames: namePayload.isEmpty ? null : namePayload,
+      ),
+    );
   }
 
   @override
@@ -1276,18 +1542,24 @@ class _CreateConversationDialogState extends State<_CreateConversationDialog> {
           TextField(
             controller: _title,
             decoration: InputDecoration(
-                labelText: l10n.messagesCreateConversationTitleOptionalLabel),
+              labelText: l10n.messagesCreateConversationTitleOptionalLabel,
+            ),
           ),
           Wrap(
-              children: _memberList
-                  .map((m) => Chip(
-                      label: Text(m),
-                      onDeleted: () => setState(() => _memberList.remove(m))))
-                  .toList()),
+            children: _memberList
+                .map(
+                  (m) => Chip(
+                    label: Text(m),
+                    onDeleted: () => setState(() => _memberList.remove(m)),
+                  ),
+                )
+                .toList(),
+          ),
           TextField(
             controller: _members,
             decoration: InputDecoration(
-                labelText: l10n.messagesCreateConversationMembersLabel),
+              labelText: l10n.messagesCreateConversationMembersLabel,
+            ),
             onChanged: (v) async {
               if (v.trim().isEmpty) {
                 setState(() => _memberSuggestions.clear());
@@ -1295,7 +1567,10 @@ class _CreateConversationDialogState extends State<_CreateConversationDialog> {
               }
               try {
                 final resp = await _api.search(
-                    query: v.trim(), type: 'profiles', limit: 6);
+                  query: v.trim(),
+                  type: 'profiles',
+                  limit: 6,
+                );
                 final list = <Map<String, dynamic>>[];
                 if (resp['success'] == true) {
                   // search may return results in different shapes; handle both
@@ -1332,7 +1607,8 @@ class _CreateConversationDialogState extends State<_CreateConversationDialog> {
                 });
               } catch (e) {
                 debugPrint(
-                    'CreateConversationDialog: profile search error: $e');
+                  'CreateConversationDialog: profile search error: $e',
+                );
               }
             },
           ),
@@ -1360,41 +1636,46 @@ class _CreateConversationDialogState extends State<_CreateConversationDialog> {
                       ? walletAddr
                       : (username ?? '').toString();
                   return ListTile(
-                      title: Text(display ?? username),
-                      subtitle: Text(walletAddr.isNotEmpty
-                          ? walletAddr
-                          : (username ?? '')),
-                      leading: AvatarWidget(
-                          avatarUrl: effectiveAvatar,
-                          wallet: (walletAddr.isNotEmpty
-                                  ? walletAddr
-                                  : (username ?? ''))
-                              .toString(),
-                          radius: 20,
-                          allowFabricatedFallback: false,
-                          enableProfileNavigation: false),
-                      onTap: () {
-                        if ((addValue).isNotEmpty) {
-                          setState(() {
-                            _memberList.add(addValue);
-                            _members.clear();
-                            _memberSuggestions.clear();
-                          });
-                        }
-                      });
+                    title: Text(display ?? username),
+                    subtitle: Text(
+                      walletAddr.isNotEmpty ? walletAddr : (username ?? ''),
+                    ),
+                    leading: KubusIdentityAvatar(
+                      avatarUrl: effectiveAvatar,
+                      wallet: (walletAddr.isNotEmpty
+                              ? walletAddr
+                              : (username ?? ''))
+                          .toString(),
+                      radius: 20,
+                      allowFabricatedFallback: false,
+                      enableProfileNavigation: false,
+                    ),
+                    onTap: () {
+                      if ((addValue).isNotEmpty) {
+                        setState(() {
+                          _memberList.add(addValue);
+                          _members.clear();
+                          _memberSuggestions.clear();
+                        });
+                      }
+                    },
+                  );
                 },
                 itemCount: _memberSuggestions.length,
               ),
             ),
-          Row(children: [
-            ElevatedButton.icon(
+          Row(
+            children: [
+              ElevatedButton.icon(
                 icon: Icon(Icons.upload_file),
                 label: Text(
-                    l10n.messagesCreateConversationGroupAvatarOptionalLabel),
+                  l10n.messagesCreateConversationGroupAvatarOptionalLabel,
+                ),
                 onPressed: () async {
                   try {
-                    final result =
-                        await FilePicker.platform.pickFiles(withData: true);
+                    final result = await FilePicker.platform.pickFiles(
+                      withData: true,
+                    );
                     if (!mounted) return;
                     if (result?.files.isNotEmpty ?? false) {
                       final file = result!.files.first;
@@ -1404,52 +1685,68 @@ class _CreateConversationDialogState extends State<_CreateConversationDialog> {
                     }
                   } catch (e) {
                     debugPrint(
-                        'CreateConversationDialog: avatar pick error: $e');
+                      'CreateConversationDialog: avatar pick error: $e',
+                    );
                   }
-                }),
-            const SizedBox(width: 8),
-            if (_avatarBytes != null)
-              KubusMonogramAvatar(radius: 20, image: MemoryImage(_avatarBytes!))
-          ]),
+                },
+              ),
+              const SizedBox(width: 8),
+              if (_avatarBytes != null)
+                KubusMonogramAvatar(
+                  radius: 20,
+                  image: MemoryImage(_avatarBytes!),
+                ),
+            ],
+          ),
           SwitchListTile(
-              value: _isGroup,
-              onChanged: (v) => setState(() => _isGroup = v),
-              title: Text(l10n.messagesCreateConversationIsGroupLabel)),
+            value: _isGroup,
+            onChanged: (v) => setState(() => _isGroup = v),
+            title: Text(l10n.messagesCreateConversationIsGroupLabel),
+          ),
         ],
       ),
       actions: [
         TextButton(
-            child: Text(l10n.commonCancel),
-            onPressed: () => Navigator.of(context).pop()),
+          child: Text(l10n.commonCancel),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
         TextButton(
-            child: Text(l10n.commonCreate),
-            onPressed: () async {
-              final manualMembers = _members.text
-                  .split(',')
-                  .map((s) => s.trim())
-                  .where((s) => s.isNotEmpty)
-                  .toList();
-              final members = [..._memberList, ...manualMembers];
-              final cp = Provider.of<ChatProvider>(context, listen: false);
-              final navigator = Navigator.of(context);
-              final res =
-                  await cp.createConversation(_title.text, _isGroup, members);
-              if (!mounted) return;
-              if (res != null && _avatarBytes != null) {
-                try {
-                  await cp.uploadConversationAvatar(
-                      res.id, _avatarBytes!, 'group_avatar.png', 'image/png');
-                } catch (e) {
-                  debugPrint('Failed to upload group avatar after create: $e');
-                }
+          child: Text(l10n.commonCreate),
+          onPressed: () async {
+            final manualMembers = _members.text
+                .split(',')
+                .map((s) => s.trim())
+                .where((s) => s.isNotEmpty)
+                .toList();
+            final members = [..._memberList, ...manualMembers];
+            final cp = Provider.of<ChatProvider>(context, listen: false);
+            final navigator = Navigator.of(context);
+            final res = await cp.createConversation(
+              _title.text,
+              _isGroup,
+              members,
+            );
+            if (!mounted) return;
+            if (res != null && _avatarBytes != null) {
+              try {
+                await cp.uploadConversationAvatar(
+                  res.id,
+                  _avatarBytes!,
+                  'group_avatar.png',
+                  'image/png',
+                );
+              } catch (e) {
+                debugPrint('Failed to upload group avatar after create: $e');
               }
-              if (!mounted) return;
-              navigator.pop({
-                'title': _title.text,
-                'isGroup': _isGroup,
-                'members': members
-              });
-            }),
+            }
+            if (!mounted) return;
+            navigator.pop({
+              'title': _title.text,
+              'isGroup': _isGroup,
+              'members': members,
+            });
+          },
+        ),
       ],
     );
   }
@@ -1489,8 +1786,10 @@ class _ConversationRowSurface extends StatelessWidget {
             ),
             decoration: BoxDecoration(
               border: Border(
-                bottom:
-                    BorderSide(color: roles.rule, width: KubusSizes.hairline),
+                bottom: BorderSide(
+                  color: roles.rule,
+                  width: KubusSizes.hairline,
+                ),
               ),
             ),
             child: child,

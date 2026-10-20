@@ -35,17 +35,21 @@ void main() {
 
     await Future<void>.delayed(Duration.zero);
     expect(gate.isResolving, isTrue);
+    // Clearing the HTTP session never opens a token-expired lock.
     gate.reset();
+    expect(gate.isResolving, isTrue);
+    gate.completeForTesting(localAuthentication: true);
 
     final r1 = await f1;
     final r2 = await f2;
-    expect(r1.outcome, AuthReauthOutcome.cancelled);
-    expect(r2.outcome, AuthReauthOutcome.cancelled);
+    expect(r1.outcome, AuthReauthOutcome.success);
+    expect(r2.outcome, AuthReauthOutcome.success);
     expect(gate.isResolving, isFalse);
     expect(gate.isLocked, isFalse);
   });
 
-  test('SecurityGateProvider does not prompt reauth on cold start wallet-only', () async {
+  test('SecurityGateProvider does not prompt reauth on cold start wallet-only',
+      () async {
     SharedPreferences.setMockInitialValues(<String, Object>{
       'wallet_address': 'wallet-only',
       'has_wallet': true,
@@ -65,7 +69,9 @@ void main() {
     expect(gate.isLocked, isFalse);
   });
 
-  test('SecurityGateProvider does not prompt reauth on first onboarding with no session', () async {
+  test(
+      'SecurityGateProvider does not prompt reauth on first onboarding with no session',
+      () async {
     SharedPreferences.setMockInitialValues(<String, Object>{});
 
     final gate = SecurityGateProvider(promptCooldown: Duration.zero);
@@ -82,7 +88,9 @@ void main() {
     expect(gate.isLocked, isFalse);
   });
 
-  testWidgets('SecurityGateProvider routes to sign-in when token expires with app lock off', (tester) async {
+  testWidgets(
+      'SecurityGateProvider routes to sign-in when token expires with app lock off',
+      (tester) async {
     SharedPreferences.setMockInitialValues(<String, Object>{
       'jwt_token': 'stored-token',
       'auth_onboarding_completed': true,
@@ -116,7 +124,8 @@ void main() {
     expect(gate.isLocked, isFalse);
   });
 
-  test('SecurityGateProvider locks on token expiry when app lock enabled', () async {
+  test('SecurityGateProvider locks on token expiry when app lock enabled',
+      () async {
     SharedPreferences.setMockInitialValues(<String, Object>{
       'jwt_token': 'stored-token',
       'auth_onboarding_completed': true,
@@ -138,6 +147,8 @@ void main() {
     expect(gate.lockReason, SecurityLockReason.tokenExpired);
 
     gate.reset();
+    expect(gate.isLocked, isTrue);
+    gate.completeForTesting(localAuthentication: true);
     await future;
   });
 }

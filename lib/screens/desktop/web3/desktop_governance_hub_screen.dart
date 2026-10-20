@@ -40,6 +40,13 @@ class _DesktopGovernanceHubScreenState extends State<DesktopGovernanceHubScreen>
       vsync: this,
     );
     _animationController.forward();
+    // Wallet values sync when a wallet screen opens, not at app start.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      Provider.of<WalletProvider>(context, listen: false)
+          .ensureWalletData()
+          .ignore();
+    });
   }
 
   @override

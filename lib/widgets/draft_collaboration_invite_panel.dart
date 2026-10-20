@@ -8,7 +8,7 @@ import '../l10n/app_localizations.dart';
 import '../providers/artwork_drafts_provider.dart';
 import '../services/backend_api_service.dart';
 import '../utils/design_tokens.dart';
-import 'avatar_widget.dart';
+import 'identity/kubus_identity_avatar.dart';
 import 'glass_components.dart';
 
 class DraftCollaborationInvitePanel extends StatefulWidget {
@@ -274,7 +274,7 @@ class _DraftCollaborationInvitePanelState
                 final suggestion = _suggestions[index];
                 return ListTile(
                   dense: true,
-                  leading: AvatarWidget(
+                  leading: KubusIdentityAvatar(
                     avatarUrl: suggestion.avatarUrl,
                     wallet: suggestion.username,
                     radius: 16,
@@ -351,7 +351,7 @@ class _DraftCollaborationInvitePanelState
         backgroundColor: scheme.surfaceContainerHighest.withValues(alpha: 0.16),
         child: Row(
           children: <Widget>[
-            AvatarWidget(
+            KubusIdentityAvatar(
               avatarUrl: invite.avatarUrl,
               wallet: invite.username ?? invite.invitedIdentifier,
               radius: 16,

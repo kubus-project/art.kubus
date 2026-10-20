@@ -138,7 +138,7 @@ void main() {
     });
   });
 
-  testWidgets('desktop generic profile uses the generic role label', (
+  testWidgets('desktop generic profile omits a generic role eyebrow', (
     tester,
   ) async {
     await pumpProfileSurface(
@@ -151,7 +151,7 @@ void main() {
 
     final context = tester.element(find.byType(ProfileIdentityBlock).first);
     final l10n = AppLocalizations.of(context)!;
-    expect(find.text(l10n.userProfileTitle), findsWidgets);
+    expect(find.text(l10n.userProfileTitle), findsNothing);
     expect(find.text(l10n.settingsRoleArtistTitle), findsNothing);
     expect(find.text(l10n.settingsRoleInstitutionTitle), findsNothing);
   });

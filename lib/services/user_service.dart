@@ -4,6 +4,7 @@ import 'dart:convert';
 import '../config/config.dart';
 import '../models/achievement_progress.dart';
 import '../models/achievements.dart' as backend_achievements;
+import '../models/profile_identity_data.dart';
 import '../models/user.dart';
 import 'backend_api_service.dart';
 import 'profile_package_mutation_tracker.dart';
@@ -24,6 +25,8 @@ class UserFollowMutationResult {
     this.unfollowed,
     this.removed,
     this.hasCanonicalPayload = false,
+    this.pending = false,
+    this.requestedIsFollowing,
   });
 
   final bool isFollowing;
@@ -36,6 +39,8 @@ class UserFollowMutationResult {
   final bool? unfollowed;
   final bool? removed;
   final bool hasCanonicalPayload;
+  final bool pending;
+  final bool? requestedIsFollowing;
 
   bool get hasCanonicalCounters =>
       followersCount != null ||
@@ -76,6 +81,11 @@ class UserService {
 
   // Simple in-memory cache for user profiles to reduce network round-trips
   static final Map<String, User> _cache = {};
+  // A profile-media update can race a network profile read. Track its version
+  // separately so the older response cannot replace a newly saved avatar or
+  // cover when it eventually completes.
+  static int _profileMediaRevision = 0;
+  static final Map<String, int> _profileMediaRevisionByUser = <String, int>{};
   // Timestamps (epoch millis) for when entries were cached
   static final Map<String, int> _cacheTimestamps = {};
   // Tracks legacy cache entries that were persisted before we stored `coverImageUrl`.
@@ -259,22 +269,44 @@ class UserService {
     if (targetWallet.isEmpty) return false;
     if (await _isCurrentUserWallet(targetWallet)) return false;
 
+    final remote = await fetchAuthoritativeFollowState(targetWallet);
+    if (remote != null) return remote;
+    if (kDebugMode) {
+      debugPrint(
+        'UserService._fetchAuthoritativeFollowState: failed for $targetWallet',
+      );
+    }
+    if (fallbackToLocalOverlay) {
+      final local = await _loadFollowingUsersFromPrefs();
+      return local.map(WalletUtils.canonical).contains(targetWallet);
+    }
+    return false;
+  }
+
+  /// Reads the server's current relationship state, returning null when the
+  /// request could not establish an authoritative answer.
+  static Future<bool?> fetchAuthoritativeFollowState(
+    String walletAddress,
+  ) async {
+    final targetWallet = WalletUtils.canonical(walletAddress);
+    if (targetWallet.isEmpty) return null;
+    if (await _isCurrentUserWallet(targetWallet)) return false;
     try {
       return await BackendApiService().isFollowing(targetWallet);
     } catch (e) {
       if (kDebugMode) {
         debugPrint(
-            'UserService._fetchAuthoritativeFollowState: failed for $targetWallet: $e');
+          'UserService.fetchAuthoritativeFollowState: failed for $targetWallet: $e',
+        );
       }
-      if (!fallbackToLocalOverlay) return false;
-      final local = await _loadFollowingUsersFromPrefs();
-      return local.map(WalletUtils.canonical).contains(targetWallet);
+      return null;
     }
   }
 
   static void _reconcileFollowMutationCache({
     required String targetWallet,
     required bool isFollowing,
+    required bool changed,
     FollowMutationRecord? mutation,
     String? actorWallet,
     int? actorFollowingCount,
@@ -287,6 +319,7 @@ class UserService {
       final nextFollowersCount = mutation?.followersCount ??
           (() {
             final current = targetExisting.followersCount;
+            if (!changed) return current;
             if (isFollowing) return current + 1;
             return current > 0 ? current - 1 : 0;
           })();
@@ -302,9 +335,9 @@ class UserService {
     final canonicalActor = WalletUtils.canonical(actorWallet);
     if (canonicalActor.isNotEmpty) {
       final actorExisting = _cache[canonicalActor];
-      if (actorExisting != null) {
+      if (actorExisting != null && actorFollowingCount != null) {
         _cache[canonicalActor] = actorExisting.copyWith(
-          followingCount: actorFollowingCount ?? actorExisting.followingCount,
+          followingCount: actorFollowingCount,
         );
       }
     }
@@ -377,16 +410,14 @@ class UserService {
         }
       }
     } catch (_) {}
+    final mediaRevisionAtRequestStart = _profileMediaRevision;
     try {
       // Fetch a public profile by wallet, profile UUID, account UUID, or
       // username. Canonical public pages use the profile UUID, while community
       // payloads normally resolve to the wallet before reaching this method.
       final profile = await BackendApiService().getProfileByWallet(userId);
 
-      final isArtist =
-          (profile['isArtist'] == true) || (profile['is_artist'] == true);
-      final isInstitution = (profile['isInstitution'] == true) ||
-          (profile['is_institution'] == true);
+      final profileRoles = ProfileIdentityRoles.fromProfileMap(profile);
       final resolvedWallet = WalletUtils.canonical(
         (profile['targetWallet'] ??
                 profile['target_wallet'] ??
@@ -524,7 +555,7 @@ class UserService {
       final effectiveName = safeDisplayName.isNotEmpty
           ? safeDisplayName
           : (safeUsername.isNotEmpty ? safeUsername : 'Unknown artist');
-      final user = User(
+      var user = User(
         id: resolvedWallet,
         name: effectiveName,
         username: safeUsername,
@@ -533,9 +564,9 @@ class UserService {
         followingCount: followingFromProfile,
         postsCount: postsFromProfile,
         isFollowing: isFollowing,
-        isVerified: profile['isVerified'] ?? false,
-        isArtist: isArtist,
-        isInstitution: isInstitution,
+        isVerified: profileRoles.isVerified,
+        isArtist: profileRoles.isArtist,
+        isInstitution: profileRoles.isInstitution,
         showAchievements: _extractShowAchievements(profile),
         fieldOfWork: fieldOfWork,
         yearsActive: yearsActive,
@@ -555,6 +586,19 @@ class UserService {
               profile['cover'],
         ),
       );
+      final resolvedMediaRevision =
+          _profileMediaRevisionByUser[WalletUtils.canonical(resolvedWallet)] ??
+              0;
+      final lookupMediaRevision =
+          _profileMediaRevisionByUser[WalletUtils.canonical(userId)] ?? 0;
+      if (resolvedMediaRevision > mediaRevisionAtRequestStart ||
+          lookupMediaRevision > mediaRevisionAtRequestStart) {
+        final savedProfile =
+            _cachedUserFor(resolvedWallet) ?? _cachedUserFor(userId);
+        if (savedProfile != null) {
+          user = _copyWithProfileMedia(user, savedProfile);
+        }
+      }
       // populate cache & timestamp
       try {
         if (user.id.isNotEmpty) {
@@ -577,6 +621,33 @@ class UserService {
       return null;
     }
   }
+
+  static User? _cachedUserFor(String userId) {
+    final canonical = WalletUtils.canonical(userId);
+    return _cache[userId] ?? (canonical.isEmpty ? null : _cache[canonical]);
+  }
+
+  static User _copyWithProfileMedia(User profile, User mediaSource) => User(
+        id: profile.id,
+        name: profile.name,
+        username: profile.username,
+        bio: profile.bio,
+        profileImageUrl: mediaSource.profileImageUrl,
+        coverImageUrl: mediaSource.coverImageUrl,
+        fieldOfWork: profile.fieldOfWork,
+        yearsActive: profile.yearsActive,
+        followersCount: profile.followersCount,
+        followingCount: profile.followingCount,
+        postsCount: profile.postsCount,
+        isFollowing: profile.isFollowing,
+        isVerified: profile.isVerified,
+        isArtist: profile.isArtist,
+        isInstitution: profile.isInstitution,
+        showAchievements: profile.showAchievements,
+        joinedDate: profile.joinedDate,
+        achievementProgress: profile.achievementProgress,
+        achievementDefinitions: profile.achievementDefinitions,
+      );
 
   // Helper to extract avatar string from various payload shapes that may be returned
   static String? _extractAvatarCandidate(dynamic candidate, String wallet) {
@@ -687,18 +758,21 @@ class UserService {
     _setUsersInCache(users, allowNullMediaOverwrite: true);
   }
 
-  static void _setUsersInCache(List<User> users,
-      {required bool allowNullMediaOverwrite}) {
+  static void _setUsersInCache(
+    List<User> users, {
+    required bool allowNullMediaOverwrite,
+  }) {
     try {
       final now = DateTime.now().millisecondsSinceEpoch;
       for (final u in users) {
         if (u.id.isEmpty) continue;
 
         final existing = _cache[u.id];
+        late final User updated;
         if (allowNullMediaOverwrite || existing == null) {
-          _cache[u.id] = u;
+          updated = u;
         } else {
-          _cache[u.id] = User(
+          updated = User(
             id: u.id,
             name: u.name,
             username: u.username,
@@ -721,6 +795,12 @@ class UserService {
                 ? u.achievementDefinitions
                 : existing.achievementDefinitions,
           );
+        }
+        _cache[u.id] = updated;
+        if (existing?.profileImageUrl != updated.profileImageUrl ||
+            existing?.coverImageUrl != updated.coverImageUrl) {
+          final revision = ++_profileMediaRevision;
+          _profileMediaRevisionByUser[WalletUtils.canonical(u.id)] = revision;
         }
         try {
           _cacheTimestamps[u.id] = now;
@@ -865,6 +945,7 @@ class UserService {
           if (!v.containsKey('coverImageUrl')) {
             _legacyCacheMissingCoverKey.add(k);
           }
+          final cachedRoles = ProfileIdentityRoles.fromProfileMap(v);
           final user = User(
             id: v['id']?.toString() ?? k,
             name: v['name']?.toString() ?? 'Unknown artist',
@@ -881,9 +962,9 @@ class UserService {
                 ? v['postsCount'] as int
                 : int.tryParse((v['postsCount'] ?? '0').toString()) ?? 0,
             isFollowing: (v['isFollowing'] == true),
-            isVerified: (v['isVerified'] == true),
-            isArtist: (v['isArtist'] == true),
-            isInstitution: (v['isInstitution'] == true),
+            isVerified: cachedRoles.isVerified,
+            isArtist: cachedRoles.isArtist,
+            isInstitution: cachedRoles.isInstitution,
             showAchievements: v['showAchievements'] is bool
                 ? v['showAchievements'] as bool
                 : true,
@@ -979,6 +1060,7 @@ class UserService {
       _cache.clear();
       _cacheTimestamps.clear();
       _legacyCacheMissingCoverKey.clear();
+      _profileMediaRevisionByUser.clear();
       final prefs = await SharedPreferences.getInstance();
       await prefs.remove(_cachePrefsKey);
     } catch (e) {
@@ -1049,10 +1131,7 @@ class UserService {
           (profile['username'] ?? lookup).toString().replaceAll('@', '');
       final avatarCandidate =
           profile['avatar'] ?? profile['avatar_url'] ?? profile['avatarUrl'];
-      final isArtist =
-          profile['isArtist'] == true || profile['is_artist'] == true;
-      final isInstitution =
-          profile['isInstitution'] == true || profile['is_institution'] == true;
+      final profileRoles = ProfileIdentityRoles.fromProfileMap(profile);
 
       UserAchievementSummaryPayload achievementSummary =
           const UserAchievementSummaryPayload();
@@ -1085,9 +1164,9 @@ class UserService {
         followingCount: following,
         postsCount: 0,
         isFollowing: await _fetchAuthoritativeFollowState(wallet),
-        isVerified: profile['isVerified'] == true,
-        isArtist: isArtist,
-        isInstitution: isInstitution,
+        isVerified: profileRoles.isVerified,
+        isArtist: profileRoles.isArtist,
+        isInstitution: profileRoles.isInstitution,
         showAchievements: _extractShowAchievements(profile),
         joinedDate: joinedDate,
         achievementProgress: achievementSummary.progress,
@@ -1256,6 +1335,8 @@ class UserService {
 
     final actorWallet = await _activeWalletAddressFromPrefs();
     final backendApi = BackendApiService();
+    final followingList = await _loadFollowingUsersFromPrefs();
+    final wasFollowingLocally = followingList.contains(targetWallet);
 
     FollowMutationRecord? mutation;
     if (shouldFollow) {
@@ -1264,14 +1345,28 @@ class UserService {
       mutation = await backendApi.unfollowUserWithResponse(targetWallet);
     }
 
+    if (mutation == null || mutation.pending || mutation.fromFallback) {
+      return UserFollowMutationResult(
+        isFollowing: wasFollowingLocally,
+        targetWallet: targetWallet,
+        pending: true,
+        requestedIsFollowing: shouldFollow,
+      );
+    }
+    if (mutation.success == false) {
+      throw BackendApiRequestException(
+        statusCode: 200,
+        path: '/api/community/follow/${Uri.encodeComponent(targetWallet)}',
+        body: mutation.message,
+      );
+    }
+
     final mutationTargetWallet =
-        WalletUtils.canonical(mutation?.targetWallet ?? targetWallet);
+        WalletUtils.canonical(mutation.targetWallet ?? targetWallet);
     final resolvedTargetWallet =
         mutationTargetWallet.isEmpty ? targetWallet : mutationTargetWallet;
-    final resolvedIsFollowing = mutation?.isFollowing ?? shouldFollow;
-
-    final followingList = await _loadFollowingUsersFromPrefs();
-    final wasFollowingLocally = followingList.contains(resolvedTargetWallet);
+    final resolvedIsFollowing = mutation.isFollowing;
+    final wasFollowingResolved = followingList.contains(resolvedTargetWallet);
     if (resolvedIsFollowing) {
       if (!followingList.contains(resolvedTargetWallet)) {
         followingList.add(resolvedTargetWallet);
@@ -1280,8 +1375,7 @@ class UserService {
       followingList.remove(resolvedTargetWallet);
     }
 
-    final resolvedActorFollowingCount =
-        mutation?.actorFollowingCount ?? followingList.length;
+    final resolvedActorFollowingCount = mutation.actorFollowingCount;
 
     try {
       await _saveFollowingUsers(followingList);
@@ -1291,10 +1385,14 @@ class UserService {
       }
     }
 
+    final resolvedChanged =
+        mutation.changed ?? (resolvedIsFollowing != wasFollowingResolved);
+
     try {
       _reconcileFollowMutationCache(
         targetWallet: resolvedTargetWallet,
         isFollowing: resolvedIsFollowing,
+        changed: resolvedChanged,
         mutation: mutation,
         actorWallet: actorWallet,
         actorFollowingCount: resolvedActorFollowingCount,
@@ -1305,19 +1403,17 @@ class UserService {
       }
     }
 
-    final resolvedChanged =
-        mutation?.changed ?? (resolvedIsFollowing != wasFollowingLocally);
-    final resolvedFollowCreated = mutation?.followCreated ??
-        (resolvedIsFollowing && !wasFollowingLocally);
+    final resolvedFollowCreated = mutation.followCreated ??
+        (resolvedIsFollowing && !wasFollowingResolved);
     final resolvedUnfollowed =
-        mutation?.unfollowed ?? (!resolvedIsFollowing && wasFollowingLocally);
-    final resolvedRemoved = mutation?.removed ?? resolvedUnfollowed;
+        mutation.unfollowed ?? (!resolvedIsFollowing && wasFollowingResolved);
+    final resolvedRemoved = mutation.removed ?? resolvedUnfollowed;
 
     ProfilePackageMutationTracker.followStateChanged(
       targetWallet: resolvedTargetWallet,
       actorWallet: actorWallet,
       isFollowing: resolvedIsFollowing,
-      followersCount: mutation?.followersCount,
+      followersCount: mutation.followersCount,
       followingCount: resolvedActorFollowingCount,
     );
 
@@ -1342,14 +1438,15 @@ class UserService {
     return UserFollowMutationResult(
       isFollowing: resolvedIsFollowing,
       targetWallet: resolvedTargetWallet,
-      followersCount: mutation?.followersCount,
-      followingCount: mutation?.followingCount,
+      followersCount: mutation.followersCount,
+      followingCount: mutation.followingCount,
       actorFollowingCount: resolvedActorFollowingCount,
       changed: resolvedChanged,
       followCreated: resolvedFollowCreated,
       unfollowed: resolvedUnfollowed,
       removed: resolvedRemoved,
-      hasCanonicalPayload: mutation?.hasCanonicalPayload ?? false,
+      hasCanonicalPayload: mutation.hasCanonicalPayload,
+      requestedIsFollowing: shouldFollow,
     );
   }
 
@@ -1842,11 +1939,11 @@ class UserService {
                 postsCount: 0,
                 isFollowing:
                     profileIsFollowing || followingSet.contains(wallet),
-                isVerified: profile['isVerified'] ?? false,
-                isArtist:
-                    profile['isArtist'] == true || profile['is_artist'] == true,
-                isInstitution: profile['isInstitution'] == true ||
-                    profile['is_institution'] == true,
+                isVerified:
+                    ProfileIdentityRoles.fromProfileMap(profile).isVerified,
+                isArtist: ProfileIdentityRoles.fromProfileMap(profile).isArtist,
+                isInstitution:
+                    ProfileIdentityRoles.fromProfileMap(profile).isInstitution,
                 showAchievements: _extractShowAchievements(profile),
                 joinedDate: profile['createdAt'] != null
                     ? 'Joined ${DateTime.parse(profile['createdAt']).month}/${DateTime.parse(profile['createdAt']).year}'
@@ -2034,11 +2131,11 @@ class UserService {
               followingCount: followingCount,
               postsCount: 0,
               isFollowing: profileIsFollowing || followingSet.contains(wallet),
-              isVerified: profile['isVerified'] ?? false,
-              isArtist:
-                  profile['isArtist'] == true || profile['is_artist'] == true,
-              isInstitution: profile['isInstitution'] == true ||
-                  profile['is_institution'] == true,
+              isVerified:
+                  ProfileIdentityRoles.fromProfileMap(profile).isVerified,
+              isArtist: ProfileIdentityRoles.fromProfileMap(profile).isArtist,
+              isInstitution:
+                  ProfileIdentityRoles.fromProfileMap(profile).isInstitution,
               showAchievements: _extractShowAchievements(profile),
               joinedDate: profile['createdAt'] != null
                   ? 'Joined ${DateTime.parse(profile['createdAt']).month}/${DateTime.parse(profile['createdAt']).year}'

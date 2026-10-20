@@ -122,8 +122,12 @@ extension _DesktopSettingsScreenStatePart1 on _DesktopSettingsScreenState {
     }
   }
 
+  // Security fields are kept as stored; their own change handlers write them.
   Future<void> _saveSettings() async {
-    await SettingsService.saveSettings(_buildSettingsState());
+    final stored = await SettingsService.loadSettings();
+    await SettingsService.saveSettings(
+      SettingsService.withStoredSecurityFields(_buildSettingsState(), stored),
+    );
   }
 
   SettingsState _buildSettingsState() {
@@ -430,9 +434,11 @@ extension _DesktopSettingsScreenStatePart1 on _DesktopSettingsScreenState {
                   padding: const EdgeInsets.all(KubusSpacing.xl),
                   child: Row(
                     children: [
-                      AvatarWidget(
+                      KubusIdentityAvatar(
                         avatarUrl: user?.avatar,
                         wallet: user?.walletAddress ?? '',
+                        isArtist: user?.isArtist ?? false,
+                        isInstitution: user?.isInstitution ?? false,
                         radius:
                             KubusChromeMetrics.heroIconBox - KubusSpacing.xxs,
                         // On the flat card the avatar needs its own edge.

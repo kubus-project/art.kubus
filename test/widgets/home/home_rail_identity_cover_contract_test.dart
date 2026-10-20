@@ -1,9 +1,10 @@
+import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:art_kubus/models/profile_identity_data.dart';
 import 'package:art_kubus/models/promotion.dart';
 import 'package:art_kubus/utils/kubus_color_roles.dart';
-import 'package:art_kubus/widgets/avatar_widget.dart';
 import 'package:art_kubus/widgets/common/kubus_entity_card.dart';
 import 'package:art_kubus/widgets/home/home_promotion_rail.dart';
+import 'package:art_kubus/widgets/identity/kubus_identity_avatar.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -52,6 +53,8 @@ Map<String, dynamic> _institutionLive0801() => <String, dynamic>{
     };
 
 Widget _harness(Widget child) => MaterialApp(
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
       theme: ThemeData.dark().copyWith(
         extensions: const [KubusColorRoles.dark],
       ),
@@ -161,8 +164,8 @@ void main() {
     expect(card.variant, KubusEntityCardVariant.identity);
     expect(card.imageUrl, endsWith(_institutionCover));
     final mark = card.leading;
-    expect(mark, isA<AvatarWidget>());
-    expect((mark! as AvatarWidget).avatarUrl, _logo);
+    expect(mark, isA<KubusIdentityAvatar>());
+    expect((mark! as KubusIdentityAvatar).avatarUrl, _logo);
     expect(card.imageUrl, isNot(contains('bbf517b1')),
         reason: 'the logo must not be painted behind itself');
     // Network images fail in tests; the card must fall back, not throw.

@@ -287,7 +287,9 @@ class _CommunitySubjectPickerContentState
     }
 
     return FutureBuilder<List<Map<String, dynamic>>>(
-      future: BackendApiService().getArtistArtworks(wallet, limit: 50),
+      future: BackendApiService()
+          .getProfileArtworks(wallet, relationship: 'managed', limit: 50)
+          .then<List<Map<String, dynamic>>>((page) => page.items),
       builder: (context, snapshot) {
         if (snapshot.connectionState != ConnectionState.done) {
           return const Center(child: InlineLoading(expand: false));

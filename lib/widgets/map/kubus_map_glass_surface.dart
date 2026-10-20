@@ -10,11 +10,7 @@ import '../glass_components.dart';
 import 'glass/kubus_map_native_backdrop_channel.dart';
 import 'glass/kubus_map_platform_backdrop_host.dart';
 
-enum KubusMapGlassSurfaceKind {
-  panel,
-  card,
-  button,
-}
+enum KubusMapGlassSurfaceKind { panel, card, button }
 
 final Set<String> _loggedMapGlassFallbackKeys = <String>{};
 final Set<String> _loggedMapGlassRegionKeys = <String>{};
@@ -622,160 +618,158 @@ Widget buildKubusMapGlassSurface({
   bool? mobileBackdropSampleableOverride,
   bool? nativeBlurHostAvailableOverride,
 }) {
-  final preset = resolveKubusMapGlassSurfacePreset(
-    context,
-    kind: kind,
-    tintBase: tintBase,
-    useBlur: useBlur,
-    blurPolicy: blurPolicy,
-    overMapPlatformView: overMapPlatformView,
-    isWebOverride: isWebOverride,
-    platformBackdropHostAvailableOverride:
-        platformBackdropHostAvailableOverride,
-    mobileNativeOverride: mobileNativeOverride,
-    mobileBackdropSampleableOverride: mobileBackdropSampleableOverride,
-    nativeBlurHostAvailableOverride: nativeBlurHostAvailableOverride,
-  );
-  final theme = Theme.of(context);
-  final isDark = theme.brightness == Brightness.dark;
-  final effectiveRadius = borderRadius ?? preset.borderRadius;
-  final effectivePadding = padding;
-  final effectiveBorder = border ??
-      (showBorder
-          ? Border.all(
-              color: preset.borderColor,
-              width: KubusSizes.hairline,
-            )
-          : null);
+  Widget buildSurface(BuildContext buildContext) {
+    final preset = resolveKubusMapGlassSurfacePreset(
+      buildContext,
+      kind: kind,
+      tintBase: tintBase,
+      useBlur: useBlur,
+      blurPolicy: blurPolicy,
+      overMapPlatformView: overMapPlatformView,
+      isWebOverride: isWebOverride,
+      platformBackdropHostAvailableOverride:
+          platformBackdropHostAvailableOverride,
+      mobileNativeOverride: mobileNativeOverride,
+      mobileBackdropSampleableOverride: mobileBackdropSampleableOverride,
+      nativeBlurHostAvailableOverride: nativeBlurHostAvailableOverride,
+    );
+    final theme = Theme.of(buildContext);
+    final isDark = theme.brightness == Brightness.dark;
+    final effectiveRadius = borderRadius ?? preset.borderRadius;
+    final effectivePadding = padding;
+    final effectiveBorder = border ??
+        (showBorder
+            ? Border.all(color: preset.borderColor, width: KubusSizes.hairline)
+            : null);
 
-  Widget surface = GlassSurface(
-    borderRadius: effectiveRadius,
-    blurSigma: preset.style.blurSigma,
-    tintColor: preset.style.tintColor,
-    fallbackMinOpacity: preset.style.fallbackMinOpacity,
-    showBorder: showBorder,
-    border: effectiveBorder,
-    enableBlur: preset.useBlur,
-    child: Padding(
-      padding: effectivePadding,
-      child: child,
-    ),
-  );
+    Widget surface = GlassSurface(
+      borderRadius: effectiveRadius,
+      blurSigma: preset.style.blurSigma,
+      tintColor: preset.style.tintColor,
+      fallbackMinOpacity: preset.style.fallbackMinOpacity,
+      showBorder: showBorder,
+      border: effectiveBorder,
+      enableBlur: preset.useBlur,
+      child: Padding(padding: effectivePadding, child: child),
+    );
 
-  // When real backdrop blur is unavailable (notably mobile native overlays
-  // sitting over the MapLibre platform view), enrich the flat tinted fallback
-  // with a cheap, static "liquid glass" treatment: a diagonal sheen, a soft
-  // bottom-right falloff, and an inner highlight stroke. This is a single
-  // IgnorePointer decoration with no animation, so it stays jank-free while the
-  // map pans/zooms and reads as intentional glass rather than a flat panel.
-  if (!preset.useBlur) {
-    // StackFit.passthrough keeps the incoming constraints intact: inside a
-    // tight parent (e.g. an Expanded action-button cell) the glass surface must
-    // fill the cell exactly like the blur path does, instead of shrink-wrapping
-    // to its intrinsic width and leaving the sheen to cover the remainder.
-    surface = Stack(
-      fit: StackFit.passthrough,
-      children: <Widget>[
-        surface,
-        Positioned.fill(
-          child: IgnorePointer(
-            child: KubusMapGlassMaterialSheen(
-              borderRadius: effectiveRadius,
-              isDark: isDark,
+    // When real backdrop blur is unavailable (notably mobile native overlays
+    // sitting over the MapLibre platform view), enrich the flat tinted fallback
+    // with a cheap, static "liquid glass" treatment: a diagonal sheen, a soft
+    // bottom-right falloff, and an inner highlight stroke. This is a single
+    // IgnorePointer decoration with no animation, so it stays jank-free while the
+    // map pans/zooms and reads as intentional glass rather than a flat panel.
+    if (!preset.useBlur) {
+      // StackFit.passthrough keeps the incoming constraints intact: inside a
+      // tight parent (e.g. an Expanded action-button cell) the glass surface must
+      // fill the cell exactly like the blur path does, instead of shrink-wrapping
+      // to its intrinsic width and leaving the sheen to cover the remainder.
+      surface = Stack(
+        fit: StackFit.passthrough,
+        children: <Widget>[
+          surface,
+          Positioned.fill(
+            child: IgnorePointer(
+              child: KubusMapGlassMaterialSheen(
+                borderRadius: effectiveRadius,
+                isDark: isDark,
+              ),
             ),
           ),
-        ),
-      ],
-    );
-  }
-
-  // Loud, explicit diagnostic when an overlay that REQUIRED real blur did not
-  // get it. This is the contract from the map-glass spec: a required-but-missing
-  // real blur must never ship silently as a flat tint.
-  if (preset.realBlurUnavailable) {
-    final platform = kIsWeb ? 'web' : defaultTargetPlatform.name;
-    debugPrint(
-      'REAL MAP BLUR REQUESTED BUT FALLBACK USED: '
-      '${overlayName ?? kind.name} reason=${preset.blurReason} '
-      'platform=$platform regionId=${backdropRegionId ?? '<none>'}',
-    );
-  }
-
-  if (kDebugMode) {
-    final realBlurRequired = preset.requireRealBlur ||
-        blurPolicy == KubusMapBlurPolicy.forceRealBlur;
-    final platform = kIsWeb ? 'web' : defaultTargetPlatform.name;
-    final key = '$kind:${overlayName ?? ''}:${preset.backdropStrategy}:'
-        '${preset.useBlur}:${preset.realBlurUnavailable}';
-    if (_loggedMapGlassFallbackKeys.add(key)) {
-      debugPrint(
-        'KubusMapGlassSurface diag: overlay=${overlayName ?? kind.name} '
-        'kind=${kind.name} platform=$platform '
-        'realBlurRequired=$realBlurRequired strategy=${preset.backdropStrategy} '
-        'realBlurUsed=${preset.useBlur} fallbackUsed=${!preset.useBlur} '
-        'realBlurUnavailable=${preset.realBlurUnavailable} '
-        'regionId=${backdropRegionId ?? '<none>'} reason=${preset.blurReason}',
+        ],
       );
     }
-  }
 
-  final effectiveShadow = boxShadow ??
-      (preset.useBlur
-          ? const <BoxShadow>[]
-          : <BoxShadow>[
-              BoxShadow(
-                color: preset.shadowColor,
-                blurRadius: preset.shadowBlurRadius,
-                offset: preset.shadowOffset,
-              ),
-            ]);
+    // Loud, explicit diagnostic when an overlay that REQUIRED real blur did not
+    // get it. This is the contract from the map-glass spec: a required-but-missing
+    // real blur must never ship silently as a flat tint.
+    if (preset.realBlurUnavailable) {
+      final platform = kIsWeb ? 'web' : defaultTargetPlatform.name;
+      debugPrint(
+        'REAL MAP BLUR REQUESTED BUT FALLBACK USED: '
+        '${overlayName ?? kind.name} reason=${preset.blurReason} '
+        'platform=$platform regionId=${backdropRegionId ?? '<none>'}',
+      );
+    }
 
-  if (effectiveShadow.isNotEmpty) {
-    surface = DecoratedBox(
-      decoration: BoxDecoration(
-        borderRadius: effectiveRadius,
-        boxShadow: effectiveShadow,
-      ),
-      child: surface,
-    );
-  }
-
-  surface = Container(
-    margin: margin,
-    child: surface,
-  );
-
-  if (preset.usePlatformBackdropHost && enablePlatformBackdropRegion) {
     if (kDebugMode) {
-      final key = '$kind:${backdropRegionId ?? '<generated>'}';
-      if (_loggedMapGlassRegionKeys.add(key)) {
+      final realBlurRequired = preset.requireRealBlur ||
+          blurPolicy == KubusMapBlurPolicy.forceRealBlur;
+      final platform = kIsWeb ? 'web' : defaultTargetPlatform.name;
+      final key = '$kind:${overlayName ?? ''}:${preset.backdropStrategy}:'
+          '${preset.useBlur}:${preset.realBlurUnavailable}';
+      if (_loggedMapGlassFallbackKeys.add(key)) {
         debugPrint(
-          'KubusMapGlassSurface: platformBackdropRegion kind=$kind '
-          'id=${backdropRegionId ?? '<generated>'} '
-          'policy=$blurPolicy strategy=${preset.backdropStrategy}',
+          'KubusMapGlassSurface diag: overlay=${overlayName ?? kind.name} '
+          'kind=${kind.name} platform=$platform '
+          'realBlurRequired=$realBlurRequired strategy=${preset.backdropStrategy} '
+          'realBlurUsed=${preset.useBlur} fallbackUsed=${!preset.useBlur} '
+          'realBlurUnavailable=${preset.realBlurUnavailable} '
+          'regionId=${backdropRegionId ?? '<none>'} reason=${preset.blurReason}',
         );
       }
     }
-    surface = _KubusMapGlassBackdropTrackedSurface(
-      regionId: backdropRegionId,
-      borderRadius: effectiveRadius,
-      blurSigma: preset.blurSigma,
-      child: surface,
-    );
+
+    final effectiveShadow = boxShadow ??
+        (preset.useBlur
+            ? const <BoxShadow>[]
+            : <BoxShadow>[
+                BoxShadow(
+                  color: preset.shadowColor,
+                  blurRadius: preset.shadowBlurRadius,
+                  offset: preset.shadowOffset,
+                ),
+              ]);
+
+    if (effectiveShadow.isNotEmpty) {
+      surface = DecoratedBox(
+        decoration: BoxDecoration(
+          borderRadius: effectiveRadius,
+          boxShadow: effectiveShadow,
+        ),
+        child: surface,
+      );
+    }
+
+    surface = Container(margin: margin, child: surface);
+
+    if (preset.usePlatformBackdropHost && enablePlatformBackdropRegion) {
+      if (kDebugMode) {
+        final key = '$kind:${backdropRegionId ?? '<generated>'}';
+        if (_loggedMapGlassRegionKeys.add(key)) {
+          debugPrint(
+            'KubusMapGlassSurface: platformBackdropRegion kind=$kind '
+            'id=${backdropRegionId ?? '<generated>'} '
+            'policy=$blurPolicy strategy=${preset.backdropStrategy}',
+          );
+        }
+      }
+      surface = _KubusMapGlassBackdropTrackedSurface(
+        regionId: backdropRegionId,
+        borderRadius: effectiveRadius,
+        blurSigma: preset.blurSigma,
+        child: surface,
+      );
+    }
+
+    if (onTap != null) {
+      surface = Material(
+        color: Colors.transparent,
+        child: InkWell(
+          focusNode: focusNode,
+          onTap: onTap,
+          borderRadius: effectiveRadius,
+          child: surface,
+        ),
+      );
+    }
+    return surface;
   }
 
-  if (onTap != null) {
-    surface = Material(
-      color: Colors.transparent,
-      child: InkWell(
-        focusNode: focusNode,
-        onTap: onTap,
-        borderRadius: effectiveRadius,
-        child: surface,
-      ),
-    );
-  }
-  return surface;
+  return ValueListenableBuilder<bool?>(
+    valueListenable: KubusMapNativeBackdropChannel.supportListenable,
+    builder: (context, _, __) => buildSurface(context),
+  );
 }
 
 /// Static "liquid glass" sheen drawn over the opaque tint fallback used when
@@ -819,19 +813,11 @@ class KubusMapGlassMaterialSheen extends StatelessWidget {
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: <Color>[
-            highlight,
-            Colors.transparent,
-            falloff,
-          ],
+          colors: <Color>[highlight, Colors.transparent, falloff],
           stops: const <double>[0.0, 0.55, 1.0],
         ),
-        border: showRim
-            ? Border.all(
-                color: rim,
-                width: KubusSizes.hairline,
-              )
-            : null,
+        border:
+            showRim ? Border.all(color: rim, width: KubusSizes.hairline) : null,
       ),
     );
   }

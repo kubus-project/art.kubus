@@ -862,13 +862,41 @@ extension _DesktopSettingsScreenStatePart3 on _DesktopSettingsScreenState {
             .toList(),
         onChanged: (value) async {
           if (value == null) return;
+          final l10n = AppLocalizations.of(context)!;
+          final messenger = ScaffoldMessenger.of(context);
           final gate =
               Provider.of<SecurityGateProvider>(context, listen: false);
+          final nextSeconds = _autoLockSecondsFromLabel(value);
+          final stored = await SettingsService.loadSettings();
+          // Lengthening the lock or switching it off needs verification;
+          // shortening it does not.
+          if (SettingsService.isAutoLockLoosening(
+                  stored.autoLockSeconds, nextSeconds) &&
+              !await gate.requireSensitiveActionVerification()) {
+            messenger.showKubusSnackBar(
+              SnackBar(content: Text(l10n.securityHubAuthenticationFailed)),
+              tone: KubusSnackBarTone.error,
+            );
+            return;
+          }
+          final readBack = await SettingsService.updateStoredSettings(
+            (current) => current.copyWith(
+              autoLockTime: value,
+              autoLockSeconds: nextSeconds,
+            ),
+          );
+          await gate.reloadSettings();
+          if (!mounted) return;
+          if (readBack.autoLockSeconds != nextSeconds) {
+            messenger.showKubusSnackBar(
+              SnackBar(content: Text(l10n.securityHubActionFailed)),
+              tone: KubusSnackBarTone.error,
+            );
+            return;
+          }
           _applyState(() {
             _autoLockTime = value;
           });
-          await _saveSettings();
-          await gate.reloadSettings();
         },
       ),
       backgroundColor: Colors.transparent,

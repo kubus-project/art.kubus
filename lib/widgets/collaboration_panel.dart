@@ -15,7 +15,7 @@ import '../utils/creator_display_format.dart';
 import '../utils/design_tokens.dart';
 import '../utils/wallet_utils.dart';
 import '../utils/user_profile_navigation.dart';
-import '../widgets/avatar_widget.dart';
+import 'identity/kubus_identity_avatar.dart';
 import 'glass_components.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
 
@@ -728,7 +728,7 @@ class _CollaborationPanelState extends State<CollaborationPanel> {
                               : (s.displayName ?? 'user');
                           return ListTile(
                             dense: true,
-                            leading: AvatarWidget(
+                            leading: KubusIdentityAvatar(
                               avatarUrl: s.avatarUrl,
                               wallet: seed,
                               radius: 16,
@@ -892,7 +892,7 @@ class _CollaborationPanelState extends State<CollaborationPanel> {
                     : null,
                 child: Row(
                   children: [
-                    AvatarWidget(
+                    KubusIdentityAvatar(
                       avatarUrl: avatarUrl,
                       wallet: seed,
                       radius: KubusSizes.sidebarActionIcon - KubusSpacing.xxs,
