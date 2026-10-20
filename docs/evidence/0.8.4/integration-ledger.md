@@ -404,3 +404,52 @@ before #98/#101 shared changes, #100 before #102's server change, #101 before st
 #103's group-only gate with walletless ordinary post ownership. Every integration changes the PR
 head/base evidence, so currently green exact-head CI must not be reused after a rebase or merge.
 No merge authorization was exercised by this ledger update.
+
+## Session 8 (2026-10-20, integration checkpoint)
+
+### G — walletless ordinary Community posting implementation
+
+Backend worktree `G:/kubus-build-084/walletless-backend-084` is clean on
+`fix/084-account-community-posting`, commit `ef0df86ff0f4057af5a9a2cb5bab78995d9d4840`,
+based on fetched live `master` `fec505cedc8df06ce9f3229dd7e6a631814afea3`. Draft PR
+[#104](https://github.com/kubus-project/art.kubus-backend/pull/104) is OPEN against that
+exact base. Its `Resolve affected backend surfaces` check is pending on run `39347030975`;
+GitGuardian passes. No merge, deployment, or production migration was performed.
+
+The 10 changed paths are `src/routes/community.js`, `src/routes/groups.js`,
+`src/services/communityPostService.js`, `src/middleware/validation.js`, both schema snapshots,
+`migrations/111_account_community_posting.sql`,
+`scripts/rollback_account_community_posting.sql`, and the two focused PostgreSQL tests.
+Ordinary posts and reposts use authenticated `users.id` ownership, wallet metadata remains
+optional, and caller-supplied author IDs are ignored. Read/owner paths are account-first with
+wallet fallback only for legacy rows. Account deletion retains the existing `author_id` FK
+`ON DELETE CASCADE` behavior; no legacy authors are backfilled. Rollback refuses to restore
+wallet constraints while walletless posts or account-scoped submission keys exist. Group posts
+remain wallet-gated. Flutter composition is still gated and needs a separate matching change.
+
+Isolated loopback PostgreSQL proof: `walletlessCommunityMigration.postgres.test.js` plus
+`communityPostIdempotency.postgres.test.js` passed 23/23 tests, including legacy preservation,
+owner spoof rejection, cross-account denial, same-row wallet linking, durable replay, group gate,
+and account-deletion semantics. `verifySchemaBootstrap.js` clean-bootstrapped both snapshots and
+all 100 migrations into 137-table schemas; resulting catalogs matched. `verifySchemaParity.js`
+reported zero table drift and migration filename policy passed. Targeted ESLint, JS syntax, and
+`git diff --check` passed. This is local synthetic evidence; exact-head CI and independent
+ownership/security review remain pending.
+
+Migration sequence compatibility was checked against current PRs: #101 contributes migration
+109; stacked #102 includes 109 and adds 110; #103 has no migration; #104 uses 111. Recheck the
+combined migration history before any later integration or release migration.
+
+### Current app PR heads and review queue
+
+| PR | Live state on 2026-10-20 | Exact head / base | Current evidence |
+|---|---|---|---|
+| app #326 | OPEN, non-draft, CLEAN | `3dec5397f86f8ab77eb63e88cb980cd6a6ecff04` / `bb83fd2dfc2d540ab5d4047289bc4b344a3ea55e` | Required exact-head run `39339219070` green; do not rerun without a new finding. |
+| app #334 | OPEN draft, BLOCKED | `bb56bb9844cfe6a5d57fc23fa4b53c44e9765420` / same dev SHA | Draft-tier run `39345869661` passed its applicable checks; native builds were skipped. Local static native-resource tests 3/3 and focused Flutter tests 32/32 were reported. Console/signed runtime and packaged-resource build proof remain unverified. |
+| app #335 | OPEN draft, BLOCKED | `c46b05987c71a4ab95c13ce7a0a5d76994549da9` / same dev SHA | Local targeted analyze and 13 tests reported green; draft run `39347227776` still had repository guardrails pending when checked. |
+| app #336 | OPEN draft, BLOCKED | `f5da072044edd013e552ddbac1e74cf27f608804` / same dev SHA | Local 246 tests and targeted analyzer on 13 files reported green; draft run `39347272752` had affected-surface resolution pending. |
+
+The owner confirmed R03 depends on user-provided Google Sign-In API/config. Do not alter signing
+or OAuth secrets. Social review of #104 is in progress; native and badge reviews of #334/#326,
+then navigation review of #335 and incremental #336 review, are assigned. No review completion
+or merge approval is claimed here.

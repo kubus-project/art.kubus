@@ -5,6 +5,19 @@ and [scope-matrix.md](scope-matrix.md). Security findings are never written here
 live in the private draft advisory and `C:/kubus-build/_private/security/`.
 
 ```text
+LATEST (2026-10-20 integration checkpoint): see integration-ledger.md "Session 8" for live state.
+  Backend #104 walletless ordinary Community posting is pushed at ef0df86 from live master
+  fec505ce; local disposable PostgreSQL contract is 23/23, schema snapshots bootstrap and
+  match, CI is pending, and social ownership/security review is in progress. Ordinary posts and
+  reposts use authenticated users.id; groups remain wallet-gated and Flutter compose remains
+  gated. No merge or production migration was done.
+  App #326 remains OPEN/CLEAN at 3dec5397 with exact-head required run 39339219070 green.
+  #334 native branding/location is draft at bb56bb98; native build jobs were skipped on its
+  draft-tier run. The user must supply Google Sign-In API/config for R03; do not touch secrets.
+  #335 navigation/comments is draft at c46b0598 and #336 profile/avatar/follow is draft at
+  f5da0720; focused local tests were reported green, draft CI remains pending. Native/badge
+  review is underway; frontend walletless compose and final device/build evidence remain open.
+
 LATEST (2026-10-20 02:00, recovery pass): see integration-ledger.md "Session 7" for live state.
   App dev is bb83fd2dfc2d540ab5d4047289bc4b344a3ea55e; #325 is merged. #326 is OPEN at
   3dec5397f86f8ab77eb63e88cb980cd6a6ecff04 with its full required CI green. #331 (359224cd),
