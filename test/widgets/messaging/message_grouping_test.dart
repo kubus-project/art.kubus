@@ -10,14 +10,12 @@ const String _bob = '0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb';
 ChatMessage _message({
   String id = 'm',
   String wallet = _alice,
-  String? userId,
   DateTime? at,
 }) {
   return ChatMessage(
     id: id,
     conversationId: 'c1',
     senderWallet: wallet,
-    senderUserId: userId,
     message: 'hi',
     createdAt: at ?? DateTime(2026, 10, 20, 12),
   );
@@ -61,14 +59,6 @@ void main() {
       final a = _message(wallet: _alice);
       final b = _message(wallet: _alice.toUpperCase().replaceFirst('0X', '0x'));
       expect(messagesShareGroup(a, b), isTrue);
-    });
-
-    test('account-only senders group by user id when no wallet is present', () {
-      final a = _message(wallet: '', userId: 'user-1');
-      final b = _message(wallet: '', userId: 'user-1');
-      final c = _message(wallet: '', userId: 'user-2');
-      expect(messagesShareGroup(a, b), isTrue);
-      expect(messagesShareGroup(a, c), isFalse);
     });
 
     test('messages without any sender identity never group', () {

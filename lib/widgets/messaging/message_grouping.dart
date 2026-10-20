@@ -13,11 +13,8 @@ const double kMessageBubbleMaxWidth = 560;
 /// Column width for the thread and conversation list on wide layouts.
 const double kMessagingColumnMaxWidth = 760;
 
-String _senderIdentityKey(ChatMessage message) {
-  final wallet = message.senderWallet.trim();
-  if (wallet.isNotEmpty) return wallet.toLowerCase();
-  return (message.senderUserId ?? '').trim();
-}
+String _senderIdentityKey(ChatMessage message) =>
+    message.senderWallet.trim().toLowerCase();
 
 /// True when [a] and [b] belong to the same visual group: the same sender
 /// with an identity, and created within [kMessageGroupWindow] of each other.
