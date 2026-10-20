@@ -124,6 +124,62 @@
   "recentActivityFallbackArtworkTitle": "umetnino",
   "notificationSomeoneFallback": "Nekdo",
   "notificationAchievementFallback": "Dosežek",
+  "notificationCommunityLikeTitle": "Nov všeček",
+  "notificationCommunityLikeBody": "{name}: všeček za vašo objavo",
+  "@notificationCommunityLikeBody": {
+    "placeholders": {
+      "name": {}
+    }
+  },
+  "notificationCommunityCommentTitle": "Nov komentar",
+  "notificationCommunityCommentBody": "{name}: nov komentar na vašo objavo",
+  "@notificationCommunityCommentBody": {
+    "placeholders": {
+      "name": {}
+    }
+  },
+  "notificationCommunityCommentWithTextBody": "{name}: {comment}",
+  "@notificationCommunityCommentWithTextBody": {
+    "placeholders": {
+      "name": {},
+      "comment": {}
+    }
+  },
+  "notificationCommunityShareTitle": "Objava deljena",
+  "notificationCommunityShareBody": "{name}: deljena vaša objava",
+  "@notificationCommunityShareBody": {
+    "placeholders": {
+      "name": {}
+    }
+  },
+  "notificationCommunityRepostTitle": "Nova ponovna objava",
+  "notificationCommunityRepostBody": "{name}: ponovna objava vaše objave",
+  "@notificationCommunityRepostBody": {
+    "placeholders": {
+      "name": {}
+    }
+  },
+  "notificationCommunityMentionTitle": "Omenjeni ste",
+  "notificationCommunityMentionBody": "{name}: omemba v objavi",
+  "@notificationCommunityMentionBody": {
+    "placeholders": {
+      "name": {}
+    }
+  },
+  "notificationCommunityActivityTitle": "Nova aktivnost",
+  "notificationCommunityActivityBody": "{name}: nova aktivnost pri vaši objavi",
+  "@notificationCommunityActivityBody": {
+    "placeholders": {
+      "name": {}
+    }
+  },
+  "notificationFollowerTitle": "Nov sledilec",
+  "notificationFollowerBody": "{name}: zdaj vam sledi",
+  "@notificationFollowerBody": {
+    "placeholders": {
+      "name": {}
+    }
+  },
   "notificationRecognitionRecordedTitle": "Priznanje zabeleženo",
   "notificationArtworkDiscoveredTitle": "Odkrito umetniško delo",
   "notificationArtworkDiscoveredBody": "Odkrito: »{title}« · {artist}",

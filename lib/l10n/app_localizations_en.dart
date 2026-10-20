@@ -142,9 +142,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String archiveObjectSeriesDefaultDescription(
-    Object artworkTitle,
-    Object artistName,
-  ) {
+      Object artworkTitle, Object artistName) {
     return 'Digital editions of $artworkTitle by $artistName';
   }
 
@@ -179,11 +177,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String communityAchievementUnlockedToast(
-    Object title,
-    Object extra,
-    Object amount,
-    Object currency,
-  ) {
+      Object title, Object extra, Object amount, Object currency) {
     return 'Achievement unlocked\n$title$extra\n+$amount $currency recognition';
   }
 
@@ -242,9 +236,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String recentActivityArchiveObjectStatusDescription(
-    Object status,
-    Object title,
-  ) {
+      Object status, Object title) {
     return 'Digital edition $status for $title';
   }
 
@@ -256,6 +248,67 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get notificationAchievementFallback => 'Achievement';
+
+  @override
+  String get notificationCommunityLikeTitle => 'New like';
+
+  @override
+  String notificationCommunityLikeBody(Object name) {
+    return '$name liked your post';
+  }
+
+  @override
+  String get notificationCommunityCommentTitle => 'New comment';
+
+  @override
+  String notificationCommunityCommentBody(Object name) {
+    return '$name commented on your post';
+  }
+
+  @override
+  String notificationCommunityCommentWithTextBody(Object name, Object comment) {
+    return '$name: $comment';
+  }
+
+  @override
+  String get notificationCommunityShareTitle => 'Post shared';
+
+  @override
+  String notificationCommunityShareBody(Object name) {
+    return '$name shared your post';
+  }
+
+  @override
+  String get notificationCommunityRepostTitle => 'New repost';
+
+  @override
+  String notificationCommunityRepostBody(Object name) {
+    return '$name reposted your post';
+  }
+
+  @override
+  String get notificationCommunityMentionTitle => 'You were mentioned';
+
+  @override
+  String notificationCommunityMentionBody(Object name) {
+    return '$name mentioned you in a post';
+  }
+
+  @override
+  String get notificationCommunityActivityTitle => 'New activity';
+
+  @override
+  String notificationCommunityActivityBody(Object name) {
+    return '$name interacted with your post';
+  }
+
+  @override
+  String get notificationFollowerTitle => 'New follower';
+
+  @override
+  String notificationFollowerBody(Object name) {
+    return '$name started following you';
+  }
 
   @override
   String get notificationRecognitionRecordedTitle => 'Recognition recorded';
@@ -2642,10 +2695,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String walletSessionStatusSummary(
-    Object accountStatus,
-    Object walletStatus,
-    Object signerStatus,
-  ) {
+      Object accountStatus, Object walletStatus, Object signerStatus) {
     return 'Account: $accountStatus · Wallet: $walletStatus · Access: $signerStatus';
   }
 
@@ -7657,10 +7707,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String receiveTokenSidebarTransferSubtitle(
-    Object token,
-    Object amount,
-    Object date,
-  ) {
+      Object token, Object amount, Object date) {
     return '$token · $amount · $date';
   }
 
@@ -7715,10 +7762,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String sendTokenSidebarRecipientSubtitle(
-    Object token,
-    Object amount,
-    Object date,
-  ) {
+      Object token, Object amount, Object date) {
     return '$token · $amount · $date';
   }
 
@@ -7829,10 +7873,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String sendTokenSendSuccessWithSignatureToast(
-    Object amount,
-    Object token,
-    Object signature,
-  ) {
+      Object amount, Object token, Object signature) {
     return '$amount $token submitted. Tx: $signature';
   }
 
@@ -9625,9 +9666,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String marketplaceOpenCollectibleDetailsSemantic(
-    Object title,
-    Object tokenId,
-  ) {
+      Object title, Object tokenId) {
     return 'Open details for $title, token $tokenId';
   }
 
@@ -10088,9 +10127,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String daoDelegateVotingPowerDialogBody(
-    Object votingPower,
-    Object delegateName,
-  ) {
+      Object votingPower, Object delegateName) {
     return 'Are you sure you want to delegate your $votingPower voting power to $delegateName?';
   }
 
@@ -12273,10 +12310,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String walletSwapSubmittedToastWithSignature(
-    Object fromToken,
-    Object toToken,
-    Object signature,
-  ) {
+      Object fromToken, Object toToken, Object signature) {
     return 'Swap submitted: $fromToken ? $toToken. Tx: $signature';
   }
 
@@ -14314,9 +14348,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String analyticsRecommendationConsistencyDescription(
-    Object activeBuckets,
-    Object totalBuckets,
-  ) {
+      Object activeBuckets, Object totalBuckets) {
     return 'Activity was recorded on $activeBuckets of $totalBuckets buckets.';
   }
 
@@ -14514,9 +14546,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String daoProposalVotesSupportSummaryLabel(
-    Object totalVotes,
-    Object supportPct,
-  ) {
+      Object totalVotes, Object supportPct) {
     return '$totalVotes votes · $supportPct% support';
   }
 
@@ -15928,10 +15958,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String analyticsInsightActivePatternDescription(
-    Object activeBuckets,
-    Object totalBuckets,
-    Object metric,
-  ) {
+      Object activeBuckets, Object totalBuckets, Object metric) {
     return '$activeBuckets of $totalBuckets intervals recorded $metric.';
   }
 
@@ -17637,11 +17664,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String marketplaceListingValueSemantic(
-    String source,
-    String amount,
-    String currency,
-    String state,
-  ) {
+      String source, String amount, String currency, String state) {
     return '$source: $amount $currency. $state';
   }
 

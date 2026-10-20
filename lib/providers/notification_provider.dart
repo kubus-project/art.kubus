@@ -779,6 +779,13 @@ class NotificationProvider extends ChangeNotifier {
               userName: userName ?? l10n.notificationSomeoneFallback,
             );
             break;
+          case 'repost':
+            await _pushService.showCommunityInteractionNotification(
+              postId: postId ?? '',
+              type: 'repost',
+              userName: userName ?? l10n.notificationSomeoneFallback,
+            );
+            break;
           case 'mention':
             await _pushService.showCommunityInteractionNotification(
               postId: postId ?? '',
