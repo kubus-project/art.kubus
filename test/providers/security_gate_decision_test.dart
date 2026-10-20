@@ -4,6 +4,7 @@ import 'package:art_kubus/providers/notification_provider.dart';
 import 'package:art_kubus/providers/profile_provider.dart';
 import 'package:art_kubus/providers/security_gate_provider.dart';
 import 'package:art_kubus/providers/wallet_provider.dart';
+import 'package:art_kubus/services/settings_service.dart';
 import 'package:flutter/widgets.dart';
 import 'package:fake_async/fake_async.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -35,15 +36,16 @@ class _FlakySettingsGate extends SecurityGateProvider {
   bool failReloads = false;
   int reloadCalls = 0;
 
-  /// Each queued completer makes the next reload hang until completed.
-  final List<Completer<void>> hangOn = <Completer<void>>[];
+  /// Each queued completer makes the next settings read hang until completed;
+  /// the value it completes with is what that read returns.
+  final List<Completer<SettingsState>> hangOn = <Completer<SettingsState>>[];
 
   @override
-  Future<void> reloadSettings() async {
+  Future<SettingsState> readSettingsForDecision() async {
     reloadCalls++;
     if (failReloads) throw StateError('settings read failed');
     if (hangOn.isNotEmpty) return hangOn.removeAt(0).future;
-    await super.reloadSettings();
+    return super.readSettingsForDecision();
   }
 }
 
@@ -165,7 +167,7 @@ void main() {
     test('hung settings read on cold start clears pending and locks', () {
       fakeAsync((async) {
         final gate = _gate(timeout: timeout);
-        gate.hangOn.add(Completer<void>());
+        gate.hangOn.add(Completer<SettingsState>());
         var done = false;
         gate.initialize().then((_) => done = true);
 
@@ -187,7 +189,7 @@ void main() {
         expect(gate.isLockDecisionPending, isFalse);
         final callsAfterColdStart = gate.reloadCalls;
 
-        gate.hangOn.add(Completer<void>());
+        gate.hangOn.add(Completer<SettingsState>());
         gate.onAppLifecycleChanged(AppLifecycleState.resumed);
         gate.onAppLifecycleChanged(AppLifecycleState.resumed);
         expect(gate.isLockDecisionPending, isTrue);
@@ -210,8 +212,8 @@ void main() {
         gate.initialize();
         async.flushMicrotasks();
 
-        final orphan = Completer<void>();
-        final newer = Completer<void>();
+        final orphan = Completer<SettingsState>();
+        final newer = Completer<SettingsState>();
         gate.hangOn.add(orphan);
         gate.onAppLifecycleChanged(AppLifecycleState.resumed);
         async.elapse(timeout);
@@ -223,14 +225,83 @@ void main() {
         expect(gate.isLockDecisionPending, isTrue);
 
         // The orphan finishes while the newer decision is still running.
-        orphan.complete();
+        orphan.complete(SettingsState.defaults());
         async.flushMicrotasks();
         expect(gate.isLockDecisionPending, isTrue);
 
-        newer.complete();
+        newer.complete(SettingsState.defaults());
         async.flushMicrotasks();
         expect(gate.isLockDecisionPending, isFalse);
       });
+    });
+  });
+
+  group('orphaned lock decisions are fenced', () {
+    const timeout = Duration(seconds: 5);
+
+    test(
+        'a storage read finishing after the timeout cannot relock once the '
+        'fallback lock is released', () {
+      fakeAsync((async) {
+        final gate = _gate(
+          prefs: {_tsKey: _agoMs(const Duration(minutes: 10))},
+          timeout: timeout,
+        );
+        final orphan = Completer<SettingsState>();
+        gate.hangOn.add(orphan);
+        gate.initialize();
+        async.elapse(timeout);
+        async.flushMicrotasks();
+        expect(gate.isLocked, isTrue);
+
+        gate.completeForTesting(localAuthentication: true);
+        expect(gate.isLocked, isFalse);
+
+        orphan.complete(SettingsState.defaults()
+            .copyWith(requirePin: true, autoLockSeconds: 60));
+        async.flushMicrotasks();
+
+        expect(gate.isLocked, isFalse);
+        expect(gate.isLockDecisionPending, isFalse);
+      });
+    });
+
+    test(
+        'a stale settings read cannot overwrite settings from a newer decision',
+        () {
+      fakeAsync((async) {
+        final gate = _gate(timeout: timeout);
+        final orphan = Completer<SettingsState>();
+        gate.hangOn.add(orphan);
+        gate.initialize();
+        async.elapse(timeout);
+        async.flushMicrotasks();
+
+        final newer = Completer<SettingsState>()
+          ..complete(SettingsState.defaults()
+              .copyWith(requirePin: false, autoLockSeconds: 60));
+        gate.hangOn.add(newer);
+        gate.onAppLifecycleChanged(AppLifecycleState.resumed);
+        async.flushMicrotasks();
+        expect(gate.settings.requirePin, isFalse);
+
+        orphan.complete(SettingsState.defaults()
+            .copyWith(requirePin: true, autoLockSeconds: 60));
+        async.flushMicrotasks();
+
+        expect(gate.settings.requirePin, isFalse);
+        expect(gate.isLockDecisionPending, isFalse);
+      });
+    });
+
+    test('a decision that finishes in time still locks after a long absence',
+        () async {
+      final gate = _gate(
+        prefs: {_tsKey: _agoMs(const Duration(minutes: 10))},
+      );
+      await gate.initialize();
+      expect(gate.isLocked, isTrue);
+      expect(gate.isLockDecisionPending, isFalse);
     });
   });
 }
