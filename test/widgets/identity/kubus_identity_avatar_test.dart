@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:art_kubus/l10n/app_localizations.dart';
@@ -13,6 +14,7 @@ import 'package:http/testing.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:art_kubus/services/backend_api_service.dart';
+import 'package:art_kubus/services/event_bus.dart';
 
 const _badgeKey = ValueKey<String>('profile-avatar-role-badge');
 const _verifiedKey = ValueKey<String>('profile-avatar-verified');
@@ -64,6 +66,7 @@ User _cachedUser({
   bool isArtist = false,
   bool isInstitution = false,
   bool isVerified = false,
+  String? avatarUrl,
 }) =>
     User(
       id: _wallet,
@@ -77,6 +80,7 @@ User _cachedUser({
       isVerified: isVerified,
       isArtist: isArtist,
       isInstitution: isInstitution,
+      profileImageUrl: avatarUrl,
       joinedDate: '',
     );
 
@@ -96,6 +100,7 @@ void main() {
           return http.Response(
             jsonEncode(<String, dynamic>{
               'id': profileId,
+              'userId': profileId,
               'walletAddress': _wallet,
               'username': 'ana',
               'displayName': 'Ana',
@@ -143,6 +148,95 @@ void main() {
       await tester.pumpWidget(const SizedBox.shrink());
       await tester.pump(const Duration(seconds: 1));
     });
+
+    testWidgets(
+        'a late profile lookup cannot put account A roles on reused account B',
+        (tester) async {
+      await UserService.clearCache();
+      final response = Completer<http.Response>();
+      var profileRequestStarted = false;
+      api.setHttpClient(MockClient((request) {
+        if (request.url.path == '/api/profiles/$profileId') {
+          profileRequestStarted = true;
+          return response.future;
+        }
+        return Future<http.Response>.value(http.Response('Not found', 404));
+      }));
+
+      final identityA = ProfileIdentityData.fromIdentityPayload(
+        <String, dynamic>{
+          'author': <String, dynamic>{
+            'id': profileId,
+            'userId': profileId,
+            'walletAddress': _wallet,
+            'displayName': 'Account A',
+          },
+        },
+        fallbackLabel: 'Unknown',
+      );
+      await tester.pumpWidget(_app(KubusIdentityAvatar.fromIdentity(
+        identityA,
+        key: const ValueKey<String>('reused-account-avatar'),
+        fetchMissingAvatar: true,
+        enableProfileNavigation: false,
+      )));
+      await tester.pump();
+      await tester.runAsync(
+          () => Future<void>.delayed(const Duration(milliseconds: 30)));
+      await tester.pump();
+      expect(profileRequestStarted, isTrue);
+
+      const accountBWallet = '9xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU';
+      final identityB = ProfileIdentityData.fromIdentityPayload(
+        <String, dynamic>{
+          'author': <String, dynamic>{
+            'id': '0bdb20de-596c-4c36-a15e-dcfba4cf4e6f',
+            'userId': '0bdb20de-596c-4c36-a15e-dcfba4cf4e6f',
+            'walletAddress': accountBWallet,
+            'displayName': 'Account B',
+            'avatarUrl': 'https://images.example.test/account-b.png',
+            'roles': <String, dynamic>{'artist': true},
+          },
+        },
+        fallbackLabel: 'Unknown',
+      );
+      await tester.pumpWidget(_app(KubusIdentityAvatar.fromIdentity(
+        identityB,
+        key: const ValueKey<String>('reused-account-avatar'),
+        fetchMissingAvatar: true,
+        enableProfileNavigation: false,
+      )));
+      await tester.pump();
+      expect(find.byIcon(Icons.brush_rounded), findsOneWidget);
+      expect(find.byIcon(Icons.account_balance_rounded), findsNothing);
+
+      await tester.runAsync(() async {
+        response.complete(
+          http.Response(
+            jsonEncode(<String, dynamic>{
+              'id': profileId,
+              'walletAddress': _wallet,
+              'username': 'account-a',
+              'displayName': 'Account A',
+              'avatar': 'https://images.example.test/account-a.png',
+              'isFollowing': true,
+              'roles': <String, dynamic>{'institution': true},
+              'isInstitution': true,
+            }),
+            200,
+            headers: <String, String>{'content-type': 'application/json'},
+          ),
+        );
+        await Future<void>.delayed(const Duration(milliseconds: 100));
+      });
+      await tester.pump();
+
+      expect(find.byIcon(Icons.brush_rounded), findsOneWidget);
+      expect(find.byIcon(Icons.account_balance_rounded), findsNothing);
+      expect(tester.takeException(), isNull);
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump(const Duration(seconds: 1));
+    });
   });
 
   group('roles from the profile cache (no network)', () {
@@ -167,11 +261,117 @@ void main() {
       expect(find.byIcon(Icons.brush_rounded), findsOneWidget);
     });
 
+    testWidgets('an explicit role revocation overrides stale cached role marks',
+        (tester) async {
+      UserService.setUsersInCacheAuthoritative(
+        [_cachedUser(isArtist: true, isVerified: true)],
+      );
+      final identity = ProfileIdentityData.fromIdentityPayload(
+        <String, dynamic>{
+          'author': <String, dynamic>{
+            'id': _wallet,
+            'walletAddress': _wallet,
+            'roles': <String, dynamic>{
+              'artist': false,
+              'institution': false,
+            },
+            'isArtist': false,
+            'isInstitution': false,
+            'isVerified': false,
+          },
+        },
+        fallbackLabel: 'Unknown',
+      );
+      await tester.pumpWidget(_app(KubusIdentityAvatar.fromIdentity(
+        identity,
+        fetchMissingAvatar: false,
+        enableProfileNavigation: false,
+      )));
+      await tester.pump();
+
+      expect(find.byKey(_badgeKey), findsNothing);
+    });
+
+    testWidgets(
+        'a wallet profile update refreshes an avatar addressed by account ID',
+        (tester) async {
+      const profileId = 'e482d0cc-7cc4-4d7a-8ace-5dddc2dd92f0';
+      const oldAvatar = 'https://images.example.test/old.png';
+      const newAvatar = 'https://images.example.test/new.png';
+      final identity = ProfileIdentityData.fromIdentityPayload(
+        <String, dynamic>{
+          'author': <String, dynamic>{
+            'id': profileId,
+            'userId': profileId,
+            'walletAddress': _wallet,
+            'displayName': 'Ana',
+            'avatarUrl': oldAvatar,
+          },
+        },
+        fallbackLabel: 'Unknown',
+      );
+      await tester.pumpWidget(_app(KubusIdentityAvatar.fromIdentity(
+        identity,
+        fetchMissingAvatar: false,
+        enableProfileNavigation: false,
+      )));
+      await tester.pump();
+      expect(
+        (tester.widget<Image>(find.byType(Image)).image as NetworkImage).url,
+        oldAvatar,
+      );
+
+      final updated = _cachedUser(avatarUrl: newAvatar);
+      UserService.setUsersInCacheAuthoritative([updated]);
+      EventBus().emitProfileUpdated(updated);
+      await tester.idle();
+      await tester.pump();
+
+      expect(
+        (tester.widget<Image>(find.byType(Image)).image as NetworkImage).url,
+        newAvatar,
+      );
+    });
+
     testWidgets('a cached profile with no roles draws nothing', (tester) async {
       UserService.setUsersInCacheAuthoritative([_cachedUser()]);
       await tester.pumpWidget(_app(_avatar()));
       await tester.pump();
       expect(find.byKey(_badgeKey), findsNothing);
+    });
+
+    testWidgets(
+        'wallet cache supplies the avatar on a profile-ID addressed surface',
+        (tester) async {
+      const profileId = 'e482d0cc-7cc4-4d7a-8ace-5dddc2dd92f0';
+      const cachedAvatar = 'https://images.example.test/cached-profile.png';
+      UserService.setUsersInCacheAuthoritative(
+        [_cachedUser(isArtist: true, avatarUrl: cachedAvatar)],
+      );
+      final identity = ProfileIdentityData.fromIdentityPayload(
+        <String, dynamic>{
+          'author': <String, dynamic>{
+            'id': profileId,
+            'userId': profileId,
+            'walletAddress': _wallet,
+            'displayName': 'Ana',
+          },
+        },
+        fallbackLabel: 'Unknown',
+      );
+
+      await tester.pumpWidget(_app(KubusIdentityAvatar.fromIdentity(
+        identity,
+        fetchMissingAvatar: false,
+        enableProfileNavigation: false,
+      )));
+      await tester.pump();
+
+      expect(
+        (tester.widget<Image>(find.byType(Image)).image as NetworkImage).url,
+        cachedAvatar,
+      );
+      expect(find.byIcon(Icons.brush_rounded), findsOneWidget);
     });
 
     testWidgets('stated roles and cached roles add up to a dual role',

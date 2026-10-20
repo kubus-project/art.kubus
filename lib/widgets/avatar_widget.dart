@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart' show listEquals;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -26,6 +27,7 @@ class AvatarWidget extends StatefulWidget {
 
   final String? avatarUrl;
   final String wallet;
+  final List<String> walletAliases;
 
   /// The account's display name, used only for the initials shown when there is
   /// no image. Without it the initials come from the wallet string, which reads
@@ -53,6 +55,7 @@ class AvatarWidget extends StatefulWidget {
     super.key,
     this.avatarUrl,
     required this.wallet,
+    this.walletAliases = const <String>[],
     this.displayName,
     this.radius = 18,
     this.borderWidth = 0,
@@ -91,9 +94,8 @@ class _AvatarWidgetState extends State<AvatarWidget>
     _shimmerController = AnimationController(
         vsync: this, duration: const Duration(milliseconds: 1000));
     _syncShimmerController();
-    _profileUpdatedSub = EventBus()
-        .on('profile_updated')
-        .listen(_handleProfileUpdated);
+    _profileUpdatedSub =
+        EventBus().on('profile_updated').listen(_handleProfileUpdated);
     _setup();
   }
 
@@ -126,7 +128,15 @@ class _AvatarWidgetState extends State<AvatarWidget>
     }
 
     // 2. Check cache
-    final cached = UserService.getCachedUser(cacheKey)?.profileImageUrl;
+    final cachedProfile = <String>{
+      cacheKey,
+      widget.wallet.trim(),
+      ...widget.walletAliases.map((alias) => alias.trim()),
+    }.where((identifier) => identifier.isNotEmpty).map((identifier) {
+      return UserService.getCachedUser(identifier) ??
+          UserService.getCachedUser(WalletUtils.normalize(identifier));
+    }).firstWhere((user) => user != null, orElse: () => null);
+    final cached = cachedProfile?.profileImageUrl;
     if (cached != null && cached.isNotEmpty) {
       setState(() {
         _effectiveUrl = _normalizeAvatar(cached);
@@ -207,11 +217,10 @@ class _AvatarWidgetState extends State<AvatarWidget>
       if (payload is User) {
         updatedWallet = payload.id;
       } else if (payload is Map) {
-        updatedWallet =
-            (payload['walletAddress'] ??
-                    payload['wallet_address'] ??
-                    payload['id'])
-                ?.toString();
+        updatedWallet = (payload['walletAddress'] ??
+                payload['wallet_address'] ??
+                payload['id'])
+            ?.toString();
       } else {
         final dynamic value = payload;
         updatedWallet =
@@ -223,13 +232,18 @@ class _AvatarWidgetState extends State<AvatarWidget>
     }
 
     final wallet = (updatedWallet ?? '').trim();
-    if (wallet.isEmpty || !WalletUtils.equals(wallet, widget.wallet)) return;
+    final matchesIdentity = wallet.isNotEmpty &&
+        <String>[widget.wallet, ...widget.walletAliases].any((candidate) {
+          final id = candidate.trim();
+          return id.isNotEmpty &&
+              (id == wallet || WalletUtils.equals(id, wallet));
+        });
+    if (!matchesIdentity) return;
 
     final cacheKey = WalletUtils.normalize(wallet);
-    final cached =
-        UserService.getCachedUser(cacheKey) ??
-            UserService.getCachedUser(wallet) ??
-            UserService.getCachedUser(WalletUtils.normalize(widget.wallet));
+    final cached = UserService.getCachedUser(cacheKey) ??
+        UserService.getCachedUser(wallet) ??
+        UserService.getCachedUser(WalletUtils.normalize(widget.wallet));
     if (cached == null || !mounted) return;
 
     // A profile save can finish while this avatar's earlier lookup is still in
@@ -278,6 +292,7 @@ class _AvatarWidgetState extends State<AvatarWidget>
     super.didUpdateWidget(oldWidget);
     if (oldWidget.avatarUrl != widget.avatarUrl ||
         oldWidget.wallet != widget.wallet ||
+        !listEquals(oldWidget.walletAliases, widget.walletAliases) ||
         oldWidget.allowFabricatedFallback != widget.allowFabricatedFallback ||
         oldWidget.fetchMissingAvatar != widget.fetchMissingAvatar) {
       _setup();

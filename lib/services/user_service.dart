@@ -588,7 +588,7 @@ class UserService {
       );
       final resolvedMediaRevision =
           _profileMediaRevisionByUser[WalletUtils.canonical(resolvedWallet)] ??
-          0;
+              0;
       final lookupMediaRevision =
           _profileMediaRevisionByUser[WalletUtils.canonical(userId)] ?? 0;
       if (resolvedMediaRevision > mediaRevisionAtRequestStart ||
@@ -628,26 +628,26 @@ class UserService {
   }
 
   static User _copyWithProfileMedia(User profile, User mediaSource) => User(
-    id: profile.id,
-    name: profile.name,
-    username: profile.username,
-    bio: profile.bio,
-    profileImageUrl: mediaSource.profileImageUrl,
-    coverImageUrl: mediaSource.coverImageUrl,
-    fieldOfWork: profile.fieldOfWork,
-    yearsActive: profile.yearsActive,
-    followersCount: profile.followersCount,
-    followingCount: profile.followingCount,
-    postsCount: profile.postsCount,
-    isFollowing: profile.isFollowing,
-    isVerified: profile.isVerified,
-    isArtist: profile.isArtist,
-    isInstitution: profile.isInstitution,
-    showAchievements: profile.showAchievements,
-    joinedDate: profile.joinedDate,
-    achievementProgress: profile.achievementProgress,
-    achievementDefinitions: profile.achievementDefinitions,
-  );
+        id: profile.id,
+        name: profile.name,
+        username: profile.username,
+        bio: profile.bio,
+        profileImageUrl: mediaSource.profileImageUrl,
+        coverImageUrl: mediaSource.coverImageUrl,
+        fieldOfWork: profile.fieldOfWork,
+        yearsActive: profile.yearsActive,
+        followersCount: profile.followersCount,
+        followingCount: profile.followingCount,
+        postsCount: profile.postsCount,
+        isFollowing: profile.isFollowing,
+        isVerified: profile.isVerified,
+        isArtist: profile.isArtist,
+        isInstitution: profile.isInstitution,
+        showAchievements: profile.showAchievements,
+        joinedDate: profile.joinedDate,
+        achievementProgress: profile.achievementProgress,
+        achievementDefinitions: profile.achievementDefinitions,
+      );
 
   // Helper to extract avatar string from various payload shapes that may be returned
   static String? _extractAvatarCandidate(dynamic candidate, String wallet) {
