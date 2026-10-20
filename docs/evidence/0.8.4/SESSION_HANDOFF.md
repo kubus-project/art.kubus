@@ -5,23 +5,33 @@ and [scope-matrix.md](scope-matrix.md). Security findings are never written here
 live in the private draft advisory and `C:/kubus-build/_private/security/`.
 
 ```text
-LATEST (2026-10-20 integration checkpoint): see integration-ledger.md "Session 8" for live state.
-  Backend #104 walletless ordinary Community posting plus the legacy wallet-only group replay fix
-  is pushed at 7c0fdf09 from live master fec505ce. Isolated PostgreSQL contracts pass 24/24;
-  snapshots bootstrap and match. Current-head CI run 39347631529 has affected-surface resolution
-  and GitGuardian passing, lint/deterministic tests in progress. Social found the NULL user_id
-  completion bug; it is repaired and must receive renewed independent review. Ordinary posts and
-  reposts use authenticated users.id; groups remain wallet-gated and Flutter compose remains
-  gated. No merge or production migration was done.
-  App #326 remains OPEN/CLEAN at 3dec5397 with exact-head required run 39339219070 green.
-  #334 native branding/location is draft at bb56bb98; source review found no blocker in its
-  bounded scope, while native build jobs were skipped on its draft-tier run. The user must supply
-  Google Sign-In API/config for R03; do not touch secrets.
-  #335 navigation/comments is draft at c46b0598 and #336 profile/avatar/follow is draft at
-  f5da0720; focused local tests were reported green, draft CI remains pending. #326/#335/#336
-  app reviews remain queued; frontend walletless compose and final device/build evidence remain open.
+LATEST (2026-10-20, Session 9): see integration-ledger.md "Session 9" for live state.
+  Verified bases: app dev bb83fd2dfc2d540ab5d4047289bc4b344a3ea55e; backend master
+  fec505cedc8df06ce9f3229dd7e6a631814afea3; admin master bbabc7138f2ff3aed598d24eca28ad82030b277e.
+  App provisional composite G:/kubus-build-084/frontend-composite-084, branch
+  integration/084-provisional-composite-20261020, is pushed clean at 83196e2c on exact dev.
+  It includes #326, #331-#338 heads listed in Session 9 plus walletless ordinary compose;
+  groups remain wallet-gated. Integration repaired the #336/#338 messages_screen conflict.
+  #338 CI failed at 9a0b2625 in locale tests; native pushed the one-file locale correction
+  428bf1bf and run 39400962799 is queued. That correction is not yet in the composite.
+  Backend provisional composite G:/kubus-build-084/backend-composite-084 is local at
+  7522ecfa; it includes #96/#98/#100-#104 and the earlier #105 commit 31e7446. Latest #105
+  self-share guard is e6ad2b6 and still needs composition plus independent post-fix review.
+  Account-messaging migration 113 is WIP in G:/kubus-build-084/account-messaging-084; 55 focused
+  tests and the final isolated PostgreSQL rollback suite 4/4 pass. No PR is open yet; the disposable
+  PG slot is released to social after schema cleanup.
+  Admin #17 is OPEN at 22580cbb; 318 local tests/typecheck/build and its draft CI run pass.
+  Synthetic Review Deck Undo runs pass 21/21 in Chromium (mvgfhxcl) and Firefox (mvgfnvis);
+  screenshots are under G:/kubus-build-084/_staging/admin-out. No production requests occurred.
+  User authorization to merge #334 and auto-deploy to dev was for old head bb56bb98 only.
+  Current #334 head is d1cea4ed; run 39397968055 is waiting only on Flutter tests, and its
+  single review thread is resolved. Do not merge d1cea4ed until the coordinator receives fresh
+  exact-head authorization. No protected PR was merged and no production deployment/migration ran.
+  User-owned Google Sign-In API/config is still required for R03. Remote FCM/APNs and account-ID
+  group membership remain incomplete. R17 rendered-dialog screenshots and R11 messaging UI
+  acceptance remain open. See Session 9 for CI, review, resource, and ownership detail.
 
-LATEST (2026-10-20 02:00, recovery pass): see integration-ledger.md "Session 7" for live state.
+HISTORICAL RECOVERY (2026-10-20 02:00): see integration-ledger.md "Session 7" for that state.
   App dev is bb83fd2dfc2d540ab5d4047289bc4b344a3ea55e; #325 is merged. #326 is OPEN at
   3dec5397f86f8ab77eb63e88cb980cd6a6ecff04 with its full required CI green. #331 (359224cd),
   #332 (17304c50) and #333 (7dee1efe) remain open drafts behind dev 9309b1ff. Backend master is

@@ -4,6 +4,9 @@ Living record of every 0.8.4 implementation branch, its exact head, validation a
 merge state. The requirement-level view is [scope-matrix.md](scope-matrix.md); the
 resumable session state is [SESSION_HANDOFF.md](SESSION_HANDOFF.md).
 
+Current live snapshot: Session 9 below. Historical session tables remain unchanged and
+must not be treated as current PR, CI, staging, or authorization state.
+
 Baseline (2026-10-18 22:40 CEST): `origin/dev` `2190782e` (after #319 and #320),
 `origin/master` `841d92a3`, released tag `v0.8.3` -> `2f93f64e`. Production web
 serves `2f93f64e`.
@@ -463,3 +466,120 @@ or OAuth secrets. Initial source review of #334 found no blocker in branding/loc
 native builds and signed runtime remain unverified. #326 identity review, #335 navigation review,
 and incremental #336 review remain outstanding while the repaired #104 head receives independent
 review. No merge approval is claimed here.
+
+## Session 9 (2026-10-20, resumed integration checkpoint)
+
+### Verified repositories, composites, and ownership
+
+Live bases: app `dev` `bb83fd2dfc2d540ab5d4047289bc4b344a3ea55e`; backend `master`
+`fec505cedc8df06ce9f3229dd7e6a631814afea3`; admin `master`
+`bbabc7138f2ff3aed598d24eca28ad82030b277e`.
+
+The app composite is `G:/kubus-build-084/frontend-composite-084`, branch
+`integration/084-provisional-composite-20261020`, base app `dev`, HEAD
+`83196e2cb32b29453bafd403a53c121d27806e54`. It is pushed to the matching remote branch
+with parity and a clean worktree. Its source heads are #326 `3dec5397f86f8ab77eb63e88cb980cd6a6ecff04`,
+#331 `359224cd00da5b29a9c88a20cf153625e9238267`, #332 `17304c5016a4097d27a30ee4568b149849dc598b`,
+#333 `7dee1efe1f696175b9e1cc6a59d36720b4270757`, #334 `d1cea4ed96e8ace15b138bc5e594a06fff7e2dcb`,
+#335 `4fac7dd95a56d7917dca7bcf740a075ec4c35ac8`, #336 `175752916c4d1a04a54fedfd49ee7d84ad302308`,
+#337 `c35223b80073bc83d806e9a31108fd10ad278d78`, and #338 `9a0b26257b4bfd39e2db5ab0d2ebb47fe2ef8b9f`.
+Those refs are recorded as source inputs, not merged PRs. Integration repaired the #336/#338 conflict
+in `lib/screens/community/messages_screen.dart`, preserving the notification conversation routing
+and identity avatar behavior. The standalone source change is limited to that integration repair
+and the walletless compose paths/helper/tests described below.
+
+Commit `83196e2c` allows authenticated ordinary account-owned post submission without a stored
+wallet across mobile, desktop inline, and desktop dialog composer surfaces. The focused widget test
+uses a JWT with `users.id`, uploads a synthetic image, and asserts the post request carries that
+account identity. Group posting remains wallet-gated before media upload. Changed paths are
+`lib/screens/community/community_screen.dart`, `lib/screens/community/community_screen_parts/community_screen_p4.dart`,
+`lib/screens/community/group_feed_screen.dart`, `lib/screens/community/messages_screen.dart`,
+`lib/screens/desktop/community/desktop_community_screen_parts/desktop_community_screen_p5.dart`,
+`lib/screens/desktop/community/desktop_community_screen_parts/desktop_community_screen_p6.dart`,
+`lib/widgets/community/community_posting_wallet.dart`, and the two focused community tests.
+Local tests pass: 4 walletless composer cases; 4 complementary surface skips are expected because
+the ordinary-post case excludes the group surface and the group-gate case excludes the three
+ordinary composer surfaces; helper/error-mapping tests 8/8. Targeted Dart analyze across nine files
+and `git diff --check` pass. This is not full candidate CI, visual acceptance, or staging proof.
+
+The backend composite is `G:/kubus-build-084/backend-composite-084`, branch
+`integration/084-provisional-composite-20261020`, base backend `master`, local HEAD
+`7522ecfa60477cef7ec2aeb051b442385c39bde8`, ahead 55 commits and not pushed. It contains the
+current composite integrations #96 `9a34bb8d42edbeaf3fafa398c8d26cf10d849b4d`, #98
+`7b8f7d68ddbe45f6c0be665c76418f903ad05e46`, #100 `850bf0fb13fdf4c5ff020d226724d794fd21fc47`,
+#101 `ba46051afb440c2ec5d7a5e72dc2858a9146e905`, #102 `cf8c091c3e900fce8683d232d317e241b37daf40`,
+#103 `d17f56166c0d6067c8ce2f1c64c8c5cf706179e5`, #104 `3a833a37242b38d7f40b8a068f5eb5afe1c9c5e3`,
+and earlier #105 `31e74460cd1b79c5ff3556666d7a8d085cf75a00`. Latest #105 is `e6ad2b6172a0e7310477e954257cbf2084e54a03` and still needs a normal local merge into the candidate and independent post-fix review. #102's 18 local route/mock tests and 18 isolated PostgreSQL tests passed; bootstrap completed 101 migrations/143 tables with schema parity. This is existing isolated synthetic proof, not a newly run exact composite check.
+
+Admin composite `G:/kubus-build-084/admin-composite-084` remains at admin `master`
+`bbabc7138f2ff3aed598d24eca28ad82030b277e`; it does not yet contain #17. Live #17 is OPEN draft
+at `22580cbbef62c1b1d6d64e4e524d57513789a422` against that base. Its local 318 tests,
+typecheck/build and draft CI run `39395534789` pass. The admin source worktree is clean at that head.
+
+### Current PR and CI state
+
+| PR | Current live head / base | State and latest evidence |
+|---|---|---|
+| app #326 | `3dec5397` / app dev `bb83fd2d` | OPEN, non-draft; exact full required run `39339219070` green. No rerun needed. |
+| app #331/#332/#333 | `359224cd` / `17304c50` / `7dee1efe`; all target old dev `9309b1ff` | OPEN drafts and mergeable; all are in the local composite. #333's ordinary-post wallet prompt is superseded by the account-ID backend; retain group gating and truthful `WALLET_REQUIRED` error handling. |
+| app #334 | `d1cea4ed` / dev `bb83fd2d` | OPEN, non-draft, mergeable; one review thread total and resolved. Run `39397968055`: Android/iOS unsigned compile, Apache, web artifact/smoke, guardrails and provenance pass; only Flutter analyze/lint/format/tests is pending. User authorization was for prior head `bb56bb9844cfe6a5d57fc23fa4b53c44e9765420` and automatic dev deployment only; it does not authorize merging changed head `d1cea4ed`. No merge or deployment occurred. |
+| app #335 | `4fac7dd9` / dev `bb83fd2d` | OPEN draft; 14 focused nav/comment tests and targeted analysis reported clean; draft tier `39348262217` green. Corrective cancellation-guard source re-review and R17 rendered dialogs remain open. |
+| app #336 | `17575291` / dev `bb83fd2d` | OPEN draft; tri-state role authority and A-to-B stale avatar callback fixes; 58 targeted regressions/analyze reported clean; draft tier `39348617979` green. Independent incremental review and rendered acceptance remain open. |
+| app #337 | `c35223b8` / dev `bb83fd2d` | OPEN draft; 69 focused tests plus analyze/format reported clean; draft tier `39349061389` green. Platform compile and visual/device acceptance were skipped in draft tier. |
+| app #338 | current branch head `428bf1bf`; composite still has `9a0b2625` | OPEN draft on dev. CI run `39398122830` failed its Flutter tests at `9a0b2625`; native pushed the one-file hand-kept locale trim/supported-locale fallback correction `428bf1bffd38fc06f11c8c6043377072a3d8b111`, two focused locale suites pass, and fresh run `39400962799` is queued. Do not fix this source in the composite; first integrate the exact correction after this ledger checkpoint. |
+| backend #96/#98/#100/#101/#102/#103 | `9a34bb8d` / `7b8f7d68` / `850bf0fb` / `ba46051` / `cf8c091` / `d17f5616` | OPEN/mergeable. #96 and #98 base current master; #100 still targets older base `29b2dc3`; #102 is stacked on #101. #101 exact CI `39349731548` passes required CI, lint and PostgreSQL jobs; #102 currently has no full CI result beyond GitGuardian. |
+| backend #104 | `3a833a37` / master `fec505ce` | OPEN draft; full current CI `39349378518` green, including PostgreSQL. Corrected wallet-only group replay regression was source reviewed without a new blocker. Ordinary posts/reposts use account ownership; wallet-keyed group membership remains gated. |
+| backend #105 | `e6ad2b61` / #104 `3a833a37` | OPEN draft; self-share guard preserves 201/message/conversation event but suppresses self notification and unread summary. Focused tests/lint/syntax/diff pass; current check list shows GitGuardian only. Independent review must be renewed on the guard commit before any merge claim. |
+| account-messaging migration 113 (not PR #113) | local WIP `G:/kubus-build-084/account-messaging-084`, branch `fix/084-account-messaging`, HEAD `ef330e87` | No PR or commit for dirty WIP. Social reports 55 focused tests and isolated migration suite 4/4, including the final rollback case; it used a unique `account_messaging_<pid>_<timestamp>` schema and dropped it. Independent review remains pending. |
+| admin #17 | `22580cbb` / admin master `bbabc713` | OPEN draft; CI `39395534789` passes lint/typecheck/tests/build. See rendered proof below. |
+
+#101's exact branch includes the total DNS+HTTP evidence-verifier deadline. The earlier suspected
+Express mount shadow was withdrawn after an executable route-order reproduction. Native's bounded
+auth/ownership/admin-CSRF/transaction review found no remaining issue on the reviewed #101 scope;
+no external website probes were used. #102 Studio S2 nearby/evidence reads remain local/PR-only;
+entity search/category write stay deferred pending owner scope acceptance.
+
+### Rendered acceptance and remaining scope
+
+Admin Review Deck Undo rendered journeys used distinct run-scoped synthetic fixtures. Chromium
+`mvgfhxcl` and Firefox `mvgfnvis` each passed 21/21 assertions, including preflight backup, approve,
+advance while Undo remains enabled, undo returning the same record to hidden `needs_review`,
+keyboard undo, stale-version conflict, reduced motion, dark mode, 390px overflow, and no production
+requests/page errors. Screenshots and JSON are under
+`G:/kubus-build-084/_staging/admin-out/undo-chromium-mvgfhxcl*` and
+`G:/kubus-build-084/_staging/admin-out/undo-firefox-mvgfnvis*`. The JSON records 832231-byte and
+833754-byte preflight backups; rerun-specific DB fixtures were deleted by the harness.
+
+The disposable `walletless-postgis-test084` container at loopback port 55648 is released and no
+database command is active. Social's final migration-113 isolated run passed 4/4 and dropped only
+its generated schema. Do not substitute shared `kubus-pg-084` staging for any local synthetic check.
+The old artist/institution staging harness still has broad name-prefix deletes and the
+`backend-candidate` API is stale; no artist/institution assertion or staging switch was run here.
+Build a run-scoped harness only after composing exact source, backup, loopback-only preflight, and
+synthetic credentials are proven.
+
+Open gates: the corrected #338 head needs its fresh CI result and inclusion in the app candidate;
+the #334 changed head needs a new exact-head authorization even though the older head was approved;
+the #105 guard needs independent re-review and integration; migration 113 needs commit/PR plus
+independent review; R17 rendered dialog screenshots have not been captured; R11 messaging screen/inbox visual
+acceptance has not started. R03 requires the user-provided Google Sign-In API/config. Remote
+FCM/APNs delivery and account-ID group membership are not implemented. No full composed Flutter
+build, candidate-wide CI, protected merge, production deploy, production migration, signed IPA, or
+physical-device acceptance is claimed.
+
+### Immediate order and ownership
+
+1. After this evidence branch is pushed, integrate #338 `428bf1bf` into the app composite and rerun
+   the affected targeted integration test; native owns #338 original-branch CI triage.
+2. Update backend composite #105 to `e6ad2b61`, wait for independent review, run exact focused
+   composite tests/PG bootstrap using the released disposable slot only after social confirms free,
+   then push the provisional branch with pending-review status.
+3. Incorporate admin #17 into its composite, preserving run-scoped staging fixtures and current
+   Undo evidence; do not run the stale artist/institution harness.
+4. Native owns R17 dialog reproduction/screenshots first, then R11 message/inbox rendering on a
+   worktree based on the current app composite. The root retains the app composite integration
+   branch; do not amend it while native owns those files without direct coordination.
+5. Complete staging preflight/backup, remaining rendered acceptance, full required candidate CI,
+   and final iOS Actions build. Re-fetch all refs and check all review threads before any later
+   authorization request. Protected merges remain approval-gated; no production operation is
+   authorized.
