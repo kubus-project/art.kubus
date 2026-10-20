@@ -118,8 +118,9 @@ class _KubusGeneralSearchState extends State<KubusGeneralSearch> {
       // Map chrome is one flat, near-opaque surface with a single hairline
       // rule and a focus-role ring. No blur, sheen or shadow.
       return KubusSearchBarStyle(
-        borderRadius:
-            BorderRadius.circular(widget.borderRadius ?? KubusRadius.lg),
+        borderRadius: BorderRadius.circular(
+          widget.borderRadius ?? KubusRadius.lg,
+        ),
         backgroundColor: roles.surfaceOverlay,
         borderColor: roles.rule,
         focusedBorderColor: roles.focus,
@@ -134,17 +135,20 @@ class _KubusGeneralSearchState extends State<KubusGeneralSearch> {
         focusedBoxShadow: null,
         prefixIconConstraints: _iconConstraints,
         suffixIconConstraints: _iconConstraints,
-        textStyle: KubusTypography.textTheme.bodyMedium
-            ?.copyWith(color: roles.foreground),
-        hintStyle: KubusTypography.textTheme.bodyMedium
-            ?.copyWith(color: roles.foregroundMuted),
+        textStyle: KubusTypography.textTheme.bodyMedium?.copyWith(
+          color: roles.foreground,
+        ),
+        hintStyle: KubusTypography.textTheme.bodyMedium?.copyWith(
+          color: roles.foregroundMuted,
+        ),
       );
     }
     // Ordinary PRODUCT field: flat raised surface, hairline rule and a
     // focus ring in the family focus role. No shadow, no user accent.
     return KubusSearchBarStyle(
-      borderRadius:
-          BorderRadius.circular(widget.borderRadius ?? KubusRadius.control + 2),
+      borderRadius: BorderRadius.circular(
+        widget.borderRadius ?? KubusRadius.control + 2,
+      ),
       backgroundColor: roles.surfaceRaised,
       borderColor: roles.rule,
       focusedBorderColor: roles.focus,
@@ -159,10 +163,12 @@ class _KubusGeneralSearchState extends State<KubusGeneralSearch> {
       focusedBoxShadow: null,
       prefixIconConstraints: _iconConstraints,
       suffixIconConstraints: _iconConstraints,
-      textStyle: KubusTypography.textTheme.bodyMedium
-          ?.copyWith(color: roles.foreground),
-      hintStyle: KubusTypography.textTheme.bodyMedium
-          ?.copyWith(color: roles.foregroundMuted),
+      textStyle: KubusTypography.textTheme.bodyMedium?.copyWith(
+        color: roles.foreground,
+      ),
+      hintStyle: KubusTypography.textTheme.bodyMedium?.copyWith(
+        color: roles.foregroundMuted,
+      ),
     );
   }
 
@@ -321,8 +327,9 @@ class KubusSearchResultsOverlay extends StatelessWidget {
         final theme = Theme.of(context);
         final scheme = theme.colorScheme;
         final l10n = AppLocalizations.of(context)!;
-        final resolvedPanelRadius =
-            BorderRadius.circular(panelRadius ?? KubusRadius.lg);
+        final resolvedPanelRadius = BorderRadius.circular(
+          panelRadius ?? KubusRadius.lg,
+        );
 
         return Positioned.fill(
           child: Stack(
@@ -353,8 +360,9 @@ class KubusSearchResultsOverlay extends StatelessWidget {
                               child: Text(
                                 minCharsHint,
                                 style: theme.textTheme.bodyMedium?.copyWith(
-                                  color:
-                                      scheme.onSurface.withValues(alpha: 0.6),
+                                  color: scheme.onSurface.withValues(
+                                    alpha: 0.6,
+                                  ),
                                 ),
                               ),
                             );
@@ -389,14 +397,16 @@ class KubusSearchResultsOverlay extends StatelessWidget {
                               label: noResultsText,
                               child: ExcludeSemantics(
                                 child: Padding(
-                                  padding:
-                                      const EdgeInsets.all(KubusSpacing.md),
+                                  padding: const EdgeInsets.all(
+                                    KubusSpacing.md,
+                                  ),
                                   child: Row(
                                     children: [
                                       Icon(
                                         Icons.search_off,
-                                        color: scheme.onSurface
-                                            .withValues(alpha: 0.4),
+                                        color: scheme.onSurface.withValues(
+                                          alpha: 0.4,
+                                        ),
                                       ),
                                       const SizedBox(width: 12),
                                       Flexible(
@@ -420,53 +430,59 @@ class KubusSearchResultsOverlay extends StatelessWidget {
                           final roles = KubusColorRoles.of(context);
                           final rows = <Widget>[];
                           for (final group in groups) {
-                            rows.add(_SearchGroupHeading(
-                              label: searchGroupLabel(l10n, group.kind),
-                              count: group.results.length,
-                              isFirst: rows.isEmpty,
-                            ));
+                            rows.add(
+                              _SearchGroupHeading(
+                                label: searchGroupLabel(l10n, group.kind),
+                                count: group.results.length,
+                                isFirst: rows.isEmpty,
+                              ),
+                            );
                             for (final result in group.results) {
                               final detail = resultDetailText(l10n, result);
-                              rows.add(MouseRegion(
-                                cursor: SystemMouseCursors.click,
-                                child: ListTile(
-                                  minLeadingWidth: 44,
-                                  minTileHeight: 56,
-                                  contentPadding: const EdgeInsets.symmetric(
-                                    horizontal: KubusSpacing.md,
-                                    vertical: KubusSpacing.xxs,
-                                  ),
-                                  leading: KubusSearchResultLeading(
-                                    result: result,
-                                  ),
-                                  title: Text(
-                                    result.label,
-                                    maxLines: 2,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: theme.textTheme.bodyMedium?.copyWith(
-                                      fontWeight: FontWeight.w600,
-                                      color: roles.foreground,
+                              rows.add(
+                                MouseRegion(
+                                  cursor: SystemMouseCursors.click,
+                                  child: ListTile(
+                                    minLeadingWidth: 44,
+                                    minTileHeight: 56,
+                                    contentPadding: const EdgeInsets.symmetric(
+                                      horizontal: KubusSpacing.md,
+                                      vertical: KubusSpacing.xxs,
                                     ),
-                                  ),
-                                  subtitle: detail.isEmpty
-                                      ? null
-                                      : Text(
-                                          detail,
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
-                                          style: theme.textTheme.bodySmall
-                                              ?.copyWith(
-                                            color: roles.foregroundMuted,
+                                    leading: KubusSearchResultLeading(
+                                      result: result,
+                                    ),
+                                    title: Text(
+                                      result.label,
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis,
+                                      style:
+                                          theme.textTheme.bodyMedium?.copyWith(
+                                        fontWeight: FontWeight.w600,
+                                        color: roles.foreground,
+                                      ),
+                                    ),
+                                    subtitle: detail.isEmpty
+                                        ? null
+                                        : Text(
+                                            detail,
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: theme.textTheme.bodySmall
+                                                ?.copyWith(
+                                              color: roles.foregroundMuted,
+                                            ),
                                           ),
-                                        ),
-                                  onTap: () {
-                                    (onDismiss ?? controller.dismissOverlay)();
-                                    FocusManager.instance.primaryFocus
-                                        ?.unfocus();
-                                    onResultTap(result);
-                                  },
+                                    onTap: () {
+                                      (onDismiss ??
+                                          controller.dismissOverlay)();
+                                      FocusManager.instance.primaryFocus
+                                          ?.unfocus();
+                                      onResultTap(result);
+                                    },
+                                  ),
                                 ),
-                              ));
+                              );
                             }
                           }
                           return Semantics(
@@ -503,10 +519,7 @@ class KubusSearchResultsOverlay extends StatelessWidget {
 /// labels and markers must never show through result text. It carries no
 /// shadow, in line with the flat map chrome (one surface level, one rule).
 class _KubusDropdownSurface extends StatelessWidget {
-  const _KubusDropdownSurface({
-    required this.panelRadius,
-    required this.child,
-  });
+  const _KubusDropdownSurface({required this.panelRadius, required this.child});
 
   final BorderRadius panelRadius;
   final Widget child;
@@ -612,8 +625,10 @@ class _SearchGroupHeading extends StatelessWidget {
             ? null
             : BoxDecoration(
                 border: Border(
-                  top:
-                      BorderSide(color: roles.rule, width: KubusSizes.hairline),
+                  top: BorderSide(
+                    color: roles.rule,
+                    width: KubusSizes.hairline,
+                  ),
                 ),
               ),
         child: Row(
@@ -721,6 +736,7 @@ class KubusSearchResultLeading extends StatelessWidget {
           : KubusCachedImage(
               imageUrl: previewUrl,
               fit: BoxFit.cover,
+              decodeToDisplaySize: true,
               placeholderBuilder: _glyph,
               errorBuilder: (context, error, stackTrace) => _glyph(context),
             ),
