@@ -98,6 +98,9 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
   bool _artistDataLoaded = false;
   int _publicStreetArtAddedCount = 0;
   List<Map<String, dynamic>> _artistArtworks = [];
+  List<Map<String, dynamic>> _documentedArtworks = const [];
+  int? _authoredArtworksTotal;
+  int? _authoredArtworksCounter;
   List<Map<String, dynamic>> _artistCollections = [];
   List<Map<String, dynamic>> _artistEvents = [];
   String? _failedCoverImageUrl;
@@ -166,8 +169,12 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
       _posts = _profileController.posts;
       _postsLoading = _profileController.postsLoading;
       _postsError = _profileController.postsError;
-      _publicStreetArtAddedCount = _profileController.publicStreetArtAddedCount;
+      _publicStreetArtAddedCount = _profileController.publicArtDocumentedCount;
       _artistArtworks = _profileController.artistArtworks;
+      _documentedArtworks = _profileController.documentedArtworks;
+      _authoredArtworksTotal = _profileController.authoredArtworksTotal;
+      _authoredArtworksCounter =
+          _profileController.package?.publicStats['authoredArtworks'];
       _artistCollections = _profileController.artistCollections;
       _artistEvents = _profileController.artistEvents;
       _artistDataLoaded = _profileController.artistDataLoaded;
@@ -945,10 +952,13 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
   }
 
   Widget _buildStatsRow(AppLocalizations l10n) {
-    final artworksCount = Provider.of<ArtworkProvider>(
+    final localArtworksCount = Provider.of<ArtworkProvider>(
       context,
       listen: true,
     ).artworksForWallet(user!.id).length;
+    final artworksCount = _authoredArtworksTotal ??
+        _authoredArtworksCounter ??
+        localArtworksCount;
 
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -1222,6 +1232,18 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
           emptyIcon: Icons.image_outlined,
           builder: _buildArtworkCard,
         ),
+        if (_documentedArtworks.isNotEmpty) ...[
+          const SizedBox(height: KubusSpacing.lg - KubusSpacing.xs),
+          _buildShowcaseSection(
+            l10n: l10n,
+            title: l10n.profilePublicArtAddedTitle,
+            subtitle: l10n.profilePublicArtAddedSubtitle,
+            items: _documentedArtworks,
+            emptyLabel: l10n.profilePublicArtAddedSubtitle,
+            emptyIcon: Icons.image_outlined,
+            builder: _buildArtworkCard,
+          ),
+        ],
         const SizedBox(height: KubusSpacing.lg - KubusSpacing.xs),
         _buildShowcaseSection(
           l10n: l10n,

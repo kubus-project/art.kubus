@@ -2238,6 +2238,9 @@
     }
   },
   "userProfileArtworksTitle": "Umetnine",
+  "profilePublicArtAddedTitle": "Dodana javna umetnost",
+  "profilePublicArtAddedSubtitle": "Umetnine, ki jih je ta profil dodal na zemljevid. Pripisane so svojim avtorjem.",
+  "profileAuthoredArtworksCountLabel": "Avtorska dela",
   "userProfileCollectionsTitle": "Zbirke",
   "userProfileEventsTitle": "Dogodki",
   "userProfileEventsSubtitleFeaturing": "Prihajajoče izkušnje z {name}.",
@@ -5644,7 +5647,7 @@
   "profileInstitutionCollectionsEmptyLabel": "Kuratiraj institucionalne zbirke za izpostavitev.",
   "profilePerformanceCreatedOwnedTitle": "Ustvarjeno / v lasti",
   "profilePerformanceFollowersFollowingTitle": "Sledilci / sledenje",
-  "profilePerformancePublicStreetArtAddedTitle": "Dodana javna umetnost",
+  "profilePerformancePublicStreetArtAddedTitle": "Dokumentirana javna umetnost",
   "profileMenuSavedItemsTitle": "Shranjene vsebine",
   "profileMenuHelpSupportTitle": "Pomoč in podpora",
   "onboardingWelcomeDiscoverTitle": "Odkrij umetnost s kubusom",

@@ -17,6 +17,7 @@ import '../models/community_group.dart';
 import '../models/event.dart';
 import '../models/exhibition.dart';
 import '../models/community_subject.dart';
+import '../models/profile_artworks_page.dart';
 import '../models/profile_identity_data.dart';
 import '../models/saved_item.dart';
 import '../models/attestation.dart';
@@ -3869,6 +3870,52 @@ class BackendApiService
       }
     } catch (e) {
       AppConfig.debugPrint('BackendApiService.getArtistArtworks failed: $e');
+      rethrow;
+    }
+  }
+
+  /// Get a public profile's artworks scoped by relationship.
+  /// GET /api/profiles/:walletAddress/artworks?relationship=authored|documented|managed
+  ///
+  /// Older backends ignore `relationship`; check
+  /// [ProfileArtworksPage.relationshipHonoured] before trusting the scope.
+  Future<ProfileArtworksPage> getProfileArtworks(
+    String walletAddress, {
+    required String relationship,
+    int limit = 20,
+    int offset = 0,
+    String? status,
+  }) async {
+    try {
+      final queryParams = <String, String>{
+        'relationship': relationship,
+        'limit': limit.toString(),
+        'offset': offset.toString(),
+      };
+      if (status != null) queryParams['status'] = status;
+
+      final uri = Uri.parse(
+        '$baseUrl/api/profiles/$walletAddress/artworks',
+      ).replace(queryParameters: queryParams);
+      final response = await _get(
+        uri,
+        includeAuth: false,
+        headers: _getHeaders(includeAuth: false),
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body) as Map<String, dynamic>;
+        return ProfileArtworksPage.fromJson(
+          data,
+          requestedRelationship: relationship,
+        );
+      } else {
+        throw Exception(
+          'Failed to get profile artworks: ${response.statusCode}',
+        );
+      }
+    } catch (e) {
+      AppConfig.debugPrint('BackendApiService.getProfileArtworks failed: $e');
       rethrow;
     }
   }
