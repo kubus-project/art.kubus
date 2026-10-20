@@ -18888,6 +18888,12 @@ abstract class AppLocalizations {
   /// **'Sign in first; wallet access is only needed for wallet-linked actions.'**
   String get communityConnectWalletFirstToast;
 
+  /// No description provided for @communityPostingNeedsWalletToast.
+  ///
+  /// In en, this message translates to:
+  /// **'Publishing community posts needs a connected wallet. You can connect one in Wallet.'**
+  String get communityPostingNeedsWalletToast;
+
   /// No description provided for @communityUnableToAuthenticateToast.
   ///
   /// In en, this message translates to:
