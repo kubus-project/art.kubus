@@ -966,6 +966,13 @@ class _AppLauncherState extends State<AppLauncher> {
   }
 }
 
+/// Whether the app is in the foreground for background work (polling, presence,
+/// notifications, the security departure). Only `resumed` is foreground: web and
+/// desktop can deliver `hidden` without a following `paused`, and `inactive` and
+/// `detached` are not foreground either.
+bool isAppForegroundState(AppLifecycleState state) =>
+    state == AppLifecycleState.resumed;
+
 class ArtKubus extends StatefulWidget {
   const ArtKubus({super.key});
 
@@ -1553,8 +1560,7 @@ class _ArtKubusState extends State<ArtKubus> with WidgetsBindingObserver {
       listen: false,
     );
     final collabProvider = Provider.of<CollabProvider>(ctx, listen: false);
-    final isForeground = state != AppLifecycleState.paused &&
-        state != AppLifecycleState.inactive;
+    final isForeground = isAppForegroundState(state);
     refreshProvider.setAppForeground(isForeground);
     chatProvider.handleAppForegroundChanged(isForeground);
     notificationProvider.handleAppForegroundChanged(isForeground);
