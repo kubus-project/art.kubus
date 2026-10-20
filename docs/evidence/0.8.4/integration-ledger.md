@@ -410,11 +410,12 @@ No merge authorization was exercised by this ledger update.
 ### G — walletless ordinary Community posting implementation
 
 Backend worktree `G:/kubus-build-084/walletless-backend-084` is clean on
-`fix/084-account-community-posting`, commit `ef0df86ff0f4057af5a9a2cb5bab78995d9d4840`,
+`fix/084-account-community-posting`, commit `7c0fdf090d18cfe508e01eb153e5503c347f0352`,
 based on fetched live `master` `fec505cedc8df06ce9f3229dd7e6a631814afea3`. Draft PR
 [#104](https://github.com/kubus-project/art.kubus-backend/pull/104) is OPEN against that
-exact base. Its `Resolve affected backend surfaces` check is pending on run `39347030975`;
-GitGuardian passes. No merge, deployment, or production migration was performed.
+exact base. On current-head run `39347631529`, `Resolve affected backend surfaces` and
+GitGuardian pass; `Lint, deterministic tests, and static validation` is in progress. No merge,
+deployment, or production migration was performed.
 
 The 10 changed paths are `src/routes/community.js`, `src/routes/groups.js`,
 `src/services/communityPostService.js`, `src/middleware/validation.js`, both schema snapshots,
@@ -427,14 +428,22 @@ wallet fallback only for legacy rows. Account deletion retains the existing `aut
 wallet constraints while walletless posts or account-scoped submission keys exist. Group posts
 remain wallet-gated. Flutter composition is still gated and needs a separate matching change.
 
+An independent review found keyed retries for existing wallet-only group members left the
+submission's `post_id` and stored response null because the completion updates matched only
+`user_id`; retry then returned `COMMUNITY_POST_ALREADY_COMMITTED`. Commit `7c0fdf09` now updates
+the account-scoped row when a user ID exists and the legacy wallet-scoped row only when it does
+not. A real-route PostgreSQL regression proves the first response is stored and the legacy retry
+returns the exact response without inserting or syncing a second post.
+
 Isolated loopback PostgreSQL proof: `walletlessCommunityMigration.postgres.test.js` plus
-`communityPostIdempotency.postgres.test.js` passed 23/23 tests, including legacy preservation,
-owner spoof rejection, cross-account denial, same-row wallet linking, durable replay, group gate,
-and account-deletion semantics. `verifySchemaBootstrap.js` clean-bootstrapped both snapshots and
-all 100 migrations into 137-table schemas; resulting catalogs matched. `verifySchemaParity.js`
-reported zero table drift and migration filename policy passed. Targeted ESLint, JS syntax, and
-`git diff --check` passed. This is local synthetic evidence; exact-head CI and independent
-ownership/security review remain pending.
+`communityPostIdempotency.postgres.test.js` passed 24/24 tests after the repair, including legacy
+wallet group replay, legacy preservation, owner spoof rejection, cross-account denial, same-row
+wallet linking, durable replay, group gate, and account-deletion semantics. `verifySchemaBootstrap.js`
+clean-bootstrapped both snapshots and all 100 migrations into 137-table schemas; resulting
+catalogs matched. `verifySchemaParity.js` reported zero table drift and migration filename
+policy passed. Targeted ESLint, JS syntax, and
+`git diff --check` passed. This is local synthetic evidence; exact-head CI is running and
+independent ownership/security review is requested again for the repaired head.
 
 Migration sequence compatibility was checked against current PRs: #101 contributes migration
 109; stacked #102 includes 109 and adds 110; #103 has no migration; #104 uses 111. Recheck the
@@ -450,6 +459,7 @@ combined migration history before any later integration or release migration.
 | app #336 | OPEN draft, BLOCKED | `f5da072044edd013e552ddbac1e74cf27f608804` / same dev SHA | Local 246 tests and targeted analyzer on 13 files reported green; draft run `39347272752` had affected-surface resolution pending. |
 
 The owner confirmed R03 depends on user-provided Google Sign-In API/config. Do not alter signing
-or OAuth secrets. Social review of #104 is in progress; native and badge reviews of #334/#326,
-then navigation review of #335 and incremental #336 review, are assigned. No review completion
-or merge approval is claimed here.
+or OAuth secrets. Initial source review of #334 found no blocker in branding/location/OAuth scope;
+native builds and signed runtime remain unverified. #326 identity review, #335 navigation review,
+and incremental #336 review remain outstanding while the repaired #104 head receives independent
+review. No merge approval is claimed here.

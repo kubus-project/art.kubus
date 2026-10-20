@@ -6,17 +6,20 @@ live in the private draft advisory and `C:/kubus-build/_private/security/`.
 
 ```text
 LATEST (2026-10-20 integration checkpoint): see integration-ledger.md "Session 8" for live state.
-  Backend #104 walletless ordinary Community posting is pushed at ef0df86 from live master
-  fec505ce; local disposable PostgreSQL contract is 23/23, schema snapshots bootstrap and
-  match, CI is pending, and social ownership/security review is in progress. Ordinary posts and
+  Backend #104 walletless ordinary Community posting plus the legacy wallet-only group replay fix
+  is pushed at 7c0fdf09 from live master fec505ce. Isolated PostgreSQL contracts pass 24/24;
+  snapshots bootstrap and match. Current-head CI run 39347631529 has affected-surface resolution
+  and GitGuardian passing, lint/deterministic tests in progress. Social found the NULL user_id
+  completion bug; it is repaired and must receive renewed independent review. Ordinary posts and
   reposts use authenticated users.id; groups remain wallet-gated and Flutter compose remains
   gated. No merge or production migration was done.
   App #326 remains OPEN/CLEAN at 3dec5397 with exact-head required run 39339219070 green.
-  #334 native branding/location is draft at bb56bb98; native build jobs were skipped on its
-  draft-tier run. The user must supply Google Sign-In API/config for R03; do not touch secrets.
+  #334 native branding/location is draft at bb56bb98; source review found no blocker in its
+  bounded scope, while native build jobs were skipped on its draft-tier run. The user must supply
+  Google Sign-In API/config for R03; do not touch secrets.
   #335 navigation/comments is draft at c46b0598 and #336 profile/avatar/follow is draft at
-  f5da0720; focused local tests were reported green, draft CI remains pending. Native/badge
-  review is underway; frontend walletless compose and final device/build evidence remain open.
+  f5da0720; focused local tests were reported green, draft CI remains pending. #326/#335/#336
+  app reviews remain queued; frontend walletless compose and final device/build evidence remain open.
 
 LATEST (2026-10-20 02:00, recovery pass): see integration-ledger.md "Session 7" for live state.
   App dev is bb83fd2dfc2d540ab5d4047289bc4b344a3ea55e; #325 is merged. #326 is OPEN at
