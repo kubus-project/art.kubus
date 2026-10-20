@@ -1105,6 +1105,13 @@ class ProfileProvider extends foundation.ChangeNotifier {
       }
 
       _currentUser = UserProfile.fromJson(profileJson);
+      // A saved avatar must stay in the cache even when the response omits it.
+      final submittedAvatar = effectiveAvatar;
+      if (submittedAvatar != null &&
+          submittedAvatar.isNotEmpty &&
+          (_currentUser?.avatar ?? '').trim().isEmpty) {
+        _currentUser = _currentUser?.copyWith(avatar: submittedAvatar);
+      }
       try {
         final av = _currentUser?.avatar ?? '';
         final resolved = _resolveUrl(av);
