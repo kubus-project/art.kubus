@@ -158,6 +158,10 @@ class _GovernanceWorkspaceState extends State<GovernanceWorkspace>
       Provider.of<WalletProvider>(context, listen: false)
           .ensureWalletData()
           .ignore();
+      // Treasury on-chain balance is a Solana read; only governance needs it.
+      Provider.of<DAOProvider>(context, listen: false)
+          .ensureTreasuryOnChainBalance()
+          .ignore();
     });
 
     final notifier = widget.selectedIndexNotifier;
