@@ -7559,11 +7559,28 @@ class BackendApiService
           targetWallet: canonicalTarget,
         );
       }
-      return _followMutationRecordFromResponse(
+      if (!_isSuccessStatus(response.statusCode)) {
+        // The signed-action transport may queue a transient response and
+        // return its original HTTP response. Its body is not confirmation that
+        // the follow was applied, even if it contains an `isFollowing` field.
+        return FollowMutationRecord.fallback(
+          isFollowing: false,
+          targetWallet: canonicalTarget,
+        );
+      }
+      final mutation = _followMutationRecordFromResponse(
         response,
         fallbackIsFollowing: true,
         fallbackTargetWallet: canonicalTarget,
       );
+      if (mutation.success == false) {
+        throw BackendApiRequestException(
+          statusCode: response.statusCode,
+          path: '/api/community/follow/$encoded',
+          body: response.body,
+        );
+      }
+      return mutation;
     } catch (e) {
       AppConfig.debugPrint('BackendApiService.followUser failed: $e');
       rethrow;
@@ -7597,11 +7614,25 @@ class BackendApiService
           targetWallet: canonicalTarget,
         );
       }
-      return _followMutationRecordFromResponse(
+      if (!_isSuccessStatus(response.statusCode)) {
+        return FollowMutationRecord.fallback(
+          isFollowing: true,
+          targetWallet: canonicalTarget,
+        );
+      }
+      final mutation = _followMutationRecordFromResponse(
         response,
         fallbackIsFollowing: false,
         fallbackTargetWallet: canonicalTarget,
       );
+      if (mutation.success == false) {
+        throw BackendApiRequestException(
+          statusCode: response.statusCode,
+          path: '/api/community/follow/$encoded',
+          body: response.body,
+        );
+      }
+      return mutation;
     } catch (e) {
       AppConfig.debugPrint('BackendApiService.unfollowUser failed: $e');
       rethrow;

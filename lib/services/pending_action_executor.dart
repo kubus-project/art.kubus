@@ -296,6 +296,11 @@ class PendingActionExecutor {
       intent.targetId,
       shouldFollow: true,
     );
+    if (result.pending) {
+      // A queued request only tells us the pre-request local state. Keep this
+      // continuation retryable until the server confirms the relationship.
+      return const PendingActionExecutionResult(PendingActionOutcome.failed);
+    }
     return PendingActionExecutionResult(
       result.isFollowing
           ? PendingActionOutcome.completed

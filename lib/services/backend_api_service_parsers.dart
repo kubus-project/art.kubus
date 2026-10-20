@@ -14,6 +14,7 @@ class FollowMutationRecord {
     this.message,
     this.success,
     this.fromFallback = false,
+    this.pending = false,
   });
 
   final bool isFollowing;
@@ -28,6 +29,7 @@ class FollowMutationRecord {
   final String? message;
   final bool? success;
   final bool fromFallback;
+  final bool pending;
 
   bool get hasCanonicalCounters =>
       followersCount != null ||
@@ -51,6 +53,7 @@ class FollowMutationRecord {
       isFollowing: isFollowing,
       targetWallet: normalizedTarget,
       fromFallback: true,
+      pending: true,
     );
   }
 
