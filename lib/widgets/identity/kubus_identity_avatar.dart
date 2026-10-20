@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show listEquals;
 import 'package:flutter/material.dart';
 
 import '../../l10n/app_localizations.dart';
@@ -174,12 +175,14 @@ class KubusIdentityAvatar extends StatefulWidget {
   const KubusIdentityAvatar({
     super.key,
     required this.wallet,
+    this.walletAliases = const <String>[],
     this.avatarUrl,
     this.displayName,
     this.radius = 18,
     this.isArtist = false,
     this.isInstitution = false,
     this.isVerified = false,
+    this.roleStatements,
     this.resolveCachedRoles = true,
     this.enableProfileNavigation = true,
     this.allowFabricatedFallback = false,
@@ -212,12 +215,20 @@ class KubusIdentityAvatar extends StatefulWidget {
         wallet: identity.navigationIdentifier ??
             identity.username ??
             identity.walletSeed,
+        walletAliases: <String>[
+          if (identity.walletSeed.trim().isNotEmpty &&
+              identity.walletSeed.trim() !=
+                  (identity.navigationIdentifier ?? identity.username) &&
+              WalletUtils.looksLikeWallet(identity.walletSeed.trim()))
+            identity.walletSeed.trim(),
+        ],
         avatarUrl: identity.avatarUrl,
         displayName: identity.avatarInitialsSource,
         radius: radius,
         isArtist: identity.isArtist,
         isInstitution: identity.isInstitution,
         isVerified: identity.isVerified,
+        roleStatements: identity.statedRoles,
         resolveCachedRoles: resolveCachedRoles,
         allowFabricatedFallback: allowFabricatedFallback,
         // A display-only avatar seed is not a profile identifier.
@@ -230,12 +241,18 @@ class KubusIdentityAvatar extends StatefulWidget {
       );
 
   final String wallet;
+
+  /// Other stable identifiers for this same profile, used for cache-update
+  /// events when one API surface addresses the profile by account ID and
+  /// another emits updates by linked wallet.
+  final List<String> walletAliases;
   final String? avatarUrl;
   final String? displayName;
   final double radius;
   final bool isArtist;
   final bool isInstitution;
   final bool isVerified;
+  final ProfileIdentityRoles? roleStatements;
 
   /// Add the roles the shared profile cache holds for [wallet]. Turn off only
   /// where the caller has a fuller statement of its own (an owner's profile).
@@ -264,7 +281,10 @@ class _KubusIdentityAvatarState extends State<KubusIdentityAvatar> {
   @override
   void didUpdateWidget(covariant KubusIdentityAvatar oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.wallet != widget.wallet) _resolvedRoles = null;
+    if (oldWidget.wallet != widget.wallet ||
+        !listEquals(oldWidget.walletAliases, widget.walletAliases)) {
+      _resolvedRoles = null;
+    }
   }
 
   void _onProfileResolved(User? user) {
@@ -276,6 +296,9 @@ class _KubusIdentityAvatarState extends State<KubusIdentityAvatar> {
               isArtist: user.isArtist,
               isInstitution: user.isInstitution,
               isVerified: user.isVerified,
+              isArtistSpecified: true,
+              isInstitutionSpecified: true,
+              isVerifiedSpecified: true,
             );
     });
   }
@@ -285,12 +308,13 @@ class _KubusIdentityAvatarState extends State<KubusIdentityAvatar> {
   /// cache. Read-only.
   ProfileIdentityRoles _cachedRoles() {
     if (!widget.resolveCachedRoles) return ProfileIdentityRoles.none;
-    final resolved = _resolvedRoles;
-    if (resolved != null) return resolved;
-    final raw = widget.wallet.trim();
-    if (raw.isEmpty) return ProfileIdentityRoles.none;
-    final user = UserService.getCachedUser(raw) ??
-        UserService.getCachedUser(WalletUtils.normalize(raw));
+    final user = <String>{
+      widget.wallet.trim(),
+      ...widget.walletAliases.map((alias) => alias.trim()),
+    }.where((identifier) => identifier.isNotEmpty).map((identifier) {
+      return UserService.getCachedUser(identifier) ??
+          UserService.getCachedUser(WalletUtils.normalize(identifier));
+    }).firstWhere((cached) => cached != null, orElse: () => null);
     if (user == null) return ProfileIdentityRoles.none;
     return ProfileIdentityRoles(
       isArtist: user.isArtist,
@@ -299,15 +323,28 @@ class _KubusIdentityAvatarState extends State<KubusIdentityAvatar> {
     );
   }
 
+  ProfileIdentityRoles _identityRoles() {
+    final stated = widget.roleStatements ??
+        ProfileIdentityRoles(
+          isArtist: widget.isArtist,
+          isInstitution: widget.isInstitution,
+          isVerified: widget.isVerified,
+        );
+    if (!widget.resolveCachedRoles) return stated;
+    // A completed profile lookup is a full, current profile statement. Before
+    // that arrives, cached positive roles fill only fields the caller leaves
+    // unstated, so an explicit false can revoke a stale cached mark.
+    final resolved = _resolvedRoles;
+    if (resolved != null) return resolved;
+    return _cachedRoles().merge(stated);
+  }
+
   @override
   Widget build(BuildContext context) {
-    final roles = ProfileIdentityRoles(
-      isArtist: widget.isArtist,
-      isInstitution: widget.isInstitution,
-      isVerified: widget.isVerified,
-    ).merge(_cachedRoles());
+    final roles = _identityRoles();
     final avatar = AvatarWidget(
       wallet: widget.wallet,
+      walletAliases: widget.walletAliases,
       avatarUrl: widget.avatarUrl,
       displayName: widget.displayName,
       radius: widget.radius,

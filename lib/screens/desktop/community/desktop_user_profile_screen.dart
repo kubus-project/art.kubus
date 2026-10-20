@@ -678,18 +678,20 @@ class _UserProfileScreenState extends State<UserProfileScreen>
         ? l10n.settingsRoleInstitutionTitle
         : isArtist
             ? l10n.settingsRoleArtistTitle
-            : l10n.userProfileTitle;
+            : null;
 
     final identity = Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          roleLabel,
-          style: KubusTextStyles.structuralLabel.copyWith(
-            color: roles.foregroundMuted,
+        if (roleLabel != null) ...[
+          Text(
+            roleLabel,
+            style: KubusTextStyles.structuralLabel.copyWith(
+              color: roles.foregroundMuted,
+            ),
           ),
-        ),
-        const SizedBox(height: KubusSpacing.md),
+          const SizedBox(height: KubusSpacing.md),
+        ],
         ProfileIdentityBlock(
           displayName: profile.name,
           handle: profile.username,
@@ -1018,14 +1020,14 @@ class _UserProfileScreenState extends State<UserProfileScreen>
     );
   }
 
-  String _profileRoleLabel(
+  String? _profileRoleLabel(
     AppLocalizations l10n, {
     required bool isArtist,
     required bool isInstitution,
   }) {
     if (isInstitution) return l10n.settingsRoleInstitutionTitle;
     if (isArtist) return l10n.settingsRoleArtistTitle;
-    return l10n.userProfileTitle;
+    return null;
   }
 
   /// Practice before paperwork: the biography carries the weight, the practice
@@ -1627,6 +1629,7 @@ class _UserProfileScreenState extends State<UserProfileScreen>
     if (!authenticated || !mounted) return;
     final messenger = ScaffoldMessenger.of(context);
     final theme = Theme.of(context);
+    final requestedIsFollowing = !profile.isFollowing;
 
     setState(() => _isFollowMutationInFlight = true);
 
@@ -1642,19 +1645,30 @@ class _UserProfileScreenState extends State<UserProfileScreen>
       debugPrint('Failed to toggle follow: $e');
       if (!mounted) return;
 
-      messenger.showKubusSnackBar(
-        SnackBar(
-          content: Text(
-            e.toString().contains('401')
-                ? l10n.userProfileSignInToFollowToast
-                : l10n.userProfileFollowUpdateFailedToast,
+      final confirmedState = await _reconcileUncertainFollow(profile);
+      if (!mounted) return;
+      if (confirmedState == requestedIsFollowing) {
+        messenger.showKubusSnackBar(
+          SnackBar(
+            content: Text(requestedIsFollowing
+                ? l10n.userProfileNowFollowingToast(profile.name)
+                : l10n.userProfileUnfollowedToast(profile.name)),
+            duration: const Duration(seconds: 2),
           ),
-          backgroundColor: theme.colorScheme.error,
-        ),
-      );
-
-      await _refreshFollowStateFromServer();
-      await _loadUserStats(skipFollowersOverwrite: true, forceRefresh: true);
+        );
+        _triggerCommunityRefresh();
+      } else {
+        messenger.showKubusSnackBar(
+          SnackBar(
+            content: Text(
+              e.toString().contains('401')
+                  ? l10n.userProfileSignInToFollowToast
+                  : l10n.userProfileFollowUpdateFailedToast,
+            ),
+            backgroundColor: theme.colorScheme.error,
+          ),
+        );
+      }
 
       if (mounted) {
         setState(() => _isFollowMutationInFlight = false);
@@ -1663,6 +1677,35 @@ class _UserProfileScreenState extends State<UserProfileScreen>
     }
 
     if (!mounted) return;
+
+    if (mutation.pending) {
+      final pendingTarget =
+          mutation.requestedIsFollowing ?? requestedIsFollowing;
+      final confirmedState = await _reconcileUncertainFollow(profile);
+      if (!mounted) return;
+      if (confirmedState == pendingTarget) {
+        messenger.showKubusSnackBar(
+          SnackBar(
+            content: Text(pendingTarget
+                ? l10n.userProfileNowFollowingToast(profile.name)
+                : l10n.userProfileUnfollowedToast(profile.name)),
+            duration: const Duration(seconds: 2),
+          ),
+        );
+        _triggerCommunityRefresh();
+      } else {
+        messenger.showKubusSnackBar(
+          SnackBar(
+            content: Text(l10n.userProfileFollowUpdateFailedToast),
+            backgroundColor: theme.colorScheme.error,
+          ),
+        );
+      }
+      if (mounted) {
+        setState(() => _isFollowMutationInFlight = false);
+      }
+      return;
+    }
 
     final currentUser = user ?? profile;
 
@@ -1693,10 +1736,7 @@ class _UserProfileScreenState extends State<UserProfileScreen>
       ),
     );
 
-    try {
-      context.read<AppRefreshProvider>().triggerCommunity();
-      context.read<AppRefreshProvider>().triggerProfile();
-    } catch (_) {}
+    _triggerCommunityRefresh();
 
     await _loadUserStats(forceRefresh: true);
     if (!mounted) return;
@@ -1719,6 +1759,24 @@ class _UserProfileScreenState extends State<UserProfileScreen>
 
   Future<void> _refreshFollowStateFromServer() async {
     await _profileController.refreshFollowStateFromServer();
+  }
+
+  Future<bool?> _reconcileUncertainFollow(User profile) async {
+    final state = await UserService.fetchAuthoritativeFollowState(profile.id);
+    if (state != null) {
+      _profileController.patchUser((latest) => latest.copyWith(
+            isFollowing: state,
+          ));
+    }
+    await _loadUserStats(skipFollowersOverwrite: true, forceRefresh: true);
+    return state;
+  }
+
+  void _triggerCommunityRefresh() {
+    try {
+      context.read<AppRefreshProvider>().triggerCommunity();
+      context.read<AppRefreshProvider>().triggerProfile();
+    } catch (_) {}
   }
 
   Future<void> _openConversation() async {

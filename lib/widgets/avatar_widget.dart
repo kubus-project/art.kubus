@@ -1,3 +1,6 @@
+import 'dart:async';
+
+import 'package:flutter/foundation.dart' show listEquals;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -5,6 +8,7 @@ import '../config/config.dart';
 import '../models/user.dart';
 import '../models/user_presence.dart';
 import '../providers/presence_provider.dart';
+import '../services/event_bus.dart';
 import '../services/user_service.dart';
 import '../utils/media_url_resolver.dart';
 import '../utils/profile_package_prefetcher.dart';
@@ -23,6 +27,7 @@ class AvatarWidget extends StatefulWidget {
 
   final String? avatarUrl;
   final String wallet;
+  final List<String> walletAliases;
 
   /// The account's display name, used only for the initials shown when there is
   /// no image. Without it the initials come from the wallet string, which reads
@@ -41,15 +46,16 @@ class AvatarWidget extends StatefulWidget {
   final bool? isOnline;
   final Color? statusColor;
 
-  /// Called once the avatar's own profile lookup settles (only when this widget
-  /// fetches, see [fetchMissingAvatar]). It lets a parent re-read what the
-  /// shared profile cache now says about the account without a second request.
+  /// Called when this avatar resolves a profile or receives an authoritative
+  /// profile update. It lets a parent re-read cached identity data without a
+  /// second request.
   final ValueChanged<User?>? onProfileResolved;
 
   const AvatarWidget({
     super.key,
     this.avatarUrl,
     required this.wallet,
+    this.walletAliases = const <String>[],
     this.displayName,
     this.radius = 18,
     this.borderWidth = 0,
@@ -76,6 +82,8 @@ class _AvatarWidgetState extends State<AvatarWidget>
   bool _loading = false;
   late AnimationController _shimmerController;
   String? _currentHeroTag;
+  int _setupGeneration = 0;
+  StreamSubscription<Map<String, dynamic>>? _profileUpdatedSub;
   String? _presencePrefetchKey;
   DateTime? _presenceLastTouchAt;
   bool _presenceTouchScheduled = false;
@@ -86,6 +94,8 @@ class _AvatarWidgetState extends State<AvatarWidget>
     _shimmerController = AnimationController(
         vsync: this, duration: const Duration(milliseconds: 1000));
     _syncShimmerController();
+    _profileUpdatedSub =
+        EventBus().on('profile_updated').listen(_handleProfileUpdated);
     _setup();
   }
 
@@ -97,6 +107,7 @@ class _AvatarWidgetState extends State<AvatarWidget>
   }
 
   Future<void> _setup() async {
+    final setupGeneration = ++_setupGeneration;
     final walletId = WalletUtils.normalize(widget.wallet);
     final cacheKey = walletId.isNotEmpty ? walletId : widget.wallet;
     final fallbackSeed = WalletUtils.canonical(widget.wallet);
@@ -109,6 +120,7 @@ class _AvatarWidgetState extends State<AvatarWidget>
       if (_isUsableNetworkUrl(normalized)) {
         setState(() {
           _effectiveUrl = normalized;
+          _loading = false;
         });
         return;
       }
@@ -116,7 +128,15 @@ class _AvatarWidgetState extends State<AvatarWidget>
     }
 
     // 2. Check cache
-    final cached = UserService.getCachedUser(cacheKey)?.profileImageUrl;
+    final cachedProfile = <String>{
+      cacheKey,
+      widget.wallet.trim(),
+      ...widget.walletAliases.map((alias) => alias.trim()),
+    }.where((identifier) => identifier.isNotEmpty).map((identifier) {
+      return UserService.getCachedUser(identifier) ??
+          UserService.getCachedUser(WalletUtils.normalize(identifier));
+    }).firstWhere((user) => user != null, orElse: () => null);
+    final cached = cachedProfile?.profileImageUrl;
     if (cached != null && cached.isNotEmpty) {
       setState(() {
         _effectiveUrl = _normalizeAvatar(cached);
@@ -148,7 +168,7 @@ class _AvatarWidgetState extends State<AvatarWidget>
         cacheKey,
         includeAchievements: false,
       );
-      if (!mounted) return;
+      if (!mounted || setupGeneration != _setupGeneration) return;
       widget.onProfileResolved?.call(u);
 
       final p = u?.profileImageUrl;
@@ -176,7 +196,7 @@ class _AvatarWidgetState extends State<AvatarWidget>
         _setLoading(false);
       }
     } catch (_) {
-      if (mounted) {
+      if (mounted && setupGeneration == _setupGeneration) {
         // On error, fallback if allowed
         if (widget.allowFabricatedFallback &&
             (_effectiveUrl == null || _effectiveUrl!.isEmpty)) {
@@ -188,6 +208,53 @@ class _AvatarWidgetState extends State<AvatarWidget>
         _setLoading(false);
       }
     }
+  }
+
+  void _handleProfileUpdated(Map<String, dynamic> event) {
+    final payload = event['payload'];
+    String? updatedWallet;
+    try {
+      if (payload is User) {
+        updatedWallet = payload.id;
+      } else if (payload is Map) {
+        updatedWallet = (payload['walletAddress'] ??
+                payload['wallet_address'] ??
+                payload['id'])
+            ?.toString();
+      } else {
+        final dynamic value = payload;
+        updatedWallet =
+            (value?.walletAddress ?? value?.wallet_address ?? value?.id)
+                ?.toString();
+      }
+    } catch (_) {
+      updatedWallet = null;
+    }
+
+    final wallet = (updatedWallet ?? '').trim();
+    final matchesIdentity = wallet.isNotEmpty &&
+        <String>[widget.wallet, ...widget.walletAliases].any((candidate) {
+          final id = candidate.trim();
+          return id.isNotEmpty &&
+              (id == wallet || WalletUtils.equals(id, wallet));
+        });
+    if (!matchesIdentity) return;
+
+    final cacheKey = WalletUtils.normalize(wallet);
+    final cached = UserService.getCachedUser(cacheKey) ??
+        UserService.getCachedUser(wallet) ??
+        UserService.getCachedUser(WalletUtils.normalize(widget.wallet));
+    if (cached == null || !mounted) return;
+
+    // A profile save can finish while this avatar's earlier lookup is still in
+    // flight. Applying the saved cache and advancing the generation prevents
+    // that older request from painting its stale URL over the new one.
+    _setupGeneration++;
+    setState(() {
+      _effectiveUrl = _normalizeAvatar(cached.profileImageUrl);
+      _loading = false;
+    });
+    widget.onProfileResolved?.call(cached);
   }
 
   void _setLoading(bool loading) {
@@ -225,6 +292,7 @@ class _AvatarWidgetState extends State<AvatarWidget>
     super.didUpdateWidget(oldWidget);
     if (oldWidget.avatarUrl != widget.avatarUrl ||
         oldWidget.wallet != widget.wallet ||
+        !listEquals(oldWidget.walletAliases, widget.walletAliases) ||
         oldWidget.allowFabricatedFallback != widget.allowFabricatedFallback ||
         oldWidget.fetchMissingAvatar != widget.fetchMissingAvatar) {
       _setup();
@@ -241,6 +309,7 @@ class _AvatarWidgetState extends State<AvatarWidget>
 
   @override
   void dispose() {
+    _profileUpdatedSub?.cancel();
     try {
       _shimmerController.dispose();
     } catch (_) {}

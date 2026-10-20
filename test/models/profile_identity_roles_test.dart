@@ -95,7 +95,8 @@ void main() {
   });
 
   group('ProfileIdentityRoles', () {
-    test('merging keeps every stated role and never removes one', () {
+    test('explicit revocation replaces stale state while omission retains it',
+        () {
       const a = ProfileIdentityRoles(isArtist: true);
       const b = ProfileIdentityRoles(isInstitution: true, isVerified: true);
       final merged = a.merge(b);
@@ -104,6 +105,20 @@ void main() {
       expect(merged.isVerified, isTrue);
       expect(ProfileIdentityRoles.none.merge(ProfileIdentityRoles.none).any,
           isFalse);
+
+      final revoked = ProfileIdentityRoles.fromProfileMap(
+        <String, dynamic>{
+          'roles': <String, dynamic>{'artist': false},
+        },
+      );
+      expect(revoked.isArtist, isFalse);
+      expect(revoked.isArtistSpecified, isTrue);
+      expect(
+          ProfileIdentityRoles.fromProfileMap(const <String, dynamic>{})
+              .isArtistSpecified,
+          isFalse);
+      expect(a.merge(revoked).isArtist, isFalse);
+      expect(a.merge(ProfileIdentityRoles.none).isArtist, isTrue);
     });
   });
 }
