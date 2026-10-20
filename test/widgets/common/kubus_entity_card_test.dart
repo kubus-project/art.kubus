@@ -6,11 +6,18 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-Widget _buildHarness(Widget child, {bool disableAnimations = false}) {
+Widget _buildHarness(
+  Widget child, {
+  bool disableAnimations = false,
+  double devicePixelRatio = 1,
+}) {
   return MaterialApp(
     theme: ThemeData.light(useMaterial3: true),
     home: MediaQuery(
-      data: MediaQueryData(disableAnimations: disableAnimations),
+      data: MediaQueryData(
+        disableAnimations: disableAnimations,
+        devicePixelRatio: devicePixelRatio,
+      ),
       child: Scaffold(body: Center(child: child)),
     ),
   );
@@ -18,58 +25,60 @@ Widget _buildHarness(Widget child, {bool disableAnimations = false}) {
 
 void main() {
   testWidgets(
-      'nested controls stay separately discoverable inside a tappable card',
-      (tester) async {
-    final semantics = tester.ensureSemantics();
-    var creatorTaps = 0;
-    var overflowTaps = 0;
+    'nested controls stay separately discoverable inside a tappable card',
+    (tester) async {
+      final semantics = tester.ensureSemantics();
+      var creatorTaps = 0;
+      var overflowTaps = 0;
 
-    await tester.pumpWidget(
-      _buildHarness(
-        KubusEntityCard(
-          variant: KubusEntityCardVariant.media,
-          kind: KubusEntityKind.artwork,
-          title: 'Sun Garden',
-          subtitleWidget: TextButton(
-            onPressed: () => creatorTaps += 1,
-            child: const Text('Ana Kovac'),
-          ),
-          alwaysShowActions: true,
-          actions: [
-            IconButton(
-              onPressed: () => overflowTaps += 1,
-              tooltip: 'More actions',
-              icon: const Icon(Icons.more_horiz),
+      await tester.pumpWidget(
+        _buildHarness(
+          KubusEntityCard(
+            variant: KubusEntityCardVariant.media,
+            kind: KubusEntityKind.artwork,
+            title: 'Sun Garden',
+            subtitleWidget: TextButton(
+              onPressed: () => creatorTaps += 1,
+              child: const Text('Ana Kovac'),
             ),
-          ],
-          width: 220,
-          height: 240,
-          onTap: () {},
+            alwaysShowActions: true,
+            actions: [
+              IconButton(
+                onPressed: () => overflowTaps += 1,
+                tooltip: 'More actions',
+                icon: const Icon(Icons.more_horiz),
+              ),
+            ],
+            width: 220,
+            height: 240,
+            onTap: () {},
+          ),
         ),
-      ),
-    );
+      );
 
-    // The card is still one named button...
-    expect(find.bySemanticsLabel('Sun Garden'), findsOneWidget);
-    // ...and the creator link and overflow action are their own nodes.
-    final creator = tester.getSemantics(find.byType(TextButton));
-    expect(creator.label, 'Ana Kovac');
-    expect(creator.flagsCollection.isButton, isTrue);
-    final overflow = tester.getSemantics(find.byType(IconButton));
-    expect(overflow.tooltip, 'More actions');
-    expect(overflow.flagsCollection.isButton, isTrue);
+      // The card is still one named button...
+      expect(find.bySemanticsLabel('Sun Garden'), findsOneWidget);
+      // ...and the creator link and overflow action are their own nodes.
+      final creator = tester.getSemantics(find.byType(TextButton));
+      expect(creator.label, 'Ana Kovac');
+      expect(creator.flagsCollection.isButton, isTrue);
+      final overflow = tester.getSemantics(find.byType(IconButton));
+      expect(overflow.tooltip, 'More actions');
+      expect(overflow.flagsCollection.isButton, isTrue);
 
-    await tester.tap(find.byType(TextButton));
-    await tester.tap(find.byType(IconButton));
-    expect(creatorTaps, 1);
-    expect(overflowTaps, 1);
-    // The title is not duplicated as a second, standalone node.
-    expect(find.text('Sun Garden'), findsOneWidget);
-    semantics.dispose();
-  });
+      await tester.tap(find.byType(TextButton));
+      await tester.tap(find.byType(IconButton));
+      expect(creatorTaps, 1);
+      expect(overflowTaps, 1);
+      // The title is not duplicated as a second, standalone node.
+      expect(find.text('Sun Garden'), findsOneWidget);
+      semantics.dispose();
+    },
+  );
 
-  testWidgets('a tappable entity card exposes button semantics and taps',
-      (tester) async {
+  testWidgets('a tappable entity card exposes button semantics and taps', (
+    tester,
+  ) async {
     final semantics = tester.ensureSemantics();
     var taps = 0;
 
@@ -99,8 +108,9 @@ void main() {
     semantics.dispose();
   });
 
-  testWidgets('a tappable entity card activates from keyboard focus',
-      (tester) async {
+  testWidgets('a tappable entity card activates from keyboard focus', (
+    tester,
+  ) async {
     var taps = 0;
 
     await tester.pumpWidget(
@@ -122,8 +132,9 @@ void main() {
     await tester.pump();
 
     // Keyboard focus is explicit and always available, hover or not.
-    final container =
-        tester.widget<AnimatedContainer>(find.byType(AnimatedContainer).first);
+    final container = tester.widget<AnimatedContainer>(
+      find.byType(AnimatedContainer).first,
+    );
     final border = (container.decoration as BoxDecoration).border as Border;
     expect(border.top.width, 2);
 
@@ -156,8 +167,9 @@ void main() {
       ),
     );
 
-    final container =
-        tester.widget<AnimatedContainer>(find.byType(AnimatedContainer).first);
+    final container = tester.widget<AnimatedContainer>(
+      find.byType(AnimatedContainer).first,
+    );
     final decoration = container.decoration as BoxDecoration;
     debugDisableShadows = previous;
     // Nothing *visible* at rest. The hover shadow keeps a fully transparent
@@ -171,8 +183,9 @@ void main() {
     );
   });
 
-  testWidgets('a card without usable media shows the authored role field',
-      (tester) async {
+  testWidgets('a card without usable media shows the authored role field', (
+    tester,
+  ) async {
     await tester.pumpWidget(
       _buildHarness(
         KubusEntityCard(
@@ -194,8 +207,34 @@ void main() {
     expect(find.byType(KubusAtmosphere), findsOneWidget);
   });
 
-  testWidgets('reduced motion removes the media scale and the lift',
-      (tester) async {
+  testWidgets('entity card media decodes within its physical display bounds', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      _buildHarness(
+        KubusEntityCard(
+          variant: KubusEntityCardVariant.media,
+          kind: KubusEntityKind.artwork,
+          title: 'Sized artwork',
+          imageUrl: 'https://cdn.example.com/entity-card.png',
+          width: 220,
+          height: 240,
+        ),
+        devicePixelRatio: 3,
+      ),
+    );
+
+    final image = tester.widget<Image>(find.byType(Image));
+    expect(image.image, isA<ResizeImage>());
+    final resized = image.image as ResizeImage;
+    expect(resized.width, isNull);
+    expect(resized.height, lessThanOrEqualTo(720));
+    expect(resized.height, greaterThan(0));
+  });
+
+  testWidgets('reduced motion removes the media scale and the lift', (
+    tester,
+  ) async {
     await tester.pumpWidget(
       _buildHarness(
         KubusEntityCard(
@@ -215,9 +254,7 @@ void main() {
 
     // The lift wrapper stays in the tree so toggling the setting never
     // remounts the card, but it never moves: its transform is the identity.
-    final lift = tester.widget<Transform>(
-      find.byKey(KubusEntityCard.liftKey),
-    );
+    final lift = tester.widget<Transform>(find.byKey(KubusEntityCard.liftKey));
     expect(lift.transform, Matrix4.identity());
   });
 

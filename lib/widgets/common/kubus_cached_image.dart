@@ -19,6 +19,7 @@ class KubusCachedImage extends StatefulWidget {
     this.filterQuality = FilterQuality.low,
     this.cacheWidth,
     this.cacheHeight,
+    this.decodeToDisplaySize = false,
     this.maxDisplayWidth,
     this.cacheVersion,
     this.icon = Icons.image_outlined,
@@ -44,6 +45,30 @@ class KubusCachedImage extends StatefulWidget {
   final FilterQuality filterQuality;
   final int? cacheWidth;
   final int? cacheHeight;
+
+  /// Decode at the laid-out size in physical pixels, capped to keep large
+  /// source images from becoming oversized decoded card/search bitmaps.
+  /// Explicit [cacheWidth]/[cacheHeight] always take precedence.
+  final bool decodeToDisplaySize;
+
+  static const int maxDisplayDecodeDimension = 1440;
+
+  /// Converts a logical layout extent into a bounded physical decode extent.
+  @visibleForTesting
+  static int? displayDecodeDimension(
+    double logicalExtent,
+    double devicePixelRatio,
+  ) {
+    if (!logicalExtent.isFinite ||
+        logicalExtent <= 0 ||
+        !devicePixelRatio.isFinite ||
+        devicePixelRatio <= 0) {
+      return null;
+    }
+    final physicalExtent = (logicalExtent * devicePixelRatio).ceil();
+    return physicalExtent.clamp(1, maxDisplayDecodeDimension);
+  }
+
   final int? maxDisplayWidth;
   final String? cacheVersion;
   final IconData icon;
@@ -99,7 +124,12 @@ class KubusCachedImage extends StatefulWidget {
   ///
   /// Candidates come from the canonical resolver: an IPFS reference yields one
   /// URL per configured gateway, and a failed candidate advances to the next.
-  Widget _buildImage(BuildContext context, _KubusCachedImageState state) {
+  Widget _buildImage(
+    BuildContext context,
+    _KubusCachedImageState state, {
+    int? displayCacheWidth,
+    int? displayCacheHeight,
+  }) {
     final resolvedSemanticLabel = _normalizedSemanticLabel;
     final candidates = MediaUrlResolver.resolveDisplayCandidates(
       imageUrl,
@@ -147,8 +177,8 @@ class KubusCachedImage extends StatefulWidget {
     // the other — so the decoded bitmap keeps its native aspect ratio and [fit]
     // does the cropping. BoxFit.fill is the one case that intentionally
     // distorts, so it keeps both dimensions.
-    int? effectiveCacheWidth = cacheWidth;
-    int? effectiveCacheHeight = cacheHeight;
+    int? effectiveCacheWidth = cacheWidth ?? displayCacheWidth;
+    int? effectiveCacheHeight = cacheHeight ?? displayCacheHeight;
     if (fit != BoxFit.fill &&
         effectiveCacheWidth != null &&
         effectiveCacheHeight != null) {
@@ -269,7 +299,30 @@ class _KubusCachedImageState extends State<KubusCachedImage> {
   }
 
   @override
-  Widget build(BuildContext context) => widget._buildImage(context, this);
+  Widget build(BuildContext context) {
+    if (!widget.decodeToDisplaySize ||
+        widget.cacheWidth != null ||
+        widget.cacheHeight != null) {
+      return widget._buildImage(context, this);
+    }
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final devicePixelRatio = MediaQuery.devicePixelRatioOf(context);
+        return widget._buildImage(
+          context,
+          this,
+          displayCacheWidth: KubusCachedImage.displayDecodeDimension(
+            constraints.maxWidth,
+            devicePixelRatio,
+          ),
+          displayCacheHeight: KubusCachedImage.displayDecodeDimension(
+            constraints.maxHeight,
+            devicePixelRatio,
+          ),
+        );
+      },
+    );
+  }
 }
 
 /// Error handed to [KubusCachedImage.errorBuilder] when the image was not
