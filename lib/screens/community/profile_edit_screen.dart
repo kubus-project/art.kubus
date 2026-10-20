@@ -312,9 +312,11 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
 
     var succeeded = false;
     try {
-      final wallet = profileProvider.currentUser?.walletAddress ?? '';
+      // Any authenticated session (wallet or email/Google) may upload; the
+      // backend derives the owner from the token, so the wallet is optional.
+      final wallet = profileProvider.currentUser?.walletAddress.trim() ?? '';
 
-      if (wallet.isEmpty) {
+      if (profileProvider.currentUser == null) {
         messenger.showKubusSnackBar(
           SnackBar(
             content: Text(l10n.profileEditNoWalletUploadAvatarToast),
@@ -355,7 +357,10 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
         _avatarChanged = false;
       });
 
-      unawaited(profileProvider.loadProfile(wallet));
+      // Email/Google sessions have no wallet, so reload the authenticated account.
+      unawaited(wallet.isEmpty
+          ? profileProvider.loadAuthenticatedProfile()
+          : profileProvider.loadProfile(wallet));
       if (kDebugMode) {
         final displayAvatarUrl =
             MediaUrlResolver.resolve(persistableAvatar) ?? persistableAvatar;
