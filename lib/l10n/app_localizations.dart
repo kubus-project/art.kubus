@@ -62,8 +62,18 @@ import 'app_localizations_sl.dart';
 /// be consistent with the languages listed in the AppLocalizations.supportedLocales
 /// property.
 abstract class AppLocalizations {
-  AppLocalizations(String locale)
-      : localeName = intl.Intl.canonicalizedLocale(locale.toString());
+  AppLocalizations(String locale) : localeName = _supportedLocaleName(locale);
+
+  // Keep this guard after `flutter gen-l10n`: the generator's default locale
+  // normalization does not trim input or fall back to the app's supported
+  // locales, and this constructor is used directly by non-widget callers.
+  static String _supportedLocaleName(String locale) {
+    final normalizedLocale = intl.Intl.canonicalizedLocale(locale.trim());
+    return switch (normalizedLocale) {
+      'en' || 'sl' => normalizedLocale,
+      _ => 'sl',
+    };
+  }
 
   final String localeName;
 
