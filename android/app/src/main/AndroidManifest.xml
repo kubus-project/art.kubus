@@ -30,7 +30,7 @@
     android:requestLegacyExternalStorage="true"
         android:label="art.kubus"
         android:name="${applicationName}"
-        android:icon="@drawable/belilogo_crn"
+        android:icon="@mipmap/ic_launcher"
         android:usesCleartextTraffic="true">
         <!--
           usesCleartextTraffic is required for the LAN rung: a kubus Node on a
