@@ -20,6 +20,7 @@ import 'package:art_kubus/services/share/share_types.dart';
 import 'package:art_kubus/utils/artwork_navigation.dart';
 import 'package:art_kubus/utils/kubus_color_roles.dart';
 import 'package:art_kubus/utils/share_deep_link_navigation.dart';
+import 'package:art_kubus/widgets/detail/subject_action_group.dart';
 import 'package:art_kubus/widgets/navigation/kubus_mobile_navigation_bar.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -393,5 +394,80 @@ void main() {
     expect(comment, findsOneWidget);
     expect(scrollViewRect.overlaps(tester.getRect(comment)), isTrue);
     expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('closing comments before the next frame cancels pending scroll', (
+    tester,
+  ) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(390, 844);
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final artwork = _artwork();
+    final commentsCompleter = Completer<List<ArtworkComment>>();
+    final artworkProvider = ArtworkProvider(
+      backendApi: _FakeArtworkApi(
+        artwork,
+        commentsFuture: () => commentsCompleter.future,
+      ),
+    )..addOrUpdateArtwork(artwork);
+
+    await tester.pumpWidget(
+      _appHarness(
+        artworkProvider: artworkProvider,
+        tabs: MainTabProvider(),
+        home: ArtDetailScreen(artworkId: _artworkId),
+      ),
+    );
+    for (var frame = 0; frame < 20; frame++) {
+      await tester.pump(const Duration(milliseconds: 50));
+    }
+
+    final l10n = AppLocalizations.of(
+      tester.element(find.byType(ArtDetailScreen)),
+    )!;
+    final commentsAction = find.text(l10n.commonComments).first;
+    await tester.scrollUntilVisible(
+      commentsAction,
+      420,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.ensureVisible(commentsAction);
+    for (var frame = 0; frame < 10; frame++) {
+      await tester.pump(const Duration(milliseconds: 50));
+    }
+
+    final scrollable = tester.state<ScrollableState>(
+      find
+          .descendant(
+            of: find.byType(CustomScrollView),
+            matching: find.byType(Scrollable),
+          )
+          .first,
+    );
+    final startingOffset = scrollable.position.pixels;
+    final commentsToggle = tester
+        .widgetList<SubjectActionGroup>(find.byType(SubjectActionGroup))
+        .expand((group) => group.actions)
+        .singleWhere((action) => action.label == l10n.commonComments);
+
+    // Both callbacks run before Flutter builds the open state, matching a
+    // rapid open then close while the pending scroll waits for endOfFrame.
+    commentsToggle.onPressed!();
+    commentsToggle.onPressed!();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+
+    expect(
+      find.byKey(const ValueKey('art-detail-comments-heading')),
+      findsNothing,
+    );
+    expect(scrollable.position.pixels, startingOffset);
+    expect(artworkProvider.isLoading('load_comments_$_artworkId'), isTrue);
+    expect(tester.takeException(), isNull);
+
+    commentsCompleter.complete(const <ArtworkComment>[]);
+    await tester.pump(const Duration(milliseconds: 50));
   });
 }

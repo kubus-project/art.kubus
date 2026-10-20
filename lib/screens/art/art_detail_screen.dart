@@ -80,23 +80,37 @@ class _ArtDetailScreenState extends State<ArtDetailScreen> {
   late ScrollController _scrollController;
   final GlobalKey _commentsSectionKey = GlobalKey();
   bool _showComments = false;
+  int _commentsScrollGeneration = 0;
 
   Future<void> _openCommentsAndScroll(ArtworkProvider provider) async {
+    final generation = ++_commentsScrollGeneration;
+    if (!_isCommentsScrollCurrent(generation)) return;
     final loading = provider.loadComments(widget.artworkId);
-    await _scrollToComments();
+    await _scrollToComments(generation);
+    if (!_isCommentsScrollCurrent(generation)) return;
     await loading;
-    if (!mounted || !_showComments) return;
-    await _scrollToComments();
+    if (!_isCommentsScrollCurrent(generation)) return;
+    await _scrollToComments(generation);
   }
 
-  Future<void> _scrollToComments() async {
+  bool _isCommentsScrollCurrent(int generation) =>
+      mounted && _showComments && _commentsScrollGeneration == generation;
+
+  Future<void> _scrollToComments(int generation) async {
+    if (!_isCommentsScrollCurrent(generation)) return;
     await WidgetsBinding.instance.endOfFrame;
-    if (!mounted || !_scrollController.hasClients) return;
+    if (!mounted ||
+        !_showComments ||
+        _commentsScrollGeneration != generation ||
+        !_scrollController.hasClients) {
+      return;
+    }
     final reduceMotion = MediaQuery.disableAnimationsOf(context);
     final duration =
         reduceMotion ? Duration.zero : const Duration(milliseconds: 250);
 
     for (var attempt = 0; attempt < 3; attempt++) {
+      if (!_isCommentsScrollCurrent(generation)) return;
       final targetContext = _commentsSectionKey.currentContext;
       if (targetContext != null) {
         if (!targetContext.mounted) return;
@@ -116,7 +130,9 @@ class _ArtDetailScreenState extends State<ArtDetailScreen> {
         duration: duration,
         curve: Curves.easeOutCubic,
       );
+      if (!_isCommentsScrollCurrent(generation)) return;
       await WidgetsBinding.instance.endOfFrame;
+      if (!_isCommentsScrollCurrent(generation)) return;
     }
   }
 
@@ -682,6 +698,7 @@ class _ArtDetailScreenState extends State<ArtDetailScreen> {
                   isSelected: _showComments,
                   onPressed: () {
                     final shouldShow = !_showComments;
+                    if (!shouldShow) _commentsScrollGeneration++;
                     setState(() => _showComments = shouldShow);
                     if (shouldShow) {
                       unawaited(_openCommentsAndScroll(artworkProvider));
