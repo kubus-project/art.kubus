@@ -15,6 +15,7 @@ import '../providers/events_provider.dart';
 import '../providers/exhibitions_provider.dart';
 import '../providers/institution_provider.dart';
 import '../providers/navigation_provider.dart';
+import '../providers/notification_provider.dart';
 import '../providers/marker_management_provider.dart';
 import '../providers/kubus_node_provider.dart';
 import '../providers/spatial_library_provider.dart';
@@ -68,6 +69,7 @@ class AppBootstrapService {
     final availabilityOperatorProvider =
         context.read<AvailabilityOperatorProvider>();
     final promotionProvider = context.read<PromotionProvider>();
+    final notificationProvider = context.read<NotificationProvider>();
 
     await _runTask('wallet_init', walletProvider.initialize);
     await _runTask('app_mode', appModeProvider.initialize);
@@ -138,6 +140,13 @@ class AppBootstrapService {
       ),
       _runTask('events', () => eventsProvider.initialize(refresh: true)),
     ];
+
+    // A restored session needs its notification state (authoritative unread
+    // summary, user-room socket) without waiting for Settings or a wallet
+    // reconnect; initialize() is a no-op without a session.
+    if (hasAuth) {
+      p1.add(_runTask('notifications', notificationProvider.initialize));
+    }
 
     if (AppConfig.isFeatureEnabled('collabInvites') && hasAuth) {
       p1.add(
