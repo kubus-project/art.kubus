@@ -109,9 +109,8 @@ ProfilePersonEntry _personEntryFromPayload(
     username: resolvedUsername.isEmpty ? null : resolvedUsername,
     isVerified: _peopleBool(row['isVerified'] ?? row['is_verified']) ||
         (cachedUser?.isVerified ?? false),
-    role: isInstitution
-        ? ProfilePersonRole.institution
-        : (isArtist ? ProfilePersonRole.artist : null),
+    isArtist: isArtist,
+    isInstitution: isInstitution,
   );
 }
 

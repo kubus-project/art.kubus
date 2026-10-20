@@ -23,7 +23,7 @@ import '../../services/achievement_service.dart' as achievement_svc;
 import '../../services/backend_api_service.dart';
 import '../../services/push_notification_service.dart';
 import '../../services/settings_service.dart';
-import '../../widgets/avatar_widget.dart';
+import '../../widgets/identity/kubus_identity_avatar.dart';
 import '../../widgets/common/kubus_stat_card.dart';
 import '../../widgets/detail/detail_shell_components.dart';
 import '../../widgets/detail/shared_section_widgets.dart';

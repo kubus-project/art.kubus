@@ -8,7 +8,7 @@ import '../../services/telemetry/telemetry_service.dart';
 import 'package:flutter/material.dart';
 import '../../widgets/common/kubus_cached_image.dart';
 import '../../widgets/inline_loading.dart';
-import '../../widgets/avatar_widget.dart';
+import '../../widgets/identity/kubus_identity_avatar.dart';
 import '../../widgets/artwork_creator_byline.dart';
 import '../../widgets/artwork_gallery_view.dart';
 import '../../widgets/detail/detail_shell_components.dart';
@@ -1815,7 +1815,7 @@ class _ArtDetailScreenState extends State<ArtDetailScreen> {
           children: [
             Row(
               children: [
-                AvatarWidget(
+                KubusIdentityAvatar(
                   avatarUrl: comment.userAvatarUrl,
                   wallet: comment.userId,
                   radius: isReply ? 12 : 16,

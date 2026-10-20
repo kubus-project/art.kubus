@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:latlong2/latlong.dart';
 
 import '../../l10n/app_localizations.dart';
+import '../../models/profile_identity_data.dart';
 import '../../utils/app_color_utils.dart';
 
 enum KubusSearchResultKind {
@@ -116,6 +117,23 @@ class KubusSearchResult {
         KubusSearchResultKind.event => 'event',
         KubusSearchResultKind.exhibition => 'exhibition',
         _ => null,
+      };
+
+  /// Roles the result's payload states for the account behind its avatar: a
+  /// profile result states its own, a post result states its author's through
+  /// author-prefixed flags. Silent payloads yield no marks.
+  ProfileIdentityRoles get authorRoles => switch (kind) {
+        KubusSearchResultKind.profile =>
+          ProfileIdentityRoles.fromAuthorPayload(data, envelope: data),
+        KubusSearchResultKind.post => ProfileIdentityRoles.fromAuthorPayload(
+            // The nested author object, when the payload carries one, states
+            // its roles; the envelope keeps the author-prefixed flags.
+            data['author'] is Map
+                ? Map<String, dynamic>.from(data['author'] as Map)
+                : const <String, dynamic>{},
+            envelope: data,
+          ),
+        _ => ProfileIdentityRoles.none,
       };
 
   String? get avatarUrl => dataString(const <String>[

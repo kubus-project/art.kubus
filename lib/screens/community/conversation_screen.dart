@@ -27,6 +27,7 @@ import '../../services/backend_api_service.dart';
 import '../../services/event_bus.dart';
 import '../../services/push_notification_service.dart';
 import '../../widgets/avatar_widget.dart';
+import '../../widgets/identity/kubus_identity_avatar.dart';
 import '../../widgets/inline_loading.dart';
 import '../../utils/creator_display_format.dart';
 import '../../utils/wallet_utils.dart';
@@ -846,7 +847,7 @@ class _ConversationScreenState extends State<ConversationScreen> {
       debugPrint(
           'ConversationScreen._buildAvatar: wallet=$wallet, avatarUrl=$normalized');
       final isLoading = avatarUrl == null || avatarUrl.isEmpty;
-      return AvatarWidget(
+      return KubusIdentityAvatar(
           avatarUrl: normalized,
           wallet: wallet,
           radius: radius,
@@ -2539,7 +2540,7 @@ class _AddMemberDialogState extends State<_AddMemberDialog> {
                               (wallet.isNotEmpty ? maskWallet(wallet) : null);
 
                           return ListTile(
-                            leading: AvatarWidget(
+                            leading: KubusIdentityAvatar(
                               avatarUrl: effectiveAvatar,
                               wallet: wallet.isNotEmpty ? wallet : rawUsername,
                               allowFabricatedFallback: false,
@@ -2645,7 +2646,7 @@ class MembersDialog extends StatelessWidget {
             final secondary = formatted.secondary;
 
             return ListTile(
-              leading: AvatarWidget(
+              leading: KubusIdentityAvatar(
                   avatarUrl: effectiveAvatar,
                   wallet: wallet,
                   allowFabricatedFallback: false),

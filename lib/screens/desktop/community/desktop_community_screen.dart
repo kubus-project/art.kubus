@@ -31,14 +31,14 @@ import '../../../services/contextual_auth_gate.dart';
 import '../../../services/user_service.dart';
 import '../../../services/share/share_service.dart';
 import '../../../services/share/share_types.dart' as share_types;
-import '../../../widgets/avatar_widget.dart';
+import '../../../widgets/identity/kubus_identity_avatar.dart';
 import '../../../widgets/empty_state_card.dart';
 import '../../../widgets/user_activity_status_line.dart';
 import '../../../widgets/community/community_compose_intent_resumer.dart';
 import '../../../widgets/community/post_like_settlement.dart';
 import '../../../services/pending_action_executor.dart';
 import '../../../widgets/community/community_post_card.dart';
-import '../../../widgets/community/community_author_role_badges.dart';
+import '../../../widgets/community/conversation_avatar.dart';
 import '../../../widgets/community/community_post_options_sheet.dart';
 import '../../../widgets/community/community_subject_picker.dart';
 import '../../../utils/app_animations.dart';
@@ -684,14 +684,19 @@ class _NewConversationDialogState extends State<_NewConversationDialog> {
                             );
                             final subtitle = formatted.secondary ??
                                 (wallet.isNotEmpty ? maskWallet(wallet) : null);
+                            final statedRoles =
+                                ProfileIdentityRoles.fromProfileMap(user);
                             final avatarUrl = user['avatar'] ??
                                 user['avatar_url'] ??
                                 user['profileImageUrl'] ??
                                 user['profileImage'];
                             return ListTile(
-                              leading: AvatarWidget(
+                              leading: KubusIdentityAvatar(
                                 wallet: wallet,
                                 avatarUrl: avatarUrl?.toString(),
+                                isArtist: statedRoles.isArtist,
+                                isInstitution: statedRoles.isInstitution,
+                                isVerified: statedRoles.isVerified,
                                 radius: 20,
                                 allowFabricatedFallback: true,
                               ),

@@ -6,7 +6,7 @@ import '../../utils/artwork_media_resolver.dart';
 import '../../utils/design_tokens.dart';
 import '../../utils/kubus_color_roles.dart';
 import '../../utils/media_url_resolver.dart';
-import '../avatar_widget.dart';
+import '../identity/kubus_identity_avatar.dart';
 import '../map/kubus_map_glass_surface.dart';
 import '../common/kubus_cached_image.dart';
 import '../map_overlay_blocker.dart';
@@ -690,10 +690,13 @@ class KubusSearchResultLeading extends StatelessWidget {
       return SizedBox(
         width: 44,
         height: 44,
-        child: AvatarWidget(
+        child: KubusIdentityAvatar(
           avatarUrl: result.avatarUrl,
           wallet: wallet.isEmpty ? result.label : wallet,
           displayName: result.label,
+          isArtist: result.authorRoles.isArtist,
+          isInstitution: result.authorRoles.isInstitution,
+          isVerified: result.authorRoles.isVerified,
           radius: 22,
           allowFabricatedFallback: true,
           enableProfileNavigation: false,
