@@ -173,12 +173,6 @@ class _DesktopShellState extends State<DesktopShell>
       route: '/community',
     ),
     DesktopNavItem(
-      icon: Icons.mail_outline,
-      activeIcon: Icons.mail,
-      labelKey: DesktopNavLabelKey.messages,
-      route: '/messages',
-    ),
-    DesktopNavItem(
       icon: Icons.palette_outlined,
       activeIcon: Icons.palette,
       labelKey: DesktopNavLabelKey.create,
@@ -671,8 +665,12 @@ class _DesktopShellState extends State<DesktopShell>
         });
       }
     }
+    // Messages has no rail entry of its own: it lives inside Community, so
+    // the internal /messages route keeps Connect selected.
+    final selectedRoute =
+        effectiveRoute == '/messages' ? '/community' : effectiveRoute;
     final selectedIndex = navItems.indexWhere(
-      (item) => item.route == effectiveRoute,
+      (item) => item.route == selectedRoute,
     );
     // Navigation selection uses the family active role on every route; data
     // and feature colours stay inside their own screens.

@@ -20,7 +20,6 @@ enum DesktopNavLabelKey {
   home,
   explore,
   connect,
-  messages,
   create,
   organize,
   govern,
@@ -38,8 +37,6 @@ extension DesktopNavLabelKeyX on DesktopNavLabelKey {
         return l10n.desktopShellNavExplore;
       case DesktopNavLabelKey.connect:
         return l10n.desktopShellNavConnect;
-      case DesktopNavLabelKey.messages:
-        return l10n.desktopShellNavMessages;
       case DesktopNavLabelKey.create:
         return l10n.desktopShellNavCreate;
       case DesktopNavLabelKey.organize:
@@ -308,7 +305,7 @@ class _DesktopNavigationState extends State<DesktopNavigation>
     final roles = KubusColorRoles.of(context);
     final label = item.labelKey.resolve(l10n);
     final itemBadgeCount =
-        item.route == '/messages' ? messageUnreadCount : item.badgeCount;
+        item.route == '/community' ? messageUnreadCount : item.badgeCount;
     Widget tile = Padding(
       padding: const EdgeInsets.symmetric(vertical: 1),
       child: MouseRegion(
@@ -443,7 +440,7 @@ class _DesktopNavigationState extends State<DesktopNavigation>
       container: true,
       button: true,
       selected: isSelected,
-      label: item.route == '/messages' && itemBadgeCount > 0
+      label: item.route == '/community' && itemBadgeCount > 0
           ? '$label, ${l10n.desktopMessagesUnreadSemantics(itemBadgeCount)}'
           : label,
       onTap: () => widget.onItemSelected(index),

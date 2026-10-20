@@ -136,7 +136,8 @@ void main() {
     semantics.dispose();
   });
 
-  testWidgets('messages badge shows authoritative unread count and semantics',
+  testWidgets(
+      'Connect carries the authoritative message unread badge and semantics',
       (tester) async {
     final semantics = tester.ensureSemantics();
     await pumpRail(
@@ -145,10 +146,10 @@ void main() {
       messageUnreadCount: 2,
       items: const <DesktopNavItem>[
         DesktopNavItem(
-          icon: Icons.mail_outline,
-          activeIcon: Icons.mail,
-          labelKey: DesktopNavLabelKey.messages,
-          route: '/messages',
+          icon: Icons.people_outline,
+          activeIcon: Icons.people,
+          labelKey: DesktopNavLabelKey.connect,
+          route: '/community',
         ),
       ],
     );
@@ -159,7 +160,7 @@ void main() {
       tester
           .getSemantics(
             find.bySemanticsLabel(
-              '${l10n.desktopShellNavMessages}, '
+              '${l10n.desktopShellNavConnect}, '
               '${l10n.desktopMessagesUnreadSemantics(2)}',
             ),
           )
@@ -170,17 +171,18 @@ void main() {
     semantics.dispose();
   });
 
-  testWidgets('messages badge stays hidden when authoritative count is zero',
+  testWidgets(
+      'Connect message badge stays hidden when authoritative count is zero',
       (tester) async {
     await pumpRail(
       tester,
       expanded: true,
       items: const <DesktopNavItem>[
         DesktopNavItem(
-          icon: Icons.mail_outline,
-          activeIcon: Icons.mail,
-          labelKey: DesktopNavLabelKey.messages,
-          route: '/messages',
+          icon: Icons.people_outline,
+          activeIcon: Icons.people,
+          labelKey: DesktopNavLabelKey.connect,
+          route: '/community',
         ),
       ],
     );
@@ -190,7 +192,7 @@ void main() {
     expect(
       tester
           .getSemantics(
-            find.bySemanticsLabel(l10n.desktopShellNavMessages),
+            find.bySemanticsLabel(l10n.desktopShellNavConnect),
           )
           .flagsCollection
           .isButton,
