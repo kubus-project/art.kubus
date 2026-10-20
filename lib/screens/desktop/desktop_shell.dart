@@ -22,6 +22,7 @@ import '../../services/contextual_auth_gate.dart';
 import '../../services/telemetry/telemetry_service.dart';
 import '../../utils/kubus_color_roles.dart';
 import '../../utils/kubus_labs_feature.dart';
+import '../../widgets/glass_components.dart';
 import 'desktop_home_screen.dart';
 import 'desktop_map_screen.dart';
 import 'community/desktop_community_screen.dart';
@@ -694,7 +695,7 @@ class _DesktopShellState extends State<DesktopShell>
     const functionsPanelWidthMedium = 300.0;
 
     void openCanonicalPublicEntryNavigation() {
-      showDialog<void>(
+      showKubusDialog<void>(
         context: context,
         builder: (dialogContext) {
           final roles = KubusColorRoles.of(dialogContext);
