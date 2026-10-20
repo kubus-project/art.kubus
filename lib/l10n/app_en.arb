@@ -5280,6 +5280,7 @@
   "desktopShellNavHome": "Home",
   "desktopShellNavExplore": "Explore",
   "desktopShellNavConnect": "Connect",
+  "desktopShellNavMessages": "Messages",
   "desktopShellNavCreate": "Create",
   "desktopShellNavOrganize": "Organize",
   "desktopShellNavGovern": "Govern",
@@ -5306,6 +5307,34 @@
   "mobileNavProfile": "Profile",
   "mobileNavAccount": "Account",
   "mobileNavSemanticLabel": "Main navigation",
+  "mobileNavCommunityUnreadSemantics": "{count} unread messages and notifications",
+  "@mobileNavCommunityUnreadSemantics": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "desktopMessagesUnreadSemantics": "{count} unread messages",
+  "@desktopMessagesUnreadSemantics": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "notificationDirectMessageTitle": "New message from {senderName}",
+  "@notificationDirectMessageTitle": {
+    "placeholders": {
+      "senderName": {
+        "type": "String"
+      }
+    }
+  },
+  "notificationDirectMessageFallbackSender": "Someone",
+  "notificationDirectMessageEmptyBody": "You have a new message.",
+  "notificationMessagesChannelName": "Messages",
+  "messagesNotificationConversationUnavailable": "This conversation is no longer available.",
   "desktopNavWalletEntry": "Wallet",
   "daoHubAppBarTitle": "Community governance",
   "labsDaoSemanticLabel": "Community Governance",

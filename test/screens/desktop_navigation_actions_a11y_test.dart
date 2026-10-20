@@ -23,6 +23,8 @@ void main() {
     WidgetTester tester, {
     required bool expanded,
     Locale locale = const Locale('en'),
+    int messageUnreadCount = 0,
+    List<DesktopNavItem> items = const <DesktopNavItem>[],
     bool notificationsSelected = false,
     VoidCallback? onNotifications,
     VoidCallback? onSettings,
@@ -36,10 +38,21 @@ void main() {
       value: expanded ? 1 : 0,
     );
     addTearDown(controller.dispose);
+    final notificationProvider = NotificationProvider()
+      ..setAuthenticatedSessionForTesting(wallet: 'test-wallet')
+      ..handleUnreadSummaryForTesting(<String, dynamic>{
+        'notificationUnreadCount': 0,
+        'messageUnreadCount': messageUnreadCount,
+        'totalUnreadCount': messageUnreadCount,
+        'generatedAt': DateTime.utc(2026).toIso8601String(),
+      });
+    addTearDown(notificationProvider.dispose);
     await tester.pumpWidget(
       MultiProvider(
         providers: [
-          ChangeNotifierProvider(create: (_) => NotificationProvider()),
+          ChangeNotifierProvider<NotificationProvider>.value(
+            value: notificationProvider,
+          ),
           ChangeNotifierProvider(create: (_) => ProfileProvider()),
           ChangeNotifierProvider(create: (_) => CollabProvider()),
           ChangeNotifierProvider(create: (_) => ThemeProvider()),
@@ -52,7 +65,7 @@ void main() {
             body: Align(
               alignment: Alignment.centerLeft,
               child: DesktopNavigation(
-                items: const <DesktopNavItem>[],
+                items: items,
                 activeAccent: Colors.teal,
                 selectedIndex: 0,
                 onItemSelected: (_) {},
@@ -121,6 +134,68 @@ void main() {
     );
     expect(node.flagsCollection.isSelected, ui.Tristate.isTrue);
     semantics.dispose();
+  });
+
+  testWidgets('messages badge shows authoritative unread count and semantics',
+      (tester) async {
+    final semantics = tester.ensureSemantics();
+    await pumpRail(
+      tester,
+      expanded: true,
+      messageUnreadCount: 2,
+      items: const <DesktopNavItem>[
+        DesktopNavItem(
+          icon: Icons.mail_outline,
+          activeIcon: Icons.mail,
+          labelKey: DesktopNavLabelKey.messages,
+          route: '/messages',
+        ),
+      ],
+    );
+    final l10n = AppLocalizations.of(tester.element(find.byType(Scaffold)))!;
+
+    expect(find.text('2'), findsOneWidget);
+    expect(
+      tester
+          .getSemantics(
+            find.bySemanticsLabel(
+              '${l10n.desktopShellNavMessages}, '
+              '${l10n.desktopMessagesUnreadSemantics(2)}',
+            ),
+          )
+          .flagsCollection
+          .isButton,
+      isTrue,
+    );
+    semantics.dispose();
+  });
+
+  testWidgets('messages badge stays hidden when authoritative count is zero',
+      (tester) async {
+    await pumpRail(
+      tester,
+      expanded: true,
+      items: const <DesktopNavItem>[
+        DesktopNavItem(
+          icon: Icons.mail_outline,
+          activeIcon: Icons.mail,
+          labelKey: DesktopNavLabelKey.messages,
+          route: '/messages',
+        ),
+      ],
+    );
+
+    expect(find.text('0'), findsNothing);
+    final l10n = AppLocalizations.of(tester.element(find.byType(Scaffold)))!;
+    expect(
+      tester
+          .getSemantics(
+            find.bySemanticsLabel(l10n.desktopShellNavMessages),
+          )
+          .flagsCollection
+          .isButton,
+      isTrue,
+    );
   });
 
   testWidgets('hovering the rail icons shows a tooltip with the same name',

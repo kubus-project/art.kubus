@@ -20,6 +20,7 @@ enum DesktopNavLabelKey {
   home,
   explore,
   connect,
+  messages,
   create,
   organize,
   govern,
@@ -37,6 +38,8 @@ extension DesktopNavLabelKeyX on DesktopNavLabelKey {
         return l10n.desktopShellNavExplore;
       case DesktopNavLabelKey.connect:
         return l10n.desktopShellNavConnect;
+      case DesktopNavLabelKey.messages:
+        return l10n.desktopShellNavMessages;
       case DesktopNavLabelKey.create:
         return l10n.desktopShellNavCreate;
       case DesktopNavLabelKey.organize:
@@ -142,6 +145,9 @@ class _DesktopNavigationState extends State<DesktopNavigation>
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final animationTheme = context.animationTheme;
+    final messageUnreadCount = context.select<NotificationProvider, int>(
+      (provider) => provider.messageUnreadCount,
+    );
 
     // When collapsed and thinner, fixed paddings used for the wider rail can
     // cause overflow. These values keep icon-only layouts comfortable.
@@ -159,13 +165,16 @@ class _DesktopNavigationState extends State<DesktopNavigation>
         Expanded(
           child: ListView.builder(
             padding: EdgeInsets.symmetric(
-                horizontal: navListHorizontalPadding, vertical: 8),
+              horizontal: navListHorizontalPadding,
+              vertical: 8,
+            ),
             itemCount: widget.items.length,
             itemBuilder: (context, index) => _buildNavItem(
               widget.items[index],
               index,
               animationTheme,
               l10n,
+              messageUnreadCount,
             ),
           ),
         ),
@@ -249,10 +258,9 @@ class _DesktopNavigationState extends State<DesktopNavigation>
                     softWrap: false,
                     overflow: TextOverflow.fade,
                     style: KubusTextStyles.navMetaLabel.copyWith(
-                      color: Theme.of(context)
-                          .colorScheme
-                          .onSurface
-                          .withValues(alpha: 0.6),
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.onSurface.withValues(alpha: 0.6),
                     ),
                   ),
                 ],
@@ -286,6 +294,7 @@ class _DesktopNavigationState extends State<DesktopNavigation>
     int index,
     AppAnimationTheme animationTheme,
     AppLocalizations l10n,
+    int messageUnreadCount,
   ) {
     final isSelected = widget.selectedIndex == index;
     final isHovered = _hoveredIndex == index;
@@ -298,6 +307,8 @@ class _DesktopNavigationState extends State<DesktopNavigation>
 
     final roles = KubusColorRoles.of(context);
     final label = item.labelKey.resolve(l10n);
+    final itemBadgeCount =
+        item.route == '/messages' ? messageUnreadCount : item.badgeCount;
     Widget tile = Padding(
       padding: const EdgeInsets.symmetric(vertical: 1),
       child: MouseRegion(
@@ -379,7 +390,8 @@ class _DesktopNavigationState extends State<DesktopNavigation>
                             ),
                             if (widget.isExpanded) ...[
                               const SizedBox(
-                                  width: KubusSpacing.sm + KubusSpacing.xs),
+                                width: KubusSpacing.sm + KubusSpacing.xs,
+                              ),
                               Expanded(
                                 child: AnimatedOpacity(
                                   opacity: widget.expandAnimation.value,
@@ -407,8 +419,7 @@ class _DesktopNavigationState extends State<DesktopNavigation>
                                 ),
                               ],
                             ],
-                            if (item.badgeCount > 0)
-                              _buildBadge(item.badgeCount),
+                            if (itemBadgeCount > 0) _buildBadge(itemBadgeCount),
                           ],
                         ),
                       ),
@@ -432,7 +443,9 @@ class _DesktopNavigationState extends State<DesktopNavigation>
       container: true,
       button: true,
       selected: isSelected,
-      label: label,
+      label: item.route == '/messages' && itemBadgeCount > 0
+          ? '$label, ${l10n.desktopMessagesUnreadSemantics(itemBadgeCount)}'
+          : label,
       onTap: () => widget.onItemSelected(index),
       child: ExcludeSemantics(child: tile),
     );
@@ -458,8 +471,10 @@ class _DesktopNavigationState extends State<DesktopNavigation>
 
   Widget _buildBottomActions({required double horizontalPadding}) {
     return Container(
-      padding:
-          EdgeInsets.symmetric(horizontal: horizontalPadding, vertical: 10),
+      padding: EdgeInsets.symmetric(
+        horizontal: horizontalPadding,
+        vertical: 10,
+      ),
       decoration: BoxDecoration(
         border: Border(
           top: BorderSide(
@@ -686,8 +701,9 @@ class _DesktopNavigationState extends State<DesktopNavigation>
                               ),
                               decoration: BoxDecoration(
                                 color: Theme.of(context).colorScheme.error,
-                                borderRadius:
-                                    BorderRadius.circular(KubusRadius.sm),
+                                borderRadius: BorderRadius.circular(
+                                  KubusRadius.sm,
+                                ),
                                 border: Border.all(
                                   color: Theme.of(context).colorScheme.surface,
                                   width: 1,
@@ -699,8 +715,9 @@ class _DesktopNavigationState extends State<DesktopNavigation>
                                       ? '99+'
                                       : badgeCount.toString(),
                                   style: KubusTextStyles.compactBadge.copyWith(
-                                    color:
-                                        Theme.of(context).colorScheme.onError,
+                                    color: Theme.of(
+                                      context,
+                                    ).colorScheme.onError,
                                   ),
                                 ),
                               ),
@@ -724,8 +741,9 @@ class _DesktopNavigationState extends State<DesktopNavigation>
                                     color: widget.activeAccent,
                                     shape: BoxShape.circle,
                                     border: Border.all(
-                                      color:
-                                          Theme.of(context).colorScheme.surface,
+                                      color: Theme.of(
+                                        context,
+                                      ).colorScheme.surface,
                                       width: 1,
                                     ),
                                   ),
@@ -832,8 +850,9 @@ class _DesktopNavigationState extends State<DesktopNavigation>
                               ),
                               decoration: BoxDecoration(
                                 color: Theme.of(context).colorScheme.error,
-                                borderRadius:
-                                    BorderRadius.circular(KubusRadius.sm),
+                                borderRadius: BorderRadius.circular(
+                                  KubusRadius.sm,
+                                ),
                                 border: Border.all(
                                   color: Theme.of(context).colorScheme.surface,
                                   width: 1,
@@ -845,8 +864,9 @@ class _DesktopNavigationState extends State<DesktopNavigation>
                                       ? '99+'
                                       : badgeCount.toString(),
                                   style: KubusTextStyles.compactBadge.copyWith(
-                                    color:
-                                        Theme.of(context).colorScheme.onError,
+                                    color: Theme.of(
+                                      context,
+                                    ).colorScheme.onError,
                                   ),
                                 ),
                               ),
@@ -870,8 +890,9 @@ class _DesktopNavigationState extends State<DesktopNavigation>
                                     color: widget.activeAccent,
                                     shape: BoxShape.circle,
                                     border: Border.all(
-                                      color:
-                                          Theme.of(context).colorScheme.surface,
+                                      color: Theme.of(
+                                        context,
+                                      ).colorScheme.surface,
                                       width: 1,
                                     ),
                                   ),
@@ -1020,7 +1041,8 @@ class _DesktopNavigationState extends State<DesktopNavigation>
                         ),
                       if (widget.isExpanded) ...[
                         const SizedBox(
-                            width: KubusSpacing.sm + KubusSpacing.xs),
+                          width: KubusSpacing.sm + KubusSpacing.xs,
+                        ),
                         Expanded(
                           child: AnimatedOpacity(
                             opacity: widget.expandAnimation.value,
@@ -1031,10 +1053,14 @@ class _DesktopNavigationState extends State<DesktopNavigation>
                               children: [
                                 Text(
                                   !profileProvider.isSignedIn
-                                      ? AppLocalizations.of(context)!
+                                      ? AppLocalizations.of(
+                                          context,
+                                        )!
                                           .commonSignIn
                                       : user?.displayName ??
-                                          AppLocalizations.of(context)!
+                                          AppLocalizations.of(
+                                            context,
+                                          )!
                                               .profilePersonaArtEnthusiast,
                                   style: KubusTextStyles.profileName.copyWith(
                                     color: isSelected
@@ -1050,10 +1076,12 @@ class _DesktopNavigationState extends State<DesktopNavigation>
                                     style:
                                         KubusTextStyles.profileHandle.copyWith(
                                       color: isSelected
-                                          ? widget.activeAccent
-                                              .withValues(alpha: 0.82)
-                                          : scheme.onSurface
-                                              .withValues(alpha: 0.6),
+                                          ? widget.activeAccent.withValues(
+                                              alpha: 0.82,
+                                            )
+                                          : scheme.onSurface.withValues(
+                                              alpha: 0.6,
+                                            ),
                                     ),
                                     overflow: TextOverflow.ellipsis,
                                     maxLines: 1,

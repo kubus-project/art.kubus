@@ -129,6 +129,51 @@ class BackendApiRequestException implements Exception {
   }
 }
 
+/// Account-scoped unread counts returned by `/api/notifications/unread-summary`.
+/// Message counts come from authoritative conversation state and are kept
+/// separate from notification rows so a DM is counted only once.
+class NotificationUnreadSummary {
+  const NotificationUnreadSummary({
+    required this.notificationsUnreadCount,
+    required this.messagesUnreadCount,
+    required this.totalUnreadCount,
+    this.generatedAt,
+  });
+
+  final int notificationsUnreadCount;
+  final int messagesUnreadCount;
+  final int totalUnreadCount;
+  final DateTime? generatedAt;
+
+  factory NotificationUnreadSummary.fromJson(Map<String, dynamic> json) {
+    final data = json['data'] is Map
+        ? Map<String, dynamic>.from(json['data'] as Map)
+        : json;
+    final notifications = data['notifications'] is Map
+        ? Map<String, dynamic>.from(data['notifications'] as Map)
+        : const <String, dynamic>{};
+    final messages = data['messages'] is Map
+        ? Map<String, dynamic>.from(data['messages'] as Map)
+        : const <String, dynamic>{};
+    int count(dynamic value) => value is num ? value.toInt() : 0;
+    final notificationCount = count(
+      data['notificationUnreadCount'] ?? notifications['unreadCount'],
+    );
+    final messageCount = count(
+      data['messageUnreadCount'] ?? messages['unreadCount'],
+    );
+    final suppliedTotal = data['totalUnreadCount'];
+    return NotificationUnreadSummary(
+      notificationsUnreadCount: notificationCount,
+      messagesUnreadCount: messageCount,
+      totalUnreadCount: suppliedTotal is num
+          ? suppliedTotal.toInt()
+          : notificationCount + messageCount,
+      generatedAt: DateTime.tryParse(data['generatedAt']?.toString() ?? ''),
+    );
+  }
+}
+
 Never _throwTypedMutationFailure({
   required Object error,
   required StackTrace stackTrace,
@@ -10086,6 +10131,30 @@ class BackendApiService
     }
   }
 
+  /// Fetches the authoritative account-scoped notification and message
+  /// unread totals. A null result means the snapshot could not be fetched;
+  /// callers should retain their last known values rather than display zero.
+  /// GET /api/notifications/unread-summary
+  Future<NotificationUnreadSummary?> getUnreadNotificationSummary() async {
+    try {
+      final response = await _get(
+        Uri.parse('$baseUrl/api/notifications/unread-summary'),
+        headers: _getHeaders(),
+      );
+      if (response.statusCode != 200) return null;
+      final decoded = jsonDecode(response.body);
+      if (decoded is! Map) return null;
+      return NotificationUnreadSummary.fromJson(
+        Map<String, dynamic>.from(decoded),
+      );
+    } catch (e) {
+      AppConfig.debugPrint(
+        'BackendApiService.getUnreadNotificationSummary failed: $e',
+      );
+      return null;
+    }
+  }
+
   /// Mark notification as read
   /// PUT /api/notifications/:id/read
   Future<void> markNotificationAsRead(String notificationId) async {
@@ -10703,10 +10772,7 @@ Artwork parseArtworkFromBackendJson(Map<String, dynamic> json) {
 
     addMeta('walletAddress', json['walletAddress'] ?? json['wallet_address']);
     addMeta('creatorId', json['creatorId'] ?? json['creator_id']);
-    addMeta(
-      'creators',
-      json['artists'] ?? json['creators'],
-    );
+    addMeta('creators', json['artists'] ?? json['creators']);
     addMeta(
       'creatorWallets',
       json['creatorWallets'] ?? json['creatorWalletAddresses'],
@@ -10776,12 +10842,9 @@ Artwork parseArtworkFromBackendJson(Map<String, dynamic> json) {
   // (`walletAddress`) is a different role and is never promoted to the artist;
   // an unattributed artwork carries an empty artist and is rendered as the
   // localized "Unknown artist" by the surfaces that show it.
-  final artist = pickString([
-        json['artist'],
-        json['artistName'],
-        json['artist_name'],
-      ]) ??
-      '';
+  final artist =
+      pickString([json['artist'], json['artistName'], json['artist_name']]) ??
+          '';
 
   final rawImage = pickString([
     json['imageUrl'],

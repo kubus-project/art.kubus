@@ -20,6 +20,7 @@ class SocketService {
   String? _socketAuthToken;
   Completer<bool>? _connectCompleter;
   final List<NotificationCallback> _notificationListeners = [];
+  final List<NotificationCallback> _unreadSummaryListeners = [];
   final List<NotificationCallback> _messageListeners = [];
   final List<NotificationCallback> _messageReadListeners = [];
   final List<NotificationCallback> _conversationListeners = [];
@@ -27,13 +28,23 @@ class SocketService {
   final List<VoidCallback> _connectListeners = [];
   final List<NotificationCallback> _markerListeners = [];
   // Stream controllers for consumers that prefer Streams
-  final StreamController<Map<String, dynamic>> _messageController = StreamController<Map<String, dynamic>>.broadcast();
-  final StreamController<Map<String, dynamic>> _messageReadController = StreamController<Map<String, dynamic>>.broadcast();
-  final StreamController<Map<String, dynamic>> _conversationMemberReadController = StreamController<Map<String, dynamic>>.broadcast();
-  final StreamController<Map<String, dynamic>> _notificationController = StreamController<Map<String, dynamic>>.broadcast();
-  final StreamController<Map<String, dynamic>> _collabController = StreamController<Map<String, dynamic>>.broadcast();
-  final StreamController<Map<String, dynamic>> _postController = StreamController<Map<String, dynamic>>.broadcast();
-  final StreamController<Map<String, dynamic>> _markerController = StreamController<Map<String, dynamic>>.broadcast();
+  final StreamController<Map<String, dynamic>> _messageController =
+      StreamController<Map<String, dynamic>>.broadcast();
+  final StreamController<Map<String, dynamic>> _messageReadController =
+      StreamController<Map<String, dynamic>>.broadcast();
+  final StreamController<Map<String, dynamic>>
+      _conversationMemberReadController =
+      StreamController<Map<String, dynamic>>.broadcast();
+  final StreamController<Map<String, dynamic>> _notificationController =
+      StreamController<Map<String, dynamic>>.broadcast();
+  final StreamController<Map<String, dynamic>> _unreadSummaryController =
+      StreamController<Map<String, dynamic>>.broadcast();
+  final StreamController<Map<String, dynamic>> _collabController =
+      StreamController<Map<String, dynamic>>.broadcast();
+  final StreamController<Map<String, dynamic>> _postController =
+      StreamController<Map<String, dynamic>>.broadcast();
+  final StreamController<Map<String, dynamic>> _markerController =
+      StreamController<Map<String, dynamic>>.broadcast();
   final List<NotificationCallback> _postListeners = [];
   String? _currentSubscribedWallet;
   final Set<String> _subscribedConversations = {};
@@ -52,7 +63,8 @@ class SocketService {
     // Simplified logging for production
     final messageId = payload['message_id'] ?? payload['messageId'] ?? '';
     final wallet = payload['wallet'] ?? payload['reader'] ?? '';
-    final conversationId = payload['conversation_id'] ?? payload['conversationId'] ?? '';
+    final conversationId =
+        payload['conversation_id'] ?? payload['conversationId'] ?? '';
     _log('$eventName -> msg=$messageId, wallet=$wallet, conv=$conversationId');
   }
 
@@ -71,6 +83,14 @@ class SocketService {
   /// Remove a previously added listener.
   void removeNotificationListener(NotificationCallback cb) =>
       _removeFromListeners(_notificationListeners, cb);
+
+  /// Add a listener for authoritative account notification/message unread
+  /// snapshots. These events are separate from notification rows.
+  void addUnreadSummaryListener(NotificationCallback cb) =>
+      _addToListeners(_unreadSummaryListeners, cb);
+
+  void removeUnreadSummaryListener(NotificationCallback cb) =>
+      _removeFromListeners(_unreadSummaryListeners, cb);
 
   void addCollabListener(NotificationCallback cb) =>
       _addToListeners(_collabListeners, cb);
@@ -114,7 +134,10 @@ class SocketService {
       _log('ensureAuthLoaded failed: $e');
     }
 
-    final resolvedBase = (baseUrl ?? api.baseUrl).replaceAll(RegExp(r'/+$'), '');
+    final resolvedBase = (baseUrl ?? api.baseUrl).replaceAll(
+      RegExp(r'/+$'),
+      '',
+    );
 
     final nextToken = (api.getAuthToken() ?? '').trim();
     final currentToken = (_socketAuthToken ?? '').trim();
@@ -127,7 +150,9 @@ class SocketService {
     }
 
     // If the target base URL changes, reset the socket instance.
-    if (_socket != null && _socketBaseUrl != null && _socketBaseUrl != resolvedBase) {
+    if (_socket != null &&
+        _socketBaseUrl != null &&
+        _socketBaseUrl != resolvedBase) {
       disconnect();
     }
 
@@ -135,8 +160,10 @@ class SocketService {
 
     // Reuse an in-flight connect attempt.
     if (_connectCompleter != null) {
-      return _connectCompleter!.future
-          .timeout(const Duration(seconds: 6), onTimeout: () => false);
+      return _connectCompleter!.future.timeout(
+        const Duration(seconds: 6),
+        onTimeout: () => false,
+      );
     }
 
     if (_socket == null) {
@@ -154,7 +181,8 @@ class SocketService {
         'reconnectionDelay': 1000,
         'reconnectionDelayMax': 30000,
         'auth': token.isNotEmpty ? {'token': token} : {},
-        'extraHeaders': token.isNotEmpty ? {'Authorization': 'Bearer $token'} : {},
+        'extraHeaders':
+            token.isNotEmpty ? {'Authorization': 'Bearer $token'} : {},
       };
 
       _socketBaseUrl = resolvedBase;
@@ -216,8 +244,10 @@ class SocketService {
     }
 
     // Wait up to 6 seconds for connect.
-    return _connectCompleter!.future
-        .timeout(const Duration(seconds: 6), onTimeout: () => false);
+    return _connectCompleter!.future.timeout(
+      const Duration(seconds: 6),
+      onTimeout: () => false,
+    );
   }
 
   // Stream getters for consumers
@@ -227,10 +257,16 @@ class SocketService {
     return _subscribedConversations.contains(conversationId);
   }
 
-  Stream<Map<String, dynamic>> get onMessageReceived => _messageController.stream;
-  Stream<Map<String, dynamic>> get onMessageRead => _messageReadController.stream;
-  Stream<Map<String, dynamic>> get onConversationMemberRead => _conversationMemberReadController.stream;
-  Stream<Map<String, dynamic>> get onNotification => _notificationController.stream;
+  Stream<Map<String, dynamic>> get onMessageReceived =>
+      _messageController.stream;
+  Stream<Map<String, dynamic>> get onMessageRead =>
+      _messageReadController.stream;
+  Stream<Map<String, dynamic>> get onConversationMemberRead =>
+      _conversationMemberReadController.stream;
+  Stream<Map<String, dynamic>> get onNotification =>
+      _notificationController.stream;
+  Stream<Map<String, dynamic>> get onUnreadSummary =>
+      _unreadSummaryController.stream;
   Stream<Map<String, dynamic>> get onCollab => _collabController.stream;
   Stream<Map<String, dynamic>> get onPostCreated => _postController.stream;
   Stream<Map<String, dynamic>> get onMarkerCreated => _markerController.stream;
@@ -248,7 +284,11 @@ class SocketService {
       _removeFromListeners(_markerListeners, cb);
 
   /// Connects and attempts to subscribe, resolving when subscription is confirmed or rejects on timeout/error
-  Future<bool> connectAndSubscribe(String baseUrl, String walletAddress, {Duration timeout = const Duration(seconds: 6)}) async {
+  Future<bool> connectAndSubscribe(
+    String baseUrl,
+    String walletAddress, {
+    Duration timeout = const Duration(seconds: 6),
+  }) async {
     try {
       final connected = await connect(baseUrl);
       if (!connected) return false;
@@ -324,28 +364,40 @@ class SocketService {
     if (_socket == null) return;
     if (_notificationHandlerRegistered) return;
     _notificationHandlerRegistered = true;
-    
+
     // Helper to normalize incoming payloads which may be a Map, JSON string, or a List
     Map<String, dynamic>? mapFromPayload(dynamic data) {
       try {
-        if (data == null) return null;
-        if (data is Map<String, dynamic>) return Map<String, dynamic>.from(data);
+        if (data == null) {
+          return null;
+        }
+        if (data is Map<String, dynamic>) {
+          return Map<String, dynamic>.from(data);
+        }
         if (data is String) {
           try {
             final parsed = json.decode(data);
-            if (parsed is Map<String, dynamic>) return Map<String, dynamic>.from(parsed);
-            if (parsed is List && parsed.isNotEmpty && parsed.first is Map) return Map<String, dynamic>.from(parsed.first as Map);
+            if (parsed is Map<String, dynamic>) {
+              return Map<String, dynamic>.from(parsed);
+            }
+            if (parsed is List && parsed.isNotEmpty && parsed.first is Map) {
+              return Map<String, dynamic>.from(parsed.first as Map);
+            }
           } catch (_) {
             // not JSON, ignore
           }
         }
         if (data is List && data.isNotEmpty) {
           final first = data.first;
-          if (first is Map) return Map<String, dynamic>.from(first);
+          if (first is Map) {
+            return Map<String, dynamic>.from(first);
+          }
           if (first is String) {
             try {
               final parsed = json.decode(first);
-              if (parsed is Map<String, dynamic>) return Map<String, dynamic>.from(parsed);
+              if (parsed is Map<String, dynamic>) {
+                return Map<String, dynamic>.from(parsed);
+              }
             } catch (_) {}
           }
         }
@@ -384,7 +436,9 @@ class SocketService {
         _log('Received notification:new');
         final mapped = mapFromPayload(data);
         if (mapped != null) {
-          _log('notification:new -> listeners=${_notificationListeners.length}');
+          _log(
+            'notification:new -> listeners=${_notificationListeners.length}',
+          );
           for (final l in _notificationListeners) {
             try {
               l(mapped);
@@ -392,12 +446,48 @@ class SocketService {
               _log('notification:new listener error: $e');
             }
           }
-          try { _notificationController.add(mapped); _log('notification:new -> controller.added'); } catch (e) { _log('notification controller add error: $e'); }
+          try {
+            _notificationController.add(mapped);
+            _log('notification:new -> controller.added');
+          } catch (e) {
+            _log('notification controller add error: $e');
+          }
         } else {
-          _log('notification:new -> payload could not be mapped; dropping (never route to message listeners)');
+          _log(
+            'notification:new -> payload could not be mapped; dropping (never route to message listeners)',
+          );
         }
       } catch (e) {
         _log('notification:new handler error: $e');
+      }
+    });
+
+    _socket!.on('notification:unread-summary', (data) {
+      try {
+        final mapped = mapFromPayload(data);
+        if (mapped == null) {
+          _log(
+            'notification:unread-summary payload could not be mapped; dropping',
+          );
+          return;
+        }
+        _log(
+          'notification:unread-summary -> listeners=${_unreadSummaryListeners.length}',
+        );
+        for (final listener in _unreadSummaryListeners) {
+          try {
+            listener(mapped);
+          } catch (e) {
+            _log('notification:unread-summary listener error: $e');
+          }
+        }
+        try {
+          _unreadSummaryController.add(mapped);
+        } catch (e) {
+          _log('unread-summary controller add error: $e');
+        }
+      } catch (e) {
+        _log('notification:unread-summary handler error: $e');
       }
     });
 
@@ -409,16 +499,30 @@ class SocketService {
         payload['event'] = eventName;
         _log('$eventName -> listeners=${_collabListeners.length}');
         for (final l in _collabListeners) {
-          try { l(payload); } catch (e) { _log('$eventName listener error: $e'); }
+          try {
+            l(payload);
+          } catch (e) {
+            _log('$eventName listener error: $e');
+          }
         }
-        try { _collabController.add(payload); } catch (e) { _log('collab controller add error: $e'); }
+        try {
+          _collabController.add(payload);
+        } catch (e) {
+          _log('collab controller add error: $e');
+        }
       } catch (e) {
         _log('$eventName handler error: $e');
       }
     }
 
-    _socket!.on('collab:invites-updated', (data) => emitCollabEvent('collab:invites-updated', data));
-    _socket!.on('collab:members-updated', (data) => emitCollabEvent('collab:members-updated', data));
+    _socket!.on(
+      'collab:invites-updated',
+      (data) => emitCollabEvent('collab:invites-updated', data),
+    );
+    _socket!.on(
+      'collab:members-updated',
+      (data) => emitCollabEvent('collab:members-updated', data),
+    );
 
     _socket!.on('chat:conversation-updated', (data) {
       try {
@@ -438,7 +542,11 @@ class SocketService {
       }
     });
 
-    void emitMarkerEvent(String eventName, dynamic data, {bool deleted = false}) {
+    void emitMarkerEvent(
+      String eventName,
+      dynamic data, {
+      bool deleted = false,
+    }) {
       try {
         _log('Received $eventName');
         final mapped = mapFromPayload(data);
@@ -448,17 +556,35 @@ class SocketService {
         if (deleted) payload['deleted'] = true;
         _log('$eventName -> listeners=${_markerListeners.length}');
         for (final l in _markerListeners) {
-          try { l(payload); } catch (e) { _log('marker listener error: $e'); }
+          try {
+            l(payload);
+          } catch (e) {
+            _log('marker listener error: $e');
+          }
         }
-        try { _markerController.add(payload); _log('$eventName -> controller.added'); } catch (e) { _log('marker controller add error: $e'); }
+        try {
+          _markerController.add(payload);
+          _log('$eventName -> controller.added');
+        } catch (e) {
+          _log('marker controller add error: $e');
+        }
       } catch (e) {
         _log('$eventName handler error: $e');
       }
     }
 
-    _socket!.on('art-marker:created', (data) => emitMarkerEvent('art-marker:created', data));
-    _socket!.on('art-marker:updated', (data) => emitMarkerEvent('art-marker:updated', data));
-    _socket!.on('art-marker:deleted', (data) => emitMarkerEvent('art-marker:deleted', data, deleted: true));
+    _socket!.on(
+      'art-marker:created',
+      (data) => emitMarkerEvent('art-marker:created', data),
+    );
+    _socket!.on(
+      'art-marker:updated',
+      (data) => emitMarkerEvent('art-marker:updated', data),
+    );
+    _socket!.on(
+      'art-marker:deleted',
+      (data) => emitMarkerEvent('art-marker:deleted', data, deleted: true),
+    );
     // Feed updates: new posts or reposts
     _socket!.on('community:new_post', (data) {
       try {
@@ -466,9 +592,18 @@ class SocketService {
         final mapped = mapFromPayload(data);
         if (mapped != null) {
           for (final l in _postListeners) {
-            try { l(mapped); } catch (e) { _log('post listener error: $e'); }
+            try {
+              l(mapped);
+            } catch (e) {
+              _log('post listener error: $e');
+            }
           }
-          try { _postController.add(mapped); _log('community:new_post -> controller.added'); } catch (e) { _log('post controller add error: $e'); }
+          try {
+            _postController.add(mapped);
+            _log('community:new_post -> controller.added');
+          } catch (e) {
+            _log('post controller add error: $e');
+          }
         }
       } catch (e) {
         _log('community:new_post handler error: $e');
@@ -477,16 +612,24 @@ class SocketService {
     // Also handle read-all events
     _socket!.on('notification:read-all', (data) {
       try {
-        final mapped = (data is Map<String, dynamic>) ? Map<String, dynamic>.from(data) : {'type': 'read-all', 'data': data};
-        _log('notification:read-all -> listeners=${_notificationListeners.length}');
+        final mapped = (data is Map<String, dynamic>)
+            ? Map<String, dynamic>.from(data)
+            : {'type': 'read-all', 'data': data};
+        _log(
+          'notification:read-all -> listeners=${_notificationListeners.length}',
+        );
         for (final l in _notificationListeners) {
-          try { l(mapped); } catch (e) { _log('ReadAll listener error: $e'); }
+          try {
+            l(mapped);
+          } catch (e) {
+            _log('ReadAll listener error: $e');
+          }
         }
       } catch (e) {
         _log('notification:read-all handler error: $e');
       }
     });
-    
+
     // Message & conversation handlers
     _socket!.on('chat:new-message', (data) {
       try {
@@ -495,13 +638,24 @@ class SocketService {
         if (mapped != null) {
           _log('chat:new-message -> listeners=${_messageListeners.length}');
           for (final l in _messageListeners) {
-            try { l(mapped); } catch (e) { _log('chat:new-message listener error: $e'); }
+            try {
+              l(mapped);
+            } catch (e) {
+              _log('chat:new-message listener error: $e');
+            }
           }
-          try { _messageController.add(mapped); _log('chat:new-message -> controller.added'); } catch (e) { _log('message controller add error: $e'); }
+          try {
+            _messageController.add(mapped);
+            _log('chat:new-message -> controller.added');
+          } catch (e) {
+            _log('message controller add error: $e');
+          }
         } else {
           _log('chat:new-message -> payload could not be mapped; dropping');
         }
-      } catch (e) { _log('chat:new-message handler error: $e'); }
+      } catch (e) {
+        _log('chat:new-message handler error: $e');
+      }
     });
 
     _socket!.on('chat:message-read', (data) {
@@ -509,15 +663,28 @@ class SocketService {
         _log('Received chat:message-read');
         final mapped = mapFromPayload(data);
         if (mapped != null) {
-          _log('chat:message-read -> listeners=${_messageReadListeners.length}');
+          _log(
+            'chat:message-read -> listeners=${_messageReadListeners.length}',
+          );
           for (final l in _messageReadListeners) {
-            try { l(mapped); } catch (e) { _log('chat:message-read listener error: $e'); }
+            try {
+              l(mapped);
+            } catch (e) {
+              _log('chat:message-read listener error: $e');
+            }
           }
-          try { _messageReadController.add(mapped); _log('chat:message-read -> controller.added'); } catch (e) { _log('messageRead controller add error: $e'); }
+          try {
+            _messageReadController.add(mapped);
+            _log('chat:message-read -> controller.added');
+          } catch (e) {
+            _log('messageRead controller add error: $e');
+          }
         } else {
           _log('chat:message-read -> payload could not be mapped; dropping');
         }
-      } catch (e) { _log('chat:message-read handler error: $e'); }
+      } catch (e) {
+        _log('chat:message-read handler error: $e');
+      }
     });
 
     _socket!.on('chat:new-conversation', (data) {
@@ -525,14 +692,24 @@ class SocketService {
         _log('Received chat:new-conversation');
         final mapped = mapFromPayload(data);
         if (mapped != null) {
-          _log('chat:new-conversation -> listeners=${_conversationListeners.length}');
+          _log(
+            'chat:new-conversation -> listeners=${_conversationListeners.length}',
+          );
           for (final l in _conversationListeners) {
-            try { l(mapped); } catch (e) { _log('chat:new-conversation listener error: $e'); }
+            try {
+              l(mapped);
+            } catch (e) {
+              _log('chat:new-conversation listener error: $e');
+            }
           }
         } else {
-          _log('chat:new-conversation -> payload could not be mapped; dropping');
+          _log(
+            'chat:new-conversation -> payload could not be mapped; dropping',
+          );
         }
-      } catch (e) { _log('chat:new-conversation handler error: $e'); }
+      } catch (e) {
+        _log('chat:new-conversation handler error: $e');
+      }
     });
 
     _socket!.on('chat:members-updated', (data) {
@@ -540,15 +717,28 @@ class SocketService {
         _log('Received chat:members-updated');
         final mapped = mapFromPayload(data);
         if (mapped != null) {
-          _log('chat:members-updated -> listeners=${_conversationListeners.length}');
+          _log(
+            'chat:members-updated -> listeners=${_conversationListeners.length}',
+          );
           for (final l in _conversationListeners) {
-            try { l(mapped); } catch (e) { _log('chat:members-updated listener error: $e'); }
+            try {
+              l(mapped);
+            } catch (e) {
+              _log('chat:members-updated listener error: $e');
+            }
           }
-          try { _conversationMemberReadController.add(mapped); _log('chat:members-updated -> controller.added'); } catch (e) { _log('conversationMember controller add error: $e'); }
+          try {
+            _conversationMemberReadController.add(mapped);
+            _log('chat:members-updated -> controller.added');
+          } catch (e) {
+            _log('conversationMember controller add error: $e');
+          }
         } else {
           _log('chat:members-updated -> payload could not be mapped; dropping');
         }
-      } catch (e) { _log('chat:members-updated handler error: $e'); }
+      } catch (e) {
+        _log('chat:members-updated handler error: $e');
+      }
     });
 
     // Also accept server event names used elsewhere to maximize compatibility
@@ -559,13 +749,24 @@ class SocketService {
         if (mapped != null) {
           _log('message:received -> listeners=${_messageListeners.length}');
           for (final l in _messageListeners) {
-            try { l(mapped); } catch (e) { _log('message:received listener error: $e'); }
+            try {
+              l(mapped);
+            } catch (e) {
+              _log('message:received listener error: $e');
+            }
           }
-          try { _messageController.add(mapped); _log('message:received -> controller.added'); } catch (e) { _log('message controller add error: $e'); }
+          try {
+            _messageController.add(mapped);
+            _log('message:received -> controller.added');
+          } catch (e) {
+            _log('message controller add error: $e');
+          }
         } else {
           _log('message:received -> payload could not be mapped; dropping');
         }
-      } catch (e) { _log('message:received handler error: $e'); }
+      } catch (e) {
+        _log('message:received handler error: $e');
+      }
     });
 
     _socket!.on('message:read', (data) {
@@ -576,13 +777,24 @@ class SocketService {
           _logEventDetails('message:read', mapped);
           _log('message:read -> listeners=${_messageReadListeners.length}');
           for (final l in _messageReadListeners) {
-            try { l(mapped); } catch (e) { _log('message:read listener error: $e'); }
+            try {
+              l(mapped);
+            } catch (e) {
+              _log('message:read listener error: $e');
+            }
           }
-          try { _messageReadController.add(mapped); _log('message:read -> controller.added'); } catch (e) { _log('messageRead controller add error: $e'); }
+          try {
+            _messageReadController.add(mapped);
+            _log('message:read -> controller.added');
+          } catch (e) {
+            _log('messageRead controller add error: $e');
+          }
         } else {
           _log('message:read -> payload could not be mapped; dropping');
         }
-      } catch (e) { _log('message:read handler error: $e'); }
+      } catch (e) {
+        _log('message:read handler error: $e');
+      }
     });
 
     _socket!.on('conversation:member:read', (data) {
@@ -591,13 +803,26 @@ class SocketService {
         final mapped = mapFromPayload(data);
         if (mapped != null) {
           _logEventDetails('conversation:member:read', mapped);
-          _log('conversation:member:read -> listeners=${_conversationListeners.length}');
+          _log(
+            'conversation:member:read -> listeners=${_conversationListeners.length}',
+          );
           for (final l in _conversationListeners) {
-            try { l(mapped); } catch (e) { _log('conversation:member:read listener error: $e'); }
+            try {
+              l(mapped);
+            } catch (e) {
+              _log('conversation:member:read listener error: $e');
+            }
           }
-          try { _conversationMemberReadController.add(mapped); _log('conversation:member:read -> controller.added'); } catch (e) { _log('conversationMember controller add error: $e'); }
+          try {
+            _conversationMemberReadController.add(mapped);
+            _log('conversation:member:read -> controller.added');
+          } catch (e) {
+            _log('conversationMember controller add error: $e');
+          }
         }
-      } catch (e) { _log('conversation:member:read handler error: $e'); }
+      } catch (e) {
+        _log('conversation:member:read handler error: $e');
+      }
     });
 
     _socket!.on('message:reaction', (data) {
@@ -605,12 +830,20 @@ class SocketService {
         _log('Received message:reaction');
         if (data is Map<String, dynamic>) {
           final mapped = Map<String, dynamic>.from(data);
-          _log('message:reaction -> listeners=${_messageReactionListeners.length}');
+          _log(
+            'message:reaction -> listeners=${_messageReactionListeners.length}',
+          );
           for (final l in _messageReactionListeners) {
-            try { l(mapped); } catch (e) { _log('message:reaction listener error: $e'); }
+            try {
+              l(mapped);
+            } catch (e) {
+              _log('message:reaction listener error: $e');
+            }
           }
         }
-      } catch (e) { _log('message:reaction handler error: $e'); }
+      } catch (e) {
+        _log('message:reaction handler error: $e');
+      }
     });
 
     _socket!.on('chat:conversation-renamed', (data) {
@@ -618,12 +851,20 @@ class SocketService {
         _log('Received chat:conversation-renamed');
         if (data is Map<String, dynamic>) {
           final mapped = Map<String, dynamic>.from(data);
-          _log('chat:conversation-renamed -> listeners=${_conversationListeners.length}');
+          _log(
+            'chat:conversation-renamed -> listeners=${_conversationListeners.length}',
+          );
           for (final l in _conversationListeners) {
-            try { l(mapped); } catch (e) { _log('conversation-renamed listener error: $e'); }
+            try {
+              l(mapped);
+            } catch (e) {
+              _log('conversation-renamed listener error: $e');
+            }
           }
         }
-      } catch (e) { _log('chat:conversation-renamed handler error: $e'); }
+      } catch (e) {
+        _log('chat:conversation-renamed handler error: $e');
+      }
     });
   }
 
@@ -646,7 +887,10 @@ class SocketService {
   }
 
   /// Subscribe to a conversation room so the client receives message/read/member events
-  Future<bool> subscribeConversation(String conversationId, {Duration timeout = const Duration(seconds: 6)}) async {
+  Future<bool> subscribeConversation(
+    String conversationId, {
+    Duration timeout = const Duration(seconds: 6),
+  }) async {
     if (_socket == null || !_socket!.connected) {
       _log('Cannot subscribe to conversation - socket not connected');
       return false;
@@ -721,6 +965,7 @@ class SocketService {
         'pendingSubscriptionAcks': _pendingSubscriptionAcks.length,
         'listenerCounts': <String, int>{
           'notification': _notificationListeners.length,
+          'unreadSummary': _unreadSummaryListeners.length,
           'message': _messageListeners.length,
           'messageRead': _messageReadListeners.length,
           'conversation': _conversationListeners.length,

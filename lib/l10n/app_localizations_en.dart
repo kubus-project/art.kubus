@@ -142,7 +142,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String archiveObjectSeriesDefaultDescription(
-      Object artworkTitle, Object artistName) {
+    Object artworkTitle,
+    Object artistName,
+  ) {
     return 'Digital editions of $artworkTitle by $artistName';
   }
 
@@ -177,7 +179,11 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String communityAchievementUnlockedToast(
-      Object title, Object extra, Object amount, Object currency) {
+    Object title,
+    Object extra,
+    Object amount,
+    Object currency,
+  ) {
     return 'Achievement unlocked\n$title$extra\n+$amount $currency recognition';
   }
 
@@ -236,7 +242,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String recentActivityArchiveObjectStatusDescription(
-      Object status, Object title) {
+    Object status,
+    Object title,
+  ) {
     return 'Digital edition $status for $title';
   }
 
@@ -2634,7 +2642,10 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String walletSessionStatusSummary(
-      Object accountStatus, Object walletStatus, Object signerStatus) {
+    Object accountStatus,
+    Object walletStatus,
+    Object signerStatus,
+  ) {
     return 'Account: $accountStatus · Wallet: $walletStatus · Access: $signerStatus';
   }
 
@@ -7646,7 +7657,10 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String receiveTokenSidebarTransferSubtitle(
-      Object token, Object amount, Object date) {
+    Object token,
+    Object amount,
+    Object date,
+  ) {
     return '$token · $amount · $date';
   }
 
@@ -7701,7 +7715,10 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String sendTokenSidebarRecipientSubtitle(
-      Object token, Object amount, Object date) {
+    Object token,
+    Object amount,
+    Object date,
+  ) {
     return '$token · $amount · $date';
   }
 
@@ -7812,7 +7829,10 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String sendTokenSendSuccessWithSignatureToast(
-      Object amount, Object token, Object signature) {
+    Object amount,
+    Object token,
+    Object signature,
+  ) {
     return '$amount $token submitted. Tx: $signature';
   }
 
@@ -9605,7 +9625,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String marketplaceOpenCollectibleDetailsSemantic(
-      Object title, Object tokenId) {
+    Object title,
+    Object tokenId,
+  ) {
     return 'Open details for $title, token $tokenId';
   }
 
@@ -10066,7 +10088,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String daoDelegateVotingPowerDialogBody(
-      Object votingPower, Object delegateName) {
+    Object votingPower,
+    Object delegateName,
+  ) {
     return 'Are you sure you want to delegate your $votingPower voting power to $delegateName?';
   }
 
@@ -12249,7 +12273,10 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String walletSwapSubmittedToastWithSignature(
-      Object fromToken, Object toToken, Object signature) {
+    Object fromToken,
+    Object toToken,
+    Object signature,
+  ) {
     return 'Swap submitted: $fromToken ? $toToken. Tx: $signature';
   }
 
@@ -12640,6 +12667,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get desktopShellNavConnect => 'Connect';
 
   @override
+  String get desktopShellNavMessages => 'Messages';
+
+  @override
   String get desktopShellNavCreate => 'Create';
 
   @override
@@ -12716,6 +12746,34 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get mobileNavSemanticLabel => 'Main navigation';
+
+  @override
+  String mobileNavCommunityUnreadSemantics(int count) {
+    return '$count unread messages and notifications';
+  }
+
+  @override
+  String desktopMessagesUnreadSemantics(int count) {
+    return '$count unread messages';
+  }
+
+  @override
+  String notificationDirectMessageTitle(String senderName) {
+    return 'New message from $senderName';
+  }
+
+  @override
+  String get notificationDirectMessageFallbackSender => 'Someone';
+
+  @override
+  String get notificationDirectMessageEmptyBody => 'You have a new message.';
+
+  @override
+  String get notificationMessagesChannelName => 'Messages';
+
+  @override
+  String get messagesNotificationConversationUnavailable =>
+      'This conversation is no longer available.';
 
   @override
   String get desktopNavWalletEntry => 'Wallet';
@@ -14256,7 +14314,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String analyticsRecommendationConsistencyDescription(
-      Object activeBuckets, Object totalBuckets) {
+    Object activeBuckets,
+    Object totalBuckets,
+  ) {
     return 'Activity was recorded on $activeBuckets of $totalBuckets buckets.';
   }
 
@@ -14454,7 +14514,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String daoProposalVotesSupportSummaryLabel(
-      Object totalVotes, Object supportPct) {
+    Object totalVotes,
+    Object supportPct,
+  ) {
     return '$totalVotes votes · $supportPct% support';
   }
 
@@ -15866,7 +15928,10 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String analyticsInsightActivePatternDescription(
-      Object activeBuckets, Object totalBuckets, Object metric) {
+    Object activeBuckets,
+    Object totalBuckets,
+    Object metric,
+  ) {
     return '$activeBuckets of $totalBuckets intervals recorded $metric.';
   }
 
@@ -17572,7 +17637,11 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String marketplaceListingValueSemantic(
-      String source, String amount, String currency, String state) {
+    String source,
+    String amount,
+    String currency,
+    String state,
+  ) {
     return '$source: $amount $currency. $state';
   }
 

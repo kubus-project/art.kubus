@@ -650,6 +650,45 @@ void main() {
     expect(find.text('Save this artwork to your collection'), findsNothing);
   });
 
+  testWidgets('message notification keeps its conversation through sign-in',
+      (tester) async {
+    Object? onboardingArguments;
+    await tester.pumpWidget(_harness(
+      routes: <String, WidgetBuilder>{
+        '/onboarding': (context) {
+          onboardingArguments = ModalRoute.of(context)?.settings.arguments;
+          return const Scaffold(body: Text('onboarding route'));
+        },
+      },
+      child: Builder(
+        builder: (context) => TextButton(
+          onPressed: () => const ContextualAuthGate().ensureAuthenticated(
+            context,
+            actionLabel: 'messages',
+            returnRoute: '/messages',
+            returnArguments: const <String, String>{
+              'conversationId': 'conversation-notification-1',
+            },
+          ),
+          child: const Text('open message notification'),
+        ),
+      ),
+    ));
+
+    await tester.tap(find.text('open message notification'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Continue with email'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('onboarding route'), findsOneWidget);
+    expect(onboardingArguments, isA<Map>());
+    final arguments = onboardingArguments! as Map;
+    expect(arguments['completionRoute'], '/messages');
+    expect(arguments['completionArguments'], <String, String>{
+      'conversationId': 'conversation-notification-1',
+    });
+  });
+
   group('onAuthJourneyStarted', () {
     Widget gateButton(VoidCallback onStarted) => Builder(
           builder: (context) => TextButton(

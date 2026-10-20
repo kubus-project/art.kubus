@@ -139,6 +139,33 @@ void main() {
     expect(provider.unreadCounts['conv_dupe'], 1);
   });
 
+  test('DM socket aliases with the same event ID increment unread once', () {
+    final provider = ChatProvider()..setCurrentWalletForTesting('wallet_me');
+    final message = <String, dynamic>{
+      'id': 'message_event_42',
+      'conversationId': 'conv_event_alias',
+      'senderWallet': 'wallet_other',
+      'message': 'one persisted message',
+      'createdAt': '2025-01-02T12:00:00Z',
+    };
+
+    provider.handleIncomingMessageForTesting(<String, dynamic>{
+      'event': 'message:received',
+      'eventId': 'message_event_42',
+      'data': <String, dynamic>{'message': message},
+    });
+    provider.handleIncomingMessageForTesting(<String, dynamic>{
+      'event': 'chat:new-message',
+      'eventId': 'message_event_42',
+      'data': <String, dynamic>{'message': message},
+    });
+
+    expect(provider.messages['conv_event_alias'], hasLength(1));
+    expect(
+        provider.messages['conv_event_alias']!.single.id, 'message_event_42');
+    expect(provider.unreadCounts['conv_event_alias'], 1);
+  });
+
   test('open conversation receives incoming message without unread increment',
       () {
     final provider = ChatProvider()

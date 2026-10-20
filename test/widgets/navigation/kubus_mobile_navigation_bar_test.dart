@@ -43,6 +43,7 @@ Widget _harness({
   required int selected,
   required ValueChanged<int> onSelected,
   Brightness brightness = Brightness.light,
+  List<KubusMobileNavigationDestination> destinations = _destinations,
 }) {
   final roles = brightness == Brightness.dark
       ? KubusColorRoles.dark
@@ -52,7 +53,7 @@ Widget _harness({
     home: Scaffold(
       bottomNavigationBar: KubusMobileNavigationBar(
         semanticLabel: 'Main navigation',
-        destinations: _destinations,
+        destinations: destinations,
         selectedIndex: selected,
         onSelected: onSelected,
       ),
@@ -128,5 +129,46 @@ void main() {
       ),
     );
     expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('shows the community unread badge and accessible count',
+      (tester) async {
+    final destinations = List<KubusMobileNavigationDestination>.of(
+      _destinations,
+    );
+    destinations[2] = const KubusMobileNavigationDestination(
+      key: Key('nav_community'),
+      icon: Icons.people_outline,
+      selectedIcon: Icons.people,
+      label: 'Skupnost',
+      badgeCount: 3,
+      badgeSemanticLabel: '3 neprebranih vsebin',
+    );
+    final semantics = tester.ensureSemantics();
+    await tester.pumpWidget(
+      _harness(
+        selected: 2,
+        onSelected: (_) {},
+        destinations: destinations,
+      ),
+    );
+
+    expect(find.text('3'), findsOneWidget);
+    expect(
+      tester.getSemantics(find.byKey(const Key('nav_community'))).label,
+      'Skupnost, 3 neprebranih vsebin',
+    );
+    semantics.dispose();
+  });
+
+  testWidgets('hides the community unread badge when the count is zero',
+      (tester) async {
+    await tester.pumpWidget(_harness(selected: 2, onSelected: (_) {}));
+
+    expect(find.text('0'), findsNothing);
+    expect(
+      tester.getSemantics(find.byKey(const Key('nav_community'))).label,
+      'Skupnost',
+    );
   });
 }
