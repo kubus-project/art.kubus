@@ -124,6 +124,62 @@
   "recentActivityFallbackArtworkTitle": "an artwork",
   "notificationSomeoneFallback": "Someone",
   "notificationAchievementFallback": "Achievement",
+  "notificationCommunityLikeTitle": "New like",
+  "notificationCommunityLikeBody": "{name} liked your post",
+  "@notificationCommunityLikeBody": {
+    "placeholders": {
+      "name": {}
+    }
+  },
+  "notificationCommunityCommentTitle": "New comment",
+  "notificationCommunityCommentBody": "{name} commented on your post",
+  "@notificationCommunityCommentBody": {
+    "placeholders": {
+      "name": {}
+    }
+  },
+  "notificationCommunityCommentWithTextBody": "{name}: {comment}",
+  "@notificationCommunityCommentWithTextBody": {
+    "placeholders": {
+      "name": {},
+      "comment": {}
+    }
+  },
+  "notificationCommunityShareTitle": "Post shared",
+  "notificationCommunityShareBody": "{name} shared your post",
+  "@notificationCommunityShareBody": {
+    "placeholders": {
+      "name": {}
+    }
+  },
+  "notificationCommunityRepostTitle": "New repost",
+  "notificationCommunityRepostBody": "{name} reposted your post",
+  "@notificationCommunityRepostBody": {
+    "placeholders": {
+      "name": {}
+    }
+  },
+  "notificationCommunityMentionTitle": "You were mentioned",
+  "notificationCommunityMentionBody": "{name} mentioned you in a post",
+  "@notificationCommunityMentionBody": {
+    "placeholders": {
+      "name": {}
+    }
+  },
+  "notificationCommunityActivityTitle": "New activity",
+  "notificationCommunityActivityBody": "{name} interacted with your post",
+  "@notificationCommunityActivityBody": {
+    "placeholders": {
+      "name": {}
+    }
+  },
+  "notificationFollowerTitle": "New follower",
+  "notificationFollowerBody": "{name} started following you",
+  "@notificationFollowerBody": {
+    "placeholders": {
+      "name": {}
+    }
+  },
   "notificationRecognitionRecordedTitle": "Recognition recorded",
   "notificationArtworkDiscoveredTitle": "Artwork discovered",
   "notificationArtworkDiscoveredBody": "Discovered “{title}” by {artist}",

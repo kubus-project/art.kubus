@@ -987,9 +987,14 @@ class PushNotificationService {
       'actionUrl': 'app://posts/$postId',
     });
 
-    final formatted = _formatCommunityMessage(type, userName, comment);
-    final title = formatted['title'] ?? 'New Activity';
-    final body = formatted['body'] ?? '';
+    final copy = communityInteractionCopy(
+      _l10n,
+      type: type,
+      actorName: userName,
+      comment: comment,
+    );
+    final title = copy.title;
+    final body = copy.body;
 
     if (kIsWeb) {
       // For web, use the browser/unified notification helper to show a notification via service worker or Notification API
@@ -1019,38 +1024,74 @@ class PushNotificationService {
     );
   }
 
-  // Local helper for consistent community message formatting
-  Map<String, String> _formatCommunityMessage(
-    String type,
-    String userName, [
+  /// Localized title/body for community interactions. Titles carry no emoji,
+  /// the actor is always named, and a missing actor falls back to the
+  /// localized "Someone" label. Unknown types use the generic activity copy.
+  @visibleForTesting
+  static ({String title, String body}) communityInteractionCopy(
+    AppLocalizations l10n, {
+    required String type,
+    String? actorName,
     String? comment,
-  ]) {
+  }) {
+    final trimmedName = actorName?.trim() ?? '';
+    final name =
+        trimmedName.isNotEmpty ? trimmedName : l10n.notificationSomeoneFallback;
     switch (type) {
       case 'like':
-        return {'title': '❤️ New Like', 'body': '$userName liked your post'};
+        return (
+          title: l10n.notificationCommunityLikeTitle,
+          body: l10n.notificationCommunityLikeBody(name),
+        );
       case 'comment':
-        final b = comment != null && comment.isNotEmpty
-            ? comment.length > 60
-                ? '${comment.substring(0, 60)}...'
-                : comment
-            : 'commented on your post';
-        return {'title': '💬 New Comment', 'body': '$userName: $b'};
+        final text = _truncateNotificationText(comment?.trim() ?? '', 60);
+        return (
+          title: l10n.notificationCommunityCommentTitle,
+          body: text.isEmpty
+              ? l10n.notificationCommunityCommentBody(name)
+              : l10n.notificationCommunityCommentWithTextBody(name, text),
+        );
       case 'share':
-        return {
-          'title': '🔄 Post Shared',
-          'body': '$userName shared your post',
-        };
+        return (
+          title: l10n.notificationCommunityShareTitle,
+          body: l10n.notificationCommunityShareBody(name),
+        );
+      case 'repost':
+        return (
+          title: l10n.notificationCommunityRepostTitle,
+          body: l10n.notificationCommunityRepostBody(name),
+        );
       case 'mention':
-        return {
-          'title': '📢 You were mentioned',
-          'body': '$userName mentioned you in a post',
-        };
+        return (
+          title: l10n.notificationCommunityMentionTitle,
+          body: l10n.notificationCommunityMentionBody(name),
+        );
       default:
-        return {
-          'title': 'New activity',
-          'body': '$userName interacted with your post',
-        };
+        return (
+          title: l10n.notificationCommunityActivityTitle,
+          body: l10n.notificationCommunityActivityBody(name),
+        );
     }
+  }
+
+  /// Localized title/body for a new follower.
+  @visibleForTesting
+  static ({String title, String body}) followerNotificationCopy(
+    AppLocalizations l10n, {
+    required String userName,
+  }) {
+    final trimmedName = userName.trim();
+    final name =
+        trimmedName.isNotEmpty ? trimmedName : l10n.notificationSomeoneFallback;
+    return (
+      title: l10n.notificationFollowerTitle,
+      body: l10n.notificationFollowerBody(name),
+    );
+  }
+
+  static String _truncateNotificationText(String text, int maxRunes) {
+    if (text.runes.length <= maxRunes) return text;
+    return '${String.fromCharCodes(text.runes.take(maxRunes))}...';
   }
 
   /// Show follower notification
@@ -1060,6 +1101,7 @@ class PushNotificationService {
     String? userAvatar,
   }) async {
     if (!_permissionGranted) return;
+    final copy = followerNotificationCopy(_l10n, userName: userName);
     if (kIsWeb) {
       try {
         final mapData = {
@@ -1070,8 +1112,8 @@ class PushNotificationService {
           'actionUrl': 'app://user/$userId',
         };
         await webshow.showNotification(
-          '👥 New Follower',
-          '$userName started following you',
+          copy.title,
+          copy.body,
           mapData,
         );
         return;
@@ -1112,8 +1154,8 @@ class PushNotificationService {
 
     await _flutterLocalNotificationsPlugin.show(
       id: userId.hashCode,
-      title: '👥 New Follower',
-      body: '$userName started following you',
+      title: copy.title,
+      body: copy.body,
       notificationDetails: details,
       payload: payload,
     );
