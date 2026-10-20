@@ -65,6 +65,11 @@ class SecurityGateProvider extends ChangeNotifier
   /// stays pending until [initialize] settles it. Each resume adds one.
   int _pendingLockDecisions = 1;
 
+  /// Identifies the newest lock decision. A decision whose body outlives its
+  /// timeout is retired by bumping this, so the orphaned body sees it is stale
+  /// and stops before every mutation.
+  int _lockDecisionGeneration = 0;
+
   /// True until the cold-start or resume decision has finished. The UI must
   /// cover the app while this holds so no restored route is interactive.
   bool get isLockDecisionPending => _pendingLockDecisions > 0;
@@ -114,19 +119,42 @@ class SecurityGateProvider extends ChangeNotifier
     return completer.future;
   }
 
-  Future<void> reloadSettings() async {
-    _settings = await SettingsService.loadSettings();
-    await refreshLocalAccountState();
+  Future<void> reloadSettings() => _reloadSettings(_alwaysCurrent);
+
+  /// The settings read used by lock decisions. Overridable so tests can hold
+  /// the read open and release it after a decision has timed out.
+  @protected
+  Future<SettingsState> readSettingsForDecision() =>
+      SettingsService.loadSettings();
+
+  static bool _alwaysCurrent() => true;
+
+  /// Applies freshly read settings only while [isCurrent] holds, so an orphaned
+  /// decision cannot overwrite settings applied by a newer one.
+  Future<void> _reloadSettings(bool Function() isCurrent) async {
+    final loaded = await readSettingsForDecision();
+    if (!isCurrent()) return;
+    _settings = loaded;
+    await _refreshLocalAccountState(isCurrent: isCurrent);
+    if (!isCurrent()) return;
     _resetInactivityTimer();
     notifyListeners();
   }
 
-  Future<void> refreshLocalAccountState({SharedPreferences? prefs}) async {
+  Future<void> refreshLocalAccountState({SharedPreferences? prefs}) =>
+      _refreshLocalAccountState(isCurrent: _alwaysCurrent, prefs: prefs);
+
+  Future<void> _refreshLocalAccountState({
+    required bool Function() isCurrent,
+    SharedPreferences? prefs,
+  }) async {
     try {
       final resolved = prefs ?? await SharedPreferences.getInstance();
+      if (!isCurrent()) return;
       _hasLocalAccount = AuthGatingService.hasLocalAccountSync(prefs: resolved);
       _accountStateUnknown = false;
     } catch (_) {
+      if (!isCurrent()) return;
       _hasLocalAccount = false;
       _accountStateUnknown = true;
     }
@@ -202,9 +230,11 @@ class SecurityGateProvider extends ChangeNotifier
 
   static const String _departureKey = 'last_inactive_ts';
 
-  /// Reads and clears the persisted departure time.
-  Future<int?> _takeDeparture() async {
+  /// Reads and clears the persisted departure time. A stale decision leaves
+  /// the departure for the decision that replaced it.
+  Future<int?> _takeDeparture(bool Function() isCurrent) async {
     final prefs = await SharedPreferences.getInstance();
+    if (!isCurrent()) return null;
     final value = prefs.getInt(_departureKey);
     await prefs.remove(_departureKey);
     return value;
@@ -227,12 +257,19 @@ class SecurityGateProvider extends ChangeNotifier
   /// Runs one lock decision under [_lockDecisionTimeout]. The decision's
   /// pending count is ended here, once, in `finally`. The body never ends it,
   /// so an orphaned body that finishes after a timeout cannot decrement the
-  /// counter or clear a newer decision's cover. On timeout or error the
-  /// decision fails closed, and the lifecycle chain moves on.
-  Future<void> _runLockDecision(Future<void> Function() body) async {
+  /// counter or clear a newer decision's cover.
+  ///
+  /// The body receives an `isCurrent` check for its generation and must test it
+  /// after every await before it mutates gate state. On timeout or error the
+  /// generation is retired before the fail-closed lock, so the orphan stops.
+  Future<void> _runLockDecision(
+      Future<void> Function(bool Function() isCurrent) body) async {
+    final generation = ++_lockDecisionGeneration;
+    bool isCurrent() => generation == _lockDecisionGeneration;
     try {
-      await body().timeout(_lockDecisionTimeout);
+      await body(isCurrent).timeout(_lockDecisionTimeout);
     } catch (e) {
+      _lockDecisionGeneration++;
       if (kDebugMode) {
         debugPrint('SecurityGateProvider lock decision bounded: $e');
       }
@@ -244,19 +281,22 @@ class SecurityGateProvider extends ChangeNotifier
 
   /// Applies the app lock when the process starts. A process that was
   /// reclaimed in the background must not come back unlocked.
-  Future<void> _enforceColdStartLock() async {
+  Future<void> _enforceColdStartLock(bool Function() isCurrent) async {
     try {
-      await reloadSettings();
+      await _reloadSettings(isCurrent);
+      if (!isCurrent()) return;
       _resetInactivityTimer();
-      final departureMs = await _takeDeparture();
+      final departureMs = await _takeDeparture(isCurrent);
+      if (!isCurrent()) return;
       if (_accountStateUnknown) {
         throw StateError('local account state is unreadable');
       }
       if (!_shouldAutoLock()) return;
       if (_awayLongEnough(departureMs)) {
-        await lock(SecurityLockReason.autoLock);
+        await _lock(SecurityLockReason.autoLock, isCurrent: isCurrent);
       }
     } catch (e) {
+      if (!isCurrent()) return;
       if (kDebugMode) {
         debugPrint('SecurityGateProvider._enforceColdStartLock failed: $e');
       }
@@ -318,9 +358,10 @@ class SecurityGateProvider extends ChangeNotifier
     }
   }
 
-  Future<void> _handleResumed() async {
+  Future<void> _handleResumed(bool Function() isCurrent) async {
     try {
-      final departureMs = await _takeDeparture();
+      final departureMs = await _takeDeparture(isCurrent);
+      if (!isCurrent()) return;
 
       // Check if we're on an auth-related route that shouldn't trigger auto-lock
       final navigator = appNavigatorKey.currentState;
@@ -342,7 +383,8 @@ class SecurityGateProvider extends ChangeNotifier
         }
       }
 
-      await reloadSettings();
+      await _reloadSettings(isCurrent);
+      if (!isCurrent()) return;
       if (_accountStateUnknown) {
         throw StateError('local account state is unreadable');
       }
@@ -352,9 +394,10 @@ class SecurityGateProvider extends ChangeNotifier
       // foreground (the first `resumed` of a launch); cold start handles that.
       if (departureMs == null) return;
       if (_awayLongEnough(departureMs)) {
-        await lock(SecurityLockReason.autoLock);
+        await _lock(SecurityLockReason.autoLock, isCurrent: isCurrent);
       }
     } catch (e) {
+      if (!isCurrent()) return;
       if (kDebugMode) {
         debugPrint('SecurityGateProvider._handleResumed failed: $e');
       }
@@ -392,18 +435,28 @@ class SecurityGateProvider extends ChangeNotifier
     });
   }
 
-  Future<void> lock(SecurityLockReason reason,
-      {AuthFailureContext? context}) async {
+  Future<void> lock(SecurityLockReason reason, {AuthFailureContext? context}) =>
+      _lock(reason, context: context, isCurrent: _alwaysCurrent);
+
+  /// [lock] for a lock decision body: applies nothing once [isCurrent] fails.
+  Future<void> _lock(
+    SecurityLockReason reason, {
+    AuthFailureContext? context,
+    required bool Function() isCurrent,
+  }) async {
     if ((reason == SecurityLockReason.autoLock ||
             reason == SecurityLockReason.tokenExpired) &&
         !_hasLocalAccount) {
       return;
     }
-    await _applyLock(reason, context: context);
+    await _applyLock(reason, context: context, isCurrent: isCurrent);
   }
 
-  Future<void> _applyLock(SecurityLockReason reason,
-      {AuthFailureContext? context}) async {
+  Future<void> _applyLock(
+    SecurityLockReason reason, {
+    AuthFailureContext? context,
+    bool Function()? isCurrent,
+  }) async {
     final wallet = _walletProvider;
     bool hasPin;
     try {
@@ -412,8 +465,10 @@ class SecurityGateProvider extends ChangeNotifier
       // An unreadable PIN store is not "no PIN": lock rather than skip.
       hasPin = true;
     }
+    if (isCurrent != null && !isCurrent()) return;
     final canUseBiometrics =
         biometricsEnabled && (await wallet?.canUseBiometrics() ?? false);
+    if (isCurrent != null && !isCurrent()) return;
     if (reason == SecurityLockReason.autoLock &&
         !(hasPin || canUseBiometrics)) {
       return;

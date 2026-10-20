@@ -4,6 +4,7 @@ import 'package:art_kubus/providers/notification_provider.dart';
 import 'package:art_kubus/providers/profile_provider.dart';
 import 'package:art_kubus/providers/security_gate_provider.dart';
 import 'package:art_kubus/providers/wallet_provider.dart';
+import 'package:art_kubus/services/settings_service.dart';
 import 'package:flutter/widgets.dart';
 import 'package:fake_async/fake_async.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -35,15 +36,16 @@ class _FlakySettingsGate extends SecurityGateProvider {
   bool failReloads = false;
   int reloadCalls = 0;
 
-  /// Each queued completer makes the next reload hang until completed.
-  final List<Completer<void>> hangOn = <Completer<void>>[];
+  /// Each queued completer makes the next settings read hang until completed;
+  /// the value it completes with is what that read returns.
+  final List<Completer<SettingsState>> hangOn = <Completer<SettingsState>>[];
 
   @override
-  Future<void> reloadSettings() async {
+  Future<SettingsState> readSettingsForDecision() async {
     reloadCalls++;
     if (failReloads) throw StateError('settings read failed');
     if (hangOn.isNotEmpty) return hangOn.removeAt(0).future;
-    await super.reloadSettings();
+    return super.readSettingsForDecision();
   }
 }
 
@@ -165,7 +167,7 @@ void main() {
     test('hung settings read on cold start clears pending and locks', () {
       fakeAsync((async) {
         final gate = _gate(timeout: timeout);
-        gate.hangOn.add(Completer<void>());
+        gate.hangOn.add(Completer<SettingsState>());
         var done = false;
         gate.initialize().then((_) => done = true);
 
@@ -187,7 +189,7 @@ void main() {
         expect(gate.isLockDecisionPending, isFalse);
         final callsAfterColdStart = gate.reloadCalls;
 
-        gate.hangOn.add(Completer<void>());
+        gate.hangOn.add(Completer<SettingsState>());
         gate.onAppLifecycleChanged(AppLifecycleState.resumed);
         gate.onAppLifecycleChanged(AppLifecycleState.resumed);
         expect(gate.isLockDecisionPending, isTrue);
@@ -210,8 +212,8 @@ void main() {
         gate.initialize();
         async.flushMicrotasks();
 
-        final orphan = Completer<void>();
-        final newer = Completer<void>();
+        final orphan = Completer<SettingsState>();
+        final newer = Completer<SettingsState>();
         gate.hangOn.add(orphan);
         gate.onAppLifecycleChanged(AppLifecycleState.resumed);
         async.elapse(timeout);
@@ -223,11 +225,11 @@ void main() {
         expect(gate.isLockDecisionPending, isTrue);
 
         // The orphan finishes while the newer decision is still running.
-        orphan.complete();
+        orphan.complete(SettingsState.defaults());
         async.flushMicrotasks();
         expect(gate.isLockDecisionPending, isTrue);
 
-        newer.complete();
+        newer.complete(SettingsState.defaults());
         async.flushMicrotasks();
         expect(gate.isLockDecisionPending, isFalse);
       });
