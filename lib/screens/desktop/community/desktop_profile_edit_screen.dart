@@ -20,6 +20,7 @@ import '../../../services/event_bus.dart';
 import '../../../providers/themeprovider.dart';
 import '../../../utils/app_animations.dart';
 import '../../../utils/design_tokens.dart';
+import '../../../utils/profile_edit_error_messages.dart';
 import '../../../utils/media_url_resolver.dart';
 import '../../../utils/profile_edit_form_utils.dart';
 import '../../../utils/profile_media_ref_utils.dart';
@@ -631,9 +632,11 @@ class _ProfileEditScreenState extends State<ProfileEditScreen>
 
     var succeeded = false;
     try {
-      final wallet = profileProvider.currentUser?.walletAddress ?? '';
+      // Any authenticated session (wallet or email/Google) may upload; the
+      // backend derives the owner from the token, so the wallet is optional.
+      final wallet = profileProvider.currentUser?.walletAddress.trim() ?? '';
 
-      if (wallet.isEmpty) {
+      if (profileProvider.currentUser == null) {
         messenger.showKubusSnackBar(
           SnackBar(
             content: Text(l10n.profileEditNoWalletUploadAvatarToast),
@@ -663,7 +666,8 @@ class _ProfileEditScreenState extends State<ProfileEditScreen>
         reloadStats: false,
       );
       if (!saved) {
-        throw Exception(profileProvider.error ?? 'Avatar save failed');
+        throw profileProvider.lastSaveFailure ??
+            Exception(profileProvider.error ?? 'Avatar save failed');
       }
 
       succeeded = true;
@@ -674,7 +678,10 @@ class _ProfileEditScreenState extends State<ProfileEditScreen>
         _avatarChanged = false;
       });
 
-      unawaited(profileProvider.loadProfile(wallet));
+      // Email/Google sessions have no wallet, so reload the authenticated account.
+      unawaited(wallet.isEmpty
+          ? profileProvider.loadAuthenticatedProfile().catchError((_) {})
+          : profileProvider.loadProfile(wallet));
       if (kDebugMode) {
         final displayAvatarUrl =
             MediaUrlResolver.resolve(persistableAvatar) ?? persistableAvatar;
@@ -751,7 +758,10 @@ class _ProfileEditScreenState extends State<ProfileEditScreen>
       if (!mounted) return;
       messenger.showKubusSnackBar(
         SnackBar(
-          content: Text(l10n.profileEditAvatarUploadFailedToast),
+          content: Text(profileEditAvatarUploadErrorMessage(
+            l10n,
+            e is ProfileRequestFailure ? e : null,
+          )),
           backgroundColor: colorScheme.error,
         ),
       );
@@ -1051,9 +1061,11 @@ class _ProfileEditScreenState extends State<ProfileEditScreen>
       }
     } catch (e) {
       if (!mounted) return;
+      final failure =
+          Provider.of<ProfileProvider>(context, listen: false).lastSaveFailure;
       final errorText = e.toString().contains('Profile save timed out')
           ? l10n.profileEditSaveTimeoutToast
-          : l10n.profileEditErrorToast;
+          : profileEditSaveErrorMessage(l10n, failure);
       if (kDebugMode) {
         debugPrint('DesktopProfileEditScreen: profile save failed: $e');
       }

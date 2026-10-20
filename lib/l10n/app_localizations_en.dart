@@ -13553,6 +13553,26 @@ class AppLocalizationsEn extends AppLocalizations {
       'Profile image upload timed out. Please try a smaller image or retry.';
 
   @override
+  String get profileEditErrorSignInAgainToast =>
+      'Your session has expired. Sign in again to save your profile.';
+
+  @override
+  String get profileEditErrorOwnershipMismatchToast =>
+      'This profile belongs to a different account. Sign in with the owning account and try again.';
+
+  @override
+  String get profileEditAvatarErrorTooLargeToast =>
+      'This image is too large. Choose a smaller image and try again.';
+
+  @override
+  String get profileEditAvatarErrorUnsupportedTypeToast =>
+      'This image format is not supported. Choose a JPG, PNG, WebP or GIF image.';
+
+  @override
+  String get profileEditAvatarErrorRateLimitedToast =>
+      'Too many uploads right now. Wait a moment and try again.';
+
+  @override
   String get profileEditCoverUploadedSavedToast => 'Cover image uploaded!';
 
   @override

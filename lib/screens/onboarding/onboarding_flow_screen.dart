@@ -2255,8 +2255,9 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
 
     final profileProvider =
         Provider.of<ProfileProvider>(context, listen: false);
+    // Any signed-in account may set its avatar; the wallet is optional.
+    if (profileProvider.currentUser == null) return null;
     final wallet = (profileProvider.currentUser?.walletAddress ?? '').trim();
-    if (wallet.isEmpty) return null;
 
     try {
       final uploadedUrl = await profileProvider.uploadAvatarBytes(

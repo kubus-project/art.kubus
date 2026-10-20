@@ -23621,6 +23621,26 @@ abstract class AppLocalizations {
   /// **'Profile image upload timed out. Please try a smaller image or retry.'**
   String get profileEditAvatarUploadTimeoutToast;
 
+  /// In en, this message translates to:
+  /// **'Your session has expired. Sign in again to save your profile.'**
+  String get profileEditErrorSignInAgainToast;
+
+  /// In en, this message translates to:
+  /// **'This profile belongs to a different account. Sign in with the owning account and try again.'**
+  String get profileEditErrorOwnershipMismatchToast;
+
+  /// In en, this message translates to:
+  /// **'This image is too large. Choose a smaller image and try again.'**
+  String get profileEditAvatarErrorTooLargeToast;
+
+  /// In en, this message translates to:
+  /// **'This image format is not supported. Choose a JPG, PNG, WebP or GIF image.'**
+  String get profileEditAvatarErrorUnsupportedTypeToast;
+
+  /// In en, this message translates to:
+  /// **'Too many uploads right now. Wait a moment and try again.'**
+  String get profileEditAvatarErrorRateLimitedToast;
+
   /// No description provided for @profileEditCoverUploadedSavedToast.
   ///
   /// In en, this message translates to:

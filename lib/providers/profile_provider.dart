@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/foundation.dart' as foundation;
 import 'package:path/path.dart' as path;
@@ -18,6 +19,56 @@ import '../utils/media_url_resolver.dart';
 import '../utils/profile_media_ref_utils.dart';
 import '../utils/wallet_utils.dart';
 import 'wallet_provider.dart';
+
+/// A profile request that failed on the backend (or before a usable URL came
+/// back). [errorCode] is the machine-readable reason from the response body or
+/// the upload quota; UI maps it to a specific message instead of a generic one.
+class ProfileRequestFailure implements Exception {
+  const ProfileRequestFailure({this.errorCode, this.statusCode, this.cause});
+
+  final String? errorCode;
+  final int? statusCode;
+  final Object? cause;
+
+  @override
+  String toString() =>
+      'ProfileRequestFailure(errorCode: ${errorCode ?? 'unknown'}, '
+      'statusCode: ${statusCode ?? 'none'}, cause: $cause)';
+}
+
+/// Reduces any thrown request error to a [ProfileRequestFailure].
+ProfileRequestFailure profileRequestFailureFrom(Object error) {
+  if (error is ProfileRequestFailure) return error;
+  if (error is UploadRateLimitedException) {
+    return ProfileRequestFailure(
+      errorCode: error.errorCode ?? 'RATE_LIMITED',
+      statusCode: 429,
+      cause: error,
+    );
+  }
+  if (error is BackendApiRequestException) {
+    return ProfileRequestFailure(
+      errorCode: _profileErrorCodeFromBody(error.body),
+      statusCode: error.statusCode,
+      cause: error,
+    );
+  }
+  return ProfileRequestFailure(cause: error);
+}
+
+String? _profileErrorCodeFromBody(String? body) {
+  final raw = (body ?? '').trim();
+  if (!raw.startsWith('{')) return null;
+  try {
+    final decoded = jsonDecode(raw);
+    if (decoded is! Map) return null;
+    final code =
+        (decoded['errorCode'] ?? decoded['error_code'] ?? '').toString().trim();
+    return code.isEmpty ? null : code;
+  } catch (_) {
+    return null;
+  }
+}
 
 class ProfileProvider extends foundation.ChangeNotifier {
   UserProfile? _currentUser;
@@ -118,6 +169,11 @@ class ProfileProvider extends foundation.ChangeNotifier {
 
   /// Debug info for last upload attempt (raw server response + extraction + verification)
   Map<String, dynamic>? get lastUploadDebug => _lastUploadDebug;
+
+  ProfileRequestFailure? _lastSaveFailure;
+
+  /// Reason for the most recent failed [saveProfile] (null after success).
+  ProfileRequestFailure? get lastSaveFailure => _lastSaveFailure;
 
   // Local debug logger to avoid shipping noisy logs in release builds.
   void debugPrint(Object? message) {
@@ -557,6 +613,12 @@ class ProfileProvider extends foundation.ChangeNotifier {
       await loadProfile(walletAddress);
       // Load additional stats from backend
       await _loadBackendStats(walletAddress);
+    } else if (BackendApiService().hasAuthSession) {
+      // A restored email or Google session has no wallet; restore it from the
+      // token so the account screens (and Edit profile) are reachable.
+      try {
+        await loadAuthenticatedProfile();
+      } catch (_) {}
     }
 
     notifyListeners();
@@ -939,6 +1001,7 @@ class ProfileProvider extends foundation.ChangeNotifier {
   }) async {
     _isLoading = true;
     _error = null;
+    _lastSaveFailure = null;
     notifyListeners();
 
     try {
@@ -971,7 +1034,9 @@ class ProfileProvider extends foundation.ChangeNotifier {
           : walletAddress;
 
       final profileData = {
-        'walletAddress': walletAddress,
+        // Email/Google sessions have no wallet: omit it so the backend derives
+        // the owner from the token instead of receiving an empty identifier.
+        if (walletAddress.isNotEmpty) 'walletAddress': walletAddress,
         if (effectiveUsername != null) 'username': effectiveUsername,
         if (effectiveDisplayName != null) 'displayName': effectiveDisplayName,
         if (effectiveBio != null) 'bio': effectiveBio,
@@ -1012,7 +1077,12 @@ class ProfileProvider extends foundation.ChangeNotifier {
             (candidate['walletAddress'] ?? candidate['wallet_address'] ?? '')
                 .toString()
                 .trim();
-        if (candidateWallet.isEmpty) {
+        final candidateId = (candidate['id'] ?? '').toString().trim();
+        // A walletless (email/Google) account's profile is identified by its
+        // id; only a wallet save needs the wallet echoed back.
+        final identified = candidateWallet.isNotEmpty ||
+            (walletAddress.trim().isEmpty && candidateId.isNotEmpty);
+        if (!identified) {
           throw const FormatException(
             'saveProfile response missing walletAddress',
           );
@@ -1046,6 +1116,13 @@ class ProfileProvider extends foundation.ChangeNotifier {
       }
 
       _currentUser = UserProfile.fromJson(profileJson);
+      // A saved avatar must stay in the cache even when the response omits it.
+      final submittedAvatar = effectiveAvatar;
+      if (submittedAvatar != null &&
+          submittedAvatar.isNotEmpty &&
+          (_currentUser?.avatar ?? '').trim().isEmpty) {
+        _currentUser = _currentUser?.copyWith(avatar: submittedAvatar);
+      }
       try {
         final av = _currentUser?.avatar ?? '';
         final resolved = _resolveUrl(av);
@@ -1053,7 +1130,7 @@ class ProfileProvider extends foundation.ChangeNotifier {
             _currentUser?.copyWith(avatar: _convertSvgToRaster(resolved));
       } catch (_) {}
 
-      if (reloadStats) {
+      if (reloadStats && walletAddress.isNotEmpty) {
         unawaited(
           _loadBackendStats(walletAddress)
               .timeout(const Duration(seconds: 5))
@@ -1073,7 +1150,9 @@ class ProfileProvider extends foundation.ChangeNotifier {
 
       // Save to SharedPreferences
       final prefs = await _ensurePrefs();
-      await prefs.setString('wallet_address', walletAddress);
+      if (walletAddress.isNotEmpty) {
+        await prefs.setString('wallet_address', walletAddress);
+      }
       final persistedUsername = _currentUser?.username ??
           (profileJson['username']?.toString() ?? '').trim();
       if (persistedUsername.isNotEmpty) {
@@ -1085,7 +1164,8 @@ class ProfileProvider extends foundation.ChangeNotifier {
       // Persist to UserService cache (and let ChatProvider be updated via EventBus)
       try {
         final u = _currentUser;
-        if (u != null) {
+        // The user cache is wallet-keyed; walletless accounts are not cached.
+        if (u != null && u.walletAddress.trim().isNotEmpty) {
           final joinedDate = u.createdAt.toIso8601String();
           UserService.setUsersInCacheAuthoritative([
             User(
@@ -1114,7 +1194,9 @@ class ProfileProvider extends foundation.ChangeNotifier {
       try {
         EventBus().emitProfileUpdated(_currentUser);
       } catch (_) {}
-      ProfilePackageMutationTracker.profileChanged(walletAddress);
+      if (walletAddress.isNotEmpty) {
+        ProfilePackageMutationTracker.profileChanged(walletAddress);
+      }
       return true;
     } on TimeoutException catch (e) {
       _error =
@@ -1122,6 +1204,7 @@ class ProfileProvider extends foundation.ChangeNotifier {
       debugPrint('ProfileProvider.saveProfile timed out: $e');
       return false;
     } catch (e) {
+      _lastSaveFailure = profileRequestFailureFrom(e);
       // Detect 429 response message and provide a friendly error
       final errMsg = e.toString();
       if (errMsg.contains('429') ||
@@ -1256,7 +1339,9 @@ class ProfileProvider extends foundation.ChangeNotifier {
         fileBytes: fileBytes,
         fileName: fileName,
         fileType: 'avatar',
-        metadata: {'walletAddress': walletAddress},
+        metadata: {
+          if (walletAddress.isNotEmpty) 'walletAddress': walletAddress,
+        },
       );
 
       // Normalize response: backend may wrap in { data: { url: ... } }
@@ -1356,7 +1441,9 @@ class ProfileProvider extends foundation.ChangeNotifier {
         fileBytes: fileBytes,
         fileName: fileName,
         fileType: fileType,
-        metadata: {'walletAddress': walletAddress},
+        metadata: {
+          if (walletAddress.isNotEmpty) 'walletAddress': walletAddress,
+        },
       );
 
       debugPrint('   API call completed successfully');
@@ -1374,6 +1461,11 @@ class ProfileProvider extends foundation.ChangeNotifier {
       final url = rawUrl?.toString();
       final resolved = _resolveUrl(url);
       final raster = resolved.isNotEmpty ? _convertSvgToRaster(resolved) : '';
+      if (raster.isEmpty) {
+        throw const ProfileRequestFailure(
+          cause: 'upload returned no avatar URL',
+        );
+      }
 
       // Verify reachable image
       final verified = await _verifyImageUrl(raster);
@@ -1416,7 +1508,8 @@ class ProfileProvider extends foundation.ChangeNotifier {
         'stackTrace': stackTrace.toString()
       };
       notifyListeners();
-      return '';
+      // Never report an empty URL as success: surface the reason instead.
+      throw profileRequestFailureFrom(e);
     }
   }
 
@@ -1775,7 +1868,7 @@ class ProfileProvider extends foundation.ChangeNotifier {
     _pendingPreferencesSync = preferencesToSync;
     notifyListeners();
 
-    if (wallet.isEmpty) {
+    if (wallet.isEmpty && !BackendApiService().hasAuthSession) {
       if (epoch == _preferencesSaveEpoch) {
         _isSavingPreferences = false;
         _hasUnsyncedPreferences = true;
@@ -1788,10 +1881,18 @@ class ProfileProvider extends foundation.ChangeNotifier {
     }
 
     try {
-      await _apiService.updateProfile(
-        wallet,
-        {'preferences': preferencesToSync.toJson()},
-      );
+      if (wallet.isEmpty) {
+        // Email and Google sessions have no wallet route; the owner-scoped
+        // save resolves the profile from the session token.
+        await _apiService.saveProfile(
+          {'preferences': preferencesToSync.toJson()},
+        );
+      } else {
+        await _apiService.updateProfile(
+          wallet,
+          {'preferences': preferencesToSync.toJson()},
+        );
+      }
 
       if (epoch != _preferencesSaveEpoch) {
         final latest = _currentUser?.preferences ?? _cachedPreferences;
@@ -1803,7 +1904,9 @@ class ProfileProvider extends foundation.ChangeNotifier {
       }
 
       _clearPreferenceSyncState();
-      ProfilePackageMutationTracker.profileChanged(wallet);
+      if (wallet.isNotEmpty) {
+        ProfilePackageMutationTracker.profileChanged(wallet);
+      }
       notifyListeners();
       return true;
     } catch (e) {

@@ -13693,6 +13693,26 @@ class AppLocalizationsSl extends AppLocalizations {
       'Nalaganje profilne slike je poteklo. Poskusi z manjšo sliko ali znova.';
 
   @override
+  String get profileEditErrorSignInAgainToast =>
+      'Seja je potekla. Znova se prijavi, da shraniš profil.';
+
+  @override
+  String get profileEditErrorOwnershipMismatchToast =>
+      'Ta profil pripada drugemu računu. Prijavi se z lastniškim računom in poskusi znova.';
+
+  @override
+  String get profileEditAvatarErrorTooLargeToast =>
+      'Ta slika je prevelika. Izberi manjšo sliko in poskusi znova.';
+
+  @override
+  String get profileEditAvatarErrorUnsupportedTypeToast =>
+      'Ta format slike ni podprt. Izberi sliko JPG, PNG, WebP ali GIF.';
+
+  @override
+  String get profileEditAvatarErrorRateLimitedToast =>
+      'Trenutno je preveč nalaganj. Počakaj trenutek in poskusi znova.';
+
+  @override
   String get profileEditCoverUploadedSavedToast => 'Naslovna slika naložena!';
 
   @override
