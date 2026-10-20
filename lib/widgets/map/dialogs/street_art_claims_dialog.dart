@@ -33,6 +33,9 @@ class StreetArtClaimsDialog extends StatefulWidget {
   }) {
     return showKubusDialog<void>(
       context: context,
+      transitionDuration: MediaQuery.of(context).disableAnimations
+          ? Duration.zero
+          : const Duration(milliseconds: 220),
       builder: (_) => StreetArtClaimsDialog(
         marker: marker,
         isMarkerOwner: isMarkerOwner,
@@ -179,7 +182,7 @@ class _StreetArtClaimsDialogState extends State<StreetArtClaimsDialog> {
 
   Future<String?> _promptReviewNote(StreetArtClaimReviewAction action) async {
     final l10n = AppLocalizations.of(context)!;
-    final controller = TextEditingController();
+    var noteText = '';
 
     String actionLabel(StreetArtClaimReviewAction value) {
       switch (value) {
@@ -196,43 +199,39 @@ class _StreetArtClaimsDialogState extends State<StreetArtClaimsDialog> {
       }
     }
 
-    try {
-      final result = await showKubusDialog<String?>(
-        context: context,
-        builder: (dialogContext) => KubusAlertDialog(
-          title: Text(actionLabel(action)),
-          content: SizedBox(
-            width: 420,
-            child: TextField(
-              controller: controller,
-              minLines: 2,
-              maxLines: 4,
-              decoration: InputDecoration(
-                labelText: l10n.mapMarkerClaimNoteLabel,
-                border: OutlineInputBorder(
-                  borderRadius: KubusRadius.circular(KubusRadius.md),
-                ),
+    return showKubusDialog<String?>(
+      context: context,
+      transitionDuration: MediaQuery.of(context).disableAnimations
+          ? Duration.zero
+          : const Duration(milliseconds: 220),
+      builder: (dialogContext) => KubusAlertDialog(
+        title: Text(actionLabel(action)),
+        content: SizedBox(
+          width: 420,
+          child: TextField(
+            minLines: 2,
+            maxLines: 4,
+            onChanged: (value) => noteText = value,
+            decoration: InputDecoration(
+              labelText: l10n.mapMarkerClaimNoteLabel,
+              border: OutlineInputBorder(
+                borderRadius: KubusRadius.circular(KubusRadius.md),
               ),
             ),
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(dialogContext).pop(null),
-              child: Text(l10n.commonCancel),
-            ),
-            FilledButton(
-              onPressed: () {
-                Navigator.of(dialogContext).pop(controller.text.trim());
-              },
-              child: Text(actionLabel(action)),
-            ),
-          ],
         ),
-      );
-      return result;
-    } finally {
-      controller.dispose();
-    }
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(null),
+            child: Text(l10n.commonCancel),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(dialogContext).pop(noteText.trim()),
+            child: Text(actionLabel(action)),
+          ),
+        ],
+      ),
+    );
   }
 
   String? _emptyToNull(String? input) {
@@ -299,6 +298,7 @@ class _StreetArtClaimsDialogState extends State<StreetArtClaimsDialog> {
         final isLoading = provider.isLoading(widget.marker.id);
         final isSubmitting = provider.isSubmitting(widget.marker.id);
         final error = provider.errorForMarker(widget.marker.id);
+        final hasError = error != null && error.trim().isNotEmpty;
 
         return KubusAlertDialog(
           title: Text(l10n.mapMarkerClaimsDialogTitle),
@@ -365,170 +365,167 @@ class _StreetArtClaimsDialogState extends State<StreetArtClaimsDialog> {
                   ),
                   const SizedBox(height: KubusSpacing.md),
                 ],
-                if (error != null && error.trim().isNotEmpty) ...[
+                if (hasError) ...[
                   Text(
-                    error,
+                    l10n.commonActionFailedToast,
                     style: KubusTypography.textTheme.bodySmall?.copyWith(
                       color: scheme.error,
                     ),
                   ),
                   const SizedBox(height: KubusSpacing.sm),
                 ],
-                SizedBox(
-                  height: 340,
-                  child: isLoading
-                      ? Center(
-                          child: Text(
-                            l10n.mapMarkerClaimLoading,
-                            style: KubusTypography.textTheme.bodyMedium,
-                          ),
-                        )
-                      : claims.isEmpty
-                          ? Center(
-                              child: Text(
-                                l10n.mapMarkerClaimNoClaims,
-                                style: KubusTypography.textTheme.bodyMedium,
+                if (isLoading)
+                  SizedBox(
+                    height: 120,
+                    child: Center(
+                      child: Text(
+                        l10n.mapMarkerClaimLoading,
+                        style: KubusTypography.textTheme.bodyMedium,
+                      ),
+                    ),
+                  )
+                else if (claims.isEmpty) ...[
+                  if (!hasError)
+                    SizedBox(
+                      height: 120,
+                      child: Center(
+                        child: Text(
+                          l10n.mapMarkerClaimNoClaims,
+                          style: KubusTypography.textTheme.bodyMedium,
+                        ),
+                      ),
+                    ),
+                ] else
+                  ConstrainedBox(
+                    constraints: const BoxConstraints(maxHeight: 340),
+                    child: ListView.separated(
+                      shrinkWrap: true,
+                      itemCount: claims.length,
+                      separatorBuilder: (_, __) => const Divider(),
+                      itemBuilder: (context, index) {
+                        final claim = claims[index];
+                        final claimant =
+                            (claim.claimantProfileName ?? '').trim().isNotEmpty
+                                ? claim.claimantProfileName!.trim()
+                                : _shortWallet(claim.claimantWallet);
+
+                        final canOwnerReview = _canOwnerReview(claim);
+                        final canDaoReview = _canDaoReview(claim);
+
+                        return Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              claimant,
+                              style: KubusTypography.textTheme.titleSmall
+                                  ?.copyWith(
+                                fontWeight: FontWeight.w700,
+                                color: scheme.onSurface,
                               ),
-                            )
-                          : ListView.separated(
-                              itemCount: claims.length,
-                              separatorBuilder: (_, __) => const Divider(),
-                              itemBuilder: (context, index) {
-                                final claim = claims[index];
-                                final claimant =
-                                    (claim.claimantProfileName ?? '').trim()
-                                            .isNotEmpty
-                                        ? claim.claimantProfileName!.trim()
-                                        : _shortWallet(claim.claimantWallet);
-
-                                final canOwnerReview = _canOwnerReview(claim);
-                                final canDaoReview = _canDaoReview(claim);
-
-                                return Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      claimant,
-                                      style: KubusTypography.textTheme.titleSmall
-                                          ?.copyWith(
-                                        fontWeight: FontWeight.w700,
-                                        color: scheme.onSurface,
-                                      ),
-                                    ),
-                                    const SizedBox(height: KubusSpacing.xxs),
-                                    Text(
-                                      '${_statusLabel(l10n, claim.status)} • ${_stageLabel(l10n, claim.reviewStage)}',
-                                      style: KubusTypography.textTheme.bodySmall
-                                          ?.copyWith(
-                                        color: scheme.onSurface.withValues(
-                                          alpha: 0.72,
-                                        ),
-                                      ),
-                                    ),
-                                    const SizedBox(height: KubusSpacing.xs),
-                                    Text(
-                                      claim.reason,
-                                      style:
-                                          KubusTypography.textTheme.bodyMedium,
-                                    ),
-                                    if ((claim.evidenceUrl ?? '')
-                                        .trim()
-                                        .isNotEmpty)
-                                      Padding(
-                                        padding: const EdgeInsets.only(
-                                          top: KubusSpacing.xs,
-                                        ),
-                                        child: Text(
-                                          claim.evidenceUrl!,
-                                          style:
-                                              KubusTypography.textTheme.bodySmall,
-                                        ),
-                                      ),
-                                    if (canOwnerReview) ...[
-                                      const SizedBox(height: KubusSpacing.sm),
-                                      Wrap(
-                                        spacing: KubusSpacing.xs,
-                                        runSpacing: KubusSpacing.xs,
-                                        children: [
-                                          OutlinedButton(
-                                            onPressed: () => unawaited(
-                                              _reviewClaim(
-                                                claim,
-                                                StreetArtClaimReviewAction
-                                                    .approve,
-                                              ),
-                                            ),
-                                            child: Text(
-                                              l10n.mapMarkerClaimActionApprove,
-                                            ),
-                                          ),
-                                          OutlinedButton(
-                                            onPressed: () => unawaited(
-                                              _reviewClaim(
-                                                claim,
-                                                StreetArtClaimReviewAction
-                                                    .reject,
-                                              ),
-                                            ),
-                                            child: Text(
-                                              l10n.mapMarkerClaimActionReject,
-                                            ),
-                                          ),
-                                          OutlinedButton(
-                                            onPressed: () => unawaited(
-                                              _reviewClaim(
-                                                claim,
-                                                StreetArtClaimReviewAction
-                                                    .escalate,
-                                              ),
-                                            ),
-                                            child: Text(
-                                              l10n.mapMarkerClaimActionEscalate,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ],
-                                    if (canDaoReview) ...[
-                                      const SizedBox(height: KubusSpacing.sm),
-                                      Wrap(
-                                        spacing: KubusSpacing.xs,
-                                        runSpacing: KubusSpacing.xs,
-                                        children: [
-                                          OutlinedButton(
-                                            onPressed: () => unawaited(
-                                              _reviewClaim(
-                                                claim,
-                                                StreetArtClaimReviewAction
-                                                    .approveDao,
-                                              ),
-                                            ),
-                                            child: Text(
-                                              l10n
-                                                  .mapMarkerClaimActionApproveDao,
-                                            ),
-                                          ),
-                                          OutlinedButton(
-                                            onPressed: () => unawaited(
-                                              _reviewClaim(
-                                                claim,
-                                                StreetArtClaimReviewAction
-                                                    .rejectDao,
-                                              ),
-                                            ),
-                                            child: Text(
-                                              l10n
-                                                  .mapMarkerClaimActionRejectDao,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ],
-                                  ],
-                                );
-                              },
                             ),
-                ),
+                            const SizedBox(height: KubusSpacing.xxs),
+                            Text(
+                              '${_statusLabel(l10n, claim.status)} • ${_stageLabel(l10n, claim.reviewStage)}',
+                              style:
+                                  KubusTypography.textTheme.bodySmall?.copyWith(
+                                color: scheme.onSurface.withValues(
+                                  alpha: 0.72,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: KubusSpacing.xs),
+                            Text(
+                              claim.reason,
+                              style: KubusTypography.textTheme.bodyMedium,
+                            ),
+                            if ((claim.evidenceUrl ?? '').trim().isNotEmpty)
+                              Padding(
+                                padding: const EdgeInsets.only(
+                                  top: KubusSpacing.xs,
+                                ),
+                                child: Text(
+                                  claim.evidenceUrl!,
+                                  style: KubusTypography.textTheme.bodySmall,
+                                ),
+                              ),
+                            if (canOwnerReview) ...[
+                              const SizedBox(height: KubusSpacing.sm),
+                              Wrap(
+                                spacing: KubusSpacing.xs,
+                                runSpacing: KubusSpacing.xs,
+                                children: [
+                                  OutlinedButton(
+                                    onPressed: () => unawaited(
+                                      _reviewClaim(
+                                        claim,
+                                        StreetArtClaimReviewAction.approve,
+                                      ),
+                                    ),
+                                    child: Text(
+                                      l10n.mapMarkerClaimActionApprove,
+                                    ),
+                                  ),
+                                  OutlinedButton(
+                                    onPressed: () => unawaited(
+                                      _reviewClaim(
+                                        claim,
+                                        StreetArtClaimReviewAction.reject,
+                                      ),
+                                    ),
+                                    child: Text(
+                                      l10n.mapMarkerClaimActionReject,
+                                    ),
+                                  ),
+                                  OutlinedButton(
+                                    onPressed: () => unawaited(
+                                      _reviewClaim(
+                                        claim,
+                                        StreetArtClaimReviewAction.escalate,
+                                      ),
+                                    ),
+                                    child: Text(
+                                      l10n.mapMarkerClaimActionEscalate,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                            if (canDaoReview) ...[
+                              const SizedBox(height: KubusSpacing.sm),
+                              Wrap(
+                                spacing: KubusSpacing.xs,
+                                runSpacing: KubusSpacing.xs,
+                                children: [
+                                  OutlinedButton(
+                                    onPressed: () => unawaited(
+                                      _reviewClaim(
+                                        claim,
+                                        StreetArtClaimReviewAction.approveDao,
+                                      ),
+                                    ),
+                                    child: Text(
+                                      l10n.mapMarkerClaimActionApproveDao,
+                                    ),
+                                  ),
+                                  OutlinedButton(
+                                    onPressed: () => unawaited(
+                                      _reviewClaim(
+                                        claim,
+                                        StreetArtClaimReviewAction.rejectDao,
+                                      ),
+                                    ),
+                                    child: Text(
+                                      l10n.mapMarkerClaimActionRejectDao,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ],
+                        );
+                      },
+                    ),
+                  ),
               ],
             ),
           ),
