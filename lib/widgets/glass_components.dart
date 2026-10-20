@@ -705,7 +705,8 @@ class KubusAlertDialog extends StatelessWidget {
 
     final surface = backgroundColor ?? scheme.surface;
     final tint = (Color.lerp(surface, scheme.primary, 0.06) ?? surface)
-        .withValues(alpha: isDark ? 0.22 : 0.14);
+        .withValues(
+            alpha: isDark ? 0.22 : KubusGlassEffects.dialogTintAlphaLight);
 
     final resolvedShape = shape ??
         RoundedRectangleBorder(
@@ -820,6 +821,23 @@ class KubusAlertDialog extends StatelessWidget {
 
     if (scrollable) {
       body = SingleChildScrollView(child: body);
+    }
+
+    if (!isDark) {
+      // Light dialogs deepen primary so action labels meet WCAG AA on the
+      // frosted panel; see KubusGlassEffects.dialogActionDarkenLight.
+      final actionPrimary = Color.lerp(
+            scheme.primary,
+            Colors.black,
+            KubusGlassEffects.dialogActionDarkenLight,
+          ) ??
+          scheme.primary;
+      body = Theme(
+        data: theme.copyWith(
+          colorScheme: scheme.copyWith(primary: actionPrimary),
+        ),
+        child: body,
+      );
     }
 
     Widget dialog = Dialog(

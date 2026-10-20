@@ -1050,6 +1050,25 @@ class KubusGlassEffects {
   static const double blurTintOpacityDark = 0.20;
   static const double blurTintOpacityLight = 0.14;
 
+  /// Light-mode tint alpha for [KubusAlertDialog] panels.
+  ///
+  /// The shared 0.14 tint lets the dimmed page (0.4 scrim) show through the
+  /// panel, which composites to about (151,154,151). Teal action labels
+  /// (0,118,106) then measure 1.9:1, far below WCAG AA 4.5:1. The tint colour
+  /// (surface lerp primary, 6%) has red about 229, so even a fully opaque
+  /// panel only reaches about 4.6:1 on the action labels. 0.98 is the
+  /// smallest value that clears 4.5:1 with margin. Dark mode keeps its own
+  /// alpha and is unaffected.
+  static const double dialogTintAlphaLight = 0.98;
+
+  /// How far light-mode dialog actions deepen the primary toward black.
+  ///
+  /// Even on the near-opaque panel, the glass sheen darkens one corner to
+  /// about (215,222,219), where teal labels (0,118,106) measure 4.0:1. Deepening
+  /// primary by 20% inside light dialogs keeps the hue and clears WCAG AA
+  /// (about 5.7:1). Scoped to dialogs; the app-wide primary is unchanged.
+  static const double dialogActionDarkenLight = 0.2;
+
   /// Shared border opacity roles for tokenized glass shells.
   static const double glassBorderOpacityStrong = 0.30;
   static const double glassBorderOpacityMedium = 0.22;
