@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/foundation.dart' as foundation;
 import 'package:path/path.dart' as path;
@@ -18,6 +19,56 @@ import '../utils/media_url_resolver.dart';
 import '../utils/profile_media_ref_utils.dart';
 import '../utils/wallet_utils.dart';
 import 'wallet_provider.dart';
+
+/// A profile request that failed on the backend (or before a usable URL came
+/// back). [errorCode] is the machine-readable reason from the response body or
+/// the upload quota; UI maps it to a specific message instead of a generic one.
+class ProfileRequestFailure implements Exception {
+  const ProfileRequestFailure({this.errorCode, this.statusCode, this.cause});
+
+  final String? errorCode;
+  final int? statusCode;
+  final Object? cause;
+
+  @override
+  String toString() =>
+      'ProfileRequestFailure(errorCode: ${errorCode ?? 'unknown'}, '
+      'statusCode: ${statusCode ?? 'none'}, cause: $cause)';
+}
+
+/// Reduces any thrown request error to a [ProfileRequestFailure].
+ProfileRequestFailure profileRequestFailureFrom(Object error) {
+  if (error is ProfileRequestFailure) return error;
+  if (error is UploadRateLimitedException) {
+    return ProfileRequestFailure(
+      errorCode: error.errorCode ?? 'RATE_LIMITED',
+      statusCode: 429,
+      cause: error,
+    );
+  }
+  if (error is BackendApiRequestException) {
+    return ProfileRequestFailure(
+      errorCode: _profileErrorCodeFromBody(error.body),
+      statusCode: error.statusCode,
+      cause: error,
+    );
+  }
+  return ProfileRequestFailure(cause: error);
+}
+
+String? _profileErrorCodeFromBody(String? body) {
+  final raw = (body ?? '').trim();
+  if (!raw.startsWith('{')) return null;
+  try {
+    final decoded = jsonDecode(raw);
+    if (decoded is! Map) return null;
+    final code =
+        (decoded['errorCode'] ?? decoded['error_code'] ?? '').toString().trim();
+    return code.isEmpty ? null : code;
+  } catch (_) {
+    return null;
+  }
+}
 
 class ProfileProvider extends foundation.ChangeNotifier {
   UserProfile? _currentUser;
@@ -118,6 +169,11 @@ class ProfileProvider extends foundation.ChangeNotifier {
 
   /// Debug info for last upload attempt (raw server response + extraction + verification)
   Map<String, dynamic>? get lastUploadDebug => _lastUploadDebug;
+
+  ProfileRequestFailure? _lastSaveFailure;
+
+  /// Reason for the most recent failed [saveProfile] (null after success).
+  ProfileRequestFailure? get lastSaveFailure => _lastSaveFailure;
 
   // Local debug logger to avoid shipping noisy logs in release builds.
   void debugPrint(Object? message) {
@@ -939,6 +995,7 @@ class ProfileProvider extends foundation.ChangeNotifier {
   }) async {
     _isLoading = true;
     _error = null;
+    _lastSaveFailure = null;
     notifyListeners();
 
     try {
@@ -1128,6 +1185,7 @@ class ProfileProvider extends foundation.ChangeNotifier {
       debugPrint('ProfileProvider.saveProfile timed out: $e');
       return false;
     } catch (e) {
+      _lastSaveFailure = profileRequestFailureFrom(e);
       // Detect 429 response message and provide a friendly error
       final errMsg = e.toString();
       if (errMsg.contains('429') ||
@@ -1384,6 +1442,11 @@ class ProfileProvider extends foundation.ChangeNotifier {
       final url = rawUrl?.toString();
       final resolved = _resolveUrl(url);
       final raster = resolved.isNotEmpty ? _convertSvgToRaster(resolved) : '';
+      if (raster.isEmpty) {
+        throw const ProfileRequestFailure(
+          cause: 'upload returned no avatar URL',
+        );
+      }
 
       // Verify reachable image
       final verified = await _verifyImageUrl(raster);
@@ -1426,7 +1489,8 @@ class ProfileProvider extends foundation.ChangeNotifier {
         'stackTrace': stackTrace.toString()
       };
       notifyListeners();
-      return '';
+      // Never report an empty URL as success: surface the reason instead.
+      throw profileRequestFailureFrom(e);
     }
   }
 
