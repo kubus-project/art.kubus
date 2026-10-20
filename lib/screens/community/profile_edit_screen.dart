@@ -18,6 +18,7 @@ import '../../models/user_profile.dart';
 import '../../models/dao.dart';
 import '../../services/event_bus.dart';
 import '../../providers/themeprovider.dart';
+import '../../utils/profile_edit_error_messages.dart';
 import '../../utils/profile_edit_form_utils.dart';
 import '../../utils/profile_media_ref_utils.dart';
 import '../../widgets/inline_loading.dart';
@@ -346,7 +347,8 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
         reloadStats: false,
       );
       if (!saved) {
-        throw Exception(profileProvider.error ?? 'Avatar save failed');
+        throw profileProvider.lastSaveFailure ??
+            Exception(profileProvider.error ?? 'Avatar save failed');
       }
 
       succeeded = true;
@@ -437,7 +439,10 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
       if (!mounted) return;
       messenger.showKubusSnackBar(
         SnackBar(
-          content: Text(l10n.profileEditAvatarUploadFailedToast),
+          content: Text(profileEditAvatarUploadErrorMessage(
+            l10n,
+            e is ProfileRequestFailure ? e : null,
+          )),
           backgroundColor: colorScheme.error,
         ),
       );
@@ -745,9 +750,11 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
       }
     } catch (e) {
       if (!mounted) return;
+      final failure =
+          Provider.of<ProfileProvider>(context, listen: false).lastSaveFailure;
       final errorText = e.toString().contains('Profile save timed out')
           ? l10n.profileEditSaveTimeoutToast
-          : l10n.profileEditErrorToast;
+          : profileEditSaveErrorMessage(l10n, failure);
       if (kDebugMode) {
         debugPrint('ProfileEditScreen: profile save failed: $e');
       }
