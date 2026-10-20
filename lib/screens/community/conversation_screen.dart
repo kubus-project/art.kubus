@@ -28,6 +28,7 @@ import '../../services/event_bus.dart';
 import '../../services/push_notification_service.dart';
 import '../../widgets/avatar_widget.dart';
 import '../../widgets/inline_loading.dart';
+import '../../widgets/messaging/message_grouping.dart';
 import '../../utils/creator_display_format.dart';
 import '../../utils/wallet_utils.dart';
 import '../../utils/account_identity.dart';
@@ -1143,15 +1144,19 @@ class _ConversationScreenState extends State<ConversationScreen> {
         _chatProvider.messages[widget.conversation.id] ?? const [];
     if (providerMessages.isNotEmpty && _scrollController.hasClients) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (!_scrollController.hasClients) return;
+        if (!mounted || !_scrollController.hasClients) return;
         try {
           final pos = _scrollController.position;
           if (pos.pixels <= 100) {
-            _scrollController.animateTo(
-              0.0,
-              duration: const Duration(milliseconds: 200),
-              curve: Curves.easeOut,
-            );
+            if (messagingReduceMotion(context)) {
+              _scrollController.jumpTo(0.0);
+            } else {
+              _scrollController.animateTo(
+                0.0,
+                duration: const Duration(milliseconds: 200),
+                curve: Curves.easeOut,
+              );
+            }
           }
         } catch (_) {}
       });
@@ -1186,13 +1191,25 @@ class _ConversationScreenState extends State<ConversationScreen> {
       body: GlassSurface(
         borderRadius: BorderRadius.zero,
         showBorder: false,
-        child: Column(
-          children: [
-            Expanded(child: _buildMessagesList()),
-            _buildMessageInput(),
-            if (_isUploading)
-              InlineLoading(height: 4, borderRadius: BorderRadius.circular(2)),
-          ],
+        child: Center(
+          // On wide layouts the thread keeps a readable column; on phones the
+          // constraint is inert.
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(
+              maxWidth: kMessagingColumnMaxWidth,
+            ),
+            child: Column(
+              children: [
+                Expanded(child: _buildMessagesList()),
+                _buildMessageInput(),
+                if (_isUploading)
+                  InlineLoading(
+                    height: 4,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+              ],
+            ),
+          ),
         ),
       ),
     );
@@ -1637,8 +1654,11 @@ class _ConversationScreenState extends State<ConversationScreen> {
         final message = display[index];
         final presentation = _resolveMessagePresentation(
             message, _chatProvider, profileProvider);
-        final showAvatar = index == 0 ||
-            display[index - 1].senderWallet != message.senderWallet;
+        // display is newest-first: index-1 is the newer neighbour, index+1 the older.
+        final groupEnd =
+            index == 0 || !messagesShareGroup(message, display[index - 1]);
+        final groupStart = index == display.length - 1 ||
+            !messagesShareGroup(display[index + 1], message);
         final animationId = _messageAnimationId(message);
         final shouldAnimate = !_animatedMessageIds.contains(animationId);
         final visibilityKey =
@@ -1648,12 +1668,11 @@ class _ConversationScreenState extends State<ConversationScreen> {
             key: presentation.rowKey,
             child: KeyedSubtree(
               key: visibilityKey,
-              child: _buildMessageItem(message, presentation, showAvatar,
-                  chronoIndex: (display.length - 1 - index),
-                  chronoLength: display.length),
+              child: _buildMessageItem(message, presentation,
+                  groupStart: groupStart, groupEnd: groupEnd),
             ),
           ),
-          shouldAnimate,
+          shouldAnimate && !messagingReduceMotion(context),
           messageId: animationId,
         );
         if (shouldAnimate) {
@@ -1718,27 +1737,24 @@ class _ConversationScreenState extends State<ConversationScreen> {
 
   Widget _buildMessageItem(
     ChatMessage message,
-    ResolvedMessagePresentation presentation,
-    bool showAvatar, {
-    int? chronoIndex,
-    int? chronoLength,
+    ResolvedMessagePresentation presentation, {
+    required bool groupStart,
+    required bool groupEnd,
   }) {
     final isMe = presentation.isMine;
-    final sourceMessages =
-        _chatProvider.messages[widget.conversation.id] ?? const <ChatMessage>[];
-    final bool isFirst = (chronoIndex != null && chronoLength != null)
-        ? chronoIndex == 0
-        : (sourceMessages.isNotEmpty ? message == sourceMessages.first : false);
-    final bool isLast = (chronoIndex != null && chronoLength != null)
-        ? chronoIndex == (chronoLength - 1)
-        : (sourceMessages.isNotEmpty ? message == sourceMessages.last : false);
+    // Avatar and sender name belong to the first message of a group; the
+    // meta row (time, read state) belongs to the last one.
+    final bool showAvatar = groupStart;
 
     final avatarUrl = presentation.senderAvatarUrl;
     final displayName = presentation.senderLabel;
     final participantWallet = presentation.senderWallet;
 
     final double avatarRadius = 16;
-    final double bubbleMaxWidth = MediaQuery.of(context).size.width * 0.72;
+    final double bubbleMaxWidth = math.min(
+      MediaQuery.of(context).size.width * 0.72,
+      kMessageBubbleMaxWidth,
+    );
     final scheme = Theme.of(context).colorScheme;
     final roles = KubusColorRoles.of(context);
 
@@ -1771,7 +1787,11 @@ class _ConversationScreenState extends State<ConversationScreen> {
         ),
         decoration: BoxDecoration(
           color: bubbleColor,
-          borderRadius: BorderRadius.circular(KubusRadius.sheet),
+          borderRadius: messageBubbleRadius(
+            isMine: isMe,
+            groupStart: groupStart,
+            groupEnd: groupEnd,
+          ),
           border: Border.all(
             color: isMe ? accent.withValues(alpha: 0.28) : roles.rule,
             width: KubusSizes.hairline,
@@ -1781,40 +1801,59 @@ class _ConversationScreenState extends State<ConversationScreen> {
           crossAxisAlignment:
               isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
           children: [
-            if (!isMe)
+            if (!isMe && showAvatar)
               Padding(
                 padding: const EdgeInsets.only(bottom: KubusSpacing.xxs),
                 child: SizedBox(
                   height: 15,
-                  child: showAvatar
-                      ? Text(
-                          displayName,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: KubusTextStyles.navMetaLabel.copyWith(
-                            fontWeight: FontWeight.w700,
-                            color: senderLabelColor,
-                          ),
-                        )
-                      : const SizedBox.shrink(),
+                  child: Text(
+                    displayName,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: KubusTextStyles.navMetaLabel.copyWith(
+                      fontWeight: FontWeight.w700,
+                      color: senderLabelColor,
+                    ),
+                  ),
                 ),
               ),
             _buildMessageContent(message, isMe),
-            const SizedBox(height: KubusSpacing.xs),
-            _buildMessageMeta(message, isMe),
+            if (groupEnd) ...[
+              const SizedBox(height: KubusSpacing.xs),
+              _buildMessageMeta(message, isMe),
+            ],
           ],
         ),
       ),
     );
 
+    // Plain text bubbles carry one merged label for screen readers. Bubbles
+    // with replies or attachments keep their own interactive children.
+    final isPlainText =
+        message.replyTo == null && message.data?['attachment'] == null;
+    final semanticBubble = isPlainText
+        ? Semantics(
+            container: true,
+            excludeSemantics: true,
+            label: [
+              if (!isMe) displayName,
+              message.message.trim(),
+              _formatTimeAgo(message.createdAt),
+            ].where((part) => part.isNotEmpty).join('. '),
+            child: bubble,
+          )
+        : bubble;
+
     return GestureDetector(
       onLongPress: () => _showMessageOptions(message),
       child: Padding(
         padding: EdgeInsets.only(
-          top: isFirst ? KubusSpacing.sm + KubusSpacing.xs : KubusSpacing.sm,
-          bottom:
-              (isLast ? KubusSpacing.md + KubusSpacing.xs : KubusSpacing.sm) +
-                  (message.reactions.isNotEmpty ? KubusSpacing.sm : 0),
+          top:
+              groupStart ? KubusSpacing.sm + KubusSpacing.xs : KubusSpacing.xxs,
+          bottom: (groupEnd
+                  ? KubusSpacing.sm + KubusSpacing.xs
+                  : KubusSpacing.xxs) +
+              (message.reactions.isNotEmpty ? KubusSpacing.sm : 0),
           left: KubusSpacing.sm,
           right: KubusSpacing.sm,
         ),
@@ -1838,7 +1877,7 @@ class _ConversationScreenState extends State<ConversationScreen> {
                     ),
                     const SizedBox(width: KubusSpacing.sm),
                   ],
-                  bubble,
+                  semanticBubble,
                 ],
               ),
               if (reactionBar != null) reactionBar,
