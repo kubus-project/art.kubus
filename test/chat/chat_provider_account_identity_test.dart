@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:art_kubus/models/message.dart';
 import 'package:art_kubus/providers/chat_provider.dart';
 import 'package:art_kubus/services/backend_api_service.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -13,6 +14,9 @@ http.Response _json(Object body, [int status = 200]) => http.Response(
       status,
       headers: {'content-type': 'application/json'},
     );
+
+const _acc = '6c421a31-405e-4d9e-8b74-9dc357fd13b2';
+const _acc2 = 'a1b2c3d4-0000-4000-8000-00000000000b';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -254,5 +258,192 @@ void main() {
     await pending;
 
     expect(provider.messages.containsKey('conv_s'), isFalse);
+  });
+
+  void seedMessage(ChatProvider provider, String conv, String id) {
+    provider.handleIncomingMessageForTesting({
+      'event': 'message:received',
+      'data': {
+        'message': {
+          'id': id,
+          'conversation_id': conv,
+          'sender_wallet': 'wallet_other',
+          'message': 'seed',
+          'created_at': '2025-01-02T12:00:00Z',
+        },
+      },
+    });
+  }
+
+  test('walletless optimistic reaction records the account as its user id',
+      () async {
+    BackendApiService().setHttpClient(
+      MockClient((request) async => _json({'success': true}, 201)),
+    );
+
+    final provider = ChatProvider()..setCurrentWalletForTesting(null);
+    seedMessage(provider, 'conv_w', 'mw');
+    provider.setCurrentAccountIdForTesting(_acc);
+
+    await provider.toggleReaction('conv_w', 'mw', '👍');
+    final reaction = provider.messages['conv_w']!.single.reactions.single;
+    expect(reaction.reactors, [_acc]);
+    expect(reaction.reactorUserIds, [_acc]);
+    expect(provider.isReactionByCurrentUser(reaction), isTrue);
+  });
+
+  test('wallet+account session reacts wallet-first and is matched by account',
+      () async {
+    BackendApiService().setHttpClient(
+      MockClient((request) async => _json({'success': true}, 201)),
+    );
+
+    final provider = ChatProvider()..setCurrentWalletForTesting('wallet_me');
+    seedMessage(provider, 'conv_wa', 'mwa');
+    provider.setCurrentAccountIdForTesting(_acc);
+
+    await provider.toggleReaction('conv_wa', 'mwa', '🔥');
+    final reaction = provider.messages['conv_wa']!.single.reactions.single;
+    expect(reaction.reactors, ['wallet_me']);
+    expect(reaction.reactorUserIds, [_acc]);
+    expect(provider.isReactionByCurrentUser(reaction), isTrue);
+  });
+
+  test('socket echo after optimistic add does not double count', () async {
+    final hold = Completer<http.Response>();
+    BackendApiService().setHttpClient(
+      MockClient((request) async {
+        if (request.url.path == '/api/messages/conv_e/messages/me1/reactions') {
+          return hold.future;
+        }
+        return http.Response('Not Found', 404);
+      }),
+    );
+
+    final provider = ChatProvider()..setCurrentWalletForTesting(null);
+    seedMessage(provider, 'conv_e', 'me1');
+    provider.setCurrentAccountIdForTesting(_acc);
+
+    final pending = provider.toggleReaction('conv_e', 'me1', '👍');
+    // Server echo arrives before the POST response.
+    provider.handleMessageReactionForTesting({
+      'conversationId': 'conv_e',
+      'messageId': 'me1',
+      'emoji': '👍',
+      'userId': _acc,
+      'user_id': _acc,
+      'wallet': null,
+      'action': 'added',
+      'reactions': [
+        {
+          'emoji': '👍',
+          'count': 1,
+          'reactors': [_acc],
+          'reactorUserIds': [_acc],
+        },
+      ],
+    });
+    hold.complete(_json({'success': true}, 201));
+    await pending;
+
+    final reaction = provider.messages['conv_e']!.single.reactions.single;
+    expect(reaction.count, 1);
+    expect(reaction.reactors, [_acc]);
+    expect(provider.isReactionByCurrentUser(reaction), isTrue);
+  });
+
+  test('walletless echo from another account is not mine', () async {
+    final provider = ChatProvider()..setCurrentWalletForTesting(null);
+    seedMessage(provider, 'conv_o', 'mo');
+    provider.setCurrentAccountIdForTesting(_acc);
+
+    provider.handleMessageReactionForTesting({
+      'conversationId': 'conv_o',
+      'messageId': 'mo',
+      'userId': _acc2,
+      'action': 'added',
+      'reactions': [
+        {
+          'emoji': '👍',
+          'count': 1,
+          'reactors': [_acc2],
+          'reactorUserIds': [_acc2],
+        },
+      ],
+    });
+
+    final reaction = provider.messages['conv_o']!.single.reactions.single;
+    expect(provider.isReactionByCurrentUser(reaction), isFalse);
+  });
+
+  test('legacy wallet-only reaction is still recognised for its wallet', () {
+    final provider = ChatProvider()
+      ..setCurrentWalletForTesting('wallet_me')
+      ..setCurrentAccountIdForTesting(null);
+
+    const legacy = MessageReaction(
+      emoji: '👍',
+      count: 2,
+      reactors: ['wallet_other', 'wallet_me'],
+    );
+    expect(provider.isReactionByCurrentUser(legacy), isTrue);
+
+    const notMine = MessageReaction(
+      emoji: '👍',
+      count: 1,
+      reactors: ['wallet_other'],
+    );
+    expect(provider.isReactionByCurrentUser(notMine), isFalse);
+  });
+
+  test('wallet is ignored on an entry that carries a different account id', () {
+    final provider = ChatProvider()
+      ..setCurrentWalletForTesting('wallet_me')
+      ..setCurrentAccountIdForTesting(_acc);
+
+    const otherAccountSameWallet = MessageReaction(
+      emoji: '👍',
+      count: 1,
+      reactors: ['wallet_me'],
+      reactorUserIds: [_acc2],
+    );
+    expect(provider.isReactionByCurrentUser(otherAccountSameWallet), isFalse);
+  });
+
+  test('toggling off a walletless reaction removes only this account entry',
+      () async {
+    var reactionCalls = 0;
+    BackendApiService().setHttpClient(
+      MockClient((request) async {
+        if (request.url.path == '/api/messages/conv_d/messages/md/reactions') {
+          reactionCalls++;
+          return _json({'success': true});
+        }
+        return http.Response('Not Found', 404);
+      }),
+    );
+
+    final provider = ChatProvider()..setCurrentWalletForTesting(null);
+    seedMessage(provider, 'conv_d', 'md');
+    provider.setCurrentAccountIdForTesting(_acc);
+    provider.handleMessageReactionForTesting({
+      'conversationId': 'conv_d',
+      'messageId': 'md',
+      'reactions': [
+        {
+          'emoji': '👍',
+          'count': 2,
+          'reactors': [_acc2, _acc],
+          'reactorUserIds': [_acc2, _acc],
+        },
+      ],
+    });
+
+    await provider.toggleReaction('conv_d', 'md', '👍');
+    final reaction = provider.messages['conv_d']!.single.reactions.single;
+    expect(reaction.reactors, [_acc2]);
+    expect(reaction.reactorUserIds, [_acc2]);
+    expect(reaction.count, 1);
+    expect(reactionCalls, 1);
   });
 }

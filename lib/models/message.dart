@@ -32,13 +32,30 @@ class MessageReply {
 class MessageReaction {
   final String emoji;
   final int count;
+
+  /// Reactor keys, wallet-first: the wallet when the reactor has one, the
+  /// account id otherwise. Index-aligned with [reactorUserIds].
   final List<String> reactors;
+
+  /// Account id per reactor, index-aligned with [reactors]. Null entries are
+  /// legacy wallet-only rows. Missing entries read as null via [userIdAt].
+  final List<String?> reactorUserIds;
 
   const MessageReaction({
     required this.emoji,
     required this.count,
     required this.reactors,
+    this.reactorUserIds = const [],
   });
+
+  /// Account id of the reactor at [index], or null for legacy wallet rows.
+  String? userIdAt(int index) => index >= 0 && index < reactorUserIds.length
+      ? reactorUserIds[index]
+      : null;
+
+  /// [reactorUserIds] padded or trimmed to the length of [reactors].
+  List<String?> get alignedReactorUserIds =>
+      List<String?>.generate(reactors.length, userIdAt);
 
   factory MessageReaction.fromJson(Map<String, dynamic> j) {
     final emoji = (j['emoji'] ?? '').toString();
@@ -46,15 +63,30 @@ class MessageReaction {
     final int count = countValue is int
         ? countValue
         : int.tryParse(countValue?.toString() ?? '0') ?? 0;
-    List<String> reactors = const [];
     final rawReactors = j['reactors'];
+    final rawUserIds = j['reactorUserIds'] ?? j['reactor_user_ids'];
+    final reactors = <String>[];
+    final reactorUserIds = <String?>[];
     if (rawReactors is List) {
-      reactors = rawReactors
-          .map((e) => e?.toString() ?? '')
-          .where((e) => e.isNotEmpty)
-          .toList();
+      for (var i = 0; i < rawReactors.length; i++) {
+        final reactor = rawReactors[i]?.toString().trim() ?? '';
+        // Skip empty entries together with their user id so both lists stay
+        // index-aligned.
+        if (reactor.isEmpty) continue;
+        reactors.add(reactor);
+        reactorUserIds.add(
+          rawUserIds is List && i < rawUserIds.length
+              ? canonicalAccountUserId(rawUserIds[i])
+              : null,
+        );
+      }
     }
-    return MessageReaction(emoji: emoji, count: count, reactors: reactors);
+    return MessageReaction(
+      emoji: emoji,
+      count: count,
+      reactors: reactors,
+      reactorUserIds: reactorUserIds,
+    );
   }
 }
 
