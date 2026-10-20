@@ -39,6 +39,23 @@ void main() {
     );
   });
 
+  test('after logout the guest state hydrates nothing', () {
+    // Logout clears the token, so a previously attempted session must not
+    // block the next email sign-in, and no stale hydration is started.
+    expect(
+      resolve(hasAuthSession: false, sessionHydrationAttempted: true),
+      DesktopProfileHydration.none,
+    );
+  });
+
+  test('a shell remounted at 1440 after a 390 session still hydrates once', () {
+    // A freshly mounted shell State starts with the attempt flag cleared.
+    expect(
+      resolve(hasAuthSession: true, sessionHydrationAttempted: false),
+      DesktopProfileHydration.session,
+    );
+  });
+
   test('a loaded profile is never hydrated again', () {
     expect(
       resolve(isSignedIn: true, authWallet: _testWallet, hasAuthSession: true),
