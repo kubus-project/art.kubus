@@ -112,4 +112,43 @@ void main() {
     expect(provider.messageUnreadCount, 2);
     expect(provider.totalUnreadCount, 5);
   });
+
+  test('socket notifications addressed to another account change nothing',
+      () async {
+    var requestCount = 0;
+    api.setHttpClient(
+      MockClient((request) async {
+        requestCount++;
+        return http.Response(jsonEncode(_summary(9, 9)), 200);
+      }),
+    );
+    final provider = NotificationProvider()
+      ..setAuthenticatedSessionForTesting(accountId: 'user-1');
+    providers.add(provider);
+
+    provider.handleNotificationForTesting(<String, dynamic>{
+      'type': 'notification:read',
+      'recipientUserId': 'user-2',
+    });
+    provider.handleNotificationForTesting(<String, dynamic>{
+      'type': 'comment',
+      'recipient_user_id': 'user-2',
+      'data': <String, dynamic>{'postId': 'post-1'},
+    });
+    await Future<void>.delayed(const Duration(milliseconds: 400));
+
+    expect(requestCount, 0);
+    expect(provider.unreadCount, 0);
+    expect(provider.messageUnreadCount, 0);
+    expect(provider.hasNew, isFalse);
+
+    provider.handleNotificationForTesting(<String, dynamic>{
+      'type': 'notification:read',
+      'recipientUserId': 'user-1',
+    });
+    await Future<void>.delayed(const Duration(milliseconds: 400));
+
+    expect(requestCount, 1);
+    expect(provider.unreadCount, 9);
+  });
 }

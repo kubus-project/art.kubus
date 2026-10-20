@@ -14,6 +14,35 @@ import '../services/push_notification_service.dart';
 import '../utils/wallet_utils.dart';
 import 'app_refresh_provider.dart';
 
+String _normalizeIdentity(String? value) => (value ?? '').trim().toLowerCase();
+
+/// Decides whether a notification payload is addressed to the current session.
+///
+/// - Both a recipient user id and a session account id known: they must match.
+/// - Otherwise both a recipient wallet and a session wallet known: they must
+///   match (case-insensitive).
+/// - Otherwise no identity can be compared and the event is kept.
+bool isNotificationForCurrentIdentity({
+  String? recipientUserId,
+  String? recipientWallet,
+  String? sessionAccountId,
+  String? sessionWallet,
+}) {
+  final payloadUserId = _normalizeIdentity(recipientUserId);
+  final sessionUserId = _normalizeIdentity(sessionAccountId);
+  if (payloadUserId.isNotEmpty && sessionUserId.isNotEmpty) {
+    return payloadUserId == sessionUserId;
+  }
+  final payloadWallet =
+      _normalizeIdentity(WalletUtils.canonical(recipientWallet));
+  final sessionWalletKey =
+      _normalizeIdentity(WalletUtils.canonical(sessionWallet));
+  if (payloadWallet.isNotEmpty && sessionWalletKey.isNotEmpty) {
+    return payloadWallet == sessionWalletKey;
+  }
+  return true;
+}
+
 class NotificationProvider extends ChangeNotifier {
   final BackendApiService _backend = BackendApiService();
   final SocketService _socket = SocketService();
@@ -501,8 +530,31 @@ class NotificationProvider extends ChangeNotifier {
     }
   }
 
+  bool _isAddressedToCurrentSession(Map<String, dynamic> payload) {
+    final nested = payload['data'] is Map
+        ? Map<String, dynamic>.from(payload['data'] as Map)
+        : const <String, dynamic>{};
+    String? pick(List<String> keys) {
+      for (final source in <Map<String, dynamic>>[payload, nested]) {
+        for (final key in keys) {
+          final value = source[key]?.toString();
+          if (value != null && value.trim().isNotEmpty) return value;
+        }
+      }
+      return null;
+    }
+
+    return isNotificationForCurrentIdentity(
+      recipientUserId: pick(const ['recipientUserId', 'recipient_user_id']),
+      recipientWallet: pick(const ['recipientWallet', 'recipient_wallet']),
+      sessionAccountId: _currentAccountId,
+      sessionWallet: _currentWallet,
+    );
+  }
+
   void _handleSocketNotification(Map<String, dynamic> data) {
     if (!_hasAuthContext) return;
+    if (!_isAddressedToCurrentSession(data)) return;
     try {
       final typeRaw = (data['type'] ?? data['event'] ?? data['action'])
               ?.toString()
@@ -692,6 +744,8 @@ class NotificationProvider extends ChangeNotifier {
                 '')
             .toString();
       }
+
+      if (!_isAddressedToCurrentSession(parsedPayload)) return;
 
       final normalizedType = resolvedType.toLowerCase();
       final data = (parsedPayload['data'] is Map)
@@ -912,8 +966,9 @@ class NotificationProvider extends ChangeNotifier {
       };
 
   @visibleForTesting
-  void setAuthenticatedSessionForTesting({String? wallet}) {
+  void setAuthenticatedSessionForTesting({String? wallet, String? accountId}) {
     _currentWallet = wallet;
+    _currentAccountId = accountId;
     _initialized = true;
   }
 
