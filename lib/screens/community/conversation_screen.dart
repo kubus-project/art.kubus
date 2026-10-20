@@ -93,9 +93,12 @@ ResolvedMessagePresentation resolveMessagePresentationForTesting({
   final normalizedCurrentId = WalletUtils.normalize(currentUserId);
   final normalizedSender = WalletUtils.normalize(message.senderWallet);
   final currentAccountId = canonicalAccountUserId(currentUserId);
-  final isMine = (message.senderUserId != null &&
-          message.senderUserId == currentAccountId) ||
-      (normalizedSender.isNotEmpty &&
+  // A message carrying a sender account id is owned by that account only; the
+  // wallet/id fallback applies just to messages without one.
+  final messageSenderUserId = message.senderUserId;
+  final isMine = messageSenderUserId != null
+      ? messageSenderUserId == currentAccountId
+      : (normalizedSender.isNotEmpty &&
           (normalizedSender == normalizedCurrentWallet ||
               normalizedSender == normalizedCurrentId));
 
@@ -998,14 +1001,10 @@ class _ConversationScreenState extends State<ConversationScreen> {
 
     final reactionCounts = <String, int>{};
     final myReactions = <String>{};
-    final currentUserWallet =
-        Provider.of<ProfileProvider>(context, listen: false)
-            .currentUser
-            ?.walletAddress;
 
     for (final r in message.reactions) {
       reactionCounts[r.emoji] = r.count;
-      if (currentUserWallet != null && r.reactors.contains(currentUserWallet)) {
+      if (_chatProvider.isReactionByCurrentUser(r)) {
         myReactions.add(r.emoji);
       }
     }

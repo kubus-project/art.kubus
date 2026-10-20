@@ -1740,16 +1740,31 @@ class ChatProvider extends ChangeNotifier {
   bool _matchesOptimisticMessage(ChatMessage current, ChatMessage incoming) {
     final clientTempId = current.data?['clientTempId']?.toString();
     final incomingClientTempId = incoming.data?['clientTempId']?.toString();
-    if (clientTempId != null &&
-        clientTempId.isNotEmpty &&
-        clientTempId == incomingClientTempId) {
-      return true;
+    final hasClientTempId = clientTempId != null && clientTempId.isNotEmpty;
+    final hasIncomingClientTempId =
+        incomingClientTempId != null && incomingClientTempId.isNotEmpty;
+    if (hasClientTempId && hasIncomingClientTempId) {
+      // Both sides carry a client id: only an exact match is the same send.
+      return clientTempId == incomingClientTempId;
     }
 
     final isOptimistic = current.id.startsWith('temp-') ||
         current.data?['sendStatus']?.toString() == 'sending';
     if (!isOptimistic) return false;
-    if (!WalletUtils.equals(current.senderWallet, incoming.senderWallet)) {
+
+    // Sender identity: account id when both sides carry one, otherwise wallet
+    // when both sides carry a non-empty wallet. Two senders with neither are
+    // never treated as the same sender.
+    final currentSenderUserId = (current.senderUserId ?? '').trim();
+    final incomingSenderUserId = (incoming.senderUserId ?? '').trim();
+    if (currentSenderUserId.isNotEmpty && incomingSenderUserId.isNotEmpty) {
+      if (currentSenderUserId != incomingSenderUserId) return false;
+    } else if (WalletUtils.canonical(current.senderWallet).isNotEmpty &&
+        WalletUtils.canonical(incoming.senderWallet).isNotEmpty) {
+      if (!WalletUtils.equals(current.senderWallet, incoming.senderWallet)) {
+        return false;
+      }
+    } else {
       return false;
     }
     if (current.message.trim() != incoming.message.trim()) return false;
@@ -2869,8 +2884,10 @@ class ChatProvider extends ChangeNotifier {
     String conversationId,
     String newTitle,
   ) async {
+    final generation = _sessionGeneration;
     try {
       final result = await _api.renameConversation(conversationId, newTitle);
+      if (generation != _sessionGeneration) return;
       if (result['success'] == true) {
         // Update local conversation
         final index = _conversations.indexWhere((c) => c.id == conversationId);
@@ -2903,8 +2920,10 @@ class ChatProvider extends ChangeNotifier {
   }
 
   Future<void> deleteConversation(String conversationId) async {
+    final generation = _sessionGeneration;
     try {
       final result = await _api.deleteConversation(conversationId);
+      if (generation != _sessionGeneration) return;
       if (result['success'] == true) {
         _conversations.removeWhere((c) => c.id == conversationId);
         _messages.remove(conversationId);
@@ -2931,11 +2950,13 @@ class ChatProvider extends ChangeNotifier {
     String conversationId,
     String newOwnerWallet,
   ) async {
+    final generation = _sessionGeneration;
     try {
       final resp = await _api.transferConversationOwner(
         conversationId,
         newOwnerWallet,
       );
+      if (generation != _sessionGeneration) return resp;
       await refreshConversations();
       return resp;
     } catch (e) {
@@ -2945,7 +2966,9 @@ class ChatProvider extends ChangeNotifier {
   }
 
   Future<void> markRead(String conversationId) async {
+    final generation = _sessionGeneration;
     await _api.markConversationRead(conversationId);
+    if (generation != _sessionGeneration) return;
     _unreadCounts[conversationId] = 0;
     _safeNotifyListeners(force: true);
   }
@@ -2969,8 +2992,10 @@ class ChatProvider extends ChangeNotifier {
 
   /// Mark an individual message as read by the current user
   Future<void> markMessageRead(String conversationId, String messageId) async {
+    final generation = _sessionGeneration;
     try {
       final resp = await _api.markMessageRead(conversationId, messageId);
+      if (generation != _sessionGeneration) return;
       debugPrint(
         'ChatProvider.markMessageRead: api response for conv=$conversationId msg=$messageId -> $resp',
       );
@@ -3199,12 +3224,14 @@ class ChatProvider extends ChangeNotifier {
     String emoji,
   ) async {
     // Optimistic update
+    final reactorKey = _currentReactorKey();
+    if (reactorKey == null) return;
+    final generation = _sessionGeneration;
     final list = _messages[conversationId];
     if (list != null) {
       for (var i = 0; i < list.length; i++) {
         if (list[i].id == messageId) {
           final msg = list[i];
-          final currentWallet = _currentWallet ?? '';
 
           // Check if already reacted
           final existingReactionIndex = msg.reactions.indexWhere(
@@ -3216,11 +3243,12 @@ class ChatProvider extends ChangeNotifier {
 
           if (existingReactionIndex >= 0) {
             final reaction = newReactions[existingReactionIndex];
-            if (reaction.reactors.contains(currentWallet)) {
+            if (isReactionByCurrentUser(reaction)) {
               // Remove reaction
               isRemoving = true;
-              final newReactors = List<String>.from(reaction.reactors)
-                ..remove(currentWallet);
+              final newReactors = reaction.reactors
+                  .where((r) => !_isCurrentReactorIdentity(r))
+                  .toList();
               if (newReactors.isEmpty) {
                 newReactions.removeAt(existingReactionIndex);
               } else {
@@ -3233,7 +3261,7 @@ class ChatProvider extends ChangeNotifier {
             } else {
               // Add to existing reaction
               final newReactors = List<String>.from(reaction.reactors)
-                ..add(currentWallet);
+                ..add(reactorKey);
               newReactions[existingReactionIndex] = MessageReaction(
                 emoji: emoji,
                 count: newReactors.length,
@@ -3246,7 +3274,7 @@ class ChatProvider extends ChangeNotifier {
               MessageReaction(
                 emoji: emoji,
                 count: 1,
-                reactors: [currentWallet],
+                reactors: [reactorKey],
               ),
             );
           }
@@ -3274,9 +3302,36 @@ class ChatProvider extends ChangeNotifier {
             debugPrint('ChatProvider.toggleReaction failed: $e');
             // Ideally we would revert the optimistic update here
           }
+          if (generation != _sessionGeneration) return;
           break;
         }
       }
     }
   }
+
+  /// Stable identity this session reacts under. The account id is preferred;
+  /// the wallet is only the fallback for sessions without an account id.
+  String? _currentReactorKey() {
+    final accountId = _currentAccountId;
+    if (accountId != null && accountId.isNotEmpty) return accountId;
+    final wallet = (_currentWallet ?? '').trim();
+    return wallet.isEmpty ? null : wallet;
+  }
+
+  /// Whether a reactor entry belongs to the current session. The backend
+  /// stores reactions by wallet, so a wallet entry also counts as mine.
+  bool _isCurrentReactorIdentity(String reactor) {
+    final value = reactor.trim();
+    if (value.isEmpty) return false;
+    final accountId = _currentAccountId;
+    if (accountId != null && accountId.isNotEmpty && value == accountId) {
+      return true;
+    }
+    final wallet = (_currentWallet ?? '').trim();
+    return wallet.isNotEmpty && WalletUtils.equals(value, wallet);
+  }
+
+  /// Whether the current session has reacted with [reaction].
+  bool isReactionByCurrentUser(MessageReaction reaction) =>
+      reaction.reactors.any(_isCurrentReactorIdentity);
 }
