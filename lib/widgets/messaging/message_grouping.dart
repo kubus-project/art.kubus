@@ -58,3 +58,24 @@ BorderRadius messageBubbleRadius({
 /// Motion is skipped entirely when the platform asks for reduced motion.
 bool messagingReduceMotion(BuildContext context) =>
     MediaQuery.maybeOf(context)?.disableAnimations ?? false;
+
+/// Read receipts stay visible on the last own message the peer has read, so
+/// read state earlier in a run is not dropped. A boundary is an own message
+/// that the peer has read while the next newer message is not read by them.
+bool isReadReceiptBoundary({
+  required bool isMine,
+  required bool readByPeer,
+  required bool hasNewerMessage,
+  required bool newerReadByPeer,
+}) {
+  if (!isMine || !readByPeer) return false;
+  return !hasNewerMessage || !newerReadByPeer;
+}
+
+/// A new message animates its entrance only when motion is allowed. Reduced
+/// motion places the message immediately; it is never hidden.
+bool shouldAnimateMessageEntrance({
+  required bool isNew,
+  required bool reduceMotion,
+}) =>
+    isNew && !reduceMotion;

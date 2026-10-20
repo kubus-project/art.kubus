@@ -1,4 +1,3 @@
-import 'package:art_kubus/widgets/kubus_button.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../utils/design_tokens.dart';
@@ -29,6 +28,7 @@ import '../../services/push_notification_service.dart';
 import '../../widgets/avatar_widget.dart';
 import '../../widgets/inline_loading.dart';
 import '../../widgets/messaging/message_grouping.dart';
+import '../../widgets/messaging/messaging_composer.dart';
 import '../../utils/creator_display_format.dart';
 import '../../utils/wallet_utils.dart';
 import '../../utils/search_suggestions.dart';
@@ -1656,6 +1656,10 @@ class _ConversationScreenState extends State<ConversationScreen> {
             index == 0 || !messagesShareGroup(message, display[index - 1]);
         final groupStart = index == display.length - 1 ||
             !messagesShareGroup(display[index + 1], message);
+        // Receipts stay on the group end and on the last own message the peer
+        // has read, so read state earlier in a run is not silently dropped.
+        final showReceipt =
+            groupEnd || _isReadBoundary(display, index, presentation.isMine);
         final animationId = _messageAnimationId(message);
         final shouldAnimate = !_animatedMessageIds.contains(animationId);
         final visibilityKey =
@@ -1666,10 +1670,15 @@ class _ConversationScreenState extends State<ConversationScreen> {
             child: KeyedSubtree(
               key: visibilityKey,
               child: _buildMessageItem(message, presentation,
-                  groupStart: groupStart, groupEnd: groupEnd),
+                  groupStart: groupStart,
+                  groupEnd: groupEnd,
+                  showReceipt: showReceipt),
             ),
           ),
-          shouldAnimate && !messagingReduceMotion(context),
+          shouldAnimateMessageEntrance(
+            isNew: shouldAnimate,
+            reduceMotion: messagingReduceMotion(context),
+          ),
           messageId: animationId,
         );
         if (shouldAnimate) {
@@ -1677,6 +1686,22 @@ class _ConversationScreenState extends State<ConversationScreen> {
         }
         return built;
       },
+    );
+  }
+
+  /// True for an own message the peer has read while the next newer message
+  /// is not read by the peer, i.e. the boundary of read state in the thread.
+  /// [display] is newest-first.
+  bool _isReadBoundary(List<ChatMessage> display, int index, bool isMine) {
+    final message = display[index];
+    final hasNewer = index > 0;
+    final newer = hasNewer ? display[index - 1] : null;
+    return isReadReceiptBoundary(
+      isMine: isMine,
+      readByPeer: _hasReceivedRead(message.readers, message.senderWallet),
+      hasNewerMessage: hasNewer,
+      newerReadByPeer:
+          newer != null && _hasReceivedRead(newer.readers, newer.senderWallet),
     );
   }
 
@@ -1736,6 +1761,7 @@ class _ConversationScreenState extends State<ConversationScreen> {
     ResolvedMessagePresentation presentation, {
     required bool groupStart,
     required bool groupEnd,
+    required bool showReceipt,
   }) {
     final isMe = presentation.isMine;
     // Avatar and sender name belong to the first message of a group; the
@@ -1814,9 +1840,9 @@ class _ConversationScreenState extends State<ConversationScreen> {
                 ),
               ),
             _buildMessageContent(message, isMe),
-            if (groupEnd) ...[
+            if (showReceipt) ...[
               const SizedBox(height: KubusSpacing.xs),
-              _buildMessageMeta(message, isMe),
+              _buildMessageMeta(message, isMe, showTime: groupEnd),
             ],
           ],
         ),
@@ -1884,7 +1910,8 @@ class _ConversationScreenState extends State<ConversationScreen> {
     );
   }
 
-  Widget _buildMessageMeta(ChatMessage message, bool isMe) {
+  Widget _buildMessageMeta(ChatMessage message, bool isMe,
+      {required bool showTime}) {
     final accent =
         Provider.of<ThemeProvider>(context, listen: false).accentColor;
     final isRead = _hasReceivedRead(message.readers, message.senderWallet);
@@ -1892,14 +1919,15 @@ class _ConversationScreenState extends State<ConversationScreen> {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Text(
-          _formatTimeAgo(message.createdAt),
-          style: KubusTextStyles.navMetaLabel.copyWith(
-            fontSize: 10,
-            color: accent.withValues(alpha: 0.88),
-            fontWeight: FontWeight.w600,
+        if (showTime)
+          Text(
+            _formatTimeAgo(message.createdAt),
+            style: KubusTextStyles.navMetaLabel.copyWith(
+              fontSize: 10,
+              color: accent.withValues(alpha: 0.88),
+              fontWeight: FontWeight.w600,
+            ),
           ),
-        ),
         if (isMe) ...[
           const SizedBox(width: 4),
           Icon(
@@ -2284,68 +2312,17 @@ class _ConversationScreenState extends State<ConversationScreen> {
 
   Widget _buildMessageInput() {
     final l10n = AppLocalizations.of(context)!;
-    final roles = KubusColorRoles.of(context);
 
     return Column(
       children: [
         _buildReplyPreview(),
-        Container(
-          padding: const EdgeInsets.fromLTRB(
-            KubusSpacing.sm,
-            KubusSpacing.sm,
-            KubusSpacing.sm,
-            KubusSpacing.sm,
-          ),
-          decoration: BoxDecoration(
-            color: roles.surface,
-            border: Border(
-              top: BorderSide(color: roles.rule, width: KubusSizes.hairline),
-            ),
-          ),
-          child: SafeArea(
-            top: false,
-            child: Row(
-              children: [
-                IconButton(
-                  tooltip: l10n.messagesAttachTooltip,
-                  icon: const Icon(Icons.attach_file),
-                  color: roles.foregroundMuted,
-                  constraints:
-                      const BoxConstraints(minWidth: 48, minHeight: 48),
-                  onPressed: _attachAndSend,
-                ),
-                Expanded(
-                  child: TextField(
-                    controller: _controller,
-                    minLines: 1,
-                    maxLines: 5,
-                    textCapitalization: TextCapitalization.sentences,
-                    decoration: InputDecoration(
-                      labelText: l10n.messagesTypeMessageHint,
-                      floatingLabelBehavior: FloatingLabelBehavior.never,
-                      hintText: l10n.messagesTypeMessageHint,
-                      hintStyle: KubusTextStyles.sectionSubtitle.copyWith(
-                        color: Theme.of(context)
-                            .colorScheme
-                            .onSurface
-                            .withValues(alpha: 0.58),
-                      ),
-                      border: InputBorder.none,
-                    ),
-                    style: KubusTextStyles.detailBody.copyWith(
-                      color: Theme.of(context).colorScheme.onSurface,
-                    ),
-                    onSubmitted: (_) => _send(),
-                  ),
-                ),
-                KubusIconActionButton(
-                  tooltip: l10n.commonSend,
-                  onPressed: _send,
-                  icon: Icons.send_rounded,
-                ),
-              ],
-            ),
-          ),
+        MessagingComposer(
+          controller: _controller,
+          onSend: () => _send(),
+          onAttach: () => _attachAndSend(),
+          hintText: l10n.messagesTypeMessageHint,
+          sendTooltip: l10n.commonSend,
+          attachTooltip: l10n.messagesAttachTooltip,
         ),
       ],
     );
