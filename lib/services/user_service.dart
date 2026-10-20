@@ -4,6 +4,7 @@ import 'dart:convert';
 import '../config/config.dart';
 import '../models/achievement_progress.dart';
 import '../models/achievements.dart' as backend_achievements;
+import '../models/profile_identity_data.dart';
 import '../models/user.dart';
 import 'backend_api_service.dart';
 import 'profile_package_mutation_tracker.dart';
@@ -383,10 +384,7 @@ class UserService {
       // payloads normally resolve to the wallet before reaching this method.
       final profile = await BackendApiService().getProfileByWallet(userId);
 
-      final isArtist =
-          (profile['isArtist'] == true) || (profile['is_artist'] == true);
-      final isInstitution = (profile['isInstitution'] == true) ||
-          (profile['is_institution'] == true);
+      final profileRoles = ProfileIdentityRoles.fromProfileMap(profile);
       final resolvedWallet = WalletUtils.canonical(
         (profile['targetWallet'] ??
                 profile['target_wallet'] ??
@@ -533,9 +531,9 @@ class UserService {
         followingCount: followingFromProfile,
         postsCount: postsFromProfile,
         isFollowing: isFollowing,
-        isVerified: profile['isVerified'] ?? false,
-        isArtist: isArtist,
-        isInstitution: isInstitution,
+        isVerified: profileRoles.isVerified,
+        isArtist: profileRoles.isArtist,
+        isInstitution: profileRoles.isInstitution,
         showAchievements: _extractShowAchievements(profile),
         fieldOfWork: fieldOfWork,
         yearsActive: yearsActive,
@@ -865,6 +863,7 @@ class UserService {
           if (!v.containsKey('coverImageUrl')) {
             _legacyCacheMissingCoverKey.add(k);
           }
+          final cachedRoles = ProfileIdentityRoles.fromProfileMap(v);
           final user = User(
             id: v['id']?.toString() ?? k,
             name: v['name']?.toString() ?? 'Unknown artist',
@@ -881,9 +880,9 @@ class UserService {
                 ? v['postsCount'] as int
                 : int.tryParse((v['postsCount'] ?? '0').toString()) ?? 0,
             isFollowing: (v['isFollowing'] == true),
-            isVerified: (v['isVerified'] == true),
-            isArtist: (v['isArtist'] == true),
-            isInstitution: (v['isInstitution'] == true),
+            isVerified: cachedRoles.isVerified,
+            isArtist: cachedRoles.isArtist,
+            isInstitution: cachedRoles.isInstitution,
             showAchievements: v['showAchievements'] is bool
                 ? v['showAchievements'] as bool
                 : true,
@@ -1049,10 +1048,7 @@ class UserService {
           (profile['username'] ?? lookup).toString().replaceAll('@', '');
       final avatarCandidate =
           profile['avatar'] ?? profile['avatar_url'] ?? profile['avatarUrl'];
-      final isArtist =
-          profile['isArtist'] == true || profile['is_artist'] == true;
-      final isInstitution =
-          profile['isInstitution'] == true || profile['is_institution'] == true;
+      final profileRoles = ProfileIdentityRoles.fromProfileMap(profile);
 
       UserAchievementSummaryPayload achievementSummary =
           const UserAchievementSummaryPayload();
@@ -1085,9 +1081,9 @@ class UserService {
         followingCount: following,
         postsCount: 0,
         isFollowing: await _fetchAuthoritativeFollowState(wallet),
-        isVerified: profile['isVerified'] == true,
-        isArtist: isArtist,
-        isInstitution: isInstitution,
+        isVerified: profileRoles.isVerified,
+        isArtist: profileRoles.isArtist,
+        isInstitution: profileRoles.isInstitution,
         showAchievements: _extractShowAchievements(profile),
         joinedDate: joinedDate,
         achievementProgress: achievementSummary.progress,
@@ -1842,11 +1838,11 @@ class UserService {
                 postsCount: 0,
                 isFollowing:
                     profileIsFollowing || followingSet.contains(wallet),
-                isVerified: profile['isVerified'] ?? false,
-                isArtist:
-                    profile['isArtist'] == true || profile['is_artist'] == true,
-                isInstitution: profile['isInstitution'] == true ||
-                    profile['is_institution'] == true,
+                isVerified:
+                    ProfileIdentityRoles.fromProfileMap(profile).isVerified,
+                isArtist: ProfileIdentityRoles.fromProfileMap(profile).isArtist,
+                isInstitution:
+                    ProfileIdentityRoles.fromProfileMap(profile).isInstitution,
                 showAchievements: _extractShowAchievements(profile),
                 joinedDate: profile['createdAt'] != null
                     ? 'Joined ${DateTime.parse(profile['createdAt']).month}/${DateTime.parse(profile['createdAt']).year}'
@@ -2034,11 +2030,11 @@ class UserService {
               followingCount: followingCount,
               postsCount: 0,
               isFollowing: profileIsFollowing || followingSet.contains(wallet),
-              isVerified: profile['isVerified'] ?? false,
-              isArtist:
-                  profile['isArtist'] == true || profile['is_artist'] == true,
-              isInstitution: profile['isInstitution'] == true ||
-                  profile['is_institution'] == true,
+              isVerified:
+                  ProfileIdentityRoles.fromProfileMap(profile).isVerified,
+              isArtist: ProfileIdentityRoles.fromProfileMap(profile).isArtist,
+              isInstitution:
+                  ProfileIdentityRoles.fromProfileMap(profile).isInstitution,
               showAchievements: _extractShowAchievements(profile),
               joinedDate: profile['createdAt'] != null
                   ? 'Joined ${DateTime.parse(profile['createdAt']).month}/${DateTime.parse(profile['createdAt']).year}'

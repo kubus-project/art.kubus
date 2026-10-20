@@ -307,6 +307,9 @@ class SearchService {
             'authorWallet': authorWallet,
             'authorUsername': authorUsername,
             'wallet': authorWallet,
+            if (post.authorIdentityData.isArtist) 'isArtist': true,
+            if (post.authorIdentityData.isInstitution) 'isInstitution': true,
+            if (post.authorIdentityData.isVerified) 'isVerified': true,
             if (post.authorAvatar != null &&
                 post.authorAvatar!.trim().isNotEmpty)
               'avatarUrl': post.authorAvatar!.trim(),
@@ -615,6 +618,9 @@ class SearchService {
           'avatarUrl': post.authorAvatar!.trim(),
         if ((post.authorWallet ?? '').trim().isNotEmpty)
           'wallet': post.authorWallet!.trim(),
+        if (post.authorIdentityData.isArtist) 'authorIsArtist': true,
+        if (post.authorIdentityData.isInstitution) 'authorIsInstitution': true,
+        if (post.authorIdentityData.isVerified) 'authorIsVerified': true,
         if (post.mediaUrls.isNotEmpty) 'imageUrls': post.mediaUrls,
       },
     );

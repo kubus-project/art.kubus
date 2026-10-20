@@ -39,7 +39,7 @@ import '../widgets/detail/shared_settings_widgets.dart';
 import 'onboarding/onboarding_flow_screen.dart';
 import 'web3/wallet/connectwallet_screen.dart';
 import 'community/profile_edit_screen.dart';
-import '../widgets/avatar_widget.dart';
+import '../widgets/identity/kubus_identity_avatar.dart';
 import '../widgets/empty_state_card.dart';
 import 'support_center_screen.dart';
 import 'web3/wallet/wallet_backup_protection_screen.dart';

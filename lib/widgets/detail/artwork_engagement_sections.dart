@@ -15,7 +15,7 @@ import '../../services/backend_api_service.dart';
 import '../../services/contextual_auth_gate.dart';
 import '../../utils/design_tokens.dart';
 import '../../utils/wallet_utils.dart';
-import '../avatar_widget.dart';
+import '../identity/kubus_identity_avatar.dart';
 import '../collaboration_panel.dart';
 import '../glass_components.dart';
 import '../inline_loading.dart';
@@ -689,7 +689,7 @@ class _ArtworkCommentsExpandableCardState
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            AvatarWidget(
+            KubusIdentityAvatar(
               avatarUrl: comment.userAvatarUrl,
               wallet: comment.userId,
               radius: isReply ? 14 : 18,

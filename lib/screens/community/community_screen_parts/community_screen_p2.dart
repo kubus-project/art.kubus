@@ -223,11 +223,6 @@ extension _CommunityScreenStatePart2 on _CommunityScreenState {
           ListTile(
             title: ProfileIdentitySummary(
               identity: post.authorIdentityData,
-              titleSuffix: CommunityAuthorRoleBadges(
-                post: post,
-                iconOnly: true,
-                spacing: 0,
-              ),
               avatarRadius: 22,
               allowFabricatedFallback: true,
               fetchMissingAvatar: false,

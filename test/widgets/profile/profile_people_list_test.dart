@@ -8,14 +8,21 @@ const _ana = ProfilePersonEntry(
   wallet: 'AnaWallet1111111111111111111111111111111111',
   primary: 'Ana Kovač',
   secondary: '@ana_kovac',
-  role: ProfilePersonRole.artist,
+  isArtist: true,
   isVerified: true,
 );
 const _gallery = ProfilePersonEntry(
   wallet: 'GalleryWallet22222222222222222222222222222',
   primary: 'Galerija Vžigalica',
   secondary: '@vzigalica',
-  role: ProfilePersonRole.institution,
+  isInstitution: true,
+);
+const _both = ProfilePersonEntry(
+  wallet: 'BothWallet44444444444444444444444444444444444',
+  primary: 'Atelier Rok',
+  secondary: '@atelier',
+  isArtist: true,
+  isInstitution: true,
 );
 const _unknown = ProfilePersonEntry(
   wallet: 'PlainWallet333333333333333333333333333333333',
@@ -138,11 +145,36 @@ void main() {
 
   testWidgets('role context only when known; no wallet data or stats',
       (tester) async {
+    final semantics = tester.ensureSemantics();
     await _pump(tester, entries: const [_ana, _gallery, _unknown]);
-    expect(find.textContaining('ARTIST'), findsOneWidget);
-    expect(find.textContaining('INSTITUTION'), findsOneWidget);
+    // Roles are marks on the avatar (two known roles, none for the unknown
+    // account) with a spoken label, not extra text in the row.
+    expect(find.byKey(const ValueKey<String>('profile-avatar-role-badge')),
+        findsNWidgets(2));
+    expect(find.bySemanticsLabel(RegExp('Artist', caseSensitive: false)),
+        findsOneWidget);
+    expect(find.bySemanticsLabel(RegExp('Institution', caseSensitive: false)),
+        findsOneWidget);
+    expect(find.textContaining('ARTIST'), findsNothing);
+    expect(find.textContaining('INSTITUTION'), findsNothing);
     expect(find.textContaining('KUB8'), findsNothing);
     expect(find.textContaining('SOL'), findsNothing);
+    semantics.dispose();
+  });
+
+  testWidgets('a dual-role person shows both marks in one spoken label',
+      (tester) async {
+    final semantics = tester.ensureSemantics();
+    await _pump(tester, entries: const [_both]);
+    expect(find.byKey(const ValueKey<String>('profile-avatar-role-badge')),
+        findsOneWidget);
+    expect(find.byIcon(Icons.brush_rounded), findsOneWidget);
+    expect(find.byIcon(Icons.account_balance_rounded), findsOneWidget);
+    expect(
+        find.bySemanticsLabel(
+            RegExp('Artist.*Institution', caseSensitive: false)),
+        findsOneWidget);
+    semantics.dispose();
   });
 
   testWidgets('empty, loading and error states use the shared patterns',

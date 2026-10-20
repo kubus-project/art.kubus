@@ -90,15 +90,23 @@ class CommunityPost {
     this.feedPin = CommunityFeedPinMetadata.none,
     this.hybridScore,
     this.achievementResult,
-  }) : authorIdentityData = authorIdentityData ??
-            _legacyAuthorIdentity(
-              fallbackLabel: 'Unknown author',
-              authorId: authorId,
-              authorWallet: authorWallet,
-              authorName: authorName,
-              authorAvatar: authorAvatar,
-              authorUsername: authorUsername,
-            );
+  }) : authorIdentityData = (authorIdentityData ??
+                _legacyAuthorIdentity(
+                  fallbackLabel: 'Unknown author',
+                  authorId: authorId,
+                  authorWallet: authorWallet,
+                  authorName: authorName,
+                  authorAvatar: authorAvatar,
+                  authorUsername: authorUsername,
+                ))
+            // The post's role flags state the author's roles beside whatever
+            // the author object stated; the shared avatar badge reads them
+            // from here. Flags only add marks, they never remove one.
+            .copyWith(
+          isArtist: authorIsArtist || (authorIdentityData?.isArtist ?? false),
+          isInstitution: authorIsInstitution ||
+              (authorIdentityData?.isInstitution ?? false),
+        );
 
   String get authorId =>
       authorIdentityData.userId ?? authorIdentityData.walletSeed;
@@ -342,7 +350,11 @@ class CommunityLikeUser {
     this.username,
     this.avatarUrl,
     this.likedAt,
+    this.roles = ProfileIdentityRoles.none,
   });
+
+  /// What the likes payload states about this account; empty when it is silent.
+  final ProfileIdentityRoles roles;
 
   ProfileIdentityData get profileIdentityData {
     final normalizedUserId =
@@ -354,6 +366,7 @@ class CommunityLikeUser {
       userId: normalizedUserId,
       wallet: walletAddress ?? normalizedUserId,
       avatarUrl: avatarUrl,
+      roles: roles,
     );
   }
 }

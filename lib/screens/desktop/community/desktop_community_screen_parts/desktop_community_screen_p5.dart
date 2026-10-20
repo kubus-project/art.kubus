@@ -1341,9 +1341,11 @@ extension _DesktopCommunityScreenStatePart5 on _DesktopCommunityScreenState {
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      AvatarWidget(
+                      KubusIdentityAvatar(
                         avatarUrl: user?.avatar,
                         wallet: user?.walletAddress ?? '',
+                        isArtist: user?.isArtist ?? false,
+                        isInstitution: user?.isInstitution ?? false,
                         radius: 24,
                         allowFabricatedFallback: true,
                       ),

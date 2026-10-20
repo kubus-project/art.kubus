@@ -13,7 +13,6 @@ import '../../utils/kubus_color_roles.dart';
 import '../../utils/media_url_resolver.dart';
 import '../../utils/profile_identity_navigation.dart';
 import '../profile_identity_summary.dart';
-import 'community_author_role_badges.dart';
 import 'community_post_caption.dart';
 import 'community_post_token_chip.dart';
 import 'community_post_media_carousel.dart';
@@ -132,14 +131,6 @@ class CommunityPostCard extends StatelessWidget {
                               ? KubusChromeMetrics.navMetaLabel
                               : KubusHeaderMetrics.screenSubtitle,
                           color: scheme.onSurface.withValues(alpha: 0.6),
-                        ),
-                        titleSuffix: CommunityAuthorRoleBadges(
-                          post: post,
-                          fontSize: isSmallScreen ? 8.5 : 9.5,
-                          iconOnly: true,
-                          // ProfileIdentitySummary already inserts a
-                          // small gap between the title and suffix.
-                          spacing: 0,
                         ),
                       ),
                     ),

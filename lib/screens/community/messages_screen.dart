@@ -15,6 +15,7 @@ import '../../models/user.dart';
 import '../../models/conversation.dart';
 import '../../core/conversation_navigator.dart';
 import '../../widgets/avatar_widget.dart';
+import '../../widgets/identity/kubus_identity_avatar.dart';
 import '../../widgets/inline_loading.dart';
 import '../../widgets/empty_state_card.dart';
 import '../../widgets/user_activity_status_line.dart';
@@ -748,7 +749,7 @@ class _MessagesScreenState extends State<MessagesScreen> {
                       // with the other participant's wallet so AvatarWidget can fetch
                       // the authoritative profile. Fall back to conversation id when
                       // unknown (group avatars or server-provided URLs).
-                      leading = AvatarWidget(
+                      leading = KubusIdentityAvatar(
                           avatarUrl: avatar,
                           wallet: widgetWallet,
                           radius: 20,
@@ -804,7 +805,7 @@ class _MessagesScreenState extends State<MessagesScreen> {
                             UserService.getCachedUser(otherWallet) == null &&
                             (_conversationAvatars[c.id] == null ||
                                 _conversationAvatars[c.id]!.isEmpty));
-                        leading = AvatarWidget(
+                        leading = KubusIdentityAvatar(
                             avatarUrl: sanitizedFallback,
                             wallet: otherWallet,
                             radius: 20,
@@ -1364,7 +1365,7 @@ class _CreateConversationDialogState extends State<_CreateConversationDialog> {
                       subtitle: Text(walletAddr.isNotEmpty
                           ? walletAddr
                           : (username ?? '')),
-                      leading: AvatarWidget(
+                      leading: KubusIdentityAvatar(
                           avatarUrl: effectiveAvatar,
                           wallet: (walletAddr.isNotEmpty
                                   ? walletAddr
