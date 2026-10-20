@@ -121,7 +121,6 @@ class DAOProvider extends ChangeNotifier {
 
       final txJson = await api.getDAOTransactions();
       _transactions = txJson.map((e) => DAOTransaction.fromJson(e)).toList();
-      await _refreshOnChainTreasuryBalance();
 
       try {
         _canModerateReviews = await api.getDAOReviewModerationAuthority();
@@ -150,6 +149,32 @@ class DAOProvider extends ChangeNotifier {
       _canModerateReviews = false;
       _treasuryOnChainBalance = null;
     }
+  }
+
+  Future<void>? _treasuryLoad;
+  DateTime? _treasuryLoadedAt;
+  static const Duration _treasuryMaxAge = Duration(minutes: 5);
+
+  /// Reads the on-chain treasury balance for governance surfaces only.
+  ///
+  /// This is a Solana RPC, so it is deliberately not part of the shared DAO
+  /// load: guests and walletless accounts must not trigger it just by opening
+  /// the map. Concurrent callers share one in-flight read, and a fresh result
+  /// is reused for [_treasuryMaxAge].
+  Future<void> ensureTreasuryOnChainBalance() {
+    final loadedAt = _treasuryLoadedAt;
+    if (loadedAt != null &&
+        DateTime.now().difference(loadedAt) < _treasuryMaxAge) {
+      return Future<void>.value();
+    }
+    final inFlight = _treasuryLoad;
+    if (inFlight != null) return inFlight;
+    final load = _refreshOnChainTreasuryBalance().whenComplete(() {
+      _treasuryLoadedAt = DateTime.now();
+      _treasuryLoad = null;
+    });
+    _treasuryLoad = load;
+    return load;
   }
 
   /// Public refresh hook so UI flows can ensure delegates/groups are present.
