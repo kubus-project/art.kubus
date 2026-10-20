@@ -8,6 +8,7 @@ import '../config/config.dart';
 import '../community/community_interactions.dart';
 import '../models/achievement_progress.dart' as legacy;
 import '../models/achievements.dart' as backend;
+import '../models/profile_artworks_page.dart';
 import '../models/profile_package.dart';
 import '../models/user.dart';
 import '../utils/profile_showcase_normalizer.dart';
@@ -30,11 +31,34 @@ enum ProfilePackageCacheStatus {
 /// data. Extended packages contain posts and showcase data. UI/provider write
 /// paths should use ProfilePackageMutationTracker instead of calling cache
 /// invalidation or patch methods here directly.
+/// Authored and documented artwork sections of a creator profile.
+@immutable
+class ProfileArtworkSections {
+  const ProfileArtworkSections({
+    this.authored = const <Map<String, dynamic>>[],
+    this.documented = const <Map<String, dynamic>>[],
+    this.authoredTotal,
+    this.documentedTotal,
+  });
+
+  /// Artworks the profile authored; credited to this wallet.
+  final List<Map<String, dynamic>> authored;
+
+  /// Artworks this profile documented on the map; credited to their own artists.
+  final List<Map<String, dynamic>> documented;
+
+  /// Full authored total, or null when the backend did not honour the scope.
+  final int? authoredTotal;
+
+  /// Full documented total, or null when the backend did not honour the scope.
+  final int? documentedTotal;
+}
+
 class ProfilePackageService {
   ProfilePackageService._();
 
   static const Duration cacheTtl = Duration(minutes: 5);
-  static const String _criticalCachePrefsKey = 'profile_critical_cache_v2';
+  static const String _criticalCachePrefsKey = 'profile_critical_cache_v3';
   static const int _maxPersistedPackages = 80;
 
   static final Map<String, ProfileCriticalPackage> _criticalCache =
@@ -561,6 +585,9 @@ class ProfilePackageService {
     return ProfileExtendedPackage(
       initialPosts: results[0] as List<CommunityPost>?,
       artistArtworks: showcase.artworks,
+      documentedArtworks: showcase.documentedArtworks,
+      authoredArtworksTotal: showcase.authoredArtworksTotal,
+      documentedArtworksTotal: showcase.documentedArtworksTotal,
       artistCollections: showcase.collections,
       artistEvents: showcase.events,
       fetchedAt: DateTime.now(),
@@ -568,23 +595,39 @@ class ProfilePackageService {
   }
 
   static Future<Map<String, int>> _loadPublicStats(String walletAddress) async {
+    // Two requests: a backend without the authorship contract rejects the
+    // authorship metrics with 400, which must not cost the base counters.
+    final results = await Future.wait(<Future<Map<String, int>>>[
+      _loadPublicStatsFor(walletAddress, const <String>[
+        'posts',
+        'followers',
+        'following',
+        'publicStreetArtAdded',
+      ]),
+      _loadPublicStatsFor(walletAddress, const <String>[
+        'authoredArtworks',
+        'documentedArtworks',
+      ]),
+    ]);
+    return <String, int>{...results[0], ...results[1]};
+  }
+
+  static Future<Map<String, int>> _loadPublicStatsFor(
+    String walletAddress,
+    List<String> metrics,
+  ) async {
     try {
       final snapshot = await StatsApiService().fetchSnapshot(
         entityType: 'user',
         entityId: walletAddress,
-        metrics: const <String>[
-          'posts',
-          'followers',
-          'following',
-          'publicStreetArtAdded',
-        ],
+        metrics: metrics,
         scope: 'public',
         forceRefresh: true,
       );
       return Map<String, int>.from(snapshot.counters);
     } catch (e) {
       if (kDebugMode) {
-        debugPrint('ProfilePackageService._loadPublicStats: $e');
+        debugPrint('ProfilePackageService._loadPublicStats($metrics): $e');
       }
       return const <String, int>{};
     }
@@ -606,6 +649,51 @@ class ProfilePackageService {
     }
   }
 
+  /// Authored and documented artwork sections of a profile. Older backends
+  /// ignore `relationship` and answer with the legacy mixed list; that list is
+  /// kept as authored and documented stays empty so nothing is double-counted.
+  static Future<ProfileArtworkSections> loadProfileArtworkSections(
+    String walletAddress, {
+    int limit = 6,
+  }) async {
+    final api = BackendApiService();
+    final authoredFuture = api.getProfileArtworks(
+      walletAddress,
+      relationship: 'authored',
+      limit: limit,
+    );
+    // A documented-scope failure must not hide the authored showcase.
+    final documentedFuture = api
+        .getProfileArtworks(
+          walletAddress,
+          relationship: 'documented',
+          limit: limit,
+        )
+        .then<ProfileArtworksPage?>(
+          (page) => page,
+          onError: (_) => null,
+        );
+
+    final authored = await authoredFuture;
+    final documented = await documentedFuture;
+    final scopeHonoured = authored.relationshipHonoured;
+    final documentedHonoured =
+        scopeHonoured && documented != null && documented.relationshipHonoured;
+
+    return ProfileArtworkSections(
+      authored: authored.items
+          .map((item) => Map<String, dynamic>.from(item))
+          .toList(growable: false),
+      documented: documentedHonoured
+          ? documented.items
+              .map((item) => Map<String, dynamic>.from(item))
+              .toList(growable: false)
+          : const <Map<String, dynamic>>[],
+      authoredTotal: scopeHonoured ? authored.total : null,
+      documentedTotal: documentedHonoured ? documented.total : null,
+    );
+  }
+
   static Future<_ProfileShowcasePayload> _loadShowcase(
     User user,
     String walletAddress,
@@ -615,16 +703,17 @@ class ProfilePackageService {
 
     try {
       final api = BackendApiService();
-      final artworksFuture = api.getArtistArtworks(walletAddress, limit: 6);
       final collectionsFuture =
           api.getCollections(walletAddress: walletAddress, limit: 6);
       final eventsFuture = api.listEvents(limit: 100);
 
       final results = await Future.wait<dynamic>([
-        artworksFuture,
+        loadProfileArtworkSections(walletAddress, limit: 6),
         collectionsFuture,
         eventsFuture,
       ]);
+
+      final sections = results[0] as ProfileArtworkSections;
 
       final events = (results[2] as List<Map<String, dynamic>>)
           .where((event) => profileEventBelongsToWallet(event, walletAddress))
@@ -633,9 +722,10 @@ class ProfilePackageService {
           .toList(growable: false);
 
       return _ProfileShowcasePayload(
-        artworks: (results[0] as List<Map<String, dynamic>>)
-            .map((item) => Map<String, dynamic>.from(item))
-            .toList(growable: false),
+        artworks: sections.authored,
+        documentedArtworks: sections.documented,
+        authoredArtworksTotal: sections.authoredTotal,
+        documentedArtworksTotal: sections.documentedTotal,
         collections: (results[1] as List<Map<String, dynamic>>)
             .map((item) => Map<String, dynamic>.from(item))
             .toList(growable: false),
@@ -816,11 +906,17 @@ class _ProfileLookup {
 class _ProfileShowcasePayload {
   const _ProfileShowcasePayload({
     this.artworks = const <Map<String, dynamic>>[],
+    this.documentedArtworks = const <Map<String, dynamic>>[],
+    this.authoredArtworksTotal,
+    this.documentedArtworksTotal,
     this.collections = const <Map<String, dynamic>>[],
     this.events = const <Map<String, dynamic>>[],
   });
 
   final List<Map<String, dynamic>> artworks;
+  final List<Map<String, dynamic>> documentedArtworks;
+  final int? authoredArtworksTotal;
+  final int? documentedArtworksTotal;
   final List<Map<String, dynamic>> collections;
   final List<Map<String, dynamic>> events;
 }

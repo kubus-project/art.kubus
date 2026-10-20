@@ -17,6 +17,7 @@ import '../../../providers/artwork_provider.dart';
 import '../../../providers/stats_provider.dart';
 import '../../../providers/community_interactions_provider.dart';
 import '../../../services/backend_api_service.dart';
+import '../../../services/profile_package_service.dart';
 import '../../../services/share/share_service.dart';
 import '../../../services/share/share_types.dart';
 import '../../../utils/artwork_navigation.dart';
@@ -81,6 +82,7 @@ class _ProfileScreenState extends State<ProfileScreen>
   bool _artistDataLoading = false;
   bool _artistDataLoaded = false;
   List<Map<String, dynamic>> _artistArtworks = [];
+  List<Map<String, dynamic>> _artistDocumentedArtworks = [];
   List<Map<String, dynamic>> _artistCollections = [];
   List<Map<String, dynamic>> _artistEvents = [];
   bool _showActivityStatus = true;
@@ -280,6 +282,10 @@ class _ProfileScreenState extends State<ProfileScreen>
         return [
           if (isArtist) ...[
             _buildArtistPortfolioSection(themeProvider),
+            if (_artistDocumentedArtworks.isNotEmpty) ...[
+              gap,
+              _buildArtistDocumentedSection(),
+            ],
             gap,
             _buildArtistCollectionsSection(themeProvider),
             gap,
@@ -925,6 +931,31 @@ class _ProfileScreenState extends State<ProfileScreen>
     );
   }
 
+  Widget _buildArtistDocumentedSection() {
+    final l10n = AppLocalizations.of(context)!;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        DesktopSectionHeader(
+          title: l10n.profilePublicArtAddedTitle,
+          subtitle: l10n.profilePublicArtAddedSubtitle,
+        ),
+        const SizedBox(height: DetailSpacing.md),
+        SizedBox(
+          height: 300,
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            itemCount: _artistDocumentedArtworks.length,
+            separatorBuilder: (_, __) =>
+                const SizedBox(width: DetailSpacing.lg),
+            itemBuilder: (context, index) =>
+                _buildArtworkShowcaseCard(_artistDocumentedArtworks[index]),
+          ),
+        ),
+      ],
+    );
+  }
+
   Widget _buildArtistCollectionsSection(ThemeProvider themeProvider) {
     final l10n = AppLocalizations.of(context)!;
     return Column(
@@ -1203,6 +1234,13 @@ class _ProfileScreenState extends State<ProfileScreen>
           'publicStreetArtAdded'
         ];
         const privateMetrics = <String>['artworksDiscovered'];
+        // Requested on their own: a backend without the authorship
+        // contract rejects unknown metrics, which must not cost the
+        // other counters.
+        const authorshipMetrics = <String>[
+          'authoredArtworks',
+          'documentedArtworks',
+        ];
 
         if (wallet.isNotEmpty) {
           statsProvider.ensureSnapshot(
@@ -1216,6 +1254,12 @@ class _ProfileScreenState extends State<ProfileScreen>
             entityId: wallet,
             metrics: privateMetrics,
             scope: 'private',
+          );
+          statsProvider.ensureSnapshot(
+            entityType: 'user',
+            entityId: wallet,
+            metrics: authorshipMetrics,
+            scope: 'public',
           );
         }
 
@@ -1240,6 +1284,24 @@ class _ProfileScreenState extends State<ProfileScreen>
             publicSnapshot?.counters ?? const <String, int>{};
         final privateCounters =
             privateSnapshot?.counters ?? const <String, int>{};
+        final authorshipSnapshot = wallet.isEmpty
+            ? null
+            : statsProvider.getSnapshot(
+                entityType: 'user',
+                entityId: wallet,
+                metrics: authorshipMetrics,
+                scope: 'public',
+              );
+        final authorshipCounters =
+            authorshipSnapshot?.counters ?? const <String, int>{};
+        final authorshipLoading = wallet.isNotEmpty &&
+            statsProvider.isSnapshotLoading(
+              entityType: 'user',
+              entityId: wallet,
+              metrics: authorshipMetrics,
+              scope: 'public',
+            ) &&
+            authorshipSnapshot == null;
 
         final publicLoading = wallet.isNotEmpty &&
             statsProvider.isSnapshotLoading(
@@ -1260,18 +1322,20 @@ class _ProfileScreenState extends State<ProfileScreen>
 
         final discoveriesValue =
             privateCounters['artworksDiscovered'] ?? stats?.artworksDiscovered;
-        final createdValue =
-            publicCounters['artworks'] ?? stats?.artworksCreated;
+        final createdValue = authorshipCounters['authoredArtworks'] ??
+            publicCounters['artworks'] ??
+            stats?.artworksCreated;
         final nftsOwnedValue = publicCounters['nftsMinted'] ?? stats?.nftsOwned;
         final publicStreetArtAddedValue =
-            publicCounters['publicStreetArtAdded'];
+            authorshipCounters['documentedArtworks'] ??
+                publicCounters['publicStreetArtAdded'];
 
         final discoveriesLabel = privateLoading
             ? '\u2026'
             : discoveriesValue == null
                 ? '\u2014'
                 : _formatStatCount(discoveriesValue);
-        final createdLabel = publicLoading
+        final createdLabel = publicLoading || authorshipLoading
             ? '\u2026'
             : createdValue == null
                 ? '\u2014'
@@ -1281,7 +1345,7 @@ class _ProfileScreenState extends State<ProfileScreen>
             : nftsOwnedValue == null
                 ? '\u2014'
                 : _formatStatCount(nftsOwnedValue);
-        final publicStreetArtAddedLabel = publicLoading
+        final publicStreetArtAddedLabel = publicLoading || authorshipLoading
             ? '\u2026'
             : publicStreetArtAddedValue == null
                 ? '\u2014'
@@ -1675,7 +1739,10 @@ class _ProfileScreenState extends State<ProfileScreen>
 
     try {
       final api = BackendApiService();
-      final artworks = await api.getArtistArtworks(walletAddress, limit: 6);
+      final sections = await ProfilePackageService.loadProfileArtworkSections(
+        walletAddress,
+        limit: 6,
+      );
       final collections =
           await api.getCollections(walletAddress: walletAddress, limit: 6);
       final eventsResponse = await api.listEvents(limit: 100);
@@ -1687,7 +1754,8 @@ class _ProfileScreenState extends State<ProfileScreen>
 
       if (!mounted) return;
       setState(() {
-        _artistArtworks = artworks;
+        _artistArtworks = sections.authored;
+        _artistDocumentedArtworks = sections.documented;
         _artistCollections = collections;
         _artistEvents = filteredEvents;
         _artistDataLoaded = true;

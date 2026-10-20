@@ -37,7 +37,12 @@ class ProfileArtworkShowcaseData {
       data['name'],
       fallbackTitle,
     ]);
+    // A documented record is someone else's work: credit its recorded artist.
+    final documentedArtist = data['relationship'] == 'documented'
+        ? data['artistName']?.toString().trim()
+        : null;
     final subtitle = _firstNonEmpty([
+      documentedArtist,
       parsed?.category,
       data['category'],
       data['medium'],

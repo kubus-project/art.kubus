@@ -110,6 +110,9 @@ class _UserProfileScreenState extends State<UserProfileScreen>
   bool _isFollowMutationInFlight = false;
   int _publicStreetArtAddedCount = 0;
   List<Map<String, dynamic>> _artistArtworks = [];
+  List<Map<String, dynamic>> _documentedArtworks = const [];
+  int? _authoredArtworksTotal;
+  int? _authoredArtworksCounter;
   List<Map<String, dynamic>> _artistCollections = [];
 
   String? _currentWalletAddress() {
@@ -211,8 +214,12 @@ class _UserProfileScreenState extends State<UserProfileScreen>
       _posts = _profileController.posts;
       _postsLoading = _profileController.postsLoading;
       _postsError = _profileController.postsError;
-      _publicStreetArtAddedCount = _profileController.publicStreetArtAddedCount;
+      _publicStreetArtAddedCount = _profileController.publicArtDocumentedCount;
       _artistArtworks = _profileController.artistArtworks;
+      _documentedArtworks = _profileController.documentedArtworks;
+      _authoredArtworksTotal = _profileController.authoredArtworksTotal;
+      _authoredArtworksCounter =
+          _profileController.package?.publicStats['authoredArtworks'];
       _artistCollections = _profileController.artistCollections;
       _artistDataLoaded = _profileController.artistDataLoaded;
       _artistDataLoading = _profileController.artistDataLoading;
@@ -426,6 +433,10 @@ class _UserProfileScreenState extends State<UserProfileScreen>
         return [
           if (isArtist) ...[
             _buildArtistPortfolioSection(themeProvider, l10n),
+            if (_documentedArtworks.isNotEmpty) ...[
+              const SizedBox(height: KubusSpacing.md),
+              _buildArtistDocumentedSection(l10n),
+            ],
             const SizedBox(height: KubusSpacing.md),
             _buildArtistCollectionsSection(themeProvider, l10n),
           ] else if (isInstitution)
@@ -1094,10 +1105,13 @@ class _UserProfileScreenState extends State<UserProfileScreen>
     final screenWidth = MediaQuery.of(context).size.width;
     final maxCols =
         isCommunityOverlay ? 2 : (screenWidth >= 1400 ? 4 : (isLarge ? 4 : 2));
-    final artworksCount = Provider.of<ArtworkProvider>(
+    final localArtworksCount = Provider.of<ArtworkProvider>(
       context,
       listen: true,
     ).artworksForWallet(user!.id).length;
+    final artworksCount = _authoredArtworksTotal ??
+        _authoredArtworksCounter ??
+        localArtworksCount;
 
     return DesktopGrid(
       minCrossAxisCount: 2,
@@ -1415,6 +1429,29 @@ class _UserProfileScreenState extends State<UserProfileScreen>
               ],
             ],
           ),
+      ],
+    );
+  }
+
+  Widget _buildArtistDocumentedSection(AppLocalizations l10n) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        DesktopSectionHeader(
+          title: l10n.profilePublicArtAddedTitle,
+          subtitle: l10n.profilePublicArtAddedSubtitle,
+        ),
+        const SizedBox(height: KubusSpacing.md),
+        SizedBox(
+          height: 280,
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            itemCount: _documentedArtworks.length,
+            separatorBuilder: (_, __) => const SizedBox(width: KubusSpacing.md),
+            itemBuilder: (context, index) =>
+                _buildArtworkShowcaseCard(_documentedArtworks[index], l10n),
+          ),
+        ),
       ],
     );
   }

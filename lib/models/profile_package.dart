@@ -109,13 +109,29 @@ class ProfileExtendedPackage {
   const ProfileExtendedPackage({
     this.initialPosts,
     this.artistArtworks = const <Map<String, dynamic>>[],
+    this.documentedArtworks = const <Map<String, dynamic>>[],
+    this.authoredArtworksTotal,
+    this.documentedArtworksTotal,
     this.artistCollections = const <Map<String, dynamic>>[],
     this.artistEvents = const <Map<String, dynamic>>[],
     required this.fetchedAt,
   });
 
   final List<CommunityPost>? initialPosts;
+
+  /// Artworks the profile authored (`relationship=authored`). On older
+  /// backends this holds the legacy mixed list instead.
   final List<Map<String, dynamic>> artistArtworks;
+
+  /// Artworks the profile documented (`relationship=documented`). Always empty
+  /// when the backend does not honour the relationship scope.
+  final List<Map<String, dynamic>> documentedArtworks;
+
+  /// Full authored total, or null when the backend did not honour the scope.
+  final int? authoredArtworksTotal;
+
+  /// Full documented total, or null when the backend did not honour the scope.
+  final int? documentedArtworksTotal;
   final List<Map<String, dynamic>> artistCollections;
   final List<Map<String, dynamic>> artistEvents;
   final DateTime fetchedAt;
@@ -125,6 +141,9 @@ class ProfileExtendedPackage {
   ProfileExtendedPackage copyWith({
     List<CommunityPost>? initialPosts,
     List<Map<String, dynamic>>? artistArtworks,
+    List<Map<String, dynamic>>? documentedArtworks,
+    int? authoredArtworksTotal,
+    int? documentedArtworksTotal,
     List<Map<String, dynamic>>? artistCollections,
     List<Map<String, dynamic>>? artistEvents,
     DateTime? fetchedAt,
@@ -132,6 +151,11 @@ class ProfileExtendedPackage {
     return ProfileExtendedPackage(
       initialPosts: initialPosts ?? this.initialPosts,
       artistArtworks: artistArtworks ?? this.artistArtworks,
+      documentedArtworks: documentedArtworks ?? this.documentedArtworks,
+      authoredArtworksTotal:
+          authoredArtworksTotal ?? this.authoredArtworksTotal,
+      documentedArtworksTotal:
+          documentedArtworksTotal ?? this.documentedArtworksTotal,
       artistCollections: artistCollections ?? this.artistCollections,
       artistEvents: artistEvents ?? this.artistEvents,
       fetchedAt: fetchedAt ?? this.fetchedAt,
@@ -141,6 +165,9 @@ class ProfileExtendedPackage {
   Map<String, dynamic> toJson() {
     return <String, dynamic>{
       'artistArtworks': artistArtworks,
+      'documentedArtworks': documentedArtworks,
+      'authoredArtworksTotal': authoredArtworksTotal,
+      'documentedArtworksTotal': documentedArtworksTotal,
       'artistCollections': artistCollections,
       'artistEvents': artistEvents,
       'fetchedAt': fetchedAt.toIso8601String(),
@@ -150,6 +177,14 @@ class ProfileExtendedPackage {
   factory ProfileExtendedPackage.fromJson(Map<String, dynamic> json) {
     return ProfileExtendedPackage(
       artistArtworks: _ProfilePackageJson.listOfMaps(json['artistArtworks']),
+      documentedArtworks:
+          _ProfilePackageJson.listOfMaps(json['documentedArtworks']),
+      authoredArtworksTotal: _ProfilePackageJson.nullableInt(
+        json['authoredArtworksTotal'],
+      ),
+      documentedArtworksTotal: _ProfilePackageJson.nullableInt(
+        json['documentedArtworksTotal'],
+      ),
       artistCollections:
           _ProfilePackageJson.listOfMaps(json['artistCollections']),
       artistEvents: _ProfilePackageJson.listOfMaps(json['artistEvents']),
@@ -218,6 +253,10 @@ class ProfilePackage {
   List<CommunityPost>? get initialPosts => extended?.initialPosts;
   List<Map<String, dynamic>> get artistArtworks =>
       extended?.artistArtworks ?? const <Map<String, dynamic>>[];
+  List<Map<String, dynamic>> get documentedArtworks =>
+      extended?.documentedArtworks ?? const <Map<String, dynamic>>[];
+  int? get authoredArtworksTotal => extended?.authoredArtworksTotal;
+  int? get documentedArtworksTotal => extended?.documentedArtworksTotal;
   List<Map<String, dynamic>> get artistCollections =>
       extended?.artistCollections ?? const <Map<String, dynamic>>[];
   List<Map<String, dynamic>> get artistEvents =>
@@ -238,6 +277,9 @@ class ProfilePackage {
     Map<String, int>? publicStats,
     List<CommunityPost>? initialPosts,
     List<Map<String, dynamic>>? artistArtworks,
+    List<Map<String, dynamic>>? documentedArtworks,
+    int? authoredArtworksTotal,
+    int? documentedArtworksTotal,
     List<Map<String, dynamic>>? artistCollections,
     List<Map<String, dynamic>>? artistEvents,
     DateTime? fetchedAt,
@@ -255,6 +297,9 @@ class ProfilePackage {
     );
     final hasExtendedPatch = initialPosts != null ||
         artistArtworks != null ||
+        documentedArtworks != null ||
+        authoredArtworksTotal != null ||
+        documentedArtworksTotal != null ||
         artistCollections != null ||
         artistEvents != null;
     final currentExtended = extended ?? this.extended;
@@ -266,6 +311,9 @@ class ProfilePackage {
             .copyWith(
             initialPosts: initialPosts,
             artistArtworks: artistArtworks,
+            documentedArtworks: documentedArtworks,
+            authoredArtworksTotal: authoredArtworksTotal,
+            documentedArtworksTotal: documentedArtworksTotal,
             artistCollections: artistCollections,
             artistEvents: artistEvents,
             fetchedAt: fetchedAt,
@@ -415,6 +463,13 @@ class _ProfilePackageJson {
   static Map<String, int> intMap(dynamic raw) {
     if (raw is! Map) return const <String, int>{};
     return raw.map((key, value) => MapEntry(key.toString(), intValue(value)));
+  }
+
+  static int? nullableInt(dynamic raw) {
+    if (raw == null) return null;
+    if (raw is int) return raw;
+    if (raw is num) return raw.toInt();
+    return int.tryParse(raw.toString());
   }
 
   static int intValue(dynamic raw) {
