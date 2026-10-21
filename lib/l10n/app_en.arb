@@ -7800,5 +7800,70 @@
   "contributionDocument": "Document public art",
   "contributionArtwork": "Add artwork",
   "contributionExhibition": "Add exhibition or event",
-  "contributionApplication": "View application status"
+  "contributionApplication": "View application status",
+  "arMarkerManagerTitle": "AR Marker",
+  "arMarkerManagerSubtitle": "Set up a printable marker so people can scan and unlock the AR experience.",
+  "arMarkerManagerOnlyPngToast": "Only PNG markers are supported.",
+  "arMarkerManagerSquareRequiredToast": "Marker must be square (width == height).",
+  "arMarkerManagerTooSmallToast": "Marker is too small. Minimum is {minPx}×{minPx}px.",
+  "@arMarkerManagerTooSmallToast": {
+    "placeholders": {
+      "minPx": {
+        "type": "int"
+      },
+      "maxPx": {
+        "type": "int"
+      }
+    }
+  },
+  "arMarkerManagerTooLargeToast": "Marker is too large. Maximum is {maxPx}×{maxPx}px.",
+  "@arMarkerManagerTooLargeToast": {
+    "placeholders": {
+      "minPx": {
+        "type": "int"
+      },
+      "maxPx": {
+        "type": "int"
+      }
+    }
+  },
+  "arMarkerManagerModeTitle": "Marker mode",
+  "arMarkerManagerAutoGenerateTitle": "Auto-generate",
+  "arMarkerManagerAutoGenerateSubtitle": "kubus generates a marker for this artwork.",
+  "arMarkerManagerUploadOwnTitle": "Upload my own",
+  "arMarkerManagerUploadOwnSubtitle": "Upload a square PNG marker ({minPx}–{maxPx}px).",
+  "@arMarkerManagerUploadOwnSubtitle": {
+    "placeholders": {
+      "minPx": {
+        "type": "int"
+      },
+      "maxPx": {
+        "type": "int"
+      }
+    }
+  },
+  "arMarkerManagerSizeLabel": "Marker size (px)",
+  "arMarkerManagerGenerateButton": "Generate",
+  "arMarkerManagerRegenerateButton": "Regenerate",
+  "arMarkerManagerRequirementsTitle": "Upload requirements",
+  "arMarkerManagerRequirementsBody": "PNG only • Square • {minPx}–{maxPx}px • High contrast • Leave a safe border for printing.",
+  "@arMarkerManagerRequirementsBody": {
+    "placeholders": {
+      "minPx": {
+        "type": "int"
+      },
+      "maxPx": {
+        "type": "int"
+      }
+    }
+  },
+  "arMarkerManagerSelectPngButton": "Select PNG",
+  "arMarkerManagerChangeFileButton": "Change file",
+  "arMarkerManagerUploadButton": "Upload marker",
+  "arMarkerManagerPreviewTitle": "Preview",
+  "arMarkerManagerDownloadButton": "Download marker",
+  "arMarkerManagerSavedToast": "AR setup saved.",
+  "promotionCheckoutOpenAppButton": "Open app",
+  "arCreateArtworkLocationMarkerTitle": "Create artwork location marker",
+  "mnemonicRevealCopyUnavailableToast": "Unable to copy the recovery phrase on this device."
 }

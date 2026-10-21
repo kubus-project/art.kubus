@@ -32132,6 +32132,156 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'View application status'**
   String get contributionApplication;
+
+  /// No description provided for @arMarkerManagerTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'AR Marker'**
+  String get arMarkerManagerTitle;
+
+  /// No description provided for @arMarkerManagerSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Set up a printable marker so people can scan and unlock the AR experience.'**
+  String get arMarkerManagerSubtitle;
+
+  /// No description provided for @arMarkerManagerOnlyPngToast.
+  ///
+  /// In en, this message translates to:
+  /// **'Only PNG markers are supported.'**
+  String get arMarkerManagerOnlyPngToast;
+
+  /// No description provided for @arMarkerManagerSquareRequiredToast.
+  ///
+  /// In en, this message translates to:
+  /// **'Marker must be square (width == height).'**
+  String get arMarkerManagerSquareRequiredToast;
+
+  /// No description provided for @arMarkerManagerTooSmallToast.
+  ///
+  /// In en, this message translates to:
+  /// **'Marker is too small. Minimum is {minPx}×{minPx}px.'**
+  String arMarkerManagerTooSmallToast(int minPx, int maxPx);
+
+  /// No description provided for @arMarkerManagerTooLargeToast.
+  ///
+  /// In en, this message translates to:
+  /// **'Marker is too large. Maximum is {maxPx}×{maxPx}px.'**
+  String arMarkerManagerTooLargeToast(int minPx, int maxPx);
+
+  /// No description provided for @arMarkerManagerModeTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Marker mode'**
+  String get arMarkerManagerModeTitle;
+
+  /// No description provided for @arMarkerManagerAutoGenerateTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Auto-generate'**
+  String get arMarkerManagerAutoGenerateTitle;
+
+  /// No description provided for @arMarkerManagerAutoGenerateSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'kubus generates a marker for this artwork.'**
+  String get arMarkerManagerAutoGenerateSubtitle;
+
+  /// No description provided for @arMarkerManagerUploadOwnTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Upload my own'**
+  String get arMarkerManagerUploadOwnTitle;
+
+  /// No description provided for @arMarkerManagerUploadOwnSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Upload a square PNG marker ({minPx}–{maxPx}px).'**
+  String arMarkerManagerUploadOwnSubtitle(int minPx, int maxPx);
+
+  /// No description provided for @arMarkerManagerSizeLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Marker size (px)'**
+  String get arMarkerManagerSizeLabel;
+
+  /// No description provided for @arMarkerManagerGenerateButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Generate'**
+  String get arMarkerManagerGenerateButton;
+
+  /// No description provided for @arMarkerManagerRegenerateButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Regenerate'**
+  String get arMarkerManagerRegenerateButton;
+
+  /// No description provided for @arMarkerManagerRequirementsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Upload requirements'**
+  String get arMarkerManagerRequirementsTitle;
+
+  /// No description provided for @arMarkerManagerRequirementsBody.
+  ///
+  /// In en, this message translates to:
+  /// **'PNG only • Square • {minPx}–{maxPx}px • High contrast • Leave a safe border for printing.'**
+  String arMarkerManagerRequirementsBody(int minPx, int maxPx);
+
+  /// No description provided for @arMarkerManagerSelectPngButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Select PNG'**
+  String get arMarkerManagerSelectPngButton;
+
+  /// No description provided for @arMarkerManagerChangeFileButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Change file'**
+  String get arMarkerManagerChangeFileButton;
+
+  /// No description provided for @arMarkerManagerUploadButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Upload marker'**
+  String get arMarkerManagerUploadButton;
+
+  /// No description provided for @arMarkerManagerPreviewTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Preview'**
+  String get arMarkerManagerPreviewTitle;
+
+  /// No description provided for @arMarkerManagerDownloadButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Download marker'**
+  String get arMarkerManagerDownloadButton;
+
+  /// No description provided for @arMarkerManagerSavedToast.
+  ///
+  /// In en, this message translates to:
+  /// **'AR setup saved.'**
+  String get arMarkerManagerSavedToast;
+
+  /// No description provided for @promotionCheckoutOpenAppButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Open app'**
+  String get promotionCheckoutOpenAppButton;
+
+  /// No description provided for @arCreateArtworkLocationMarkerTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Create artwork location marker'**
+  String get arCreateArtworkLocationMarkerTitle;
+
+  /// No description provided for @mnemonicRevealCopyUnavailableToast.
+  ///
+  /// In en, this message translates to:
+  /// **'Unable to copy the recovery phrase on this device.'**
+  String get mnemonicRevealCopyUnavailableToast;
 }
 
 class _AppLocalizationsDelegate

@@ -18723,4 +18723,92 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get contributionApplication => 'Preveri stanje prijave';
+
+  @override
+  String get arMarkerManagerTitle => 'AR označevalec';
+
+  @override
+  String get arMarkerManagerSubtitle =>
+      'Nastavi označevalec za tisk, da ga drugi lahko skenirajo in odklenejo AR izkušnjo.';
+
+  @override
+  String get arMarkerManagerOnlyPngToast => 'Podprti so le PNG označevalci.';
+
+  @override
+  String get arMarkerManagerSquareRequiredToast =>
+      'Označevalec mora biti kvadraten (širina == višina).';
+
+  @override
+  String arMarkerManagerTooSmallToast(int minPx, int maxPx) {
+    return 'Označevalec je premajhen. Najmanj $minPx×${minPx}px.';
+  }
+
+  @override
+  String arMarkerManagerTooLargeToast(int minPx, int maxPx) {
+    return 'Označevalec je prevelik. Največ $maxPx×${maxPx}px.';
+  }
+
+  @override
+  String get arMarkerManagerModeTitle => 'Način označevalca';
+
+  @override
+  String get arMarkerManagerAutoGenerateTitle => 'Samodejno ustvari';
+
+  @override
+  String get arMarkerManagerAutoGenerateSubtitle =>
+      'kubus ustvari označevalec za to umetnino.';
+
+  @override
+  String get arMarkerManagerUploadOwnTitle => 'Naloži svojega';
+
+  @override
+  String arMarkerManagerUploadOwnSubtitle(int minPx, int maxPx) {
+    return 'Naloži kvadratni PNG označevalec ($minPx–${maxPx}px).';
+  }
+
+  @override
+  String get arMarkerManagerSizeLabel => 'Velikost označevalca (px)';
+
+  @override
+  String get arMarkerManagerGenerateButton => 'Ustvari';
+
+  @override
+  String get arMarkerManagerRegenerateButton => 'Ustvari znova';
+
+  @override
+  String get arMarkerManagerRequirementsTitle => 'Zahteve za nalaganje';
+
+  @override
+  String arMarkerManagerRequirementsBody(int minPx, int maxPx) {
+    return 'Samo PNG • Kvadratno • $minPx–${maxPx}px • Visok kontrast • Pusti varen rob za tiskanje.';
+  }
+
+  @override
+  String get arMarkerManagerSelectPngButton => 'Izberi PNG';
+
+  @override
+  String get arMarkerManagerChangeFileButton => 'Zamenjaj datoteko';
+
+  @override
+  String get arMarkerManagerUploadButton => 'Naloži označevalec';
+
+  @override
+  String get arMarkerManagerPreviewTitle => 'Predogled';
+
+  @override
+  String get arMarkerManagerDownloadButton => 'Prenesi označevalec';
+
+  @override
+  String get arMarkerManagerSavedToast => 'AR nastavitev je shranjena.';
+
+  @override
+  String get promotionCheckoutOpenAppButton => 'Odpri aplikacijo';
+
+  @override
+  String get arCreateArtworkLocationMarkerTitle =>
+      'Ustvari lokacijski označevalec umetnine';
+
+  @override
+  String get mnemonicRevealCopyUnavailableToast =>
+      'Obnovitvene fraze na tej napravi ni mogoče kopirati.';
 }
