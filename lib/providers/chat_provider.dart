@@ -1510,23 +1510,31 @@ class ChatProvider extends ChangeNotifier {
   Map<String, dynamic>? _normalizeIncomingMessagePayload(
     Map<String, dynamic> data,
   ) {
-    Map<String, dynamic>? unwrapCandidate(Object? candidate) {
+    // Envelope fields (`data`, `payload`) only win when they actually carry a
+    // message. An empty or metadata-only envelope must not shadow the top-level
+    // message fields the backend sends alongside it.
+    Map<String, dynamic>? unwrapCandidate(
+      Object? candidate, {
+      bool requireMessage = false,
+    }) {
       if (candidate is! Map) return null;
       final map = Map<String, dynamic>.from(candidate);
       final nestedMessage = map['message'];
-      if (nestedMessage is Map) {
-        return Map<String, dynamic>.from(nestedMessage);
+      final unwrapped =
+          nestedMessage is Map ? Map<String, dynamic>.from(nestedMessage) : map;
+      if (requireMessage && !_looksLikeIncomingMessage(unwrapped)) {
+        return null;
       }
-      return map;
+      return unwrapped;
     }
 
     final rawMessage = unwrapCandidate(data['message']);
     if (rawMessage != null) return rawMessage;
 
-    final rawData = unwrapCandidate(data['data']);
+    final rawData = unwrapCandidate(data['data'], requireMessage: true);
     if (rawData != null) return rawData;
 
-    final rawPayload = unwrapCandidate(data['payload']);
+    final rawPayload = unwrapCandidate(data['payload'], requireMessage: true);
     if (rawPayload != null) return rawPayload;
 
     final rawRaw = unwrapCandidate(data['raw']);
