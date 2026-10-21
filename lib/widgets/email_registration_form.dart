@@ -127,6 +127,9 @@ class _EmailRegistrationFormState extends State<EmailRegistrationForm> {
               labelText: l10n.commonPassword,
               errorText: widget.passwordError,
               suffixIcon: IconButton(
+                tooltip: _obscurePassword
+                    ? l10n.formShowPassword
+                    : l10n.formHidePassword,
                 onPressed: () {
                   setState(() => _obscurePassword = !_obscurePassword);
                 },
@@ -163,6 +166,9 @@ class _EmailRegistrationFormState extends State<EmailRegistrationForm> {
               labelText: l10n.commonConfirmPassword,
               errorText: widget.confirmPasswordError,
               suffixIcon: IconButton(
+                tooltip: _obscureConfirmPassword
+                    ? l10n.formShowPassword
+                    : l10n.formHidePassword,
                 onPressed: () {
                   setState(
                       () => _obscureConfirmPassword = !_obscureConfirmPassword);

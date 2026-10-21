@@ -145,6 +145,8 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
             labelText: l10n.commonPassword,
             border: const OutlineInputBorder(),
             suffixIcon: IconButton(
+              tooltip:
+                  _showPassword ? l10n.formHidePassword : l10n.formShowPassword,
               onPressed: () => setState(() => _showPassword = !_showPassword),
               icon: Icon(
                 _showPassword
@@ -162,6 +164,9 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
             labelText: l10n.commonConfirmPassword,
             border: const OutlineInputBorder(),
             suffixIcon: IconButton(
+              tooltip: _showConfirmPassword
+                  ? l10n.formHidePassword
+                  : l10n.formShowPassword,
               onPressed: () => setState(
                 () => _showConfirmPassword = !_showConfirmPassword,
               ),

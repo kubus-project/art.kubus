@@ -7986,6 +7986,21 @@ class AppLocalizationsEn extends AppLocalizations {
   String get qrScannerSwitchCameraFailedToast => 'Unable to switch camera.';
 
   @override
+  String get qrScannerTorchOnTooltip => 'Turn on flashlight';
+
+  @override
+  String get qrScannerTorchOffTooltip => 'Turn off flashlight';
+
+  @override
+  String get qrScannerSwitchCameraTooltip => 'Switch camera';
+
+  @override
+  String get commentLikeTooltip => 'Like comment';
+
+  @override
+  String get commentUnlikeTooltip => 'Unlike comment';
+
+  @override
   String get artworkNotFound => 'Artwork not found';
 
   @override

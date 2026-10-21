@@ -93,6 +93,7 @@ class _QRScannerScreenState extends State<QRScannerScreen> {
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
+          tooltip: l10n.commonClose,
           icon: Icon(Icons.close, color: theme.colorScheme.onSurface),
           onPressed: () => Navigator.pop(context),
         ),
@@ -109,6 +110,9 @@ class _QRScannerScreenState extends State<QRScannerScreen> {
             ? null
             : [
                 IconButton(
+                  tooltip: _isTorchOn
+                      ? l10n.qrScannerTorchOffTooltip
+                      : l10n.qrScannerTorchOnTooltip,
                   icon: Icon(
                     _isTorchOn ? Icons.flash_on : Icons.flash_off,
                     color: _isTorchOn ? accent : theme.colorScheme.onSurface,
@@ -116,6 +120,7 @@ class _QRScannerScreenState extends State<QRScannerScreen> {
                   onPressed: _toggleTorch,
                 ),
                 IconButton(
+                  tooltip: l10n.qrScannerSwitchCameraTooltip,
                   icon: Icon(
                     _cameraFacing == CameraFacing.back
                         ? Icons.flip_camera_android

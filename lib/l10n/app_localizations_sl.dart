@@ -8046,6 +8046,21 @@ class AppLocalizationsSl extends AppLocalizations {
   String get qrScannerSwitchCameraFailedToast => 'Kamere ni mogoče zamenjati.';
 
   @override
+  String get qrScannerTorchOnTooltip => 'Vklopi bliskavico';
+
+  @override
+  String get qrScannerTorchOffTooltip => 'Izklopi bliskavico';
+
+  @override
+  String get qrScannerSwitchCameraTooltip => 'Preklopi kamero';
+
+  @override
+  String get commentLikeTooltip => 'Všečkaj komentar';
+
+  @override
+  String get commentUnlikeTooltip => 'Odstrani všeček s komentarja';
+
+  @override
   String get artworkNotFound => 'Umetnina ni najdena';
 
   @override
