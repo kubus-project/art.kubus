@@ -125,6 +125,7 @@ CLS 1.015 to 0.012.
   is not keyed to the user.
 
 ## Deferred to 0.9
+Preserved branches, exact heads and the rebase order are in [handoff-0.9.md](handoff-0.9.md).
 Backend #104 (walletless posting, migration 111), #105 (account notifications), #106 (account
 messaging, migrations 113/114); app #340 (account messaging identity), #341 (R11 on the account
 model), and the walletless compose commit 83196e2c. **#108 ships `112_account_aware_notifications.sql`
