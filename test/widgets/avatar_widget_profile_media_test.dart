@@ -148,4 +148,49 @@ void main() {
     expect(UserService.getCachedUser(_wallet)?.coverImageUrl, _savedCover);
     expect(_networkUrl(tester), _savedAvatar);
   });
+
+  testWidgets('a stale payload avatar loses to the saved cached avatar', (
+    tester,
+  ) async {
+    UserService.setUsersInCacheAuthoritative([_user(avatar: _savedAvatar)]);
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: Scaffold(
+          body: Center(
+            child: AvatarWidget(
+              wallet: _wallet,
+              avatarUrl: _oldAvatar,
+              radius: 24,
+              enableProfileNavigation: false,
+              fetchMissingAvatar: false,
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+
+    expect(_networkUrl(tester), _savedAvatar);
+  });
+
+  testWidgets('saving an unchanged avatar URL re-renders with a cache bust', (
+    tester,
+  ) async {
+    UserService.setUsersInCacheAuthoritative([_user(avatar: _oldAvatar)]);
+    await tester.pumpWidget(_app());
+    await tester.pump();
+    expect(_networkUrl(tester), _oldAvatar);
+
+    final saved = _user(avatar: _oldAvatar);
+    UserService.setUsersInCacheAuthoritative([saved]);
+    UserService.markProfileMediaChanged([_wallet]);
+    EventBus().emitProfileUpdated(saved);
+    await tester.idle();
+    await tester.pump();
+
+    final url = _networkUrl(tester);
+    expect(url, isNotNull);
+    expect(url, startsWith(_oldAvatar));
+    expect(url, contains('v='));
+  });
 }
