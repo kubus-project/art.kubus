@@ -37,7 +37,9 @@ class _ChatHttp {
 
   /// Endpoint key for a request, or null when the mock does not serve it.
   String? _keyFor(String method, String path) {
-    if (path == '/api/messages') return 'conversations';
+    if (path == '/api/messages') {
+      return method == 'POST' ? 'create' : 'conversations';
+    }
     if (path.startsWith('/api/messages/')) {
       if (path.endsWith('/messages') && method == 'POST') return 'send';
       if (path.endsWith('/messages')) return 'messages';
@@ -321,5 +323,64 @@ void main() {
 
     expect(provider.messages, isEmpty);
     expect(provider.unreadCounts, isEmpty);
+  });
+
+  test(
+      'createConversation completing for account A writes nothing after '
+      'wallet change', () async {
+    final http = _ChatHttp();
+    BackendApiService().setHttpClient(http.client());
+    BackendApiService().setAuthTokenForTesting('tokenA');
+
+    final provider = ChatProvider();
+    provider.setCurrentWalletForTesting('walletA');
+
+    final pending = provider.createConversation('Chat', false, ['walletB']);
+    await http.arrived('conversations');
+    http.complete('conversations', {'success': true, 'data': []});
+    await http.arrived('create');
+
+    unawaited(provider.setCurrentWallet('walletB'));
+    await Future<void>.delayed(Duration.zero);
+
+    http.complete('create', {
+      'success': true,
+      'data': _conversation('convNew'),
+    });
+    final created = await pending;
+
+    expect(created, isNull);
+    expect(provider.conversations, isEmpty);
+    expect(provider.unreadCounts, isEmpty);
+  });
+
+  test(
+      'createConversation does not create anything after a wallet change '
+      'during the conversation pre-check', () async {
+    final http = _ChatHttp();
+    BackendApiService().setHttpClient(http.client());
+    BackendApiService().setAuthTokenForTesting('tokenA');
+
+    final provider = ChatProvider();
+    provider.setCurrentWalletForTesting('walletA');
+
+    final pending = provider.createConversation('Chat', false, ['walletB']);
+    await http.arrived('conversations');
+
+    unawaited(provider.setCurrentWallet('walletB'));
+    await Future<void>.delayed(Duration.zero);
+
+    http.complete('conversations', {
+      'success': true,
+      'data': [_conversation('convA')],
+    });
+    final created = await pending;
+
+    expect(created, isNull);
+    expect(provider.conversations, isEmpty);
+    expect(
+      http.requests.where((r) => r.startsWith('POST ')),
+      isEmpty,
+    );
   });
 }

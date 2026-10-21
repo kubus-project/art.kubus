@@ -2324,12 +2324,15 @@ class ChatProvider extends ChangeNotifier {
     String filename,
     String contentType,
   ) async {
+    final generation = _sessionGeneration;
     final resp = await _api.uploadMessageAttachment(
       conversationId,
       bytes,
       filename,
       contentType,
     );
+    // A response for a previous session must not reload that conversation into the current one.
+    if (generation != _sessionGeneration) return resp;
     if (resp['success'] == true) {
       // The server will broadcast via sockets; ensure local state is refreshed
       await loadMessages(conversationId);
@@ -2342,12 +2345,17 @@ class ChatProvider extends ChangeNotifier {
     bool isGroup,
     List<String> members,
   ) async {
+    // Every state write and socket call below is fenced: when the session
+    // changes while a request is in flight, the result is not adopted.
+    final generation = _sessionGeneration;
     try {
       await _api.loadAuthToken();
     } catch (_) {}
+    if (generation != _sessionGeneration) return null;
     // First-pass: fetch conversations from backend and try to find an existing 1:1 conversation
     try {
       var convResp = await _api.fetchConversations();
+      if (generation != _sessionGeneration) return null;
       // If unauthorized, try to issue a token for current wallet and retry once
       try {
         final status = convResp['status'] as int?;
@@ -2359,6 +2367,7 @@ class ChatProvider extends ChangeNotifier {
               final w = prefs.getString('wallet_address') ??
                   prefs.getString('user_id') ??
                   '';
+              if (generation != _sessionGeneration) return null;
               if (w.isNotEmpty) _currentWallet = w.toString();
             } catch (e2) {
               debugPrint(
@@ -2370,6 +2379,7 @@ class ChatProvider extends ChangeNotifier {
                 (_currentWallet == null || _currentWallet!.isEmpty)) {
               try {
                 final meResp = await _api.getMyProfile();
+                if (generation != _sessionGeneration) return null;
                 if (meResp['success'] == true && meResp['data'] != null) {
                   final me = meResp['data'] as Map<String, dynamic>;
                   _currentWallet = (me['wallet_address'] ??
@@ -2389,11 +2399,13 @@ class ChatProvider extends ChangeNotifier {
               _currentWallet != null &&
               _currentWallet!.isNotEmpty) {
             final issued = await _api.issueDebugTokenForWallet(_currentWallet!);
+            if (generation != _sessionGeneration) return null;
             if (issued) {
               try {
                 await _api.loadAuthToken();
               } catch (_) {}
               convResp = await _api.fetchConversations();
+              if (generation != _sessionGeneration) return null;
             }
           }
         }
@@ -2427,6 +2439,7 @@ class ChatProvider extends ChangeNotifier {
             if (isGroupFlag == true) continue;
 
             final mresp = await _api.fetchConversationMembers(cid);
+            if (generation != _sessionGeneration) return null;
             if ((mresp['success'] == true) || (mresp['data'] != null)) {
               final list = (mresp['data'] ??
                   mresp['members'] ??
@@ -2481,6 +2494,7 @@ class ChatProvider extends ChangeNotifier {
       isGroup: isGroup,
       members: members,
     );
+    if (generation != _sessionGeneration) return null;
     if (resp['success'] == true) {
       final conv = Conversation.fromJson(resp['data']);
       _conversations.insert(0, conv);
@@ -2496,6 +2510,7 @@ class ChatProvider extends ChangeNotifier {
           'ChatProvider.createConversation: subscribeConversation failed: $e',
         );
       }
+      if (generation != _sessionGeneration) return null;
       // Optionally open conversation automatically
       try {
         await openConversation(conv.id);
@@ -2514,6 +2529,7 @@ class ChatProvider extends ChangeNotifier {
             final w = prefs.getString('wallet_address') ??
                 prefs.getString('user_id') ??
                 '';
+            if (generation != _sessionGeneration) return null;
             if (w.isNotEmpty) {
               _currentWallet = w.toString();
             }
@@ -2527,6 +2543,7 @@ class ChatProvider extends ChangeNotifier {
               (_currentWallet == null || _currentWallet!.isEmpty)) {
             try {
               final meResp = await _api.getMyProfile();
+              if (generation != _sessionGeneration) return null;
               if (meResp['success'] == true && meResp['data'] != null) {
                 final me = meResp['data'] as Map<String, dynamic>;
                 _currentWallet = (me['wallet_address'] ??
@@ -2546,16 +2563,19 @@ class ChatProvider extends ChangeNotifier {
             _currentWallet != null &&
             _currentWallet!.isNotEmpty) {
           final issued = await _api.issueDebugTokenForWallet(_currentWallet!);
+          if (generation != _sessionGeneration) return null;
           if (issued) {
             try {
               await _api.loadAuthToken();
             } catch (_) {}
+            if (generation != _sessionGeneration) return null;
             // Retry once
             resp = await _api.createConversation(
               title: title,
               isGroup: isGroup,
               members: members,
             );
+            if (generation != _sessionGeneration) return null;
             if (resp['success'] == true) {
               final conv = Conversation.fromJson(resp['data']);
               _conversations.insert(0, conv);
@@ -2687,6 +2707,7 @@ class ChatProvider extends ChangeNotifier {
   ) async {
     final trimmed = memberIdentifier.trim();
     if (trimmed.isEmpty) return null;
+    final generation = _sessionGeneration;
 
     var memberWallet = trimmed;
     final usernameCandidate = trimmed.replaceFirst(RegExp(r'^@+'), '');
@@ -2714,6 +2735,7 @@ class ChatProvider extends ChangeNotifier {
       conversationId,
       conversationHint: conversation,
     );
+    if (generation != _sessionGeneration) return null;
     final alreadyMember = existingMembers.any(
       (wallet) => WalletUtils.equals(wallet, memberWallet),
     );
@@ -2743,6 +2765,7 @@ class ChatProvider extends ChangeNotifier {
         true,
         sanitizedMembers,
       );
+      if (generation != _sessionGeneration) return null;
       if (newConversation != null) {
         await _prefetchUsersForWallets(uniqueMembers);
         return newConversation;
@@ -2766,6 +2789,7 @@ class ChatProvider extends ChangeNotifier {
       );
     }
 
+    if (generation != _sessionGeneration) return null;
     await fetchMembers(conversationId);
     await _prefetchUsersForWallets([memberWallet]);
     await refreshConversations();
@@ -2785,7 +2809,9 @@ class ChatProvider extends ChangeNotifier {
         normalized = memberIdentifier.replaceFirst('@', '');
       }
     } catch (_) {}
+    final generation = _sessionGeneration;
     await _api.removeConversationMember(conversationId, normalized);
+    if (generation != _sessionGeneration) return;
     await refreshConversations();
   }
 
@@ -2794,7 +2820,9 @@ class ChatProvider extends ChangeNotifier {
     String newTitle,
   ) async {
     try {
+      final generation = _sessionGeneration;
       final result = await _api.renameConversation(conversationId, newTitle);
+      if (generation != _sessionGeneration) return;
       if (result['success'] == true) {
         // Update local conversation
         final index = _conversations.indexWhere((c) => c.id == conversationId);
@@ -2827,7 +2855,9 @@ class ChatProvider extends ChangeNotifier {
 
   Future<void> deleteConversation(String conversationId) async {
     try {
+      final generation = _sessionGeneration;
       final result = await _api.deleteConversation(conversationId);
+      if (generation != _sessionGeneration) return;
       if (result['success'] == true) {
         _conversations.removeWhere((c) => c.id == conversationId);
         _messages.remove(conversationId);
@@ -2855,10 +2885,12 @@ class ChatProvider extends ChangeNotifier {
     String newOwnerWallet,
   ) async {
     try {
+      final generation = _sessionGeneration;
       final resp = await _api.transferConversationOwner(
         conversationId,
         newOwnerWallet,
       );
+      if (generation != _sessionGeneration) return resp;
       await refreshConversations();
       return resp;
     } catch (e) {
