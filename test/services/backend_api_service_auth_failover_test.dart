@@ -246,7 +246,8 @@ void main() {
     );
   });
 
-  test('issueDebugTokenForWallet retries on standby when primary returns 503',
+  test(
+      'issueDebugTokenForWallet retries on standby after explicit pre-mutation rejection',
       () async {
     final api = BackendApiService();
     final requestHosts = <String>[];
@@ -264,7 +265,9 @@ void main() {
           return http.Response(
             jsonEncode(<String, Object?>{
               'success': false,
-              'error': 'primary unavailable',
+              'error': 'Node is not writable',
+              'code': 'NODE_NOT_WRITABLE',
+              'preferredWriteBaseUrl': AppConfig.standbyApiUrl,
             }),
             503,
             headers: _jsonHeaders,
@@ -317,7 +320,9 @@ void main() {
           return http.Response(
             jsonEncode(<String, Object?>{
               'success': false,
-              'error': 'primary unavailable',
+              'error': 'Node is not writable',
+              'code': 'NODE_NOT_WRITABLE',
+              'preferredWriteBaseUrl': AppConfig.standbyApiUrl,
             }),
             503,
             headers: _jsonHeaders,
@@ -353,7 +358,8 @@ void main() {
     );
   });
 
-  test('uploadMessageAttachment retries on standby when primary returns 503',
+  test(
+      'uploadMessageAttachment retries on standby after explicit pre-mutation rejection',
       () async {
     final api = BackendApiService();
     api.setAuthTokenForTesting(_validAuthToken);
@@ -373,7 +379,9 @@ void main() {
           return http.Response(
             jsonEncode(<String, Object?>{
               'success': false,
-              'error': 'primary unavailable',
+              'error': 'Node is not writable',
+              'code': 'NODE_NOT_WRITABLE',
+              'preferredWriteBaseUrl': AppConfig.standbyApiUrl,
             }),
             503,
             headers: _jsonHeaders,
@@ -411,7 +419,9 @@ void main() {
     );
   });
 
-  test('uploadArMarker retries on standby when primary returns 503', () async {
+  test(
+      'uploadArMarker retries on standby after explicit pre-mutation rejection',
+      () async {
     final api = BackendApiService();
     api.setAuthTokenForTesting(_validAuthToken);
 
@@ -430,7 +440,9 @@ void main() {
           return http.Response(
             jsonEncode(<String, Object?>{
               'success': false,
-              'error': 'primary unavailable',
+              'error': 'Node is not writable',
+              'code': 'NODE_NOT_WRITABLE',
+              'preferredWriteBaseUrl': AppConfig.standbyApiUrl,
             }),
             503,
             headers: _jsonHeaders,

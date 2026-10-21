@@ -2327,7 +2327,7 @@ class BackendApiService
         nestedResponse['code']?.toString() == 'NODE_NOT_WRITABLE') {
       return true;
     }
-    return response.body.contains('NODE_NOT_WRITABLE');
+    return false;
   }
 
   Uri? _redirectNodeNotWritableRequest(
@@ -2432,16 +2432,10 @@ class BackendApiService
     );
   }
 
-  /// Whether a request that failed on one backend may be sent to another.
-  ///
-  /// Reads always may. A write may only when repeating it is harmless
-  /// ([replaySafe]: the server deduplicates it or it only creates a session),
-  /// or when the failure proves the first backend never applied it: it said so
-  /// (NODE_NOT_WRITABLE), it was unavailable (503), the edge could not reach it
-  /// (Cloudflare 522/523/530), or the connection was refused before anything
-  /// was sent. A timeout, a dropped connection, 500, 502, 504 or 524 prove
-  /// none of that: the first backend may already have committed, and a replay
-  /// would apply the write twice.
+  /// Whether an unconfirmed request may be repeated on another backend.
+  /// Reads and operations with authoritative server replay protection may move.
+  /// Generic HTTP statuses and transport error text never prove non-commit.
+  /// NODE_NOT_WRITABLE is a structured rejection from the pre-mutation guard.
   @visibleForTesting
   static bool mayRepeatOnAnotherBackend({
     required String method,
@@ -2456,17 +2450,15 @@ class BackendApiService
       return true;
     }
     if (replaySafe) return true;
-    if (statusCode != null) {
-      return const <int>{503, 522, 523, 530}.contains(statusCode);
+    if (error is BackendApiRequestException && error.statusCode == 503) {
+      try {
+        final payload = jsonDecode(error.body ?? '');
+        return payload is Map && payload['code'] == 'NODE_NOT_WRITABLE';
+      } on FormatException {
+        return false;
+      }
     }
-    if (error == null) return false;
-    if (error is BackendApiRequestException) {
-      if ((error.body ?? '').contains('NODE_NOT_WRITABLE')) return true;
-      return const <int>{503, 522, 523, 530}.contains(error.statusCode);
-    }
-    final message = error.toString().toLowerCase();
-    return message.contains('connection refused') ||
-        message.contains('failed host lookup');
+    return false;
   }
 
   bool _isFallbackEligibleReadError(Object error) {

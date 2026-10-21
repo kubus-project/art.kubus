@@ -51,14 +51,6 @@ UploadRateLimitedException _backendApiUploadRateLimitFromResponse(
 
 /// Quota and client errors are final: a retry cannot succeed and only adds
 /// load. Timeouts (408), server errors and transport failures stay retryable.
-bool _backendApiIsNonRetryableUploadFailure(Object error) {
-  if (error is UploadRateLimitedException) return true;
-  if (error is BackendApiRequestException) {
-    final status = error.statusCode;
-    return status >= 400 && status < 500 && status != 408;
-  }
-  return false;
-}
 
 String? _backendApiResolveUploadedUrl(Map<String, dynamic> data) {
   try {
@@ -130,12 +122,6 @@ String _backendApiNormalizeTargetStorage(String targetStorage) {
   return 'http';
 }
 
-bool _backendApiIsNodeNotWritableException(Object error) {
-  return error is BackendApiRequestException &&
-      error.statusCode == 503 &&
-      (error.body ?? '').contains('NODE_NOT_WRITABLE');
-}
-
 Map<String, dynamic>? _backendApiDecodeResponseObject(String? body) {
   if (body == null || body.trim().isEmpty) return null;
   try {
@@ -167,7 +153,7 @@ bool _backendApiResponseBodyIsNodeNotWritable(String? body) {
     }
   }
 
-  return body.contains('NODE_NOT_WRITABLE');
+  return false;
 }
 
 String? _backendApiExtractPreferredWriteBaseUrl(String? body) {
@@ -434,31 +420,10 @@ Future<Map<String, dynamic>> _backendApiUploadFileImpl(
               )
             : response.body,
       );
-    } catch (e, stackTrace) {
-      if (e is TimeoutException) {
-        rethrow;
-      }
-      if (_backendApiIsNodeNotWritableException(e)) {
-        rethrow;
-      }
-      if (_backendApiIsNonRetryableUploadFailure(e)) {
-        rethrow;
-      }
-
-      if (attempt >= maxRetries) {
-        service._debugLogThrottled(
-          'uploadFile:error:final',
-          'BackendApiService.uploadFile: error (final): $e\n$stackTrace',
-        );
-        rethrow;
-      }
-
-      final backoff = 1 << (attempt - 1);
-      service._debugLogThrottled(
-        'uploadFile:error:retry',
-        'BackendApiService.uploadFile: transient error, retrying in ${backoff}s (attempt $attempt/$maxRetries): $e',
-      );
-      await Future.delayed(Duration(seconds: backoff));
+    } catch (_) {
+      // An upload may already be stored even when its response is lost.
+      // Retry only the explicit pre-mutation rejection/rate-limit paths above.
+      rethrow;
     }
   }
 }
@@ -695,32 +660,10 @@ Future<Map<String, dynamic>> _backendApiUploadAvatarToProfileImpl(
               )
             : response.body,
       );
-    } catch (e, stackTrace) {
-      if (e is TimeoutException) {
-        rethrow;
-      }
-      if (_backendApiIsNodeNotWritableException(e)) {
-        rethrow;
-      }
-      if (_backendApiIsNonRetryableUploadFailure(e)) {
-        rethrow;
-      }
-
-      if (attempt >= maxRetries) {
-        service._debugLogThrottled(
-          'uploadAvatarToProfile:error:final',
-          'BackendApiService.uploadAvatarToProfile: error (final): $e\n$stackTrace',
-          throttle: const Duration(seconds: 1),
-        );
-        rethrow;
-      }
-
-      final backoff = 1 << (attempt - 1);
-      service._debugLogThrottled(
-        'uploadAvatarToProfile:error:retry',
-        'BackendApiService.uploadAvatarToProfile: transient error, retrying in ${backoff}s (attempt $attempt/$maxRetries): $e',
-      );
-      await Future.delayed(Duration(seconds: backoff));
+    } catch (_) {
+      // An upload may already be stored even when its response is lost.
+      // Retry only the explicit pre-mutation rejection/rate-limit paths above.
+      rethrow;
     }
   }
 }

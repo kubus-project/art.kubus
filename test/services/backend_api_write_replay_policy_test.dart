@@ -52,7 +52,7 @@ void main() {
 
     test('a write that may already have committed is never repeated', () {
       for (final method in ['POST', 'PUT', 'PATCH', 'DELETE']) {
-        for (final status in [500, 502, 504, 524]) {
+        for (final status in [500, 502, 503, 504, 522, 523, 524, 530]) {
           expect(may(method, status: status), isFalse,
               reason: '$method after $status');
         }
@@ -74,7 +74,7 @@ void main() {
 
     test('a write moves only when the failure proves it was not applied', () {
       for (final status in [503, 522, 523, 530]) {
-        expect(may('POST', status: status), isTrue, reason: '$status');
+        expect(may('POST', status: status), isFalse, reason: '$status');
       }
       expect(
         may('POST',
@@ -89,12 +89,25 @@ void main() {
           may('POST',
               error: http.ClientException(
                   'SocketException: Connection refused (OS Error: Connection refused, errno = 111)')),
-          isTrue);
+          isFalse);
       expect(
           may('POST',
               error:
                   http.ClientException("Failed host lookup: 'api.kubus.site'")),
-          isTrue);
+          isFalse);
+    });
+
+    test(
+        'error text containing a rejection code is not an authoritative rejection',
+        () {
+      expect(
+          may('POST',
+              error: const BackendApiRequestException(
+                statusCode: 503,
+                path: '/api/x',
+                body: '{"error":"upstream NODE_NOT_WRITABLE after commit"}',
+              )),
+          isFalse);
     });
 
     test('authorization and conflict answers never count as availability', () {
@@ -141,6 +154,8 @@ void main() {
     final writes = <String, Future<Object?> Function()>{
       'comment': () => BackendApiService()
           .createComment(postId: 'post-1', content: 'once only'),
+      'support reply': () =>
+          BackendApiService().replyToSupportTicket('ticket-1', 'once'),
       'marker': () => BackendApiService().createArtMarker(
             title: 'Marker',
             description: 'd',
@@ -151,7 +166,7 @@ void main() {
     };
 
     for (final entry in writes.entries) {
-      for (final status in [500, 502, 504]) {
+      for (final status in [500, 502, 503, 504, 522, 523, 530]) {
         test('a ${entry.key} the primary answers $status for is not resent',
             () async {
           twoBackends(primary: (_) => _json(<String, Object?>{}, status));
@@ -173,9 +188,13 @@ void main() {
         expect(hosts, <String>[primaryHost]);
       });
 
-      test('a ${entry.key} the primary refuses as unavailable (503) moves once',
+      test('a ${entry.key} explicitly rejected before mutation moves once',
           () async {
-        twoBackends(primary: (_) => _json(<String, Object?>{}, 503));
+        twoBackends(
+            primary: (_) => _json(<String, Object?>{
+                  'code': 'NODE_NOT_WRITABLE',
+                  'preferredWriteBaseUrl': AppConfig.standbyApiUrl,
+                }, 503));
         await attempt(entry.value);
         expect(hosts, <String>[primaryHost, standbyHost]);
       });
@@ -192,17 +211,40 @@ void main() {
       }
     }
 
-    test('a message attachment upload is not resent after a primary 504',
-        () async {
-      twoBackends(primary: (_) => _json(<String, Object?>{}, 504));
-      await attempt(() => BackendApiService().uploadMessageAttachment(
-            'conversation-1',
-            <int>[1, 2, 3, 4],
-            'image.png',
-            'image/png',
-          ));
-      expect(hosts, <String>[primaryHost]);
-    });
+    for (final status in [503, 504]) {
+      test('a message attachment upload is not resent after a primary $status',
+          () async {
+        twoBackends(primary: (_) => _json(<String, Object?>{}, status));
+        await attempt(() => BackendApiService().uploadMessageAttachment(
+              'conversation-1',
+              <int>[1, 2, 3, 4],
+              'image.png',
+              'image/png',
+            ));
+        expect(hosts, <String>[primaryHost]);
+      });
+    }
+
+    for (final failure in <Object>[
+      503,
+      504,
+      TimeoutException('after commit'),
+      http.ClientException('connection reset')
+    ]) {
+      test('file upload never retries an ambiguous $failure', () async {
+        twoBackends(primary: (_) {
+          if (failure is int) return _json(<String, Object?>{}, failure);
+          throw failure;
+        });
+        await attempt(() => BackendApiService().uploadFile(
+              fileBytes: <int>[1, 2, 3],
+              fileName: 'test.png',
+              fileType: 'post-image',
+              compress: false,
+            ));
+        expect(hosts, <String>[primaryHost]);
+      });
+    }
 
     test('an email login (replay-safe) moves to the standby after a 504',
         () async {
