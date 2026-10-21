@@ -105,7 +105,7 @@ abstract class AppLocalizations {
   /// A list of this localizations delegate's supported locales.
   static const List<Locale> supportedLocales = <Locale>[
     Locale('en'),
-    Locale('sl'),
+    Locale('sl')
   ];
 
   /// No description provided for @appTagline.
@@ -341,9 +341,7 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Digital editions of {artworkTitle} by {artistName}'**
   String archiveObjectSeriesDefaultDescription(
-    Object artworkTitle,
-    Object artistName,
-  );
+      Object artworkTitle, Object artistName);
 
   /// No description provided for @archiveObjectSeriesCreateFailed.
   ///
@@ -392,11 +390,7 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Achievement unlocked\n{title}{extra}\n+{amount} {currency} recognition'**
   String communityAchievementUnlockedToast(
-    Object title,
-    Object extra,
-    Object amount,
-    Object currency,
-  );
+      Object title, Object extra, Object amount, Object currency);
 
   /// No description provided for @communityViewAchievementsAction.
   ///
@@ -487,9 +481,7 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Digital edition {status} for {title}'**
   String recentActivityArchiveObjectStatusDescription(
-    Object status,
-    Object title,
-  );
+      Object status, Object title);
 
   /// No description provided for @recentActivityFallbackArtworkTitle.
   ///
@@ -508,6 +500,96 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Achievement'**
   String get notificationAchievementFallback;
+
+  /// No description provided for @notificationCommunityLikeTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'New like'**
+  String get notificationCommunityLikeTitle;
+
+  /// No description provided for @notificationCommunityLikeBody.
+  ///
+  /// In en, this message translates to:
+  /// **'{name} liked your post'**
+  String notificationCommunityLikeBody(Object name);
+
+  /// No description provided for @notificationCommunityCommentTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'New comment'**
+  String get notificationCommunityCommentTitle;
+
+  /// No description provided for @notificationCommunityCommentBody.
+  ///
+  /// In en, this message translates to:
+  /// **'{name} commented on your post'**
+  String notificationCommunityCommentBody(Object name);
+
+  /// No description provided for @notificationCommunityCommentWithTextBody.
+  ///
+  /// In en, this message translates to:
+  /// **'{name}: {comment}'**
+  String notificationCommunityCommentWithTextBody(Object name, Object comment);
+
+  /// No description provided for @notificationCommunityShareTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Post shared'**
+  String get notificationCommunityShareTitle;
+
+  /// No description provided for @notificationCommunityShareBody.
+  ///
+  /// In en, this message translates to:
+  /// **'{name} shared your post'**
+  String notificationCommunityShareBody(Object name);
+
+  /// No description provided for @notificationCommunityRepostTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'New repost'**
+  String get notificationCommunityRepostTitle;
+
+  /// No description provided for @notificationCommunityRepostBody.
+  ///
+  /// In en, this message translates to:
+  /// **'{name} reposted your post'**
+  String notificationCommunityRepostBody(Object name);
+
+  /// No description provided for @notificationCommunityMentionTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'You were mentioned'**
+  String get notificationCommunityMentionTitle;
+
+  /// No description provided for @notificationCommunityMentionBody.
+  ///
+  /// In en, this message translates to:
+  /// **'{name} mentioned you in a post'**
+  String notificationCommunityMentionBody(Object name);
+
+  /// No description provided for @notificationCommunityActivityTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'New activity'**
+  String get notificationCommunityActivityTitle;
+
+  /// No description provided for @notificationCommunityActivityBody.
+  ///
+  /// In en, this message translates to:
+  /// **'{name} interacted with your post'**
+  String notificationCommunityActivityBody(Object name);
+
+  /// No description provided for @notificationFollowerTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'New follower'**
+  String get notificationFollowerTitle;
+
+  /// No description provided for @notificationFollowerBody.
+  ///
+  /// In en, this message translates to:
+  /// **'{name} started following you'**
+  String notificationFollowerBody(Object name);
 
   /// No description provided for @notificationRecognitionRecordedTitle.
   ///
@@ -4708,10 +4790,7 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Account: {accountStatus} · Wallet: {walletStatus} · Access: {signerStatus}'**
   String walletSessionStatusSummary(
-    Object accountStatus,
-    Object walletStatus,
-    Object signerStatus,
-  );
+      Object accountStatus, Object walletStatus, Object signerStatus);
 
   /// No description provided for @walletActionSignInRequiredToast.
   ///
@@ -13406,10 +13485,7 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{token} · {amount} · {date}'**
   String receiveTokenSidebarTransferSubtitle(
-    Object token,
-    Object amount,
-    Object date,
-  );
+      Object token, Object amount, Object date);
 
   /// No description provided for @sendTokenTitle.
   ///
@@ -13506,10 +13582,7 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{token} · {amount} · {date}'**
   String sendTokenSidebarRecipientSubtitle(
-    Object token,
-    Object amount,
-    Object date,
-  );
+      Object token, Object amount, Object date);
 
   /// No description provided for @sendTokenSidebarSummaryTitle.
   ///
@@ -13684,10 +13757,7 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{amount} {token} submitted. Tx: {signature}'**
   String sendTokenSendSuccessWithSignatureToast(
-    Object amount,
-    Object token,
-    Object signature,
-  );
+      Object amount, Object token, Object signature);
 
   /// No description provided for @sendTokenSendFailedToast.
   ///
@@ -16790,9 +16860,7 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Open details for {title}, token {tokenId}'**
   String marketplaceOpenCollectibleDetailsSemantic(
-    Object title,
-    Object tokenId,
-  );
+      Object title, Object tokenId);
 
   /// No description provided for @marketplaceShareTooltip.
   ///
@@ -17603,9 +17671,7 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Are you sure you want to delegate your {votingPower} voting power to {delegateName}?'**
   String daoDelegateVotingPowerDialogBody(
-    Object votingPower,
-    Object delegateName,
-  );
+      Object votingPower, Object delegateName);
 
   /// No description provided for @daoDelegationBenefitsTitle.
   ///
@@ -21362,10 +21428,7 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Swap submitted: {fromToken} ? {toToken}. Tx: {signature}'**
   String walletSwapSubmittedToastWithSignature(
-    Object fromToken,
-    Object toToken,
-    Object signature,
-  );
+      Object fromToken, Object toToken, Object signature);
 
   /// No description provided for @walletTransactionConfirmationsLabel.
   ///
@@ -24942,9 +25005,7 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Activity was recorded on {activeBuckets} of {totalBuckets} buckets.'**
   String analyticsRecommendationConsistencyDescription(
-    Object activeBuckets,
-    Object totalBuckets,
-  );
+      Object activeBuckets, Object totalBuckets);
 
   /// No description provided for @analyticsRecommendationReverseDecline.
   ///
@@ -25269,9 +25330,7 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{totalVotes} votes · {supportPct}% support'**
   String daoProposalVotesSupportSummaryLabel(
-    Object totalVotes,
-    Object supportPct,
-  );
+      Object totalVotes, Object supportPct);
 
   /// No description provided for @commonSearchHint.
   ///
@@ -27684,10 +27743,7 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{activeBuckets} of {totalBuckets} intervals recorded {metric}.'**
   String analyticsInsightActivePatternDescription(
-    Object activeBuckets,
-    Object totalBuckets,
-    Object metric,
-  );
+      Object activeBuckets, Object totalBuckets, Object metric);
 
   /// No description provided for @analyticsInsightPeakTitle.
   ///
@@ -30616,11 +30672,7 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{source}: {amount} {currency}. {state}'**
   String marketplaceListingValueSemantic(
-    String source,
-    String amount,
-    String currency,
-    String state,
-  );
+      String source, String amount, String currency, String state);
 
   /// No description provided for @promotionBuilderSwitchNetwork.
   ///
@@ -31400,9 +31452,8 @@ AppLocalizations lookupAppLocalizations(Locale locale) {
   }
 
   throw FlutterError(
-    'AppLocalizations.delegate failed to load unsupported locale "$locale". This is likely '
-    'an issue with the localizations generation tool. Please file an issue '
-    'on GitHub with a reproducible sample app and the gen-l10n configuration '
-    'that was used.',
-  );
+      'AppLocalizations.delegate failed to load unsupported locale "$locale". This is likely '
+      'an issue with the localizations generation tool. Please file an issue '
+      'on GitHub with a reproducible sample app and the gen-l10n configuration '
+      'that was used.');
 }
