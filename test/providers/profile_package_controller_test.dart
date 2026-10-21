@@ -287,6 +287,34 @@ void main() {
       controller.dispose();
     });
 
+    test('a linked_auth placeholder is never the wallet key; the account id is',
+        () async {
+      final controller = ProfilePackageController(walletAddress: accountUuid);
+      controller.applyCritical(
+          _critical(wallet: 'linked_auth:$accountUuid', title: 'Milestone'));
+      final requests = <Uri>[];
+      BackendApiService().setHttpClient(MockClient((request) async {
+        if (request.url.path.contains('/api/community/posts')) {
+          requests.add(request.url);
+          return _jsonResponse(<String, Object?>{
+            'data': <Object?>[
+              _postJson(id: 'own-post', authorUserId: accountUuid),
+            ],
+          });
+        }
+        return http.Response('Not found', 404);
+      }));
+
+      await controller.loadPosts();
+
+      expect(requests.single.queryParameters['authorUserId'], accountUuid);
+      expect(
+          requests.single.queryParameters.containsKey('authorWallet'), isFalse);
+      expect(controller.posts.map((post) => post.id), <String>['own-post']);
+
+      controller.dispose();
+    });
+
     test('failed posts request surfaces postsError, not an empty feed',
         () async {
       final controller = ProfilePackageController(walletAddress: accountUuid);
