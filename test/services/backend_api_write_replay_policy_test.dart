@@ -226,6 +226,24 @@ void main() {
       expect(hosts, <String>[primaryHost, standbyHost]);
     });
 
+    test('a wallet login (replay-safe) moves to the standby after a 504',
+        () async {
+      BackendApiService().setAuthTokenForTesting(null);
+      twoBackends(
+        primary: (_) => _json(<String, Object?>{'success': false}, 504),
+        standby: (_) => _json(<String, Object?>{
+          'success': true,
+          'data': <String, Object?>{'token': 'standby-token'},
+        }, 200),
+      );
+      await attempt(() => BackendApiService().loginWithWallet(
+            walletAddress: 'WalletTest111111111111111111111111111111111',
+            signature: 'sig',
+            message: 'msg',
+          ));
+      expect(hosts, <String>[primaryHost, standbyHost]);
+    });
+
     test('reads still move to the standby after a primary 504', () async {
       twoBackends(primary: (_) => _json(<String, Object?>{}, 504));
       await attempt(() => BackendApiService().getArtwork('artwork-1'));
