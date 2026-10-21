@@ -18811,4 +18811,35 @@ class AppLocalizationsSl extends AppLocalizations {
   @override
   String get mnemonicRevealCopyUnavailableToast =>
       'Obnovitvene fraze na tej napravi ni mogoče kopirati.';
+
+  @override
+  String get promotionCheckoutReturnAppBarTitle => 'Plačilo promocije';
+
+  @override
+  String get promotionCheckoutReturnDefaultTitle => 'Plačilo promocije';
+
+  @override
+  String get promotionCheckoutReturnSuccessTitle =>
+      'Plačilo za promocijo je prejeto';
+
+  @override
+  String get promotionCheckoutReturnSuccessBody =>
+      'Plačilo je prejeto. Zahteva za promocijo zdaj čaka na pregled administratorja.';
+
+  @override
+  String get promotionCheckoutReturnCancelledTitle =>
+      'Plačilo za promocijo je preklicano';
+
+  @override
+  String get promotionCheckoutReturnCancelledBody =>
+      'Plačilo ni bilo izvedeno. Ko boste pripravljeni, se vrnite v aplikacijo in promocijo znova oddajte.';
+
+  @override
+  String get promotionCheckoutReturnDefaultBody =>
+      'Vrnite se v aplikacijo in preverite trenutno stanje zahteve za promocijo.';
+
+  @override
+  String promotionCheckoutReturnSessionLabel(String sessionId) {
+    return 'Seja Stripe: $sessionId';
+  }
 }
