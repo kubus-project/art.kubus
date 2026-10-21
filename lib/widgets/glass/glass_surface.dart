@@ -129,7 +129,8 @@ class GlassSurface extends StatelessWidget {
     final secondaryStopOpacity = resolvedOpacity * (useBlur ? 0.85 : 0.94);
     final tintPrimary = baseTint.withValues(alpha: primaryStopOpacity);
     final tintSecondary = baseTint.withValues(
-      alpha: secondaryStopOpacity > stopFloor ? secondaryStopOpacity : stopFloor,
+      alpha:
+          secondaryStopOpacity > stopFloor ? secondaryStopOpacity : stopFloor,
     );
 
     // --- Border ---

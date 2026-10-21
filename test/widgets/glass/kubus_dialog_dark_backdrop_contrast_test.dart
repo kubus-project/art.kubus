@@ -2,7 +2,6 @@ import 'dart:math' as math;
 
 import 'package:art_kubus/utils/design_tokens.dart';
 import 'package:art_kubus/utils/kubus_color_roles.dart';
-import 'package:art_kubus/widgets/glass/glass_surface.dart';
 import 'package:art_kubus/widgets/glass_components.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -111,16 +110,15 @@ void main() {
     _expectStopsClearAa(_panelStops(tester), actionPrimary);
   });
 
-  testWidgets(
-      'blur-disabled light dialog surface also clears 4.5:1 over black',
+  testWidgets('blur-disabled light dialog surface also clears 4.5:1 over black',
       (tester) async {
     // Mirrors the light dialog panel tint on the opaque fallback path, which
     // low-end and reduced-effects devices take instead of BackdropFilter.
     final theme = _lightTheme();
     final surface = theme.colorScheme.surface;
-    final tint = (Color.lerp(surface, theme.colorScheme.primary, 0.06) ??
-            surface)
-        .withValues(alpha: KubusGlassEffects.dialogTintAlphaLight);
+    final tint =
+        (Color.lerp(surface, theme.colorScheme.primary, 0.06) ?? surface)
+            .withValues(alpha: KubusGlassEffects.dialogTintAlphaLight);
     await tester.pumpWidget(MaterialApp(
       theme: theme,
       home: Scaffold(
@@ -139,8 +137,8 @@ void main() {
           matching: find.byType(DecoratedBox),
         )
         .first);
-    final gradient = (box.decoration as BoxDecoration).gradient!
-        as LinearGradient;
+    final gradient =
+        (box.decoration as BoxDecoration).gradient! as LinearGradient;
     final actionPrimary = Color.lerp(
       theme.colorScheme.primary,
       Colors.black,
