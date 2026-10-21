@@ -151,6 +151,14 @@ class UserProfileNavigation {
     );
   }
 
+  /// Whether [targetId] is the signed-in account (stable account, wallet or
+  /// public actor ID). Public profile screens use it to hide self-follow and
+  /// self-message actions when the owner views their own public profile.
+  static bool isCurrentUser(BuildContext context, String? targetId) {
+    if (targetId == null) return false;
+    return _targetsCurrentUser(context, targetId);
+  }
+
   /// Match only stable account identifiers and linked wallet/public actor IDs.
   /// Display names and usernames are intentionally excluded because they can
   /// collide or change independently of account ownership.
