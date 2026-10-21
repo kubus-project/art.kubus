@@ -27,9 +27,87 @@ import '../../utils/design_tokens.dart';
 import '../../widgets/kubus_button.dart';
 import '../../utils/kubus_color_roles.dart';
 import '../../utils/wallet_utils.dart';
+import '../../utils/account_identity.dart';
 import '../../utils/media_url_resolver.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
 import '../../widgets/glass_components.dart';
+
+@visibleForTesting
+class ConversationPeerSelection {
+  const ConversationPeerSelection({
+    required this.identity,
+    required this.displayLabel,
+    this.accountUserId,
+    this.wallet,
+  });
+
+  final String identity;
+  final String displayLabel;
+  final String? accountUserId;
+  final String? wallet;
+}
+
+@visibleForTesting
+ConversationPeerSelection conversationPeerSelectionFromProfile(
+  Map<String, dynamic> profile,
+) {
+  final accountUserId = canonicalAccountUserId(
+    profile['userId'] ??
+        profile['user_id'] ??
+        profile['accountId'] ??
+        profile['account_id'] ??
+        profile['id'],
+  );
+  final wallet = (profile['wallet_address'] ??
+              profile['walletAddress'] ??
+              profile['wallet'])
+          ?.toString()
+          .trim() ??
+      '';
+  final username =
+      (profile['username'] ?? profile['handle'])?.toString().trim() ?? '';
+  final displayName =
+      (profile['displayName'] ?? profile['display_name'])?.toString().trim() ??
+          '';
+  return ConversationPeerSelection(
+    identity: accountUserId ?? (wallet.isNotEmpty ? wallet : username),
+    displayLabel: displayName.isNotEmpty
+        ? displayName
+        : username.isNotEmpty
+            ? username
+            : accountUserId ?? wallet,
+    accountUserId: accountUserId,
+    wallet: wallet.isEmpty ? null : wallet,
+  );
+}
+
+@visibleForTesting
+({List<String> members, List<String> memberUserIds})
+    partitionConversationParticipantsForTesting(
+  Iterable<String> selected, {
+  bool isGroup = false,
+  Map<String, String> walletAliases = const <String, String>{},
+}) {
+  final members = <String>[];
+  final memberUserIds = <String>[];
+  final seenMembers = <String>{};
+  final seenUserIds = <String>{};
+  void addMember(String value) {
+    if (value.isNotEmpty && seenMembers.add(value)) members.add(value);
+  }
+
+  for (final value
+      in selected.map((item) => item.trim()).where((v) => v.isNotEmpty)) {
+    final accountId = canonicalAccountUserId(value);
+    if (isGroup || accountId == null) {
+      addMember(value);
+      continue;
+    }
+    if (seenUserIds.add(accountId)) memberUserIds.add(accountId);
+    addMember(walletAliases[accountId]?.trim() ?? '');
+  }
+  return (members: members, memberUserIds: memberUserIds);
+}
 
 class MessagesScreen extends StatefulWidget {
   const MessagesScreen({super.key, this.initialConversationId});
@@ -444,6 +522,10 @@ class _MessagesScreenState extends State<MessagesScreen> {
         result['title'] as String? ?? '',
         result['isGroup'] as bool? ?? false,
         result['members'] as List<String>,
+        memberUserIds:
+            (result['memberUserIds'] as List<dynamic>? ?? const <dynamic>[])
+                .whereType<String>()
+                .toList(growable: false),
       );
     }
   }
@@ -1469,6 +1551,8 @@ class _CreateConversationDialogState extends State<_CreateConversationDialog> {
   final _title = TextEditingController();
   final BackendApiService _api = BackendApiService();
   final List<String> _memberList = [];
+  final Map<String, String> _walletAliasByAccountId = <String, String>{};
+  final Map<String, String> _memberLabelByIdentity = <String, String>{};
   final List<Map<String, dynamic>> _memberSuggestions = [];
   Uint8List? _avatarBytes;
   bool _isGroup = true;
@@ -1498,7 +1582,9 @@ class _CreateConversationDialogState extends State<_CreateConversationDialog> {
             children: _memberList
                 .map(
                   (m) => Chip(
-                    label: Text(m),
+                    label: Text(_memberLabelByIdentity[m] ??
+                        _walletAliasByAccountId[m] ??
+                        m),
                     onDeleted: () => setState(() => _memberList.remove(m)),
                   ),
                 )
@@ -1568,6 +1654,7 @@ class _CreateConversationDialogState extends State<_CreateConversationDialog> {
                 physics: const AlwaysScrollableScrollPhysics(),
                 itemBuilder: (ctx, idx) {
                   final s = _memberSuggestions[idx];
+                  final peer = conversationPeerSelectionFromProfile(s);
                   final username =
                       s['username'] ?? s['wallet_address'] ?? s['wallet'];
                   final display = s['displayName'] ?? s['display_name'] ?? '';
@@ -1577,13 +1664,8 @@ class _CreateConversationDialogState extends State<_CreateConversationDialog> {
                           ? avatar.toString()
                           : null;
                   // Prefer adding the wallet address when available; otherwise fall back to username
-                  final walletAddr =
-                      (s['wallet_address'] ?? s['wallet'] ?? s['walletAddress'])
-                              ?.toString() ??
-                          '';
-                  final addValue = walletAddr.isNotEmpty
-                      ? walletAddr
-                      : (username ?? '').toString();
+                  final walletAddr = peer.wallet ?? '';
+                  final addValue = peer.identity;
                   return ListTile(
                     title: Text(display ?? username),
                     subtitle: Text(
@@ -1602,7 +1684,15 @@ class _CreateConversationDialogState extends State<_CreateConversationDialog> {
                     onTap: () {
                       if ((addValue).isNotEmpty) {
                         setState(() {
-                          _memberList.add(addValue);
+                          if (!_memberList.contains(addValue)) {
+                            _memberList.add(addValue);
+                          }
+                          if (peer.accountUserId != null &&
+                              walletAddr.isNotEmpty) {
+                            _walletAliasByAccountId[peer.accountUserId!] =
+                                walletAddr;
+                          }
+                          _memberLabelByIdentity[addValue] = peer.displayLabel;
                           _members.clear();
                           _memberSuggestions.clear();
                         });
@@ -1668,12 +1758,19 @@ class _CreateConversationDialogState extends State<_CreateConversationDialog> {
                 .where((s) => s.isNotEmpty)
                 .toList();
             final members = [..._memberList, ...manualMembers];
+            final participantSelection =
+                partitionConversationParticipantsForTesting(
+              members,
+              isGroup: _isGroup,
+              walletAliases: _walletAliasByAccountId,
+            );
             final cp = Provider.of<ChatProvider>(context, listen: false);
             final navigator = Navigator.of(context);
             final res = await cp.createConversation(
               _title.text,
               _isGroup,
-              members,
+              participantSelection.members,
+              memberUserIds: participantSelection.memberUserIds,
             );
             if (!mounted) return;
             if (res != null && _avatarBytes != null) {
@@ -1692,7 +1789,8 @@ class _CreateConversationDialogState extends State<_CreateConversationDialog> {
             navigator.pop({
               'title': _title.text,
               'isGroup': _isGroup,
-              'members': members,
+              'members': participantSelection.members,
+              'memberUserIds': participantSelection.memberUserIds,
             });
           },
         ),

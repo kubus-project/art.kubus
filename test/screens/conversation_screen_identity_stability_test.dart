@@ -161,6 +161,31 @@ void main() {
     expect(resolved.stableDisplayLabel, '0x1234...5678');
   });
 
+  test('account-only sender is presented as the current user without a wallet',
+      () {
+    final provider = ChatProvider();
+    addTearDown(provider.dispose);
+    const accountId = '6c421a31-405e-4d9e-8b74-9dc357fd13b2';
+    final accountOnlyMessage = ChatMessage.fromJson(<String, dynamic>{
+      'id': 'account-message-1',
+      'conversation_id': 'c1',
+      'sender_user_id': accountId,
+      'sender_wallet': null,
+      'message': 'hello from my account',
+      'created_at': '2026-10-20T12:00:00Z',
+    });
+
+    final presentation = resolveMessagePresentationForTesting(
+      message: accountOnlyMessage,
+      conversation: Conversation(id: 'c1'),
+      chatProvider: provider,
+      currentUserId: accountId,
+    );
+
+    expect(accountOnlyMessage.senderWallet, isEmpty);
+    expect(presentation.isMine, isTrue);
+  });
+
   test('Opening conversation seeds sender once, not once per bubble', () {
     final provider = ChatProvider();
     addTearDown(provider.dispose);
@@ -173,6 +198,52 @@ void main() {
     provider.seedMessageParticipants(messages);
 
     expect(provider.participantIdentitySnapshot.length, 1);
+  });
+
+  test('message from another account on the same wallet is not mine', () {
+    final provider = ChatProvider();
+    addTearDown(provider.dispose);
+    final otherAccountMessage = ChatMessage.fromJson(<String, dynamic>{
+      'id': 'other-account-message',
+      'conversation_id': 'c1',
+      'sender_user_id': 'a1b2c3d4-0000-4000-8000-00000000000b',
+      'sender_wallet': 'wallet_me',
+      'message': 'from the other account',
+      'created_at': '2026-10-20T12:00:00Z',
+    });
+
+    final presentation = resolveMessagePresentationForTesting(
+      message: otherAccountMessage,
+      conversation: Conversation(id: 'c1'),
+      chatProvider: provider,
+      currentUserWallet: 'wallet_me',
+      currentUserId: '6c421a31-405e-4d9e-8b74-9dc357fd13b2',
+    );
+
+    expect(presentation.isMine, isFalse);
+  });
+
+  test('wallet fallback decides ownership only without a sender account id',
+      () {
+    final provider = ChatProvider();
+    addTearDown(provider.dispose);
+    final legacyMessage = ChatMessage.fromJson(<String, dynamic>{
+      'id': 'legacy-message',
+      'conversation_id': 'c1',
+      'sender_wallet': 'wallet_me',
+      'message': 'legacy row without account id',
+      'created_at': '2026-10-20T12:00:00Z',
+    });
+
+    final presentation = resolveMessagePresentationForTesting(
+      message: legacyMessage,
+      conversation: Conversation(id: 'c1'),
+      chatProvider: provider,
+      currentUserWallet: 'wallet_me',
+      currentUserId: '6c421a31-405e-4d9e-8b74-9dc357fd13b2',
+    );
+
+    expect(presentation.isMine, isTrue);
   });
 
   test('Non-renderable messages still do not render', () {

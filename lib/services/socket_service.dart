@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'backend_api_service.dart';
+import '../utils/account_identity.dart';
 // wallet_utils is intentionally not used here because the server now expects
 // canonical wallet casing when subscribing to user rooms. Keep the import
 // commented for reference.
@@ -46,11 +47,13 @@ class SocketService {
   final StreamController<Map<String, dynamic>> _markerController =
       StreamController<Map<String, dynamic>>.broadcast();
   final List<NotificationCallback> _postListeners = [];
-  String? _currentSubscribedWallet;
+  String? _currentSubscribedIdentity;
+  bool _currentSubscribedIdentityIsAccount = false;
   final Set<String> _subscribedConversations = {};
   final Map<String, _PendingSubscriptionAck> _pendingSubscriptionAcks = {};
   bool _notificationHandlerRegistered = false;
   final List<NotificationCallback> _messageReactionListeners = [];
+  io.Socket Function(String, Map<String, dynamic>)? _socketFactoryForTesting;
 
   void _log(String msg) {
     if (!kDebugMode) return;
@@ -186,7 +189,8 @@ class SocketService {
       };
 
       _socketBaseUrl = resolvedBase;
-      _socket = io.io(resolvedBase, options);
+      _socket = _socketFactoryForTesting?.call(resolvedBase, options) ??
+          io.io(resolvedBase, options);
 
       // Register all event handlers once per socket instance.
       _notificationHandlerRegistered = false;
@@ -195,8 +199,8 @@ class SocketService {
       _socket!.onConnect((_) {
         _log('Connected');
         // Re-subscribe if we had a previous wallet.
-        if (_currentSubscribedWallet != null) {
-          _resubscribe(_currentSubscribedWallet!);
+        if (_currentSubscribedIdentity != null) {
+          _resubscribeCurrentIdentity();
         }
         // Notify connect listeners so UI can refresh data.
         for (final cb in _connectListeners) {
@@ -286,13 +290,18 @@ class SocketService {
   /// Connects and attempts to subscribe, resolving when subscription is confirmed or rejects on timeout/error
   Future<bool> connectAndSubscribe(
     String baseUrl,
-    String walletAddress, {
+    String identity, {
+    bool isAccountId = false,
     Duration timeout = const Duration(seconds: 6),
   }) async {
     try {
       final connected = await connect(baseUrl);
       if (!connected) return false;
-      return await _subscribeUserWithAck(walletAddress, timeout: timeout);
+      return await _subscribePersonalRoom(
+        identity,
+        isAccountId: isAccountId,
+        timeout: timeout,
+      );
     } catch (e) {
       _log('connectAndSubscribe error: $e');
       return false;
@@ -308,54 +317,87 @@ class SocketService {
   /// Subscribe to personal user room. Requires server validation with JWT.
   /// Will auto-connect if needed and avoid duplicate subscriptions.
   void subscribeUser(String walletAddress) {
-    unawaited(_subscribeUserWithAck(walletAddress));
+    unawaited(_subscribePersonalRoom(walletAddress));
   }
 
-  Future<bool> _subscribeUserWithAck(
-    String walletAddress, {
+  void subscribeAccount(String accountId) {
+    final canonicalId = canonicalAccountUserId(accountId);
+    if (canonicalId == null) return;
+    unawaited(_subscribePersonalRoom(canonicalId, isAccountId: true));
+  }
+
+  Future<bool> connectAndSubscribeAccount(
+    String baseUrl,
+    String accountId, {
+    Duration timeout = const Duration(seconds: 6),
+  }) {
+    final canonicalId = canonicalAccountUserId(accountId);
+    if (canonicalId == null) return Future<bool>.value(false);
+    return connectAndSubscribe(
+      baseUrl,
+      canonicalId,
+      isAccountId: true,
+      timeout: timeout,
+    );
+  }
+
+  Future<bool> _subscribePersonalRoom(
+    String identity, {
+    bool isAccountId = false,
     Duration timeout = const Duration(seconds: 6),
   }) async {
-    final roomWallet = walletAddress.toString();
-    if (roomWallet.isEmpty) return false;
-    final expectedRoom = 'user:$roomWallet';
+    final roomIdentity =
+        isAccountId ? canonicalAccountUserId(identity) : identity.trim();
+    if (roomIdentity == null || roomIdentity.isEmpty) return false;
+    final expectedRoom =
+        isAccountId ? 'account:$roomIdentity' : 'user:$roomIdentity';
 
-    final previouslySubscribed = _currentSubscribedWallet;
+    final previouslySubscribed = _currentSubscribedIdentity;
+    final previouslySubscribedAsAccount = _currentSubscribedIdentityIsAccount;
     final socketReady = _socket != null && _socket!.connected;
 
     if (!socketReady) {
-      _currentSubscribedWallet = roomWallet;
-      _log('subscribeUser queued until socket connects');
+      _currentSubscribedIdentity = roomIdentity;
+      _currentSubscribedIdentityIsAccount = isAccountId;
+      _log('personal room subscription queued until socket connects');
       unawaited(connect());
       return false;
     }
 
-    if (previouslySubscribed == roomWallet &&
+    if (previouslySubscribed == roomIdentity &&
+        previouslySubscribedAsAccount == isAccountId &&
         !_pendingSubscriptionAcks.containsKey(expectedRoom)) {
-      _log('Already subscribed to $walletAddress');
+      _log('Already subscribed to $expectedRoom');
       return true;
     }
 
     if (previouslySubscribed != null && previouslySubscribed.isNotEmpty) {
       _socket!.emit('unsubscribe:user', previouslySubscribed);
-      _resolvePendingSubscriptionAck('user:$previouslySubscribed', false);
+      final previousRoom = previouslySubscribedAsAccount
+          ? 'account:$previouslySubscribed'
+          : 'user:$previouslySubscribed';
+      _resolvePendingSubscriptionAck(previousRoom, false);
     }
 
-    _currentSubscribedWallet = roomWallet;
+    _currentSubscribedIdentity = roomIdentity;
+    _currentSubscribedIdentityIsAccount = isAccountId;
     final ok = await _awaitSubscriptionAck(
       room: expectedRoom,
       timeout: timeout,
       emitRequest: () {
-        _socket!.emit('subscribe:user', roomWallet);
-        _log('emitted subscribe:user for $roomWallet');
+        _socket!.emit('subscribe:user', roomIdentity);
+        _log('emitted subscribe:user for $expectedRoom');
       },
     );
     if (ok) {
-      _log('subscribe:ok for $walletAddress (room: $expectedRoom)');
+      _log('subscribe:ok for $expectedRoom');
       return true;
     }
-    _log('subscribe:error for $walletAddress');
-    if (_currentSubscribedWallet == roomWallet) {
-      _currentSubscribedWallet = null;
+    _log('subscribe:error for $expectedRoom');
+    if (_currentSubscribedIdentity == roomIdentity &&
+        _currentSubscribedIdentityIsAccount == isAccountId) {
+      _currentSubscribedIdentity = null;
+      _currentSubscribedIdentityIsAccount = false;
     }
     return false;
   }
@@ -870,20 +912,40 @@ class SocketService {
 
   // Handled inline in _registerNotificationHandler
 
-  void _resubscribe(String walletAddress) {
-    _log('Re-subscribing to $walletAddress after reconnect');
-    _currentSubscribedWallet = null; // Reset to allow resubscription
-    subscribeUser(walletAddress);
+  void _resubscribeCurrentIdentity() {
+    final identity = _currentSubscribedIdentity;
+    if (identity == null || identity.isEmpty) return;
+    final isAccountId = _currentSubscribedIdentityIsAccount;
+    _log('Re-subscribing to personal room after reconnect');
+    _currentSubscribedIdentity = null; // Reset to allow resubscription.
+    _currentSubscribedIdentityIsAccount = false;
+    unawaited(_subscribePersonalRoom(identity, isAccountId: isAccountId));
   }
 
   void unsubscribeUser(String walletAddress) {
+    _unsubscribePersonalRoom(walletAddress, isAccountId: false);
+  }
+
+  void unsubscribeAccount(String accountId) {
+    final canonicalId = canonicalAccountUserId(accountId);
+    if (canonicalId == null) return;
+    _unsubscribePersonalRoom(canonicalId, isAccountId: true);
+  }
+
+  void _unsubscribePersonalRoom(String identity, {required bool isAccountId}) {
     if (_socket == null) return;
-    final roomWallet = walletAddress.toString();
-    _socket!.emit('unsubscribe:user', roomWallet);
-    if (_currentSubscribedWallet == roomWallet) {
-      _currentSubscribedWallet = null;
+    final roomIdentity = identity.trim();
+    if (roomIdentity.isEmpty) return;
+    _socket!.emit('unsubscribe:user', roomIdentity);
+    if (_currentSubscribedIdentity == roomIdentity &&
+        _currentSubscribedIdentityIsAccount == isAccountId) {
+      _currentSubscribedIdentity = null;
+      _currentSubscribedIdentityIsAccount = false;
     }
-    _resolvePendingSubscriptionAck('user:$roomWallet', false);
+    _resolvePendingSubscriptionAck(
+      isAccountId ? 'account:$roomIdentity' : 'user:$roomIdentity',
+      false,
+    );
   }
 
   /// Subscribe to a conversation room so the client receives message/read/member events
@@ -945,14 +1007,28 @@ class SocketService {
     _socket = null;
     _socketBaseUrl = null;
     _socketAuthToken = null;
-    _currentSubscribedWallet = null;
+    _currentSubscribedIdentity = null;
+    _currentSubscribedIdentityIsAccount = false;
     _subscribedConversations.clear();
     _notificationHandlerRegistered = false;
     _connectCompleter = null;
   }
 
+  @visibleForTesting
+  void setSocketFactoryForTesting(
+    io.Socket Function(String, Map<String, dynamic>)? factory,
+  ) {
+    _socketFactoryForTesting = factory;
+  }
+
   /// Returns the wallet address the socket is currently subscribed to (user room), or null.
-  String? get currentSubscribedWallet => _currentSubscribedWallet;
+  String? get currentSubscribedWallet =>
+      _currentSubscribedIdentityIsAccount ? null : _currentSubscribedIdentity;
+  String? get currentSubscribedAccountId =>
+      _currentSubscribedIdentityIsAccount ? _currentSubscribedIdentity : null;
+  String? get currentSubscribedIdentity => _currentSubscribedIdentity;
+  bool get currentSubscribedIdentityIsAccount =>
+      _currentSubscribedIdentityIsAccount;
 
   Set<String> get subscribedConversationIds =>
       Set<String>.unmodifiable(_subscribedConversations);
@@ -960,7 +1036,9 @@ class SocketService {
   Map<String, Object?> get debugResourceSnapshot => <String, Object?>{
         'connected': _socket?.connected == true,
         'baseUrl': _socketBaseUrl,
-        'currentSubscribedWallet': _currentSubscribedWallet,
+        'currentSubscribedWallet': currentSubscribedWallet,
+        'currentSubscribedAccountId': currentSubscribedAccountId,
+        'currentSubscribedIdentity': _currentSubscribedIdentity,
         'subscribedConversationCount': _subscribedConversations.length,
         'pendingSubscriptionAcks': _pendingSubscriptionAcks.length,
         'listenerCounts': <String, int>{

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:art_kubus/providers/chat_provider.dart';
@@ -183,5 +184,152 @@ void main() {
 
     expect(provider.messages['conv_open'], hasLength(1));
     expect(provider.unreadCounts['conv_open'], 0);
+  });
+
+  test('late message response from the prior account cannot fill new cache',
+      () async {
+    final requestStarted = Completer<void>();
+    final staleResponse = Completer<http.Response>();
+    BackendApiService().setHttpClient(MockClient((request) async {
+      expect(request.url.path, '/api/messages/private-a/messages');
+      requestStarted.complete();
+      return staleResponse.future;
+    }));
+    final provider = ChatProvider()
+      ..switchAccountForTesting('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa');
+    addTearDown(provider.dispose);
+
+    final pending = provider.loadMessages('private-a');
+    await requestStarted.future;
+    provider.switchAccountForTesting('bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb');
+    staleResponse.complete(http.Response(
+      jsonEncode(<String, dynamic>{
+        'success': true,
+        'data': <Map<String, dynamic>>[
+          <String, dynamic>{
+            'id': 'a-message',
+            'conversation_id': 'private-a',
+            'sender_user_id': 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+            'sender_wallet': null,
+            'message': 'private to account A',
+            'created_at': '2026-10-20T10:00:00Z',
+          },
+        ],
+      }),
+      200,
+    ));
+
+    expect(await pending, isEmpty);
+    expect(provider.messages, isEmpty);
+    expect(provider.debugResourceSnapshot['currentAccountId'],
+        'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb');
+  });
+
+  test('account room event for unknown prior-session conversation is ignored',
+      () async {
+    BackendApiService().setHttpClient(MockClient((request) async {
+      if (request.url.path == '/api/messages') {
+        return http.Response(
+          jsonEncode(<String, dynamic>{'success': true, 'data': <dynamic>[]}),
+          200,
+        );
+      }
+      return http.Response('Not Found', 404);
+    }));
+    final provider = ChatProvider()
+      ..switchAccountForTesting('bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb');
+    addTearDown(provider.dispose);
+
+    provider.handleIncomingMessageForTesting(<String, dynamic>{
+      'conversationId': 'private-a',
+      'message': <String, dynamic>{
+        'id': 'a-message',
+        'senderUserId': 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+        'message': 'private to account A',
+      },
+    });
+    await Future<void>.delayed(Duration.zero);
+
+    expect(provider.messages, isEmpty);
+    expect(provider.unreadCounts, isEmpty);
+  });
+
+  test(
+      'account switch clears the prior account conversation and message caches',
+      () async {
+    BackendApiService().setHttpClient(MockClient((request) async {
+      if (request.url.path == '/api/messages') {
+        return http.Response(
+          jsonEncode(<String, dynamic>{
+            'success': true,
+            'data': <Map<String, dynamic>>[
+              <String, dynamic>{
+                'id': 'private-a',
+                'memberUserIds': <String>[
+                  'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+                ],
+                'isGroup': false,
+              },
+            ],
+          }),
+          200,
+        );
+      }
+      if (request.url.path == '/api/messages/private-a/messages') {
+        return http.Response(
+          jsonEncode(<String, dynamic>{
+            'success': true,
+            'data': <Map<String, dynamic>>[
+              <String, dynamic>{
+                'id': 'a-message',
+                'conversation_id': 'private-a',
+                'sender_user_id': 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+                'message': 'private to account A',
+                'created_at': '2026-10-20T10:00:00Z',
+              },
+            ],
+          }),
+          200,
+        );
+      }
+      return http.Response('Not Found', 404);
+    }));
+    final provider = ChatProvider()
+      ..switchAccountForTesting('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa');
+    addTearDown(provider.dispose);
+
+    await provider.refreshConversations();
+    await provider.loadMessages('private-a');
+    expect(provider.conversations.map((c) => c.id), contains('private-a'));
+    expect(provider.messages['private-a'], hasLength(1));
+
+    provider.switchAccountForTesting('bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb');
+
+    expect(provider.conversations, isEmpty);
+    expect(provider.messages, isEmpty);
+    expect(provider.unreadCounts, isEmpty);
+    expect(provider.debugResourceSnapshot['currentAccountId'],
+        'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb');
+  });
+
+  test('legacy wallet session still accepts wallet-addressed incoming messages',
+      () async {
+    final provider = ChatProvider()
+      ..setCurrentWalletForTesting('0xLegacyWallet');
+    addTearDown(provider.dispose);
+
+    provider.handleIncomingMessageForTesting(<String, dynamic>{
+      'conversationId': 'wallet-conv',
+      'message': <String, dynamic>{
+        'id': 'legacy-message',
+        'sender_wallet': '0xPeerWallet',
+        'message': 'legacy wallet message',
+      },
+    });
+
+    expect(provider.messages['wallet-conv'], hasLength(1));
+    expect(
+        provider.messages['wallet-conv']!.single.senderWallet, '0xPeerWallet');
+    expect(provider.debugResourceSnapshot['currentAccountId'], isNull);
   });
 }
