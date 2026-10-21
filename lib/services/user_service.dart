@@ -565,8 +565,11 @@ class UserService {
         postsCount: postsFromProfile,
         isFollowing: isFollowing,
         isVerified: profileRoles.isVerified,
+        isVerifiedSpecified: profileRoles.isVerifiedSpecified,
         isArtist: profileRoles.isArtist,
+        isArtistSpecified: profileRoles.isArtistSpecified,
         isInstitution: profileRoles.isInstitution,
+        isInstitutionSpecified: profileRoles.isInstitutionSpecified,
         showAchievements: _extractShowAchievements(profile),
         fieldOfWork: fieldOfWork,
         yearsActive: yearsActive,
@@ -641,8 +644,11 @@ class UserService {
         postsCount: profile.postsCount,
         isFollowing: profile.isFollowing,
         isVerified: profile.isVerified,
+        isVerifiedSpecified: profile.isVerifiedSpecified,
         isArtist: profile.isArtist,
+        isArtistSpecified: profile.isArtistSpecified,
         isInstitution: profile.isInstitution,
+        isInstitutionSpecified: profile.isInstitutionSpecified,
         showAchievements: profile.showAchievements,
         joinedDate: profile.joinedDate,
         achievementProgress: profile.achievementProgress,
@@ -768,9 +774,21 @@ class UserService {
         if (u.id.isEmpty) continue;
 
         final existing = _cache[u.id];
+        // A stated role (true or explicit false) replaces the cached value; an
+        // unstated one (partial payload, synthetic record) keeps it.
+        final roles = existing == null
+            ? u.roleStatements
+            : existing.roleStatements.merge(u.roleStatements);
         late final User updated;
         if (allowNullMediaOverwrite || existing == null) {
-          updated = u;
+          updated = u.copyWith(
+            isVerified: roles.isVerified,
+            isVerifiedSpecified: roles.isVerifiedSpecified,
+            isArtist: roles.isArtist,
+            isArtistSpecified: roles.isArtistSpecified,
+            isInstitution: roles.isInstitution,
+            isInstitutionSpecified: roles.isInstitutionSpecified,
+          );
         } else {
           updated = User(
             id: u.id,
@@ -783,9 +801,12 @@ class UserService {
             followingCount: u.followingCount,
             postsCount: u.postsCount,
             isFollowing: u.isFollowing,
-            isVerified: u.isVerified,
-            isArtist: u.isArtist,
-            isInstitution: u.isInstitution,
+            isVerified: roles.isVerified,
+            isVerifiedSpecified: roles.isVerifiedSpecified,
+            isArtist: roles.isArtist,
+            isArtistSpecified: roles.isArtistSpecified,
+            isInstitution: roles.isInstitution,
+            isInstitutionSpecified: roles.isInstitutionSpecified,
             showAchievements: u.showAchievements,
             joinedDate: u.joinedDate,
             achievementProgress: u.achievementProgress.isNotEmpty
@@ -829,9 +850,12 @@ class UserService {
       'followingCount': u.followingCount,
       'postsCount': u.postsCount,
       'isFollowing': u.isFollowing,
-      'isVerified': u.isVerified,
-      'isArtist': u.isArtist,
-      'isInstitution': u.isInstitution,
+      // Role keys are written only when stated, so a reload keeps unstated
+      // values unstated (ProfileIdentityRoles.fromProfileMap reads key presence).
+      if (u.roleStatements.isVerifiedSpecified) 'isVerified': u.isVerified,
+      if (u.roleStatements.isArtistSpecified) 'isArtist': u.isArtist,
+      if (u.roleStatements.isInstitutionSpecified)
+        'isInstitution': u.isInstitution,
       'showAchievements': u.showAchievements,
       'joinedDate': u.joinedDate,
       'profileImageUrl': u.profileImageUrl,
@@ -963,8 +987,11 @@ class UserService {
                 : int.tryParse((v['postsCount'] ?? '0').toString()) ?? 0,
             isFollowing: (v['isFollowing'] == true),
             isVerified: cachedRoles.isVerified,
+            isVerifiedSpecified: cachedRoles.isVerifiedSpecified,
             isArtist: cachedRoles.isArtist,
+            isArtistSpecified: cachedRoles.isArtistSpecified,
             isInstitution: cachedRoles.isInstitution,
+            isInstitutionSpecified: cachedRoles.isInstitutionSpecified,
             showAchievements: v['showAchievements'] is bool
                 ? v['showAchievements'] as bool
                 : true,
@@ -1165,8 +1192,11 @@ class UserService {
         postsCount: 0,
         isFollowing: await _fetchAuthoritativeFollowState(wallet),
         isVerified: profileRoles.isVerified,
+        isVerifiedSpecified: profileRoles.isVerifiedSpecified,
         isArtist: profileRoles.isArtist,
+        isArtistSpecified: profileRoles.isArtistSpecified,
         isInstitution: profileRoles.isInstitution,
+        isInstitutionSpecified: profileRoles.isInstitutionSpecified,
         showAchievements: _extractShowAchievements(profile),
         joinedDate: joinedDate,
         achievementProgress: achievementSummary.progress,
@@ -1821,6 +1851,7 @@ class UserService {
               isFollowing: isFollowing,
             )
           : User(
+              isVerified: false,
               id: normalizedWallet,
               name: 'Unknown artist',
               username: '',
@@ -1829,9 +1860,6 @@ class UserService {
               followingCount: following,
               postsCount: posts,
               isFollowing: isFollowing,
-              isVerified: false,
-              isArtist: false,
-              isInstitution: false,
               joinedDate: 'Joined recently',
               achievementProgress: [],
               profileImageUrl: null,
@@ -1899,6 +1927,7 @@ class UserService {
                   : 0;
               final profileIsFollowing = profile['isFollowing'] == true ||
                   profile['is_following'] == true;
+              final profileRoles = ProfileIdentityRoles.fromProfileMap(profile);
               final user = User(
                 id: wallet,
                 name: ((profile['displayName'] ?? '')
@@ -1939,11 +1968,12 @@ class UserService {
                 postsCount: 0,
                 isFollowing:
                     profileIsFollowing || followingSet.contains(wallet),
-                isVerified:
-                    ProfileIdentityRoles.fromProfileMap(profile).isVerified,
-                isArtist: ProfileIdentityRoles.fromProfileMap(profile).isArtist,
-                isInstitution:
-                    ProfileIdentityRoles.fromProfileMap(profile).isInstitution,
+                isVerified: profileRoles.isVerified,
+                isVerifiedSpecified: profileRoles.isVerifiedSpecified,
+                isArtist: profileRoles.isArtist,
+                isArtistSpecified: profileRoles.isArtistSpecified,
+                isInstitution: profileRoles.isInstitution,
+                isInstitutionSpecified: profileRoles.isInstitutionSpecified,
                 showAchievements: _extractShowAchievements(profile),
                 joinedDate: profile['createdAt'] != null
                     ? 'Joined ${DateTime.parse(profile['createdAt']).month}/${DateTime.parse(profile['createdAt']).year}'
@@ -1992,6 +2022,7 @@ class UserService {
             ));
           } else {
             results.add(User(
+              isVerified: false,
               id: w,
               name: 'Unknown artist',
               username: '',
@@ -2000,9 +2031,6 @@ class UserService {
               followingCount: 0,
               postsCount: 0,
               isFollowing: followingSet.contains(WalletUtils.canonical(w)),
-              isVerified: false,
-              isArtist: false,
-              isInstitution: false,
               joinedDate: 'Joined recently',
               achievementProgress: [],
               profileImageUrl: null,
@@ -2092,6 +2120,7 @@ class UserService {
                 : 0;
             final profileIsFollowing = profile['isFollowing'] == true ||
                 profile['is_following'] == true;
+            final profileRoles = ProfileIdentityRoles.fromProfileMap(profile);
             final user = User(
               id: wallet,
               name: ((profile['displayName'] ?? '')
@@ -2131,11 +2160,12 @@ class UserService {
               followingCount: followingCount,
               postsCount: 0,
               isFollowing: profileIsFollowing || followingSet.contains(wallet),
-              isVerified:
-                  ProfileIdentityRoles.fromProfileMap(profile).isVerified,
-              isArtist: ProfileIdentityRoles.fromProfileMap(profile).isArtist,
-              isInstitution:
-                  ProfileIdentityRoles.fromProfileMap(profile).isInstitution,
+              isVerified: profileRoles.isVerified,
+              isVerifiedSpecified: profileRoles.isVerifiedSpecified,
+              isArtist: profileRoles.isArtist,
+              isArtistSpecified: profileRoles.isArtistSpecified,
+              isInstitution: profileRoles.isInstitution,
+              isInstitutionSpecified: profileRoles.isInstitutionSpecified,
               showAchievements: _extractShowAchievements(profile),
               joinedDate: profile['createdAt'] != null
                   ? 'Joined ${DateTime.parse(profile['createdAt']).month}/${DateTime.parse(profile['createdAt']).year}'
@@ -2182,6 +2212,7 @@ class UserService {
           results.add(found[w]!);
         } else {
           results.add(User(
+            isVerified: false,
             id: w,
             name: 'Unknown artist',
             username: '',
@@ -2190,9 +2221,6 @@ class UserService {
             followingCount: 0,
             postsCount: 0,
             isFollowing: followingSet.contains(WalletUtils.canonical(w)),
-            isVerified: false,
-            isArtist: false,
-            isInstitution: false,
             joinedDate: 'Joined recently',
             achievementProgress: [],
             profileImageUrl: null,
@@ -2215,6 +2243,7 @@ class UserService {
           results.add(u);
         } else {
           results.add(User(
+            isVerified: false,
             id: w,
             name: 'Unknown artist',
             username: '',
@@ -2223,7 +2252,6 @@ class UserService {
             followingCount: 0,
             postsCount: 0,
             isFollowing: false,
-            isVerified: false,
             joinedDate: 'Joined recently',
             achievementProgress: [],
             profileImageUrl: null,
@@ -2231,6 +2259,7 @@ class UserService {
         }
       } catch (_) {
         results.add(User(
+          isVerified: false,
           id: w,
           name: 'Unknown artist',
           username: '',
@@ -2239,8 +2268,6 @@ class UserService {
           followingCount: 0,
           postsCount: 0,
           isFollowing: false,
-          isVerified: false,
-          isArtist: false,
           joinedDate: 'Joined recently',
           achievementProgress: [],
           profileImageUrl: null,
