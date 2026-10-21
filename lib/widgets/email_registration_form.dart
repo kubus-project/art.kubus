@@ -87,8 +87,9 @@ class _EmailRegistrationFormState extends State<EmailRegistrationForm> {
       ),
     );
     final fieldSpacing = widget.compact ? KubusSpacing.sm : KubusSpacing.md;
-    final showOptionalUsernameSection =
-        widget.showUsername && widget.usernameController != null && !widget.requireUsername;
+    final showOptionalUsernameSection = widget.showUsername &&
+        widget.usernameController != null &&
+        !widget.requireUsername;
 
     return AutofillGroup(
       child: Column(
@@ -191,7 +192,8 @@ class _EmailRegistrationFormState extends State<EmailRegistrationForm> {
             if (showOptionalUsernameSection)
               DecoratedBox(
                 decoration: BoxDecoration(
-                  color: colorScheme.surface.withValues(alpha: isDark ? 0.18 : 0.62),
+                  color: colorScheme.surface
+                      .withValues(alpha: isDark ? 0.18 : 0.62),
                   borderRadius: BorderRadius.circular(widget.compact ? 14 : 16),
                   border: Border.all(
                     color: colorScheme.outlineVariant.withValues(alpha: 0.16),
