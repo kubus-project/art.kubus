@@ -1920,6 +1920,9 @@ class _ArtDetailScreenState extends State<ArtDetailScreen> {
                     icon: const Icon(Icons.more_horiz),
                   ),
                 IconButton(
+                  tooltip: comment.isLikedByCurrentUser
+                      ? l10n.commentUnlikeTooltip
+                      : l10n.commentLikeTooltip,
                   onPressed: () =>
                       provider.toggleCommentLike(widget.artworkId, comment.id),
                   icon: Icon(

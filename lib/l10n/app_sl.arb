@@ -3011,6 +3011,11 @@
   "qrScannerInvalidQrToast": "Prosim, skeniraj QR kodo Solana denarnice.",
   "qrScannerTorchNotSupportedToast": "Vklop bliskavice na tej napravi ni podprt.",
   "qrScannerSwitchCameraFailedToast": "Kamere ni mogoče zamenjati.",
+  "qrScannerTorchOnTooltip": "Vklopi bliskavico",
+  "qrScannerTorchOffTooltip": "Izklopi bliskavico",
+  "qrScannerSwitchCameraTooltip": "Preklopi kamero",
+  "commentLikeTooltip": "Všečkaj komentar",
+  "commentUnlikeTooltip": "Odstrani všeček s komentarja",
   "artworkNotFound": "Umetnina ni najdena",
   "web3DashboardComingSoon": "Web3 nadzorna plošča – kmalu",
   "artDetailLoadingTitle": "Nalaganje umetnine",
@@ -7756,5 +7761,64 @@
   "contributionDocument": "Dokumentiraj umetnost v javnem prostoru",
   "contributionArtwork": "Dodaj umetniško delo",
   "contributionExhibition": "Dodaj razstavo ali dogodek",
-  "contributionApplication": "Preveri stanje prijave"
+  "contributionApplication": "Preveri stanje prijave",
+  "arMarkerManagerTitle": "AR označevalec",
+  "arMarkerManagerSubtitle": "Nastavi označevalec za tisk, da ga drugi lahko skenirajo in odklenejo AR izkušnjo.",
+  "arMarkerManagerOnlyPngToast": "Podprti so le PNG označevalci.",
+  "arMarkerManagerSquareRequiredToast": "Označevalec mora biti kvadraten (širina == višina).",
+  "arMarkerManagerTooSmallToast": "Označevalec je premajhen. Najmanj {minPx}×{minPx}px.",
+  "@arMarkerManagerTooSmallToast": {
+    "placeholders": {
+      "minPx": {
+        "type": "int"
+      }
+    }
+  },
+  "arMarkerManagerTooLargeToast": "Označevalec je prevelik. Največ {maxPx}×{maxPx}px.",
+  "@arMarkerManagerTooLargeToast": {
+    "placeholders": {
+      "maxPx": {
+        "type": "int"
+      }
+    }
+  },
+  "arMarkerManagerModeTitle": "Način označevalca",
+  "arMarkerManagerAutoGenerateTitle": "Samodejno ustvari",
+  "arMarkerManagerAutoGenerateSubtitle": "kubus ustvari označevalec za to umetnino.",
+  "arMarkerManagerUploadOwnTitle": "Naloži svojega",
+  "arMarkerManagerUploadOwnSubtitle": "Naloži kvadratni PNG označevalec ({minPx}–{maxPx}px).",
+  "@arMarkerManagerUploadOwnSubtitle": {
+    "placeholders": {
+      "minPx": {
+        "type": "int"
+      },
+      "maxPx": {
+        "type": "int"
+      }
+    }
+  },
+  "arMarkerManagerSizeLabel": "Velikost označevalca (px)",
+  "arMarkerManagerGenerateButton": "Ustvari",
+  "arMarkerManagerRegenerateButton": "Ustvari znova",
+  "arMarkerManagerRequirementsTitle": "Zahteve za nalaganje",
+  "arMarkerManagerRequirementsBody": "Samo PNG • Kvadratno • {minPx}–{maxPx}px • Visok kontrast • Pusti varen rob za tiskanje.",
+  "@arMarkerManagerRequirementsBody": {
+    "placeholders": {
+      "minPx": {
+        "type": "int"
+      },
+      "maxPx": {
+        "type": "int"
+      }
+    }
+  },
+  "arMarkerManagerSelectPngButton": "Izberi PNG",
+  "arMarkerManagerChangeFileButton": "Zamenjaj datoteko",
+  "arMarkerManagerUploadButton": "Naloži označevalec",
+  "arMarkerManagerPreviewTitle": "Predogled",
+  "arMarkerManagerDownloadButton": "Prenesi označevalec",
+  "arMarkerManagerSavedToast": "AR nastavitev je shranjena.",
+  "promotionCheckoutOpenAppButton": "Odpri aplikacijo",
+  "arCreateArtworkLocationMarkerTitle": "Ustvari lokacijski označevalec umetnine",
+  "mnemonicRevealCopyUnavailableToast": "Obnovitvene fraze na tej napravi ni mogoče kopirati."
 }

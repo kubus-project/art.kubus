@@ -19,25 +19,33 @@ source of truth that the patch is present is the guard test passing.
    puro flutter gen-l10n
    ```
 
-2. **Re-apply the hand patch** in `lib/l10n/app_localizations.dart`. The stock
-   generator produces:
+2. **Re-apply the hand patch** with the script (it is idempotent, and CI runs
+   the same sequence and fails on any diff):
+   ```bash
+   dart format lib/l10n/app_localizations*.dart
+   node scripts/l10n/locale_guard.mjs --fix
+   node scripts/l10n/locale_guard.mjs --check
+   ```
+   The canonical guard text lives in `scripts/l10n/locale_guard.mjs`. For
+   reference, the stock generator produces:
    ```dart
    abstract class AppLocalizations {
      AppLocalizations(String locale) : localeName = intl.Intl.canonicalizedLocale(locale.toString());
 
      final String localeName;
    ```
-   Replace the constructor and add the helper so invalid tags resolve to `sl`:
+   and the script turns it into the guarded constructor, which maps anything
+   other than `en`/`sl` to `sl`:
    ```dart
    abstract class AppLocalizations {
-     AppLocalizations(String locale) : localeName = _safeCanonicalizedLocale(locale);
+     AppLocalizations(String locale) : localeName = _supportedLocaleName(locale);
 
-     static String _safeCanonicalizedLocale(String locale) {
-       final raw = locale.trim();
-       if (raw.isEmpty || raw == 'undefined' || raw == 'null') {
-         return 'sl';
-       }
-       return intl.Intl.canonicalizedLocale(raw);
+     static String _supportedLocaleName(String locale) {
+       final normalizedLocale = intl.Intl.canonicalizedLocale(locale.trim());
+       return switch (normalizedLocale) {
+         'en' || 'sl' => normalizedLocale,
+         _ => 'sl',
+       };
      }
 
      final String localeName;

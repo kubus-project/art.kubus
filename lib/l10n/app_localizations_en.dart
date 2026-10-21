@@ -7986,6 +7986,21 @@ class AppLocalizationsEn extends AppLocalizations {
   String get qrScannerSwitchCameraFailedToast => 'Unable to switch camera.';
 
   @override
+  String get qrScannerTorchOnTooltip => 'Turn on flashlight';
+
+  @override
+  String get qrScannerTorchOffTooltip => 'Turn off flashlight';
+
+  @override
+  String get qrScannerSwitchCameraTooltip => 'Switch camera';
+
+  @override
+  String get commentLikeTooltip => 'Like comment';
+
+  @override
+  String get commentUnlikeTooltip => 'Unlike comment';
+
+  @override
   String get artworkNotFound => 'Artwork not found';
 
   @override
@@ -18514,4 +18529,92 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get contributionApplication => 'View application status';
+
+  @override
+  String get arMarkerManagerTitle => 'AR Marker';
+
+  @override
+  String get arMarkerManagerSubtitle =>
+      'Set up a printable marker so people can scan and unlock the AR experience.';
+
+  @override
+  String get arMarkerManagerOnlyPngToast => 'Only PNG markers are supported.';
+
+  @override
+  String get arMarkerManagerSquareRequiredToast =>
+      'Marker must be square (width == height).';
+
+  @override
+  String arMarkerManagerTooSmallToast(int minPx) {
+    return 'Marker is too small. Minimum is $minPx×${minPx}px.';
+  }
+
+  @override
+  String arMarkerManagerTooLargeToast(int maxPx) {
+    return 'Marker is too large. Maximum is $maxPx×${maxPx}px.';
+  }
+
+  @override
+  String get arMarkerManagerModeTitle => 'Marker mode';
+
+  @override
+  String get arMarkerManagerAutoGenerateTitle => 'Auto-generate';
+
+  @override
+  String get arMarkerManagerAutoGenerateSubtitle =>
+      'kubus generates a marker for this artwork.';
+
+  @override
+  String get arMarkerManagerUploadOwnTitle => 'Upload my own';
+
+  @override
+  String arMarkerManagerUploadOwnSubtitle(int minPx, int maxPx) {
+    return 'Upload a square PNG marker ($minPx–${maxPx}px).';
+  }
+
+  @override
+  String get arMarkerManagerSizeLabel => 'Marker size (px)';
+
+  @override
+  String get arMarkerManagerGenerateButton => 'Generate';
+
+  @override
+  String get arMarkerManagerRegenerateButton => 'Regenerate';
+
+  @override
+  String get arMarkerManagerRequirementsTitle => 'Upload requirements';
+
+  @override
+  String arMarkerManagerRequirementsBody(int minPx, int maxPx) {
+    return 'PNG only • Square • $minPx–${maxPx}px • High contrast • Leave a safe border for printing.';
+  }
+
+  @override
+  String get arMarkerManagerSelectPngButton => 'Select PNG';
+
+  @override
+  String get arMarkerManagerChangeFileButton => 'Change file';
+
+  @override
+  String get arMarkerManagerUploadButton => 'Upload marker';
+
+  @override
+  String get arMarkerManagerPreviewTitle => 'Preview';
+
+  @override
+  String get arMarkerManagerDownloadButton => 'Download marker';
+
+  @override
+  String get arMarkerManagerSavedToast => 'AR setup saved.';
+
+  @override
+  String get promotionCheckoutOpenAppButton => 'Open app';
+
+  @override
+  String get arCreateArtworkLocationMarkerTitle =>
+      'Create artwork location marker';
+
+  @override
+  String get mnemonicRevealCopyUnavailableToast =>
+      'Unable to copy the recovery phrase on this device.';
 }

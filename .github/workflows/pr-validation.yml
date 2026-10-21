@@ -186,6 +186,17 @@ jobs:
         run: |
           flutter pub get
           git diff --exit-code -- pubspec.lock
+      - name: Check generated localizations and locale guard
+        # Regenerating l10n drops the hand-kept locale guard (issue #196); the script
+        # re-applies it, and the diff fails on generated drift or a lost guard.
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --test scripts/l10n/locale_guard.test.mjs
+          flutter gen-l10n
+          dart format lib/l10n/app_localizations*.dart
+          node scripts/l10n/locale_guard.mjs --fix
+          git diff --exit-code -- lib/l10n/
       - name: Check changed Dart formatting
         if: ${{ github.event_name == 'pull_request' }}
         shell: bash

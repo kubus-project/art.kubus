@@ -87,8 +87,9 @@ class _EmailRegistrationFormState extends State<EmailRegistrationForm> {
       ),
     );
     final fieldSpacing = widget.compact ? KubusSpacing.sm : KubusSpacing.md;
-    final showOptionalUsernameSection =
-        widget.showUsername && widget.usernameController != null && !widget.requireUsername;
+    final showOptionalUsernameSection = widget.showUsername &&
+        widget.usernameController != null &&
+        !widget.requireUsername;
 
     return AutofillGroup(
       child: Column(
@@ -127,6 +128,9 @@ class _EmailRegistrationFormState extends State<EmailRegistrationForm> {
               labelText: l10n.commonPassword,
               errorText: widget.passwordError,
               suffixIcon: IconButton(
+                tooltip: _obscurePassword
+                    ? l10n.formShowPassword
+                    : l10n.formHidePassword,
                 onPressed: () {
                   setState(() => _obscurePassword = !_obscurePassword);
                 },
@@ -163,6 +167,9 @@ class _EmailRegistrationFormState extends State<EmailRegistrationForm> {
               labelText: l10n.commonConfirmPassword,
               errorText: widget.confirmPasswordError,
               suffixIcon: IconButton(
+                tooltip: _obscureConfirmPassword
+                    ? l10n.formShowPassword
+                    : l10n.formHidePassword,
                 onPressed: () {
                   setState(
                       () => _obscureConfirmPassword = !_obscureConfirmPassword);
@@ -185,7 +192,8 @@ class _EmailRegistrationFormState extends State<EmailRegistrationForm> {
             if (showOptionalUsernameSection)
               DecoratedBox(
                 decoration: BoxDecoration(
-                  color: colorScheme.surface.withValues(alpha: isDark ? 0.18 : 0.62),
+                  color: colorScheme.surface
+                      .withValues(alpha: isDark ? 0.18 : 0.62),
                   borderRadius: BorderRadius.circular(widget.compact ? 14 : 16),
                   border: Border.all(
                     color: colorScheme.outlineVariant.withValues(alpha: 0.16),

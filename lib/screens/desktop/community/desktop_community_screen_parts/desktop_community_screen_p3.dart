@@ -307,54 +307,60 @@ extension _DesktopCommunityScreenStatePart3 on _DesktopCommunityScreenState {
                     const SizedBox(height: KubusSpacing.xs),
                     Row(
                       children: [
-                        InkWell(
-                          borderRadius: BorderRadius.circular(KubusRadius.sm),
-                          onTap: () async {
-                            try {
-                              await context
-                                  .read<CommunityInteractionsProvider>()
-                                  .toggleCommentLike(
-                                    postId: post.id,
-                                    comment: comment,
-                                  );
-                              if (mounted) _applyState(() {});
-                            } catch (_) {
-                              if (!mounted) return;
-                              ScaffoldMessenger.of(context).showKubusSnackBar(
-                                SnackBar(
-                                  content: Text(l10n
-                                      .postDetailUpdateCommentLikeFailedToast),
-                                ),
-                              );
-                            }
-                          },
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: KubusSpacing.xs,
-                              vertical: KubusSpacing.xxs,
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(
-                                  comment.isLiked
-                                      ? Icons.favorite
-                                      : Icons.favorite_border,
-                                  size: 15,
-                                  color: comment.isLiked
-                                      ? KubusColorRoles.of(context).likeAction
-                                      : scheme.onSurface
-                                          .withValues(alpha: 0.56),
-                                ),
-                                const SizedBox(width: KubusSpacing.xs),
-                                Text(
-                                  '${comment.likeCount}',
-                                  style: KubusTextStyles.compactBadge.copyWith(
-                                    color: scheme.onSurface
-                                        .withValues(alpha: 0.66),
+                        Tooltip(
+                          message: comment.isLiked
+                              ? l10n.commentUnlikeTooltip
+                              : l10n.commentLikeTooltip,
+                          child: InkWell(
+                            borderRadius: BorderRadius.circular(KubusRadius.sm),
+                            onTap: () async {
+                              try {
+                                await context
+                                    .read<CommunityInteractionsProvider>()
+                                    .toggleCommentLike(
+                                      postId: post.id,
+                                      comment: comment,
+                                    );
+                                if (mounted) _applyState(() {});
+                              } catch (_) {
+                                if (!mounted) return;
+                                ScaffoldMessenger.of(context).showKubusSnackBar(
+                                  SnackBar(
+                                    content: Text(l10n
+                                        .postDetailUpdateCommentLikeFailedToast),
                                   ),
-                                ),
-                              ],
+                                );
+                              }
+                            },
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: KubusSpacing.xs,
+                                vertical: KubusSpacing.xxs,
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    comment.isLiked
+                                        ? Icons.favorite
+                                        : Icons.favorite_border,
+                                    size: 15,
+                                    color: comment.isLiked
+                                        ? KubusColorRoles.of(context).likeAction
+                                        : scheme.onSurface
+                                            .withValues(alpha: 0.56),
+                                  ),
+                                  const SizedBox(width: KubusSpacing.xs),
+                                  Text(
+                                    '${comment.likeCount}',
+                                    style:
+                                        KubusTextStyles.compactBadge.copyWith(
+                                      color: scheme.onSurface
+                                          .withValues(alpha: 0.66),
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
                           ),
                         ),
