@@ -1,5 +1,4 @@
 import 'package:art_kubus/models/conversation.dart';
-import 'package:art_kubus/models/message.dart';
 import 'package:art_kubus/providers/chat_provider.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
