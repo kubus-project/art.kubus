@@ -75,7 +75,16 @@ export function getNextSampleDelayMs(
   };
   const candidates = [];
   for (let d = 0; d < floatPeriodMs; d += PHASE_STEP_MS) candidates.push([d, score(d)]);
+  const naturalScore = score(0);
   const best = Math.max(...candidates.map(([, s]) => s));
   if (!Number.isFinite(best)) return 0;
-  return candidates.find(([, s]) => s >= best * 0.5)[0];
+  // Keep the natural cadence when it is already at least half as far from the
+  // existing phases as the best available target. Otherwise choose the true
+  // maximum-distance candidate, which bisects the largest uncovered phase gap.
+  // Returning the first merely acceptable candidate can repeatedly place
+  // samples off-center and leave a gap just beyond the contract limit.
+  if (naturalScore >= best * 0.5) return 0;
+  return candidates.reduce((bestCandidate, candidate) =>
+    candidate[1] > bestCandidate[1] ? candidate : bestCandidate,
+  )[0];
 }

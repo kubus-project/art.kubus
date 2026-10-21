@@ -116,6 +116,33 @@ test('phase-targeted waits cover the float cycle for every steady capture cadenc
   }
 });
 
+test('phase targets cover the float cycle with jittered Firefox-length captures', () => {
+  const options = { settleMs: 600 };
+  const captureDurations = [3400, 3700, 3500, 3650, 3450, 3700, 3550, 3400];
+  const frames = [];
+  let now = 0;
+  let previousCaptureMs = 0;
+  while (!getSettledSamplingCoverage(frames, options).complete && frames.length < 40) {
+    const wait = frames.length
+      ? getNextSampleDelayMs(frames, {
+          ...options,
+          nowMs: now,
+          expectedCaptureMs: previousCaptureMs,
+        })
+      : 0;
+    const captureMs = captureDurations[frames.length % captureDurations.length];
+    const captureStarted = now + wait;
+    frames.push({ t: captureStarted + captureMs / 2 });
+    now = captureStarted + captureMs;
+    previousCaptureMs = captureMs;
+  }
+
+  const coverage = getSettledSamplingCoverage(frames, options);
+  assert.equal(coverage.complete, true);
+  assert.ok(coverage.maxPhaseGapMs < FLOAT_PERIOD_MS * 0.25 - 25);
+  assert.ok(frames.length <= 30, `jittered captures needed ${frames.length} samples`);
+});
+
 test('a cadence that already lands on fresh phases is never delayed', () => {
   const frames = framesAt(700, 1500, 2300);
   assert.equal(
