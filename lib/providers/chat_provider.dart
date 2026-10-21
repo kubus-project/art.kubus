@@ -1111,10 +1111,7 @@ class ChatProvider extends ChangeNotifier {
       // Fallback: try to read persisted wallet from shared preferences
       try {
         final prefs = await SharedPreferences.getInstance();
-        final w = prefs.getString('wallet_address') ??
-            prefs.getString('user_id') ??
-            prefs.getString('wallet') ??
-            '';
+        final w = storedWalletFromPrefs(prefs);
         debugPrint(
           'ChatProvider.initialize: SharedPreferences wallet read: $w',
         );
@@ -1506,6 +1503,12 @@ class ChatProvider extends ChangeNotifier {
       _conversations.insert(0, updated);
     }
   }
+
+  /// Wallet persisted by the auth/profile flow. `user_id` is an account key
+  /// and may not be a wallet, so it must never be used as a socket room id.
+  static String storedWalletFromPrefs(SharedPreferences prefs) =>
+      (prefs.getString('wallet_address') ?? prefs.getString('wallet') ?? '')
+          .trim();
 
   Map<String, dynamic>? _normalizeIncomingMessagePayload(
     Map<String, dynamic> data,
@@ -2287,9 +2290,7 @@ class ChatProvider extends ChangeNotifier {
           if (_currentWallet == null || _currentWallet!.isEmpty) {
             try {
               final prefs = await SharedPreferences.getInstance();
-              final w = prefs.getString('wallet_address') ??
-                  prefs.getString('user_id') ??
-                  '';
+              final w = storedWalletFromPrefs(prefs);
               if (w.isNotEmpty) _currentWallet = w.toString();
             } catch (e2) {
               debugPrint(
@@ -2442,9 +2443,7 @@ class ChatProvider extends ChangeNotifier {
         if (_currentWallet == null || _currentWallet!.isEmpty) {
           try {
             final prefs = await SharedPreferences.getInstance();
-            final w = prefs.getString('wallet_address') ??
-                prefs.getString('user_id') ??
-                '';
+            final w = storedWalletFromPrefs(prefs);
             if (w.isNotEmpty) {
               _currentWallet = w.toString();
             }
