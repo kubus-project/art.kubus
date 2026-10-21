@@ -142,6 +142,10 @@ class _FakeAvatarProfileProvider extends ProfileProvider {
   String? reloadAvatar;
   int reloadCount = 0;
 
+  /// When false, [saveProfile] reports a backend failure by returning false
+  /// (the walletless path never throws for this case).
+  bool saveSucceeds = true;
+
   @override
   Future<String> uploadAvatarBytes({
     required List<int> fileBytes,
@@ -167,6 +171,7 @@ class _FakeAvatarProfileProvider extends ProfileProvider {
     ProfilePreferences? preferences,
     bool reloadStats = true,
   }) async {
+    if (!saveSucceeds) return false;
     final current = currentUser;
     if (current != null && avatar != null) {
       setCurrentUser(current.copyWith(avatar: avatar));
@@ -506,6 +511,66 @@ void main() {
     await state.debugEnsureAvatarHydratedForMainShell(uploaded);
     expect(provider.reloadCount, greaterThanOrEqualTo(1));
     expect(provider.currentUser?.avatar, provider.uploadResult);
+  });
+
+  testWidgets(
+      'failed avatar profile save keeps staged bytes for retry and reports it',
+      (tester) async {
+    await tester.binding.setSurfaceSize(const Size(390, 1200));
+    addTearDown(() async => tester.binding.setSurfaceSize(null));
+
+    const wallet = '0xavatarsavefail';
+    final provider = _FakeAvatarProfileProvider(
+      UserProfile(
+        id: 'profile_avatar_save_fail',
+        walletAddress: wallet,
+        username: 'avatar_save_fail',
+        displayName: 'Avatar Save Fail',
+        bio: '',
+        avatar: '',
+        createdAt: DateTime(2026, 3, 16),
+        updatedAt: DateTime(2026, 3, 16),
+      ),
+    );
+
+    await tester.pumpWidget(
+      _buildTestApp(
+        child: const OnboardingFlowScreen(initialStepId: 'profile'),
+        locale: const Locale('en'),
+        size: const Size(390, 1200),
+        profileProvider: provider,
+      ),
+    );
+    await _pumpOnboardingReady(tester);
+
+    final state = tester.state(find.byType(OnboardingFlowScreen)) as dynamic;
+    await state.debugStageAvatar(
+      bytes: Uint8List.fromList(<int>[1, 2, 3, 4]),
+      fileName: 'avatar.png',
+      mimeType: 'image/png',
+    );
+
+    // Upload succeeds but the backend save reports failure (returns false).
+    provider.saveSucceeds = false;
+    final failed = await state.debugFlushPendingAvatarUpload() as String?;
+    expect(failed, isNull);
+    // Bytes stay staged, and the avatar is not treated as persisted locally.
+    expect(state.debugHasStagedAvatar, isTrue);
+    expect(state.debugLocalProfileDraftAvatar, isNot(provider.uploadResult));
+    expect(provider.currentUser?.avatar, isNot(provider.uploadResult));
+    await tester.pump();
+    expect(
+      find.text('Unable to update avatar right now.'),
+      findsOneWidget,
+    );
+
+    // A retry once the backend accepts the save persists and clears staging.
+    provider.saveSucceeds = true;
+    final retried = await state.debugFlushPendingAvatarUpload() as String?;
+    expect(retried, provider.uploadResult);
+    expect(state.debugHasStagedAvatar, isFalse);
+    expect(provider.currentUser?.avatar, provider.uploadResult);
+    expect(state.debugLocalProfileDraftAvatar, provider.uploadResult);
   });
 
   testWidgets('avatar hydration keeps a fresh reloaded avatar from the backend',
