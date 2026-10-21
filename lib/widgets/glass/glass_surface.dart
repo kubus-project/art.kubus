@@ -58,6 +58,11 @@ class GlassSurface extends StatelessWidget {
   /// canonical glass tint/border/shadow logic.
   final bool enableBlur;
 
+  /// Lower bound applied to both gradient stops. The gradient's second stop is
+  /// otherwise dimmed (see the blur/fallback factors in [build]), which can
+  /// drop text contrast over a dark backdrop. Null keeps the default falloff.
+  final double? minimumStopOpacity;
+
   const GlassSurface({
     super.key,
     required this.child,
@@ -69,6 +74,7 @@ class GlassSurface extends StatelessWidget {
     this.showBorder = true,
     this.border,
     this.enableBlur = true,
+    this.minimumStopOpacity,
   });
 
   @override
@@ -117,9 +123,13 @@ class GlassSurface extends StatelessWidget {
 
     // Keep a slight tonal shift when blur is enabled, but stay more uniform in
     // opaque fallback mode.
-    final tintPrimary = baseTint.withValues(alpha: resolvedOpacity);
+    final stopFloor = minimumStopOpacity ?? 0.0;
+    final primaryStopOpacity =
+        resolvedOpacity > stopFloor ? resolvedOpacity : stopFloor;
+    final secondaryStopOpacity = resolvedOpacity * (useBlur ? 0.85 : 0.94);
+    final tintPrimary = baseTint.withValues(alpha: primaryStopOpacity);
     final tintSecondary = baseTint.withValues(
-      alpha: resolvedOpacity * (useBlur ? 0.85 : 0.94),
+      alpha: secondaryStopOpacity > stopFloor ? secondaryStopOpacity : stopFloor,
     );
 
     // --- Border ---

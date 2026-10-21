@@ -263,6 +263,9 @@ class LiquidGlassPanel extends StatelessWidget {
   /// kubus glass tint, border, and shadow handling.
   final bool enableBlur;
 
+  /// Lower bound for both gradient stops; forwarded to [GlassSurface].
+  final double? minimumStopOpacity;
+
   const LiquidGlassPanel({
     super.key,
     required this.child,
@@ -275,6 +278,7 @@ class LiquidGlassPanel extends StatelessWidget {
     this.onTap,
     this.fallbackMinOpacity = KubusGlassEffects.fallbackOpaqueOpacity,
     this.enableBlur = true,
+    this.minimumStopOpacity,
   });
 
   @override
@@ -291,6 +295,7 @@ class LiquidGlassPanel extends StatelessWidget {
         tintColor: backgroundColor,
         fallbackMinOpacity: fallbackMinOpacity,
         enableBlur: enableBlur,
+        minimumStopOpacity: minimumStopOpacity,
         child: Padding(
           padding: padding ?? const EdgeInsets.all(KubusSpacing.md),
           child: child,
@@ -647,6 +652,15 @@ enum KubusDialogSize {
 ///
 /// Prefer using this with [showKubusDialog] so dialogs also blur the background.
 class KubusAlertDialog extends StatelessWidget {
+  /// Lowest stop opacity for light-mode dialog panels.
+  ///
+  /// The panel tint is 0.98 alpha, but the gradient's second stop is dimmed to
+  /// 85% (blur) or 94% (fallback). Over a black backdrop that drops the stop
+  /// to about 0.83, where the deepened action primary (0,94,85) measures about
+  /// 4.4:1 against the composite. A 0.92 floor keeps both stops at or above
+  /// about 5.4:1 over black and well above 4.5:1 over white.
+  static const double lightStopOpacityFloor = 0.92;
+
   final Widget? icon;
   final EdgeInsetsGeometry? iconPadding;
   final Widget? title;
@@ -854,6 +868,7 @@ class KubusAlertDialog extends StatelessWidget {
         blurSigma: blurSigma,
         showBorder: showBorder,
         backgroundColor: tint,
+        minimumStopOpacity: isDark ? null : lightStopOpacityFloor,
         child: body,
       ),
     );
