@@ -395,9 +395,13 @@ class ProfileIdentityData {
     );
   }
 
+  /// [cachedRoles] are the roles already known for this entity (for example
+  /// from the user cache). A rail payload that does not state a role keeps the
+  /// cached value; a stated one, including an explicit false, wins.
   factory ProfileIdentityData.fromHomeRailItem(
     HomeRailItem item, {
     required String fallbackLabel,
+    ProfileIdentityRoles? cachedRoles,
   }) {
     final raw = item.raw;
     // `imageUrl` is the rail's single "best image": the avatar or logo, but
@@ -440,7 +444,10 @@ class ProfileIdentityData {
         userId: userId,
         wallet: item.profileTargetId ?? rawId,
         avatarUrl: _pickAvatarUrl(raw) ?? profileImageAsMark,
-        roles: ProfileIdentityRoles.fromProfileMap(raw),
+        roles: _resolveRailRoles(
+          ProfileIdentityRoles.fromProfileMap(raw),
+          cachedRoles,
+        ),
       );
     }
 
@@ -454,8 +461,11 @@ class ProfileIdentityData {
         wallet: profileTargetId ?? item.id,
         avatarUrl: _pickLogoOrAvatarUrl(raw) ?? imageAsMark,
         // The rail item *is* an institution entity: its type states the role.
-        roles: ProfileIdentityRoles.fromProfileMap(raw)
-            .merge(const ProfileIdentityRoles(isInstitution: true)),
+        roles: _resolveRailRoles(
+          ProfileIdentityRoles.fromProfileMap(raw)
+              .merge(const ProfileIdentityRoles(isInstitution: true)),
+          cachedRoles,
+        ),
       );
     }
 
@@ -469,6 +479,12 @@ class ProfileIdentityData {
     );
   }
 }
+
+ProfileIdentityRoles _resolveRailRoles(
+  ProfileIdentityRoles fromPayload,
+  ProfileIdentityRoles? cached,
+) =>
+    cached == null ? fromPayload : cached.merge(fromPayload);
 
 String? _pickAvatarUrl(Map<String, dynamic> raw) {
   return _firstNonEmpty(<dynamic>[
