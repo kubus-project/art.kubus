@@ -111,6 +111,15 @@ class ProfilePackageController extends ChangeNotifier {
     return null;
   }
 
+  /// The one author key sent with profile post requests. A wallet wins; the
+  /// backend ANDs authorWallet with authorUserId, so sending both can only drop
+  /// posts. Both null means nothing is fetched (never the global feed).
+  ({String? wallet, String? userId}) get _postsAuthorKey {
+    final wallet = _postsAuthorWallet;
+    if (wallet != null) return (wallet: wallet, userId: null);
+    return (wallet: null, userId: _postsAuthorUserId);
+  }
+
   /// Posts for this profile. A walletless profile sends `authorUserId` only,
   /// and every returned post is re-checked against that id, so a backend that
   /// ignores the parameter cannot show other authors' posts here.
@@ -474,8 +483,9 @@ class ProfilePackageController extends ChangeNotifier {
 
     try {
       const pageSize = 20;
-      final wallet = _postsAuthorWallet;
-      final userId = _postsAuthorUserId;
+      final key = _postsAuthorKey;
+      final wallet = key.wallet;
+      final userId = key.userId;
       final fetched = (wallet == null && userId == null)
           ? const <CommunityPost>[]
           : await BackendApiService().getCommunityPosts(
@@ -526,8 +536,9 @@ class ProfilePackageController extends ChangeNotifier {
 
     try {
       const pageSize = 20;
-      final wallet = _postsAuthorWallet;
-      final userId = _postsAuthorUserId;
+      final key = _postsAuthorKey;
+      final wallet = key.wallet;
+      final userId = key.userId;
       final fetched = (wallet == null && userId == null)
           ? const <CommunityPost>[]
           : await BackendApiService().getCommunityPosts(
