@@ -1,6 +1,7 @@
 # art.kubus 0.8.4: final 0.8 stabilization
 
-Status: **IN RELEASE** (updated as each step completes). Statuses are kept separate:
+Status: **RELEASED** on 2026-10-21. Tag `v0.8.4` is on `master` `8c2c571f`; production web and the
+GitHub Release are live. Statuses are kept separate:
 **implemented**, **tested**, **reviewed**, **merged**, **deployed** and **released** are
 never inferred from one another. Maturity stays 0.8.x-alpha. The version bump is its own
 commit (build `261020.01`, 2026-10-20).
@@ -30,7 +31,39 @@ before deploying. Rollback: image `artkubus-backend:rollback-pre-c3925db`, plus 
 taken before migrating (125 MB, 133 tables). `app.kubus.site` reports
 `X-Kubus-Backend-Revision: c3925db`, and the R18 links are live.
 
+Follow-up [#111](https://github.com/kubus-project/art.kubus-backend/pull/111) (R04), merged as
+`master` `34cbb0c` and **deployed** to Oracle on 2026-10-20 at 22:24Z. It is healthy, and the public
+pages report `X-Kubus-Backend-Revision: 34cbb0c`. The compose invocation was re-proven by config hash.
+There were no migrations. Rollback image: `artkubus-backend:rollback-pre-34cbb0c`.
+- Email and Google (`account_linked`) sessions may write their own profile and avatar. The owner comes
+  only from the token; another wallet or user returns 403 `PROFILE_OWNERSHIP_MISMATCH`.
+- R04 root cause: the default-avatar `BEFORE INSERT` trigger fills the proposed row, so the upsert's
+  `COALESCE(EXCLUDED.avatar_url, ...)` reset an uploaded avatar to the identicon on every save that
+  did not resend it. The edit screen does exactly that with its preferences save.
+- Every profile update sent without `preferences` returned a 500 (NOT NULL, proposed row).
+
 ## App (art.kubus)
+
+Release PR [#348](https://github.com/kubus-project/art.kubus/pull/348) (`dev` to `master`, merge commit)
+is merged as `master` `8c2c571f`. Exact-head full CI passed and the review thread is resolved.
+- **Deployed:** `release-production.yml` run 39531825402 on `8c2c571f`, approved through `production-web`.
+  `app.kubus.site/kubus-web-revision.txt` reports `8c2c571f`, and `version.json` reports 0.8.4.
+- **Released:** tag `v0.8.4`, with mobile-release run 39532754396 published as an immutable
+  [GitHub Release](https://github.com/kubus-project/art.kubus/releases/tag/v0.8.4). Assets: signed
+  Android APK and AAB, an unsigned iOS IPA, `release-manifest.json` and `SHA256SUMS`.
+
+After #345, R04 landed in #347 and #349:
+- Avatar and profile save for every sign-in method; specific EN/SL error messages.
+- Mobile now restores email and Google sessions that have no wallet. Before this, the Account tab
+  showed the guest screen.
+- Walletless preference sync.
+- The onboarding avatar is kept for retry when the save fails.
+
+Rendered QA on isolated local staging, against the web build of #347 plus backend #111: 4 of 4 PASS.
+- Accounts: email-only, and email with a linked wallet. Viewports: 390 and 1440.
+- Each run: avatar upload, save, reload. The new `/uploads/...` avatar and the bio persist in the DB
+  and the UI.
+
 
 Integration PR [#345](https://github.com/kubus-project/art.kubus/pull/345) was merged into
 `dev` with a merge commit as `7d7586e1`. It contains #326, #331, #332, #333, #335, #336, #337,
@@ -66,7 +99,7 @@ CLS 1.015 to 0.012.
 | --- | --- | --- |
 | R01/R02/R15 | Icon, app name, iOS location purpose | Merged (#334). Physical device check owed |
 | R03 | iOS Google sign-in | BLOCKED_OWNER (Google Sign-In configuration) |
-| R04/R06 | Avatar persistence, follow state | Merged (#336). Widget tests |
+| R04/R06 | Avatar persistence, follow state | Released (#336, #347, #349; backend #111 deployed). Rendered on local staging, 4 of 4 PASS |
 | R05 | Generic profile eyebrow removed | Merged earlier (db141c54) |
 | R07/R08/R10 | Message and interaction notifications, unread badges | Merged (#338, backend #108 deployed). Rendered on local staging: Connect badge 4, cleared after reading |
 | R09 | EN/SL notification copy | Merged (#339). Widget tests |
@@ -75,9 +108,14 @@ CLS 1.015 to 0.012.
 | R14 | Artwork return keeps the bottom-bar tab | Merged (#335). Widget tests |
 | R16 | Comments navigation and scrolling | Merged (#335). Widget tests |
 | R17 | Dialog layout, contrast, dismissal | Merged (#344). Contrast measured on rendered screenshots |
-| R18 | SEO page to Flutter entry | Backend #109 deployed; links verified in production HTML |
+| R18 | SEO page to Flutter entry | Released. Production, Chromium and Firefox: the EN/SL hub CTA (`/map?lang=`) enters the app map. EN place pages are taken over by Flutter in Chromium. JS off: the crawlable HTML has the map links |
 
 ## Known limitations
+- Headless Firefox: the public-page Flutter takeover falls back to the HTML page (`flutter_takeover_failed`
+  after about 1.6 s; the page stays fully usable). Chromium completes the takeover. The takeover files did
+  not change in 0.8.4. Check in a real (non-headless) Firefox.
+- The mobile profile shows "Connect wallet to see profile" for email-only accounts (cosmetic). Cover image
+  upload still requires a wallet.
 - iOS: no Apple Developer Program enrolment, so the IPA is unsigned and there is no TestFlight build.
 - On desktop, Enter in the message composer inserts a new line (pre-existing; the send button sends).
 - Hub SEO pages remain HTML by design; their primary CTA enters the app map, and `/map` ignores
