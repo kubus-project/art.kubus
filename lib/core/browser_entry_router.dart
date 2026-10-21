@@ -232,8 +232,7 @@ class BrowserEntryRouterDelegate extends RouterDelegate<BrowserEntryRoute>
   @override
   Future<void> setNewRoutePath(BrowserEntryRoute configuration) async {
     final changed = configuration != _configuration;
-    final fragmentOnlyChange =
-        configuration.visibleUri.replace(fragment: '') ==
+    final fragmentOnlyChange = configuration.visibleUri.replace(fragment: '') ==
             _configuration.visibleUri.replace(fragment: '') &&
         configuration.shellRoute == _configuration.shellRoute &&
         configuration.entityType == _configuration.entityType &&
