@@ -195,7 +195,13 @@ async function verifyBrowser(
   repetition,
 ) {
   const browserLabel = `${browserName}-${viewportName}-run-${repetition}`;
-  const context = await browser.newContext({ viewport });
+  // An explicit locale: without one, Playwright's Firefox reports navigator.languages as
+  // ["undefined"] on CSP-protected pages (its injected override is blocked), and the Flutter
+  // engine rejects that tag before it starts.
+  const context = await browser.newContext({
+    viewport,
+    locale: new URL(canonicalUrl).pathname.startsWith('/sl/') ? 'sl-SI' : 'en-US',
+  });
   const page = await context.newPage();
   let releaseBoot = () => {};
   if (smokeBypassToken) {

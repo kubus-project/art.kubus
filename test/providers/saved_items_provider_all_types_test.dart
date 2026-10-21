@@ -213,6 +213,21 @@ void main() {
     expect(provider.savedMarkersCount, equals(0));
   });
 
+  test('signed-out visitors never ask the backend for saved status', () async {
+    final repository = _FakeSavedItemsRepository(hasBackendSession: false);
+    final provider = SavedItemsProvider(repository: repository);
+
+    await provider.reconcileVisibleItems(<SavedItemRecord>[
+      SavedItemRecord(
+        type: SavedItemType.communityPost,
+        id: 'post-public',
+        savedAt: DateTime.fromMillisecondsSinceEpoch(0),
+      ),
+    ]);
+
+    expect(repository.batchStatusCalls, 0);
+  });
+
   test('signed-out save does not mutate local saved state', () async {
     final provider = SavedItemsProvider(
       repository: _FakeSavedItemsRepository(hasBackendSession: false),
