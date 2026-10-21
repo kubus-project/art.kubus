@@ -18617,4 +18617,35 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get mnemonicRevealCopyUnavailableToast =>
       'Unable to copy the recovery phrase on this device.';
+
+  @override
+  String get promotionCheckoutReturnAppBarTitle => 'Promotion Checkout';
+
+  @override
+  String get promotionCheckoutReturnDefaultTitle => 'Promotion checkout';
+
+  @override
+  String get promotionCheckoutReturnSuccessTitle =>
+      'Promotion payment received';
+
+  @override
+  String get promotionCheckoutReturnSuccessBody =>
+      'Your payment was received. The promotion request is now waiting for admin review.';
+
+  @override
+  String get promotionCheckoutReturnCancelledTitle =>
+      'Promotion checkout cancelled';
+
+  @override
+  String get promotionCheckoutReturnCancelledBody =>
+      'No payment was captured. You can return to the app and submit the promotion again when ready.';
+
+  @override
+  String get promotionCheckoutReturnDefaultBody =>
+      'Return to the app to review the current status of your promotion request.';
+
+  @override
+  String promotionCheckoutReturnSessionLabel(String sessionId) {
+    return 'Stripe session: $sessionId';
+  }
 }

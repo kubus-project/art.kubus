@@ -32282,6 +32282,54 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Unable to copy the recovery phrase on this device.'**
   String get mnemonicRevealCopyUnavailableToast;
+
+  /// App bar title of the screen shown after returning from Stripe promotion checkout.
+  ///
+  /// In en, this message translates to:
+  /// **'Promotion Checkout'**
+  String get promotionCheckoutReturnAppBarTitle;
+
+  /// Status title when the promotion checkout return status is unknown or still pending.
+  ///
+  /// In en, this message translates to:
+  /// **'Promotion checkout'**
+  String get promotionCheckoutReturnDefaultTitle;
+
+  /// Status title after a successful promotion checkout return.
+  ///
+  /// In en, this message translates to:
+  /// **'Promotion payment received'**
+  String get promotionCheckoutReturnSuccessTitle;
+
+  /// Explanatory body text after a successful promotion checkout return.
+  ///
+  /// In en, this message translates to:
+  /// **'Your payment was received. The promotion request is now waiting for admin review.'**
+  String get promotionCheckoutReturnSuccessBody;
+
+  /// Status title when the user cancels promotion checkout.
+  ///
+  /// In en, this message translates to:
+  /// **'Promotion checkout cancelled'**
+  String get promotionCheckoutReturnCancelledTitle;
+
+  /// Explanatory body text when the user cancels promotion checkout.
+  ///
+  /// In en, this message translates to:
+  /// **'No payment was captured. You can return to the app and submit the promotion again when ready.'**
+  String get promotionCheckoutReturnCancelledBody;
+
+  /// Explanatory body text when the promotion checkout return status is unknown or still pending.
+  ///
+  /// In en, this message translates to:
+  /// **'Return to the app to review the current status of your promotion request.'**
+  String get promotionCheckoutReturnDefaultBody;
+
+  /// Label showing the Stripe checkout session id on the promotion checkout return screen.
+  ///
+  /// In en, this message translates to:
+  /// **'Stripe session: {sessionId}'**
+  String promotionCheckoutReturnSessionLabel(String sessionId);
 }
 
 class _AppLocalizationsDelegate

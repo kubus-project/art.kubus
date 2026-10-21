@@ -7859,5 +7859,42 @@
   "arMarkerManagerSavedToast": "AR setup saved.",
   "promotionCheckoutOpenAppButton": "Open app",
   "arCreateArtworkLocationMarkerTitle": "Create artwork location marker",
-  "mnemonicRevealCopyUnavailableToast": "Unable to copy the recovery phrase on this device."
+  "mnemonicRevealCopyUnavailableToast": "Unable to copy the recovery phrase on this device.",
+  "promotionCheckoutReturnAppBarTitle": "Promotion Checkout",
+  "@promotionCheckoutReturnAppBarTitle": {
+    "description": "App bar title of the screen shown after returning from Stripe promotion checkout."
+  },
+  "promotionCheckoutReturnDefaultTitle": "Promotion checkout",
+  "@promotionCheckoutReturnDefaultTitle": {
+    "description": "Status title when the promotion checkout return status is unknown or still pending."
+  },
+  "promotionCheckoutReturnSuccessTitle": "Promotion payment received",
+  "@promotionCheckoutReturnSuccessTitle": {
+    "description": "Status title after a successful promotion checkout return."
+  },
+  "promotionCheckoutReturnSuccessBody": "Your payment was received. The promotion request is now waiting for admin review.",
+  "@promotionCheckoutReturnSuccessBody": {
+    "description": "Explanatory body text after a successful promotion checkout return."
+  },
+  "promotionCheckoutReturnCancelledTitle": "Promotion checkout cancelled",
+  "@promotionCheckoutReturnCancelledTitle": {
+    "description": "Status title when the user cancels promotion checkout."
+  },
+  "promotionCheckoutReturnCancelledBody": "No payment was captured. You can return to the app and submit the promotion again when ready.",
+  "@promotionCheckoutReturnCancelledBody": {
+    "description": "Explanatory body text when the user cancels promotion checkout."
+  },
+  "promotionCheckoutReturnDefaultBody": "Return to the app to review the current status of your promotion request.",
+  "@promotionCheckoutReturnDefaultBody": {
+    "description": "Explanatory body text when the promotion checkout return status is unknown or still pending."
+  },
+  "promotionCheckoutReturnSessionLabel": "Stripe session: {sessionId}",
+  "@promotionCheckoutReturnSessionLabel": {
+    "description": "Label showing the Stripe checkout session id on the promotion checkout return screen.",
+    "placeholders": {
+      "sessionId": {
+        "type": "String"
+      }
+    }
+  }
 }

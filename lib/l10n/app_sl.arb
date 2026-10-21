@@ -7820,5 +7820,20 @@
   "arMarkerManagerSavedToast": "AR nastavitev je shranjena.",
   "promotionCheckoutOpenAppButton": "Odpri aplikacijo",
   "arCreateArtworkLocationMarkerTitle": "Ustvari lokacijski označevalec umetnine",
-  "mnemonicRevealCopyUnavailableToast": "Obnovitvene fraze na tej napravi ni mogoče kopirati."
+  "mnemonicRevealCopyUnavailableToast": "Obnovitvene fraze na tej napravi ni mogoče kopirati.",
+  "promotionCheckoutReturnAppBarTitle": "Plačilo promocije",
+  "promotionCheckoutReturnDefaultTitle": "Plačilo promocije",
+  "promotionCheckoutReturnSuccessTitle": "Plačilo za promocijo je prejeto",
+  "promotionCheckoutReturnSuccessBody": "Plačilo je prejeto. Zahteva za promocijo zdaj čaka na pregled administratorja.",
+  "promotionCheckoutReturnCancelledTitle": "Plačilo za promocijo je preklicano",
+  "promotionCheckoutReturnCancelledBody": "Plačilo ni bilo izvedeno. Ko boste pripravljeni, se vrnite v aplikacijo in promocijo znova oddajte.",
+  "promotionCheckoutReturnDefaultBody": "Vrnite se v aplikacijo in preverite trenutno stanje zahteve za promocijo.",
+  "promotionCheckoutReturnSessionLabel": "Seja Stripe: {sessionId}",
+  "@promotionCheckoutReturnSessionLabel": {
+    "placeholders": {
+      "sessionId": {
+        "type": "String"
+      }
+    }
+  }
 }

@@ -20,15 +20,15 @@ class PromotionCheckoutReturnScreen extends StatelessWidget {
     final l10n = AppLocalizations.of(context)!;
     final scheme = Theme.of(context).colorScheme;
     final title = _isSuccess
-        ? 'Promotion payment received'
+        ? l10n.promotionCheckoutReturnSuccessTitle
         : _isCancelled
-            ? 'Promotion checkout cancelled'
-            : 'Promotion checkout';
+            ? l10n.promotionCheckoutReturnCancelledTitle
+            : l10n.promotionCheckoutReturnDefaultTitle;
     final body = _isSuccess
-        ? 'Your payment was received. The promotion request is now waiting for admin review.'
+        ? l10n.promotionCheckoutReturnSuccessBody
         : _isCancelled
-            ? 'No payment was captured. You can return to the app and submit the promotion again when ready.'
-            : 'Return to the app to review the current status of your promotion request.';
+            ? l10n.promotionCheckoutReturnCancelledBody
+            : l10n.promotionCheckoutReturnDefaultBody;
     final icon = _isSuccess
         ? Icons.check_circle_outline
         : _isCancelled
@@ -42,7 +42,7 @@ class PromotionCheckoutReturnScreen extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Promotion Checkout'),
+        title: Text(l10n.promotionCheckoutReturnAppBarTitle),
       ),
       body: Center(
         child: ConstrainedBox(
@@ -71,7 +71,9 @@ class PromotionCheckoutReturnScreen extends StatelessWidget {
                     if ((sessionId ?? '').trim().isNotEmpty) ...[
                       const SizedBox(height: 12),
                       SelectableText(
-                        'Stripe session: ${sessionId!.trim()}',
+                        l10n.promotionCheckoutReturnSessionLabel(
+                          sessionId!.trim(),
+                        ),
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
                               color: scheme.onSurfaceVariant,
                             ),
