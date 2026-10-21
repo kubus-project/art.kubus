@@ -107,12 +107,21 @@ ResolvedMessagePresentation resolveMessagePresentationForTesting({
   );
 }
 
+/// Where a [ConversationScreen] is hosted.
+///
+/// [fullscreen] is a routed page (mobile) and keeps the leading Back control
+/// that pops to the conversation list. [embedded] is hosted inside a shell
+/// pane (desktop) that already owns navigation, so the header drops the
+/// redundant Back control and aligns the title to the pane inset.
+enum ConversationPresentation { fullscreen, embedded }
+
 class ConversationScreen extends StatefulWidget {
   final Conversation conversation;
   final List<String>? preloadedMembers;
   final Map<String, String?>? preloadedAvatars;
   final Map<String, String?>? preloadedDisplayNames;
   final VoidCallback? onClose;
+  final ConversationPresentation presentation;
   const ConversationScreen({
     super.key,
     required this.conversation,
@@ -120,6 +129,7 @@ class ConversationScreen extends StatefulWidget {
     this.preloadedAvatars,
     this.preloadedDisplayNames,
     this.onClose,
+    this.presentation = ConversationPresentation.fullscreen,
   });
 
   @override
@@ -1161,6 +1171,7 @@ class _ConversationScreenState extends State<ConversationScreen> {
     }
 
     final roles = KubusColorRoles.of(context);
+    final isEmbedded = widget.presentation == ConversationPresentation.embedded;
     return Scaffold(
       backgroundColor: roles.ground,
       appBar: AppBar(
@@ -1171,18 +1182,26 @@ class _ConversationScreenState extends State<ConversationScreen> {
         shape: Border(
           bottom: BorderSide(color: roles.rule, width: KubusSizes.hairline),
         ),
-        leadingWidth: KubusHeaderMetrics.actionHitArea + KubusSpacing.md,
-        leading: Padding(
-          padding: const EdgeInsets.only(left: KubusSpacing.sm),
-          child: TopBarIcon(
-            icon: Icon(
-              Icons.arrow_back,
-              color: Theme.of(context).colorScheme.onSurface,
-              size: KubusHeaderMetrics.actionIcon,
-            ),
-            onPressed: widget.onClose ?? () => Navigator.of(context).maybePop(),
-          ),
-        ),
+        leadingWidth: isEmbedded
+            ? null
+            : KubusHeaderMetrics.actionHitArea + KubusSpacing.md,
+        // Embedded panes have no leading control, so the title sits on the
+        // pane inset instead of the default leading-slot gap.
+        titleSpacing: isEmbedded ? KubusSpacing.md : null,
+        leading: isEmbedded
+            ? null
+            : Padding(
+                padding: const EdgeInsets.only(left: KubusSpacing.sm),
+                child: TopBarIcon(
+                  icon: Icon(
+                    Icons.arrow_back,
+                    color: Theme.of(context).colorScheme.onSurface,
+                    size: KubusHeaderMetrics.actionIcon,
+                  ),
+                  onPressed:
+                      widget.onClose ?? () => Navigator.of(context).maybePop(),
+                ),
+              ),
         title: _buildHeaderTitle(),
         actions: _buildHeaderActions(),
       ),
