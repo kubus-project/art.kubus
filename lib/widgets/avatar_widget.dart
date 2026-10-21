@@ -117,10 +117,11 @@ class _AvatarWidgetState extends State<AvatarWidget>
     // "https:/api.kubus.site/..." which would otherwise break rendering.
     // The UserService cache is authoritative: a saved avatar wins over a stale
     // payload snapshot, and the payload is used only when the cache has none.
+    final aliases = [widget.wallet, ...widget.walletAliases];
     final resolvedUrl = UserService.resolveAvatarUrl(
       wallet: cacheKey,
       payloadUrl: widget.avatarUrl,
-      aliases: [widget.wallet, ...widget.walletAliases],
+      aliases: aliases,
     );
     final normalized = _normalizeAvatar(resolvedUrl);
     if (_isUsableNetworkUrl(normalized)) {
@@ -128,6 +129,17 @@ class _AvatarWidgetState extends State<AvatarWidget>
         _effectiveUrl = normalized;
         _loading = false;
       });
+      // An expired cache entry must not stay authoritative forever. Render now
+      // and refresh in the background so a changed avatar appears without
+      // blocking this frame.
+      if (widget.fetchMissingAvatar &&
+          walletId.isNotEmpty &&
+          UserService.isAvatarCacheExpired(
+            wallet: cacheKey,
+            aliases: aliases,
+          )) {
+        unawaited(_refreshExpiredAvatar(setupGeneration, cacheKey));
+      }
       return;
     }
     // Malformed or absent avatars fall through to the fetch/fallback path.
@@ -196,6 +208,32 @@ class _AvatarWidgetState extends State<AvatarWidget>
         }
         _setLoading(false);
       }
+    }
+  }
+
+  /// Background refresh for an expired cache entry. Does not show loading and
+  /// does not bump [_setupGeneration], so it cannot cancel an in-flight setup.
+  Future<void> _refreshExpiredAvatar(
+    int setupGeneration,
+    String cacheKey,
+  ) async {
+    try {
+      final u = await UserService.getUserById(
+        cacheKey,
+        includeAchievements: false,
+      );
+      if (!mounted || setupGeneration != _setupGeneration || u == null) return;
+      widget.onProfileResolved?.call(u);
+      final next = _normalizeAvatar(UserService.resolveAvatarUrl(
+        wallet: cacheKey,
+        payloadUrl: widget.avatarUrl,
+        aliases: [widget.wallet, ...widget.walletAliases],
+      ));
+      if (_isUsableNetworkUrl(next) && next != _effectiveUrl) {
+        setState(() => _effectiveUrl = next);
+      }
+    } catch (_) {
+      // Keep the rendered avatar; a failed refresh is not user-facing.
     }
   }
 
