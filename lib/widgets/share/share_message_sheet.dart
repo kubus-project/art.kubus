@@ -1,12 +1,13 @@
 import 'dart:async';
 
 import 'package:art_kubus/l10n/app_localizations.dart';
+import 'package:art_kubus/models/profile_identity_data.dart';
 import 'package:art_kubus/services/backend_api_service.dart';
 import 'package:art_kubus/services/share/share_types.dart';
 import 'package:art_kubus/utils/creator_display_format.dart';
 import 'package:art_kubus/utils/design_tokens.dart';
 import 'package:art_kubus/utils/search_suggestions.dart';
-import 'package:art_kubus/widgets/avatar_widget.dart';
+import 'package:art_kubus/widgets/identity/kubus_identity_avatar.dart';
 import 'package:art_kubus/widgets/common/kubus_glass_icon_button.dart';
 import 'package:art_kubus/widgets/common/kubus_screen_header.dart';
 import 'package:art_kubus/widgets/empty_state_card.dart';
@@ -255,6 +256,9 @@ class _ShareMessageSheetState extends State<ShareMessageSheet> {
                                 final avatar =
                                     (profile['avatar'] ?? profile['avatar_url'])
                                         ?.toString();
+                                final statedRoles =
+                                    ProfileIdentityRoles.fromProfileMap(
+                                        profile);
 
                                 final formatted = CreatorDisplayFormat.format(
                                   fallbackLabel: l10n.commonUnknown,
@@ -283,12 +287,16 @@ class _ShareMessageSheetState extends State<ShareMessageSheet> {
                                     child: ListTile(
                                       enabled: !_isSending,
                                       contentPadding: EdgeInsets.zero,
-                                      leading: AvatarWidget(
+                                      leading: KubusIdentityAvatar(
                                         wallet: (walletAddr != null &&
                                                 walletAddr.isNotEmpty)
                                             ? walletAddr
                                             : username,
                                         avatarUrl: avatar,
+                                        isArtist: statedRoles.isArtist,
+                                        isInstitution:
+                                            statedRoles.isInstitution,
+                                        isVerified: statedRoles.isVerified,
                                         radius: 20,
                                         allowFabricatedFallback: false,
                                       ),

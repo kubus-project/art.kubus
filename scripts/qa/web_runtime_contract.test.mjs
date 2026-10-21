@@ -218,7 +218,7 @@ test('release artifact workflows propagate generated metadata to platform builds
   assert.match(web, /--build-number="\$\{\{ steps\.metadata\.outputs\.build_number \}\}"/);
   assert.match(web, /KUBUS_BUILD_DATE: \$\{\{ steps\.metadata\.outputs\.build_date \}\}/);
   assert.match(mobile, /build_number: \$\{\{ steps\.metadata\.outputs\.build_number \}\}/);
-  assert.equal((mobile.match(/--build-number="\$\{\{ needs\.source\.outputs\.build_number \}\}"/g) || []).length, 3);
+  assert.equal((mobile.match(/--build-number="\$\{\{ needs\.source\.outputs\.build_number \}\}"/g) || []).length, 4);
   assert.match(config, /String\.fromEnvironment\(\s*'KUBUS_APP_VERSION'/);
   assert.match(config, /int\.fromEnvironment\(\s*'KUBUS_BUILD_NUMBER'/);
   assert.match(config, /String\.fromEnvironment\(\s*'KUBUS_BUILD_DATE'/);
@@ -278,8 +278,8 @@ test('iOS publication signs a configured IPA from exact CI inputs before attachi
     'utf8',
   );
 
-  const iosJob = mobile.slice(mobile.indexOf('\n  ios:'), mobile.indexOf('\n  publish:'));
-  assert.match(iosJob, /if: \$\{\{ needs\.source\.outputs\.build_ios == 'true' \}\}/);
+  const iosJob = mobile.slice(mobile.indexOf('\n  ios:'), mobile.indexOf('\n  ios-unsigned:'));
+  assert.match(iosJob, /if: \$\{\{ needs\.source\.outputs\.ios_mode == 'signed' \}\}/);
   assert.match(mobile, /environment: ios-release/);
   assert.match(mobile, /IOS_DISTRIBUTION_CERTIFICATE_BASE64/);
   assert.match(mobile, /IOS_PROVISIONING_PROFILE_BASE64/);

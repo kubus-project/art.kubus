@@ -357,15 +357,11 @@ extension _CommunityScreenStatePart5 on _CommunityScreenState {
 
                       return ListTile(
                         onTap: () => openProfileIdentity(context, identity),
-                        leading: AvatarWidget(
-                            wallet: identity.navigationIdentifier ??
-                                identity.username ??
-                                identity.walletSeed,
-                            fetchMissingAvatar: identity.canOpenProfile,
-                            avatarUrl: identity.avatarUrl,
-                            radius: 20,
-                            allowFabricatedFallback: false,
-                            enableProfileNavigation: false),
+                        leading: KubusIdentityAvatar.fromIdentity(
+                          identity,
+                          radius: 20,
+                          allowFabricatedFallback: false,
+                        ),
                         title: Text(identity.label,
                             style: KubusTypography.inter(
                                 fontWeight: FontWeight.w600)),

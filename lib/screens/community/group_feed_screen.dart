@@ -38,7 +38,7 @@ import '../../utils/search_suggestions.dart';
 import '../../utils/profile_identity_navigation.dart';
 import '../../widgets/app_loading.dart';
 import '../../utils/design_tokens.dart';
-import '../../widgets/avatar_widget.dart';
+import '../../widgets/identity/kubus_identity_avatar.dart';
 import '../../widgets/common/keyboard_inset_padding.dart';
 import '../../widgets/community/community_post_card.dart';
 import '../../widgets/community/community_post_options_sheet.dart';
@@ -1121,15 +1121,10 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
                             (wallet.isNotEmpty ? maskWallet(wallet) : null);
                         return ListTile(
                           onTap: () => openProfileIdentity(context, identity),
-                          leading: AvatarWidget(
-                            wallet: identity.navigationIdentifier ??
-                                identity.username ??
-                                identity.walletSeed,
-                            fetchMissingAvatar: identity.canOpenProfile,
-                            avatarUrl: identity.avatarUrl,
+                          leading: KubusIdentityAvatar.fromIdentity(
+                            identity,
                             radius: 20,
                             allowFabricatedFallback: true,
-                            enableProfileNavigation: false,
                           ),
                           title: Text(
                             identity.label,
@@ -1260,15 +1255,10 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
 
                       return ListTile(
                         onTap: () => openProfileIdentity(context, identity),
-                        leading: AvatarWidget(
-                          wallet: identity.navigationIdentifier ??
-                              identity.username ??
-                              identity.walletSeed,
-                          fetchMissingAvatar: identity.canOpenProfile,
-                          avatarUrl: identity.avatarUrl,
+                        leading: KubusIdentityAvatar.fromIdentity(
+                          identity,
                           radius: 20,
                           allowFabricatedFallback: false,
-                          enableProfileNavigation: false,
                         ),
                         title: Text(
                           identity.label,

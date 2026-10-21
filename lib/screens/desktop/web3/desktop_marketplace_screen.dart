@@ -454,7 +454,7 @@ class _DesktopMarketplaceScreenState extends State<DesktopMarketplaceScreen> {
     final scheme = Theme.of(context).colorScheme;
     final ownedCollectibles = _ownedCollectibles(entry);
 
-    await showDialog<void>(
+    await showKubusDialog<void>(
       context: context,
       builder: (dialogContext) => Dialog(
         child: ConstrainedBox(

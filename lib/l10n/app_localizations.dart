@@ -64,10 +64,13 @@ import 'app_localizations_sl.dart';
 abstract class AppLocalizations {
   AppLocalizations(String locale) : localeName = _supportedLocaleName(locale);
 
+  // Keep this guard after `flutter gen-l10n`: the generator's default locale
+  // normalization does not trim input or fall back to the app's supported
+  // locales, and this constructor is used directly by non-widget callers.
   static String _supportedLocaleName(String locale) {
-    final localeName = intl.Intl.canonicalizedLocale(locale.trim());
-    return switch (localeName) {
-      'en' || 'sl' => localeName,
+    final normalizedLocale = intl.Intl.canonicalizedLocale(locale.trim());
+    return switch (normalizedLocale) {
+      'en' || 'sl' => normalizedLocale,
       _ => 'sl',
     };
   }
@@ -497,6 +500,96 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Achievement'**
   String get notificationAchievementFallback;
+
+  /// No description provided for @notificationCommunityLikeTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'New like'**
+  String get notificationCommunityLikeTitle;
+
+  /// No description provided for @notificationCommunityLikeBody.
+  ///
+  /// In en, this message translates to:
+  /// **'{name} liked your post'**
+  String notificationCommunityLikeBody(Object name);
+
+  /// No description provided for @notificationCommunityCommentTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'New comment'**
+  String get notificationCommunityCommentTitle;
+
+  /// No description provided for @notificationCommunityCommentBody.
+  ///
+  /// In en, this message translates to:
+  /// **'{name} commented on your post'**
+  String notificationCommunityCommentBody(Object name);
+
+  /// No description provided for @notificationCommunityCommentWithTextBody.
+  ///
+  /// In en, this message translates to:
+  /// **'{name}: {comment}'**
+  String notificationCommunityCommentWithTextBody(Object name, Object comment);
+
+  /// No description provided for @notificationCommunityShareTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Post shared'**
+  String get notificationCommunityShareTitle;
+
+  /// No description provided for @notificationCommunityShareBody.
+  ///
+  /// In en, this message translates to:
+  /// **'{name} shared your post'**
+  String notificationCommunityShareBody(Object name);
+
+  /// No description provided for @notificationCommunityRepostTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'New repost'**
+  String get notificationCommunityRepostTitle;
+
+  /// No description provided for @notificationCommunityRepostBody.
+  ///
+  /// In en, this message translates to:
+  /// **'{name} reposted your post'**
+  String notificationCommunityRepostBody(Object name);
+
+  /// No description provided for @notificationCommunityMentionTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'You were mentioned'**
+  String get notificationCommunityMentionTitle;
+
+  /// No description provided for @notificationCommunityMentionBody.
+  ///
+  /// In en, this message translates to:
+  /// **'{name} mentioned you in a post'**
+  String notificationCommunityMentionBody(Object name);
+
+  /// No description provided for @notificationCommunityActivityTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'New activity'**
+  String get notificationCommunityActivityTitle;
+
+  /// No description provided for @notificationCommunityActivityBody.
+  ///
+  /// In en, this message translates to:
+  /// **'{name} interacted with your post'**
+  String notificationCommunityActivityBody(Object name);
+
+  /// No description provided for @notificationFollowerTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'New follower'**
+  String get notificationFollowerTitle;
+
+  /// No description provided for @notificationFollowerBody.
+  ///
+  /// In en, this message translates to:
+  /// **'{name} started following you'**
+  String notificationFollowerBody(Object name);
 
   /// No description provided for @notificationRecognitionRecordedTitle.
   ///
@@ -1211,6 +1304,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Notifications'**
   String get commonNotifications;
+
+  /// No description provided for @desktopNavCollabInvitesTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Collaboration invites'**
+  String get desktopNavCollabInvitesTooltip;
 
   /// No description provided for @commonLabLabel.
   ///
@@ -5293,6 +5392,12 @@ abstract class AppLocalizations {
   /// **'Biometric authentication failed.'**
   String get settingsBiometricFailedToast;
 
+  /// No description provided for @biometricIdentityPromptReason.
+  ///
+  /// In en, this message translates to:
+  /// **'Authenticate to continue'**
+  String get biometricIdentityPromptReason;
+
   /// No description provided for @settingsExportRecoveryPhraseDialogTitle.
   ///
   /// In en, this message translates to:
@@ -5382,6 +5487,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Failed to set PIN'**
   String get settingsPinSetFailedToast;
+
+  /// No description provided for @settingsPinInvalidFormatError.
+  ///
+  /// In en, this message translates to:
+  /// **'A PIN must be 4 to 12 digits'**
+  String get settingsPinInvalidFormatError;
+
+  /// No description provided for @settingsPinClearFailedToast.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not remove the PIN'**
+  String get settingsPinClearFailedToast;
 
   /// No description provided for @settingsClearCacheDialogTitle.
   ///
@@ -10152,6 +10269,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Artworks'**
   String get userProfileArtworksTitle;
+
+  /// No description provided for @profilePublicArtAddedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Public art added'**
+  String get profilePublicArtAddedTitle;
+
+  /// No description provided for @profilePublicArtAddedSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Artworks this profile documented on the map. They are credited to their own artists.'**
+  String get profilePublicArtAddedSubtitle;
+
+  /// No description provided for @profileAuthoredArtworksCountLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Authored artworks'**
+  String get profileAuthoredArtworksCountLabel;
 
   /// No description provided for @userProfileCollectionsTitle.
   ///
@@ -18864,6 +18999,12 @@ abstract class AppLocalizations {
   /// **'Sign in first; wallet access is only needed for wallet-linked actions.'**
   String get communityConnectWalletFirstToast;
 
+  /// No description provided for @communityPostingNeedsWalletToast.
+  ///
+  /// In en, this message translates to:
+  /// **'Publishing community posts needs a connected wallet. You can connect one in Wallet.'**
+  String get communityPostingNeedsWalletToast;
+
   /// No description provided for @communityUnableToAuthenticateToast.
   ///
   /// In en, this message translates to:
@@ -20916,6 +21057,613 @@ abstract class AppLocalizations {
   /// **'Browser prompt cancelled or timed out.'**
   String get securityHubBrowserPromptCancelledOrTimedOut;
 
+  /// No description provided for @securityHubStatusSecured.
+  ///
+  /// In en, this message translates to:
+  /// **'Secured'**
+  String get securityHubStatusSecured;
+
+  /// No description provided for @securityHubStatusRecommended.
+  ///
+  /// In en, this message translates to:
+  /// **'Recommended'**
+  String get securityHubStatusRecommended;
+
+  /// No description provided for @securityHubStatusFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed'**
+  String get securityHubStatusFailed;
+
+  /// No description provided for @securityHubStatusDestructive.
+  ///
+  /// In en, this message translates to:
+  /// **'Destructive'**
+  String get securityHubStatusDestructive;
+
+  /// No description provided for @securityHubStatusActive.
+  ///
+  /// In en, this message translates to:
+  /// **'Active'**
+  String get securityHubStatusActive;
+
+  /// No description provided for @securityHubStatusMissing.
+  ///
+  /// In en, this message translates to:
+  /// **'Missing'**
+  String get securityHubStatusMissing;
+
+  /// No description provided for @securityHubStatusLinked.
+  ///
+  /// In en, this message translates to:
+  /// **'Linked'**
+  String get securityHubStatusLinked;
+
+  /// No description provided for @securityHubStatusChecked.
+  ///
+  /// In en, this message translates to:
+  /// **'Checked'**
+  String get securityHubStatusChecked;
+
+  /// No description provided for @securityHubStatusReady.
+  ///
+  /// In en, this message translates to:
+  /// **'Ready'**
+  String get securityHubStatusReady;
+
+  /// No description provided for @securityHubStatusReadOnly.
+  ///
+  /// In en, this message translates to:
+  /// **'Read-only'**
+  String get securityHubStatusReadOnly;
+
+  /// No description provided for @securityHubBackUpOffline.
+  ///
+  /// In en, this message translates to:
+  /// **'Back up offline'**
+  String get securityHubBackUpOffline;
+
+  /// No description provided for @securityHubEnableBiometrics.
+  ///
+  /// In en, this message translates to:
+  /// **'Enable biometrics'**
+  String get securityHubEnableBiometrics;
+
+  /// No description provided for @securityHubVerifyBackup.
+  ///
+  /// In en, this message translates to:
+  /// **'Verify'**
+  String get securityHubVerifyBackup;
+
+  /// No description provided for @securityHubSavePin.
+  ///
+  /// In en, this message translates to:
+  /// **'Save PIN'**
+  String get securityHubSavePin;
+
+  /// No description provided for @securityHubSetPin.
+  ///
+  /// In en, this message translates to:
+  /// **'Set PIN'**
+  String get securityHubSetPin;
+
+  /// No description provided for @securityHubSetLocalPin.
+  ///
+  /// In en, this message translates to:
+  /// **'Set local PIN'**
+  String get securityHubSetLocalPin;
+
+  /// No description provided for @securityHubBiometricUnlock.
+  ///
+  /// In en, this message translates to:
+  /// **'Biometric unlock'**
+  String get securityHubBiometricUnlock;
+
+  /// No description provided for @securityHubBiometricUnlockEnabled.
+  ///
+  /// In en, this message translates to:
+  /// **'Biometric unlock enabled.'**
+  String get securityHubBiometricUnlockEnabled;
+
+  /// No description provided for @securityHubBiometricsUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Biometrics unavailable.'**
+  String get securityHubBiometricsUnavailable;
+
+  /// No description provided for @securityHubBiometricApprovalFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Biometric approval failed.'**
+  String get securityHubBiometricApprovalFailed;
+
+  /// No description provided for @securityHubAuthenticationFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Authentication failed.'**
+  String get securityHubAuthenticationFailed;
+
+  /// No description provided for @securityHubActionFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Action failed. Try again.'**
+  String get securityHubActionFailed;
+
+  /// No description provided for @securityHubWalletAccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Wallet access'**
+  String get securityHubWalletAccess;
+
+  /// No description provided for @securityHubWalletAccessState.
+  ///
+  /// In en, this message translates to:
+  /// **'Wallet access state'**
+  String get securityHubWalletAccessState;
+
+  /// No description provided for @securityHubLocalSigner.
+  ///
+  /// In en, this message translates to:
+  /// **'Local signer'**
+  String get securityHubLocalSigner;
+
+  /// No description provided for @securityHubLocalSignerReady.
+  ///
+  /// In en, this message translates to:
+  /// **'Local signer ready'**
+  String get securityHubLocalSignerReady;
+
+  /// No description provided for @securityHubSecurityKey.
+  ///
+  /// In en, this message translates to:
+  /// **'Security key'**
+  String get securityHubSecurityKey;
+
+  /// No description provided for @securityHubSetUpBackupFirst.
+  ///
+  /// In en, this message translates to:
+  /// **'Set up backup first'**
+  String get securityHubSetUpBackupFirst;
+
+  /// No description provided for @securityHubUpdateBackup.
+  ///
+  /// In en, this message translates to:
+  /// **'Update backup'**
+  String get securityHubUpdateBackup;
+
+  /// No description provided for @securityHubSaveEncryptedBackup.
+  ///
+  /// In en, this message translates to:
+  /// **'Save encrypted backup'**
+  String get securityHubSaveEncryptedBackup;
+
+  /// No description provided for @securityHubRestoreAccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Restore access'**
+  String get securityHubRestoreAccess;
+
+  /// No description provided for @securityHubAddAccountPasskey.
+  ///
+  /// In en, this message translates to:
+  /// **'Add account passkey'**
+  String get securityHubAddAccountPasskey;
+
+  /// No description provided for @securityHubAccountPasskeyAdded.
+  ///
+  /// In en, this message translates to:
+  /// **'Account sign-in passkey added.'**
+  String get securityHubAccountPasskeyAdded;
+
+  /// No description provided for @securityHubAccountPasskeyRemoved.
+  ///
+  /// In en, this message translates to:
+  /// **'Account sign-in passkey removed.'**
+  String get securityHubAccountPasskeyRemoved;
+
+  /// No description provided for @securityHubRemoveAccountPasskeyTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove account sign-in passkey?'**
+  String get securityHubRemoveAccountPasskeyTitle;
+
+  /// No description provided for @securityHubSecureThisDevice.
+  ///
+  /// In en, this message translates to:
+  /// **'Secure this device'**
+  String get securityHubSecureThisDevice;
+
+  /// No description provided for @securityHubConfirmRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm required'**
+  String get securityHubConfirmRequired;
+
+  /// No description provided for @securityHubNever.
+  ///
+  /// In en, this message translates to:
+  /// **'Never'**
+  String get securityHubNever;
+
+  /// No description provided for @securityHubLastUsedNever.
+  ///
+  /// In en, this message translates to:
+  /// **'Last used never'**
+  String get securityHubLastUsedNever;
+
+  /// No description provided for @securityHubLinkedDevice.
+  ///
+  /// In en, this message translates to:
+  /// **'Linked device'**
+  String get securityHubLinkedDevice;
+
+  /// No description provided for @securityHubRecoveryAvailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Recovery available'**
+  String get securityHubRecoveryAvailable;
+
+  /// No description provided for @securityHubAccountOnly.
+  ///
+  /// In en, this message translates to:
+  /// **'Account only'**
+  String get securityHubAccountOnly;
+
+  /// No description provided for @securityHubCurrentAccountWallet.
+  ///
+  /// In en, this message translates to:
+  /// **'Current account wallet'**
+  String get securityHubCurrentAccountWallet;
+
+  /// No description provided for @securityHubNoWallet.
+  ///
+  /// In en, this message translates to:
+  /// **'No wallet'**
+  String get securityHubNoWallet;
+
+  /// No description provided for @securityHubLocalSecuritySettingsUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Local security settings are temporarily unavailable.'**
+  String get securityHubLocalSecuritySettingsUnavailable;
+
+  /// No description provided for @securityHubWalletSecurityStatusRefreshFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Wallet security status could not be refreshed.'**
+  String get securityHubWalletSecurityStatusRefreshFailed;
+
+  /// No description provided for @securityHubEncryptedBackupStatusRefreshFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Encrypted wallet backup status could not be refreshed.'**
+  String get securityHubEncryptedBackupStatusRefreshFailed;
+
+  /// No description provided for @securityHubAccountPasskeyStatusUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Account passkey status is temporarily unavailable.'**
+  String get securityHubAccountPasskeyStatusUnavailable;
+
+  /// No description provided for @securityHubWalletRecoveryPasskeyDefaultName.
+  ///
+  /// In en, this message translates to:
+  /// **'Wallet recovery passkey'**
+  String get securityHubWalletRecoveryPasskeyDefaultName;
+
+  /// No description provided for @securityHubWalletRecoveryPasskeyDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Used to restore local wallet access from encrypted backup.'**
+  String get securityHubWalletRecoveryPasskeyDescription;
+
+  /// No description provided for @securityHubAccountSignInDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Used to sign into art.kubus without email, Google, or wallet signature.'**
+  String get securityHubAccountSignInDescription;
+
+  /// No description provided for @securityHubPinDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Protects sensitive account and wallet actions on this device.'**
+  String get securityHubPinDescription;
+
+  /// No description provided for @securityHubCreateBackupDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose a recovery password. It decrypts the wallet backup on a new device.'**
+  String get securityHubCreateBackupDescription;
+
+  /// No description provided for @securityHubVerifyBackupDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter the recovery password to verify this backup can be decrypted locally.'**
+  String get securityHubVerifyBackupDescription;
+
+  /// No description provided for @securityHubBiometricUnlockPromptDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Enable biometric unlock on this device, or skip it for now.'**
+  String get securityHubBiometricUnlockPromptDescription;
+
+  /// No description provided for @securityHubEncryptedBackupDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Create a password-protected encrypted backup for recovery.'**
+  String get securityHubEncryptedBackupDescription;
+
+  /// No description provided for @securityHubRecoveryPhraseOfflineDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Store the recovery phrase offline before you rely on this wallet.'**
+  String get securityHubRecoveryPhraseOfflineDescription;
+
+  /// No description provided for @securityHubDeleteBackupRowDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Removes the encrypted server backup for the current wallet.'**
+  String get securityHubDeleteBackupRowDescription;
+
+  /// No description provided for @securityHubDeleteBackupDialogBody.
+  ///
+  /// In en, this message translates to:
+  /// **'This removes the encrypted server backup for the current wallet. Keep the recovery phrase stored safely offline.'**
+  String get securityHubDeleteBackupDialogBody;
+
+  /// No description provided for @securityHubRemoveWalletRecoveryPasskeyBody.
+  ///
+  /// In en, this message translates to:
+  /// **'This device passkey will no longer unlock the encrypted wallet backup.'**
+  String get securityHubRemoveWalletRecoveryPasskeyBody;
+
+  /// No description provided for @securityHubRemoveRecoveryPasskeyAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove recovery passkey'**
+  String get securityHubRemoveRecoveryPasskeyAction;
+
+  /// No description provided for @securityHubRemoveAccountPasskeyBody.
+  ///
+  /// In en, this message translates to:
+  /// **'This passkey will no longer sign into art.kubus on this account.'**
+  String get securityHubRemoveAccountPasskeyBody;
+
+  /// No description provided for @securityHubRestoreSigningBeforeTransfers.
+  ///
+  /// In en, this message translates to:
+  /// **'Restore signing before transfers'**
+  String get securityHubRestoreSigningBeforeTransfers;
+
+  /// No description provided for @securityHubEncryptedBackupRestoreDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Encrypted backup can restore local wallet access.'**
+  String get securityHubEncryptedBackupRestoreDescription;
+
+  /// No description provided for @securityHubEncryptedBackupAvailableDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Encrypted wallet backup is available for recovery.'**
+  String get securityHubEncryptedBackupAvailableDescription;
+
+  /// No description provided for @securityHubEncryptedBackupDisabledDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Encrypted wallet backup is disabled in this build.'**
+  String get securityHubEncryptedBackupDisabledDescription;
+
+  /// No description provided for @securityHubSetUpLocalUnlockDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Set up local unlock before sensitive wallet and account actions.'**
+  String get securityHubSetUpLocalUnlockDescription;
+
+  /// No description provided for @securityHubSetUpLocalUnlockStepsDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Set up local unlock, passkeys, and wallet recovery before you continue.'**
+  String get securityHubSetUpLocalUnlockStepsDescription;
+
+  /// No description provided for @securityHubSummaryDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Manage account sign-in, device unlock, wallet access, encrypted backups, and recovery credentials in one place.'**
+  String get securityHubSummaryDescription;
+
+  /// No description provided for @securityHubLocalWalletCanSign.
+  ///
+  /// In en, this message translates to:
+  /// **'Local wallet can sign'**
+  String get securityHubLocalWalletCanSign;
+
+  /// No description provided for @securityHubLocalWalletSignerAvailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Local wallet signer is available on this device.'**
+  String get securityHubLocalWalletSignerAvailable;
+
+  /// No description provided for @securityHubNoLocalSignerAvailable.
+  ///
+  /// In en, this message translates to:
+  /// **'No local signer is available on this device.'**
+  String get securityHubNoLocalSignerAvailable;
+
+  /// No description provided for @securityHubNoExternalSignerConnected.
+  ///
+  /// In en, this message translates to:
+  /// **'No external wallet signer is connected.'**
+  String get securityHubNoExternalSignerConnected;
+
+  /// No description provided for @securityHubNoRecoveryPhraseActionRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'No recovery phrase action is currently required.'**
+  String get securityHubNoRecoveryPhraseActionRequired;
+
+  /// No description provided for @securityHubNoWalletConnectedOnDevice.
+  ///
+  /// In en, this message translates to:
+  /// **'No wallet is connected on this device.'**
+  String get securityHubNoWalletConnectedOnDevice;
+
+  /// No description provided for @securityHubNoWalletRecoveryPasskeys.
+  ///
+  /// In en, this message translates to:
+  /// **'No wallet recovery passkeys are registered.'**
+  String get securityHubNoWalletRecoveryPasskeys;
+
+  /// No description provided for @securityHubPinStaysOnDevice.
+  ///
+  /// In en, this message translates to:
+  /// **'PIN stays on this device and protects sensitive wallet actions.'**
+  String get securityHubPinStaysOnDevice;
+
+  /// No description provided for @securityHubPrfSupported.
+  ///
+  /// In en, this message translates to:
+  /// **'PRF supported'**
+  String get securityHubPrfSupported;
+
+  /// No description provided for @securityHubPrfNotSupported.
+  ///
+  /// In en, this message translates to:
+  /// **'PRF not supported'**
+  String get securityHubPrfNotSupported;
+
+  /// No description provided for @securityHubRecoveryMaterialEncrypted.
+  ///
+  /// In en, this message translates to:
+  /// **'Recovery material encrypted'**
+  String get securityHubRecoveryMaterialEncrypted;
+
+  /// No description provided for @securityHubNoEncryptedRecoveryMaterial.
+  ///
+  /// In en, this message translates to:
+  /// **'No encrypted recovery material'**
+  String get securityHubNoEncryptedRecoveryMaterial;
+
+  /// No description provided for @securityHubSignInRecoverySeparate.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign-in and wallet recovery are managed separately'**
+  String get securityHubSignInRecoverySeparate;
+
+  /// No description provided for @securityHubPrfUnsupportedBrowser.
+  ///
+  /// In en, this message translates to:
+  /// **'This browser does not expose wallet-recovery PRF support.'**
+  String get securityHubPrfUnsupportedBrowser;
+
+  /// No description provided for @securityHubThisDeviceCanSign.
+  ///
+  /// In en, this message translates to:
+  /// **'This device can sign wallet actions.'**
+  String get securityHubThisDeviceCanSign;
+
+  /// No description provided for @securityHubWalletAccessReadOnlyOrNotConnected.
+  ///
+  /// In en, this message translates to:
+  /// **'Wallet access is read-only or not connected.'**
+  String get securityHubWalletAccessReadOnlyOrNotConnected;
+
+  /// No description provided for @securityHubWalletRecoveryPasskeyAdded.
+  ///
+  /// In en, this message translates to:
+  /// **'Wallet recovery passkey \"{passkeyName}\" added.'**
+  String securityHubWalletRecoveryPasskeyAdded(Object passkeyName);
+
+  /// No description provided for @securityHubCreatedOn.
+  ///
+  /// In en, this message translates to:
+  /// **'Created {date}'**
+  String securityHubCreatedOn(Object date);
+
+  /// No description provided for @securityHubCreatedAndLastUsed.
+  ///
+  /// In en, this message translates to:
+  /// **'Created {createdDate}. Last used {lastUsedDate}.'**
+  String securityHubCreatedAndLastUsed(Object createdDate, Object lastUsedDate);
+
+  /// No description provided for @securityHubLastUsedOn.
+  ///
+  /// In en, this message translates to:
+  /// **'Last used {date}'**
+  String securityHubLastUsedOn(Object date);
+
+  /// No description provided for @securityHubLastVerifiedOn.
+  ///
+  /// In en, this message translates to:
+  /// **'Last verified {date}'**
+  String securityHubLastVerifiedOn(Object date);
+
+  /// No description provided for @securityHubPasskeyStatusSummary.
+  ///
+  /// In en, this message translates to:
+  /// **'{lastActivity}. {prfLabel}. {recoveryMaterial}.'**
+  String securityHubPasskeyStatusSummary(
+      Object lastActivity, Object prfLabel, Object recoveryMaterial);
+
+  /// No description provided for @securityHubPasskeyCounts.
+  ///
+  /// In en, this message translates to:
+  /// **'{accountCount} account / {recoveryCount} recovery'**
+  String securityHubPasskeyCounts(int accountCount, int recoveryCount);
+
+  /// No description provided for @securityHubRegisteredCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} registered'**
+  String securityHubRegisteredCount(int count);
+
+  /// No description provided for @securityHubPasskeyPurpose.
+  ///
+  /// In en, this message translates to:
+  /// **'Purpose: {purpose}'**
+  String securityHubPasskeyPurpose(Object purpose);
+
+  /// No description provided for @securityHubPasskeyPurposePrfCapable.
+  ///
+  /// In en, this message translates to:
+  /// **'Purpose: {purpose} - PRF capable'**
+  String securityHubPasskeyPurposePrfCapable(Object purpose);
+
+  /// No description provided for @securityHubExternalWalletHelper.
+  ///
+  /// In en, this message translates to:
+  /// **'External wallet: {walletName}'**
+  String securityHubExternalWalletHelper(Object walletName);
+
+  /// No description provided for @securityHubExternalWalletConnected.
+  ///
+  /// In en, this message translates to:
+  /// **'External wallet connected.'**
+  String get securityHubExternalWalletConnected;
+
+  /// No description provided for @securityHubExternalSignerConnected.
+  ///
+  /// In en, this message translates to:
+  /// **'External signer connected'**
+  String get securityHubExternalSignerConnected;
+
+  /// No description provided for @securityHubConnectOrRestoreWallet.
+  ///
+  /// In en, this message translates to:
+  /// **'Connect or restore a wallet'**
+  String get securityHubConnectOrRestoreWallet;
+
+  /// No description provided for @securityHubDeleteBackupAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete backup'**
+  String get securityHubDeleteBackupAction;
+
+  /// No description provided for @securityHubBiometricUnlockDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Uses this device biometric prompt after a local PIN exists.'**
+  String get securityHubBiometricUnlockDescription;
+
   /// No description provided for @walletRecoveryFallbackTitle.
   ///
   /// In en, this message translates to:
@@ -22039,6 +22787,12 @@ abstract class AppLocalizations {
   /// **'Connect'**
   String get desktopShellNavConnect;
 
+  /// No description provided for @desktopShellNavMessages.
+  ///
+  /// In en, this message translates to:
+  /// **'Messages'**
+  String get desktopShellNavMessages;
+
   /// No description provided for @desktopShellNavCreate.
   ///
   /// In en, this message translates to:
@@ -22194,6 +22948,48 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Main navigation'**
   String get mobileNavSemanticLabel;
+
+  /// No description provided for @mobileNavCommunityUnreadSemantics.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} unread messages and notifications'**
+  String mobileNavCommunityUnreadSemantics(int count);
+
+  /// No description provided for @desktopMessagesUnreadSemantics.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} unread messages'**
+  String desktopMessagesUnreadSemantics(int count);
+
+  /// No description provided for @notificationDirectMessageTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'New message from {senderName}'**
+  String notificationDirectMessageTitle(String senderName);
+
+  /// No description provided for @notificationDirectMessageFallbackSender.
+  ///
+  /// In en, this message translates to:
+  /// **'Someone'**
+  String get notificationDirectMessageFallbackSender;
+
+  /// No description provided for @notificationDirectMessageEmptyBody.
+  ///
+  /// In en, this message translates to:
+  /// **'You have a new message.'**
+  String get notificationDirectMessageEmptyBody;
+
+  /// No description provided for @notificationMessagesChannelName.
+  ///
+  /// In en, this message translates to:
+  /// **'Messages'**
+  String get notificationMessagesChannelName;
+
+  /// No description provided for @messagesNotificationConversationUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'This conversation is no longer available.'**
+  String get messagesNotificationConversationUnavailable;
 
   /// No description provided for @desktopNavWalletEntry.
   ///
@@ -22824,6 +23620,26 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Profile image upload timed out. Please try a smaller image or retry.'**
   String get profileEditAvatarUploadTimeoutToast;
+
+  /// In en, this message translates to:
+  /// **'Your session has expired. Sign in again to save your profile.'**
+  String get profileEditErrorSignInAgainToast;
+
+  /// In en, this message translates to:
+  /// **'This profile belongs to a different account. Sign in with the owning account and try again.'**
+  String get profileEditErrorOwnershipMismatchToast;
+
+  /// In en, this message translates to:
+  /// **'This image is too large. Choose a smaller image and try again.'**
+  String get profileEditAvatarErrorTooLargeToast;
+
+  /// In en, this message translates to:
+  /// **'This image format is not supported. Choose a JPG, PNG, WebP or GIF image.'**
+  String get profileEditAvatarErrorUnsupportedTypeToast;
+
+  /// In en, this message translates to:
+  /// **'Too many uploads right now. Wait a moment and try again.'**
+  String get profileEditAvatarErrorRateLimitedToast;
 
   /// No description provided for @profileEditCoverUploadedSavedToast.
   ///

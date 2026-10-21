@@ -1,7 +1,132 @@
+import 'package:flutter/foundation.dart';
+
 import '../utils/creator_display_format.dart';
 import '../utils/user_identity_display.dart';
 import '../utils/wallet_utils.dart';
 import 'promotion.dart';
+
+/// The artist / institution / verified statements a source makes about one
+/// account. A false value may be either absent or an explicit revocation;
+/// [isArtistSpecified], [isInstitutionSpecified] and [isVerifiedSpecified]
+/// preserve that distinction when sources are merged. A mark is never inferred
+/// from a name, a handle, a wallet or the age of an account.
+@immutable
+class ProfileIdentityRoles {
+  const ProfileIdentityRoles({
+    this.isArtist = false,
+    this.isInstitution = false,
+    this.isVerified = false,
+    bool? isArtistSpecified,
+    bool? isInstitutionSpecified,
+    bool? isVerifiedSpecified,
+  })  : isArtistSpecified = isArtistSpecified ?? isArtist,
+        isInstitutionSpecified = isInstitutionSpecified ?? isInstitution,
+        isVerifiedSpecified = isVerifiedSpecified ?? isVerified;
+
+  static const ProfileIdentityRoles none = ProfileIdentityRoles();
+
+  final bool isArtist;
+  final bool isInstitution;
+  final bool isVerified;
+  final bool isArtistSpecified;
+  final bool isInstitutionSpecified;
+  final bool isVerifiedSpecified;
+
+  bool get hasRole => isArtist || isInstitution;
+  bool get any => hasRole || isVerified;
+
+  /// Applies [other] as a newer statement, retaining this source only for
+  /// fields that [other] leaves unstated.
+  ProfileIdentityRoles merge(ProfileIdentityRoles other) =>
+      ProfileIdentityRoles(
+        isArtist: other.isArtistSpecified ? other.isArtist : isArtist,
+        isInstitution:
+            other.isInstitutionSpecified ? other.isInstitution : isInstitution,
+        isVerified: other.isVerifiedSpecified ? other.isVerified : isVerified,
+        isArtistSpecified: isArtistSpecified || other.isArtistSpecified,
+        isInstitutionSpecified:
+            isInstitutionSpecified || other.isInstitutionSpecified,
+        isVerifiedSpecified: isVerifiedSpecified || other.isVerifiedSpecified,
+      );
+
+  /// What an author object states, plus the author-prefixed flags a post or
+  /// comment envelope may carry beside it. Bare `isArtist` on the envelope is
+  /// deliberately ignored: it would not describe the author.
+  factory ProfileIdentityRoles.fromAuthorPayload(
+    Map<String, dynamic> author, {
+    Map<String, dynamic> envelope = const <String, dynamic>{},
+  }) {
+    final rolesRaw = author['roles'];
+    final roles = rolesRaw is Map
+        ? Map<String, dynamic>.from(rolesRaw)
+        : const <String, dynamic>{};
+    final artistFlags = <dynamic>[
+      roles['artist'],
+      author['isArtist'],
+      author['is_artist'],
+      envelope['authorIsArtist'],
+      envelope['author_is_artist'],
+    ];
+    final institutionFlags = <dynamic>[
+      roles['institution'],
+      author['isInstitution'],
+      author['is_institution'],
+      envelope['authorIsInstitution'],
+      envelope['author_is_institution'],
+    ];
+    final verifiedFlags = <dynamic>[
+      author['isVerified'],
+      author['is_verified'],
+      envelope['authorIsVerified'],
+      envelope['author_is_verified'],
+    ];
+    return ProfileIdentityRoles(
+      isArtist: artistFlags.any((value) => _parseStatedFlag(value) == true),
+      isInstitution:
+          institutionFlags.any((value) => _parseStatedFlag(value) == true),
+      isVerified: verifiedFlags.any((value) => _parseStatedFlag(value) == true),
+      isArtistSpecified:
+          artistFlags.any((value) => _parseStatedFlag(value) != null),
+      isInstitutionSpecified:
+          institutionFlags.any((value) => _parseStatedFlag(value) != null),
+      isVerifiedSpecified:
+          verifiedFlags.any((value) => _parseStatedFlag(value) != null),
+    );
+  }
+
+  /// What a profile row states about itself (bare keys are the account's own).
+  factory ProfileIdentityRoles.fromProfileMap(Map<String, dynamic> raw) =>
+      ProfileIdentityRoles.fromAuthorPayload(raw);
+
+  @override
+  bool operator ==(Object other) =>
+      other is ProfileIdentityRoles &&
+      other.isArtist == isArtist &&
+      other.isInstitution == isInstitution &&
+      other.isVerified == isVerified &&
+      other.isArtistSpecified == isArtistSpecified &&
+      other.isInstitutionSpecified == isInstitutionSpecified &&
+      other.isVerifiedSpecified == isVerifiedSpecified;
+
+  @override
+  int get hashCode => Object.hash(
+        isArtist,
+        isInstitution,
+        isVerified,
+        isArtistSpecified,
+        isInstitutionSpecified,
+        isVerifiedSpecified,
+      );
+}
+
+bool? _parseStatedFlag(dynamic value) {
+  if (value is bool) return value;
+  if (value is num) return value != 0;
+  final text = value?.toString().trim().toLowerCase();
+  if (text == 'true' || text == '1' || text == 'yes') return true;
+  if (text == 'false' || text == '0' || text == 'no') return false;
+  return null;
+}
 
 class ProfileIdentityData {
   final String label;
@@ -11,6 +136,15 @@ class ProfileIdentityData {
   final String walletSeed;
   final String? avatarUrl;
 
+  /// Role values from this source, used for the shared avatar badge. The
+  /// [roleStatements] field records whether false was explicit or absent; no
+  /// role is inferred from a name, handle or wallet. Artist status does not
+  /// imply verification.
+  final bool isArtist;
+  final bool isInstitution;
+  final bool isVerified;
+  final ProfileIdentityRoles roleStatements;
+
   const ProfileIdentityData({
     required this.label,
     required this.walletSeed,
@@ -18,7 +152,25 @@ class ProfileIdentityData {
     this.username,
     this.userId,
     this.avatarUrl,
+    this.isArtist = false,
+    this.isInstitution = false,
+    this.isVerified = false,
+    this.roleStatements = ProfileIdentityRoles.none,
   });
+
+  /// Role flags from this identity source, including explicit false values.
+  /// Manually constructed identities with a true role remain stated.
+  ProfileIdentityRoles get statedRoles => ProfileIdentityRoles(
+        isArtist: isArtist,
+        isInstitution: isInstitution,
+        isVerified: isVerified,
+        isArtistSpecified: roleStatements.isArtistSpecified || isArtist,
+        isInstitutionSpecified:
+            roleStatements.isInstitutionSpecified || isInstitution,
+        isVerifiedSpecified: roleStatements.isVerifiedSpecified || isVerified,
+      );
+
+  bool get hasRoleBadge => isArtist || isInstitution || isVerified;
 
   String? get navigationIdentifier {
     final normalizedUserId = (userId ?? '').trim();
@@ -62,6 +214,9 @@ class ProfileIdentityData {
     String? userId,
     String? walletSeed,
     String? avatarUrl,
+    bool? isArtist,
+    bool? isInstitution,
+    bool? isVerified,
   }) {
     return ProfileIdentityData(
       label: label ?? this.label,
@@ -70,6 +225,10 @@ class ProfileIdentityData {
       userId: userId ?? this.userId,
       walletSeed: walletSeed ?? this.walletSeed,
       avatarUrl: avatarUrl ?? this.avatarUrl,
+      isArtist: isArtist ?? this.isArtist,
+      isInstitution: isInstitution ?? this.isInstitution,
+      isVerified: isVerified ?? this.isVerified,
+      roleStatements: roleStatements,
     );
   }
 
@@ -97,6 +256,7 @@ class ProfileIdentityData {
           userId,
         ]) ??
         '';
+    final roles = ProfileIdentityRoles.fromProfileMap(raw);
     final rawLabel = identity.name.trim();
     final label = rawLabel.isEmpty || rawLabel.toLowerCase() == 'unknown artist'
         ? fallbackLabel
@@ -108,6 +268,10 @@ class ProfileIdentityData {
       userId: userId,
       walletSeed: walletSeed.trim().isEmpty ? label : walletSeed.trim(),
       avatarUrl: _pickAvatarUrl(raw),
+      isArtist: roles.isArtist,
+      isInstitution: roles.isInstitution,
+      isVerified: roles.isVerified,
+      roleStatements: roles,
     );
   }
 
@@ -118,6 +282,7 @@ class ProfileIdentityData {
     String? userId,
     String? wallet,
     String? avatarUrl,
+    ProfileIdentityRoles roles = ProfileIdentityRoles.none,
   }) {
     final formatted = CreatorDisplayFormat.format(
       fallbackLabel: fallbackLabel,
@@ -140,6 +305,10 @@ class ProfileIdentityData {
       userId: normalizedUserId.isEmpty ? null : normalizedUserId,
       walletSeed: walletSeed.isEmpty ? formatted.primary : walletSeed,
       avatarUrl: _normalizeText(avatarUrl),
+      isArtist: roles.isArtist,
+      isInstitution: roles.isInstitution,
+      isVerified: roles.isVerified,
+      roleStatements: roles,
     );
   }
 
@@ -212,6 +381,7 @@ class ProfileIdentityData {
         'profileImage',
         'profile_image',
       ]),
+      roles: ProfileIdentityRoles.fromAuthorPayload(nested, envelope: json),
     );
   }
 
@@ -270,6 +440,7 @@ class ProfileIdentityData {
         userId: userId,
         wallet: item.profileTargetId ?? rawId,
         avatarUrl: _pickAvatarUrl(raw) ?? profileImageAsMark,
+        roles: ProfileIdentityRoles.fromProfileMap(raw),
       );
     }
 
@@ -282,6 +453,9 @@ class ProfileIdentityData {
         userId: profileTargetId,
         wallet: profileTargetId ?? item.id,
         avatarUrl: _pickLogoOrAvatarUrl(raw) ?? imageAsMark,
+        // The rail item *is* an institution entity: its type states the role.
+        roles: ProfileIdentityRoles.fromProfileMap(raw)
+            .merge(const ProfileIdentityRoles(isInstitution: true)),
       );
     }
 

@@ -67,10 +67,7 @@ class CommunityArtDiscoveryFeed extends StatelessWidget {
     }
 
     final children = <Widget>[
-      _DiscoveryHeader(
-        provider: provider,
-        onUseMyLocation: onUseMyLocation,
-      ),
+      _DiscoveryHeader(provider: provider, onUseMyLocation: onUseMyLocation),
       const SizedBox(height: KubusSpacing.md),
       if (provider.error != null && provider.allItems.isEmpty)
         EmptyStateCard(
@@ -212,7 +209,10 @@ class _DiscoveryHeader extends StatelessWidget {
   }
 }
 
-String _reasonLabel(AppLocalizations l10n, ArtDiscoveryReason reason) =>
+String _reasonLabel(
+  AppLocalizations l10n,
+  ArtDiscoveryReason reason,
+) =>
     switch (reason) {
       ArtDiscoveryReason.fromFollowed =>
         l10n.communityArtDiscoveryReasonFollowed,
@@ -254,8 +254,11 @@ class _ReasonLabel extends StatelessWidget {
       padding: const EdgeInsets.only(bottom: KubusSpacing.xs),
       child: Row(
         children: [
-          Icon(_reasonIcon(item.reason),
-              size: 14, color: roles.foregroundMuted),
+          Icon(
+            _reasonIcon(item.reason),
+            size: 14,
+            color: roles.foregroundMuted,
+          ),
           const SizedBox(width: KubusSpacing.xs),
           Flexible(
             child: Text(
@@ -293,7 +296,10 @@ class _DiscoveryEntry extends StatelessWidget {
     }
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [_ReasonLabel(item: item), body],
+      children: [
+        _ReasonLabel(item: item),
+        body,
+      ],
     );
   }
 }
@@ -317,6 +323,7 @@ class _CoverImage extends StatelessWidget {
         child: KubusCachedImage(
           imageUrl: resolved,
           fit: BoxFit.cover,
+          decodeToDisplaySize: true,
           semanticLabel: label,
         ),
       ),
@@ -384,12 +391,16 @@ class _ExhibitionCard extends StatelessWidget {
     if (start != null || end != null) {
       String fmt(DateTime d) =>
           MaterialLocalizations.of(context).formatMediumDate(d.toLocal());
-      when = [if (start != null) fmt(start), if (end != null) fmt(end)]
-          .join(' – ');
+      when = [
+        if (start != null) fmt(start),
+        if (end != null) fmt(end),
+      ].join(' – ');
     }
     final place = (exhibition.locationName ?? '').trim();
-    final meta =
-        [if (when != null) when, if (place.isNotEmpty) place].join(' · ');
+    final meta = [
+      if (when != null) when,
+      if (place.isNotEmpty) place,
+    ].join(' · ');
     assert(locale.isNotEmpty);
     return Semantics(
       button: true,

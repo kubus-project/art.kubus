@@ -8,7 +8,7 @@ import '../../services/telemetry/telemetry_service.dart';
 import 'package:flutter/material.dart';
 import '../../widgets/common/kubus_cached_image.dart';
 import '../../widgets/inline_loading.dart';
-import '../../widgets/avatar_widget.dart';
+import '../../widgets/identity/kubus_identity_avatar.dart';
 import '../../widgets/artwork_creator_byline.dart';
 import '../../widgets/artwork_gallery_view.dart';
 import '../../widgets/detail/detail_shell_components.dart';
@@ -78,7 +78,63 @@ class ArtDetailScreen extends StatefulWidget {
 class _ArtDetailScreenState extends State<ArtDetailScreen> {
   late TextEditingController _commentController;
   late ScrollController _scrollController;
+  final GlobalKey _commentsSectionKey = GlobalKey();
   bool _showComments = false;
+  int _commentsScrollGeneration = 0;
+
+  Future<void> _openCommentsAndScroll(ArtworkProvider provider) async {
+    final generation = ++_commentsScrollGeneration;
+    if (!_isCommentsScrollCurrent(generation)) return;
+    final loading = provider.loadComments(widget.artworkId);
+    await _scrollToComments(generation);
+    if (!_isCommentsScrollCurrent(generation)) return;
+    await loading;
+    if (!_isCommentsScrollCurrent(generation)) return;
+    await _scrollToComments(generation);
+  }
+
+  bool _isCommentsScrollCurrent(int generation) =>
+      mounted && _showComments && _commentsScrollGeneration == generation;
+
+  Future<void> _scrollToComments(int generation) async {
+    if (!_isCommentsScrollCurrent(generation)) return;
+    await WidgetsBinding.instance.endOfFrame;
+    if (!mounted ||
+        !_showComments ||
+        _commentsScrollGeneration != generation ||
+        !_scrollController.hasClients) {
+      return;
+    }
+    final reduceMotion = MediaQuery.disableAnimationsOf(context);
+    final duration =
+        reduceMotion ? Duration.zero : const Duration(milliseconds: 250);
+
+    for (var attempt = 0; attempt < 3; attempt++) {
+      if (!_isCommentsScrollCurrent(generation)) return;
+      final targetContext = _commentsSectionKey.currentContext;
+      if (targetContext != null) {
+        if (!targetContext.mounted) return;
+        await Scrollable.ensureVisible(
+          targetContext,
+          alignment: 0.08,
+          duration: duration,
+          curve: Curves.easeOutCubic,
+        );
+        return;
+      }
+
+      final position = _scrollController.position;
+      if (!position.hasContentDimensions) return;
+      await _scrollController.animateTo(
+        position.maxScrollExtent,
+        duration: duration,
+        curve: Curves.easeOutCubic,
+      );
+      if (!_isCommentsScrollCurrent(generation)) return;
+      await WidgetsBinding.instance.endOfFrame;
+      if (!_isCommentsScrollCurrent(generation)) return;
+    }
+  }
 
   String _publicReturnRoute(BuildContext context) {
     try {
@@ -641,9 +697,11 @@ class _ArtDetailScreenState extends State<ArtDetailScreen> {
                   selectedLabel: l10n.artworkDetailHideComments,
                   isSelected: _showComments,
                   onPressed: () {
-                    setState(() => _showComments = !_showComments);
-                    if (_showComments) {
-                      artworkProvider.loadComments(widget.artworkId);
+                    final shouldShow = !_showComments;
+                    if (!shouldShow) _commentsScrollGeneration++;
+                    setState(() => _showComments = shouldShow);
+                    if (shouldShow) {
+                      unawaited(_openCommentsAndScroll(artworkProvider));
                     }
                   },
                 ),
@@ -1496,9 +1554,13 @@ class _ArtDetailScreenState extends State<ArtDetailScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          '${l10n.commonComments} (${artwork.commentsCount})',
-          style: DetailTypography.sectionTitle(context),
+        KeyedSubtree(
+          key: _commentsSectionKey,
+          child: Text(
+            '${l10n.commonComments} (${artwork.commentsCount})',
+            key: const ValueKey('art-detail-comments-heading'),
+            style: DetailTypography.sectionTitle(context),
+          ),
         ),
         const SizedBox(height: DetailSpacing.lg),
         if (error != null)
@@ -1815,7 +1877,7 @@ class _ArtDetailScreenState extends State<ArtDetailScreen> {
           children: [
             Row(
               children: [
-                AvatarWidget(
+                KubusIdentityAvatar(
                   avatarUrl: comment.userAvatarUrl,
                   wallet: comment.userId,
                   radius: isReply ? 12 : 16,

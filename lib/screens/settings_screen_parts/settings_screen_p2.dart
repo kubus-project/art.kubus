@@ -522,12 +522,38 @@ extension _SettingsScreenStatePart2 on _SettingsScreenState {
                 final navigator = Navigator.of(context);
                 final messenger = ScaffoldMessenger.of(context);
                 final gate = context.read<SecurityGateProvider>();
+                final nextSeconds = _autoLockSecondsFromLabel(label);
+                final stored = await SettingsService.loadSettings();
+                // Lengthening the lock or switching it off needs verification;
+                // shortening it does not.
+                if (SettingsService.isAutoLockLoosening(
+                        stored.autoLockSeconds, nextSeconds) &&
+                    !await gate.requireSensitiveActionVerification()) {
+                  messenger.showKubusSnackBar(
+                    SnackBar(
+                        content: Text(l10n.securityHubAuthenticationFailed)),
+                    tone: KubusSnackBarTone.error,
+                  );
+                  return;
+                }
+                final readBack = await SettingsService.updateStoredSettings(
+                  (current) => current.copyWith(
+                    autoLockTime: label,
+                    autoLockSeconds: nextSeconds,
+                  ),
+                );
+                await gate.reloadSettings();
+                if (!mounted) return;
+                if (readBack.autoLockSeconds != nextSeconds) {
+                  messenger.showKubusSnackBar(
+                    SnackBar(content: Text(l10n.securityHubActionFailed)),
+                    tone: KubusSnackBarTone.error,
+                  );
+                  return;
+                }
                 _applyState(() {
                   _autoLockTime = label;
                 });
-                await _saveAllSettings();
-                await gate.reloadSettings();
-                if (!mounted) return;
                 navigator.pop();
                 messenger.showKubusSnackBar(
                   SnackBar(
@@ -546,6 +572,18 @@ extension _SettingsScreenStatePart2 on _SettingsScreenState {
     final l10n = AppLocalizations.of(context)!;
     final walletProvider = Provider.of<WalletProvider>(context, listen: false);
     final gate = context.read<SecurityGateProvider>();
+    if (!value) {
+      // Switching biometric unlock off weakens the lock: verify first.
+      if (!await gate.requireSensitiveActionVerification()) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showKubusSnackBar(
+            SnackBar(content: Text(l10n.securityHubAuthenticationFailed)),
+            tone: KubusSnackBarTone.error,
+          );
+        }
+        return;
+      }
+    }
     if (value) {
       final hasPin = await walletProvider.hasPin();
       if (!hasPin) {
@@ -556,7 +594,8 @@ extension _SettingsScreenStatePart2 on _SettingsScreenState {
           );
         }
         _applyState(() => _biometricAuth = false);
-        await _saveAllSettings();
+        await SettingsService.updateStoredSettings(
+            (current) => current.copyWith(biometricAuth: false));
         await gate.reloadSettings();
         return;
       }
@@ -568,12 +607,15 @@ extension _SettingsScreenStatePart2 on _SettingsScreenState {
           );
         }
         _applyState(() => _biometricAuth = false);
-        await _saveAllSettings();
+        await SettingsService.updateStoredSettings(
+            (current) => current.copyWith(biometricAuth: false));
         await gate.reloadSettings();
         return;
       }
       // Optional: require one successful auth when enabling
-      final ok = await walletProvider.authenticateWithBiometrics();
+      final ok = await walletProvider.authenticateWithBiometrics(
+        localizedReason: l10n.biometricIdentityPromptReason,
+      );
       if (!ok) {
         if (mounted) {
           ScaffoldMessenger.of(context).showKubusSnackBar(
@@ -581,10 +623,27 @@ extension _SettingsScreenStatePart2 on _SettingsScreenState {
           );
         }
         _applyState(() => _biometricAuth = false);
-        await _saveAllSettings();
+        await SettingsService.updateStoredSettings(
+            (current) => current.copyWith(biometricAuth: false));
         await gate.reloadSettings();
         return;
       }
+    }
+    final stored = await SettingsService.updateStoredSettings(
+      (current) => current.copyWith(
+        biometricAuth: value,
+        useBiometricsOnUnlock: value ? current.useBiometricsOnUnlock : true,
+        biometricsDeclined: value ? false : current.biometricsDeclined,
+      ),
+    );
+    await gate.reloadSettings();
+    if (!mounted) return;
+    if (stored.biometricAuth != value) {
+      ScaffoldMessenger.of(context).showKubusSnackBar(
+        SnackBar(content: Text(l10n.securityHubActionFailed)),
+        tone: KubusSnackBarTone.error,
+      );
+      return;
     }
     _applyState(() {
       _biometricAuth = value;
@@ -595,8 +654,6 @@ extension _SettingsScreenStatePart2 on _SettingsScreenState {
         _biometricsDeclined = false;
       }
     });
-    await _saveAllSettings();
-    await gate.reloadSettings();
   }
 
   Future<void> _toggleRequirePin(bool value) async {
@@ -616,28 +673,47 @@ extension _SettingsScreenStatePart2 on _SettingsScreenState {
           SnackBar(content: Text(l10n.settingsPinSetFailedToast)),
         );
         _applyState(() => _requirePin = false);
-        await _saveAllSettings();
+        await SettingsService.updateStoredSettings(
+            (current) => current.copyWith(requirePin: false));
         await gate.reloadSettings();
         return;
       }
+      final stored = await SettingsService.updateStoredSettings(
+          (current) => current.copyWith(requirePin: true));
+      if (!mounted) return;
+      if (!stored.requirePin) {
+        ScaffoldMessenger.of(context).showKubusSnackBar(
+          SnackBar(content: Text(l10n.securityHubActionFailed)),
+          tone: KubusSnackBarTone.error,
+        );
+        return;
+      }
       _applyState(() => _requirePin = true);
-      await _saveAllSettings();
       await gate.reloadSettings();
       return;
     }
 
     // Disabling requires a local verification.
-    await gate.lock(SecurityLockReason.sensitiveAction);
-    final settled = await gate.waitForResolution();
-    if (settled == null || !settled.isSuccess) {
+    // Only a local PIN or biometric check may switch the requirement off; a
+    // sign-in that resolves an already-pending token lock proves nothing.
+    if (!await gate.requireSensitiveActionVerification()) {
       if (!mounted) return;
       _applyState(() => _requirePin = true);
       return;
     }
 
+    final stored = await SettingsService.updateStoredSettings(
+        (current) => current.copyWith(requirePin: false));
     if (!mounted) return;
+    if (stored.requirePin) {
+      _applyState(() => _requirePin = true);
+      ScaffoldMessenger.of(context).showKubusSnackBar(
+        SnackBar(content: Text(l10n.securityHubActionFailed)),
+        tone: KubusSnackBarTone.error,
+      );
+      return;
+    }
     _applyState(() => _requirePin = false);
-    await _saveAllSettings();
     await gate.reloadSettings();
   }
 
@@ -825,22 +901,25 @@ extension _SettingsScreenStatePart2 on _SettingsScreenState {
               final messenger = ScaffoldMessenger.of(context);
               // Clearing PIN requires verification. If the user forgot it, they
               // must logout and re-login.
-              await gate.lock(SecurityLockReason.sensitiveAction);
-              final settled = await gate.waitForResolution();
-              if (settled == null || !settled.isSuccess) {
+              final result = await PinManagement(
+                wallet: walletProvider,
+                gate: gate,
+              ).removePin();
+              if (!mounted) return;
+              if (result.outcome == PinManagementOutcome.authenticationFailed) {
                 return;
               }
-
-              await walletProvider.clearPin();
-              if (!mounted) return;
+              if (!result.isSuccess) {
+                messenger.showKubusSnackBar(
+                    SnackBar(content: Text(l10n.settingsPinClearFailedToast)));
+                return;
+              }
               _applyState(() {
                 _requirePin = false;
                 _biometricAuth = false;
                 _useBiometricsOnUnlock = true;
                 _hasPin = false;
               });
-              await _saveAllSettings();
-              await gate.reloadSettings();
               navigator.pop();
               messenger.showKubusSnackBar(
                   SnackBar(content: Text(l10n.settingsPinClearedToast)));
@@ -859,36 +938,39 @@ extension _SettingsScreenStatePart2 on _SettingsScreenState {
               final messenger = ScaffoldMessenger.of(context);
               final pin = pinController.text.trim();
               final confirm = confirmController.text.trim();
-              if (pin.length < 4 || confirm.length < 4) {
-                messenger.showKubusSnackBar(
-                    SnackBar(content: Text(l10n.settingsPinMinLengthError)));
+              final result = await PinManagement(
+                wallet: walletProvider,
+                gate: gate,
+              ).setOrReplacePin(pin, confirm);
+              if (!mounted) return;
+              if (!result.isSuccess) {
+                final message = switch (result.outcome) {
+                  PinManagementOutcome.invalid => switch (result.issue) {
+                      PinFormatIssue.tooShort => l10n.settingsPinMinLengthError,
+                      PinFormatIssue.mismatch => l10n.settingsPinMismatchError,
+                      _ => l10n.settingsPinInvalidFormatError,
+                    },
+                  PinManagementOutcome.authenticationFailed => null,
+                  _ => l10n.settingsPinSetFailedToast,
+                };
+                if (message != null) {
+                  messenger.showKubusSnackBar(SnackBar(content: Text(message)));
+                }
                 return;
               }
-              if (pin != confirm) {
-                messenger.showKubusSnackBar(
-                    SnackBar(content: Text(l10n.settingsPinMismatchError)));
-                return;
-              }
-              try {
-                await walletProvider.setPin(pin);
-                if (!mounted) return;
-                final hasPin = await walletProvider.hasPin();
-                final biometricsSupported =
-                    await walletProvider.canUseBiometrics();
-                if (!mounted) return;
-                _applyState(() {
-                  _hasPin = hasPin;
-                  _biometricsSupported = biometricsSupported;
-                });
-                await gate.reloadSettings();
-                navigator.pop();
-                messenger.showKubusSnackBar(
-                    SnackBar(content: Text(l10n.settingsPinSetSuccessToast)));
-              } catch (e) {
-                if (!mounted) return;
-                messenger.showKubusSnackBar(
-                    SnackBar(content: Text(l10n.settingsPinSetFailedToast)));
-              }
+              final hasPin = await walletProvider.hasPin();
+              final biometricsSupported =
+                  await walletProvider.canUseBiometrics();
+              final settings = await SettingsService.loadSettings();
+              if (!mounted) return;
+              _applyState(() {
+                _hasPin = hasPin;
+                _requirePin = settings.requirePin;
+                _biometricsSupported = biometricsSupported;
+              });
+              navigator.pop();
+              messenger.showKubusSnackBar(
+                  SnackBar(content: Text(l10n.settingsPinSetSuccessToast)));
             },
             child: Text(l10n.commonSave,
                 style: KubusTypography.inter(

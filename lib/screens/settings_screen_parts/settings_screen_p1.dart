@@ -102,11 +102,12 @@ extension _SettingsScreenStatePart1 on _SettingsScreenState {
       padding: const EdgeInsets.all(KubusSpacing.md),
       child: Row(
         children: [
-          AvatarWidget(
+          KubusIdentityAvatar(
             wallet: profileProvider.currentUser?.walletAddress ?? '',
             avatarUrl: profileProvider.currentUser?.avatar,
             radius: 26,
-            cornerRadiusFactor: AvatarWidget.defaultCornerRadiusFactor,
+            isArtist: profileProvider.currentUser?.isArtist ?? false,
+            isInstitution: profileProvider.currentUser?.isInstitution ?? false,
             enableProfileNavigation: false,
           ),
           const SizedBox(width: KubusSpacing.md),

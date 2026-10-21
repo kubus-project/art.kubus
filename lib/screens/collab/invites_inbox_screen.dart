@@ -10,7 +10,7 @@ import '../../utils/kubus_color_roles.dart';
 import '../art/collection_detail_screen.dart';
 import '../events/event_detail_screen.dart';
 import '../events/exhibition_detail_screen.dart';
-import '../../widgets/avatar_widget.dart';
+import '../../widgets/identity/kubus_identity_avatar.dart';
 import '../../widgets/empty_state_card.dart';
 import '../../widgets/kubus_button.dart';
 import '../../widgets/states/kubus_product_states.dart';
@@ -379,7 +379,7 @@ class InviteRow extends StatelessWidget {
             ExcludeSemantics(
               child: Row(
                 children: [
-                  AvatarWidget(
+                  KubusIdentityAvatar(
                     avatarUrl: invitedBy?.avatarUrl,
                     wallet: seed,
                     radius: 18,

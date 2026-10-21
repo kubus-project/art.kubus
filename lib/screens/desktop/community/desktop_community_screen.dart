@@ -31,14 +31,14 @@ import '../../../services/contextual_auth_gate.dart';
 import '../../../services/user_service.dart';
 import '../../../services/share/share_service.dart';
 import '../../../services/share/share_types.dart' as share_types;
-import '../../../widgets/avatar_widget.dart';
+import '../../../widgets/identity/kubus_identity_avatar.dart';
 import '../../../widgets/empty_state_card.dart';
 import '../../../widgets/user_activity_status_line.dart';
 import '../../../widgets/community/community_compose_intent_resumer.dart';
 import '../../../widgets/community/post_like_settlement.dart';
 import '../../../services/pending_action_executor.dart';
 import '../../../widgets/community/community_post_card.dart';
-import '../../../widgets/community/community_author_role_badges.dart';
+import '../../../widgets/community/conversation_avatar.dart';
 import '../../../widgets/community/community_post_options_sheet.dart';
 import '../../../widgets/community/community_subject_picker.dart';
 import '../../../utils/app_animations.dart';
@@ -88,6 +88,7 @@ import '../../../widgets/community/contextual_contribution_card.dart';
 import '../../../widgets/common/kubus_screen_header.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
 import 'package:art_kubus/widgets/community/community_post_delete.dart';
+import 'package:art_kubus/widgets/community/community_posting_wallet.dart';
 import 'package:art_kubus/widgets/community/community_art_discovery_feed.dart';
 import 'package:art_kubus/community/art_discovery.dart';
 import 'package:art_kubus/community/art_discovery_sources.dart';
@@ -103,7 +104,14 @@ part 'desktop_community_screen_parts/desktop_community_screen_p6.dart';
 /// Desktop community screen with Twitter/Instagram-style feed
 /// Features multi-column layout with trending and suggestions
 class DesktopCommunityScreen extends StatefulWidget {
-  const DesktopCommunityScreen({super.key});
+  const DesktopCommunityScreen({
+    super.key,
+    this.initialShowMessages = false,
+    this.initialConversationId,
+  });
+
+  final bool initialShowMessages;
+  final String? initialConversationId;
 
   @override
   State<DesktopCommunityScreen> createState() => _DesktopCommunityScreenState();
@@ -194,8 +202,26 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
   }
 
   @override
+  void didUpdateWidget(covariant DesktopCommunityScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.initialShowMessages != widget.initialShowMessages) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _handleSidebarTabChange(widget.initialShowMessages);
+      });
+    }
+    if (oldWidget.initialConversationId != widget.initialConversationId) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          unawaited(_openInitialConversation(widget.initialConversationId));
+        }
+      });
+    }
+  }
+
+  @override
   void initState() {
     super.initState();
+    _showMessagesPanel = widget.initialShowMessages;
     _animationController = AnimationController(
       duration: const Duration(milliseconds: 600),
       vsync: this,
@@ -224,16 +250,46 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
     // the active feed has had a chance to render.
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _startInitialCommunityLoad();
+      unawaited(_openInitialConversation(widget.initialConversationId));
 
       try {
-        _appRefreshProvider =
-            Provider.of<AppRefreshProvider>(context, listen: false);
+        _appRefreshProvider = Provider.of<AppRefreshProvider>(
+          context,
+          listen: false,
+        );
         _lastCommunityRefreshVersion =
             _appRefreshProvider?.communityVersion ?? 0;
         _lastGlobalRefreshVersion = _appRefreshProvider?.globalVersion ?? 0;
         _appRefreshProvider?.addListener(_onAppRefreshTriggered);
       } catch (_) {}
     });
+  }
+
+  Future<void> _openInitialConversation(String? rawId) async {
+    final conversationId = (rawId ?? '').trim();
+    if (conversationId.isEmpty || conversationId.length > 128) return;
+    if (!_showMessagesPanel) _handleSidebarTabChange(true);
+
+    final chatProvider = context.read<ChatProvider>();
+    Conversation? conversation;
+    for (final item in chatProvider.conversations) {
+      if (item.id == conversationId) {
+        conversation = item;
+        break;
+      }
+    }
+    if (conversation == null) {
+      await chatProvider.refreshConversations();
+      if (!mounted) return;
+      for (final item in chatProvider.conversations) {
+        if (item.id == conversationId) {
+          conversation = item;
+          break;
+        }
+      }
+    }
+    if (!mounted || conversation == null) return;
+    _openConversation(conversation);
   }
 
   @override
@@ -279,54 +335,59 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
         child: Scaffold(
           backgroundColor: Colors.transparent,
           body: CommunityMediaViewport(
-              child: Stack(
-            children: [
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Main feed
-                  Expanded(
-                    flex: isLarge ? 3 : 2,
-                    child: _buildMainFeed(themeProvider, animationTheme),
-                  ),
+            child: Stack(
+              children: [
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Main feed
+                    Expanded(
+                      flex: isLarge ? 3 : 2,
+                      child: _buildMainFeed(themeProvider, animationTheme),
+                    ),
 
-                  // Right sidebar
-                  if (isMedium || isLarge)
-                    SizedBox(
-                      width: isLarge ? 360 : 300,
-                      child: Container(
-                        decoration: BoxDecoration(
-                          color: KubusColorRoles.of(context).surface,
-                          border: Border(
-                            left: BorderSide(
-                              color: KubusColorRoles.of(context).rule,
-                              width: KubusSizes.hairline,
+                    // Right sidebar
+                    if (isMedium || isLarge)
+                      SizedBox(
+                        width: isLarge ? 360 : 300,
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: KubusColorRoles.of(context).surface,
+                            border: Border(
+                              left: BorderSide(
+                                color: KubusColorRoles.of(context).rule,
+                                width: KubusSizes.hairline,
+                              ),
                             ),
                           ),
+                          child: _buildRightSidebar(themeProvider),
                         ),
-                        child: _buildRightSidebar(themeProvider),
                       ),
-                    ),
-                ],
-              ),
+                  ],
+                ),
 
-              kubus_search.KubusSearchResultsOverlay(
-                controller: _communitySearchController,
-                accentColor: themeProvider.accentColor,
-                minCharsHint: AppLocalizations.of(context)!
-                    .desktopCommunitySearchMinCharsHint,
-                noResultsText: AppLocalizations.of(context)!
-                    .desktopCommunitySearchNoResults,
-                maxWidth: 320,
-                onResultTap: (result) {
-                  unawaited(_handleSearchResultTap(result));
-                },
-              ),
+                kubus_search.KubusSearchResultsOverlay(
+                  controller: _communitySearchController,
+                  accentColor: themeProvider.accentColor,
+                  minCharsHint: AppLocalizations.of(
+                    context,
+                  )!
+                      .desktopCommunitySearchMinCharsHint,
+                  noResultsText: AppLocalizations.of(
+                    context,
+                  )!
+                      .desktopCommunitySearchNoResults,
+                  maxWidth: 320,
+                  onResultTap: (result) {
+                    unawaited(_handleSearchResultTap(result));
+                  },
+                ),
 
-              // Compose dialog
-              if (_showComposeDialog) _buildComposeDialog(themeProvider),
-            ],
-          )),
+                // Compose dialog
+                if (_showComposeDialog) _buildComposeDialog(themeProvider),
+              ],
+            ),
+          ),
         ),
       ),
     );
@@ -464,8 +525,11 @@ class _NewConversationDialogState extends State<_NewConversationDialog> {
       if (!mounted) return;
       setState(() => _isLoading = true);
       try {
-        final resp =
-            await _backendApi.search(query: query, type: 'profiles', limit: 20);
+        final resp = await _backendApi.search(
+          query: query,
+          type: 'profiles',
+          limit: 20,
+        );
         final parsed = _parseProfileSearchResults(resp);
         if (!mounted) return;
         setState(() {
@@ -483,7 +547,8 @@ class _NewConversationDialogState extends State<_NewConversationDialog> {
   }
 
   List<Map<String, dynamic>> _parseProfileSearchResults(
-      Map<String, dynamic> payload) {
+    Map<String, dynamic> payload,
+  ) {
     final results = <Map<String, dynamic>>[];
 
     void addEntries(List<dynamic>? entries) {
@@ -503,8 +568,9 @@ class _NewConversationDialogState extends State<_NewConversationDialog> {
 
     final dynamic resultsNode = payload['results'];
     if (resultsNode is Map<String, dynamic>) {
-      addEntries((resultsNode['profiles'] as List?) ??
-          (resultsNode['results'] as List?));
+      addEntries(
+        (resultsNode['profiles'] as List?) ?? (resultsNode['results'] as List?),
+      );
     } else if (resultsNode is List) {
       addEntries(resultsNode);
     }
@@ -512,7 +578,8 @@ class _NewConversationDialogState extends State<_NewConversationDialog> {
     final dynamic dataNode = payload['data'];
     if (dataNode is Map<String, dynamic>) {
       addEntries(
-          (dataNode['profiles'] as List?) ?? (dataNode['results'] as List?));
+        (dataNode['profiles'] as List?) ?? (dataNode['results'] as List?),
+      );
     } else if (dataNode is List) {
       addEntries(dataNode);
     }
@@ -543,7 +610,9 @@ class _NewConversationDialogState extends State<_NewConversationDialog> {
               children: [
                 Expanded(
                   child: KubusHeaderText(
-                    title: AppLocalizations.of(context)!
+                    title: AppLocalizations.of(
+                      context,
+                    )!
                         .desktopCommunityNewMessageTitle,
                     kind: KubusHeaderKind.section,
                   ),
@@ -559,10 +628,9 @@ class _NewConversationDialogState extends State<_NewConversationDialog> {
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(KubusRadius.md),
                 border: Border.all(
-                  color: Theme.of(context)
-                      .colorScheme
-                      .outline
-                      .withValues(alpha: 0.18),
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.outline.withValues(alpha: 0.18),
                 ),
               ),
               child: LiquidGlassPanel(
@@ -595,22 +663,22 @@ class _NewConversationDialogState extends State<_NewConversationDialog> {
                         horizontal: 12,
                         vertical: 12,
                       ),
-                      hintText: AppLocalizations.of(context)!
+                      hintText: AppLocalizations.of(
+                        context,
+                      )!
                           .desktopCommunitySearchUsersHint,
                       hintStyle: KubusTextStyles.sectionSubtitle.copyWith(
-                        color: Theme.of(context)
-                            .colorScheme
-                            .onSurface
-                            .withValues(alpha: 0.5),
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.onSurface.withValues(alpha: 0.5),
                       ),
                       border: InputBorder.none,
                       prefixIcon: Icon(
                         Icons.search,
                         size: 20,
-                        color: Theme.of(context)
-                            .colorScheme
-                            .onSurface
-                            .withValues(alpha: 0.5),
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.onSurface.withValues(alpha: 0.5),
                       ),
                       prefixIconConstraints: const BoxConstraints(
                         minWidth: 40,
@@ -635,17 +703,20 @@ class _NewConversationDialogState extends State<_NewConversationDialog> {
                               Icon(
                                 Icons.person_search,
                                 size: 48,
-                                color: Theme.of(context)
-                                    .colorScheme
-                                    .onSurface
-                                    .withValues(alpha: 0.3),
+                                color: Theme.of(
+                                  context,
+                                ).colorScheme.onSurface.withValues(alpha: 0.3),
                               ),
                               const SizedBox(height: 12),
                               Text(
-                                AppLocalizations.of(context)!
+                                AppLocalizations.of(
+                                  context,
+                                )!
                                     .desktopCommunitySearchUsersToMessageHint,
                                 style: KubusTextStyles.sectionSubtitle.copyWith(
-                                  color: Theme.of(context)
+                                  color: Theme.of(
+                                    context,
+                                  )
                                       .colorScheme
                                       .onSurface
                                       .withValues(alpha: 0.5),
@@ -684,14 +755,19 @@ class _NewConversationDialogState extends State<_NewConversationDialog> {
                             );
                             final subtitle = formatted.secondary ??
                                 (wallet.isNotEmpty ? maskWallet(wallet) : null);
+                            final statedRoles =
+                                ProfileIdentityRoles.fromProfileMap(user);
                             final avatarUrl = user['avatar'] ??
                                 user['avatar_url'] ??
                                 user['profileImageUrl'] ??
                                 user['profileImage'];
                             return ListTile(
-                              leading: AvatarWidget(
+                              leading: KubusIdentityAvatar(
                                 wallet: wallet,
                                 avatarUrl: avatarUrl?.toString(),
+                                isArtist: statedRoles.isArtist,
+                                isInstitution: statedRoles.isInstitution,
+                                isVerified: statedRoles.isVerified,
                                 radius: 20,
                                 allowFabricatedFallback: true,
                               ),

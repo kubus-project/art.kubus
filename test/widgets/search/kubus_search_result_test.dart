@@ -15,6 +15,42 @@ void main() {
     expect(result.previewImageUrl, 'https://example.com/cover.png');
   });
 
+  test('a post row reads the roles of its nested author object', () {
+    const result = KubusSearchResult(
+      label: 'A post',
+      kind: KubusSearchResultKind.post,
+      id: 'post-1',
+      data: <String, dynamic>{
+        'author': <String, dynamic>{
+          'displayName': 'Ana Artist',
+          'roles': <String, dynamic>{'artist': true},
+        },
+      },
+    );
+
+    expect(result.authorRoles.isArtist, isTrue);
+    expect(result.authorRoles.isInstitution, isFalse);
+    expect(result.authorRoles.isVerified, isFalse);
+  });
+
+  test('a post row keeps author-prefixed envelope flags beside a nested author',
+      () {
+    const result = KubusSearchResult(
+      label: 'A post',
+      kind: KubusSearchResultKind.post,
+      id: 'post-2',
+      data: <String, dynamic>{
+        'author': <String, dynamic>{'displayName': 'Ben'},
+        'authorIsVerified': true,
+        'isArtist': true,
+      },
+    );
+
+    expect(result.authorRoles.isVerified, isTrue);
+    // A bare envelope isArtist does not describe the author.
+    expect(result.authorRoles.isArtist, isFalse);
+  });
+
   test('walletSeed falls back to profile id when wallet fields are absent', () {
     const result = KubusSearchResult(
       label: 'Ada',

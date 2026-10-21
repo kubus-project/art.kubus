@@ -41,7 +41,8 @@ class ChatProvider extends ChangeNotifier {
       _socket.addMessageReactionListener(_onMessageReaction);
     } catch (e) {
       debugPrint(
-          'ChatProvider constructor: failed to register socket listeners: $e');
+        'ChatProvider constructor: failed to register socket listeners: $e',
+      );
     }
   }
   // Socket event handlers
@@ -54,10 +55,12 @@ class ChatProvider extends ChangeNotifier {
       }
       refreshConversations().then((_) {
         debugPrint(
-            'ChatProvider._onMembersUpdated: refreshConversations completed');
+          'ChatProvider._onMembersUpdated: refreshConversations completed',
+        );
       }).catchError((e) {
         debugPrint(
-            'ChatProvider._onMembersUpdated: refreshConversations error: $e');
+          'ChatProvider._onMembersUpdated: refreshConversations error: $e',
+        );
       });
     } catch (e) {
       debugPrint('ChatProvider._onMembersUpdated error: $e');
@@ -91,7 +94,8 @@ class ChatProvider extends ChangeNotifier {
   /// Returns a synchronous preloaded map of members, avatar URLs and display names for a conversation.
   /// This function avoids network calls and uses the provider's cached members and user cache when available.
   Map<String, dynamic> getPreloadedProfileMapsForConversation(
-      String conversationId) {
+    String conversationId,
+  ) {
     final result = <String, dynamic>{
       'members': <String>[],
       'avatars': <String, String?>{},
@@ -164,11 +168,13 @@ class ChatProvider extends ChangeNotifier {
             final members = (cache['result'] as List<dynamic>?) ?? [];
             for (final m in members) {
               final map = (m as Map).cast<String, dynamic>();
-              final w = WalletUtils.normalize((map['wallet_address'] ??
-                      map['wallet'] ??
-                      map['walletAddress'] ??
-                      map['id'])
-                  ?.toString());
+              final w = WalletUtils.normalize(
+                (map['wallet_address'] ??
+                        map['wallet'] ??
+                        map['walletAddress'] ??
+                        map['id'])
+                    ?.toString(),
+              );
               if (w.isNotEmpty) {
                 addWallet(w);
                 final displayName =
@@ -227,7 +233,8 @@ class ChatProvider extends ChangeNotifier {
       }
     } catch (e) {
       debugPrint(
-          'ChatProvider.getPreloadedProfileMapsForConversation failed: $e');
+        'ChatProvider.getPreloadedProfileMapsForConversation failed: $e',
+      );
     }
     return result;
   }
@@ -338,8 +345,10 @@ class ChatProvider extends ChangeNotifier {
     );
   }
 
-  Future<void> _hydrateConversationsFromPayload(List<dynamic> items,
-      {bool forceNotify = true}) async {
+  Future<void> _hydrateConversationsFromPayload(
+    List<dynamic> items, {
+    bool forceNotify = true,
+  }) async {
     try {
       _conversations = items
           .map((i) => Conversation.fromJson(i as Map<String, dynamic>))
@@ -375,17 +384,20 @@ class ChatProvider extends ChangeNotifier {
       _safeNotifyListeners();
     }
     debugPrint(
-        'ChatProvider._hydrateConversationsFromPayload: hydrated ${_conversations.length} conversations');
+      'ChatProvider._hydrateConversationsFromPayload: hydrated ${_conversations.length} conversations',
+    );
     try {
       await _prefetchMembersAndProfilesFromConversations(_conversations);
     } catch (e) {
       debugPrint(
-          'ChatProvider._hydrateConversationsFromPayload prefetch failed: $e');
+        'ChatProvider._hydrateConversationsFromPayload prefetch failed: $e',
+      );
     }
   }
 
   Future<void> _prefetchMembersAndProfilesFromConversations(
-      List<Conversation> convs) async {
+    List<Conversation> convs,
+  ) async {
     try {
       final wallets = <String>{};
       final myWalletCanonical = WalletUtils.canonical(_currentWallet);
@@ -429,16 +441,19 @@ class ChatProvider extends ChangeNotifier {
         try {
           final members = await fetchMembers(conv.id);
           for (final member in members) {
-            final wallet = WalletUtils.normalize((member['wallet_address'] ??
-                    member['wallet'] ??
-                    member['walletAddress'] ??
-                    member['id'])
-                ?.toString());
+            final wallet = WalletUtils.normalize(
+              (member['wallet_address'] ??
+                      member['wallet'] ??
+                      member['walletAddress'] ??
+                      member['id'])
+                  ?.toString(),
+            );
             collectWallet(wallet);
           }
         } catch (e) {
           debugPrint(
-              'ChatProvider._prefetchMembersAndProfilesFromConversations: fetchMembers failed for ${conv.id}: $e');
+            'ChatProvider._prefetchMembersAndProfilesFromConversations: fetchMembers failed for ${conv.id}: $e',
+          );
         }
       }
 
@@ -447,7 +462,8 @@ class ChatProvider extends ChangeNotifier {
       }
     } catch (e) {
       debugPrint(
-          'ChatProvider._prefetchMembersAndProfilesFromConversations error: $e');
+        'ChatProvider._prefetchMembersAndProfilesFromConversations error: $e',
+      );
     }
   }
 
@@ -553,7 +569,8 @@ class ChatProvider extends ChangeNotifier {
       _notificationsThisSecond++;
       if (_notificationsThisSecond > _notifyMaxPerSecond) {
         debugPrint(
-            'ChatProvider._safeNotifyListeners: throttled, notified $_notificationsThisSecond times this second');
+          'ChatProvider._safeNotifyListeners: throttled, notified $_notificationsThisSecond times this second',
+        );
         return;
       }
 
@@ -643,9 +660,7 @@ class ChatProvider extends ChangeNotifier {
     }
 
     if (kDebugMode && seeded > 0) {
-      debugPrint(
-        'ChatProvider: seeded $seeded conversation participants',
-      );
+      debugPrint('ChatProvider: seeded $seeded conversation participants');
     }
     if (seeded > 0) {
       _safeNotifyListeners(force: true);
@@ -667,7 +682,9 @@ class ChatProvider extends ChangeNotifier {
           walletAddress: WalletUtils.normalize(message.senderWallet),
           userId: WalletUtils.normalize(message.senderWallet),
           displayName: _meaningfulDisplayName(
-              message.senderDisplayName, message.senderWallet),
+            message.senderDisplayName,
+            message.senderWallet,
+          ),
           username: _meaningfulUsername(message.senderUsername),
           avatarUrl: _normalizeParticipantAvatar(message.senderAvatar),
           source: ParticipantIdentitySource.messageSnapshot,
@@ -685,9 +702,7 @@ class ChatProvider extends ChangeNotifier {
     }
   }
 
-  void upsertParticipantIdentity(
-    ResolvedConversationParticipant participant,
-  ) {
+  void upsertParticipantIdentity(ResolvedConversationParticipant participant) {
     _upsertParticipantIdentity(participant, notify: true);
   }
 
@@ -719,8 +734,10 @@ class ChatProvider extends ChangeNotifier {
         userId: WalletUtils.normalize(currentUserId).isNotEmpty
             ? WalletUtils.normalize(currentUserId)
             : senderWallet,
-        displayName:
-            _meaningfulDisplayName(currentUserDisplayName, senderWallet),
+        displayName: _meaningfulDisplayName(
+          currentUserDisplayName,
+          senderWallet,
+        ),
         avatarUrl: _normalizeParticipantAvatar(currentUserAvatarUrl),
         source: ParticipantIdentitySource.localUser,
         updatedAt: DateTime.now(),
@@ -737,8 +754,10 @@ class ChatProvider extends ChangeNotifier {
         identityKey: senderKey,
         walletAddress: senderWallet.isEmpty ? null : senderWallet,
         userId: senderWallet.isEmpty ? null : senderWallet,
-        displayName:
-            _meaningfulDisplayName(message.senderDisplayName, senderWallet),
+        displayName: _meaningfulDisplayName(
+          message.senderDisplayName,
+          senderWallet,
+        ),
         username: _meaningfulUsername(message.senderUsername),
         avatarUrl: _normalizeParticipantAvatar(message.senderAvatar),
         source: ParticipantIdentitySource.messageSnapshot,
@@ -855,7 +874,9 @@ class ChatProvider extends ChangeNotifier {
           ? null
           : WalletUtils.normalize(participant.userId),
       displayName: _meaningfulDisplayName(
-          participant.displayName, participant.walletAddress),
+        participant.displayName,
+        participant.walletAddress,
+      ),
       username: _meaningfulUsername(participant.username),
       avatarUrl: _normalizeParticipantAvatar(participant.avatarUrl),
       source: participant.source,
@@ -1029,10 +1050,7 @@ class ChatProvider extends ChangeNotifier {
     );
   }
 
-  void _resetSessionState({
-    required String reason,
-    bool notify = true,
-  }) {
+  void _resetSessionState({required String reason, bool notify = true}) {
     _chatProviderResetSessionState(this, reason: reason, notify: notify);
   }
 
@@ -1074,7 +1092,8 @@ class ChatProvider extends ChangeNotifier {
       if (initialWallet != null && initialWallet.isNotEmpty) {
         _currentWallet = initialWallet;
         debugPrint(
-            'ChatProvider.initialize: initialWallet provided: $_currentWallet');
+          'ChatProvider.initialize: initialWallet provided: $_currentWallet',
+        );
       }
       final meResp = await _api.getMyProfile();
       debugPrint('ChatProvider.initialize: getMyProfile response: $meResp');
@@ -1084,7 +1103,8 @@ class ChatProvider extends ChangeNotifier {
             (me['wallet_address'] ?? me['walletAddress'] ?? me['wallet'])
                 ?.toString();
         debugPrint(
-            'ChatProvider.initialize: wallet from getMyProfile: $_currentWallet');
+          'ChatProvider.initialize: wallet from getMyProfile: $_currentWallet',
+        );
       }
     } catch (e) {
       debugPrint('ChatProvider: getMyProfile failed: $e');
@@ -1096,11 +1116,13 @@ class ChatProvider extends ChangeNotifier {
             prefs.getString('wallet') ??
             '';
         debugPrint(
-            'ChatProvider.initialize: SharedPreferences wallet read: $w');
+          'ChatProvider.initialize: SharedPreferences wallet read: $w',
+        );
         if (w.isNotEmpty) _currentWallet = w.toString();
       } catch (e2) {
         debugPrint(
-            'ChatProvider: Failed to read wallet from shared prefs: $e2');
+          'ChatProvider: Failed to read wallet from shared prefs: $e2',
+        );
       }
     }
     // Token issuance handled centrally via ensureAuthLoaded; no further action here.
@@ -1143,22 +1165,29 @@ class ChatProvider extends ChangeNotifier {
       if (_currentWallet != null && _currentWallet!.isNotEmpty) {
         // Attempt to connect and confirm subscription before loading messages; fallback to subscribeUser if not supported
         try {
-          var ok =
-              await _socket.connectAndSubscribe(_api.baseUrl, _currentWallet!);
+          var ok = await _socket.connectAndSubscribe(
+            _api.baseUrl,
+            _currentWallet!,
+          );
           debugPrint('ChatProvider: socket connectAndSubscribe result: $ok');
           if (!ok) {
             debugPrint(
-                'ChatProvider: connectAndSubscribe failed, attempting token issuance and retry');
+              'ChatProvider: connectAndSubscribe failed, attempting token issuance and retry',
+            );
             try {
               if (AppConfig.enableDebugIssueToken) {
-                final issued =
-                    await _api.issueDebugTokenForWallet(_currentWallet!);
+                final issued = await _api.issueDebugTokenForWallet(
+                  _currentWallet!,
+                );
                 if (issued) {
                   await _api.loadAuthToken();
                   ok = await _socket.connectAndSubscribe(
-                      _api.baseUrl, _currentWallet!);
+                    _api.baseUrl,
+                    _currentWallet!,
+                  );
                   debugPrint(
-                      'ChatProvider: socket connectAndSubscribe retry result: $ok');
+                    'ChatProvider: socket connectAndSubscribe retry result: $ok',
+                  );
                 }
               }
             } catch (e2) {
@@ -1171,14 +1200,16 @@ class ChatProvider extends ChangeNotifier {
           }
         } catch (e) {
           debugPrint(
-              'ChatProvider: connectAndSubscribe failed, falling back: $e');
+            'ChatProvider: connectAndSubscribe failed, falling back: $e',
+          );
           _socket.subscribeUser(_currentWallet!);
         }
         // Log subscription state for debugging
         try {
           final currentSub = _socket.currentSubscribedWallet;
           debugPrint(
-              'ChatProvider.initialize: socket currentSubscribedWallet=$currentSub expected=$_currentWallet');
+            'ChatProvider.initialize: socket currentSubscribedWallet=$currentSub expected=$_currentWallet',
+          );
         } catch (_) {}
       } else {
         // try to determine wallet if not set
@@ -1192,20 +1223,25 @@ class ChatProvider extends ChangeNotifier {
             if (_currentWallet != null && _currentWallet!.isNotEmpty) {
               try {
                 final ok2 = await _socket.connectAndSubscribe(
-                    _api.baseUrl, _currentWallet!);
+                  _api.baseUrl,
+                  _currentWallet!,
+                );
                 debugPrint(
-                    'ChatProvider: socket connectAndSubscribe result (after profile try): $ok2');
+                  'ChatProvider: socket connectAndSubscribe result (after profile try): $ok2',
+                );
                 if (!ok2) _socket.subscribeUser(_currentWallet!);
               } catch (e2) {
                 debugPrint(
-                    'ChatProvider: connectAndSubscribe fallback failed after profile try: $e2');
+                  'ChatProvider: connectAndSubscribe fallback failed after profile try: $e2',
+                );
                 _socket.subscribeUser(_currentWallet!);
               }
             }
           }
         } catch (e) {
           debugPrint(
-              'ChatProvider: Failed to determine current wallet during subscribe: $e');
+            'ChatProvider: Failed to determine current wallet during subscribe: $e',
+          );
         }
       }
     } catch (e) {
@@ -1268,7 +1304,8 @@ class ChatProvider extends ChangeNotifier {
           }
         } catch (e) {
           debugPrint(
-              'ChatProvider: EventBus profile_updated handler error: $e');
+            'ChatProvider: EventBus profile_updated handler error: $e',
+          );
         }
       });
     } catch (e) {
@@ -1314,18 +1351,19 @@ class ChatProvider extends ChangeNotifier {
                           as int? ??
                       0;
                   final u = User(
-                      id: id,
-                      name: name,
-                      username: username,
-                      bio: (item['bio'] ?? '')?.toString() ?? '',
-                      profileImageUrl: avatar,
-                      followersCount: followers,
-                      followingCount: following,
-                      postsCount: posts,
-                      isFollowing: false,
-                      isVerified: false,
-                      joinedDate: '',
-                      achievementProgress: []);
+                    id: id,
+                    name: name,
+                    username: username,
+                    bio: (item['bio'] ?? '')?.toString() ?? '',
+                    profileImageUrl: avatar,
+                    followersCount: followers,
+                    followingCount: following,
+                    postsCount: posts,
+                    isFollowing: false,
+                    isVerified: false,
+                    joinedDate: '',
+                    achievementProgress: [],
+                  );
                   users.add(u);
                 } catch (_) {}
               }
@@ -1338,7 +1376,8 @@ class ChatProvider extends ChangeNotifier {
       });
     } catch (e) {
       debugPrint(
-          'ChatProvider: EventBus profiles_updated subscription failed: $e');
+        'ChatProvider: EventBus profiles_updated subscription failed: $e',
+      );
     }
     // Previously we relied on an internal cacheVersion notifier to trigger UI updates,
     // but that pattern caused repeated refreshes and UI update storms. We now avoid
@@ -1367,10 +1406,11 @@ class ChatProvider extends ChangeNotifier {
   // This bypasses the signature dedupe check so profile/avatar updates
   // take effect immediately in UI widgets that rely on provider state.
 
-  void bindAuthContext(
-      {ProfileProvider? profileProvider,
-      String? walletAddress,
-      bool? isSignedIn}) {
+  void bindAuthContext({
+    ProfileProvider? profileProvider,
+    String? walletAddress,
+    bool? isSignedIn,
+  }) {
     _chatProviderBindAuthContext(
       this,
       profileProvider: profileProvider,
@@ -1382,7 +1422,8 @@ class ChatProvider extends ChangeNotifier {
   Future<void> refreshConversations() async {
     try {
       debugPrint(
-          'ChatProvider.refreshConversations: isAuthenticated=$_hasAuthToken');
+        'ChatProvider.refreshConversations: isAuthenticated=$_hasAuthToken',
+      );
       if (!_hasAuthContext) {
         return;
       }
@@ -1411,7 +1452,8 @@ class ChatProvider extends ChangeNotifier {
         await _hydrateConversationsFromPayload(items);
         _lastUnauthorizedAt = null;
         debugPrint(
-            'ChatProvider.refreshConversations: loaded ${_conversations.length} conversations');
+          'ChatProvider.refreshConversations: loaded ${_conversations.length} conversations',
+        );
       }
     } catch (e) {
       debugPrint('ChatProvider: Error refreshing conversations: $e');
@@ -1419,8 +1461,10 @@ class ChatProvider extends ChangeNotifier {
   }
 
   void _upsertConversationMetadataForMessage(
-      String conversationId, ChatMessage message,
-      {bool force = false}) {
+    String conversationId,
+    ChatMessage message, {
+    bool force = false,
+  }) {
     final convId = conversationId.trim();
     if (convId.isEmpty) return;
     final index = _conversations.indexWhere((c) => c.id == convId);
@@ -1464,7 +1508,8 @@ class ChatProvider extends ChangeNotifier {
   }
 
   Map<String, dynamic>? _normalizeIncomingMessagePayload(
-      Map<String, dynamic> data) {
+    Map<String, dynamic> data,
+  ) {
     Map<String, dynamic>? unwrapCandidate(Object? candidate) {
       if (candidate is! Map) return null;
       final map = Map<String, dynamic>.from(candidate);
@@ -1522,11 +1567,7 @@ class ChatProvider extends ChangeNotifier {
     final event = payload['event']?.toString().toLowerCase() ?? '';
     final eventType = payload['eventType']?.toString().toLowerCase() ?? '';
     final type = payload['type']?.toString().toLowerCase() ?? '';
-    final nonMessageSignals = <String>[
-      event,
-      eventType,
-      type,
-    ].join('|');
+    final nonMessageSignals = <String>[event, eventType, type].join('|');
     if (nonMessageSignals.contains('read') ||
         nonMessageSignals.contains('receipt') ||
         nonMessageSignals.contains('member') ||
@@ -1558,8 +1599,11 @@ class ChatProvider extends ChangeNotifier {
     final topLevelEvent = data['event']?.toString().toLowerCase() ?? '';
     final topLevelEventType = data['eventType']?.toString().toLowerCase() ?? '';
     final topLevelType = data['type']?.toString().toLowerCase() ?? '';
-    final topLevelSignals =
-        <String>[topLevelEvent, topLevelEventType, topLevelType].join('|');
+    final topLevelSignals = <String>[
+      topLevelEvent,
+      topLevelEventType,
+      topLevelType,
+    ].join('|');
     if (topLevelSignals.contains('notification') ||
         topLevelSignals.contains('read') ||
         topLevelSignals.contains('receipt') ||
@@ -1575,37 +1619,36 @@ class ChatProvider extends ChangeNotifier {
 
     final keys =
         payload.keys.map((key) => key.toString().toLowerCase()).toSet();
-    final onlyMetaKeys = keys.every((key) => <String>{
-          'event',
-          'eventtype',
-          'type',
-          'reader',
-          'readers',
-          'read_at',
-          'readat',
-          'room',
-          'conversationid',
-          'conversation_id',
-          'messageid',
-          'message_id',
-          'member',
-          'members',
-          'payload',
-          'data',
-          'raw',
-          'status',
-          'state',
-          'subscription',
-        }.contains(key));
+    final onlyMetaKeys = keys.every(
+      (key) => <String>{
+        'event',
+        'eventtype',
+        'type',
+        'reader',
+        'readers',
+        'read_at',
+        'readat',
+        'room',
+        'conversationid',
+        'conversation_id',
+        'messageid',
+        'message_id',
+        'member',
+        'members',
+        'payload',
+        'data',
+        'raw',
+        'status',
+        'state',
+        'subscription',
+      }.contains(key),
+    );
     if (onlyMetaKeys) return true;
 
     return !_looksLikeIncomingMessage(payload);
   }
 
-  bool _matchesOptimisticMessage(
-    ChatMessage current,
-    ChatMessage incoming,
-  ) {
+  bool _matchesOptimisticMessage(ChatMessage current, ChatMessage incoming) {
     final clientTempId = current.data?['clientTempId']?.toString();
     final incomingClientTempId = incoming.data?['clientTempId']?.toString();
     if (clientTempId != null &&
@@ -1633,7 +1676,8 @@ class ChatProvider extends ChangeNotifier {
       if (_isNonMessageEventPayload(data)) {
         if (kDebugMode) {
           debugPrint(
-              'ChatProvider._onMessageReceived: rejecting non-message event payload');
+            'ChatProvider._onMessageReceived: rejecting non-message event payload',
+          );
         }
         return;
       }
@@ -1642,7 +1686,8 @@ class ChatProvider extends ChangeNotifier {
       if (payload == null) {
         if (kDebugMode) {
           debugPrint(
-              'ChatProvider._onMessageReceived: payload normalization failed');
+            'ChatProvider._onMessageReceived: payload normalization failed',
+          );
         }
         return;
       }
@@ -1651,7 +1696,8 @@ class ChatProvider extends ChangeNotifier {
       if (convId.isEmpty) {
         if (kDebugMode) {
           debugPrint(
-              'ChatProvider._onMessageReceived: missing conversation id; rawData=$data');
+            'ChatProvider._onMessageReceived: missing conversation id; rawData=$data',
+          );
         }
         return;
       }
@@ -1663,16 +1709,40 @@ class ChatProvider extends ChangeNotifier {
       if (!_isRenderableIncomingMessage(msg)) {
         if (kDebugMode) {
           debugPrint(
-              'ChatProvider._onMessageReceived: ignoring non-renderable payload=${payload.keys.toList()}');
+            'ChatProvider._onMessageReceived: ignoring non-renderable payload=${payload.keys.toList()}',
+          );
         }
         return;
       }
       final normalizedMsg = msg;
+      final senderUserId = (data['senderUserId'] ??
+              data['sender_user_id'] ??
+              payload['senderUserId'] ??
+              payload['sender_user_id'])
+          ?.toString()
+          .trim();
+      final currentClaims = _api.getCurrentAuthTokenClaims();
+      final currentUserId = (currentClaims?['id'] ??
+              currentClaims?['user_id'] ??
+              currentClaims?['sub'])
+          ?.toString()
+          .trim();
+      final senderWallet = WalletUtils.canonical(normalizedMsg.senderWallet);
+      final currentWallet = WalletUtils.canonical(_currentWallet);
+      final isSelfSender = (senderWallet.isNotEmpty &&
+              currentWallet.isNotEmpty &&
+              senderWallet == currentWallet) ||
+          (senderUserId != null &&
+              senderUserId.isNotEmpty &&
+              currentUserId != null &&
+              currentUserId.isNotEmpty &&
+              senderUserId == currentUserId);
       final existing = _messages[convId] ?? const <ChatMessage>[];
       final next = <ChatMessage>[];
       var inserted = false;
-      final alreadyHadServerMessage =
-          existing.any((message) => message.id == normalizedMsg.id);
+      final alreadyHadServerMessage = existing.any(
+        (message) => message.id == normalizedMsg.id,
+      );
       for (final current in existing) {
         if (current.id == normalizedMsg.id ||
             _matchesOptimisticMessage(current, normalizedMsg)) {
@@ -1695,43 +1765,50 @@ class ChatProvider extends ChangeNotifier {
         _unreadCounts[convId] = 0;
         markMessageReadLocal(convId, normalizedMsg.id);
         _sendMarkMessageReadToServer(convId, normalizedMsg.id);
-      } else if (!alreadyHadServerMessage &&
-          !WalletUtils.equals(normalizedMsg.senderWallet, _currentWallet)) {
+      } else if (!alreadyHadServerMessage && !isSelfSender) {
         _unreadCounts[convId] = (_unreadCounts[convId] ?? 0) + 1;
       }
       _upsertConversationMetadataForMessage(convId, normalizedMsg);
       // Trigger an OS/local notification for incoming messages when the conversation
       // is not open. PushNotificationService will no-op if permission not granted.
       try {
-        if (!isOpen) {
+        if (!isOpen && !alreadyHadServerMessage && !isSelfSender) {
           final senderWallet = normalizedMsg.senderWallet;
-          final authorName = (_userCache[senderWallet]?.name) ??
+          final authorName = normalizedMsg.senderDisplayName ??
+              normalizedMsg.senderUsername ??
+              _userCache[senderWallet]?.name ??
               (senderWallet.length > 10
                   ? '${senderWallet.substring(0, 10)}...'
                   : senderWallet);
           final content = normalizedMsg.message.toString();
           // Fire-and-forget: service early-returns when permission is not granted
           PushNotificationService()
-              .showCommunityNotification(
-            postId: normalizedMsg.id,
-            authorName: authorName,
+              .showDirectMessageNotification(
+            eventId: normalizedMsg.id,
+            conversationId: convId,
+            senderName: authorName,
             content: content,
           )
               .catchError((e) {
-            debugPrint('ChatProvider: showCommunityNotification failed: $e');
+            debugPrint(
+              'ChatProvider: showDirectMessageNotification failed: $e',
+            );
           });
         }
       } catch (e) {
         debugPrint(
-            'ChatProvider: Failed to show local notification for incoming message: $e');
+          'ChatProvider: Failed to show local notification for incoming message: $e',
+        );
       }
       if (kDebugMode) {
         debugPrint(
-            'ChatProvider: _onMessageReceived: convId=$convId, msgId=${normalizedMsg.id}, messagesInConv=${_messages[convId]?.length ?? 0}, unread=${_unreadCounts[convId]}');
+          'ChatProvider: _onMessageReceived: convId=$convId, msgId=${normalizedMsg.id}, messagesInConv=${_messages[convId]?.length ?? 0}, unread=${_unreadCounts[convId]}',
+        );
         // Report whether this conversation is known locally.
         final convIdx = _conversations.indexWhere((c) => c.id == convId);
         debugPrint(
-            'ChatProvider: conv known locally: ${convIdx >= 0}, convCount=${_conversations.length}, index=$convIdx');
+          'ChatProvider: conv known locally: ${convIdx >= 0}, convCount=${_conversations.length}, index=$convIdx',
+        );
       }
       // Force notify so unread badge updates are immediate in UI
       _safeNotifyListeners(force: true);
@@ -1756,12 +1833,14 @@ class ChatProvider extends ChangeNotifier {
       if (convId.isEmpty || messageId.isEmpty) return;
 
       debugPrint(
-          'ChatProvider._onMessageRead: convId=$convId, messageId=$messageId, reader=$reader');
+        'ChatProvider._onMessageRead: convId=$convId, messageId=$messageId, reader=$reader',
+      );
 
       final list = _messages[convId];
       if (list == null) {
         debugPrint(
-            'ChatProvider._onMessageRead: No messages found for conv $convId');
+          'ChatProvider._onMessageRead: No messages found for conv $convId',
+        );
         return;
       }
 
@@ -1776,14 +1855,16 @@ class ChatProvider extends ChangeNotifier {
         final readerCanonical = WalletUtils.canonical(reader);
         final alreadyRegistered = m.readers.any((r) {
           final existing = WalletUtils.normalize(
-              (r['wallet_address'] ?? r['wallet'] ?? '').toString());
+            (r['wallet_address'] ?? r['wallet'] ?? '').toString(),
+          );
           return existing.isNotEmpty &&
               WalletUtils.equals(existing, readerCanonical);
         });
 
         if (alreadyRegistered) {
           debugPrint(
-              'ChatProvider._onMessageRead: Reader $reader already registered for message $messageId');
+            'ChatProvider._onMessageRead: Reader $reader already registered for message $messageId',
+          );
           break;
         }
 
@@ -1791,8 +1872,9 @@ class ChatProvider extends ChangeNotifier {
         final newReaders = List<Map<String, dynamic>>.from(m.readers);
         final readAt = (data['read_at'] ?? data['readAt'] ?? data['readAtUtc'])
             ?.toString();
-        newReaders.add(_buildReaderMetadata(reader,
-            readAtOverride: readAt, payload: data));
+        newReaders.add(
+          _buildReaderMetadata(reader, readAtOverride: readAt, payload: data),
+        );
 
         final updatedMsg = m.copyWith(
           readers: newReaders,
@@ -1818,7 +1900,8 @@ class ChatProvider extends ChangeNotifier {
         }
 
         debugPrint(
-            'ChatProvider._onMessageRead: Updated message $messageId with new reader $reader, total readers: ${updatedMsg.readersCount}');
+          'ChatProvider._onMessageRead: Updated message $messageId with new reader $reader, total readers: ${updatedMsg.readersCount}',
+        );
 
         // Force immediate notification for read receipt updates
         _safeNotifyListeners(force: true);
@@ -1827,7 +1910,8 @@ class ChatProvider extends ChangeNotifier {
 
       if (!messageFound) {
         debugPrint(
-            'ChatProvider._onMessageRead: Message $messageId not found in conversation $convId');
+          'ChatProvider._onMessageRead: Message $messageId not found in conversation $convId',
+        );
       }
     } catch (e) {
       debugPrint('ChatProvider._onMessageRead error: $e');
@@ -1858,7 +1942,8 @@ class ChatProvider extends ChangeNotifier {
         _socket.subscribeConversation(conv.id);
       } catch (e) {
         debugPrint(
-            'ChatProvider._onNewConversation: subscribeConversation failed: $e');
+          'ChatProvider._onNewConversation: subscribeConversation failed: $e',
+        );
       }
       _safeNotifyListeners();
     } catch (e) {
@@ -1884,7 +1969,8 @@ class ChatProvider extends ChangeNotifier {
                   '')
               .toString();
       debugPrint(
-          'ChatProvider._onConversationMemberRead: convId=$convId, wallet=$wallet, lastRead=$lastRead');
+        'ChatProvider._onConversationMemberRead: convId=$convId, wallet=$wallet, lastRead=$lastRead',
+      );
       if (convId.isEmpty) return;
       // Compare wallet to current wallet case-insensitively for detection only
       if (wallet.isNotEmpty &&
@@ -1898,12 +1984,17 @@ class ChatProvider extends ChangeNotifier {
     }
   }
 
-  Future<void> sendMessage(String conversationId, String message,
-      {Map<String, dynamic>? data, String? replyToId}) async {
+  Future<void> sendMessage(
+    String conversationId,
+    String message, {
+    Map<String, dynamic>? data,
+    String? replyToId,
+  }) async {
     final nid = conversationId;
     final trimmedMessage = message.trim();
-    final hasRenderableData =
-        (data ?? const <String, dynamic>{}).entries.any((entry) {
+    final hasRenderableData = (data ?? const <String, dynamic>{}).entries.any((
+      entry,
+    ) {
       final key = entry.key.toString();
       final value = entry.value;
       if (value == null) return false;
@@ -1979,13 +2070,17 @@ class ChatProvider extends ChangeNotifier {
       _cacheMessages(
         nid,
         current
-            .map((item) => item.id == tempId
-                ? item.copyWith(data: {
-                    ...?item.data,
-                    'sendStatus': 'failed',
-                    'error': e.toString(),
-                  })
-                : item)
+            .map(
+              (item) => item.id == tempId
+                  ? item.copyWith(
+                      data: {
+                        ...?item.data,
+                        'sendStatus': 'failed',
+                        'error': e.toString(),
+                      },
+                    )
+                  : item,
+            )
             .toList(growable: false),
       );
       _safeNotifyListeners(force: true);
@@ -2013,7 +2108,8 @@ class ChatProvider extends ChangeNotifier {
       resp = await _api.fetchMessages(conversationId);
     } catch (e) {
       debugPrint(
-          'ChatProvider: fetchMessages failed, attempting session restore and retry: $e');
+        'ChatProvider: fetchMessages failed, attempting session restore and retry: $e',
+      );
       try {
         final restored = await _api.restoreExistingSession();
         if (!restored) {
@@ -2033,7 +2129,8 @@ class ChatProvider extends ChangeNotifier {
       _cacheMessages(conversationId, list);
       seedMessageParticipants(list);
       debugPrint(
-          'ChatProvider.loadMessages: conversationId=$conversationId loaded ${list.length} messages');
+        'ChatProvider.loadMessages: conversationId=$conversationId loaded ${list.length} messages',
+      );
       _safeNotifyListeners(force: true);
       // Prefetch sender profiles so message list shows stable names/avatars
       try {
@@ -2045,7 +2142,8 @@ class ChatProvider extends ChangeNotifier {
         if (wallets.isNotEmpty) _prefetchUsersForWallets(wallets.toList());
       } catch (e) {
         debugPrint(
-            'ChatProvider.loadMessages: prefetch sender profiles failed: $e');
+          'ChatProvider.loadMessages: prefetch sender profiles failed: $e',
+        );
       }
       // If this conversation is currently open, mark it read after loading messages
       if (_openConversationId != null &&
@@ -2062,18 +2160,24 @@ class ChatProvider extends ChangeNotifier {
   // Fire-and-forget: inform server that a single message has been read, without
   // performing local state adjustments (used when we already updated local state optimistically).
   Future<void> _sendMarkMessageReadToServer(
-      String conversationId, String messageId) async {
+    String conversationId,
+    String messageId,
+  ) async {
     try {
       final resp = await _api.markMessageRead(conversationId, messageId);
       debugPrint(
-          'ChatProvider._sendMarkMessageReadToServer: resp=$resp for conv=$conversationId msg=$messageId');
+        'ChatProvider._sendMarkMessageReadToServer: resp=$resp for conv=$conversationId msg=$messageId',
+      );
     } catch (e) {
       debugPrint('ChatProvider: _sendMarkMessageReadToServer failed: $e');
     }
   }
 
-  Map<String, dynamic> _buildReaderMetadata(String wallet,
-      {String? readAtOverride, Map<String, dynamic>? payload}) {
+  Map<String, dynamic> _buildReaderMetadata(
+    String wallet, {
+    String? readAtOverride,
+    Map<String, dynamic>? payload,
+  }) {
     final normalizedWallet = wallet.trim();
     final timestamp = (readAtOverride != null && readAtOverride.isNotEmpty)
         ? readAtOverride
@@ -2137,10 +2241,18 @@ class ChatProvider extends ChangeNotifier {
     _chatProviderMergeUserCache(this, users);
   }
 
-  Future<Map<String, dynamic>> uploadAttachment(String conversationId,
-      List<int> bytes, String filename, String contentType) async {
+  Future<Map<String, dynamic>> uploadAttachment(
+    String conversationId,
+    List<int> bytes,
+    String filename,
+    String contentType,
+  ) async {
     final resp = await _api.uploadMessageAttachment(
-        conversationId, bytes, filename, contentType);
+      conversationId,
+      bytes,
+      filename,
+      contentType,
+    );
     if (resp['success'] == true) {
       // The server will broadcast via sockets; ensure local state is refreshed
       await loadMessages(conversationId);
@@ -2149,7 +2261,10 @@ class ChatProvider extends ChangeNotifier {
   }
 
   Future<Conversation?> createConversation(
-      String title, bool isGroup, List<String> members) async {
+    String title,
+    bool isGroup,
+    List<String> members,
+  ) async {
     try {
       await _api.loadAuthToken();
     } catch (_) {}
@@ -2170,7 +2285,8 @@ class ChatProvider extends ChangeNotifier {
               if (w.isNotEmpty) _currentWallet = w.toString();
             } catch (e2) {
               debugPrint(
-                  'createConversation: SharedPreferences fallback for wallet failed: $e2');
+                'createConversation: SharedPreferences fallback for wallet failed: $e2',
+              );
             }
             // If we still don't have a wallet and there IS a token, try resolving via getMyProfile
             if ((_api.getAuthToken() ?? '').isNotEmpty &&
@@ -2186,7 +2302,8 @@ class ChatProvider extends ChangeNotifier {
                 }
               } catch (e) {
                 debugPrint(
-                    'createConversation: getMyProfile failed while resolving wallet for conv list retry: $e');
+                  'createConversation: getMyProfile failed while resolving wallet for conv list retry: $e',
+                );
               }
             }
           }
@@ -2251,13 +2368,15 @@ class ChatProvider extends ChangeNotifier {
                       // Found existing direct conversation — build Conversation from backend item
                       Conversation conv;
                       try {
-                        conv =
-                            Conversation.fromJson(item as Map<String, dynamic>);
+                        conv = Conversation.fromJson(
+                          item as Map<String, dynamic>,
+                        );
                       } catch (_) {
                         conv = Conversation(
-                            id: cid,
-                            title: (item['title'] ?? '')?.toString(),
-                            isGroup: false);
+                          id: cid,
+                          title: (item['title'] ?? '')?.toString(),
+                          isGroup: false,
+                        );
                       }
                       // Insert into local cache for quick access
                       _conversations.removeWhere((c) => c.id == cid);
@@ -2271,7 +2390,8 @@ class ChatProvider extends ChangeNotifier {
             }
           } catch (e) {
             debugPrint(
-                'createConversation: backend member check failed for conv item: $e');
+              'createConversation: backend member check failed for conv item: $e',
+            );
           }
         }
       }
@@ -2280,7 +2400,10 @@ class ChatProvider extends ChangeNotifier {
     }
 
     var resp = await _api.createConversation(
-        title: title, isGroup: isGroup, members: members);
+      title: title,
+      isGroup: isGroup,
+      members: members,
+    );
     if (resp['success'] == true) {
       final conv = Conversation.fromJson(resp['data']);
       _conversations.insert(0, conv);
@@ -2289,10 +2412,12 @@ class ChatProvider extends ChangeNotifier {
       try {
         final ok = await _socket.subscribeConversation(conv.id);
         debugPrint(
-            'ChatProvider.createConversation: subscribeConversation result: $ok');
+          'ChatProvider.createConversation: subscribeConversation result: $ok',
+        );
       } catch (e) {
         debugPrint(
-            'ChatProvider.createConversation: subscribeConversation failed: $e');
+          'ChatProvider.createConversation: subscribeConversation failed: $e',
+        );
       }
       // Optionally open conversation automatically
       try {
@@ -2317,7 +2442,8 @@ class ChatProvider extends ChangeNotifier {
             }
           } catch (e) {
             debugPrint(
-                'createConversation: SharedPreferences wallet lookup failed: $e');
+              'createConversation: SharedPreferences wallet lookup failed: $e',
+            );
           }
           // If we have a token and no wallet, try to call getMyProfile
           if ((_api.getAuthToken() ?? '').isNotEmpty &&
@@ -2333,7 +2459,8 @@ class ChatProvider extends ChangeNotifier {
               }
             } catch (e) {
               debugPrint(
-                  'createConversation: getMyProfile failed while resolving wallet for 401 retry: $e');
+                'createConversation: getMyProfile failed while resolving wallet for 401 retry: $e',
+              );
             }
           }
         }
@@ -2348,7 +2475,10 @@ class ChatProvider extends ChangeNotifier {
             } catch (_) {}
             // Retry once
             resp = await _api.createConversation(
-                title: title, isGroup: isGroup, members: members);
+              title: title,
+              isGroup: isGroup,
+              members: members,
+            );
             if (resp['success'] == true) {
               final conv = Conversation.fromJson(resp['data']);
               _conversations.insert(0, conv);
@@ -2365,10 +2495,18 @@ class ChatProvider extends ChangeNotifier {
     return null;
   }
 
-  Future<Map<String, dynamic>> uploadConversationAvatar(String conversationId,
-      List<int> bytes, String filename, String contentType) async {
+  Future<Map<String, dynamic>> uploadConversationAvatar(
+    String conversationId,
+    List<int> bytes,
+    String filename,
+    String contentType,
+  ) async {
     final resp = await _api.uploadConversationAvatar(
-        conversationId, bytes, filename, contentType);
+      conversationId,
+      bytes,
+      filename,
+      contentType,
+    );
     // If succeeded, refresh conversations
     if (resp['success'] == true) {
       await refreshConversations();
@@ -2384,8 +2522,10 @@ class ChatProvider extends ChangeNotifier {
     }
   }
 
-  Future<List<String>> _collectConversationMemberWallets(String conversationId,
-      {Conversation? conversationHint}) async {
+  Future<List<String>> _collectConversationMemberWallets(
+    String conversationId, {
+    Conversation? conversationHint,
+  }) async {
     final ordered = <String>[];
     final seen = <String>{};
 
@@ -2420,7 +2560,8 @@ class ChatProvider extends ChangeNotifier {
             addWallet(WalletUtils.resolveFromMap(entry));
           } else if (entry is Map) {
             addWallet(
-                WalletUtils.resolveFromMap(entry.cast<String, dynamic>()));
+              WalletUtils.resolveFromMap(entry.cast<String, dynamic>()),
+            );
           }
         }
       }
@@ -2434,7 +2575,8 @@ class ChatProvider extends ChangeNotifier {
         }
       } catch (e) {
         debugPrint(
-            'ChatProvider._collectConversationMemberWallets: fetchMembers failed for $conversationId: $e');
+          'ChatProvider._collectConversationMemberWallets: fetchMembers failed for $conversationId: $e',
+        );
       }
     }
 
@@ -2463,14 +2605,17 @@ class ChatProvider extends ChangeNotifier {
 
   /// Accepts either a wallet or a username. Returns the created conversation when a new group chat is spawned.
   Future<Conversation?> addMember(
-      String conversationId, String memberIdentifier) async {
+    String conversationId,
+    String memberIdentifier,
+  ) async {
     final trimmed = memberIdentifier.trim();
     if (trimmed.isEmpty) return null;
 
     var memberWallet = trimmed;
     final usernameCandidate = trimmed.replaceFirst(RegExp(r'^@+'), '');
     debugPrint(
-        'ChatProvider.addMember: called with identifier="$memberIdentifier"');
+      'ChatProvider.addMember: called with identifier="$memberIdentifier"',
+    );
     try {
       final user = await UserService.getUserByUsername(usernameCandidate);
       if (user != null && user.id.isNotEmpty) {
@@ -2482,19 +2627,23 @@ class ChatProvider extends ChangeNotifier {
     memberWallet = WalletUtils.normalize(memberWallet);
     if (memberWallet.isEmpty) {
       debugPrint(
-          'ChatProvider.addMember: resolved wallet empty for "$memberIdentifier"');
+        'ChatProvider.addMember: resolved wallet empty for "$memberIdentifier"',
+      );
       return null;
     }
 
     final conversation = _findConversationById(conversationId);
     final existingMembers = await _collectConversationMemberWallets(
-        conversationId,
-        conversationHint: conversation);
-    final alreadyMember = existingMembers
-        .any((wallet) => WalletUtils.equals(wallet, memberWallet));
+      conversationId,
+      conversationHint: conversation,
+    );
+    final alreadyMember = existingMembers.any(
+      (wallet) => WalletUtils.equals(wallet, memberWallet),
+    );
     if (alreadyMember) {
       debugPrint(
-          'ChatProvider.addMember: $memberWallet is already a member of $conversationId');
+        'ChatProvider.addMember: $memberWallet is already a member of $conversationId',
+      );
       return conversation;
     }
 
@@ -2504,31 +2653,40 @@ class ChatProvider extends ChangeNotifier {
 
     if (shouldCreateGroup) {
       debugPrint(
-          'ChatProvider.addMember: promoting $conversationId to group (members=${uniqueMembers.length})');
+        'ChatProvider.addMember: promoting $conversationId to group (members=${uniqueMembers.length})',
+      );
       final sanitizedMembers = uniqueMembers
           .where((wallet) => !WalletUtils.equals(wallet, _currentWallet))
           .toList();
       final groupTitle = (conversation?.title?.trim().isNotEmpty ?? false)
           ? conversation!.title!.trim()
           : 'Group chat';
-      final newConversation =
-          await createConversation(groupTitle, true, sanitizedMembers);
+      final newConversation = await createConversation(
+        groupTitle,
+        true,
+        sanitizedMembers,
+      );
       if (newConversation != null) {
         await _prefetchUsersForWallets(uniqueMembers);
         return newConversation;
       }
       debugPrint(
-          'ChatProvider.addMember: failed to create group conversation; falling back to inline member add');
+        'ChatProvider.addMember: failed to create group conversation; falling back to inline member add',
+      );
     }
 
     try {
-      final resp =
-          await _api.addConversationMember(conversationId, memberWallet);
+      final resp = await _api.addConversationMember(
+        conversationId,
+        memberWallet,
+      );
       debugPrint(
-          'ChatProvider.addMember: addConversationMember response: $resp');
+        'ChatProvider.addMember: addConversationMember response: $resp',
+      );
     } catch (e) {
       debugPrint(
-          'ChatProvider.addMember: addConversationMember call failed: $e');
+        'ChatProvider.addMember: addConversationMember call failed: $e',
+      );
     }
 
     await fetchMembers(conversationId);
@@ -2538,7 +2696,9 @@ class ChatProvider extends ChangeNotifier {
   }
 
   Future<void> removeMember(
-      String conversationId, String memberIdentifier) async {
+    String conversationId,
+    String memberIdentifier,
+  ) async {
     // Try to resolve as username or wallet client-side. Backend supports accepting memberUsername/memberWallet
     var normalized = memberIdentifier;
     try {
@@ -2553,7 +2713,9 @@ class ChatProvider extends ChangeNotifier {
   }
 
   Future<void> renameConversation(
-      String conversationId, String newTitle) async {
+    String conversationId,
+    String newTitle,
+  ) async {
     try {
       final result = await _api.renameConversation(conversationId, newTitle);
       if (result['success'] == true) {
@@ -2612,10 +2774,14 @@ class ChatProvider extends ChangeNotifier {
   }
 
   Future<Map<String, dynamic>> transferOwnership(
-      String conversationId, String newOwnerWallet) async {
+    String conversationId,
+    String newOwnerWallet,
+  ) async {
     try {
-      final resp =
-          await _api.transferConversationOwner(conversationId, newOwnerWallet);
+      final resp = await _api.transferConversationOwner(
+        conversationId,
+        newOwnerWallet,
+      );
       await refreshConversations();
       return resp;
     } catch (e) {
@@ -2652,7 +2818,8 @@ class ChatProvider extends ChangeNotifier {
     try {
       final resp = await _api.markMessageRead(conversationId, messageId);
       debugPrint(
-          'ChatProvider.markMessageRead: api response for conv=$conversationId msg=$messageId -> $resp');
+        'ChatProvider.markMessageRead: api response for conv=$conversationId msg=$messageId -> $resp',
+      );
       // If server indicates not found or failure, try to mark the conversation read as a fallback
       if (resp['success'] != true &&
           (resp['status'] == 404 || resp['status'] == 400)) {
@@ -2678,7 +2845,8 @@ class ChatProvider extends ChangeNotifier {
               _touchMessageCache(conversationId);
             }
             debugPrint(
-                'ChatProvider.markMessageRead: updated local message readByCurrent for conv=$conversationId msg=$messageId at index=$i');
+              'ChatProvider.markMessageRead: updated local message readByCurrent for conv=$conversationId msg=$messageId at index=$i',
+            );
             // Decrease unread count for conversation if present
             final curr = _unreadCounts[conversationId] ?? 0;
             if (curr > 0) _unreadCounts[conversationId] = curr - 1;
@@ -2709,7 +2877,8 @@ class ChatProvider extends ChangeNotifier {
             !existingReaders.any((r) {
               try {
                 final existing = WalletUtils.normalize(
-                    ((r['wallet_address'] ?? r['wallet']) ?? '').toString());
+                  ((r['wallet_address'] ?? r['wallet']) ?? '').toString(),
+                );
                 return existing.isNotEmpty &&
                     WalletUtils.equals(existing, readerCanonical) &&
                     readerCanonical.isNotEmpty;
@@ -2813,8 +2982,9 @@ class ChatProvider extends ChangeNotifier {
           List<MessageReaction> parsedReactions = [];
           if (reactions is List) {
             parsedReactions = reactions
-                .map((r) =>
-                    MessageReaction.fromJson(Map<String, dynamic>.from(r)))
+                .map(
+                  (r) => MessageReaction.fromJson(Map<String, dynamic>.from(r)),
+                )
                 .toList();
           }
 
@@ -2869,7 +3039,10 @@ class ChatProvider extends ChangeNotifier {
   }
 
   Future<void> toggleReaction(
-      String conversationId, String messageId, String emoji) async {
+    String conversationId,
+    String messageId,
+    String emoji,
+  ) async {
     // Optimistic update
     final list = _messages[conversationId];
     if (list != null) {
@@ -2879,8 +3052,9 @@ class ChatProvider extends ChangeNotifier {
           final currentWallet = _currentWallet ?? '';
 
           // Check if already reacted
-          final existingReactionIndex =
-              msg.reactions.indexWhere((r) => r.emoji == emoji);
+          final existingReactionIndex = msg.reactions.indexWhere(
+            (r) => r.emoji == emoji,
+          );
           bool isRemoving = false;
 
           List<MessageReaction> newReactions = List.from(msg.reactions);
@@ -2913,11 +3087,13 @@ class ChatProvider extends ChangeNotifier {
             }
           } else {
             // Create new reaction
-            newReactions.add(MessageReaction(
-              emoji: emoji,
-              count: 1,
-              reactors: [currentWallet],
-            ));
+            newReactions.add(
+              MessageReaction(
+                emoji: emoji,
+                count: 1,
+                reactors: [currentWallet],
+              ),
+            );
           }
 
           // Update local state
@@ -2931,7 +3107,10 @@ class ChatProvider extends ChangeNotifier {
           try {
             if (isRemoving) {
               await _api.removeMessageReaction(
-                  conversationId, messageId, emoji);
+                conversationId,
+                messageId,
+                emoji,
+              );
             } else {
               await _api.addMessageReaction(conversationId, messageId, emoji);
             }

@@ -124,6 +124,62 @@
   "recentActivityFallbackArtworkTitle": "an artwork",
   "notificationSomeoneFallback": "Someone",
   "notificationAchievementFallback": "Achievement",
+  "notificationCommunityLikeTitle": "New like",
+  "notificationCommunityLikeBody": "{name} liked your post",
+  "@notificationCommunityLikeBody": {
+    "placeholders": {
+      "name": {}
+    }
+  },
+  "notificationCommunityCommentTitle": "New comment",
+  "notificationCommunityCommentBody": "{name} commented on your post",
+  "@notificationCommunityCommentBody": {
+    "placeholders": {
+      "name": {}
+    }
+  },
+  "notificationCommunityCommentWithTextBody": "{name}: {comment}",
+  "@notificationCommunityCommentWithTextBody": {
+    "placeholders": {
+      "name": {},
+      "comment": {}
+    }
+  },
+  "notificationCommunityShareTitle": "Post shared",
+  "notificationCommunityShareBody": "{name} shared your post",
+  "@notificationCommunityShareBody": {
+    "placeholders": {
+      "name": {}
+    }
+  },
+  "notificationCommunityRepostTitle": "New repost",
+  "notificationCommunityRepostBody": "{name} reposted your post",
+  "@notificationCommunityRepostBody": {
+    "placeholders": {
+      "name": {}
+    }
+  },
+  "notificationCommunityMentionTitle": "You were mentioned",
+  "notificationCommunityMentionBody": "{name} mentioned you in a post",
+  "@notificationCommunityMentionBody": {
+    "placeholders": {
+      "name": {}
+    }
+  },
+  "notificationCommunityActivityTitle": "New activity",
+  "notificationCommunityActivityBody": "{name} interacted with your post",
+  "@notificationCommunityActivityBody": {
+    "placeholders": {
+      "name": {}
+    }
+  },
+  "notificationFollowerTitle": "New follower",
+  "notificationFollowerBody": "{name} started following you",
+  "@notificationFollowerBody": {
+    "placeholders": {
+      "name": {}
+    }
+  },
   "notificationRecognitionRecordedTitle": "Recognition recorded",
   "notificationArtworkDiscoveredTitle": "Artwork discovered",
   "notificationArtworkDiscoveredBody": "Discovered “{title}” by {artist}",
@@ -297,6 +353,7 @@
   "commonReplace": "Replace",
   "commonSearch": "Search",
   "commonNotifications": "Notifications",
+  "desktopNavCollabInvitesTooltip": "Collaboration invites",
   "commonLabLabel": "Lab",
   "commonShare": "Share",
   "shareOptionCreatePost": "Create community post",
@@ -1092,6 +1149,7 @@
   },
   "settingsBiometricUnavailableToast": "Biometric unlock not available on this device.",
   "settingsBiometricFailedToast": "Biometric authentication failed.",
+  "biometricIdentityPromptReason": "Authenticate to continue",
   "settingsExportRecoveryPhraseDialogTitle": "Export recovery phrase",
   "settingsExportRecoveryPhraseDialogBody": "Only view your phrase in private. We never store it, and anyone with it can move your assets.",
   "settingsExportRecoveryPhraseDialogConfirm": "Confirm you are ready before revealing the words.",
@@ -1107,6 +1165,8 @@
   "settingsPinMismatchError": "PINs do not match",
   "settingsPinSetSuccessToast": "PIN set successfully",
   "settingsPinSetFailedToast": "Failed to set PIN",
+  "settingsPinInvalidFormatError": "A PIN must be 4 to 12 digits",
+  "settingsPinClearFailedToast": "Could not remove the PIN",
   "settingsClearCacheDialogTitle": "Clear cache",
   "settingsClearCacheDialogBody": "This will clear temporary files and may improve performance.",
   "settingsCacheClearedToast": "Cache cleared successfully",
@@ -2290,6 +2350,9 @@
     }
   },
   "userProfileArtworksTitle": "Artworks",
+  "profilePublicArtAddedTitle": "Public art added",
+  "profilePublicArtAddedSubtitle": "Artworks this profile documented on the map. They are credited to their own artists.",
+  "profileAuthoredArtworksCountLabel": "Authored artworks",
   "userProfileCollectionsTitle": "Collections",
   "userProfileEventsTitle": "Events",
   "userProfileEventsSubtitleFeaturing": "Upcoming experiences featuring {name}.",
@@ -4438,6 +4501,7 @@
   "communityNameThisPlaceTitle": "Name this place",
   "communityNamePlaceHint": "e.g. City park",
   "communityConnectWalletFirstToast": "Sign in first; wallet access is only needed for wallet-linked actions.",
+  "communityPostingNeedsWalletToast": "Publishing community posts needs a connected wallet. You can connect one in Wallet.",
   "communityUnableToAuthenticateToast": "Unable to authenticate. Please try again.",
   "communityComposerAddContentToast": "Add text, an image, or a video.",
   "communityComposerSharedInGroupToast": "Posted in {groupName}",
@@ -5005,6 +5069,172 @@
   "securityHubWalletRecoveryPasskeyRemoveFailedToast": "Could not remove wallet recovery passkey. Try again.",
   "securityHubPasskeyAlreadyRegistered": "This passkey is already registered.",
   "securityHubBrowserPromptCancelledOrTimedOut": "Browser prompt cancelled or timed out.",
+  "securityHubStatusSecured": "Secured",
+  "securityHubStatusRecommended": "Recommended",
+  "securityHubStatusFailed": "Failed",
+  "securityHubStatusDestructive": "Destructive",
+  "securityHubStatusActive": "Active",
+  "securityHubStatusMissing": "Missing",
+  "securityHubStatusLinked": "Linked",
+  "securityHubStatusChecked": "Checked",
+  "securityHubStatusReady": "Ready",
+  "securityHubStatusReadOnly": "Read-only",
+  "securityHubBackUpOffline": "Back up offline",
+  "securityHubEnableBiometrics": "Enable biometrics",
+  "securityHubVerifyBackup": "Verify",
+  "securityHubSavePin": "Save PIN",
+  "securityHubSetPin": "Set PIN",
+  "securityHubSetLocalPin": "Set local PIN",
+  "securityHubBiometricUnlock": "Biometric unlock",
+  "securityHubBiometricUnlockEnabled": "Biometric unlock enabled.",
+  "securityHubBiometricsUnavailable": "Biometrics unavailable.",
+  "securityHubBiometricApprovalFailed": "Biometric approval failed.",
+  "securityHubAuthenticationFailed": "Authentication failed.",
+  "securityHubActionFailed": "Action failed. Try again.",
+  "securityHubWalletAccess": "Wallet access",
+  "securityHubWalletAccessState": "Wallet access state",
+  "securityHubLocalSigner": "Local signer",
+  "securityHubLocalSignerReady": "Local signer ready",
+  "securityHubSecurityKey": "Security key",
+  "securityHubSetUpBackupFirst": "Set up backup first",
+  "securityHubUpdateBackup": "Update backup",
+  "securityHubSaveEncryptedBackup": "Save encrypted backup",
+  "securityHubRestoreAccess": "Restore access",
+  "securityHubAddAccountPasskey": "Add account passkey",
+  "securityHubAccountPasskeyAdded": "Account sign-in passkey added.",
+  "securityHubAccountPasskeyRemoved": "Account sign-in passkey removed.",
+  "securityHubRemoveAccountPasskeyTitle": "Remove account sign-in passkey?",
+  "securityHubSecureThisDevice": "Secure this device",
+  "securityHubConfirmRequired": "Confirm required",
+  "securityHubNever": "Never",
+  "securityHubLastUsedNever": "Last used never",
+  "securityHubLinkedDevice": "Linked device",
+  "securityHubRecoveryAvailable": "Recovery available",
+  "securityHubAccountOnly": "Account only",
+  "securityHubCurrentAccountWallet": "Current account wallet",
+  "securityHubNoWallet": "No wallet",
+  "securityHubLocalSecuritySettingsUnavailable": "Local security settings are temporarily unavailable.",
+  "securityHubWalletSecurityStatusRefreshFailed": "Wallet security status could not be refreshed.",
+  "securityHubEncryptedBackupStatusRefreshFailed": "Encrypted wallet backup status could not be refreshed.",
+  "securityHubAccountPasskeyStatusUnavailable": "Account passkey status is temporarily unavailable.",
+  "securityHubWalletRecoveryPasskeyDefaultName": "Wallet recovery passkey",
+  "securityHubWalletRecoveryPasskeyDescription": "Used to restore local wallet access from encrypted backup.",
+  "securityHubAccountSignInDescription": "Used to sign into art.kubus without email, Google, or wallet signature.",
+  "securityHubPinDescription": "Protects sensitive account and wallet actions on this device.",
+  "securityHubCreateBackupDescription": "Choose a recovery password. It decrypts the wallet backup on a new device.",
+  "securityHubVerifyBackupDescription": "Enter the recovery password to verify this backup can be decrypted locally.",
+  "securityHubBiometricUnlockPromptDescription": "Enable biometric unlock on this device, or skip it for now.",
+  "securityHubEncryptedBackupDescription": "Create a password-protected encrypted backup for recovery.",
+  "securityHubRecoveryPhraseOfflineDescription": "Store the recovery phrase offline before you rely on this wallet.",
+  "securityHubDeleteBackupRowDescription": "Removes the encrypted server backup for the current wallet.",
+  "securityHubDeleteBackupDialogBody": "This removes the encrypted server backup for the current wallet. Keep the recovery phrase stored safely offline.",
+  "securityHubRemoveWalletRecoveryPasskeyBody": "This device passkey will no longer unlock the encrypted wallet backup.",
+  "securityHubRemoveRecoveryPasskeyAction": "Remove recovery passkey",
+  "securityHubRemoveAccountPasskeyBody": "This passkey will no longer sign into art.kubus on this account.",
+  "securityHubRestoreSigningBeforeTransfers": "Restore signing before transfers",
+  "securityHubEncryptedBackupRestoreDescription": "Encrypted backup can restore local wallet access.",
+  "securityHubEncryptedBackupAvailableDescription": "Encrypted wallet backup is available for recovery.",
+  "securityHubEncryptedBackupDisabledDescription": "Encrypted wallet backup is disabled in this build.",
+  "securityHubSetUpLocalUnlockDescription": "Set up local unlock before sensitive wallet and account actions.",
+  "securityHubSetUpLocalUnlockStepsDescription": "Set up local unlock, passkeys, and wallet recovery before you continue.",
+  "securityHubSummaryDescription": "Manage account sign-in, device unlock, wallet access, encrypted backups, and recovery credentials in one place.",
+  "securityHubLocalWalletCanSign": "Local wallet can sign",
+  "securityHubLocalWalletSignerAvailable": "Local wallet signer is available on this device.",
+  "securityHubNoLocalSignerAvailable": "No local signer is available on this device.",
+  "securityHubNoExternalSignerConnected": "No external wallet signer is connected.",
+  "securityHubNoRecoveryPhraseActionRequired": "No recovery phrase action is currently required.",
+  "securityHubNoWalletConnectedOnDevice": "No wallet is connected on this device.",
+  "securityHubNoWalletRecoveryPasskeys": "No wallet recovery passkeys are registered.",
+  "securityHubPinStaysOnDevice": "PIN stays on this device and protects sensitive wallet actions.",
+  "securityHubPrfSupported": "PRF supported",
+  "securityHubPrfNotSupported": "PRF not supported",
+  "securityHubRecoveryMaterialEncrypted": "Recovery material encrypted",
+  "securityHubNoEncryptedRecoveryMaterial": "No encrypted recovery material",
+  "securityHubSignInRecoverySeparate": "Sign-in and wallet recovery are managed separately",
+  "securityHubPrfUnsupportedBrowser": "This browser does not expose wallet-recovery PRF support.",
+  "securityHubThisDeviceCanSign": "This device can sign wallet actions.",
+  "securityHubWalletAccessReadOnlyOrNotConnected": "Wallet access is read-only or not connected.",
+  "securityHubWalletRecoveryPasskeyAdded": "Wallet recovery passkey \"{passkeyName}\" added.",
+  "@securityHubWalletRecoveryPasskeyAdded": {
+    "placeholders": {
+      "passkeyName": {}
+    }
+  },
+  "securityHubCreatedOn": "Created {date}",
+  "@securityHubCreatedOn": {
+    "placeholders": {
+      "date": {}
+    }
+  },
+  "securityHubCreatedAndLastUsed": "Created {createdDate}. Last used {lastUsedDate}.",
+  "@securityHubCreatedAndLastUsed": {
+    "placeholders": {
+      "createdDate": {},
+      "lastUsedDate": {}
+    }
+  },
+  "securityHubLastUsedOn": "Last used {date}",
+  "@securityHubLastUsedOn": {
+    "placeholders": {
+      "date": {}
+    }
+  },
+  "securityHubLastVerifiedOn": "Last verified {date}",
+  "@securityHubLastVerifiedOn": {
+    "placeholders": {
+      "date": {}
+    }
+  },
+  "securityHubPasskeyStatusSummary": "{lastActivity}. {prfLabel}. {recoveryMaterial}.",
+  "@securityHubPasskeyStatusSummary": {
+    "placeholders": {
+      "lastActivity": {},
+      "prfLabel": {},
+      "recoveryMaterial": {}
+    }
+  },
+  "securityHubPasskeyCounts": "{accountCount} account / {recoveryCount} recovery",
+  "@securityHubPasskeyCounts": {
+    "placeholders": {
+      "accountCount": {
+        "type": "int"
+      },
+      "recoveryCount": {
+        "type": "int"
+      }
+    }
+  },
+  "securityHubRegisteredCount": "{count} registered",
+  "@securityHubRegisteredCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "securityHubPasskeyPurpose": "Purpose: {purpose}",
+  "@securityHubPasskeyPurpose": {
+    "placeholders": {
+      "purpose": {}
+    }
+  },
+  "securityHubPasskeyPurposePrfCapable": "Purpose: {purpose} - PRF capable",
+  "@securityHubPasskeyPurposePrfCapable": {
+    "placeholders": {
+      "purpose": {}
+    }
+  },
+  "securityHubExternalWalletHelper": "External wallet: {walletName}",
+  "@securityHubExternalWalletHelper": {
+    "placeholders": {
+      "walletName": {}
+    }
+  },
+  "securityHubExternalWalletConnected": "External wallet connected.",
+  "securityHubExternalSignerConnected": "External signer connected",
+  "securityHubConnectOrRestoreWallet": "Connect or restore a wallet",
+  "securityHubDeleteBackupAction": "Delete backup",
+  "securityHubBiometricUnlockDescription": "Uses this device biometric prompt after a local PIN exists.",
   "walletRecoveryFallbackTitle": "Restore wallet access",
   "walletRecoveryPasskeyFailedTitle": "Passkey recovery failed",
   "walletRecoveryPasskeyUnavailableTitle": "Passkey recovery unavailable",
@@ -5279,6 +5509,7 @@
   "desktopShellNavHome": "Home",
   "desktopShellNavExplore": "Explore",
   "desktopShellNavConnect": "Connect",
+  "desktopShellNavMessages": "Messages",
   "desktopShellNavCreate": "Create",
   "desktopShellNavOrganize": "Organize",
   "desktopShellNavGovern": "Govern",
@@ -5305,6 +5536,34 @@
   "mobileNavProfile": "Profile",
   "mobileNavAccount": "Account",
   "mobileNavSemanticLabel": "Main navigation",
+  "mobileNavCommunityUnreadSemantics": "{count} unread messages and notifications",
+  "@mobileNavCommunityUnreadSemantics": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "desktopMessagesUnreadSemantics": "{count} unread messages",
+  "@desktopMessagesUnreadSemantics": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "notificationDirectMessageTitle": "New message from {senderName}",
+  "@notificationDirectMessageTitle": {
+    "placeholders": {
+      "senderName": {
+        "type": "String"
+      }
+    }
+  },
+  "notificationDirectMessageFallbackSender": "Someone",
+  "notificationDirectMessageEmptyBody": "You have a new message.",
+  "notificationMessagesChannelName": "Messages",
+  "messagesNotificationConversationUnavailable": "This conversation is no longer available.",
   "desktopNavWalletEntry": "Wallet",
   "daoHubAppBarTitle": "Community governance",
   "labsDaoSemanticLabel": "Community Governance",
@@ -5417,6 +5676,11 @@
   "profileEditAvatarUploadedLocalToast": "Avatar uploaded locally (save failed)",
   "profileEditAvatarUploadFailedToast": "Avatar upload failed. Please try again.",
   "profileEditAvatarUploadTimeoutToast": "Profile image upload timed out. Please try a smaller image or retry.",
+  "profileEditErrorSignInAgainToast": "Your session has expired. Sign in again to save your profile.",
+  "profileEditErrorOwnershipMismatchToast": "This profile belongs to a different account. Sign in with the owning account and try again.",
+  "profileEditAvatarErrorTooLargeToast": "This image is too large. Choose a smaller image and try again.",
+  "profileEditAvatarErrorUnsupportedTypeToast": "This image format is not supported. Choose a JPG, PNG, WebP or GIF image.",
+  "profileEditAvatarErrorRateLimitedToast": "Too many uploads right now. Wait a moment and try again.",
   "profileEditCoverUploadedSavedToast": "Cover image uploaded!",
   "profileEditCoverUploadedLocalToast": "Cover image uploaded locally",
   "profileEditCoverUploadFailedToast": "Cover image upload failed. Please try again.",
@@ -5717,7 +5981,7 @@
   "profilePerformanceDiscoveriesTitle": "Discoveries",
   "profilePerformanceCreatedOwnedTitle": "Created / owned",
   "profilePerformanceFollowersFollowingTitle": "Followers / following",
-  "profilePerformancePublicStreetArtAddedTitle": "Added Public Art",
+  "profilePerformancePublicStreetArtAddedTitle": "Public art documented",
   "profileMenuSavedItemsTitle": "Saved items",
   "savedItemsSummarySubtitleEmpty": "Bookmark artworks, events, collections, exhibitions, and posts to keep them here.",
   "savedItemsEmptyLibraryTitle": "Nothing saved yet",

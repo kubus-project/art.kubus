@@ -27,15 +27,26 @@ class _SecurityGateOverlayState extends State<SecurityGateOverlay> {
     return Consumer<SecurityGateProvider>(
       builder: (context, gate, child) {
         final animationTheme = context.animationTheme;
+        // While locked or still deciding, the app underneath is covered: it
+        // is excluded from semantics and focus and receives no pointers.
+        final covering = gate.isLocked || gate.isLockDecisionPending;
         return Listener(
           behavior: HitTestBehavior.translucent,
           onPointerDown: (_) => gate.onUserInteraction(),
           child: Stack(
             children: [
-              child ?? const SizedBox.shrink(),
+              // Always wrapped (excluding toggles) so the child's element tree
+              // is stable when the decision completes.
+              ExcludeSemantics(
+                excluding: covering,
+                child: ExcludeFocus(
+                  excluding: covering,
+                  child: child ?? const SizedBox.shrink(),
+                ),
+              ),
               Positioned.fill(
                 child: IgnorePointer(
-                  ignoring: !gate.isLocked,
+                  ignoring: !covering,
                   child: AnimatedSwitcher(
                     duration: animationTheme.medium,
                     switchInCurve: animationTheme.fadeCurve,
@@ -45,8 +56,15 @@ class _SecurityGateOverlayState extends State<SecurityGateOverlay> {
                       child: child,
                     ),
                     child: gate.isLocked
-                        ? const _SecurityLockOverlay(key: ValueKey('security_locked'))
-                        : const SizedBox.shrink(key: ValueKey('security_unlocked')),
+                        ? const _SecurityLockOverlay(
+                            key: ValueKey('security_locked'))
+                        : gate.isLockDecisionPending
+                            ? _LockDecisionCover(
+                                key: const ValueKey('security_deciding'),
+                                color: Theme.of(context).colorScheme.surface,
+                              )
+                            : const SizedBox.shrink(
+                                key: ValueKey('security_unlocked')),
                   ),
                 ),
               ),
@@ -55,6 +73,24 @@ class _SecurityGateOverlayState extends State<SecurityGateOverlay> {
         );
       },
       child: widget.child,
+    );
+  }
+}
+
+/// Opaque cover shown only while the lock decision is pending. It carries no
+/// PIN field and no buttons; it just hides and absorbs input.
+class _LockDecisionCover extends StatelessWidget {
+  const _LockDecisionCover({super.key, required this.color});
+
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return AbsorbPointer(
+      child: ColoredBox(
+        color: color,
+        child: const SizedBox.expand(),
+      ),
     );
   }
 }
@@ -135,16 +171,21 @@ class _SecurityLockOverlayState extends State<_SecurityLockOverlay> {
     });
   }
 
-  String _reasonMessageForBiometric(SecurityGateProvider gate, AppLocalizations l10n) {
+  String _reasonMessageForBiometric(
+      SecurityGateProvider gate, AppLocalizations l10n) {
     if (gate.lockReason == SecurityLockReason.tokenExpired) {
       return l10n.authReauthDialogMessage;
     }
     return l10n.lockAppLockedDescription;
   }
 
-  String _biometricErrorMessage(BiometricAuthOutcome outcome, AppLocalizations l10n) {
-    if (outcome == BiometricAuthOutcome.notAvailable) return l10n.settingsBiometricUnavailableToast;
-    if (outcome == BiometricAuthOutcome.lockedOut || outcome == BiometricAuthOutcome.permanentlyLockedOut) {
+  String _biometricErrorMessage(
+      BiometricAuthOutcome outcome, AppLocalizations l10n) {
+    if (outcome == BiometricAuthOutcome.notAvailable) {
+      return l10n.settingsBiometricUnavailableToast;
+    }
+    if (outcome == BiometricAuthOutcome.lockedOut ||
+        outcome == BiometricAuthOutcome.permanentlyLockedOut) {
       return l10n.settingsBiometricFailedToast;
     }
     return l10n.settingsBiometricFailedToast;
@@ -172,7 +213,8 @@ class _SecurityLockOverlayState extends State<_SecurityLockOverlay> {
     setState(() => _error = null);
 
     if (_lockoutRemainingSeconds > 0) {
-      setState(() => _error = l10n.mnemonicRevealPinLockedError(_lockoutRemainingSeconds));
+      setState(() =>
+          _error = l10n.mnemonicRevealPinLockedError(_lockoutRemainingSeconds));
       return;
     }
 
@@ -183,13 +225,15 @@ class _SecurityLockOverlayState extends State<_SecurityLockOverlay> {
     if (result.outcome == PinVerifyOutcome.lockedOut) {
       await _refreshLockout();
       if (!mounted) return;
-      setState(() => _error = l10n.mnemonicRevealPinLockedError(_lockoutRemainingSeconds));
+      setState(() =>
+          _error = l10n.mnemonicRevealPinLockedError(_lockoutRemainingSeconds));
       return;
     }
 
     if (result.outcome == PinVerifyOutcome.incorrect) {
       final attempts = (result.maxAttempts > 0)
-          ? l10n.securityPinAttemptsRemaining(result.remainingAttempts, result.maxAttempts)
+          ? l10n.securityPinAttemptsRemaining(
+              result.remainingAttempts, result.maxAttempts)
           : l10n.mnemonicRevealIncorrectPinError;
       setState(() => _error = attempts);
       return;
@@ -204,8 +248,12 @@ class _SecurityLockOverlayState extends State<_SecurityLockOverlay> {
     final gate = context.watch<SecurityGateProvider>();
     final scheme = Theme.of(context).colorScheme;
 
-    final title = gate.lockReason == SecurityLockReason.tokenExpired ? l10n.authReauthDialogTitle : l10n.lockAppLockedTitle;
-    final message = gate.lockReason == SecurityLockReason.tokenExpired ? l10n.authReauthDialogMessage : l10n.lockAppLockedDescription;
+    final title = gate.lockReason == SecurityLockReason.tokenExpired
+        ? l10n.authReauthDialogTitle
+        : l10n.lockAppLockedTitle;
+    final message = gate.lockReason == SecurityLockReason.tokenExpired
+        ? l10n.authReauthDialogMessage
+        : l10n.lockAppLockedDescription;
     final showSignIn = gate.lockReason == SecurityLockReason.tokenExpired;
     final showCancel = gate.lockReason == SecurityLockReason.sensitiveAction;
 
@@ -226,16 +274,17 @@ class _SecurityLockOverlayState extends State<_SecurityLockOverlay> {
                   const SizedBox(height: KubusSpacing.sm),
                   Text(
                     message,
-                    style: Theme.of(context)
-                        .textTheme
-                        .bodyMedium
-                        ?.copyWith(color: scheme.onSurface.withValues(alpha: 0.8)),
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: scheme.onSurface.withValues(alpha: 0.8)),
                   ),
                   if (_error != null) ...[
                     const SizedBox(height: KubusSpacing.md),
                     Text(
                       _error!,
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: scheme.error),
+                      style: Theme.of(context)
+                          .textTheme
+                          .bodyMedium
+                          ?.copyWith(color: scheme.error),
                     ),
                   ],
                   const SizedBox(height: KubusSpacing.lg),
@@ -263,9 +312,12 @@ class _SecurityLockOverlayState extends State<_SecurityLockOverlay> {
                     },
                   ),
                   FutureBuilder<bool>(
-                    future: context.read<WalletProvider>().hasPin(),
+                    future: context.read<WalletProvider>().hasPinOrThrow(),
                     builder: (context, snapshot) {
-                      final hasPin = snapshot.data == true;
+                      // A store that cannot be read must not hide the PIN entry:
+                      // the lock's only other exit is logout. Offer the PIN, and
+                      // let the unlock attempt report the real failure.
+                      final hasPin = snapshot.hasError || snapshot.data == true;
                       if (!hasPin) return const SizedBox.shrink();
                       return Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -300,7 +352,9 @@ class _SecurityLockOverlayState extends State<_SecurityLockOverlay> {
                       if (showCancel) const Spacer(),
                       if (showSignIn)
                         TextButton(
-                          onPressed: gate.isBusy ? null : () => gate.unlockWithSignIn(),
+                          onPressed: gate.isBusy
+                              ? null
+                              : () => gate.unlockWithSignIn(),
                           child: Text(l10n.commonSignIn),
                         ),
                       if (showSignIn) const Spacer(),

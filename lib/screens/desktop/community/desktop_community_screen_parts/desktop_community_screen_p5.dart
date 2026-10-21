@@ -287,6 +287,21 @@ extension _DesktopCommunityScreenStatePart5 on _DesktopCommunityScreenState {
       sourceScreen: 'desktop_community_screen',
     );
     if (!canPost || !mounted) return;
+    // Email-only accounts have no wallet; posting would only fail at the
+    // backend. Ask for a wallet up front, keeping the draft in the composer.
+    if (await readCommunityPostingWallet() == null) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showKubusSnackBar(
+        SnackBar(
+          content: Text(
+              AppLocalizations.of(context)!.communityPostingNeedsWalletToast),
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: Theme.of(context).colorScheme.error,
+        ),
+      );
+      return;
+    }
+    if (!mounted) return;
     final appModeProvider =
         Provider.of<AppModeProvider?>(context, listen: false);
     if (appModeProvider?.isIpfsFallbackMode ?? false) {
@@ -429,15 +444,19 @@ extension _DesktopCommunityScreenStatePart5 on _DesktopCommunityScreenState {
       if (mounted) {
         ScaffoldMessenger.of(context).showKubusSnackBar(
           SnackBar(
-            content: Text(communityComposerFailureMessage(
-              AppLocalizations.of(context)!,
-              e,
-              unuploadedMediaCount: _composerMedia.hasFailedUploads
-                  ? _composerMedia.unuploadedCount
-                  : null,
-              fallback: AppLocalizations.of(context)!
-                  .desktopCommunityPostPublishFailedToast,
-            )),
+            // A stale stored wallet can pass the pre-check; the backend's
+            // WALLET_REQUIRED answer still gets the actionable message.
+            content: Text(isCommunityWalletRequiredError(e)
+                ? AppLocalizations.of(context)!.communityPostingNeedsWalletToast
+                : communityComposerFailureMessage(
+                    AppLocalizations.of(context)!,
+                    e,
+                    unuploadedMediaCount: _composerMedia.hasFailedUploads
+                        ? _composerMedia.unuploadedCount
+                        : null,
+                    fallback: AppLocalizations.of(context)!
+                        .desktopCommunityPostPublishFailedToast,
+                  )),
             behavior: SnackBarBehavior.floating,
             backgroundColor: Theme.of(context).colorScheme.error,
           ),
@@ -1341,9 +1360,11 @@ extension _DesktopCommunityScreenStatePart5 on _DesktopCommunityScreenState {
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      AvatarWidget(
+                      KubusIdentityAvatar(
                         avatarUrl: user?.avatar,
                         wallet: user?.walletAddress ?? '',
+                        isArtist: user?.isArtist ?? false,
+                        isInstitution: user?.isInstitution ?? false,
                         radius: 24,
                         allowFabricatedFallback: true,
                       ),

@@ -126,6 +126,8 @@ class _ProfileEditTestProvider extends ProfileProvider {
   );
 
   Object? avatarUploadError;
+  ProfileRequestFailure? avatarUploadFailure;
+  final List<String> avatarUploadWallets = <String>[];
   Object? coverUploadError;
   bool saveShouldTimeout = false;
   String? lastError;
@@ -143,6 +145,9 @@ class _ProfileEditTestProvider extends ProfileProvider {
     required String walletAddress,
     String? mimeType,
   }) async {
+    avatarUploadWallets.add(walletAddress);
+    final failure = avatarUploadFailure;
+    if (failure != null) throw failure;
     final error = avatarUploadError;
     if (error != null) {
       if (error is TimeoutException) throw error;
@@ -484,7 +489,7 @@ void main() {
         '/uploads/profiles/cover/current.png');
   });
 
-  testWidgets('missing wallet avatar upload resets spinner and preview',
+  testWidgets('email-only session uploads and saves avatar without a wallet',
       (tester) async {
     final provider = _ProfileEditTestProvider();
     provider.setCurrentUser(
@@ -496,15 +501,47 @@ void main() {
         tester.state(find.byType(mobile.ProfileEditScreen)) as dynamic;
     await state.debugUploadAvatarBytesForTesting(
       bytes: Uint8List.fromList(<int>[1, 2, 3]),
-      fileName: 'avatar.png',
+      fileName: 'email-avatar.png',
       mimeType: 'image/png',
     );
     await tester.pump();
 
+    expect(provider.avatarUploadWallets, <String>['']);
+    expect(provider.savedAvatar, '/uploads/profiles/avatars/email-avatar.png');
     expect(state.debugIsUploadingAvatar, isFalse);
     expect(state.debugAvatarChanged, isFalse);
     expect(state.debugHasLocalAvatarBytes, isFalse);
-    expect(find.textContaining('Sign in first'), findsOneWidget);
+    expect(find.textContaining('Sign in first'), findsNothing);
+  });
+
+  testWidgets('avatar upload error code shows its specific message',
+      (tester) async {
+    final provider = _ProfileEditTestProvider()
+      ..avatarUploadFailure = const ProfileRequestFailure(
+        errorCode: 'FILE_TOO_LARGE',
+        statusCode: 413,
+      );
+    await _pumpEditScreen(tester, provider, const mobile.ProfileEditScreen());
+
+    final state =
+        tester.state(find.byType(mobile.ProfileEditScreen)) as dynamic;
+    await state.debugUploadAvatarBytesForTesting(
+      bytes: Uint8List.fromList(<int>[1, 2, 3]),
+      fileName: 'huge.png',
+      mimeType: 'image/png',
+    );
+    await tester.pump();
+
+    expect(
+      find.text(
+        'This image is too large. Choose a smaller image and try again.',
+      ),
+      findsOneWidget,
+    );
+    expect(state.debugIsUploadingAvatar, isFalse);
+    expect(provider.savedAvatar, isNull);
+    expect(
+        provider.currentUser?.avatar, '/uploads/profiles/avatars/current.png');
   });
 
   testWidgets('missing wallet cover upload resets spinner and preview',

@@ -5,8 +5,14 @@ part of '../settings_screen.dart';
 // the State's _applyState shim.
 extension _SettingsScreenStatePart3 on _SettingsScreenState {
   // Save all settings
+  // Security fields (PIN requirement, biometrics, auto-lock) are not written
+  // from widget state: they are kept as stored and written only by their own
+  // change handlers, so a stale screen cannot undo a Security Hub change.
   Future<void> _saveAllSettings() async {
-    await SettingsService.saveSettings(_buildSettingsState());
+    final stored = await SettingsService.loadSettings();
+    await SettingsService.saveSettings(
+      SettingsService.withStoredSecurityFields(_buildSettingsState(), stored),
+    );
   }
 
   SettingsState _buildSettingsState() {

@@ -285,7 +285,10 @@ void main() {
         tester
             .widget<ProfileIdentityBlock>(find.byType(ProfileIdentityBlock))
             .showRoleBadges,
-        isTrue);
+        isFalse,
+        reason: 'the role is shown once, on the avatar, at every width');
+    expect(find.byKey(const ValueKey<String>('profile-avatar-role-badge')),
+        findsOneWidget);
   });
 
   testWidgets('an institution shows one role signal too', (tester) async {
@@ -302,14 +305,24 @@ void main() {
     expect(find.text('INSTITUTION PROFILE'), findsNothing);
   });
 
-  testWidgets('an account without a role badge keeps its role eyebrow', (
+  testWidgets('generic profile label is omitted when there is no role', (
     tester,
   ) async {
     await tester.pumpWidget(
-      _harness(_hero(isArtist: false, roleLabel: 'Profile')),
+      _harness(_hero(isArtist: false, roleLabel: null)),
     );
     await tester.pump();
-    expect(find.text('PROFILE'), findsOneWidget);
+    expect(find.text('PROFILE'), findsNothing);
+  });
+
+  testWidgets('an intentional custom identity label is preserved', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      _harness(_hero(isArtist: false, roleLabel: 'Collector')),
+    );
+    await tester.pump();
+    expect(find.text('COLLECTOR'), findsOneWidget);
   });
 
   testWidgets('the avatar has no extra frame or padding around it', (

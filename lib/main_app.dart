@@ -146,8 +146,9 @@ class _MainAppState extends State<MainApp> {
       // Replay only the exact public entry still owning the browser pathname.
       final entry = context.read<PublicEntityTakeoverProvider>().target;
       if (entry != null && entry.path == Uri.base.path) {
-        final target =
-            const ShareDeepLinkParser().parse(Uri.parse(entry.browserRoute));
+        final target = const ShareDeepLinkParser().parse(
+          Uri.parse(entry.browserRoute),
+        );
         if (target != null) {
           WidgetsBinding.instance.addPostFrameCallback((_) {
             if (!mounted || DesktopBreakpoints.isDesktop(context)) return;
@@ -233,7 +234,8 @@ class _MainAppState extends State<MainApp> {
       // startup.
       if (!_mountedTabs.contains(tabIndex)) {
         return SizedBox.shrink(
-            key: ValueKey<String>('tab-$tabIndex-placeholder'));
+          key: ValueKey<String>('tab-$tabIndex-placeholder'),
+        );
       }
 
       // IndexedStack keeps inactive tabs alive but does NOT mute their
@@ -251,8 +253,12 @@ class _MainAppState extends State<MainApp> {
   Widget _buildBottomNavigationBar() {
     final l10n = AppLocalizations.of(context)!;
     final currentIndex = context.watch<MainTabProvider>().currentIndex;
-    final isSignedIn =
-        context.select<ProfileProvider, bool>((p) => p.isSignedIn);
+    final unreadTotal = context.select<NotificationProvider, int>(
+      (provider) => provider.totalUnreadCount,
+    );
+    final isSignedIn = context.select<ProfileProvider, bool>(
+      (p) => p.isSignedIn,
+    );
     return KubusMobileNavigationBar(
       semanticLabel: l10n.mobileNavSemanticLabel,
       selectedIndex: currentIndex,
@@ -275,6 +281,10 @@ class _MainAppState extends State<MainApp> {
           icon: Icons.people_outline,
           selectedIcon: Icons.people,
           label: l10n.mobileNavCommunity,
+          badgeCount: unreadTotal,
+          badgeSemanticLabel: unreadTotal > 0
+              ? l10n.mobileNavCommunityUnreadSemantics(unreadTotal)
+              : null,
         ),
         KubusMobileNavigationDestination(
           key: const Key('mobile_nav_home'),
@@ -307,8 +317,10 @@ class _MainAppState extends State<MainApp> {
 
   void _syncTelemetryForIndex(int index) {
     if (DesktopBreakpoints.isDesktop(context)) return;
-    final profileProvider =
-        Provider.of<ProfileProvider>(context, listen: false);
+    final profileProvider = Provider.of<ProfileProvider>(
+      context,
+      listen: false,
+    );
 
     String name;
     String route;
@@ -350,23 +362,35 @@ class _MainAppState extends State<MainApp> {
   void _syncRefreshVisibility(int index) {
     if (DesktopBreakpoints.isDesktop(context)) return;
     try {
-      final refreshProvider =
-          Provider.of<AppRefreshProvider>(context, listen: false);
+      final refreshProvider = Provider.of<AppRefreshProvider>(
+        context,
+        listen: false,
+      );
       final chatProvider = Provider.of<ChatProvider>(context, listen: false);
-      final notificationProvider =
-          Provider.of<NotificationProvider>(context, listen: false);
-      final presenceProvider =
-          Provider.of<PresenceProvider>(context, listen: false);
-      final collabProvider =
-          Provider.of<CollabProvider>(context, listen: false);
+      final notificationProvider = Provider.of<NotificationProvider>(
+        context,
+        listen: false,
+      );
+      final presenceProvider = Provider.of<PresenceProvider>(
+        context,
+        listen: false,
+      );
+      final collabProvider = Provider.of<CollabProvider>(
+        context,
+        listen: false,
+      );
       final isCommunity = index == 2;
       final isProfile = index == 4;
 
       refreshProvider.setViewActive(
-          AppRefreshProvider.viewCommunity, isCommunity);
+        AppRefreshProvider.viewCommunity,
+        isCommunity,
+      );
       refreshProvider.setViewActive(AppRefreshProvider.viewChat, isCommunity);
       refreshProvider.setViewActive(
-          AppRefreshProvider.viewNotifications, isCommunity);
+        AppRefreshProvider.viewNotifications,
+        isCommunity,
+      );
       refreshProvider.setViewActive(AppRefreshProvider.viewProfile, isProfile);
       chatProvider.handleViewVisibilityChanged();
       notificationProvider.handleViewVisibilityChanged();

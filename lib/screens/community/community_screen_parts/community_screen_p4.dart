@@ -407,7 +407,7 @@ extension _CommunityScreenStatePart4 on _CommunityScreenState {
       if (walletAddress == null || walletAddress.isEmpty) {
         if (!mounted) return null;
         final l10n = AppLocalizations.of(context)!;
-        _showSnack(l10n.communityConnectWalletFirstToast);
+        _showSnack(l10n.communityPostingNeedsWalletToast);
         return null;
       }
       final api = BackendApiService();

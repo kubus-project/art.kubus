@@ -44,6 +44,13 @@ class _SendTokenScreenState extends State<SendTokenScreen>
   @override
   void initState() {
     super.initState();
+    // Wallet values sync when a wallet screen opens, not at app start.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      Provider.of<WalletProvider>(context, listen: false)
+          .ensureWalletData()
+          .ignore();
+    });
     _animationController = AnimationController(
       duration: const Duration(milliseconds: 300),
       vsync: this,

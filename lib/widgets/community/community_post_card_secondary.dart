@@ -54,13 +54,6 @@ class _RepostInnerCard extends StatelessWidget {
                     subtitleStyle: KubusTextStyles.navMetaLabel.copyWith(
                       color: scheme.onSurface.withValues(alpha: 0.6),
                     ),
-                    titleSuffix: CommunityAuthorRoleBadges(
-                      post: post,
-                      fontSize: 8,
-                      iconOnly: true,
-                      // ProfileIdentitySummary already adds spacing.
-                      spacing: 0,
-                    ),
                   ),
                 ),
                 Text(

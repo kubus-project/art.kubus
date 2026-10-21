@@ -420,7 +420,7 @@ class _SignInScreenState extends State<SignInScreen> {
       );
       final assertion = await getWalletBackupPasskeyAssertion(options);
       final result = await api.verifyPasskeyLogin(
-        responsePayload: assertion,
+        responsePayload: withoutPrfOutput(assertion),
       );
       if (!mounted) return;
       await _handleAuthSuccess(result, origin: AuthOrigin.passkey);

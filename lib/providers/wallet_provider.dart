@@ -194,6 +194,9 @@ class WalletProvider extends ChangeNotifier {
   );
   // Cached mnemonic import retry
   Timer? _importRetryTimer;
+  // Bumped whenever a scheduled retry is superseded, cancelled or succeeds,
+  // so a callback already past its timer cannot import after that.
+  int _importRetryGeneration = 0;
   int _importRetryAttempts = 0;
   static const int _maxImportRetryAttempts = 3;
   static const Duration _baseImportRetryDelay = Duration(seconds: 5);
@@ -347,6 +350,8 @@ class WalletProvider extends ChangeNotifier {
       return didAuthenticate
           ? BiometricAuthOutcome.success
           : BiometricAuthOutcome.cancelled;
+    } on LocalAuthException catch (e) {
+      return _outcomeForLocalAuthCode(e.code);
     } on PlatformException catch (e) {
       final code = e.code.toLowerCase();
       if (code.contains('notavailable') || code.contains('not_available')) {
@@ -387,6 +392,32 @@ class WalletProvider extends ChangeNotifier {
     }
   }
 
+  /// Maps local_auth 3.x exception codes onto [BiometricAuthOutcome].
+  static BiometricAuthOutcome _outcomeForLocalAuthCode(
+      LocalAuthExceptionCode code) {
+    switch (code) {
+      case LocalAuthExceptionCode.userCanceled:
+      case LocalAuthExceptionCode.systemCanceled:
+      case LocalAuthExceptionCode.timeout:
+        return BiometricAuthOutcome.cancelled;
+      case LocalAuthExceptionCode.noBiometricsEnrolled:
+      case LocalAuthExceptionCode.noBiometricHardware:
+      case LocalAuthExceptionCode.noCredentialsSet:
+        return BiometricAuthOutcome.notAvailable;
+      case LocalAuthExceptionCode.temporaryLockout:
+      case LocalAuthExceptionCode.biometricLockout:
+        return BiometricAuthOutcome.lockedOut;
+      case LocalAuthExceptionCode.userRequestedFallback:
+        return BiometricAuthOutcome.failed;
+      case LocalAuthExceptionCode.authInProgress:
+      case LocalAuthExceptionCode.uiUnavailable:
+      case LocalAuthExceptionCode.biometricHardwareTemporarilyUnavailable:
+      case LocalAuthExceptionCode.deviceError:
+      case LocalAuthExceptionCode.unknownError:
+        return BiometricAuthOutcome.error;
+    }
+  }
+
   Future<bool> authenticateWithBiometrics({String? localizedReason}) async {
     final outcome = await authenticateWithBiometricsDetailed(
         localizedReason: localizedReason);
@@ -407,6 +438,9 @@ class WalletProvider extends ChangeNotifier {
       await _pinAuth.clearPin();
     } catch (e) {
       _walletLog('failed to clear PIN: $e');
+      // The caller must know: reporting a cleared PIN that is still stored
+      // would leave the UI and the lock out of step.
+      rethrow;
     }
   }
 
@@ -417,6 +451,16 @@ class WalletProvider extends ChangeNotifier {
       return false;
     }
   }
+
+  /// Whether a PIN is stored, throwing when the store cannot be read. Security
+  /// decisions (replace, remove, gate a sensitive action) use this instead of
+  /// [hasPin], because "could not read" must never be treated as "no PIN".
+  Future<bool> hasPinOrThrow() => _pinAuth.hasPin();
+
+  /// Read-only check that the stored PIN hash is the one for [pin]. It is not
+  /// an attempt: it does not touch the failure counters or a running lockout.
+  /// Throws when the store cannot be read.
+  Future<bool> matchesStoredPin(String pin) => _pinAuth.matchesStoredPin(pin);
 
   Future<PinVerifyResult> verifyPinDetailed(String pin) async {
     try {
@@ -464,14 +508,37 @@ class WalletProvider extends ChangeNotifier {
 
   /// Reads the cached mnemonic without performing any local authentication.
   /// Callers must enforce their own security gate before calling this.
+  /// Returns null while a purge is pending. The phrase is then never revealed,
+  /// and the purge is retried here without throwing.
   Future<String?> readCachedMnemonic() async {
     try {
+      final prefs = await SharedPreferences.getInstance();
+      if (prefs.getBool(pendingMnemonicPurgeKey) == true) {
+        _walletLog('cached mnemonic read refused: purge pending');
+        final purged = await clearCachedMnemonic();
+        await _setPendingMnemonicPurge(!purged);
+        return null;
+      }
       return await _secureStorage
           .read(key: 'cached_mnemonic')
           .timeout(_secureStorageOpTimeout);
     } catch (e) {
       _walletLog('failed to read cached mnemonic: $e');
       return null;
+    }
+  }
+
+  /// True when a cached recovery phrase may still be in secure storage. A read
+  /// that fails or times out counts as "may still be present".
+  Future<bool> cachedMnemonicMayRemain() async {
+    try {
+      final phrase = await _secureStorage
+          .read(key: 'cached_mnemonic')
+          .timeout(_secureStorageOpTimeout);
+      return phrase != null;
+    } catch (e) {
+      _walletLog('failed to check cached mnemonic presence: $e');
+      return true;
     }
   }
 
@@ -487,27 +554,80 @@ class WalletProvider extends ChangeNotifier {
             value: DateTime.now().millisecondsSinceEpoch.toString(),
           )
           .timeout(_secureStorageOpTimeout);
+      // A newly cached phrase overwrites any phrase a pending purge targeted.
+      await _setPendingMnemonicPurge(false);
     } catch (e) {
       _walletLog('failed to cache mnemonic: $e');
     }
   }
 
-  Future<void> clearCachedMnemonic() async {
+  /// Deletes the cached recovery phrase and its timestamp. Returns true only
+  /// when both deletes completed and a read-back shows the phrase absent. One
+  /// retry is made after a failure. Callers that must not leave a phrase behind
+  /// persist a pending purge when this returns false.
+  Future<bool> clearCachedMnemonic() async {
+    // No phrase should be imported once it is being removed.
+    _cancelImportRetry();
+    for (var attempt = 1; attempt <= 2; attempt++) {
+      try {
+        // Bounded like every other secure-storage call: a hung platform call
+        // counts as a failed purge (the pending flag retries it at startup)
+        // instead of holding up logout or disconnect.
+        await _secureStorage
+            .delete(key: 'cached_mnemonic')
+            .timeout(_secureStorageOpTimeout);
+        await _secureStorage
+            .delete(key: 'cached_mnemonic_ts')
+            .timeout(_secureStorageOpTimeout);
+        final phrase = await _secureStorage
+            .read(key: 'cached_mnemonic')
+            .timeout(_secureStorageOpTimeout);
+        final ts = await _secureStorage
+            .read(key: 'cached_mnemonic_ts')
+            .timeout(_secureStorageOpTimeout);
+        if (phrase == null && ts == null) return true;
+        _walletLog(
+            'cached mnemonic still present after delete (attempt $attempt)');
+      } catch (e) {
+        _walletLog('failed to clear cached mnemonic (attempt $attempt): $e');
+      }
+    }
+    return false;
+  }
+
+  static const String pendingMnemonicPurgeKey = 'pending_mnemonic_purge';
+
+  /// Persists or clears the "purge the cached phrase at next startup" flag.
+  Future<void> _setPendingMnemonicPurge(bool pending) async {
     try {
-      await _secureStorage
-          .delete(key: 'cached_mnemonic')
-          .timeout(_secureStorageOpTimeout);
-      await _secureStorage
-          .delete(key: 'cached_mnemonic_ts')
-          .timeout(_secureStorageOpTimeout);
+      final prefs = await SharedPreferences.getInstance();
+      if (pending) {
+        await prefs.setBool(pendingMnemonicPurgeKey, true);
+      } else {
+        await prefs.remove(pendingMnemonicPurgeKey);
+      }
     } catch (e) {
-      _walletLog('failed to clear cached mnemonic: $e');
+      _walletLog('failed to update pending mnemonic purge flag: $e');
     }
   }
+
+  /// Test seam for the startup cached-wallet path.
+  @visibleForTesting
+  Future<void> loadCachedWalletForTesting() => _loadCachedWallet();
 
   Future<void> _loadCachedWallet() async {
     try {
       _walletLog('_loadCachedWallet: starting cached wallet check');
+      final prefs = await SharedPreferences.getInstance();
+      if (prefs.getBool(pendingMnemonicPurgeKey) == true) {
+        // A logout could not delete the phrase. Purge it now and never import it.
+        final purged = await clearCachedMnemonic();
+        await _setPendingMnemonicPurge(!purged);
+        _walletLog(purged
+            ? 'pending mnemonic purge completed; not importing'
+            : 'pending mnemonic purge still failing; not importing');
+        return;
+      }
       final mnemonic = await _secureStorage
           .read(key: 'cached_mnemonic')
           .timeout(_secureStorageOpTimeout);
@@ -651,9 +771,12 @@ class WalletProvider extends ChangeNotifier {
                 prefs.getString('wallet'))
             ?.trim();
         if (storedAddress != null && storedAddress.isNotEmpty) {
+          // Restore the remembered address only. Balances, tokens and history
+          // load when a wallet screen asks (ensureWalletData), so startup no
+          // longer waits on four Solana RPCs and a profile sync for an
+          // identity that cannot sign anything.
           _currentWalletAddress = storedAddress;
           _apiService.setPreferredWalletAddress(storedAddress);
-          await _loadData();
         }
       } catch (e) {
         _walletLog('fallback restore failed: $e');
@@ -674,14 +797,21 @@ class WalletProvider extends ChangeNotifier {
       _cachedDerivedCandidate = null;
       // reset retry state
       _importRetryAttempts = 0;
-      _importRetryTimer?.cancel();
-      _importRetryTimer = null;
+      _invalidateImportRetry();
       return true;
     } catch (e, stackTrace) {
       _walletLog('import attempt failed: $e\n$stackTrace');
       _importRetryAttempts += 1;
       return false;
     }
+  }
+
+  void _cancelImportRetry() => _invalidateImportRetry();
+
+  void _invalidateImportRetry() {
+    _importRetryGeneration++;
+    _importRetryTimer?.cancel();
+    _importRetryTimer = null;
   }
 
   void _scheduleImportRetry(String mnemonic) {
@@ -691,15 +821,26 @@ class WalletProvider extends ChangeNotifier {
         return;
       }
 
-      _importRetryTimer?.cancel();
+      _invalidateImportRetry();
+      final generation = _importRetryGeneration;
       final multiplier = _importRetryAttempts + 1;
       final delay =
           Duration(seconds: _baseImportRetryDelay.inSeconds * multiplier);
       _walletLog('scheduling mnemonic import retry in ${delay.inSeconds}s');
       _importRetryTimer = Timer(delay, () async {
         // Only retry if still have cached mnemonic and not imported yet
-        final cached = await _secureStorage.read(key: 'cached_mnemonic');
+        // Same gate as readCachedMnemonic: a pending purge yields null here too.
+        final cached = await readCachedMnemonic();
+        // The read is awaited, so a purge or a newer schedule may have started
+        // meanwhile. Drop the phrase unless this retry is still current and no
+        // purge is pending.
+        if (generation != _importRetryGeneration) return;
         if (cached == null) return;
+        final prefs = await SharedPreferences.getInstance();
+        if (generation != _importRetryGeneration ||
+            prefs.getBool(pendingMnemonicPurgeKey) == true) {
+          return;
+        }
         final ok = await _attemptImportFromCache(cached,
             derived: _cachedDerivedCandidate);
         if (!ok) {
@@ -1397,7 +1538,7 @@ class WalletProvider extends ChangeNotifier {
     final assertion = await getWalletBackupPasskeyAssertion(options);
     await _apiService.recovery.verifyPasskeyAuth(
       walletAddress: targetWallet,
-      responsePayload: assertion,
+      responsePayload: withoutPrfOutput(assertion),
     );
     await refreshEncryptedWalletBackupStatus(walletAddress: targetWallet);
     return true;
@@ -1458,7 +1599,7 @@ class WalletProvider extends ChangeNotifier {
       }
       final verifyResponse = await _apiService.recovery.verifyPasskeyRecover(
         walletAddress: targetWallet,
-        responsePayload: assertion.response!,
+        responsePayload: withoutPrfOutput(assertion.response!),
       );
 
       if (verifyResponse['verified'] != true) {
@@ -1592,7 +1733,7 @@ class WalletProvider extends ChangeNotifier {
     final verifyResponse = await _apiService.recovery.verifyPasskeyRegistration(
       walletAddress: targetWallet,
       nickname: nickname,
-      responsePayload: credential,
+      responsePayload: withoutPrfOutput(credential),
       encryptedWrappedRecoveryKey: wrapped.encryptedWrappedRecoveryKey,
       encryptedWrappedRecoveryKeyNonce:
           wrapped.encryptedWrappedRecoveryKeyNonce,
@@ -1998,7 +2139,56 @@ class WalletProvider extends ChangeNotifier {
     return handled;
   }
 
-  Future<void> _loadData() async {
+  /// Loads balances, tokens and history when a wallet-dependent screen opens.
+  ///
+  /// Startup restores the wallet identity without this network sync, so a
+  /// screen that shows wallet values asks for it here. A load of the same
+  /// wallet on the same network within [maxAge] is reused, and a load already
+  /// in flight is joined rather than repeated.
+  Future<void> ensureWalletData({
+    Duration maxAge = const Duration(minutes: 2),
+  }) {
+    final key = _walletDataKey;
+    if (key == null) return Future<void>.value();
+    final loadedAt = _walletDataLoadedAt;
+    if (_walletDataLoadedKey == key &&
+        loadedAt != null &&
+        DateTime.now().difference(loadedAt) < maxAge) {
+      return Future<void>.value();
+    }
+    return _loadData();
+  }
+
+  String? get _walletDataKey {
+    final address = (_currentWalletAddress ?? '').trim();
+    if (address.isEmpty) return null;
+    return '${_solanaWalletService.currentNetwork}|$address';
+  }
+
+  Future<void>? _walletDataLoad;
+  String? _walletDataLoadKey;
+  String? _walletDataLoadedKey;
+  DateTime? _walletDataLoadedAt;
+
+  Future<void> _loadData() {
+    // One balance/token/history sync per wallet and network at a time: the
+    // initializer, cached-wallet import and screens may all ask together.
+    final key = _walletDataKey ?? '';
+    final inFlight = _walletDataLoad;
+    if (inFlight != null && _walletDataLoadKey == key) return inFlight;
+    final load = _loadDataUncoalesced(key);
+    _walletDataLoad = load;
+    _walletDataLoadKey = key;
+    load.whenComplete(() {
+      if (identical(_walletDataLoad, load)) {
+        _walletDataLoad = null;
+        _walletDataLoadKey = null;
+      }
+    }).ignore();
+    return load;
+  }
+
+  Future<void> _loadDataUncoalesced(String key) async {
     _isLoading = true;
     _sessionPhase = WalletSessionPhase.restoring;
     notifyListeners();
@@ -2009,6 +2199,11 @@ class WalletProvider extends ChangeNotifier {
       _walletLog('_loadData: loading from blockchain');
       await _loadFromBlockchain();
       _clearLastError();
+      // _loadFromBlockchain reports failure by leaving no wallet.
+      if (key.isNotEmpty && _wallet != null) {
+        _walletDataLoadedKey = key;
+        _walletDataLoadedAt = DateTime.now();
+      }
     } catch (e) {
       _walletLog('error loading wallet data: $e');
       _setLastError(e);
@@ -4003,12 +4198,13 @@ class WalletProvider extends ChangeNotifier {
     _clearEncryptedWalletBackupState();
     // Clear cached mnemonic on explicit disconnect for security
     try {
-      await clearCachedMnemonic();
+      final purged = await clearCachedMnemonic();
+      // If the phrase could not be deleted, purge it at next startup instead.
+      await _setPendingMnemonicPurge(!purged);
     } catch (_) {}
     // Cancel any pending import retry timers
     try {
-      _importRetryTimer?.cancel();
-      _importRetryTimer = null;
+      _cancelImportRetry();
       _importRetryAttempts = 0;
     } catch (_) {}
 

@@ -19,11 +19,25 @@ import 'kubus_map_platform_backdrop_controller.dart';
 class KubusMapNativeBackdropChannel {
   const KubusMapNativeBackdropChannel._();
 
-  static const MethodChannel _channel =
-      MethodChannel('art.kubus/map_native_backdrop');
+  static const MethodChannel _channel = MethodChannel(
+    'art.kubus/map_native_backdrop',
+  );
 
   static bool? _supported;
   static Future<bool>? _probe;
+  static final ValueNotifier<bool?> _supportChanges = ValueNotifier<bool?>(
+    null,
+  );
+
+  /// Rebuild signal for map chrome whose blur decision depends on this probe.
+  static ValueListenable<bool?> get supportListenable => _supportChanges;
+
+  static void _setSupported(bool supported) {
+    _supported = supported;
+    if (_supportChanges.value != supported) {
+      _supportChanges.value = supported;
+    }
+  }
 
   /// Cached, synchronous support flag.
   ///
@@ -42,15 +56,14 @@ class KubusMapNativeBackdropChannel {
   /// One-shot native capability probe (memoized).
   static Future<bool> probeSupport() {
     if (kIsWeb || defaultTargetPlatform != TargetPlatform.iOS) {
-      _supported = false;
+      _setSupported(false);
       return Future<bool>.value(false);
     }
-    return _probe ??=
-        _channel.invokeMethod<bool>('isSupported').then((value) {
-      _supported = value ?? false;
+    return _probe ??= _channel.invokeMethod<bool>('isSupported').then((value) {
+      _setSupported(value ?? false);
       return _supported!;
     }).catchError((Object _) {
-      _supported = false;
+      _setSupported(false);
       return false;
     });
   }
@@ -88,7 +101,7 @@ class KubusMapNativeBackdropChannel {
     } catch (_) {
       // Any platform failure demotes the host: the next blur decision falls
       // back to the enriched tint sheen instead of a host that does nothing.
-      _supported = false;
+      _setSupported(false);
     }
   }
 
@@ -98,13 +111,16 @@ class KubusMapNativeBackdropChannel {
     try {
       await _channel.invokeMethod<void>('clearRegions');
     } catch (_) {
-      _supported = false;
+      _setSupported(false);
     }
   }
 
   @visibleForTesting
   static void debugReset({bool? supportedOverride}) {
     _supported = supportedOverride;
+    if (_supportChanges.value != supportedOverride) {
+      _supportChanges.value = supportedOverride;
+    }
     _probe = null;
   }
 }

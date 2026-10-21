@@ -151,6 +151,18 @@ class _GovernanceWorkspaceState extends State<GovernanceWorkspace>
     // Initialize pages list but don't build widgets yet
     _checkOnboarding();
     _animationController.forward();
+    // Voting power reads the wallet's KUB8 balance.
+    // Wallet values sync when a wallet screen opens, not at app start.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      Provider.of<WalletProvider>(context, listen: false)
+          .ensureWalletData()
+          .ignore();
+      // Treasury on-chain balance is a Solana read; only governance needs it.
+      Provider.of<DAOProvider>(context, listen: false)
+          .ensureTreasuryOnChainBalance()
+          .ignore();
+    });
 
     final notifier = widget.selectedIndexNotifier;
     if (notifier != null) {

@@ -47,6 +47,10 @@ class _WalletHomeState extends State<WalletHome> {
         context,
         listen: false,
       ).trackScreenVisit('wallet');
+      // Wallet values sync when a wallet screen opens, not at app start.
+      Provider.of<WalletProvider>(context, listen: false)
+          .ensureWalletData()
+          .ignore();
     });
   }
 

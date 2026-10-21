@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 
-import '../../l10n/app_localizations.dart';
 import '../../utils/design_tokens.dart';
 import '../../utils/kubus_color_roles.dart';
 import '../../utils/media_url_resolver.dart';
@@ -8,6 +7,7 @@ import '../avatar_widget.dart';
 import '../common/kubus_cached_image.dart';
 import '../detail/profile_identity_block.dart';
 import '../glass_components.dart';
+import '../identity/kubus_identity_avatar.dart';
 import 'profile_cover_field.dart';
 
 /// The canonical profile hero: cover, overlapping avatar, shared identity block
@@ -159,8 +159,10 @@ class ProfileIdentityHero extends StatelessWidget {
           accent: accent,
           displayName: displayName,
           handle: handle,
-          isVerified: !mobile && isVerified,
-          showRoleBadges: !mobile,
+          // Roles and verification live on the avatar for every width
+          // (KubusAvatarRoleBadge); the name carries no second mark.
+          isVerified: false,
+          showRoleBadges: false,
           isArtist: isArtist,
           isInstitution: isInstitution,
           roleLabel: isArtist || isInstitution ? null : roleLabel,
@@ -241,13 +243,14 @@ class ProfileIdentityHero extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   ProfileAvatarMount(
-                      radius: avatarRadius,
-                      isVerified: mobile && isVerified,
-                      isArtist: mobile && isArtist,
-                      isInstitution: mobile && isInstitution,
-                      editLabel: onAvatarEdit == null ? null : avatarEditLabel,
-                      onEdit: onAvatarEdit,
-                      child: avatar),
+                    radius: avatarRadius,
+                    isVerified: isVerified,
+                    isArtist: isArtist,
+                    isInstitution: isInstitution,
+                    editLabel: onAvatarEdit == null ? null : avatarEditLabel,
+                    onEdit: onAvatarEdit,
+                    child: avatar,
+                  ),
                   const SizedBox(width: KubusSpacing.md),
                   // Content stays as wide as its identity, not as wide as the
                   // entire row. The plate stays anchored to the cover/avatar.
@@ -282,9 +285,9 @@ class ProfileIdentityHero extends StatelessWidget {
                     alignment: AlignmentDirectional.centerStart,
                     child: ProfileAvatarMount(
                       radius: avatarRadius,
-                      isVerified: mobile && isVerified,
-                      isArtist: mobile && isArtist,
-                      isInstitution: mobile && isInstitution,
+                      isVerified: isVerified,
+                      isArtist: isArtist,
+                      isInstitution: isInstitution,
                       editLabel: onAvatarEdit == null ? null : avatarEditLabel,
                       onEdit: onAvatarEdit,
                       child: avatar,
@@ -363,29 +366,6 @@ class ProfileAvatarMount extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final roles = KubusColorRoles.of(context);
-    final l10n = AppLocalizations.of(context)!;
-    final hasRole = isArtist || isInstitution;
-    final roleColor = isInstitution
-        ? roles.institutionBadgeAccent
-        : isArtist
-            ? roles.artistBadgeAccent
-            : roles.success;
-    final roleIcon = isInstitution
-        ? Icons.account_balance_rounded
-        : isArtist
-            ? Icons.brush_rounded
-            : Icons.verified_rounded;
-    final roleLabels = <String>[
-      if (isArtist) l10n.badgeArtistLabel,
-      if (isInstitution) l10n.badgeInstitutionLabel,
-    ];
-    final badgeLabel = [
-      ...roleLabels,
-      if (isVerified) l10n.peopleVerifiedLabel,
-    ].where((label) => label.isNotEmpty).join(', ');
-    final badgeForeground = roleColor.computeLuminance() > 0.179
-        ? KubusColorRoles.light.foreground
-        : KubusColorRoles.dark.foreground;
     Widget avatar = DecoratedBox(
       key: const ValueKey<String>('profile-hero-avatar-mount'),
       decoration: BoxDecoration(
@@ -404,72 +384,16 @@ class ProfileAvatarMount extends StatelessWidget {
         clipBehavior: Clip.none,
         children: [
           child,
-          if (isVerified || hasRole)
-            Positioned(
-              right: 0,
-              bottom: 0,
-              child: Semantics(
-                label: badgeLabel,
-                child: ExcludeSemantics(
-                  child: DecoratedBox(
-                    key: const ValueKey<String>('profile-avatar-role-badge'),
-                    decoration: BoxDecoration(
-                      color: roleColor,
-                      borderRadius: BorderRadius.circular(
-                        AvatarWidget.shapeRadiusFor(
-                            radius: KubusHeaderMetrics.actionIcon / 2 +
-                                KubusSpacing.xs),
-                      ),
-                    ),
-                    child: SizedBox(
-                      width: isArtist && isInstitution ? 28 : 20,
-                      height: 20,
-                      child: Stack(
-                        clipBehavior: Clip.none,
-                        children: [
-                          Center(
-                            child: isArtist && isInstitution
-                                ? Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                        Icon(Icons.brush_rounded,
-                                            color: badgeForeground, size: 12),
-                                        Icon(Icons.account_balance_rounded,
-                                            color: badgeForeground, size: 12),
-                                      ])
-                                : Icon(
-                                    roleIcon,
-                                    color: badgeForeground,
-                                    size: 14,
-                                  ),
-                          ),
-                          if (isVerified && hasRole)
-                            Positioned(
-                              top: -KubusSpacing.xxs,
-                              right: -KubusSpacing.xxs,
-                              child: DecoratedBox(
-                                decoration: BoxDecoration(
-                                  color: roles.success,
-                                  shape: BoxShape.circle,
-                                  border: Border.all(
-                                    color: badgeForeground,
-                                    width: KubusSizes.hairline,
-                                  ),
-                                ),
-                                child: Icon(
-                                  Icons.check_rounded,
-                                  size: KubusSpacing.sm,
-                                  color: roles.onActive,
-                                ),
-                              ),
-                            ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-              ),
+          Positioned(
+            right: 0,
+            bottom: 0,
+            child: KubusAvatarRoleBadge(
+              avatarRadius: radius,
+              isArtist: isArtist,
+              isInstitution: isInstitution,
+              isVerified: isVerified,
             ),
+          ),
         ],
       ),
     );

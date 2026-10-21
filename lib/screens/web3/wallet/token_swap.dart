@@ -52,6 +52,13 @@ class _TokenSwapState extends State<TokenSwap> {
     if (AppConfig.isFeatureEnabled('tokenSwap')) {
       _fromController.addListener(_onAmountChanged);
     }
+    // Wallet values sync when a wallet screen opens, not at app start.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      Provider.of<WalletProvider>(context, listen: false)
+          .ensureWalletData()
+          .ignore();
+    });
   }
 
   @override

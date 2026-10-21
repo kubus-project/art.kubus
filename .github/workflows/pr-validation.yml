@@ -3,6 +3,10 @@ name: Pull request validation
 on:
   pull_request:
     branches: [dev, master]
+    # ready_for_review is what upgrades a draft PR from the draft tier to the full tier on the
+    # same head. converted_to_draft is deliberately absent: a draft cannot merge, and returning
+    # to ready fires ready_for_review again.
+    types: [opened, synchronize, reopened, ready_for_review]
   workflow_dispatch:
 
 permissions:
@@ -38,7 +42,13 @@ jobs:
     name: Resolve affected CI surfaces
     runs-on: ubuntu-24.04
     timeout-minutes: 5
+    # Job-level permissions replace the workflow default: tier resolution reads the PR's
+    # current draft state through the API.
+    permissions:
+      contents: read
+      pull-requests: read
     outputs:
+      tier: ${{ steps.tier.outputs.tier }}
       full: ${{ steps.classify.outputs.full }}
       frontend: ${{ steps.classify.outputs.frontend }}
       web: ${{ steps.classify.outputs.web }}
@@ -53,6 +63,16 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v4
         with: { fetch-depth: 0, submodules: false }
+      - name: Resolve validation tier (draft or full)
+        id: tier
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BASE_REF: ${{ github.base_ref }}
+          PAYLOAD_DRAFT: ${{ github.event.pull_request.draft }}
+          REPOSITORY: ${{ github.repository }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          GH_TOKEN: ${{ github.token }}
+        run: node scripts/ci/pr_validation_tier.mjs
       - name: Classify changed paths
         id: classify
         shell: bash
@@ -90,6 +110,7 @@ jobs:
           npm run verify:toolchain:node
           npm run verify:architecture
           node --test scripts/ci/workflow_contracts.test.mjs
+          node --test scripts/qa/staging/isolation.test.mjs
           node scripts/ci/backend_gitlink_contract.mjs
       - name: Validate deployment contracts locally
         if: ${{ needs.changes.outputs.full == 'true' || needs.changes.outputs.deployment == 'true' }}
@@ -187,6 +208,7 @@ jobs:
           set -euo pipefail
           if [ "$RELEASE_CANDIDATE" = true ]; then flutter test --coverage; else flutter test; fi
       - name: PRODUCT motion acceptance (real browser pointer)
+        if: ${{ needs.changes.outputs.tier == 'full' }}
         # Measures what is painted, not what is built: lift, continuous float,
         # accent shadow and return to rest for every tile layout, in Chromium
         # and Firefox, with and without prefers-reduced-motion.
@@ -212,6 +234,7 @@ jobs:
           if-no-files-found: ignore
           retention-days: 3
       - name: Community feature flag contracts in both configurations
+        if: ${{ needs.changes.outputs.tier == 'full' }}
         run: |
           node --test scripts/prepare_public_build_config.test.mjs scripts/verify_community_backend_contract.test.mjs
           flutter test --dart-define=COMMUNITY_MULTI_MEDIA_ENABLED=true test/community test/widgets/community
@@ -230,9 +253,10 @@ jobs:
     needs: [changes, guardrails]
     if: >-
       ${{
-        needs.changes.outputs.full == 'true' ||
+        needs.changes.outputs.tier == 'full' &&
+        (needs.changes.outputs.full == 'true' ||
         needs.changes.outputs.frontend == 'true' ||
-        needs.changes.outputs.web == 'true'
+        needs.changes.outputs.web == 'true')
       }}
     uses: ./.github/workflows/web-artifact.yml
     with:
@@ -266,7 +290,7 @@ jobs:
   android:
     name: Android release compile without signing
     needs: [changes, guardrails]
-    if: ${{ needs.changes.outputs.full == 'true' || needs.changes.outputs.android == 'true' }}
+    if: ${{ needs.changes.outputs.tier == 'full' && (needs.changes.outputs.full == 'true' || needs.changes.outputs.android == 'true') }}
     runs-on: ubuntu-24.04
     timeout-minutes: 45
     env:
@@ -350,7 +374,7 @@ jobs:
   ios:
     name: iOS release compile without codesigning
     needs: [changes, guardrails]
-    if: ${{ needs.changes.outputs.full == 'true' || needs.changes.outputs.ios == 'true' }}
+    if: ${{ needs.changes.outputs.tier == 'full' && (needs.changes.outputs.full == 'true' || needs.changes.outputs.ios == 'true') }}
     runs-on: macos-15
     timeout-minutes: 45
     steps:
@@ -396,7 +420,13 @@ jobs:
         run: docker rm -f kubus-web
 
   required:
-    name: PR validation required
+    # The required context is reserved for full-tier results. A draft-tier run reports under a
+    # different, non-required context, so a green draft run can never satisfy branch protection,
+    # not even during the seconds before a ready_for_review run registers its own check. Only an
+    # explicit 'draft' tier selects the draft name; a missing or unknown tier keeps the required
+    # name and fails inside the aggregator (fail closed). Keep both names in sync with
+    # REQUIRED_CHECK_CONTEXT / DRAFT_CHECK_CONTEXT in scripts/ci/pr_validation_tier.mjs.
+    name: ${{ needs.changes.outputs.tier == 'draft' && 'PR validation (draft tier, not merge evidence)' || 'PR validation required' }}
     needs:
       - source_policy
       - changes
@@ -411,11 +441,26 @@ jobs:
     if: ${{ always() }}
     runs-on: ubuntu-24.04
     timeout-minutes: 3
+    # Re-reads the PR's live draft state so a draft-tier run that finishes after the PR became
+    # ready fails instead of reporting success.
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      tier: ${{ steps.aggregate.outputs.tier }}
+      scope: ${{ steps.aggregate.outputs.scope }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v4
         with: { submodules: false }
       - name: Require success or legitimate skip from every declared job
+        id: aggregate
         env:
           NEEDS_JSON: ${{ toJSON(needs) }}
+          TIER: ${{ needs.changes.outputs.tier }}
+          FULL_RUN: ${{ needs.changes.outputs.full }}
+          BASE_REF: ${{ github.base_ref }}
+          REPOSITORY: ${{ github.repository }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          GH_TOKEN: ${{ github.token }}
           EXPECTED_JOBS: source_policy,changes,guardrails,documentation,flutter_quality,web_artifact,backend_contract,android,ios,web_routing
         run: node scripts/ci/validate_job_results.mjs

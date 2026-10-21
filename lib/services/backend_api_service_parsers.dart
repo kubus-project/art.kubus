@@ -14,6 +14,7 @@ class FollowMutationRecord {
     this.message,
     this.success,
     this.fromFallback = false,
+    this.pending = false,
   });
 
   final bool isFollowing;
@@ -28,6 +29,7 @@ class FollowMutationRecord {
   final String? message;
   final bool? success;
   final bool fromFallback;
+  final bool pending;
 
   bool get hasCanonicalCounters =>
       followersCount != null ||
@@ -51,6 +53,7 @@ class FollowMutationRecord {
       isFollowing: isFollowing,
       targetWallet: normalizedTarget,
       fromFallback: true,
+      pending: true,
     );
   }
 
@@ -263,6 +266,7 @@ CommunityLikeUser _backendApiCommunityLikeUserFromBackendJson(
     username: username,
     avatarUrl: MediaUrlResolver.resolve(avatarCandidate),
     likedAt: likedAt,
+    roles: ProfileIdentityRoles.fromProfileMap(json),
   );
 }
 
@@ -359,38 +363,8 @@ CommunityPost _backendApiCommunityPostFromBackendJson(
   final identity = rawIdentity.copyWith(
     avatarUrl: MediaUrlResolver.resolve(rawIdentity.avatarUrl),
   );
-  final rolesRaw = normalizedAuthor['roles'];
-  final roles = rolesRaw is Map
-      ? Map<String, dynamic>.from(rolesRaw)
-      : const <String, dynamic>{};
-  bool authorIsArtistFlag = communityBool(
-    roles['artist'] ??
-        normalizedAuthor['isArtist'] ??
-        normalizedAuthor['is_artist'] ??
-        json['authorIsArtist'] ??
-        json['author_is_artist'],
-  );
-  bool authorIsInstitutionFlag = communityBool(
-    roles['institution'] ??
-        normalizedAuthor['isInstitution'] ??
-        normalizedAuthor['is_institution'] ??
-        json['authorIsInstitution'] ??
-        json['author_is_institution'],
-  );
-  final roleHint = (normalizedAuthor['role'] ??
-          normalizedAuthor['type'] ??
-          json['authorRole'] ??
-          '')
-      .toString()
-      .toLowerCase();
-  if (roleHint.contains('institution') ||
-      roleHint.contains('museum') ||
-      roleHint.contains('gallery')) {
-    authorIsInstitutionFlag = true;
-  }
-  if (roleHint.contains('artist') || roleHint.contains('creator')) {
-    authorIsArtistFlag = true;
-  }
+  final authorRoles =
+      ProfileIdentityRoles.fromAuthorPayload(normalizedAuthor, envelope: json);
 
   final dynamic mediaPayload = json['mediaUrls'] ?? json['media_urls'];
   final List<String> mediaUrls = mediaPayload is List
@@ -647,8 +621,8 @@ CommunityPost _backendApiCommunityPostFromBackendJson(
     isFollowing: communityBool(
       json['isFollowing'] ?? json['is_following'],
     ),
-    authorIsArtist: authorIsArtistFlag,
-    authorIsInstitution: authorIsInstitutionFlag,
+    authorIsArtist: authorRoles.isArtist,
+    authorIsInstitution: authorRoles.isInstitution,
     promotion: PromotionMetadata.readFrom(json),
     feedPin: CommunityFeedPinMetadata.fromJson(
       json['feedPin'] is Map<String, dynamic>

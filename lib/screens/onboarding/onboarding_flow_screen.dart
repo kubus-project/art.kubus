@@ -2255,8 +2255,9 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
 
     final profileProvider =
         Provider.of<ProfileProvider>(context, listen: false);
+    // Any signed-in account may set its avatar; the wallet is optional.
+    if (profileProvider.currentUser == null) return null;
     final wallet = (profileProvider.currentUser?.walletAddress ?? '').trim();
-    if (wallet.isEmpty) return null;
 
     try {
       final uploadedUrl = await profileProvider.uploadAvatarBytes(
@@ -2268,10 +2269,13 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
       final resolvedUrl = uploadedUrl.trim();
       if (resolvedUrl.isEmpty) return null;
 
-      await profileProvider.saveProfile(
+      final saved = await profileProvider.saveProfile(
         walletAddress: wallet,
         avatar: resolvedUrl,
       );
+      // saveProfile reports failure by returning false; keep the staged
+      // avatar so it can be retried.
+      if (!saved) return null;
 
       _localProfileDraft = <String, String>{
         ..._localProfileDraft,

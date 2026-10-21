@@ -2,7 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/foundation.dart' show kIsWeb, visibleForTesting;
 import 'notification_helper.dart';
 import 'notification_show_helper.dart' as webshow;
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
@@ -28,6 +28,7 @@ class PushNotificationService {
   bool _permissionGranted = false;
   bool _permissionRequestInProgress = false;
   Completer<void>? _permissionRequestCompleter;
+  String? _pendingLaunchTapPayload;
 
   AppLocalizations get _l10n {
     final languageCode =
@@ -47,6 +48,7 @@ class PushNotificationService {
   void addOnNotificationTapListener(Function(String) listener) {
     if (_notificationTapListeners.contains(listener)) return;
     _notificationTapListeners.add(listener);
+    _dispatchPendingLaunchTapIfReady();
   }
 
   void removeOnNotificationTapListener(Function(String) listener) {
@@ -54,13 +56,15 @@ class PushNotificationService {
   }
 
   void addOnNotificationReceivedListener(
-      Function(String, Map<String, dynamic>) listener) {
+    Function(String, Map<String, dynamic>) listener,
+  ) {
     if (_notificationReceivedListeners.contains(listener)) return;
     _notificationReceivedListeners.add(listener);
   }
 
   void removeOnNotificationReceivedListener(
-      Function(String, Map<String, dynamic>) listener) {
+    Function(String, Map<String, dynamic>) listener,
+  ) {
     _notificationReceivedListeners.remove(listener);
   }
 
@@ -69,7 +73,7 @@ class PushNotificationService {
     if (_initialized) return;
 
     const AndroidInitializationSettings initializationSettingsAndroid =
-        AndroidInitializationSettings('@mipmap/ic_launcher');
+        AndroidInitializationSettings('@drawable/ic_notification');
 
     const DarwinInitializationSettings initializationSettingsIOS =
         DarwinInitializationSettings(
@@ -89,6 +93,22 @@ class PushNotificationService {
       onDidReceiveNotificationResponse: _onNotificationTapped,
     );
 
+    try {
+      final launchDetails = await _flutterLocalNotificationsPlugin
+          .getNotificationAppLaunchDetails();
+      final payload = launchDetails?.notificationResponse?.payload;
+      if (launchDetails?.didNotificationLaunchApp == true &&
+          payload != null &&
+          payload.trim().isNotEmpty) {
+        _pendingLaunchTapPayload = payload;
+        _dispatchPendingLaunchTapIfReady();
+      }
+    } catch (e) {
+      debugPrint(
+        'PushNotificationService: launch notification lookup failed: $e',
+      );
+    }
+
     _initialized = true;
     await _checkPermission();
     debugPrint('PushNotificationService: Initialized');
@@ -104,7 +124,9 @@ class PushNotificationService {
       // instead of plugin/shared pref state.
       _permissionGranted = await isWebNotificationPermissionGranted();
       await prefs.setBool(
-          'notification_permission_granted', _permissionGranted);
+        'notification_permission_granted',
+        _permissionGranted,
+      );
       return _permissionGranted;
     }
 
@@ -116,11 +138,14 @@ class PushNotificationService {
       final permissionStatus = await Permission.notification.status;
       _permissionGranted = permissionStatus.isGranted;
       await prefs.setBool(
-          'notification_permission_granted', _permissionGranted);
+        'notification_permission_granted',
+        _permissionGranted,
+      );
       return _permissionGranted;
     } catch (e) {
       debugPrint(
-          'PushNotificationService: Runtime permission check failed: $e');
+        'PushNotificationService: Runtime permission check failed: $e',
+      );
     }
 
     _permissionGranted =
@@ -161,9 +186,12 @@ class PushNotificationService {
         _permissionGranted = granted;
         final prefs = await SharedPreferences.getInstance();
         await prefs.setBool(
-            'notification_permission_granted', _permissionGranted);
+          'notification_permission_granted',
+          _permissionGranted,
+        );
         debugPrint(
-            'PushNotificationService (web): Permission granted: $_permissionGranted');
+          'PushNotificationService (web): Permission granted: $_permissionGranted',
+        );
         return _permissionGranted;
       }
 
@@ -173,11 +201,7 @@ class PushNotificationService {
       final bool? granted = await _flutterLocalNotificationsPlugin
           .resolvePlatformSpecificImplementation<
               IOSFlutterLocalNotificationsPlugin>()
-          ?.requestPermissions(
-            alert: true,
-            badge: true,
-            sound: true,
-          );
+          ?.requestPermissions(alert: true, badge: true, sound: true);
 
       // Request permission on Android 13+
       final bool? grantedAndroid = await _flutterLocalNotificationsPlugin
@@ -198,10 +222,13 @@ class PushNotificationService {
       // Store permission status
       final prefs = await SharedPreferences.getInstance();
       await prefs.setBool(
-          'notification_permission_granted', _permissionGranted);
+        'notification_permission_granted',
+        _permissionGranted,
+      );
 
       debugPrint(
-          'PushNotificationService: Permission granted: $_permissionGranted');
+        'PushNotificationService: Permission granted: $_permissionGranted',
+      );
       return _permissionGranted;
     } catch (e) {
       debugPrint('PushNotificationService requestPermission failed: $e');
@@ -220,23 +247,15 @@ class PushNotificationService {
       try {
         final data = jsonDecode(payload) as Map<String, dynamic>;
         final type = data['type'] as String?;
-        onNotificationTap?.call(payload);
-
-        for (final listener
-            in List<Function(String)>.from(_notificationTapListeners)) {
-          try {
-            listener(payload);
-          } catch (_) {
-            // Ignore listener errors.
-          }
-        }
+        _dispatchNotificationTap(payload);
 
         if (type != null) {
           onNotificationReceived?.call(type, data);
 
           for (final listener
               in List<Function(String, Map<String, dynamic>)>.from(
-                  _notificationReceivedListeners)) {
+            _notificationReceivedListeners,
+          )) {
             try {
               listener(type, data);
             } catch (_) {
@@ -246,6 +265,34 @@ class PushNotificationService {
         }
       } catch (e) {
         debugPrint('Error parsing notification payload: $e');
+      }
+    }
+  }
+
+  void _dispatchPendingLaunchTapIfReady() {
+    final payload = _pendingLaunchTapPayload;
+    if (payload == null || _notificationTapListeners.isEmpty) return;
+    _pendingLaunchTapPayload = null;
+    scheduleMicrotask(() => _dispatchNotificationTap(payload));
+  }
+
+  @visibleForTesting
+  void queueLaunchTapForTesting(String payload) {
+    _pendingLaunchTapPayload = payload;
+    _dispatchPendingLaunchTapIfReady();
+  }
+
+  void _dispatchNotificationTap(String payload) {
+    try {
+      onNotificationTap?.call(payload);
+    } catch (_) {}
+    for (final listener in List<Function(String)>.from(
+      _notificationTapListeners,
+    )) {
+      try {
+        listener(payload);
+      } catch (_) {
+        // Ignore listener errors.
       }
     }
   }
@@ -263,14 +310,18 @@ class PushNotificationService {
           'markerId': marker.id,
           'artworkId': marker.artworkId,
           'distance': distance,
-          'actionUrl': 'app://artwork/${marker.artworkId}'
+          'actionUrl': 'app://artwork/${marker.artworkId}',
         };
-        await webshow.showNotification('AR Artwork Nearby! 🎨',
-            '${marker.name} is ${distance.round()}m away', mapData);
+        await webshow.showNotification(
+          'AR Artwork Nearby! 🎨',
+          '${marker.name} is ${distance.round()}m away',
+          mapData,
+        );
         return;
       } catch (e) {
         debugPrint(
-            'PushNotificationService (web) showARProximityNotification failed: $e');
+          'PushNotificationService (web) showARProximityNotification failed: $e',
+        );
       }
     }
 
@@ -282,7 +333,7 @@ class PushNotificationService {
       importance: Importance.high,
       priority: Priority.high,
       showWhen: true,
-      icon: '@mipmap/ic_launcher',
+      icon: '@drawable/ic_notification',
       enableVibration: true,
       playSound: true,
     );
@@ -332,7 +383,7 @@ class PushNotificationService {
       importance: Importance.defaultImportance,
       priority: Priority.defaultPriority,
       showWhen: true,
-      icon: '@mipmap/ic_launcher',
+      icon: '@drawable/ic_notification',
     );
 
     const DarwinNotificationDetails iosDetails = DarwinNotificationDetails(
@@ -360,16 +411,18 @@ class PushNotificationService {
           'authorName': authorName,
           'content': content,
           if (imageUrl != null) 'imageUrl': imageUrl,
-          'actionUrl': 'app://posts/$postId'
+          'actionUrl': 'app://posts/$postId',
         };
         await webshow.showNotification(
-            'New post from $authorName',
-            content.length > 60 ? '${content.substring(0, 60)}...' : content,
-            mapData);
+          'New post from $authorName',
+          content.length > 60 ? '${content.substring(0, 60)}...' : content,
+          mapData,
+        );
         return;
       } catch (e) {
         debugPrint(
-            'PushNotificationService (web) showCommunityNotification failed: $e');
+          'PushNotificationService (web) showCommunityNotification failed: $e',
+        );
       }
     }
 
@@ -377,6 +430,75 @@ class PushNotificationService {
       id: postId.hashCode,
       title: 'New post from $authorName',
       body: content.length > 60 ? '${content.substring(0, 60)}...' : content,
+      notificationDetails: details,
+      payload: payload,
+    );
+  }
+
+  /// Show one localized direct-message alert. The stable message event ID is
+  /// used as the platform notification ID so duplicate socket aliases replace
+  /// the same alert instead of creating duplicates.
+  Future<void> showDirectMessageNotification({
+    required String eventId,
+    required String conversationId,
+    required String senderName,
+    required String content,
+  }) async {
+    if (!_permissionGranted) return;
+    final l10n = _l10n;
+    final safeSender = senderName.trim().isEmpty
+        ? l10n.notificationDirectMessageFallbackSender
+        : senderName.trim();
+    final preview = content.trim().isEmpty
+        ? l10n.notificationDirectMessageEmptyBody
+        : content.trim().length > 160
+            ? '${content.trim().substring(0, 157)}…'
+            : content.trim();
+    final actionUrl = 'app://messages/${Uri.encodeComponent(conversationId)}';
+    final payload = jsonEncode(<String, Object?>{
+      'type': 'direct_message',
+      'eventId': eventId,
+      'conversationId': conversationId,
+      'actionUrl': actionUrl,
+    });
+    final title = l10n.notificationDirectMessageTitle(safeSender);
+
+    if (kIsWeb) {
+      try {
+        await webshow.showNotification(title, preview, <String, dynamic>{
+          'type': 'direct_message',
+          'eventId': eventId,
+          'conversationId': conversationId,
+          'actionUrl': actionUrl,
+        });
+        return;
+      } catch (e) {
+        debugPrint(
+          'PushNotificationService (web) direct-message notification failed: $e',
+        );
+      }
+    }
+
+    final details = NotificationDetails(
+      android: AndroidNotificationDetails(
+        'messages',
+        l10n.notificationMessagesChannelName,
+        channelDescription: l10n.notificationMessagesChannelName,
+        importance: Importance.defaultImportance,
+        priority: Priority.defaultPriority,
+        showWhen: true,
+        icon: '@drawable/ic_notification',
+      ),
+      iOS: const DarwinNotificationDetails(
+        presentAlert: true,
+        presentBadge: true,
+        presentSound: true,
+      ),
+    );
+    await _flutterLocalNotificationsPlugin.show(
+      id: eventId.hashCode,
+      title: title,
+      body: preview,
       notificationDetails: details,
       payload: payload,
     );
@@ -400,14 +522,18 @@ class PushNotificationService {
           'artworkId': artworkId,
           'title': title,
           'artist': artist,
-          'actionUrl': 'app://artwork/$artworkId'
+          'actionUrl': 'app://artwork/$artworkId',
         };
         await webshow.showNotification(
-            l10n.notificationArtworkDiscoveredTitle, body, mapData);
+          l10n.notificationArtworkDiscoveredTitle,
+          body,
+          mapData,
+        );
         return;
       } catch (e) {
         debugPrint(
-            'PushNotificationService (web) showArtworkDiscoveryNotification failed: $e');
+          'PushNotificationService (web) showArtworkDiscoveryNotification failed: $e',
+        );
       }
     }
 
@@ -419,7 +545,7 @@ class PushNotificationService {
       importance: Importance.high,
       priority: Priority.high,
       showWhen: true,
-      icon: '@mipmap/ic_launcher',
+      icon: '@drawable/ic_notification',
       enableVibration: true,
       playSound: true,
     );
@@ -473,13 +599,14 @@ class PushNotificationService {
           if (hasKub8Unit) 'amount': amount,
           if (hasKub8Unit) 'currency': 'KUB8',
           'reason': reason,
-          'actionUrl': 'app://rewards'
+          'actionUrl': 'app://rewards',
         };
         await webshow.showNotification(title, body, mapData);
         return;
       } catch (e) {
         debugPrint(
-            'PushNotificationService (web) showRewardNotification failed: $e');
+          'PushNotificationService (web) showRewardNotification failed: $e',
+        );
       }
     }
 
@@ -491,7 +618,7 @@ class PushNotificationService {
       importance: Importance.high,
       priority: Priority.high,
       showWhen: true,
-      icon: '@mipmap/ic_launcher',
+      icon: '@drawable/ic_notification',
       enableVibration: true,
       playSound: true,
     );
@@ -555,7 +682,7 @@ class PushNotificationService {
           'artworkTitle': artworkTitle,
           'status': status,
           'transactionId': transactionId,
-          'actionUrl': 'app://artwork/$artworkId'
+          'actionUrl': 'app://artwork/$artworkId',
         };
         String titleText = '';
         String bodyText = '';
@@ -577,7 +704,8 @@ class PushNotificationService {
         return;
       } catch (e) {
         debugPrint(
-            'PushNotificationService (web) showNFTMintingNotification failed: $e');
+          'PushNotificationService (web) showNFTMintingNotification failed: $e',
+        );
       }
     }
 
@@ -589,7 +717,7 @@ class PushNotificationService {
       importance: Importance.high,
       priority: Priority.high,
       showWhen: true,
-      icon: '@mipmap/ic_launcher',
+      icon: '@drawable/ic_notification',
       enableVibration: true,
       playSound: true,
     );
@@ -661,7 +789,7 @@ class PushNotificationService {
           'amount': amount,
           'buyerName': buyerName,
           'sellerName': sellerName,
-          'actionUrl': 'app://trade/$tradeId'
+          'actionUrl': 'app://trade/$tradeId',
         };
         String titleText = '';
         String bodyText = '';
@@ -684,7 +812,8 @@ class PushNotificationService {
         return;
       } catch (e) {
         debugPrint(
-            'PushNotificationService (web) showTradingNotification failed: $e');
+          'PushNotificationService (web) showTradingNotification failed: $e',
+        );
       }
     }
 
@@ -696,7 +825,7 @@ class PushNotificationService {
       importance: Importance.high,
       priority: Priority.high,
       showWhen: true,
-      icon: '@mipmap/ic_launcher',
+      icon: '@drawable/ic_notification',
       enableVibration: true,
       playSound: true,
     );
@@ -765,14 +894,18 @@ class PushNotificationService {
           'title': title,
           'description': description,
           'rewardTokens': rewardTokens,
-          'actionUrl': 'app://achievement/$achievementId'
+          'actionUrl': 'app://achievement/$achievementId',
         };
-        await webshow.showNotification('🏆 Achievement Unlocked!',
-            '$title - $description (+$rewardTokens KUB8)', mapData);
+        await webshow.showNotification(
+          '🏆 Achievement Unlocked!',
+          '$title - $description (+$rewardTokens KUB8)',
+          mapData,
+        );
         return;
       } catch (e) {
         debugPrint(
-            'PushNotificationService (web) showAchievementNotification failed: $e');
+          'PushNotificationService (web) showAchievementNotification failed: $e',
+        );
       }
     }
 
@@ -784,7 +917,7 @@ class PushNotificationService {
       importance: Importance.high,
       priority: Priority.high,
       showWhen: true,
-      icon: '@mipmap/ic_launcher',
+      icon: '@drawable/ic_notification',
       enableVibration: true,
       playSound: true,
     );
@@ -832,7 +965,7 @@ class PushNotificationService {
       importance: Importance.defaultImportance,
       priority: Priority.defaultPriority,
       showWhen: true,
-      icon: '@mipmap/ic_launcher',
+      icon: '@drawable/ic_notification',
     );
 
     const DarwinNotificationDetails iosDetails = DarwinNotificationDetails(
@@ -854,9 +987,14 @@ class PushNotificationService {
       'actionUrl': 'app://posts/$postId',
     });
 
-    final formatted = _formatCommunityMessage(type, userName, comment);
-    final title = formatted['title'] ?? 'New Activity';
-    final body = formatted['body'] ?? '';
+    final copy = communityInteractionCopy(
+      _l10n,
+      type: type,
+      actorName: userName,
+      comment: comment,
+    );
+    final title = copy.title;
+    final body = copy.body;
 
     if (kIsWeb) {
       // For web, use the browser/unified notification helper to show a notification via service worker or Notification API
@@ -867,7 +1005,7 @@ class PushNotificationService {
           'postId': postId,
           'userName': userName,
           'comment': comment,
-          'actionUrl': 'app://posts/$postId'
+          'actionUrl': 'app://posts/$postId',
         };
         await webshow.showNotification(title, body, mapData);
         return;
@@ -886,35 +1024,74 @@ class PushNotificationService {
     );
   }
 
-  // Local helper for consistent community message formatting
-  Map<String, String> _formatCommunityMessage(String type, String userName,
-      [String? comment]) {
+  /// Localized title/body for community interactions. Titles carry no emoji,
+  /// the actor is always named, and a missing actor falls back to the
+  /// localized "Someone" label. Unknown types use the generic activity copy.
+  @visibleForTesting
+  static ({String title, String body}) communityInteractionCopy(
+    AppLocalizations l10n, {
+    required String type,
+    String? actorName,
+    String? comment,
+  }) {
+    final trimmedName = actorName?.trim() ?? '';
+    final name =
+        trimmedName.isNotEmpty ? trimmedName : l10n.notificationSomeoneFallback;
     switch (type) {
       case 'like':
-        return {'title': '❤️ New Like', 'body': '$userName liked your post'};
+        return (
+          title: l10n.notificationCommunityLikeTitle,
+          body: l10n.notificationCommunityLikeBody(name),
+        );
       case 'comment':
-        final b = comment != null && comment.isNotEmpty
-            ? comment.length > 60
-                ? '${comment.substring(0, 60)}...'
-                : comment
-            : 'commented on your post';
-        return {'title': '💬 New Comment', 'body': '$userName: $b'};
+        final text = _truncateNotificationText(comment?.trim() ?? '', 60);
+        return (
+          title: l10n.notificationCommunityCommentTitle,
+          body: text.isEmpty
+              ? l10n.notificationCommunityCommentBody(name)
+              : l10n.notificationCommunityCommentWithTextBody(name, text),
+        );
       case 'share':
-        return {
-          'title': '🔄 Post Shared',
-          'body': '$userName shared your post'
-        };
+        return (
+          title: l10n.notificationCommunityShareTitle,
+          body: l10n.notificationCommunityShareBody(name),
+        );
+      case 'repost':
+        return (
+          title: l10n.notificationCommunityRepostTitle,
+          body: l10n.notificationCommunityRepostBody(name),
+        );
       case 'mention':
-        return {
-          'title': '📢 You were mentioned',
-          'body': '$userName mentioned you in a post'
-        };
+        return (
+          title: l10n.notificationCommunityMentionTitle,
+          body: l10n.notificationCommunityMentionBody(name),
+        );
       default:
-        return {
-          'title': 'New activity',
-          'body': '$userName interacted with your post'
-        };
+        return (
+          title: l10n.notificationCommunityActivityTitle,
+          body: l10n.notificationCommunityActivityBody(name),
+        );
     }
+  }
+
+  /// Localized title/body for a new follower.
+  @visibleForTesting
+  static ({String title, String body}) followerNotificationCopy(
+    AppLocalizations l10n, {
+    required String userName,
+  }) {
+    final trimmedName = userName.trim();
+    final name =
+        trimmedName.isNotEmpty ? trimmedName : l10n.notificationSomeoneFallback;
+    return (
+      title: l10n.notificationFollowerTitle,
+      body: l10n.notificationFollowerBody(name),
+    );
+  }
+
+  static String _truncateNotificationText(String text, int maxRunes) {
+    if (text.runes.length <= maxRunes) return text;
+    return '${String.fromCharCodes(text.runes.take(maxRunes))}...';
   }
 
   /// Show follower notification
@@ -924,6 +1101,7 @@ class PushNotificationService {
     String? userAvatar,
   }) async {
     if (!_permissionGranted) return;
+    final copy = followerNotificationCopy(_l10n, userName: userName);
     if (kIsWeb) {
       try {
         final mapData = {
@@ -931,14 +1109,18 @@ class PushNotificationService {
           'userId': userId,
           'userName': userName,
           'userAvatar': userAvatar,
-          'actionUrl': 'app://user/$userId'
+          'actionUrl': 'app://user/$userId',
         };
         await webshow.showNotification(
-            '👥 New Follower', '$userName started following you', mapData);
+          copy.title,
+          copy.body,
+          mapData,
+        );
         return;
       } catch (e) {
         debugPrint(
-            'PushNotificationService (web) showFollowerNotification failed: $e');
+          'PushNotificationService (web) showFollowerNotification failed: $e',
+        );
       }
     }
 
@@ -950,7 +1132,7 @@ class PushNotificationService {
       importance: Importance.defaultImportance,
       priority: Priority.defaultPriority,
       showWhen: true,
-      icon: '@mipmap/ic_launcher',
+      icon: '@drawable/ic_notification',
     );
 
     const DarwinNotificationDetails iosDetails = DarwinNotificationDetails(
@@ -972,8 +1154,8 @@ class PushNotificationService {
 
     await _flutterLocalNotificationsPlugin.show(
       id: userId.hashCode,
-      title: '👥 New Follower',
-      body: '$userName started following you',
+      title: copy.title,
+      body: copy.body,
       notificationDetails: details,
       payload: payload,
     );
@@ -995,7 +1177,7 @@ class PushNotificationService {
           'artworkTitle': artworkTitle,
           'collectorName': collectorName,
           'collectionCount': collectionCount,
-          'actionUrl': 'app://collections'
+          'actionUrl': 'app://collections',
         };
         String titleText = '';
         String bodyText = '';
@@ -1014,7 +1196,8 @@ class PushNotificationService {
         return;
       } catch (e) {
         debugPrint(
-            'PushNotificationService (web) showCollectionNotification failed: $e');
+          'PushNotificationService (web) showCollectionNotification failed: $e',
+        );
       }
     }
 
@@ -1026,7 +1209,7 @@ class PushNotificationService {
       importance: Importance.defaultImportance,
       priority: Priority.defaultPriority,
       showWhen: true,
-      icon: '@mipmap/ic_launcher',
+      icon: '@drawable/ic_notification',
     );
 
     const DarwinNotificationDetails iosDetails = DarwinNotificationDetails(
@@ -1084,7 +1267,8 @@ class PushNotificationService {
         return;
       } catch (e) {
         debugPrint(
-            'PushNotificationService (web) showSystemNotification failed: $e');
+          'PushNotificationService (web) showSystemNotification failed: $e',
+        );
       }
     }
 
@@ -1096,7 +1280,7 @@ class PushNotificationService {
       importance: Importance.max,
       priority: Priority.max,
       showWhen: true,
-      icon: '@mipmap/ic_launcher',
+      icon: '@drawable/ic_notification',
       enableVibration: true,
       playSound: true,
     );
@@ -1169,14 +1353,15 @@ class PushNotificationService {
           'artworkTitle': artworkTitle,
           'currentBid': currentBid,
           'bidderName': bidderName,
-          'actionUrl': 'app://auction/$auctionId'
+          'actionUrl': 'app://auction/$auctionId',
         };
         await webshow.showNotification(titleText, bodyText, mapData);
         await _storeInAppNotification('auction', titleText, bodyText, mapData);
         return;
       } catch (e) {
         debugPrint(
-            'PushNotificationService (web) showAuctionNotification failed: $e');
+          'PushNotificationService (web) showAuctionNotification failed: $e',
+        );
       }
     }
 
@@ -1188,7 +1373,7 @@ class PushNotificationService {
       importance: Importance.high,
       priority: Priority.high,
       showWhen: true,
-      icon: '@mipmap/ic_launcher',
+      icon: '@drawable/ic_notification',
       enableVibration: true,
       playSound: true,
     );
@@ -1259,15 +1444,20 @@ class PushNotificationService {
           'eventType': type,
           'projectTitle': projectTitle,
           'collaboratorName': collaboratorName,
-          'actionUrl': 'app://project/$projectId'
+          'actionUrl': 'app://project/$projectId',
         };
         await webshow.showNotification(titleText, bodyText, mapData);
         await _storeInAppNotification(
-            'collaboration', titleText, bodyText, mapData);
+          'collaboration',
+          titleText,
+          bodyText,
+          mapData,
+        );
         return;
       } catch (e) {
         debugPrint(
-            'PushNotificationService (web) showCollaborationNotification failed: $e');
+          'PushNotificationService (web) showCollaborationNotification failed: $e',
+        );
       }
     }
 
@@ -1279,7 +1469,7 @@ class PushNotificationService {
       importance: Importance.defaultImportance,
       priority: Priority.defaultPriority,
       showWhen: true,
-      icon: '@mipmap/ic_launcher',
+      icon: '@drawable/ic_notification',
     );
 
     const DarwinNotificationDetails iosDetails = DarwinNotificationDetails(
@@ -1311,7 +1501,11 @@ class PushNotificationService {
     );
 
     await _storeInAppNotification(
-        'collaboration', titleText, bodyText, payloadData);
+      'collaboration',
+      titleText,
+      bodyText,
+      payloadData,
+    );
   }
 
   /// Push notification for collaboration invites on events/exhibitions.
@@ -1357,11 +1551,16 @@ class PushNotificationService {
       try {
         await webshow.showNotification(titleText, bodyText, payloadData);
         await _storeInAppNotification(
-            'collab_invite', titleText, bodyText, payloadData);
+          'collab_invite',
+          titleText,
+          bodyText,
+          payloadData,
+        );
         return;
       } catch (e) {
         debugPrint(
-            'PushNotificationService (web) showCollabInviteNotification failed: $e');
+          'PushNotificationService (web) showCollabInviteNotification failed: $e',
+        );
       }
     }
 
@@ -1373,7 +1572,7 @@ class PushNotificationService {
       importance: Importance.defaultImportance,
       priority: Priority.defaultPriority,
       showWhen: true,
-      icon: '@mipmap/ic_launcher',
+      icon: '@drawable/ic_notification',
     );
 
     const DarwinNotificationDetails iosDetails = DarwinNotificationDetails(
@@ -1396,7 +1595,11 @@ class PushNotificationService {
     );
 
     await _storeInAppNotification(
-        'collab_invite', titleText, bodyText, payloadData);
+      'collab_invite',
+      titleText,
+      bodyText,
+      payloadData,
+    );
   }
 
   /// Push notification for AR events
@@ -1434,14 +1637,15 @@ class PushNotificationService {
           'eventTitle': eventTitle,
           'eventType': type,
           'startTime': startTime?.toIso8601String(),
-          'actionUrl': 'app://ar_event/$eventId'
+          'actionUrl': 'app://ar_event/$eventId',
         };
         await webshow.showNotification(titleText, bodyText, mapData);
         await _storeInAppNotification('ar_event', titleText, bodyText, mapData);
         return;
       } catch (e) {
         debugPrint(
-            'PushNotificationService (web) showAREventNotification failed: $e');
+          'PushNotificationService (web) showAREventNotification failed: $e',
+        );
       }
     }
 
@@ -1453,7 +1657,7 @@ class PushNotificationService {
       importance: Importance.high,
       priority: Priority.high,
       showWhen: true,
-      icon: '@mipmap/ic_launcher',
+      icon: '@drawable/ic_notification',
     );
 
     const DarwinNotificationDetails iosDetails = DarwinNotificationDetails(
@@ -1521,15 +1725,20 @@ class PushNotificationService {
           'challengeTitle': challengeTitle,
           'progress': progress,
           'total': total,
-          'actionUrl': 'app://challenge/$challengeId'
+          'actionUrl': 'app://challenge/$challengeId',
         };
         await webshow.showNotification(titleText, bodyText, mapData);
         await _storeInAppNotification(
-            'challenge', titleText, bodyText, mapData);
+          'challenge',
+          titleText,
+          bodyText,
+          mapData,
+        );
         return;
       } catch (e) {
         debugPrint(
-            'PushNotificationService (web) showChallengeNotification failed: $e');
+          'PushNotificationService (web) showChallengeNotification failed: $e',
+        );
       }
     }
 
@@ -1541,7 +1750,7 @@ class PushNotificationService {
       importance: Importance.defaultImportance,
       priority: Priority.defaultPriority,
       showWhen: true,
-      icon: '@mipmap/ic_launcher',
+      icon: '@drawable/ic_notification',
     );
 
     const DarwinNotificationDetails iosDetails = DarwinNotificationDetails(
@@ -1574,7 +1783,11 @@ class PushNotificationService {
     );
 
     await _storeInAppNotification(
-        'challenge', titleText, bodyText, payloadData);
+      'challenge',
+      titleText,
+      bodyText,
+      payloadData,
+    );
   }
 
   /// Push notification for token staking updates
@@ -1609,14 +1822,15 @@ class PushNotificationService {
           'eventType': type,
           'rewardAmount': rewardAmount,
           'poolName': poolName,
-          'actionUrl': 'app://staking'
+          'actionUrl': 'app://staking',
         };
         await webshow.showNotification(titleText, bodyText, mapData);
         await _storeInAppNotification('staking', titleText, bodyText, mapData);
         return;
       } catch (e) {
         debugPrint(
-            'PushNotificationService (web) showStakingNotification failed: $e');
+          'PushNotificationService (web) showStakingNotification failed: $e',
+        );
       }
     }
 
@@ -1628,7 +1842,7 @@ class PushNotificationService {
       importance: Importance.defaultImportance,
       priority: Priority.defaultPriority,
       showWhen: true,
-      icon: '@mipmap/ic_launcher',
+      icon: '@drawable/ic_notification',
     );
 
     const DarwinNotificationDetails iosDetails = DarwinNotificationDetails(
@@ -1691,7 +1905,8 @@ class PushNotificationService {
       await prefs.setStringList('in_app_notifications', existing);
     } catch (e) {
       debugPrint(
-          'PushNotificationService: failed to store in-app notification: $e');
+        'PushNotificationService: failed to store in-app notification: $e',
+      );
     }
   }
 
@@ -1707,7 +1922,8 @@ class PushNotificationService {
         out.add(decoded);
       } catch (e) {
         debugPrint(
-            'PushNotificationService.getInAppNotifications: failed to decode item: $e');
+          'PushNotificationService.getInAppNotifications: failed to decode item: $e',
+        );
       }
     }
     return out;

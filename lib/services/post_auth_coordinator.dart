@@ -11,6 +11,7 @@ import '../providers/pending_action_provider.dart';
 import '../services/meta/meta_conversion_adapter.dart';
 import '../models/user_persona.dart';
 import '../providers/chat_provider.dart';
+import '../providers/notification_provider.dart';
 import '../providers/profile_provider.dart';
 import '../providers/saved_items_provider.dart';
 import '../providers/security_gate_provider.dart';
@@ -103,6 +104,12 @@ class PostAuthCoordinator {
         pendingActionProvider = context.read<PendingActionProvider>();
       } catch (_) {
         // Reauth modals and tests can run outside the full provider tree.
+      }
+      NotificationProvider? notificationProvider;
+      try {
+        notificationProvider = context.read<NotificationProvider>();
+      } catch (_) {
+        // Same as above: not every caller has the full provider tree.
       }
       final walletSessionProviders = WalletSessionSyncProvidersPayload(
         walletProvider: walletProvider,
@@ -288,6 +295,11 @@ class PostAuthCoordinator {
         }
       }
 
+      // The new session's notification state (unread summary, user-room
+      // socket) follows the sign-in; force re-binds after an account switch.
+      if (notificationProvider != null) {
+        unawaited(notificationProvider.initialize(force: true));
+      }
       setStage(PostAuthStage.loadingProfile);
       var walletForProfile = accountAuthWithoutWallet
           ? ''

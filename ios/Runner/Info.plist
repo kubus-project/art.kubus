@@ -5,7 +5,7 @@
 		<key>CFBundleDevelopmentRegion</key>
 		<string>$(DEVELOPMENT_LANGUAGE)</string>
 		<key>CFBundleDisplayName</key>
-		<string>Art kubus</string>
+		<string>art.kubus</string>
 		<key>CFBundleExecutable</key>
 		<string>$(EXECUTABLE_NAME)</string>
 		<key>CFBundleIdentifier</key>
@@ -13,7 +13,7 @@
 		<key>CFBundleInfoDictionaryVersion</key>
 		<string>6.0</string>
 		<key>CFBundleName</key>
-		<string>art_kubus</string>
+		<string>art.kubus</string>
 		<key>CFBundlePackageType</key>
 		<string>APPL</string>
 		<key>CFBundleShortVersionString</key>
@@ -82,5 +82,7 @@
 		<string>Use the camera to discover, place and capture art with spatial tracking.</string>
 		<key>NSLocalNetworkUsageDescription</key>
 		<string>Connect directly to your kubus Node on this Wi-Fi network, so your captures stay on your own network instead of travelling over the internet.</string>
+		<key>NSLocationWhenInUseUsageDescription</key>
+		<string>Use your location while art.kubus is open to show nearby artworks and guide you to artworks when requested.</string>
 	</dict>
 </plist>
