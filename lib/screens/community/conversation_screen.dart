@@ -1209,6 +1209,8 @@ class _ConversationScreenState extends State<ConversationScreen> {
                     color: Theme.of(context).colorScheme.onSurface,
                     size: KubusHeaderMetrics.actionIcon,
                   ),
+                  // Screen readers need a label for the icon-only control.
+                  tooltip: MaterialLocalizations.of(context).backButtonTooltip,
                   onPressed:
                       widget.onClose ?? () => Navigator.of(context).maybePop(),
                 ),
