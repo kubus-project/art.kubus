@@ -1181,11 +1181,16 @@ class ProfileProvider extends foundation.ChangeNotifier {
               followingCount: u.stats?.followingCount ?? 0,
               postsCount: u.stats?.artworksCreated ?? 0,
               isFollowing: false,
-              isVerified: false,
+              // The owner's own profile states all three roles, so a
+              // revocation must reach the shared cache.
+              isVerified: u.artistInfo?.verified ?? false,
+              isVerifiedSpecified: true,
               joinedDate: joinedDate,
               achievementProgress: [],
               isArtist: u.isArtist,
+              isArtistSpecified: true,
               isInstitution: u.isInstitution,
+              isInstitutionSpecified: true,
             )
           ]);
         }
