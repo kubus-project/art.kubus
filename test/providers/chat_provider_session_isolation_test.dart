@@ -188,6 +188,63 @@ void main() {
     expect(provider.unreadCounts, isEmpty);
   });
 
+  test(
+      'sendMessage completing for account A does not write to the new '
+      'session after wallet change', () async {
+    final http = _ChatHttp();
+    BackendApiService().setHttpClient(http.client());
+    BackendApiService().setAuthTokenForTesting('tokenA');
+
+    final provider = ChatProvider();
+    provider.setCurrentWalletForTesting('walletA');
+
+    final pending = provider.sendMessage('convA', 'hi');
+    await http.arrived('send');
+
+    unawaited(provider.setCurrentWallet('walletB'));
+    await Future<void>.delayed(Duration.zero);
+
+    http.complete('send', {
+      'success': true,
+      'data': _message('m2', 'convA'),
+    });
+    await pending;
+
+    expect(provider.messages.containsKey('convA'), isFalse);
+    expect(provider.messages, isEmpty);
+  });
+
+  test(
+      'no conversation read fallback is sent for account A after wallet '
+      'change', () async {
+    final http = _ChatHttp();
+    BackendApiService().setHttpClient(http.client());
+    BackendApiService().setAuthTokenForTesting('tokenA');
+
+    final provider = ChatProvider();
+    provider.setCurrentWalletForTesting('walletA');
+
+    final pending = provider.markMessageRead('convA', 'm1');
+    await http.arrived('messageRead');
+
+    unawaited(provider.setCurrentWallet('walletB'));
+    await Future<void>.delayed(Duration.zero);
+
+    // Server says the message is not found, which would normally fall back to
+    // marking the whole conversation read.
+    http.complete('messageRead', {'success': false}, status: 404);
+    await pending;
+
+    expect(
+      http.requests.where((r) => r == 'POST /api/messages/convA/read'),
+      isEmpty,
+    );
+    expect(
+      http.requests.where((r) => r.endsWith('/api/messages/convA/read')),
+      isEmpty,
+    );
+  });
+
   test('wallet change clears per-account caches and conversations', () async {
     final http = _ChatHttp();
     BackendApiService().setHttpClient(http.client());

@@ -2085,8 +2085,9 @@ class ChatProvider extends ChangeNotifier {
         data: optimisticData,
         replyToId: replyToId,
       );
-      if (generation != _sessionGeneration) return;
+      // Parse first so a failed response still throws; only the writes are fenced.
       final msg = ChatMessage.fromJson(result['data']);
+      if (generation != _sessionGeneration) return;
       final current = _messages[nid] ?? const <ChatMessage>[];
       final replaced = <ChatMessage>[];
       var inserted = false;
