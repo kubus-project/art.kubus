@@ -278,34 +278,46 @@ class _KubusIdentityAvatarState extends State<KubusIdentityAvatar> {
   /// profile UUID, for one), so the returned user is the authority here.
   ProfileIdentityRoles? _resolvedRoles;
 
+  /// Identifiers compare trimmed; EVM hex addresses also compare
+  /// case-insensitively, so a case-only difference is the same identity.
+  static String _identityKey(String value) {
+    final trimmed = value.trim();
+    return RegExp(r'^0x', caseSensitive: false).hasMatch(trimmed)
+        ? trimmed.toLowerCase()
+        : trimmed;
+  }
+
+  static bool _sameIdentity(KubusIdentityAvatar a, KubusIdentityAvatar b) =>
+      _identityKey(a.wallet) == _identityKey(b.wallet) &&
+      listEquals(
+        a.walletAliases.map(_identityKey).toList(),
+        b.walletAliases.map(_identityKey).toList(),
+      );
+
   @override
   void didUpdateWidget(covariant KubusIdentityAvatar oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.wallet != widget.wallet ||
-        !listEquals(oldWidget.walletAliases, widget.walletAliases)) {
+    // Only a different account invalidates the lookup's roles. The next build
+    // reads the new identity's cached roles synchronously, so its first frame
+    // already carries them, before any lookup completes.
+    if (!_sameIdentity(oldWidget, widget)) {
       _resolvedRoles = null;
     }
   }
 
   void _onProfileResolved(User? user) {
-    if (!mounted) return;
+    // A failed or synthetic lookup states nothing: keep the roles already
+    // known. [User.roleStatements] carries only what the record states.
+    if (!mounted || user == null) return;
+    final statements = user.roleStatements;
+    if (statements == _resolvedRoles) return;
     setState(() {
-      _resolvedRoles = user == null
-          ? null
-          : ProfileIdentityRoles(
-              isArtist: user.isArtist,
-              isInstitution: user.isInstitution,
-              isVerified: user.isVerified,
-              isArtistSpecified: true,
-              isInstitutionSpecified: true,
-              isVerifiedSpecified: true,
-            );
+      _resolvedRoles = statements;
     });
   }
 
-  /// Roles of the profile this avatar shows: the resolved lookup when it
-  /// returned a user, otherwise [KubusIdentityAvatar.wallet] in the profile
-  /// cache. Read-only.
+  /// Roles the shared profile cache states for [KubusIdentityAvatar.wallet] or
+  /// an alias. Read-only; keeps the cached user's stated/unstated fields.
   ProfileIdentityRoles _cachedRoles() {
     if (!widget.resolveCachedRoles) return ProfileIdentityRoles.none;
     final user = <String>{
@@ -316,11 +328,7 @@ class _KubusIdentityAvatarState extends State<KubusIdentityAvatar> {
           UserService.getCachedUser(WalletUtils.normalize(identifier));
     }).firstWhere((cached) => cached != null, orElse: () => null);
     if (user == null) return ProfileIdentityRoles.none;
-    return ProfileIdentityRoles(
-      isArtist: user.isArtist,
-      isInstitution: user.isInstitution,
-      isVerified: user.isVerified,
-    );
+    return user.roleStatements;
   }
 
   ProfileIdentityRoles _identityRoles() {
@@ -331,12 +339,12 @@ class _KubusIdentityAvatarState extends State<KubusIdentityAvatar> {
           isVerified: widget.isVerified,
         );
     if (!widget.resolveCachedRoles) return stated;
-    // A completed profile lookup is a full, current profile statement. Before
-    // that arrives, cached positive roles fill only fields the caller leaves
-    // unstated, so an explicit false can revoke a stale cached mark.
+    // Cached roles fill what the caller leaves unstated; the stated roles
+    // then win where stated, true or false. A completed profile lookup is a
+    // newer statement and merges over both, field by field.
+    final base = _cachedRoles().merge(stated);
     final resolved = _resolvedRoles;
-    if (resolved != null) return resolved;
-    return _cachedRoles().merge(stated);
+    return resolved == null ? base : base.merge(resolved);
   }
 
   @override
