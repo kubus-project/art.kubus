@@ -365,9 +365,8 @@ Future<void> _chatProviderSetCurrentWallet(
       if (isStale()) return;
       if (meResp['success'] == true && meResp['data'] != null) {
         final me = meResp['data'] as Map<String, dynamic>;
-        final canonical =
-            (me['wallet_address'] ?? me['wallet'] ?? me['id'])?.toString();
-        if (canonical != null && canonical.isNotEmpty) {
+        final canonical = ChatProvider.walletFromProfilePayload(me);
+        if (canonical.isNotEmpty) {
           provider._currentWallet = canonical;
           debugPrint(
               'ChatProvider.setCurrentWallet: resolved canonical wallet=${provider._currentWallet} from server');

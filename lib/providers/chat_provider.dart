@@ -1564,6 +1564,13 @@ class ChatProvider extends ChangeNotifier {
     }
   }
 
+  /// Wallet named by a /profiles/me payload. The profile row `id` is not a
+  /// wallet: subscribing with it makes the server reject subscribe:user.
+  static String walletFromProfilePayload(Map<String, dynamic> me) =>
+      (me['wallet_address'] ?? me['walletAddress'] ?? me['wallet'] ?? '')
+          .toString()
+          .trim();
+
   /// Wallet persisted by the auth/profile flow. `user_id` is an account key
   /// and may not be a wallet, so it must never be used as a socket room id.
   static String storedWalletFromPrefs(SharedPreferences prefs) =>
