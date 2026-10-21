@@ -6303,6 +6303,7 @@ class BackendApiService
     int limit = 20,
     bool? arOnly,
     String? authorWallet,
+    String? authorUserId,
     bool? followingOnly,
     String? surface,
     String? tag,
@@ -6319,6 +6320,12 @@ class BackendApiService
 
       if (arOnly != null) queryParams['arOnly'] = arOnly.toString();
       if (authorWallet != null) queryParams['authorWallet'] = authorWallet;
+      final normalizedAuthorUserId = authorUserId?.trim() ?? '';
+      if (normalizedAuthorUserId.isNotEmpty) {
+        // Older backends ignore unknown parameters; callers that cannot
+        // trust the response must filter client-side.
+        queryParams['authorUserId'] = normalizedAuthorUserId;
+      }
       if (followingOnly != null) {
         queryParams['followingOnly'] = followingOnly.toString();
       }
@@ -6379,6 +6386,11 @@ class BackendApiService
                 authorWallet.trim().isNotEmpty &&
                 WalletUtils.canonical(post.authorWallet) !=
                     WalletUtils.canonical(authorWallet)) {
+              return false;
+            }
+            if (normalizedAuthorUserId.isNotEmpty &&
+                (post.authorIdentityData.userId ?? '').trim().toLowerCase() !=
+                    normalizedAuthorUserId.toLowerCase()) {
               return false;
             }
             if (tag != null && tag.trim().isNotEmpty) {

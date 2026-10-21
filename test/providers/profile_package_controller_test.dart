@@ -228,6 +228,86 @@ void main() {
 
     controller.dispose();
   });
+
+  group('profile posts query', () {
+    const accountUuid = '3f2b9c1e-7a4d-4e8b-9c2a-1d2e3f4a5b6c';
+    const foreignUuid = '9a8b7c6d-5e4f-4a3b-8c2d-1e0f9a8b7c6d';
+
+    test('wallet profile sends authorWallet for its posts', () async {
+      final controller = ProfilePackageController(walletAddress: wallet);
+      controller.applyCritical(_critical(wallet: wallet, title: 'Milestone'));
+      final requests = <Uri>[];
+      BackendApiService().setHttpClient(MockClient((request) async {
+        if (request.url.path.contains('/api/community/posts')) {
+          requests.add(request.url);
+          return _jsonResponse(<String, Object?>{'data': <Object?>[]});
+        }
+        return http.Response('Not found', 404);
+      }));
+
+      await controller.loadPosts();
+
+      expect(requests, hasLength(1));
+      expect(requests.single.queryParameters['authorWallet'], wallet);
+      expect(
+          requests.single.queryParameters.containsKey('authorUserId'), isFalse);
+      expect(controller.postsError, isNull);
+
+      controller.dispose();
+    });
+
+    test('walletless profile sends authorUserId and drops foreign posts',
+        () async {
+      final controller = ProfilePackageController(walletAddress: accountUuid);
+      controller
+          .applyCritical(_critical(wallet: accountUuid, title: 'Milestone'));
+      final requests = <Uri>[];
+      BackendApiService().setHttpClient(MockClient((request) async {
+        if (request.url.path.contains('/api/community/posts')) {
+          requests.add(request.url);
+          // An older backend ignores authorUserId and returns the global feed.
+          return _jsonResponse(<String, Object?>{
+            'data': <Object?>[
+              _postJson(id: 'own-post', authorUserId: accountUuid),
+              _postJson(id: 'foreign-post', authorUserId: foreignUuid),
+            ],
+          });
+        }
+        return http.Response('Not found', 404);
+      }));
+
+      await controller.loadPosts();
+
+      expect(requests.single.queryParameters['authorUserId'], accountUuid);
+      expect(
+          requests.single.queryParameters.containsKey('authorWallet'), isFalse);
+      expect(controller.posts.map((post) => post.id), <String>['own-post']);
+      expect(controller.postsError, isNull);
+
+      controller.dispose();
+    });
+
+    test('failed posts request surfaces postsError, not an empty feed',
+        () async {
+      final controller = ProfilePackageController(walletAddress: accountUuid);
+      controller
+          .applyCritical(_critical(wallet: accountUuid, title: 'Milestone'));
+      BackendApiService().setHttpClient(MockClient((request) async {
+        if (request.url.path.contains('/api/community/posts')) {
+          return http.Response('failed', 500);
+        }
+        return http.Response('Not found', 404);
+      }));
+
+      await controller.loadPosts(errorMessage: 'posts failed');
+
+      expect(controller.postsLoading, isFalse);
+      expect(controller.postsError, 'posts failed');
+      expect(controller.posts, isEmpty);
+
+      controller.dispose();
+    });
+  });
 }
 
 ProfileCriticalPackage _critical({
@@ -368,6 +448,21 @@ http.Response _mockProfilePackageResponse(
   }
 
   return http.Response('Not found', 404);
+}
+
+Map<String, Object?> _postJson({
+  required String id,
+  required String authorUserId,
+}) {
+  return <String, Object?>{
+    'id': id,
+    'content': 'Post $id',
+    'createdAt': '2026-05-25T00:00:00.000Z',
+    'author': <String, Object?>{
+      'userId': authorUserId,
+      'displayName': 'Author $authorUserId',
+    },
+  };
 }
 
 http.Response _jsonResponse(Map<String, Object?> payload) {
