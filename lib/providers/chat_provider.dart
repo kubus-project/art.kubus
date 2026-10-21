@@ -356,6 +356,9 @@ class ChatProvider extends ChangeNotifier {
       _conversations = items
           .map((i) => Conversation.fromJson(i as Map<String, dynamic>))
           .toList();
+      // A conversation listed for this session is live again (for example the
+      // same account signing back in), so its socket events are accepted.
+      _retiredSessionConversationIds.removeAll(_conversations.map((c) => c.id));
     } catch (_) {
       _conversations = [];
     }
@@ -1171,11 +1174,17 @@ class ChatProvider extends ChangeNotifier {
     _socket.addConversationListener(_onConversationMemberRead);
     _socket.addConversationListener(_onConversationRenamed);
     _socket.addMessageReactionListener(_onMessageReaction);
+    // Listeners stay registered for every later session. Past this point a
+    // sign-out or account switch owns subscription and loading through
+    // setCurrentWallet, so a superseded initialize stops after each await.
+    bool superseded() => initGeneration != _sessionGeneration;
     await refreshConversations();
+    if (superseded()) return;
     // After loading conversations, proactively fetch member profiles for faster UI updates
     try {
       final allWallets = <String>{};
-      for (final conv in _conversations) {
+      for (final conv in List<Conversation>.of(_conversations)) {
+        if (superseded()) return;
         try {
           final members = await fetchMembers(conv.id);
           for (final m in members) {
@@ -1189,12 +1198,13 @@ class ChatProvider extends ChangeNotifier {
           }
         } catch (_) {}
       }
-      if (allWallets.isNotEmpty) {
+      if (allWallets.isNotEmpty && !superseded()) {
         await _prefetchUsersForWallets(allWallets.toList());
       }
     } catch (e) {
       debugPrint('ChatProvider.initialize: prefetch users failed: $e');
     }
+    if (superseded()) return;
     // Subscribe to user room if we have a wallet
     try {
       if (_currentWallet != null && _currentWallet!.isNotEmpty) {
@@ -1205,6 +1215,7 @@ class ChatProvider extends ChangeNotifier {
             _currentWallet!,
           );
           debugPrint('ChatProvider: socket connectAndSubscribe result: $ok');
+          if (superseded()) return;
           if (!ok) {
             debugPrint(
               'ChatProvider: connectAndSubscribe failed, attempting token issuance and retry',
@@ -1216,6 +1227,7 @@ class ChatProvider extends ChangeNotifier {
                 );
                 if (issued) {
                   await _api.loadAuthToken();
+                  if (superseded()) return;
                   ok = await _socket.connectAndSubscribe(
                     _api.baseUrl,
                     _currentWallet!,
@@ -1229,6 +1241,7 @@ class ChatProvider extends ChangeNotifier {
               debugPrint('ChatProvider: token issuance retry failed: $e2');
             }
           }
+          if (superseded()) return;
           if (!ok) {
             // attempt subscribe as best effort
             _socket.subscribeUser(_currentWallet!);
@@ -1237,6 +1250,7 @@ class ChatProvider extends ChangeNotifier {
           debugPrint(
             'ChatProvider: connectAndSubscribe failed, falling back: $e',
           );
+          if (superseded()) return;
           _socket.subscribeUser(_currentWallet!);
         }
         // Log subscription state for debugging
@@ -1255,9 +1269,8 @@ class ChatProvider extends ChangeNotifier {
             final resolvedWallet2 =
                 (me2['wallet_address'] ?? me2['walletAddress'] ?? me2['wallet'])
                     ?.toString();
-            if (initGeneration == _sessionGeneration) {
-              _currentWallet = resolvedWallet2;
-            }
+            if (superseded()) return;
+            _currentWallet = resolvedWallet2;
             if (_currentWallet != null && _currentWallet!.isNotEmpty) {
               try {
                 final ok2 = await _socket.connectAndSubscribe(
