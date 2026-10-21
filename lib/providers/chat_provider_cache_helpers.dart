@@ -83,6 +83,8 @@ void _chatProviderResetSessionState(
   required String reason,
   required bool notify,
 }) {
+  // Invalidate every in-flight loader that belongs to the session being left.
+  provider._sessionGeneration += 1;
   try {
     provider._pollTimer?.cancel();
     provider._pollTimer = null;
@@ -97,6 +99,12 @@ void _chatProviderResetSessionState(
   provider._openConversationId = null;
   try {
     provider._socket.leaveAllConversations();
+  } catch (_) {}
+  try {
+    final subscribedWallet = provider._socket.currentSubscribedWallet;
+    if (subscribedWallet != null && subscribedWallet.isNotEmpty) {
+      provider._socket.unsubscribeUser(subscribedWallet);
+    }
   } catch (_) {}
 
   provider._currentWallet = null;
