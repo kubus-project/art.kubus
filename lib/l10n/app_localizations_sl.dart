@@ -8046,6 +8046,21 @@ class AppLocalizationsSl extends AppLocalizations {
   String get qrScannerSwitchCameraFailedToast => 'Kamere ni mogoče zamenjati.';
 
   @override
+  String get qrScannerTorchOnTooltip => 'Vklopi bliskavico';
+
+  @override
+  String get qrScannerTorchOffTooltip => 'Izklopi bliskavico';
+
+  @override
+  String get qrScannerSwitchCameraTooltip => 'Preklopi kamero';
+
+  @override
+  String get commentLikeTooltip => 'Všečkaj komentar';
+
+  @override
+  String get commentUnlikeTooltip => 'Odstrani všeček s komentarja';
+
+  @override
   String get artworkNotFound => 'Umetnina ni najdena';
 
   @override
@@ -18708,4 +18723,123 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get contributionApplication => 'Preveri stanje prijave';
+
+  @override
+  String get arMarkerManagerTitle => 'AR označevalec';
+
+  @override
+  String get arMarkerManagerSubtitle =>
+      'Nastavi označevalec za tisk, da ga drugi lahko skenirajo in odklenejo AR izkušnjo.';
+
+  @override
+  String get arMarkerManagerOnlyPngToast => 'Podprti so le PNG označevalci.';
+
+  @override
+  String get arMarkerManagerSquareRequiredToast =>
+      'Označevalec mora biti kvadraten (širina == višina).';
+
+  @override
+  String arMarkerManagerTooSmallToast(int minPx) {
+    return 'Označevalec je premajhen. Najmanj $minPx×${minPx}px.';
+  }
+
+  @override
+  String arMarkerManagerTooLargeToast(int maxPx) {
+    return 'Označevalec je prevelik. Največ $maxPx×${maxPx}px.';
+  }
+
+  @override
+  String get arMarkerManagerModeTitle => 'Način označevalca';
+
+  @override
+  String get arMarkerManagerAutoGenerateTitle => 'Samodejno ustvari';
+
+  @override
+  String get arMarkerManagerAutoGenerateSubtitle =>
+      'kubus ustvari označevalec za to umetnino.';
+
+  @override
+  String get arMarkerManagerUploadOwnTitle => 'Naloži svojega';
+
+  @override
+  String arMarkerManagerUploadOwnSubtitle(int minPx, int maxPx) {
+    return 'Naloži kvadratni PNG označevalec ($minPx–${maxPx}px).';
+  }
+
+  @override
+  String get arMarkerManagerSizeLabel => 'Velikost označevalca (px)';
+
+  @override
+  String get arMarkerManagerGenerateButton => 'Ustvari';
+
+  @override
+  String get arMarkerManagerRegenerateButton => 'Ustvari znova';
+
+  @override
+  String get arMarkerManagerRequirementsTitle => 'Zahteve za nalaganje';
+
+  @override
+  String arMarkerManagerRequirementsBody(int minPx, int maxPx) {
+    return 'Samo PNG • Kvadratno • $minPx–${maxPx}px • Visok kontrast • Pusti varen rob za tiskanje.';
+  }
+
+  @override
+  String get arMarkerManagerSelectPngButton => 'Izberi PNG';
+
+  @override
+  String get arMarkerManagerChangeFileButton => 'Zamenjaj datoteko';
+
+  @override
+  String get arMarkerManagerUploadButton => 'Naloži označevalec';
+
+  @override
+  String get arMarkerManagerPreviewTitle => 'Predogled';
+
+  @override
+  String get arMarkerManagerDownloadButton => 'Prenesi označevalec';
+
+  @override
+  String get arMarkerManagerSavedToast => 'AR nastavitev je shranjena.';
+
+  @override
+  String get promotionCheckoutOpenAppButton => 'Odpri aplikacijo';
+
+  @override
+  String get arCreateArtworkLocationMarkerTitle =>
+      'Ustvari lokacijski označevalec umetnine';
+
+  @override
+  String get mnemonicRevealCopyUnavailableToast =>
+      'Obnovitvene fraze na tej napravi ni mogoče kopirati.';
+
+  @override
+  String get promotionCheckoutReturnAppBarTitle => 'Plačilo promocije';
+
+  @override
+  String get promotionCheckoutReturnDefaultTitle => 'Plačilo promocije';
+
+  @override
+  String get promotionCheckoutReturnSuccessTitle =>
+      'Plačilo za promocijo je prejeto';
+
+  @override
+  String get promotionCheckoutReturnSuccessBody =>
+      'Plačilo je prejeto. Zahteva za promocijo zdaj čaka na pregled administratorja.';
+
+  @override
+  String get promotionCheckoutReturnCancelledTitle =>
+      'Plačilo za promocijo je preklicano';
+
+  @override
+  String get promotionCheckoutReturnCancelledBody =>
+      'Plačilo ni bilo izvedeno. Ko boste pripravljeni, se vrnite v aplikacijo in promocijo znova oddajte.';
+
+  @override
+  String get promotionCheckoutReturnDefaultBody =>
+      'Vrnite se v aplikacijo in preverite trenutno stanje zahteve za promocijo.';
+
+  @override
+  String promotionCheckoutReturnSessionLabel(String sessionId) {
+    return 'Seja Stripe: $sessionId';
+  }
 }

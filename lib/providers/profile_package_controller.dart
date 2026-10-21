@@ -21,6 +21,19 @@ import 'stats_provider.dart';
 /// extended posts/showcase update separately. Profile-affecting writes should
 /// go through ProfilePackageMutationTracker so cached achievements stay stable
 /// and backend definitions are never synthesized locally.
+final RegExp _profileUuidPattern = RegExp(
+  r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$',
+);
+
+bool _isProfileUuid(String value) => _profileUuidPattern.hasMatch(value);
+
+bool _isPublicProfileWallet(String value) {
+  final normalized = value.trim();
+  return normalized.isNotEmpty &&
+      !_isProfileUuid(normalized) &&
+      !normalized.toLowerCase().startsWith('linked_auth:');
+}
+
 class ProfilePackageController extends ChangeNotifier {
   ProfilePackageController({
     required String walletAddress,
@@ -79,6 +92,52 @@ class ProfilePackageController extends ChangeNotifier {
 
   ProfilePackage? get package => _package;
   User? get user => _package?.user;
+
+  /// Public wallet of the profile, or null for walletless account profiles.
+  String? get _postsAuthorWallet {
+    for (final candidate in <String?>[user?.id, _walletAddress]) {
+      final value = candidate?.trim() ?? '';
+      if (_isPublicProfileWallet(value)) return value;
+    }
+    return null;
+  }
+
+  /// Account user id (UUID) of the profile when one is known.
+  String? get _postsAuthorUserId {
+    for (final candidate in <String?>[user?.id, _walletAddress]) {
+      final value = candidate?.trim() ?? '';
+      if (value.isNotEmpty && _isProfileUuid(value)) return value;
+    }
+    return null;
+  }
+
+  /// The one author key sent with profile post requests. A wallet wins; the
+  /// backend ANDs authorWallet with authorUserId, so sending both can only drop
+  /// posts. Both null means nothing is fetched (never the global feed).
+  ({String? wallet, String? userId}) get _postsAuthorKey {
+    final wallet = _postsAuthorWallet;
+    if (wallet != null) return (wallet: wallet, userId: null);
+    return (wallet: null, userId: _postsAuthorUserId);
+  }
+
+  /// Posts for this profile. A walletless profile sends `authorUserId` only,
+  /// and every returned post is re-checked against that id, so a backend that
+  /// ignores the parameter cannot show other authors' posts here.
+  List<CommunityPost> _ownPostsOnly(
+    List<CommunityPost> posts, {
+    required String? wallet,
+    required String? userId,
+  }) {
+    if (wallet != null) return posts;
+    if (userId == null) return const <CommunityPost>[];
+    final expected = userId.toLowerCase();
+    return posts
+        .where((post) =>
+            (post.authorIdentityData.userId ?? '').trim().toLowerCase() ==
+            expected)
+        .toList(growable: false);
+  }
+
   bool get isLoadingCritical => _isLoadingCritical;
   bool get isLoadingExtended => _isLoadingExtended;
   Object? get error => _error;
@@ -424,11 +483,18 @@ class ProfilePackageController extends ChangeNotifier {
 
     try {
       const pageSize = 20;
-      final posts = await BackendApiService().getCommunityPosts(
-        page: _currentPage,
-        limit: pageSize,
-        authorWallet: currentUser.id,
-      );
+      final key = _postsAuthorKey;
+      final wallet = key.wallet;
+      final userId = key.userId;
+      final fetched = (wallet == null && userId == null)
+          ? const <CommunityPost>[]
+          : await BackendApiService().getCommunityPosts(
+              page: _currentPage,
+              limit: pageSize,
+              authorWallet: wallet,
+              authorUserId: userId,
+            );
+      final posts = _ownPostsOnly(fetched, wallet: wallet, userId: userId);
       await _hydratePostInteractions(
         posts,
         savedItemsProvider: savedItemsProvider,
@@ -436,12 +502,13 @@ class ProfilePackageController extends ChangeNotifier {
       );
       _posts = posts;
       _postsLoading = false;
-      _isLastPage = posts.length < pageSize;
+      _isLastPage = fetched.length < pageSize;
       _postsError = null;
-      patchStats(<String, int>{'posts': posts.length});
+      // The page length is not the total: counts come from the stats endpoint.
       ProfilePackageMutationTracker.postsPatched(
         wallet: currentUser.id,
         posts: _posts,
+        updateCount: false,
       );
       _notifyListenersSafe();
     } catch (e) {
@@ -469,11 +536,18 @@ class ProfilePackageController extends ChangeNotifier {
 
     try {
       const pageSize = 20;
-      final more = await BackendApiService().getCommunityPosts(
-        page: _currentPage,
-        limit: pageSize,
-        authorWallet: currentUser.id,
-      );
+      final key = _postsAuthorKey;
+      final wallet = key.wallet;
+      final userId = key.userId;
+      final fetched = (wallet == null && userId == null)
+          ? const <CommunityPost>[]
+          : await BackendApiService().getCommunityPosts(
+              page: _currentPage,
+              limit: pageSize,
+              authorWallet: wallet,
+              authorUserId: userId,
+            );
+      final more = _ownPostsOnly(fetched, wallet: wallet, userId: userId);
       await _hydratePostInteractions(
         more,
         savedItemsProvider: savedItemsProvider,
@@ -481,7 +555,7 @@ class ProfilePackageController extends ChangeNotifier {
       );
       // A new list: the one in hand may be fixed-length or unmodifiable.
       _posts = <CommunityPost>[..._posts, ...more];
-      _isLastPage = more.length < pageSize;
+      _isLastPage = fetched.length < pageSize;
       _loadingMore = false;
       ProfilePackageMutationTracker.postsPatched(
         wallet: currentUser.id,

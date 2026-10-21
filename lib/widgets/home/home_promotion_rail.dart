@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../models/profile_identity_data.dart';
 import '../../models/promotion.dart';
+import '../../services/user_service.dart';
 import '../../utils/design_tokens.dart';
 import '../../utils/kubus_color_roles.dart';
 import '../../utils/kubus_entity_semantics.dart';
@@ -153,6 +154,7 @@ class _HomePromotionRailCard extends StatelessWidget {
       final data = ProfileIdentityData.fromHomeRailItem(
         item,
         fallbackLabel: profileFallbackLabel,
+        cachedRoles: _cachedRailRoles(item),
       );
       final isPerson = item.entityType == PromotionEntityType.profile;
       final hasMark = (data.avatarUrl ?? '').trim().isNotEmpty;
@@ -223,6 +225,14 @@ class _PromotedMark extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Roles the user cache already knows for a rail identity. The rail payload
+/// does not always state them, so a cached artist keeps its badge there.
+ProfileIdentityRoles? _cachedRailRoles(HomeRailItem item) {
+  final id = (item.profileTargetId ?? item.id).trim();
+  if (id.isEmpty) return null;
+  return UserService.getCachedUser(id)?.roleStatements;
 }
 
 /// The cover an identity rail card paints behind its avatar or logo.

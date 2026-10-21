@@ -148,4 +148,108 @@ void main() {
     expect(UserService.getCachedUser(_wallet)?.coverImageUrl, _savedCover);
     expect(_networkUrl(tester), _savedAvatar);
   });
+
+  testWidgets('a stale payload avatar loses to the saved cached avatar', (
+    tester,
+  ) async {
+    UserService.setUsersInCacheAuthoritative([_user(avatar: _savedAvatar)]);
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: Scaffold(
+          body: Center(
+            child: AvatarWidget(
+              wallet: _wallet,
+              avatarUrl: _oldAvatar,
+              radius: 24,
+              enableProfileNavigation: false,
+              fetchMissingAvatar: false,
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+
+    expect(_networkUrl(tester), _savedAvatar);
+  });
+
+  testWidgets('saving an unchanged avatar URL re-renders with a cache bust', (
+    tester,
+  ) async {
+    UserService.setUsersInCacheAuthoritative([_user(avatar: _oldAvatar)]);
+    await tester.pumpWidget(_app());
+    await tester.pump();
+    expect(_networkUrl(tester), _oldAvatar);
+
+    final saved = _user(avatar: _oldAvatar);
+    UserService.setUsersInCacheAuthoritative([saved]);
+    UserService.markProfileMediaChanged([_wallet]);
+    EventBus().emitProfileUpdated(saved);
+    await tester.idle();
+    await tester.pump();
+
+    final url = _networkUrl(tester);
+    expect(url, isNotNull);
+    expect(url, startsWith(_oldAvatar));
+    expect(url, contains('v='));
+  });
+
+  testWidgets(
+      'an expired cached avatar renders now and starts a background refresh', (
+    tester,
+  ) async {
+    UserService.setUsersInCacheAuthoritative([_user(avatar: _oldAvatar)]);
+    UserService.ageCacheEntryForTesting(_wallet, const Duration(hours: 7));
+    api.setHttpClient(
+      MockClient((request) {
+        if (request.url.path == '/api/profiles/$_wallet') {
+          return Future<http.Response>.value(
+            http.Response(
+              jsonEncode(<String, Object?>{
+                'id': _wallet,
+                'walletAddress': _wallet,
+                'username': 'ana',
+                'displayName': 'Ana Artist',
+                'avatar': _savedAvatar,
+                'coverImage': _savedCover,
+                'isFollowing': false,
+              }),
+              200,
+              headers: const <String, String>{
+                'content-type': 'application/json',
+              },
+            ),
+          );
+        }
+        return Future<http.Response>.value(http.Response('Not found', 404));
+      }),
+    );
+
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: Scaffold(
+          body: Center(
+            child: AvatarWidget(
+              wallet: _wallet,
+              radius: 24,
+              enableProfileNavigation: false,
+              fetchMissingAvatar: true,
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+    expect(_networkUrl(tester), _oldAvatar);
+
+    // The expired entry is dropped synchronously when the background refresh
+    // starts, so the cache no longer serves the stale avatar. Rendering was not
+    // blocked by the refresh, and the widget keeps the avatar it already showed.
+    expect(UserService.getCachedUser(_wallet), isNull);
+    expect(_networkUrl(tester), _oldAvatar);
+
+    // Let the background request settle so no retry timer outlives the test.
+    await tester.pump(const Duration(minutes: 1));
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
 }

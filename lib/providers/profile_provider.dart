@@ -85,6 +85,7 @@ class ProfileProvider extends foundation.ChangeNotifier {
   int _realPostsCount = 0;
   SharedPreferences? _prefs;
   final ProfileBackendApi _apiService;
+  final StatsApiService _statsApi;
   Map<String, dynamic>? _lastUploadDebug;
   ProfilePreferences? _cachedPreferences;
   bool _hasHydratedProfile = false;
@@ -98,8 +99,9 @@ class ProfileProvider extends foundation.ChangeNotifier {
   ProfilePreferences? _pendingPreferencesSync;
   int _preferencesSaveEpoch = 0;
 
-  ProfileProvider({ProfileBackendApi? apiService})
-      : _apiService = apiService ?? BackendApiService();
+  ProfileProvider({ProfileBackendApi? apiService, StatsApiService? statsApi})
+      : _apiService = apiService ?? BackendApiService(),
+        _statsApi = statsApi ?? StatsApiService();
 
   void bindWalletProvider(WalletProvider walletProvider) {
     if (identical(_walletProvider, walletProvider)) return;
@@ -628,9 +630,10 @@ class ProfileProvider extends foundation.ChangeNotifier {
   Future<void> _loadBackendStats(
     String walletAddress, {
     bool forceRefresh = false,
+    bool Function()? isCurrent,
   }) async {
     try {
-      final snapshot = await StatsApiService().fetchSnapshot(
+      final snapshot = await _statsApi.fetchSnapshot(
         entityType: 'user',
         entityId: walletAddress,
         metrics: const [
@@ -645,6 +648,9 @@ class ProfileProvider extends foundation.ChangeNotifier {
         scope: 'public',
         forceRefresh: forceRefresh,
       );
+      // A sign-out or account switch while the request was in flight must not
+      // apply the previous account's counts.
+      if (isCurrent != null && !isCurrent()) return;
 
       _collectionsCount = snapshot.counters['collections'] ?? 0;
       _realFollowersCount = snapshot.counters['followers'] ?? 0;
@@ -1161,35 +1167,8 @@ class ProfileProvider extends foundation.ChangeNotifier {
       debugPrint(
           'ProfileProvider: Profile saved successfully for wallet: $walletAddress');
 
-      // Persist to UserService cache (and let ChatProvider be updated via EventBus)
-      try {
-        final u = _currentUser;
-        // The user cache is wallet-keyed; walletless accounts are not cached.
-        if (u != null && u.walletAddress.trim().isNotEmpty) {
-          final joinedDate = u.createdAt.toIso8601String();
-          UserService.setUsersInCacheAuthoritative([
-            User(
-              id: u.walletAddress,
-              name: u.displayName,
-              username: u.username,
-              bio: u.bio,
-              profileImageUrl: u.avatar,
-              coverImageUrl: MediaUrlResolver.resolve(u.coverImage),
-              fieldOfWork: u.artistInfo?.specialty ?? const <String>[],
-              yearsActive: u.artistInfo?.yearsActive ?? 0,
-              followersCount: u.stats?.followersCount ?? 0,
-              followingCount: u.stats?.followingCount ?? 0,
-              postsCount: u.stats?.artworksCreated ?? 0,
-              isFollowing: false,
-              isVerified: false,
-              joinedDate: joinedDate,
-              achievementProgress: [],
-              isArtist: u.isArtist,
-              isInstitution: u.isInstitution,
-            )
-          ]);
-        }
-      } catch (_) {}
+      // Persist to UserService cache (the source of truth for other surfaces)
+      _publishSavedProfileToUserCache();
       // Emit an application event indicating the profile was updated
       try {
         EventBus().emitProfileUpdated(_currentUser);
@@ -1219,6 +1198,53 @@ class ProfileProvider extends foundation.ChangeNotifier {
       _isLoading = false;
       notifyListeners();
     }
+  }
+
+  /// Writes the saved owner profile into UserService's shared cache under the
+  /// wallet key and the account id key, then marks the media revision so every
+  /// avatar surface re-resolves to the saved URL (cache-busted when unchanged).
+  /// Walletless accounts are not cached.
+  void _publishSavedProfileToUserCache() {
+    try {
+      final u = _currentUser;
+      if (u == null || u.walletAddress.trim().isEmpty) return;
+      final joinedDate = u.createdAt.toIso8601String();
+      final coverUrl = MediaUrlResolver.resolve(u.coverImage);
+      User userFor(String id) => User(
+            id: id,
+            name: u.displayName,
+            username: u.username,
+            bio: u.bio,
+            profileImageUrl: u.avatar,
+            coverImageUrl: coverUrl,
+            fieldOfWork: u.artistInfo?.specialty ?? const <String>[],
+            yearsActive: u.artistInfo?.yearsActive ?? 0,
+            followersCount: u.stats?.followersCount ?? 0,
+            followingCount: u.stats?.followingCount ?? 0,
+            postsCount: u.stats?.artworksCreated ?? 0,
+            isFollowing: false,
+            // The owner's own profile states all three roles, so a
+            // revocation must reach the shared cache.
+            isVerified: u.artistInfo?.verified ?? false,
+            isVerifiedSpecified: true,
+            joinedDate: joinedDate,
+            achievementProgress: [],
+            isArtist: u.isArtist,
+            isArtistSpecified: true,
+            isInstitution: u.isInstitution,
+            isInstitutionSpecified: true,
+          );
+      final wallet = u.walletAddress.trim();
+      final accountId = u.id.trim();
+      final ids = <String>[
+        wallet,
+        if (accountId.isNotEmpty && accountId != wallet) accountId,
+      ];
+      UserService.setUsersInCacheAuthoritative(
+        ids.map(userFor).toList(growable: false),
+      );
+      UserService.markProfileMediaChanged(ids);
+    } catch (_) {}
   }
 
   Future<bool> saveProfileMedia({
@@ -1304,6 +1330,9 @@ class ProfileProvider extends foundation.ChangeNotifier {
       }
 
       _isSignedIn = true;
+      // Avatar/cover-only saves must reach the shared cache too, otherwise
+      // other surfaces keep showing the previous image.
+      _publishSavedProfileToUserCache();
       notifyListeners();
       try {
         EventBus().emitProfileUpdated(_currentUser);
@@ -1938,6 +1967,10 @@ class ProfileProvider extends foundation.ChangeNotifier {
     bool forceRefresh = false,
     String? walletAddress,
   }) async {
+    // Capture the load epoch before any await: sign-out or an account switch
+    // bumps it, and the late stats response must then be dropped.
+    final requestEpoch = _profileLoadEpoch;
+    bool isCurrentLoad() => requestEpoch == _profileLoadEpoch;
     final explicit = walletAddress?.trim();
     String? resolved = (explicit != null && explicit.isNotEmpty)
         ? explicit
@@ -1955,7 +1988,12 @@ class ProfileProvider extends foundation.ChangeNotifier {
 
     final wallet = resolved?.trim() ?? '';
     if (wallet.isEmpty) return;
-    await _loadBackendStats(wallet, forceRefresh: forceRefresh);
+    if (!isCurrentLoad()) return;
+    await _loadBackendStats(
+      wallet,
+      forceRefresh: forceRefresh,
+      isCurrent: isCurrentLoad,
+    );
   }
 
   /// Update privacy/display preferences locally and attempt to persist to backend.

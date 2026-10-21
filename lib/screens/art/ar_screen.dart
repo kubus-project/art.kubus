@@ -4122,7 +4122,7 @@ class _ARScreenState extends State<ARScreen>
                     const SizedBox(height: 12),
                     ListTile(
                       leading: const Icon(Icons.add_location_alt_outlined),
-                      title: const Text('Create artwork location marker'),
+                      title: Text(l10n.arCreateArtworkLocationMarkerTitle),
                       subtitle: const Text(
                         'Advanced contributor action using your live location.',
                       ),

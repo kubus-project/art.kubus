@@ -228,6 +228,231 @@ void main() {
 
     controller.dispose();
   });
+
+  group('profile posts query', () {
+    const accountUuid = '3f2b9c1e-7a4d-4e8b-9c2a-1d2e3f4a5b6c';
+    const foreignUuid = '9a8b7c6d-5e4f-4a3b-8c2d-1e0f9a8b7c6d';
+
+    test('wallet profile sends authorWallet for its posts', () async {
+      final controller = ProfilePackageController(walletAddress: wallet);
+      controller.applyCritical(_critical(wallet: wallet, title: 'Milestone'));
+      final requests = <Uri>[];
+      BackendApiService().setHttpClient(MockClient((request) async {
+        if (request.url.path.contains('/api/community/posts')) {
+          requests.add(request.url);
+          return _jsonResponse(<String, Object?>{'data': <Object?>[]});
+        }
+        return http.Response('Not found', 404);
+      }));
+
+      await controller.loadPosts();
+
+      expect(requests, hasLength(1));
+      expect(requests.single.queryParameters['authorWallet'], wallet);
+      expect(
+          requests.single.queryParameters.containsKey('authorUserId'), isFalse);
+      expect(controller.postsError, isNull);
+
+      controller.dispose();
+    });
+
+    test('walletless profile sends authorUserId and drops foreign posts',
+        () async {
+      final controller = ProfilePackageController(walletAddress: accountUuid);
+      controller
+          .applyCritical(_critical(wallet: accountUuid, title: 'Milestone'));
+      final requests = <Uri>[];
+      BackendApiService().setHttpClient(MockClient((request) async {
+        if (request.url.path.contains('/api/community/posts')) {
+          requests.add(request.url);
+          // An older backend ignores authorUserId and returns the global feed.
+          return _jsonResponse(<String, Object?>{
+            'data': <Object?>[
+              _postJson(id: 'own-post', authorUserId: accountUuid),
+              _postJson(id: 'foreign-post', authorUserId: foreignUuid),
+            ],
+          });
+        }
+        return http.Response('Not found', 404);
+      }));
+
+      await controller.loadPosts();
+
+      expect(requests.single.queryParameters['authorUserId'], accountUuid);
+      expect(
+          requests.single.queryParameters.containsKey('authorWallet'), isFalse);
+      expect(controller.posts.map((post) => post.id), <String>['own-post']);
+      expect(controller.postsError, isNull);
+
+      controller.dispose();
+    });
+
+    test('a linked_auth placeholder is never the wallet key; the account id is',
+        () async {
+      final controller = ProfilePackageController(walletAddress: accountUuid);
+      controller.applyCritical(
+          _critical(wallet: 'linked_auth:$accountUuid', title: 'Milestone'));
+      final requests = <Uri>[];
+      BackendApiService().setHttpClient(MockClient((request) async {
+        if (request.url.path.contains('/api/community/posts')) {
+          requests.add(request.url);
+          return _jsonResponse(<String, Object?>{
+            'data': <Object?>[
+              _postJson(id: 'own-post', authorUserId: accountUuid),
+            ],
+          });
+        }
+        return http.Response('Not found', 404);
+      }));
+
+      await controller.loadPosts();
+
+      expect(requests.single.queryParameters['authorUserId'], accountUuid);
+      expect(
+          requests.single.queryParameters.containsKey('authorWallet'), isFalse);
+      expect(controller.posts.map((post) => post.id), <String>['own-post']);
+
+      controller.dispose();
+    });
+
+    test('failed posts request surfaces postsError, not an empty feed',
+        () async {
+      final controller = ProfilePackageController(walletAddress: accountUuid);
+      controller
+          .applyCritical(_critical(wallet: accountUuid, title: 'Milestone'));
+      BackendApiService().setHttpClient(MockClient((request) async {
+        if (request.url.path.contains('/api/community/posts')) {
+          return http.Response('failed', 500);
+        }
+        return http.Response('Not found', 404);
+      }));
+
+      await controller.loadPosts(errorMessage: 'posts failed');
+
+      expect(controller.postsLoading, isFalse);
+      expect(controller.postsError, 'posts failed');
+      expect(controller.posts, isEmpty);
+
+      controller.dispose();
+    });
+
+    test('wallet profile shows its wallet-authored posts', () async {
+      final controller = ProfilePackageController(walletAddress: wallet);
+      controller.applyCritical(_critical(wallet: wallet, title: 'Milestone'));
+      BackendApiService().setHttpClient(MockClient((request) async {
+        if (request.url.path.contains('/api/community/posts')) {
+          return _jsonResponse(<String, Object?>{
+            'data': <Object?>[
+              _walletPostJson(id: 'wallet-post', wallet: wallet),
+            ],
+          });
+        }
+        return http.Response('Not found', 404);
+      }));
+
+      await controller.loadPosts();
+
+      expect(controller.posts.map((post) => post.id), <String>['wallet-post']);
+      expect(controller.postsError, isNull);
+
+      controller.dispose();
+    });
+
+    test(
+        'account-uuid profile resolving to a wallet sends only authorWallet '
+        'and keeps legacy wallet-authored posts', () async {
+      // The account UUID is the route key, while the loaded user id is the
+      // wallet: both identifiers are known, but only the wallet is sent.
+      final controller = ProfilePackageController(walletAddress: accountUuid);
+      controller.applyCritical(_critical(wallet: wallet, title: 'Milestone'));
+      final requests = <Uri>[];
+      BackendApiService().setHttpClient(MockClient((request) async {
+        if (request.url.path.contains('/api/community/posts')) {
+          requests.add(request.url);
+          // Legacy posts carry only the wallet, with no author userId.
+          return _jsonResponse(<String, Object?>{
+            'data': <Object?>[
+              _walletPostJson(id: 'legacy-post', wallet: wallet),
+            ],
+          });
+        }
+        return http.Response('Not found', 404);
+      }));
+
+      await controller.loadPosts();
+
+      expect(requests, hasLength(1));
+      expect(requests.single.queryParameters['authorWallet'], wallet);
+      expect(
+          requests.single.queryParameters.containsKey('authorUserId'), isFalse);
+      expect(controller.posts.map((post) => post.id), <String>['legacy-post']);
+      expect(controller.postsError, isNull);
+
+      controller.dispose();
+    });
+
+    test('profile with no posts yields an empty list without error', () async {
+      final controller = ProfilePackageController(walletAddress: wallet);
+      controller.applyCritical(_critical(wallet: wallet, title: 'Milestone'));
+      BackendApiService().setHttpClient(MockClient((request) async {
+        if (request.url.path.contains('/api/community/posts')) {
+          return _jsonResponse(<String, Object?>{'data': <Object?>[]});
+        }
+        return http.Response('Not found', 404);
+      }));
+
+      await controller.loadPosts();
+
+      expect(controller.posts, isEmpty);
+      expect(controller.postsError, isNull);
+      expect(controller.postsLoading, isFalse);
+      expect(controller.isLastPage, isTrue);
+
+      controller.dispose();
+    });
+
+    test('loadMorePosts reuses the single author key on page two', () async {
+      final controller = ProfilePackageController(walletAddress: wallet);
+      controller.applyCritical(_critical(wallet: wallet, title: 'Milestone'));
+      final requests = <Uri>[];
+      BackendApiService().setHttpClient(MockClient((request) async {
+        if (request.url.path.contains('/api/community/posts')) {
+          requests.add(request.url);
+          final page = request.url.queryParameters['page'];
+          final ids = page == '2'
+              ? <String>['page-2-a', 'page-2-b', 'page-2-c']
+              : List<String>.generate(20, (i) => 'page-1-$i');
+          return _jsonResponse(<String, Object?>{
+            'data': <Object?>[
+              for (final id in ids) _walletPostJson(id: id, wallet: wallet),
+            ],
+          });
+        }
+        return http.Response('Not found', 404);
+      }));
+
+      await controller.loadPosts();
+
+      expect(controller.posts, hasLength(20));
+      expect(controller.isLastPage, isFalse);
+
+      await controller.loadMorePosts();
+
+      expect(requests, hasLength(2));
+      expect(requests.last.queryParameters['page'], '2');
+      for (final request in requests) {
+        expect(request.queryParameters['authorWallet'], wallet);
+        expect(request.queryParameters.containsKey('authorUserId'), isFalse);
+      }
+      expect(controller.posts, hasLength(23));
+      expect(controller.posts.last.id, 'page-2-c');
+      // Fewer than pageSize returned on page two: the list is complete.
+      expect(controller.isLastPage, isTrue);
+      expect(controller.postsError, isNull);
+
+      controller.dispose();
+    });
+  });
 }
 
 ProfileCriticalPackage _critical({
@@ -368,6 +593,36 @@ http.Response _mockProfilePackageResponse(
   }
 
   return http.Response('Not found', 404);
+}
+
+Map<String, Object?> _postJson({
+  required String id,
+  required String authorUserId,
+}) {
+  return <String, Object?>{
+    'id': id,
+    'content': 'Post $id',
+    'createdAt': '2026-05-25T00:00:00.000Z',
+    'author': <String, Object?>{
+      'userId': authorUserId,
+      'displayName': 'Author $authorUserId',
+    },
+  };
+}
+
+Map<String, Object?> _walletPostJson({
+  required String id,
+  required String wallet,
+}) {
+  return <String, Object?>{
+    'id': id,
+    'content': 'Post $id',
+    'createdAt': '2026-05-25T00:00:00.000Z',
+    'author': <String, Object?>{
+      'walletAddress': wallet,
+      'displayName': 'Controller Profile',
+    },
+  };
 }
 
 http.Response _jsonResponse(Map<String, Object?> payload) {

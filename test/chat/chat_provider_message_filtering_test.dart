@@ -158,6 +158,8 @@ void main() {
 
   test('reaction event updates existing message', () {
     final provider = ChatProvider();
+    // Socket events only apply to a signed-in session.
+    provider.setCurrentWalletForTesting('wallet-self');
     provider.messages['conv-reaction'] = <ChatMessage>[
       ChatMessage(
         id: 'msg-reaction',

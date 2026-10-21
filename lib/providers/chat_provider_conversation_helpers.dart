@@ -26,8 +26,13 @@ Future<List<Map<String, dynamic>>> _chatProviderFetchMembers(
     }
   }
 
+  final generation = provider._sessionGeneration;
   final completer = provider._api.fetchConversationMembers(conversationId).then(
     (resp) {
+      // Members fetched for a previous session/account are neither cached nor returned.
+      if (generation != provider._sessionGeneration) {
+        return <Map<String, dynamic>>[];
+      }
       if (resp['success'] == true) {
         final list = (resp['data'] as List<dynamic>?) ?? [];
         provider._cacheMembers(
@@ -88,7 +93,9 @@ Future<void> _chatProviderPrefetchUsersForWallets(
         'ChatProvider._prefetchUsersForWallets: wallets=${wallets.length}');
     final uniq = wallets.where((w) => w.isNotEmpty).toSet().toList();
     if (uniq.isEmpty) return;
+    final generation = provider._sessionGeneration;
     final users = await UserService.getUsersByWallets(uniq);
+    if (generation != provider._sessionGeneration) return;
     final updated = <String>[];
     for (final u in users) {
       if (u.id.isNotEmpty) {

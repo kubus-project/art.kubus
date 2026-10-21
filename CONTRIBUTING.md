@@ -87,7 +87,7 @@ Comment on an issue before starting so nobody duplicates work. If you want to bu
 - Respect feature flags and provider initialization order.
 - Keep mobile and desktop parity when you change a screen. Many screens have a separate desktop layout under `lib/screens/desktop/`.
 - Use theme helpers and tokens, never hardcoded colors.
-- User-visible text goes through `AppLocalizations`. Add every new key to both `lib/l10n/app_en.arb` and `lib/l10n/app_sl.arb`, then run `flutter gen-l10n`. Regeneration drops a hand-kept locale guard in `lib/l10n/app_localizations.dart`; restore it so that `git diff dev -- lib/l10n/app_localizations.dart` shows only additions. `test/l10n/` fails if the guard is missing.
+- User-visible text goes through `AppLocalizations`. Add every new key to both `lib/l10n/app_en.arb` and `lib/l10n/app_sl.arb`, then run `flutter gen-l10n`. Regeneration drops a hand-kept locale guard in `lib/l10n/app_localizations.dart`. After `flutter gen-l10n`, run `dart format lib/l10n/app_localizations*.dart && node scripts/l10n/locale_guard.mjs --fix` to re-apply it (`--check` verifies it). CI runs the same steps and fails on generated drift or a lost guard, so `git diff dev -- lib/l10n/` should show only the new keys. `test/l10n/` fails if the guard is missing.
 - Brand names are lowercase: `art.kubus`, `kubus`, `kubus Node`.
 - Do not add secrets, keys or private credentials.
 

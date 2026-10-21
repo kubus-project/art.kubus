@@ -3276,6 +3276,11 @@
   "qrScannerInvalidQrToast": "Please scan a Solana wallet QR code.",
   "qrScannerTorchNotSupportedToast": "Torch toggle not supported on this device.",
   "qrScannerSwitchCameraFailedToast": "Unable to switch camera.",
+  "qrScannerTorchOnTooltip": "Turn on flashlight",
+  "qrScannerTorchOffTooltip": "Turn off flashlight",
+  "qrScannerSwitchCameraTooltip": "Switch camera",
+  "commentLikeTooltip": "Like comment",
+  "commentUnlikeTooltip": "Unlike comment",
   "artworkNotFound": "Artwork not found",
   "web3DashboardComingSoon": "Web3 dashboard - coming soon",
   "artDetailLoadingTitle": "Loading artwork",
@@ -7795,5 +7800,101 @@
   "contributionDocument": "Document public art",
   "contributionArtwork": "Add artwork",
   "contributionExhibition": "Add exhibition or event",
-  "contributionApplication": "View application status"
+  "contributionApplication": "View application status",
+  "arMarkerManagerTitle": "AR Marker",
+  "arMarkerManagerSubtitle": "Set up a printable marker so people can scan and unlock the AR experience.",
+  "arMarkerManagerOnlyPngToast": "Only PNG markers are supported.",
+  "arMarkerManagerSquareRequiredToast": "Marker must be square (width == height).",
+  "arMarkerManagerTooSmallToast": "Marker is too small. Minimum is {minPx}×{minPx}px.",
+  "@arMarkerManagerTooSmallToast": {
+    "placeholders": {
+      "minPx": {
+        "type": "int"
+      }
+    }
+  },
+  "arMarkerManagerTooLargeToast": "Marker is too large. Maximum is {maxPx}×{maxPx}px.",
+  "@arMarkerManagerTooLargeToast": {
+    "placeholders": {
+      "maxPx": {
+        "type": "int"
+      }
+    }
+  },
+  "arMarkerManagerModeTitle": "Marker mode",
+  "arMarkerManagerAutoGenerateTitle": "Auto-generate",
+  "arMarkerManagerAutoGenerateSubtitle": "kubus generates a marker for this artwork.",
+  "arMarkerManagerUploadOwnTitle": "Upload my own",
+  "arMarkerManagerUploadOwnSubtitle": "Upload a square PNG marker ({minPx}–{maxPx}px).",
+  "@arMarkerManagerUploadOwnSubtitle": {
+    "placeholders": {
+      "minPx": {
+        "type": "int"
+      },
+      "maxPx": {
+        "type": "int"
+      }
+    }
+  },
+  "arMarkerManagerSizeLabel": "Marker size (px)",
+  "arMarkerManagerGenerateButton": "Generate",
+  "arMarkerManagerRegenerateButton": "Regenerate",
+  "arMarkerManagerRequirementsTitle": "Upload requirements",
+  "arMarkerManagerRequirementsBody": "PNG only • Square • {minPx}–{maxPx}px • High contrast • Leave a safe border for printing.",
+  "@arMarkerManagerRequirementsBody": {
+    "placeholders": {
+      "minPx": {
+        "type": "int"
+      },
+      "maxPx": {
+        "type": "int"
+      }
+    }
+  },
+  "arMarkerManagerSelectPngButton": "Select PNG",
+  "arMarkerManagerChangeFileButton": "Change file",
+  "arMarkerManagerUploadButton": "Upload marker",
+  "arMarkerManagerPreviewTitle": "Preview",
+  "arMarkerManagerDownloadButton": "Download marker",
+  "arMarkerManagerSavedToast": "AR setup saved.",
+  "promotionCheckoutOpenAppButton": "Open app",
+  "arCreateArtworkLocationMarkerTitle": "Create artwork location marker",
+  "mnemonicRevealCopyUnavailableToast": "Unable to copy the recovery phrase on this device.",
+  "promotionCheckoutReturnAppBarTitle": "Promotion Checkout",
+  "@promotionCheckoutReturnAppBarTitle": {
+    "description": "App bar title of the screen shown after returning from Stripe promotion checkout."
+  },
+  "promotionCheckoutReturnDefaultTitle": "Promotion checkout",
+  "@promotionCheckoutReturnDefaultTitle": {
+    "description": "Status title when the promotion checkout return status is unknown or still pending."
+  },
+  "promotionCheckoutReturnSuccessTitle": "Promotion payment received",
+  "@promotionCheckoutReturnSuccessTitle": {
+    "description": "Status title after a successful promotion checkout return."
+  },
+  "promotionCheckoutReturnSuccessBody": "Your payment was received. The promotion request is now waiting for admin review.",
+  "@promotionCheckoutReturnSuccessBody": {
+    "description": "Explanatory body text after a successful promotion checkout return."
+  },
+  "promotionCheckoutReturnCancelledTitle": "Promotion checkout cancelled",
+  "@promotionCheckoutReturnCancelledTitle": {
+    "description": "Status title when the user cancels promotion checkout."
+  },
+  "promotionCheckoutReturnCancelledBody": "No payment was captured. You can return to the app and submit the promotion again when ready.",
+  "@promotionCheckoutReturnCancelledBody": {
+    "description": "Explanatory body text when the user cancels promotion checkout."
+  },
+  "promotionCheckoutReturnDefaultBody": "Return to the app to review the current status of your promotion request.",
+  "@promotionCheckoutReturnDefaultBody": {
+    "description": "Explanatory body text when the promotion checkout return status is unknown or still pending."
+  },
+  "promotionCheckoutReturnSessionLabel": "Stripe session: {sessionId}",
+  "@promotionCheckoutReturnSessionLabel": {
+    "description": "Label showing the Stripe checkout session id on the promotion checkout return screen.",
+    "placeholders": {
+      "sessionId": {
+        "type": "String"
+      }
+    }
+  }
 }
