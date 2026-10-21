@@ -71,6 +71,7 @@ import 'providers/spatial_capture_provider.dart';
 import 'providers/spatial_library_provider.dart';
 import 'providers/availability_operator_provider.dart';
 import 'core/app_initializer.dart';
+import 'core/browser_entry_router.dart';
 import 'core/public_entry_navigation.dart';
 import 'core/startup_trace.dart';
 import 'core/app_navigator.dart';
@@ -448,30 +449,13 @@ class _AppLauncherState extends State<AppLauncher> {
       child: Consumer2<ThemeProvider, LocaleProvider>(
         builder: (context, themeProvider, localeProvider, _) {
           if (!_initialized) {
-            return MaterialApp(
-              debugShowCheckedModeBanner: false,
-              navigatorKey: appNavigatorKey,
-              locale: localeProvider.locale,
-              supportedLocales: AppLocalizations.supportedLocales,
-              localizationsDelegates: AppLocalizations.localizationsDelegates,
-              onGenerateTitle: (context) =>
-                  publicEntityDocumentTitle() ??
-                  AppLocalizations.of(context)?.appTitle ??
-                  'art.kubus',
-              theme: themeProvider.lightTheme,
-              darkTheme: themeProvider.darkTheme,
-              themeMode: themeProvider.themeMode,
-              builder: (context, child) {
-                // Safety net: if any route uses transparency and forgets to
-                // paint its own backdrop, we'd otherwise see the host page's
-                // HTML background.
-                return KubusProductBackground(
-                  child: child ?? const SizedBox.shrink(),
-                );
-              },
-              home: const Scaffold(
-                backgroundColor: Colors.transparent,
-                body: AppLoading(),
+            return Theme(
+              data: themeProvider.lightTheme,
+              child: const Directionality(
+                textDirection: TextDirection.ltr,
+                child: KubusProductBackground(
+                  child: AppLoading(),
+                ),
               ),
             );
           }
@@ -990,7 +974,9 @@ class ArtKubus extends StatefulWidget {
 
 class _ArtKubusState extends State<ArtKubus> with WidgetsBindingObserver {
   final TelemetryRouteObserver _telemetryObserver = TelemetryRouteObserver();
-  final UrlCoherenceObserver _urlCoherenceObserver = UrlCoherenceObserver();
+  late final UrlCoherenceObserver _urlCoherenceObserver = UrlCoherenceObserver(
+    report: _reportVisibleBrowserUrl,
+  );
   // The shared instance is what entity screens register their titles with.
   late final DocumentTitleObserver _documentTitleObserver = (() {
     final observer = DocumentTitleObserver.shared;
@@ -1001,6 +987,49 @@ class _ArtKubusState extends State<ArtKubus> with WidgetsBindingObserver {
     observer.retainedPath = retained == null ? null : Uri.base.path;
     return observer;
   })();
+
+  late final BrowserEntryRoute _webInitialRoute =
+      BrowserEntryRoute.fromUri(_webStartupUri());
+  late final StartupBrowserRouteInformationProvider
+      _webRouteInformationProvider =
+      StartupBrowserRouteInformationProvider(_webInitialRoute);
+  late final BrowserEntryRouterDelegate _webRouterDelegate =
+      BrowserEntryRouterDelegate(
+    navigatorKey: appNavigatorKey,
+    initialConfiguration: _webInitialRoute,
+    onGenerateInitialRoutes: _generateInitialRoutes,
+    onGenerateRoute: _buildAppRoute,
+    observers: <NavigatorObserver>[
+      _telemetryObserver,
+      appRouteObserver,
+      _urlCoherenceObserver,
+      _documentTitleObserver,
+    ],
+    restoreRoute: _restoreBrowserRoute,
+  );
+
+  Uri _webStartupUri() {
+    final startupRoute = PublicEntryNavigation.instance.startupBrowserRoute;
+    return startupRoute == null ? Uri.base : Uri.parse(startupRoute);
+  }
+
+  void _reportVisibleBrowserUrl(String url) {
+    if (!kIsWeb) return;
+    final router = _webRouterDelegate;
+    if (router.isRestoringRoute) return;
+    final uri = Uri.tryParse(url);
+    if (uri != null) router.reportVisibleUri(uri);
+  }
+
+  void _restoreBrowserRoute(
+    BrowserEntryRoute configuration,
+    NavigatorState navigator,
+  ) {
+    final route = _buildAppRoute(
+      RouteSettings(name: configuration.visibleUri.toString()),
+    );
+    navigator.pushAndRemoveUntil(route, (_) => false);
+  }
 
   Map<String, WidgetBuilder> get _namedRoutes => {
         ...ShellRoutes.builders,
@@ -1615,6 +1644,10 @@ class _ArtKubusState extends State<ArtKubus> with WidgetsBindingObserver {
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _urlCoherenceObserver.dispose();
+    if (kIsWeb) {
+      _webRouteInformationProvider.dispose();
+      _webRouterDelegate.dispose();
+    }
     super.dispose();
   }
 
@@ -1662,58 +1695,85 @@ class _ArtKubusState extends State<ArtKubus> with WidgetsBindingObserver {
   Widget build(BuildContext context) {
     return Consumer2<ThemeProvider, LocaleProvider>(
       builder: (context, themeProvider, localeProvider, child) {
-        return MaterialApp(
-          title: 'art.kubus',
-          debugShowCheckedModeBanner: false,
-          navigatorKey: appNavigatorKey,
-          navigatorObservers: [
-            _telemetryObserver,
-            appRouteObserver,
-            _urlCoherenceObserver,
-            _documentTitleObserver,
-          ],
-          locale: localeProvider.locale,
-          supportedLocales: AppLocalizations.supportedLocales,
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
-          onGenerateTitle: (context) =>
-              _documentTitleObserver.title.value ??
-              publicEntityDocumentTitle() ??
-              AppLocalizations.of(context)?.appTitle ??
-              'art.kubus',
-          theme: themeProvider.lightTheme,
-          darkTheme: themeProvider.darkTheme,
-          themeMode: themeProvider.themeMode,
-          builder: (context, child) {
-            // Report the resolved UI locale so the funnel can compare the
-            // English and Slovenian experiences.
-            TelemetryService().setLocale(
-              Localizations.localeOf(context).languageCode,
-            );
-            return ValueListenableBuilder<String?>(
-              valueListenable: _documentTitleObserver.title,
-              builder: (context, documentTitle, shell) => Title(
-                title: documentTitle ??
-                    AppLocalizations.of(context)?.appTitle ??
-                    'art.kubus',
-                color: Theme.of(context).primaryColor,
-                child: shell!,
-              ),
-              child: KubusProductBackground(
-                child: SecurityGateOverlay(
-                  // Mounted above the navigator so a restored pending action
-                  // can be confirmed on whichever entity the visitor was
-                  // returned to, on mobile and desktop alike.
-                  child: PendingActionContinuationHost(
-                    navigatorKey: appNavigatorKey,
-                    child: child ?? const SizedBox.shrink(),
-                  ),
+        Widget app;
+        final navigatorObservers = <NavigatorObserver>[
+          _telemetryObserver,
+          appRouteObserver,
+          _urlCoherenceObserver,
+          _documentTitleObserver,
+        ];
+        Widget buildApp(BuildContext context, Widget? child) {
+          // Report the resolved UI locale so the funnel can compare the
+          // English and Slovenian experiences.
+          TelemetryService().setLocale(
+            Localizations.localeOf(context).languageCode,
+          );
+          return ValueListenableBuilder<String?>(
+            valueListenable: _documentTitleObserver.title,
+            builder: (context, documentTitle, shell) => Title(
+              title: documentTitle ??
+                  AppLocalizations.of(context)?.appTitle ??
+                  'art.kubus',
+              color: Theme.of(context).primaryColor,
+              child: shell!,
+            ),
+            child: KubusProductBackground(
+              child: SecurityGateOverlay(
+                // Mounted above the navigator so a restored pending action
+                // can be confirmed on whichever entity the visitor was
+                // returned to, on mobile and desktop alike.
+                child: PendingActionContinuationHost(
+                  navigatorKey: appNavigatorKey,
+                  child: child ?? const SizedBox.shrink(),
                 ),
               ),
-            );
-          },
-          onGenerateInitialRoutes: _generateInitialRoutes,
-          onGenerateRoute: _buildAppRoute,
-        );
+            ),
+          );
+        }
+
+        if (kIsWeb) {
+          app = MaterialApp.router(
+            title: 'art.kubus',
+            debugShowCheckedModeBanner: false,
+            routeInformationProvider: _webRouteInformationProvider,
+            routeInformationParser: const BrowserEntryRouteInformationParser(),
+            routerDelegate: _webRouterDelegate,
+            locale: localeProvider.locale,
+            supportedLocales: AppLocalizations.supportedLocales,
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            onGenerateTitle: (context) =>
+                _documentTitleObserver.title.value ??
+                publicEntityDocumentTitle() ??
+                AppLocalizations.of(context)?.appTitle ??
+                'art.kubus',
+            theme: themeProvider.lightTheme,
+            darkTheme: themeProvider.darkTheme,
+            themeMode: themeProvider.themeMode,
+            builder: buildApp,
+          );
+        } else {
+          app = MaterialApp(
+            title: 'art.kubus',
+            debugShowCheckedModeBanner: false,
+            navigatorKey: appNavigatorKey,
+            navigatorObservers: navigatorObservers,
+            locale: localeProvider.locale,
+            supportedLocales: AppLocalizations.supportedLocales,
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            onGenerateTitle: (context) =>
+                _documentTitleObserver.title.value ??
+                publicEntityDocumentTitle() ??
+                AppLocalizations.of(context)?.appTitle ??
+                'art.kubus',
+            theme: themeProvider.lightTheme,
+            darkTheme: themeProvider.darkTheme,
+            themeMode: themeProvider.themeMode,
+            builder: buildApp,
+            onGenerateInitialRoutes: _generateInitialRoutes,
+            onGenerateRoute: _buildAppRoute,
+          );
+        }
+        return app;
       },
     );
   }

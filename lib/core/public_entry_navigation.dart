@@ -54,6 +54,10 @@ class PublicEntryNavigation extends ChangeNotifier with WidgetsBindingObserver {
   @visibleForTesting
   Future<void> Function() exitApp = SystemNavigator.pop;
 
+  /// Frozen launch URL shared with the web Router's initial route provider.
+  /// It is read without consuming it; initial-route generation consumes it once.
+  String? get startupBrowserRoute => _startupBrowserRoute;
+
   /// Captures the browser URL before Flutter's route-information normalization
   /// can drop a fragment from its initial Navigator route. Consume this once
   /// during initial-route generation; later in-app entries must own their own
