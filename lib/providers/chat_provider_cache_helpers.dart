@@ -83,6 +83,8 @@ void _chatProviderResetSessionState(
   required String reason,
   required bool notify,
 }) {
+  // Invalidate every in-flight loader that belongs to the session being left.
+  provider._sessionGeneration += 1;
   try {
     provider._pollTimer?.cancel();
     provider._pollTimer = null;
@@ -98,6 +100,18 @@ void _chatProviderResetSessionState(
   try {
     provider._socket.leaveAllConversations();
   } catch (_) {}
+  try {
+    final subscribedWallet = provider._socket.currentSubscribedWallet;
+    if (subscribedWallet != null && subscribedWallet.isNotEmpty) {
+      provider._socket.unsubscribeUser(subscribedWallet);
+    }
+  } catch (_) {}
+
+  // Remember the conversations being left so late socket events for them are
+  // rejected by _isSocketEventForCurrentSession.
+  provider._retiredSessionConversationIds
+    ..addAll(provider._conversations.map((c) => c.id))
+    ..addAll(provider._messages.keys);
 
   provider._currentWallet = null;
   provider._conversations = [];

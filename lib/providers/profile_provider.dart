@@ -85,6 +85,7 @@ class ProfileProvider extends foundation.ChangeNotifier {
   int _realPostsCount = 0;
   SharedPreferences? _prefs;
   final ProfileBackendApi _apiService;
+  final StatsApiService _statsApi;
   Map<String, dynamic>? _lastUploadDebug;
   ProfilePreferences? _cachedPreferences;
   bool _hasHydratedProfile = false;
@@ -98,8 +99,9 @@ class ProfileProvider extends foundation.ChangeNotifier {
   ProfilePreferences? _pendingPreferencesSync;
   int _preferencesSaveEpoch = 0;
 
-  ProfileProvider({ProfileBackendApi? apiService})
-      : _apiService = apiService ?? BackendApiService();
+  ProfileProvider({ProfileBackendApi? apiService, StatsApiService? statsApi})
+      : _apiService = apiService ?? BackendApiService(),
+        _statsApi = statsApi ?? StatsApiService();
 
   void bindWalletProvider(WalletProvider walletProvider) {
     if (identical(_walletProvider, walletProvider)) return;
@@ -628,9 +630,10 @@ class ProfileProvider extends foundation.ChangeNotifier {
   Future<void> _loadBackendStats(
     String walletAddress, {
     bool forceRefresh = false,
+    bool Function()? isCurrent,
   }) async {
     try {
-      final snapshot = await StatsApiService().fetchSnapshot(
+      final snapshot = await _statsApi.fetchSnapshot(
         entityType: 'user',
         entityId: walletAddress,
         metrics: const [
@@ -645,6 +648,9 @@ class ProfileProvider extends foundation.ChangeNotifier {
         scope: 'public',
         forceRefresh: forceRefresh,
       );
+      // A sign-out or account switch while the request was in flight must not
+      // apply the previous account's counts.
+      if (isCurrent != null && !isCurrent()) return;
 
       _collectionsCount = snapshot.counters['collections'] ?? 0;
       _realFollowersCount = snapshot.counters['followers'] ?? 0;
@@ -1961,6 +1967,10 @@ class ProfileProvider extends foundation.ChangeNotifier {
     bool forceRefresh = false,
     String? walletAddress,
   }) async {
+    // Capture the load epoch before any await: sign-out or an account switch
+    // bumps it, and the late stats response must then be dropped.
+    final requestEpoch = _profileLoadEpoch;
+    bool isCurrentLoad() => requestEpoch == _profileLoadEpoch;
     final explicit = walletAddress?.trim();
     String? resolved = (explicit != null && explicit.isNotEmpty)
         ? explicit
@@ -1978,7 +1988,12 @@ class ProfileProvider extends foundation.ChangeNotifier {
 
     final wallet = resolved?.trim() ?? '';
     if (wallet.isEmpty) return;
-    await _loadBackendStats(wallet, forceRefresh: forceRefresh);
+    if (!isCurrentLoad()) return;
+    await _loadBackendStats(
+      wallet,
+      forceRefresh: forceRefresh,
+      isCurrent: isCurrentLoad,
+    );
   }
 
   /// Update privacy/display preferences locally and attempt to persist to backend.

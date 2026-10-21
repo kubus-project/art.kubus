@@ -1,16 +1,14 @@
 part of 'chat_provider.dart';
 
-const Duration _chatSubscriptionMonitorActiveInterval =
-  Duration(seconds: 60);
-const Duration _chatSubscriptionMonitorPassiveInterval =
-  Duration(seconds: 150);
-const Duration _chatSubscriptionMonitorHealthyInterval =
-    Duration(minutes: 3);
+const Duration _chatSubscriptionMonitorActiveInterval = Duration(seconds: 60);
+const Duration _chatSubscriptionMonitorPassiveInterval = Duration(seconds: 150);
+const Duration _chatSubscriptionMonitorHealthyInterval = Duration(minutes: 3);
 const Duration _chatSubscriptionMonitorBackgroundInterval =
     Duration(minutes: 4);
 
 const Duration _chatConversationPollActiveInterval = Duration(seconds: 18);
-const Duration _chatConversationPollInitialFallbackInterval = Duration(seconds: 3);
+const Duration _chatConversationPollInitialFallbackInterval =
+    Duration(seconds: 3);
 const Duration _chatConversationPollPassiveInterval = Duration(seconds: 45);
 
 bool _chatProviderIsForeground(ChatProvider provider) {
@@ -39,7 +37,8 @@ bool _chatProviderSocketHealthyForWallet(ChatProvider provider) {
   return subscribedWallet.isNotEmpty && subscribedWallet == expectedWallet;
 }
 
-Duration? _chatProviderComputeSubscriptionMonitorInterval(ChatProvider provider) {
+Duration? _chatProviderComputeSubscriptionMonitorInterval(
+    ChatProvider provider) {
   if (!provider._hasAuthContext) return null;
   if (!_chatProviderIsForeground(provider)) {
     return _chatSubscriptionMonitorBackgroundInterval;
@@ -129,8 +128,8 @@ void _chatProviderEvaluateSubscriptionMonitor(
           debugPrint(
               'ChatProvider: subscription monitor detected mismatch (subscribed=$subscribed expected=${provider._currentWallet}), attempting resubscribe');
         }
-        var ok = await provider._socket
-            .connectAndSubscribe(provider._api.baseUrl, provider._currentWallet!);
+        var ok = await provider._socket.connectAndSubscribe(
+            provider._api.baseUrl, provider._currentWallet!);
         if (kDebugMode) {
           debugPrint(
               'ChatProvider subscription monitor: connectAndSubscribe -> $ok');
@@ -159,7 +158,8 @@ void _chatProviderEvaluateConversationPolling(
     return;
   }
 
-  final interval = _chatProviderComputeConversationPollingInterval(provider, nid);
+  final interval =
+      _chatProviderComputeConversationPollingInterval(provider, nid);
   if (interval == null) {
     provider._pollTimer?.cancel();
     provider._pollTimer = null;
@@ -201,7 +201,9 @@ void _chatProviderEvaluateConversationPolling(
         return;
       }
 
+      final generation = provider._sessionGeneration;
       final resp = await provider._api.fetchMessages(nid);
+      if (generation != provider._sessionGeneration) return;
       if (resp['success'] == true) {
         final items = (resp['data'] as List<dynamic>?) ?? [];
         final list = items
@@ -315,7 +317,8 @@ void _chatProviderBindAuthContext(
     if (signature == provider._lastAuthSignature) return;
     provider._lastAuthSignature = signature;
 
-    final hasSession = token.isNotEmpty || resolvedWallet.isNotEmpty || signedIn;
+    final hasSession =
+        token.isNotEmpty || resolvedWallet.isNotEmpty || signedIn;
     if (!hasSession) {
       provider._resetSessionState(reason: 'authCleared');
       return;
@@ -351,9 +354,15 @@ Future<void> _chatProviderSetCurrentWallet(
     if ((provider._currentWallet ?? '').isNotEmpty) {
       provider._resetSessionState(reason: 'walletChanged', notify: false);
     }
+    // Every wallet boundary starts a new session generation; work still in
+    // flight for the previous wallet is dropped when it resolves.
+    provider._sessionGeneration += 1;
+    final generation = provider._sessionGeneration;
+    bool isStale() => generation != provider._sessionGeneration;
     provider._currentWallet = wallet;
     try {
       final meResp = await provider._api.getMyProfile();
+      if (isStale()) return;
       if (meResp['success'] == true && meResp['data'] != null) {
         final me = meResp['data'] as Map<String, dynamic>;
         final canonical =
@@ -368,12 +377,16 @@ Future<void> _chatProviderSetCurrentWallet(
       debugPrint(
           'ChatProvider.setCurrentWallet: failed to resolve canonical wallet from server: $e');
     }
-    debugPrint('ChatProvider.setCurrentWallet: wallet=${provider._currentWallet}');
+    if (isStale()) return;
+    debugPrint(
+        'ChatProvider.setCurrentWallet: wallet=${provider._currentWallet}');
     try {
-      await provider._api.ensureAuthLoaded(walletAddress: provider._currentWallet);
+      await provider._api
+          .ensureAuthLoaded(walletAddress: provider._currentWallet);
     } catch (e) {
       debugPrint('setCurrentWallet: ensureAuthLoaded failed: $e');
     }
+    if (isStale()) return;
     try {
       var ok = await provider._socket
           .connectAndSubscribe(provider._api.baseUrl, provider._currentWallet!);
@@ -383,24 +396,29 @@ Future<void> _chatProviderSetCurrentWallet(
               .issueDebugTokenForWallet(provider._currentWallet!);
           if (issued) {
             await provider._api.loadAuthToken();
+            if (isStale()) return;
             ok = await provider._socket.connectAndSubscribe(
                 provider._api.baseUrl, provider._currentWallet!);
           }
         } catch (_) {}
       }
+      if (isStale()) return;
       if (!ok) provider._socket.subscribeUser(provider._currentWallet!);
     } catch (e) {
       debugPrint('ChatProvider.setCurrentWallet: socket subscribe failed: $e');
+      if (isStale()) return;
       try {
         provider._socket.subscribeUser(provider._currentWallet!);
       } catch (_) {}
     }
+    if (isStale()) return;
     try {
       await provider.refreshConversations();
     } catch (e) {
       debugPrint(
           'ChatProvider.setCurrentWallet: refreshConversations failed: $e');
     }
+    if (isStale()) return;
     provider._startSubscriptionMonitor();
     _chatProviderEvaluateConversationPolling(provider, forceRestart: true);
     provider._safeNotifyListeners(force: true);
@@ -422,10 +440,12 @@ Future<void> _chatProviderOpenConversation(
       debugPrint(
           'ChatProvider.openConversation: subscribeConversation result for $nid -> $ok');
     } catch (e) {
-      debugPrint('ChatProvider.openConversation: subscribeConversation failed: $e');
+      debugPrint(
+          'ChatProvider.openConversation: subscribeConversation failed: $e');
     }
   } catch (e) {
-    debugPrint('ChatProvider.openConversation: subscribeConversation failed: $e');
+    debugPrint(
+        'ChatProvider.openConversation: subscribeConversation failed: $e');
   }
   try {
     await provider.loadMessages(nid);
@@ -441,7 +461,8 @@ Future<void> _chatProviderOpenConversation(
   try {
     _chatProviderEvaluateConversationPolling(provider, forceRestart: true);
   } catch (e) {
-    debugPrint('ChatProvider: Failed to start poll timer for conversation $nid: $e');
+    debugPrint(
+        'ChatProvider: Failed to start poll timer for conversation $nid: $e');
   }
 }
 
@@ -458,7 +479,8 @@ Future<void> _chatProviderCloseConversation(
   } catch (e) {
     debugPrint('ChatProvider.closeConversation: leaveConversation failed: $e');
   }
-  if (provider._openConversationId != null && provider._openConversationId == nid) {
+  if (provider._openConversationId != null &&
+      provider._openConversationId == nid) {
     provider._openConversationId = null;
     provider._openConversationStartedAt = null;
   }
