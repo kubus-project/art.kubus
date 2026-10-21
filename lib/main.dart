@@ -71,6 +71,7 @@ import 'providers/spatial_capture_provider.dart';
 import 'providers/spatial_library_provider.dart';
 import 'providers/availability_operator_provider.dart';
 import 'core/app_initializer.dart';
+import 'core/public_entry_navigation.dart';
 import 'core/startup_trace.dart';
 import 'core/app_navigator.dart';
 import 'core/shell_routes.dart';
@@ -338,6 +339,8 @@ void main() {
 
       // Run app immediately and show splash while initializing the cached user store
       StartupTrace.mark('runApp');
+      // Before runApp: it must be offered the browser Back before the Navigator.
+      PublicEntryNavigation.install();
       runApp(const AppLauncher());
     },
     (error, stack) {

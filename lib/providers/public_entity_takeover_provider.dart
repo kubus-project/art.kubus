@@ -2,6 +2,7 @@ import 'package:flutter/widgets.dart';
 import 'package:provider/provider.dart';
 
 import '../config/config.dart';
+import '../core/public_entry_navigation.dart';
 import '../core/startup_trace.dart';
 import '../services/public_entity_takeover_bridge.dart';
 import '../services/share/share_deep_link_parser.dart';
@@ -132,6 +133,11 @@ class PublicEntityTakeoverProvider extends ChangeNotifier {
     _target = next;
     _bootstrap = null;
     _readyDispatched = false;
+    PublicEntryNavigation.instance.setEntry(
+      type: target.type,
+      entityId: target.id,
+      browserRoute: next.browserRoute,
+    );
     dispatchPublicEntityRouteParsed(
       type: next.type,
       id: next.id,
@@ -281,7 +287,18 @@ class PublicEntityTakeoverProvider extends ChangeNotifier {
         left?.browserRoute == right.browserRoute;
   }
 
-  String? _localizedSegment(ShareEntityType type, String locale) {
+  /// The localized canonical path of an entity (`/en/artworks/{id}`,
+  /// `/sl/umetnine/{id}`); any language other than `sl` uses English.
+  static String localizedCanonicalPath(
+    ShareEntityType type,
+    String entityId,
+    String languageCode,
+  ) {
+    final locale = languageCode == 'sl' ? 'sl' : 'en';
+    return '/$locale/${_localizedSegment(type, locale)}/${Uri.encodeComponent(entityId.trim())}';
+  }
+
+  static String? _localizedSegment(ShareEntityType type, String locale) {
     return switch (type) {
       ShareEntityType.artwork => locale == 'sl' ? 'umetnine' : 'artworks',
       ShareEntityType.profile => locale == 'sl' ? 'profili' : 'profiles',

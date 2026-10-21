@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
 
+import 'public_entry_navigation.dart';
+
 /// Keeps the browser URL describing the page that is actually visible.
 ///
 /// Flutter's Navigator tells the engine about a route only while the top route
@@ -20,19 +22,28 @@ import 'package:flutter/services.dart';
 /// from what the address bar was last told. It never changes navigation, only
 /// what the URL says.
 ///
-/// Limit: an entity opened in-app is still an unnamed route, so after Back the
-/// address is the page it was opened from (for example `/map`), not the
-/// entity. An entity reached through its canonical link keeps that link,
-/// because the shell route beneath it carries the canonical name.
+/// Entity screens are mostly unnamed (and on desktop they live in the shell's
+/// own stack, not the Navigator), so they [PublicEntryNavigation.claim] their
+/// URL while they are the top screen; the topmost visible claim wins over the
+/// named page beneath it.
 class UrlCoherenceObserver extends NavigatorObserver {
   UrlCoherenceObserver({
     bool? enabled,
     void Function(String url)? report,
+    PublicEntryNavigation? entityUrls,
+    String? Function()? currentBrowserUrl,
   })  : _enabled = enabled ?? kIsWeb,
-        _report = report ?? _reportToEngine;
+        _report = report ?? _reportToEngine,
+        _entityUrls = entityUrls ?? PublicEntryNavigation.instance,
+        _currentBrowserUrl =
+            currentBrowserUrl ?? (kIsWeb ? _browserUrl : _noBrowserUrl) {
+    if (_enabled) _entityUrls.addListener(_schedule);
+  }
 
   final bool _enabled;
   final void Function(String url) _report;
+  final PublicEntryNavigation _entityUrls;
+  final String? Function() _currentBrowserUrl;
   final List<Route<dynamic>> _stack = <Route<dynamic>>[];
   String? _shownUrl;
   bool _scheduled = false;
@@ -44,6 +55,8 @@ class UrlCoherenceObserver extends NavigatorObserver {
   /// The URL the visible page should be showing, from the current stack.
   @visibleForTesting
   String? get desiredUrl {
+    final entityUrl = _entityUrls.visibleEntityUrl;
+    if (entityUrl != null) return entityUrl;
     for (var i = _stack.length - 1; i >= 0; i--) {
       final route = _stack[i];
       if (route is! PageRoute<dynamic>) continue;
@@ -110,13 +123,24 @@ class UrlCoherenceObserver extends NavigatorObserver {
     final desired = desiredUrl;
     if (desired == null) return;
     if (_shownUrl == null) {
-      // First named page: the browser is already on the URL that produced it.
-      _shownUrl = desired;
-      return;
+      // The browser is on the URL that opened the app. Off the web (and in
+      // tests) assume the first named page is that URL.
+      _shownUrl = _currentBrowserUrl() ?? desired;
     }
     if (desired == _shownUrl) return;
     _shownUrl = desired;
     _report(desired);
+  }
+
+  static String? _noBrowserUrl() => null;
+
+  static String? _browserUrl() {
+    final base = Uri.base;
+    return Uri(
+      path: base.path,
+      query: base.hasQuery ? base.query : null,
+      fragment: base.hasFragment ? base.fragment : null,
+    ).toString();
   }
 
   static void _reportToEngine(String url) {
