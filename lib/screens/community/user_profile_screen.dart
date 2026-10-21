@@ -239,7 +239,12 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     final authenticated = await const ContextualAuthGate().ensureAuthenticated(
       context,
       actionLabel: l10n.commonFollow.toLowerCase(),
-      returnRoute: '/u/${Uri.encodeComponent(widget.userId)}',
+      returnRoute: PublicEntityTakeoverProvider.returnRouteOr(
+        context,
+        ShareEntityType.profile,
+        widget.userId,
+        '/u/${Uri.encodeComponent(widget.userId)}',
+      ),
       actionType: PendingActionType.follow,
       targetType: PendingActionTargetType.user,
       targetId: profile.id,
@@ -1135,7 +1140,12 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
       requirements: ProtectedActionRequirements.participant,
       context,
       actionLabel: l10n.userProfileMessageButtonLabel.toLowerCase(),
-      returnRoute: '/u/${Uri.encodeComponent(widget.userId)}',
+      returnRoute: PublicEntityTakeoverProvider.returnRouteOr(
+        context,
+        ShareEntityType.profile,
+        widget.userId,
+        '/u/${Uri.encodeComponent(widget.userId)}',
+      ),
     );
     if (!authenticated || !mounted) return;
     final chatProvider = Provider.of<ChatProvider>(context, listen: false);

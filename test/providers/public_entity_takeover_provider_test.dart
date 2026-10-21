@@ -1,7 +1,9 @@
 import 'package:art_kubus/providers/public_entity_takeover_provider.dart';
 import 'package:art_kubus/services/share/share_deep_link_parser.dart';
 import 'package:art_kubus/services/share/share_types.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:provider/provider.dart';
 
 void main() {
   test('seeds only an exact localized canonical artwork pathname', () {
@@ -419,4 +421,49 @@ void main() {
       );
     },
   );
+
+  testWidgets(
+      'protected-action return route keeps the canonical URL only for its entity',
+      (tester) async {
+    final provider = PublicEntityTakeoverProvider()
+      ..seed(
+        initialUri: Uri.parse('/en/posts/post-7?ref=feed#comments'),
+        target: const ShareDeepLinkTarget(
+          type: ShareEntityType.post,
+          id: 'post-7',
+          localeCode: 'en',
+        ),
+      );
+    late BuildContext withProvider;
+    late BuildContext withoutProvider;
+    await tester.pumpWidget(Directionality(
+      textDirection: TextDirection.ltr,
+      child: Column(children: [
+        Builder(builder: (context) {
+          withoutProvider = context;
+          return const SizedBox();
+        }),
+        ChangeNotifierProvider<PublicEntityTakeoverProvider>.value(
+          value: provider,
+          child: Builder(builder: (context) {
+            withProvider = context;
+            return const SizedBox();
+          }),
+        ),
+      ]),
+    ));
+
+    String route(BuildContext context, ShareEntityType type, String id) =>
+        PublicEntityTakeoverProvider.returnRouteOr(
+            context, type, id, '/fallback/$id');
+
+    expect(route(withProvider, ShareEntityType.post, 'post-7'),
+        '/en/posts/post-7?ref=feed#comments');
+    expect(route(withProvider, ShareEntityType.post, 'post-8'),
+        '/fallback/post-8');
+    expect(route(withProvider, ShareEntityType.profile, 'post-7'),
+        '/fallback/post-7');
+    expect(route(withoutProvider, ShareEntityType.post, 'post-7'),
+        '/fallback/post-7');
+  });
 }

@@ -80,8 +80,9 @@ class UserProfileNavigation {
     required String userId,
     String? username,
     String? heroTag,
+    bool allowOwnerShortcut = true,
   }) async {
-    if (_targetsCurrentUser(context, userId)) {
+    if (allowOwnerShortcut && _targetsCurrentUser(context, userId)) {
       await _openOwnerProfile(context);
       return;
     }
@@ -93,7 +94,9 @@ class UserProfileNavigation {
     if (userId.trim().isEmpty && initialCriticalPackageFuture != null) {
       final resolved = await initialCriticalPackageFuture;
       if (!context.mounted) return;
-      if (resolved != null && _targetsCurrentUser(context, resolved.user.id)) {
+      if (allowOwnerShortcut &&
+          resolved != null &&
+          _targetsCurrentUser(context, resolved.user.id)) {
         await _openOwnerProfile(context);
         return;
       }
