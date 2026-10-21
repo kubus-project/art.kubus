@@ -56,6 +56,7 @@ import '../services/map_attribution_helper.dart';
 import '../services/walking_location_service.dart';
 import '../services/walking_navigation_diagnostics.dart';
 import '../core/app_route_observer.dart';
+import '../core/public_entry_navigation.dart';
 import '../core/startup_trace.dart';
 import '../models/art_marker.dart';
 import '../models/event.dart';
@@ -301,6 +302,9 @@ class _MapScreenState extends State<MapScreen>
   String? _directTargetMarkerId;
   MapDeepLinkProvider? _mapDeepLinkProvider;
   MapDeepLinkClaim? _mapDeepLinkClaim;
+  Object? _publicMarkerUrlClaim;
+  String? _publicMarkerUrlClaimId;
+  String? _publicMarkerUrlLanguage;
   MainTabProvider? _tabProvider;
   Timer? _proximityCheckTimer;
   bool _proximityChecksEnabled = false;
@@ -728,6 +732,7 @@ class _MapScreenState extends State<MapScreen>
         final stackIndexChanged = state.stackIndex != prevSelection.stackIndex;
 
         final marker = state.selectedMarker;
+        _syncPublicMarkerUrlClaim(state.selectedMarkerId);
         if (tokenChanged || marker == null) {
           _resetMarkerOverlayComposition();
         }
@@ -1277,17 +1282,18 @@ class _MapScreenState extends State<MapScreen>
     _syncRootTutorialBinding();
 
     final provider = Provider.of<MapDeepLinkProvider>(context);
-    if (_mapDeepLinkProvider == provider) return;
+    if (_mapDeepLinkProvider != provider) {
+      _mapDeepLinkProvider?.removeListener(_handleMapDeepLinkProviderChanged);
+      _mapDeepLinkProvider = provider;
+      _mapDeepLinkProvider?.addListener(_handleMapDeepLinkProviderChanged);
 
-    _mapDeepLinkProvider?.removeListener(_handleMapDeepLinkProviderChanged);
-    _mapDeepLinkProvider = provider;
-    _mapDeepLinkProvider?.addListener(_handleMapDeepLinkProviderChanged);
-
-    // If an intent was queued before the map mounted, handle it now.
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      _handleMapDeepLinkProviderChanged();
-    });
+      // If an intent was queued before the map mounted, handle it now.
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        _handleMapDeepLinkProviderChanged();
+      });
+    }
+    _syncPublicMarkerUrlClaim(_kubusMapController.selectedMarkerId);
   }
 
   void _resolveInitialLocaleViewport() {
@@ -1657,6 +1663,7 @@ class _MapScreenState extends State<MapScreen>
       _deactivateRootTutorialOwner(reason: 'mobile-map-tab-hidden');
     }
     _isMapTabVisible = isVisible;
+    PublicEntryNavigation.instance.visibilityChanged();
     _handleActiveStateChanged();
     _syncRootTutorialBinding();
     if (isVisible) {
@@ -1686,6 +1693,7 @@ class _MapScreenState extends State<MapScreen>
       _deactivateRootTutorialOwner(reason: 'mobile-map-route-hidden');
     }
     _isRouteVisible = isVisible;
+    PublicEntryNavigation.instance.visibilityChanged();
     _handleActiveStateChanged();
     _syncRootTutorialBinding();
     if (isVisible) {
@@ -2154,6 +2162,9 @@ class _MapScreenState extends State<MapScreen>
 
   @override
   void dispose() {
+    PublicEntryNavigation.instance.release(_publicMarkerUrlClaim);
+    _publicMarkerUrlClaim = null;
+    _publicMarkerUrlClaimId = null;
     _userLocationAnimator.dispose();
     _headingExpiryTimer?.cancel();
     _mapSearchFocusNode.dispose();
@@ -3052,6 +3063,56 @@ class _MapScreenState extends State<MapScreen>
         }
       },
     );
+  }
+
+  void _syncPublicMarkerUrlClaim(String? selectedMarkerId) {
+    final navigation = PublicEntryNavigation.instance;
+    final nextId = selectedMarkerId?.trim();
+    final locale = Localizations.maybeLocaleOf(context)?.languageCode == 'sl'
+        ? 'sl'
+        : 'en';
+    if (!kIsWeb || nextId == null || nextId.isEmpty) {
+      final previousId = _publicMarkerUrlClaimId;
+      final hadClaim = _publicMarkerUrlClaim != null;
+      navigation.release(_publicMarkerUrlClaim);
+      _publicMarkerUrlClaim = null;
+      _publicMarkerUrlClaimId = null;
+      _publicMarkerUrlLanguage = null;
+      if (previousId != null) {
+        navigation.abandonEntry(ShareEntityType.marker, previousId);
+      }
+      if (hadClaim || previousId != null) navigation.visibilityChanged();
+      return;
+    }
+    if (_publicMarkerUrlClaimId == nextId &&
+        _publicMarkerUrlLanguage == locale) {
+      return;
+    }
+
+    final previousId = _publicMarkerUrlClaimId;
+    navigation.release(_publicMarkerUrlClaim);
+    if (previousId != null && previousId != nextId) {
+      navigation.abandonEntry(ShareEntityType.marker, previousId);
+    }
+    _publicMarkerUrlClaim = navigation.claim(
+      context,
+      type: ShareEntityType.marker,
+      entityId: nextId,
+      localizedPath: (languageCode) =>
+          PublicEntityTakeoverProvider.localizedCanonicalPath(
+        ShareEntityType.marker,
+        nextId,
+        languageCode,
+      ),
+      isShowing: () =>
+          mounted &&
+          _isMapTabVisible &&
+          _isRouteVisible &&
+          _kubusMapController.selectedMarkerId == nextId,
+    );
+    _publicMarkerUrlClaimId = nextId;
+    _publicMarkerUrlLanguage = locale;
+    navigation.visibilityChanged();
   }
 
   void _setSheetInteracting(bool value) {

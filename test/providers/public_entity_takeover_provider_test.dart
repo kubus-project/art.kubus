@@ -1,3 +1,4 @@
+import 'package:art_kubus/core/public_entry_navigation.dart';
 import 'package:art_kubus/providers/public_entity_takeover_provider.dart';
 import 'package:art_kubus/services/share/share_deep_link_parser.dart';
 import 'package:art_kubus/services/share/share_types.dart';
@@ -6,6 +7,40 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 
 void main() {
+  test('keeps the frozen startup fragment and consumes it only once', () {
+    final navigation = PublicEntryNavigation.instance;
+    navigation.resetForTest();
+    navigation.captureStartupBrowserRoute(
+      Uri.parse('https://app.example/en/artworks/art-42?ref=launch#details'),
+    );
+    final provider = PublicEntityTakeoverProvider();
+    provider.seed(
+      initialUri: Uri.parse('/en/artworks/art-42?ref=launch'),
+      target: const ShareDeepLinkTarget(
+        type: ShareEntityType.artwork,
+        id: 'art-42',
+        localeCode: 'en',
+      ),
+    );
+
+    expect(provider.returnRouteForArtwork('art-42'),
+        '/en/artworks/art-42?ref=launch#details');
+
+    provider.seed(
+      initialUri: Uri.parse('/en/artworks/art-43?ref=next'),
+      target: const ShareDeepLinkTarget(
+        type: ShareEntityType.artwork,
+        id: 'art-43',
+        localeCode: 'en',
+      ),
+    );
+    expect(provider.returnRouteForArtwork('art-43'),
+        '/en/artworks/art-43?ref=next');
+    expect(
+        navigation.takeStartupBrowserRouteFor('/en/artworks/art-43'), isNull);
+    navigation.resetForTest();
+  });
+
   test('seeds only an exact localized canonical artwork pathname', () {
     final provider = PublicEntityTakeoverProvider();
     const target = ShareDeepLinkTarget(

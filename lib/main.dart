@@ -180,6 +180,9 @@ void main() {
   // `AppInitializer`, so nothing used to persist its attribution at all. Taking
   // the snapshot synchronously here — before `runApp` and before any `await` —
   // makes capture independent of routing and of when it is read.
+  if (kIsWeb) {
+    PublicEntryNavigation.instance.captureStartupBrowserRoute(Uri.base);
+  }
   GuestSessionService.snapshotLaunchUrl();
   GuestSessionService.expectPlatformInitialLinkResolution();
 
@@ -1404,8 +1407,15 @@ class _ArtKubusState extends State<ArtKubus> with WidgetsBindingObserver {
   }
 
   List<Route<dynamic>> _generateInitialRoutes(String initialRoute) {
-    final normalized = initialRoute.trim().isEmpty ? '/' : initialRoute.trim();
-    final uri = Uri.tryParse(normalized) ?? Uri(path: normalized);
+    var normalized = initialRoute.trim().isEmpty ? '/' : initialRoute.trim();
+    var uri = Uri.tryParse(normalized) ?? Uri(path: normalized);
+    final isPublicDeepLink = const ShareDeepLinkParser().parse(uri) != null;
+    final startupBrowserRoute =
+        PublicEntryNavigation.instance.takeStartupBrowserRouteFor(uri.path);
+    if (isPublicDeepLink && startupBrowserRoute != null) {
+      normalized = startupBrowserRoute;
+      uri = Uri.parse(startupBrowserRoute);
+    }
 
     // Mobile cold start. `main()` has no launch URL to freeze on Android/iOS,
     // and a deep link to `/register?utm_*` resolves straight to its screen
@@ -1604,6 +1614,7 @@ class _ArtKubusState extends State<ArtKubus> with WidgetsBindingObserver {
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    _urlCoherenceObserver.dispose();
     super.dispose();
   }
 

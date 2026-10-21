@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 
@@ -44,10 +45,35 @@ class PublicEntryNavigation extends ChangeNotifier with WidgetsBindingObserver {
 
   final List<_EntityClaim> _claims = <_EntityClaim>[];
   _Entry? _entry;
+  _Entry? _shellReturn;
+  String? _startupBrowserRoute;
+  bool _entryWasClaimed = false;
+  bool _exitAttempted = false;
 
   /// How the app leaves the page; replaced in tests.
   @visibleForTesting
   Future<void> Function() exitApp = SystemNavigator.pop;
+
+  /// Captures the browser URL before Flutter's route-information normalization
+  /// can drop a fragment from its initial Navigator route. Consume this once
+  /// during initial-route generation; later in-app entries must own their own
+  /// query and fragment values.
+  void captureStartupBrowserRoute(Uri uri) {
+    _startupBrowserRoute ??= Uri(
+      path: uri.path,
+      query: uri.hasQuery ? uri.query : null,
+      fragment: uri.hasFragment ? uri.fragment : null,
+    ).toString();
+  }
+
+  /// Returns the frozen launch URL only for the same initial path, and always
+  /// clears it so it can never leak onto a later entity navigation.
+  String? takeStartupBrowserRouteFor(String path) {
+    final route = _startupBrowserRoute;
+    _startupBrowserRoute = null;
+    if (route == null || Uri.tryParse(route)?.path != path) return null;
+    return route;
+  }
 
   /// Records the entity a canonical public URL opened, with the exact browser
   /// route (query and fragment kept) that address it.
@@ -55,8 +81,32 @@ class PublicEntryNavigation extends ChangeNotifier with WidgetsBindingObserver {
     required ShareEntityType type,
     required String entityId,
     required String browserRoute,
+    required String shellRoute,
   }) {
-    _entry = _Entry(type, entityId.trim(), browserRoute);
+    final id = entityId.trim();
+    if (id.isEmpty ||
+        browserRoute.trim().isEmpty ||
+        shellRoute.trim().isEmpty) {
+      return;
+    }
+    final current = _entry;
+    if (current != null &&
+        current.matches(type, id) &&
+        current.browserRoute == browserRoute &&
+        current.shellRoute == shellRoute) {
+      return;
+    }
+    if (current != null && !current.matches(type, id)) {
+      // A new provider seed owns the entry now. Dispose its prior entity's URL
+      // claims immediately; the old widgets may take another frame to leave.
+      _claims.removeWhere(
+        (claim) => current.matches(claim.type, claim.entityId),
+      );
+    }
+    _entry = _Entry(type, id, browserRoute, shellRoute);
+    _shellReturn = null;
+    _entryWasClaimed = false;
+    _exitAttempted = false;
     notifyListeners();
   }
 
@@ -64,7 +114,8 @@ class PublicEntryNavigation extends ChangeNotifier with WidgetsBindingObserver {
   /// current and [isShowing] (if given) holds. Returns a token for [release].
   ///
   /// [localizedPath] builds the entity's canonical path in the app language;
-  /// the entry entity keeps the exact route it was opened at.
+  /// the entry entity keeps its original query and fragment when the locale
+  /// changes.
   Object claim(
     BuildContext context, {
     required ShareEntityType type,
@@ -87,9 +138,29 @@ class PublicEntryNavigation extends ChangeNotifier with WidgetsBindingObserver {
   }
 
   /// Releases a [claim] when its screen leaves the tree. Null is ignored.
-  void release(Object? token) {
+  void release(Object? token, {bool retireEntryIfUnused = false}) {
     if (token is! _EntityClaim) return;
-    if (_claims.remove(token)) notifyListeners();
+    if (!_claims.remove(token)) return;
+    if (retireEntryIfUnused &&
+        (token.route == null || !token.route!.isActive) &&
+        _entry?.matches(token.type, token.entityId) == true) {
+      final retiringEntry = _entry;
+      SchedulerBinding.instance.addPostFrameCallback((_) {
+        final entry = _entry;
+        if (entry == null || !identical(entry, retiringEntry)) return;
+        if (_claims.any((claim) =>
+            claim.element.mounted &&
+            entry.matches(claim.type, claim.entityId))) {
+          return;
+        }
+        _shellReturn = entry;
+        _entry = null;
+        _entryWasClaimed = false;
+        notifyListeners();
+      });
+      SchedulerBinding.instance.ensureVisualUpdate();
+    }
+    notifyListeners();
   }
 
   /// Re-evaluates claims after a visibility input outside the route stack
@@ -110,22 +181,83 @@ class PublicEntryNavigation extends ChangeNotifier with WidgetsBindingObserver {
     final claim = _topVisibleClaim;
     if (claim == null) return null;
     final entry = _entry;
-    if (entry != null && entry.matches(claim)) return entry.browserRoute;
+    if (entry != null && entry.matches(claim.type, claim.entityId)) {
+      _entryWasClaimed = true;
+      final original = Uri.tryParse(entry.browserRoute);
+      final localized = Uri.tryParse(claim.defaultUrl);
+      if (original == null ||
+          localized == null ||
+          original.path == localized.path) {
+        return entry.browserRoute;
+      }
+      return localized
+          .replace(
+            query: original.hasQuery ? original.query : null,
+            fragment: original.hasFragment ? original.fragment : null,
+          )
+          .toString();
+    }
+    final shellReturn = _shellReturn;
+    if (_exitAttempted &&
+        shellReturn != null &&
+        shellReturn.matches(claim.type, claim.entityId)) {
+      return shellReturn.browserRoute;
+    }
     return claim.defaultUrl;
+  }
+
+  /// Keeps the original address while its exact entry has not painted yet.
+  /// This prevents the shell's internal route from replacing a canonical URL
+  /// while data is still loading and the readiness wrapper is not mounted.
+  String? get pendingEntryUrl =>
+      _entry != null && !_entryWasClaimed ? _entry!.browserRoute : null;
+
+  /// Returns the shell route beneath a completed public entry when the shell's
+  /// Navigator route still carries the entry's canonical name.
+  String? underlyingShellRouteFor(String? currentRoute) {
+    final entry = _entry;
+    final shellReturn = _shellReturn;
+    if (_topVisibleClaim != null) return null;
+    if (entry != null && !_entryWasClaimed) return null;
+    final routeOwner = entry ?? shellReturn;
+    if (routeOwner == null) {
+      return null;
+    }
+    final routePath = Uri.tryParse(currentRoute ?? '')?.path;
+    final entryPath = Uri.tryParse(routeOwner.browserRoute)?.path;
+    if (routePath == null || routePath != entryPath) return null;
+    return routeOwner.shellRoute;
   }
 
   /// Whether the entity the visitor arrived on is still the top screen.
   bool get entryIsTop {
     final entry = _entry;
     final claim = _topVisibleClaim;
-    return entry != null && claim != null && entry.matches(claim);
+    return entry != null &&
+        !_exitAttempted &&
+        claim != null &&
+        entry.matches(claim.type, claim.entityId);
+  }
+
+  /// Drops the startup entry when a map selection replaces that marker in the
+  /// map's single selection slot. Ordinary detail routes keep their entry claim
+  /// mounted underneath, so they do not call this method.
+  void abandonEntry(ShareEntityType type, String entityId) {
+    final entry = _entry;
+    if (entry == null || !entry.matches(type, entityId.trim())) return;
+    _shellReturn = entry;
+    _entry = null;
+    _entryWasClaimed = false;
+    _exitAttempted = false;
+    notifyListeners();
   }
 
   @override
   Future<bool> didPopRoute() async {
     if (!entryIsTop) return false;
     // One exit: if leaving is refused, later Backs behave normally in-app.
-    _entry = null;
+    _exitAttempted = true;
+    _shellReturn = _entry;
     await exitApp();
     return true;
   }
@@ -134,19 +266,24 @@ class PublicEntryNavigation extends ChangeNotifier with WidgetsBindingObserver {
   void resetForTest() {
     _claims.clear();
     _entry = null;
+    _shellReturn = null;
+    _startupBrowserRoute = null;
+    _entryWasClaimed = false;
+    _exitAttempted = false;
     exitApp = SystemNavigator.pop;
   }
 }
 
 class _Entry {
-  const _Entry(this.type, this.entityId, this.browserRoute);
+  const _Entry(this.type, this.entityId, this.browserRoute, this.shellRoute);
 
   final ShareEntityType type;
   final String entityId;
   final String browserRoute;
+  final String shellRoute;
 
-  bool matches(_EntityClaim claim) =>
-      claim.type == type && claim.entityId == entityId;
+  bool matches(ShareEntityType candidateType, String candidateId) =>
+      candidateType == type && candidateId == entityId;
 }
 
 class _EntityClaim {

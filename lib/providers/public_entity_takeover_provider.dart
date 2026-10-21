@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../config/config.dart';
 import '../core/public_entry_navigation.dart';
+import '../core/shell_routes.dart';
 import '../core/startup_trace.dart';
 import '../services/public_entity_takeover_bridge.dart';
 import '../services/share/share_deep_link_parser.dart';
@@ -117,15 +118,20 @@ class PublicEntityTakeoverProvider extends ChangeNotifier {
     if (segment == null || type == null) return;
     final expectedPath = '/$locale/$segment/${Uri.encodeComponent(target.id)}';
     if (initialUri.path != expectedPath) return;
+    final startupBrowserRoute =
+        PublicEntryNavigation.instance.takeStartupBrowserRouteFor(expectedPath);
+    final browserUri = startupBrowserRoute == null
+        ? initialUri
+        : Uri.parse(startupBrowserRoute);
 
     final next = PublicEntityTakeoverTarget(
       type: type,
       id: target.id,
       path: initialUri.path,
       browserRoute: Uri(
-        path: initialUri.path,
-        query: initialUri.hasQuery ? initialUri.query : null,
-        fragment: initialUri.hasFragment ? initialUri.fragment : null,
+        path: browserUri.path,
+        query: browserUri.hasQuery ? browserUri.query : null,
+        fragment: browserUri.hasFragment ? browserUri.fragment : null,
       ).toString(),
     );
     if (_sameTarget(_target, next)) return;
@@ -137,6 +143,9 @@ class PublicEntityTakeoverProvider extends ChangeNotifier {
       type: target.type,
       entityId: target.id,
       browserRoute: next.browserRoute,
+      shellRoute: target.type == ShareEntityType.marker
+          ? ShellRoutes.map
+          : ShellRoutes.main,
     );
     dispatchPublicEntityRouteParsed(
       type: next.type,

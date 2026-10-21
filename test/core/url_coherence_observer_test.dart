@@ -1,17 +1,29 @@
 import 'package:art_kubus/core/url_coherence_observer.dart';
+import 'package:art_kubus/core/public_entry_navigation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:art_kubus/services/share/share_types.dart';
 
 class _Harness {
-  _Harness() {
-    observer = UrlCoherenceObserver(enabled: true, report: reports.add);
+  _Harness({PublicEntryNavigation? entityUrls}) {
+    observer = UrlCoherenceObserver(
+      enabled: true,
+      report: (url) {
+        reports.add(url);
+        browserUrl = url;
+      },
+      currentBrowserUrl: () => browserUrl,
+      entityUrls: entityUrls,
+    );
   }
 
   final List<String> reports = <String>[];
   final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
+  String? browserUrl;
   late final UrlCoherenceObserver observer;
 
   Widget build({String initialRoute = '/en/artworks/a1'}) {
+    browserUrl ??= initialRoute;
     return MaterialApp(
       navigatorKey: navigatorKey,
       navigatorObservers: <NavigatorObserver>[observer],
@@ -29,6 +41,8 @@ class _Harness {
 }
 
 void main() {
+  tearDown(() => PublicEntryNavigation.instance.resetForTest());
+
   testWidgets('the first named page is the address bar, not a change',
       (tester) async {
     final harness = _Harness();
@@ -123,6 +137,36 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(harness.reports, <String>['/en/events/e1']);
+  });
+
+  testWidgets(
+      'a pending public entry repairs a later Navigator shell URL overwrite',
+      (tester) async {
+    final entryNavigation = PublicEntryNavigation.instance;
+    entryNavigation.setEntry(
+      type: ShareEntityType.artwork,
+      entityId: 'a1',
+      browserRoute: '/en/artworks/a1?source=share#cover',
+      shellRoute: '/main',
+    );
+    final harness = _Harness(entityUrls: entryNavigation)
+      ..browserUrl = '/en/artworks/a1?source=share#cover';
+    await tester.pumpWidget(harness.build());
+    await tester.pumpAndSettle();
+
+    // Navigator's startup replacement can land after the observer's first
+    // frame callback. Simulate that external write, then a readiness/claim
+    // notification; the observer must compare with the browser, not only its
+    // stale last-reported URL.
+    harness.browserUrl = '/main';
+    entryNavigation.visibilityChanged();
+    await tester.pumpAndSettle();
+
+    expect(harness.reports, <String>[
+      '/en/artworks/a1?source=share#cover',
+    ]);
+    expect(harness.browserUrl, '/en/artworks/a1?source=share#cover');
+    expect(harness.observer.desiredUrl, '/en/artworks/a1?source=share#cover');
   });
 
   testWidgets('does nothing when disabled (non-web platforms)', (tester) async {

@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../core/public_entry_navigation.dart';
 import '../providers/public_entity_takeover_provider.dart';
 import '../services/share/share_types.dart';
 
@@ -30,10 +31,13 @@ class PublicEntityTakeoverReady extends StatefulWidget {
 
 class _PublicEntityTakeoverReadyState extends State<PublicEntityTakeoverReady> {
   bool _scheduled = false;
+  Object? _urlClaim;
+  String? _claimLanguage;
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
+    _refreshUrlClaim();
     _scheduleReadySignal();
   }
 
@@ -42,8 +46,44 @@ class _PublicEntityTakeoverReadyState extends State<PublicEntityTakeoverReady> {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.type != widget.type ||
         oldWidget.entityId != widget.entityId) {
+      PublicEntryNavigation.instance.abandonEntry(
+        oldWidget.type,
+        oldWidget.entityId,
+      );
+      _releaseUrlClaim();
       _scheduled = false;
+      _refreshUrlClaim();
       _scheduleReadySignal();
+    }
+  }
+
+  void _refreshUrlClaim() {
+    final languageCode =
+        Localizations.maybeLocaleOf(context)?.languageCode == 'sl'
+            ? 'sl'
+            : 'en';
+    if (_urlClaim != null && _claimLanguage == languageCode) return;
+    _releaseUrlClaim();
+    _urlClaim = PublicEntryNavigation.instance.claim(
+      context,
+      type: widget.type,
+      entityId: widget.entityId,
+      localizedPath: (languageCode) =>
+          PublicEntityTakeoverProvider.localizedCanonicalPath(
+        widget.type,
+        widget.entityId,
+        languageCode,
+      ),
+    );
+    _claimLanguage = languageCode;
+  }
+
+  void _releaseUrlClaim() {
+    final token = _urlClaim;
+    _urlClaim = null;
+    _claimLanguage = null;
+    if (token != null) {
+      PublicEntryNavigation.instance.release(token);
     }
   }
 
@@ -71,4 +111,17 @@ class _PublicEntityTakeoverReadyState extends State<PublicEntityTakeoverReady> {
 
   @override
   Widget build(BuildContext context) => widget.child;
+
+  @override
+  void dispose() {
+    final token = _urlClaim;
+    _urlClaim = null;
+    if (token != null) {
+      PublicEntryNavigation.instance.release(
+        token,
+        retireEntryIfUnused: true,
+      );
+    }
+    super.dispose();
+  }
 }

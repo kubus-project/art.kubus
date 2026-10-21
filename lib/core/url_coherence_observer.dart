@@ -57,13 +57,21 @@ class UrlCoherenceObserver extends NavigatorObserver {
   String? get desiredUrl {
     final entityUrl = _entityUrls.visibleEntityUrl;
     if (entityUrl != null) return entityUrl;
+    final pendingEntryUrl = _entityUrls.pendingEntryUrl;
+    if (pendingEntryUrl != null) return pendingEntryUrl;
     for (var i = _stack.length - 1; i >= 0; i--) {
       final route = _stack[i];
       if (route is! PageRoute<dynamic>) continue;
       final name = route.settings.name?.trim();
-      if (name != null && name.isNotEmpty) return name;
+      if (name != null && name.isNotEmpty) {
+        return _entityUrls.underlyingShellRouteFor(name) ?? name;
+      }
     }
     return null;
+  }
+
+  void dispose() {
+    if (_enabled) _entityUrls.removeListener(_schedule);
   }
 
   @override
@@ -111,10 +119,17 @@ class UrlCoherenceObserver extends NavigatorObserver {
     if (!_enabled || _scheduled) return;
     _scheduled = true;
     // Run after the frame so the Navigator's own report has already happened
-    // and this is always the last write for the stack it describes.
+    // and this is always the last write for the stack it describes. Flutter's
+    // initial-route replacement can report from a later callback in that same
+    // frame, though, so verify the live browser URL once more on the next
+    // frame. This matters for public entries: the shell is the underlying app
+    // route, while the original entity URL must stay visible until the entry
+    // claim is deliberately superseded.
     SchedulerBinding.instance.addPostFrameCallback((_) {
       _scheduled = false;
       _sync();
+      SchedulerBinding.instance.addPostFrameCallback((_) => _sync());
+      SchedulerBinding.instance.ensureVisualUpdate();
     });
     SchedulerBinding.instance.ensureVisualUpdate();
   }
@@ -122,12 +137,18 @@ class UrlCoherenceObserver extends NavigatorObserver {
   void _sync() {
     final desired = desiredUrl;
     if (desired == null) return;
-    if (_shownUrl == null) {
-      // The browser is on the URL that opened the app. Off the web (and in
-      // tests) assume the first named page is that URL.
-      _shownUrl = _currentBrowserUrl() ?? desired;
+    // The browser is on the URL that opened the app. Off the web (and in
+    // tests) assume the first named page is that URL.
+    final current = _currentBrowserUrl();
+    _shownUrl ??= current ?? desired;
+    // Navigator can update browser history after the first post-frame report.
+    // Compare with the live location as well as our last write so that an
+    // unchanged pending entry claim repairs that later shell-route overwrite.
+    if (desired == _shownUrl && (current == null || current == desired)) return;
+    if (current == desired) {
+      _shownUrl = desired;
+      return;
     }
-    if (desired == _shownUrl) return;
     _shownUrl = desired;
     _report(desired);
   }

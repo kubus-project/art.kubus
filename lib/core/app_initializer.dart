@@ -125,7 +125,7 @@ class _AppInitializerState extends State<AppInitializer> {
     navigator.pushReplacement(
       MaterialPageRoute(
         builder: (_) => destination,
-        settings: RouteSettings(name: decision.browserRoutePath),
+        settings: RouteSettings(name: decision.preferredShellRoute),
       ),
     );
     return true;
@@ -772,7 +772,7 @@ class _AppInitializerState extends State<AppInitializer> {
         navigator.pushReplacement(
           MaterialPageRoute(
             builder: (_) => destination,
-            settings: RouteSettings(name: decision.browserRoutePath),
+            settings: RouteSettings(name: decision.preferredShellRoute),
           ),
         );
         return;

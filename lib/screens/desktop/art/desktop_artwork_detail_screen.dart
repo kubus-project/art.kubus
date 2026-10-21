@@ -42,6 +42,7 @@ import '../../../widgets/common/kubus_screen_header.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
 import '../../../widgets/map/dialogs/street_art_claims_dialog.dart';
 import '../../../widgets/spatial/artwork_spatial_archive_section.dart';
+import '../../../widgets/public_entity_takeover_ready.dart';
 import '../desktop_shell_scope.dart';
 
 /// Whether the desktop shell header already shows [title] above this screen.
@@ -91,7 +92,6 @@ class _DesktopArtworkDetailScreenState
   String? _prefetchedAttendanceMarkerId;
   bool _artworkLoading = true;
   String? _artworkError;
-  bool _takeoverReadyScheduled = false;
 
   String _publicReturnRoute(BuildContext context) {
     try {
@@ -292,7 +292,6 @@ class _DesktopArtworkDetailScreenState
           );
         }
 
-        _scheduleTakeoverReady(artwork.id);
         final isCanonicalPublicEntry = isCanonicalPublicEntityEntry(
           context,
           type: widget.publicEntityType == ShareEntityType.nft
@@ -305,27 +304,31 @@ class _DesktopArtworkDetailScreenState
           metadata: artwork.metadata,
         );
 
-        return DocumentTitle(
-          title: artwork.title,
-          child: Scaffold(
-            backgroundColor: scheme.surface,
-            appBar: widget.showAppBar
-                ? AppBar(
-                    title: KubusHeaderText(
-                      title: 'art.kubus',
-                      brandTitle: true,
-                      kind: KubusHeaderKind.screen,
-                      compact: true,
-                    ),
-                  )
-                : null,
-            body: _buildDesktopPage(
-              isSaved: isSaved,
-              artwork: artwork,
-              coverUrl: coverUrl,
-              artworkProvider: artworkProvider,
-              isSignedIn: isSignedIn,
-              isCanonicalPublicEntry: isCanonicalPublicEntry,
+        return PublicEntityTakeoverReady(
+          type: widget.publicEntityType,
+          entityId: widget.publicEntryId,
+          child: DocumentTitle(
+            title: artwork.title,
+            child: Scaffold(
+              backgroundColor: scheme.surface,
+              appBar: widget.showAppBar
+                  ? AppBar(
+                      title: KubusHeaderText(
+                        title: 'art.kubus',
+                        brandTitle: true,
+                        kind: KubusHeaderKind.screen,
+                        compact: true,
+                      ),
+                    )
+                  : null,
+              body: _buildDesktopPage(
+                isSaved: isSaved,
+                artwork: artwork,
+                coverUrl: coverUrl,
+                artworkProvider: artworkProvider,
+                isSignedIn: isSignedIn,
+                isCanonicalPublicEntry: isCanonicalPublicEntry,
+              ),
             ),
           ),
         );
@@ -489,22 +492,6 @@ class _DesktopArtworkDetailScreenState
         },
       ),
     );
-  }
-
-  void _scheduleTakeoverReady(String artworkId) {
-    if (_takeoverReadyScheduled) return;
-    _takeoverReadyScheduled = true;
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      try {
-        unawaited(
-          context.read<PublicEntityTakeoverProvider>().markEntityReady(
-                widget.publicEntityType,
-                widget.publicEntryId,
-              ),
-        );
-      } catch (_) {}
-    });
   }
 
   Widget _buildMedia(Artwork artwork, String? coverUrl) {
