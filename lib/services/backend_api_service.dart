@@ -773,19 +773,17 @@ class BackendApiService
     return out.length > 1000 ? out.substring(0, 1000) : out;
   }
 
+  /// Best-effort, single attempt: diagnostics carry no bearer token and are
+  /// never retried or failed over, so a broken backend cannot amplify reports.
   Future<http.Response?> postClientDiagnostics(String jsonBody) async {
     try {
-      final headers = _getHeaders(includeAuth: false);
-      final token = (_authToken ?? '').trim();
-      if (token.isNotEmpty) {
-        headers['Authorization'] = 'Bearer $token';
-      }
       return await _post(
         Uri.parse('$baseUrl/api/diagnostics/error'),
         includeAuth: false,
-        headers: headers,
+        headers: _getHeaders(includeAuth: false),
         body: jsonBody,
-        isIdempotent: true,
+        isIdempotent: false,
+        allowImplicitBackendFailover: false,
         timeout: const Duration(seconds: 5),
       );
     } catch (_) {
@@ -803,6 +801,35 @@ class BackendApiService
   @visibleForTesting
   static bool disableHttpFailureDiagnosticsForTesting = false;
 
+  static String _diagnosticsPathWithoutQuery(String rawPath) {
+    final queryStart = rawPath.indexOf('?');
+    return queryStart < 0 ? rawPath : rawPath.substring(0, queryStart);
+  }
+
+  static final RegExp _diagnosticsUuidSegment = RegExp(
+    r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$',
+  );
+  static final RegExp _diagnosticsNumericSegment = RegExp(r'^\d+$');
+  static final RegExp _diagnosticsHexSegment =
+      RegExp(r'^0x[0-9a-fA-F]+$', caseSensitive: false);
+  static final RegExp _diagnosticsBase58Segment =
+      RegExp(r'^[1-9A-HJ-NP-Za-km-z]{32,}$');
+
+  /// Collapses identifier-like path segments so `/api/profiles/<id>` reports
+  /// for different ids share one dedupe key.
+  static String _diagnosticsDedupePath(String path) {
+    return _diagnosticsPathWithoutQuery(path).split('/').map((segment) {
+      if (segment.isEmpty) return segment;
+      if (_diagnosticsUuidSegment.hasMatch(segment) ||
+          _diagnosticsNumericSegment.hasMatch(segment) ||
+          _diagnosticsHexSegment.hasMatch(segment) ||
+          _diagnosticsBase58Segment.hasMatch(segment)) {
+        return ':id';
+      }
+      return segment;
+    }).join('/');
+  }
+
   void _captureHttpFailureDiagnostics({
     required String method,
     required Uri uri,
@@ -815,8 +842,9 @@ class BackendApiService
     // 401/403 without a session is an expected guest outcome, not a defect;
     // reporting each one doubles guest request volume for no signal.
     if ((status == 401 || status == 403) && !hasAuthSession) return;
-    // Dedupe repeats: one report per method+path+status per window.
-    final dedupeKey = '$method ${uri.path} $status';
+    // Dedupe repeats: one report per method+normalized path+status per window.
+    final path = _diagnosticsPathWithoutQuery(uri.path);
+    final dedupeKey = '$method ${_diagnosticsDedupePath(path)} $status';
     final lastAt = _diagnosticsLastReportAt[dedupeKey];
     final now = DateTime.now();
     if (lastAt != null && now.difference(lastAt) < _diagnosticsRepeatWindow) {
@@ -850,7 +878,7 @@ class BackendApiService
           'requestId': _lastRequestId,
           'metadata': _sanitizeDiagnosticsMetadata({
             'method': method.toUpperCase(),
-            'path': uri.path,
+            'path': path,
             'status_code': status,
             'response_preview': bodyPreview,
           }),
@@ -6275,6 +6303,7 @@ class BackendApiService
     int limit = 20,
     bool? arOnly,
     String? authorWallet,
+    String? authorUserId,
     bool? followingOnly,
     String? surface,
     String? tag,
@@ -6291,6 +6320,12 @@ class BackendApiService
 
       if (arOnly != null) queryParams['arOnly'] = arOnly.toString();
       if (authorWallet != null) queryParams['authorWallet'] = authorWallet;
+      final normalizedAuthorUserId = authorUserId?.trim() ?? '';
+      if (normalizedAuthorUserId.isNotEmpty) {
+        // Older backends ignore unknown parameters; callers that cannot
+        // trust the response must filter client-side.
+        queryParams['authorUserId'] = normalizedAuthorUserId;
+      }
       if (followingOnly != null) {
         queryParams['followingOnly'] = followingOnly.toString();
       }
@@ -6351,6 +6386,11 @@ class BackendApiService
                 authorWallet.trim().isNotEmpty &&
                 WalletUtils.canonical(post.authorWallet) !=
                     WalletUtils.canonical(authorWallet)) {
+              return false;
+            }
+            if (normalizedAuthorUserId.isNotEmpty &&
+                (post.authorIdentityData.userId ?? '').trim().toLowerCase() !=
+                    normalizedAuthorUserId.toLowerCase()) {
               return false;
             }
             if (tag != null && tag.trim().isNotEmpty) {
