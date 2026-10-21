@@ -42,6 +42,8 @@ Future<Map<String, dynamic>> _backendApiLoginWithWallet(
       'POST',
       path,
       includeAuth: false,
+      // The wallet challenge is consumed once before session creation.
+      replaySafe: false,
       headers: service._getHeaders(includeAuth: false),
       body: jsonEncode({
         'walletAddress': walletAddress,
@@ -153,6 +155,8 @@ Future<Map<String, dynamic>> _backendApiLoginWithEmail(
       'POST',
       path,
       includeAuth: false,
+      // A repeated login only issues another session, so it may move to the standby.
+      replaySafe: true,
       headers: service._getHeaders(includeAuth: false),
       body: jsonEncode({'email': email, 'password': password}),
     );
@@ -717,6 +721,8 @@ Future<Map<String, dynamic>> _backendApiLoginWithGoogle(
       'POST',
       endpoint,
       includeAuth: false,
+      // Authorization codes are single-use; only ID-token verification may replay.
+      replaySafe: !isCodeFlow,
       headers: service._getHeaders(includeAuth: false),
       body: jsonEncode(body),
     );

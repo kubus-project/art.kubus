@@ -1338,6 +1338,7 @@ class BackendApiService
     bool retriedAfterReauth = false,
     bool retriedAfterWritableRedirect = false,
     bool allowImplicitBackendFailover = true,
+    bool replaySafe = false,
     Set<String>? attemptedBackendOrigins,
   }) async {
     final attemptedOrigins = Set<String>.from(
@@ -1475,7 +1476,13 @@ class BackendApiService
           throw ArgumentError('Unsupported method: $method');
       }
     } catch (error) {
-      if (allowImplicitBackendFailover && _isFallbackEligibleReadError(error)) {
+      if (allowImplicitBackendFailover &&
+          _isFallbackEligibleReadError(error) &&
+          mayRepeatOnAnotherBackend(
+            method: method,
+            replaySafe: replaySafe,
+            error: error,
+          )) {
         final failoverUri = _nextImplicitFailoverUri(
           uri,
           method: method,
@@ -1490,6 +1497,7 @@ class BackendApiService
             body: body,
             encoding: encoding,
             isIdempotent: isIdempotent,
+            replaySafe: replaySafe,
             timeout: timeout,
             retriedAfterReauth: retriedAfterReauth,
             retriedAfterWritableRedirect: retriedAfterWritableRedirect,
@@ -1558,6 +1566,7 @@ class BackendApiService
             body: body,
             encoding: encoding,
             isIdempotent: isIdempotent,
+            replaySafe: replaySafe,
             timeout: timeout,
             retriedAfterReauth: retriedAfterReauth,
             retriedAfterWritableRedirect: true,
@@ -1569,7 +1578,12 @@ class BackendApiService
       }
 
       if (allowImplicitBackendFailover &&
-          _shouldImplicitFailoverOnStatus(method, response.statusCode)) {
+          _shouldImplicitFailoverOnStatus(method, response.statusCode) &&
+          mayRepeatOnAnotherBackend(
+            method: method,
+            replaySafe: replaySafe,
+            statusCode: response.statusCode,
+          )) {
         final failoverUri = _nextImplicitFailoverUri(
           uri,
           method: method,
@@ -1584,6 +1598,7 @@ class BackendApiService
             body: body,
             encoding: encoding,
             isIdempotent: isIdempotent,
+            replaySafe: replaySafe,
             timeout: timeout,
             retriedAfterReauth: retriedAfterReauth,
             retriedAfterWritableRedirect: retriedAfterWritableRedirect,
@@ -1624,6 +1639,7 @@ class BackendApiService
         body: body,
         encoding: encoding,
         isIdempotent: isIdempotent,
+        replaySafe: replaySafe,
         timeout: timeout,
         retriedAfterReauth: true,
         retriedAfterWritableRedirect: retriedAfterWritableRedirect,
@@ -1760,6 +1776,7 @@ class BackendApiService
     bool retriedAfterReauth = false,
     bool retriedAfterWritableRedirect = false,
     bool allowImplicitBackendFailover = true,
+    bool replaySafe = false,
     Set<String>? attemptedBackendOrigins,
   }) async {
     _lastMultipartTimeoutForTesting = timeout;
@@ -1802,7 +1819,13 @@ class BackendApiService
       if (error is TimeoutException) {
         rethrow;
       }
-      if (allowImplicitBackendFailover && _isFallbackEligibleReadError(error)) {
+      if (allowImplicitBackendFailover &&
+          _isFallbackEligibleReadError(error) &&
+          mayRepeatOnAnotherBackend(
+            method: request.method,
+            replaySafe: replaySafe,
+            error: error,
+          )) {
         final failoverUri = _nextImplicitFailoverUri(
           request.url,
           method: request.method,
@@ -1826,6 +1849,7 @@ class BackendApiService
             retriedAfterReauth: retriedAfterReauth,
             retriedAfterWritableRedirect: retriedAfterWritableRedirect,
             allowImplicitBackendFailover: allowImplicitBackendFailover,
+            replaySafe: replaySafe,
             attemptedBackendOrigins: attemptedOrigins,
           );
         }
@@ -1865,6 +1889,7 @@ class BackendApiService
           retriedAfterReauth: retriedAfterReauth,
           retriedAfterWritableRedirect: true,
           allowImplicitBackendFailover: false,
+          replaySafe: replaySafe,
           attemptedBackendOrigins: attemptedOrigins,
         );
       }
@@ -1872,7 +1897,12 @@ class BackendApiService
     }
 
     if (allowImplicitBackendFailover &&
-        _shouldImplicitFailoverOnStatus(request.method, response.statusCode)) {
+        _shouldImplicitFailoverOnStatus(request.method, response.statusCode) &&
+        mayRepeatOnAnotherBackend(
+          method: request.method,
+          replaySafe: replaySafe,
+          statusCode: response.statusCode,
+        )) {
       final failoverUri = _nextImplicitFailoverUri(
         request.url,
         method: request.method,
@@ -1896,6 +1926,7 @@ class BackendApiService
           retriedAfterReauth: retriedAfterReauth,
           retriedAfterWritableRedirect: retriedAfterWritableRedirect,
           allowImplicitBackendFailover: allowImplicitBackendFailover,
+          replaySafe: replaySafe,
           attemptedBackendOrigins: attemptedOrigins,
         );
       }
@@ -1934,6 +1965,7 @@ class BackendApiService
       retriedAfterReauth: true,
       retriedAfterWritableRedirect: retriedAfterWritableRedirect,
       allowImplicitBackendFailover: allowImplicitBackendFailover,
+      replaySafe: replaySafe,
       attemptedBackendOrigins: attemptedOrigins,
     );
   }
@@ -2295,7 +2327,7 @@ class BackendApiService
         nestedResponse['code']?.toString() == 'NODE_NOT_WRITABLE') {
       return true;
     }
-    return response.body.contains('NODE_NOT_WRITABLE');
+    return false;
   }
 
   Uri? _redirectNodeNotWritableRequest(
@@ -2400,6 +2432,35 @@ class BackendApiService
     );
   }
 
+  /// Whether an unconfirmed request may be repeated on another backend.
+  /// Reads and operations with authoritative server replay protection may move.
+  /// Generic HTTP statuses and transport error text never prove non-commit.
+  /// NODE_NOT_WRITABLE is a structured rejection from the pre-mutation guard.
+  @visibleForTesting
+  static bool mayRepeatOnAnotherBackend({
+    required String method,
+    required bool replaySafe,
+    int? statusCode,
+    Object? error,
+  }) {
+    final normalized = method.toUpperCase();
+    if (normalized == 'GET' ||
+        normalized == 'HEAD' ||
+        normalized == 'OPTIONS') {
+      return true;
+    }
+    if (replaySafe) return true;
+    if (error is BackendApiRequestException && error.statusCode == 503) {
+      try {
+        final payload = jsonDecode(error.body ?? '');
+        return payload is Map && payload['code'] == 'NODE_NOT_WRITABLE';
+      } on FormatException {
+        return false;
+      }
+    }
+    return false;
+  }
+
   bool _isFallbackEligibleReadError(Object error) {
     final status = _tryParseRequestFailedStatus(error);
     if (status == null) {
@@ -2487,6 +2548,7 @@ class BackendApiService
     Object? body,
     Encoding? encoding,
     bool isIdempotent = false,
+    bool replaySafe = false,
     Duration timeout = AppConfig.requestTimeout,
   }) async {
     http.Response? lastResponse;
@@ -2494,6 +2556,17 @@ class BackendApiService
 
     for (final candidateBaseUrl
         in _publicFallbackService.preferredWriteBaseUrls) {
+      // A later candidate only gets this request when the previous failure
+      // proves it was not applied, or repeating it is harmless.
+      if ((lastResponse != null || lastError != null) &&
+          !mayRepeatOnAnotherBackend(
+            method: method,
+            replaySafe: replaySafe,
+            statusCode: lastError == null ? lastResponse?.statusCode : null,
+            error: lastError,
+          )) {
+        break;
+      }
       final uri = _buildApiUri(candidateBaseUrl, path);
       try {
         final response = await _request(
@@ -2504,6 +2577,7 @@ class BackendApiService
           body: body,
           encoding: encoding,
           isIdempotent: isIdempotent,
+          replaySafe: replaySafe,
           timeout: timeout,
           allowImplicitBackendFailover: false,
         );
@@ -2517,8 +2591,10 @@ class BackendApiService
           return response;
         }
         lastResponse = response;
+        lastError = null;
       } catch (error) {
         lastError = error;
+        lastResponse = null;
       }
     }
 
@@ -2537,6 +2613,7 @@ class BackendApiService
     Object? body,
     Encoding? encoding,
     bool isIdempotent = false,
+    bool replaySafe = false,
     Duration timeout = AppConfig.requestTimeout,
   }) async {
     http.Response? lastResponse;
@@ -2548,6 +2625,17 @@ class BackendApiService
         : _publicFallbackService.preferredWriteBaseUrls;
 
     for (final candidateBaseUrl in candidateBaseUrls) {
+      // A later candidate only gets this request when the previous failure
+      // proves it was not applied, or repeating it is harmless.
+      if ((lastResponse != null || lastError != null) &&
+          !mayRepeatOnAnotherBackend(
+            method: normalizedMethod,
+            replaySafe: replaySafe,
+            statusCode: lastError == null ? lastResponse?.statusCode : null,
+            error: lastError,
+          )) {
+        break;
+      }
       final uri = _buildApiUri(
         candidateBaseUrl,
         normalizedPath,
@@ -2562,6 +2650,7 @@ class BackendApiService
           body: body,
           encoding: encoding,
           isIdempotent: isIdempotent || normalizedMethod == 'GET',
+          replaySafe: replaySafe,
           timeout: timeout,
           allowImplicitBackendFailover: false,
         );
@@ -2575,8 +2664,10 @@ class BackendApiService
           return response;
         }
         lastResponse = response;
+        lastError = null;
       } catch (error) {
         lastError = error;
+        lastResponse = null;
       }
     }
 
