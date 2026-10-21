@@ -268,7 +268,7 @@ void main() {
       expect(hosts, <String>[primaryHost, standbyHost]);
     });
 
-    test('a wallet login (replay-safe) moves to the standby after a 504',
+    test('a wallet login cannot replay a consumed challenge after a 504',
         () async {
       BackendApiService().setAuthTokenForTesting(null);
       twoBackends(
@@ -283,7 +283,18 @@ void main() {
             signature: 'sig',
             message: 'msg',
           ));
-      expect(hosts, <String>[primaryHost, standbyHost]);
+      expect(hosts, <String>[primaryHost]);
+    });
+
+    test(
+        'Google authorization-code exchange is never replayed after a lost response',
+        () async {
+      BackendApiService().setAuthTokenForTesting(null);
+      twoBackends(
+          primary: (_) => _json(<String, Object?>{'success': false}, 504));
+      await attempt(() => BackendApiService()
+          .loginWithGoogle(code: 'one-time-code', origin: 'web'));
+      expect(hosts, <String>[primaryHost]);
     });
 
     test('reads still move to the standby after a primary 504', () async {
