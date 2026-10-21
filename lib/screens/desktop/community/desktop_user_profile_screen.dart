@@ -1004,15 +1004,17 @@ class _UserProfileScreenState extends State<UserProfileScreen>
             enableProfileNavigation: false,
             heroTag: widget.heroTag,
           ),
-          actions: ProfileRelationshipActions(
-            isFollowing: user!.isFollowing,
-            isFollowLoading: _isFollowMutationInFlight,
-            onFollow: () => unawaited(_toggleFollow()),
-            onMessage: () => unawaited(_openConversation()),
-            followLabel: l10n.userProfileFollowButton,
-            followingLabel: l10n.userProfileFollowingButton,
-            messageLabel: l10n.userProfileMessageButtonLabel,
-          ),
+          actions: _viewerIsSubject
+              ? null
+              : ProfileRelationshipActions(
+                  isFollowing: user!.isFollowing,
+                  isFollowLoading: _isFollowMutationInFlight,
+                  onFollow: () => unawaited(_toggleFollow()),
+                  onMessage: () => unawaited(_openConversation()),
+                  followLabel: l10n.userProfileFollowButton,
+                  followingLabel: l10n.userProfileFollowingButton,
+                  messageLabel: l10n.userProfileMessageButtonLabel,
+                ),
         ),
         const SizedBox(height: KubusSpacing.lg),
         _buildPracticeBlock(l10n),
@@ -1188,6 +1190,10 @@ class _UserProfileScreenState extends State<UserProfileScreen>
     return Theme.of(context).colorScheme.primary;
   }
 
+  bool get _viewerIsSubject =>
+      UserProfileNavigation.isCurrentUser(context, widget.userId) ||
+      UserProfileNavigation.isCurrentUser(context, user?.id);
+
   Widget _buildActionButtons(
     ThemeProvider themeProvider,
     AppLocalizations l10n, {
@@ -1196,6 +1202,7 @@ class _UserProfileScreenState extends State<UserProfileScreen>
     // Canonical relationship actions shared with mobile — same button
     // vocabulary, sizing and states, no separate DesktopActionButton utility
     // card. Auth gating and conversation navigation live in the callbacks.
+    if (_viewerIsSubject) return const SizedBox.shrink();
     final actions = ProfileRelationshipActions(
       isFollowing: user!.isFollowing,
       isFollowLoading: _isFollowMutationInFlight,
@@ -1619,7 +1626,12 @@ class _UserProfileScreenState extends State<UserProfileScreen>
     final authenticated = await const ContextualAuthGate().ensureAuthenticated(
       context,
       actionLabel: l10n.commonFollow.toLowerCase(),
-      returnRoute: '/u/${Uri.encodeComponent(widget.userId)}',
+      returnRoute: PublicEntityTakeoverProvider.returnRouteOr(
+        context,
+        ShareEntityType.profile,
+        widget.userId,
+        '/u/${Uri.encodeComponent(widget.userId)}',
+      ),
       actionType: PendingActionType.follow,
       targetType: PendingActionTargetType.user,
       targetId: profile.id,
@@ -1785,7 +1797,12 @@ class _UserProfileScreenState extends State<UserProfileScreen>
       requirements: ProtectedActionRequirements.participant,
       context,
       actionLabel: l10n.userProfileMessageButtonLabel.toLowerCase(),
-      returnRoute: '/u/${Uri.encodeComponent(widget.userId)}',
+      returnRoute: PublicEntityTakeoverProvider.returnRouteOr(
+        context,
+        ShareEntityType.profile,
+        widget.userId,
+        '/u/${Uri.encodeComponent(widget.userId)}',
+      ),
     );
     if (!authenticated || !mounted) return;
     final chatProvider = Provider.of<ChatProvider>(context, listen: false);

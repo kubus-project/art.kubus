@@ -1,4 +1,5 @@
-import 'package:flutter/foundation.dart';
+import 'package:flutter/widgets.dart';
+import 'package:provider/provider.dart';
 
 import '../config/config.dart';
 import '../core/startup_trace.dart';
@@ -208,6 +209,25 @@ class PublicEntityTakeoverProvider extends ChangeNotifier {
 
   String? returnRouteForArtwork(String artworkId) {
     return returnRouteFor(ShareEntityType.artwork, artworkId);
+  }
+
+  /// Sign-in return route for a protected action on [type]/[entityId]: the
+  /// exact canonical public URL when that entity is the current public entry,
+  /// otherwise [fallback] (a compact in-app alias).
+  static String returnRouteOr(
+    BuildContext context,
+    ShareEntityType type,
+    String entityId,
+    String fallback,
+  ) {
+    try {
+      return context
+              .read<PublicEntityTakeoverProvider>()
+              .returnRouteFor(type, entityId) ??
+          fallback;
+    } catch (_) {
+      return fallback;
+    }
   }
 
   String? returnRouteFor(ShareEntityType type, String entityId) {

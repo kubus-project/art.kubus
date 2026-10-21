@@ -14,6 +14,7 @@ import '../../services/block_list_service.dart';
 import '../../services/contextual_auth_gate.dart';
 import '../../services/share/share_service.dart';
 import '../../services/share/share_types.dart';
+import '../../utils/user_profile_navigation.dart';
 import '../desktop/desktop_shell_scope.dart';
 import '../../utils/design_tokens.dart';
 import '../../utils/app_color_utils.dart';
@@ -239,7 +240,12 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     final authenticated = await const ContextualAuthGate().ensureAuthenticated(
       context,
       actionLabel: l10n.commonFollow.toLowerCase(),
-      returnRoute: '/u/${Uri.encodeComponent(widget.userId)}',
+      returnRoute: PublicEntityTakeoverProvider.returnRouteOr(
+        context,
+        ShareEntityType.profile,
+        widget.userId,
+        '/u/${Uri.encodeComponent(widget.userId)}',
+      ),
       actionType: PendingActionType.follow,
       targetType: PendingActionTargetType.user,
       targetId: profile.id,
@@ -660,15 +666,17 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
             enableProfileNavigation: false,
             heroTag: widget.heroTag,
           ),
-          actions: ProfileRelationshipActions(
-            isFollowing: user!.isFollowing,
-            isFollowLoading: _isFollowMutationInFlight,
-            onFollow: () => unawaited(_toggleFollow()),
-            onMessage: () => unawaited(_openMessageConversation(l10n)),
-            followLabel: l10n.userProfileFollowButton,
-            followingLabel: l10n.userProfileFollowingButton,
-            messageLabel: l10n.userProfileMessageButtonLabel,
-          ),
+          actions: _viewerIsSubject
+              ? null
+              : ProfileRelationshipActions(
+                  isFollowing: user!.isFollowing,
+                  isFollowLoading: _isFollowMutationInFlight,
+                  onFollow: () => unawaited(_toggleFollow()),
+                  onMessage: () => unawaited(_openMessageConversation(l10n)),
+                  followLabel: l10n.userProfileFollowButton,
+                  followingLabel: l10n.userProfileFollowingButton,
+                  messageLabel: l10n.userProfileMessageButtonLabel,
+                ),
         ),
         const SizedBox(height: DetailSpacing.lg),
         _buildPracticeBlock(l10n, isArtist: isArtist),
@@ -818,18 +826,23 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
           ),
         ],
         const SizedBox(height: KubusSpacing.md),
-        ProfileRelationshipActions(
-          isFollowing: profile.isFollowing,
-          isFollowLoading: _isFollowMutationInFlight,
-          onFollow: () => unawaited(_toggleFollow()),
-          onMessage: () => unawaited(_openMessageConversation(l10n)),
-          followLabel: l10n.userProfileFollowButton,
-          followingLabel: l10n.userProfileFollowingButton,
-          messageLabel: l10n.userProfileMessageButtonLabel,
-        ),
+        if (!_viewerIsSubject)
+          ProfileRelationshipActions(
+            isFollowing: profile.isFollowing,
+            isFollowLoading: _isFollowMutationInFlight,
+            onFollow: () => unawaited(_toggleFollow()),
+            onMessage: () => unawaited(_openMessageConversation(l10n)),
+            followLabel: l10n.userProfileFollowButton,
+            followingLabel: l10n.userProfileFollowingButton,
+            messageLabel: l10n.userProfileMessageButtonLabel,
+          ),
       ],
     );
   }
+
+  bool get _viewerIsSubject =>
+      UserProfileNavigation.isCurrentUser(context, widget.userId) ||
+      UserProfileNavigation.isCurrentUser(context, user?.id);
 
   String? get _canonicalPublicCoverUrl {
     final profile = user;
@@ -1135,7 +1148,12 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
       requirements: ProtectedActionRequirements.participant,
       context,
       actionLabel: l10n.userProfileMessageButtonLabel.toLowerCase(),
-      returnRoute: '/u/${Uri.encodeComponent(widget.userId)}',
+      returnRoute: PublicEntityTakeoverProvider.returnRouteOr(
+        context,
+        ShareEntityType.profile,
+        widget.userId,
+        '/u/${Uri.encodeComponent(widget.userId)}',
+      ),
     );
     if (!authenticated || !mounted) return;
     final chatProvider = Provider.of<ChatProvider>(context, listen: false);
