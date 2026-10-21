@@ -32161,13 +32161,13 @@ abstract class AppLocalizations {
   ///
   /// In en, this message translates to:
   /// **'Marker is too small. Minimum is {minPx}×{minPx}px.'**
-  String arMarkerManagerTooSmallToast(int minPx, int maxPx);
+  String arMarkerManagerTooSmallToast(int minPx);
 
   /// No description provided for @arMarkerManagerTooLargeToast.
   ///
   /// In en, this message translates to:
   /// **'Marker is too large. Maximum is {maxPx}×{maxPx}px.'**
-  String arMarkerManagerTooLargeToast(int minPx, int maxPx);
+  String arMarkerManagerTooLargeToast(int maxPx);
 
   /// No description provided for @arMarkerManagerModeTitle.
   ///

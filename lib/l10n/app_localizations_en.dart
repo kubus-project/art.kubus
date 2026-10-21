@@ -18545,12 +18545,12 @@ class AppLocalizationsEn extends AppLocalizations {
       'Marker must be square (width == height).';
 
   @override
-  String arMarkerManagerTooSmallToast(int minPx, int maxPx) {
+  String arMarkerManagerTooSmallToast(int minPx) {
     return 'Marker is too small. Minimum is $minPx×${minPx}px.';
   }
 
   @override
-  String arMarkerManagerTooLargeToast(int minPx, int maxPx) {
+  String arMarkerManagerTooLargeToast(int maxPx) {
     return 'Marker is too large. Maximum is $maxPx×${maxPx}px.';
   }
 

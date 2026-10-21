@@ -7771,18 +7771,12 @@
     "placeholders": {
       "minPx": {
         "type": "int"
-      },
-      "maxPx": {
-        "type": "int"
       }
     }
   },
   "arMarkerManagerTooLargeToast": "Označevalec je prevelik. Največ {maxPx}×{maxPx}px.",
   "@arMarkerManagerTooLargeToast": {
     "placeholders": {
-      "minPx": {
-        "type": "int"
-      },
       "maxPx": {
         "type": "int"
       }

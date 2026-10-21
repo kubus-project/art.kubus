@@ -7810,18 +7810,12 @@
     "placeholders": {
       "minPx": {
         "type": "int"
-      },
-      "maxPx": {
-        "type": "int"
       }
     }
   },
   "arMarkerManagerTooLargeToast": "Marker is too large. Maximum is {maxPx}×{maxPx}px.",
   "@arMarkerManagerTooLargeToast": {
     "placeholders": {
-      "minPx": {
-        "type": "int"
-      },
       "maxPx": {
         "type": "int"
       }

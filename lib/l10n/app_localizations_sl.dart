@@ -18739,12 +18739,12 @@ class AppLocalizationsSl extends AppLocalizations {
       'Označevalec mora biti kvadraten (širina == višina).';
 
   @override
-  String arMarkerManagerTooSmallToast(int minPx, int maxPx) {
+  String arMarkerManagerTooSmallToast(int minPx) {
     return 'Označevalec je premajhen. Najmanj $minPx×${minPx}px.';
   }
 
   @override
-  String arMarkerManagerTooLargeToast(int minPx, int maxPx) {
+  String arMarkerManagerTooLargeToast(int maxPx) {
     return 'Označevalec je prevelik. Največ $maxPx×${maxPx}px.';
   }
 
