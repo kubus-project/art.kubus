@@ -2125,10 +2125,17 @@ class ChatProvider extends ChangeNotifier {
   }
 
   Future<List<Map<String, dynamic>>> listConversations() async {
+    // Capture before the fetch: a late response must not be stamped with the
+    // generation of the session that replaced this one.
+    final generation = _sessionGeneration;
     final resp = await _api.fetchConversations();
+    if (generation != _sessionGeneration) return const [];
     if (resp['success'] == true) {
       final items = (resp['data'] as List<dynamic>?) ?? [];
-      await _hydrateConversationsFromPayload(items);
+      await _hydrateConversationsFromPayload(
+        items,
+        sessionGeneration: generation,
+      );
       return items.cast<Map<String, dynamic>>();
     }
     return [];

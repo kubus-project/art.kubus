@@ -9,12 +9,15 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:art_kubus/providers/chat_provider.dart';
 import 'package:art_kubus/services/backend_api_service.dart';
 
-/// Serves chat endpoints from the test. Conversation and message responses are
-/// held by completers so a test can resolve account A's request after the
-/// session has moved on.
+/// Serves chat endpoints from the test. Held requests are queued per endpoint
+/// and resolved oldest-first, so a test can answer account A's request after
+/// the session has moved on to account B.
 class _ChatHttp {
-  final Map<String, Completer<http.Response>> _pending = {};
+  final Map<String, List<Completer<http.Response>>> _held = {};
   final Map<String, Completer<void>> _arrived = {};
+
+  /// Every request as "METHOD path", in arrival order.
+  final List<String> requests = [];
 
   http.Response? _immediate(String path) {
     if (path == '/api/profiles/me') {
@@ -32,28 +35,46 @@ class _ChatHttp {
     return null;
   }
 
-  /// Future that completes when the request for [key] reaches the mock.
+  /// Endpoint key for a request, or null when the mock does not serve it.
+  String? _keyFor(String method, String path) {
+    if (path == '/api/messages') return 'conversations';
+    if (path.startsWith('/api/messages/')) {
+      if (path.endsWith('/messages') && method == 'POST') return 'send';
+      if (path.endsWith('/messages')) return 'messages';
+      if (path.contains('/messages/') && path.endsWith('/read')) {
+        return 'messageRead';
+      }
+      if (path.endsWith('/read')) return 'conversationRead';
+    }
+    return null;
+  }
+
+  /// Future that completes when the first request for [key] reaches the mock.
   Future<void> arrived(String key) {
     return _arrived.putIfAbsent(key, () => Completer<void>()).future;
   }
 
-  void complete(String key, Map<String, dynamic> body) {
-    _pending[key]!.complete(http.Response(jsonEncode(body), 200));
+  /// Answers the oldest held request for [key].
+  void complete(String key, Map<String, dynamic> body, {int status = 200}) {
+    final queue = _held[key]!;
+    queue.removeAt(0).complete(http.Response(jsonEncode(body), status));
   }
 
   MockClient client() {
     return MockClient((request) async {
       final path = request.url.path;
+      requests.add('${request.method} $path');
       final immediate = _immediate(path);
       if (immediate != null) return immediate;
-      final isMessages =
-          path.startsWith('/api/messages/') && path.endsWith('/messages');
-      if (!isMessages && path != '/api/messages') {
+      final key = _keyFor(request.method, path);
+      if (key == null) {
         return http.Response(jsonEncode({'success': false}), 404);
       }
-      final key = isMessages ? 'messages' : 'conversations';
+      if (key == 'conversationRead') {
+        return http.Response(jsonEncode({'success': true, 'data': {}}), 200);
+      }
       final completer = Completer<http.Response>();
-      _pending[key] = completer;
+      _held.putIfAbsent(key, () => []).add(completer);
       final arrived = _arrived.putIfAbsent(key, () => Completer<void>());
       if (!arrived.isCompleted) arrived.complete();
       return completer.future;
@@ -137,6 +158,34 @@ void main() {
 
     expect(result, isEmpty);
     expect(provider.messages, isEmpty);
+  });
+
+  test(
+      'late listConversations response for account A is dropped after '
+      'wallet change', () async {
+    final http = _ChatHttp();
+    BackendApiService().setHttpClient(http.client());
+    BackendApiService().setAuthTokenForTesting('tokenA');
+
+    final provider = ChatProvider();
+    provider.setCurrentWalletForTesting('walletA');
+
+    final pending = provider.listConversations();
+    await http.arrived('conversations');
+
+    // Switch to B while A's list request is still in flight.
+    unawaited(provider.setCurrentWallet('walletB'));
+    await Future<void>.delayed(Duration.zero);
+
+    http.complete('conversations', {
+      'success': true,
+      'data': [_conversation('convA')],
+    });
+    final returned = await pending;
+
+    expect(returned, isEmpty);
+    expect(provider.conversations, isEmpty);
+    expect(provider.unreadCounts, isEmpty);
   });
 
   test('wallet change clears per-account caches and conversations', () async {
