@@ -108,6 +108,8 @@ void main() {
     await tester.pump();
 
     expect(find.byIcon(Icons.arrow_back), findsOneWidget);
+    // The icon-only Back control carries a screen-reader label.
+    expect(find.byTooltip('Back'), findsOneWidget);
     await tester.tap(find.byIcon(Icons.arrow_back));
     await tester.pump();
 
