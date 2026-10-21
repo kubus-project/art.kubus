@@ -342,12 +342,13 @@ class _ConversationScreenState extends State<ConversationScreen> {
     if (!mounted || !_cacheProvider.isInitialized) return;
     final avatarPayload = <String, String?>{};
     final displayPayload = <String, String?>{};
-    _headerAvatarUrlCache.forEach((wallet, url) {
-      final trimmed = url?.trim() ?? '';
-      if (trimmed.isEmpty) return;
-      if (_isPlaceholderAvatar(trimmed, wallet)) return;
-      avatarPayload[wallet] = trimmed;
-    });
+    for (final wallet in _headerAvatarUrlCache.keys) {
+      // Persist the resolved avatar so a stale header snapshot cannot be
+      // written back over a newer saved avatar.
+      final resolved = _resolvedHeaderAvatar(wallet);
+      if (resolved == null) continue;
+      avatarPayload[wallet] = resolved;
+    }
     _headerDisplayNameCache.forEach((wallet, name) {
       if ((name ?? '').trim().isEmpty || name == wallet) return;
       displayPayload[wallet] = name!.trim();
@@ -357,6 +358,17 @@ class _ConversationScreenState extends State<ConversationScreen> {
       avatars: avatarPayload.isEmpty ? null : avatarPayload,
       displayNames: displayPayload.isEmpty ? null : displayPayload,
     ));
+  }
+
+  /// Header avatar for [wallet] under the shared rule: the UserService cached
+  /// avatar wins over this screen's payload snapshot, which is the fallback.
+  String? _resolvedHeaderAvatar(String wallet) {
+    final normalizedWallet = WalletUtils.normalize(wallet);
+    return UserService.resolveAvatarUrl(
+      wallet: wallet,
+      payloadUrl: _headerAvatarUrlCache[wallet] ??
+          _headerAvatarUrlCache[normalizedWallet],
+    );
   }
 
   void _seedHeaderCacheIntoParticipantProvider() {
@@ -370,8 +382,7 @@ class _ConversationScreenState extends State<ConversationScreen> {
       if (normalizedWallet.isEmpty) continue;
       final displayName = _headerDisplayNameCache[wallet] ??
           _headerDisplayNameCache[normalizedWallet];
-      final avatarUrl = _headerAvatarUrlCache[wallet] ??
-          _headerAvatarUrlCache[normalizedWallet];
+      final avatarUrl = _resolvedHeaderAvatar(wallet);
       _chatProvider.upsertParticipantIdentity(
         ResolvedConversationParticipant(
           identityKey: normalizeParticipantIdentityKey(

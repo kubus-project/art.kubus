@@ -115,33 +115,22 @@ class _AvatarWidgetState extends State<AvatarWidget>
     // usable HTTP(S) URL (or a backend-relative path that resolves to one).
     // Some API responses historically contained malformed absolute URLs like
     // "https:/api.kubus.site/..." which would otherwise break rendering.
-    if (widget.avatarUrl != null && widget.avatarUrl!.isNotEmpty) {
-      final normalized = _normalizeAvatar(widget.avatarUrl);
-      if (_isUsableNetworkUrl(normalized)) {
-        setState(() {
-          _effectiveUrl = normalized;
-          _loading = false;
-        });
-        return;
-      }
-      // Fall through: treat malformed avatarUrl as absent and try cache/fetch.
-    }
-
-    // 2. Check cache
-    final cachedProfile = <String>{
-      cacheKey,
-      widget.wallet.trim(),
-      ...widget.walletAliases.map((alias) => alias.trim()),
-    }.where((identifier) => identifier.isNotEmpty).map((identifier) {
-      return UserService.getCachedUser(identifier) ??
-          UserService.getCachedUser(WalletUtils.normalize(identifier));
-    }).firstWhere((user) => user != null, orElse: () => null);
-    final cached = cachedProfile?.profileImageUrl;
-    if (cached != null && cached.isNotEmpty) {
+    // The UserService cache is authoritative: a saved avatar wins over a stale
+    // payload snapshot, and the payload is used only when the cache has none.
+    final resolvedUrl = UserService.resolveAvatarUrl(
+      wallet: cacheKey,
+      payloadUrl: widget.avatarUrl,
+      aliases: [widget.wallet, ...widget.walletAliases],
+    );
+    final normalized = _normalizeAvatar(resolvedUrl);
+    if (_isUsableNetworkUrl(normalized)) {
       setState(() {
-        _effectiveUrl = _normalizeAvatar(cached);
+        _effectiveUrl = normalized;
+        _loading = false;
       });
+      return;
     }
+    // Malformed or absent avatars fall through to the fetch/fallback path.
 
     // 3. Fetch authoritative profile
     // Skip fetch for placeholder/unknown wallets to avoid unnecessary 404s
@@ -250,8 +239,12 @@ class _AvatarWidgetState extends State<AvatarWidget>
     // flight. Applying the saved cache and advancing the generation prevents
     // that older request from painting its stale URL over the new one.
     _setupGeneration++;
+    final resolved = UserService.resolveAvatarUrl(
+      wallet: cacheKey,
+      aliases: [widget.wallet, ...widget.walletAliases],
+    );
     setState(() {
-      _effectiveUrl = _normalizeAvatar(cached.profileImageUrl);
+      _effectiveUrl = _normalizeAvatar(resolved ?? cached.profileImageUrl);
       _loading = false;
     });
     widget.onProfileResolved?.call(cached);
