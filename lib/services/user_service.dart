@@ -1612,31 +1612,35 @@ class UserService {
     }
   }
 
-  /// Single avatar resolution rule for every surface. The UserService cached
-  /// profile for [wallet] (or any [aliases]) is authoritative and wins over a
-  /// payload snapshot [payloadUrl]; the payload is used only when the cache has
-  /// no usable avatar. Returns null when neither has a usable image, so callers
-  /// fall back to the identicon/initials.
+  /// Single avatar resolution rule for every surface.
+  ///
+  /// The cached profile for [wallet] (or any [aliases]) wins over a payload
+  /// snapshot [payloadUrl] only while it is trustworthy: the user saved media
+  /// locally (own-save revision) or the cache entry is within its TTL. Otherwise
+  /// a present payload is newer than the cache and wins; the cache is used as a
+  /// fallback when the payload has no usable avatar. Returns null when neither
+  /// has a usable image, so callers fall back to the identicon/initials.
   static String? resolveAvatarUrl({
     required String wallet,
     String? payloadUrl,
     Iterable<String> aliases = const <String>[],
   }) {
-    final keys = <String>{
-      wallet.trim(),
-      WalletUtils.normalize(wallet),
-      ...aliases.map((a) => a.trim()),
-    }..removeWhere((k) => k.isEmpty);
-    String? cachedUrl;
-    for (final key in keys) {
-      final cached = _cachedUserFor(key);
-      final url = _usableAvatarUrl(cached?.profileImageUrl);
-      if (url != null) {
-        cachedUrl = url;
-        break;
-      }
+    final keys = _avatarKeysFor(wallet, aliases);
+    final cacheEntryKey = _cachedAvatarEntryKey(keys);
+    final cachedUrl = cacheEntryKey == null
+        ? null
+        : _usableAvatarUrl(_cache[cacheEntryKey]?.profileImageUrl);
+    final payloadResolved = _usableAvatarUrl(payloadUrl);
+    final String? resolved;
+    if (cachedUrl == null) {
+      resolved = payloadResolved;
+    } else if (payloadResolved == null ||
+        _hasLocalMediaSave(keys) ||
+        _isCacheEntryFresh(cacheEntryKey!)) {
+      resolved = cachedUrl;
+    } else {
+      resolved = payloadResolved;
     }
-    final resolved = cachedUrl ?? _usableAvatarUrl(payloadUrl);
     if (resolved == null) return null;
     final bust = keys
         .map((k) => _profileMediaBustByUser[WalletUtils.canonical(k)] ?? 0)
@@ -1652,6 +1656,71 @@ class UserService {
         'v': bust.toString(),
       },
     ).toString();
+  }
+
+  /// True when the cached avatar for [wallet] (or [aliases]) is past the TTL, so
+  /// callers should refresh the profile in the background. Returns false when no
+  /// cache entry supplies a usable avatar.
+  static bool isAvatarCacheExpired({
+    required String wallet,
+    Iterable<String> aliases = const <String>[],
+  }) {
+    final entryKey = _cachedAvatarEntryKey(_avatarKeysFor(wallet, aliases));
+    return entryKey != null && !_isCacheEntryFresh(entryKey);
+  }
+
+  /// Test hook: backdates the cache timestamp of [userId] by [age] so TTL
+  /// expiry can be exercised without waiting.
+  @visibleForTesting
+  static void ageCacheEntryForTesting(String userId, Duration age) {
+    if (!_cache.containsKey(userId)) return;
+    _cacheTimestamps[userId] =
+        DateTime.now().millisecondsSinceEpoch - age.inMilliseconds;
+  }
+
+  static Set<String> _avatarKeysFor(String wallet, Iterable<String> aliases) {
+    return <String>{
+      wallet.trim(),
+      WalletUtils.normalize(wallet),
+      ...aliases.map((a) => a.trim()),
+    }..removeWhere((k) => k.isEmpty);
+  }
+
+  /// Cache key of the first entry in [keys] that supplies a usable avatar.
+  static String? _cachedAvatarEntryKey(Iterable<String> keys) {
+    for (final key in keys) {
+      final entryKey = _cacheEntryKeyFor(key);
+      if (entryKey == null) continue;
+      if (_usableAvatarUrl(_cache[entryKey]?.profileImageUrl) != null) {
+        return entryKey;
+      }
+    }
+    return null;
+  }
+
+  static String? _cacheEntryKeyFor(String userId) {
+    if (_cache.containsKey(userId)) return userId;
+    final canonical = WalletUtils.canonical(userId);
+    if (canonical.isNotEmpty && _cache.containsKey(canonical)) return canonical;
+    return null;
+  }
+
+  /// Same TTL rule as [getUserById]: an entry is expired only once its age
+  /// exceeds the TTL. Entries without a timestamp are not treated as expired.
+  static bool _isCacheEntryFresh(String entryKey) {
+    final ts = _cacheTimestamps[entryKey] ?? 0;
+    if (ts <= 0) return true;
+    return DateTime.now().millisecondsSinceEpoch - ts <= _ttlMillis;
+  }
+
+  /// True when an explicit local avatar/cover save was recorded for any of [keys].
+  static bool _hasLocalMediaSave(Iterable<String> keys) {
+    for (final key in keys) {
+      if ((_profileMediaBustByUser[WalletUtils.canonical(key)] ?? 0) > 0) {
+        return true;
+      }
+    }
+    return false;
   }
 
   static String? _usableAvatarUrl(String? raw) {

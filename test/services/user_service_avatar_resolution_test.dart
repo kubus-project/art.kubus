@@ -89,4 +89,65 @@ void main() {
     expect(resolved, isNot(_oldUrl));
     expect(resolved, startsWith(_oldUrl));
   });
+
+  group('cache TTL versus payload snapshot', () {
+    const expiredAge = Duration(hours: 7);
+
+    test('an expired cache entry loses to a fresh payload', () {
+      UserService.setUsersInCacheAuthoritative([_user(_wallet, _oldUrl)]);
+      UserService.ageCacheEntryForTesting(_wallet, expiredAge);
+
+      expect(
+        UserService.resolveAvatarUrl(wallet: _wallet, payloadUrl: _newUrl),
+        _newUrl,
+      );
+      expect(UserService.isAvatarCacheExpired(wallet: _wallet), isTrue);
+    });
+
+    test('a fresh cache entry beats a stale payload', () {
+      UserService.setUsersInCacheAuthoritative([_user(_wallet, _newUrl)]);
+
+      expect(
+        UserService.resolveAvatarUrl(wallet: _wallet, payloadUrl: _oldUrl),
+        _newUrl,
+      );
+      expect(UserService.isAvatarCacheExpired(wallet: _wallet), isFalse);
+    });
+
+    test('an own-save revision keeps the cache authoritative with v=', () {
+      UserService.setUsersInCacheAuthoritative([_user(_wallet, _newUrl)]);
+      UserService.markProfileMediaChanged([_wallet]);
+      UserService.ageCacheEntryForTesting(_wallet, expiredAge);
+
+      final resolved = UserService.resolveAvatarUrl(
+        wallet: _wallet,
+        payloadUrl: _oldUrl,
+      );
+      expect(resolved, startsWith(_newUrl));
+      expect(resolved, contains('v='));
+    });
+
+    test('an empty payload falls back to an expired cache entry', () {
+      UserService.setUsersInCacheAuthoritative([_user(_wallet, _oldUrl)]);
+      UserService.ageCacheEntryForTesting(_wallet, expiredAge);
+
+      expect(UserService.resolveAvatarUrl(wallet: _wallet), _oldUrl);
+      expect(
+        UserService.resolveAvatarUrl(wallet: _wallet, payloadUrl: '  '),
+        _oldUrl,
+      );
+      expect(UserService.isAvatarCacheExpired(wallet: _wallet), isTrue);
+    });
+
+    test('expiry is reported only for an entry that supplies an avatar', () {
+      UserService.setUsersInCacheAuthoritative([_user(_wallet, null)]);
+      UserService.ageCacheEntryForTesting(_wallet, expiredAge);
+
+      expect(UserService.isAvatarCacheExpired(wallet: _wallet), isFalse);
+      expect(
+        UserService.isAvatarCacheExpired(wallet: 'unknown-wallet'),
+        isFalse,
+      );
+    });
+  });
 }
