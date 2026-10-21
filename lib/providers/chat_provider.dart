@@ -2055,6 +2055,9 @@ class ChatProvider extends ChangeNotifier {
       ].contains(key);
     });
     if (trimmedMessage.isEmpty && !hasRenderableData) return;
+    // Responses for a previous session/account must not touch this session's
+    // caches (see _sessionGeneration).
+    final generation = _sessionGeneration;
     final tempId = 'temp-${DateTime.now().microsecondsSinceEpoch}';
     final optimisticData = <String, dynamic>{
       ...?data,
@@ -2082,6 +2085,7 @@ class ChatProvider extends ChangeNotifier {
         data: optimisticData,
         replyToId: replyToId,
       );
+      if (generation != _sessionGeneration) return;
       final msg = ChatMessage.fromJson(result['data']);
       final current = _messages[nid] ?? const <ChatMessage>[];
       final replaced = <ChatMessage>[];
@@ -2102,6 +2106,7 @@ class ChatProvider extends ChangeNotifier {
       _upsertConversationMetadataForMessage(nid, msg, force: true);
       _safeNotifyListeners(force: true);
     } catch (e) {
+      if (generation != _sessionGeneration) rethrow;
       final current = _messages[nid] ?? const <ChatMessage>[];
       _cacheMessages(
         nid,
@@ -2196,10 +2201,11 @@ class ChatProvider extends ChangeNotifier {
         );
       }
       // If this conversation is currently open, mark it read after loading messages
+      if (generation != _sessionGeneration) return const <ChatMessage>[];
       if (_openConversationId != null &&
           _openConversationId == conversationId) {
         try {
-          await markRead(conversationId);
+          await markRead(conversationId, sessionGeneration: generation);
         } catch (_) {}
       }
       return list;
@@ -2840,8 +2846,13 @@ class ChatProvider extends ChangeNotifier {
     }
   }
 
-  Future<void> markRead(String conversationId) async {
+  Future<void> markRead(String conversationId, {int? sessionGeneration}) async {
+    final generation = sessionGeneration ?? _sessionGeneration;
+    // Never send a read for a previous account's conversation under the
+    // current token; drop the local write if the session changed mid-flight.
+    if (generation != _sessionGeneration) return;
     await _api.markConversationRead(conversationId);
+    if (generation != _sessionGeneration) return;
     _unreadCounts[conversationId] = 0;
     _safeNotifyListeners(force: true);
   }
@@ -2865,16 +2876,20 @@ class ChatProvider extends ChangeNotifier {
 
   /// Mark an individual message as read by the current user
   Future<void> markMessageRead(String conversationId, String messageId) async {
+    final generation = _sessionGeneration;
     try {
       final resp = await _api.markMessageRead(conversationId, messageId);
       debugPrint(
         'ChatProvider.markMessageRead: api response for conv=$conversationId msg=$messageId -> $resp',
       );
+      // The session changed while the request was in flight: no fallback read
+      // and no local writes into the new session.
+      if (generation != _sessionGeneration) return;
       // If server indicates not found or failure, try to mark the conversation read as a fallback
       if (resp['success'] != true &&
           (resp['status'] == 404 || resp['status'] == 400)) {
         try {
-          await markRead(conversationId);
+          await markRead(conversationId, sessionGeneration: generation);
         } catch (_) {}
         return;
       }
