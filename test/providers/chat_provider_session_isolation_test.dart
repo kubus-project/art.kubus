@@ -282,4 +282,44 @@ void main() {
     expect(provider.unreadCounts, isEmpty);
     expect(provider.totalUnread, 0);
   });
+
+  test(
+      'socket message for a conversation of the previous session is ignored '
+      'after switch', () async {
+    final http = _ChatHttp();
+    BackendApiService().setHttpClient(http.client());
+    BackendApiService().setAuthTokenForTesting('tokenA');
+
+    final provider = ChatProvider();
+    provider.setCurrentWalletForTesting('walletA');
+
+    final refreshA = provider.refreshConversations();
+    await http.arrived('conversations');
+    http.complete('conversations', {
+      'success': true,
+      'data': [_conversation('convA')],
+    });
+    await refreshA;
+    expect(provider.conversations, isNotEmpty);
+
+    unawaited(provider.setCurrentWallet('walletB'));
+    await Future<void>.delayed(Duration.zero);
+    expect(provider.conversations, isEmpty);
+
+    // A late frame for A's conversation arrives after the switch.
+    provider.handleIncomingMessageForTesting(_message('m3', 'convA'));
+
+    expect(provider.messages.containsKey('convA'), isFalse);
+    expect(provider.unreadCounts, isEmpty);
+  });
+
+  test('socket message is ignored while no wallet is bound', () {
+    final provider = ChatProvider();
+    provider.setCurrentWalletForTesting(null);
+
+    provider.handleIncomingMessageForTesting(_message('m4', 'convX'));
+
+    expect(provider.messages, isEmpty);
+    expect(provider.unreadCounts, isEmpty);
+  });
 }

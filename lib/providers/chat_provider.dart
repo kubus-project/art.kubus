@@ -484,6 +484,10 @@ class ChatProvider extends ChangeNotifier {
   // when it changed, so a late response for account A never lands in B's state.
   int _sessionGeneration = 0;
 
+  // Conversation ids that belonged to a session that has been left. Socket
+  // events for these are dropped unless the current session lists them too.
+  final Set<String> _retiredSessionConversationIds = <String>{};
+
   List<Conversation> _conversations = [];
   final Map<String, List<ChatMessage>> _messages = {};
   final Map<String, int> _unreadCounts = {}; // conversationId -> unread count
@@ -1066,6 +1070,13 @@ class ChatProvider extends ChangeNotifier {
 
   void _resetSessionState({required String reason, bool notify = true}) {
     _chatProviderResetSessionState(this, reason: reason, notify: notify);
+  }
+
+  /// Whether a socket event for [conversationId] belongs to the current session.
+  bool _isSocketEventForCurrentSession(String conversationId) {
+    if ((_currentWallet ?? '').trim().isEmpty) return false;
+    if (_conversations.any((c) => c.id == conversationId)) return true;
+    return !_retiredSessionConversationIds.contains(conversationId);
   }
 
   Future<void> initialize({String? initialWallet}) async {
@@ -1737,6 +1748,14 @@ class ChatProvider extends ChangeNotifier {
         }
         return;
       }
+      if (!_isSocketEventForCurrentSession(convId)) {
+        if (kDebugMode) {
+          debugPrint(
+            'ChatProvider._onMessageReceived: dropping event outside current session',
+          );
+        }
+        return;
+      }
 
       final msg = ChatMessage.fromJson(<String, dynamic>{
         ...payload,
@@ -1867,6 +1886,7 @@ class ChatProvider extends ChangeNotifier {
       final reader = (data['reader'] ?? data['wallet'] ?? '').toString();
 
       if (convId.isEmpty || messageId.isEmpty) return;
+      if (!_isSocketEventForCurrentSession(convId)) return;
 
       debugPrint(
         'ChatProvider._onMessageRead: convId=$convId, messageId=$messageId, reader=$reader',
@@ -3038,6 +3058,7 @@ class ChatProvider extends ChangeNotifier {
       final reactions = data['reactions']; // List of reaction objects
 
       if (convId.isEmpty || messageId.isEmpty) return;
+      if (!_isSocketEventForCurrentSession(convId)) return;
 
       final list = _messages[convId];
       if (list == null) return;

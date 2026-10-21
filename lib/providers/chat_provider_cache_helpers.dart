@@ -107,6 +107,12 @@ void _chatProviderResetSessionState(
     }
   } catch (_) {}
 
+  // Remember the conversations being left so late socket events for them are
+  // rejected by _isSocketEventForCurrentSession.
+  provider._retiredSessionConversationIds
+    ..addAll(provider._conversations.map((c) => c.id))
+    ..addAll(provider._messages.keys);
+
   provider._currentWallet = null;
   provider._conversations = [];
   provider._messages.clear();
