@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:art_kubus/utils/design_tokens.dart';
 
 class PromotionCheckoutReturnScreen extends StatelessWidget {
@@ -16,6 +17,7 @@ class PromotionCheckoutReturnScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final scheme = Theme.of(context).colorScheme;
     final title = _isSuccess
         ? 'Promotion payment received'
@@ -83,18 +85,20 @@ class PromotionCheckoutReturnScreen extends StatelessWidget {
                       alignment: WrapAlignment.center,
                       children: [
                         ElevatedButton(
-                          onPressed: () => Navigator.of(context).pushNamedAndRemoveUntil(
+                          onPressed: () =>
+                              Navigator.of(context).pushNamedAndRemoveUntil(
                             '/main',
                             (route) => false,
                           ),
-                          child: const Text('Open app'),
+                          child: Text(l10n.promotionCheckoutOpenAppButton),
                         ),
                         TextButton(
-                          onPressed: () => Navigator.of(context).pushNamedAndRemoveUntil(
+                          onPressed: () =>
+                              Navigator.of(context).pushNamedAndRemoveUntil(
                             '/sign-in',
                             (route) => false,
                           ),
-                          child: const Text('Sign in'),
+                          child: Text(l10n.commonSignIn),
                         ),
                       ],
                     ),
