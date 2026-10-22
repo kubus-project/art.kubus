@@ -186,6 +186,27 @@ When no native app owns the URL:
 - auth begins only at protected actions;
 - opening from search must not create canonical → compact → `/app` history hops.
 
+Implementation (web only; native paths are unchanged behind `kIsWeb`):
+
+- The root Navigator is driven by a framework `Router`
+  (`BrowserEntryRouterDelegate` in `lib/core/browser_entry_router.dart`). It
+  owns browser reporting and popstate restoration; the Navigator stays the
+  app's navigation owner.
+- `BrowserHistoryMirror` records the entries this page created. An in-app Back
+  to the entry directly below steps the browser back instead of pushing a
+  duplicate. A reload restores the mirror from the entry's stored state
+  (`historyIndex`, `historyBack`), so the first Back after a refresh behaves
+  the same way.
+- A browser traversal that needs a different page starts a restore; for
+  `restoreCooldown` (800 ms) the page starts up undisturbed. Traversals arriving
+  in that window are coalesced to the latest one, and visible-address reports
+  from the starting page are ignored until it settles. Traversals are compared
+  with the page on screen, so a hash-only change never replays a stale fragment.
+- An account gate (`/sign-in`, `/register`) that replaces a pending public entry
+  before its shell appears takes over the address; the return target stays in
+  the gate's arguments.
+- Known gap: `/map?lat&lng&z` camera application is not yet implemented.
+
 The existing `/app/*` route remains only as an internal/backward-compatible
 surface while migration is in progress; new public entry should not depend on it.
 

@@ -42,6 +42,7 @@ import '../../../widgets/common/kubus_screen_header.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
 import '../../../widgets/map/dialogs/street_art_claims_dialog.dart';
 import '../../../widgets/spatial/artwork_spatial_archive_section.dart';
+import '../../../widgets/public_entity_takeover_ready.dart';
 import '../desktop_shell_scope.dart';
 
 /// Whether the desktop shell header already shows [title] above this screen.
@@ -91,7 +92,6 @@ class _DesktopArtworkDetailScreenState
   String? _prefetchedAttendanceMarkerId;
   bool _artworkLoading = true;
   String? _artworkError;
-  bool _takeoverReadyScheduled = false;
 
   String _publicReturnRoute(BuildContext context) {
     try {
@@ -202,6 +202,15 @@ class _DesktopArtworkDetailScreenState
     }
   }
 
+  /// Loading, error and not-found views hold the requested entity's URL without
+  /// telling the takeover it is ready (see [PublicEntityTakeoverReady]).
+  Widget _holdEntryUrl(Widget child) => PublicEntityTakeoverReady(
+        type: widget.publicEntityType,
+        entityId: widget.publicEntryId,
+        signalReady: false,
+        child: child,
+      );
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
@@ -220,50 +229,54 @@ class _DesktopArtworkDetailScreenState
               );
 
         if (_artworkLoading) {
-          return Scaffold(
-            backgroundColor: scheme.surface,
-            appBar: widget.showAppBar
-                ? AppBar(
-                    title: KubusHeaderText(
-                      title: l10n.artDetailLoadingTitle,
-                      kind: KubusHeaderKind.screen,
-                      compact: true,
-                    ),
-                  )
-                : null,
-            body: const Center(child: InlineLoading()),
+          return _holdEntryUrl(
+            Scaffold(
+              backgroundColor: scheme.surface,
+              appBar: widget.showAppBar
+                  ? AppBar(
+                      title: KubusHeaderText(
+                        title: l10n.artDetailLoadingTitle,
+                        kind: KubusHeaderKind.screen,
+                        compact: true,
+                      ),
+                    )
+                  : null,
+              body: const Center(child: InlineLoading()),
+            ),
           );
         }
 
         if (_artworkError != null) {
-          return Scaffold(
-            backgroundColor: scheme.surface,
-            appBar: widget.showAppBar
-                ? AppBar(
-                    title: KubusHeaderText(
-                      title: l10n.artDetailTitle,
-                      kind: KubusHeaderKind.screen,
-                      compact: true,
+          return _holdEntryUrl(
+            Scaffold(
+              backgroundColor: scheme.surface,
+              appBar: widget.showAppBar
+                  ? AppBar(
+                      title: KubusHeaderText(
+                        title: l10n.artDetailTitle,
+                        kind: KubusHeaderKind.screen,
+                        compact: true,
+                      ),
+                    )
+                  : null,
+              body: Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      _artworkError!,
+                      style: KubusTextStyles.sectionSubtitle.copyWith(
+                        color: scheme.onSurface,
+                      ),
+                      textAlign: TextAlign.center,
                     ),
-                  )
-                : null,
-            body: Center(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    _artworkError!,
-                    style: KubusTextStyles.sectionSubtitle.copyWith(
-                      color: scheme.onSurface,
+                    const SizedBox(height: 16),
+                    ElevatedButton(
+                      onPressed: _loadArtworkDetails,
+                      child: Text(l10n.commonRetry),
                     ),
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 16),
-                  ElevatedButton(
-                    onPressed: _loadArtworkDetails,
-                    child: Text(l10n.commonRetry),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           );
@@ -272,27 +285,28 @@ class _DesktopArtworkDetailScreenState
         if (artwork == null ||
             (widget.publicEntityType == ShareEntityType.nft &&
                 (!artwork.isNft || !artwork.isPublic || !artwork.isActive))) {
-          return Scaffold(
-            backgroundColor: scheme.surface,
-            appBar: widget.showAppBar
-                ? AppBar(
-                    title: KubusHeaderText(
-                      title: l10n.artworkNotFound,
-                      kind: KubusHeaderKind.screen,
-                      compact: true,
-                    ),
-                  )
-                : null,
-            body: Center(
-              child: Text(
-                l10n.artworkNotFound,
-                style: KubusTextStyles.screenTitle,
+          return _holdEntryUrl(
+            Scaffold(
+              backgroundColor: scheme.surface,
+              appBar: widget.showAppBar
+                  ? AppBar(
+                      title: KubusHeaderText(
+                        title: l10n.artworkNotFound,
+                        kind: KubusHeaderKind.screen,
+                        compact: true,
+                      ),
+                    )
+                  : null,
+              body: Center(
+                child: Text(
+                  l10n.artworkNotFound,
+                  style: KubusTextStyles.screenTitle,
+                ),
               ),
             ),
           );
         }
 
-        _scheduleTakeoverReady(artwork.id);
         final isCanonicalPublicEntry = isCanonicalPublicEntityEntry(
           context,
           type: widget.publicEntityType == ShareEntityType.nft
@@ -305,27 +319,31 @@ class _DesktopArtworkDetailScreenState
           metadata: artwork.metadata,
         );
 
-        return DocumentTitle(
-          title: artwork.title,
-          child: Scaffold(
-            backgroundColor: scheme.surface,
-            appBar: widget.showAppBar
-                ? AppBar(
-                    title: KubusHeaderText(
-                      title: 'art.kubus',
-                      brandTitle: true,
-                      kind: KubusHeaderKind.screen,
-                      compact: true,
-                    ),
-                  )
-                : null,
-            body: _buildDesktopPage(
-              isSaved: isSaved,
-              artwork: artwork,
-              coverUrl: coverUrl,
-              artworkProvider: artworkProvider,
-              isSignedIn: isSignedIn,
-              isCanonicalPublicEntry: isCanonicalPublicEntry,
+        return PublicEntityTakeoverReady(
+          type: widget.publicEntityType,
+          entityId: widget.publicEntryId,
+          child: DocumentTitle(
+            title: artwork.title,
+            child: Scaffold(
+              backgroundColor: scheme.surface,
+              appBar: widget.showAppBar
+                  ? AppBar(
+                      title: KubusHeaderText(
+                        title: 'art.kubus',
+                        brandTitle: true,
+                        kind: KubusHeaderKind.screen,
+                        compact: true,
+                      ),
+                    )
+                  : null,
+              body: _buildDesktopPage(
+                isSaved: isSaved,
+                artwork: artwork,
+                coverUrl: coverUrl,
+                artworkProvider: artworkProvider,
+                isSignedIn: isSignedIn,
+                isCanonicalPublicEntry: isCanonicalPublicEntry,
+              ),
             ),
           ),
         );
@@ -489,22 +507,6 @@ class _DesktopArtworkDetailScreenState
         },
       ),
     );
-  }
-
-  void _scheduleTakeoverReady(String artworkId) {
-    if (_takeoverReadyScheduled) return;
-    _takeoverReadyScheduled = true;
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      try {
-        unawaited(
-          context.read<PublicEntityTakeoverProvider>().markEntityReady(
-                widget.publicEntityType,
-                widget.publicEntryId,
-              ),
-        );
-      } catch (_) {}
-    });
   }
 
   Widget _buildMedia(Artwork artwork, String? coverUrl) {

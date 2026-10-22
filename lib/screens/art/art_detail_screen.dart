@@ -53,6 +53,7 @@ import '../../utils/design_tokens.dart';
 import '../../utils/kubus_color_roles.dart';
 import '../../widgets/map/dialogs/street_art_claims_dialog.dart';
 import '../../widgets/spatial/artwork_spatial_archive_section.dart';
+import '../../widgets/public_entity_takeover_ready.dart';
 import '../../providers/activation_prompt_provider.dart';
 import '../../services/meta/meta_conversion_adapter.dart';
 
@@ -188,7 +189,6 @@ class _ArtDetailScreenState extends State<ArtDetailScreen> {
   String? _prefetchedAttendanceMarkerId;
   bool _artworkLoading = true;
   String? _artworkError;
-  bool _takeoverReadyScheduled = false;
   final Set<String> _deleteDialogOpenArtworkIds = <String>{};
   final Set<String> _deleteInFlightArtworkIds = <String>{};
   final Set<String> _deleteDialogOpenCommentIds = <String>{};
@@ -223,6 +223,15 @@ class _ArtDetailScreenState extends State<ArtDetailScreen> {
     super.dispose();
   }
 
+  /// Loading, error and not-found views hold the requested entity's URL without
+  /// telling the takeover it is ready (see [PublicEntityTakeoverReady]).
+  Widget _holdEntryUrl(Widget child) => PublicEntityTakeoverReady(
+        type: widget.publicEntityType,
+        entityId: widget.publicEntryId,
+        signalReady: false,
+        child: child,
+      );
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
@@ -252,67 +261,71 @@ class _ArtDetailScreenState extends State<ArtDetailScreen> {
         final canManage = isSignedIn && isOwner;
 
         if (_artworkLoading) {
-          return AnimatedGradientBackground(
-            child: Scaffold(
-              backgroundColor: Theme.of(context).colorScheme.surface,
-              appBar: AppBar(
-                title: Text(
-                  l10n.artDetailLoadingTitle,
-                  style: KubusTypography.inter(fontWeight: FontWeight.w600),
-                ),
+          return _holdEntryUrl(
+            AnimatedGradientBackground(
+              child: Scaffold(
                 backgroundColor: Theme.of(context).colorScheme.surface,
-                elevation: 0,
+                appBar: AppBar(
+                  title: Text(
+                    l10n.artDetailLoadingTitle,
+                    style: KubusTypography.inter(fontWeight: FontWeight.w600),
+                  ),
+                  backgroundColor: Theme.of(context).colorScheme.surface,
+                  elevation: 0,
+                ),
+                body: const Center(child: InlineLoading()),
               ),
-              body: const Center(child: InlineLoading()),
             ),
           );
         }
 
         if (_artworkError != null) {
-          return Scaffold(
-            backgroundColor: Theme.of(context).colorScheme.surface,
-            appBar: AppBar(
-              title: Text(
-                l10n.artDetailTitle,
-                style: KubusTypography.inter(fontWeight: FontWeight.w600),
-              ),
+          return _holdEntryUrl(
+            Scaffold(
               backgroundColor: Theme.of(context).colorScheme.surface,
-              elevation: 0,
-            ),
-            body: Center(
-              child: Padding(
-                padding: const EdgeInsets.all(DetailSpacing.xl),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      Icons.error_outline_rounded,
-                      size: 48,
-                      color: Theme.of(context).colorScheme.error,
-                    ),
-                    const SizedBox(height: DetailSpacing.lg),
-                    Text(
-                      _artworkError!,
-                      style: KubusTypography.inter(
-                        fontSize: 15,
-                        color: Theme.of(
-                          context,
-                        ).colorScheme.onSurface.withValues(alpha: 0.8),
+              appBar: AppBar(
+                title: Text(
+                  l10n.artDetailTitle,
+                  style: KubusTypography.inter(fontWeight: FontWeight.w600),
+                ),
+                backgroundColor: Theme.of(context).colorScheme.surface,
+                elevation: 0,
+              ),
+              body: Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(DetailSpacing.xl),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.error_outline_rounded,
+                        size: 48,
+                        color: Theme.of(context).colorScheme.error,
                       ),
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: DetailSpacing.xl),
-                    FilledButton.icon(
-                      onPressed: _loadArtworkDetails,
-                      icon: const Icon(Icons.refresh, size: 18),
-                      label: Text(
-                        l10n.commonRetry,
+                      const SizedBox(height: DetailSpacing.lg),
+                      Text(
+                        _artworkError!,
                         style: KubusTypography.inter(
-                          fontWeight: FontWeight.w600,
+                          fontSize: 15,
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.onSurface.withValues(alpha: 0.8),
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: DetailSpacing.xl),
+                      FilledButton.icon(
+                        onPressed: _loadArtworkDetails,
+                        icon: const Icon(Icons.refresh, size: 18),
+                        label: Text(
+                          l10n.commonRetry,
+                          style: KubusTypography.inter(
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -322,132 +335,137 @@ class _ArtDetailScreenState extends State<ArtDetailScreen> {
         if (artwork == null ||
             (widget.publicEntityType == ShareEntityType.nft &&
                 (!artwork.isNft || !artwork.isPublic || !artwork.isActive))) {
-          return Scaffold(
-            backgroundColor: Theme.of(context).colorScheme.surface,
-            appBar: AppBar(
-              title: Text(
-                l10n.artworkNotFound,
-                style: KubusTypography.inter(fontWeight: FontWeight.w600),
-              ),
+          return _holdEntryUrl(
+            Scaffold(
               backgroundColor: Theme.of(context).colorScheme.surface,
-              elevation: 0,
-            ),
-            body: Center(
-              child: Padding(
-                padding: const EdgeInsets.all(DetailSpacing.xl),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      Icons.image_not_supported_outlined,
-                      size: 56,
-                      color: Theme.of(
-                        context,
-                      ).colorScheme.onSurface.withValues(alpha: 0.3),
-                    ),
-                    const SizedBox(height: DetailSpacing.lg),
-                    Text(
-                      l10n.artworkNotFound,
-                      style: KubusTypography.inter(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
+              appBar: AppBar(
+                title: Text(
+                  l10n.artworkNotFound,
+                  style: KubusTypography.inter(fontWeight: FontWeight.w600),
+                ),
+                backgroundColor: Theme.of(context).colorScheme.surface,
+                elevation: 0,
+              ),
+              body: Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(DetailSpacing.xl),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.image_not_supported_outlined,
+                        size: 56,
                         color: Theme.of(
                           context,
-                        ).colorScheme.onSurface.withValues(alpha: 0.7),
+                        ).colorScheme.onSurface.withValues(alpha: 0.3),
                       ),
-                    ),
-                  ],
+                      const SizedBox(height: DetailSpacing.lg),
+                      Text(
+                        l10n.artworkNotFound,
+                        style: KubusTypography.inter(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.onSurface.withValues(alpha: 0.7),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),
           );
         }
 
-        _scheduleTakeoverReady(artwork.id);
-        return DocumentTitle(
-          title: artwork.title,
-          child: AnimatedGradientBackground(
-            child: Scaffold(
-              backgroundColor: Theme.of(context).colorScheme.surface,
-              body: CustomScrollView(
-                controller: _scrollController,
-                slivers: [
-                  _buildAppBar(artwork),
-                  SliverToBoxAdapter(
-                    child: Padding(
+        return PublicEntityTakeoverReady(
+          type: widget.publicEntityType,
+          entityId: widget.publicEntryId,
+          child: DocumentTitle(
+            title: artwork.title,
+            child: AnimatedGradientBackground(
+              child: Scaffold(
+                backgroundColor: Theme.of(context).colorScheme.surface,
+                body: CustomScrollView(
+                  controller: _scrollController,
+                  slivers: [
+                    _buildAppBar(artwork),
+                    SliverToBoxAdapter(
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(
+                          DetailSpacing.lg,
+                          DetailSpacing.md,
+                          DetailSpacing.lg,
+                          0,
+                        ),
+                        child: AspectRatio(
+                          // The server frame uses the portrait public
+                          // artwork crop at this same compact width.
+                          aspectRatio: 0.77,
+                          child: _buildPreviewCoverImage(
+                            ArtworkMediaResolver.resolveCover(artwork: artwork),
+                            semanticLabel: artwork.title.trim().isEmpty
+                                ? 'Artwork image'
+                                : '${artwork.title} image',
+                          ),
+                        ),
+                      ),
+                    ),
+                    SliverPadding(
                       padding: const EdgeInsets.fromLTRB(
                         DetailSpacing.lg,
-                        DetailSpacing.md,
+                        DetailSpacing.xl,
                         DetailSpacing.lg,
-                        0,
+                        DetailSpacing.xl,
                       ),
-                      child: AspectRatio(
-                        // The server frame uses the portrait public
-                        // artwork crop at this same compact width.
-                        aspectRatio: 0.77,
-                        child: _buildPreviewCoverImage(
-                          ArtworkMediaResolver.resolveCover(artwork: artwork),
-                          semanticLabel: artwork.title.trim().isEmpty
-                              ? 'Artwork image'
-                              : '${artwork.title} image',
-                        ),
-                      ),
-                    ),
-                  ),
-                  SliverPadding(
-                    padding: const EdgeInsets.fromLTRB(
-                      DetailSpacing.lg,
-                      DetailSpacing.xl,
-                      DetailSpacing.lg,
-                      DetailSpacing.xl,
-                    ),
-                    sliver: SliverList(
-                      // Editorial rhythm: major zones breathe with the
-                      // larger card gap instead of packing tightly.
-                      delegate: SliverChildListDelegate([
-                        _buildArtInfo(artwork),
-                        const SizedBox(height: DetailSpacing.cardGap),
-                        _buildPrimaryActionButtons(artwork),
-                        const SizedBox(height: DetailSpacing.cardGap),
-                        _buildDescription(artwork),
-                        const SizedBox(height: DetailSpacing.cardGap),
-                        ArtworkProvenanceSection(artwork: artwork),
-                        const SizedBox(height: DetailSpacing.cardGap),
-                        _buildGallerySection(artwork),
-                        if (artwork.galleryUrls.isNotEmpty)
+                      sliver: SliverList(
+                        // Editorial rhythm: major zones breathe with the
+                        // larger card gap instead of packing tightly.
+                        delegate: SliverChildListDelegate([
+                          _buildArtInfo(artwork),
                           const SizedBox(height: DetailSpacing.cardGap),
-                        ArtworkSpatialArchiveSection(
-                          artwork: artwork,
-                          contextMarkerId: widget.attendanceMarkerId,
-                        ),
-                        const SizedBox(height: DetailSpacing.cardGap),
-                        _buildSocialStats(artwork),
-                        const SizedBox(height: DetailSpacing.cardGap),
-                        _buildAdditionalActions(
-                          artwork,
-                          isOwner: isOwner,
-                          canManage: canManage,
-                        ),
-                        const SizedBox(height: DetailSpacing.cardGap),
-                        if (AppConfig.isFeatureEnabled('collabInvites') &&
-                            isSignedIn) ...[
-                          CollaborationPanel(
-                            entityType: 'artworks',
-                            entityId: artwork.id,
-                            myRole: isOwner ? 'owner' : null,
+                          _buildPrimaryActionButtons(artwork),
+                          const SizedBox(height: DetailSpacing.cardGap),
+                          _buildDescription(artwork),
+                          const SizedBox(height: DetailSpacing.cardGap),
+                          ArtworkProvenanceSection(artwork: artwork),
+                          const SizedBox(height: DetailSpacing.cardGap),
+                          _buildGallerySection(artwork),
+                          if (artwork.galleryUrls.isNotEmpty)
+                            const SizedBox(height: DetailSpacing.cardGap),
+                          ArtworkSpatialArchiveSection(
+                            artwork: artwork,
+                            contextMarkerId: widget.attendanceMarkerId,
                           ),
-                          const SizedBox(height: DetailSpacing.xl),
-                        ],
-                        _buildCommentsSection(artwork, artworkProvider),
-                        const SizedBox(height: 100), // Bottom padding
-                      ]),
+                          const SizedBox(height: DetailSpacing.cardGap),
+                          _buildSocialStats(artwork),
+                          const SizedBox(height: DetailSpacing.cardGap),
+                          _buildAdditionalActions(
+                            artwork,
+                            isOwner: isOwner,
+                            canManage: canManage,
+                          ),
+                          const SizedBox(height: DetailSpacing.cardGap),
+                          if (AppConfig.isFeatureEnabled('collabInvites') &&
+                              isSignedIn) ...[
+                            CollaborationPanel(
+                              entityType: 'artworks',
+                              entityId: artwork.id,
+                              myRole: isOwner ? 'owner' : null,
+                            ),
+                            const SizedBox(height: DetailSpacing.xl),
+                          ],
+                          _buildCommentsSection(artwork, artworkProvider),
+                          const SizedBox(height: 100), // Bottom padding
+                        ]),
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
+                floatingActionButton: (_showComments && isSignedIn)
+                    ? _buildCommentFAB(artwork)
+                    : null,
               ),
-              floatingActionButton: (_showComments && isSignedIn)
-                  ? _buildCommentFAB(artwork)
-                  : null,
             ),
           ),
         );
@@ -500,22 +518,6 @@ class _ArtDetailScreenState extends State<ArtDetailScreen> {
         });
       }
     }
-  }
-
-  void _scheduleTakeoverReady(String artworkId) {
-    if (_takeoverReadyScheduled) return;
-    _takeoverReadyScheduled = true;
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      try {
-        unawaited(
-          context.read<PublicEntityTakeoverProvider>().markEntityReady(
-                widget.publicEntityType,
-                widget.publicEntryId,
-              ),
-        );
-      } catch (_) {}
-    });
   }
 
   Widget _buildAppBar(Artwork artwork) {

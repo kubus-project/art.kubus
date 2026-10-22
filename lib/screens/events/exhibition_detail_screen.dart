@@ -1486,10 +1486,10 @@ class _ExhibitionDetailScreenState extends State<ExhibitionDetailScreen> {
         ),
       ),
     );
-    if (exactExhibition == null) return content;
     return PublicEntityTakeoverReady(
       type: ShareEntityType.exhibition,
-      entityId: exactExhibition.id,
+      entityId: exactExhibition?.id ?? widget.exhibitionId,
+      signalReady: exactExhibition != null,
       child: content,
     );
   }
