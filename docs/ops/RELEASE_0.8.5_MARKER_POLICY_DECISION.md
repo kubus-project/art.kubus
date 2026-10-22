@@ -1,6 +1,6 @@
 ﻿# Marker visibility and editorial-state decision
 
-**Decision needed:** choose whether legacy unreviewed markers retain bounded public visibility, become approved-only across all public surfaces, or remain a release blocker. **Recommendation: A**, subject to explicit owner decision. No production or source policy change was made for this memo.
+**Owner decision recorded, 2026-10-23: A — bounded legacy visibility, for candidate implementation only.** Editorial verification and SEO permissions remain separate. Production changes still require explicit approval. The comparison and read-only evidence below precede implementation; they are not release qualification.
 
 ## Fresh counts and the 9,046 reconciliation
 
