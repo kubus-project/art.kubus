@@ -12,6 +12,7 @@ import 'onboarding_state_service.dart';
 import 'push_notification_service.dart';
 import 'socket_service.dart';
 import 'pending_action_service.dart';
+import 'profile_package_service.dart';
 import 'telemetry/telemetry_service.dart';
 
 /// Centralized storage and side-effect helpers for settings.
@@ -162,6 +163,9 @@ class SettingsService {
     // this account (camera, filters, search, selection) is gone.
     KubusMapSessionMemory.clearAll();
     await backendApi.clearAuth();
+    // Cached public profile packages, in memory and persisted, belong to the
+    // session that is ending; the next sign-in starts with none.
+    await ProfilePackageService.clearForSignOut();
     // The socket still holds the signed-out token; close it so neither a
     // reconnect nor a new handshake can carry that token.
     SocketService().disconnect();

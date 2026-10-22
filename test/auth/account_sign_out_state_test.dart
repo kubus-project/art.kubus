@@ -25,6 +25,7 @@ const List<String> _accountScopedKeys = <String>[
   'showAchievements',
   'share_last_visited_location',
   'show_collection',
+  'profile_critical_cache_v3',
 ];
 
 const MethodChannel _secureStorageChannel =
@@ -72,6 +73,7 @@ Map<String, Object> _signedInPrefs() => <String, Object>{
       'showAchievements': false,
       'share_last_visited_location': true,
       'show_collection': false,
+      'profile_critical_cache_v3': '{"0xabc":{}}',
     };
 
 class _Wallet extends WalletProvider {

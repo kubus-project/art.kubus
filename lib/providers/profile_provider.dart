@@ -93,6 +93,10 @@ class ProfileProvider extends foundation.ChangeNotifier {
   foundation.VoidCallback? _walletProviderListener;
   String? _boundWalletAddress;
   int _profileLoadEpoch = 0;
+
+  /// Account session the current request belongs to. A sign-out ends it, so a
+  /// response that arrives afterwards must not write the previous account.
+  int get _accountSessionEpoch => BackendApiService().authSessionEpoch;
   bool _isSavingPreferences = false;
   bool _hasUnsyncedPreferences = false;
   String? _preferencesSaveError;
@@ -540,6 +544,7 @@ class ProfileProvider extends foundation.ChangeNotifier {
     bool persistToBackend = true,
     bool throwOnBackendFailure = false,
   }) async {
+    final sessionEpoch = _accountSessionEpoch;
     final wallet = _currentWalletAddress;
     if (wallet == null || wallet.isEmpty) return;
 
@@ -561,7 +566,7 @@ class ProfileProvider extends foundation.ChangeNotifier {
       } catch (_) {}
     }
 
-    await _persistPreferences(nextPrefs);
+    await _persistPreferences(nextPrefs, sessionEpoch: sessionEpoch);
 
     if (!persistToBackend) return;
     try {
@@ -686,7 +691,10 @@ class ProfileProvider extends foundation.ChangeNotifier {
   /// Load profile by wallet address
   Future<void> loadAuthenticatedProfile() async {
     final requestEpoch = ++_profileLoadEpoch;
-    bool isCurrentLoad() => requestEpoch == _profileLoadEpoch;
+    final sessionEpoch = _accountSessionEpoch;
+    bool isCurrentLoad() =>
+        requestEpoch == _profileLoadEpoch &&
+        sessionEpoch == _accountSessionEpoch;
     _isLoading = true;
     _error = null;
     _hasHydratedProfile = false;
@@ -720,7 +728,7 @@ class ProfileProvider extends foundation.ChangeNotifier {
               : accountKey;
       final mergedPrefs = _mergePreferencesWithLocalPersona(preferenceKey);
       _currentUser = _currentUser?.copyWith(preferences: mergedPrefs);
-      await _persistPreferences(mergedPrefs);
+      await _persistPreferences(mergedPrefs, sessionEpoch: sessionEpoch);
       if (accountKey.isNotEmpty) {
         try {
           final prefs = await _ensurePrefs();
@@ -730,7 +738,7 @@ class ProfileProvider extends foundation.ChangeNotifier {
 
       final walletAddress = _currentUser?.walletAddress.trim() ?? '';
       if (walletAddress.isNotEmpty) {
-        await _applyDaoReviewRoles(walletAddress);
+        await _applyDaoReviewRoles(walletAddress, sessionEpoch: sessionEpoch);
         if (!isCurrentLoad()) return;
         await _loadBackendStats(walletAddress);
         if (!isCurrentLoad()) return;
@@ -757,7 +765,10 @@ class ProfileProvider extends foundation.ChangeNotifier {
     bool allowWalletAutoRegister = false,
   }) async {
     final requestEpoch = ++_profileLoadEpoch;
-    bool isCurrentLoad() => requestEpoch == _profileLoadEpoch;
+    final sessionEpoch = _accountSessionEpoch;
+    bool isCurrentLoad() =>
+        requestEpoch == _profileLoadEpoch &&
+        sessionEpoch == _accountSessionEpoch;
     _isLoading = true;
     _error = null;
     _hasHydratedProfile = false;
@@ -850,7 +861,7 @@ class ProfileProvider extends foundation.ChangeNotifier {
           }
         }
         // If profile missing role flags but DAO review approved, promote accordingly
-        await _applyDaoReviewRoles(walletAddress);
+        await _applyDaoReviewRoles(walletAddress, sessionEpoch: sessionEpoch);
         if (!isCurrentLoad()) return;
         // Ensure avatar URL is rasterized and absolute
         try {
@@ -864,7 +875,7 @@ class ProfileProvider extends foundation.ChangeNotifier {
         // Merge backend preferences with locally cached toggles for offline continuity
         final mergedPrefs = _mergePreferencesWithLocalPersona(walletAddress);
         _currentUser = _currentUser?.copyWith(preferences: mergedPrefs);
-        await _persistPreferences(mergedPrefs);
+        await _persistPreferences(mergedPrefs, sessionEpoch: sessionEpoch);
         debugPrint(
             'ProfileProvider: Profile loaded from backend: ${_currentUser?.username}');
 
@@ -954,7 +965,7 @@ class ProfileProvider extends foundation.ChangeNotifier {
           _hasHydratedProfile = true;
           final mergedPrefs = _mergePreferencesWithLocalPersona(walletAddress);
           _currentUser = _currentUser?.copyWith(preferences: mergedPrefs);
-          await _persistPreferences(mergedPrefs);
+          await _persistPreferences(mergedPrefs, sessionEpoch: sessionEpoch);
         } catch (regError) {
           debugPrint(
               'ProfileProvider: Auto-registration failed: $regError, creating local default');
@@ -964,7 +975,7 @@ class ProfileProvider extends foundation.ChangeNotifier {
           _hasHydratedProfile = true;
           final mergedPrefs = _mergePreferencesWithLocalPersona(walletAddress);
           _currentUser = _currentUser?.copyWith(preferences: mergedPrefs);
-          await _persistPreferences(mergedPrefs);
+          await _persistPreferences(mergedPrefs, sessionEpoch: sessionEpoch);
         }
       }
 
@@ -1005,6 +1016,7 @@ class ProfileProvider extends foundation.ChangeNotifier {
     ProfilePreferences? preferences,
     bool reloadStats = true,
   }) async {
+    final sessionEpoch = _accountSessionEpoch;
     _isLoading = true;
     _error = null;
     _lastSaveFailure = null;
@@ -1151,7 +1163,7 @@ class ProfileProvider extends foundation.ChangeNotifier {
       try {
         final mergedPrefs = _mergePreferencesWithLocalPersona(walletAddress);
         _currentUser = _currentUser?.copyWith(preferences: mergedPrefs);
-        await _persistPreferences(mergedPrefs);
+        await _persistPreferences(mergedPrefs, sessionEpoch: sessionEpoch);
       } catch (_) {}
 
       // Save to SharedPreferences
@@ -1168,7 +1180,7 @@ class ProfileProvider extends foundation.ChangeNotifier {
           'ProfileProvider: Profile saved successfully for wallet: $walletAddress');
 
       // Persist to UserService cache (the source of truth for other surfaces)
-      _publishSavedProfileToUserCache();
+      _publishSavedProfileToUserCache(sessionEpoch);
       // Emit an application event indicating the profile was updated
       try {
         EventBus().emitProfileUpdated(_currentUser);
@@ -1204,7 +1216,10 @@ class ProfileProvider extends foundation.ChangeNotifier {
   /// wallet key and the account id key, then marks the media revision so every
   /// avatar surface re-resolves to the saved URL (cache-busted when unchanged).
   /// Walletless accounts are not cached.
-  void _publishSavedProfileToUserCache() {
+  void _publishSavedProfileToUserCache(int sessionEpoch) {
+    // A profile saved under a session that has ended must not reach the shared
+    // cache that the next account reads.
+    if (sessionEpoch != _accountSessionEpoch) return;
     try {
       final u = _currentUser;
       if (u == null || u.walletAddress.trim().isEmpty) return;
@@ -1242,6 +1257,7 @@ class ProfileProvider extends foundation.ChangeNotifier {
       ];
       UserService.setUsersInCacheAuthoritative(
         ids.map(userFor).toList(growable: false),
+        sessionEpoch: sessionEpoch,
       );
       UserService.markProfileMediaChanged(ids);
     } catch (_) {}
@@ -1252,6 +1268,7 @@ class ProfileProvider extends foundation.ChangeNotifier {
     String? avatar,
     String? coverImage,
   }) async {
+    final sessionEpoch = _accountSessionEpoch;
     _error = null;
     final effectiveAvatar = ProfileMediaRefUtils.toPersistableAvatarRef(avatar);
     final effectiveCover =
@@ -1332,7 +1349,7 @@ class ProfileProvider extends foundation.ChangeNotifier {
       _isSignedIn = true;
       // Avatar/cover-only saves must reach the shared cache too, otherwise
       // other surfaces keep showing the previous image.
-      _publishSavedProfileToUserCache();
+      _publishSavedProfileToUserCache(sessionEpoch);
       notifyListeners();
       try {
         EventBus().emitProfileUpdated(_currentUser);
@@ -1731,7 +1748,10 @@ class ProfileProvider extends foundation.ChangeNotifier {
     return existing.copyWith(persona: persisted);
   }
 
-  Future<void> _applyDaoReviewRoles(String walletAddress) async {
+  Future<void> _applyDaoReviewRoles(
+    String walletAddress, {
+    required int sessionEpoch,
+  }) async {
     try {
       final reviewPayload =
           await _apiService.getDAOReview(idOrWallet: walletAddress);
@@ -1768,7 +1788,7 @@ class ProfileProvider extends foundation.ChangeNotifier {
           isInstitution: nextInstitution,
           preferences: nextPreferences,
         );
-        await _persistPreferences(nextPreferences);
+        await _persistPreferences(nextPreferences, sessionEpoch: sessionEpoch);
         notifyListeners();
         try {
           EventBus().emitProfileUpdated(_currentUser);
@@ -1779,60 +1799,78 @@ class ProfileProvider extends foundation.ChangeNotifier {
     }
   }
 
-  Future<void> _persistPreferences(ProfilePreferences preferences) async {
+  /// Writes the profile privacy and preference mirrors for [sessionEpoch], the
+  /// account session the caller started under. Once a sign-out ends that session
+  /// nothing more is written. Each write checks it right before it is issued,
+  /// because every await can yield to a sign-out, and a late response must not
+  /// restore the previous account's toggles.
+  Future<void> _persistPreferences(
+    ProfilePreferences preferences, {
+    required int sessionEpoch,
+  }) async {
+    bool sessionEnded() => sessionEpoch != _accountSessionEpoch;
     try {
       final prefs = await _ensurePrefs();
-      await prefs.setBool(
+      Future<void> setBool(String key, bool value) async {
+        if (sessionEnded()) return;
+        await prefs.setBool(key, value);
+      }
+
+      Future<void> setString(String key, String value) async {
+        if (sessionEnded()) return;
+        await prefs.setString(key, value);
+      }
+
+      await setBool(
           'private_profile', preferences.privacy.toLowerCase() == 'private');
-      await prefs.setBool(
-          'show_activity_status', preferences.showActivityStatus);
-      await prefs.setBool('show_achievements', preferences.showAchievements);
-      await prefs.setBool('showAchievements', preferences.showAchievements);
-      await prefs.setBool(
+      await setBool('show_activity_status', preferences.showActivityStatus);
+      await setBool('show_achievements', preferences.showAchievements);
+      await setBool('showAchievements', preferences.showAchievements);
+      await setBool(
           'share_last_visited_location', preferences.shareLastVisitedLocation);
-      await prefs.setBool('show_collection', preferences.showCollection);
-      await prefs.setBool('allow_messages', preferences.allowMessages);
+      await setBool('show_collection', preferences.showCollection);
+      await setBool('allow_messages', preferences.allowMessages);
       final wallet = _currentWalletAddress;
       final persona = (preferences.persona ?? '').trim();
       if (wallet != null && wallet.isNotEmpty) {
         if (persona.isNotEmpty) {
-          await prefs.setString(_personaKeyForWallet(wallet), persona);
-          await prefs.setBool(_personaOnboardedKeyForWallet(wallet), true);
+          await setString(_personaKeyForWallet(wallet), persona);
+          await setBool(_personaOnboardedKeyForWallet(wallet), true);
         }
-        await prefs.setBool(
+        await setBool(
           _notificationPreferenceKeyForWallet(wallet, 'enabled'),
           preferences.notificationPreferences.enabled,
         );
-        await prefs.setBool(
+        await setBool(
           _notificationPreferenceKeyForWallet(wallet, 'art'),
           preferences.notificationPreferences.art,
         );
-        await prefs.setBool(
+        await setBool(
           _notificationPreferenceKeyForWallet(wallet, 'community'),
           preferences.notificationPreferences.community,
         );
-        await prefs.setBool(
+        await setBool(
           _notificationPreferenceKeyForWallet(wallet, 'dao'),
           preferences.notificationPreferences.dao,
         );
-        await prefs.setBool(
+        await setBool(
           _notificationPreferenceKeyForWallet(wallet, 'artistHub'),
           preferences.notificationPreferences.artistHub,
         );
-        await prefs.setBool(
+        await setBool(
           _notificationPreferenceKeyForWallet(wallet, 'institutionHub'),
           preferences.notificationPreferences.institutionHub,
         );
-        await prefs.setBool(
+        await setBool(
           _notificationPreferenceKeyForWallet(wallet, 'account'),
           preferences.notificationPreferences.account,
         );
-        await prefs.setBool(
+        await setBool(
           _notificationPreferenceKeyForWallet(wallet, 'promotion'),
           preferences.notificationPreferences.promotion,
         );
       }
-      _cachedPreferences = preferences;
+      if (!sessionEnded()) _cachedPreferences = preferences;
     } catch (_) {}
   }
 
@@ -1970,7 +2008,10 @@ class ProfileProvider extends foundation.ChangeNotifier {
     // Capture the load epoch before any await: sign-out or an account switch
     // bumps it, and the late stats response must then be dropped.
     final requestEpoch = _profileLoadEpoch;
-    bool isCurrentLoad() => requestEpoch == _profileLoadEpoch;
+    final sessionEpoch = _accountSessionEpoch;
+    bool isCurrentLoad() =>
+        requestEpoch == _profileLoadEpoch &&
+        sessionEpoch == _accountSessionEpoch;
     final explicit = walletAddress?.trim();
     String? resolved = (explicit != null && explicit.isNotEmpty)
         ? explicit
@@ -2007,6 +2048,7 @@ class ProfileProvider extends foundation.ChangeNotifier {
     bool? showCollection,
     bool? allowMessages,
   }) async {
+    final sessionEpoch = _accountSessionEpoch;
     try {
       final existing =
           _currentUser?.preferences ?? _cachedPreferencesFromPrefs();
@@ -2035,7 +2077,7 @@ class ProfileProvider extends foundation.ChangeNotifier {
       if (_currentUser != null) {
         _currentUser = _currentUser!.copyWith(preferences: next);
       }
-      await _persistPreferences(next);
+      await _persistPreferences(next, sessionEpoch: sessionEpoch);
       await _syncPreferencesToBackend(next);
     } catch (e) {
       _isSavingPreferences = false;
