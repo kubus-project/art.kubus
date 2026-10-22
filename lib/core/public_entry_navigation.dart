@@ -100,6 +100,12 @@ class PublicEntryNavigation extends ChangeNotifier with WidgetsBindingObserver {
         current.matches(type, id) &&
         current.browserRoute == browserRoute &&
         current.shellRoute == shellRoute) {
+      // The same entry seeded again: the browser history restored its page
+      // while the screen that showed it is still being torn down. The entry
+      // waits for the restored screen's claim, so that teardown must not
+      // retire it.
+      _entryWasClaimed = false;
+      _exitAttempted = false;
       return;
     }
     if (current != null && !current.matches(type, id)) {
@@ -160,6 +166,8 @@ class PublicEntryNavigation extends ChangeNotifier with WidgetsBindingObserver {
       SchedulerBinding.instance.addPostFrameCallback((_) {
         final entry = _entry;
         if (entry == null || !identical(entry, retiringEntry)) return;
+        // Seeded again meanwhile (a restored page is about to claim it).
+        if (!_entryWasClaimed) return;
         if (_claims.any((claim) =>
             claim.element.mounted &&
             entry.matches(claim.type, claim.entityId))) {

@@ -155,6 +155,57 @@ void main() {
       expect(navigation.takeReplaceNextAddress(), isFalse);
     });
 
+    testWidgets(
+        're-seeding the entry while its old screen is torn down keeps it',
+        (tester) async {
+      seedEntry();
+      late BuildContext screen;
+      await tester.pumpWidget(Builder(builder: (context) {
+        screen = context;
+        return const SizedBox.shrink();
+      }));
+      final token = navigation.claim(
+        screen,
+        type: ShareEntityType.artwork,
+        entityId: 'bad-id',
+        localizedPath: (_) => '/en/artworks/bad-id',
+      );
+      expect(navigation.visibleEntityUrl, entryUrl);
+
+      // Browser Back restores the page: the same entry is seeded again, then
+      // the screen it replaces is disposed.
+      seedEntry();
+      navigation.release(token, retireEntryIfUnused: true);
+      await tester.pump();
+      await tester.pump();
+
+      expect(navigation.pendingEntryUrl, entryUrl,
+          reason: 'the restored screen has not claimed yet');
+    });
+
+    testWidgets('a screen that really leaves still retires its entry',
+        (tester) async {
+      seedEntry();
+      late BuildContext screen;
+      await tester.pumpWidget(Builder(builder: (context) {
+        screen = context;
+        return const SizedBox.shrink();
+      }));
+      final token = navigation.claim(
+        screen,
+        type: ShareEntityType.artwork,
+        entityId: 'bad-id',
+        localizedPath: (_) => '/en/artworks/bad-id',
+      );
+      expect(navigation.visibleEntityUrl, entryUrl);
+
+      navigation.release(token, retireEntryIfUnused: true);
+      await tester.pump();
+      await tester.pump();
+
+      expect(navigation.pendingEntryUrl, isNull);
+    });
+
     testWidgets('a claimed entry is not abandoned by later pages',
         (tester) async {
       seedEntry();
