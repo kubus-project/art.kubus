@@ -77,4 +77,3 @@ All implementation work remains isolated. Marker WIP is also saved as `marker-ed
 
 Final recommendation: **NO-GO**. This is an auditable incomplete release candidate, not a released or fully accepted v0.8.5.
 Marker WIP exact pushed SHA: `495ebfa2d350176e30c88bd3b87e8c3a4fde8455`.
-
