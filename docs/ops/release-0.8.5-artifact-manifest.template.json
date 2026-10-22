@@ -1,0 +1,54 @@
+{
+  "status": "pending",
+  "release": "0.8.5",
+  "releaseTag": null,
+  "sourceRepository": "kubus-project/art.kubus",
+  "sourceSha": null,
+  "sourceBranch": null,
+  "workflowRunId": null,
+  "workflowName": null,
+  "version": null,
+  "buildDate": null,
+  "buildNumber": null,
+  "artifacts": [
+    {
+      "platform": "web",
+      "name": null,
+      "sizeBytes": null,
+      "sha256": null,
+      "checksumManifest": null,
+      "checksumManifestSha256": null,
+      "signatureStatus": "not-applicable"
+    },
+    {
+      "platform": "android-apk",
+      "name": null,
+      "sizeBytes": null,
+      "sha256": null,
+      "checksumManifest": null,
+      "checksumManifestSha256": null,
+      "signatureStatus": "pending"
+    },
+    {
+      "platform": "android-aab",
+      "name": null,
+      "sizeBytes": null,
+      "sha256": null,
+      "checksumManifest": null,
+      "checksumManifestSha256": null,
+      "signatureStatus": "pending"
+    },
+    {
+      "platform": "ios-ipa",
+      "name": null,
+      "sizeBytes": null,
+      "sha256": null,
+      "checksumManifest": null,
+      "checksumManifestSha256": null,
+      "signatureStatus": "pending"
+    }
+  ],
+  "releasePublication": "not-published",
+  "productionDeployment": "not-deployed",
+  "notes": "Template only. Fill exclusively from the final exact-SHA workflow artifacts; do not infer or copy values from an earlier run."
+}
