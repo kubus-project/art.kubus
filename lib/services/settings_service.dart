@@ -144,12 +144,18 @@ class SettingsService {
   }
 
   /// Clear all local session/auth data and disconnect wallet.
+  ///
+  /// With [preserveWallet] the account session still ends in full, but the
+  /// local wallet (its connection, cached recovery phrase and persisted
+  /// identity) is left exactly as it was. Used when the backend, not the user,
+  /// ended the session (a suspended account).
   static Future<void> logout({
     required WalletProvider walletProvider,
     required BackendApiService backendApi,
     NotificationProvider? notificationProvider,
     ProfileProvider? profileProvider,
     SavedItemsProvider? savedItemsProvider,
+    bool preserveWallet = false,
   }) async {
     // First, and synchronous: nothing below may fail before the map's memory of
     // this account (camera, filters, search, selection) is gone.
@@ -162,10 +168,12 @@ class SettingsService {
       await PushNotificationService().cancelAllNotifications();
     } catch (_) {}
 
-    await walletProvider.disconnectWallet(preserveAuthenticatedWallet: false);
+    if (!preserveWallet) {
+      await walletProvider.disconnectWallet(preserveAuthenticatedWallet: false);
+    }
 
     final prefs = await SharedPreferences.getInstance();
-    const removeKeys = {
+    final removeKeys = <String>{
       'jwt_token',
       'token',
       'auth_token',
@@ -174,10 +182,12 @@ class SettingsService {
       'refreshToken',
       'auth_refresh_token',
       'authRefreshToken',
-      'wallet_address',
-      'wallet',
-      'walletAddress',
-      'has_wallet',
+      if (!preserveWallet) ...const [
+        'wallet_address',
+        'wallet',
+        'walletAddress',
+        'has_wallet',
+      ],
       'user_id',
       PreferenceKeys.hasCompletedAuthOnboarding,
       'notification_permission_granted',

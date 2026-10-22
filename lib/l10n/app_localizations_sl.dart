@@ -1252,6 +1252,13 @@ class AppLocalizationsSl extends AppLocalizations {
       'Tvoja seja je potekla. Za nadaljevanje se znova prijavi.';
 
   @override
+  String get authAccountSuspendedTitle => 'Račun je suspendiran';
+
+  @override
+  String get authAccountSuspendedMessage =>
+      'Dostop do tega računa je suspendiran, zato si bil odjavljen. Denarnica na tej napravi ni prizadeta. Če meniš, da gre za napako, se obrni na podporo.';
+
+  @override
   String get authAccountCreatedProfileLoading =>
       'Račun je ustvarjen. Profil se nalaga v ozadju.';
 

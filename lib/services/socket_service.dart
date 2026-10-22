@@ -2,6 +2,7 @@ import 'package:socket_io_client/socket_io_client.dart' as io;
 import 'package:flutter/foundation.dart';
 import 'dart:async';
 import 'dart:convert';
+import 'auth_session_coordinator.dart';
 import 'backend_api_service.dart';
 // wallet_utils is intentionally not used here because the server now expects
 // canonical wallet casing when subscribing to user rooms. Keep the import
@@ -18,6 +19,11 @@ class SocketService {
   io.Socket? _socket;
   String? _socketBaseUrl;
   String? _socketAuthToken;
+
+  /// The token whose account the backend reported as suspended. While the
+  /// session still carries it, [connect] refuses, so no caller can start a
+  /// reconnect loop against a socket the server will keep rejecting.
+  String? _inactiveAccountToken;
   Completer<bool>? _connectCompleter;
   final List<NotificationCallback> _notificationListeners = [];
   final List<NotificationCallback> _unreadSummaryListeners = [];
@@ -142,6 +148,14 @@ class SocketService {
     final nextToken = (api.getAuthToken() ?? '').trim();
     final currentToken = (_socketAuthToken ?? '').trim();
 
+    // A new sign-in (different token) clears the suspension; the same token
+    // never reconnects.
+    if (nextToken != _inactiveAccountToken) _inactiveAccountToken = null;
+    if (_inactiveAccountToken != null) {
+      _log('connect skipped: account suspended');
+      return false;
+    }
+
     // If auth token changes (login/logout) we must recreate the socket so the
     // handshake includes the new token. This prevents "anonymous socket" state
     // where presence/chat subscriptions silently fail until app restart.
@@ -223,10 +237,20 @@ class SocketService {
       // Fail fast on connection errors.
       _socket!.on('connect_error', (err) {
         _log('connect_error: $err');
+        if (AccountInactiveSignal.isPayload(err)) {
+          _handleAccountInactive();
+          return;
+        }
         _resolveAllPendingSubscriptionAcks(false);
         final c = _connectCompleter;
         if (c != null && !c.isCompleted) c.complete(false);
         _connectCompleter = null;
+      });
+
+      // Event-time rejection: the server emits `auth:error` and disconnects.
+      _socket!.on('auth:error', (data) {
+        _log('auth:error: $data');
+        if (AccountInactiveSignal.isPayload(data)) _handleAccountInactive();
       });
     }
 
@@ -938,6 +962,33 @@ class SocketService {
     }
     _subscribedConversations.clear();
   }
+
+  /// The backend suspended the signed-in account. Stop for good (no
+  /// reconnect) and hand the session to the shared auth coordinator, which
+  /// ends it exactly as for a REST `403 ACCOUNT_INACTIVE`.
+  void _handleAccountInactive() {
+    final token =
+        (_socketAuthToken ?? BackendApiService().getAuthToken() ?? '').trim();
+    // An anonymous socket has no account to suspend; a repeat is a no-op.
+    if (token.isEmpty || _inactiveAccountToken == token) return;
+    _inactiveAccountToken = token;
+
+    final pending = _connectCompleter;
+    if (pending != null && !pending.isCompleted) pending.complete(false);
+    disconnect();
+    unawaited(BackendApiService().reportAccountInactive(source: 'SOCKET'));
+  }
+
+  @visibleForTesting
+  void debugHandleServerAuthError(dynamic payload) {
+    if (AccountInactiveSignal.isPayload(payload)) _handleAccountInactive();
+  }
+
+  @visibleForTesting
+  bool get debugAccountInactive => _inactiveAccountToken != null;
+
+  @visibleForTesting
+  void debugResetAccountInactive() => _inactiveAccountToken = null;
 
   void disconnect() {
     _resolveAllPendingSubscriptionAcks(false);

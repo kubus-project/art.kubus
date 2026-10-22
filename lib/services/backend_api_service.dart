@@ -1286,6 +1286,27 @@ class BackendApiService
         lower.contains('unauthorized');
   }
 
+  /// Reports that the backend refused this session because the account is
+  /// suspended (socket `auth:error` / handshake rejection). Goes through the
+  /// same coordinator as a REST `403 ACCOUNT_INACTIVE`, so there is one path
+  /// that ends the session. Returns whether a coordinator took it.
+  Future<bool> reportAccountInactive({required String source}) async {
+    final coordinator = _authCoordinator;
+    if (coordinator == null) return false;
+    await coordinator.handleAuthFailure(
+      AuthFailureContext(
+        statusCode: 403,
+        method: source,
+        path: '/socket.io',
+        body: jsonEncode(<String, Object>{
+          'success': false,
+          'errorCode': AccountInactiveSignal.errorCode,
+        }),
+      ),
+    );
+    return true;
+  }
+
   bool _isAuthFailureStatus({
     required int statusCode,
     required String? responseBody,
@@ -1532,13 +1553,20 @@ class BackendApiService
     );
 
     final coordinator = _authCoordinator;
-    final isAuthFailure = includeAuth &&
+    final accountInactive = includeAuth &&
         coordinator != null &&
-        AppConfig.isFeatureEnabled('rePromptLoginOnExpiry') &&
-        _isAuthFailureStatus(
+        AccountInactiveSignal.isRestResponse(
           statusCode: response.statusCode,
-          responseBody: response.body,
+          body: response.body,
         );
+    final isAuthFailure = accountInactive ||
+        (includeAuth &&
+            coordinator != null &&
+            AppConfig.isFeatureEnabled('rePromptLoginOnExpiry') &&
+            _isAuthFailureStatus(
+              statusCode: response.statusCode,
+              responseBody: response.body,
+            ));
 
     if (!isAuthFailure) {
       if (_isSuccessStatus(response.statusCode)) {
@@ -1611,10 +1639,12 @@ class BackendApiService
       return response;
     }
 
-    if (retriedAfterReauth) {
+    if (retriedAfterReauth && !accountInactive) {
       return response;
     }
 
+    // A suspended account is ended by the coordinator and never retried: the
+    // result is never a success, so the request below is not replayed.
     final result = await coordinator.handleAuthFailure(
       AuthFailureContext(
         statusCode: response.statusCode,
@@ -1933,16 +1963,23 @@ class BackendApiService
     }
 
     final coordinator = _authCoordinator;
-    final isAuthFailure = includeAuth &&
+    final accountInactive = includeAuth &&
         coordinator != null &&
-        AppConfig.isFeatureEnabled('rePromptLoginOnExpiry') &&
-        _isAuthFailureStatus(
+        AccountInactiveSignal.isRestResponse(
           statusCode: response.statusCode,
-          responseBody: response.body,
+          body: response.body,
         );
+    final isAuthFailure = accountInactive ||
+        (includeAuth &&
+            coordinator != null &&
+            AppConfig.isFeatureEnabled('rePromptLoginOnExpiry') &&
+            _isAuthFailureStatus(
+              statusCode: response.statusCode,
+              responseBody: response.body,
+            ));
 
     if (!isAuthFailure) return response;
-    if (retriedAfterReauth) return response;
+    if (retriedAfterReauth && !accountInactive) return response;
 
     final result = await coordinator.handleAuthFailure(
       AuthFailureContext(
