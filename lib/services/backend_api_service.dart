@@ -360,6 +360,14 @@ class BackendApiService
 
   http.Client _client = http.Client();
   AuthSessionCoordinator? _authCoordinator;
+
+  /// Bumped at every sign-out (see [clearAuth]). Account requests capture it when
+  /// they start and drop their local writes once it has moved on, so a response
+  /// that lands after sign-out cannot repopulate the next session's state.
+  int _authSessionEpoch = 0;
+
+  /// Epoch of the current authenticated session; changes at every sign-out.
+  int get authSessionEpoch => _authSessionEpoch;
   MediaUploadOptimizer _mediaUploadOptimizer = const MediaUploadOptimizer();
 
   // Used only for diagnostic logging; the actual behavior is determined by the
@@ -1175,6 +1183,7 @@ class BackendApiService
 
   /// Clear authentication
   Future<void> clearAuth() async {
+    _authSessionEpoch += 1;
     _authToken = null;
     _authWalletCanonical = null;
     _authCoordinator?.reset();
@@ -1200,6 +1209,10 @@ class BackendApiService
         await prefs.remove(key);
       }
       await prefs.remove(PreferenceKeys.authLastSignInMethodV1);
+      // Account-scoped email and security status; sign-in repopulates them.
+      for (final key in secureAccountStatusPrefKeys) {
+        await prefs.remove(key);
+      }
       AppConfig.debugPrint(
         'BackendApiService: Auth cleared from SharedPreferences',
       );
@@ -1284,6 +1297,33 @@ class BackendApiService
         lower.contains('invalid') ||
         lower.contains('authentication required') ||
         lower.contains('unauthorized');
+  }
+
+  /// Reports that the backend refused this session because the account is
+  /// suspended (socket `auth:error` / handshake rejection). Goes through the
+  /// same coordinator as a REST `403 ACCOUNT_INACTIVE`, so there is one path
+  /// that ends the session. Returns whether a coordinator took it.
+  Future<bool> reportAccountInactive({required String source}) async {
+    final coordinator = _authCoordinator;
+    if (coordinator == null) {
+      // Production binds the SecurityGateProvider at startup; without one the
+      // most that can be done here is to drop the credentials, never to keep a
+      // suspended session alive.
+      await clearAuth();
+      return false;
+    }
+    await coordinator.handleAuthFailure(
+      AuthFailureContext(
+        statusCode: 403,
+        method: source,
+        path: '/socket.io',
+        body: jsonEncode(<String, Object>{
+          'success': false,
+          'errorCode': AccountInactiveSignal.errorCode,
+        }),
+      ),
+    );
+    return true;
   }
 
   bool _isAuthFailureStatus({
@@ -1532,13 +1572,20 @@ class BackendApiService
     );
 
     final coordinator = _authCoordinator;
-    final isAuthFailure = includeAuth &&
+    final accountInactive = includeAuth &&
         coordinator != null &&
-        AppConfig.isFeatureEnabled('rePromptLoginOnExpiry') &&
-        _isAuthFailureStatus(
+        AccountInactiveSignal.isRestResponse(
           statusCode: response.statusCode,
-          responseBody: response.body,
+          body: response.body,
         );
+    final isAuthFailure = accountInactive ||
+        (includeAuth &&
+            coordinator != null &&
+            AppConfig.isFeatureEnabled('rePromptLoginOnExpiry') &&
+            _isAuthFailureStatus(
+              statusCode: response.statusCode,
+              responseBody: response.body,
+            ));
 
     if (!isAuthFailure) {
       if (_isSuccessStatus(response.statusCode)) {
@@ -1611,10 +1658,12 @@ class BackendApiService
       return response;
     }
 
-    if (retriedAfterReauth) {
+    if (retriedAfterReauth && !accountInactive) {
       return response;
     }
 
+    // A suspended account is ended by the coordinator and never retried: the
+    // result is never a success, so the request below is not replayed.
     final result = await coordinator.handleAuthFailure(
       AuthFailureContext(
         statusCode: response.statusCode,
@@ -1933,16 +1982,23 @@ class BackendApiService
     }
 
     final coordinator = _authCoordinator;
-    final isAuthFailure = includeAuth &&
+    final accountInactive = includeAuth &&
         coordinator != null &&
-        AppConfig.isFeatureEnabled('rePromptLoginOnExpiry') &&
-        _isAuthFailureStatus(
+        AccountInactiveSignal.isRestResponse(
           statusCode: response.statusCode,
-          responseBody: response.body,
+          body: response.body,
         );
+    final isAuthFailure = accountInactive ||
+        (includeAuth &&
+            coordinator != null &&
+            AppConfig.isFeatureEnabled('rePromptLoginOnExpiry') &&
+            _isAuthFailureStatus(
+              statusCode: response.statusCode,
+              responseBody: response.body,
+            ));
 
     if (!isAuthFailure) return response;
-    if (retriedAfterReauth) return response;
+    if (retriedAfterReauth && !accountInactive) return response;
 
     final result = await coordinator.handleAuthFailure(
       AuthFailureContext(
@@ -2000,6 +2056,7 @@ class BackendApiService
     required String? email,
     required bool emailVerified,
     required bool emailAuthEnabled,
+    int? sessionEpoch,
   }) async {
     await _backendApiPersistSecureAccountStatus(
       hasEmail: hasEmail,
@@ -2007,6 +2064,7 @@ class BackendApiService
       email: email,
       emailVerified: emailVerified,
       emailAuthEnabled: emailAuthEnabled,
+      sessionEpoch: sessionEpoch,
     );
   }
 
@@ -2018,14 +2076,18 @@ class BackendApiService
     return _backendApiGetCachedSecureAccountStatus(this);
   }
 
+  /// [sessionEpoch] is the epoch captured when the request that produced [body]
+  /// started. A body that arrives after sign-out is then discarded.
   Future<void> syncSecureAccountStatusFromResponse(
     Map<String, dynamic> body, {
     bool fetchIfMissing = true,
+    int? sessionEpoch,
   }) async {
     await _backendApiSyncSecureAccountStatusFromResponse(
       this,
       body,
       fetchIfMissing: fetchIfMissing,
+      sessionEpoch: sessionEpoch,
     );
   }
 

@@ -207,13 +207,17 @@ class _SecureAccountScreenState extends State<SecureAccountScreen> {
               .timeout(const Duration(seconds: 8));
         } catch (_) {}
 
+        final sessionEpoch = api.authSessionEpoch;
         final response = await api.registerWithEmail(
           email: email,
           password: password,
           walletAddress: walletAddress.isEmpty ? null : walletAddress,
           includeAuth: true,
         );
-        await api.syncSecureAccountStatusFromResponse(response);
+        await api.syncSecureAccountStatusFromResponse(
+          response,
+          sessionEpoch: sessionEpoch,
+        );
         final payload = response['data'] is Map<String, dynamic>
             ? response['data'] as Map<String, dynamic>
             : response;
@@ -264,11 +268,13 @@ class _SecureAccountScreenState extends State<SecureAccountScreen> {
       _inlineError = null;
     });
     try {
+      final sessionEpoch = BackendApiService().authSessionEpoch;
       final response = await BackendApiService()
           .resendEmailVerificationForCurrentAccount(email: email);
       await BackendApiService().syncSecureAccountStatusFromResponse(
         response,
         fetchIfMissing: false,
+        sessionEpoch: sessionEpoch,
       );
       final payload = response['data'] is Map<String, dynamic>
           ? response['data'] as Map<String, dynamic>

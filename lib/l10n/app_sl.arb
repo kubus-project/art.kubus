@@ -537,6 +537,14 @@
   "@authReauthDialogMessage": {
     "description": "Sporočilo v dialogu, prikazanem ob poteku seje, ko se mora uporabnik ponovno avtenticirati."
   },
+  "authAccountSuspendedTitle": "Račun je suspendiran",
+  "@authAccountSuspendedTitle": {
+    "description": "Naslov dialoga, prikazanega, ko zaledje sporoči, da je prijavljeni račun suspendiran in je bil uporabnik odjavljen."
+  },
+  "authAccountSuspendedMessage": "Dostop do tega računa je suspendiran, zato je bila seja končana. Denarnica na tej napravi ni prizadeta. Če meniš, da gre za napako, se obrni na podporo.",
+  "@authAccountSuspendedMessage": {
+    "description": "Sporočilo dialoga, prikazanega, ko zaledje sporoči, da je prijavljeni račun suspendiran in je bil uporabnik odjavljen."
+  },
   "authAccountCreatedProfileLoading": "Račun je ustvarjen. Profil se nalaga v ozadju.",
   "authEmailSignInDisabled": "Prijava z e-pošto je onemogočena.",
   "authEmailRegistrationDisabled": "Registracija z e-pošto je onemogočena.",
