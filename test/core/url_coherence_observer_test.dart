@@ -278,4 +278,46 @@ void main() {
     expect(forward, isEmpty);
     observer.dispose();
   });
+
+  testWidgets('a page that replaces another replaces its history entry',
+      (tester) async {
+    final forward = <String>[];
+    final replaced = <String>[];
+    String? browserUrl = '/';
+    final observer = UrlCoherenceObserver(
+      enabled: true,
+      report: (url) {
+        forward.add(url);
+        browserUrl = url;
+      },
+      reportReplace: (url) {
+        replaced.add(url);
+        browserUrl = url;
+      },
+      currentBrowserUrl: () => browserUrl,
+    );
+    final navigatorKey = GlobalKey<NavigatorState>();
+    await tester.pumpWidget(MaterialApp(
+      navigatorKey: navigatorKey,
+      navigatorObservers: <NavigatorObserver>[observer],
+      initialRoute: '/',
+      onGenerateRoute: (settings) => MaterialPageRoute<void>(
+        settings: settings,
+        builder: (_) => Text('page ${settings.name}'),
+      ),
+    ));
+    await tester.pumpAndSettle();
+
+    // AppInitializer opens the shell with pushReplacement: `/` becomes `/map`.
+    navigatorKey.currentState!.pushReplacementNamed('/map');
+    await tester.pumpAndSettle();
+    expect(replaced, <String>['/map']);
+    expect(forward, isEmpty);
+
+    navigatorKey.currentState!.pushNamed('/sign-in');
+    await tester.pumpAndSettle();
+    expect(forward, <String>['/sign-in'],
+        reason: 'an ordinary push still adds an entry');
+    observer.dispose();
+  });
 }

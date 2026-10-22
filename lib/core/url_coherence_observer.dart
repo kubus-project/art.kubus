@@ -60,6 +60,7 @@ class UrlCoherenceObserver extends NavigatorObserver {
   String? _shownUrl;
   bool _scheduled = false;
   bool _pushedSinceSync = false;
+  bool _replacedSinceSync = false;
 
   /// The URL the observer believes the address bar currently shows.
   @visibleForTesting
@@ -117,7 +118,7 @@ class UrlCoherenceObserver extends NavigatorObserver {
     if (newRoute is! PageRoute<dynamic> && oldRoute is! PageRoute<dynamic>) {
       return;
     }
-    _pushedSinceSync = true;
+    _replacedSinceSync = true;
     final index = oldRoute == null ? -1 : _stack.indexOf(oldRoute);
     if (newRoute != null && newRoute is PageRoute<dynamic>) {
       if (_enabled) _entityUrls.pageOpened(newRoute.settings.name);
@@ -146,6 +147,7 @@ class UrlCoherenceObserver extends NavigatorObserver {
       _scheduled = false;
       _sync();
       _pushedSinceSync = false;
+      _replacedSinceSync = false;
       SchedulerBinding.instance.addPostFrameCallback((_) => _sync());
       SchedulerBinding.instance.ensureVisualUpdate();
     });
@@ -168,7 +170,11 @@ class UrlCoherenceObserver extends NavigatorObserver {
       return;
     }
     _shownUrl = desired;
-    if (_entityUrls.takeReplaceNextAddress()) {
+    if (_entityUrls.takeReplaceNextAddress() ||
+        (_replacedSinceSync && !_pushedSinceSync)) {
+      // A page replacing another (the startup shell redirect, for example)
+      // replaces its history entry: Back must not return to the page it
+      // replaced, which would only redirect again.
       (_reportReplace ?? _report)(desired);
       return;
     }

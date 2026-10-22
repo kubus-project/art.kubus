@@ -41,6 +41,31 @@ void main() {
     navigation.resetForTest();
   });
 
+  test('a restored entity re-arms the entry its screen released', () {
+    final navigation = PublicEntryNavigation.instance;
+    navigation.resetForTest();
+    final provider = PublicEntityTakeoverProvider();
+    const target = ShareDeepLinkTarget(
+      type: ShareEntityType.collection,
+      id: 'c1',
+      localeCode: 'en',
+    );
+    final uri = Uri.parse('/en/collections/c1');
+
+    provider.seed(initialUri: uri, target: target);
+    expect(navigation.pendingEntryUrl, '/en/collections/c1');
+
+    // The visitor moved on: the entity screen left and released its entry.
+    navigation.abandonEntry(ShareEntityType.collection, 'c1');
+    expect(navigation.pendingEntryUrl, isNull);
+
+    // Browser Back restores the page: the same target is seeded again.
+    provider.seed(initialUri: uri, target: target);
+    expect(navigation.pendingEntryUrl, '/en/collections/c1',
+        reason: 'the restored page must keep its address while it loads');
+    navigation.resetForTest();
+  });
+
   test('seeds only an exact localized canonical artwork pathname', () {
     final provider = PublicEntityTakeoverProvider();
     const target = ShareDeepLinkTarget(

@@ -134,7 +134,22 @@ class PublicEntityTakeoverProvider extends ChangeNotifier {
         fragment: browserUri.hasFragment ? browserUri.fragment : null,
       ).toString(),
     );
-    if (_sameTarget(_target, next)) return;
+    final shellRoute = target.type == ShareEntityType.marker
+        ? ShellRoutes.map
+        : ShellRoutes.main;
+    if (_sameTarget(_target, next)) {
+      // The browser history returned to this entity after the app had moved on
+      // (its entry was released when its screen left): re-arm the entry so the
+      // restored page keeps the canonical address while it loads. A no-op while
+      // the entry is still the live one.
+      PublicEntryNavigation.instance.setEntry(
+        type: target.type,
+        entityId: target.id,
+        browserRoute: next.browserRoute,
+        shellRoute: shellRoute,
+      );
+      return;
+    }
 
     _target = next;
     _bootstrap = null;
@@ -143,9 +158,7 @@ class PublicEntityTakeoverProvider extends ChangeNotifier {
       type: target.type,
       entityId: target.id,
       browserRoute: next.browserRoute,
-      shellRoute: target.type == ShareEntityType.marker
-          ? ShellRoutes.map
-          : ShellRoutes.main,
+      shellRoute: shellRoute,
     );
     dispatchPublicEntityRouteParsed(
       type: next.type,
