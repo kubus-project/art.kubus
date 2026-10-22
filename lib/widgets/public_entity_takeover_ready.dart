@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../core/public_entry_navigation.dart';
 import '../providers/public_entity_takeover_provider.dart';
 import '../services/share/share_types.dart';
 
@@ -10,18 +11,27 @@ import '../services/share/share_types.dart';
 ///
 /// Detail screens must only include this wrapper around a meaningful view for
 /// the exact requested record. Loading, placeholder, not-found, and error
-/// branches must remain unwrapped so the server-rendered fallback stays active.
+/// branches must not signal readiness so the server-rendered fallback stays
+/// active: wrap them with [signalReady] false. They still hold the entity's URL
+/// claim, so the address bar keeps describing the page the visitor is on (and
+/// the first browser Back still leaves) until they navigate somewhere else,
+/// instead of a never-claimed entry pinning a phantom entity URL.
 class PublicEntityTakeoverReady extends StatefulWidget {
   const PublicEntityTakeoverReady({
     super.key,
     required this.type,
     required this.entityId,
     required this.child,
+    this.signalReady = true,
   });
 
   final ShareEntityType type;
   final String entityId;
   final Widget child;
+
+  /// False for loading, not-found and error views: the URL is claimed but the
+  /// takeover is not told the entity is ready.
+  final bool signalReady;
 
   @override
   State<PublicEntityTakeoverReady> createState() =>
@@ -30,10 +40,13 @@ class PublicEntityTakeoverReady extends StatefulWidget {
 
 class _PublicEntityTakeoverReadyState extends State<PublicEntityTakeoverReady> {
   bool _scheduled = false;
+  Object? _urlClaim;
+  String? _claimLanguage;
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
+    _refreshUrlClaim();
     _scheduleReadySignal();
   }
 
@@ -42,19 +55,58 @@ class _PublicEntityTakeoverReadyState extends State<PublicEntityTakeoverReady> {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.type != widget.type ||
         oldWidget.entityId != widget.entityId) {
+      PublicEntryNavigation.instance.abandonEntry(
+        oldWidget.type,
+        oldWidget.entityId,
+      );
+      _releaseUrlClaim();
+      _scheduled = false;
+      _refreshUrlClaim();
+      _scheduleReadySignal();
+    } else if (!oldWidget.signalReady && widget.signalReady) {
       _scheduled = false;
       _scheduleReadySignal();
     }
   }
 
+  void _refreshUrlClaim() {
+    final languageCode =
+        Localizations.maybeLocaleOf(context)?.languageCode == 'sl'
+            ? 'sl'
+            : 'en';
+    if (_urlClaim != null && _claimLanguage == languageCode) return;
+    _releaseUrlClaim();
+    _urlClaim = PublicEntryNavigation.instance.claim(
+      context,
+      type: widget.type,
+      entityId: widget.entityId,
+      localizedPath: (languageCode) =>
+          PublicEntityTakeoverProvider.localizedCanonicalPath(
+        widget.type,
+        widget.entityId,
+        languageCode,
+      ),
+    );
+    _claimLanguage = languageCode;
+  }
+
+  void _releaseUrlClaim() {
+    final token = _urlClaim;
+    _urlClaim = null;
+    _claimLanguage = null;
+    if (token != null) {
+      PublicEntryNavigation.instance.release(token);
+    }
+  }
+
   void _scheduleReadySignal() {
-    if (_scheduled) return;
+    if (_scheduled || !widget.signalReady) return;
     _scheduled = true;
     // This widget is mounted while the exact entity frame is being built.
     // Dispatch at the end of that same frame so a responsive shell rebuild on
     // the following frame cannot dispose the meaningful view first.
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
+      if (!mounted || !widget.signalReady) return;
       try {
         unawaited(
           context.read<PublicEntityTakeoverProvider>().markEntityReady(
@@ -71,4 +123,17 @@ class _PublicEntityTakeoverReadyState extends State<PublicEntityTakeoverReady> {
 
   @override
   Widget build(BuildContext context) => widget.child;
+
+  @override
+  void dispose() {
+    final token = _urlClaim;
+    _urlClaim = null;
+    if (token != null) {
+      PublicEntryNavigation.instance.release(
+        token,
+        retireEntryIfUnused: true,
+      );
+    }
+    super.dispose();
+  }
 }

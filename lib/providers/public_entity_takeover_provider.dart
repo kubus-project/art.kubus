@@ -1,6 +1,9 @@
-import 'package:flutter/foundation.dart';
+import 'package:flutter/widgets.dart';
+import 'package:provider/provider.dart';
 
 import '../config/config.dart';
+import '../core/public_entry_navigation.dart';
+import '../core/shell_routes.dart';
 import '../core/startup_trace.dart';
 import '../services/public_entity_takeover_bridge.dart';
 import '../services/share/share_deep_link_parser.dart';
@@ -115,22 +118,48 @@ class PublicEntityTakeoverProvider extends ChangeNotifier {
     if (segment == null || type == null) return;
     final expectedPath = '/$locale/$segment/${Uri.encodeComponent(target.id)}';
     if (initialUri.path != expectedPath) return;
+    final startupBrowserRoute =
+        PublicEntryNavigation.instance.takeStartupBrowserRouteFor(expectedPath);
+    final browserUri = startupBrowserRoute == null
+        ? initialUri
+        : Uri.parse(startupBrowserRoute);
 
     final next = PublicEntityTakeoverTarget(
       type: type,
       id: target.id,
       path: initialUri.path,
       browserRoute: Uri(
-        path: initialUri.path,
-        query: initialUri.hasQuery ? initialUri.query : null,
-        fragment: initialUri.hasFragment ? initialUri.fragment : null,
+        path: browserUri.path,
+        query: browserUri.hasQuery ? browserUri.query : null,
+        fragment: browserUri.hasFragment ? browserUri.fragment : null,
       ).toString(),
     );
-    if (_sameTarget(_target, next)) return;
+    final shellRoute = target.type == ShareEntityType.marker
+        ? ShellRoutes.map
+        : ShellRoutes.main;
+    if (_sameTarget(_target, next)) {
+      // The browser history returned to this entity after the app had moved on
+      // (its entry was released when its screen left): re-arm the entry so the
+      // restored page keeps the canonical address while it loads. A no-op while
+      // the entry is still the live one.
+      PublicEntryNavigation.instance.setEntry(
+        type: target.type,
+        entityId: target.id,
+        browserRoute: next.browserRoute,
+        shellRoute: shellRoute,
+      );
+      return;
+    }
 
     _target = next;
     _bootstrap = null;
     _readyDispatched = false;
+    PublicEntryNavigation.instance.setEntry(
+      type: target.type,
+      entityId: target.id,
+      browserRoute: next.browserRoute,
+      shellRoute: shellRoute,
+    );
     dispatchPublicEntityRouteParsed(
       type: next.type,
       id: next.id,
@@ -210,6 +239,25 @@ class PublicEntityTakeoverProvider extends ChangeNotifier {
     return returnRouteFor(ShareEntityType.artwork, artworkId);
   }
 
+  /// Sign-in return route for a protected action on [type]/[entityId]: the
+  /// exact canonical public URL when that entity is the current public entry,
+  /// otherwise [fallback] (a compact in-app alias).
+  static String returnRouteOr(
+    BuildContext context,
+    ShareEntityType type,
+    String entityId,
+    String fallback,
+  ) {
+    try {
+      return context
+              .read<PublicEntityTakeoverProvider>()
+              .returnRouteFor(type, entityId) ??
+          fallback;
+    } catch (_) {
+      return fallback;
+    }
+  }
+
   String? returnRouteFor(ShareEntityType type, String entityId) {
     final current = _target;
     if (current == null ||
@@ -261,7 +309,18 @@ class PublicEntityTakeoverProvider extends ChangeNotifier {
         left?.browserRoute == right.browserRoute;
   }
 
-  String? _localizedSegment(ShareEntityType type, String locale) {
+  /// The localized canonical path of an entity (`/en/artworks/{id}`,
+  /// `/sl/umetnine/{id}`); any language other than `sl` uses English.
+  static String localizedCanonicalPath(
+    ShareEntityType type,
+    String entityId,
+    String languageCode,
+  ) {
+    final locale = languageCode == 'sl' ? 'sl' : 'en';
+    return '/$locale/${_localizedSegment(type, locale)}/${Uri.encodeComponent(entityId.trim())}';
+  }
+
+  static String? _localizedSegment(ShareEntityType type, String locale) {
     return switch (type) {
       ShareEntityType.artwork => locale == 'sl' ? 'umetnine' : 'artworks',
       ShareEntityType.profile => locale == 'sl' ? 'profili' : 'profiles',

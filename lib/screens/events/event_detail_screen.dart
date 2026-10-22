@@ -675,10 +675,10 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
     final content = isCanonicalPublicEntry
         ? eventScaffold
         : AnimatedGradientBackground(child: eventScaffold);
-    if (exactEvent == null) return content;
     return PublicEntityTakeoverReady(
       type: ShareEntityType.event,
-      entityId: exactEvent.id,
+      entityId: exactEvent?.id ?? widget.eventId,
+      signalReady: exactEvent != null,
       child: content,
     );
   }

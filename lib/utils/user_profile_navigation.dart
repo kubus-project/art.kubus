@@ -80,8 +80,9 @@ class UserProfileNavigation {
     required String userId,
     String? username,
     String? heroTag,
+    bool allowOwnerShortcut = true,
   }) async {
-    if (_targetsCurrentUser(context, userId)) {
+    if (allowOwnerShortcut && _targetsCurrentUser(context, userId)) {
       await _openOwnerProfile(context);
       return;
     }
@@ -93,7 +94,9 @@ class UserProfileNavigation {
     if (userId.trim().isEmpty && initialCriticalPackageFuture != null) {
       final resolved = await initialCriticalPackageFuture;
       if (!context.mounted) return;
-      if (resolved != null && _targetsCurrentUser(context, resolved.user.id)) {
+      if (allowOwnerShortcut &&
+          resolved != null &&
+          _targetsCurrentUser(context, resolved.user.id)) {
         await _openOwnerProfile(context);
         return;
       }
@@ -146,6 +149,14 @@ class UserProfileNavigation {
       context,
       MaterialPageRoute(builder: (_) => profileScreen),
     );
+  }
+
+  /// Whether [targetId] is the signed-in account (stable account, wallet or
+  /// public actor ID). Public profile screens use it to hide self-follow and
+  /// self-message actions when the owner views their own public profile.
+  static bool isCurrentUser(BuildContext context, String? targetId) {
+    if (targetId == null) return false;
+    return _targetsCurrentUser(context, targetId);
   }
 
   /// Match only stable account identifiers and linked wallet/public actor IDs.

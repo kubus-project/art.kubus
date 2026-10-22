@@ -1,9 +1,71 @@
+import 'package:art_kubus/core/public_entry_navigation.dart';
 import 'package:art_kubus/providers/public_entity_takeover_provider.dart';
 import 'package:art_kubus/services/share/share_deep_link_parser.dart';
 import 'package:art_kubus/services/share/share_types.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:provider/provider.dart';
 
 void main() {
+  test('keeps the frozen startup fragment and consumes it only once', () {
+    final navigation = PublicEntryNavigation.instance;
+    navigation.resetForTest();
+    navigation.captureStartupBrowserRoute(
+      Uri.parse('https://app.example/en/artworks/art-42?ref=launch#details'),
+    );
+    final provider = PublicEntityTakeoverProvider();
+    provider.seed(
+      initialUri: Uri.parse('/en/artworks/art-42?ref=launch'),
+      target: const ShareDeepLinkTarget(
+        type: ShareEntityType.artwork,
+        id: 'art-42',
+        localeCode: 'en',
+      ),
+    );
+
+    expect(provider.returnRouteForArtwork('art-42'),
+        '/en/artworks/art-42?ref=launch#details');
+
+    provider.seed(
+      initialUri: Uri.parse('/en/artworks/art-43?ref=next'),
+      target: const ShareDeepLinkTarget(
+        type: ShareEntityType.artwork,
+        id: 'art-43',
+        localeCode: 'en',
+      ),
+    );
+    expect(provider.returnRouteForArtwork('art-43'),
+        '/en/artworks/art-43?ref=next');
+    expect(
+        navigation.takeStartupBrowserRouteFor('/en/artworks/art-43'), isNull);
+    navigation.resetForTest();
+  });
+
+  test('a restored entity re-arms the entry its screen released', () {
+    final navigation = PublicEntryNavigation.instance;
+    navigation.resetForTest();
+    final provider = PublicEntityTakeoverProvider();
+    const target = ShareDeepLinkTarget(
+      type: ShareEntityType.collection,
+      id: 'c1',
+      localeCode: 'en',
+    );
+    final uri = Uri.parse('/en/collections/c1');
+
+    provider.seed(initialUri: uri, target: target);
+    expect(navigation.pendingEntryUrl, '/en/collections/c1');
+
+    // The visitor moved on: the entity screen left and released its entry.
+    navigation.abandonEntry(ShareEntityType.collection, 'c1');
+    expect(navigation.pendingEntryUrl, isNull);
+
+    // Browser Back restores the page: the same target is seeded again.
+    provider.seed(initialUri: uri, target: target);
+    expect(navigation.pendingEntryUrl, '/en/collections/c1',
+        reason: 'the restored page must keep its address while it loads');
+    navigation.resetForTest();
+  });
+
   test('seeds only an exact localized canonical artwork pathname', () {
     final provider = PublicEntityTakeoverProvider();
     const target = ShareDeepLinkTarget(
@@ -419,4 +481,49 @@ void main() {
       );
     },
   );
+
+  testWidgets(
+      'protected-action return route keeps the canonical URL only for its entity',
+      (tester) async {
+    final provider = PublicEntityTakeoverProvider()
+      ..seed(
+        initialUri: Uri.parse('/en/posts/post-7?ref=feed#comments'),
+        target: const ShareDeepLinkTarget(
+          type: ShareEntityType.post,
+          id: 'post-7',
+          localeCode: 'en',
+        ),
+      );
+    late BuildContext withProvider;
+    late BuildContext withoutProvider;
+    await tester.pumpWidget(Directionality(
+      textDirection: TextDirection.ltr,
+      child: Column(children: [
+        Builder(builder: (context) {
+          withoutProvider = context;
+          return const SizedBox();
+        }),
+        ChangeNotifierProvider<PublicEntityTakeoverProvider>.value(
+          value: provider,
+          child: Builder(builder: (context) {
+            withProvider = context;
+            return const SizedBox();
+          }),
+        ),
+      ]),
+    ));
+
+    String route(BuildContext context, ShareEntityType type, String id) =>
+        PublicEntityTakeoverProvider.returnRouteOr(
+            context, type, id, '/fallback/$id');
+
+    expect(route(withProvider, ShareEntityType.post, 'post-7'),
+        '/en/posts/post-7?ref=feed#comments');
+    expect(route(withProvider, ShareEntityType.post, 'post-8'),
+        '/fallback/post-8');
+    expect(route(withProvider, ShareEntityType.profile, 'post-7'),
+        '/fallback/post-7');
+    expect(route(withoutProvider, ShareEntityType.post, 'post-7'),
+        '/fallback/post-7');
+  });
 }

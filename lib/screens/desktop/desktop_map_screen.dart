@@ -36,6 +36,7 @@ import '../../models/exhibition.dart';
 import '../../models/map_marker_subject.dart';
 import '../../config/config.dart';
 import '../../core/app_route_observer.dart';
+import '../../core/public_entry_navigation.dart';
 import '../../services/guest_session_service.dart';
 import '../../services/telemetry/telemetry_service.dart';
 import '../../services/map_attribution_helper.dart';
@@ -352,6 +353,9 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
   late final WalkingNavigationLocationCoordinator _walkingLocationCoordinator;
   bool _isAppForeground = true;
   bool _isRouteVisible = true;
+  Object? _publicMarkerUrlClaim;
+  String? _publicMarkerUrlClaimId;
+  String? _publicMarkerUrlLanguage;
   PageRoute<dynamic>? _subscribedRoute;
   int _markerOpenRequestId = 0;
   int _markerOpenSurfaceRevision = -1;
@@ -652,6 +656,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
         );
 
         final marker = state.selectedMarker;
+        _syncPublicMarkerUrlClaim(state.selectedMarkerId);
         if (marker != null) {
           _linkedSubjectCoordinator.selectionChanged(marker);
           // Run selection-only side effects once per selection token.
@@ -961,6 +966,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       _tutorialOverlayController = overlayController;
     }
     _syncRootTutorialBinding();
+    _syncPublicMarkerUrlClaim(_kubusMapController.selectedMarkerId);
   }
 
   void _resolveInitialLocaleViewport() {
@@ -1755,6 +1761,16 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     MapTargetResult result,
   ) {
     final markerId = intent.exactMarkerId?.trim() ?? '';
+    if (markerId.isNotEmpty &&
+        (result == MapTargetResult.notFound ||
+            result == MapTargetResult.coordinatesOnly)) {
+      // The requested marker never resolved, so it can never claim the
+      // address: stop it pinning a phantom marker URL over the plain map.
+      PublicEntryNavigation.instance.entryUnresolved(
+        ShareEntityType.marker,
+        markerId,
+      );
+    }
     if (result != MapTargetResult.overlayOpened || markerId.isEmpty) return;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
@@ -1821,11 +1837,61 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       _deactivateRootTutorialOwner(reason: 'desktop-map-route-hidden');
     }
     _isRouteVisible = isVisible;
+    PublicEntryNavigation.instance.visibilityChanged();
     _handleActiveStateChanged();
     _syncRootTutorialBinding();
     if (isVisible) {
       _scheduleWebMapResizeRecovery(reason: 'routeVisible');
     }
+  }
+
+  void _syncPublicMarkerUrlClaim(String? selectedMarkerId) {
+    final navigation = PublicEntryNavigation.instance;
+    final nextId = selectedMarkerId?.trim();
+    final locale = Localizations.maybeLocaleOf(context)?.languageCode == 'sl'
+        ? 'sl'
+        : 'en';
+    if (!kIsWeb || nextId == null || nextId.isEmpty) {
+      final previousId = _publicMarkerUrlClaimId;
+      final hadClaim = _publicMarkerUrlClaim != null;
+      navigation.release(_publicMarkerUrlClaim);
+      _publicMarkerUrlClaim = null;
+      _publicMarkerUrlClaimId = null;
+      _publicMarkerUrlLanguage = null;
+      if (previousId != null) {
+        navigation.abandonEntry(ShareEntityType.marker, previousId);
+      }
+      if (hadClaim || previousId != null) navigation.visibilityChanged();
+      return;
+    }
+    if (_publicMarkerUrlClaimId == nextId &&
+        _publicMarkerUrlLanguage == locale) {
+      return;
+    }
+
+    final previousId = _publicMarkerUrlClaimId;
+    navigation.release(_publicMarkerUrlClaim);
+    if (previousId != null && previousId != nextId) {
+      navigation.abandonEntry(ShareEntityType.marker, previousId);
+    }
+    _publicMarkerUrlClaim = navigation.claim(
+      context,
+      type: ShareEntityType.marker,
+      entityId: nextId,
+      localizedPath: (languageCode) =>
+          PublicEntityTakeoverProvider.localizedCanonicalPath(
+        ShareEntityType.marker,
+        nextId,
+        languageCode,
+      ),
+      isShowing: () =>
+          mounted &&
+          _isRouteVisible &&
+          _kubusMapController.selectedMarkerId == nextId,
+    );
+    _publicMarkerUrlClaimId = nextId;
+    _publicMarkerUrlLanguage = locale;
+    navigation.visibilityChanged();
   }
 
   void _scheduleWebMapResizeRecovery({required String reason}) {
@@ -2450,6 +2516,9 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
 
   @override
   void dispose() {
+    PublicEntryNavigation.instance.release(_publicMarkerUrlClaim);
+    _publicMarkerUrlClaim = null;
+    _publicMarkerUrlClaimId = null;
     _userLocationAnimator.dispose();
     _compassSubscription?.cancel();
     _headingExpiryTimer?.cancel();
