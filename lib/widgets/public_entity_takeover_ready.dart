@@ -11,18 +11,27 @@ import '../services/share/share_types.dart';
 ///
 /// Detail screens must only include this wrapper around a meaningful view for
 /// the exact requested record. Loading, placeholder, not-found, and error
-/// branches must remain unwrapped so the server-rendered fallback stays active.
+/// branches must not signal readiness so the server-rendered fallback stays
+/// active: wrap them with [signalReady] false. They still hold the entity's URL
+/// claim, so the address bar keeps describing the page the visitor is on (and
+/// the first browser Back still leaves) until they navigate somewhere else,
+/// instead of a never-claimed entry pinning a phantom entity URL.
 class PublicEntityTakeoverReady extends StatefulWidget {
   const PublicEntityTakeoverReady({
     super.key,
     required this.type,
     required this.entityId,
     required this.child,
+    this.signalReady = true,
   });
 
   final ShareEntityType type;
   final String entityId;
   final Widget child;
+
+  /// False for loading, not-found and error views: the URL is claimed but the
+  /// takeover is not told the entity is ready.
+  final bool signalReady;
 
   @override
   State<PublicEntityTakeoverReady> createState() =>
@@ -53,6 +62,9 @@ class _PublicEntityTakeoverReadyState extends State<PublicEntityTakeoverReady> {
       _releaseUrlClaim();
       _scheduled = false;
       _refreshUrlClaim();
+      _scheduleReadySignal();
+    } else if (!oldWidget.signalReady && widget.signalReady) {
+      _scheduled = false;
       _scheduleReadySignal();
     }
   }
@@ -88,13 +100,13 @@ class _PublicEntityTakeoverReadyState extends State<PublicEntityTakeoverReady> {
   }
 
   void _scheduleReadySignal() {
-    if (_scheduled) return;
+    if (_scheduled || !widget.signalReady) return;
     _scheduled = true;
     // This widget is mounted while the exact entity frame is being built.
     // Dispatch at the end of that same frame so a responsive shell rebuild on
     // the following frame cannot dispose the meaningful view first.
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
+      if (!mounted || !widget.signalReady) return;
       try {
         unawaited(
           context.read<PublicEntityTakeoverProvider>().markEntityReady(

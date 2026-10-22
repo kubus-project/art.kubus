@@ -49,6 +49,8 @@ class PublicEntryNavigation extends ChangeNotifier with WidgetsBindingObserver {
   String? _startupBrowserRoute;
   bool _entryWasClaimed = false;
   bool _exitAttempted = false;
+  bool _entryShellSeen = false;
+  bool _replaceNextAddress = false;
 
   /// How the app leaves the page; replaced in tests.
   @visibleForTesting
@@ -108,6 +110,7 @@ class PublicEntryNavigation extends ChangeNotifier with WidgetsBindingObserver {
       );
     }
     _entry = _Entry(type, id, browserRoute, shellRoute);
+    _entryShellSeen = false;
     _shellReturn = null;
     _entryWasClaimed = false;
     _exitAttempted = false;
@@ -136,6 +139,11 @@ class PublicEntryNavigation extends ChangeNotifier with WidgetsBindingObserver {
       defaultUrl: localizedPath(languageCode == 'sl' ? 'sl' : 'en'),
       isShowing: isShowing,
     );
+    // The visitor is now looking at a different entity while the entry they
+    // arrived on was never shown (it failed to resolve, or needs a sign-in):
+    // that entry can no longer pin its address.
+    _abandonUnclaimedEntryUnless(
+        (entry) => entry.matches(type, claim.entityId));
     _claims.add(claim);
     notifyListeners();
     return claim;
@@ -243,6 +251,55 @@ class PublicEntryNavigation extends ChangeNotifier with WidgetsBindingObserver {
         entry.matches(claim.type, claim.entityId);
   }
 
+  /// Called when a named page route is pushed. A pending entry that was never
+  /// shown (its entity failed to load, or a sign-in page took its place) must
+  /// not keep pinning its address once the visitor reaches a page that is
+  /// neither the entry itself nor the shell beneath it. Pages pushed before the
+  /// entry's shell has appeared are startup plumbing and never count.
+  void pageOpened(String? routeName) {
+    final entry = _entry;
+    final path = Uri.tryParse(routeName?.trim() ?? '')?.path;
+    if (entry == null || path == null || path.isEmpty || path == '/') return;
+    if (path == Uri.tryParse(entry.shellRoute)?.path) {
+      _entryShellSeen = true;
+      return;
+    }
+    if (!_entryShellSeen) return;
+    _abandonUnclaimedEntryUnless((entry) {
+      return path == Uri.tryParse(entry.browserRoute)?.path;
+    });
+  }
+
+  void _abandonUnclaimedEntryUnless(bool Function(_Entry entry) keep) {
+    final entry = _entry;
+    if (entry == null || _entryWasClaimed || keep(entry)) return;
+    if (_claims.any((c) => entry.matches(c.type, c.entityId))) return;
+    _shellReturn = entry;
+    _entry = null;
+    _exitAttempted = false;
+    notifyListeners();
+  }
+
+  /// True once after an entry that never showed was dropped because its entity
+  /// could not be resolved (nothing the visitor did). The address correction
+  /// that follows must replace the history entry, never add one: Back would
+  /// otherwise return to the invalid address and trap the visitor.
+  bool takeReplaceNextAddress() {
+    final value = _replaceNextAddress;
+    _replaceNextAddress = false;
+    return value;
+  }
+
+  /// The entry's entity could not be resolved (for example an unknown marker):
+  /// drop it so it stops pinning its address.
+  void entryUnresolved(ShareEntityType type, String entityId) {
+    final entry = _entry;
+    if (entry == null || !entry.matches(type, entityId.trim())) return;
+    if (_entryWasClaimed) return;
+    _replaceNextAddress = true;
+    abandonEntry(type, entityId);
+  }
+
   /// Drops the startup entry when a map selection replaces that marker in the
   /// map's single selection slot. Ordinary detail routes keep their entry claim
   /// mounted underneath, so they do not call this method.
@@ -274,6 +331,8 @@ class PublicEntryNavigation extends ChangeNotifier with WidgetsBindingObserver {
     _startupBrowserRoute = null;
     _entryWasClaimed = false;
     _exitAttempted = false;
+    _entryShellSeen = false;
+    _replaceNextAddress = false;
     exitApp = SystemNavigator.pop;
   }
 }

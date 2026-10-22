@@ -30,10 +30,14 @@ class UrlCoherenceObserver extends NavigatorObserver {
   UrlCoherenceObserver({
     bool? enabled,
     void Function(String url)? report,
+    void Function(String url)? reportBack,
+    void Function(String url)? reportReplace,
     PublicEntryNavigation? entityUrls,
     String? Function()? currentBrowserUrl,
   })  : _enabled = enabled ?? kIsWeb,
         _report = report ?? _reportToEngine,
+        _reportBack = reportBack,
+        _reportReplace = reportReplace,
         _entityUrls = entityUrls ?? PublicEntryNavigation.instance,
         _currentBrowserUrl =
             currentBrowserUrl ?? (kIsWeb ? _browserUrl : _noBrowserUrl) {
@@ -42,11 +46,20 @@ class UrlCoherenceObserver extends NavigatorObserver {
 
   final bool _enabled;
   final void Function(String url) _report;
+
+  /// Reports an address that became visible without a page push, which is the
+  /// visitor going Back in the app. Falls back to [_report] when not given.
+  final void Function(String url)? _reportBack;
+
+  /// Reports a correction nobody navigated to (an unresolvable entry dropped):
+  /// it must replace the current history entry. Falls back to [_report].
+  final void Function(String url)? _reportReplace;
   final PublicEntryNavigation _entityUrls;
   final String? Function() _currentBrowserUrl;
   final List<Route<dynamic>> _stack = <Route<dynamic>>[];
   String? _shownUrl;
   bool _scheduled = false;
+  bool _pushedSinceSync = false;
 
   /// The URL the observer believes the address bar currently shows.
   @visibleForTesting
@@ -79,7 +92,9 @@ class UrlCoherenceObserver extends NavigatorObserver {
     // Dialogs, sheets and popups are not pages: they cannot change the URL and
     // must not force a frame on a hot path.
     if (route is! PageRoute<dynamic>) return;
+    _pushedSinceSync = true;
     _stack.add(route);
+    if (_enabled) _entityUrls.pageOpened(route.settings.name);
     _schedule();
   }
 
@@ -102,8 +117,10 @@ class UrlCoherenceObserver extends NavigatorObserver {
     if (newRoute is! PageRoute<dynamic> && oldRoute is! PageRoute<dynamic>) {
       return;
     }
+    _pushedSinceSync = true;
     final index = oldRoute == null ? -1 : _stack.indexOf(oldRoute);
     if (newRoute != null && newRoute is PageRoute<dynamic>) {
+      if (_enabled) _entityUrls.pageOpened(newRoute.settings.name);
       if (index >= 0) {
         _stack[index] = newRoute;
       } else {
@@ -128,6 +145,7 @@ class UrlCoherenceObserver extends NavigatorObserver {
     SchedulerBinding.instance.addPostFrameCallback((_) {
       _scheduled = false;
       _sync();
+      _pushedSinceSync = false;
       SchedulerBinding.instance.addPostFrameCallback((_) => _sync());
       SchedulerBinding.instance.ensureVisualUpdate();
     });
@@ -150,7 +168,14 @@ class UrlCoherenceObserver extends NavigatorObserver {
       return;
     }
     _shownUrl = desired;
-    _report(desired);
+    if (_entityUrls.takeReplaceNextAddress()) {
+      (_reportReplace ?? _report)(desired);
+      return;
+    }
+    // A change that no page push caused is the visitor going back (a pop, or an
+    // entity sub-screen closing): let the router step the browser back instead
+    // of adding an entry for a page that is already in the history.
+    (_pushedSinceSync ? _report : _reportBack ?? _report)(desired);
   }
 
   static String? _noBrowserUrl() => null;

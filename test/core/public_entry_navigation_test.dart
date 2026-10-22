@@ -112,6 +112,127 @@ void main() {
     expect(navigation.visibleEntityUrl, entryUrl);
     observer.dispose();
   });
+
+  group('an entry that never loads', () {
+    const entryUrl = '/en/artworks/bad-id?utm_source=qa#gallery';
+
+    void seedEntry() => navigation.setEntry(
+          type: ShareEntityType.artwork,
+          entityId: 'bad-id',
+          browserRoute: entryUrl,
+          shellRoute: '/main',
+        );
+
+    test('keeps its address for its own shell and path, drops it for others',
+        () {
+      seedEntry();
+      navigation.pageOpened('/en/artworks/bad-id?utm_source=qa#gallery');
+      navigation.pageOpened('/');
+      navigation.pageOpened(null);
+      navigation.pageOpened('/en');
+      navigation.pageOpened('/sign-in');
+      expect(navigation.pendingEntryUrl, entryUrl,
+          reason: 'pages before the shell appears are startup plumbing');
+
+      navigation.pageOpened('/main');
+      expect(navigation.pendingEntryUrl, entryUrl);
+      navigation.pageOpened('/sign-in');
+      expect(navigation.pendingEntryUrl, isNull,
+          reason: 'a different page replaces the never-shown entry');
+    });
+
+    test('an unresolvable entry is dropped and its correction replaces', () {
+      seedEntry();
+      expect(navigation.takeReplaceNextAddress(), isFalse);
+
+      navigation.entryUnresolved(ShareEntityType.marker, 'bad-id');
+      expect(navigation.pendingEntryUrl, entryUrl,
+          reason: 'another type is not this entry');
+
+      navigation.entryUnresolved(ShareEntityType.artwork, 'bad-id');
+      expect(navigation.pendingEntryUrl, isNull);
+      expect(navigation.takeReplaceNextAddress(), isTrue);
+      expect(navigation.takeReplaceNextAddress(), isFalse);
+    });
+
+    testWidgets('a claimed entry is not abandoned by later pages',
+        (tester) async {
+      seedEntry();
+      await tester.pumpWidget(MaterialApp(
+        home: Builder(builder: (context) {
+          navigation.claim(
+            context,
+            type: ShareEntityType.artwork,
+            entityId: 'bad-id',
+            localizedPath: (_) => '/en/artworks/bad-id',
+          );
+          return const SizedBox.shrink();
+        }),
+      ));
+      expect(navigation.visibleEntityUrl, entryUrl);
+
+      navigation.pageOpened('/sign-in');
+      expect(navigation.visibleEntityUrl, entryUrl);
+      expect(navigation.entryIsTop, isTrue);
+    });
+
+    testWidgets('claiming a different entity releases the unclaimed entry',
+        (tester) async {
+      seedEntry();
+      expect(navigation.pendingEntryUrl, entryUrl);
+      await tester.pumpWidget(MaterialApp(
+        home: Builder(builder: (context) {
+          navigation.claim(
+            context,
+            type: ShareEntityType.marker,
+            entityId: 'other',
+            localizedPath: (_) => '/en/map/other',
+          );
+          return const SizedBox.shrink();
+        }),
+      ));
+
+      expect(navigation.pendingEntryUrl, isNull);
+      expect(navigation.visibleEntityUrl, '/en/map/other');
+    });
+
+    testWidgets(
+        'Back from a not-found entity page reports the shell, not the '
+        'phantom entity URL', (tester) async {
+      seedEntry();
+      final reports = <String>[];
+      String? browserUrl = entryUrl;
+      final observer = UrlCoherenceObserver(
+        enabled: true,
+        report: (url) {
+          reports.add(url);
+          browserUrl = url;
+        },
+        entityUrls: navigation,
+        currentBrowserUrl: () => browserUrl,
+      );
+      final navigatorKey = GlobalKey<NavigatorState>();
+      await tester.pumpWidget(MaterialApp(
+        navigatorKey: navigatorKey,
+        navigatorObservers: <NavigatorObserver>[observer],
+        initialRoute: '/main',
+        onGenerateRoute: (settings) => MaterialPageRoute<void>(
+          settings: settings,
+          builder: (_) => Text('page ${settings.name}'),
+        ),
+      ));
+      await tester.pumpAndSettle();
+      expect(reports, isEmpty, reason: 'the pending entry keeps its address');
+
+      // The visitor opens another page; the entity never rendered.
+      navigatorKey.currentState!.pushNamed('/map');
+      await tester.pumpAndSettle();
+
+      expect(reports, <String>['/map']);
+      expect(navigation.pendingEntryUrl, isNull);
+      observer.dispose();
+    });
+  });
 }
 
 class _Harness {

@@ -72,6 +72,7 @@ import 'providers/spatial_library_provider.dart';
 import 'providers/availability_operator_provider.dart';
 import 'core/app_initializer.dart';
 import 'core/browser_entry_router.dart';
+import 'core/browser_history_step.dart';
 import 'core/public_entry_navigation.dart';
 import 'core/startup_trace.dart';
 import 'core/app_navigator.dart';
@@ -449,13 +450,43 @@ class _AppLauncherState extends State<AppLauncher> {
       child: Consumer2<ThemeProvider, LocaleProvider>(
         builder: (context, themeProvider, localeProvider, _) {
           if (!_initialized) {
-            return Theme(
-              data: themeProvider.lightTheme,
-              child: const Directionality(
-                textDirection: TextDirection.ltr,
-                child: KubusProductBackground(
-                  child: AppLoading(),
+            if (kIsWeb) {
+              // The web Router owns appNavigatorKey once the app mounts, so
+              // the splash must not be a second Navigator with that key.
+              return Theme(
+                data: themeProvider.lightTheme,
+                child: const Directionality(
+                  textDirection: TextDirection.ltr,
+                  child: KubusProductBackground(
+                    child: AppLoading(),
+                  ),
                 ),
+              );
+            }
+            return MaterialApp(
+              debugShowCheckedModeBanner: false,
+              navigatorKey: appNavigatorKey,
+              locale: localeProvider.locale,
+              supportedLocales: AppLocalizations.supportedLocales,
+              localizationsDelegates: AppLocalizations.localizationsDelegates,
+              onGenerateTitle: (context) =>
+                  publicEntityDocumentTitle() ??
+                  AppLocalizations.of(context)?.appTitle ??
+                  'art.kubus',
+              theme: themeProvider.lightTheme,
+              darkTheme: themeProvider.darkTheme,
+              themeMode: themeProvider.themeMode,
+              builder: (context, child) {
+                // Safety net: if any route uses transparency and forgets to
+                // paint its own backdrop, we'd otherwise see the host page's
+                // HTML background.
+                return KubusProductBackground(
+                  child: child ?? const SizedBox.shrink(),
+                );
+              },
+              home: const Scaffold(
+                backgroundColor: Colors.transparent,
+                body: AppLoading(),
               ),
             );
           }
@@ -976,6 +1007,8 @@ class _ArtKubusState extends State<ArtKubus> with WidgetsBindingObserver {
   final TelemetryRouteObserver _telemetryObserver = TelemetryRouteObserver();
   late final UrlCoherenceObserver _urlCoherenceObserver = UrlCoherenceObserver(
     report: _reportVisibleBrowserUrl,
+    reportBack: _reportVisibleBrowserBack,
+    reportReplace: _reportVisibleBrowserReplace,
   );
   // The shared instance is what entity screens register their titles with.
   late final DocumentTitleObserver _documentTitleObserver = (() {
@@ -990,9 +1023,12 @@ class _ArtKubusState extends State<ArtKubus> with WidgetsBindingObserver {
 
   late final BrowserEntryRoute _webInitialRoute =
       BrowserEntryRoute.fromUri(_webStartupUri());
+  final BrowserHistoryMirror _webHistory = BrowserHistoryMirror();
   late final StartupBrowserRouteInformationProvider
-      _webRouteInformationProvider =
-      StartupBrowserRouteInformationProvider(_webInitialRoute);
+      _webRouteInformationProvider = StartupBrowserRouteInformationProvider(
+    _webInitialRoute,
+    history: _webHistory,
+  );
   late final BrowserEntryRouterDelegate _webRouterDelegate =
       BrowserEntryRouterDelegate(
     navigatorKey: appNavigatorKey,
@@ -1006,6 +1042,8 @@ class _ArtKubusState extends State<ArtKubus> with WidgetsBindingObserver {
       _documentTitleObserver,
     ],
     restoreRoute: _restoreBrowserRoute,
+    history: _webHistory,
+    stepBrowserBack: stepBrowserHistoryBack,
   );
 
   Uri _webStartupUri() {
@@ -1019,6 +1057,22 @@ class _ArtKubusState extends State<ArtKubus> with WidgetsBindingObserver {
     if (router.isRestoringRoute) return;
     final uri = Uri.tryParse(url);
     if (uri != null) router.reportVisibleUri(uri);
+  }
+
+  void _reportVisibleBrowserBack(String url) {
+    if (!kIsWeb) return;
+    final router = _webRouterDelegate;
+    if (router.isRestoringRoute) return;
+    final uri = Uri.tryParse(url);
+    if (uri != null) router.reportVisibleBack(uri);
+  }
+
+  void _reportVisibleBrowserReplace(String url) {
+    if (!kIsWeb) return;
+    final router = _webRouterDelegate;
+    if (router.isRestoringRoute) return;
+    final uri = Uri.tryParse(url);
+    if (uri != null) router.reportVisibleUri(uri, replace: true);
   }
 
   void _restoreBrowserRoute(

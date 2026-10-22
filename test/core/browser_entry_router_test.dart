@@ -209,4 +209,247 @@ void main() {
     provider.dispose();
     delegate.dispose();
   });
+
+  group('BrowserHistoryMirror', () {
+    Uri u(String s) => Uri.parse(s);
+
+    test('push, replace and step-back eligibility follow the reports', () {
+      final mirror = BrowserHistoryMirror()
+        ..recordReport(u('/main'), replace: true)
+        ..recordReport(u('/en/artworks/a1'), replace: false);
+
+      expect(mirror.cursor, 1);
+      expect(mirror.canStepBackTo(u('/main')), isTrue);
+      expect(mirror.canStepBackTo(u('/map')), isFalse);
+
+      mirror.recordReport(u('/en/artworks/a1?x=1'), replace: true);
+      expect(mirror.cursor, 1);
+      expect(mirror.canStepBackTo(u('/main')), isTrue);
+    });
+
+    test('the first entry has nothing below it', () {
+      final mirror = BrowserHistoryMirror()
+        ..recordReport(u('/en/artworks/a1'), replace: true);
+      expect(mirror.canStepBackTo(u('/main')), isFalse);
+    });
+
+    test('browser Back/Forward move the cursor; unknown entries restart', () {
+      final mirror = BrowserHistoryMirror()
+        ..recordReport(u('/main'), replace: true)
+        ..recordReport(u('/map'), replace: false)
+        ..recordReport(u('/en/artworks/a1'), replace: false);
+
+      mirror.browserNavigated(u('/main'), 0);
+      expect(mirror.cursor, 0);
+      mirror.browserNavigated(u('/en/artworks/a1'), 2);
+      expect(mirror.cursor, 2);
+
+      mirror.browserNavigated(u('/somewhere'), 7);
+      expect(mirror.cursor, 0);
+      expect(mirror.current, u('/somewhere'));
+      expect(mirror.canStepBackTo(u('/main')), isFalse);
+    });
+
+    test('pushing after stepping back discards the forward entries', () {
+      final mirror = BrowserHistoryMirror()
+        ..recordReport(u('/main'), replace: true)
+        ..recordReport(u('/map'), replace: false);
+      mirror.browserNavigated(u('/main'), 0);
+      mirror.recordReport(u('/community'), replace: false);
+
+      expect(mirror.cursor, 1);
+      expect(mirror.canStepBackTo(u('/main')), isTrue);
+      mirror.browserNavigated(u('/map'), 1);
+      expect(mirror.current, u('/map'),
+          reason: 'a stale index for a different URL restarts the mirror');
+    });
+
+    test('query order does not make two locations different', () {
+      expect(
+        BrowserHistoryMirror.sameLocation(u('/a?x=1&y=2'), u('/a?y=2&x=1')),
+        isTrue,
+      );
+      expect(
+        BrowserHistoryMirror.sameLocation(u('/a#one'), u('/a#two')),
+        isFalse,
+      );
+    });
+  });
+
+  testWidgets(
+      'an in-app Back steps the browser back instead of adding an entry',
+      (tester) async {
+    final home = BrowserEntryRoute.fromUri(Uri.parse('/main'));
+    final history = BrowserHistoryMirror();
+    final restored = <BrowserEntryRoute>[];
+    var steps = 0;
+    final delegate = BrowserEntryRouterDelegate(
+      navigatorKey: GlobalKey<NavigatorState>(),
+      initialConfiguration: home,
+      onGenerateInitialRoutes: (name) => <Route<dynamic>>[
+        MaterialPageRoute<void>(
+          settings: RouteSettings(name: name),
+          builder: (_) => const Scaffold(body: Text('home')),
+        ),
+      ],
+      onGenerateRoute: (settings) => MaterialPageRoute<void>(
+        settings: settings,
+        builder: (_) => const Scaffold(body: Text('other')),
+      ),
+      observers: const <NavigatorObserver>[],
+      restoreRoute: (configuration, _) => restored.add(configuration),
+      history: history,
+      stepBrowserBack: () => steps++,
+    );
+    final provider = StartupBrowserRouteInformationProvider(
+      home,
+      history: history,
+    );
+    await tester.pumpWidget(MaterialApp.router(
+      routeInformationProvider: provider,
+      routeInformationParser: parser,
+      routerDelegate: delegate,
+    ));
+    await tester.pumpAndSettle();
+
+    // Home -> artwork reports a new entry.
+    delegate.reportVisibleUri(Uri.parse('/en/artworks/a1'));
+    await tester.pumpAndSettle();
+    expect(history.cursor, 1);
+
+    // The in-app back arrow returns to Home: step the browser, add nothing.
+    delegate.reportVisibleBack(Uri.parse('/main'));
+    await tester.pumpAndSettle();
+    expect(steps, 1);
+    expect(history.cursor, 1, reason: 'no entry was pushed for Home');
+
+    // The popstate that follows arrives with the recorded index and must not
+    // rebuild the page the Navigator already shows.
+    await delegate.setNewRoutePath(BrowserEntryRoute.fromUri(
+      Uri.parse('/main'),
+      historyState: <String, Object?>{'historyIndex': 0},
+    ));
+    expect(restored, isEmpty);
+    expect(history.cursor, 0);
+    expect(delegate.currentConfiguration.visibleUri.path, '/main');
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    provider.dispose();
+    delegate.dispose();
+  });
+
+  testWidgets('an in-app Back with no matching entry below is a normal report',
+      (tester) async {
+    final entry = BrowserEntryRoute.fromUri(Uri.parse('/en/artworks/a1'));
+    final history = BrowserHistoryMirror();
+    var steps = 0;
+    final delegate = BrowserEntryRouterDelegate(
+      navigatorKey: GlobalKey<NavigatorState>(),
+      initialConfiguration: entry,
+      onGenerateInitialRoutes: (name) => <Route<dynamic>>[
+        MaterialPageRoute<void>(
+          settings: RouteSettings(name: name),
+          builder: (_) => const Scaffold(body: Text('entry')),
+        ),
+      ],
+      onGenerateRoute: (settings) => MaterialPageRoute<void>(
+        settings: settings,
+        builder: (_) => const Scaffold(body: Text('other')),
+      ),
+      observers: const <NavigatorObserver>[],
+      restoreRoute: (configuration, _) {},
+      history: history,
+      stepBrowserBack: () => steps++,
+    );
+    final provider = StartupBrowserRouteInformationProvider(
+      entry,
+      history: history,
+    );
+    await tester.pumpWidget(MaterialApp.router(
+      routeInformationProvider: provider,
+      routeInformationParser: parser,
+      routerDelegate: delegate,
+    ));
+    await tester.pumpAndSettle();
+
+    // The entity was the first entry: Home is not below it, so Home is pushed.
+    delegate.reportVisibleBack(Uri.parse('/main'));
+    await tester.pumpAndSettle();
+
+    expect(steps, 0);
+    expect(history.cursor, 1);
+    expect(delegate.currentConfiguration.visibleUri.path, '/main');
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    provider.dispose();
+    delegate.dispose();
+  });
+
+  testWidgets('a replacing report rewrites the entry instead of adding one',
+      (tester) async {
+    final entry = BrowserEntryRoute.fromUri(Uri.parse('/en/map/bad-marker'));
+    final reports = <(Uri, RouteInformationReportingType)>[];
+    final history = BrowserHistoryMirror();
+    final delegate = BrowserEntryRouterDelegate(
+      navigatorKey: GlobalKey<NavigatorState>(),
+      initialConfiguration: entry,
+      onGenerateInitialRoutes: (name) => <Route<dynamic>>[
+        MaterialPageRoute<void>(
+          settings: RouteSettings(name: name),
+          builder: (_) => const Scaffold(body: Text('map')),
+        ),
+      ],
+      onGenerateRoute: (settings) => MaterialPageRoute<void>(
+        settings: settings,
+        builder: (_) => const Scaffold(body: Text('other')),
+      ),
+      observers: const <NavigatorObserver>[],
+      restoreRoute: (configuration, _) {},
+      history: history,
+    );
+    final provider = _RecordingProvider(
+      entry,
+      history,
+      (info, type) => reports.add((info.uri, type)),
+    );
+    await tester.pumpWidget(MaterialApp.router(
+      routeInformationProvider: provider,
+      routeInformationParser: parser,
+      routerDelegate: delegate,
+    ));
+    await tester.pumpAndSettle();
+    reports.clear();
+
+    delegate.reportVisibleUri(Uri.parse('/map'), replace: true);
+    await tester.pumpAndSettle();
+
+    expect(reports.map((r) => r.$1.path), <String>['/map']);
+    expect(reports.single.$2, RouteInformationReportingType.neglect);
+    expect(history.cursor, 0, reason: 'replaced, not appended');
+
+    delegate.reportVisibleUri(Uri.parse('/main'));
+    await tester.pumpAndSettle();
+    expect(history.cursor, 1);
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    provider.dispose();
+    delegate.dispose();
+  });
+}
+
+class _RecordingProvider extends StartupBrowserRouteInformationProvider {
+  _RecordingProvider(
+      super.initialRoute, BrowserHistoryMirror history, this.onReport)
+      : super(history: history);
+
+  final void Function(RouteInformation, RouteInformationReportingType) onReport;
+
+  @override
+  void routerReportsNewRouteInformation(
+    RouteInformation routeInformation, {
+    RouteInformationReportingType type = RouteInformationReportingType.none,
+  }) {
+    onReport(routeInformation, type);
+    super.routerReportsNewRouteInformation(routeInformation, type: type);
+  }
 }

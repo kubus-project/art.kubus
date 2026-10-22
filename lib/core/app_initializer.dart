@@ -125,7 +125,13 @@ class _AppInitializerState extends State<AppInitializer> {
     navigator.pushReplacement(
       MaterialPageRoute(
         builder: (_) => destination,
-        settings: RouteSettings(name: decision.preferredShellRoute),
+        settings: RouteSettings(
+          // Web names the page route after the shell it opens (the canonical
+          // URL is owned by the entry claim); native keeps the browser-route
+          // name that telemetry has always recorded.
+          name:
+              kIsWeb ? decision.preferredShellRoute : decision.browserRoutePath,
+        ),
       ),
     );
     return true;
@@ -772,7 +778,14 @@ class _AppInitializerState extends State<AppInitializer> {
         navigator.pushReplacement(
           MaterialPageRoute(
             builder: (_) => destination,
-            settings: RouteSettings(name: decision.preferredShellRoute),
+            settings: RouteSettings(
+              // Web names the page route after the shell it opens (the canonical
+              // URL is owned by the entry claim); native keeps the browser-route
+              // name that telemetry has always recorded.
+              name: kIsWeb
+                  ? decision.preferredShellRoute
+                  : decision.browserRoutePath,
+            ),
           ),
         );
         return;

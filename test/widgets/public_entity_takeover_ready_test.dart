@@ -190,6 +190,53 @@ void main() {
     await tester.pump();
     expect(find.text('replacement shell'), findsOneWidget);
   });
+
+  testWidgets(
+      'a not-found view holds the entity URL claim without signalling ready',
+      (tester) async {
+    const entryUrl = '/en/artworks/bad-id';
+    final provider = PublicEntityTakeoverProvider();
+    provider.seed(
+      initialUri: Uri.parse('/en/artworks/bad-id'),
+      target: const ShareDeepLinkTarget(
+        type: ShareEntityType.artwork,
+        id: 'bad-id',
+        localeCode: 'en',
+      ),
+    );
+    final ready = ValueNotifier<bool>(false);
+
+    await tester.pumpWidget(
+      ChangeNotifierProvider.value(
+        value: provider,
+        child: MaterialApp(
+          home: ValueListenableBuilder<bool>(
+            valueListenable: ready,
+            builder: (_, isReady, __) => PublicEntityTakeoverReady(
+              type: ShareEntityType.artwork,
+              entityId: 'bad-id',
+              signalReady: isReady,
+              child: Text(isReady ? 'artwork' : 'not found'),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+
+    expect(provider.isReady, isFalse,
+        reason: 'the server-rendered fallback must stay active');
+    expect(navigation.visibleEntityUrl, entryUrl,
+        reason: 'the page still describes the requested entity');
+    expect(navigation.entryIsTop, isTrue,
+        reason: 'so the first browser Back leaves the app');
+
+    // The same widget becomes the loaded view: now it signals.
+    ready.value = true;
+    await tester.pump();
+    await tester.pump();
+    expect(provider.isReady, isTrue);
+  });
 }
 
 class _DisposeEntityOnFollowingFrame extends StatefulWidget {

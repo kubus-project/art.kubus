@@ -223,6 +223,15 @@ class _ArtDetailScreenState extends State<ArtDetailScreen> {
     super.dispose();
   }
 
+  /// Loading, error and not-found views hold the requested entity's URL without
+  /// telling the takeover it is ready (see [PublicEntityTakeoverReady]).
+  Widget _holdEntryUrl(Widget child) => PublicEntityTakeoverReady(
+        type: widget.publicEntityType,
+        entityId: widget.publicEntryId,
+        signalReady: false,
+        child: child,
+      );
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
@@ -252,67 +261,71 @@ class _ArtDetailScreenState extends State<ArtDetailScreen> {
         final canManage = isSignedIn && isOwner;
 
         if (_artworkLoading) {
-          return AnimatedGradientBackground(
-            child: Scaffold(
-              backgroundColor: Theme.of(context).colorScheme.surface,
-              appBar: AppBar(
-                title: Text(
-                  l10n.artDetailLoadingTitle,
-                  style: KubusTypography.inter(fontWeight: FontWeight.w600),
-                ),
+          return _holdEntryUrl(
+            AnimatedGradientBackground(
+              child: Scaffold(
                 backgroundColor: Theme.of(context).colorScheme.surface,
-                elevation: 0,
+                appBar: AppBar(
+                  title: Text(
+                    l10n.artDetailLoadingTitle,
+                    style: KubusTypography.inter(fontWeight: FontWeight.w600),
+                  ),
+                  backgroundColor: Theme.of(context).colorScheme.surface,
+                  elevation: 0,
+                ),
+                body: const Center(child: InlineLoading()),
               ),
-              body: const Center(child: InlineLoading()),
             ),
           );
         }
 
         if (_artworkError != null) {
-          return Scaffold(
-            backgroundColor: Theme.of(context).colorScheme.surface,
-            appBar: AppBar(
-              title: Text(
-                l10n.artDetailTitle,
-                style: KubusTypography.inter(fontWeight: FontWeight.w600),
-              ),
+          return _holdEntryUrl(
+            Scaffold(
               backgroundColor: Theme.of(context).colorScheme.surface,
-              elevation: 0,
-            ),
-            body: Center(
-              child: Padding(
-                padding: const EdgeInsets.all(DetailSpacing.xl),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      Icons.error_outline_rounded,
-                      size: 48,
-                      color: Theme.of(context).colorScheme.error,
-                    ),
-                    const SizedBox(height: DetailSpacing.lg),
-                    Text(
-                      _artworkError!,
-                      style: KubusTypography.inter(
-                        fontSize: 15,
-                        color: Theme.of(
-                          context,
-                        ).colorScheme.onSurface.withValues(alpha: 0.8),
+              appBar: AppBar(
+                title: Text(
+                  l10n.artDetailTitle,
+                  style: KubusTypography.inter(fontWeight: FontWeight.w600),
+                ),
+                backgroundColor: Theme.of(context).colorScheme.surface,
+                elevation: 0,
+              ),
+              body: Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(DetailSpacing.xl),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.error_outline_rounded,
+                        size: 48,
+                        color: Theme.of(context).colorScheme.error,
                       ),
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: DetailSpacing.xl),
-                    FilledButton.icon(
-                      onPressed: _loadArtworkDetails,
-                      icon: const Icon(Icons.refresh, size: 18),
-                      label: Text(
-                        l10n.commonRetry,
+                      const SizedBox(height: DetailSpacing.lg),
+                      Text(
+                        _artworkError!,
                         style: KubusTypography.inter(
-                          fontWeight: FontWeight.w600,
+                          fontSize: 15,
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.onSurface.withValues(alpha: 0.8),
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: DetailSpacing.xl),
+                      FilledButton.icon(
+                        onPressed: _loadArtworkDetails,
+                        icon: const Icon(Icons.refresh, size: 18),
+                        label: Text(
+                          l10n.commonRetry,
+                          style: KubusTypography.inter(
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -322,41 +335,43 @@ class _ArtDetailScreenState extends State<ArtDetailScreen> {
         if (artwork == null ||
             (widget.publicEntityType == ShareEntityType.nft &&
                 (!artwork.isNft || !artwork.isPublic || !artwork.isActive))) {
-          return Scaffold(
-            backgroundColor: Theme.of(context).colorScheme.surface,
-            appBar: AppBar(
-              title: Text(
-                l10n.artworkNotFound,
-                style: KubusTypography.inter(fontWeight: FontWeight.w600),
-              ),
+          return _holdEntryUrl(
+            Scaffold(
               backgroundColor: Theme.of(context).colorScheme.surface,
-              elevation: 0,
-            ),
-            body: Center(
-              child: Padding(
-                padding: const EdgeInsets.all(DetailSpacing.xl),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      Icons.image_not_supported_outlined,
-                      size: 56,
-                      color: Theme.of(
-                        context,
-                      ).colorScheme.onSurface.withValues(alpha: 0.3),
-                    ),
-                    const SizedBox(height: DetailSpacing.lg),
-                    Text(
-                      l10n.artworkNotFound,
-                      style: KubusTypography.inter(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
+              appBar: AppBar(
+                title: Text(
+                  l10n.artworkNotFound,
+                  style: KubusTypography.inter(fontWeight: FontWeight.w600),
+                ),
+                backgroundColor: Theme.of(context).colorScheme.surface,
+                elevation: 0,
+              ),
+              body: Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(DetailSpacing.xl),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.image_not_supported_outlined,
+                        size: 56,
                         color: Theme.of(
                           context,
-                        ).colorScheme.onSurface.withValues(alpha: 0.7),
+                        ).colorScheme.onSurface.withValues(alpha: 0.3),
                       ),
-                    ),
-                  ],
+                      const SizedBox(height: DetailSpacing.lg),
+                      Text(
+                        l10n.artworkNotFound,
+                        style: KubusTypography.inter(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.onSurface.withValues(alpha: 0.7),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),

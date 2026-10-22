@@ -2612,10 +2612,11 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
         _error == null &&
         post != null &&
         (requestedId.isEmpty || post.id == requestedId);
-    if (!isExactLoadedPost) return content;
+    if (!isExactLoadedPost && requestedId.isEmpty) return content;
     return PublicEntityTakeoverReady(
       type: ShareEntityType.post,
-      entityId: post.id,
+      entityId: isExactLoadedPost ? post.id : requestedId,
+      signalReady: isExactLoadedPost,
       child: content,
     );
   }

@@ -2509,6 +2509,16 @@ class _MapScreenState extends State<MapScreen>
     MapTargetResult result,
   ) {
     final markerId = intent.exactMarkerId?.trim() ?? '';
+    if (markerId.isNotEmpty &&
+        (result == MapTargetResult.notFound ||
+            result == MapTargetResult.coordinatesOnly)) {
+      // The requested marker never resolved, so it can never claim the
+      // address: stop it pinning a phantom marker URL over the plain map.
+      PublicEntryNavigation.instance.entryUnresolved(
+        ShareEntityType.marker,
+        markerId,
+      );
+    }
     if (result != MapTargetResult.overlayOpened || markerId.isEmpty) return;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;

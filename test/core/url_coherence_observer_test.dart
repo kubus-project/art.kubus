@@ -15,6 +15,9 @@ class _Harness {
       currentBrowserUrl: () => browserUrl,
       entityUrls: entityUrls,
     );
+    // Observers listen to the shared singleton; a stale one from an earlier
+    // test must not consume state meant for the current test's observer.
+    addTearDown(observer.dispose);
   }
 
   final List<String> reports = <String>[];
@@ -185,5 +188,94 @@ void main() {
     await tester.pump();
 
     expect(reports, isEmpty);
+  });
+
+  testWidgets('a pop reports through reportBack, a push through report',
+      (tester) async {
+    final forward = <String>[];
+    final back = <String>[];
+    String? browserUrl = '/main';
+    final observer = UrlCoherenceObserver(
+      enabled: true,
+      report: (url) {
+        forward.add(url);
+        browserUrl = url;
+      },
+      reportBack: (url) {
+        back.add(url);
+        browserUrl = url;
+      },
+      currentBrowserUrl: () => browserUrl,
+    );
+    final navigatorKey = GlobalKey<NavigatorState>();
+    await tester.pumpWidget(MaterialApp(
+      navigatorKey: navigatorKey,
+      navigatorObservers: <NavigatorObserver>[observer],
+      initialRoute: '/main',
+      onGenerateRoute: (settings) => MaterialPageRoute<void>(
+        settings: settings,
+        builder: (_) => Text('page ${settings.name}'),
+      ),
+    ));
+    await tester.pumpAndSettle();
+
+    navigatorKey.currentState!.pushNamed('/map');
+    await tester.pumpAndSettle();
+    expect(forward, <String>['/map']);
+    expect(back, isEmpty);
+
+    navigatorKey.currentState!.pop();
+    await tester.pumpAndSettle();
+    expect(forward, <String>['/map']);
+    expect(back, <String>['/main'],
+        reason: 'returning to the page below must not push another entry');
+    observer.dispose();
+  });
+
+  testWidgets('dropping an unresolvable entry reports a replacing correction',
+      (tester) async {
+    const entryUrl = '/en/map/bad-marker';
+    PublicEntryNavigation.instance.setEntry(
+      type: ShareEntityType.marker,
+      entityId: 'bad-marker',
+      browserRoute: entryUrl,
+      shellRoute: '/map',
+    );
+    final forward = <String>[];
+    final replaced = <String>[];
+    String? browserUrl = entryUrl;
+    final observer = UrlCoherenceObserver(
+      enabled: true,
+      report: (url) {
+        forward.add(url);
+        browserUrl = url;
+      },
+      reportReplace: (url) {
+        replaced.add(url);
+        browserUrl = url;
+      },
+      currentBrowserUrl: () => browserUrl,
+    );
+    final navigatorKey = GlobalKey<NavigatorState>();
+    await tester.pumpWidget(MaterialApp(
+      navigatorKey: navigatorKey,
+      navigatorObservers: <NavigatorObserver>[observer],
+      initialRoute: '/map',
+      onGenerateRoute: (settings) => MaterialPageRoute<void>(
+        settings: settings,
+        builder: (_) => Text('page ${settings.name}'),
+      ),
+    ));
+    await tester.pumpAndSettle();
+    expect(forward, isEmpty);
+    expect(replaced, isEmpty, reason: 'the pending entry holds its address');
+
+    PublicEntryNavigation.instance
+        .entryUnresolved(ShareEntityType.marker, 'bad-marker');
+    await tester.pumpAndSettle();
+
+    expect(replaced, <String>['/map']);
+    expect(forward, isEmpty);
+    observer.dispose();
   });
 }

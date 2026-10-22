@@ -202,6 +202,15 @@ class _DesktopArtworkDetailScreenState
     }
   }
 
+  /// Loading, error and not-found views hold the requested entity's URL without
+  /// telling the takeover it is ready (see [PublicEntityTakeoverReady]).
+  Widget _holdEntryUrl(Widget child) => PublicEntityTakeoverReady(
+        type: widget.publicEntityType,
+        entityId: widget.publicEntryId,
+        signalReady: false,
+        child: child,
+      );
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
@@ -220,50 +229,54 @@ class _DesktopArtworkDetailScreenState
               );
 
         if (_artworkLoading) {
-          return Scaffold(
-            backgroundColor: scheme.surface,
-            appBar: widget.showAppBar
-                ? AppBar(
-                    title: KubusHeaderText(
-                      title: l10n.artDetailLoadingTitle,
-                      kind: KubusHeaderKind.screen,
-                      compact: true,
-                    ),
-                  )
-                : null,
-            body: const Center(child: InlineLoading()),
+          return _holdEntryUrl(
+            Scaffold(
+              backgroundColor: scheme.surface,
+              appBar: widget.showAppBar
+                  ? AppBar(
+                      title: KubusHeaderText(
+                        title: l10n.artDetailLoadingTitle,
+                        kind: KubusHeaderKind.screen,
+                        compact: true,
+                      ),
+                    )
+                  : null,
+              body: const Center(child: InlineLoading()),
+            ),
           );
         }
 
         if (_artworkError != null) {
-          return Scaffold(
-            backgroundColor: scheme.surface,
-            appBar: widget.showAppBar
-                ? AppBar(
-                    title: KubusHeaderText(
-                      title: l10n.artDetailTitle,
-                      kind: KubusHeaderKind.screen,
-                      compact: true,
+          return _holdEntryUrl(
+            Scaffold(
+              backgroundColor: scheme.surface,
+              appBar: widget.showAppBar
+                  ? AppBar(
+                      title: KubusHeaderText(
+                        title: l10n.artDetailTitle,
+                        kind: KubusHeaderKind.screen,
+                        compact: true,
+                      ),
+                    )
+                  : null,
+              body: Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      _artworkError!,
+                      style: KubusTextStyles.sectionSubtitle.copyWith(
+                        color: scheme.onSurface,
+                      ),
+                      textAlign: TextAlign.center,
                     ),
-                  )
-                : null,
-            body: Center(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    _artworkError!,
-                    style: KubusTextStyles.sectionSubtitle.copyWith(
-                      color: scheme.onSurface,
+                    const SizedBox(height: 16),
+                    ElevatedButton(
+                      onPressed: _loadArtworkDetails,
+                      child: Text(l10n.commonRetry),
                     ),
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 16),
-                  ElevatedButton(
-                    onPressed: _loadArtworkDetails,
-                    child: Text(l10n.commonRetry),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           );
@@ -272,21 +285,23 @@ class _DesktopArtworkDetailScreenState
         if (artwork == null ||
             (widget.publicEntityType == ShareEntityType.nft &&
                 (!artwork.isNft || !artwork.isPublic || !artwork.isActive))) {
-          return Scaffold(
-            backgroundColor: scheme.surface,
-            appBar: widget.showAppBar
-                ? AppBar(
-                    title: KubusHeaderText(
-                      title: l10n.artworkNotFound,
-                      kind: KubusHeaderKind.screen,
-                      compact: true,
-                    ),
-                  )
-                : null,
-            body: Center(
-              child: Text(
-                l10n.artworkNotFound,
-                style: KubusTextStyles.screenTitle,
+          return _holdEntryUrl(
+            Scaffold(
+              backgroundColor: scheme.surface,
+              appBar: widget.showAppBar
+                  ? AppBar(
+                      title: KubusHeaderText(
+                        title: l10n.artworkNotFound,
+                        kind: KubusHeaderKind.screen,
+                        compact: true,
+                      ),
+                    )
+                  : null,
+              body: Center(
+                child: Text(
+                  l10n.artworkNotFound,
+                  style: KubusTextStyles.screenTitle,
+                ),
               ),
             ),
           );
