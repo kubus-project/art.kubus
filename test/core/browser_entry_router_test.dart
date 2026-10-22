@@ -387,6 +387,82 @@ void main() {
     delegate.dispose();
   });
 
+  testWidgets(
+      'an in-app Back from a reloaded entry replaces it when the entry below is app history',
+      (tester) async {
+    // The state the engine returns after a reload of an artwork opened from
+    // the collection, as measured in Chromium: the Router's entry wrapped in
+    // the engine's {serialCount, state} record (serialCount is a double), with
+    // historyBack naming the collection entry below it.
+    const artwork = '/en/artworks/b4e7026c-4ee8-52b5-80e5-a3625117ef3b';
+    const collection = '/en/collections/a0842200-0000-4000-8000-0000000000c1';
+    final entry = BrowserEntryRoute.fromUri(
+      Uri.parse(artwork),
+      historyState: <Object?, Object?>{
+        'serialCount': 1.0,
+        'state': <Object?, Object?>{
+          'version': 1,
+          'visibleUri': artwork,
+          'shellRoute': '/main',
+          'entityType': 'artwork',
+          'entityId': 'b4e7026c-4ee8-52b5-80e5-a3625117ef3b',
+          'historyIndex': 1,
+          'historyBack': collection,
+        },
+      },
+    );
+    final history = BrowserHistoryMirror();
+    var steps = 0;
+    final delegate = BrowserEntryRouterDelegate(
+      navigatorKey: GlobalKey<NavigatorState>(),
+      initialConfiguration: entry,
+      onGenerateInitialRoutes: (name) => <Route<dynamic>>[
+        MaterialPageRoute<void>(
+          settings: RouteSettings(name: name),
+          builder: (_) => const Scaffold(body: Text('entry')),
+        ),
+      ],
+      onGenerateRoute: (settings) => MaterialPageRoute<void>(
+        settings: settings,
+        builder: (_) => const Scaffold(body: Text('other')),
+      ),
+      observers: const <NavigatorObserver>[],
+      restoreRoute: (configuration, _) {},
+      history: history,
+      stepBrowserBack: () => steps++,
+    );
+    final provider = StartupBrowserRouteInformationProvider(
+      entry,
+      history: history,
+    );
+    await tester.pumpWidget(MaterialApp.router(
+      routeInformationProvider: provider,
+      routeInformationParser: parser,
+      routerDelegate: delegate,
+    ));
+    await tester.pumpAndSettle();
+
+    // The reload restored the browser entries: the collection is below.
+    expect(history.cursor, 1);
+    expect(history.below, Uri.parse(collection));
+
+    // The in-app Back pops the artwork to Home. The browser cannot step to
+    // Home, so Home replaces the artwork: the entry count is unchanged and the
+    // collection stays below Home, not a second Home above the artwork.
+    delegate.reportVisibleBack(Uri.parse('/main'));
+    await tester.pumpAndSettle();
+
+    expect(steps, 0);
+    expect(history.cursor, 1, reason: 'no entry was pushed for Home');
+    expect(history.current, Uri.parse('/main'));
+    expect(history.below, Uri.parse(collection));
+    expect(delegate.currentConfiguration.visibleUri.path, '/main');
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    provider.dispose();
+    delegate.dispose();
+  });
+
   testWidgets('a replacing report rewrites the entry instead of adding one',
       (tester) async {
     final entry = BrowserEntryRoute.fromUri(Uri.parse('/en/map/bad-marker'));

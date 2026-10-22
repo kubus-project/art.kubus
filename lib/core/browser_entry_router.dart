@@ -443,7 +443,12 @@ class BrowserEntryRouterDelegate extends RouterDelegate<BrowserEntryRoute>
     final mirror = history;
     final step = stepBrowserBack;
     if (mirror == null || step == null || !mirror.canStepBackTo(uri)) {
-      reportVisibleUri(uri);
+      // The browser cannot step to [uri]. When this page recorded an entry
+      // below the current one (a reloaded entry keeps its historyBack, the app
+      // history it was opened from), the in-app Back replaces the entry it
+      // leaves so it adds nothing. A cold external entry has no recorded entry
+      // below, so the visible change is pushed and Back still returns to it.
+      reportVisibleUri(uri, replace: mirror?.below != null);
       return;
     }
     _shownRoute = next;
