@@ -16,9 +16,11 @@ import 'package:art_kubus/providers/wallet_provider.dart';
 import 'package:art_kubus/screens/desktop/desktop_map_screen.dart';
 import 'package:art_kubus/screens/map_screen.dart';
 import 'package:art_kubus/widgets/map/kubus_map_chrome.dart';
+import 'package:art_kubus/widgets/art_map_view.dart';
 import 'package:art_kubus/widgets/map/nearby/kubus_nearby_art_panel.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:latlong2/latlong.dart' as ll;
 import 'package:provider/provider.dart';
 
 Widget _wrapWithProviders({
@@ -61,7 +63,11 @@ void main() {
     await tester.pumpWidget(
       _wrapWithProviders(
         size: const Size(420, 820),
-        child: const MapScreen(),
+        child: const MapScreen(
+          initialCenter: ll.LatLng(46.05, 14.51),
+          initialZoom: 12,
+          autoFollow: false,
+        ),
       ),
     );
 
@@ -71,6 +77,9 @@ void main() {
     await tester.pump(const Duration(milliseconds: 50));
 
     expect(find.byType(MapScreen), findsOneWidget);
+    final renderedMap = tester.widget<ArtMapView>(find.byType(ArtMapView));
+    expect(renderedMap.initialCenter, const ll.LatLng(46.05, 14.51));
+    expect(renderedMap.initialZoom, 12);
     final credit = tester.getRect(find.byType(KubusMapAttributionControl));
     final nearbyPanel = tester.getRect(find.byType(KubusNearbyArtPanel));
     expect(
@@ -86,7 +95,11 @@ void main() {
     await tester.pumpWidget(
       _wrapWithProviders(
         size: const Size(1280, 900),
-        child: const DesktopMapScreen(),
+        child: const DesktopMapScreen(
+          initialCenter: ll.LatLng(46.05, 14.51),
+          initialZoom: 12,
+          autoFollow: false,
+        ),
       ),
     );
 
@@ -94,5 +107,83 @@ void main() {
     await tester.pump(const Duration(milliseconds: 50));
 
     expect(find.byType(DesktopMapScreen), findsOneWidget);
+    final renderedMap = tester.widget<ArtMapView>(find.byType(ArtMapView));
+    expect(renderedMap.initialCenter, const ll.LatLng(46.05, 14.51));
+    expect(renderedMap.initialZoom, 12);
+  });
+
+  testWidgets('a mounted mobile map applies the updated route camera', (
+    tester,
+  ) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(420, 820);
+    addTearDown(tester.view.resetPhysicalSize);
+    var center = const ll.LatLng(46.05, 14.51);
+    var zoom = 12.0;
+    late StateSetter updateCamera;
+
+    await tester.pumpWidget(
+      _wrapWithProviders(
+        size: const Size(420, 820),
+        child: StatefulBuilder(
+          builder: (context, setState) {
+            updateCamera = setState;
+            return MapScreen(
+              initialCenter: center,
+              initialZoom: zoom,
+              autoFollow: false,
+            );
+          },
+        ),
+      ),
+    );
+    await tester.pump(const Duration(milliseconds: 50));
+    await tester.pump(const Duration(milliseconds: 50));
+
+    updateCamera(() {
+      center = const ll.LatLng(47.12, 15.04);
+      zoom = 9;
+    });
+    await tester.pump();
+
+    final renderedMap = tester.widget<ArtMapView>(find.byType(ArtMapView));
+    expect(renderedMap.initialCenter, center);
+    expect(renderedMap.initialZoom, zoom);
+  });
+
+  testWidgets('a mounted desktop map applies the updated route camera', (
+    tester,
+  ) async {
+    var center = const ll.LatLng(46.05, 14.51);
+    var zoom = 12.0;
+    late StateSetter updateCamera;
+
+    await tester.pumpWidget(
+      _wrapWithProviders(
+        size: const Size(1280, 900),
+        child: StatefulBuilder(
+          builder: (context, setState) {
+            updateCamera = setState;
+            return DesktopMapScreen(
+              initialCenter: center,
+              initialZoom: zoom,
+              autoFollow: false,
+            );
+          },
+        ),
+      ),
+    );
+    await tester.pump(const Duration(milliseconds: 50));
+    await tester.pump(const Duration(milliseconds: 50));
+
+    updateCamera(() {
+      center = const ll.LatLng(47.12, 15.04);
+      zoom = 9;
+    });
+    await tester.pump();
+
+    final renderedMap = tester.widget<ArtMapView>(find.byType(ArtMapView));
+    expect(renderedMap.initialCenter, center);
+    expect(renderedMap.initialZoom, zoom);
   });
 }

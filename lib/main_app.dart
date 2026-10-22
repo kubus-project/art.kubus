@@ -1,4 +1,5 @@
 import 'package:art_kubus/services/share/share_deep_link_parser.dart';
+import 'package:art_kubus/features/map/shared/map_entry_camera.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -36,7 +37,9 @@ import 'widgets/tutorial/tutorial_overlay_presenter.dart';
 import 'widgets/tutorial/tutorial_overlay_scope.dart';
 
 class MainApp extends StatefulWidget {
-  const MainApp({super.key});
+  const MainApp({super.key, this.initialMapCamera});
+
+  final MapEntryCamera? initialMapCamera;
 
   @override
   State<MainApp> createState() => _MainAppState();
@@ -216,8 +219,13 @@ class _MainAppState extends State<MainApp> {
   }
 
   List<Widget> _buildScreens(int currentIndex) {
-    const screens = <Widget>[
-      MapScreen(),
+    final camera = widget.initialMapCamera;
+    final screens = <Widget>[
+      MapScreen(
+        initialCenter: camera?.center,
+        initialZoom: camera?.zoom,
+        autoFollow: camera == null,
+      ),
       ARScreen(),
       CommunityScreen(),
       HomeScreen(),

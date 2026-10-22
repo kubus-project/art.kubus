@@ -632,6 +632,39 @@ class _MapScreenState extends State<MapScreen>
   }
 
   @override
+  void didUpdateWidget(covariant MapScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+
+    final center = widget.initialCenter;
+    final cameraChanged = oldWidget.initialCenter != center ||
+        oldWidget.initialZoom != widget.initialZoom;
+    if (!cameraChanged ||
+        center == null ||
+        widget.initialMarkerId != null ||
+        widget.initialArtworkId != null ||
+        widget.initialSubjectId != null) {
+      return;
+    }
+
+    // Browser Back/Forward can update a map URL while this screen is still
+    // mounted. Route the new camera through the shared map camera controller;
+    // never let location follow or marker-target selection take ownership.
+    _yieldFollowToDeliberateCamera();
+    _autoFollow = false;
+    _kubusMapController.setAutoFollow(false);
+    _cameraCenter = center;
+    _lastZoom = widget.initialZoom ?? _lastZoom;
+    _initialLocaleViewportApplied = true;
+    unawaited(
+      _mapCameraController.animateTo(
+        center,
+        zoom: _lastZoom,
+        duration: Duration.zero,
+      ),
+    );
+  }
+
+  @override
   void initState() {
     super.initState();
     KeyboardActivationTracker.install();
@@ -4453,6 +4486,7 @@ class _MapScreenState extends State<MapScreen>
             setMapController: (value) => _mapController = value,
             setLayersManager: (manager) => _layersManager = manager,
           );
+          _mapCameraController.flushQueuedIfReady();
           _walkingNavigationMapCoordinator?.resetForMapController();
 
           // Mirror controller state into legacy screen guards while migration is incremental.

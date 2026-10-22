@@ -53,6 +53,36 @@ void main() {
     expect(route.zoom, 12);
   });
 
+  test('map shell history retains its locale query and fragment', () {
+    final route = BrowserEntryRoute.fromUri(
+      Uri.parse('/map?lang=en#camera'),
+    );
+
+    expect(route.shellRoute, '/map');
+    expect(route.visibleUri.toString(), '/map?lang=en#camera');
+  });
+
+  testWidgets('browser traversal treats a different map camera as a new view',
+      (tester) async {
+    final first = BrowserEntryRoute.fromUri(
+      Uri.parse('/map?lat=46.05&lng=14.51&z=12'),
+    );
+    final restored = <String>[];
+    final delegate = _restoringDelegate(first, restored);
+    await _pumpDelegate(tester, delegate);
+
+    final secondUri = Uri.parse('/map?lat=47.12&lng=15.04&z=9');
+    await delegate.setNewRoutePath(BrowserEntryRoute.fromUri(secondUri));
+
+    expect(restored, <String>[secondUri.toString()]);
+    expect(delegate.currentConfiguration.latitude, 47.12);
+    expect(delegate.currentConfiguration.longitude, 15.04);
+    expect(delegate.currentConfiguration.zoom, 9);
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    delegate.dispose();
+  });
+
   test('changing from an entity to the shell drops entry query and fragment',
       () {
     final entry = BrowserEntryRoute.fromUri(

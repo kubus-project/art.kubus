@@ -28,6 +28,7 @@ import '../services/auth/auth_deep_link_parser.dart';
 import '../services/share/share_deep_link_parser.dart';
 import '../screens/onboarding/onboarding_flow_screen.dart';
 import '../screens/desktop/desktop_shell.dart';
+import '../features/map/shared/map_entry_camera.dart';
 import '../widgets/app_loading.dart';
 import 'app_navigator.dart' show AppStartupGate, appNavigatorKey;
 import 'app_initializer_helper.dart';
@@ -82,6 +83,26 @@ class _AppInitializerState extends State<AppInitializer> {
   Timer? _startupWatchdog;
   bool _didNavigate = false;
   String? _serverVersion;
+
+  void _replaceWithShell(NavigatorState navigator, String route) {
+    final launchUri = widget.initialUri ?? (kIsWeb ? Uri.base : null);
+    final mapEntryUri =
+        route == ShellRoutes.map && launchUri?.path == ShellRoutes.map
+            ? launchUri
+            : null;
+    if (mapEntryUri == null) {
+      navigator.pushReplacementNamed(route);
+      return;
+    }
+
+    final camera = MapEntryCamera.fromUri(mapEntryUri);
+    navigator.pushReplacement(
+      MaterialPageRoute<void>(
+        builder: (_) => ShellEntryScreen.map(initialMapCamera: camera),
+        settings: RouteSettings(name: mapEntryUri.toString()),
+      ),
+    );
+  }
 
   Future<void> _refreshServerVersion(ConfigProvider configProvider) async {
     final fetched = await BackendApiService().fetchServerVersion(
@@ -163,7 +184,7 @@ class _AppInitializerState extends State<AppInitializer> {
     }
     if (!mounted || _didNavigate) return;
     _didNavigate = true;
-    navigator.pushReplacementNamed(entry.shellRoute);
+    _replaceWithShell(navigator, entry.shellRoute);
   }
 
   /// The safe fallback when startup is already degraded (initialisation threw
@@ -832,7 +853,7 @@ class _AppInitializerState extends State<AppInitializer> {
           );
         }
         _didNavigate = true;
-        navigator.pushReplacementNamed(ShellRoutes.map);
+        _replaceWithShell(navigator, ShellRoutes.map);
         return;
       }
 
@@ -1008,7 +1029,7 @@ class _AppInitializerState extends State<AppInitializer> {
         }
         if (!mounted) return;
         _didNavigate = true;
-        navigator.pushReplacementNamed(entry.shellRoute);
+        _replaceWithShell(navigator, entry.shellRoute);
         return;
       }
 
@@ -1018,7 +1039,7 @@ class _AppInitializerState extends State<AppInitializer> {
       unawaited(maybeStartWarmUp());
       if (!mounted) return;
       _didNavigate = true;
-      navigator.pushReplacementNamed(entry.shellRoute);
+      _replaceWithShell(navigator, entry.shellRoute);
     } catch (e, st) {
       AppConfig.debugPrint('AppInitializer: initialization failed: $e');
       AppConfig.debugPrint('AppInitializer: init stack: $st');

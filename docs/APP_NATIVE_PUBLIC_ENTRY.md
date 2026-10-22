@@ -205,7 +205,10 @@ Implementation (web only; native paths are unchanged behind `kIsWeb`):
 - An account gate (`/sign-in`, `/register`) that replaces a pending public entry
   before its shell appears takes over the address; the return target stays in
   the gate's arguments.
-- Known gap: `/map?lat&lng&z` camera application is not yet implemented.
+- A direct `/map?lat&lng&z` entry validates and applies its camera through the
+  existing shared map controller on mobile and desktop. Browser history
+  restores the camera from each visible URL, while the complete map query and
+  fragment remain in the address bar through shell initialization.
 
 The existing `/app/*` route remains only as an internal/backward-compatible
 surface while migration is in progress; new public entry should not depend on it.

@@ -17,6 +17,7 @@ import 'providers/profile_provider.dart';
 import 'providers/web3provider.dart';
 import 'providers/themeprovider.dart';
 import 'features/map/session/kubus_map_session_memory.dart';
+import 'features/map/shared/map_entry_camera.dart';
 import 'providers/tile_providers.dart';
 import 'providers/navigation_provider.dart';
 import 'providers/artwork_provider.dart';
@@ -77,6 +78,7 @@ import 'core/public_entry_navigation.dart';
 import 'core/startup_trace.dart';
 import 'core/app_navigator.dart';
 import 'core/shell_routes.dart';
+import 'core/shell_entry_screen.dart';
 import 'core/url_strategy.dart';
 import 'core/deep_link_bootstrap_screen.dart';
 import 'core/maplibre_web_registration.dart';
@@ -1363,6 +1365,14 @@ class _ArtKubusState extends State<ArtKubus> with WidgetsBindingObserver {
     }
 
     final uri = Uri.tryParse(name) ?? Uri(path: name);
+
+    final mapCamera = MapEntryCamera.fromUri(uri);
+    if (mapCamera != null) {
+      return MaterialPageRoute<void>(
+        builder: (_) => ShellEntryScreen.map(initialMapCamera: mapCamera),
+        settings: settings,
+      );
+    }
 
     if (uri.path == '/verify-email') {
       final token = (uri.queryParameters['token'] ?? '').trim();

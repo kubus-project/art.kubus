@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:art_kubus/utils/design_tokens.dart';
+import 'package:art_kubus/features/map/shared/map_entry_camera.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:pointer_interceptor/pointer_interceptor.dart';
@@ -134,8 +135,13 @@ DesktopProfileHydration resolveDesktopProfileHydration({
 /// Main desktop shell that provides the sidebar navigation
 class DesktopShell extends StatefulWidget {
   final int initialIndex;
+  final MapEntryCamera? initialMapCamera;
 
-  const DesktopShell({super.key, this.initialIndex = 0});
+  const DesktopShell({
+    super.key,
+    this.initialIndex = 0,
+    this.initialMapCamera,
+  });
 
   @override
   State<DesktopShell> createState() => _DesktopShellState();
@@ -581,7 +587,12 @@ class _DesktopShellState extends State<DesktopShell>
   Widget _buildCurrentScreen(String route) {
     switch (route) {
       case '/explore':
-        return const DesktopMapScreen();
+        final camera = widget.initialMapCamera;
+        return DesktopMapScreen(
+          initialCenter: camera?.center,
+          initialZoom: camera?.zoom,
+          autoFollow: camera == null,
+        );
       case '/community':
         return const DesktopCommunityScreen();
       case '/messages':

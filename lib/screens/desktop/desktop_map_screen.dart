@@ -523,6 +523,39 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       };
 
   @override
+  void didUpdateWidget(covariant DesktopMapScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+
+    final center = widget.initialCenter;
+    final cameraChanged = oldWidget.initialCenter != center ||
+        oldWidget.initialZoom != widget.initialZoom;
+    if (!cameraChanged ||
+        center == null ||
+        widget.initialMarkerId != null ||
+        widget.initialArtworkId != null ||
+        widget.initialSubjectId != null) {
+      return;
+    }
+
+    // Browser Back/Forward may change a map URL without rebuilding the shell.
+    // The existing map controller applies the new entry camera while marker
+    // targets and user-follow continue to own their established paths.
+    _yieldFollowToDeliberateCamera();
+    _autoFollow = false;
+    _kubusMapController.setAutoFollow(false);
+    _cameraCenter = center;
+    _cameraZoom = widget.initialZoom ?? _cameraZoom;
+    _initialLocaleViewportApplied = true;
+    unawaited(
+      _mapCameraController.animateTo(
+        center,
+        zoom: _cameraZoom,
+        duration: Duration.zero,
+      ),
+    );
+  }
+
+  @override
   void initState() {
     super.initState();
     if (!kIsWeb &&
