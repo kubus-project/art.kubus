@@ -294,12 +294,17 @@ void main() {
         browserRoute: entryUrl,
         shellRoute: '/main',
       );
-      final reports = <String>[];
+      final pushes = <String>[];
+      final replaces = <String>[];
       String? browserUrl = entryUrl;
       final observer = UrlCoherenceObserver(
         enabled: true,
         report: (url) {
-          reports.add(url);
+          pushes.add(url);
+          browserUrl = url;
+        },
+        reportReplace: (url) {
+          replaces.add(url);
           browserUrl = url;
         },
         entityUrls: navigation,
@@ -316,7 +321,8 @@ void main() {
         ),
       ));
       await tester.pumpAndSettle();
-      expect(reports, isEmpty, reason: 'the pending entry keeps its address');
+      expect(pushes, isEmpty, reason: 'the pending entry keeps its address');
+      expect(replaces, isEmpty, reason: 'the pending entry keeps its address');
 
       // AppInitializer hands an account-only entity to sign-in before the shell
       // has appeared. The sign-in page is what the visitor sees now.
@@ -326,7 +332,9 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(reports, <String>['/sign-in']);
+      expect(replaces, <String>['/sign-in'],
+          reason: 'the gate replaces the entry it took over, never adds one');
+      expect(pushes, isEmpty);
       expect(browserUrl, '/sign-in');
       expect(navigation.pendingEntryUrl, isNull);
       observer.dispose();

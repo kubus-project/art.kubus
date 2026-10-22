@@ -650,11 +650,15 @@ void main() {
   testWidgets(
       'a reloaded page restores the entry below it, so an in-app Back steps '
       'the browser instead of pushing a second Home', (tester) async {
+    // The engine's wrapper, as a reload returns it from history.state.
     final artwork = BrowserEntryRoute.fromUri(
       Uri.parse('/en/artworks/a1'),
       historyState: <String, Object?>{
-        'historyIndex': 1,
-        'historyBack': '/main',
+        'serialCount': 2.0,
+        'state': <String, Object?>{
+          'historyIndex': 1,
+          'historyBack': '/main',
+        },
       },
     );
     final history = BrowserHistoryMirror();
@@ -682,6 +686,139 @@ void main() {
 
     expect(steps, 1, reason: 'Home is the entry below: step back to it');
     expect(history.cursor, 1, reason: 'no duplicate Home was pushed');
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    provider.dispose();
+    delegate.dispose();
+  });
+
+  test('an engine-wrapped history state is read through the route parser',
+      () async {
+    final route = await const BrowserEntryRouteInformationParser()
+        .parseRouteInformation(RouteInformation(
+      uri: Uri.parse('/en/artworks/a1'),
+      state: <String, Object?>{
+        'serialCount': 2.0,
+        'state': <String, Object?>{
+          'historyIndex': 1,
+          'historyBack': '/main',
+        },
+      },
+    ));
+
+    expect(route.historyIndex, 1);
+    expect(route.historyBack, Uri.parse('/main'));
+    expect(
+      unwrapEngineHistoryState(
+          <String, Object?>{'serialCount': 2.0, 'state': 'x'}),
+      'x',
+    );
+    expect(unwrapEngineHistoryState('plain'), 'plain');
+  });
+
+  testWidgets(
+      'a traversal to an entry this page did not record keeps the entry below '
+      'it, so a second in-app Back still steps', (tester) async {
+    final entry = BrowserEntryRoute.fromUri(
+      Uri.parse('/en/artworks/c'),
+      historyState: <String, Object?>{
+        'serialCount': 3.0,
+        'state': <String, Object?>{
+          'historyIndex': 2,
+          'historyBack': '/en/events/b',
+        },
+      },
+    );
+    final history = BrowserHistoryMirror();
+    var steps = 0;
+    final restored = <String>[];
+    final delegate = _restoringDelegate(
+      entry,
+      restored,
+      history: history,
+      stepBrowserBack: () => steps++,
+    );
+    final provider = StartupBrowserRouteInformationProvider(
+      entry,
+      history: history,
+    );
+    await tester.pumpWidget(MaterialApp.router(
+      routeInformationProvider: provider,
+      routeInformationParser: parser,
+      routerDelegate: delegate,
+    ));
+    await tester.pumpAndSettle();
+
+    delegate.reportVisibleBack(Uri.parse('/en/events/b'));
+    await tester.pumpAndSettle();
+    expect(steps, 1);
+
+    // The browser lands on B at a position this page never recorded (7). B's
+    // own state names A beneath it.
+    await delegate.setNewRoutePath(BrowserEntryRoute.fromUri(
+      Uri.parse('/en/events/b'),
+      historyState: <String, Object?>{
+        'serialCount': 8.0,
+        'state': <String, Object?>{
+          'historyIndex': 7,
+          'historyBack': '/en/collections/a',
+        },
+      },
+    ));
+    await tester.pumpAndSettle();
+    expect(restored, isEmpty, reason: 'the browser Back was the in-app step');
+
+    delegate.reportVisibleBack(Uri.parse('/en/collections/a'));
+    await tester.pumpAndSettle();
+    expect(steps, 2, reason: 'A is the entry below B: step, never push it');
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    provider.dispose();
+    delegate.dispose();
+  });
+
+  testWidgets(
+      'an in-app change reported during a deferred restore is replayed when '
+      'the browser returns to the page on screen', (tester) async {
+    const first = '/en/artworks/a1';
+    const second = '/en/events/e1';
+    const tapped = '/en/artworks/a1/more';
+    final restored = <String>[];
+    final browserReports = <String>[];
+    final delegate = _restoringDelegate(
+      BrowserEntryRoute.fromUri(Uri.parse('/main')),
+      restored,
+    );
+    final provider = _RecordingProvider(
+      BrowserEntryRoute.fromUri(Uri.parse('/main')),
+      BrowserHistoryMirror(),
+      (info, type) => browserReports.add(info.uri.toString()),
+    );
+    await tester.pumpWidget(MaterialApp.router(
+      routeInformationProvider: provider,
+      routeInformationParser: parser,
+      routerDelegate: delegate,
+    ));
+    await tester.pumpAndSettle();
+
+    await delegate.setNewRoutePath(BrowserEntryRoute.fromUri(Uri.parse(first)));
+    await delegate
+        .setNewRoutePath(BrowserEntryRoute.fromUri(Uri.parse(second)));
+    // The visitor acts on the page on screen inside the cooldown.
+    delegate.reportVisibleUri(Uri.parse(tapped));
+    expect(delegate.currentConfiguration.visibleUri.toString(), second,
+        reason: 'a visible report waits while the restore is pending');
+
+    // The browser returns to the artwork on screen before the cooldown ends.
+    await delegate.setNewRoutePath(BrowserEntryRoute.fromUri(Uri.parse(first)));
+    await tester.pumpAndSettle();
+    expect(delegate.currentConfiguration.visibleUri.toString(), tapped,
+        reason: 'the in-app change still reaches the address');
+    expect(browserReports.last, tapped);
+
+    await tester.pump(const Duration(milliseconds: 801));
+    expect(restored, <String>[first],
+        reason: 'the deferred page is no longer wanted');
 
     await tester.pumpWidget(const SizedBox.shrink());
     provider.dispose();

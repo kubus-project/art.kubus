@@ -7,6 +7,15 @@ import '../services/share/share_deep_link_parser.dart';
 import '../services/share/share_types.dart';
 import 'shell_routes.dart';
 
+/// Flutter's web engine stores each Router entry as `{serialCount, state}` in
+/// the browser history, and a reload hands that wrapper back as the entry's
+/// `history.state`. The entry's own state is the inner map. Popstate reports
+/// arrive already unwrapped, so this is idempotent.
+Object? unwrapEngineHistoryState(Object? state) {
+  if (state is Map && state.containsKey('serialCount')) return state['state'];
+  return state;
+}
+
 /// The URL describes the visible page; [shellRoute] describes the app surface
 /// that owns it. The other fields are a serializable summary of a public entity
 /// or map selection, so browser history can restore the same app state.
@@ -33,7 +42,8 @@ class BrowserEntryRoute {
     final normalized = uri.path.isEmpty ? uri.replace(path: '/') : uri;
     final target = const ShareDeepLinkParser().parse(normalized);
     final intent = const ShareDeepLinkCodec().parseIntent(normalized);
-    final serializedShell = _stateString(historyState, 'shellRoute');
+    final entryState = unwrapEngineHistoryState(historyState);
+    final serializedShell = _stateString(entryState, 'shellRoute');
     final shellRoute = _shellRouteFor(
       normalized,
       target: target,
@@ -52,8 +62,8 @@ class BrowserEntryRoute {
       latitude: intent?.lat,
       longitude: intent?.lng,
       zoom: intent?.zoom,
-      historyIndex: _stateInt(historyState, 'historyIndex'),
-      historyBack: _stateUri(historyState, 'historyBack'),
+      historyIndex: _stateInt(entryState, 'historyIndex'),
+      historyBack: _stateUri(entryState, 'historyBack'),
     );
   }
 
@@ -306,9 +316,11 @@ class BrowserHistoryMirror {
       _cursor > 0 && sameLocation(_uris[_cursor - 1], uri);
 
   /// The browser moved (Back, Forward, a link) to [uri], whose recorded
-  /// position was [index]. An entry this page never created restarts the
-  /// mirror at that entry.
-  void browserNavigated(Uri uri, int? index) {
+  /// position was [index]. When that position does not match what this page
+  /// recorded, the mirror restarts at [uri], seeded with [below] (the entry the
+  /// page recorded under it), so an in-app Back still steps instead of adding a
+  /// duplicate of the entry below.
+  void browserNavigated(Uri uri, int? index, {Uri? below}) {
     if (index != null &&
         index >= 0 &&
         index < _uris.length &&
@@ -317,10 +329,7 @@ class BrowserHistoryMirror {
       return;
     }
     if (sameLocation(current, uri)) return;
-    _uris
-      ..clear()
-      ..add(uri);
-    _cursor = 0;
+    restore(uri, below: below);
   }
 }
 
@@ -379,6 +388,11 @@ class BrowserEntryRouterDelegate extends RouterDelegate<BrowserEntryRoute>
   bool _restoringRoute = false;
   Uri? _expectedBackUri;
 
+  /// The last visible address reported while a restore was deferred. It is
+  /// replayed if the traversal that deferred the restore lands back on the page
+  /// on screen, so an in-app change made meanwhile is not lost from the address.
+  Uri? _droppedVisibleUri;
+
   @override
   BrowserEntryRoute get currentConfiguration => _configuration;
 
@@ -391,10 +405,14 @@ class BrowserEntryRouterDelegate extends RouterDelegate<BrowserEntryRoute>
   /// [replace] rewrites the current browser entry instead of adding one, for
   /// corrections the visitor did not navigate to.
   void reportVisibleUri(Uri uri, {bool replace = false}) {
-    // While a traversal waits out the cooldown, the address already names the
-    // page the browser moved to. A report from the page still starting up would
-    // overwrite that entry and the deferred restore would then re-push it.
-    if (_restoringRoute || _deferredRestore != null) return;
+    if (_restoringRoute) return;
+    if (_deferredRestore != null) {
+      // While a traversal waits out the cooldown, the address already names the
+      // page the browser moved to. A report from the page still starting up
+      // would overwrite that entry and the deferred restore would re-push it.
+      _droppedVisibleUri = uri;
+      return;
+    }
     _expectedBackUri = null;
     final next = _configuration.withVisibleUri(uri);
     _shownRoute = next;
@@ -415,7 +433,11 @@ class BrowserEntryRouterDelegate extends RouterDelegate<BrowserEntryRoute>
   void reportVisibleBack(Uri uri) {
     // Same window as reportVisibleUri: the browser already names the page a
     // deferred restore will show, so this visible change must not reach it.
-    if (_restoringRoute || _deferredRestore != null) return;
+    if (_restoringRoute) return;
+    if (_deferredRestore != null) {
+      _droppedVisibleUri = uri;
+      return;
+    }
     final next = _configuration.withVisibleUri(uri);
     if (next == _configuration) return;
     final mirror = history;
@@ -446,6 +468,7 @@ class BrowserEntryRouterDelegate extends RouterDelegate<BrowserEntryRoute>
     history?.browserNavigated(
       configuration.visibleUri,
       configuration.historyIndex,
+      below: configuration.historyBack,
     );
     // The browser Back this delegate asked for: the Navigator already shows
     // that page, so only the serialized configuration needs to follow.
@@ -463,11 +486,17 @@ class BrowserEntryRouterDelegate extends RouterDelegate<BrowserEntryRoute>
     if (arrivedByInAppBack || sameScreen) {
       // Browser hash-only navigation, or the browser returned to the page on
       // screen. The Navigator already shows it, so a restore still waiting out
-      // the cooldown is now stale and is dropped.
+      // the cooldown is stale. A visible change reported while that restore was
+      // pending still applies: replay it instead of leaving the address stale.
+      final pending = _deferredRestore != null;
       _deferredRestore = null;
+      final dropped = _droppedVisibleUri;
+      _droppedVisibleUri = null;
+      if (pending && dropped != null) reportVisibleUri(dropped);
     } else if (navigator != null) {
       if (_restoreCooldownTimer != null) {
         _deferredRestore = configuration;
+        _droppedVisibleUri = null;
       } else {
         _runRestore(configuration, navigator);
       }
@@ -501,11 +530,9 @@ class BrowserEntryRouterDelegate extends RouterDelegate<BrowserEntryRoute>
       _restoreCooldownTimer = null;
       final deferred = _deferredRestore;
       _deferredRestore = null;
+      _droppedVisibleUri = null;
       final current = navigatorKey.currentState;
-      // A deferred page the screen already shows needs no second startup.
-      if (deferred == null || current == null) return;
-      if (_sameScreen(deferred, _shownRoute)) return;
-      _runRestore(deferred, current);
+      if (deferred != null && current != null) _runRestore(deferred, current);
     });
   }
 
