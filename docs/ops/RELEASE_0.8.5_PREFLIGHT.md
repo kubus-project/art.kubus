@@ -1,7 +1,7 @@
-# v0.8.5 protected release preflight (proposed, nonexecuted)
+﻿# v0.8.5 protected release preflight (proposed, nonexecuted)
 
 This is a preparation runbook. **Every command below is a future operator
-command and has not been run for v0.8.5.** A workflow dispatch, protected
+command and has not been run for v0.8.5.** A protected release/deployment workflow dispatch, protected
 environment approval, merge, deployment, tag, or publication requires the
 release owner's explicit authorization. Do not use this document as evidence
 that the candidate is ready.
@@ -11,7 +11,7 @@ that the candidate is ready.
 | Surface | Observed state | Release consequence |
 | --- | --- | --- |
 | App | PR #358 head `085726e76b24c1a240f37a99d469e897aba17098`; full-tier CI run `39835198150` in progress | Await exact-head results and final artifact/evidence. |
-| Backend | Production `master` baseline `46c9b84fed42aff21463c788e5e13994689c7f73` is reported deployed on Oracle. PR #129 `1e94d5b278df7627fea4fe5f23e993d2b096651e` is open and green; its preview SSR suite passed 64/64. PR #130 `9f53af8a7bc71969daf3f7d3efdbfd058b172c54` is open and test-only. Marker strict-gate implementation is in progress with exact SHA pending. | Re-fetch repository state and require an explicit backend deployment plan for any source change. Existing production deployment is not proof that candidate backend changes are deployed. |
+| Backend | Production `master` baseline `46c9b84fed42aff21463c788e5e13994689c7f73` is reported deployed on Oracle. PR #129 `1e94d5b278df7627fea4fe5f23e993d2b0966517` is open and green; its preview SSR suite passed 64/64. PR #130 `9f53af8a7bc71969daf3f7d3efdbfd058b172c54` is open and test-only. Marker strict-gate implementation is in progress with exact SHA pending. | Re-fetch repository state and require an explicit backend deployment plan for any source change. Existing production deployment is not proof that candidate backend changes are deployed. |
 | Admin | PR #18 head `a2d788804779baf63a6c091d4734ce04ea38a887`, source compatibility CI green | Exact-head browser acceptance remains open. |
 | Moderation data | 9,046 eligible production markers are unreviewed | Owner classification is blocked. No bulk approve/deindex. |
 | HA | Oracle HA reported false, zero replicas; Home `ce11d5fcaeaf081b981b84cfb69c4fcb641b9047` is stale and returns 503 | Production recovery/HA is not qualified. Stop before any failover, reseed, or destructive action. |
@@ -163,3 +163,4 @@ git rev-list --left-right --cherry-pick --count origin/master...origin/dev
 
 The first count must be zero before ordinary development resumes. Do not squash
 the reconciliation or rewrite either protected branch.
+
