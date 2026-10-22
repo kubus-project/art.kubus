@@ -325,6 +325,14 @@ void main() {
         'user_id': 'user-suspended',
         'wallet_address': 'WalletAddr111',
         'has_wallet': true,
+        // Account-scoped data the previous account left on this device.
+        'secure_account_email': 'suspended@example.com',
+        'secure_account_email_verified_v1': true,
+        'secure_account_status_cache_v1':
+            '{"hasEmail":true,"hasPassword":true,"email":"suspended@example.com"}',
+        'secure_account_status_cache_ts_v1': 1700000000000,
+        'private_profile': true,
+        'allow_messages': false,
       });
       BackendApiService().setAuthTokenForTesting(_jwt());
       storage = _SecureStorage()..install();
@@ -363,6 +371,14 @@ void main() {
       // The wallet is not the account: it must survive untouched.
       expect(prefs.getString('wallet_address'), 'WalletAddr111');
       expect(prefs.getBool('has_wallet'), isTrue);
+      // The suspended account's email, verification and status cache, and its
+      // privacy mirrors, must not outlive the session on this device.
+      expect(prefs.getString('secure_account_email'), isNull);
+      expect(prefs.getBool('secure_account_email_verified_v1'), isNull);
+      expect(prefs.getString('secure_account_status_cache_v1'), isNull);
+      expect(prefs.getInt('secure_account_status_cache_ts_v1'), isNull);
+      expect(prefs.getBool('private_profile'), isNull);
+      expect(prefs.getBool('allow_messages'), isNull);
       expect(wallet.disconnects, 0);
 
       // The real provider no longer shows the previous account...

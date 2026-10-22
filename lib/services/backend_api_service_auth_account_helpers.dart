@@ -36,6 +36,7 @@ Future<Map<String, dynamic>> _backendApiLoginWithWallet(
   required String signature,
   required String message,
 }) async {
+  final sessionEpoch = service._authSessionEpoch;
   try {
     const path = '/api/auth/login';
     final response = await service._sendAuthRequestWithFailover(
@@ -57,6 +58,7 @@ Future<Map<String, dynamic>> _backendApiLoginWithWallet(
       await service._persistTokenFromResponse(data);
       await service.syncSecureAccountStatusFromResponse(
         data,
+        sessionEpoch: sessionEpoch,
         fetchIfMissing: false,
       );
       await service.setLastSignInMethod(AuthSignInMethod.wallet);
@@ -78,6 +80,7 @@ Future<Map<String, dynamic>> _backendApiRegisterWithEmail(
   String? walletAddress,
   bool includeAuth = false,
 }) async {
+  final sessionEpoch = service._authSessionEpoch;
   try {
     const path = '/api/auth/register/email';
     final uri = service._buildApiUri(service.baseUrl, path);
@@ -114,6 +117,7 @@ Future<Map<String, dynamic>> _backendApiRegisterWithEmail(
       await service._persistTokenFromResponse(data);
       await service.syncSecureAccountStatusFromResponse(
         data,
+        sessionEpoch: sessionEpoch,
         fetchIfMissing: false,
       );
       await service.setLastSignInMethod(AuthSignInMethod.email);
@@ -144,6 +148,7 @@ Future<Map<String, dynamic>> _backendApiLoginWithEmail(
   required String email,
   required String password,
 }) async {
+  final sessionEpoch = service._authSessionEpoch;
   try {
     const path = '/api/auth/login/email';
     final uri = service._buildApiUri(service.baseUrl, path);
@@ -165,6 +170,7 @@ Future<Map<String, dynamic>> _backendApiLoginWithEmail(
       await service._persistTokenFromResponse(data);
       await service.syncSecureAccountStatusFromResponse(
         data,
+        sessionEpoch: sessionEpoch,
         fetchIfMissing: false,
       );
       await service.setLastSignInMethod(AuthSignInMethod.email);
@@ -394,6 +400,7 @@ Future<Map<String, dynamic>> _backendApiResendEmailVerificationRequest(
   required String email,
   required bool includeAuth,
 }) async {
+  final sessionEpoch = service._authSessionEpoch;
   try {
     const path = '/api/auth/resend-verification';
     final uri = service._buildApiUri(service.baseUrl, path);
@@ -421,6 +428,7 @@ Future<Map<String, dynamic>> _backendApiResendEmailVerificationRequest(
       final data = jsonDecode(response.body) as Map<String, dynamic>;
       await service.syncSecureAccountStatusFromResponse(
         data,
+        sessionEpoch: sessionEpoch,
         fetchIfMissing: false,
       );
       return data;
@@ -509,6 +517,7 @@ Future<Map<String, dynamic>> _backendApiGetAccountSecurityStatus(
 Future<void> _backendApiSyncSecureAccountStatusToPrefs(
   BackendApiService service,
 ) async {
+  final sessionEpoch = service._authSessionEpoch;
   try {
     if (!AppConfig.isFeatureEnabled('emailAuth')) return;
     final status = service._normalizeSecurityStatusMap(
@@ -521,6 +530,7 @@ Future<void> _backendApiSyncSecureAccountStatusToPrefs(
       email: status['email']?.toString(),
       emailVerified: status['emailVerified'] == true,
       emailAuthEnabled: status['emailAuthEnabled'] != false,
+      sessionEpoch: sessionEpoch,
     );
   } catch (e) {
     AppConfig.debugPrint(
@@ -533,6 +543,7 @@ Future<Map<String, dynamic>> _backendApiAddPasswordToCurrentAccount(
   BackendApiService service, {
   required String password,
 }) async {
+  final sessionEpoch = service._authSessionEpoch;
   try {
     const path = '/api/auth/account-security/password';
     final response = await service._sendAuthRequestWithFailover(
@@ -544,7 +555,8 @@ Future<Map<String, dynamic>> _backendApiAddPasswordToCurrentAccount(
     );
     final data = jsonDecode(response.body) as Map<String, dynamic>;
     if (response.statusCode == 200) {
-      await service.syncSecureAccountStatusFromResponse(data);
+      await service.syncSecureAccountStatusFromResponse(data,
+          sessionEpoch: sessionEpoch);
       return data;
     }
     throw BackendApiRequestException(
@@ -564,6 +576,7 @@ Future<Map<String, dynamic>> _backendApiVerifyEmail(
   BackendApiService service, {
   required String token,
 }) async {
+  final sessionEpoch = service._authSessionEpoch;
   try {
     const path = '/api/auth/verify-email';
     final uri = service._buildApiUri(service.baseUrl, path);
@@ -580,7 +593,8 @@ Future<Map<String, dynamic>> _backendApiVerifyEmail(
     );
     if (response.statusCode == 200) {
       final data = jsonDecode(response.body) as Map<String, dynamic>;
-      await service.syncSecureAccountStatusFromResponse(data);
+      await service.syncSecureAccountStatusFromResponse(data,
+          sessionEpoch: sessionEpoch);
       return data;
     }
     if (response.statusCode == 429) {
@@ -681,6 +695,7 @@ Future<Map<String, dynamic>> _backendApiLoginWithGoogle(
   String? displayName,
   String origin = 'signin',
 }) async {
+  final sessionEpoch = service._authSessionEpoch;
   try {
     final normalizedIdToken = (idToken ?? '').trim();
     final normalizedCode = (code ?? '').trim();
@@ -731,6 +746,7 @@ Future<Map<String, dynamic>> _backendApiLoginWithGoogle(
       await service._persistTokenFromResponse(data);
       await service.syncSecureAccountStatusFromResponse(
         data,
+        sessionEpoch: sessionEpoch,
         fetchIfMissing: false,
       );
       await service.setLastSignInMethod(AuthSignInMethod.google);
@@ -773,6 +789,7 @@ Future<Map<String, dynamic>> _backendApiBindAuthenticatedWallet(
   String walletAddress, {
   String? signature,
 }) async {
+  final sessionEpoch = service._authSessionEpoch;
   try {
     const path = '/api/auth/bind-wallet';
     final normalizedSignature = (signature ?? '').trim();
@@ -789,7 +806,8 @@ Future<Map<String, dynamic>> _backendApiBindAuthenticatedWallet(
     final data = jsonDecode(response.body) as Map<String, dynamic>;
     if (response.statusCode == 200 || response.statusCode == 201) {
       await service._persistTokenFromResponse(data);
-      await service.syncSecureAccountStatusFromResponse(data);
+      await service.syncSecureAccountStatusFromResponse(data,
+          sessionEpoch: sessionEpoch);
       return data;
     }
     throw BackendApiRequestException(

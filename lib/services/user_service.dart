@@ -375,6 +375,7 @@ class UserService {
 
   static Future<User?> getUserById(String userId,
       {bool forceRefresh = false, bool includeAchievements = true}) async {
+    final sessionEpoch = BackendApiService().authSessionEpoch;
     try {
       // Consult cache first (unless caller requests fresh data)
       if (!forceRefresh) {
@@ -611,7 +612,7 @@ class UserService {
       try {
         if (user.id.isNotEmpty) {
           // Use the central cache setter to remain consistent and avoid direct cacheVersion bumps
-          setUsersInCacheAuthoritative([user]);
+          setUsersInCacheAuthoritative([user], sessionEpoch: sessionEpoch);
           // Legacy cache entries should force-refresh only once.
           try {
             _legacyCacheMissingCoverKey.remove(userId);
@@ -759,20 +760,38 @@ class UserService {
   // explicitly trigger UI updates (e.g., call provider refresh methods) if they want to
   // reflect cache changes. The `notify` flag is kept for API compatibility but does
   // not perform any implicit global notification.
-  static void setUsersInCache(List<User> users) {
-    _setUsersInCache(users, allowNullMediaOverwrite: false);
+  /// [sessionEpoch] is the epoch captured when the request that fetched [users]
+  /// started; a write for a session that has since ended is dropped.
+  static void setUsersInCache(List<User> users, {int? sessionEpoch}) {
+    _setUsersInCache(
+      users,
+      allowNullMediaOverwrite: false,
+      sessionEpoch: sessionEpoch,
+    );
   }
 
   /// Same as `setUsersInCache` but treats null media fields as authoritative updates.
   /// Use this when the caller has fetched a full profile payload or explicitly updated profile media.
-  static void setUsersInCacheAuthoritative(List<User> users) {
-    _setUsersInCache(users, allowNullMediaOverwrite: true);
+  static void setUsersInCacheAuthoritative(List<User> users,
+      {int? sessionEpoch}) {
+    _setUsersInCache(
+      users,
+      allowNullMediaOverwrite: true,
+      sessionEpoch: sessionEpoch,
+    );
   }
 
   static void _setUsersInCache(
     List<User> users, {
     required bool allowNullMediaOverwrite,
+    int? sessionEpoch,
   }) {
+    // A write captured under a session that has since ended is dropped whole,
+    // so it reaches neither memory nor the persisted cache of the next account.
+    if (sessionEpoch != null &&
+        sessionEpoch != BackendApiService().authSessionEpoch) {
+      return;
+    }
     try {
       final now = DateTime.now().millisecondsSinceEpoch;
       for (final u in users) {
@@ -1107,6 +1126,7 @@ class UserService {
     String username, {
     bool includeAchievements = true,
   }) async {
+    final sessionEpoch = BackendApiService().authSessionEpoch;
     final trimmed = username.trim();
     if (trimmed.isEmpty) return null;
     final lookup = trimmed.replaceFirst(RegExp(r'^@+'), '').toLowerCase();
@@ -1219,7 +1239,7 @@ class UserService {
         ),
       );
 
-      setUsersInCacheAuthoritative([user]);
+      setUsersInCacheAuthoritative([user], sessionEpoch: sessionEpoch);
       try {
         _legacyCacheMissingCoverKey.remove(wallet);
       } catch (_) {}
@@ -1958,6 +1978,7 @@ class UserService {
   /// background (non-blocking) to avoid slowing down profile fetch paths.
   static Future<void> fetchAndUpdateUserStats(String walletAddress) async {
     if (walletAddress.isEmpty) return;
+    final sessionEpoch = BackendApiService().authSessionEpoch;
 
     final normalizedWallet = WalletUtils.canonical(walletAddress);
     if (normalizedWallet.isEmpty) return;
@@ -2013,7 +2034,7 @@ class UserService {
               profileImageUrl: null,
             );
 
-      setUsersInCache([updated]);
+      setUsersInCache([updated], sessionEpoch: sessionEpoch);
     } catch (e) {
       if (kDebugMode) {
         debugPrint('UserService.fetchAndUpdateUserStats: $e');
@@ -2028,6 +2049,7 @@ class UserService {
   /// - `batchFirstThreshold`: if the number of wallets >= this threshold, call the batch endpoint first.
   static Future<List<User>> getUsersByWallets(List<String> wallets,
       {bool forceRefresh = false, int batchFirstThreshold = 4}) async {
+    final sessionEpoch = BackendApiService().authSessionEpoch;
     final results = <User>[];
     final clean = wallets.where((w) => w.isNotEmpty).toSet().toList();
     if (clean.isEmpty) return results;
@@ -2156,7 +2178,8 @@ class UserService {
 
         // Populate internal cache with found users
         if (found.isNotEmpty) {
-          setUsersInCacheAuthoritative(found.values.toList());
+          setUsersInCacheAuthoritative(found.values.toList(),
+              sessionEpoch: sessionEpoch);
         }
 
         // Build ordered results using found when present, otherwise cached or fallback
@@ -2347,7 +2370,10 @@ class UserService {
       }
 
       // Populate internal cache with found users
-      if (found.isNotEmpty) setUsersInCacheAuthoritative(found.values.toList());
+      if (found.isNotEmpty) {
+        setUsersInCacheAuthoritative(found.values.toList(),
+            sessionEpoch: sessionEpoch);
+      }
 
       // Build ordered results using cached values when present, found when present, otherwise minimal fallback
       for (final w in wallets) {

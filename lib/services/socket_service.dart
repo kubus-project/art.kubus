@@ -128,6 +128,31 @@ class SocketService {
   void removeMessageReactionListener(NotificationCallback cb) =>
       _removeFromListeners(_messageReactionListeners, cb);
 
+  /// Socket.IO options for a handshake that carries [token].
+  ///
+  /// `forceNew` is required. Without it socket_io_client reuses the Manager it
+  /// cached for this URL, and that Manager returns the Socket it already holds.
+  /// That Socket keeps the `auth` it was constructed with, so after a
+  /// suspension and a fresh sign-in the handshake would carry the old JWT.
+  static Map<String, dynamic> handshakeOptionsFor(String token) {
+    return <String, dynamic>{
+      // Prefer WebSocket but allow polling fallback (some networks/proxies
+      // block WS, which otherwise surfaces as "No transports available").
+      'transports': ['websocket', 'polling'],
+      'autoConnect': false,
+      'forceNew': true,
+      // Default socket.io backoff caps at 5s forever; when the server is
+      // unreachable that means a radio wakeup every few seconds for the
+      // whole session. Let retries back off up to 30s instead — reconnects
+      // after transient drops still happen quickly (first retries stay ~1s).
+      'reconnectionDelay': 1000,
+      'reconnectionDelayMax': 30000,
+      'auth': token.isNotEmpty ? {'token': token} : {},
+      'extraHeaders':
+          token.isNotEmpty ? {'Authorization': 'Bearer $token'} : {},
+    };
+  }
+
   /// Connects socket to backend. If `baseUrl` is null uses `BackendApiService().baseUrl`.
   /// Returns true when connected, false on error/timeout.
   Future<bool> connect([String? baseUrl]) async {
@@ -183,21 +208,7 @@ class SocketService {
     if (_socket == null) {
       final token = (api.getAuthToken() ?? '').trim();
       _socketAuthToken = token.isNotEmpty ? token : null;
-      final options = <String, dynamic>{
-        // Prefer WebSocket but allow polling fallback (some networks/proxies
-        // block WS, which otherwise surfaces as "No transports available").
-        'transports': ['websocket', 'polling'],
-        'autoConnect': false,
-        // Default socket.io backoff caps at 5s forever; when the server is
-        // unreachable that means a radio wakeup every few seconds for the
-        // whole session. Let retries back off up to 30s instead — reconnects
-        // after transient drops still happen quickly (first retries stay ~1s).
-        'reconnectionDelay': 1000,
-        'reconnectionDelayMax': 30000,
-        'auth': token.isNotEmpty ? {'token': token} : {},
-        'extraHeaders':
-            token.isNotEmpty ? {'Authorization': 'Bearer $token'} : {},
-      };
+      final options = handshakeOptionsFor(token);
 
       _socketBaseUrl = resolvedBase;
       _socket = io.io(resolvedBase, options);

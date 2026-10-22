@@ -360,6 +360,14 @@ class BackendApiService
 
   http.Client _client = http.Client();
   AuthSessionCoordinator? _authCoordinator;
+
+  /// Bumped at every sign-out (see [clearAuth]). Account requests capture it when
+  /// they start and drop their local writes once it has moved on, so a response
+  /// that lands after sign-out cannot repopulate the next session's state.
+  int _authSessionEpoch = 0;
+
+  /// Epoch of the current authenticated session; changes at every sign-out.
+  int get authSessionEpoch => _authSessionEpoch;
   MediaUploadOptimizer _mediaUploadOptimizer = const MediaUploadOptimizer();
 
   // Used only for diagnostic logging; the actual behavior is determined by the
@@ -1175,6 +1183,7 @@ class BackendApiService
 
   /// Clear authentication
   Future<void> clearAuth() async {
+    _authSessionEpoch += 1;
     _authToken = null;
     _authWalletCanonical = null;
     _authCoordinator?.reset();
@@ -1200,6 +1209,10 @@ class BackendApiService
         await prefs.remove(key);
       }
       await prefs.remove(PreferenceKeys.authLastSignInMethodV1);
+      // Account-scoped email and security status; sign-in repopulates them.
+      for (final key in secureAccountStatusPrefKeys) {
+        await prefs.remove(key);
+      }
       AppConfig.debugPrint(
         'BackendApiService: Auth cleared from SharedPreferences',
       );
@@ -2043,6 +2056,7 @@ class BackendApiService
     required String? email,
     required bool emailVerified,
     required bool emailAuthEnabled,
+    int? sessionEpoch,
   }) async {
     await _backendApiPersistSecureAccountStatus(
       hasEmail: hasEmail,
@@ -2050,6 +2064,7 @@ class BackendApiService
       email: email,
       emailVerified: emailVerified,
       emailAuthEnabled: emailAuthEnabled,
+      sessionEpoch: sessionEpoch,
     );
   }
 
@@ -2061,14 +2076,18 @@ class BackendApiService
     return _backendApiGetCachedSecureAccountStatus(this);
   }
 
+  /// [sessionEpoch] is the epoch captured when the request that produced [body]
+  /// started. A body that arrives after sign-out is then discarded.
   Future<void> syncSecureAccountStatusFromResponse(
     Map<String, dynamic> body, {
     bool fetchIfMissing = true,
+    int? sessionEpoch,
   }) async {
     await _backendApiSyncSecureAccountStatusFromResponse(
       this,
       body,
       fetchIfMissing: fetchIfMissing,
+      sessionEpoch: sessionEpoch,
     );
   }
 

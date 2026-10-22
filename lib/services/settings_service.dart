@@ -10,6 +10,7 @@ import '../features/map/session/kubus_map_session_memory.dart';
 import 'backend_api_service.dart';
 import 'onboarding_state_service.dart';
 import 'push_notification_service.dart';
+import 'socket_service.dart';
 import 'pending_action_service.dart';
 import 'telemetry/telemetry_service.dart';
 
@@ -161,6 +162,9 @@ class SettingsService {
     // this account (camera, filters, search, selection) is gone.
     KubusMapSessionMemory.clearAll();
     await backendApi.clearAuth();
+    // The socket still holds the signed-out token; close it so neither a
+    // reconnect nor a new handshake can carry that token.
+    SocketService().disconnect();
     notificationProvider?.reset();
     profileProvider?.signOut();
     await savedItemsProvider?.resetForLogout();
@@ -195,6 +199,15 @@ class SettingsService {
       'notification_permission_granted',
       'last_inactive_ts',
       'lock_timeout_seconds',
+      // Profile privacy mirrors hold the previous account's preferences. The
+      // profile provider reads them before the next account's profile loads.
+      'private_profile',
+      'allow_messages',
+      'show_activity_status',
+      'show_achievements',
+      'showAchievements',
+      'share_last_visited_location',
+      'show_collection',
       // A remembered activation intent belongs to the session that captured
       // it. Leaving it behind would offer the previous user's pending Save or
       // Follow to whoever signs in next on this device.
