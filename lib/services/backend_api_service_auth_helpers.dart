@@ -37,29 +37,53 @@ Map<String, dynamic>? _backendApiMapOrNull(Object? value) {
   return null;
 }
 
+/// Preference keys that describe the signed-in account's email and security
+/// status. They are account data: every sign-out removes them, and the next
+/// sign-in repopulates them from the backend.
+const List<String> secureAccountStatusPrefKeys = <String>[
+  PreferenceKeys.secureAccountEmail,
+  PreferenceKeys.secureAccountEmailVerifiedV1,
+  PreferenceKeys.secureAccountStatusCacheV1,
+  PreferenceKeys.secureAccountStatusCacheTsV1,
+];
+
+/// Whether a request captured under [sessionEpoch] belongs to a session that
+/// has since ended. A null epoch means the caller did not capture one.
+bool _backendApiSessionEpochStale(int? sessionEpoch) =>
+    sessionEpoch != null &&
+    sessionEpoch != BackendApiService()._authSessionEpoch;
+
 Future<void> _backendApiPersistSecureAccountStatus({
   required bool hasEmail,
   required bool hasPassword,
   required String? email,
   required bool emailVerified,
   required bool emailAuthEnabled,
+  int? sessionEpoch,
 }) async {
   final prefs = await SharedPreferences.getInstance();
+  // Checked before every write: each await can yield to a sign-out, and a
+  // response for a session that has ended must not write the previous
+  // account's email or status back.
+  if (_backendApiSessionEpochStale(sessionEpoch)) return;
   final normalizedEmail = (email ?? '').trim();
   if (!hasEmail || normalizedEmail.isEmpty) {
     await prefs.remove(PreferenceKeys.secureAccountEmail);
+    if (_backendApiSessionEpochStale(sessionEpoch)) return;
     await prefs.setBool(
       PreferenceKeys.secureAccountEmailVerifiedV1,
       false,
     );
   } else {
     await prefs.setString(PreferenceKeys.secureAccountEmail, normalizedEmail);
+    if (_backendApiSessionEpochStale(sessionEpoch)) return;
     await prefs.setBool(
       PreferenceKeys.secureAccountEmailVerifiedV1,
       emailVerified,
     );
   }
 
+  if (_backendApiSessionEpochStale(sessionEpoch)) return;
   await prefs.setString(
     PreferenceKeys.secureAccountStatusCacheV1,
     jsonEncode(<String, dynamic>{
@@ -70,6 +94,7 @@ Future<void> _backendApiPersistSecureAccountStatus({
       'emailAuthEnabled': emailAuthEnabled,
     }),
   );
+  if (_backendApiSessionEpochStale(sessionEpoch)) return;
   await prefs.setInt(
     PreferenceKeys.secureAccountStatusCacheTsV1,
     DateTime.now().millisecondsSinceEpoch,
@@ -112,7 +137,8 @@ Future<Map<String, dynamic>> _backendApiGetCachedSecureAccountStatus(
     }
   }
 
-  final email = (prefs.getString(PreferenceKeys.secureAccountEmail) ?? '').trim();
+  final email =
+      (prefs.getString(PreferenceKeys.secureAccountEmail) ?? '').trim();
   final emailVerified =
       prefs.getBool(PreferenceKeys.secureAccountEmailVerifiedV1) ?? false;
   return <String, dynamic>{
@@ -128,6 +154,7 @@ Future<void> _backendApiSyncSecureAccountStatusFromResponse(
   BackendApiService service,
   Map<String, dynamic> body, {
   required bool fetchIfMissing,
+  int? sessionEpoch,
 }) async {
   try {
     if (!AppConfig.isFeatureEnabled('emailAuth')) return;
@@ -143,16 +170,18 @@ Future<void> _backendApiSyncSecureAccountStatusFromResponse(
         email: normalized['email']?.toString(),
         emailVerified: normalized['emailVerified'] == true,
         emailAuthEnabled: normalized['emailAuthEnabled'] != false,
+        sessionEpoch: sessionEpoch,
       );
       return;
     }
 
-    final user = service._mapOrNull(payload['user']) ?? service._mapOrNull(body['user']);
+    final user =
+        service._mapOrNull(payload['user']) ?? service._mapOrNull(body['user']);
     if (user != null) {
       final email = (user['email'] ?? '').toString().trim();
       final hasEmail = email.isNotEmpty;
-      final hasVerificationFlag =
-          user.containsKey('emailVerified') || user.containsKey('email_verified');
+      final hasVerificationFlag = user.containsKey('emailVerified') ||
+          user.containsKey('email_verified');
       if (hasEmail || hasVerificationFlag) {
         await service._persistSecureAccountStatus(
           hasEmail: hasEmail,
@@ -161,12 +190,15 @@ Future<void> _backendApiSyncSecureAccountStatusFromResponse(
           emailVerified:
               user['emailVerified'] == true || user['email_verified'] == true,
           emailAuthEnabled: true,
+          sessionEpoch: sessionEpoch,
         );
         return;
       }
     }
 
-    if (fetchIfMissing && (service._authToken ?? '').trim().isNotEmpty) {
+    if (fetchIfMissing &&
+        !_backendApiSessionEpochStale(sessionEpoch) &&
+        (service._authToken ?? '').trim().isNotEmpty) {
       await service.syncSecureAccountStatusToPrefs();
     }
   } catch (e) {

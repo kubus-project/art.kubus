@@ -9,6 +9,7 @@ import 'package:art_kubus/services/backend_api_service.dart';
 import 'package:art_kubus/services/http_client_factory.dart';
 import 'package:art_kubus/services/profile_package_service.dart';
 import 'package:art_kubus/services/user_service.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
@@ -467,6 +468,116 @@ void main() {
       'Fresh Backend Milestone',
     );
   });
+
+  group('sign-out ends the critical package session', () {
+    const secureStorageChannel =
+        MethodChannel('plugins.it_nomads.com/flutter_secure_storage');
+
+    setUp(() {
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(secureStorageChannel, (call) async => null);
+    });
+
+    tearDown(() {
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(secureStorageChannel, null);
+    });
+
+    test(
+        'a critical load in flight at sign-out does not re-create the persisted cache',
+        () async {
+      final prefs = await SharedPreferences.getInstance();
+      final releaseProfile = Completer<void>();
+      var profileRequested = false;
+      BackendApiService().setHttpClient(MockClient((request) async {
+        if (request.url.path.contains('/api/profiles/')) {
+          profileRequested = true;
+          await releaseProfile.future;
+        }
+        return _mockProfilePackageResponse(request, wallet: wallet);
+      }));
+
+      final load = ProfilePackageService.loadPublicProfileCriticalPackage(
+        wallet,
+        forceRefresh: true,
+      );
+      await _settle();
+      expect(profileRequested, isTrue);
+
+      // Sign-out ends the session first, then clears the package cache.
+      await BackendApiService().clearAuth();
+      await ProfilePackageService.clearForSignOut(prefs: prefs);
+      releaseProfile.complete();
+
+      expect(await load, isNull);
+      await _settle();
+      expect(prefs.getString('profile_critical_cache_v3'), isNull);
+
+      // Positive control: a load for the new session does persist its package,
+      // so the absence above is not an artifact of the persistence path.
+      final fresh =
+          await ProfilePackageService.loadPublicProfileCriticalPackage(
+        wallet,
+        forceRefresh: true,
+      );
+      expect(fresh?.user.id, wallet);
+      await _settle();
+      expect(prefs.getString('profile_critical_cache_v3'), isNotNull);
+    });
+
+    test('a superseded in-flight load leaves the newer load registered',
+        () async {
+      final prefs = await SharedPreferences.getInstance();
+      var gate = Completer<void>();
+      final requestsByGate = <Completer<void>, int>{};
+      BackendApiService().setHttpClient(MockClient((request) async {
+        if (request.url.path.contains('/api/profiles/')) {
+          final current = gate;
+          requestsByGate[current] = (requestsByGate[current] ?? 0) + 1;
+          await current.future;
+        }
+        return _mockProfilePackageResponse(request, wallet: wallet);
+      }));
+
+      final oldGate = gate;
+      final oldLoad = ProfilePackageService.loadPublicProfileCriticalPackage(
+        wallet,
+        forceRefresh: true,
+      );
+      await _settle();
+      expect(requestsByGate[oldGate], greaterThan(0));
+
+      await BackendApiService().clearAuth();
+      await ProfilePackageService.clearForSignOut(prefs: prefs);
+
+      gate = Completer<void>();
+      final newGate = gate;
+      final newLoad = ProfilePackageService.loadPublicProfileCriticalPackage(
+        wallet,
+        forceRefresh: true,
+      );
+      await _settle();
+      final newRequests = requestsByGate[newGate] ?? 0;
+      expect(newRequests, greaterThan(0));
+
+      // The superseded load finishes while the newer load is still in flight.
+      oldGate.complete();
+      expect(await oldLoad, isNull);
+
+      // A third call joins the newer load instead of starting its own.
+      final joined = ProfilePackageService.loadPublicProfileCriticalPackage(
+        wallet,
+        forceRefresh: true,
+      );
+      await _settle();
+      expect(requestsByGate[newGate] ?? 0, newRequests);
+
+      newGate.complete();
+      final loaded = await newLoad;
+      expect(loaded?.user.id, wallet);
+      expect(identical(await joined, loaded), isTrue);
+    });
+  });
 }
 
 Map<String, Object?> _legacyCriticalJson({required String wallet}) {
@@ -511,6 +622,9 @@ Map<String, Object?> _legacyCriticalJson({required String wallet}) {
     'achievementsUnavailable': false,
   };
 }
+
+Future<void> _settle() =>
+    Future<void>.delayed(const Duration(milliseconds: 50));
 
 http.Response _mockProfilePackageResponse(
   http.Request request, {

@@ -81,23 +81,31 @@ class _SecureAccountBannerCardState extends State<SecureAccountBannerCard> {
 
       if (!loadedFromCache) {
         try {
-          final status = await BackendApiService().getAccountSecurityStatus();
+          final api = BackendApiService();
+          // Captured before the request: a sign-out meanwhile must not cache the
+          // status of the account that just left.
+          final sessionEpoch = api.authSessionEpoch;
+          final status = await api.getAccountSecurityStatus();
           hasEmail = status['hasEmail'] == true;
           hasPassword = status['hasPassword'] == true;
           emailAuthEnabled = status['emailAuthEnabled'] != false;
 
-          await prefs.setString(
-            PreferenceKeys.secureAccountStatusCacheV1,
-            jsonEncode({
-              'hasEmail': hasEmail,
-              'hasPassword': hasPassword,
-              'emailAuthEnabled': emailAuthEnabled,
-            }),
-          );
-          await prefs.setInt(
-            PreferenceKeys.secureAccountStatusCacheTsV1,
-            nowMs,
-          );
+          if (api.authSessionEpoch == sessionEpoch) {
+            await prefs.setString(
+              PreferenceKeys.secureAccountStatusCacheV1,
+              jsonEncode({
+                'hasEmail': hasEmail,
+                'hasPassword': hasPassword,
+                'emailAuthEnabled': emailAuthEnabled,
+              }),
+            );
+          }
+          if (api.authSessionEpoch == sessionEpoch) {
+            await prefs.setInt(
+              PreferenceKeys.secureAccountStatusCacheTsV1,
+              nowMs,
+            );
+          }
         } catch (_) {
           final tokenEmail =
               (BackendApiService().getCurrentAuthEmail() ?? '').trim();

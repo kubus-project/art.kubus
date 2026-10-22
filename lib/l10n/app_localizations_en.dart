@@ -1252,6 +1252,13 @@ class AppLocalizationsEn extends AppLocalizations {
       'Your session has expired. Sign in again to continue.';
 
   @override
+  String get authAccountSuspendedTitle => 'Account suspended';
+
+  @override
+  String get authAccountSuspendedMessage =>
+      'Access to this account has been suspended, so you have been signed out. Your wallet on this device is not affected. If you think this is a mistake, contact support.';
+
+  @override
   String get authAccountCreatedProfileLoading =>
       'Account created. Loading your profile in the background.';
 

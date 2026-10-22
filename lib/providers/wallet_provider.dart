@@ -274,6 +274,21 @@ class WalletProvider extends ChangeNotifier {
   }
 
   @visibleForTesting
+  void seedAccountSessionForTesting({
+    required String email,
+    required Map<String, dynamic> backendProfile,
+    int collectionsCount = 0,
+    int achievementsUnlocked = 0,
+  }) {
+    _accountSignedIn = true;
+    _accountEmail = email;
+    _backendProfile = backendProfile;
+    _collectionsCount = collectionsCount;
+    _achievementsUnlocked = achievementsUnlocked;
+    notifyListeners();
+  }
+
+  @visibleForTesting
   void setCurrentWalletAddressForTesting(String? address) {
     final next = (address ?? '').trim();
     _currentWalletAddress = next.isEmpty ? null : next;
@@ -4177,6 +4192,30 @@ class WalletProvider extends ChangeNotifier {
     );
   }
 
+  /// Drops everything in memory that belongs to the signed-in ACCOUNT (backend
+  /// profile, token/transaction lists, collection and achievement counters).
+  /// Shared by [disconnectWallet] and [clearAccountSessionKeepWallet] so the two
+  /// cannot drift.
+  void _clearAccountData() {
+    _tokens.clear();
+    _transactions.clear();
+    _backendProfile = null;
+    _collectionsCount = 0;
+    _achievementsUnlocked = 0;
+    _achievementTokenTotal = 0.0;
+  }
+
+  /// Ends the in-memory account session after the backend ended it (a suspended
+  /// account) WITHOUT touching the wallet: keys, cached recovery phrase, the
+  /// connected signer and the persisted wallet identity all stay as they were.
+  /// Nothing of the previous account remains visible to the next sign-in.
+  Future<void> clearAccountSessionKeepWallet() async {
+    _clearAccountData();
+    _clearAccountShellState();
+    _clearLastError();
+    notifyListeners();
+  }
+
   Future<void> disconnectWallet(
       {bool preserveAuthenticatedWallet = true}) async {
     final fallbackWallet = preserveAuthenticatedWallet
@@ -4188,12 +4227,7 @@ class WalletProvider extends ChangeNotifier {
     await clearExternalSigner(notify: false);
     _currentWalletAddress = null;
     _wallet = null;
-    _tokens.clear();
-    _transactions.clear();
-    _backendProfile = null;
-    _collectionsCount = 0;
-    _achievementsUnlocked = 0;
-    _achievementTokenTotal = 0.0;
+    _clearAccountData();
     _cachedDerivedCandidate = null;
     _clearEncryptedWalletBackupState();
     // Clear cached mnemonic on explicit disconnect for security
