@@ -7,6 +7,11 @@ void main() {
   test('shell cold starts accept only benign launch parameters', () {
     expect(ShellRoutes.shouldWrapInitialUri(Uri.parse('/map')), isTrue);
     expect(
+      ShellRoutes.shouldWrapInitialUri(Uri.parse('/map?lang=en')),
+      isTrue,
+      reason: 'the direct public Open Art Map target must bootstrap the shell',
+    );
+    expect(
       ShellRoutes.shouldWrapInitialUri(
         Uri.parse('/map?utm_source=search&mode=guest&intent=discover'),
       ),

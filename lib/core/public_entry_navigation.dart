@@ -5,6 +5,10 @@ import 'package:flutter/widgets.dart';
 
 import '../services/share/share_types.dart';
 
+/// Direction of navigation that happens in the desktop shell instead of the
+/// root Navigator, so the URL observer cannot infer it from NavigatorObserver.
+enum ShellRouteNavigation { forward, back }
+
 /// Keeps browser history coherent for app-native public entry
 /// (docs/APP_NATIVE_PUBLIC_ENTRY.md).
 ///
@@ -51,6 +55,7 @@ class PublicEntryNavigation extends ChangeNotifier with WidgetsBindingObserver {
   bool _exitAttempted = false;
   bool _entryShellSeen = false;
   bool _replaceNextAddress = false;
+  ShellRouteNavigation? _shellRouteNavigation;
 
   /// How the app leaves the page; replaced in tests.
   @visibleForTesting
@@ -186,6 +191,19 @@ class PublicEntryNavigation extends ChangeNotifier with WidgetsBindingObserver {
   /// Re-evaluates claims after a visibility input outside the route stack
   /// (for example a map selection) changed.
   void visibilityChanged() => notifyListeners();
+
+  /// Records a desktop-shell navigation direction for the URL observer.
+  void recordShellRouteNavigation(ShellRouteNavigation navigation) {
+    _shellRouteNavigation = navigation;
+    notifyListeners();
+  }
+
+  /// Consumes the latest shell transition once.
+  ShellRouteNavigation? takeShellRouteNavigation() {
+    final navigation = _shellRouteNavigation;
+    _shellRouteNavigation = null;
+    return navigation;
+  }
 
   _EntityClaim? get _topVisibleClaim {
     for (var i = _claims.length - 1; i >= 0; i--) {
@@ -351,6 +369,7 @@ class PublicEntryNavigation extends ChangeNotifier with WidgetsBindingObserver {
     _exitAttempted = false;
     _entryShellSeen = false;
     _replaceNextAddress = false;
+    _shellRouteNavigation = null;
     exitApp = SystemNavigator.pop;
   }
 }

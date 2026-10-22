@@ -61,6 +61,7 @@ class UrlCoherenceObserver extends NavigatorObserver {
   bool _scheduled = false;
   bool _pushedSinceSync = false;
   bool _replacedSinceSync = false;
+  ShellRouteNavigation? _pendingShellNavigation;
 
   /// The URL the observer believes the address bar currently shows.
   @visibleForTesting
@@ -155,8 +156,15 @@ class UrlCoherenceObserver extends NavigatorObserver {
   }
 
   void _sync() {
+    final latestShellNavigation = _entityUrls.takeShellRouteNavigation();
+    if (latestShellNavigation != null) {
+      _pendingShellNavigation = latestShellNavigation;
+    }
     final desired = desiredUrl;
-    if (desired == null) return;
+    if (desired == null) {
+      _pendingShellNavigation = null;
+      return;
+    }
     // The browser is on the URL that opened the app. Off the web (and in
     // tests) assume the first named page is that URL.
     final current = _currentBrowserUrl();
@@ -164,9 +172,13 @@ class UrlCoherenceObserver extends NavigatorObserver {
     // Navigator can update browser history after the first post-frame report.
     // Compare with the live location as well as our last write so that an
     // unchanged pending entry claim repairs that later shell-route overwrite.
-    if (desired == _shownUrl && (current == null || current == desired)) return;
+    if (desired == _shownUrl && (current == null || current == desired)) {
+      _pendingShellNavigation = null;
+      return;
+    }
     if (current == desired) {
       _shownUrl = desired;
+      _pendingShellNavigation = null;
       return;
     }
     _shownUrl = desired;
@@ -176,6 +188,16 @@ class UrlCoherenceObserver extends NavigatorObserver {
       // replaces its history entry: Back must not return to the page it
       // replaced, which would only redirect again.
       (_reportReplace ?? _report)(desired);
+      _pendingShellNavigation = null;
+      return;
+    }
+    final shellNavigation = _pendingShellNavigation;
+    if (shellNavigation == ShellRouteNavigation.forward) {
+      _report(desired);
+      return;
+    }
+    if (shellNavigation == ShellRouteNavigation.back) {
+      (_reportBack ?? _report)(desired);
       return;
     }
     // A change that no page push caused is the visitor going back (a pop, or an

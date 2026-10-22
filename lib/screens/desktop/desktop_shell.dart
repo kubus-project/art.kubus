@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:pointer_interceptor/pointer_interceptor.dart';
 import 'package:provider/provider.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
+import '../../core/public_entry_navigation.dart';
 import '../../providers/app_refresh_provider.dart';
 import '../../providers/chat_provider.dart';
 import '../../providers/collab_provider.dart';
@@ -316,6 +317,9 @@ class _DesktopShellState extends State<DesktopShell>
         _closeFunctionsPanel();
       }
     }
+    PublicEntryNavigation.instance.recordShellRouteNavigation(
+      ShellRouteNavigation.forward,
+    );
     setState(() {
       _screenStack.add(screen);
       if (!_dispatchingInitialCanonicalEntry) {
@@ -329,6 +333,9 @@ class _DesktopShellState extends State<DesktopShell>
   /// Pop a screen from the in-shell stack
   void _popScreenFromStack() {
     if (_screenStack.isNotEmpty) {
+      PublicEntryNavigation.instance.recordShellRouteNavigation(
+        ShellRouteNavigation.back,
+      );
       setState(() {
         _screenStack.removeLast();
         _canonicalPublicEntryTarget = null;
@@ -340,6 +347,11 @@ class _DesktopShellState extends State<DesktopShell>
 
   /// Navigate to a specific route within the shell (clears screen stack)
   void _navigateToRoute(String route) {
+    if (route != _activeRoute || _screenStack.isNotEmpty) {
+      PublicEntryNavigation.instance.recordShellRouteNavigation(
+        ShellRouteNavigation.forward,
+      );
+    }
     final leavingExplore = _activeRoute == '/explore' && route != '/explore';
     if (leavingExplore) {
       _deactivateExploreTutorial(reason: 'desktop-shell-route-change');
@@ -464,6 +476,12 @@ class _DesktopShellState extends State<DesktopShell>
     if (!isSignedIn && item.route == _web3EntryRoute) {
       unawaited(_activateWeb3Capability());
       return;
+    }
+
+    if (_activeRoute != item.route || _screenStack.isNotEmpty) {
+      PublicEntryNavigation.instance.recordShellRouteNavigation(
+        ShellRouteNavigation.forward,
+      );
     }
 
     final leavingExplore =
@@ -1166,6 +1184,9 @@ class _DesktopShellState extends State<DesktopShell>
     if (_activeRoute == '/explore') {
       _deactivateExploreTutorial(reason: 'desktop-shell-wallet-route');
     }
+    PublicEntryNavigation.instance.recordShellRouteNavigation(
+      ShellRouteNavigation.forward,
+    );
     setState(() {
       _activeRoute = _walletRoute;
       _screenStack.clear();

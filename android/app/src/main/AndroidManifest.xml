@@ -127,6 +127,8 @@
                 <data android:scheme="https" android:host="app.kubus.site" android:pathPrefix="/sl/zemljevid/" />
                 <data android:scheme="https" android:host="app.kubus.site" android:pathPrefix="/en/collectibles/" />
                 <data android:scheme="https" android:host="app.kubus.site" android:pathPrefix="/sl/zbirateljski-predmeti/" />
+                <!-- Direct interactive map target used by public entity actions. -->
+                <data android:scheme="https" android:host="app.kubus.site" android:path="/map" />
             </intent-filter>
         </activity>
         <!-- Don't delete the meta-data below.

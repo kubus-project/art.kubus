@@ -11,16 +11,20 @@ void dispatchPublicEntityRouteParsed({
   required String type,
   required String id,
   required String path,
+  required String locale,
 }) {
-  _dispatch('kubus:public-entity-route-parsed', type: type, id: id, path: path);
+  _dispatch('kubus:public-entity-route-parsed',
+      type: type, id: id, path: path, locale: locale);
 }
 
 void dispatchPublicEntityReady({
   required String type,
   required String id,
   required String path,
+  required String locale,
 }) {
-  _dispatch('kubus:public-entity-ready', type: type, id: id, path: path);
+  _dispatch('kubus:public-entity-ready',
+      type: type, id: id, path: path, locale: locale);
 }
 
 Map<String, dynamic>? readPublicEntityBootstrap() {
@@ -42,11 +46,13 @@ void _dispatch(
   required String type,
   required String id,
   required String path,
+  required String locale,
 }) {
   final detail = jsonEncode(<String, String>{
     'type': type,
     'id': id,
     'path': path,
+    'locale': locale,
   }).toJS;
   web.window.dispatchEvent(
     web.CustomEvent(eventName, web.CustomEventInit(detail: detail)),

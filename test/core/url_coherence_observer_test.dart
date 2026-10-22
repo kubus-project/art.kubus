@@ -320,4 +320,83 @@ void main() {
         reason: 'an ordinary push still adds an entry');
     observer.dispose();
   });
+
+  testWidgets(
+      'desktop shell forward after reload keeps entity history and back restores it',
+      (tester) async {
+    const entryUrl = '/en/artworks/a1?source=share#cover';
+    final entryNavigation = PublicEntryNavigation.instance;
+    entryNavigation.setEntry(
+      type: ShareEntityType.artwork,
+      entityId: 'a1',
+      browserRoute: entryUrl,
+      shellRoute: '/main',
+    );
+    final forward = <String>[];
+    final back = <String>[];
+    String? browserUrl = entryUrl;
+    final observer = UrlCoherenceObserver(
+      enabled: true,
+      report: (url) {
+        forward.add(url);
+        browserUrl = url;
+      },
+      reportBack: (url) {
+        back.add(url);
+        browserUrl = url;
+      },
+      currentBrowserUrl: () => browserUrl,
+      entityUrls: entryNavigation,
+    );
+    addTearDown(observer.dispose);
+
+    var entityVisible = true;
+    Object? claim;
+    late StateSetter setEntityVisible;
+    Widget buildEntity(BuildContext context) => StatefulBuilder(
+          builder: (context, setState) {
+            setEntityVisible = setState;
+            claim ??= entryNavigation.claim(
+              context,
+              type: ShareEntityType.artwork,
+              entityId: 'a1',
+              localizedPath: (_) => '/en/artworks/a1',
+              isShowing: () => entityVisible,
+            );
+            return Text(entityVisible ? 'reloaded entity' : 'shell page');
+          },
+        );
+    await tester.pumpWidget(MaterialApp(
+      navigatorObservers: <NavigatorObserver>[observer],
+      initialRoute: '/main',
+      onGenerateInitialRoutes: (_) => <Route<dynamic>>[
+        MaterialPageRoute<void>(
+          settings: const RouteSettings(name: '/main'),
+          builder: buildEntity,
+        ),
+      ],
+      onGenerateRoute: (settings) => MaterialPageRoute<void>(
+        settings: settings,
+        builder: buildEntity,
+      ),
+    ));
+    await tester.pumpAndSettle();
+
+    expect(entryNavigation.visibleEntityUrl, entryUrl);
+    expect(browserUrl, entryUrl);
+
+    entryNavigation.recordShellRouteNavigation(ShellRouteNavigation.forward);
+    setEntityVisible(() => entityVisible = false);
+    entryNavigation.visibilityChanged();
+    await tester.pumpAndSettle();
+    expect(forward, <String>['/main']);
+    expect(browserUrl, '/main');
+
+    entryNavigation.recordShellRouteNavigation(ShellRouteNavigation.back);
+    setEntityVisible(() => entityVisible = true);
+    entryNavigation.visibilityChanged();
+    await tester.pumpAndSettle();
+    expect(back, <String>[entryUrl]);
+    expect(browserUrl, entryUrl);
+  });
 }
