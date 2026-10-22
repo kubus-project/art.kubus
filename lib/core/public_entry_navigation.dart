@@ -259,11 +259,21 @@ class PublicEntryNavigation extends ChangeNotifier with WidgetsBindingObserver {
         entry.matches(claim.type, claim.entityId);
   }
 
+  /// Account gates a public entry can hand off to before its shell appears
+  /// (AppInitializer's sign-in redirect for an account-only entity).
+  static const Set<String> _accountGatePaths = <String>{
+    '/sign-in',
+    '/register'
+  };
+
   /// Called when a named page route is pushed. A pending entry that was never
   /// shown (its entity failed to load, or a sign-in page took its place) must
   /// not keep pinning its address once the visitor reaches a page that is
   /// neither the entry itself nor the shell beneath it. Pages pushed before the
-  /// entry's shell has appeared are startup plumbing and never count.
+  /// entry's shell has appeared are startup plumbing and never count, except
+  /// the account gate: a sign-in page that replaces the startup route is what
+  /// the visitor sees, so the address must follow it. The return target travels
+  /// in that page's arguments.
   void pageOpened(String? routeName) {
     final entry = _entry;
     final path = Uri.tryParse(routeName?.trim() ?? '')?.path;
@@ -272,7 +282,7 @@ class PublicEntryNavigation extends ChangeNotifier with WidgetsBindingObserver {
       _entryShellSeen = true;
       return;
     }
-    if (!_entryShellSeen) return;
+    if (!_entryShellSeen && !_accountGatePaths.contains(path)) return;
     _abandonUnclaimedEntryUnless((entry) {
       return path == Uri.tryParse(entry.browserRoute)?.path;
     });

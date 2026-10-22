@@ -22,6 +22,7 @@ class BrowserEntryRoute {
     this.longitude,
     this.zoom,
     this.historyIndex,
+    this.historyBack,
   });
 
   factory BrowserEntryRoute.fromUri(
@@ -52,6 +53,7 @@ class BrowserEntryRoute {
       longitude: intent?.lng,
       zoom: intent?.zoom,
       historyIndex: _stateInt(historyState, 'historyIndex'),
+      historyBack: _stateUri(historyState, 'historyBack'),
     );
   }
 
@@ -67,6 +69,11 @@ class BrowserEntryRoute {
   /// Position of this entry among the entries this page created, as recorded
   /// by [BrowserHistoryMirror]. Not part of the route's identity.
   final int? historyIndex;
+
+  /// The address of the entry directly below this one, when this page recorded
+  /// it. A reload keeps the browser's entries and this state, so it tells the
+  /// reloaded page which entry an in-app Back should step to. Not identity.
+  final Uri? historyBack;
 
   Map<String, Object?> toHistoryState() => <String, Object?>{
         'version': 1,
@@ -117,6 +124,11 @@ class BrowserEntryRoute {
     if (state is! Map) return null;
     final value = state[key];
     return value is int ? value : null;
+  }
+
+  static Uri? _stateUri(Object? state, String key) {
+    final value = _stateString(state, key);
+    return value == null ? null : Uri.tryParse(value);
   }
 
   static String? _stateString(Object? state, String key) {
@@ -182,6 +194,12 @@ class StartupBrowserRouteInformationProvider
     BrowserHistoryMirror? history,
   })  : history = history ?? BrowserHistoryMirror(),
         super(initialRouteInformation: initialRoute.toRouteInformation()) {
+    // A reload keeps the browser's entries: start the mirror where the page
+    // was, with the entry below it when this page recorded one.
+    this.history.restore(
+          initialRoute.visibleUri,
+          below: initialRoute.historyBack,
+        );
     routerReportsNewRouteInformation(
       initialRoute.toRouteInformation(),
       type: RouteInformationReportingType.neglect,
@@ -207,11 +225,16 @@ class StartupBrowserRouteInformationProvider
     };
     history.recordReport(routeInformation.uri, replace: replace);
     final state = routeInformation.state;
+    final below = history.below;
     super.routerReportsNewRouteInformation(
       RouteInformation(
         uri: routeInformation.uri,
         state: state is Map
-            ? <Object?, Object?>{...state, 'historyIndex': history.cursor}
+            ? <Object?, Object?>{
+                ...state,
+                'historyIndex': history.cursor,
+                if (below != null) 'historyBack': below.toString(),
+              }
             : state,
       ),
       type: type,
@@ -232,6 +255,19 @@ class BrowserHistoryMirror {
   int get cursor => _cursor;
 
   Uri? get current => _uris.isEmpty ? null : _uris[_cursor];
+
+  /// The entry directly below the current one, or null.
+  Uri? get below => _cursor > 0 ? _uris[_cursor - 1] : null;
+
+  /// Starts the mirror at the entry a (re)loaded page shows, seeding the entry
+  /// below it when the page recorded one. Without that seed the first in-app
+  /// Back would push a second copy of the page below.
+  void restore(Uri current, {Uri? below}) {
+    _uris
+      ..clear()
+      ..addAll(below == null ? <Uri>[current] : <Uri>[below, current]);
+    _cursor = below == null ? 0 : 1;
+  }
 
   /// Whether [a] and [b] are the same browser location (path, query, fragment).
   static bool sameLocation(Uri? a, Uri? b) {
@@ -309,7 +345,8 @@ class BrowserEntryRouterDelegate extends RouterDelegate<BrowserEntryRoute>
     this.restoreCooldown = const Duration(milliseconds: 800),
     GlobalKey<NavigatorState>? navigatorKey,
   })  : navigatorKey = navigatorKey ?? GlobalKey<NavigatorState>(),
-        _configuration = initialConfiguration;
+        _configuration = initialConfiguration,
+        _shownRoute = initialConfiguration;
 
   @override
   final GlobalKey<NavigatorState> navigatorKey;
@@ -332,7 +369,13 @@ class BrowserEntryRouterDelegate extends RouterDelegate<BrowserEntryRoute>
 
   Timer? _restoreCooldownTimer;
   BrowserEntryRoute? _deferredRestore;
+
+  /// The address the browser shows: the latest traversal or visible report.
   BrowserEntryRoute _configuration;
+
+  /// The page the Navigator shows. It trails [_configuration] while a restore
+  /// is deferred, and it is what a traversal is compared against.
+  BrowserEntryRoute _shownRoute;
   bool _restoringRoute = false;
   Uri? _expectedBackUri;
 
@@ -348,9 +391,13 @@ class BrowserEntryRouterDelegate extends RouterDelegate<BrowserEntryRoute>
   /// [replace] rewrites the current browser entry instead of adding one, for
   /// corrections the visitor did not navigate to.
   void reportVisibleUri(Uri uri, {bool replace = false}) {
-    if (_restoringRoute) return;
+    // While a traversal waits out the cooldown, the address already names the
+    // page the browser moved to. A report from the page still starting up would
+    // overwrite that entry and the deferred restore would then re-push it.
+    if (_restoringRoute || _deferredRestore != null) return;
     _expectedBackUri = null;
     final next = _configuration.withVisibleUri(uri);
+    _shownRoute = next;
     if (next == _configuration) return;
     _configuration = next;
     final context = navigatorKey.currentContext;
@@ -366,7 +413,9 @@ class BrowserEntryRouterDelegate extends RouterDelegate<BrowserEntryRoute>
   /// history stays [.., Home] rather than gaining a second Home; otherwise it is
   /// an ordinary visible-address change.
   void reportVisibleBack(Uri uri) {
-    if (_restoringRoute) return;
+    // Same window as reportVisibleUri: the browser already names the page a
+    // deferred restore will show, so this visible change must not reach it.
+    if (_restoringRoute || _deferredRestore != null) return;
     final next = _configuration.withVisibleUri(uri);
     if (next == _configuration) return;
     final mirror = history;
@@ -375,6 +424,7 @@ class BrowserEntryRouterDelegate extends RouterDelegate<BrowserEntryRoute>
       reportVisibleUri(uri);
       return;
     }
+    _shownRoute = next;
     _configuration = next;
     _expectedBackUri = uri;
     step();
@@ -404,22 +454,18 @@ class BrowserEntryRouterDelegate extends RouterDelegate<BrowserEntryRoute>
     final arrivedByInAppBack = expectedBack != null &&
         BrowserHistoryMirror.sameLocation(
             expectedBack, configuration.visibleUri);
-    final changed = configuration != _configuration && !arrivedByInAppBack;
-    final fragmentOnlyChange = configuration.visibleUri.replace(fragment: '') ==
-            _configuration.visibleUri.replace(fragment: '') &&
-        configuration.shellRoute == _configuration.shellRoute &&
-        configuration.entityType == _configuration.entityType &&
-        configuration.entityId == _configuration.entityId &&
-        configuration.markerId == _configuration.markerId &&
-        configuration.latitude == _configuration.latitude &&
-        configuration.longitude == _configuration.longitude &&
-        configuration.zoom == _configuration.zoom;
+    // Compared with the page on screen, never with the address of a restore
+    // still waiting out the cooldown: a fragment-only change to a deferred
+    // page must not replay that page's older fragment.
+    final sameScreen = _sameScreen(configuration, _shownRoute);
     _configuration = configuration;
     final navigator = navigatorKey.currentState;
-    // Browser hash-only navigation changes the address, not the selected
-    // Flutter screen. Keep the new fragment in the serialized configuration
-    // without replaying a deep-link bootstrap or replacing the live page.
-    if (changed && !fragmentOnlyChange && navigator != null) {
+    if (arrivedByInAppBack || sameScreen) {
+      // Browser hash-only navigation, or the browser returned to the page on
+      // screen. The Navigator already shows it, so a restore still waiting out
+      // the cooldown is now stale and is dropped.
+      _deferredRestore = null;
+    } else if (navigator != null) {
       if (_restoreCooldownTimer != null) {
         _deferredRestore = configuration;
       } else {
@@ -429,6 +475,19 @@ class BrowserEntryRouterDelegate extends RouterDelegate<BrowserEntryRoute>
     notifyListeners();
   }
 
+  /// Whether [a] and [b] show the same page. The fragment is not part of it:
+  /// browser hash-only navigation changes the address, not the selected screen.
+  static bool _sameScreen(BrowserEntryRoute a, BrowserEntryRoute b) =>
+      a.visibleUri.replace(fragment: '') ==
+          b.visibleUri.replace(fragment: '') &&
+      a.shellRoute == b.shellRoute &&
+      a.entityType == b.entityType &&
+      a.entityId == b.entityId &&
+      a.markerId == b.markerId &&
+      a.latitude == b.latitude &&
+      a.longitude == b.longitude &&
+      a.zoom == b.zoom;
+
   void _runRestore(BrowserEntryRoute configuration, NavigatorState navigator) {
     _restoringRoute = true;
     try {
@@ -436,13 +495,17 @@ class BrowserEntryRouterDelegate extends RouterDelegate<BrowserEntryRoute>
     } finally {
       _restoringRoute = false;
     }
+    _shownRoute = configuration;
     if (restoreCooldown == Duration.zero) return;
     _restoreCooldownTimer = Timer(restoreCooldown, () {
       _restoreCooldownTimer = null;
       final deferred = _deferredRestore;
       _deferredRestore = null;
       final current = navigatorKey.currentState;
-      if (deferred != null && current != null) _runRestore(deferred, current);
+      // A deferred page the screen already shows needs no second startup.
+      if (deferred == null || current == null) return;
+      if (_sameScreen(deferred, _shownRoute)) return;
+      _runRestore(deferred, current);
     });
   }
 

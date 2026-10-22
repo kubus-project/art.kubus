@@ -1021,8 +1021,11 @@ class _ArtKubusState extends State<ArtKubus> with WidgetsBindingObserver {
     return observer;
   })();
 
-  late final BrowserEntryRoute _webInitialRoute =
-      BrowserEntryRoute.fromUri(_webStartupUri());
+  // The stored state lets a reloaded page keep its entry's history position.
+  late final BrowserEntryRoute _webInitialRoute = BrowserEntryRoute.fromUri(
+    _webStartupUri(),
+    historyState: currentBrowserHistoryState(),
+  );
   final BrowserHistoryMirror _webHistory = BrowserHistoryMirror();
   late final StartupBrowserRouteInformationProvider
       _webRouteInformationProvider = StartupBrowserRouteInformationProvider(

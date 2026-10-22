@@ -1,4 +1,6 @@
 import 'package:art_kubus/core/browser_entry_router.dart';
+import 'package:art_kubus/core/public_entry_navigation.dart';
+import 'package:art_kubus/core/url_coherence_observer.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -495,6 +497,241 @@ void main() {
     provider.dispose();
     delegate.dispose();
   });
+
+  testWidgets(
+      'a page starting up during a deferred traversal cannot overwrite the '
+      'entry the browser moved to', (tester) async {
+    final navigation = PublicEntryNavigation.instance;
+    navigation.resetForTest();
+    addTearDown(navigation.resetForTest);
+    const home = '/main';
+    const first = '/en/artworks/a1';
+    const second = '/en/events/e1';
+    String? browserUrl = home;
+    final browserReports = <String>[];
+    final restored = <String>[];
+    // The observer is wired exactly as main.dart wires it to the delegate.
+    late final BrowserEntryRouterDelegate delegate;
+    final observer = UrlCoherenceObserver(
+      enabled: true,
+      report: (url) => delegate.reportVisibleUri(Uri.parse(url)),
+      reportBack: (url) => delegate.reportVisibleBack(Uri.parse(url)),
+      reportReplace: (url) =>
+          delegate.reportVisibleUri(Uri.parse(url), replace: true),
+      entityUrls: navigation,
+      currentBrowserUrl: () => browserUrl,
+    );
+    addTearDown(observer.dispose);
+    delegate = BrowserEntryRouterDelegate(
+      navigatorKey: GlobalKey<NavigatorState>(),
+      initialConfiguration: BrowserEntryRoute.fromUri(Uri.parse(home)),
+      onGenerateInitialRoutes: (name) => <Route<dynamic>>[
+        MaterialPageRoute<void>(
+          settings: RouteSettings(name: name),
+          builder: (_) => const Scaffold(body: Text('shell')),
+        ),
+      ],
+      onGenerateRoute: (settings) => MaterialPageRoute<void>(
+        settings: settings,
+        builder: (_) => const Scaffold(body: Text('other')),
+      ),
+      observers: <NavigatorObserver>[observer],
+      restoreRoute: (configuration, navigator) {
+        final name = configuration.visibleUri.toString();
+        restored.add(name);
+        navigator.pushAndRemoveUntil(
+          MaterialPageRoute<void>(
+            settings: RouteSettings(name: name),
+            builder: (_) => Scaffold(body: Text('page $name')),
+          ),
+          (_) => false,
+        );
+      },
+    );
+    final provider = _RecordingProvider(
+      BrowserEntryRoute.fromUri(Uri.parse(home)),
+      BrowserHistoryMirror(),
+      (info, type) {
+        browserReports.add(info.uri.toString());
+        browserUrl = info.uri.toString();
+      },
+    );
+    await tester.pumpWidget(MaterialApp.router(
+      routeInformationProvider: provider,
+      routeInformationParser: parser,
+      routerDelegate: delegate,
+    ));
+    await tester.pumpAndSettle();
+
+    // Back to the artwork: its restore starts and the cooldown begins.
+    browserUrl = first;
+    await delegate.setNewRoutePath(BrowserEntryRoute.fromUri(Uri.parse(first)));
+    await tester.pumpAndSettle();
+    expect(restored, <String>[first]);
+    expect(find.text('page $first'), findsOneWidget);
+    browserReports.clear();
+
+    // Back again to the event before the artwork has finished starting. Its
+    // startup then reports its own address while the browser shows the event.
+    browserUrl = second;
+    await delegate
+        .setNewRoutePath(BrowserEntryRoute.fromUri(Uri.parse(second)));
+    navigation.visibilityChanged();
+    await tester.pump();
+    expect(browserReports, isNot(contains(first)),
+        reason: 'the starting page must not overwrite the entry the browser '
+            'moved to');
+
+    // The cooldown ends: only the event is restored, and nothing re-pushes the
+    // artwork.
+    await tester.pump(const Duration(milliseconds: 801));
+    await tester.pumpAndSettle();
+    expect(restored, <String>[first, second]);
+    expect(find.text('page $second'), findsOneWidget);
+    expect(browserUrl, second);
+    expect(browserReports, isNot(contains(first)));
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    provider.dispose();
+  });
+
+  testWidgets(
+      'a traversal back to the page on screen drops the restore it deferred',
+      (tester) async {
+    const first = '/en/artworks/a1';
+    final restored = <String>[];
+    final delegate = _restoringDelegate(
+      BrowserEntryRoute.fromUri(Uri.parse('/main')),
+      restored,
+    );
+    await _pumpDelegate(tester, delegate);
+
+    await delegate.setNewRoutePath(BrowserEntryRoute.fromUri(Uri.parse(first)));
+    await delegate
+        .setNewRoutePath(BrowserEntryRoute.fromUri(Uri.parse('/en/events/e1')));
+    // The browser returns to the artwork (with a fragment) inside the cooldown.
+    await delegate.setNewRoutePath(
+        BrowserEntryRoute.fromUri(Uri.parse('$first#details')));
+    await tester.pump(const Duration(milliseconds: 801));
+
+    expect(restored, <String>[first],
+        reason: 'the artwork already on screen must not start a second time');
+    expect(delegate.currentConfiguration.visibleUri.fragment, 'details');
+    await tester.pumpWidget(const SizedBox.shrink());
+    delegate.dispose();
+  });
+
+  testWidgets(
+      'a fragment-only traversal during a cooldown restores the latest '
+      'fragment, not the deferred one', (tester) async {
+    final restored = <String>[];
+    final delegate = _restoringDelegate(
+      BrowserEntryRoute.fromUri(Uri.parse('/main')),
+      restored,
+    );
+    await _pumpDelegate(tester, delegate);
+
+    await delegate.setNewRoutePath(
+        BrowserEntryRoute.fromUri(Uri.parse('/en/artworks/a1')));
+    await delegate.setNewRoutePath(
+        BrowserEntryRoute.fromUri(Uri.parse('/en/events/e1#a')));
+    await delegate.setNewRoutePath(
+        BrowserEntryRoute.fromUri(Uri.parse('/en/events/e1#b')));
+    await tester.pump(const Duration(milliseconds: 801));
+
+    final replayed = Uri.parse(restored.last);
+    expect(replayed.path, '/en/events/e1');
+    expect(replayed.fragment, 'b',
+        reason: 'the deferred restore must show the live fragment');
+    await tester.pumpWidget(const SizedBox.shrink());
+    delegate.dispose();
+  });
+
+  testWidgets(
+      'a reloaded page restores the entry below it, so an in-app Back steps '
+      'the browser instead of pushing a second Home', (tester) async {
+    final artwork = BrowserEntryRoute.fromUri(
+      Uri.parse('/en/artworks/a1'),
+      historyState: <String, Object?>{
+        'historyIndex': 1,
+        'historyBack': '/main',
+      },
+    );
+    final history = BrowserHistoryMirror();
+    var steps = 0;
+    final delegate = _restoringDelegate(
+      artwork,
+      <String>[],
+      history: history,
+      stepBrowserBack: () => steps++,
+    );
+    final provider = StartupBrowserRouteInformationProvider(
+      artwork,
+      history: history,
+    );
+    await tester.pumpWidget(MaterialApp.router(
+      routeInformationProvider: provider,
+      routeInformationParser: parser,
+      routerDelegate: delegate,
+    ));
+    await tester.pumpAndSettle();
+
+    expect(history.cursor, 1, reason: 'the reloaded entry keeps its place');
+    delegate.reportVisibleBack(Uri.parse('/main'));
+    await tester.pumpAndSettle();
+
+    expect(steps, 1, reason: 'Home is the entry below: step back to it');
+    expect(history.cursor, 1, reason: 'no duplicate Home was pushed');
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    provider.dispose();
+    delegate.dispose();
+  });
+}
+
+/// Builds a delegate whose restores are recorded in [restored] and do not
+/// touch the Navigator. Restores start from the navigator the router shows.
+BrowserEntryRouterDelegate _restoringDelegate(
+  BrowserEntryRoute initial,
+  List<String> restored, {
+  BrowserHistoryMirror? history,
+  VoidCallback? stepBrowserBack,
+}) =>
+    BrowserEntryRouterDelegate(
+      navigatorKey: GlobalKey<NavigatorState>(),
+      initialConfiguration: initial,
+      onGenerateInitialRoutes: (name) => <Route<dynamic>>[
+        MaterialPageRoute<void>(
+          settings: RouteSettings(name: name),
+          builder: (_) => const Scaffold(body: Text('shell')),
+        ),
+      ],
+      onGenerateRoute: (settings) => MaterialPageRoute<void>(
+        settings: settings,
+        builder: (_) => const Scaffold(body: Text('other')),
+      ),
+      observers: const <NavigatorObserver>[],
+      restoreRoute: (configuration, _) =>
+          restored.add(configuration.visibleUri.toString()),
+      history: history,
+      stepBrowserBack: stepBrowserBack,
+    );
+
+Future<void> _pumpDelegate(
+  WidgetTester tester,
+  BrowserEntryRouterDelegate delegate,
+) async {
+  const parser = BrowserEntryRouteInformationParser();
+  final provider = PlatformRouteInformationProvider(
+    initialRouteInformation: delegate.currentConfiguration.toRouteInformation(),
+  );
+  addTearDown(provider.dispose);
+  await tester.pumpWidget(MaterialApp.router(
+    routeInformationProvider: provider,
+    routeInformationParser: parser,
+    routerDelegate: delegate,
+  ));
+  await tester.pumpAndSettle();
 }
 
 class _RecordingProvider extends StartupBrowserRouteInformationProvider {

@@ -4,3 +4,6 @@ import 'dart:ui_web' as ui_web;
 void stepBrowserHistoryBack() {
   ui_web.urlStrategy?.go(-1);
 }
+
+/// Web implementation: the state the Router stored with the current entry.
+Object? currentBrowserHistoryState() => ui_web.urlStrategy?.getState();

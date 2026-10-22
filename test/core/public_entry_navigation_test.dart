@@ -130,7 +130,7 @@ void main() {
       navigation.pageOpened('/');
       navigation.pageOpened(null);
       navigation.pageOpened('/en');
-      navigation.pageOpened('/sign-in');
+      // An account gate is not plumbing; the sign-in test below covers it.
       expect(navigation.pendingEntryUrl, entryUrl,
           reason: 'pages before the shell appears are startup plumbing');
 
@@ -280,6 +280,54 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(reports, <String>['/map']);
+      expect(navigation.pendingEntryUrl, isNull);
+      observer.dispose();
+    });
+
+    testWidgets(
+        'a sign-in gate that replaces a pending entry before its shell shows '
+        'takes over the address', (tester) async {
+      const entryUrl = '/en/artworks/a1?utm_source=qa';
+      navigation.setEntry(
+        type: ShareEntityType.artwork,
+        entityId: 'a1',
+        browserRoute: entryUrl,
+        shellRoute: '/main',
+      );
+      final reports = <String>[];
+      String? browserUrl = entryUrl;
+      final observer = UrlCoherenceObserver(
+        enabled: true,
+        report: (url) {
+          reports.add(url);
+          browserUrl = url;
+        },
+        entityUrls: navigation,
+        currentBrowserUrl: () => browserUrl,
+      );
+      final navigatorKey = GlobalKey<NavigatorState>();
+      await tester.pumpWidget(MaterialApp(
+        navigatorKey: navigatorKey,
+        navigatorObservers: <NavigatorObserver>[observer],
+        initialRoute: entryUrl,
+        onGenerateRoute: (settings) => MaterialPageRoute<void>(
+          settings: settings,
+          builder: (_) => Text('page ${settings.name}'),
+        ),
+      ));
+      await tester.pumpAndSettle();
+      expect(reports, isEmpty, reason: 'the pending entry keeps its address');
+
+      // AppInitializer hands an account-only entity to sign-in before the shell
+      // has appeared. The sign-in page is what the visitor sees now.
+      navigatorKey.currentState!.pushReplacementNamed(
+        '/sign-in',
+        arguments: <String, Object?>{'redirectRoute': entryUrl},
+      );
+      await tester.pumpAndSettle();
+
+      expect(reports, <String>['/sign-in']);
+      expect(browserUrl, '/sign-in');
       expect(navigation.pendingEntryUrl, isNull);
       observer.dispose();
     });
