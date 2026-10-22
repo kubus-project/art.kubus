@@ -269,6 +269,10 @@ class BrowserHistoryMirror {
   /// The entry directly below the current one, or null.
   Uri? get below => _cursor > 0 ? _uris[_cursor - 1] : null;
 
+  /// Whether the entry below is the one a reload restored from the page's own
+  /// history state, and no in-app push has moved past the current entry since.
+  bool _restoredBelowUnused = false;
+
   /// Starts the mirror at the entry a (re)loaded page shows, seeding the entry
   /// below it when the page recorded one. Without that seed the first in-app
   /// Back would push a second copy of the page below.
@@ -277,6 +281,16 @@ class BrowserHistoryMirror {
       ..clear()
       ..addAll(below == null ? <Uri>[current] : <Uri>[below, current]);
     _cursor = below == null ? 0 : 1;
+    _restoredBelowUnused = below != null;
+  }
+
+  /// Whether an in-app change the browser cannot step to may replace the
+  /// current entry: true once, for a reloaded entry whose restored entry below
+  /// is still unused. Taking it consumes it.
+  bool takeRestoredBelow() {
+    final unused = _restoredBelowUnused && below != null;
+    _restoredBelowUnused = false;
+    return unused;
   }
 
   /// Whether [a] and [b] are the same browser location (path, query, fragment).
@@ -308,6 +322,8 @@ class BrowserHistoryMirror {
       _uris.removeRange(_cursor + 1, _uris.length);
       _uris.add(uri);
       _cursor = _uris.length - 1;
+      // The entry below is now the one this push left, not the restored entry.
+      _restoredBelowUnused = false;
     }
   }
 
@@ -443,12 +459,16 @@ class BrowserEntryRouterDelegate extends RouterDelegate<BrowserEntryRoute>
     final mirror = history;
     final step = stepBrowserBack;
     if (mirror == null || step == null || !mirror.canStepBackTo(uri)) {
-      // The browser cannot step to [uri]. When this page recorded an entry
-      // below the current one (a reloaded entry keeps its historyBack, the app
-      // history it was opened from), the in-app Back replaces the entry it
-      // leaves so it adds nothing. A cold external entry has no recorded entry
-      // below, so the visible change is pushed and Back still returns to it.
-      reportVisibleUri(uri, replace: mirror?.below != null);
+      // The browser cannot step to [uri]. A reloaded entry keeps the app
+      // history it was opened from as the entry below (its historyBack). When
+      // the in-app Back returns to that entry's own shell, it replaces the
+      // entry it leaves so it adds nothing. Any other visible change (a related
+      // page opened forward, a marker, a cold external entry) is pushed, so the
+      // entry it leaves stays in the browser history and Back still returns.
+      final replace = mirror != null &&
+          mirror.takeRestoredBelow() &&
+          uri.path == _configuration.shellRoute;
+      reportVisibleUri(uri, replace: replace);
       return;
     }
     _shownRoute = next;

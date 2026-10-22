@@ -463,6 +463,98 @@ void main() {
     delegate.dispose();
   });
 
+  testWidgets(
+      'an in-app change the browser cannot step to pushes when no entry was '
+      'restored, so Back still returns to the entry left', (tester) async {
+    // A cold visit to a collection, then an artwork pushed from it: the
+    // entry below is app history this page recorded, not a restored one.
+    final collection = BrowserEntryRoute.fromUri(
+      Uri.parse('/en/collections/c1'),
+    );
+    final history = BrowserHistoryMirror();
+    var steps = 0;
+    final delegate = _restoringDelegate(
+      collection,
+      <String>[],
+      history: history,
+      stepBrowserBack: () => steps++,
+    );
+    final provider = StartupBrowserRouteInformationProvider(
+      collection,
+      history: history,
+    );
+    await tester.pumpWidget(MaterialApp.router(
+      routeInformationProvider: provider,
+      routeInformationParser: parser,
+      routerDelegate: delegate,
+    ));
+    await tester.pumpAndSettle();
+
+    delegate.reportVisibleUri(Uri.parse('/en/artworks/a1'));
+    await tester.pumpAndSettle();
+    expect(history.cursor, 1);
+
+    // A related artwork opened without a page push (a desktop panel) is a new
+    // entry: it must not overwrite artwork a1 in the browser history.
+    delegate.reportVisibleBack(Uri.parse('/en/artworks/b2'));
+    await tester.pumpAndSettle();
+
+    expect(steps, 0, reason: 'the browser cannot step to artwork b2');
+    expect(history.cursor, 2);
+    expect(history.below, Uri.parse('/en/artworks/a1'));
+    expect(history.current, Uri.parse('/en/artworks/b2'));
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    provider.dispose();
+    delegate.dispose();
+  });
+
+  testWidgets(
+      'a reloaded entry opened forward pushes the related page instead of '
+      'replacing the reloaded entry', (tester) async {
+    final artwork = BrowserEntryRoute.fromUri(
+      Uri.parse('/en/artworks/a1'),
+      historyState: <String, Object?>{
+        'serialCount': 2.0,
+        'state': <String, Object?>{
+          'historyIndex': 1,
+          'historyBack': '/en/collections/c1',
+        },
+      },
+    );
+    final history = BrowserHistoryMirror();
+    final delegate = _restoringDelegate(
+      artwork,
+      <String>[],
+      history: history,
+      stepBrowserBack: () {},
+    );
+    final provider = StartupBrowserRouteInformationProvider(
+      artwork,
+      history: history,
+    );
+    await tester.pumpWidget(MaterialApp.router(
+      routeInformationProvider: provider,
+      routeInformationParser: parser,
+      routerDelegate: delegate,
+    ));
+    await tester.pumpAndSettle();
+    expect(history.below, Uri.parse('/en/collections/c1'));
+
+    // Opening a related artwork on the reloaded page is not an in-app Back to
+    // its shell: the reloaded artwork a1 keeps its browser entry.
+    delegate.reportVisibleBack(Uri.parse('/en/artworks/b2'));
+    await tester.pumpAndSettle();
+
+    expect(history.cursor, 2);
+    expect(history.below, Uri.parse('/en/artworks/a1'));
+    expect(history.current, Uri.parse('/en/artworks/b2'));
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    provider.dispose();
+    delegate.dispose();
+  });
+
   testWidgets('a replacing report rewrites the entry instead of adding one',
       (tester) async {
     final entry = BrowserEntryRoute.fromUri(Uri.parse('/en/map/bad-marker'));
