@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:art_kubus/core/app_navigator.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
@@ -10,6 +11,7 @@ import 'package:art_kubus/services/auth_session_coordinator.dart';
 import 'package:art_kubus/services/backend_api_service.dart';
 import 'package:art_kubus/services/socket_service.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
@@ -23,6 +25,63 @@ import 'package:shared_preferences/shared_preferences.dart';
 const String _inactiveBody =
     '{"success":false,"error":"Account access is suspended",'
     '"errorCode":"ACCOUNT_INACTIVE"}';
+
+const MethodChannel _secureStorageChannel =
+    MethodChannel('plugins.it_nomads.com/flutter_secure_storage');
+
+/// In-memory platform secure storage, so the tests can prove the recovery
+/// phrase is never deleted.
+class _SecureStorage {
+  final Map<String, String> values = <String, String>{};
+  final List<String> deletedKeys = <String>[];
+
+  void install() {
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(_secureStorageChannel, (call) async {
+      final args = (call.arguments as Map?) ?? const {};
+      final key = args['key'] as String?;
+      switch (call.method) {
+        case 'read':
+          return values[key];
+        case 'write':
+          values[key!] = args['value'] as String;
+          return null;
+        case 'delete':
+          deletedKeys.add(key!);
+          values.remove(key);
+          return null;
+      }
+      return null;
+    });
+  }
+
+  void uninstall() {
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(_secureStorageChannel, null);
+  }
+}
+
+void _seedAccount(WalletProvider wallet) {
+  wallet.setCurrentWalletAddressForTesting('WalletAddr111');
+  wallet.seedAccountSessionForTesting(
+    email: 'suspended@example.com',
+    backendProfile: <String, dynamic>{'id': 'user-suspended'},
+    collectionsCount: 4,
+    achievementsUnlocked: 7,
+  );
+}
+
+/// Mirrors the JS-style error a Socket.IO client surfaces: `message` plus the
+/// middleware's `data`.
+class _ErrorLike {
+  _ErrorLike(this.message, this.data);
+
+  final String message;
+  final Object? data;
+
+  @override
+  String toString() => 'ErrorLike($message)';
+}
 
 class _Wallet extends WalletProvider {
   _Wallet() : super(deferInit: true);
@@ -250,6 +309,7 @@ void main() {
   group('SecurityGateProvider ends the session for a suspended account', () {
     late SecurityGateProvider gate;
     late _Wallet wallet;
+    late _SecureStorage storage;
 
     AuthFailureContext failure({String body = _inactiveBody}) =>
         AuthFailureContext(
@@ -267,8 +327,12 @@ void main() {
         'has_wallet': true,
       });
       BackendApiService().setAuthTokenForTesting(_jwt());
+      storage = _SecureStorage()..install();
+      storage.values['cached_mnemonic'] = 'alpha beta gamma';
+      storage.values['cached_mnemonic_ts'] = '1';
       gate = SecurityGateProvider(promptCooldown: Duration.zero);
       wallet = _Wallet();
+      _seedAccount(wallet);
       gate.bindDependencies(
         profileProvider: ProfileProvider(),
         walletProvider: wallet,
@@ -277,6 +341,7 @@ void main() {
     });
 
     tearDown(() {
+      storage.uninstall();
       BackendApiService().setAuthTokenForTesting(null);
     });
 
@@ -299,6 +364,19 @@ void main() {
       expect(prefs.getString('wallet_address'), 'WalletAddr111');
       expect(prefs.getBool('has_wallet'), isTrue);
       expect(wallet.disconnects, 0);
+
+      // The real provider no longer shows the previous account...
+      expect(wallet.accountSignedIn, isFalse);
+      expect(wallet.accountEmail, isNull);
+      expect(wallet.backendProfile, isNull);
+      expect(wallet.collectionsCount, 0);
+      expect(wallet.achievementsUnlocked, 0);
+      expect(wallet.tokens, isEmpty);
+      expect(wallet.transactions, isEmpty);
+      // ...while the wallet itself, its identity and its recovery phrase stay.
+      expect(wallet.currentWalletAddress, 'WalletAddr111');
+      expect(storage.values['cached_mnemonic'], 'alpha beta gamma');
+      expect(storage.deletedKeys, isNot(contains('cached_mnemonic')));
 
       expect(find.text('route:/sign-in'), findsOneWidget);
       expect(find.text('Account suspended'), findsOneWidget);
@@ -345,6 +423,43 @@ void main() {
     });
   });
 
+  group('WalletProvider.clearAccountSessionKeepWallet', () {
+    test('clears account state and keeps the wallet and its phrase', () async {
+      SharedPreferences.setMockInitialValues(<String, Object>{
+        'wallet_address': 'WalletAddr111',
+      });
+      final storage = _SecureStorage()..install();
+      addTearDown(storage.uninstall);
+      storage.values['cached_mnemonic'] = 'alpha beta gamma';
+      final wallet = _Wallet();
+      _seedAccount(wallet);
+      BackendApiService().setAuthTokenForTesting(null);
+      expect(wallet.accountSignedIn, isTrue);
+
+      await wallet.clearAccountSessionKeepWallet();
+
+      expect(wallet.accountSignedIn, isFalse);
+      expect(wallet.accountEmail, isNull);
+      expect(wallet.backendProfile, isNull);
+      expect(wallet.collectionsCount, 0);
+      expect(wallet.achievementsUnlocked, 0);
+      expect(wallet.currentWalletAddress, 'WalletAddr111');
+      expect(storage.values['cached_mnemonic'], 'alpha beta gamma');
+      expect(storage.deletedKeys, isEmpty);
+      final prefs = await SharedPreferences.getInstance();
+      expect(prefs.getString('wallet_address'), 'WalletAddr111');
+    });
+  });
+
+  test('production startup always registers the session coordinator', () {
+    final main = File('lib/main.dart').readAsStringSync();
+    expect(main, contains('SecurityGateProvider'));
+    expect(
+      main,
+      contains('BackendApiService().bindAuthCoordinator(provider)'),
+    );
+  });
+
   group('SocketService stops for a suspended account', () {
     final socket = SocketService();
     late _RecordingCoordinator coordinator;
@@ -389,6 +504,78 @@ void main() {
 
       expect(socket.debugAccountInactive, isTrue);
       expect(coordinator.failures, hasLength(1));
+    });
+
+    test('every shape the backend or client can produce is recognised', () {
+      final suspended = <String, dynamic>{
+        'message': 'Account access is suspended',
+        'data': <String, dynamic>{'code': 'SOCKET_AUTH_INACTIVE'},
+      };
+      final shapes = <String, Object?>{
+        'decoded map (server packet)': suspended,
+        'json string': jsonEncode(suspended),
+        'one-element list': <Object>[suspended],
+        'error-like object with data': _ErrorLike(
+          'Account access is suspended',
+          <String, dynamic>{'code': 'SOCKET_AUTH_INACTIVE'},
+        ),
+        'error-like object with message only': _ErrorLike(
+          'Account access is suspended',
+          null,
+        ),
+        'message text only': 'Account access is suspended',
+        'exception wrapping the text': Exception('Account access is suspended'),
+        'auth:error event': <String, dynamic>{
+          'error': 'Account access is suspended',
+          'code': 'ACCOUNT_INACTIVE',
+        },
+      };
+      shapes.forEach((name, shape) {
+        expect(
+          AccountInactiveSignal.isSocketError(shape),
+          isTrue,
+          reason: name,
+        );
+      });
+
+      final others = <String, Object?>{
+        'invalid token': <String, dynamic>{
+          'message': 'Authentication error',
+          'data': <String, dynamic>{'code': 'SOCKET_AUTH_INVALID'},
+        },
+        'auth required': <String, dynamic>{
+          'error': 'Authentication required',
+          'code': 'AUTH_REQUIRED',
+        },
+        'transport error': 'websocket error',
+        'plain error object': _ErrorLike('xhr poll error', null),
+        'null': null,
+      };
+      others.forEach((name, shape) {
+        expect(
+          AccountInactiveSignal.isSocketError(shape),
+          isFalse,
+          reason: name,
+        );
+      });
+    });
+
+    test('each shape drives the handler end to end', () async {
+      final shapes = <Object>[
+        jsonEncode(<String, dynamic>{
+          'data': <String, dynamic>{'code': 'SOCKET_AUTH_INACTIVE'},
+        }),
+        _ErrorLike('Account access is suspended', null),
+        'Account access is suspended',
+      ];
+      for (final shape in shapes) {
+        socket.debugResetAccountInactive();
+        coordinator.failures.clear();
+        socket.debugHandleServerAuthError(shape);
+        await Future<void>.delayed(Duration.zero);
+        expect(socket.debugAccountInactive, isTrue, reason: '$shape');
+        expect(coordinator.failures, hasLength(1), reason: '$shape');
+      }
     });
 
     test('a repeated event does not report twice', () async {

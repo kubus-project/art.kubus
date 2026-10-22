@@ -237,7 +237,7 @@ class SocketService {
       // Fail fast on connection errors.
       _socket!.on('connect_error', (err) {
         _log('connect_error: $err');
-        if (AccountInactiveSignal.isPayload(err)) {
+        if (AccountInactiveSignal.isSocketError(err)) {
           _handleAccountInactive();
           return;
         }
@@ -250,7 +250,7 @@ class SocketService {
       // Event-time rejection: the server emits `auth:error` and disconnects.
       _socket!.on('auth:error', (data) {
         _log('auth:error: $data');
-        if (AccountInactiveSignal.isPayload(data)) _handleAccountInactive();
+        if (AccountInactiveSignal.isSocketError(data)) _handleAccountInactive();
       });
     }
 
@@ -981,7 +981,9 @@ class SocketService {
 
   @visibleForTesting
   void debugHandleServerAuthError(dynamic payload) {
-    if (AccountInactiveSignal.isPayload(payload)) _handleAccountInactive();
+    if (AccountInactiveSignal.isSocketError(payload)) {
+      _handleAccountInactive();
+    }
   }
 
   @visibleForTesting

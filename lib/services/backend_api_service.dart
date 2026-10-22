@@ -1292,7 +1292,13 @@ class BackendApiService
   /// that ends the session. Returns whether a coordinator took it.
   Future<bool> reportAccountInactive({required String source}) async {
     final coordinator = _authCoordinator;
-    if (coordinator == null) return false;
+    if (coordinator == null) {
+      // Production binds the SecurityGateProvider at startup; without one the
+      // most that can be done here is to drop the credentials, never to keep a
+      // suspended session alive.
+      await clearAuth();
+      return false;
+    }
     await coordinator.handleAuthFailure(
       AuthFailureContext(
         statusCode: 403,

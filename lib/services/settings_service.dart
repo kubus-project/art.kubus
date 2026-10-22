@@ -168,7 +168,9 @@ class SettingsService {
       await PushNotificationService().cancelAllNotifications();
     } catch (_) {}
 
-    if (!preserveWallet) {
+    if (preserveWallet) {
+      await walletProvider.clearAccountSessionKeepWallet();
+    } else {
       await walletProvider.disconnectWallet(preserveAuthenticatedWallet: false);
     }
 

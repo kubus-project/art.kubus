@@ -50,6 +50,37 @@ class AccountInactiveSignal {
   /// Socket handshake middleware rejection (`connect_error`, `data.code`).
   static const String socketHandshakeCode = 'SOCKET_AUTH_INACTIVE';
 
+  /// The exact message both socket rejections carry. It is only a fallback for
+  /// a client that hands over text instead of the structured payload.
+  static const String suspendedMessage = 'Account access is suspended';
+
+  /// Whether a Socket.IO `connect_error` / `auth:error` argument names an
+  /// inactive account. The server sends `{message, data: {code}}` (a decoded
+  /// Map); a client may instead surface a JSON string, a one-element list, an
+  /// Error-like object exposing `.data` / `.message`, or just the message text.
+  static bool isSocketError(Object? error) {
+    if (error == null) return false;
+    if (error is Map || error is List) return isPayload(error);
+    if (error is String) {
+      final text = error.trim();
+      if (text.isEmpty) return false;
+      if (text.startsWith('{') || text.startsWith('[')) {
+        try {
+          if (isPayload(jsonDecode(text))) return true;
+        } catch (_) {}
+      }
+      return text.contains(suspendedMessage);
+    }
+    final dynamic dynamicError = error;
+    try {
+      if (isSocketError(dynamicError.data as Object?)) return true;
+    } catch (_) {}
+    try {
+      if (isSocketError(dynamicError.message as Object?)) return true;
+    } catch (_) {}
+    return isSocketError(error.toString());
+  }
+
   static bool isRestResponse({required int statusCode, String? body}) {
     if (statusCode != 403) return false;
     final raw = (body ?? '').trim();

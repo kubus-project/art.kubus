@@ -1256,7 +1256,7 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get authAccountSuspendedMessage =>
-      'Dostop do tega računa je suspendiran, zato si bil odjavljen. Denarnica na tej napravi ni prizadeta. Če meniš, da gre za napako, se obrni na podporo.';
+      'Dostop do tega računa je suspendiran, zato je bila seja končana. Denarnica na tej napravi ni prizadeta. Če meniš, da gre za napako, se obrni na podporo.';
 
   @override
   String get authAccountCreatedProfileLoading =>

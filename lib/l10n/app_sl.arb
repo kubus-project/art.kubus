@@ -541,7 +541,7 @@
   "@authAccountSuspendedTitle": {
     "description": "Naslov dialoga, prikazanega, ko zaledje sporoči, da je prijavljeni račun suspendiran in je bil uporabnik odjavljen."
   },
-  "authAccountSuspendedMessage": "Dostop do tega računa je suspendiran, zato si bil odjavljen. Denarnica na tej napravi ni prizadeta. Če meniš, da gre za napako, se obrni na podporo.",
+  "authAccountSuspendedMessage": "Dostop do tega računa je suspendiran, zato je bila seja končana. Denarnica na tej napravi ni prizadeta. Če meniš, da gre za napako, se obrni na podporo.",
   "@authAccountSuspendedMessage": {
     "description": "Sporočilo dialoga, prikazanega, ko zaledje sporoči, da je prijavljeni račun suspendiran in je bil uporabnik odjavljen."
   },
