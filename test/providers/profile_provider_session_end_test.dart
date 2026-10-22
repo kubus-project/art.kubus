@@ -99,6 +99,24 @@ class _HeldReviewApi implements ProfileBackendApi {
   Future<bool> isFollowing(String walletAddress) async => false;
 }
 
+/// Holds the account save open so a test can end the session while the save
+/// is still in flight.
+class _HeldSaveApi extends _HeldReviewApi {
+  final Completer<void> saveStarted = Completer<void>();
+  final Completer<Map<String, dynamic>> _save =
+      Completer<Map<String, dynamic>>();
+
+  void answerSave(Map<String, dynamic> saved) => _save.complete(saved);
+
+  @override
+  Future<Map<String, dynamic>> saveProfile(
+    Map<String, dynamic> profileData,
+  ) {
+    if (!saveStarted.isCompleted) saveStarted.complete();
+    return _save.future;
+  }
+}
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
@@ -156,5 +174,63 @@ void main() {
     for (final key in _mirrorKeys) {
       expect(prefs.get(key), isNull, reason: '$key written after sign-out');
     }
+  });
+
+  test('a load superseded by a session change releases the loading flag',
+      () async {
+    final api = _HeldReviewApi();
+    final provider = ProfileProvider(apiService: api);
+    final load = provider.loadAuthenticatedProfile();
+    await api.reviewStarted.future;
+
+    // A wallet switch re-issues the token without a sign-out, so nothing else
+    // clears the spinner for this load.
+    await BackendApiService().clearAuth();
+    api.answerReview(null);
+    await load;
+
+    expect(provider.isLoading, isFalse);
+  });
+
+  test('a profile save that finishes after sign-out restores no account state',
+      () async {
+    final api = _HeldSaveApi();
+    final provider = ProfileProvider(apiService: api);
+    final save = provider.saveProfile(
+      walletAddress: 'WalletAddr111',
+      username: 'person',
+      reloadStats: false,
+    );
+    await api.saveStarted.future;
+
+    // Sign-out lands while the save is in flight.
+    await BackendApiService().clearAuth();
+    provider.signOut();
+    api.answerSave(_account());
+
+    expect(await save, isFalse);
+    expect(provider.isSignedIn, isFalse);
+    final prefs = await SharedPreferences.getInstance();
+    expect(prefs.getString('wallet_address'), isNull);
+    expect(prefs.getString('username'), isNull);
+  });
+
+  test('a profile save for a session that stays open persists the account',
+      () async {
+    final api = _HeldSaveApi();
+    final provider = ProfileProvider(apiService: api);
+    final save = provider.saveProfile(
+      walletAddress: 'WalletAddr111',
+      username: 'person',
+      reloadStats: false,
+    );
+    await api.saveStarted.future;
+    api.answerSave(_account());
+
+    expect(await save, isTrue);
+    expect(provider.isSignedIn, isTrue);
+    final prefs = await SharedPreferences.getInstance();
+    expect(prefs.getString('wallet_address'), 'WalletAddr111');
+    expect(prefs.getString('username'), 'person');
   });
 }

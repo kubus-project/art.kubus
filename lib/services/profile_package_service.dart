@@ -222,7 +222,9 @@ class ProfilePackageService {
         wallet: wallet,
         value: watch.elapsedMilliseconds,
       );
-      _extendedInFlight.remove(inFlightKey);
+      if (identical(_extendedInFlight[inFlightKey], future)) {
+        _extendedInFlight.remove(inFlightKey);
+      }
     }
   }
 
@@ -872,7 +874,11 @@ class ProfilePackageService {
               : ProfilePackage.fromJson(map).critical;
           if (!critical.isComplete) continue;
           if (!critical.isFresh(const Duration(hours: 24))) continue;
-          if (sessionEpoch != _sessionEpoch) return;
+          if (sessionEpoch != _sessionEpoch) {
+            // The session that replaces this one loads its own copy.
+            _persistentCacheLoaded = false;
+            return;
+          }
           _storeCriticalPackage(critical, persist: false);
         } catch (_) {}
       }

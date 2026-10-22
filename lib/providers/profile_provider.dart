@@ -165,6 +165,16 @@ class ProfileProvider extends foundation.ChangeNotifier {
     _clearPreferenceSyncState();
   }
 
+  /// Releases the loading flag when a load returns without reaching its own
+  /// completion. A stale response, or a session change without a sign-out
+  /// (clearAuth on a wallet switch), leaves no newer load to clear it. A newer
+  /// load owns the flag, and a sign-out already reset it.
+  void _releaseStaleLoad(int requestEpoch) {
+    if (requestEpoch != _profileLoadEpoch || !_isLoading) return;
+    _isLoading = false;
+    notifyListeners();
+  }
+
   Future<SharedPreferences> _ensurePrefs() async {
     final existing = _prefs;
     if (existing != null) return existing;
@@ -551,9 +561,13 @@ class ProfileProvider extends foundation.ChangeNotifier {
     final nextValue = persona.storageValue;
     try {
       final prefs = await _ensurePrefs();
+      if (sessionEpoch != _accountSessionEpoch) return;
       await prefs.setString(_personaKeyForWallet(wallet), nextValue);
       await prefs.setBool(_personaOnboardedKeyForWallet(wallet), true);
     } catch (_) {}
+    // The rest writes the account; a session that ended while the prefs
+    // loaded keeps none of it.
+    if (sessionEpoch != _accountSessionEpoch) return;
 
     final existing = _currentUser?.preferences ?? _cachedPreferencesFromPrefs();
     final nextPrefs = existing.copyWith(persona: nextValue);
@@ -567,6 +581,7 @@ class ProfileProvider extends foundation.ChangeNotifier {
     }
 
     await _persistPreferences(nextPrefs, sessionEpoch: sessionEpoch);
+    if (sessionEpoch != _accountSessionEpoch) return;
 
     if (!persistToBackend) return;
     try {
@@ -757,6 +772,8 @@ class ProfileProvider extends foundation.ChangeNotifier {
       debugPrint('Error loading authenticated profile: $e');
       notifyListeners();
       rethrow;
+    } finally {
+      _releaseStaleLoad(requestEpoch);
     }
   }
 
@@ -997,6 +1014,8 @@ class ProfileProvider extends foundation.ChangeNotifier {
       _hasHydratedProfile = true;
       debugPrint('Error loading profile: $e');
       notifyListeners();
+    } finally {
+      _releaseStaleLoad(requestEpoch);
     }
   }
 
@@ -1076,6 +1095,9 @@ class ProfileProvider extends foundation.ChangeNotifier {
 
       // Always save to backend
       final savedProfileRaw = await _apiService.saveProfile(profileData);
+      // A sign-out that landed while the save was in flight owns the state
+      // now: a late response must not mark the signed-out session signed in.
+      if (sessionEpoch != _accountSessionEpoch) return false;
 
       debugPrint('ProfileProvider: raw saveProfile response: $savedProfileRaw');
 
@@ -1168,11 +1190,13 @@ class ProfileProvider extends foundation.ChangeNotifier {
 
       // Save to SharedPreferences
       final prefs = await _ensurePrefs();
+      if (sessionEpoch != _accountSessionEpoch) return false;
       if (walletAddress.isNotEmpty) {
         await prefs.setString('wallet_address', walletAddress);
       }
       final persistedUsername = _currentUser?.username ??
           (profileJson['username']?.toString() ?? '').trim();
+      if (sessionEpoch != _accountSessionEpoch) return false;
       if (persistedUsername.isNotEmpty) {
         await prefs.setString('username', persistedUsername);
       }
@@ -1283,6 +1307,7 @@ class ProfileProvider extends foundation.ChangeNotifier {
       final savedProfileRaw = await _apiService
           .saveProfile(profileData)
           .timeout(AppConfig.requestTimeout);
+      if (sessionEpoch != _accountSessionEpoch) return false;
       final raw = Map<String, dynamic>.from(savedProfileRaw);
       final nested = raw['data'];
       final candidate = nested is Map ? Map<String, dynamic>.from(nested) : raw;
@@ -1928,7 +1953,20 @@ class ProfileProvider extends foundation.ChangeNotifier {
     }
 
     final wallet = user.walletAddress.trim();
+    final sessionEpoch = _accountSessionEpoch;
     final epoch = ++_preferencesSaveEpoch;
+    // A session that ended while this write was in flight owns no sync state.
+    // Its pending payload belongs to that account, so it is dropped rather
+    // than retried under the next one.
+    bool sessionEnded() {
+      if (sessionEpoch == _accountSessionEpoch) return false;
+      if (epoch == _preferencesSaveEpoch) {
+        _clearPreferenceSyncState();
+        notifyListeners();
+      }
+      return true;
+    }
+
     _isSavingPreferences = true;
     _hasUnsyncedPreferences = true;
     _preferencesSaveError = null;
@@ -1961,6 +1999,7 @@ class ProfileProvider extends foundation.ChangeNotifier {
         );
       }
 
+      if (sessionEnded()) return false;
       if (epoch != _preferencesSaveEpoch) {
         final latest = _currentUser?.preferences ?? _cachedPreferences;
         if (latest != null &&
@@ -1977,6 +2016,7 @@ class ProfileProvider extends foundation.ChangeNotifier {
       notifyListeners();
       return true;
     } catch (e) {
+      if (sessionEnded()) return false;
       if (epoch == _preferencesSaveEpoch) {
         _isSavingPreferences = false;
         _hasUnsyncedPreferences = true;
