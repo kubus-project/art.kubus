@@ -435,6 +435,66 @@ void main() {
     provider.dispose();
     delegate.dispose();
   });
+
+  testWidgets(
+      'history traversals during a restore are coalesced to the latest one',
+      (tester) async {
+    final initial = BrowserEntryRoute.fromUri(Uri.parse('/main'));
+    final restored = <String>[];
+    final delegate = BrowserEntryRouterDelegate(
+      navigatorKey: GlobalKey<NavigatorState>(),
+      initialConfiguration: initial,
+      onGenerateInitialRoutes: (name) => <Route<dynamic>>[
+        MaterialPageRoute<void>(
+          settings: RouteSettings(name: name),
+          builder: (_) => const Scaffold(body: Text('shell')),
+        ),
+      ],
+      onGenerateRoute: (settings) => MaterialPageRoute<void>(
+        settings: settings,
+        builder: (_) => const Scaffold(body: Text('other')),
+      ),
+      observers: const <NavigatorObserver>[],
+      restoreRoute: (configuration, _) =>
+          restored.add(configuration.visibleUri.path),
+      restoreCooldown: const Duration(milliseconds: 800),
+    );
+    final provider = PlatformRouteInformationProvider(
+      initialRouteInformation: initial.toRouteInformation(),
+    );
+    await tester.pumpWidget(MaterialApp.router(
+      routeInformationProvider: provider,
+      routeInformationParser: parser,
+      routerDelegate: delegate,
+    ));
+    await tester.pumpAndSettle();
+
+    BrowserEntryRoute at(String path) =>
+        BrowserEntryRoute.fromUri(Uri.parse(path));
+    await delegate.setNewRoutePath(at('/en/collections/c1'));
+    expect(restored, <String>['/en/collections/c1']);
+
+    // Forward arrives while the first restore is still starting up, then a
+    // third traversal: only the last one is restored, once, after the cooldown.
+    await delegate.setNewRoutePath(at('/en/artworks/a1'));
+    await delegate.setNewRoutePath(at('/en/events/e1'));
+    expect(restored, <String>['/en/collections/c1'],
+        reason: 'nothing may be restored inside the cooldown');
+    expect(delegate.currentConfiguration.visibleUri.path, '/en/events/e1',
+        reason: 'the serialized address still follows the browser');
+
+    await tester.pump(const Duration(milliseconds: 801));
+    expect(restored, <String>['/en/collections/c1', '/en/events/e1']);
+
+    // Nothing pending: the next traversal after the cooldown is immediate.
+    await tester.pump(const Duration(milliseconds: 801));
+    await delegate.setNewRoutePath(at('/en/artworks/a1'));
+    expect(restored.last, '/en/artworks/a1');
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    provider.dispose();
+    delegate.dispose();
+  });
 }
 
 class _RecordingProvider extends StartupBrowserRouteInformationProvider {

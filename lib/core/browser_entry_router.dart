@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
@@ -304,6 +306,7 @@ class BrowserEntryRouterDelegate extends RouterDelegate<BrowserEntryRoute>
     required this.restoreRoute,
     this.history,
     this.stepBrowserBack,
+    this.restoreCooldown = const Duration(milliseconds: 800),
     GlobalKey<NavigatorState>? navigatorKey,
   })  : navigatorKey = navigatorKey ?? GlobalKey<NavigatorState>(),
         _configuration = initialConfiguration;
@@ -320,6 +323,15 @@ class BrowserEntryRouterDelegate extends RouterDelegate<BrowserEntryRoute>
   final BrowserHistoryMirror? history;
   final VoidCallback? stepBrowserBack;
 
+  /// A page restored from the address needs its startup (providers, shell,
+  /// entity) to run undisturbed: a second restore that lands while it is still
+  /// starting can leave the shell showing instead of the entity the address
+  /// names. History traversals arriving inside this window are coalesced and
+  /// only the latest is restored once it has elapsed.
+  final Duration restoreCooldown;
+
+  Timer? _restoreCooldownTimer;
+  BrowserEntryRoute? _deferredRestore;
   BrowserEntryRoute _configuration;
   bool _restoringRoute = false;
   Uri? _expectedBackUri;
@@ -408,13 +420,37 @@ class BrowserEntryRouterDelegate extends RouterDelegate<BrowserEntryRoute>
     // Flutter screen. Keep the new fragment in the serialized configuration
     // without replaying a deep-link bootstrap or replacing the live page.
     if (changed && !fragmentOnlyChange && navigator != null) {
-      _restoringRoute = true;
-      try {
-        restoreRoute(configuration, navigator);
-      } finally {
-        _restoringRoute = false;
+      if (_restoreCooldownTimer != null) {
+        _deferredRestore = configuration;
+      } else {
+        _runRestore(configuration, navigator);
       }
     }
     notifyListeners();
+  }
+
+  void _runRestore(BrowserEntryRoute configuration, NavigatorState navigator) {
+    _restoringRoute = true;
+    try {
+      restoreRoute(configuration, navigator);
+    } finally {
+      _restoringRoute = false;
+    }
+    if (restoreCooldown == Duration.zero) return;
+    _restoreCooldownTimer = Timer(restoreCooldown, () {
+      _restoreCooldownTimer = null;
+      final deferred = _deferredRestore;
+      _deferredRestore = null;
+      final current = navigatorKey.currentState;
+      if (deferred != null && current != null) _runRestore(deferred, current);
+    });
+  }
+
+  @override
+  void dispose() {
+    _restoreCooldownTimer?.cancel();
+    _restoreCooldownTimer = null;
+    _deferredRestore = null;
+    super.dispose();
   }
 }
