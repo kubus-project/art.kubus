@@ -79,6 +79,10 @@ Future<void> pumpProfileSurface(
   double textScale = 1.0,
   bool canonicalPublicEntry = false,
 
+  /// Sign in as the viewed profile on a public surface (the owner opening
+  /// their own canonical public profile URL).
+  bool viewerIsSubject = false,
+
   /// Give the viewed profile one achievement, so its recognition section
   /// renders (it is hidden when empty).
   bool withAchievements = false,
@@ -115,7 +119,8 @@ Future<void> pumpProfileSurface(
   final profileProvider = ProfileProvider();
   if (surface == ProfileSurface.mobileOwner ||
       surface == ProfileSurface.desktopOwner ||
-      surface == ProfileSurface.desktopOwnerInShell) {
+      surface == ProfileSurface.desktopOwnerInShell ||
+      viewerIsSubject) {
     profileProvider.setCurrentUser(_ownerProfileFrom(resolvedUser));
   }
 
