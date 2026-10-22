@@ -32,4 +32,3 @@ prepared, that run had produced no release artifact. Prior build-only output
 from an earlier app SHA is not the final candidate. Android signing, iOS
 signing, final web artifact checksums, end-to-end release qualification,
 production deployment, and publication are not asserted here.
-

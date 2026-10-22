@@ -163,4 +163,3 @@ git rev-list --left-right --cherry-pick --count origin/master...origin/dev
 
 The first count must be zero before ordinary development resumes. Do not squash
 the reconciliation or rewrite either protected branch.
-
