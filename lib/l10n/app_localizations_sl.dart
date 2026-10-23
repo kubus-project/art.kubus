@@ -4112,6 +4112,10 @@ class AppLocalizationsSl extends AppLocalizations {
       'Pred oddajo poveži denarnico.';
 
   @override
+  String get institutionHubApplicationWalletWhy =>
+      'Prijava se podpiše z vašo denarnico, zato pregled ostane vezan na denarnico, ki jo nadzorujete. Za brskanje po institucijah denarnica ni potrebna.';
+
+  @override
   String get institutionHubApplicationSubmittedToast =>
       'Prijava je oddana v pregled upravljanja.';
 
