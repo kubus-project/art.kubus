@@ -10,10 +10,10 @@ that the candidate is ready.
 
 | Surface | Observed state | Release consequence |
 | --- | --- | --- |
-| App | PR #358 head `085726e76b24c1a240f37a99d469e897aba17098`; full-tier CI run `39835198150` in progress | Await exact-head results and final artifact/evidence. |
-| Backend | Production `master` baseline `46c9b84fed42aff21463c788e5e13994689c7f73` is reported deployed on Oracle. PR #129 `1e94d5b278df7627fea4fe5f23e993d2b0966517` is open and green; its preview SSR suite passed 64/64. PR #130 `9f53af8a7bc71969daf3f7d3efdbfd058b172c54` is open and test-only. Marker strict-gate implementation is in progress with exact SHA pending. | Re-fetch repository state and require an explicit backend deployment plan for any source change. Existing production deployment is not proof that candidate backend changes are deployed. |
-| Admin | PR #18 head `a2d788804779baf63a6c091d4734ce04ea38a887`, source compatibility CI green | Exact-head browser acceptance remains open. |
-| Moderation data | 9,046 eligible production markers are unreviewed | Owner classification is blocked. No bulk approve/deindex. |
+| App | PR #358 head `a1629792c9dd4f26f2c41730cc38fe9b31c52560`; full-tier run `39876644908` passed, including required aggregate, Flutter/motion/community flags, web smoke and Android/iOS compilation. | Separate snapshot-fallback changes still require review, tests and final integrated acceptance. |
+| Backend | Oracle production baseline remains `46c9b84fed42aff21463c788e5e13994689c7f73`. Candidate PR #131 combines reviewed #129/#130; reviewed loading-layout fix is integrated at `3e09a1a301454dd1ff269dd07f2cfc10ef3226dd`. Marker policy remains separate pending independent clearance. | Re-fetch the final candidate and require full integrated tests before requesting deployment. No candidate deployment is claimed. |
+| Admin | PR #18 head `a2d788804779baf63a6c091d4734ce04ea38a887`; tree-equivalent UI and fresh isolated admin/moderator session/CSRF/logout smoke passed against backend `9401f734`. | Recheck compatibility if backend authorization changes; production smoke remains pending. |
+| Moderation data | Owner approved a frozen cohort of 8,955 eligible legacy UUIDs, kept unreviewed. The older 9,046 figure is not a comparable total; see the marker decision memo. | Candidate code only. New/materially changed records require approval; public visibility does not grant verification or SEO permission. No production migration or bulk moderation authorized. |
 | HA | Oracle HA reported false, zero replicas; Home `ce11d5fcaeaf081b981b84cfb69c4fcb641b9047` is stale and returns 503 | Production recovery/HA is not qualified. Stop before any failover, reseed, or destructive action. |
 | Android/iOS | No signed v0.8.5 artifacts. Android signing runs only through protected release workflow. Local iOS signing credentials/Xcode are unavailable. | No native distribution claim. A CI compile is not a signed artifact. |
 | Earlier candidate artifact | Run `39832070656` contains a 0.8.5 web bundle from an earlier app SHA, before the map-camera fix (reported build metadata `416373525`). | Exclude it from final release, performance baselines, and checksums. It does not match PR #358's current head. |
@@ -52,9 +52,12 @@ continue past a failed gate.
   guessed build metadata.
 - Confirm the backend endpoints and SSR behavior used by the app are available
   on the selected target before frontend promotion.
-- Preserve the production marker owner-review gate. The current 9,046 records
-  have not been individually reviewed; do not mutate their publication state
-  as a release shortcut.
+- Preserve the approved 8,955-UUID cohort and its independently checked material
+  fingerprints. These records remain unreviewed. Migration 113 needs a separate
+  approved production plan; do not bulk approve, hide or deindex records.
+- Verify current DNSLink snapshot freshness and publisher health separately
+  from Flutter's outage fallback guard. Historical IPFS CIDs are immutable;
+  neither a pointer update nor a client filter erases historical copies.
 - Confirm admin compatibility and required role/configuration contracts.
 
 ## Proposed protected release commands (NOT EXECUTED)

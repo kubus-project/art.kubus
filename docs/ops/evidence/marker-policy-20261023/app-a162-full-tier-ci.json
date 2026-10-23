@@ -1,0 +1,85 @@
+{
+  "headSha": "a1629792c9dd4f26f2c41730cc38fe9b31c52560",
+  "status": "completed",
+  "conclusion": "success",
+  "url": "https://github.com/kubus-project/art.kubus/actions/runs/39876644908",
+  "jobs": [
+    {
+      "name": "Validate PR branch provenance",
+      "conclusion": "success",
+      "url": "https://github.com/kubus-project/art.kubus/actions/runs/39876644908/job/120163747867",
+      "startedAt": "2026-10-23T00:11:54Z",
+      "completedAt": "2026-10-23T00:12:06Z"
+    },
+    {
+      "name": "Resolve affected CI surfaces",
+      "conclusion": "success",
+      "url": "https://github.com/kubus-project/art.kubus/actions/runs/39876644908/job/120163748684",
+      "startedAt": "2026-10-23T00:11:55Z",
+      "completedAt": "2026-10-23T00:12:11Z"
+    },
+    {
+      "name": "Repository, CI, and deployment guardrails",
+      "conclusion": "success",
+      "url": "https://github.com/kubus-project/art.kubus/actions/runs/39876644908/job/120163849958",
+      "startedAt": "2026-10-23T00:12:13Z",
+      "completedAt": "2026-10-23T00:12:55Z"
+    },
+    {
+      "name": "Documentation and agent consistency",
+      "conclusion": "success",
+      "url": "https://github.com/kubus-project/art.kubus/actions/runs/39876644908/job/120164101934",
+      "startedAt": "2026-10-23T00:12:57Z",
+      "completedAt": "2026-10-23T00:13:14Z"
+    },
+    {
+      "name": "Backend compatibility contract",
+      "conclusion": "success",
+      "url": "https://github.com/kubus-project/art.kubus/actions/runs/39876644908/job/120164101977",
+      "startedAt": "2026-10-23T00:12:57Z",
+      "completedAt": "2026-10-23T00:13:12Z"
+    },
+    {
+      "name": "Android release compile without signing",
+      "conclusion": "success",
+      "url": "https://github.com/kubus-project/art.kubus/actions/runs/39876644908/job/120164102006",
+      "startedAt": "2026-10-23T00:12:57Z",
+      "completedAt": "2026-10-23T00:29:15Z"
+    },
+    {
+      "name": "iOS release compile without codesigning",
+      "conclusion": "success",
+      "url": "https://github.com/kubus-project/art.kubus/actions/runs/39876644908/job/120164102011",
+      "startedAt": "2026-10-23T00:12:58Z",
+      "completedAt": "2026-10-23T00:18:37Z"
+    },
+    {
+      "name": "Apache production routing contract",
+      "conclusion": "success",
+      "url": "https://github.com/kubus-project/art.kubus/actions/runs/39876644908/job/120164102041",
+      "startedAt": "2026-10-23T00:12:57Z",
+      "completedAt": "2026-10-23T00:13:14Z"
+    },
+    {
+      "name": "Flutter analysis, lint, format, and tests",
+      "conclusion": "success",
+      "url": "https://github.com/kubus-project/art.kubus/actions/runs/39876644908/job/120164102080",
+      "startedAt": "2026-10-23T00:12:57Z",
+      "completedAt": "2026-10-23T00:52:24Z"
+    },
+    {
+      "name": "Release web build and browser smoke / Build and locally smoke exact web artifact",
+      "conclusion": "success",
+      "url": "https://github.com/kubus-project/art.kubus/actions/runs/39876644908/job/120164102180",
+      "startedAt": "2026-10-23T00:12:57Z",
+      "completedAt": "2026-10-23T00:15:54Z"
+    },
+    {
+      "name": "PR validation required",
+      "conclusion": "success",
+      "url": "https://github.com/kubus-project/art.kubus/actions/runs/39876644908/job/120177069200",
+      "startedAt": "2026-10-23T00:52:26Z",
+      "completedAt": "2026-10-23T00:52:38Z"
+    }
+  ]
+}
