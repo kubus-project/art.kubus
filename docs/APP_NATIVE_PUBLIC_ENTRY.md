@@ -162,6 +162,28 @@ A 404 or other 4xx is an answer and stays not found. The marker entry keeps its
 address on this path; it is not dropped to the plain map. No timer declares
 failure and nothing reloads automatically.
 
+What counts as "no answer" on the marker entry:
+
+- A primary read that fails with 5xx, 408 or transport, followed by an Orbit
+  mirror read that fails the same way, is an outage. `getArtMarkerOrThrow`
+  rethrows it. The public marker snapshot never holds markers, so its empty
+  answer must not turn the outage into "not found".
+- A primary 404 is an answer, and the mirror is not asked.
+- A primary outage followed by an explicit mirror 4xx (for example 404) is an
+  answer: not found.
+
+Not-found is resolved, not failed. When the profile load gets a definitive
+not-found answer (the API's 404, or a profile without a usable package), the
+profile screens signal `kubus:public-entity-resolved` once the app's not-found
+state is on screen. The host removes its overlay and marks the takeover
+`resolved` with no failed copy and no Refresh. The entity URL stays. A resolved
+takeover can never become failed or ready afterwards.
+
+Known behaviour, unchanged here: a marker 404 still goes to the existing
+`entryUnresolved` path, which rewrites the address to `/map`. No resolved signal
+is sent on that path, so the SSR overlay can remain in its slow state while the
+app shows the map. Changing it needs a marker not-found design of its own.
+
 Target rule:
 
 > Only the exact entity screen can declare the handoff ready.
