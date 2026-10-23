@@ -576,29 +576,28 @@ test('PR validation workflow wires the tiers without weakening the required chec
   for (const [name, next] of [['guardrails', 'documentation'], ['documentation', 'flutter_quality'], ['backend_contract', 'android'], ['web_routing', 'required']]) {
     assert.doesNotMatch(job(name, next), /outputs\.tier/, `${name} must run in the draft tier`);
   }
-  const flutter = job('flutter_quality', 'web_artifact');
+  const flutter = job('flutter_quality', 'map_browser_regression');
   assert.doesNotMatch(flutter.slice(0, flutter.indexOf('steps:')), /outputs\.tier/);
   assert.match(flutter, /flutter analyze --fatal-infos --fatal-warnings/);
   assert.match(flutter, /flutter test --coverage; else flutter test/);
   for (const step of [
     'PRODUCT motion acceptance',
-    'Mounted map fallback revocation in Chrome',
     'Community feature flag contracts in both configurations',
   ]) {
     const at = flutter.indexOf(`- name: ${step}`);
     assert.ok(at > 0, `${step} step exists`);
     assert.match(flutter.slice(at, at + 220), /if:\s*\$\{\{ needs\.changes\.outputs\.tier == 'full' \}\}/, `${step} must be full-tier only`);
   }
-  const motionAt = flutter.indexOf('- name: PRODUCT motion acceptance');
-  const fallbackBrowserAt = flutter.indexOf('- name: Mounted map fallback revocation in Chrome');
-  const fallbackBrowserStep = flutter.slice(fallbackBrowserAt, flutter.indexOf('\n      - name:', fallbackBrowserAt + 1));
-  assert.ok(
-    fallbackBrowserAt > motionAt,
-    'the fallback browser test reuses the motion step browser install',
-  );
-  assert.match(flutter.slice(motionAt, fallbackBrowserAt), /playwright install --with-deps chromium firefox/);
-  assert.match(fallbackBrowserStep, /CHROME_EXECUTABLE=.*chromium\.executablePath\(\)/);
-  assert.match(fallbackBrowserStep, /flutter test --platform chrome --reporter expanded --concurrency=1 test\/map\/map_screen_web_smoke_test\.dart/);
+  assert.doesNotMatch(flutter, /map_screen_web_smoke_test/, 'the Chrome widget test must not share the 60-minute flutter_quality budget');
+  // The browser widget test is its own full-tier job with its own budget, and the aggregate requires it.
+  const mapBrowser = job('map_browser_regression', 'web_artifact');
+  assert.match(mapBrowser.slice(0, mapBrowser.indexOf('steps:')), /needs\.changes\.outputs\.tier == 'full'/, 'map_browser_regression must be full-tier only');
+  assert.match(mapBrowser, /timeout-minutes:\s*45/);
+  assert.match(mapBrowser, /playwright install --with-deps chromium/);
+  assert.match(mapBrowser, /CHROME_EXECUTABLE=.*chromium\.executablePath\(\)/);
+  assert.match(mapBrowser, /flutter test --platform chrome --reporter expanded --concurrency=1 --ignore-timeouts test\/map\/map_screen_web_smoke_test\.dart/);
+  assert.match(content.slice(content.indexOf('\n  required:')), /^\s+- map_browser_regression$/m, 'the required aggregate must need map_browser_regression');
+  assert.match(content, /EXPECTED_JOBS:[^\n]*map_browser_regression/);
   const required = content.slice(content.indexOf('\n  required:'));
   assert.match(required, /pull-requests:\s*read/);
   assert.match(required, /TIER:\s*\$\{\{ needs\.changes\.outputs\.tier \}\}/);

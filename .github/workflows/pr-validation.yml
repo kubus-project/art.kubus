@@ -236,14 +236,6 @@ jobs:
               QA_WEB_ROOT=build/motion-gallery QA_BROWSER="$browser" QA_REDUCED="$reduced" node scripts/qa/product_motion_acceptance.mjs
             done
           done
-      - name: Mounted map fallback revocation in Chrome
-        if: ${{ needs.changes.outputs.tier == 'full' }}
-        shell: bash
-        run: |
-          set -euo pipefail
-          export CHROME_EXECUTABLE="$(node -e "process.stdout.write(require('./scripts/qa/node_modules/playwright').chromium.executablePath())")"
-          test -x "$CHROME_EXECUTABLE"
-          flutter test --platform chrome --reporter expanded --concurrency=1 test/map/map_screen_web_smoke_test.dart
       - name: Upload motion diagnostics on failure
         if: ${{ failure() }}
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
@@ -266,6 +258,44 @@ jobs:
           path: coverage/lcov.info
           if-no-files-found: error
           retention-days: 3
+
+  map_browser_regression:
+    name: Mounted map fallback revocation in Chrome
+    needs: [changes, guardrails]
+    if: ${{ needs.changes.outputs.tier == 'full' && (needs.changes.outputs.full == 'true' || needs.changes.outputs.frontend == 'true') }}
+    runs-on: ubuntu-24.04
+    # Compiling this test's import graph (the whole map screen) for the browser is slow on a cold
+    # runner: inside flutter_quality it was still loading after 14 minutes when that job's 60-minute
+    # limit cancelled it. It has its own job and budget so it runs in parallel and can fail or time out
+    # on its own evidence. --ignore-timeouts only lifts the suite-load timeout; this job limit bounds it.
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v4
+        with: { fetch-depth: 0, submodules: false }
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          package-manager-cache: false
+      - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+      - name: Resolve locked dependencies
+        run: |
+          flutter pub get
+          git diff --exit-code -- pubspec.lock
+      - name: Install Chromium
+        run: |
+          npm --prefix scripts/qa ci --no-audit --no-fund
+          npm --prefix scripts/qa exec -- playwright install --with-deps chromium
+      - name: Mounted map fallback revocation in Chrome
+        shell: bash
+        run: |
+          set -euo pipefail
+          export CHROME_EXECUTABLE="$(node -e "process.stdout.write(require('./scripts/qa/node_modules/playwright').chromium.executablePath())")"
+          test -x "$CHROME_EXECUTABLE"
+          flutter test --platform chrome --reporter expanded --concurrency=1 --ignore-timeouts test/map/map_screen_web_smoke_test.dart
 
   web_artifact:
     name: Release web build and browser smoke
@@ -452,6 +482,7 @@ jobs:
       - guardrails
       - documentation
       - flutter_quality
+      - map_browser_regression
       - web_artifact
       - backend_contract
       - android
@@ -481,5 +512,5 @@ jobs:
           REPOSITORY: ${{ github.repository }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
           GH_TOKEN: ${{ github.token }}
-          EXPECTED_JOBS: source_policy,changes,guardrails,documentation,flutter_quality,web_artifact,backend_contract,android,ios,web_routing
+          EXPECTED_JOBS: source_policy,changes,guardrails,documentation,flutter_quality,map_browser_regression,web_artifact,backend_contract,android,ios,web_routing
         run: node scripts/ci/validate_job_results.mjs
