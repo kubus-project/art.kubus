@@ -32,10 +32,12 @@ class PublicEntityTakeoverProvider extends ChangeNotifier {
   Map<String, dynamic>? _bootstrap;
   bool _readyDispatched = false;
   bool _failureDispatched = false;
+  bool _resolvedNotFoundDispatched = false;
 
   PublicEntityTakeoverTarget? get target => _target;
   bool get isReady => _readyDispatched;
   bool get isFailed => _failureDispatched;
+  bool get isResolvedNotFound => _resolvedNotFoundDispatched;
   Map<String, dynamic>? get bootstrap => _bootstrap;
 
   bool _supportsBootstrapVersion(dynamic version) =>
@@ -160,6 +162,7 @@ class PublicEntityTakeoverProvider extends ChangeNotifier {
     _bootstrap = null;
     _readyDispatched = false;
     _failureDispatched = false;
+    _resolvedNotFoundDispatched = false;
     PublicEntryNavigation.instance.setEntry(
       type: target.type,
       entityId: target.id,
@@ -284,7 +287,8 @@ class PublicEntityTakeoverProvider extends ChangeNotifier {
     if (current == null ||
         current.type != _wireType(type) ||
         current.id != entityId ||
-        _readyDispatched) {
+        _readyDispatched ||
+        _resolvedNotFoundDispatched) {
       return Future<void>.value();
     }
 
@@ -318,11 +322,42 @@ class PublicEntityTakeoverProvider extends ChangeNotifier {
         current.type != _wireType(type) ||
         current.id != entityId ||
         _readyDispatched ||
+        _resolvedNotFoundDispatched ||
         _failureDispatched) {
       return Future<void>.value();
     }
     _failureDispatched = true;
     dispatchPublicEntityFailed(
+      type: current.type,
+      id: current.id,
+      path: current.path,
+      locale: current.locale,
+    );
+    notifyListeners();
+    return Future<void>.value();
+  }
+
+  /// Reports that [entityId] has a definitive answer that it does not exist
+  /// (the API returned 404). The screen shows its own not-found state at the
+  /// same URL, so the web host removes the SSR overlay and hands the page to
+  /// the app, exactly as for a ready entity. This is not a failure: it never
+  /// offers Refresh, and nothing here retries or changes the address.
+  /// Idempotent, and a no-op unless this entity still owns a pending takeover.
+  Future<void> markEntityResolvedNotFound(
+    ShareEntityType type,
+    String entityId,
+  ) {
+    final current = _target;
+    if (current == null ||
+        current.type != _wireType(type) ||
+        current.id != entityId ||
+        _readyDispatched ||
+        _resolvedNotFoundDispatched ||
+        _failureDispatched) {
+      return Future<void>.value();
+    }
+    _resolvedNotFoundDispatched = true;
+    dispatchPublicEntityResolvedNotFound(
       type: current.type,
       id: current.id,
       path: current.path,

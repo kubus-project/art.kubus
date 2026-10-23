@@ -399,3 +399,47 @@ test('a failed-entity signal after the exact entity is ready changes nothing', (
   assert.equal(page.marks.includes('flutter_takeover_failed'), false);
   assert.equal(page.refreshButton.hidden, true);
 });
+
+test('a resolved not-found signal removes the overlay without the failed state', () => {
+  const page = harness('en');
+  const exact = { type: 'artwork', id: 'art-1', path: '/en/artworks/art-1', locale: 'en' };
+  const signalResolved = (detail) => page.global.dispatchEvent(
+    new page.global.CustomEvent('kubus:public-entity-resolved', { detail }),
+  );
+  page.global.kubusPublicTakeover.bootstrapStarted();
+  page.advance(8000);
+  assert.equal(page.status.dataset.state, 'slow');
+
+  signalResolved({ ...exact, id: 'other' });
+  assert.equal(page.status.dataset.state, 'slow', 'another entity cannot resolve this takeover');
+  assert.equal(page.classes.has('kubus-takeover-active'), false);
+
+  signalResolved(JSON.stringify(exact));
+  assert.equal(page.status.dataset.state, 'resolved');
+  assert.equal(page.status.hidden, true);
+  assert.equal(page.classes.has('kubus-takeover-active'), true, 'the app is handed the page');
+  assert.equal(page.classes.has('kubus-takeover-complete'), true);
+  assert.equal(page.attrs.get('document:aria-hidden'), 'true');
+  assert.equal(page.refreshButton.hidden, true, 'a not-found answer offers no Refresh');
+  assert.equal(page.marks.includes('public_entity_resolved'), true);
+  assert.equal(page.marks.includes('flutter_takeover_failed'), false);
+
+  // Nothing after a resolved answer can turn it into a failure or a ready state.
+  page.global.kubusPublicTakeover.fail();
+  page.global.dispatchEvent(new page.global.CustomEvent('kubus:public-entity-failed', { detail: exact }));
+  page.dispatchEntity(exact);
+  signalResolved(exact);
+  assert.equal(page.status.dataset.state, 'resolved');
+  assert.equal(page.marks.includes('flutter_takeover_failed'), false);
+  assert.equal(page.marks.includes('public_entity_ready'), false);
+  assert.equal(page.reloadCount, 0, 'the not-found answer never reloads');
+});
+
+test('a resolved signal after the exact entity is ready changes nothing', () => {
+  const page = harness('en');
+  const exact = { type: 'artwork', id: 'art-1', path: '/en/artworks/art-1', locale: 'en' };
+  page.dispatchEntity(exact);
+  page.global.dispatchEvent(new page.global.CustomEvent('kubus:public-entity-resolved', { detail: exact }));
+  assert.equal(page.status.dataset.state, 'ready');
+  assert.equal(page.marks.includes('public_entity_resolved'), false);
+});

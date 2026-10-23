@@ -595,4 +595,61 @@ void main() {
         '/sl/zemljevid/m2');
     navigation.resetForTest();
   });
+
+  test('a not-found profile resolves its pending takeover, never fails it', () {
+    final navigation = PublicEntryNavigation.instance;
+    navigation.resetForTest();
+    final provider = PublicEntityTakeoverProvider();
+    const target = ShareDeepLinkTarget(
+      type: ShareEntityType.profile,
+      id: 'p2',
+      localeCode: 'en',
+    );
+    provider.seed(initialUri: Uri.parse('/en/profiles/p2'), target: target);
+
+    unawaited(
+        provider.markEntityResolvedNotFound(ShareEntityType.profile, 'other'));
+    expect(provider.isResolvedNotFound, isFalse,
+        reason: 'another entity cannot resolve this takeover');
+
+    unawaited(
+        provider.markEntityResolvedNotFound(ShareEntityType.profile, 'p2'));
+    unawaited(
+        provider.markEntityResolvedNotFound(ShareEntityType.profile, 'p2'));
+    expect(provider.isResolvedNotFound, isTrue);
+    expect(provider.isFailed, isFalse, reason: 'not found is not a failure');
+    expect(provider.isReady, isFalse);
+
+    // Once resolved, neither a failure nor a ready signal follows it.
+    unawaited(provider.markEntityFailed(ShareEntityType.profile, 'p2'));
+    unawaited(provider.markEntityReady(ShareEntityType.profile, 'p2'));
+    expect(provider.isFailed, isFalse);
+    expect(provider.isReady, isFalse);
+    // The entity keeps its canonical address.
+    expect(navigation.pendingEntryUrl, '/en/profiles/p2');
+    expect(provider.returnRouteFor(ShareEntityType.profile, 'p2'),
+        '/en/profiles/p2');
+    navigation.resetForTest();
+  });
+
+  test('a failed takeover is never resolved as not found', () {
+    final navigation = PublicEntryNavigation.instance;
+    navigation.resetForTest();
+    final provider = PublicEntityTakeoverProvider();
+    provider.seed(
+      initialUri: Uri.parse('/en/profiles/p3'),
+      target: const ShareDeepLinkTarget(
+        type: ShareEntityType.profile,
+        id: 'p3',
+        localeCode: 'en',
+      ),
+    );
+    unawaited(provider.markEntityFailed(ShareEntityType.profile, 'p3'));
+    expect(provider.isFailed, isTrue);
+
+    unawaited(
+        provider.markEntityResolvedNotFound(ShareEntityType.profile, 'p3'));
+    expect(provider.isResolvedNotFound, isFalse);
+    navigation.resetForTest();
+  });
 }

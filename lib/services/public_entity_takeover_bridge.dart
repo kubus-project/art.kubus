@@ -30,6 +30,20 @@ void dispatchPublicEntityReady({
   );
 }
 
+void dispatchPublicEntityResolvedNotFound({
+  required String type,
+  required String id,
+  required String path,
+  required String locale,
+}) {
+  implementation.dispatchPublicEntityResolvedNotFound(
+    type: type,
+    id: id,
+    path: path,
+    locale: locale,
+  );
+}
+
 void dispatchPublicEntityFailed({
   required String type,
   required String id,

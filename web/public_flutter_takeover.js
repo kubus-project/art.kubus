@@ -205,14 +205,27 @@
     }, 260);
   };
 
+  // "Settled" means the exact entity has an answer the app now shows: ready, or a
+  // definitive not-found. Either one removes the overlay; only the first one counts.
+  const settleTakeover = (state, markName) => {
+    entityIsReady = true;
+    clearTimers();
+    releaseBootstrapListeners();
+    setStatus(state, "", false);
+    mark(markName);
+    activate();
+  };
+
   globalThis.addEventListener("kubus:public-entity-ready", (event) => {
-    if (!failureShown && isExpectedEntity(event.detail)) {
-      entityIsReady = true;
-      clearTimers();
-      releaseBootstrapListeners();
-      setStatus("ready", "", false);
-      mark("public_entity_ready");
-      activate();
+    if (!failureShown && !entityIsReady && isExpectedEntity(event.detail)) {
+      settleTakeover("ready", "public_entity_ready");
+    }
+  });
+  // The entity does not exist (API 404). The app shows its own not-found screen at
+  // this URL, so the overlay goes away without the failed state or a Refresh.
+  globalThis.addEventListener("kubus:public-entity-resolved", (event) => {
+    if (!failureShown && !entityIsReady && isExpectedEntity(event.detail)) {
+      settleTakeover("resolved", "public_entity_resolved");
     }
   });
   globalThis.addEventListener("kubus:public-entity-route-parsed", (event) => {

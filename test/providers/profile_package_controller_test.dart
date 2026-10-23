@@ -473,6 +473,8 @@ void main() {
       final controller = ProfilePackageController(walletAddress: limitedWallet);
       await controller.load();
       expect(controller.criticalLoadFailedTransiently, isTrue);
+      expect(controller.criticalLoadNotFound, isFalse,
+          reason: 'a failed lookup is never the not-found answer');
       expect(controller.user, isNull);
       expect(controller.isLoadingCritical, isFalse);
       controller.dispose();
@@ -494,6 +496,8 @@ void main() {
       final controller = ProfilePackageController(walletAddress: missingWallet);
       await controller.load();
       expect(controller.criticalLoadFailedTransiently, isFalse);
+      // The answer resolves a pending takeover; it is not a failure.
+      expect(controller.criticalLoadNotFound, isTrue);
       expect(controller.user, isNull);
       controller.dispose();
     });
@@ -512,6 +516,23 @@ void main() {
       );
       await controller.load();
       expect(controller.criticalLoadFailedTransiently, isTrue);
+      expect(controller.user, isNull);
+      expect(controller.isLoadingCritical, isFalse);
+      controller.dispose();
+    });
+
+    test('a prefetched not-found answer reaches the controller as not found',
+        () async {
+      final controller = ProfilePackageController(
+        walletAddress: 'profile_controller_prefetch_missing_wallet',
+        initialCriticalPackageFuture:
+            Future<PublicEntityLoadOutcome<ProfileCriticalPackage>>.value(
+          const PublicEntityNotFound<ProfileCriticalPackage>(),
+        ),
+      );
+      await controller.load();
+      expect(controller.criticalLoadNotFound, isTrue);
+      expect(controller.criticalLoadFailedTransiently, isFalse);
       expect(controller.user, isNull);
       expect(controller.isLoadingCritical, isFalse);
       controller.dispose();

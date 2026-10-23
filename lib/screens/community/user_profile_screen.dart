@@ -170,6 +170,9 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     if (_profileController.criticalLoadFailedTransiently) {
       WidgetsBinding.instance
           .addPostFrameCallback((_) => _signalPublicTakeoverFailed());
+    } else if (_profileController.criticalLoadNotFound) {
+      WidgetsBinding.instance
+          .addPostFrameCallback((_) => _signalPublicTakeoverResolved());
     }
     setState(() {
       user = _profileController.user;
@@ -198,6 +201,21 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     try {
       unawaited(
         context.read<PublicEntityTakeoverProvider>().markEntityFailed(
+              ShareEntityType.profile,
+              widget.userId,
+            ),
+      );
+    } catch (_) {}
+  }
+
+  /// The profile does not exist. Its not-found state is on screen after this
+  /// frame, so a pending public takeover can hand the page over to the app. It
+  /// is an answer, not a failure: no Refresh, and the entity URL stays.
+  void _signalPublicTakeoverResolved() {
+    if (!mounted) return;
+    try {
+      unawaited(
+        context.read<PublicEntityTakeoverProvider>().markEntityResolvedNotFound(
               ShareEntityType.profile,
               widget.userId,
             ),

@@ -87,6 +87,10 @@ class ProfilePackageController extends ChangeNotifier {
   // outage, transport). The screen then shows a retryable failure instead of
   // "not found", and signals a pending public takeover as failed.
   bool _criticalLoadFailedTransiently = false;
+  // True when the last critical load got a definitive answer with no usable
+  // profile (the API's not-found), so the screen shows its not-found state. A
+  // pending public takeover is then resolved, not failed.
+  bool _criticalLoadNotFound = false;
   List<CommunityPost> _posts = <CommunityPost>[];
   bool _postsLoading = true;
   int _currentPage = 1;
@@ -158,6 +162,7 @@ class ProfilePackageController extends ChangeNotifier {
   bool get isLoadingExtended => _isLoadingExtended;
   Object? get error => _error;
   bool get criticalLoadFailedTransiently => _criticalLoadFailedTransiently;
+  bool get criticalLoadNotFound => _criticalLoadNotFound;
   List<CommunityPost> get posts => List<CommunityPost>.unmodifiable(_posts);
   bool get postsLoading => _postsLoading;
   bool get loadingMore => _loadingMore;
@@ -218,6 +223,7 @@ class ProfilePackageController extends ChangeNotifier {
     final epoch = ++_loadEpoch;
     _error = null;
     _criticalLoadFailedTransiently = false;
+    _criticalLoadNotFound = false;
     if (_package == null) {
       _isLoadingCritical = true;
       _notifyListenersSafe();
@@ -254,6 +260,8 @@ class ProfilePackageController extends ChangeNotifier {
         _isLoadingCritical = false;
         _criticalLoadFailedTransiently =
             outcome is PublicEntityTransientFailure<ProfileCriticalPackage>;
+        // Every other empty result is the screen's not-found state: an answer.
+        _criticalLoadNotFound = !_criticalLoadFailedTransiently;
         _error = StateError('Profile package critical load failed');
         _notifyListenersSafe();
         return;
@@ -348,6 +356,7 @@ class ProfilePackageController extends ChangeNotifier {
     _isLoadingCritical = false;
     _error = null;
     _criticalLoadFailedTransiently = false;
+    _criticalLoadNotFound = false;
     _publicStreetArtAddedCount = critical.publicStats['publicStreetArtAdded'] ??
         _publicStreetArtAddedCount;
     _notifyListenersSafe();
