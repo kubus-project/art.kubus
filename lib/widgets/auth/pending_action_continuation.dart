@@ -67,7 +67,10 @@ class _PendingActionContinuationHostState
     if (!provider.isAwaitingConfirmation) {
       _interruptedOffers = 0;
     }
-    if (provider.isAwaitingConfirmation && !_presenting) {
+    if (provider.isAwaitingConfirmation &&
+        !_presenting &&
+        _interruptedOffers <
+            PendingActionContinuationHost.maxInterruptedOffers) {
       _presenting = true;
       unawaited(_present(provider));
     }
@@ -119,9 +122,9 @@ class _PendingActionContinuationHostState
       // neither confirmed nor declined, so the action must survive and be
       // offered again over the screen that replaced it.
       _presenting = false;
+      _interruptedOffers += 1;
       if (_interruptedOffers <
           PendingActionContinuationHost.maxInterruptedOffers) {
-        _interruptedOffers += 1;
         setState(() {});
       }
       return;
@@ -186,9 +189,10 @@ Future<_ConfirmationDecision> _showConfirmation(
   BuildContext context, {
   required PendingActionIntent intent,
 }) async {
-  // `PopScope` hears every pop the visitor can cause (buttons, the barrier,
-  // back, drag) and none of the route removals that replace the screen
-  // underneath, which is what tells the two kinds of `null` result apart.
+  // `PopScope` hears every pop (buttons, the barrier, back, drag, and any
+  // programmatic `Navigator.pop`) and none of the route removals that replace
+  // the screen underneath, which is what tells the two kinds of `null` result
+  // apart. Post-authentication navigation replaces routes; it never pops them.
   var closedByVisitor = false;
   final result = await showModalBottomSheet<bool>(
     context: context,

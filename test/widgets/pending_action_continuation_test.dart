@@ -231,6 +231,12 @@ void main() {
     // The cap is finite: the sheet stops reappearing well before ten swaps...
     expect(swaps, lessThan(10));
     expect(find.text('Save this artwork?'), findsNothing);
+
+    // ...and an unrelated rebuild of the host must not start a fresh round.
+    tester.element(find.byType(PendingActionContinuationHost)).markNeedsBuild();
+    await tester.pump(PendingActionContinuationHost.settleDelay);
+    await tester.pumpAndSettle();
+    expect(find.text('Save this artwork?'), findsNothing);
     // ...and the visitor's action is neither executed nor discarded.
     expect(pendingActions.pending, isNotNull);
     expect(executor.calls, 0);
