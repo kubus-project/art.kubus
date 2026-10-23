@@ -580,11 +580,25 @@ test('PR validation workflow wires the tiers without weakening the required chec
   assert.doesNotMatch(flutter.slice(0, flutter.indexOf('steps:')), /outputs\.tier/);
   assert.match(flutter, /flutter analyze --fatal-infos --fatal-warnings/);
   assert.match(flutter, /flutter test --coverage; else flutter test/);
-  for (const step of ['PRODUCT motion acceptance', 'Community feature flag contracts in both configurations']) {
+  for (const step of [
+    'PRODUCT motion acceptance',
+    'Mounted map fallback revocation in Chrome',
+    'Community feature flag contracts in both configurations',
+  ]) {
     const at = flutter.indexOf(`- name: ${step}`);
     assert.ok(at > 0, `${step} step exists`);
     assert.match(flutter.slice(at, at + 220), /if:\s*\$\{\{ needs\.changes\.outputs\.tier == 'full' \}\}/, `${step} must be full-tier only`);
   }
+  const motionAt = flutter.indexOf('- name: PRODUCT motion acceptance');
+  const fallbackBrowserAt = flutter.indexOf('- name: Mounted map fallback revocation in Chrome');
+  const fallbackBrowserStep = flutter.slice(fallbackBrowserAt, flutter.indexOf('\n      - name:', fallbackBrowserAt + 1));
+  assert.ok(
+    fallbackBrowserAt > motionAt,
+    'the fallback browser test reuses the motion step browser install',
+  );
+  assert.match(flutter.slice(motionAt, fallbackBrowserAt), /playwright install --with-deps chromium firefox/);
+  assert.match(fallbackBrowserStep, /CHROME_EXECUTABLE=.*chromium\.executablePath\(\)/);
+  assert.match(fallbackBrowserStep, /flutter test --platform chrome --reporter expanded --concurrency=1 test\/map\/map_screen_web_smoke_test\.dart/);
   const required = content.slice(content.indexOf('\n  required:'));
   assert.match(required, /pull-requests:\s*read/);
   assert.match(required, /TIER:\s*\$\{\{ needs\.changes\.outputs\.tier \}\}/);

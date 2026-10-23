@@ -236,6 +236,14 @@ jobs:
               QA_WEB_ROOT=build/motion-gallery QA_BROWSER="$browser" QA_REDUCED="$reduced" node scripts/qa/product_motion_acceptance.mjs
             done
           done
+      - name: Mounted map fallback revocation in Chrome
+        if: ${{ needs.changes.outputs.tier == 'full' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          export CHROME_EXECUTABLE="$(node -e "process.stdout.write(require('./scripts/qa/node_modules/playwright').chromium.executablePath())")"
+          test -x "$CHROME_EXECUTABLE"
+          flutter test --platform chrome --reporter expanded --concurrency=1 test/map/map_screen_web_smoke_test.dart
       - name: Upload motion diagnostics on failure
         if: ${{ failure() }}
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
