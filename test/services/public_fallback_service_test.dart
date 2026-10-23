@@ -311,6 +311,17 @@ void main() {
       service.recordDualBackendFailure();
     }
     expect(service.mode, AppRuntimeMode.ipfsFallback);
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(
+      'public_snapshot_dataset_raw_cache_v1_markers',
+      jsonEncode(<Map<String, dynamic>>[
+        <String, dynamic>{'id': 'stale-cached-marker'},
+      ]),
+    );
+    await prefs.setString(
+      'public_snapshot_dataset_cid_cache_v1_markers',
+      markerCid,
+    );
     service.bindHttpClient(
       MockClient((_) async => throw Exception('offline')),
     );
