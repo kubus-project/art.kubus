@@ -47,10 +47,11 @@ Widget _host({
   required SavedItemsProvider savedItemsProvider,
   Locale locale = const Locale('en'),
   Size size = const Size(390, 844),
+  GlobalKey<NavigatorState>? navigatorKey,
 }) {
   // The host lives in MaterialApp.builder, above the Navigator, so it reaches
   // the navigator through this key — exactly as main.dart wires it.
-  final navigatorKey = GlobalKey<NavigatorState>();
+  navigatorKey ??= GlobalKey<NavigatorState>();
   return MultiProvider(
     providers: [
       ChangeNotifierProvider<PendingActionProvider>.value(
@@ -157,6 +158,102 @@ void main() {
     expect(executor.calls, 0);
     expect(pendingActions.pending, isNull);
     expect(find.text('restored artwork'), findsOneWidget);
+  });
+
+  testWidgets(
+      'a route swap under the sheet keeps the action and offers it again',
+      (tester) async {
+    final navigatorKey = GlobalKey<NavigatorState>();
+    await tester.pumpWidget(_host(
+      pendingActions: pendingActions,
+      artworkProvider: artworkProvider,
+      savedItemsProvider: savedItemsProvider,
+      navigatorKey: navigatorKey,
+    ));
+
+    await pendingActions.capture(_intent(label: 'Blue Wall'));
+    await pendingActions.restore();
+    await pumpAndSettleConfirmation(tester);
+    expect(find.text('Save this artwork?'), findsOneWidget);
+
+    // Post-authentication navigation finishing late replaces the screen the
+    // sheet was opened over. The visitor did not decide anything.
+    navigatorKey.currentState!.pushReplacement(MaterialPageRoute<void>(
+      builder: (_) =>
+          const Scaffold(body: Center(child: Text('final artwork'))),
+    ));
+    await tester.pumpAndSettle();
+
+    expect(pendingActions.pending, isNotNull);
+    expect(executor.calls, 0);
+
+    await tester.pump(PendingActionContinuationHost.settleDelay);
+    await tester.pumpAndSettle();
+
+    expect(find.text('final artwork'), findsOneWidget);
+    expect(find.text('Save this artwork?'), findsOneWidget);
+    expect(find.text('Blue Wall'), findsOneWidget);
+
+    // The re-offered sheet still works exactly once.
+    await tester.tap(find.widgetWithText(FilledButton, 'Save'));
+    await tester.pumpAndSettle();
+    expect(executor.calls, 1);
+    expect(pendingActions.pending, isNull);
+  });
+
+  testWidgets(
+      'repeated interruptions stop re-offering but never drop the action',
+      (tester) async {
+    final navigatorKey = GlobalKey<NavigatorState>();
+    await tester.pumpWidget(_host(
+      pendingActions: pendingActions,
+      artworkProvider: artworkProvider,
+      savedItemsProvider: savedItemsProvider,
+      navigatorKey: navigatorKey,
+    ));
+
+    await pendingActions.capture(_intent());
+    await pendingActions.restore();
+    await pumpAndSettleConfirmation(tester);
+
+    var swaps = 0;
+    while (
+        find.text('Save this artwork?').evaluate().isNotEmpty && swaps < 10) {
+      navigatorKey.currentState!.pushReplacement(MaterialPageRoute<void>(
+        builder: (_) => Scaffold(body: Center(child: Text('swap $swaps'))),
+      ));
+      swaps += 1;
+      await tester.pumpAndSettle();
+      await tester.pump(PendingActionContinuationHost.settleDelay);
+      await tester.pumpAndSettle();
+    }
+
+    // The cap is finite: the sheet stops reappearing well before ten swaps...
+    expect(swaps, lessThan(10));
+    expect(find.text('Save this artwork?'), findsNothing);
+    // ...and the visitor's action is neither executed nor discarded.
+    expect(pendingActions.pending, isNotNull);
+    expect(executor.calls, 0);
+  });
+
+  testWidgets('tapping outside the sheet is a decision to decline',
+      (tester) async {
+    await tester.pumpWidget(_host(
+      pendingActions: pendingActions,
+      artworkProvider: artworkProvider,
+      savedItemsProvider: savedItemsProvider,
+    ));
+
+    await pendingActions.capture(_intent());
+    await pendingActions.restore();
+    await pumpAndSettleConfirmation(tester);
+
+    await tester.tapAt(const Offset(195, 40));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Save this artwork?'), findsNothing);
+    expect(executor.calls, 0);
+    expect(pendingActions.pending, isNull);
   });
 
   testWidgets('a gone target explains what changed instead of failing silently',
