@@ -357,6 +357,11 @@ test('canonical public takeover waits for exact entity readiness and keeps root 
   assert.match(takeover, /host\.setAttribute\("aria-hidden", "true"\)/);
   assert.match(takeover, /onBootstrapResourceError/);
   assert.match(takeover, /flutter_takeover_failed/);
+  // Firefox can deliver a deferred bootstrap failure before this script listens; the failed request must
+  // still be detected from Resource Timing, and failure must stay a single idempotent transition.
+  assert.match(takeover, /getEntriesByType\?\.\("resource"\)/);
+  assert.match(takeover, /responseStatus === 0 \|\| latest\.responseStatus >= 400/);
+  assert.match(takeover, /document\.addEventListener\("DOMContentLoaded", verifyBootstrapRequest\)/);
   assert.doesNotMatch(takeover, /setTimeout\([^)]*,\s*2000\)/);
 });
 
