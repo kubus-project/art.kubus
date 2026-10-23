@@ -1516,6 +1516,7 @@
   "institutionHubApplicationFocusRequired": "Let us know your programming focus.",
   "institutionHubApplicationMissionRequired": "Describe your mission in at least 20 characters.",
   "institutionHubApplicationWalletRequired": "Connect a wallet before submitting.",
+  "institutionHubApplicationWalletWhy": "Applying is signed with your wallet, so the review stays tied to a wallet you control. Browsing institutions does not need one.",
   "institutionHubApplicationSubmittedToast": "Application submitted for governance review.",
   "institutionHubApplicationSubmitUnavailableToast": "Unable to submit application right now.",
   "institutionHubApplicationSubmitFailedToast": "Submission failed: {error}",
