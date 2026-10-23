@@ -2131,6 +2131,7 @@ class BackendApiService
     bool includeAuth = true,
     bool allowOrbitFallback = false,
     bool allowImplicitBackendFailover = true,
+    bool orbitAnswerIsAuthoritative = false,
   }) async {
     final key = _rateLimitKey('GET', uri);
     if (_isRateLimited(key)) {
@@ -2248,6 +2249,16 @@ class BackendApiService
       'fetch_json_orbit_failed:${fallbackUri.path}:${fallbackResponse.statusCode}',
       'BackendApiService: Orbit fallback failed ${fallbackResponse.statusCode} for ${fallbackUri.path}',
     );
+    final fallbackStatus = fallbackResponse.statusCode;
+    if (orbitAnswerIsAuthoritative &&
+        fallbackStatus >= 400 &&
+        fallbackStatus < 500 &&
+        fallbackStatus != 408) {
+      // The mirror answered: the entity is absent there (404) or refused. Report
+      // that answer as the status itself, so the caller sees it as a 4xx answer
+      // and not as an outage, while the primary failure stays in the message.
+      throw Exception('Request failed: $fallbackStatus ($primaryFailure)');
+    }
     throw Exception(
         '$primaryFailure (Orbit fallback failed: ${fallbackResponse.statusCode})');
   }
@@ -2485,12 +2496,14 @@ class BackendApiService
     Map<String, String>? queryParameters,
     bool includeAuth = true,
     bool allowOrbitFallback = false,
+    bool orbitAnswerIsAuthoritative = false,
   }) {
     return _fetchJson(
       _buildApiUri(rawBaseUrl, path, queryParameters: queryParameters),
       includeAuth: includeAuth,
       allowOrbitFallback: allowOrbitFallback,
       allowImplicitBackendFailover: false,
+      orbitAnswerIsAuthoritative: orbitAnswerIsAuthoritative,
     );
   }
 
@@ -2544,10 +2557,15 @@ class BackendApiService
     return const <int>{502, 503, 504, 522, 523, 524, 530}.contains(status);
   }
 
+  /// [snapshotMissIsFailure] is for public-entry reads that must tell "absent"
+  /// from "unreachable": when every live read failed with an outage and the
+  /// snapshot has no entry either, the outage is rethrown instead of a null
+  /// answer. Default callers keep the snapshot's null.
   Future<R> _performPublicRead<R>({
     required Future<R> Function(String baseUrl) liveRead,
     required Future<R> Function() snapshotRead,
     bool allowSnapshot = true,
+    bool snapshotMissIsFailure = false,
   }) async {
     Object? lastFallbackEligibleError;
 
@@ -2572,14 +2590,21 @@ class BackendApiService
     }
 
     if (allowSnapshot) {
+      final R snapshotResult;
       try {
-        return await snapshotRead();
+        snapshotResult = await snapshotRead();
       } catch (snapshotError) {
         if (lastFallbackEligibleError != null) {
           throw lastFallbackEligibleError;
         }
         rethrow;
       }
+      if (snapshotMissIsFailure &&
+          snapshotResult == null &&
+          lastFallbackEligibleError != null) {
+        throw lastFallbackEligibleError;
+      }
+      return snapshotResult;
     }
 
     if (lastFallbackEligibleError != null) {
@@ -4614,12 +4639,16 @@ class BackendApiService
     if (id.isEmpty) return null;
 
     return _performPublicRead<ArtMarker?>(
+      // A failed primary and mirror read is an outage, not an absent marker:
+      // the snapshot may not hold the marker and must not turn it into null.
+      snapshotMissIsFailure: true,
       liveRead: (candidateBaseUrl) async {
         final data = await _fetchJsonFromBaseUrl(
           candidateBaseUrl,
           '/api/art-markers/$id',
           includeAuth: false,
           allowOrbitFallback: allowOrbitFallback,
+          orbitAnswerIsAuthoritative: true,
         );
 
         final payload =

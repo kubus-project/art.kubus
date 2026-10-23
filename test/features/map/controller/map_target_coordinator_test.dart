@@ -567,6 +567,47 @@ void main() {
       );
     });
 
+    // The exact messages BackendApiService raises when the primary read and
+    // its Orbit mirror both fail (see getArtMarkerOrThrow).
+    for (final error in <Object>[
+      Exception(
+          'Request failed: 503 (Request failed: 503 (Orbit fallback failed: 503))'),
+      Exception('Request failed: 503 (Orbit fallback failed: 502)'),
+    ]) {
+      test('$error is an outage on both routes: transient', () async {
+        final harness = _Harness(fetchError: error);
+        harness.coordinator
+          ..setMapControllerReady(true)
+          ..setStyleReady(true);
+        final result = await harness.coordinator.submit(
+          const MapTargetIntent(exactMarkerId: 'm1'),
+        );
+        expect(result, MapTargetResult.transientFailure);
+        expect(
+          mapTargetEntryEffectFor(result),
+          MapTargetEntryEffect.markFailed,
+        );
+      });
+    }
+
+    test("the mirror's 404 after a primary outage is a missing marker",
+        () async {
+      final harness = _Harness(
+        fetchError: Exception('Request failed: 404 (Request failed: 503)'),
+      );
+      harness.coordinator
+        ..setMapControllerReady(true)
+        ..setStyleReady(true);
+      final result = await harness.coordinator.submit(
+        const MapTargetIntent(exactMarkerId: 'm1'),
+      );
+      expect(result, MapTargetResult.notFound);
+      expect(
+        mapTargetEntryEffectFor(result),
+        MapTargetEntryEffect.unresolved,
+      );
+    });
+
     test('a 429 on the exact marker still resolves through its artwork',
         () async {
       final related = _marker(id: 'm9', artworkId: 'a1');
