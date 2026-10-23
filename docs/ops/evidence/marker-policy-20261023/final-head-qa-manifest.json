@@ -1,0 +1,135 @@
+{
+  "generatedAt": "2026-10-23T12:37:57+02:00",
+  "qualification": "bounded final-head operational browser QA",
+  "app": {
+    "sourceSha": "6a885b2d9eca78534d6dd0a5d97cf29c07c6a312",
+    "sourceCiRun": {
+      "id": 39937612488,
+      "status": "in_progress",
+      "conclusion": null
+    },
+    "artifactKind": "local Flutter release-mode compile with development metadata and loopback endpoints; not CI artifact",
+    "artifactPath": "G:\\kubus-build-084\\_staging\\final085-resume-20261023\\app-fallback-cache-guards\\build\\local-finalhead-6a885b2d",
+    "version": "0.8.5",
+    "buildNumber": "1432513261",
+    "flutter": "3.44.2",
+    "dart": "3.12.2",
+    "artifactManifestSha256": "3b7637538827c84f487e10a58953a437574d472490e7a398fce89e38f5c7cc31",
+    "mainDartJsSha256": "2d234319371523743f1230a78f2b1a1e5cb86cdd0a1fe8982c915f3780710238"
+  },
+  "backend": {
+    "sourceSha": "88d792ffccc4ccaff96f82f230d4b9e14b7e00a1",
+    "ciRun": {
+      "id": 39938446580,
+      "status": "completed",
+      "conclusion": "success"
+    },
+    "review": "PASS: workflow-only migration bootstrap step; exact-head backend CI succeeded"
+  },
+  "previewBoundary": {
+    "appAddressBarOrigin": "http://127.0.0.1:4178",
+    "ssrRendererOrigin": "http://127.0.0.1:4175",
+    "syntheticReadOnlyApiOrigin": "http://127.0.0.1:4176",
+    "compiledApiOrigin": "http://127.0.0.1:4285, intercepted in browser before egress",
+    "compiledAppStaticOrigin": "http://127.0.0.1:4288",
+    "browserVersions": {
+      "chromium": "145.0.7632.6",
+      "firefox": "146.0.1"
+    }
+  },
+  "results": {
+    "flutterFamilyDirectRefresh": {
+      "status": "PASS",
+      "passed": 64,
+      "total": 64,
+      "dimensions": "8 families x EN/SL x Chromium/Firefox x desktop/mobile",
+      "evidence": "final-head-6a885b2d-64-matrix.json",
+      "script": "public-family-64-matrix.mjs",
+      "interceptedNonGetApiAttempts": 92,
+      "interceptedNonGetResponse": 405,
+      "writesReachedService": 0
+    },
+    "noJavaScriptSsrDirectRefresh": {
+      "status": "PASS",
+      "passed": 64,
+      "total": 64,
+      "dimensions": "8 families x EN/SL x Chromium/Firefox x desktop/mobile",
+      "evidence": "final-head-ssr-nojs-64.json",
+      "script": "final-head-ssr-nojs-64.mjs",
+      "javascriptEnabled": false,
+      "nonLocalRequestsBlocked": 128
+    },
+    "mapHandoffHistory": {
+      "status": "PASS",
+      "passed": 4,
+      "total": 4,
+      "dimensions": "Chromium/Firefox x desktop/mobile",
+      "navigationTarget": "http://127.0.0.1:4178/main",
+      "backRestoresExactArtworkUrlWithQueryAndHash": true,
+      "forwardRestoresMapUrl": true,
+      "mapCanvasCount": 1,
+      "evidence": "art-map-history-qa.json",
+      "script": "history-map-handoff-qa.cjs"
+    },
+    "mapCameraDirectRefresh": {
+      "status": "PASS",
+      "browser": "Chromium 145.0.7632.6",
+      "center": {
+        "latitude": 46.05,
+        "longitude": 14.509999999999991
+      },
+      "zoom": 12,
+      "directAndRefreshLoaded": true,
+      "urlQueryHashRetained": true,
+      "pageErrors": 0,
+      "evidence": "final-head-map-camera.json",
+      "script": "map-camera-direct-refresh.cjs",
+      "readOnlyCartoBasemapGetsAllowed": true
+    },
+    "ssrTakeoverVisibilityAndFailure": {
+      "status": "PASS",
+      "cases": [
+        "390px mobile light",
+        "1280px desktop light",
+        "320px Slovenian with 150% text",
+        "dark mode",
+        "reduced motion"
+      ],
+      "browser": "Chromium 145.0.7632.6",
+      "states": [
+        "pending",
+        "500ms-loading",
+        "8s-slow",
+        "controlled-bootstrap-failure"
+      ],
+      "refreshOnlyVisibleOnFailure": true,
+      "ssrContentVisibleThroughout": true,
+      "statusInducedClsEntries": 0,
+      "mainAndHeadingPositionDeltas": 0,
+      "overlapOrClipping": false,
+      "nonGetApiAttempts": 0,
+      "evidence": "final-head-ssr-l1-acceptance.json",
+      "script": "ssr-l1-finalhead-acceptance.cjs"
+    }
+  },
+  "separateFinding": {
+    "owner": "app_acceptance_resume",
+    "status": "FAILURE_REPORTED",
+    "finding": "Authenticated Not now action rendered signed-in Home while the address bar stayed on the artwork route."
+  },
+  "nativeAppLinks": {
+    "status": "BLOCKED",
+    "reason": "No signed 0.8.5 candidate artifact was available; preserved 0.8.4 production APK evidence is not proof of verified links for 0.8.5."
+  },
+  "emulator": {
+    "started": false,
+    "adbDevicesAtCleanup": 0
+  },
+  "cleanup": {
+    "stoppedOwnedPids": [14844, 66788, 82640],
+    "clearedPorts": [4175, 4176, 4178, 4285, 4288],
+    "appStaticPreview4288": "stopped by app agent",
+    "proof": "cleanup-state.json"
+  },
+  "evidenceDirectory": "G:\\kubus-build-084\\_staging\\final085-resume-20261023\\operational\\final-head-6a885b2d-20261023"
+}

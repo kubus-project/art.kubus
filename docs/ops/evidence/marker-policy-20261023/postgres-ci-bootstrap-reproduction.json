@@ -41,6 +41,14 @@
   },
   "review_and_ci": {
     "diff_check": "PASS",
-    "github_ci_on_topic": "Not manually dispatched; independent review requested before integration/rerun"
+    "exact_head_github_ci": {
+      "run_id": "39938446580",
+      "head": "88d792ffccc4ccaff96f82f230d4b9e14b7e00a1",
+      "conclusion": "SUCCESS",
+      "quality_job": "SUCCESS",
+      "postgres_schema_and_editorial_migration_contracts": "SUCCESS",
+      "required_gate": "SUCCESS",
+      "invocation": "Automatic PR workflow; no manual dispatch"
+    }
   }
 }
