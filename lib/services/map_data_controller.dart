@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import '../config/config.dart';
 import '../models/art_marker.dart';
 import 'backend_api_service.dart';
+import 'public_fallback_service.dart';
 
 @immutable
 class MapDataControllerStats {
@@ -101,6 +102,10 @@ class MapDataController {
     if (id.isEmpty) return Future<ArtMarker?>.value(null);
 
     _debugMarkerByIdCalls += 1;
+    // Do not let an in-memory live result bypass the public fallback contract.
+    if (PublicFallbackService().isIpfsFallbackMode) {
+      return Future<ArtMarker?>.value(null);
+    }
 
     final cached = _markerByIdCache[id];
     if (cached != null &&
@@ -116,6 +121,7 @@ class MapDataController {
     }
 
     final future = _backendApiService.getArtMarker(id).then((marker) {
+      if (PublicFallbackService().isIpfsFallbackMode) return null;
       _markerByIdCache[id] = _MarkerByIdCacheEntry(
         marker: marker,
         fetchedAt: DateTime.now(),
@@ -142,6 +148,9 @@ class MapDataController {
     if (id.isEmpty) return Future<List<ArtMarker>>.value(const <ArtMarker>[]);
 
     _debugMarkersByArtworkCalls += 1;
+    if (PublicFallbackService().isIpfsFallbackMode) {
+      return Future<List<ArtMarker>>.value(const <ArtMarker>[]);
+    }
 
     final cached = _markersByArtworkCache[id];
     if (cached != null &&
@@ -157,6 +166,9 @@ class MapDataController {
     }
 
     final future = _backendApiService.getArtMarkersByArtwork(id).then((items) {
+      if (PublicFallbackService().isIpfsFallbackMode) {
+        return const <ArtMarker>[];
+      }
       final markers = List<ArtMarker>.unmodifiable(items);
       _markersByArtworkCache[id] = _MarkersByArtworkCacheEntry(
         markers: markers,
