@@ -350,3 +350,52 @@ test('a request that fails after the takeover script ran is caught by the DOMCon
   assert.equal(page.status.dataset.state, 'failed');
   assert.equal(page.marks.filter((name) => name === 'flutter_takeover_failed').length, 1);
 });
+
+test('a Flutter failed-entity signal reuses the one idempotent failure transition', () => {
+  const page = harness('en', { bootstrapElement: true });
+  const exact = { type: 'artwork', id: 'art-1', path: '/en/artworks/art-1', locale: 'en' };
+  const signalFailed = (detail) => page.global.dispatchEvent(
+    new page.global.CustomEvent('kubus:public-entity-failed', { detail }),
+  );
+  page.global.kubusPublicTakeover.bootstrapStarted();
+  page.advance(8000);
+  assert.equal(page.status.dataset.state, 'slow');
+
+  signalFailed({ ...exact, id: 'other' });
+  assert.equal(page.status.dataset.state, 'slow', 'another entity cannot fail this takeover');
+
+  signalFailed(JSON.stringify(exact));
+  assert.equal(page.status.dataset.state, 'failed');
+  assert.equal(page.message.textContent, "The world of art couldn't open this time. Try refreshing the page or come back later.");
+  assert.equal(page.refreshButton.hidden, false);
+  assert.equal(page.classes.has('kubus-takeover-active'), false);
+
+  // Repeats from Flutter and from the other failure paths make no second transition.
+  signalFailed(exact);
+  page.global.kubusPublicTakeover.fail();
+  page.bootstrapScript.dispatch('error', { type: 'error' });
+  page.global.dispatchEvent({
+    type: 'error',
+    target: new page.global.HTMLScriptElement('https://app.kubus.site/flutter_bootstrap.js'),
+  });
+  assert.equal(page.marks.filter((name) => name === 'flutter_takeover_failed').length, 1);
+  assert.equal(page.status.dataset.state, 'failed');
+  assert.equal(page.reloadCount, 0, 'failure never retries automatically');
+
+  page.dispatchEntity(exact);
+  assert.equal(page.classes.has('kubus-takeover-active'), false,
+    'a late ready signal cannot cover a failed SSR page');
+});
+
+test('a failed-entity signal after the exact entity is ready changes nothing', () => {
+  const page = harness('en');
+  const exact = { type: 'artwork', id: 'art-1', path: '/en/artworks/art-1', locale: 'en' };
+  page.dispatchEntity(exact);
+  assert.equal(page.classes.has('kubus-takeover-active'), true);
+
+  page.global.dispatchEvent(new page.global.CustomEvent('kubus:public-entity-failed', { detail: exact }));
+  assert.equal(page.status.dataset.state, 'ready');
+  assert.equal(page.classes.has('kubus-takeover-active'), true);
+  assert.equal(page.marks.includes('flutter_takeover_failed'), false);
+  assert.equal(page.refreshButton.hidden, true);
+});

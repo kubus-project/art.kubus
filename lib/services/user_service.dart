@@ -373,8 +373,13 @@ class UserService {
     }
   }
 
+  /// [rethrowErrors] is for public-entry loads that must tell a failed lookup
+  /// from a missing profile (see `PublicEntityLoadOutcome`). The default keeps
+  /// the null-on-error contract that general callers depend on.
   static Future<User?> getUserById(String userId,
-      {bool forceRefresh = false, bool includeAchievements = true}) async {
+      {bool forceRefresh = false,
+      bool includeAchievements = true,
+      bool rethrowErrors = false}) async {
     final sessionEpoch = BackendApiService().authSessionEpoch;
     try {
       // Consult cache first (unless caller requests fresh data)
@@ -622,6 +627,7 @@ class UserService {
       } catch (_) {}
       return user;
     } catch (e) {
+      if (rethrowErrors) rethrow;
       if (kDebugMode) {
         debugPrint(
             'UserService.getUserById: failed to load profile for $userId: $e');

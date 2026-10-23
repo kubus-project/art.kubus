@@ -27,6 +27,18 @@ void dispatchPublicEntityReady({
       type: type, id: id, path: path, locale: locale);
 }
 
+/// The entity could not be loaded for lack of an answer. The host treats it
+/// exactly like its own bootstrap failure: failed state with a manual Refresh.
+void dispatchPublicEntityFailed({
+  required String type,
+  required String id,
+  required String path,
+  required String locale,
+}) {
+  _dispatch('kubus:public-entity-failed',
+      type: type, id: id, path: path, locale: locale);
+}
+
 Map<String, dynamic>? readPublicEntityBootstrap() {
   final element = web.document.getElementById('kubus-public-entity-bootstrap');
   final text = element?.textContent;

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:art_kubus/core/public_entry_navigation.dart';
 import 'package:art_kubus/providers/public_entity_takeover_provider.dart';
 import 'package:art_kubus/services/share/share_deep_link_parser.dart';
@@ -525,5 +527,72 @@ void main() {
         '/fallback/post-7');
     expect(route(withoutProvider, ShareEntityType.post, 'post-7'),
         '/fallback/post-7');
+  });
+
+  test('a failed lookup reports failure once, only for its pending entity', () {
+    final navigation = PublicEntryNavigation.instance;
+    navigation.resetForTest();
+    final provider = PublicEntityTakeoverProvider();
+    const target = ShareDeepLinkTarget(
+      type: ShareEntityType.profile,
+      id: 'p1',
+      localeCode: 'en',
+    );
+    provider.seed(initialUri: Uri.parse('/en/profiles/p1'), target: target);
+
+    unawaited(provider.markEntityFailed(ShareEntityType.profile, 'other'));
+    expect(provider.isFailed, isFalse,
+        reason: 'another entity cannot fail this takeover');
+
+    unawaited(provider.markEntityFailed(ShareEntityType.profile, 'p1'));
+    unawaited(provider.markEntityFailed(ShareEntityType.profile, 'p1'));
+    expect(provider.isFailed, isTrue);
+    expect(provider.isReady, isFalse);
+    // The failed entity keeps its canonical address: it was not abandoned.
+    expect(navigation.pendingEntryUrl, '/en/profiles/p1');
+    expect(provider.returnRouteFor(ShareEntityType.profile, 'p1'),
+        '/en/profiles/p1');
+    navigation.resetForTest();
+  });
+
+  test('a failure never follows a ready entity', () {
+    final navigation = PublicEntryNavigation.instance;
+    navigation.resetForTest();
+    final provider = PublicEntityTakeoverProvider();
+    provider.seed(
+      initialUri: Uri.parse('/en/map/m1'),
+      target: const ShareDeepLinkTarget(
+        type: ShareEntityType.marker,
+        id: 'm1',
+        localeCode: 'en',
+      ),
+    );
+    unawaited(provider.markEntityReady(ShareEntityType.marker, 'm1'));
+    expect(provider.isReady, isTrue);
+
+    unawaited(provider.markEntityFailed(ShareEntityType.marker, 'm1'));
+    expect(provider.isFailed, isFalse);
+    navigation.resetForTest();
+  });
+
+  test('a marker entry keeps the entity URL through readiness and failure', () {
+    final navigation = PublicEntryNavigation.instance;
+    navigation.resetForTest();
+    final provider = PublicEntityTakeoverProvider();
+    const target = ShareDeepLinkTarget(
+      type: ShareEntityType.marker,
+      id: 'm2',
+      localeCode: 'sl',
+    );
+    provider.seed(initialUri: Uri.parse('/sl/zemljevid/m2'), target: target);
+
+    // Success: the marker opens and the entry is ready; the address stays on
+    // the entity URL, not the locale-free /map shell route.
+    expect(navigation.pendingEntryUrl, '/sl/zemljevid/m2');
+    unawaited(provider.markEntityReady(ShareEntityType.marker, 'm2'));
+    expect(navigation.pendingEntryUrl, '/sl/zemljevid/m2');
+    expect(provider.returnRouteFor(ShareEntityType.marker, 'm2'),
+        '/sl/zemljevid/m2');
+    navigation.resetForTest();
   });
 }

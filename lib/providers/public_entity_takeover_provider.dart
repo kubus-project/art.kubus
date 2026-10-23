@@ -31,9 +31,11 @@ class PublicEntityTakeoverProvider extends ChangeNotifier {
   PublicEntityTakeoverTarget? _target;
   Map<String, dynamic>? _bootstrap;
   bool _readyDispatched = false;
+  bool _failureDispatched = false;
 
   PublicEntityTakeoverTarget? get target => _target;
   bool get isReady => _readyDispatched;
+  bool get isFailed => _failureDispatched;
   Map<String, dynamic>? get bootstrap => _bootstrap;
 
   bool _supportsBootstrapVersion(dynamic version) =>
@@ -157,6 +159,7 @@ class PublicEntityTakeoverProvider extends ChangeNotifier {
     _target = next;
     _bootstrap = null;
     _readyDispatched = false;
+    _failureDispatched = false;
     PublicEntryNavigation.instance.setEntry(
       type: target.type,
       entityId: target.id,
@@ -295,6 +298,31 @@ class PublicEntityTakeoverProvider extends ChangeNotifier {
         route: current.path,
         caller: 'PublicEntityTakeoverProvider');
     dispatchPublicEntityReady(
+      type: current.type,
+      id: current.id,
+      path: current.path,
+      locale: current.locale,
+    );
+    notifyListeners();
+    return Future<void>.value();
+  }
+
+  /// Reports that [entityId] could not be loaded for lack of an answer (rate
+  /// limit, outage, transport). The web host shows its failed state with a
+  /// manual Refresh. Idempotent, and a no-op unless this entity still owns a
+  /// pending takeover, so a failure never covers a page that is already ready.
+  /// Nothing here retries, reloads, or changes the address.
+  Future<void> markEntityFailed(ShareEntityType type, String entityId) {
+    final current = _target;
+    if (current == null ||
+        current.type != _wireType(type) ||
+        current.id != entityId ||
+        _readyDispatched ||
+        _failureDispatched) {
+      return Future<void>.value();
+    }
+    _failureDispatched = true;
+    dispatchPublicEntityFailed(
       type: current.type,
       id: current.id,
       path: current.path,

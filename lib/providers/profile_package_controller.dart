@@ -9,6 +9,7 @@ import '../models/user.dart';
 import '../services/backend_api_service.dart';
 import '../services/profile_package_mutation_tracker.dart';
 import '../services/profile_package_service.dart';
+import '../services/public_entity_load_outcome.dart';
 import '../services/user_service.dart';
 import '../utils/wallet_utils.dart';
 import 'community_interactions_provider.dart';
@@ -39,7 +40,8 @@ class ProfilePackageController extends ChangeNotifier {
     required String walletAddress,
     String? username,
     ProfileCriticalPackage? initialCriticalPackage,
-    Future<ProfileCriticalPackage?>? initialCriticalPackageFuture,
+    Future<PublicEntityLoadOutcome<ProfileCriticalPackage>>?
+        initialCriticalPackageFuture,
     Future<ProfileExtendedPackage?>? initialExtendedPackageFuture,
     ProfilePackage? initialPackage,
     Future<ProfilePackage?>? initialPackageFuture,
@@ -48,7 +50,9 @@ class ProfilePackageController extends ChangeNotifier {
         _initialCriticalPackage =
             initialCriticalPackage ?? initialPackage?.critical,
         _initialCriticalPackageFuture = initialCriticalPackageFuture ??
-            initialPackageFuture?.then((package) => package?.critical),
+            initialPackageFuture?.then(
+              (package) => _criticalOutcomeOf(package?.critical),
+            ),
         _initialExtendedPackageFuture = initialExtendedPackageFuture ??
             initialPackageFuture?.then((package) => package?.extended) {
     final package = initialPackage;
@@ -64,13 +68,25 @@ class ProfilePackageController extends ChangeNotifier {
   final String _walletAddress;
   final String? _username;
   final ProfileCriticalPackage? _initialCriticalPackage;
-  final Future<ProfileCriticalPackage?>? _initialCriticalPackageFuture;
+  final Future<PublicEntityLoadOutcome<ProfileCriticalPackage>>?
+      _initialCriticalPackageFuture;
+
+  static PublicEntityLoadOutcome<ProfileCriticalPackage> _criticalOutcomeOf(
+    ProfileCriticalPackage? critical,
+  ) =>
+      critical == null
+          ? const PublicEntityNotFound()
+          : PublicEntityFound(critical);
   final Future<ProfileExtendedPackage?>? _initialExtendedPackageFuture;
 
   ProfilePackage? _package;
   bool _isLoadingCritical = true;
   bool _isLoadingExtended = false;
   Object? _error;
+  // True when the last critical load failed without an answer (rate limit,
+  // outage, transport). The screen then shows a retryable failure instead of
+  // "not found", and signals a pending public takeover as failed.
+  bool _criticalLoadFailedTransiently = false;
   List<CommunityPost> _posts = <CommunityPost>[];
   bool _postsLoading = true;
   int _currentPage = 1;
@@ -141,6 +157,7 @@ class ProfilePackageController extends ChangeNotifier {
   bool get isLoadingCritical => _isLoadingCritical;
   bool get isLoadingExtended => _isLoadingExtended;
   Object? get error => _error;
+  bool get criticalLoadFailedTransiently => _criticalLoadFailedTransiently;
   List<CommunityPost> get posts => List<CommunityPost>.unmodifiable(_posts);
   bool get postsLoading => _postsLoading;
   bool get loadingMore => _loadingMore;
@@ -200,6 +217,7 @@ class ProfilePackageController extends ChangeNotifier {
   }) async {
     final epoch = ++_loadEpoch;
     _error = null;
+    _criticalLoadFailedTransiently = false;
     if (_package == null) {
       _isLoadingCritical = true;
       _notifyListenersSafe();
@@ -222,17 +240,20 @@ class ProfilePackageController extends ChangeNotifier {
     }
 
     try {
-      final critical = !forceRefresh && _initialCriticalPackageFuture != null
+      final outcome = !forceRefresh && _initialCriticalPackageFuture != null
           ? await _initialCriticalPackageFuture
-          : await ProfilePackageService.loadPublicProfileCriticalPackage(
+          : await ProfilePackageService.loadPublicProfileCriticalOutcome(
               _walletAddress,
               forceRefresh: forceRefresh,
               username: _username,
             );
       if (epoch != _loadEpoch) return;
+      final critical = outcome.valueOrNull;
       if (critical == null || !critical.isComplete) {
         _package = null;
         _isLoadingCritical = false;
+        _criticalLoadFailedTransiently =
+            outcome is PublicEntityTransientFailure<ProfileCriticalPackage>;
         _error = StateError('Profile package critical load failed');
         _notifyListenersSafe();
         return;
@@ -326,6 +347,7 @@ class ProfilePackageController extends ChangeNotifier {
     );
     _isLoadingCritical = false;
     _error = null;
+    _criticalLoadFailedTransiently = false;
     _publicStreetArtAddedCount = critical.publicStats['publicStreetArtAdded'] ??
         _publicStreetArtAddedCount;
     _notifyListenersSafe();

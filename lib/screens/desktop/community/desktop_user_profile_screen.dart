@@ -13,6 +13,7 @@ import '../../../models/profile_package.dart';
 import '../../../models/user.dart';
 import '../../../services/user_service.dart';
 import '../../../services/share/share_service.dart';
+import '../../../services/public_entity_load_outcome.dart';
 import '../../../services/share/share_types.dart';
 import '../../../services/block_list_service.dart';
 import '../../../services/contextual_auth_gate.dart';
@@ -74,7 +75,8 @@ class UserProfileScreen extends StatefulWidget {
   final ProfilePackage? initialPackage;
   final Future<ProfilePackage?>? initialPackageFuture;
   final ProfileCriticalPackage? initialCriticalPackage;
-  final Future<ProfileCriticalPackage?>? initialCriticalPackageFuture;
+  final Future<PublicEntityLoadOutcome<ProfileCriticalPackage>>?
+      initialCriticalPackageFuture;
   final Future<ProfileExtendedPackage?>? initialExtendedPackageFuture;
 
   const UserProfileScreen({
@@ -206,8 +208,31 @@ class _UserProfileScreenState extends State<UserProfileScreen>
     super.dispose();
   }
 
+  /// A critical load that failed without an answer. During a public takeover
+  /// the web host shows its failed state (provider no-ops otherwise); the
+  /// screen's own retry stays available in every case.
+  void _signalPublicTakeoverFailed() {
+    if (!mounted) return;
+    try {
+      unawaited(
+        context.read<PublicEntityTakeoverProvider>().markEntityFailed(
+              ShareEntityType.profile,
+              widget.userId,
+            ),
+      );
+    } catch (_) {}
+  }
+
+  void _retryCriticalLoad() {
+    unawaited(_profileController.load(forceRefresh: true));
+  }
+
   void _syncProfileControllerState() {
     if (!mounted) return;
+    if (_profileController.criticalLoadFailedTransiently) {
+      WidgetsBinding.instance
+          .addPostFrameCallback((_) => _signalPublicTakeoverFailed());
+    }
     setState(() {
       user = _profileController.user;
       isLoading = _profileController.isLoadingCritical;
@@ -265,6 +290,23 @@ class _UserProfileScreenState extends State<UserProfileScreen>
     }
 
     if (user == null) {
+      if (_profileController.criticalLoadFailedTransiently) {
+        // The lookup failed; the profile may exist. Offer a retry instead of
+        // reporting it as not found (same copy as UnavailableEntityScaffold).
+        return Scaffold(
+          backgroundColor: Colors.transparent,
+          body: Center(
+            child: EmptyStateCard(
+              icon: Icons.link_off_outlined,
+              title: l10n.userProfileTitle,
+              description: l10n.entityUnavailableBody,
+              showAction: true,
+              actionLabel: l10n.commonRetry,
+              onAction: _retryCriticalLoad,
+            ),
+          ),
+        );
+      }
       return Scaffold(
         backgroundColor: Colors.transparent,
         body: Center(

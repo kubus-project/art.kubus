@@ -13,6 +13,7 @@ import 'package:art_kubus/screens/desktop/community/desktop_user_profile_screen.
 import 'package:art_kubus/screens/desktop/desktop_shell_scope.dart';
 import 'package:art_kubus/services/share/share_deep_link_parser.dart';
 import 'package:art_kubus/services/share/share_types.dart';
+import 'package:art_kubus/services/public_entity_load_outcome.dart';
 import 'package:art_kubus/utils/share_deep_link_navigation.dart';
 import 'package:art_kubus/utils/user_profile_navigation.dart';
 import 'package:flutter/material.dart';
@@ -60,7 +61,8 @@ void main() {
                 context,
                 userId: '',
                 username: 'current_artist',
-                initialCriticalPackageFuture: Future.value(resolved),
+                initialCriticalPackageFuture:
+                    Future.value(PublicEntityFound(resolved)),
               ),
               child: const Text('Open resolved profile'),
             ),

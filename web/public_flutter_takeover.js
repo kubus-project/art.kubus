@@ -220,6 +220,14 @@
       mark("public_entity_route_parsed");
     }
   });
+  // Flutter reports an entity it could not load for lack of an answer (rate limit,
+  // outage). It is the same failure as a bootstrap error: failTakeover is idempotent,
+  // and does nothing once the exact entity is ready.
+  globalThis.addEventListener("kubus:public-entity-failed", (event) => {
+    if (isExpectedEntity(event.detail)) {
+      failTakeover();
+    }
+  });
 
   if (refreshButton) {
     refreshButton.addEventListener("click", () => globalThis.location.reload());
