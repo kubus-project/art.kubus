@@ -79,17 +79,62 @@
     }
   };
 
-  const onBootstrapResourceError = (event) => {
+  const bootstrapPath = (url) => {
+    try {
+      return new URL(url, globalThis.location.href).pathname;
+    } catch (_) {
+      return null;
+    }
+  };
+
+  let bootstrapElement = null;
+
+  const releaseBootstrapListeners = () => {
+    globalThis.removeEventListener("error", onBootstrapResourceError, true);
+    bootstrapElement?.removeEventListener("error", onBootstrapResourceError);
+    bootstrapElement = null;
+  };
+
+  const failTakeover = () => {
+    if (failureShown || entityIsReady) return;
+    failureShown = true;
+    clearTimers();
+    releaseBootstrapListeners();
+    if (transitionCleanup !== null) {
+      globalThis.clearTimeout(transitionCleanup);
+      transitionCleanup = null;
+    }
+    setInactive();
+    setStatus("failed", failureText, true, true);
+    mark("flutter_takeover_failed");
+  };
+
+  // Both the window capture listener and an element listener funnel into failTakeover, which is idempotent.
+  function onBootstrapResourceError(event) {
     const target = event.target;
     if (!(target instanceof HTMLScriptElement)) return;
-    let path;
-    try {
-      path = new URL(target.src, globalThis.location.href).pathname;
-    } catch (_) {
-      return;
+    const path = bootstrapPath(target.src);
+    if (!path || !/(?:flutter_bootstrap|main\.dart|canvaskit|skwasm).*\.js$/.test(path)) return;
+    failTakeover();
+  }
+
+  // Firefox fires a deferred script's error event at fetch failure, which can be before this script runs
+  // (the SSR page loads takeover and bootstrap with defer), so that event is never seen by a listener.
+  // The failed request remains in Resource Timing: responseStatus 0 for a network failure, the HTTP
+  // status for an error response. A successful or still-pending request never matches.
+  const bootstrapRequestAlreadyFailed = () => {
+    const entries = globalThis.performance?.getEntriesByType?.("resource") || [];
+    let latest = null;
+    for (const entry of entries) {
+      const path = bootstrapPath(entry.name);
+      if (path && /flutter_bootstrap\.js$/.test(path)) latest = entry;
     }
-    if (!/(?:flutter_bootstrap|main\.dart|canvaskit|skwasm).*\.js$/.test(path)) return;
-    globalThis.kubusPublicTakeover?.fail();
+    if (latest === null) return false;
+    return latest.responseStatus === 0 || latest.responseStatus >= 400;
+  };
+
+  const verifyBootstrapRequest = () => {
+    if (bootstrapRequestAlreadyFailed()) failTakeover();
   };
 
   const finishTransition = () => {
@@ -164,7 +209,7 @@
     if (!failureShown && isExpectedEntity(event.detail)) {
       entityIsReady = true;
       clearTimers();
-      globalThis.removeEventListener("error", onBootstrapResourceError, true);
+      releaseBootstrapListeners();
       setStatus("ready", "", false);
       mark("public_entity_ready");
       activate();
@@ -184,6 +229,13 @@
   setStatus("pending", "", false);
   mark("public_ssr_visible");
   globalThis.addEventListener("error", onBootstrapResourceError, true);
+  bootstrapElement = document.querySelector('script[src*="flutter_bootstrap.js"]');
+  bootstrapElement?.addEventListener("error", onBootstrapResourceError);
+  verifyBootstrapRequest();
+  if (document.readyState !== "complete") {
+    // Deferred scripts run before DOMContentLoaded, when the bootstrap request has settled.
+    document.addEventListener("DOMContentLoaded", verifyBootstrapRequest);
+  }
 
   globalThis.kubusPublicTakeover = Object.freeze({
     hostElement: () => host,
@@ -205,18 +257,6 @@
       }, 8000);
     },
     engineReady: () => mark("flutter_engine_ready"),
-    fail: () => {
-      if (failureShown || entityIsReady) return;
-      failureShown = true;
-      clearTimers();
-      globalThis.removeEventListener("error", onBootstrapResourceError, true);
-      if (transitionCleanup !== null) {
-        globalThis.clearTimeout(transitionCleanup);
-        transitionCleanup = null;
-      }
-      setInactive();
-      setStatus("failed", failureText, true, true);
-      mark("flutter_takeover_failed");
-    },
+    fail: failTakeover,
   });
 })();

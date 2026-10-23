@@ -4,13 +4,19 @@ const path = require('node:path');
 const test = require('node:test');
 const vm = require('node:vm');
 
-function harness(locale = 'en') {
+function harness(locale = 'en', options = {}) {
   const listeners = new Map();
   const classes = new Set();
   const timers = new Map();
+  const marks = [];
+  const documentListeners = new Map();
   let currentTime = 0;
   let nextTimerId = 0;
   let reloadCount = 0;
+  // Resource Timing entries for the document (options.resourceEntries), read at takeover execution.
+  const resourceEntries = options.resourceEntries || [];
+  // The Flutter bootstrap script element, when the page already contains it (options.bootstrapElement).
+  let bootstrapScript = null;
   const classList = {
     add: (...names) => names.forEach((name) => classes.add(name)),
     remove: (...names) => names.forEach((name) => classes.delete(name)),
@@ -65,19 +71,37 @@ function harness(locale = 'en') {
   class HTMLScriptElement {
     constructor(src) { this.src = src; }
   }
+  if (options.bootstrapElement) {
+    const element = new HTMLScriptElement('https://app.kubus.site/flutter_bootstrap.js');
+    const elementListeners = new Map();
+    element.addEventListener = (name, callback) => elementListeners.set(name, [...(elementListeners.get(name) || []), callback]);
+    element.removeEventListener = (name, callback) => elementListeners.set(name, (elementListeners.get(name) || []).filter((item) => item !== callback));
+    element.dispatch = (name, event) => (elementListeners.get(name) || []).forEach((cb) => cb({ ...event, target: element }));
+    element.listenerCount = (name) => (elementListeners.get(name) || []).length;
+    bootstrapScript = element;
+  }
   const global = {
     document: {
       documentElement: { classList },
+      readyState: options.readyState || 'interactive',
       getElementById: (id) => id === 'flutter-host' ? host : id === 'public-document' ? publicDocument : null,
-      querySelector: (selector) => selector === '[data-kubus-takeover-status]' ? status : null,
+      querySelector: (selector) => {
+        if (selector === '[data-kubus-takeover-status]') return status;
+        if (selector === 'script[src*="flutter_bootstrap.js"]') return bootstrapScript;
+        return null;
+      },
       createElement: () => ({ dataset: {}, textContent: '' }),
+      addEventListener: (name, callback) => documentListeners.set(name, [...(documentListeners.get(name) || []), callback]),
     },
     location: {
       pathname: host.dataset.entityPath,
       href: `https://app.kubus.site${host.dataset.entityPath}`,
       reload: () => { reloadCount += 1; },
     },
-    performance: { mark() {} },
+    performance: {
+      mark: (name) => marks.push(name),
+      getEntriesByType: (type) => (type === 'resource' ? resourceEntries : []),
+    },
     matchMedia: () => ({ matches: true }),
     setTimeout: (callback, delay) => {
       const id = ++nextTimerId;
@@ -128,9 +152,17 @@ function harness(locale = 'en') {
     refreshButton,
     advance,
     dispatchEntity,
+    marks,
+    bootstrapScript,
+    fireDocumentEvent: (name) => (documentListeners.get(name) || []).forEach((cb) => cb({ type: name })),
     get reloadCount() { return reloadCount; },
   };
 }
+
+const bootstrapEntry = (responseStatus) => ({
+  name: 'https://app.kubus.site/flutter_bootstrap.js',
+  responseStatus,
+});
 
 test('engine and route readiness alone never replace the semantic document', () => {
   const page = harness();
@@ -223,4 +255,74 @@ test('a Flutter bootstrap script error enters failure before engine readiness', 
   assert.equal(page.status.dataset.state, 'failed');
   assert.equal(page.refreshButton.hidden, false);
   assert.equal(page.reloadCount, 0);
+});
+
+test('a bootstrap element error alone, with no window capture event, enters failure', () => {
+  const page = harness('en', { bootstrapElement: true });
+  page.global.kubusPublicTakeover.bootstrapStarted();
+  page.bootstrapScript.dispatch('error', { type: 'error' });
+  assert.equal(page.status.dataset.state, 'failed');
+  assert.equal(page.message.textContent, "The world of art couldn't open this time. Try refreshing the page or come back later.");
+  assert.equal(page.refreshButton.hidden, false);
+  assert.equal(page.classes.has('kubus-takeover-active'), false);
+  assert.equal(page.reloadCount, 0, 'failure never retries automatically');
+});
+
+test('window capture and bootstrap element signals for one request make a single failure transition', () => {
+  for (const order of [['window', 'element'], ['element', 'window']]) {
+    const page = harness('en', { bootstrapElement: true });
+    page.global.kubusPublicTakeover.bootstrapStarted();
+    const fireWindow = () => page.global.dispatchEvent({
+      type: 'error',
+      target: new page.global.HTMLScriptElement('https://app.kubus.site/flutter_bootstrap.js'),
+    });
+    const fireElement = () => page.bootstrapScript.dispatch('error', { type: 'error' });
+    for (const signal of order) (signal === 'window' ? fireWindow : fireElement)();
+    fireWindow();
+    fireElement();
+    assert.equal(page.status.dataset.state, 'failed', order.join(' then '));
+    assert.equal(page.marks.filter((name) => name === 'flutter_takeover_failed').length, 1,
+      `one failure mark for ${order.join(' then ')}`);
+    assert.equal(page.refreshButton.hidden, false);
+    assert.equal(page.reloadCount, 0);
+  }
+});
+
+test('a bootstrap request that failed before the takeover script ran enters failure (Firefox deferred ordering)', () => {
+  const page = harness('en', { resourceEntries: [bootstrapEntry(0)] });
+  assert.equal(page.status.dataset.state, 'failed');
+  assert.equal(page.status.hidden, false);
+  assert.equal(page.refreshButton.hidden, false);
+  assert.equal(page.refreshButton.textContent, 'Refresh');
+  assert.equal(page.classes.has('kubus-takeover-active'), false);
+  assert.equal(page.reloadCount, 0);
+});
+
+test('an HTTP error response for the bootstrap request enters failure', () => {
+  const page = harness('sl', { resourceEntries: [bootstrapEntry(404)] });
+  assert.equal(page.status.dataset.state, 'failed');
+  assert.equal(page.refreshButton.textContent, 'Osveži');
+});
+
+test('a pending or successful bootstrap request never fails the takeover', () => {
+  const pending = harness('en', { resourceEntries: [] });
+  pending.fireDocumentEvent('DOMContentLoaded');
+  assert.equal(pending.status.dataset.state, 'pending');
+
+  const loaded = harness('en', { resourceEntries: [bootstrapEntry(200)] });
+  loaded.fireDocumentEvent('DOMContentLoaded');
+  loaded.global.kubusPublicTakeover.bootstrapStarted();
+  loaded.advance(500);
+  assert.equal(loaded.status.dataset.state, 'loading');
+  assert.equal(loaded.marks.includes('flutter_takeover_failed'), false);
+});
+
+test('a request that fails after the takeover script ran is caught by the DOMContentLoaded recheck', () => {
+  const entries = [];
+  const page = harness('en', { resourceEntries: entries });
+  assert.equal(page.status.dataset.state, 'pending');
+  entries.push(bootstrapEntry(0));
+  page.fireDocumentEvent('DOMContentLoaded');
+  assert.equal(page.status.dataset.state, 'failed');
+  assert.equal(page.marks.filter((name) => name === 'flutter_takeover_failed').length, 1);
 });
