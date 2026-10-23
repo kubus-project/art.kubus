@@ -1,0 +1,296 @@
+{
+  "schema": "kubus-backend-orbitdb-marker-lifecycle-v1",
+  "candidateSha": "88d792ffccc4ccaff96f82f230d4b9e14b7e00a1",
+  "observedAt": "2026-10-23T11:39:17.500Z",
+  "host": "kubus-ssr-orbitdb-pg-20261022",
+  "port": 5432,
+  "postgresDbImage": "sha256:3f4a5d48e0be9580ed70ed618cd039ce57bbb2dd113053d3836e28513f1f87cd",
+  "kuboEndpoint": "http://kubus-ssr-orbitdb-ipfs-20261022:5001",
+  "dnsLinkProvider": "off",
+  "snapshotPublisherEnabled": "false",
+  "redisConfigured": false,
+  "id": {
+    "artworkId": "b06ac410-3f3e-4660-a925-6f76bfc23dd7",
+    "approvedMarkerId": "500d5c8e-2c15-4972-bde7-45b2adc10f21",
+    "legacyHideMarkerId": "2f8bf0be-8619-45e8-bedb-fa193524ab35",
+    "legacyRejectMarkerId": "d6d727ac-e792-464c-851d-e728d624c4f4",
+    "legacyMaterialMarkerId": "e48c9807-a994-4dab-9b1b-b705a7ee6025"
+  },
+  "checks": [
+    {
+      "name": "fresh migration chain (runner) applied including 113",
+      "pass": true,
+      "initialMarkers": 0,
+      "initialGrants": 0
+    },
+    {
+      "name": "synthetic approved and QA-seeded legacy grants",
+      "pass": true,
+      "approved": 1,
+      "legacyGrants": 3,
+      "allInitiallyEligible": true,
+      "editorialStates": {
+        "approved": 1,
+        "unreviewedWithGrant": 3
+      }
+    },
+    {
+      "name": "initial-visible-500d5c8e-2c15-4972-bde7-45b2adc10f21",
+      "pass": true,
+      "expectedVisible": true,
+      "publicApiPresent": true,
+      "orbitFallbackPresent": true,
+      "orbitFallbackListed": true,
+      "arContentStatus": 200,
+      "rawOrbitDocPresent": true
+    },
+    {
+      "name": "initial-visible-2f8bf0be-8619-45e8-bedb-fa193524ab35",
+      "pass": true,
+      "expectedVisible": true,
+      "publicApiPresent": true,
+      "orbitFallbackPresent": true,
+      "orbitFallbackListed": true,
+      "arContentStatus": 200,
+      "rawOrbitDocPresent": true
+    },
+    {
+      "name": "initial-visible-d6d727ac-e792-464c-851d-e728d624c4f4",
+      "pass": true,
+      "expectedVisible": true,
+      "publicApiPresent": true,
+      "orbitFallbackPresent": true,
+      "orbitFallbackListed": true,
+      "arContentStatus": 200,
+      "rawOrbitDocPresent": true
+    },
+    {
+      "name": "initial-visible-e48c9807-a994-4dab-9b1b-b705a7ee6025",
+      "pass": true,
+      "expectedVisible": true,
+      "publicApiPresent": true,
+      "orbitFallbackPresent": true,
+      "orbitFallbackListed": true,
+      "arContentStatus": 200,
+      "rawOrbitDocPresent": true
+    },
+    {
+      "name": "actual OrbitDB write and current API/detail/list reads",
+      "pass": true,
+      "markerCount": 4,
+      "approvedCount": 1,
+      "legacyGrantCount": 3
+    },
+    {
+      "name": "owner-hide-unhide-read-time-deny",
+      "pass": true,
+      "expectedVisible": false,
+      "publicApiPresent": false,
+      "orbitFallbackPresent": false,
+      "orbitFallbackListed": false,
+      "arContentStatus": 404,
+      "rawOrbitDocPresent": true
+    },
+    {
+      "name": "owner-hide-unhide-post-sync-deny",
+      "pass": true,
+      "expectedVisible": false,
+      "publicApiPresent": false,
+      "orbitFallbackPresent": false,
+      "orbitFallbackListed": false,
+      "arContentStatus": 404,
+      "rawOrbitDocPresent": false
+    },
+    {
+      "name": "owner-hide-unhide-revert-still-denied",
+      "pass": true,
+      "expectedVisible": false,
+      "publicApiPresent": false,
+      "orbitFallbackPresent": false,
+      "orbitFallbackListed": false,
+      "arContentStatus": 404,
+      "rawOrbitDocPresent": false
+    },
+    {
+      "name": "owner-hide-unhide revocation, read-time denial, removal, monotonic revert, historical CID remains readable",
+      "pass": true,
+      "revokeReason": "marker-material-or-state-change",
+      "orbitDocPresentBeforeSync": false,
+      "orbitDocRemovedAfterSync": true,
+      "historicalRecordCid": "QmfZVW9PK23RcmpUnkiVx566ZFDf8Zv3HHXCrfkFv4FH9b",
+      "historicalCidReadableAfterRevert": true,
+      "historicalBytesStable": true
+    },
+    {
+      "name": "reject-unreview-read-time-deny",
+      "pass": true,
+      "expectedVisible": false,
+      "publicApiPresent": false,
+      "orbitFallbackPresent": false,
+      "orbitFallbackListed": false,
+      "arContentStatus": 404,
+      "rawOrbitDocPresent": true
+    },
+    {
+      "name": "reject-unreview-post-sync-deny",
+      "pass": true,
+      "expectedVisible": false,
+      "publicApiPresent": false,
+      "orbitFallbackPresent": false,
+      "orbitFallbackListed": false,
+      "arContentStatus": 404,
+      "rawOrbitDocPresent": false
+    },
+    {
+      "name": "reject-unreview-revert-still-denied",
+      "pass": true,
+      "expectedVisible": false,
+      "publicApiPresent": false,
+      "orbitFallbackPresent": false,
+      "orbitFallbackListed": false,
+      "arContentStatus": 404,
+      "rawOrbitDocPresent": false
+    },
+    {
+      "name": "reject-unreview revocation, read-time denial, removal, monotonic revert, historical CID remains readable",
+      "pass": true,
+      "revokeReason": "marker-material-or-state-change",
+      "orbitDocPresentBeforeSync": false,
+      "orbitDocRemovedAfterSync": true,
+      "historicalRecordCid": "Qmbe5fhv9fQRWixKsmVskCxecgQ3eYUKtkujf45fA8NLWf",
+      "historicalCidReadableAfterRevert": true,
+      "historicalBytesStable": true
+    },
+    {
+      "name": "material-edit-revert-read-time-deny",
+      "pass": true,
+      "expectedVisible": false,
+      "publicApiPresent": false,
+      "orbitFallbackPresent": false,
+      "orbitFallbackListed": false,
+      "arContentStatus": 404,
+      "rawOrbitDocPresent": true
+    },
+    {
+      "name": "material-edit-revert-post-sync-deny",
+      "pass": true,
+      "expectedVisible": false,
+      "publicApiPresent": false,
+      "orbitFallbackPresent": false,
+      "orbitFallbackListed": false,
+      "arContentStatus": 404,
+      "rawOrbitDocPresent": false
+    },
+    {
+      "name": "material-edit-revert-revert-still-denied",
+      "pass": true,
+      "expectedVisible": false,
+      "publicApiPresent": false,
+      "orbitFallbackPresent": false,
+      "orbitFallbackListed": false,
+      "arContentStatus": 404,
+      "rawOrbitDocPresent": false
+    },
+    {
+      "name": "material-edit-revert revocation, read-time denial, removal, monotonic revert, historical CID remains readable",
+      "pass": true,
+      "revokeReason": "marker-material-or-state-change",
+      "orbitDocPresentBeforeSync": false,
+      "orbitDocRemovedAfterSync": true,
+      "historicalRecordCid": "QmZHoSGSDAwpiyxg982tCBAaxE3KETbdk9Nw1RDmRiTym8",
+      "historicalCidReadableAfterRevert": true,
+      "historicalBytesStable": true
+    },
+    {
+      "name": "fresh public snapshot built and stored to isolated Kubo; revoked legacy markers excluded; DNSLink skipped",
+      "pass": true,
+      "inMemoryGeneratedAt": "2026-10-23T11:40:17.447Z",
+      "inMemoryMarkerCount": 1,
+      "inMemoryApprovedPresent": true,
+      "inMemoryRevokedLegacyIdsExcluded": true,
+      "publishedGeneratedAt": "2026-10-23T11:40:17.457Z",
+      "registryCid": "QmVgBMnQx78j6CYofEps4C3JcBdytNaEWJ8R8YbgoQjJF9",
+      "markerDatasetCid": "QmcKgGRrVphcCGk7oeykpGGgvmfenTj4vyRfb1RAjHkzrq",
+      "publishedMarkerCount": 1,
+      "publishedApprovedPresent": true,
+      "publishedRevokedLegacyIdsExcluded": true,
+      "dnsLink": {
+        "provider": "off",
+        "domain": "public.kubus.site",
+        "updated": false,
+        "skipped": true,
+        "reason": "provider_disabled"
+      },
+      "dnsLinkPointerChanged": false
+    }
+  ],
+  "database": "orbitdb_lifecycle_085_133908",
+  "phase": "passed",
+  "postgres": {
+    "version": "15.8 (Debian 15.8-1.pgdg110+1)",
+    "postgis": "3.4.3"
+  },
+  "kuboPeerId": "12D3KooWRRBJRjRUtumAiDQwDZc5iLkwxkkXx9iJdUyE5EEB5vvG",
+  "dnsLinkProviderAtRuntime": "off",
+  "dnsLinkConfiguredAtRuntime": false,
+  "snapshotPublisherEnabledAtRuntime": false,
+  "redisEnabledAtRuntime": false,
+  "publication": [
+    {
+      "id": "500d5c8e-2c15-4972-bde7-45b2adc10f21",
+      "editorialState": "approved",
+      "manifestVersion": 1,
+      "manifestCid": "QmVAa2FfoQbGrqnpprqBom9uQBrUwqbkDHN1M8E1bGsXuj",
+      "recordCid": "QmSDQ2GgoQawAAssD3iQbjmhFwbCAVAYN99sLMsKoDu3LJ",
+      "historicalRecordCid": "QmSDQ2GgoQawAAssD3iQbjmhFwbCAVAYN99sLMsKoDu3LJ"
+    },
+    {
+      "id": "2f8bf0be-8619-45e8-bedb-fa193524ab35",
+      "editorialState": "unreviewed",
+      "manifestVersion": 1,
+      "manifestCid": "QmdDnvoY1oB3Fzu9FY3hiFcjfR8Nme2juukExDqYGh3P4c",
+      "recordCid": "QmfZVW9PK23RcmpUnkiVx566ZFDf8Zv3HHXCrfkFv4FH9b",
+      "historicalRecordCid": "QmfZVW9PK23RcmpUnkiVx566ZFDf8Zv3HHXCrfkFv4FH9b"
+    },
+    {
+      "id": "d6d727ac-e792-464c-851d-e728d624c4f4",
+      "editorialState": "unreviewed",
+      "manifestVersion": 1,
+      "manifestCid": "Qmcz982NDaicgnsi5aAYfKRUKfBgyZ5DkwWcEkJQzF8Stb",
+      "recordCid": "Qmbe5fhv9fQRWixKsmVskCxecgQ3eYUKtkujf45fA8NLWf",
+      "historicalRecordCid": "Qmbe5fhv9fQRWixKsmVskCxecgQ3eYUKtkujf45fA8NLWf"
+    },
+    {
+      "id": "e48c9807-a994-4dab-9b1b-b705a7ee6025",
+      "editorialState": "unreviewed",
+      "manifestVersion": 1,
+      "manifestCid": "QmbdUHjVRFhUUQLkvwX3WGo2VfvhYKmq1vdcbrrkCvBXKy",
+      "recordCid": "QmZHoSGSDAwpiyxg982tCBAaxE3KETbdk9Nw1RDmRiTym8",
+      "historicalRecordCid": "QmZHoSGSDAwpiyxg982tCBAaxE3KETbdk9Nw1RDmRiTym8"
+    }
+  ],
+  "snapshot": {
+    "inMemoryGeneratedAt": "2026-10-23T11:40:17.447Z",
+    "inMemoryMarkerCount": 1,
+    "inMemoryApprovedPresent": true,
+    "inMemoryRevokedLegacyIdsExcluded": true,
+    "publishedGeneratedAt": "2026-10-23T11:40:17.457Z",
+    "registryCid": "QmVgBMnQx78j6CYofEps4C3JcBdytNaEWJ8R8YbgoQjJF9",
+    "markerDatasetCid": "QmcKgGRrVphcCGk7oeykpGGgvmfenTj4vyRfb1RAjHkzrq",
+    "publishedMarkerCount": 1,
+    "publishedApprovedPresent": true,
+    "publishedRevokedLegacyIdsExcluded": true,
+    "dnsLink": {
+      "provider": "off",
+      "domain": "public.kubus.site",
+      "updated": false,
+      "skipped": true,
+      "reason": "provider_disabled"
+    },
+    "dnsLinkPointerChanged": false
+  },
+  "ownedDatabaseDropped": true,
+  "finishedAt": "2026-10-23T11:40:17.699Z",
+  "result": "PASS",
+  "failure": null
+}

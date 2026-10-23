@@ -1,0 +1,28 @@
+{
+  "schema": "kubus-backend-orbitdb-marker-lifecycle-v1",
+  "candidateSha": "88d792ffccc4ccaff96f82f230d4b9e14b7e00a1",
+  "observedAt": "2026-10-23T10:36:54.530Z",
+  "host": "kubus-ssr-orbitdb-pg-20261022",
+  "port": 5432,
+  "postgresDbImage": "postgis/postgis:15-3.4@sha256:3f4a5d48e0be9580ed70ed618cd039ce57bbb2dd113053d3836e28513f1f87cd",
+  "kuboEndpoint": "http://kubus-ssr-orbitdb-ipfs-20261022:5001/api/v0",
+  "dnsLinkProvider": "off",
+  "snapshotPublisherEnabled": "false",
+  "redisConfigured": false,
+  "id": {},
+  "checks": [],
+  "database": "orbitdb_lifecycle_085_20261023_103654_62280",
+  "phase": "postgres-bootstrap",
+  "postgres": {
+    "version": "15.8 (Debian 15.8-1.pgdg110+1)",
+    "postgis": "3.4.3"
+  },
+  "ownedDatabaseDropped": true,
+  "finishedAt": "2026-10-23T10:36:57.222Z",
+  "result": "FAIL",
+  "failure": {
+    "phase": "schema-and-migration",
+    "message": "relation \"art_markers\" does not exist",
+    "stack": "error: relation \"art_markers\" does not exist\n    at /mnt/host/g/kubus-build-084/_staging/final085-resume-20261023/backend/node_modules/pg/lib/client.js:652:17\n    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)\n    at async main (/evidence/orbitdb-marker-lifecycle.js:154:22)\n    at async /evidence/orbitdb-marker-lifecycle.js:326:5"
+  }
+}

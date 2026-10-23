@@ -1,0 +1,80 @@
+{
+  "preflight": {
+    "in_recovery": false,
+    "read_only": "on",
+    "active_sessions": 1,
+    "measured_utc": "2026-10-22T23:31:10Z"
+  },
+  "fields": [
+    "family",
+    "name",
+    "value"
+  ],
+  "rows": [
+    {
+      "family": "legacy_map_breakdown",
+      "name": "link=linked|artwork=non_collectible|state=unreviewed",
+      "value": "8955"
+    },
+    {
+      "family": "measurement",
+      "name": "utc",
+      "value": "2026-10-22T23:31:10Z"
+    },
+    {
+      "family": "predicate_total",
+      "name": "all_marker_rows",
+      "value": "9050"
+    },
+    {
+      "family": "predicate_total",
+      "name": "old_map_API_exact_cast_active_coords_link_owner_visible",
+      "value": "8955"
+    },
+    {
+      "family": "predicate_total",
+      "name": "resume_aggregate_active_non_false_link_owner_visible",
+      "value": "8955"
+    },
+    {
+      "family": "predicate_total",
+      "name": "saved_proof_active_and_own_public_cast_true",
+      "value": "9050"
+    },
+    {
+      "family": "predicate_total",
+      "name": "SEO_repository_legacy_text_active_link_owner_visible",
+      "value": "8955"
+    },
+    {
+      "family": "predicate_total",
+      "name": "WIP_strict_candidate_SQL_approved_active_text_link_owner_visible",
+      "value": "0"
+    },
+    {
+      "family": "saved_proof_group",
+      "name": "unreviewed | active=true | own_public=true",
+      "value": "9050"
+    },
+    {
+      "family": "saved_proof_public_breakdown",
+      "name": "link=linked|artwork=non_collectible|state=unreviewed",
+      "value": "8955"
+    },
+    {
+      "family": "saved_proof_public_breakdown",
+      "name": "link=linked|artwork=not_public_active|state=unreviewed",
+      "value": "95"
+    },
+    {
+      "family": "seo_policy",
+      "name": "independent_cultural_marker_pages_approved_and_substantive",
+      "value": "0"
+    },
+    {
+      "family": "seo_policy",
+      "name": "linked_marker_route_policy_v1_2_candidates_canonical_to_artwork_not_sitemap",
+      "value": "8955"
+    }
+  ]
+}

@@ -1,0 +1,18 @@
+{
+    "sourceSha":  "6a885b2d9eca78534d6dd0a5d97cf29c07c6a312",
+    "artifactDir":  "G:\\kubus-build-084\\_staging\\final085-resume-20261023\\app-fallback-cache-guards\\build\\local-finalhead-6a885b2d",
+    "fileCount":  198,
+    "manifestSha256":  "3b7637538827c84f487e10a58953a437574d472490e7a398fce89e38f5c7cc31",
+    "mainDartJsSha256":  "2d234319371523743f1230a78f2b1a1e5cb86cdd0a1fe8982c915f3780710238",
+    "bootstrapSha256":  "1ff4af2fd285bbc239ea5c01e166d5f58f5d58c2b67a3dfcfb4ecde36b5bdd5e",
+    "indexHtmlSha256":  "a73d53d38e99a4914d60c60b406324c3e815f8a81c2e6efe563d2aae94d0a851",
+    "webRevision":  "6a885b2d9eca78534d6dd0a5d97cf29c07c6a312",
+    "deploymentMetadata":  {
+                               "environment":  "development",
+                               "sourceSha":  "6a885b2d9eca78534d6dd0a5d97cf29c07c6a312",
+                               "artifact":  "flutter-web-development-6a885b2d9eca78534d6dd0a5d97cf29c07c6a312"
+                           },
+    "apiOrigin":  "http://127.0.0.1:4285",
+    "appOrigin":  "http://127.0.0.1:4288",
+    "buildType":  "local Flutter 3.44.2 release compile; not uploaded CI artifact"
+}

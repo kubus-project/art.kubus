@@ -1,0 +1,54 @@
+{
+  "captured_at_utc": "2026-10-23T10:20:31Z",
+  "topic": {
+    "branch": "codex/085-postgres-ci-bootstrap-20261023",
+    "head": "88d792ffccc4ccaff96f82f230d4b9e14b7e00a1",
+    "parent": "d518c48f9ed385b02c105a9473c380eb56b12eca",
+    "worktree": "G:\\kubus-build-084\\_staging\\final085-resume-20261023\\backend-pg-ci-fix",
+    "change_scope": "GitHub Actions PostgreSQL contract database bootstrap only"
+  },
+  "prior_exact_head_ci": {
+    "run_id": "39937175593",
+    "job": "PostgreSQL schema and editorial migration contracts",
+    "failed_step": "Spatial discovery PostgreSQL contract",
+    "cause": "The workflow service database was never migrated. Earlier schema bootstrap and editorial migration checks create and drop separate scratch databases, while this suite points SPATIAL_TEST_DATABASE_URL at the still-empty service database. CI logs show missing public.art_markers and public.artworks relations.",
+    "other_observation": "markerLinkedArtworkVisibility.postgres.test.js passed 12/12 because it creates and drops its own disposable database."
+  },
+  "fix": {
+    "workflow_file": ".github/workflows/backend-ci.yml",
+    "step": "Migrate disposable contract database",
+    "command": "npm run migrate",
+    "position": "After test-runner install and before the shared PostgreSQL contract suites",
+    "assertions_changed": false,
+    "existing_schema_bootstrap_and_editorial_checks_retained": true
+  },
+  "local_fresh_database_reproduction": {
+    "postgres_image": "postgis/postgis:15-3.4",
+    "host_binding": "127.0.0.1:60246",
+    "database": "spatial_ci_fix_20261023",
+    "credentials": "Random test-only credentials generated for the disposable container; not persisted",
+    "migration_command": "npm run migrate",
+    "migration_result": "PASS: clean base schema and migration chain completed, including migration 113; setup verification passed",
+    "test_command": "npm run test:spatial:postgres",
+    "test_result": {
+      "suites_passed": 3,
+      "suites_failed": 0,
+      "tests_passed": 24,
+      "tests_failed": 0,
+      "exit_code": 0
+    },
+    "cleanup": "Isolated database and temporary PostGIS container removed; no shared or production database was used"
+  },
+  "review_and_ci": {
+    "diff_check": "PASS",
+    "exact_head_github_ci": {
+      "run_id": "39938446580",
+      "head": "88d792ffccc4ccaff96f82f230d4b9e14b7e00a1",
+      "conclusion": "SUCCESS",
+      "quality_job": "SUCCESS",
+      "postgres_schema_and_editorial_migration_contracts": "SUCCESS",
+      "required_gate": "SUCCESS",
+      "invocation": "Automatic PR workflow; no manual dispatch"
+    }
+  }
+}

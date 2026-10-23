@@ -1,0 +1,36 @@
+{
+  "headSha": "88d792ffccc4ccaff96f82f230d4b9e14b7e00a1",
+  "status": "completed",
+  "conclusion": "success",
+  "url": "https://github.com/kubus-project/art.kubus-backend/actions/runs/39938446580",
+  "jobs": [
+    {
+      "name": "Resolve affected backend surfaces",
+      "conclusion": "success",
+      "url": "https://github.com/kubus-project/art.kubus-backend/actions/runs/39938446580/job/120363678072",
+      "startedAt": "2026-10-23T10:20:55Z",
+      "completedAt": "2026-10-23T10:21:00Z"
+    },
+    {
+      "name": "Lint, deterministic tests, and static validation",
+      "conclusion": "success",
+      "url": "https://github.com/kubus-project/art.kubus-backend/actions/runs/39938446580/job/120363727044",
+      "startedAt": "2026-10-23T10:21:02Z",
+      "completedAt": "2026-10-23T10:23:27Z"
+    },
+    {
+      "name": "PostgreSQL schema and editorial migration contracts",
+      "conclusion": "success",
+      "url": "https://github.com/kubus-project/art.kubus-backend/actions/runs/39938446580/job/120364695386",
+      "startedAt": "2026-10-23T10:23:30Z",
+      "completedAt": "2026-10-23T10:26:11Z"
+    },
+    {
+      "name": "Backend CI required",
+      "conclusion": "success",
+      "url": "https://github.com/kubus-project/art.kubus-backend/actions/runs/39938446580/job/120365776920",
+      "startedAt": "2026-10-23T10:26:13Z",
+      "completedAt": "2026-10-23T10:26:16Z"
+    }
+  ]
+}

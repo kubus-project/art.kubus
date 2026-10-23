@@ -1,0 +1,36 @@
+{
+  "originalCapture": {
+    "observedUtc": "2026-10-23 00:36:18.098224+00",
+    "sourceGitCommit": "46c9b84fed42aff21463c788e5e13994689c7f73",
+    "querySha256": "be7bcde9bdd7f3ff9184a64f13ec52672475fc531a8c7ab20a6c40c7f4b662c9",
+    "projectionSha256": "ef1bf5142a46e095e2b49c34407cb3f5ce91f2e26974a209eb9bcbe80d4ec2ce",
+    "manifestSha256": "b03f5aed213206c614877189f61736d1d36597ae87582a802fbde06a7652454b",
+    "counts": {
+      "raw_active_owner_public_unreviewed": 9050,
+      "public_eligible_unreviewed": 8955,
+      "eligible_by_cutoff": 8955,
+      "eligible_after_cutoff_or_missing": 0
+    }
+  },
+  "typedProjection": {
+    "querySha256": "863ea93a4c05b35f934391ad92a6b9a7c4fd2efb37977dae652585dc4099ac5a",
+    "projectionSha256": "7e7d90dbcd70b67b68e58eb8f4c8afc143192f1621cc4eeebd5fac073b3d3197"
+  },
+  "compatibilityCheck": {
+    "sourceContext": "oracle/artkubus-backend",
+    "sourceGitCommit": "46c9b84fed42aff21463c788e5e13994689c7f73",
+    "observedUtc": "2026-10-23 09:46:44.987945+00",
+    "cutoffUtc": "2026-10-22T23:31:10Z",
+    "serverVersionNum": "150019",
+    "transactionReadOnly": "on",
+    "inRecovery": false,
+    "querySha256": "f29ee8cf219661e8d022df6acd5c9eace40f7f759fdcdc1c152f77f7b19b331f",
+    "projectionSha256": "7e7d90dbcd70b67b68e58eb8f4c8afc143192f1621cc4eeebd5fac073b3d3197",
+    "counts": {
+      "raw_active_owner_public_unreviewed": 9050,
+      "public_eligible_unreviewed": 8955,
+      "eligible_by_cutoff": 8955,
+      "changed_fingerprints": 0
+    }
+  }
+}

@@ -1,0 +1,80 @@
+{
+  "evidenceType": "read-only-current-dnslink-and-publisher-error",
+  "collectionMinuteUtc": "2026-10-23T09:54Z",
+  "probeTimestampResolution": "UTC minute bucket; the DNS and registry probes completed during this minute",
+  "readOnly": true,
+  "runtime": {
+    "dockerContext": "oracle",
+    "backendContainer": "artkubus-backend",
+    "secretValuesReadOrRecorded": false,
+    "environmentPresence": {
+      "ipfsClusterApiConfigured": true,
+      "ipfsRpcConfigured": true,
+      "effectiveIpfsClusterPinTimeoutMs": 5000
+    }
+  },
+  "dnslink": {
+    "record": "_dnslink.public.kubus.site",
+    "txtValue": "dnslink=/ipfs/QmcrGzidKzUraHEMrTC5Fbz6R5DBBJVhJ9Zf1QLxFGvHER",
+    "resolvedAtUtc": "2026-10-23T09:54Z"
+  },
+  "registry": {
+    "cid": "QmcrGzidKzUraHEMrTC5Fbz6R5DBBJVhJ9Zf1QLxFGvHER",
+    "readMethod": "Oracle backend container existing IPFS RPC client, cat <cid>/public-index.json",
+    "readAtUtc": "2026-10-23T09:54Z",
+    "version": 1,
+    "generatedAt": "2026-10-09T09:06:17.395Z",
+    "datasetCount": 8
+  },
+  "publisherErrors": {
+    "logSource": "Oracle artkubus-backend /app/logs/error.log; only sanitized fields retained",
+    "recentSamples": [
+      {
+        "timestampUtc": "2026-10-23T09:50:07Z",
+        "message": "StorageService: IPFS upload failed",
+        "error": "timeout of 5000ms exceeded",
+        "pinRequested": true,
+        "ipfsRpcHealth": true,
+        "ipfsRpcHealthError": null
+      },
+      {
+        "timestampUtc": "2026-10-23T09:51:07Z",
+        "message": "StorageService: IPFS upload failed",
+        "error": "timeout of 5000ms exceeded",
+        "pinRequested": true,
+        "ipfsRpcHealth": true,
+        "ipfsRpcHealthError": null
+      },
+      {
+        "timestampUtc": "2026-10-23T09:52:07Z",
+        "message": "StorageService: IPFS upload failed",
+        "error": "timeout of 5000ms exceeded",
+        "pinRequested": true,
+        "ipfsRpcHealth": true,
+        "ipfsRpcHealthError": null
+      },
+      {
+        "timestampUtc": "2026-10-23T09:53:07Z",
+        "message": "StorageService: IPFS upload failed",
+        "error": "timeout of 5000ms exceeded",
+        "pinRequested": true,
+        "ipfsRpcHealth": true,
+        "ipfsRpcHealthError": null
+      }
+    ]
+  },
+  "interpretation": {
+    "likelyFailureStage": "IPFS Cluster pin request",
+    "inferenceBasis": "IPFS_CLUSTER_API is configured, effective pin request timeout is 5000 ms, and upload logging says timeout of 5000ms exceeded while pinRequested=true and Kubo RPC health is true. Source queueClusterPin uses this timeout for the cluster API request.",
+    "certainty": "strong inference; sampled log fields do not identify the remote request endpoint",
+    "notEstablished": [
+      "that every earlier publisher failure had the same cause",
+      "that a specific cluster resource limit or network fault caused the timeouts"
+    ]
+  },
+  "requiredRepair": "With owner approval, diagnose and remediate IPFS Cluster pin API latency/reachability/queue capacity (or separately approve a tested timeout adjustment). A new DNSLink snapshot qualifies as policy-current only when produced by the reviewed bounded-visibility candidate after its cohort/schema migration is authorized and applied; do not republish from the old 46c9 runtime as qualification. Then run one authorized candidate publication and verify all dataset CIDs, a newly generated registry, and DNSLink resolving to that registry. No such action was taken.",
+  "limitations": [
+    "Historical content-addressed IPFS CIDs remain fetchable.",
+    "No source/configuration change, publication, service restart, or DNS update was performed."
+  ]
+}
