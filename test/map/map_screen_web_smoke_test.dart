@@ -161,6 +161,9 @@ void main() {
 
       expect(state.debugMarkerSourceInputIdsForTest, isEmpty);
       expect(state.debugHasDrawableOverviewForTest, isFalse);
+      // Entering IPFS fallback starts PublicFallbackService's periodic health monitor. flutter_test
+      // fails a test whose body returns with a pending timer, so stop it inside the body.
+      await PublicFallbackService().resetForTesting();
       await tester.pumpWidget(const SizedBox.shrink());
     }
 
