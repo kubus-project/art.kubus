@@ -304,6 +304,30 @@ test('an HTTP error response for the bootstrap request enters failure', () => {
   assert.equal(page.refreshButton.textContent, 'Osveži');
 });
 
+test('a successful status-200 bootstrap entry never fails, before or after DOMContentLoaded', () => {
+  const page = harness('en', { resourceEntries: [bootstrapEntry(200)] });
+  assert.equal(page.status.dataset.state, 'pending');
+  assert.equal(page.refreshButton.hidden, true);
+  page.fireDocumentEvent('DOMContentLoaded');
+  assert.equal(page.status.dataset.state, 'pending');
+  assert.equal(page.refreshButton.hidden, true);
+  assert.equal(page.marks.includes('flutter_takeover_failed'), false);
+  assert.equal(page.reloadCount, 0);
+});
+
+test('an undefined responseStatus (older browsers) never fails the takeover', () => {
+  const page = harness('en', { resourceEntries: [bootstrapEntry(undefined)] });
+  assert.equal(page.status.dataset.state, 'pending');
+  page.fireDocumentEvent('DOMContentLoaded');
+  assert.equal(page.status.dataset.state, 'pending');
+  assert.equal(page.refreshButton.hidden, true);
+  page.global.kubusPublicTakeover.bootstrapStarted();
+  page.advance(500);
+  assert.equal(page.status.dataset.state, 'loading');
+  assert.equal(page.marks.includes('flutter_takeover_failed'), false);
+  assert.equal(page.reloadCount, 0);
+});
+
 test('a pending or successful bootstrap request never fails the takeover', () => {
   const pending = harness('en', { resourceEntries: [] });
   pending.fireDocumentEvent('DOMContentLoaded');

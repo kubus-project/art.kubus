@@ -137,12 +137,23 @@ contracts before modifying the handoff.
 
 ## 6. Takeover correctness
 
-`web/public_flutter_takeover.js` currently contains a 1500 ms fallback that
-can synthesize `kubus:public-entity-ready` after the engine and route are ready
-even if the entity screen itself has not declared a meaningful frame.
+`web/public_flutter_takeover.js` shows loading copy after about 500 ms and a
+slow state after about 8 s. Neither is a failure, and no timer declares failure.
 
-That contradicts the documented readiness contract and must be removed or
-replaced with a non-takeover failure path.
+Failure happens only on an actual bootstrap or resource error:
+
+- `error` events for the Flutter bootstrap, `main.dart`, CanvasKit or Skwasm
+  scripts, from a window capture listener and the bootstrap element; and
+- a Resource Timing check of `flutter_bootstrap.js`, run at script execution
+  and again at `DOMContentLoaded`. Firefox can fire the deferred script's error
+  before the takeover script runs, so the error event alone is not enough. A
+  request with `responseStatus` 0 or 400 or higher fails. A pending or
+  successful request, or an undefined `responseStatus` in older browsers, never
+  fails.
+
+On failure the SSR page stays visible with one manual Refresh control. There is
+no automatic reload. A late `kubus:public-entity-ready` cannot cover a failed
+SSR page.
 
 Target rule:
 
