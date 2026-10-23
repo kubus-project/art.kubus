@@ -4592,45 +4592,58 @@ class BackendApiService
     String markerId, {
     bool allowOrbitFallback = true,
   }) async {
-    final id = markerId.trim();
-    if (id.isEmpty) return null;
-
     try {
-      return await _performPublicRead<ArtMarker?>(
-        liveRead: (candidateBaseUrl) async {
-          final data = await _fetchJsonFromBaseUrl(
-            candidateBaseUrl,
-            '/api/art-markers/$id',
-            includeAuth: false,
-            allowOrbitFallback: allowOrbitFallback,
-          );
-
-          final payload =
-              data['data'] ?? data['marker'] ?? data['artMarker'] ?? data;
-          if (payload is Map<String, dynamic>) {
-            return _artMarkerFromBackendJson(payload);
-          }
-          if (payload is Map) {
-            return _artMarkerFromBackendJson(
-              Map<String, dynamic>.from(payload),
-            );
-          }
-          return null;
-        },
-        snapshotRead: () async {
-          final markers = await _loadSnapshotDatasetMaps('markers');
-          for (final entry in markers) {
-            if ((entry['id'] ?? '').toString().trim() == id) {
-              return _artMarkerFromBackendJson(entry);
-            }
-          }
-          return null;
-        },
+      return await getArtMarkerOrThrow(
+        markerId,
+        allowOrbitFallback: allowOrbitFallback,
       );
     } catch (e) {
       AppConfig.debugPrint('BackendApiService.getArtMarker failed: $e');
       return null;
     }
+  }
+
+  /// [getArtMarker] for public-entry reads: a failed lookup throws instead of
+  /// returning null, so the caller can tell a transient failure from a marker
+  /// that does not exist (`PublicEntityLoadOutcome`).
+  Future<ArtMarker?> getArtMarkerOrThrow(
+    String markerId, {
+    bool allowOrbitFallback = true,
+  }) async {
+    final id = markerId.trim();
+    if (id.isEmpty) return null;
+
+    return _performPublicRead<ArtMarker?>(
+      liveRead: (candidateBaseUrl) async {
+        final data = await _fetchJsonFromBaseUrl(
+          candidateBaseUrl,
+          '/api/art-markers/$id',
+          includeAuth: false,
+          allowOrbitFallback: allowOrbitFallback,
+        );
+
+        final payload =
+            data['data'] ?? data['marker'] ?? data['artMarker'] ?? data;
+        if (payload is Map<String, dynamic>) {
+          return _artMarkerFromBackendJson(payload);
+        }
+        if (payload is Map) {
+          return _artMarkerFromBackendJson(
+            Map<String, dynamic>.from(payload),
+          );
+        }
+        return null;
+      },
+      snapshotRead: () async {
+        final markers = await _loadSnapshotDatasetMaps('markers');
+        for (final entry in markers) {
+          if ((entry['id'] ?? '').toString().trim() == id) {
+            return _artMarkerFromBackendJson(entry);
+          }
+        }
+        return null;
+      },
+    );
   }
 
   /// Get map markers linked through the authoritative artwork relation.

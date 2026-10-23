@@ -858,7 +858,7 @@ class _MapScreenState extends State<MapScreen>
 
     _mapTargetCoordinator = MapTargetCoordinator(
       loadedMarkers: () => _artMarkers,
-      fetchMarkerById: MapDataController().getArtMarkerById,
+      fetchMarkerById: MapDataController().getArtMarkerForDirectTarget,
       fetchMarkersByArtwork: MapDataController().getArtMarkersByArtwork,
       loadMarkersAround: _loadMarkersAroundTarget,
       mergeMarkers: _mergeDirectTargetMarkers,
@@ -2524,9 +2524,11 @@ class _MapScreenState extends State<MapScreen>
     final messenger = ScaffoldMessenger.maybeOf(context);
     final l10n = AppLocalizations.of(context);
     if (messenger == null || l10n == null) return;
-    final message = result == MapTargetResult.coordinatesOnly
-        ? l10n.mapTargetMarkerUnavailableToast
-        : l10n.mapTargetNotFoundToast;
+    final message = switch (result) {
+      MapTargetResult.coordinatesOnly => l10n.mapTargetMarkerUnavailableToast,
+      MapTargetResult.transientFailure => l10n.entityUnavailableBody,
+      _ => l10n.mapTargetNotFoundToast,
+    };
     messenger.showKubusSnackBar(SnackBar(content: Text(message)));
   }
 
@@ -2554,31 +2556,52 @@ class _MapScreenState extends State<MapScreen>
     MapTargetResult result,
   ) {
     final markerId = intent.exactMarkerId?.trim() ?? '';
-    if (markerId.isNotEmpty &&
-        (result == MapTargetResult.notFound ||
-            result == MapTargetResult.coordinatesOnly)) {
-      // The requested marker never resolved, so it can never claim the
-      // address: stop it pinning a phantom marker URL over the plain map.
-      PublicEntryNavigation.instance.entryUnresolved(
-        ShareEntityType.marker,
-        markerId,
-      );
+    if (markerId.isEmpty) return;
+    switch (mapTargetEntryEffectFor(result)) {
+      case MapTargetEntryEffect.unresolved:
+        // The requested marker never resolved, so it can never claim the
+        // address: stop it pinning a phantom marker URL over the plain map.
+        PublicEntryNavigation.instance.entryUnresolved(
+          ShareEntityType.marker,
+          markerId,
+        );
+      case MapTargetEntryEffect.markFailed:
+        // The lookup failed without an answer: the marker may exist, so the
+        // entity keeps its address (no entryUnresolved, no URL rewrite).
+        _signalMarkerTakeoverFailed(markerId);
+      case MapTargetEntryEffect.markReady:
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (!mounted) return;
+          try {
+            unawaited(
+              context.read<PublicEntityTakeoverProvider>().markEntityReady(
+                    ShareEntityType.marker,
+                    markerId,
+                  ),
+            );
+          } catch (_) {}
+        });
+        // An idle app schedules no frame, and a post-frame callback does not ask
+        // for one: without this the readiness (and with it the public takeover)
+        // would wait for the next unrelated frame.
+        WidgetsBinding.instance.ensureVisualUpdate();
+      case MapTargetEntryEffect.none:
+        break;
     }
-    if (result != MapTargetResult.overlayOpened || markerId.isEmpty) return;
+  }
+
+  void _signalMarkerTakeoverFailed(String markerId) {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       try {
         unawaited(
-          context.read<PublicEntityTakeoverProvider>().markEntityReady(
+          context.read<PublicEntityTakeoverProvider>().markEntityFailed(
                 ShareEntityType.marker,
                 markerId,
               ),
         );
       } catch (_) {}
     });
-    // An idle app schedules no frame, and a post-frame callback does not ask
-    // for one: without this the readiness (and with it the public takeover)
-    // would wait for the next unrelated frame.
     WidgetsBinding.instance.ensureVisualUpdate();
   }
 

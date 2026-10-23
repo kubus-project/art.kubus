@@ -97,7 +97,28 @@ class MapDataController {
     _debugMarkersByArtworkInFlightDedupes = 0;
   }
 
+  /// Null when the marker is absent or its lookup failed. Public-entry direct
+  /// targets use [getArtMarkerForDirectTarget] so a failure is not mistaken for
+  /// a missing marker.
   Future<ArtMarker?> getArtMarkerById(String markerId) {
+    return _loadArtMarkerById(markerId).catchError((Object e, StackTrace st) {
+      // Best-effort: keep failures local and avoid poisoning caches.
+      if (kDebugMode) {
+        AppConfig.debugPrint(
+            'MapDataController: getArtMarkerById($markerId) failed: $e');
+        AppConfig.debugPrint('MapDataController: getArtMarkerById stack: $st');
+      }
+      return null;
+    });
+  }
+
+  /// Throws when the lookup fails (rate limit, outage, transport), so the map
+  /// target coordinator can report a transient failure instead of "not found".
+  /// Resolves to null only when the marker does not exist.
+  Future<ArtMarker?> getArtMarkerForDirectTarget(String markerId) =>
+      _loadArtMarkerById(markerId);
+
+  Future<ArtMarker?> _loadArtMarkerById(String markerId) {
     final id = markerId.trim();
     if (id.isEmpty) return Future<ArtMarker?>.value(null);
 
@@ -120,21 +141,15 @@ class MapDataController {
       return inFlight;
     }
 
-    final future = _backendApiService.getArtMarker(id).then((marker) {
+    // A failed lookup throws and caches nothing (the cache is written only on
+    // an answer).
+    final future = _backendApiService.getArtMarkerOrThrow(id).then((marker) {
       if (PublicFallbackService().isIpfsFallbackMode) return null;
       _markerByIdCache[id] = _MarkerByIdCacheEntry(
         marker: marker,
         fetchedAt: DateTime.now(),
       );
       return marker;
-    }).catchError((Object e, StackTrace st) {
-      // Best-effort: keep failures local and avoid poisoning caches.
-      if (kDebugMode) {
-        AppConfig.debugPrint(
-            'MapDataController: getArtMarkerById($id) failed: $e');
-        AppConfig.debugPrint('MapDataController: getArtMarkerById stack: $st');
-      }
-      return null;
     }).whenComplete(() {
       _inFlightMarkerById.remove(id);
     });
