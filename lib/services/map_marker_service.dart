@@ -526,6 +526,7 @@ class MapMarkerService {
   }
 
   void notifyMarkerUpserted(ArtMarker marker) {
+    if (PublicFallbackService().isIpfsFallbackMode) return;
     if (!_isValidPosition(marker.position)) return;
 
     final shouldKeep = _lastQueryWasBounds
@@ -749,6 +750,8 @@ class MapMarkerService {
 
   void _handleSocketMarker(Map<String, dynamic> payload) {
     try {
+      if (PublicFallbackService().isIpfsFallbackMode) return;
+
       final event = payload['event']?.toString() ?? '';
       final deleted =
           payload['deleted'] == true || event == 'art-marker:deleted';
@@ -761,32 +764,15 @@ class MapMarkerService {
 
       final marker = _markerFromSocketPayload(payload);
       if (marker == null || !_isValidPosition(marker.position)) return;
-      final shouldKeep = _lastQueryWasBounds
-          ? (_lastQueryBounds != null &&
-              _boundsContains(_lastQueryBounds!, marker.position))
-          : (_lastQueryCenter != null &&
-              _distance.as(
-                    LengthUnit.Kilometer,
-                    _lastQueryCenter!,
-                    marker.position,
-                  ) <=
-                  _lastQueryRadiusKm + 0.5);
-
-      // If we have an active cache window and the marker is nearby, merge it in-place.
-      if (shouldKeep) {
-        final existingIndex =
-            _cachedMarkers.indexWhere((m) => m.id == marker.id);
-        if (existingIndex >= 0) {
-          _cachedMarkers[existingIndex] = marker;
-        } else {
-          _cachedMarkers.add(marker);
-        }
-      }
-      _markerStreamController.add(marker);
+      notifyMarkerUpserted(marker);
     } catch (e) {
       _log('MapMarkerService: failed to handle socket marker: $e');
     }
   }
+
+  @visibleForTesting
+  void debugHandleSocketMarker(Map<String, dynamic> payload) =>
+      _handleSocketMarker(payload);
 
   double _asDouble(dynamic value, [double fallback = 0]) {
     if (value is num) return value.toDouble();

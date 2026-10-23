@@ -47,6 +47,7 @@ import '../../services/map_data_controller.dart';
 import '../../services/share/share_service.dart';
 import '../../services/share/share_types.dart';
 import '../../services/map_marker_service.dart';
+import '../../services/public_fallback_service.dart';
 import '../../services/ar_service.dart';
 import '../../services/walking_location_service.dart';
 import '../../services/walking_navigation_diagnostics.dart';
@@ -311,6 +312,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
   List<ArtMarker> _artMarkers = [];
   bool _isLoadingMarkers = false; // Tracks the latest marker request
   int _markerRequestId = 0;
+  bool _lastObservedIpfsFallbackMode = false;
   MarkerSubjectLoader get _subjectLoader => MarkerSubjectLoader(context);
   StreamSubscription<CompassEvent>? _compassSubscription;
   Timer? _headingExpiryTimer;
@@ -453,7 +455,10 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
   @override
   double get clusterTopologyZoom => _regroupGate.topologyZoomFor(_cameraZoom);
   @override
-  MapMarkerOverview? get markerOverview => _overviewController.drawableOverview;
+  MapMarkerOverview? get markerOverview =>
+      PublicFallbackService().isIpfsFallbackMode
+          ? null
+          : _overviewController.drawableOverview;
 
   /// The overview can express the content-layer toggles but not filters that
   /// depend on per-artwork state, so those fall back to detailed markers.
@@ -558,6 +563,9 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
   @override
   void initState() {
     super.initState();
+    final fallbackService = PublicFallbackService();
+    _lastObservedIpfsFallbackMode = fallbackService.isIpfsFallbackMode;
+    fallbackService.addListener(_handlePublicFallbackModeChanged);
     if (!kIsWeb &&
         (defaultTargetPlatform == TargetPlatform.android ||
             defaultTargetPlatform == TargetPlatform.iOS)) {
@@ -2029,6 +2037,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
   /// current camera viewport. This keeps deep links and search selections
   /// reliable when their marker is outside the loaded viewport snapshot.
   Future<void> _loadMarkersAroundTarget(LatLng position) async {
+    if (PublicFallbackService().isIpfsFallbackMode) return;
     if (!_pollingEnabled) return;
     if (_isLoadingMarkers) {
       _pendingTargetMarkerLoad = position;
@@ -2039,6 +2048,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
   }
 
   Future<void> _loadMarkersAroundTargetNow(LatLng position) async {
+    if (PublicFallbackService().isIpfsFallbackMode) return;
     if (!_pollingEnabled || _isLoadingMarkers) return;
 
     final artworkProvider = context.read<ArtworkProvider>();
@@ -2057,6 +2067,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
         filtersKey: _markerQueryFiltersKey(),
       );
       if (!mounted || requestId != _markerRequestId) return;
+      if (PublicFallbackService().isIpfsFallbackMode) return;
 
       _mergeDirectTargetMarkers(result.markers);
       unawaited(_syncMapMarkers(themeProvider: themeProvider));
@@ -2549,6 +2560,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
 
   @override
   void dispose() {
+    PublicFallbackService().removeListener(_handlePublicFallbackModeChanged);
     PublicEntryNavigation.instance.release(_publicMarkerUrlClaim);
     _publicMarkerUrlClaim = null;
     _publicMarkerUrlClaimId = null;
@@ -5194,6 +5206,9 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
   }
 
   List<ArtMarker> _computeVisibleMarkers() {
+    if (PublicFallbackService().isIpfsFallbackMode) {
+      return const <ArtMarker>[];
+    }
     final artworkProvider = context.read<ArtworkProvider>();
     Artwork? artworkFor(ArtMarker marker) {
       final id = marker.artworkId;
@@ -5225,6 +5240,72 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       alwaysIncludeMarkerIds: pinnedIds.isEmpty ? null : pinnedIds,
     );
   }
+
+  void _handlePublicFallbackModeChanged() {
+    final isIpfsFallback = PublicFallbackService().isIpfsFallbackMode;
+    if (_lastObservedIpfsFallbackMode == isIpfsFallback) return;
+    _lastObservedIpfsFallbackMode = isIpfsFallback;
+    if (!mounted) return;
+
+    if (isIpfsFallback) {
+      _markerRequestId += 1;
+      _isLoadingMarkers = false;
+      _pendingMarkerRefresh = false;
+      _pendingMarkerRefreshForce = false;
+      _lastMarkerFetchCenter = null;
+      _lastMarkerFetchTime = null;
+      _loadedViewportBounds = null;
+      _loadedViewportZoomBucket = null;
+      _pendingRestoreMarker = null;
+      _overviewController.deactivate();
+      _artMarkers = const <ArtMarker>[];
+      _kubusMapController.dismissSelection();
+      _kubusMapController.setMarkers(const <ArtMarker>[]);
+      _safeSetState(() {});
+      _applyVisibleMarkers();
+      unawaited(
+        _syncMapMarkersSafe(themeProvider: context.read<ThemeProvider>()),
+      );
+      return;
+    }
+
+    unawaited(_loadMarkersForCurrentView(force: true));
+  }
+
+  @visibleForTesting
+  void debugSetLoadedMarkersForTest(List<ArtMarker> markers) {
+    _safeSetState(() => _artMarkers = List<ArtMarker>.of(markers));
+    _applyVisibleMarkers();
+  }
+
+  @visibleForTesting
+  Future<void> debugLoadOverviewForTest({
+    required GeoBounds bounds,
+    required double zoom,
+    bool keepForHandoff = false,
+  }) async {
+    final outcome = await _overviewController.refresh(
+      visible: bounds,
+      queryBounds: bounds,
+      zoom: zoom,
+      force: true,
+      allowed: true,
+    );
+    if (keepForHandoff &&
+        (outcome == KubusMapOverviewRefresh.applied ||
+            outcome == KubusMapOverviewRefresh.unchanged)) {
+      _overviewController.deactivate(keepForHandoff: true);
+    }
+  }
+
+  @visibleForTesting
+  List<String> get debugMarkerSourceInputIdsForTest => _kubusMapController
+      .buildRenderedMarkers()
+      .map((rendered) => rendered.marker.id)
+      .toList(growable: false);
+
+  @visibleForTesting
+  bool get debugHasDrawableOverviewForTest => markerOverview != null;
 
   List<Artwork> _getFilteredArtworks(
     List<Artwork> artworks, {
@@ -5285,6 +5366,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
   }
 
   Future<void> _loadMarkersForCurrentView({bool force = false}) async {
+    if (PublicFallbackService().isIpfsFallbackMode) return;
     if (!_pollingEnabled) {
       _queuePendingMarkerRefresh(force: force);
       return;
@@ -5299,6 +5381,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     if (useBoundsQuery) {
       zoomBucket = MapViewportUtils.zoomBucket(_cameraZoom);
       final visible = await _getVisibleGeoBounds();
+      if (PublicFallbackService().isIpfsFallbackMode) return;
       if (visible == null) return;
       bounds = MapViewportUtils.expandBounds(
         visible,
@@ -5320,6 +5403,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     bool force = false,
     int? zoomBucket,
   }) async {
+    if (PublicFallbackService().isIpfsFallbackMode) return;
     if (!_pollingEnabled) {
       _queuePendingMarkerRefresh(force: force);
       return;
@@ -5385,6 +5469,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
         allowed: _overviewAllowedByFilters,
       );
       if (!mounted) return;
+      if (PublicFallbackService().isIpfsFallbackMode) return;
       switch (overviewOutcome) {
         case KubusMapOverviewRefresh.applied:
           unawaited(_syncMapMarkers(themeProvider: themeProvider));
@@ -5455,6 +5540,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
             );
       if (!mounted) return;
       if (requestId != _markerRequestId) return;
+      if (PublicFallbackService().isIpfsFallbackMode) return;
 
       final merged = useBoundsQuery
           ? ArtMarkerListDiff.upsertById(
@@ -5658,6 +5744,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
   }
 
   void _handleMarkerCreated(ArtMarker marker) {
+    if (PublicFallbackService().isIpfsFallbackMode) return;
     if (!marker.hasValidPosition) return;
 
     final existingIndex = _artMarkers.indexWhere((m) => m.id == marker.id);

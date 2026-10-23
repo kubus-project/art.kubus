@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:art_kubus/config/config.dart';
+import 'package:art_kubus/models/art_marker.dart';
 import 'package:art_kubus/services/backend_api_service.dart';
 import 'package:art_kubus/services/map_data_controller.dart';
 import 'package:art_kubus/services/map_marker_service.dart';
@@ -139,4 +140,55 @@ void main() {
       expect(controller.debugStats.markersByArtworkCacheHits, 0);
     },
   );
+
+  test('socket and local marker upserts are withheld in IPFS fallback',
+      () async {
+    BackendApiService().setHttpClient(
+      MockClient((_) async => markerListResponse()),
+    );
+    final service = MapMarkerService.createForTest();
+    const center = LatLng(46.0569, 14.5058);
+    await service.loadMarkers(center: center, radiusKm: 5);
+
+    final emitted = <ArtMarker>[];
+    final subscription = service.onMarkerCreated.listen(emitted.add);
+    Map<String, dynamic> socketMarker(String id) => <String, dynamic>{
+          'id': id,
+          'name': 'Synthetic socket marker',
+          'latitude': center.latitude,
+          'longitude': center.longitude,
+          'markerType': 'artwork',
+          'createdAt': '2026-10-23T00:00:00.000Z',
+          'createdBy': 'synthetic-test',
+          'isPublic': true,
+          'isActive': true,
+        };
+
+    service.debugHandleSocketMarker(socketMarker('synthetic-live-socket'));
+    await Future<void>.delayed(Duration.zero);
+    expect(
+        emitted.map((marker) => marker.id), <String>['synthetic-live-socket']);
+
+    enterIpfsFallback();
+    service.debugHandleSocketMarker(socketMarker('synthetic-fallback-socket'));
+    service.notifyMarkerUpserted(
+      ArtMarker.fromMap(socketMarker('synthetic-fallback-local')),
+    );
+    await Future<void>.delayed(Duration.zero);
+
+    expect(
+        emitted.map((marker) => marker.id), <String>['synthetic-live-socket']);
+    expect(service.cachedMarkers, isEmpty);
+
+    await PublicFallbackService().resetForTesting();
+    expect(
+      service.cachedMarkers.map((marker) => marker.id),
+      isNot(contains('synthetic-fallback-socket')),
+    );
+    expect(
+      service.cachedMarkers.map((marker) => marker.id),
+      isNot(contains('synthetic-fallback-local')),
+    );
+    await subscription.cancel();
+  });
 }
