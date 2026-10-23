@@ -267,7 +267,7 @@ jobs:
     # Compiling this test's import graph (the whole map screen) for the browser is slow on a cold
     # runner: inside flutter_quality it was still loading after 14 minutes when that job's 60-minute
     # limit cancelled it. It has its own job and budget so it runs in parallel and can fail or time out
-    # on its own evidence. --ignore-timeouts only lifts the suite-load timeout; this job limit bounds it.
+    # on its own evidence. --ignore-timeouts lifts every test timeout (including suite load); this job limit bounds a hang.
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v4
@@ -276,6 +276,7 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
           package-manager-cache: false
+      - run: npm install --global "npm@${NPM_VERSION}"
       - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2
         with:
           flutter-version: ${{ env.FLUTTER_VERSION }}
