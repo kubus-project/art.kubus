@@ -131,7 +131,7 @@ import '../widgets/map/controls/kubus_map_primary_controls.dart'
 import '../widgets/map/dialogs/kubus_map_attribution_dialog.dart';
 import '../widgets/map/kubus_map_chrome.dart';
 import '../widgets/map/dialogs/street_art_claims_dialog.dart';
-import '../widgets/map/glass/kubus_map_platform_backdrop_host.dart';
+import '../widgets/map/glass/kubus_map_platform_backdrop_mount.dart';
 import '../widgets/map/kubus_map_glass_surface.dart';
 import '../widgets/common/kubus_filter_panel.dart';
 import '../widgets/common/kubus_glass_icon_button.dart';

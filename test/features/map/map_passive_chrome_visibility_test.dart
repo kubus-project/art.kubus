@@ -1,6 +1,6 @@
 import 'package:art_kubus/features/map/shared/map_marker_chrome_occlusion_plan.dart';
 import 'package:art_kubus/features/map/shared/map_passive_chrome_visibility.dart';
-import 'package:art_kubus/widgets/map/glass/kubus_map_platform_backdrop_host.dart';
+import 'package:art_kubus/widgets/map/glass/kubus_map_platform_backdrop_mount.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
