@@ -6,7 +6,9 @@ import 'dart:convert';
 import 'package:art_kubus/config/config.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:art_kubus/models/art_marker.dart';
+import 'package:art_kubus/providers/activation_prompt_provider.dart';
 import 'package:art_kubus/providers/artwork_provider.dart';
+import 'package:art_kubus/providers/events_provider.dart';
 import 'package:art_kubus/providers/exhibitions_provider.dart';
 import 'package:art_kubus/providers/main_tab_provider.dart';
 import 'package:art_kubus/providers/map_deep_link_provider.dart';
@@ -46,6 +48,10 @@ Widget _wrapWithProviders({
       ChangeNotifierProvider(create: (_) => MapDeepLinkProvider()),
       ChangeNotifierProvider(create: (_) => NavigationProvider()),
       ChangeNotifierProvider(create: (_) => ExhibitionsProvider()),
+      ChangeNotifierProvider(create: (_) => EventsProvider()),
+      ChangeNotifierProvider(
+        create: (_) => ActivationPromptProvider(hasAuthSession: () => false),
+      ),
       ChangeNotifierProvider(create: (_) => MarkerManagementProvider()),
       ChangeNotifierProvider(create: (_) => PresenceProvider()),
       Provider<TileProviders>(
