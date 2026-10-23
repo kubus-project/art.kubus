@@ -1,0 +1,17 @@
+{
+  "sourceContext": "oracle/artkubus-backend",
+  "sourceGitCommit": "46c9b84fed42aff21463c788e5e13994689c7f73",
+  "observedUtc": "2026-10-23 09:46:44.987945+00",
+  "cutoffUtc": "2026-10-22T23:31:10Z",
+  "serverVersionNum": "150019",
+  "transactionReadOnly": "on",
+  "inRecovery": false,
+  "querySha256": "f29ee8cf219661e8d022df6acd5c9eace40f7f759fdcdc1c152f77f7b19b331f",
+  "projectionSha256": "7e7d90dbcd70b67b68e58eb8f4c8afc143192f1621cc4eeebd5fac073b3d3197",
+  "counts": {
+    "raw_active_owner_public_unreviewed": 9050,
+    "public_eligible_unreviewed": 8955,
+    "eligible_by_cutoff": 8955,
+    "changed_fingerprints": 0
+  }
+}

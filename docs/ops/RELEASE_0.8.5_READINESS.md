@@ -1,6 +1,6 @@
 ﻿# v0.8.5 release readiness — 2026-10-23
 
-**NO-GO. v0.8.5 is not released.** Final marker review, snapshot freshness, integrated acceptance, HA and signed/native qualification remain incomplete. This report records completed evidence separately from pending gates. No protected branch merge, tag, publication, production deployment, production data migration or HA repair was performed.
+**NO-GO. v0.8.5 is not released.** Marker source review is clear, but final app review, snapshot freshness, integrated acceptance, HA and signed/native qualification remain incomplete. This report records completed evidence separately from pending gates. No protected branch merge, tag, publication, production deployment, production data migration or HA repair was performed.
 
 ## Exact candidate ledger
 
@@ -10,12 +10,12 @@
 | Backend deployed Oracle baseline | `46c9b84fed42aff21463c788e5e13994689c7f73`, container GIT_COMMIT verified |
 | Backend SSR-L1 / language fix, PR #129 | `1e94d5b278df7627fea4fe5f23e993d2b0966517`, pushed, reviewed, required CI passed |
 | Backend test restoration, PR #130 | `9f53af8a7bc71969daf3f7d3efdbfd058b172c54`, independently reviewed and integrated with #129 in #131 at 9401f734; hosted CI passed there. |
-| Backend candidate, PR #131 | `3e09a1a301454dd1ff269dd07f2cfc10ef3226dd`; includes #129/#130 and independently reviewed CSS fix #132 (bd8bb310). Marker code remains outside this candidate. |
+| Backend candidate, PR #131 | `d6ffb166e3608d6f3ca266a8db8c60df18bb11b0`; includes #129/#130, independently reviewed CSS fix #132 (bd8bb310), and reviewed marker topic 27b6c94. Exact integrated acceptance is running. |
 | Admin, open PR #18 | `a2d788804779baf63a6c091d4734ce04ea38a887`; tree-equivalent UI proof preserved; fresh isolated role/session/CSRF/logout browser smoke passed against backend 9401f734. |
-| Marker selected-policy topic | `ff30f0a25a9500c9ec0927b00ef47317b5deeb1c`, pushed separately; 12/12 focused PG tests passed. Review found a remaining typed-counter fingerprint edge; follow-up is pending. Neither 1fac612 nor ff30f0a is cleared for integration. |
+| Marker selected-policy topic | `27b6c94f158b0452a56c53ea56a1cd4d58c9e034`, independently cleared for candidate integration; reviewer reran 12/12 focused PG tests and schema parity, checked matching migration/schema function blocks and provenance. Replaces uncleared 1fac612/ff30f0a and is integrated in #131. |
 | App snapshot-fallback topic | `cd9611f41db461ddb41e4605820dcb51eef050aa`, pushed separately atop a1629792; client snapshot marker/exhibition-ID guard awaits review/test completion and integration. |
 
-There is **no final integrated backend candidate including the marker gate**. #131 is the single integration topic; only independently reviewed changes may enter it. Do not deploy a branch merely because its individual tests passed.
+**#131 is the single integrated backend candidate**, including the reviewed marker gate. It is not a qualified production release until its exact integrated acceptance and operational gates pass. Do not deploy a branch merely because its individual tests passed.
 
 App #353 is in dev; #354/#355/#356/#357 are preserved and assembled in draft #358, not merged into protected branches by this run. Backend #117/#120/#123–#128 ancestry was reconciled against current master; #121/#122 code exists in that ancestry although their PR records remain open. #129/#130 are additional open work. Documentation is draft app PR #359. Unrelated v0.9 work and shared-checkout WIP were preserved.
 
@@ -44,6 +44,7 @@ App #353 is in dev; #354/#355/#356/#357 are preserved and assembled in draft #35
 | Physical Android Chrome | BLOCKED: no device attached; remains required release gate. |
 | Native App Links | PARTIAL: v0.8.4 signed APK certificate matches live and checked-in assetlinks; final installed 0.8.5 App Link behavior unverified. |
 | Backend renderer | PASS targeted 130 tests and required hosted CI. Full local suite had one 5s auth timeout under load; isolated failing file then passed 11/11. Do not report that full local run green. |
+| Integrated backend d6ffb166 | Toolchain/lint/schema parity/Compose and both clean schema bootstraps PASS (103 migrations/144 tables); editorial migration contract PASS. Wider spatial PG run exposed old temporary-table fixture incompatibility with the typed fingerprint function. Test-only correction is pending independent review; full integrated matrix is not yet PASS. |
 | Admin/security | PASS for source compatibility, tree-equivalent prior UI coverage, and fresh isolated admin/moderator session/CSRF/logout smoke against backend 9401f734; zero business mutations/external requests. Production acceptance remains pending. |
 | OrbitDB / snapshots | PARTIAL: isolated mirror-mode artwork publish/readback and Kubo snapshot registry/dataset readback passed, DNSLink off. Marker approval/rejection/revert and stale fallback/purge lifecycle NOT qualified. |
 | HA | BLOCKED: Oracle zero streaming replicas / replication unhealthy; Home ce11d5fcaeaf081b981b84cfb69c4fcb641b9047 stale and readiness/writability 503. No repair authorized/performed. |
@@ -53,9 +54,11 @@ App #353 is in dev; #354/#355/#356/#357 are preserved and assembled in draft #35
 
 The earlier **9,046** readiness figure is not a verified comparable total. Historical September evidence uses 9,046 for the `artwork_not_ar` subset, not all eligible markers. Fresh read-only evidence finds 9,050 own-public active/unreviewed rows; 95 fail existing linked-artwork visibility, leaving **8,955** eligible markers. Do not describe this as 91 records removed. See the [marker decision and saved queries](RELEASE_0.8.5_MARKER_POLICY_DECISION.md).
 
-The owner approved candidate implementation of bounded visibility for a captured **8,955-UUID cohort**, kept explicitly unreviewed. New/materially changed markers need approval; private/inactive/rejected/archived records and hidden linked owners remain denied. Public visibility is neither editorial verification nor SEO permission. The independent saved-capture check finds 8,955 unique IDs, no post-cutoff eligible records, and a manifest emitted from the same eligible CTE; no unintentional capture exclusion/admission was found at that capture. Source fingerprint follow-up still needs clearance. No production migration, bulk approval, hiding or deindexing occurred.
+The owner approved candidate implementation of bounded visibility for a captured **8,955-UUID cohort**, kept explicitly unreviewed. New/materially changed markers need approval; private/inactive/rejected/archived records and hidden linked owners remain denied. Public visibility is neither editorial verification nor SEO permission. The independent saved-capture check finds 8,955 unique IDs, no post-cutoff eligible records, and a manifest emitted from the same eligible CTE; no unintentional capture exclusion/admission was found at that capture. The fingerprint follow-up cleared independent review at 27b6c94; [saved review](evidence/marker-policy-20261023/marker-policy-cohort-crosscheck-ff30f0a.md) and [typed compatibility evidence](evidence/marker-policy-20261023/marker-cohort-typed-projection-compatibility.json) preserve the provenance. No production migration, bulk approval, hiding or deindexing occurred.
 
 Preserve strict-gate WIP `495ebfa2d350176e30c88bd3b87e8c3a4fde8455` separately; it is not the selected policy. Current DNSLink and historical immutable CIDs are distinct: stale current publication is unresolved, and historical IPFS erasure is not promised. The app fallback guard blocks snapshot marker rows/embedded marker IDs locally; it does not itself repair the publisher or replace the current DNSLink pointer.
+
+Focused read-only evidence at 2026-10-23 09:54 UTC confirms the current registry was generated on 2026-10-09. Four sanitized upload-error samples report a 5,000 ms timeout with pinning requested; the cluster-pin stage is the strong inferred failure point, not a proven cause for every earlier failure. See [DNSLink/publisher evidence](evidence/marker-policy-20261023/dnslink-publisher-readonly-2026-10-23.json). Owner-approved repair must diagnose the pin service before any timeout/configuration change, then qualify a successful publication from the reviewed, schema-ready policy producer and verify datasets, registry and current DNSLink. No repair, publication or DNS write was performed.
 
 ## SEO and performance boundaries
 
@@ -65,13 +68,13 @@ Released-v0.8.4 equivalent-build performance comparison remains BLOCKED. Earlier
 
 ## Native artifacts and signing
 
-Unsigned Android/iOS CI compiles passed at final app SHA. No signed v0.8.5 APK/AAB or distributable IPA is qualified. Local Android release keystore/key.properties absent; protected environment signing must be checked through the existing release workflow. Repository-secret absence alone does not establish environment-secret absence. Existing signed v0.8.4 proves prior signer identity, not a signed 0.8.5 artifact. Final immutable checksums/release manifest remain pending; template values must stay null rather than fabricated.
+Android and unsigned iOS CI compiles passed at a1629792. The Android CI job also signed and uploaded a temporary device-test APK; this is not production release-signing or verified installed App Links evidence. No production-signed v0.8.5 APK/AAB or distributable IPA is qualified. Local Android release keystore/key.properties absent; protected environment signing must be checked through the existing release workflow. Repository-secret absence alone does not establish environment-secret absence. Existing signed v0.8.4 proves prior signer identity, not a signed v0.8.5 release artifact. Final release checksums/manifest remain pending; template values must stay null rather than fabricated.
 
 ## Release / rollback procedure and owner gates
 
 Draft PR #359 contains proposed notes, preflight and pending artifact manifest. Refresh it against final heads before use. Gate sequence: reviewed candidate and exact-SHA acceptance → schema/config/backup/rollback preflight → owner-approved backend rollout → compatible admin → frontend web → native distribution separately. Stop on failed gates. No protected action is authorized by this report.
 
-Before release: clear the remaining fingerprint finding and current-snapshot freshness gate; integrate reviewed marker/app changes and run their full exact-head matrix; finish real-auth/physical-device/native qualification; qualify HA recovery and rollback; separately approve signed native artifact generation and then publication. Verify deployment/image SHA and schema parity immediately before any approved promotion.
+Before release: resolve current-snapshot freshness; finish app fallback review and integrate only cleared changes; run the full exact-head matrix, including the restored PostgreSQL fixtures; finish real-auth/physical-device/native qualification; qualify HA recovery and rollback; separately approve signed native artifact generation and then publication. Verify deployment/image SHA and schema parity immediately before any approved promotion.
 
 Use existing protected workflows and guarded atomic web rollback. Backend baseline rollback anchor is current Oracle 46c9b84f, subject to image/schema verification. Admin production rollback artifact must be identified. Preserve backups and do not guess host paths. After an approved dev→master release, reconcile ancestry back into dev with a merge commit; require master-only cherry-pick-aware count zero.
 

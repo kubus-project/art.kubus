@@ -11,11 +11,11 @@ that the candidate is ready.
 | Surface | Observed state | Release consequence |
 | --- | --- | --- |
 | App | PR #358 head `a1629792c9dd4f26f2c41730cc38fe9b31c52560`; full-tier run `39876644908` passed, including required aggregate, Flutter/motion/community flags, web smoke and Android/iOS compilation. | Separate snapshot-fallback changes still require review, tests and final integrated acceptance. |
-| Backend | Oracle production baseline remains `46c9b84fed42aff21463c788e5e13994689c7f73`. Candidate PR #131 combines reviewed #129/#130; reviewed loading-layout fix is integrated at `3e09a1a301454dd1ff269dd07f2cfc10ef3226dd`. Marker policy remains separate pending independent clearance. | Re-fetch the final candidate and require full integrated tests before requesting deployment. No candidate deployment is claimed. |
+| Backend | Oracle production baseline remains `46c9b84fed42aff21463c788e5e13994689c7f73`. Candidate PR #131 head `d6ffb166e3608d6f3ca266a8db8c60df18bb11b0` combines reviewed #129/#130, loading-layout fix #132 and marker policy 27b6c94. | Full integrated tests are running; require their exact-head results before requesting deployment. No candidate deployment is claimed. |
 | Admin | PR #18 head `a2d788804779baf63a6c091d4734ce04ea38a887`; tree-equivalent UI and fresh isolated admin/moderator session/CSRF/logout smoke passed against backend `9401f734`. | Recheck compatibility if backend authorization changes; production smoke remains pending. |
 | Moderation data | Owner approved a frozen cohort of 8,955 eligible legacy UUIDs, kept unreviewed. The older 9,046 figure is not a comparable total; see the marker decision memo. | Candidate code only. New/materially changed records require approval; public visibility does not grant verification or SEO permission. No production migration or bulk moderation authorized. |
 | HA | Oracle HA reported false, zero replicas; Home `ce11d5fcaeaf081b981b84cfb69c4fcb641b9047` is stale and returns 503 | Production recovery/HA is not qualified. Stop before any failover, reseed, or destructive action. |
-| Android/iOS | No signed v0.8.5 artifacts. Android signing runs only through protected release workflow. Local iOS signing credentials/Xcode are unavailable. | No native distribution claim. A CI compile is not a signed artifact. |
+| Android/iOS | No qualified production-signed v0.8.5 artifacts. Full CI emitted a temporarily signed device-test APK; production signing is a separate protected workflow. Local iOS signing credentials/Xcode are unavailable. | No native distribution or verified production-certificate App Links claim. |
 | Earlier candidate artifact | Run `39832070656` contains a 0.8.5 web bundle from an earlier app SHA, before the map-camera fix (reported build metadata `416373525`). | Exclude it from final release, performance baselines, and checksums. It does not match PR #358's current head. |
 
 Refresh all PR heads, required checks, workflow configuration, deployments and
@@ -58,6 +58,12 @@ continue past a failed gate.
 - Verify current DNSLink snapshot freshness and publisher health separately
   from Flutter's outage fallback guard. Historical IPFS CIDs are immutable;
   neither a pointer update nor a client filter erases historical copies.
+- The read-only publisher probe found a 9 October current registry and repeated
+  5,000 ms upload/pinning timeouts. Diagnose IPFS Cluster latency/reachability
+  before proposing a tested timeout change. After separate repair/deployment
+  approval, qualify publication using the reviewed, migration-ready policy
+  producer, then verify every dataset, registry timestamp and DNSLink target.
+  Republishing the older runtime is not proof of candidate policy enforcement.
 - Confirm admin compatibility and required role/configuration contracts.
 
 ## Proposed protected release commands (NOT EXECUTED)
@@ -102,6 +108,32 @@ separate workflow mode; the proposed command above deliberately does not
 publish. A final release owner must choose the publication mode after checking
 the artifacts.
 
+## HA recovery approval packet (NOT EXECUTED)
+
+The saved read-only probe found Oracle writable but with zero streaming
+replicas and an inactive/lost `oracle_home_slot`; Home was unready/stale.
+This is not a safe failover target. HTTP diagnostic health does not override
+readiness or replication failure.
+
+Before any live intervention, the owner must approve the exact operator,
+maintenance window, authority/fencing plan, accepted write outage and rollback
+contact. Recheck live database roles, witness lease/quorum, replay position,
+disk capacity and container revisions at that time. Require a recent Oracle
+backup proven by isolated restore, and preserve Home before any reseed.
+
+The backend's `deploy/ha/scripts/reseed-home-standby.sh` clears the standby
+data directory. Its use needs explicit approval of that destructive step and
+verified primary/slot inputs; do not run it from this preparation packet.
+Resolve the lost slot before reseeding: creating a slot only if absent does
+not repair an existing lost slot. Follow the backend operator runbook rather
+than guessing replacement commands.
+
+After an approved recovery, require Home in recovery with a live WAL receiver
+and advancing replay, Oracle with the expected streaming replica/healthy slot,
+Oracle readiness/writability 200, and standby readiness 200/writability 503.
+Do not promote Home, reroute writes or initiate failback during verification.
+Any failed safety gate stops the procedure.
+
 ## Rollback anchors and actions
 
 ### Web
@@ -138,6 +170,12 @@ The backend production baseline is reported as deployed at
 and migration recovery contract before any release. No admin production
 rollback SHA was provided for this packet; record the actual deployed SHA and
 artifact from the admin deployment system before promotion.
+
+Schema compatibility alone does not establish a policy-safe backend rollback:
+the older runtime does not enforce migration 113's cohort restrictions. Verify
+the rollback build preserves the publication/privacy gates, or obtain explicit
+owner acceptance of its impact before promotion. Preserve cohort records and
+revocation history; do not reset grants or remove migration 113 as a shortcut.
 
 ## Post-promotion smoke matrix
 
