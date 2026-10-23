@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
@@ -595,7 +595,13 @@ test('PR validation workflow wires the tiers without weakening the required chec
   assert.match(mapBrowser, /timeout-minutes:\s*45/);
   assert.match(mapBrowser, /playwright install --with-deps chromium/);
   assert.match(mapBrowser, /CHROME_EXECUTABLE=.*chromium\.executablePath\(\)/);
-  assert.match(mapBrowser, /flutter test --platform chrome --reporter expanded --concurrency=1 --ignore-timeouts test\/map\/map_screen_web_smoke_test\.dart/);
+  assert.match(mapBrowser, /flutter test --platform chrome --reporter expanded --concurrency=1 test\/map\/map_screen_web_smoke_test\.dart/);
+  assert.doesNotMatch(mapBrowser, /--ignore-timeouts/, 'a suite-load failure must fail in minutes, not wait for the job limit');
+  const controlAt = mapBrowser.indexOf('- name: Browser harness positive control');
+  const mapStepAt = mapBrowser.indexOf('- name: Mounted map fallback revocation in Chrome');
+  assert.ok(controlAt > 0 && controlAt < mapStepAt, 'the browser harness positive control runs before the map test');
+  assert.match(mapBrowser.slice(controlAt, mapStepAt), /test\/web\/basic_browser_smoke_test\.dart[\s\S]*All tests passed/);
+  assert.match(mapBrowser.slice(controlAt, mapStepAt), /test\/widgets\/map\/glass\/kubus_map_platform_backdrop_mount_browser_test\.dart/);
   assert.match(content.slice(content.indexOf('\n  required:')), /^\s+- map_browser_regression$/m, 'the required aggregate must need map_browser_regression');
   assert.match(content, /EXPECTED_JOBS:[^\n]*map_browser_regression/);
   const required = content.slice(content.indexOf('\n  required:'));
@@ -690,4 +696,23 @@ test('context: the workflow reserves the required name for non-draft tiers and n
   // The aggregate must run even when its dependencies fail, so the context always resolves.
   const required = content.slice(content.indexOf('\n  required:'));
   assert.match(required, /if:\s*\$\{\{ always\(\) \}\}/);
+});
+
+// ---- Browser-test module names ----------------------------------------------
+
+// flutter_tools 3.44.2 flutter_web_platform.dart:391 (_handleStaticArtifact) answers any URL containing
+// `host.dart.js` with the harness bundle, so a compiled `*host.dart` library never loads and the browser
+// suite stalls at "loading" (see the W6-A bisect). Keep every lib/ and test/ file off that suffix.
+test('browser test modules never end in host.dart (flutter_tools serves host.dart.js from the harness)', () => {
+  const offenders = [];
+  const walk = (directory) => {
+    for (const entry of readdirSync(directory, { withFileTypes: true })) {
+      const path = resolve(directory, entry.name);
+      if (entry.isDirectory()) walk(path);
+      else if (/host\.dart$/.test(entry.name)) offenders.push(path.slice(repositoryRoot.length + 1));
+    }
+  };
+  walk(resolve(repositoryRoot, 'lib'));
+  walk(resolve(repositoryRoot, 'test'));
+  assert.deepEqual(offenders, [], 'rename these to *mount.dart or similar; a *host.dart module never loads in a browser test');
 });
