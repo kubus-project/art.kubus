@@ -155,6 +155,13 @@ On failure the SSR page stays visible with one manual Refresh control. There is
 no automatic reload. A late `kubus:public-entity-ready` cannot cover a failed
 SSR page.
 
+Flutter also reports a pending entity whose load got no answer (rate limit 429,
+408, 5xx, transport failure) through `kubus:public-entity-failed`, with the same
+entity detail as the ready signal. The host applies the same idempotent failure.
+A 404 or other 4xx is an answer and stays not found. The marker entry keeps its
+address on this path; it is not dropped to the plain map. No timer declares
+failure and nothing reloads automatically.
+
 Target rule:
 
 > Only the exact entity screen can declare the handoff ready.
