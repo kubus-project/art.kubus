@@ -1,5 +1,6 @@
 import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:art_kubus/utils/design_tokens.dart';
+import 'package:art_kubus/widgets/common/kubus_password_visibility_toggle.dart';
 import 'package:art_kubus/widgets/kubus_button.dart';
 import 'package:flutter/material.dart';
 
@@ -127,18 +128,11 @@ class _EmailRegistrationFormState extends State<EmailRegistrationForm> {
             decoration: _decoration(
               labelText: l10n.commonPassword,
               errorText: widget.passwordError,
-              suffixIcon: IconButton(
-                tooltip: _obscurePassword
-                    ? l10n.formShowPassword
-                    : l10n.formHidePassword,
+              suffixIcon: KubusPasswordVisibilityToggle(
+                obscured: _obscurePassword,
                 onPressed: () {
                   setState(() => _obscurePassword = !_obscurePassword);
                 },
-                icon: Icon(
-                  _obscurePassword
-                      ? Icons.visibility_outlined
-                      : Icons.visibility_off_outlined,
-                ),
               ),
               border: border,
               colorScheme: colorScheme,
@@ -166,19 +160,12 @@ class _EmailRegistrationFormState extends State<EmailRegistrationForm> {
             decoration: _decoration(
               labelText: l10n.commonConfirmPassword,
               errorText: widget.confirmPasswordError,
-              suffixIcon: IconButton(
-                tooltip: _obscureConfirmPassword
-                    ? l10n.formShowPassword
-                    : l10n.formHidePassword,
+              suffixIcon: KubusPasswordVisibilityToggle(
+                obscured: _obscureConfirmPassword,
                 onPressed: () {
                   setState(
                       () => _obscureConfirmPassword = !_obscureConfirmPassword);
                 },
-                icon: Icon(
-                  _obscureConfirmPassword
-                      ? Icons.visibility_outlined
-                      : Icons.visibility_off_outlined,
-                ),
               ),
               border: border,
               colorScheme: colorScheme,

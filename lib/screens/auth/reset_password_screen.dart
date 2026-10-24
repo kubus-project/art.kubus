@@ -9,6 +9,7 @@ import '../../utils/design_tokens.dart';
 import '../../utils/kubus_color_roles.dart';
 import '../../widgets/app_logo.dart';
 import '../../widgets/common/kubus_context_icon.dart';
+import '../../widgets/common/kubus_password_visibility_toggle.dart';
 import '../../widgets/auth/auth_atmosphere.dart';
 import '../../widgets/kubus_button.dart';
 import '../../widgets/kubus_card.dart';
@@ -144,15 +145,9 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
           decoration: InputDecoration(
             labelText: l10n.commonPassword,
             border: const OutlineInputBorder(),
-            suffixIcon: IconButton(
-              tooltip:
-                  _showPassword ? l10n.formHidePassword : l10n.formShowPassword,
+            suffixIcon: KubusPasswordVisibilityToggle(
+              obscured: !_showPassword,
               onPressed: () => setState(() => _showPassword = !_showPassword),
-              icon: Icon(
-                _showPassword
-                    ? Icons.visibility_off_outlined
-                    : Icons.visibility_outlined,
-              ),
             ),
           ),
         ),
@@ -163,17 +158,10 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
           decoration: InputDecoration(
             labelText: l10n.commonConfirmPassword,
             border: const OutlineInputBorder(),
-            suffixIcon: IconButton(
-              tooltip: _showConfirmPassword
-                  ? l10n.formHidePassword
-                  : l10n.formShowPassword,
+            suffixIcon: KubusPasswordVisibilityToggle(
+              obscured: !_showConfirmPassword,
               onPressed: () => setState(
                 () => _showConfirmPassword = !_showConfirmPassword,
-              ),
-              icon: Icon(
-                _showConfirmPassword
-                    ? Icons.visibility_off_outlined
-                    : Icons.visibility_outlined,
               ),
             ),
           ),
