@@ -9,6 +9,7 @@ import 'package:art_kubus/providers/saved_items_provider.dart';
 import 'package:art_kubus/providers/wallet_provider.dart';
 import 'package:art_kubus/services/account_identity.dart';
 import 'package:art_kubus/services/backend_api_service.dart';
+import 'package:art_kubus/services/block_list_service.dart';
 import 'package:art_kubus/services/pending_action_executor.dart';
 import 'package:art_kubus/services/settings_service.dart';
 import 'package:art_kubus/utils/wallet_utils.dart';
@@ -259,10 +260,13 @@ Future<void> _logout(ArtworkProvider artworks) => SettingsService.logout(
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  setUp(() {
+  setUp(() async {
+    AccountIdentity.resetForTesting();
     SharedPreferences.setMockInitialValues(<String, Object>{});
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(_secureStorageChannel, (call) async => null);
+    // Every test starts as a guest with an empty block list in memory.
+    await AccountIdentity.notifyChanged();
   });
 
   tearDown(() {
@@ -708,9 +712,8 @@ void main() {
   });
 
   group('device-level account keys', () {
-    const accountKeys = <String>[
-      'blocked_wallets_v1',
-      'reported_posts',
+    const purgedKeys = <String>[
+      'artwork_view_history_v1',
       'collectibles_v1',
       'collectible_series_v1',
       'institutions_v1',
@@ -721,8 +724,7 @@ void main() {
     test('an identity change purges them and keeps unrelated preferences',
         () async {
       SharedPreferences.setMockInitialValues(<String, Object>{
-        'blocked_wallets_v1': '["WalletAAA"]',
-        'reported_posts': <String>['post-1'],
+        'artwork_view_history_v1': '[]',
         'collectibles_v1': '[]',
         'collectible_series_v1': '[]',
         'institutions_v1': '[]',
@@ -734,7 +736,7 @@ void main() {
       await AccountIdentity.notifyChanged();
 
       final prefs = await SharedPreferences.getInstance();
-      for (final key in accountKeys) {
+      for (final key in purgedKeys) {
         expect(prefs.containsKey(key), isFalse, reason: '$key survived');
       }
       expect(prefs.getString('theme_mode'), 'dark');
@@ -742,15 +744,128 @@ void main() {
 
     test('sign-out purges them too', () async {
       SharedPreferences.setMockInitialValues(<String, Object>{
-        'blocked_wallets_v1': '["WalletAAA"]',
-        'reported_posts': <String>['post-1'],
+        'artwork_view_history_v1': '[]',
+        'collectibles_v1': '[]',
       });
 
       await _logout(ArtworkProvider(backendApi: _server()));
 
       final prefs = await SharedPreferences.getInstance();
+      expect(prefs.containsKey('artwork_view_history_v1'), isFalse);
+      expect(prefs.containsKey('collectibles_v1'), isFalse);
+    });
+  });
+
+  group('blocks and reports are kept per account', () {
+    const walletX = 'WalletXXX';
+    final tokenA = _token(<String, Object>{
+      'walletAddress': 'WalletAAA',
+      'user_id': 'user-a',
+    });
+    final tokenB = _token(<String, Object>{
+      'walletAddress': 'WalletBBB',
+      'user_id': 'user-b',
+    });
+
+    test('a block made by A is not seen by B, and is back for A on return',
+        () async {
+      final api = BackendApiService();
+      final blocks = BlockListService();
+      await api.setAuthToken(tokenA);
+      await blocks.blockWallet(walletX);
+      expect(await blocks.isWalletBlocked(walletX), isTrue);
+
+      await api.setAuthToken(tokenB);
+      expect(await blocks.isWalletBlocked(walletX), isFalse);
+
+      await api.setAuthToken(tokenA);
+      expect(await blocks.isWalletBlocked(walletX), isTrue);
+
+      final prefs = await SharedPreferences.getInstance();
+      expect(prefs.getString('blocked_wallets_v1.user-a'), contains(walletX));
+      expect(prefs.containsKey('blocked_wallets_v1.user-b'), isFalse);
+    });
+
+    test('sign-out keeps the blocks, and a returning account gets them back',
+        () async {
+      final api = BackendApiService();
+      final blocks = BlockListService();
+      await api.setAuthToken(tokenA);
+      await blocks.blockWallet(walletX);
+
+      await api.clearAuth();
+      expect(await blocks.isWalletBlocked(walletX), isFalse);
+
+      await api.setAuthToken(tokenA);
+      expect(await blocks.isWalletBlocked(walletX), isTrue);
+    });
+
+    test("a guest's blocks last for the session and never reach an account",
+        () async {
+      final api = BackendApiService();
+      final blocks = BlockListService();
+      await api.clearAuth();
+      await blocks.blockWallet(walletX);
+      expect(await blocks.isWalletBlocked(walletX), isTrue);
+
+      final prefs = await SharedPreferences.getInstance();
+      expect(
+        prefs.getKeys().where((key) => key.startsWith('blocked_wallets_v1')),
+        isEmpty,
+      );
+
+      await api.setAuthToken(tokenA);
+      expect(await blocks.isWalletBlocked(walletX), isFalse);
+    });
+
+    test(
+        'blocks written before accounts were scoped go to the first account '
+        'that signs in', () async {
+      SharedPreferences.setMockInitialValues(<String, Object>{
+        'blocked_wallets_v1': '["$walletX"]',
+      });
+      final api = BackendApiService();
+      final blocks = BlockListService();
+
+      await api.setAuthToken(tokenA);
+      expect(await blocks.isWalletBlocked(walletX), isTrue);
+
+      await api.setAuthToken(tokenB);
+      expect(await blocks.isWalletBlocked(walletX), isFalse);
+
+      final prefs = await SharedPreferences.getInstance();
       expect(prefs.containsKey('blocked_wallets_v1'), isFalse);
+      expect(prefs.getString('blocked_wallets_v1.user-a'), contains(walletX));
+    });
+
+    test('reported posts follow the same rule: adopted once, then per account',
+        () async {
+      SharedPreferences.setMockInitialValues(<String, Object>{
+        'reported_posts': <String>['post-1|spam|1'],
+      });
+      final api = BackendApiService();
+
+      await api.setAuthToken(tokenA);
+      await AccountIdentity.adoptLegacyRecords('user-a');
+      final prefs = await SharedPreferences.getInstance();
+      expect(
+        prefs.getStringList('reported_posts.user-a'),
+        <String>['post-1|spam|1'],
+      );
       expect(prefs.containsKey('reported_posts'), isFalse);
+
+      await api.setAuthToken(tokenB);
+      await AccountIdentity.adoptLegacyRecords('user-b');
+      expect(prefs.containsKey('reported_posts.user-b'), isFalse);
+
+      expect(
+        AccountIdentity.scopedKey('reported_posts', accountKey: 'user-b'),
+        'reported_posts.user-b',
+      );
+      expect(
+        AccountIdentity.scopedKey('reported_posts', accountKey: ''),
+        isNull,
+      );
     });
   });
 }

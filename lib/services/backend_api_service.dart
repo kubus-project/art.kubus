@@ -617,6 +617,7 @@ class BackendApiService
   void setAuthTokenForTesting(String? token) {
     _authToken = token;
     _authWalletCanonical = _tryExtractWalletFromToken(token);
+    AccountIdentity.setAccountKey(_accountKeyOf(token));
   }
 
   @visibleForTesting
@@ -1011,11 +1012,24 @@ class BackendApiService
     return '$wallet|$userId';
   }
 
+  /// The stable id of the account a token belongs to, for the device records
+  /// kept per account. Empty when the token cannot be read (a guest).
+  String _accountKeyOf(String? token) {
+    final payload = _tryDecodeJwtPayload((token ?? '').trim());
+    if (payload == null) return '';
+    for (final claim in const ['user_id', 'id', 'sub']) {
+      final value = (payload[claim] ?? '').toString().trim();
+      if (value.isNotEmpty) return value;
+    }
+    return _tryExtractWalletFromToken(token) ?? '';
+  }
+
   /// Set authentication token for API requests
   Future<void> setAuthToken(String token) async {
     final previousIdentity = _authIdentityOf(_authToken);
     _authToken = token;
     _authWalletCanonical = _tryExtractWalletFromToken(token);
+    AccountIdentity.setAccountKey(_accountKeyOf(token));
     AppConfig.debugPrint('BackendApiService: Auth token set (in-memory)');
     // A token for another account ends the previous identity's local state.
     final nextIdentity = _authIdentityOf(token);
@@ -1158,6 +1172,7 @@ class BackendApiService
         if (AuthGatingService.isAccessTokenValid(token)) {
           _authToken = token;
           _authWalletCanonical = _tryExtractWalletFromToken(token);
+          AccountIdentity.setAccountKey(_accountKeyOf(token));
           await resolveLastSignInMethod();
           AppConfig.debugPrint(
             'BackendApiService: Auth token loaded (in-memory)',
@@ -1165,6 +1180,7 @@ class BackendApiService
         } else {
           _authToken = null;
           _authWalletCanonical = null;
+          AccountIdentity.setAccountKey('');
           AppConfig.debugPrint(
             'BackendApiService: Stored auth token is expired; ignoring',
           );
@@ -1207,8 +1223,9 @@ class BackendApiService
     _authWalletCanonical = null;
     _authCoordinator?.reset();
     // Every way the session ends comes through here (sign-out, a token for
-    // another wallet, a deleted or suspended account). Listeners run before
-    // the first await below.
+    // another wallet, a deleted or suspended account). The session is now a
+    // guest's. Listeners run before the first await below.
+    AccountIdentity.setAccountKey('');
     await AccountIdentity.notifyChanged();
     try {
       await _secureStorage
