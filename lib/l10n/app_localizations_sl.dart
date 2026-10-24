@@ -4184,6 +4184,9 @@ class AppLocalizationsSl extends AppLocalizations {
       'Poveži denarnico za prijavo';
 
   @override
+  String get institutionHubCtaApplyAsInstitution => 'Prijava ustanove';
+
+  @override
   String get institutionHubDaoStatusSyncedLabel =>
       'Stanje sinhronizirano iz pregleda upravljanja';
 

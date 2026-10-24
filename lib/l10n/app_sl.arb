@@ -1511,6 +1511,7 @@
   "institutionHubCtaApprovedByDao": "Odobreno v pregledu upravljanja",
   "institutionHubCtaPendingDaoReview": "Čaka na pregled upravljanja",
   "institutionHubCtaConnectWalletToApply": "Poveži denarnico za prijavo",
+  "institutionHubCtaApplyAsInstitution": "Prijava ustanove",
   "institutionHubDaoStatusSyncedLabel": "Stanje sinhronizirano iz pregleda upravljanja",
   "institutionHubDaoReviewQueueMessage": "Tvoja prijava čaka v vrsti za pregled upravljanja.",
   "institutionHubApprovedToolsMessage": "Cestitke! Institucijska orodja so odobrena.",

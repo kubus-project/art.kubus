@@ -361,6 +361,7 @@ class InstitutionProvider extends ChangeNotifier {
       ),
       isVerified: isApprovedInstitution || hasInstitutionProfile,
       createdAt: profile.createdAt,
+      isSelfDerivedFromWallet: true,
     );
   }
 
@@ -377,6 +378,7 @@ class InstitutionProvider extends ChangeNotifier {
         a.longitude == b.longitude &&
         a.contactEmail == b.contactEmail &&
         a.website == b.website &&
+        a.isSelfDerivedFromWallet == b.isSelfDerivedFromWallet &&
         a.coverImageUrl == b.coverImageUrl &&
         a.logoUrl == b.logoUrl &&
         a.stats.totalVisitors == b.stats.totalVisitors &&

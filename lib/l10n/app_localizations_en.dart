@@ -4150,6 +4150,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get institutionHubCtaConnectWalletToApply => 'Connect wallet to apply';
 
   @override
+  String get institutionHubCtaApplyAsInstitution => 'Apply as an institution';
+
+  @override
   String get institutionHubDaoStatusSyncedLabel =>
       'Status synced from governance review';
 

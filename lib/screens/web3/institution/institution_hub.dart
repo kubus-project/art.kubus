@@ -435,7 +435,7 @@ class _InstitutionHubState extends State<InstitutionHub> {
     } else if (isPending) {
       ctaLabel = l10n.institutionHubCtaPendingDaoReview;
     } else if (wallet.isEmpty) {
-      ctaLabel = l10n.institutionHubCtaConnectWalletToApply;
+      ctaLabel = l10n.institutionHubCtaApplyAsInstitution;
     } else {
       ctaLabel = l10n.institutionHubApplyForReviewAction;
     }

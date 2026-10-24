@@ -1547,6 +1547,7 @@
   "institutionHubCtaApprovedByDao": "Approved by governance review",
   "institutionHubCtaPendingDaoReview": "Pending governance review",
   "institutionHubCtaConnectWalletToApply": "Connect wallet to apply",
+  "institutionHubCtaApplyAsInstitution": "Apply as an institution",
   "institutionHubDaoStatusSyncedLabel": "Status synced from governance review",
   "institutionHubDaoReviewQueueMessage": "Your submission is in the governance review queue.",
   "institutionHubApprovedToolsMessage": "Congratulations! Approved for institution tools.",

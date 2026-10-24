@@ -182,15 +182,15 @@ void main() {
     final context = tester.element(find.byType(InstitutionHub));
     final l10n = AppLocalizations.of(context)!;
 
-    // The CTA names the wallet need and stays tappable, so browsing and
-    // filling in the application never require a wallet.
+    // The CTA names the application, not a wallet step, and stays tappable so
+    // browsing and filling in the application never require a wallet.
+    expect(find.text(l10n.institutionHubCtaConnectWalletToApply), findsNothing);
     expect(
-      _applyButton(tester, l10n.institutionHubCtaConnectWalletToApply)
-          .onPressed,
+      _applyButton(tester, l10n.institutionHubCtaApplyAsInstitution).onPressed,
       isNotNull,
     );
 
-    await tester.tap(find.text(l10n.institutionHubCtaConnectWalletToApply));
+    await tester.tap(find.text(l10n.institutionHubCtaApplyAsInstitution));
     await tester.pumpAndSettle();
 
     final sheet = find.byType(BackdropGlassSheet);
@@ -224,7 +224,7 @@ void main() {
     final context = tester.element(find.byType(InstitutionHub));
     final l10n = AppLocalizations.of(context)!;
 
-    await tester.tap(find.text(l10n.institutionHubCtaConnectWalletToApply));
+    await tester.tap(find.text(l10n.institutionHubCtaApplyAsInstitution));
     await tester.pumpAndSettle();
 
     final fields = find.descendant(

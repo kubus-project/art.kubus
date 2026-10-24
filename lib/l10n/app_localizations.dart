@@ -7366,6 +7366,12 @@ abstract class AppLocalizations {
   /// **'Connect wallet to apply'**
   String get institutionHubCtaConnectWalletToApply;
 
+  /// No description provided for @institutionHubCtaApplyAsInstitution.
+  ///
+  /// In en, this message translates to:
+  /// **'Apply as an institution'**
+  String get institutionHubCtaApplyAsInstitution;
+
   /// No description provided for @institutionHubDaoStatusSyncedLabel.
   ///
   /// In en, this message translates to:
