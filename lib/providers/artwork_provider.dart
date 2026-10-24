@@ -9,6 +9,7 @@ import '../models/artwork_comment.dart';
 import '../models/kubus_node_models.dart';
 import '../services/ar_content_service.dart';
 import '../services/art_content_service.dart';
+import '../services/account_identity.dart';
 import '../services/backend_api_service.dart';
 import '../services/profile_package_mutation_tracker.dart';
 import '../services/user_action_logger.dart';
@@ -22,6 +23,8 @@ class ArtworkProvider extends ChangeNotifier {
   final Map<String, String?> _commentLoadErrors = <String, String?>{};
   final Map<String, String?> _commentSubmitErrors = <String, String?>{};
   final Map<String, bool> _loadingStates = {};
+  final Map<String, int> _loadingGenerations = <String, int>{};
+  int _loadingSequence = 0;
   final Set<String> _walletsWithPrivateArtworks = <String>{};
   final Set<String> _walletsWithPublicArtworks = <String>{};
   String? _error;
@@ -44,10 +47,8 @@ class ArtworkProvider extends ChangeNotifier {
   int _accountEpoch = 0;
   static const Duration _artworksFreshWindow = Duration(seconds: 60);
 
-  /// Device view history. Sign-out removes it so the next account never sees
-  /// the previous account's browsing.
-  static const String viewHistoryStorageKey = 'artwork_view_history_v1';
-  static const String _viewHistoryPrefsKey = viewHistoryStorageKey;
+  // Device view history. AccountIdentity purges it on every identity change.
+  static const String _viewHistoryPrefsKey = 'artwork_view_history_v1';
   final List<ViewHistoryEntry> _viewHistory = <ViewHistoryEntry>[];
   bool _historyLoaded = false;
 
@@ -55,7 +56,19 @@ class ArtworkProvider extends ChangeNotifier {
       : _backendApi = backendApi ?? BackendApiService(),
         _spatialApi = backendApi == null
             ? BackendApiService()
-            : (backendApi is BackendApiService ? backendApi : null);
+            : (backendApi is BackendApiService ? backendApi : null) {
+    // Every identity change (sign-out, wallet mismatch, disconnect, another
+    // account's token) drops this provider's account-scoped state.
+    AccountIdentity.addListener(_handleAccountIdentityChanged);
+  }
+
+  void _handleAccountIdentityChanged() => clearAccountScopedState();
+
+  @override
+  void dispose() {
+    AccountIdentity.removeListener(_handleAccountIdentityChanged);
+    super.dispose();
+  }
 
   List<Artwork> get artworks => List.unmodifiable(_artworks);
   String? get error => _error;
@@ -204,10 +217,10 @@ class ArtworkProvider extends ChangeNotifier {
       if (current != null) _artworks[i] = current;
     }
 
-    _loadingStates.removeWhere(
-      (operation, _) =>
-          operation.startsWith('like_') || operation.startsWith('save_'),
-    );
+    // Every run still in flight belongs to the ending identity. Its flags go
+    // now, and its finish is ignored because its generation is gone.
+    _loadingStates.clear();
+    _loadingGenerations.clear();
     notifyListeners();
   }
 
@@ -366,9 +379,13 @@ class ArtworkProvider extends ChangeNotifier {
     final operation = 'refresh_artwork_$key';
     if (isLoading(operation)) return getArtworkById(key);
 
-    _setLoading(operation, true);
+    final epoch = _accountEpoch;
+    final loadingGeneration = _beginLoading(operation);
     try {
       final fetched = await _backendApi.getArtwork(key);
+      // A refresh that lands after the account changed is not this account's
+      // to cache or return.
+      if (epoch != _accountEpoch) return null;
       addOrUpdateArtwork(fetched, retainWhenListRefresh: true);
       return fetched;
     } catch (e) {
@@ -377,7 +394,7 @@ class ArtworkProvider extends ChangeNotifier {
       }
       rethrow;
     } finally {
-      _setLoading(operation, false);
+      _endLoading(operation, loadingGeneration);
     }
   }
 
@@ -487,7 +504,7 @@ class ArtworkProvider extends ChangeNotifier {
     }
 
     const operation = 'create_artwork';
-    _setLoading(operation, true);
+    final loadingGeneration = _beginLoading(operation);
     try {
       final coverUrl = await ArtContentService.uploadMedia(
         coverImageBytes,
@@ -543,7 +560,7 @@ class ArtworkProvider extends ChangeNotifier {
       _setError('Failed to create artwork: $e');
       return null;
     } finally {
-      _setLoading(operation, false);
+      _endLoading(operation, loadingGeneration);
     }
   }
 
@@ -557,7 +574,7 @@ class ArtworkProvider extends ChangeNotifier {
 
   Future<Artwork?> publishArtwork(String artworkId) async {
     final operation = 'publish_artwork_$artworkId';
-    _setLoading(operation, true);
+    final loadingGeneration = _beginLoading(operation);
     try {
       final updated = await _backendApi.publishArtwork(artworkId);
       if (updated != null) {
@@ -590,13 +607,13 @@ class ArtworkProvider extends ChangeNotifier {
       _setError('Failed to publish artwork: $e');
       return null;
     } finally {
-      _setLoading(operation, false);
+      _endLoading(operation, loadingGeneration);
     }
   }
 
   Future<Artwork?> unpublishArtwork(String artworkId) async {
     final operation = 'unpublish_artwork_$artworkId';
-    _setLoading(operation, true);
+    final loadingGeneration = _beginLoading(operation);
     try {
       final updated = await _backendApi.unpublishArtwork(artworkId);
       if (updated != null) {
@@ -629,7 +646,7 @@ class ArtworkProvider extends ChangeNotifier {
       _setError('Failed to unpublish artwork: $e');
       return null;
     } finally {
-      _setLoading(operation, false);
+      _endLoading(operation, loadingGeneration);
     }
   }
 
@@ -652,7 +669,7 @@ class ArtworkProvider extends ChangeNotifier {
     if (isLoading(operation)) {
       return const ArtworkUpdateResult.alreadyInFlight();
     }
-    _setLoading(operation, true);
+    final loadingGeneration = _beginLoading(operation);
     try {
       final updated = await _backendApi.updateArtwork(id, updates);
       if (updated != null) {
@@ -672,7 +689,7 @@ class ArtworkProvider extends ChangeNotifier {
       _setError('Failed to update artwork: $e');
       return ArtworkUpdateResult.failed(failure);
     } finally {
-      _setLoading(operation, false);
+      _endLoading(operation, loadingGeneration);
     }
   }
 
@@ -751,7 +768,8 @@ class ArtworkProvider extends ChangeNotifier {
     if (!confirmOnServer && artwork.isLikedByCurrentUser == liked) return true;
 
     final alreadyInState = artwork.isLikedByCurrentUser == liked;
-    _setLoading('like_$id', true);
+    final epoch = _accountEpoch;
+    final loadingGeneration = _beginLoading('like_$id');
     final original = artwork;
     try {
       addOrUpdateArtwork(
@@ -777,34 +795,34 @@ class ArtworkProvider extends ChangeNotifier {
             ? await _backendApi.likeArtwork(id)
             : await _backendApi.unlikeArtwork(id);
 
-        if (confirmOnServer && liked) {
-          // A like counts only once the server reports it. An offline write
-          // queued in the outbox returns no body, and neither does a like the
-          // server never accepted, so read the artwork back to tell them apart.
-          final server = await _backendApi.getArtwork(id);
-          if (!server.isLikedByCurrentUser) {
-            addOrUpdateArtwork(original);
-            return false;
-          }
+        if (confirmOnServer && liked && updatedCount == null) {
+          // The backend answers an accepted like with the new count. No count
+          // means the write only reached the offline outbox, or the server did
+          // not accept it: unconfirmed, so the pending action stays retryable.
+          if (epoch == _accountEpoch) addOrUpdateArtwork(original);
+          return false;
         }
 
-        if (updatedCount != null) {
+        if (updatedCount != null && epoch == _accountEpoch) {
           final latest = getArtworkById(id);
           if (latest != null) {
             addOrUpdateArtwork(latest.copyWith(likesCount: updatedCount));
           }
         }
       } catch (e) {
-        // Rollback optimistic state on failure.
-        addOrUpdateArtwork(original);
+        // Roll back the optimistic state, unless the account changed while the
+        // request was in flight: the cache then belongs to another identity.
+        if (epoch == _accountEpoch) addOrUpdateArtwork(original);
         rethrow;
       }
       return true;
     } catch (e) {
-      _setError('Failed to update like: $e');
+      if (epoch == _accountEpoch) {
+        _setError('Failed to update like: $e');
+      }
       return false;
     } finally {
-      _setLoading('like_$id', false);
+      _endLoading('like_$id', loadingGeneration);
     }
   }
 
@@ -829,7 +847,8 @@ class ArtworkProvider extends ChangeNotifier {
       return true;
     }
 
-    _setLoading('save_$id', true);
+    final epoch = _accountEpoch;
+    final loadingGeneration = _beginLoading('save_$id');
     final artwork = getArtworkById(id);
     final nextTimestamp = DateTime.now();
 
@@ -842,7 +861,7 @@ class ArtworkProvider extends ChangeNotifier {
         );
       }
 
-      if (artwork != null) {
+      if (artwork != null && epoch == _accountEpoch) {
         addOrUpdateArtwork(artwork.copyWith(isFavoriteByCurrentUser: saved));
       }
 
@@ -863,13 +882,14 @@ class ArtworkProvider extends ChangeNotifier {
       _setError('Failed to update artwork saved state: $e');
       return false;
     } finally {
-      _setLoading('save_$id', false);
+      _endLoading('save_$id', loadingGeneration);
     }
   }
 
   /// Mark artwork as discovered
   Future<void> discoverArtwork(String artworkId) async {
-    _setLoading('discover_$artworkId', true);
+    final epoch = _accountEpoch;
+    final loadingGeneration = _beginLoading('discover_$artworkId');
     try {
       final artwork = getArtworkById(artworkId);
       if (artwork != null && !artwork.isDiscovered) {
@@ -888,9 +908,11 @@ class ArtworkProvider extends ChangeNotifier {
             true,
             timestamp: DateTime.now(),
           );
-          addOrUpdateArtwork(
-            updatedArtwork.copyWith(isFavoriteByCurrentUser: true),
-          );
+          if (epoch == _accountEpoch) {
+            addOrUpdateArtwork(
+              updatedArtwork.copyWith(isFavoriteByCurrentUser: true),
+            );
+          }
         }
 
         // Sync with backend and reconcile server discovery count.
@@ -898,7 +920,7 @@ class ArtworkProvider extends ChangeNotifier {
           final serverCount = await _backendApi.discoverArtworkWithCount(
             artworkId,
           );
-          if (serverCount != null) {
+          if (serverCount != null && epoch == _accountEpoch) {
             final latest = getArtworkById(artworkId);
             if (latest != null) {
               addOrUpdateArtwork(latest.copyWith(discoveryCount: serverCount));
@@ -913,7 +935,7 @@ class ArtworkProvider extends ChangeNotifier {
     } catch (e) {
       _setError('Failed to discover artwork: $e');
     } finally {
-      _setLoading('discover_$artworkId', false);
+      _endLoading('discover_$artworkId', loadingGeneration);
     }
   }
 
@@ -950,13 +972,16 @@ class ArtworkProvider extends ChangeNotifier {
     final operation = 'load_comments_$artworkId';
     if (!force && isLoading(operation)) return;
     _commentLoadErrors[artworkId] = null;
-    _setLoading(operation, true);
+    final epoch = _accountEpoch;
+    final loadingGeneration = _beginLoading(operation);
     try {
       final fetched = await _backendApi.getArtworkComments(
         artworkId: artworkId,
         page: 1,
         limit: 100,
       );
+      // Comments fetched for an account that has since changed are dropped.
+      if (epoch != _accountEpoch) return;
       // Keep ordering consistent with Community comments: oldest-first so threads read naturally.
       // Backend provides an ORDER BY, but sort defensively to keep behavior stable.
       final sorted = [...fetched]
@@ -972,10 +997,12 @@ class ArtworkProvider extends ChangeNotifier {
       }
       notifyListeners();
     } catch (e) {
-      _commentLoadErrors[artworkId] = 'Failed to load comments: $e';
-      _setError(_commentLoadErrors[artworkId]!);
+      if (epoch == _accountEpoch) {
+        _commentLoadErrors[artworkId] = 'Failed to load comments: $e';
+        _setError(_commentLoadErrors[artworkId]!);
+      }
     } finally {
-      _setLoading(operation, false);
+      _endLoading(operation, loadingGeneration);
     }
   }
 
@@ -996,7 +1023,7 @@ class ArtworkProvider extends ChangeNotifier {
     required String content,
     String? parentCommentId,
   }) async {
-    _setLoading('comment_$artworkId', true);
+    final loadingGeneration = _beginLoading('comment_$artworkId');
     _commentSubmitErrors[artworkId] = null;
     try {
       await _backendApi.createArtworkComment(
@@ -1011,7 +1038,7 @@ class ArtworkProvider extends ChangeNotifier {
       _setError(_commentSubmitErrors[artworkId]!);
       rethrow;
     } finally {
-      _setLoading('comment_$artworkId', false);
+      _endLoading('comment_$artworkId', loadingGeneration);
     }
   }
 
@@ -1074,7 +1101,7 @@ class ArtworkProvider extends ChangeNotifier {
     final operation = 'edit_comment_${artworkId}_$commentId';
     if (isLoading(operation)) return;
     _commentSubmitErrors[artworkId] = null;
-    _setLoading(operation, true);
+    final loadingGeneration = _beginLoading(operation);
     try {
       await _backendApi.editArtworkComment(
         commentId: commentId,
@@ -1086,7 +1113,7 @@ class ArtworkProvider extends ChangeNotifier {
       _setError(_commentSubmitErrors[artworkId]!);
       rethrow;
     } finally {
-      _setLoading(operation, false);
+      _endLoading(operation, loadingGeneration);
     }
   }
 
@@ -1100,7 +1127,7 @@ class ArtworkProvider extends ChangeNotifier {
     final operation = 'delete_comment_${artworkId}_$commentId';
     if (isLoading(operation)) return;
     _commentSubmitErrors[artworkId] = null;
-    _setLoading(operation, true);
+    final loadingGeneration = _beginLoading(operation);
     try {
       final updatedCount = await _backendApi.deleteArtworkComment(commentId);
       if (updatedCount != null) {
@@ -1115,7 +1142,7 @@ class ArtworkProvider extends ChangeNotifier {
       _setError(_commentSubmitErrors[artworkId]!);
       rethrow;
     } finally {
-      _setLoading(operation, false);
+      _endLoading(operation, loadingGeneration);
     }
   }
 
@@ -1147,7 +1174,7 @@ class ArtworkProvider extends ChangeNotifier {
   }
 
   Future<void> _loadArtworksInternal({bool refresh = false}) async {
-    _setLoading('load_artworks', true);
+    final loadingGeneration = _beginLoading('load_artworks');
     final epoch = _accountEpoch;
 
     try {
@@ -1184,7 +1211,7 @@ class ArtworkProvider extends ChangeNotifier {
     } catch (e) {
       _setError('Failed to load artworks: $e');
     } finally {
-      _setLoading('load_artworks', false);
+      _endLoading('load_artworks', loadingGeneration);
     }
   }
 
@@ -1204,7 +1231,7 @@ class ArtworkProvider extends ChangeNotifier {
     }
 
     final operationKey = 'load_artworks_wallet_$cacheKey';
-    _setLoading(operationKey, true);
+    final loadingGeneration = _beginLoading(operationKey);
     final epoch = _accountEpoch;
     try {
       final walletArtworks = await _backendApi.getArtworks(
@@ -1232,7 +1259,7 @@ class ArtworkProvider extends ChangeNotifier {
     } catch (e) {
       _setError('Failed to load wallet artworks: $e');
     } finally {
-      _setLoading(operationKey, false);
+      _endLoading(operationKey, loadingGeneration);
     }
   }
 
@@ -1245,7 +1272,10 @@ class ArtworkProvider extends ChangeNotifier {
   Future<void> ensureHistoryLoaded() async {
     if (_historyLoaded) return;
     try {
+      final epoch = _accountEpoch;
       final prefs = await SharedPreferences.getInstance();
+      // History read for an account that has since changed is not loaded.
+      if (epoch != _accountEpoch) return;
       final raw = prefs.getStringList(_viewHistoryPrefsKey) ?? <String>[];
       _viewHistory
         ..clear()
@@ -1291,7 +1321,9 @@ class ArtworkProvider extends ChangeNotifier {
   }
 
   Future<void> _recordViewHistory(Artwork artwork) async {
+    final epoch = _accountEpoch;
     await ensureHistoryLoaded();
+    if (epoch != _accountEpoch) return;
     _viewHistory.removeWhere((entry) => entry.artworkId == artwork.id);
     _viewHistory.insert(
       0,
@@ -1307,6 +1339,9 @@ class ArtworkProvider extends ChangeNotifier {
 
     try {
       final prefs = await SharedPreferences.getInstance();
+      // A write from before an account change would put the previous
+      // account's history back on the device.
+      if (epoch != _accountEpoch) return;
       await prefs.setStringList(
         _viewHistoryPrefsKey,
         _viewHistory.map((e) => jsonEncode(e.toJson())).toList(),
@@ -1327,6 +1362,24 @@ class ArtworkProvider extends ChangeNotifier {
   void _setLoading(String operation, bool loading) {
     _loadingStates[operation] = loading;
     notifyListeners();
+  }
+
+  /// Marks [operation] as running. The returned generation must be handed to
+  /// [_endLoading], so only the run that started a flag can clear it.
+  int _beginLoading(String operation) {
+    final generation = ++_loadingSequence;
+    _loadingGenerations[operation] = generation;
+    _setLoading(operation, true);
+    return generation;
+  }
+
+  /// Clears [operation] only while [generation] is still the latest run of it.
+  /// A run that finishes after an account switch, or after a newer run of the
+  /// same operation started, must not clear that newer run's flag.
+  void _endLoading(String operation, int generation) {
+    if (_loadingGenerations[operation] != generation) return;
+    _loadingGenerations.remove(operation);
+    _setLoading(operation, false);
   }
 
   void _setError(String error) {

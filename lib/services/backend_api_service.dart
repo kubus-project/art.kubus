@@ -43,6 +43,7 @@ import 'media_upload_optimizer.dart';
 import 'telemetry/kubus_client_context.dart';
 import 'telemetry/telemetry_uuid.dart';
 import 'node/turn_configuration.dart';
+import 'account_identity.dart';
 
 part 'backend_api_service_auth_helpers.dart';
 part 'backend_api_service_auth_account_helpers.dart';
@@ -998,11 +999,29 @@ class BackendApiService
     await ensureAuthLoaded(walletAddress: desiredCanonical);
   }
 
+  /// The account a token belongs to: its wallet and user id from the payload.
+  /// Empty when the token cannot be read.
+  String _authIdentityOf(String? token) {
+    final payload = _tryDecodeJwtPayload((token ?? '').trim());
+    if (payload == null) return '';
+    final wallet = _tryExtractWalletFromToken(token) ?? '';
+    final userId = (payload['user_id'] ?? payload['id'] ?? payload['sub'] ?? '')
+        .toString()
+        .trim();
+    return '$wallet|$userId';
+  }
+
   /// Set authentication token for API requests
   Future<void> setAuthToken(String token) async {
+    final previousIdentity = _authIdentityOf(_authToken);
     _authToken = token;
     _authWalletCanonical = _tryExtractWalletFromToken(token);
     AppConfig.debugPrint('BackendApiService: Auth token set (in-memory)');
+    // A token for another account ends the previous identity's local state.
+    final nextIdentity = _authIdentityOf(token);
+    if (previousIdentity.isNotEmpty && previousIdentity != nextIdentity) {
+      await AccountIdentity.notifyChanged();
+    }
     if (!_hasInitializedBinding) {
       AppConfig.debugPrint(
         'BackendApiService: skipping auth token persistence (binding not initialized)',
@@ -1187,6 +1206,10 @@ class BackendApiService
     _authToken = null;
     _authWalletCanonical = null;
     _authCoordinator?.reset();
+    // Every way the session ends comes through here (sign-out, a token for
+    // another wallet, a deleted or suspended account). Listeners run before
+    // the first await below.
+    await AccountIdentity.notifyChanged();
     try {
       await _secureStorage
           .delete(key: 'jwt_token')

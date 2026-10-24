@@ -162,7 +162,6 @@ extension _SettingsScreenStatePart3 on _SettingsScreenState {
       profileProvider: profileProvider,
       savedItemsProvider:
           Provider.of<SavedItemsProvider>(context, listen: false),
-      artworkProvider: Provider.of<ArtworkProvider>(context, listen: false),
     );
 
     if (!mounted) return;

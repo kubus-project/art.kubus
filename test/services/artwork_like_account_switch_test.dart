@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:art_kubus/models/artwork.dart';
 import 'package:art_kubus/models/artwork_comment.dart';
@@ -6,6 +7,7 @@ import 'package:art_kubus/models/pending_action_intent.dart';
 import 'package:art_kubus/providers/artwork_provider.dart';
 import 'package:art_kubus/providers/saved_items_provider.dart';
 import 'package:art_kubus/providers/wallet_provider.dart';
+import 'package:art_kubus/services/account_identity.dart';
 import 'package:art_kubus/services/backend_api_service.dart';
 import 'package:art_kubus/services/pending_action_executor.dart';
 import 'package:art_kubus/services/settings_service.dart';
@@ -18,8 +20,9 @@ import 'package:shared_preferences/shared_preferences.dart';
 const MethodChannel _secureStorageChannel =
     MethodChannel('plugins.it_nomads.com/flutter_secure_storage');
 
-/// A backend that remembers what the server holds: which artworks exist and
-/// which ones this account likes. A like the outbox queues never reaches it.
+/// A backend that remembers what the server holds. A like the outbox queues
+/// never reaches it. A public read carries no viewer state, as the backend
+/// only reports the viewer's like and bookmark for an authenticated request.
 class _ServerApi implements ArtworkBackendApi {
   /// Artworks the server serves by id.
   final Map<String, Artwork> served = <String, Artwork>{};
@@ -27,15 +30,23 @@ class _ServerApi implements ArtworkBackendApi {
   /// Artworks listed for a wallet, keyed by canonical wallet.
   final Map<String, List<Artwork>> walletArtworks = <String, List<Artwork>>{};
 
-  /// Set to hold the wallet listing open until the test completes it.
+  /// Comments the server serves for an artwork.
+  final List<ArtworkComment> comments = <ArtworkComment>[];
+
+  /// Each gate holds the next call of its kind open until it is completed.
   Completer<List<Artwork>>? walletGate;
+  Completer<Artwork>? getGate;
+  Completer<void>? unlikeGate;
+  Completer<List<ArtworkComment>>? commentsGate;
 
   final Set<String> likedOnServer = <String>{};
   final List<String> likeCalls = <String>[];
+  final List<String> unlikeCalls = <String>[];
   final List<String> getCalls = <String>[];
   final List<String> walletCalls = <String>[];
 
   Object? likeError;
+  Object? unlikeError;
 
   /// Simulates an offline write: the request is queued and no body returns.
   bool likeQueued = false;
@@ -51,16 +62,28 @@ class _ServerApi implements ArtworkBackendApi {
   }
 
   @override
-  Future<int?> unlikeArtwork(String artworkId) =>
-      throw UnimplementedError('unlike is not used here');
+  Future<int?> unlikeArtwork(String artworkId) async {
+    unlikeCalls.add(artworkId);
+    final gate = unlikeGate;
+    unlikeGate = null;
+    if (gate != null) await gate.future;
+    final error = unlikeError;
+    if (error != null) throw error;
+    likedOnServer.remove(artworkId);
+    return 4;
+  }
 
   @override
   Future<Artwork> getArtwork(String artworkId) async {
     getCalls.add(artworkId);
+    final gate = getGate;
+    getGate = null;
+    if (gate != null) return gate.future;
     final artwork = served[artworkId];
     if (artwork == null) throw StateError('no artwork $artworkId');
     return artwork.copyWith(
-      isLikedByCurrentUser: likedOnServer.contains(artworkId),
+      isLikedByCurrentUser: false,
+      isFavoriteByCurrentUser: false,
     );
   }
 
@@ -92,8 +115,25 @@ class _ServerApi implements ArtworkBackendApi {
           .where((artwork) => artwork.isPublic || includePrivateForWallet)
           .toList(growable: false);
     }
-    return served.values.where((artwork) => artwork.isPublic).toList();
+    return served.values
+        .where((artwork) => artwork.isPublic)
+        .toList(growable: false);
   }
+
+  @override
+  Future<List<ArtworkComment>> getArtworkComments({
+    required String artworkId,
+    int page = 1,
+    int limit = 50,
+  }) async {
+    final gate = commentsGate;
+    commentsGate = null;
+    if (gate != null) return gate.future;
+    return List<ArtworkComment>.of(comments);
+  }
+
+  @override
+  Future<int?> recordArtworkView(String artworkId) async => null;
 
   @override
   Future<Artwork?> updateArtwork(
@@ -110,18 +150,6 @@ class _ServerApi implements ArtworkBackendApi {
 
   @override
   Future<int?> discoverArtworkWithCount(String artworkId) =>
-      throw UnimplementedError();
-
-  @override
-  Future<int?> recordArtworkView(String artworkId) =>
-      throw UnimplementedError();
-
-  @override
-  Future<List<ArtworkComment>> getArtworkComments({
-    required String artworkId,
-    int page = 1,
-    int limit = 50,
-  }) =>
       throw UnimplementedError();
 
   @override
@@ -185,8 +213,25 @@ Artwork _artwork({
       discoveryCount: discoveryCount,
     );
 
+ArtworkComment _comment() => ArtworkComment(
+      id: 'comment-1',
+      artworkId: 'art-1',
+      userId: 'WalletAAA',
+      userName: 'Visitor',
+      content: 'Hello',
+      createdAt: DateTime.utc(2026, 1, 1),
+      isLikedByCurrentUser: true,
+    );
+
 /// A server that serves the public artwork `art-1`, not yet liked.
 _ServerApi _server() => _ServerApi()..served['art-1'] = _artwork();
+
+/// An unsigned token whose payload carries the given claims.
+String _token(Map<String, Object> claims) {
+  String part(Object value) =>
+      base64Url.encode(utf8.encode(jsonEncode(value))).replaceAll('=', '');
+  return '${part(<String, Object>{'alg': 'none'})}.${part(claims)}.sig';
+}
 
 PendingActionIntent _artworkLike() => PendingActionIntent.create(
       actionType: PendingActionType.like,
@@ -208,7 +253,6 @@ Future<PendingActionExecutionResult> _confirmLike(
 Future<void> _logout(ArtworkProvider artworks) => SettingsService.logout(
       walletProvider: _Wallet(),
       backendApi: BackendApiService(),
-      artworkProvider: artworks,
       preserveWallet: true,
     );
 
@@ -393,6 +437,32 @@ void main() {
     });
 
     test(
+        'a confirmed like is confirmed by the like response alone, with no '
+        'read-back', () async {
+      final api = _server();
+      final artworks = ArtworkProvider(backendApi: api);
+      artworks.seedArtworksForTesting(<Artwork>[_artwork()]);
+
+      final result = await _confirmLike(artworks);
+
+      expect(result.outcome, PendingActionOutcome.completed);
+      expect(api.likeCalls, <String>['art-1']);
+      expect(api.getCalls, isEmpty);
+    });
+
+    test(
+        'a public read never reports the viewer like, so a read-back could '
+        'not confirm one', () async {
+      final api = _server();
+      await api.likeArtwork('art-1');
+
+      final read = await api.getArtwork('art-1');
+
+      expect(api.likedOnServer, contains('art-1'));
+      expect(read.isLikedByCurrentUser, isFalse);
+    });
+
+    test(
         'a stale cached like still reaches the server, never completes '
         'without a write', () async {
       final api = _server();
@@ -465,6 +535,222 @@ void main() {
 
       expect(ok, isTrue);
       expect(api.likeCalls, isEmpty);
+    });
+  });
+
+  group('writes already in flight when the account changes', () {
+    test(
+        'an unlike that fails after the switch does not restore the ending '
+        'account like', () async {
+      final api = _server()..likedOnServer.add('art-1');
+      final artworks = ArtworkProvider(backendApi: api);
+      artworks.seedArtworksForTesting(<Artwork>[_artwork(liked: true)]);
+      final gate = Completer<void>();
+      api.unlikeGate = gate;
+
+      final pending = artworks.setLiked('art-1', false);
+      await _logout(artworks);
+      api.unlikeError = Exception('unauthorized');
+      gate.complete();
+
+      expect(await pending, isFalse);
+      expect(artworks.getArtworkById('art-1')!.isLikedByCurrentUser, isFalse);
+    });
+
+    test('a comment list that lands after the switch is discarded', () async {
+      final api = _server();
+      final gate = Completer<List<ArtworkComment>>();
+      api.commentsGate = gate;
+      final artworks = ArtworkProvider(backendApi: api);
+
+      final load = artworks.loadComments('art-1');
+      await _logout(artworks);
+      gate.complete(<ArtworkComment>[_comment()]);
+      await load;
+
+      expect(artworks.getComments('art-1'), isEmpty);
+    });
+
+    test('a refresh that lands after the switch is not cached', () async {
+      final api = _server();
+      final gate = Completer<Artwork>();
+      api.getGate = gate;
+      final artworks = ArtworkProvider(backendApi: api);
+
+      final refresh = artworks.refreshArtwork('art-private');
+      await _logout(artworks);
+      gate.complete(_artwork(
+        id: 'art-private',
+        walletAddress: 'WALLETAAA',
+        isPublic: false,
+      ));
+
+      expect(await refresh, isNull);
+      expect(artworks.getArtworkById('art-private'), isNull);
+    });
+
+    test('a view recorded before the switch is not written after it', () async {
+      final artworks = ArtworkProvider(backendApi: _server());
+      artworks.seedArtworksForTesting(<Artwork>[_artwork()]);
+
+      final pending = artworks.incrementViewCount('art-1');
+      await _logout(artworks);
+      await pending;
+
+      expect(artworks.viewHistoryEntries, isEmpty);
+      final prefs = await SharedPreferences.getInstance();
+      expect(prefs.getStringList('artwork_view_history_v1'), isNull);
+    });
+
+    test('a run that finishes after a switch does not clear a newer run flag',
+        () async {
+      final api = _server();
+      final first = Completer<Artwork>();
+      final second = Completer<Artwork>();
+      api.getGate = first;
+      final artworks = ArtworkProvider(backendApi: api);
+
+      final oldRun = artworks.refreshArtwork('art-1');
+      await _logout(artworks);
+      api.getGate = second;
+      final newRun = artworks.refreshArtwork('art-1');
+      expect(artworks.isLoading('refresh_artwork_art-1'), isTrue);
+
+      first.complete(_artwork());
+      await oldRun;
+      expect(artworks.isLoading('refresh_artwork_art-1'), isTrue);
+
+      second.complete(_artwork());
+      await newRun;
+      expect(artworks.isLoading('refresh_artwork_art-1'), isFalse);
+    });
+  });
+
+  group('every identity change clears the ending account', () {
+    test('the identity listener runs at the change, before any await',
+        () async {
+      var calls = 0;
+      void listener() => calls += 1;
+      AccountIdentity.addListener(listener);
+      addTearDown(() => AccountIdentity.removeListener(listener));
+
+      final pending = BackendApiService().clearAuth();
+
+      expect(calls, 1);
+      await pending;
+      expect(calls, 1);
+    });
+
+    test(
+        'clearAuth alone (a wallet mismatch or a deleted account) clears the '
+        'artwork state', () async {
+      final artworks = ArtworkProvider(backendApi: _server());
+      artworks.seedArtworksForTesting(<Artwork>[
+        _artwork(liked: true, favorite: true),
+      ]);
+
+      await BackendApiService().clearAuth();
+
+      expect(artworks.getArtworkById('art-1')!.isLikedByCurrentUser, isFalse);
+      expect(
+          artworks.getArtworkById('art-1')!.isFavoriteByCurrentUser, isFalse);
+    });
+
+    test('a token for another account clears the ending account state',
+        () async {
+      final api = BackendApiService();
+      await api.setAuthToken(
+        _token(<String, Object>{'walletAddress': 'WalletAAA', 'user_id': 'a'}),
+      );
+      final artworks = ArtworkProvider(backendApi: _server());
+      artworks.seedArtworksForTesting(<Artwork>[_artwork(liked: true)]);
+
+      await api.setAuthToken(
+        _token(<String, Object>{'walletAddress': 'WalletBBB', 'user_id': 'b'}),
+      );
+
+      expect(artworks.getArtworkById('art-1')!.isLikedByCurrentUser, isFalse);
+    });
+
+    test('a token for the same account keeps the artwork state', () async {
+      final api = BackendApiService();
+      final token = _token(<String, Object>{
+        'walletAddress': 'WalletCCC',
+        'user_id': 'c',
+      });
+      await api.setAuthToken(token);
+      final artworks = ArtworkProvider(backendApi: _server());
+      artworks.seedArtworksForTesting(<Artwork>[_artwork(liked: true)]);
+
+      await api.setAuthToken(token);
+
+      expect(artworks.getArtworkById('art-1')!.isLikedByCurrentUser, isTrue);
+    });
+
+    test('disconnecting the wallet clears the ending account state', () async {
+      final artworks = ArtworkProvider(backendApi: _server());
+      artworks.seedArtworksForTesting(<Artwork>[_artwork(liked: true)]);
+
+      await _Wallet().disconnectWallet().catchError((_) {});
+
+      expect(artworks.getArtworkById('art-1')!.isLikedByCurrentUser, isFalse);
+    });
+
+    test('a disposed provider stops listening to identity changes', () {
+      final before = AccountIdentity.listenerCount;
+      final artworks = ArtworkProvider(backendApi: _server());
+      expect(AccountIdentity.listenerCount, before + 1);
+
+      artworks.dispose();
+
+      expect(AccountIdentity.listenerCount, before);
+    });
+  });
+
+  group('device-level account keys', () {
+    const accountKeys = <String>[
+      'blocked_wallets_v1',
+      'reported_posts',
+      'collectibles_v1',
+      'collectible_series_v1',
+      'institutions_v1',
+      'institution_events_v1',
+      'event_registrations_v1_event-1',
+    ];
+
+    test('an identity change purges them and keeps unrelated preferences',
+        () async {
+      SharedPreferences.setMockInitialValues(<String, Object>{
+        'blocked_wallets_v1': '["WalletAAA"]',
+        'reported_posts': <String>['post-1'],
+        'collectibles_v1': '[]',
+        'collectible_series_v1': '[]',
+        'institutions_v1': '[]',
+        'institution_events_v1': '[]',
+        'event_registrations_v1_event-1': '[]',
+        'theme_mode': 'dark',
+      });
+
+      await AccountIdentity.notifyChanged();
+
+      final prefs = await SharedPreferences.getInstance();
+      for (final key in accountKeys) {
+        expect(prefs.containsKey(key), isFalse, reason: '$key survived');
+      }
+      expect(prefs.getString('theme_mode'), 'dark');
+    });
+
+    test('sign-out purges them too', () async {
+      SharedPreferences.setMockInitialValues(<String, Object>{
+        'blocked_wallets_v1': '["WalletAAA"]',
+        'reported_posts': <String>['post-1'],
+      });
+
+      await _logout(ArtworkProvider(backendApi: _server()));
+
+      final prefs = await SharedPreferences.getInstance();
+      expect(prefs.containsKey('blocked_wallets_v1'), isFalse);
+      expect(prefs.containsKey('reported_posts'), isFalse);
     });
   });
 }

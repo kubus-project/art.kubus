@@ -6,7 +6,6 @@ import 'package:flutter/foundation.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import '../providers/artwork_provider.dart';
 import '../providers/themeprovider.dart';
 import '../providers/config_provider.dart';
 import '../providers/glass_capabilities_provider.dart';

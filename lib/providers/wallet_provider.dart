@@ -21,6 +21,7 @@ import '../services/pin_hashing.dart';
 import '../services/security/pin_auth_service.dart';
 import '../services/solana_walletconnect_service.dart';
 import '../services/user_service.dart';
+import '../services/account_identity.dart';
 import '../services/wallet_backup_passkey_service.dart';
 import '../services/wallet_passkey_crypto_service.dart';
 import '../config/config.dart';
@@ -4218,6 +4219,8 @@ class WalletProvider extends ChangeNotifier {
 
   Future<void> disconnectWallet(
       {bool preserveAuthenticatedWallet = true}) async {
+    // The connected identity ends here. Listeners run before the first await.
+    await AccountIdentity.notifyChanged();
     final fallbackWallet = preserveAuthenticatedWallet
         ? await _resolveAuthenticatedWalletAddress()
         : null;

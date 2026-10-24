@@ -14,7 +14,6 @@ import '../services/onboarding_state_service.dart';
 import '../services/pin_hashing.dart';
 import '../services/settings_service.dart';
 import '../providers/notification_provider.dart';
-import '../providers/artwork_provider.dart';
 import '../providers/profile_provider.dart';
 import '../providers/saved_items_provider.dart';
 import '../providers/wallet_provider.dart';
@@ -46,7 +45,6 @@ class SecurityGateProvider extends ChangeNotifier
   WalletProvider? _walletProvider;
   NotificationProvider? _notificationProvider;
   SavedItemsProvider? _savedItemsProvider;
-  ArtworkProvider? _artworkProvider;
 
   SettingsState? _settings;
 
@@ -97,13 +95,11 @@ class SecurityGateProvider extends ChangeNotifier
     required WalletProvider walletProvider,
     required NotificationProvider notificationProvider,
     SavedItemsProvider? savedItemsProvider,
-    ArtworkProvider? artworkProvider,
   }) {
     _profileProvider = profileProvider;
     _walletProvider = walletProvider;
     _notificationProvider = notificationProvider;
     _savedItemsProvider = savedItemsProvider;
-    _artworkProvider = artworkProvider;
   }
 
   Future<void> initialize() {
@@ -537,7 +533,6 @@ class SecurityGateProvider extends ChangeNotifier
         notificationProvider: _notificationProvider,
         profileProvider: _profileProvider,
         savedItemsProvider: _savedItemsProvider,
-        artworkProvider: _artworkProvider,
         preserveWallet: preserveWallet,
       );
     } catch (e) {

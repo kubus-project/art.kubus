@@ -1105,14 +1105,11 @@ extension _DesktopSettingsScreenStatePart1 on _DesktopSettingsScreenState {
                   Provider.of<NotificationProvider>(context, listen: false);
               final profileProvider =
                   Provider.of<ProfileProvider>(context, listen: false);
-              final artworkProvider =
-                  Provider.of<ArtworkProvider>(context, listen: false);
               await SettingsService.resetApp(
                 walletProvider: walletProvider,
                 backendApi: BackendApiService(),
                 notificationProvider: notificationProvider,
                 profileProvider: profileProvider,
-                artworkProvider: artworkProvider,
               );
               navigator.pop();
               messenger.showKubusSnackBar(SnackBar(
@@ -1164,8 +1161,6 @@ extension _DesktopSettingsScreenStatePart1 on _DesktopSettingsScreenState {
                   Provider.of<NotificationProvider>(context, listen: false);
               final profileProvider =
                   Provider.of<ProfileProvider>(context, listen: false);
-              final artworkProvider =
-                  Provider.of<ArtworkProvider>(context, listen: false);
 
               // Delete the authenticated account (users.id), never just
               // wallet-scoped data. Local state is only cleared after the
@@ -1188,7 +1183,6 @@ extension _DesktopSettingsScreenStatePart1 on _DesktopSettingsScreenState {
                 backendApi: BackendApiService(),
                 notificationProvider: notificationProvider,
                 profileProvider: profileProvider,
-                artworkProvider: artworkProvider,
               );
               if (!mounted) return;
               navigator.pop();

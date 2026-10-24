@@ -2,7 +2,6 @@ import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../config/config.dart';
-import '../providers/artwork_provider.dart';
 import '../providers/notification_provider.dart';
 import '../providers/profile_provider.dart';
 import '../providers/saved_items_provider.dart';
@@ -158,7 +157,6 @@ class SettingsService {
     NotificationProvider? notificationProvider,
     ProfileProvider? profileProvider,
     SavedItemsProvider? savedItemsProvider,
-    ArtworkProvider? artworkProvider,
     bool preserveWallet = false,
   }) async {
     // First, and synchronous: nothing below may fail before the map's memory of
@@ -174,9 +172,6 @@ class SettingsService {
     notificationProvider?.reset();
     profileProvider?.signOut();
     await savedItemsProvider?.resetForLogout();
-    // Artwork likes and bookmarks are viewer-relative. Left behind, the next
-    // account's like looks already done and never reaches the server.
-    artworkProvider?.clearAccountScopedState();
     try {
       await PushNotificationService().cancelAllNotifications();
     } catch (_) {}
@@ -221,9 +216,6 @@ class SettingsService {
       // it. Leaving it behind would offer the previous user's pending Save or
       // Follow to whoever signs in next on this device.
       PendingActionService.storageKey,
-      // The device's artwork view history records what the previous account
-      // browsed.
-      ArtworkProvider.viewHistoryStorageKey,
     };
     for (final key in removeKeys) {
       await prefs.remove(key);
@@ -244,14 +236,12 @@ class SettingsService {
     required BackendApiService backendApi,
     NotificationProvider? notificationProvider,
     ProfileProvider? profileProvider,
-    ArtworkProvider? artworkProvider,
   }) async {
     await logout(
       walletProvider: walletProvider,
       backendApi: backendApi,
       notificationProvider: notificationProvider,
       profileProvider: profileProvider,
-      artworkProvider: artworkProvider,
     );
     await _clearPreferencesKeepingPendingPurge(walletProvider: walletProvider);
     final prefs = await SharedPreferences.getInstance();
