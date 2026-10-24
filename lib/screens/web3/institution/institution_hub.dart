@@ -71,11 +71,10 @@ class _InstitutionHubState extends State<InstitutionHub> {
   @override
   void initState() {
     super.initState();
-    // No first-visit Web3 onboarding: browsing institutions is public and
-    // must not require a wallet or push wallet education. The help action in
-    // the app bar still opens the same explanation on request.
     WidgetsBinding.instance.addPostFrameCallback(
         (_) => _loadInstitutionReviewStatus(forceRefresh: true));
+    WidgetsBinding.instance
+        .addPostFrameCallback((_) => unawaited(_checkOnboarding()));
   }
 
   @override
@@ -97,6 +96,20 @@ class _InstitutionHubState extends State<InstitutionHub> {
     if (wallet.isNotEmpty) {
       _loadInstitutionReviewStatus(forceRefresh: true);
     }
+  }
+
+  // First-visit Web3 onboarding is for users with a wallet. Guests and
+  // email-only accounts browse institutions without wallet education; the
+  // help action still opens the same explanation on request.
+  Future<void> _checkOnboarding() async {
+    if (!mounted || _resolveWalletAddress().isEmpty) return;
+    if (!await isOnboardingNeeded(InstitutionHubOnboardingData.featureKey)) {
+      return;
+    }
+    if (!mounted) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _showOnboarding();
+    });
   }
 
   void _showOnboarding() {
@@ -370,6 +383,14 @@ class _InstitutionHubState extends State<InstitutionHub> {
       title: l10n.navigationScreenInstitutionHub,
       lede: lede,
       actions: [
+        // The embedded layout has no app bar, so the help entry lives here.
+        if (widget.embedded)
+          KubusButton(
+            onPressed: _showOnboarding,
+            icon: Icons.help_outline,
+            label: l10n.institutionHubHelpTooltip,
+            variant: KubusButtonVariant.quiet,
+          ),
         if (canSelfServeInstitutionPromotion)
           KubusButton(
             onPressed: _openInstitutionPromotionFlow,

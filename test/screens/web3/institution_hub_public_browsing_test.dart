@@ -10,6 +10,7 @@ import 'package:art_kubus/providers/profile_provider.dart';
 import 'package:art_kubus/providers/themeprovider.dart';
 import 'package:art_kubus/providers/wallet_provider.dart';
 import 'package:art_kubus/providers/web3provider.dart';
+import 'package:art_kubus/screens/onboarding/web3/onboarding_data.dart';
 import 'package:art_kubus/screens/onboarding/web3/web3_onboarding.dart';
 import 'package:art_kubus/screens/web3/institution/institution_hub.dart';
 import 'package:art_kubus/services/backend_api_service.dart';
@@ -54,19 +55,38 @@ UserProfile _emailOnlyUser() {
   );
 }
 
+const _walletAddress = 'WalletHub1111111111111111111111111111111111';
+
+UserProfile _walletUser() {
+  return UserProfile(
+    id: 'user-wallet',
+    walletAddress: _walletAddress,
+    username: 'walletgallery',
+    displayName: 'Wallet gallery',
+    bio: '',
+    avatar: '',
+    createdAt: DateTime.utc(2026, 9, 1),
+    updatedAt: DateTime.utc(2026, 9, 1),
+  );
+}
+
 Future<List<String>> _pumpHub(
   WidgetTester tester, {
   UserProfile? user,
   required List<String> requests,
   bool signedIn = false,
+  bool embedded = false,
+  Map<String, Object> initialPrefs = const <String, Object>{},
 }) async {
-  SharedPreferences.setMockInitialValues(<String, Object>{});
+  SharedPreferences.setMockInitialValues(<String, Object>{...initialPrefs});
   final api = BackendApiService();
   api.setAuthTokenForTesting(signedIn ? 'test-token' : null);
   api.setHttpClient(MockClient((request) async {
     requests.add('${request.method} ${request.url.path}');
     const headers = <String, String>{'content-type': 'application/json'};
-    if (request.url.path.startsWith('/api/dao/reviews')) {
+    // Only the list endpoint gets an empty body. The single-wallet endpoint
+    // answers 404 so no review is parsed for the wallet under test.
+    if (request.url.path == '/api/dao/reviews') {
       return http.Response(
         jsonEncode(<String, Object?>{'reviews': <Object?>[]}),
         200,
@@ -122,7 +142,7 @@ Future<List<String>> _pumpHub(
               builder: (_) => const SizedBox.shrink(),
             );
           },
-          home: const InstitutionHub(),
+          home: InstitutionHub(embedded: embedded),
         ),
       ),
     ),
@@ -256,5 +276,38 @@ void main() {
       reason:
           'the wallet guard opened the account flow for the email-only user',
     );
+  });
+
+  testWidgets('wallet holder sees Web3 onboarding on the first visit',
+      (tester) async {
+    await _pumpHub(
+      tester,
+      user: _walletUser(),
+      requests: <String>[],
+      signedIn: true,
+    );
+
+    expect(find.byType(Web3OnboardingScreen), findsOneWidget);
+  });
+
+  testWidgets('embedded institution hub exposes the help entry',
+      (tester) async {
+    await _pumpHub(
+      tester,
+      user: _emailOnlyUser(),
+      requests: <String>[],
+      signedIn: true,
+      embedded: true,
+    );
+
+    // The embedded layout has no app bar; the help action sits in the header
+    // and opens the same explanation the mobile app bar does.
+    expect(find.byIcon(Icons.help_outline), findsOneWidget);
+    expect(find.byType(Web3OnboardingScreen), findsNothing);
+
+    await tester.tap(find.byIcon(Icons.help_outline));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(Web3OnboardingScreen), findsOneWidget);
   });
 }
