@@ -1488,6 +1488,7 @@
   "institutionHubApplicationFocusRequired": "Opiši programski fokus.",
   "institutionHubApplicationMissionRequired": "Opiši poslanstvo z vsaj 20 znaki.",
   "institutionHubApplicationWalletRequired": "Pred oddajo poveži denarnico.",
+  "institutionHubApplicationWalletWhy": "Prijava se podpiše z vašo denarnico, zato pregled ostane vezan na denarnico, ki jo nadzorujete. Za brskanje po institucijah denarnica ni potrebna.",
   "institutionHubApplicationSubmittedToast": "Prijava je oddana v pregled upravljanja.",
   "institutionHubApplicationSubmitUnavailableToast": "Prijave trenutno ni mogoče oddati.",
   "institutionHubApplicationSubmitFailedToast": "Oddaja ni uspela: {error}",
