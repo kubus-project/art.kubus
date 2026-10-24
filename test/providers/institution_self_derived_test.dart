@@ -30,15 +30,20 @@ Institution _directoryInstitution() {
   );
 }
 
-UserProfile _institutionUser() {
+UserProfile _institutionUser({
+  String wallet = _wallet,
+  String id = 'user-self-derived',
+  String displayName = 'Zvezda Gallery',
+  bool isInstitution = true,
+}) {
   return UserProfile(
-    id: 'user-self-derived',
-    walletAddress: _wallet,
+    id: id,
+    walletAddress: wallet,
     username: 'zvezda',
-    displayName: 'Zvezda Gallery',
+    displayName: displayName,
     bio: '',
     avatar: '',
-    isInstitution: true,
+    isInstitution: isInstitution,
     createdAt: DateTime.utc(2026, 1, 1),
     updatedAt: DateTime.utc(2026, 1, 1),
   );
@@ -63,5 +68,64 @@ void main() {
     final directory = _directoryInstitution();
     expect(directory.isSelfDerivedFromWallet, isFalse);
     expect(markerSubjectInstitutions(<Institution>[directory]), [directory]);
+  });
+
+  test('switching accounts replaces the derived entry with the new wallet only',
+      () {
+    const walletA = 'WalletSelfDerivedA111111111111111111111111';
+    const walletB = 'WalletSelfDerivedB111111111111111111111111';
+    final profiles = ProfileProvider()
+      ..setCurrentUser(_institutionUser(wallet: walletA, id: 'user-a'));
+    final provider = InstitutionProvider()..bindProfileProvider(profiles);
+
+    final first = provider.institutions;
+    expect(first.map((i) => i.id), [walletA]);
+    expect(first.single.isSelfDerivedFromWallet, isTrue);
+
+    profiles.setCurrentUser(_institutionUser(
+      wallet: walletB,
+      id: 'user-b',
+      displayName: 'Second Gallery',
+    ));
+
+    final second = provider.institutions;
+    expect(second.map((i) => i.id), [walletB]);
+    expect(second.single.isSelfDerivedFromWallet, isTrue);
+    expect(second.single.name, 'Second Gallery');
+    expect(provider.getInstitutionById(walletA), isNull);
+    expect(markerSubjectInstitutions(second), isEmpty);
+  });
+
+  test('sign-out leaves no derived entry and no marker subject', () {
+    const wallet = 'WalletSelfDerivedSignOut111111111111111111';
+    final profiles = ProfileProvider()
+      ..setCurrentUser(_institutionUser(wallet: wallet));
+    final provider = InstitutionProvider()..bindProfileProvider(profiles);
+    expect(provider.getInstitutionById(wallet), isNotNull);
+
+    profiles.signOut();
+
+    expect(provider.institutions, isEmpty);
+    expect(provider.getInstitutionById(wallet), isNull);
+    expect(markerSubjectInstitutions(provider.institutions), isEmpty);
+  });
+
+  test('an account with an empty wallet derives no institution', () {
+    final profiles = ProfileProvider()
+      ..setCurrentUser(_institutionUser(wallet: '   '));
+    final provider = InstitutionProvider()..bindProfileProvider(profiles);
+
+    expect(provider.institutions, isEmpty);
+    expect(markerSubjectInstitutions(provider.institutions), isEmpty);
+  });
+
+  test('an email-only account without an institution profile derives nothing',
+      () {
+    final profiles = ProfileProvider()
+      ..setCurrentUser(_institutionUser(wallet: '', isInstitution: false));
+    final provider = InstitutionProvider()..bindProfileProvider(profiles);
+
+    expect(provider.institutions, isEmpty);
+    expect(markerSubjectInstitutions(provider.institutions), isEmpty);
   });
 }
