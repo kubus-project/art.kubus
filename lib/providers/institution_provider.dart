@@ -359,7 +359,9 @@ class InstitutionProvider extends ChangeNotifier {
         visitorGrowth: 0,
         revenueGrowth: 0,
       ),
-      isVerified: isApprovedInstitution || hasInstitutionProfile,
+      // Verification comes only from the DAO institution approval, never from
+      // the self-editable profile.isInstitution flag.
+      isVerified: isApprovedInstitution,
       createdAt: profile.createdAt,
     );
   }
