@@ -278,11 +278,11 @@ class InstitutionProvider extends ChangeNotifier {
     final derived = _derivedInstitution;
     if (derived == null) return institutions;
 
+    // A backend record with the same id is authoritative; the derived entry
+    // only fills in when no backend record exists for that id.
     final existingIndex =
         institutions.indexWhere((item) => item.id == derived.id);
-    if (existingIndex >= 0) {
-      institutions[existingIndex] = derived;
-    } else {
+    if (existingIndex < 0) {
       institutions.insert(0, derived);
     }
     return institutions;
