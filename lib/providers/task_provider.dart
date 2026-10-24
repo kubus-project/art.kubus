@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 
 import '../config/config.dart';
@@ -44,7 +46,16 @@ class TaskProvider extends ChangeNotifier {
   // earlier account is discarded when it lands.
   int _accountEpoch = 0;
 
-  void _handleAccountIdentityChanged() => clearAccountScopedState();
+  void _handleAccountIdentityChanged() {
+    clearAccountScopedState();
+    // A session that is still signed in now belongs to the new identity, so its
+    // progress is requested again through the same path the bootstrap uses. The
+    // token is already the new one when the change is announced. A guest has no
+    // progress to load.
+    if (AccountIdentity.accountKey.isNotEmpty) {
+      unawaited(refreshAchievementsForCurrentUser());
+    }
+  }
 
   /// Drops the achievement and task progress of the account that just signed
   /// out, and the summary the backend sent for it. The next account starts

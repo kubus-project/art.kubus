@@ -20,6 +20,7 @@ const _validAuthToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.'
     'signature';
 
 const _walletA = 'WalletTest111111111111111111111111111111111111';
+const _walletB = 'WalletTest222222222222222222222222222222222222';
 
 http.Response _jsonResponse(Map<String, Object?> body) {
   return http.Response(
@@ -27,6 +28,36 @@ http.Response _jsonResponse(Map<String, Object?> body) {
     200,
     headers: const <String, String>{'content-type': 'application/json'},
   );
+}
+
+/// A token for [wallet] carrying the claims the client reads. Not signed: the
+/// test sets it straight into the backend service.
+String _tokenForWallet(String wallet) {
+  String segment(Map<String, Object?> json) =>
+      base64Url.encode(utf8.encode(jsonEncode(json))).replaceAll('=', '');
+  return '${segment({'alg': 'HS256', 'typ': 'JWT'})}.'
+      '${segment({'exp': 4733856000, 'walletAddress': wallet})}.signature';
+}
+
+Map<String, Object?> _progressPayload(int currentProgress) {
+  return <String, Object?>{
+    'success': true,
+    'definitions': <Object?>[
+      <String, Object?>{
+        'code': 'first_visit',
+        'title': 'First visit',
+        'description': 'Visit the map',
+      },
+    ],
+    'progress': <Object?>[
+      <String, Object?>{
+        'achievementCode': 'first_visit',
+        'currentProgress': currentProgress,
+        'isCompleted': false,
+      },
+    ],
+    'unlocked': <Object?>[],
+  };
 }
 
 Map<String, Object?> _institutionPayload({required String id}) {
@@ -347,10 +378,93 @@ void main() {
       expect(provider.achievementProgress, isNotEmpty);
       expect(provider.taskProgress, isNotEmpty);
 
-      await AccountIdentity.notifyChanged();
-
+      final changed = AccountIdentity.notifyChanged();
+      // Cleared when the change is announced, before the first await. The
+      // re-request that follows refills progress only once its response lands.
       expect(provider.achievementProgress, isEmpty);
       expect(provider.taskProgress, isEmpty);
+      await changed;
+      await pumpEventQueue();
+    });
+
+    test('a signed-in identity change requests the new account progress',
+        () async {
+      final authorizations = <String?>[];
+      BackendApiService().setHttpClient(MockClient((request) async {
+        if (request.url.path == '/api/achievements/me') {
+          authorizations.add(request.headers['authorization']);
+          return _jsonResponse(_progressPayload(authorizations.length));
+        }
+        return http.Response('Unexpected request ${request.url}', 500);
+      }));
+      final provider = TaskProvider();
+      addTearDown(provider.dispose);
+      await provider.refreshAchievementsForCurrentUser();
+      expect(
+          provider.getAchievementProgress('first_visit')?.currentProgress, 1);
+
+      final nextToken = _tokenForWallet(_walletB);
+      BackendApiService().setAuthTokenForTesting(nextToken);
+      await AccountIdentity.notifyChanged();
+      await pumpEventQueue();
+
+      expect(authorizations, hasLength(2));
+      expect(authorizations.last, 'Bearer $nextToken');
+      expect(
+          provider.getAchievementProgress('first_visit')?.currentProgress, 2);
+      expect(provider.isLoading, isFalse);
+    });
+
+    test('a sign-out clears progress and requests nothing', () async {
+      var requests = 0;
+      BackendApiService().setHttpClient(MockClient((request) async {
+        if (request.url.path == '/api/achievements/me') {
+          requests += 1;
+          return _jsonResponse(_progressPayload(1));
+        }
+        return http.Response('Unexpected request ${request.url}', 500);
+      }));
+      final provider = TaskProvider();
+      addTearDown(provider.dispose);
+      await provider.refreshAchievementsForCurrentUser();
+      expect(requests, 1);
+
+      BackendApiService().setAuthTokenForTesting(null);
+      await AccountIdentity.notifyChanged();
+      await pumpEventQueue();
+
+      expect(requests, 1);
+      expect(provider.achievementProgress, isEmpty);
+      expect(provider.taskProgress, isEmpty);
+    });
+
+    test('a progress read still in flight for the previous account is dropped',
+        () async {
+      final previousRead = Completer<http.Response>();
+      var requests = 0;
+      BackendApiService().setHttpClient(MockClient((request) async {
+        if (request.url.path == '/api/achievements/me') {
+          requests += 1;
+          if (requests == 1) return previousRead.future;
+          return _jsonResponse(_progressPayload(2));
+        }
+        return http.Response('Unexpected request ${request.url}', 500);
+      }));
+      final provider = TaskProvider();
+      addTearDown(provider.dispose);
+      final staleLoad = provider.refreshAchievementsForCurrentUser();
+      await pumpEventQueue();
+      expect(requests, 1);
+
+      BackendApiService().setAuthTokenForTesting(_tokenForWallet(_walletB));
+      await AccountIdentity.notifyChanged();
+      previousRead.complete(_jsonResponse(_progressPayload(1)));
+      await staleLoad;
+      await pumpEventQueue();
+
+      expect(requests, 2);
+      expect(
+          provider.getAchievementProgress('first_visit')?.currentProgress, 2);
     });
   });
 }
