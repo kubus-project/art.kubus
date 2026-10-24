@@ -7258,6 +7258,12 @@ abstract class AppLocalizations {
   /// **'Connect a wallet before submitting.'**
   String get institutionHubApplicationWalletRequired;
 
+  /// No description provided for @institutionHubApplicationWalletWhy.
+  ///
+  /// In en, this message translates to:
+  /// **'Applying is signed with your wallet, so the review stays tied to a wallet you control. Browsing institutions does not need one.'**
+  String get institutionHubApplicationWalletWhy;
+
   /// No description provided for @institutionHubApplicationSubmittedToast.
   ///
   /// In en, this message translates to:
