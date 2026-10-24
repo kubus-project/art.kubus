@@ -104,7 +104,14 @@ void main() {
         .map((element) => element.getAttribute('android:path'))
         .whereType<String>()
         .toSet();
-    expect(exactPaths,
-        equals({'/sign-in', '/register', '/verify-email', '/reset-password'}));
+    expect(
+        exactPaths,
+        equals({
+          '/sign-in',
+          '/register',
+          '/verify-email',
+          '/reset-password',
+          '/map',
+        }));
   });
 }

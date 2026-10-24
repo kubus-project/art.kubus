@@ -43,6 +43,11 @@ class PendingActionContinuationHost extends StatefulWidget {
   /// rather than over the route transition.
   static const Duration settleDelay = Duration(milliseconds: 450);
 
+  /// How many times a sheet that was removed from under the visitor is offered
+  /// again before the host stops, leaving the action pending rather than
+  /// discarded.
+  static const int maxInterruptedOffers = 3;
+
   @override
   State<PendingActionContinuationHost> createState() =>
       _PendingActionContinuationHostState();
@@ -51,13 +56,21 @@ class PendingActionContinuationHost extends StatefulWidget {
 class _PendingActionContinuationHostState
     extends State<PendingActionContinuationHost> {
   bool _presenting = false;
+  int _interruptedOffers = 0;
+  String? _viewedIdentityKey;
 
   @override
   Widget build(BuildContext context) {
     // `watch` here is intentional: the host has no UI of its own, it just needs
     // to be rebuilt when an intent becomes ready so it can present the sheet.
     final provider = context.watch<PendingActionProvider>();
-    if (provider.isAwaitingConfirmation && !_presenting) {
+    if (!provider.isAwaitingConfirmation) {
+      _interruptedOffers = 0;
+    }
+    if (provider.isAwaitingConfirmation &&
+        !_presenting &&
+        _interruptedOffers <
+            PendingActionContinuationHost.maxInterruptedOffers) {
       _presenting = true;
       unawaited(_present(provider));
     }
@@ -85,7 +98,11 @@ class _PendingActionContinuationHostState
       return;
     }
 
-    provider.markConfirmationViewed();
+    // A re-offer after an interruption is the same view, not a second one.
+    if (_viewedIdentityKey != intent.identityKey) {
+      _viewedIdentityKey = intent.identityKey;
+      provider.markConfirmationViewed();
+    }
 
     // Captured before the await so no BuildContext is used across a gap.
     final l10n = AppLocalizations.of(sheetContext)!;
@@ -93,16 +110,27 @@ class _PendingActionContinuationHostState
     final artworkProvider = context.read<ArtworkProvider>();
     final savedItemsProvider = context.read<SavedItemsProvider>();
 
-    final confirmed = await showPendingActionConfirmationSheet(
-      sheetContext,
-      intent: intent,
-    );
+    final decision = await _showConfirmation(sheetContext, intent: intent);
     if (!mounted) {
       _presenting = false;
       return;
     }
 
-    if (!confirmed) {
+    if (decision == _ConfirmationDecision.interrupted) {
+      // The route the sheet sat on was replaced while the visitor was still
+      // reading it, e.g. post-authentication navigation finishing late. They
+      // neither confirmed nor declined, so the action must survive and be
+      // offered again over the screen that replaced it.
+      _presenting = false;
+      _interruptedOffers += 1;
+      if (_interruptedOffers <
+          PendingActionContinuationHost.maxInterruptedOffers) {
+        setState(() {});
+      }
+      return;
+    }
+
+    if (decision == _ConfirmationDecision.declined) {
       // Cancelling keeps the visitor exactly where they are, with public
       // browsing untouched.
       await provider.cancel();
@@ -147,6 +175,42 @@ class _PendingActionContinuationHostState
   }
 }
 
+/// How the confirmation sheet ended.
+enum _ConfirmationDecision {
+  confirmed,
+  declined,
+
+  /// The sheet's route was removed (a route replacement) rather than closed by
+  /// the visitor, so no decision was made.
+  interrupted,
+}
+
+Future<_ConfirmationDecision> _showConfirmation(
+  BuildContext context, {
+  required PendingActionIntent intent,
+}) async {
+  // `PopScope` hears every pop (buttons, the barrier, back, drag, and any
+  // programmatic `Navigator.pop`) and none of the route removals that replace
+  // the screen underneath, which is what tells the two kinds of `null` result
+  // apart. Post-authentication navigation replaces routes; it never pops them.
+  var closedByVisitor = false;
+  final result = await showModalBottomSheet<bool>(
+    context: context,
+    backgroundColor: Colors.transparent,
+    isScrollControlled: true,
+    useSafeArea: false,
+    builder: (sheetContext) => PopScope(
+      onPopInvokedWithResult: (didPop, _) {
+        if (didPop) closedByVisitor = true;
+      },
+      child: _PendingActionConfirmationSheet(intent: intent),
+    ),
+  );
+  if (result == true) return _ConfirmationDecision.confirmed;
+  if (result == false || closedByVisitor) return _ConfirmationDecision.declined;
+  return _ConfirmationDecision.interrupted;
+}
+
 /// Asks the visitor to confirm the action they attempted before signing up.
 ///
 /// Returns true only on an explicit confirmation; dismissing by tap-outside or
@@ -155,14 +219,8 @@ Future<bool> showPendingActionConfirmationSheet(
   BuildContext context, {
   required PendingActionIntent intent,
 }) async {
-  final result = await showModalBottomSheet<bool>(
-    context: context,
-    backgroundColor: Colors.transparent,
-    isScrollControlled: true,
-    useSafeArea: false,
-    builder: (sheetContext) => _PendingActionConfirmationSheet(intent: intent),
-  );
-  return result ?? false;
+  final decision = await _showConfirmation(context, intent: intent);
+  return decision == _ConfirmationDecision.confirmed;
 }
 
 class _PendingActionConfirmationSheet extends StatelessWidget {

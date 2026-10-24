@@ -4,7 +4,7 @@ import 'package:art_kubus/providers/glass_capabilities_provider.dart';
 import 'package:art_kubus/utils/design_tokens.dart';
 import 'package:art_kubus/widgets/glass/glass_surface.dart';
 import 'package:art_kubus/widgets/map/glass/kubus_map_native_backdrop_channel.dart';
-import 'package:art_kubus/widgets/map/glass/kubus_map_platform_backdrop_host.dart';
+import 'package:art_kubus/widgets/map/glass/kubus_map_platform_backdrop_mount.dart';
 import 'package:art_kubus/widgets/map/kubus_map_glass_surface.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';

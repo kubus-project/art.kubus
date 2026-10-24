@@ -12,6 +12,7 @@ import 'package:art_kubus/providers/profile_package_controller.dart';
 import 'package:art_kubus/services/backend_api_service.dart';
 import 'package:art_kubus/services/http_client_factory.dart';
 import 'package:art_kubus/services/profile_package_service.dart';
+import 'package:art_kubus/services/public_entity_load_outcome.dart';
 import 'package:art_kubus/services/user_service.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
@@ -142,7 +143,8 @@ void main() {
   test('stale async critical result is ignored after newer refresh', () async {
     final oldCritical =
         _critical(wallet: wallet, title: 'Old Backend Milestone');
-    final pendingInitial = Completer<ProfileCriticalPackage?>();
+    final pendingInitial =
+        Completer<PublicEntityLoadOutcome<ProfileCriticalPackage>>();
     final controller = ProfilePackageController(
       walletAddress: wallet,
       initialCriticalPackageFuture: pendingInitial.future,
@@ -159,7 +161,7 @@ void main() {
     final initialLoad = controller.load();
     final refresh = controller.refresh();
     await refresh;
-    pendingInitial.complete(oldCritical);
+    pendingInitial.complete(PublicEntityFound(oldCritical));
     await initialLoad;
 
     expect(controller.package!.achievementDefinitions.single.title,
@@ -450,6 +452,89 @@ void main() {
       expect(controller.isLastPage, isTrue);
       expect(controller.postsError, isNull);
 
+      controller.dispose();
+    });
+  });
+  group('public profile entry under a failed lookup', () {
+    test('a rate-limited profile is a transient failure, never not found',
+        () async {
+      const limitedWallet = 'profile_controller_rate_limited_wallet';
+      BackendApiService().setHttpClient(MockClient((request) async {
+        return http.Response('{"error":"Too many requests"}', 429);
+      }));
+
+      final outcome =
+          await ProfilePackageService.loadPublicProfileCriticalOutcome(
+        limitedWallet,
+      );
+      expect(
+          outcome, isA<PublicEntityTransientFailure<ProfileCriticalPackage>>());
+
+      final controller = ProfilePackageController(walletAddress: limitedWallet);
+      await controller.load();
+      expect(controller.criticalLoadFailedTransiently, isTrue);
+      expect(controller.criticalLoadNotFound, isFalse,
+          reason: 'a failed lookup is never the not-found answer');
+      expect(controller.user, isNull);
+      expect(controller.isLoadingCritical, isFalse);
+      controller.dispose();
+    });
+
+    test('a missing profile (404) is not found, not a transient failure',
+        () async {
+      const missingWallet = 'profile_controller_missing_wallet';
+      BackendApiService().setHttpClient(MockClient((request) async {
+        return http.Response('{"error":"Not found"}', 404);
+      }));
+
+      final outcome =
+          await ProfilePackageService.loadPublicProfileCriticalOutcome(
+        missingWallet,
+      );
+      expect(outcome, isA<PublicEntityNotFound<ProfileCriticalPackage>>());
+
+      final controller = ProfilePackageController(walletAddress: missingWallet);
+      await controller.load();
+      expect(controller.criticalLoadFailedTransiently, isFalse);
+      // The answer resolves a pending takeover; it is not a failure.
+      expect(controller.criticalLoadNotFound, isTrue);
+      expect(controller.user, isNull);
+      controller.dispose();
+    });
+
+    test('a prefetched transient failure reaches the controller as a failure',
+        () async {
+      final controller = ProfilePackageController(
+        walletAddress: 'profile_controller_prefetch_wallet',
+        initialCriticalPackageFuture:
+            Future<PublicEntityLoadOutcome<ProfileCriticalPackage>>.value(
+          const PublicEntityTransientFailure<ProfileCriticalPackage>(
+            reason: 'rate limited',
+            statusCode: 429,
+          ),
+        ),
+      );
+      await controller.load();
+      expect(controller.criticalLoadFailedTransiently, isTrue);
+      expect(controller.user, isNull);
+      expect(controller.isLoadingCritical, isFalse);
+      controller.dispose();
+    });
+
+    test('a prefetched not-found answer reaches the controller as not found',
+        () async {
+      final controller = ProfilePackageController(
+        walletAddress: 'profile_controller_prefetch_missing_wallet',
+        initialCriticalPackageFuture:
+            Future<PublicEntityLoadOutcome<ProfileCriticalPackage>>.value(
+          const PublicEntityNotFound<ProfileCriticalPackage>(),
+        ),
+      );
+      await controller.load();
+      expect(controller.criticalLoadNotFound, isTrue);
+      expect(controller.criticalLoadFailedTransiently, isFalse);
+      expect(controller.user, isNull);
+      expect(controller.isLoadingCritical, isFalse);
       controller.dispose();
     });
   });

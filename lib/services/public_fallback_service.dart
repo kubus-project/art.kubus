@@ -448,10 +448,20 @@ class PublicFallbackService extends ChangeNotifier {
       return const <dynamic>[];
     }
 
+    // Immutable snapshots cannot prove current marker visibility. Until a
+    // snapshot carries verifiable eligibility evidence, never serve marker
+    // rows or exhibition-to-marker links from a snapshot read.
+    if (normalizedKey == 'markers') {
+      return const <dynamic>[];
+    }
+
     final cachedItems = _datasetCache[normalizedKey];
 
     if (!forceRefresh && _datasetCache.containsKey(normalizedKey)) {
-      return List<dynamic>.from(_datasetCache[normalizedKey]!);
+      return _applySnapshotEligibilityBoundary(
+        normalizedKey,
+        _datasetCache[normalizedKey]!,
+      );
     }
 
     final registry = await loadRegistry(forceRefresh: forceRefresh);
@@ -464,7 +474,7 @@ class PublicFallbackService extends ChangeNotifier {
           (expectedCid == null || expectedCid == cached.cachedCid)) {
         _datasetCache[normalizedKey] = List<dynamic>.from(cached.items);
         _datasetCidCache[normalizedKey] = cached.cachedCid;
-        return List<dynamic>.from(cached.items);
+        return _applySnapshotEligibilityBoundary(normalizedKey, cached.items);
       }
     }
 
@@ -507,7 +517,7 @@ class PublicFallbackService extends ChangeNotifier {
         _datasetCache[normalizedKey] = List<dynamic>.from(items);
         _datasetCidCache[normalizedKey] = datasetRecord.cid;
         await _persistDataset(normalizedKey, datasetRecord.cid, response.body);
-        return List<dynamic>.from(items);
+        return _applySnapshotEligibilityBoundary(normalizedKey, items);
       } catch (error) {
         lastError = error;
       }
@@ -521,7 +531,27 @@ class PublicFallbackService extends ChangeNotifier {
 
     return cachedItems == null
         ? const <dynamic>[]
-        : List<dynamic>.from(cachedItems);
+        : _applySnapshotEligibilityBoundary(normalizedKey, cachedItems);
+  }
+
+  List<dynamic> _applySnapshotEligibilityBoundary(
+    String datasetKey,
+    List<dynamic> items,
+  ) {
+    if (datasetKey == 'markers') {
+      return const <dynamic>[];
+    }
+    if (datasetKey != 'exhibitions') {
+      return List<dynamic>.from(items);
+    }
+
+    return items.map((item) {
+      if (item is! Map) return item;
+      final exhibition = Map<String, dynamic>.from(item);
+      exhibition.remove('markerIds');
+      exhibition.remove('marker_ids');
+      return exhibition;
+    }).toList(growable: false);
   }
 
   void bindHttpClient(http.Client client) {

@@ -540,6 +540,14 @@
   "@authReauthDialogMessage": {
     "description": "Message shown in a dialog when the user's session has expired and they need to re-authenticate."
   },
+  "authAccountSuspendedTitle": "Account suspended",
+  "@authAccountSuspendedTitle": {
+    "description": "Title of the dialog shown after the backend reports that the signed-in account is suspended and the app has signed the user out."
+  },
+  "authAccountSuspendedMessage": "Access to this account has been suspended, so you have been signed out. Your wallet on this device is not affected. If you think this is a mistake, contact support.",
+  "@authAccountSuspendedMessage": {
+    "description": "Message of the dialog shown after the backend reports that the signed-in account is suspended and the app has signed the user out."
+  },
   "authAccountCreatedProfileLoading": "Account created. Loading your profile in the background.",
   "authEmailSignInDisabled": "Email sign-in is disabled.",
   "authEmailRegistrationDisabled": "Email registration is disabled.",
@@ -1516,6 +1524,7 @@
   "institutionHubApplicationFocusRequired": "Let us know your programming focus.",
   "institutionHubApplicationMissionRequired": "Describe your mission in at least 20 characters.",
   "institutionHubApplicationWalletRequired": "Connect a wallet before submitting.",
+  "institutionHubApplicationWalletWhy": "Applying is signed with your wallet, so the review stays tied to a wallet you control. Browsing institutions does not need one.",
   "institutionHubApplicationSubmittedToast": "Application submitted for governance review.",
   "institutionHubApplicationSubmitUnavailableToast": "Unable to submit application right now.",
   "institutionHubApplicationSubmitFailedToast": "Submission failed: {error}",

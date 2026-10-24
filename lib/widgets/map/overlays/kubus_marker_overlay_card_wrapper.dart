@@ -6,7 +6,7 @@ import 'package:flutter/material.dart';
 import '../../../utils/app_animations.dart';
 import '../../../utils/kubus_map_tokens.dart';
 import '../../map_overlay_blocker.dart';
-import '../glass/kubus_map_platform_backdrop_host.dart';
+import '../glass/kubus_map_platform_backdrop_mount.dart';
 
 enum KubusMarkerOverlayPlacementStrategy {
   anchored,

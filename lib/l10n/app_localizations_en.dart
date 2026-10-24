@@ -1252,6 +1252,13 @@ class AppLocalizationsEn extends AppLocalizations {
       'Your session has expired. Sign in again to continue.';
 
   @override
+  String get authAccountSuspendedTitle => 'Account suspended';
+
+  @override
+  String get authAccountSuspendedMessage =>
+      'Access to this account has been suspended, so you have been signed out. Your wallet on this device is not affected. If you think this is a mistake, contact support.';
+
+  @override
   String get authAccountCreatedProfileLoading =>
       'Account created. Loading your profile in the background.';
 
@@ -4078,6 +4085,10 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get institutionHubApplicationWalletRequired =>
       'Connect a wallet before submitting.';
+
+  @override
+  String get institutionHubApplicationWalletWhy =>
+      'Applying is signed with your wallet, so the review stays tied to a wallet you control. Browsing institutions does not need one.';
 
   @override
   String get institutionHubApplicationSubmittedToast =>

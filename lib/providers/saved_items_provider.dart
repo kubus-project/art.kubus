@@ -601,6 +601,9 @@ class SavedItemsProvider extends ChangeNotifier {
               growable: false,
             );
     if (visibleItems.isEmpty) return;
+    // Saved state is per account: a signed-out visitor (e.g. on a public post) has none, and the
+    // endpoint would only answer 401.
+    if (!await _repository.hasBackendSession()) return;
 
     final statusMap = await _repository.getSavedBatchStatus(visibleItems);
     if (statusMap.isEmpty) return;

@@ -1,5 +1,5 @@
 import 'package:art_kubus/widgets/common/kubus_filter_panel.dart';
-import 'package:art_kubus/widgets/map/glass/kubus_map_platform_backdrop_host.dart';
+import 'package:art_kubus/widgets/map/glass/kubus_map_platform_backdrop_mount.dart';
 import 'package:art_kubus/widgets/map/kubus_map_glass_surface.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';

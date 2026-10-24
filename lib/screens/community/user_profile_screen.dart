@@ -6,14 +6,17 @@ import 'package:art_kubus/l10n/app_localizations.dart';
 import 'profile_section_order.dart';
 import '../../utils/wallet_utils.dart';
 import '../../widgets/app_loading.dart';
+import '../../widgets/unavailable_entity_scaffold.dart';
 import 'package:provider/provider.dart';
 import '../../models/profile_package.dart';
 import '../../models/user.dart';
 import '../../services/user_service.dart';
+import '../../services/public_entity_load_outcome.dart';
 import '../../services/block_list_service.dart';
 import '../../services/contextual_auth_gate.dart';
 import '../../services/share/share_service.dart';
 import '../../services/share/share_types.dart';
+import '../../utils/user_profile_navigation.dart';
 import '../desktop/desktop_shell_scope.dart';
 import '../../utils/design_tokens.dart';
 import '../../utils/app_color_utils.dart';
@@ -67,7 +70,8 @@ class UserProfileScreen extends StatefulWidget {
   final ProfilePackage? initialPackage;
   final Future<ProfilePackage?>? initialPackageFuture;
   final ProfileCriticalPackage? initialCriticalPackage;
-  final Future<ProfileCriticalPackage?>? initialCriticalPackageFuture;
+  final Future<PublicEntityLoadOutcome<ProfileCriticalPackage>>?
+      initialCriticalPackageFuture;
   final Future<ProfileExtendedPackage?>? initialExtendedPackageFuture;
 
   const UserProfileScreen({
@@ -163,6 +167,13 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
 
   void _syncProfileControllerState() {
     if (!mounted) return;
+    if (_profileController.criticalLoadFailedTransiently) {
+      WidgetsBinding.instance
+          .addPostFrameCallback((_) => _signalPublicTakeoverFailed());
+    } else if (_profileController.criticalLoadNotFound) {
+      WidgetsBinding.instance
+          .addPostFrameCallback((_) => _signalPublicTakeoverResolved());
+    }
     setState(() {
       user = _profileController.user;
       isLoading = _profileController.isLoadingCritical;
@@ -180,6 +191,40 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
       _artistDataLoaded = _profileController.artistDataLoaded;
       _artistDataLoading = _profileController.artistDataLoading;
     });
+  }
+
+  /// A critical load that failed without an answer. During a public takeover
+  /// the web host shows its failed state (provider no-ops otherwise); the
+  /// screen's own retry stays available in every case.
+  void _signalPublicTakeoverFailed() {
+    if (!mounted) return;
+    try {
+      unawaited(
+        context.read<PublicEntityTakeoverProvider>().markEntityFailed(
+              ShareEntityType.profile,
+              widget.userId,
+            ),
+      );
+    } catch (_) {}
+  }
+
+  /// The profile does not exist. Its not-found state is on screen after this
+  /// frame, so a pending public takeover can hand the page over to the app. It
+  /// is an answer, not a failure: no Refresh, and the entity URL stays.
+  void _signalPublicTakeoverResolved() {
+    if (!mounted) return;
+    try {
+      unawaited(
+        context.read<PublicEntityTakeoverProvider>().markEntityResolvedNotFound(
+              ShareEntityType.profile,
+              widget.userId,
+            ),
+      );
+    } catch (_) {}
+  }
+
+  void _retryCriticalLoad() {
+    unawaited(_profileController.load(forceRefresh: true));
   }
 
   void _handleIncomingPost(Map<String, dynamic> data) async {
@@ -239,7 +284,12 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     final authenticated = await const ContextualAuthGate().ensureAuthenticated(
       context,
       actionLabel: l10n.commonFollow.toLowerCase(),
-      returnRoute: '/u/${Uri.encodeComponent(widget.userId)}',
+      returnRoute: PublicEntityTakeoverProvider.returnRouteOr(
+        context,
+        ShareEntityType.profile,
+        widget.userId,
+        '/u/${Uri.encodeComponent(widget.userId)}',
+      ),
       actionType: PendingActionType.follow,
       targetType: PendingActionTargetType.user,
       targetId: profile.id,
@@ -423,6 +473,20 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     }
 
     if (user == null) {
+      if (_profileController.criticalLoadFailedTransiently) {
+        // The lookup failed; the profile may exist. Offer a retry instead of
+        // reporting it as not found.
+        return UnavailableEntityScaffold(
+          entityLabel: l10n.userProfileTitle,
+          reason: UnavailableEntityReason.loadFailed,
+          onRetry: _retryCriticalLoad,
+          canonicalPublicEntry: isCanonicalPublicEntityEntry(
+            context,
+            type: 'profile',
+            id: widget.userId,
+          ),
+        );
+      }
       return Scaffold(
         appBar: AppBar(
           flexibleSpace: const KubusGlassAppBarBackdrop(
@@ -660,15 +724,17 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
             enableProfileNavigation: false,
             heroTag: widget.heroTag,
           ),
-          actions: ProfileRelationshipActions(
-            isFollowing: user!.isFollowing,
-            isFollowLoading: _isFollowMutationInFlight,
-            onFollow: () => unawaited(_toggleFollow()),
-            onMessage: () => unawaited(_openMessageConversation(l10n)),
-            followLabel: l10n.userProfileFollowButton,
-            followingLabel: l10n.userProfileFollowingButton,
-            messageLabel: l10n.userProfileMessageButtonLabel,
-          ),
+          actions: _viewerIsSubject
+              ? null
+              : ProfileRelationshipActions(
+                  isFollowing: user!.isFollowing,
+                  isFollowLoading: _isFollowMutationInFlight,
+                  onFollow: () => unawaited(_toggleFollow()),
+                  onMessage: () => unawaited(_openMessageConversation(l10n)),
+                  followLabel: l10n.userProfileFollowButton,
+                  followingLabel: l10n.userProfileFollowingButton,
+                  messageLabel: l10n.userProfileMessageButtonLabel,
+                ),
         ),
         const SizedBox(height: DetailSpacing.lg),
         _buildPracticeBlock(l10n, isArtist: isArtist),
@@ -818,18 +884,23 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
           ),
         ],
         const SizedBox(height: KubusSpacing.md),
-        ProfileRelationshipActions(
-          isFollowing: profile.isFollowing,
-          isFollowLoading: _isFollowMutationInFlight,
-          onFollow: () => unawaited(_toggleFollow()),
-          onMessage: () => unawaited(_openMessageConversation(l10n)),
-          followLabel: l10n.userProfileFollowButton,
-          followingLabel: l10n.userProfileFollowingButton,
-          messageLabel: l10n.userProfileMessageButtonLabel,
-        ),
+        if (!_viewerIsSubject)
+          ProfileRelationshipActions(
+            isFollowing: profile.isFollowing,
+            isFollowLoading: _isFollowMutationInFlight,
+            onFollow: () => unawaited(_toggleFollow()),
+            onMessage: () => unawaited(_openMessageConversation(l10n)),
+            followLabel: l10n.userProfileFollowButton,
+            followingLabel: l10n.userProfileFollowingButton,
+            messageLabel: l10n.userProfileMessageButtonLabel,
+          ),
       ],
     );
   }
+
+  bool get _viewerIsSubject =>
+      UserProfileNavigation.isCurrentUser(context, widget.userId) ||
+      UserProfileNavigation.isCurrentUser(context, user?.id);
 
   String? get _canonicalPublicCoverUrl {
     final profile = user;
@@ -1135,7 +1206,12 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
       requirements: ProtectedActionRequirements.participant,
       context,
       actionLabel: l10n.userProfileMessageButtonLabel.toLowerCase(),
-      returnRoute: '/u/${Uri.encodeComponent(widget.userId)}',
+      returnRoute: PublicEntityTakeoverProvider.returnRouteOr(
+        context,
+        ShareEntityType.profile,
+        widget.userId,
+        '/u/${Uri.encodeComponent(widget.userId)}',
+      ),
     );
     if (!authenticated || !mounted) return;
     final chatProvider = Provider.of<ChatProvider>(context, listen: false);

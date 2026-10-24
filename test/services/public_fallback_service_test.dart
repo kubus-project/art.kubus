@@ -242,6 +242,99 @@ void main() {
     expect(cachedArtworks.first['title'], 'Snapshot Artwork');
   });
 
+  test('snapshot reads withhold markers and cached exhibition marker links',
+      () async {
+    const markerCid =
+        'bafybeigdyrzt5bq2dp2i5m2h3x2p6g7c6f3s4n5m6p7q8r9s0t1u2v3w4';
+    const exhibitionCid =
+        'bafybeihdwdcefgh4dqkjv67uzcmw7ojee6xedzdetojuzjevtenxquvyku';
+    const placeholderCid =
+        'bafybeibwzif3usj2hej4gkd5xwhkq6xrj2a6o3ilol4w6a7fdj3lvz2xsi';
+    final registryJson = jsonEncode(<String, dynamic>{
+      'version': '2026-10-23',
+      'generatedAt': '2026-10-23T00:00:00Z',
+      'datasets': <String, dynamic>{
+        for (final key in PublicFallbackService.requiredDatasetKeys)
+          key: <String, dynamic>{
+            'cid': key == 'markers'
+                ? markerCid
+                : key == 'exhibitions'
+                    ? exhibitionCid
+                    : placeholderCid,
+            'generatedAt': '2026-10-23T00:00:00Z',
+          },
+      },
+    });
+
+    service.bindHttpClient(
+      MockClient((request) async {
+        if (request.url.path
+            .contains('/ipns/public.kubus.site/public-index.json')) {
+          return http.Response(registryJson, 200);
+        }
+        if (request.url.path.contains('/ipfs/$exhibitionCid')) {
+          return http.Response(
+            jsonEncode(<Map<String, dynamic>>[
+              <String, dynamic>{
+                'id': 'exhibition-1',
+                'title': 'Snapshot Exhibition',
+                'markerIds': <String>['marker-public'],
+                'marker_ids': <String>['marker-legacy'],
+              },
+            ]),
+            200,
+          );
+        }
+        if (request.url.path.contains('/ipfs/$markerCid')) {
+          return http.Response(
+            jsonEncode(<Map<String, dynamic>>[
+              <String, dynamic>{'id': 'marker-public'},
+            ]),
+            200,
+          );
+        }
+        return http.Response('Not Found', 404);
+      }),
+    );
+
+    final initialExhibitions = await service.loadDatasetArray(
+      'exhibitions',
+      forceRefresh: true,
+    );
+    expect(initialExhibitions, hasLength(1));
+    expect(initialExhibitions.single['title'], 'Snapshot Exhibition');
+    expect(initialExhibitions.single.containsKey('markerIds'), isFalse);
+    expect(initialExhibitions.single.containsKey('marker_ids'), isFalse);
+
+    await service.resetForTesting();
+    for (var i = 0; i < AppConfig.backendOutageFailureThreshold; i++) {
+      service.recordDualBackendFailure();
+    }
+    expect(service.mode, AppRuntimeMode.ipfsFallback);
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(
+      'public_snapshot_dataset_raw_cache_v1_markers',
+      jsonEncode(<Map<String, dynamic>>[
+        <String, dynamic>{'id': 'stale-cached-marker'},
+      ]),
+    );
+    await prefs.setString(
+      'public_snapshot_dataset_cid_cache_v1_markers',
+      markerCid,
+    );
+    service.bindHttpClient(
+      MockClient((_) async => throw Exception('offline')),
+    );
+
+    final cachedExhibitions = await service.loadDatasetArray('exhibitions');
+    final cachedMarkers = await service.loadDatasetArray('markers');
+    expect(cachedExhibitions, hasLength(1));
+    expect(cachedExhibitions.single['title'], 'Snapshot Exhibition');
+    expect(cachedExhibitions.single.containsKey('markerIds'), isFalse);
+    expect(cachedExhibitions.single.containsKey('marker_ids'), isFalse);
+    expect(cachedMarkers, isEmpty);
+  });
+
   test(
     'refreshBackendMode reduces standby probe frequency in deep prolonged IPFS fallback outages',
     () async {

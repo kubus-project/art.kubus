@@ -2,6 +2,7 @@ import 'package:flutter/widgets.dart';
 
 import '../main_app.dart';
 import '../screens/activity/advanced_analytics_screen.dart';
+import '../features/map/shared/map_entry_camera.dart';
 import '../services/share/share_deep_link_parser.dart';
 import '../services/share/share_types.dart';
 import 'shell_entry_screen.dart';
@@ -36,6 +37,10 @@ class ShellRoutes {
     // existing provider tree. Query values are deliberately inert here.
     if (uri.path == analytics) return true;
     if (!initializerWrapped.contains(uri.path)) return false;
+    // Map camera parameters are a public launch target, not incidental query
+    // state. Keep the complete URI through initialization so the shell can
+    // seed the existing map screen with this camera.
+    if (uri.path == map && MapEntryCamera.fromUri(uri) != null) return true;
     return uri.queryParameters.keys.every(_isBenignLaunchParameter);
   }
 

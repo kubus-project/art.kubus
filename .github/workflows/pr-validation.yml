@@ -109,7 +109,7 @@ jobs:
         run: |
           npm run verify:toolchain:node
           npm run verify:architecture
-          node --test scripts/ci/workflow_contracts.test.mjs
+          node --test scripts/ci/workflow_contracts.test.mjs test/public_flutter_takeover.test.js scripts/qa/web_runtime_contract.test.mjs
           node --test scripts/qa/staging/isolation.test.mjs
           node scripts/ci/backend_gitlink_contract.mjs
       - name: Validate deployment contracts locally
@@ -168,7 +168,7 @@ jobs:
     needs: [changes, guardrails]
     if: ${{ needs.changes.outputs.full == 'true' || needs.changes.outputs.frontend == 'true' }}
     runs-on: ubuntu-24.04
-    timeout-minutes: 45
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v4
         with: { fetch-depth: 0, submodules: false }
@@ -258,6 +258,68 @@ jobs:
           path: coverage/lcov.info
           if-no-files-found: error
           retention-days: 3
+
+  map_browser_regression:
+    name: Mounted map fallback revocation in Chrome
+    needs: [changes, guardrails]
+    if: ${{ needs.changes.outputs.tier == 'full' && (needs.changes.outputs.full == 'true' || needs.changes.outputs.frontend == 'true') }}
+    runs-on: ubuntu-24.04
+    # Compiling this test's import graph (the whole map screen) for the browser is slow on a cold
+    # runner: inside flutter_quality it was still loading after 14 minutes when that job's 60-minute
+    # limit cancelled it. It has its own job and budget so it runs in parallel and can fail or time out
+    # on its own evidence. Test timeouts stay on: a suite that never loads must fail fast, not wait for the job limit.
+    # The positive control and the mount probe run first, so a broken browser harness is named before the map test.
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v4
+        with: { fetch-depth: 0, submodules: false }
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          package-manager-cache: false
+      - run: npm install --global "npm@${NPM_VERSION}"
+      - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+      - name: Resolve locked dependencies
+        run: |
+          flutter pub get
+          git diff --exit-code -- pubspec.lock
+      - name: Install Chromium
+        run: |
+          npm --prefix scripts/qa ci --no-audit --no-fund
+          npm --prefix scripts/qa exec -- playwright install --with-deps chromium
+      - name: Browser harness positive control
+        shell: bash
+        timeout-minutes: 20
+        run: |
+          set -euo pipefail
+          export CHROME_EXECUTABLE="$(node -e "process.stdout.write(require('./scripts/qa/node_modules/playwright').chromium.executablePath())")"
+          test -x "$CHROME_EXECUTABLE"
+          flutter test --platform chrome --reporter expanded --concurrency=1 test/web/basic_browser_smoke_test.dart 2>&1 | tee browser-control.log
+          grep -q "All tests passed" browser-control.log
+      - name: Backdrop mount renders in Chrome
+        shell: bash
+        timeout-minutes: 20
+        run: |
+          set -euo pipefail
+          export CHROME_EXECUTABLE="$(node -e "process.stdout.write(require('./scripts/qa/node_modules/playwright').chromium.executablePath())")"
+          test -x "$CHROME_EXECUTABLE"
+          flutter test --platform chrome --reporter expanded --concurrency=1 test/widgets/map/glass/kubus_map_platform_backdrop_mount_browser_test.dart 2>&1 | tee backdrop-mount.log
+          grep -q "All tests passed" backdrop-mount.log
+      - name: Mounted map fallback revocation in Chrome
+        shell: bash
+        # A stalled suite load must fail here in 20 minutes, not wait for the 45-minute job limit.
+        # --disable-dev-shm-usage is deliberately not set: the GitHub ubuntu runner is a VM with a
+        # normal /dev/shm. Only the local Docker rig (64 MB /dev/shm) needs that flag.
+        timeout-minutes: 20
+        run: |
+          set -euo pipefail
+          export CHROME_EXECUTABLE="$(node -e "process.stdout.write(require('./scripts/qa/node_modules/playwright').chromium.executablePath())")"
+          test -x "$CHROME_EXECUTABLE"
+          flutter test --platform chrome --reporter expanded --concurrency=1 test/map/map_screen_web_smoke_test.dart
 
   web_artifact:
     name: Release web build and browser smoke
@@ -444,6 +506,7 @@ jobs:
       - guardrails
       - documentation
       - flutter_quality
+      - map_browser_regression
       - web_artifact
       - backend_contract
       - android
@@ -473,5 +536,5 @@ jobs:
           REPOSITORY: ${{ github.repository }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
           GH_TOKEN: ${{ github.token }}
-          EXPECTED_JOBS: source_policy,changes,guardrails,documentation,flutter_quality,web_artifact,backend_contract,android,ios,web_routing
+          EXPECTED_JOBS: source_policy,changes,guardrails,documentation,flutter_quality,map_browser_regression,web_artifact,backend_contract,android,ios,web_routing
         run: node scripts/ci/validate_job_results.mjs

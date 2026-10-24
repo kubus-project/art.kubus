@@ -6,6 +6,7 @@ import 'package:flutter/scheduler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../core/app_navigator.dart';
+import '../l10n/app_localizations.dart';
 import '../services/auth_gating_service.dart';
 import '../services/auth_session_coordinator.dart';
 import '../services/backend_api_service.dart';
@@ -17,6 +18,7 @@ import '../providers/profile_provider.dart';
 import '../providers/saved_items_provider.dart';
 import '../providers/wallet_provider.dart';
 import '../screens/auth/sign_in_screen.dart';
+import '../widgets/glass_components.dart';
 
 enum SecurityLockReason {
   autoLock,
@@ -51,6 +53,7 @@ class SecurityGateProvider extends ChangeNotifier
   AuthFailureContext? _authFailureContext;
 
   Completer<AuthReauthResult>? _inFlight;
+  Future<AuthReauthResult>? _inactiveSessionEnd;
   DateTime? _cooldownUntil;
   bool _busy = false;
 
@@ -517,7 +520,9 @@ class SecurityGateProvider extends ChangeNotifier
     _completeAndReset(const AuthReauthResult(AuthReauthOutcome.cancelled));
   }
 
-  Future<void> logout() async {
+  /// Signs out. With [preserveWallet] the account session ends in full but the
+  /// local wallet is untouched (the backend ended the session, not the user).
+  Future<void> logout({bool preserveWallet = false}) async {
     final wallet = _walletProvider;
     if (wallet == null) return;
 
@@ -528,6 +533,7 @@ class SecurityGateProvider extends ChangeNotifier
         notificationProvider: _notificationProvider,
         profileProvider: _profileProvider,
         savedItemsProvider: _savedItemsProvider,
+        preserveWallet: preserveWallet,
       );
     } catch (e) {
       if (kDebugMode) {
@@ -579,6 +585,10 @@ class SecurityGateProvider extends ChangeNotifier
 
   @override
   Future<AuthReauthResult> handleAuthFailure(AuthFailureContext context) async {
+    // A suspended account cannot be repaired by signing in again, and its
+    // still-valid token must not be mistaken for a live session below.
+    if (context.isAccountInactive) return _endSessionForInactiveAccount();
+
     final existing = _inFlight;
     if (existing != null) {
       if (_lockReason != SecurityLockReason.sensitiveAction) {
@@ -708,6 +718,60 @@ class SecurityGateProvider extends ChangeNotifier
           message: 'Unable to start re-auth flow');
     }
     return inflight.future;
+  }
+
+  /// The backend suspended this account: end the authenticated session through
+  /// the ordinary sign-out (tokens, account state, navigation to /sign-in) and
+  /// say why. The wallet stays on the device untouched. Concurrent reports
+  /// share one run, and a report that arrives once the session is already gone
+  /// is ignored, so nothing loops and the notice is shown once.
+  Future<AuthReauthResult> _endSessionForInactiveAccount() {
+    final running = _inactiveSessionEnd;
+    if (running != null) return running;
+
+    final hasSession = _hasLocalAccount ||
+        (BackendApiService().getAuthToken() ?? '').trim().isNotEmpty;
+    if (!hasSession) {
+      return Future.value(const AuthReauthResult(
+        AuthReauthOutcome.failed,
+        message: 'Account suspended; no session left to end',
+      ));
+    }
+
+    final run = () async {
+      await logout(preserveWallet: true);
+      _showAccountSuspendedNotice();
+      return const AuthReauthResult(
+        AuthReauthOutcome.failed,
+        message: 'Account suspended; session ended',
+      );
+    }();
+    _inactiveSessionEnd = run;
+    return run.whenComplete(() => _inactiveSessionEnd = null);
+  }
+
+  void _showAccountSuspendedNotice() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      // The overlay sits below the navigator, so the dialog finds its route
+      // stack; the navigator's own context has no navigator above it.
+      final context = appNavigatorKey.currentState?.overlay?.context;
+      if (context == null || !context.mounted) return;
+      final l10n = AppLocalizations.of(context);
+      if (l10n == null) return;
+      unawaited(showKubusDialog<void>(
+        context: context,
+        builder: (dialogContext) => KubusAlertDialog(
+          title: Text(l10n.authAccountSuspendedTitle),
+          content: Text(l10n.authAccountSuspendedMessage),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: Text(l10n.commonOk),
+            ),
+          ],
+        ),
+      ));
+    });
   }
 
   /// Returns true only when [token] is a parseable JWT with an `exp` claim

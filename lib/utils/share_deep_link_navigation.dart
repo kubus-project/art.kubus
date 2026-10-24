@@ -8,6 +8,7 @@ import '../core/shell_routes.dart';
 import '../core/startup_trace.dart';
 import '../providers/main_tab_provider.dart';
 import '../providers/map_deep_link_provider.dart';
+import '../providers/public_entity_takeover_provider.dart';
 import '../screens/desktop/desktop_map_screen.dart';
 import '../screens/desktop/desktop_shell.dart';
 import '../screens/map_screen.dart';
@@ -100,7 +101,11 @@ class ShareDeepLinkNavigation {
         return;
       case ShareEntityType.profile:
         tabs?.setIndex(2);
-        await UserProfileNavigation.open(context, userId: target.id);
+        await UserProfileNavigation.open(
+          context,
+          userId: target.id,
+          allowOwnerShortcut: !_isPublicEntryTarget(context, target),
+        );
         return;
       case ShareEntityType.event:
         tabs?.setIndex(3);
@@ -152,6 +157,24 @@ class ShareDeepLinkNavigation {
     }
   }
 
+  /// A canonical public URL (e.g. /en/profiles/{id}) is served as the public
+  /// profile and must hand over to the same public view, even when the visitor
+  /// is signed in as that profile's owner. Ordinary in-app profile links keep
+  /// the owner shortcut.
+  static bool _isPublicEntryTarget(
+    BuildContext context,
+    ShareDeepLinkTarget target,
+  ) {
+    try {
+      return context
+              .read<PublicEntityTakeoverProvider>()
+              .returnRouteFor(target.type, target.id) !=
+          null;
+    } catch (_) {
+      return false;
+    }
+  }
+
   static Future<void> _openInDesktopShell(
     DesktopShellScope scope,
     BuildContext context,
@@ -176,7 +199,11 @@ class ShareDeepLinkNavigation {
         return;
       case ShareEntityType.profile:
         scope.navigateToRoute('/community');
-        await UserProfileNavigation.open(context, userId: target.id);
+        await UserProfileNavigation.open(
+          context,
+          userId: target.id,
+          allowOwnerShortcut: !_isPublicEntryTarget(context, target),
+        );
         return;
       case ShareEntityType.event:
         scope.navigateToRoute('/home');

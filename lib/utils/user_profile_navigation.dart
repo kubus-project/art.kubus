@@ -13,6 +13,7 @@ import '../providers/profile_provider.dart';
 import '../screens/desktop/community/desktop_profile_screen.dart'
     as desktop_owner;
 import '../services/profile_package_service.dart';
+import '../services/public_entity_load_outcome.dart';
 import '../utils/home/home_quick_action_executor.dart';
 import '../utils/home/home_quick_action_models.dart';
 import '../utils/wallet_utils.dart';
@@ -46,7 +47,8 @@ class DesktopProfilePresentationScope extends InheritedWidget {
 }
 
 class UserProfileNavigation {
-  static Future<ProfileCriticalPackage?>? _prefetchCriticalProfilePackage(
+  static Future<PublicEntityLoadOutcome<ProfileCriticalPackage>>?
+      _prefetchCriticalProfilePackage(
     String userId, {
     String? username,
   }) {
@@ -57,12 +59,13 @@ class UserProfileNavigation {
       return null;
     }
     try {
-      final future = ProfilePackageService.prefetchPublicProfileCriticalPackage(
+      final future = ProfilePackageService.prefetchPublicProfileCriticalOutcome(
         trimmed,
         username: normalizedUsername,
       );
       unawaited(
-        future.then((critical) async {
+        future.then((outcome) async {
+          final critical = outcome.valueOrNull;
           if (critical == null) return;
           await ProfilePackageService.prefetchPublicProfileExtendedPackage(
             critical.user.id,
@@ -80,8 +83,9 @@ class UserProfileNavigation {
     required String userId,
     String? username,
     String? heroTag,
+    bool allowOwnerShortcut = true,
   }) async {
-    if (_targetsCurrentUser(context, userId)) {
+    if (allowOwnerShortcut && _targetsCurrentUser(context, userId)) {
       await _openOwnerProfile(context);
       return;
     }
@@ -91,9 +95,11 @@ class UserProfileNavigation {
       username: username,
     );
     if (userId.trim().isEmpty && initialCriticalPackageFuture != null) {
-      final resolved = await initialCriticalPackageFuture;
+      final resolved = (await initialCriticalPackageFuture).valueOrNull;
       if (!context.mounted) return;
-      if (resolved != null && _targetsCurrentUser(context, resolved.user.id)) {
+      if (allowOwnerShortcut &&
+          resolved != null &&
+          _targetsCurrentUser(context, resolved.user.id)) {
         await _openOwnerProfile(context);
         return;
       }
@@ -146,6 +152,14 @@ class UserProfileNavigation {
       context,
       MaterialPageRoute(builder: (_) => profileScreen),
     );
+  }
+
+  /// Whether [targetId] is the signed-in account (stable account, wallet or
+  /// public actor ID). Public profile screens use it to hide self-follow and
+  /// self-message actions when the owner views their own public profile.
+  static bool isCurrentUser(BuildContext context, String? targetId) {
+    if (targetId == null) return false;
+    return _targetsCurrentUser(context, targetId);
   }
 
   /// Match only stable account identifiers and linked wallet/public actor IDs.
@@ -229,7 +243,8 @@ class UserProfileNavigation {
     required String userId,
     String? username,
     String? heroTag,
-    Future<ProfileCriticalPackage?>? initialCriticalPackageFuture,
+    Future<PublicEntityLoadOutcome<ProfileCriticalPackage>>?
+        initialCriticalPackageFuture,
   }) async {
     if (_targetsCurrentUser(context, userId)) {
       await _openOwnerProfile(context);
@@ -246,7 +261,7 @@ class UserProfileNavigation {
           username: normalizedUsername,
         );
     if (userId.trim().isEmpty && criticalFuture != null) {
-      final resolved = await criticalFuture;
+      final resolved = (await criticalFuture).valueOrNull;
       if (!context.mounted) return;
       if (resolved != null && _targetsCurrentUser(context, resolved.user.id)) {
         await _openOwnerProfile(context);

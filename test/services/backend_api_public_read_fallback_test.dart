@@ -3,8 +3,10 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:art_kubus/config/config.dart';
+import 'package:art_kubus/models/art_marker.dart';
 import 'package:art_kubus/services/auth_session_coordinator.dart';
 import 'package:art_kubus/services/backend_api_service.dart';
+import 'package:art_kubus/services/public_entity_load_outcome.dart';
 import 'package:art_kubus/services/public_fallback_service.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
@@ -237,6 +239,83 @@ void main() {
       final result = await read();
       expect(result.toString(), contains('Request failed: 500'));
       expect(trace(), ['primary', 'primary+orbit']);
+    });
+  });
+
+  // The public-entry marker read. The public marker snapshot holds no markers
+  // (it is never served for markers), so a live outage must surface as an
+  // outage, not as the snapshot's empty answer.
+  group('public marker entry read (getArtMarkerOrThrow)', () {
+    Future<Object?> readMarker() async {
+      try {
+        return await BackendApiService().getArtMarkerOrThrow(id);
+      } catch (e) {
+        return e;
+      }
+    }
+
+    http.Response markerJson() => http.Response(
+          jsonEncode({
+            'success': true,
+            'data': {
+              'id': id,
+              'name': 'River Memory',
+              'latitude': 46.05,
+              'longitude': 14.5,
+              'markerType': 'artwork',
+              'isPublic': true,
+              'isActive': true,
+            },
+          }),
+          200,
+          headers: const {'content-type': 'application/json'},
+        );
+
+    PublicEntityLoadOutcome<ArtMarker> classify(Object? result) =>
+        classifyPublicEntityLoadError<ArtMarker>(result!);
+
+    test('primary and mirror both 503: a transient failure, never a null',
+        () async {
+      backend((host, orbit) => status(503));
+      final result = await readMarker();
+      expect(result, isA<Exception>());
+      expect(classify(result), isA<PublicEntityTransientFailure<ArtMarker>>());
+      expect(trace(), containsAll(['primary', 'primary+orbit']));
+    });
+
+    test('primary and mirror both time out: a transient failure', () async {
+      backend((host, orbit) => throw TimeoutException('slow'));
+      final result = await readMarker();
+      expect(classify(result), isA<PublicEntityTransientFailure<ArtMarker>>());
+    });
+
+    test('primary 404: not found, and the mirror is not asked', () async {
+      backend((host, orbit) => status(404));
+      final result = await readMarker();
+      expect(classify(result), isA<PublicEntityNotFound<ArtMarker>>());
+      expect(trace(), ['primary']);
+    });
+
+    test("primary 503 and the mirror's explicit 404: not found", () async {
+      backend((host, orbit) => orbit ? status(404) : status(503));
+      final result = await readMarker();
+      expect(classify(result), isA<PublicEntityNotFound<ArtMarker>>());
+      expect(trace(), ['primary', 'primary+orbit'],
+          reason: 'the mirror answered, so no further backend is asked');
+    });
+
+    test('the mirror answers with the marker when the primary is down',
+        () async {
+      backend((host, orbit) => orbit ? markerJson() : status(503));
+      final result = await readMarker();
+      expect(result, isA<ArtMarker>());
+      expect((result as ArtMarker).id, id);
+      expect(trace(), ['primary', 'primary+orbit']);
+    });
+
+    test('getArtMarker keeps its null contract on an outage', () async {
+      backend((host, orbit) => status(503));
+      expect(await BackendApiService().getArtMarker(id), isNull);
     });
   });
 }

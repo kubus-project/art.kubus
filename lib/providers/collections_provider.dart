@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 
 import '../models/collection_record.dart';
+import '../services/account_identity.dart';
 import '../services/backend_api_service.dart';
 import '../services/profile_package_mutation_tracker.dart';
 import '../utils/wallet_utils.dart';
@@ -9,7 +10,38 @@ class CollectionsProvider extends ChangeNotifier {
   final BackendApiService _api;
 
   CollectionsProvider({BackendApiService? api})
-      : _api = api ?? BackendApiService();
+      : _api = api ?? BackendApiService() {
+    AccountIdentity.addListener(_handleAccountIdentityChanged);
+  }
+
+  // Bumped on every identity change, so a list load that started under an
+  // earlier account is discarded when it lands.
+  int _accountEpoch = 0;
+
+  void _handleAccountIdentityChanged() => clearAccountScopedState();
+
+  /// Drops the collections held for the account that just signed out. Without
+  /// a wallet, [loadCollections] returns the signed-in account's own
+  /// collections, so the lists are cleared and the next load starts from
+  /// nothing.
+  void clearAccountScopedState() {
+    _accountEpoch += 1;
+    _collections.clear();
+    _byId.clear();
+    _publicBootstrapSeededIds.clear();
+    _loadingIds.clear();
+    _errorsById.clear();
+    _listInitialized = false;
+    _listLoading = false;
+    _listError = null;
+    notifyListeners();
+  }
+
+  @override
+  void dispose() {
+    AccountIdentity.removeListener(_handleAccountIdentityChanged);
+    super.dispose();
+  }
 
   final List<CollectionRecord> _collections = <CollectionRecord>[];
   bool _listLoading = false;
@@ -75,6 +107,7 @@ class CollectionsProvider extends ChangeNotifier {
   }) async {
     if (_listLoading) return;
     if (_listInitialized && !refresh) return;
+    final epoch = _accountEpoch;
     _listLoading = true;
     _listError = null;
     notifyListeners();
@@ -85,6 +118,8 @@ class CollectionsProvider extends ChangeNotifier {
         page: page,
         limit: limit,
       );
+      // The response belongs to an account that has since signed out.
+      if (epoch != _accountEpoch) return;
       final records = raw.map(CollectionRecord.fromMap).toList(growable: false);
       _collections
         ..clear()
@@ -94,10 +129,13 @@ class CollectionsProvider extends ChangeNotifier {
       }
       _listInitialized = true;
     } catch (e) {
-      _listError = e.toString();
+      if (epoch == _accountEpoch) _listError = e.toString();
     } finally {
-      _listLoading = false;
-      notifyListeners();
+      // A stale load must not clear the flag a newer load has set.
+      if (epoch == _accountEpoch) {
+        _listLoading = false;
+        notifyListeners();
+      }
     }
   }
 

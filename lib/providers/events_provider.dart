@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 
 import '../models/event.dart';
 import '../models/exhibition.dart';
+import '../services/account_identity.dart';
 import '../services/backend_api_service.dart';
 import '../services/profile_package_mutation_tracker.dart';
 import '../services/telemetry/contribution_type.dart';
@@ -15,7 +16,44 @@ class EventsProvider extends ChangeNotifier {
 
   EventsProvider({BackendApiService? api, TelemetryService? telemetry})
       : _api = api ?? BackendApiService(),
-        _telemetry = telemetry ?? TelemetryService();
+        _telemetry = telemetry ?? TelemetryService() {
+    AccountIdentity.addListener(_handleAccountIdentityChanged);
+  }
+
+  // Bumped on every identity change. A load that started under an earlier
+  // account is discarded when it lands, and cannot clear a newer load's flag.
+  int _accountEpoch = 0;
+
+  void _handleAccountIdentityChanged() => clearAccountScopedState();
+
+  /// Drops every event this provider holds for the account that just signed
+  /// out. The list endpoint is public, but create and update results went into
+  /// the same cache and may be the account's own drafts, so the whole cache,
+  /// the per-account POAP state and the selection are cleared. The next
+  /// [initialize] reloads it for the new account.
+  void clearAccountScopedState() {
+    _accountEpoch += 1;
+    _events.clear();
+    _byId.clear();
+    _detailHydratedIds.clear();
+    _exhibitionsByEventId.clear();
+    _poapByEventId.clear();
+    _selected = null;
+    _initialized = false;
+    _error = null;
+    _isListLoading = false;
+    _isDetailLoading = false;
+    _isPoapLoading = false;
+    _isPoapClaiming = false;
+    _isRelationSyncing = false;
+    notifyListeners();
+  }
+
+  @override
+  void dispose() {
+    AccountIdentity.removeListener(_handleAccountIdentityChanged);
+    super.dispose();
+  }
 
   final List<KubusEvent> _events = <KubusEvent>[];
   final Map<String, KubusEvent> _byId = <String, KubusEvent>{};
@@ -122,6 +160,7 @@ class EventsProvider extends ChangeNotifier {
     int limit = 20,
     int offset = 0,
   }) async {
+    final epoch = _accountEpoch;
     _setFlag(_Flag.list, true);
     _error = null;
     try {
@@ -135,6 +174,8 @@ class EventsProvider extends ChangeNotifier {
         limit: limit,
         offset: offset,
       );
+      // The response belongs to an account that has since signed out.
+      if (epoch != _accountEpoch) return;
       final next = raw.map((e) => KubusEvent.fromJson(e)).toList();
       if (refresh) {
         _events
@@ -151,10 +192,13 @@ class EventsProvider extends ChangeNotifier {
       }
       notifyListeners();
     } catch (e) {
-      _error = e.toString();
-      notifyListeners();
+      if (epoch == _accountEpoch) {
+        _error = e.toString();
+        notifyListeners();
+      }
     } finally {
-      _setFlag(_Flag.list, false);
+      // A stale load must not clear the flag a newer load has set.
+      if (epoch == _accountEpoch) _setFlag(_Flag.list, false);
     }
   }
 

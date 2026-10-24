@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:latlong2/latlong.dart';
 
 import '../../../models/art_marker.dart';
+import '../../../services/public_entity_load_outcome.dart';
 import '../shared/map_marker_collision_config.dart';
 import '../shared/map_marker_selection_resolver.dart';
 import '../shared/map_screen_constants.dart';
@@ -61,9 +62,41 @@ enum MapTargetResult {
   overlayOpened,
   coordinatesOnly,
   notFound,
+
+  /// The target's lookup failed without an answer (rate limit, outage). The
+  /// target may exist: it is not reported as not found.
+  transientFailure,
   cancelled,
   superseded,
 }
+
+/// What a direct marker target's terminal result means for its public entry.
+enum MapTargetEntryEffect {
+  /// The marker is on screen: the entry's entity is ready.
+  markReady,
+
+  /// The lookup failed without an answer: the handoff is reported as failed and
+  /// the entry keeps its address.
+  markFailed,
+
+  /// The marker does not resolve: the entry is dropped so that it stops
+  /// pinning its address over the plain map.
+  unresolved,
+
+  none,
+}
+
+MapTargetEntryEffect mapTargetEntryEffectFor(MapTargetResult result) =>
+    switch (result) {
+      MapTargetResult.overlayOpened => MapTargetEntryEffect.markReady,
+      MapTargetResult.transientFailure => MapTargetEntryEffect.markFailed,
+      MapTargetResult.notFound ||
+      MapTargetResult.coordinatesOnly =>
+        MapTargetEntryEffect.unresolved,
+      MapTargetResult.cancelled ||
+      MapTargetResult.superseded =>
+        MapTargetEntryEffect.none,
+    };
 
 typedef MapTargetTerminalCallback = void Function(
   MapTargetIntent intent,
@@ -274,13 +307,24 @@ class MapTargetCoordinator {
 
         _phase = MapTargetPhase.resolving;
         var candidate = _resolve(intent, _loadedMarkers());
+        // A failed exact-marker lookup does not end the search: the artwork
+        // relation and the coordinates may still resolve it. It is reported as
+        // a transient failure only when nothing else does.
+        var markerLookupFailed = false;
         if (candidate == null) {
           final fetched = <ArtMarker>[];
           final markerId = intent.exactMarkerId?.trim() ?? '';
           if (markerId.isNotEmpty) {
-            final marker = await _fetchMarkerById(markerId);
+            final lookup = await _lookupMarker(markerId);
             if (!_isCurrent(intent, generation)) return;
-            if (marker != null) fetched.add(marker);
+            switch (lookup) {
+              case PublicEntityFound<ArtMarker>(:final value):
+                fetched.add(value);
+              case PublicEntityTransientFailure<ArtMarker>():
+                markerLookupFailed = true;
+              case PublicEntityNotFound<ArtMarker>():
+                break;
+            }
           }
 
           final artworkId = intent.artworkId?.trim() ?? '';
@@ -303,6 +347,10 @@ class MapTargetCoordinator {
         }
 
         if (candidate == null) {
+          if (markerLookupFailed) {
+            _finishTransientFailure(intent);
+            return;
+          }
           final position = intent.preferredPosition;
           if (position != null) {
             _phase = MapTargetPhase.movingCamera;
@@ -346,6 +394,28 @@ class MapTargetCoordinator {
         _requestDrive();
       }
     }
+  }
+
+  /// A fetch that throws is classified, not treated as "no marker": a rate
+  /// limit or outage must not look like an absent marker.
+  Future<PublicEntityLoadOutcome<ArtMarker>> _lookupMarker(
+    String markerId,
+  ) async {
+    try {
+      final marker = await _fetchMarkerById(markerId);
+      return marker == null
+          ? const PublicEntityNotFound()
+          : PublicEntityFound(marker);
+    } catch (error) {
+      return classifyPublicEntityLoadError<ArtMarker>(error);
+    }
+  }
+
+  void _finishTransientFailure(MapTargetIntent intent) {
+    try {
+      _showFallback(intent, MapTargetResult.transientFailure);
+    } catch (_) {}
+    _finish(intent, MapTargetResult.transientFailure, clearPin: true);
   }
 
   ArtMarker? _resolve(MapTargetIntent intent, Iterable<ArtMarker> markers) {
