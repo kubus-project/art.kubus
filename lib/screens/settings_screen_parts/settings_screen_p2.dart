@@ -1219,6 +1219,10 @@ extension _SettingsScreenStatePart2 on _SettingsScreenState {
                 backendApi: BackendApiService(),
                 notificationProvider: notificationProvider,
                 profileProvider: profileProvider,
+                artworkProvider: Provider.of<ArtworkProvider>(
+                  context,
+                  listen: false,
+                ),
               );
 
               if (!mounted) return;
@@ -1321,6 +1325,8 @@ extension _SettingsScreenStatePart2 on _SettingsScreenState {
                     Provider.of<NotificationProvider>(context, listen: false);
                 final profileProvider =
                     Provider.of<ProfileProvider>(context, listen: false);
+                final artworkProvider =
+                    Provider.of<ArtworkProvider>(context, listen: false);
 
                 // Delete the authenticated account (users.id), never just
                 // wallet-scoped data. Requires a valid backend token; local
@@ -1344,6 +1350,7 @@ extension _SettingsScreenStatePart2 on _SettingsScreenState {
                   backendApi: BackendApiService(),
                   notificationProvider: notificationProvider,
                   profileProvider: profileProvider,
+                  artworkProvider: artworkProvider,
                 );
 
                 if (!mounted) return;

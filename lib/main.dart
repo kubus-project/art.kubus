@@ -916,6 +916,7 @@ class _AppLauncherState extends State<AppLauncher> {
                     walletProvider: walletProvider,
                     notificationProvider: notificationProvider,
                     savedItemsProvider: context.read<SavedItemsProvider>(),
+                    artworkProvider: context.read<ArtworkProvider>(),
                   );
                   BackendApiService().bindAuthCoordinator(provider);
                   unawaited(provider.initialize());

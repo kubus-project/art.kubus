@@ -125,6 +125,35 @@ class ArtworkProvider extends ChangeNotifier {
     _reconcileSavedBookmarkState();
   }
 
+  /// Drops what this provider holds about the account that just signed out.
+  ///
+  /// Public artwork data stays. The viewer-relative like and bookmark flags on
+  /// every cached artwork, cached comments and the optimistic like/save
+  /// markers are reset, so the next account starts from the server's public
+  /// state instead of the previous account's likes.
+  void clearAccountScopedState() {
+    for (final id in _artworkById.keys.toList(growable: false)) {
+      final artwork = _artworkById[id]!;
+      if (!artwork.isLikedByCurrentUser && !artwork.isFavoriteByCurrentUser) {
+        continue;
+      }
+      _artworkById[id] = artwork.copyWith(
+        isLikedByCurrentUser: false,
+        isFavoriteByCurrentUser: false,
+      );
+    }
+    for (var i = 0; i < _artworks.length; i++) {
+      final current = _artworkById[_artworks[i].id];
+      if (current != null) _artworks[i] = current;
+    }
+    _comments.clear();
+    _loadingStates.removeWhere(
+      (operation, _) =>
+          operation.startsWith('like_') || operation.startsWith('save_'),
+    );
+    notifyListeners();
+  }
+
   /// Get artwork by ID
   Artwork? getArtworkById(String id) => _artworkById[id];
 
@@ -642,21 +671,33 @@ class ArtworkProvider extends ChangeNotifier {
   ///
   /// Idempotent by design: a replayed action (for example one a visitor
   /// confirmed after signing up) must never flip a like the user already has.
-  Future<bool> setLiked(String artworkId, bool liked) async {
+  ///
+  /// With [confirmOnServer] the cached flag is not trusted: the backend like is
+  /// sent even when the cache already reads [liked]. A confirmed pending action
+  /// uses this, so its success always means a server write happened, never a
+  /// stale cache read left over from a previous account.
+  Future<bool> setLiked(
+    String artworkId,
+    bool liked, {
+    bool confirmOnServer = false,
+  }) async {
     final id = artworkId.trim();
     if (id.isEmpty) return false;
 
     final artwork = getArtworkById(id);
     if (artwork == null) return false;
-    if (artwork.isLikedByCurrentUser == liked) return true;
+    if (!confirmOnServer && artwork.isLikedByCurrentUser == liked) return true;
 
+    final alreadyInState = artwork.isLikedByCurrentUser == liked;
     _setLoading('like_$id', true);
     final original = artwork;
     try {
       addOrUpdateArtwork(
         artwork.copyWith(
           isLikedByCurrentUser: liked,
-          likesCount: liked ? artwork.likesCount + 1 : artwork.likesCount - 1,
+          likesCount: alreadyInState
+              ? artwork.likesCount
+              : (liked ? artwork.likesCount + 1 : artwork.likesCount - 1),
         ),
       );
 

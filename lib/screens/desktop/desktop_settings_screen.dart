@@ -15,6 +15,7 @@ import '../../providers/wallet_provider.dart';
 import '../../providers/platform_provider.dart';
 import '../../providers/security_gate_provider.dart';
 import '../../providers/email_preferences_provider.dart';
+import '../../providers/artwork_provider.dart';
 import '../../providers/saved_items_provider.dart';
 import '../../models/email_preferences.dart';
 import '../../models/achievement_progress.dart';
