@@ -421,6 +421,12 @@ class _MapScreenState extends State<MapScreen>
   final GlobalKey _primaryControlsKey = GlobalKey();
   bool _railMeasurementScheduled = false;
   String? _lastRailMeasurementSignature;
+  // Rail geometry captured after layout. The rail builder reads these instead
+  // of other subtrees' GlobalKeys: a keyed subtree removed earlier in the same
+  // build pass stays reachable through its key until it unmounts, and by then
+  // its render object is detached, so reading its geometry throws.
+  double _measuredTopChromeBottom = 0.0;
+  double _measuredRailHeight = 0.0;
   final GlobalKey _tutorialMapToolsButtonKey = GlobalKey();
   final GlobalKey _nearbyPeekKey = GlobalKey();
   final ValueNotifier<MapMarkerChromeOcclusionPlan>
@@ -6347,16 +6353,9 @@ class _MapScreenState extends State<MapScreen>
       valueListenable: _nearbySheetExtentNotifier,
       builder: (context, sheetExtent, _) {
         final effectiveExtent = _isWalkingFocusedMode ? 0.0 : sheetExtent;
-        final searchRect = _rectInMapViewport(_searchSurfaceKey);
-        final extraContentRect = _rectInMapViewport(_searchExtraContentKey);
-        final topChromeBottom = _isWalkingFocusedMode
-            ? 0.0
-            : math.max(
-                searchRect?.bottom ?? 0.0,
-                extraContentRect?.bottom ?? 0.0,
-              );
-        final railHeight =
-            _rectInMapViewport(_primaryControlsKey)?.height ?? 0.0;
+        final topChromeBottom =
+            _isWalkingFocusedMode ? 0.0 : _measuredTopChromeBottom;
+        final railHeight = _measuredRailHeight;
         final geometry = KubusMapMobileRailGeometry(
           viewportHeight: viewportHeight,
           reservedBottom: reservedBottom,
@@ -6520,6 +6519,11 @@ class _MapScreenState extends State<MapScreen>
       final searchRect = _rectInMapViewport(_searchSurfaceKey);
       final extraContentRect = _rectInMapViewport(_searchExtraContentKey);
       final railRect = _rectInMapViewport(_primaryControlsKey);
+      _measuredTopChromeBottom = math.max(
+        searchRect?.bottom ?? 0.0,
+        extraContentRect?.bottom ?? 0.0,
+      );
+      _measuredRailHeight = railRect?.height ?? 0.0;
       final media = MediaQuery.of(context);
       final reservedBottom = _isWalkingFocusedMode
           ? media.viewPadding.bottom
