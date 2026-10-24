@@ -39,8 +39,15 @@ class ArtworkProvider extends ChangeNotifier {
   final Set<String> _supplementalArtworkIds = <String>{};
   Future<void>? _inFlightLoadArtworks;
   DateTime? _lastArtworksLoadAt;
+  // Bumped by clearAccountScopedState. A response that started under an
+  // earlier account is dropped instead of merged into the next account's cache.
+  int _accountEpoch = 0;
   static const Duration _artworksFreshWindow = Duration(seconds: 60);
-  static const String _viewHistoryPrefsKey = 'artwork_view_history_v1';
+
+  /// Device view history. Sign-out removes it so the next account never sees
+  /// the previous account's browsing.
+  static const String viewHistoryStorageKey = 'artwork_view_history_v1';
+  static const String _viewHistoryPrefsKey = viewHistoryStorageKey;
   final List<ViewHistoryEntry> _viewHistory = <ViewHistoryEntry>[];
   bool _historyLoaded = false;
 
@@ -99,13 +106,14 @@ class ArtworkProvider extends ChangeNotifier {
     if (pending != null) return pending;
     final api = _spatialApi;
     if (api == null) return const ArtworkSpatialHistory(history: []);
+    final epoch = _accountEpoch;
     final future = api.getArtworkSpatialHistory(id);
     _spatialHistoryLoads[id] = future;
     _spatialHistoryErrors.remove(id);
     notifyListeners();
     try {
       final history = await future;
-      _spatialHistory[id] = history;
+      if (epoch == _accountEpoch) _spatialHistory[id] = history;
       return history;
     } catch (error) {
       _spatialHistoryErrors[id] = error.toString();
@@ -127,26 +135,75 @@ class ArtworkProvider extends ChangeNotifier {
 
   /// Drops what this provider holds about the account that just signed out.
   ///
-  /// Public artwork data stays. The viewer-relative like and bookmark flags on
-  /// every cached artwork, cached comments and the optimistic like/save
-  /// markers are reset, so the next account starts from the server's public
-  /// state instead of the previous account's likes.
+  /// Public artwork data stays. What goes is anything the ending session could
+  /// see only as itself: private artworks, artworks listed for a wallet, the
+  /// viewer's like, bookmark and discovery state, cached comments, spatial
+  /// history, view history, and the optimistic like/save markers. Responses
+  /// still in flight for the ending session are discarded when they land.
   void clearAccountScopedState() {
+    _accountEpoch += 1;
+
+    final ownedWallets = <String>{
+      ..._walletsWithPrivateArtworks,
+      ..._walletsWithPublicArtworks,
+    };
+    bool ownedByEndingSession(Artwork artwork) {
+      if (!artwork.isPublic) return true;
+      final wallet = artwork.walletAddress?.trim() ?? '';
+      return wallet.isNotEmpty &&
+          ownedWallets.contains(WalletUtils.canonical(wallet));
+    }
+
+    final dropped = _artworks
+        .where(ownedByEndingSession)
+        .map((artwork) => artwork.id)
+        .toSet();
+    _artworks.removeWhere((artwork) => dropped.contains(artwork.id));
+    _artworkById.removeWhere(
+      (id, artwork) => dropped.contains(id) || ownedByEndingSession(artwork),
+    );
+
+    _supplementalArtworkIds.clear();
+    _walletsWithPrivateArtworks.clear();
+    _walletsWithPublicArtworks.clear();
+    _lastArtworksLoadAt = null;
+    _inFlightLoadArtworks = null;
+    _inFlightArtworkFetches.clear();
+
+    _spatialHistory.clear();
+    _spatialHistoryLoads.clear();
+    _spatialHistoryErrors.clear();
+
+    _viewHistory.clear();
+    _historyLoaded = false;
+
+    _comments.clear();
+    _commentLoadErrors.clear();
+    _commentSubmitErrors.clear();
+
     for (final id in _artworkById.keys.toList(growable: false)) {
       final artwork = _artworkById[id]!;
-      if (!artwork.isLikedByCurrentUser && !artwork.isFavoriteByCurrentUser) {
-        continue;
-      }
+      final viewerScoped = artwork.isLikedByCurrentUser ||
+          artwork.isFavoriteByCurrentUser ||
+          artwork.isDiscovered ||
+          artwork.discoveredAt != null ||
+          artwork.discoveryUserId != null;
+      if (!viewerScoped) continue;
+      // discoveryCount is a public total and stays; the status, the time and
+      // the discoverer are the viewer's own discovery state.
       _artworkById[id] = artwork.copyWith(
         isLikedByCurrentUser: false,
         isFavoriteByCurrentUser: false,
+        status: ArtworkStatus.undiscovered,
+        clearDiscoveredAt: true,
+        clearDiscoveryUserId: true,
       );
     }
     for (var i = 0; i < _artworks.length; i++) {
       final current = _artworkById[_artworks[i].id];
       if (current != null) _artworks[i] = current;
     }
-    _comments.clear();
+
     _loadingStates.removeWhere(
       (operation, _) =>
           operation.startsWith('like_') || operation.startsWith('save_'),
@@ -247,8 +304,11 @@ class ArtworkProvider extends ChangeNotifier {
     }
 
     try {
+      final epoch = _accountEpoch;
       final future = _backendApi.getArtwork(key).then((fetched) {
-        addOrUpdateArtwork(fetched, retainWhenListRefresh: true);
+        if (epoch == _accountEpoch) {
+          addOrUpdateArtwork(fetched, retainWhenListRefresh: true);
+        }
         return fetched;
       });
       _inFlightArtworkFetches[key] = future;
@@ -276,9 +336,11 @@ class ArtworkProvider extends ChangeNotifier {
     if (wanted.isEmpty) return const <String>{};
 
     try {
+      final epoch = _accountEpoch;
       final fetched = await _backendApi.getArtworks(
         ids: wanted.toList(growable: false),
       );
+      if (epoch != _accountEpoch) return wanted;
       var updated = false;
       for (final artwork in fetched) {
         if (!wanted.contains(artwork.id)) continue;
@@ -715,6 +777,17 @@ class ArtworkProvider extends ChangeNotifier {
             ? await _backendApi.likeArtwork(id)
             : await _backendApi.unlikeArtwork(id);
 
+        if (confirmOnServer && liked) {
+          // A like counts only once the server reports it. An offline write
+          // queued in the outbox returns no body, and neither does a like the
+          // server never accepted, so read the artwork back to tell them apart.
+          final server = await _backendApi.getArtwork(id);
+          if (!server.isLikedByCurrentUser) {
+            addOrUpdateArtwork(original);
+            return false;
+          }
+        }
+
         if (updatedCount != null) {
           final latest = getArtworkById(id);
           if (latest != null) {
@@ -1067,12 +1140,15 @@ class ArtworkProvider extends ChangeNotifier {
     try {
       await future;
     } finally {
-      _inFlightLoadArtworks = null;
+      if (identical(_inFlightLoadArtworks, future)) {
+        _inFlightLoadArtworks = null;
+      }
     }
   }
 
   Future<void> _loadArtworksInternal({bool refresh = false}) async {
     _setLoading('load_artworks', true);
+    final epoch = _accountEpoch;
 
     try {
       if (refresh) {
@@ -1080,6 +1156,7 @@ class ArtworkProvider extends ChangeNotifier {
         _walletsWithPublicArtworks.clear();
       }
       final artworks = await _backendApi.getArtworks(limit: 100);
+      if (epoch != _accountEpoch) return;
       final merged = artworks.map(_mergeSavedBookmarkState).toList();
       final listedArtworkIds = merged.map((artwork) => artwork.id).toSet();
       final supplementalArtworks = _supplementalArtworkIds
@@ -1128,12 +1205,14 @@ class ArtworkProvider extends ChangeNotifier {
 
     final operationKey = 'load_artworks_wallet_$cacheKey';
     _setLoading(operationKey, true);
+    final epoch = _accountEpoch;
     try {
       final walletArtworks = await _backendApi.getArtworks(
         walletAddress: walletAddress,
         includePrivateForWallet: includePrivateForWallet,
         limit: 100,
       );
+      if (epoch != _accountEpoch) return;
       bool updated = false;
       for (final artwork in walletArtworks) {
         final merged = _mergeSavedBookmarkState(artwork);

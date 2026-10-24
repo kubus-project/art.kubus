@@ -221,6 +221,9 @@ class SettingsService {
       // it. Leaving it behind would offer the previous user's pending Save or
       // Follow to whoever signs in next on this device.
       PendingActionService.storageKey,
+      // The device's artwork view history records what the previous account
+      // browsed.
+      ArtworkProvider.viewHistoryStorageKey,
     };
     for (final key in removeKeys) {
       await prefs.remove(key);
