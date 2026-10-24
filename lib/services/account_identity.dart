@@ -72,7 +72,9 @@ abstract final class AccountIdentity {
 
   /// Moves the legacy unscoped block and report records to [key] and deletes
   /// the unscoped copies. Runs once per device: the first signed-in account
-  /// adopts them, and the same future answers every later caller.
+  /// adopts them, and the same future answers every later caller. On a shared
+  /// device, an account that signs in first after the upgrade inherits the
+  /// previous users' unscoped blocks and reports; this is accepted and one-time.
   static Future<void> adoptLegacyRecords(String key) {
     final owner = key.trim();
     if (owner.isEmpty) return Future<void>.value();

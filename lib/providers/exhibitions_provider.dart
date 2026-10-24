@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 
 import '../models/event.dart';
 import '../models/exhibition.dart';
+import '../services/account_identity.dart';
 import '../services/backend_api_service.dart';
 import '../services/telemetry/contribution_type.dart';
 import '../services/telemetry/telemetry_service.dart';
@@ -14,7 +15,45 @@ class ExhibitionsProvider extends ChangeNotifier {
 
   ExhibitionsProvider({BackendApiService? api, TelemetryService? telemetry})
       : _api = api ?? BackendApiService(),
-        _telemetry = telemetry ?? TelemetryService();
+        _telemetry = telemetry ?? TelemetryService() {
+    AccountIdentity.addListener(_handleAccountIdentityChanged);
+  }
+
+  // Bumped on every identity change. A load that started under an earlier
+  // account is discarded when it lands, and cannot clear the flags of a newer one.
+  int _accountEpoch = 0;
+
+  void _handleAccountIdentityChanged() => clearAccountScopedState();
+
+  /// Drops every exhibition this provider holds for the account that just
+  /// signed out: the signed-in "mine" list (drafts included), the detail
+  /// cache, the selection and the per-account POAP state. The public list is
+  /// cleared too, because list payloads carry the viewer's role. The next
+  /// [initialize] reloads it for the new account.
+  void clearAccountScopedState() {
+    _accountEpoch += 1;
+    _exhibitions.clear();
+    _myExhibitions.clear();
+    _byId.clear();
+    _detailHydratedIds.clear();
+    _poapByExhibitionId.clear();
+    _programEventsByExhibitionId.clear();
+    _selected = null;
+    _initialized = false;
+    _error = null;
+    _isListLoading = false;
+    _isDetailLoading = false;
+    _isMyExhibitionsLoading = false;
+    _isPoapLoading = false;
+    _isPoapClaiming = false;
+    notifyListeners();
+  }
+
+  @override
+  void dispose() {
+    AccountIdentity.removeListener(_handleAccountIdentityChanged);
+    super.dispose();
+  }
 
   final List<Exhibition> _exhibitions = <Exhibition>[];
   final List<Exhibition> _myExhibitions = <Exhibition>[];
@@ -126,6 +165,7 @@ class ExhibitionsProvider extends ChangeNotifier {
     int limit = 20,
     int offset = 0,
   }) async {
+    final epoch = _accountEpoch;
     _setFlag(mine ? _Flag.myList : _Flag.list, true);
     _error = null;
     try {
@@ -140,6 +180,8 @@ class ExhibitionsProvider extends ChangeNotifier {
         limit: limit,
         offset: offset,
       );
+      // The response belongs to an account that has since signed out.
+      if (epoch != _accountEpoch) return;
       if (mine) {
         if (refresh) {
           _myExhibitions
@@ -171,10 +213,15 @@ class ExhibitionsProvider extends ChangeNotifier {
       }
       notifyListeners();
     } catch (e) {
-      _error = e.toString();
-      notifyListeners();
+      if (epoch == _accountEpoch) {
+        _error = e.toString();
+        notifyListeners();
+      }
     } finally {
-      _setFlag(mine ? _Flag.myList : _Flag.list, false);
+      // A stale load must not clear the flag a newer load has set.
+      if (epoch == _accountEpoch) {
+        _setFlag(mine ? _Flag.myList : _Flag.list, false);
+      }
     }
   }
 
@@ -185,21 +232,27 @@ class ExhibitionsProvider extends ChangeNotifier {
       return _byId[id.trim()];
     }
 
+    final epoch = _accountEpoch;
     _setFlag(_Flag.detail, true);
     _error = null;
     try {
       final ex = await _api.getExhibition(id);
+      // A detail fetched for an account that has since signed out is neither
+      // cached nor handed back.
+      if (epoch != _accountEpoch) return null;
       if (ex != null) {
         _upsert(ex, notify: false, detailHydrated: true);
         notifyListeners();
       }
       return ex;
     } catch (e) {
-      _error = e.toString();
-      notifyListeners();
+      if (epoch == _accountEpoch) {
+        _error = e.toString();
+        notifyListeners();
+      }
       rethrow;
     } finally {
-      _setFlag(_Flag.detail, false);
+      if (epoch == _accountEpoch) _setFlag(_Flag.detail, false);
     }
   }
 

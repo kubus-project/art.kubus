@@ -504,6 +504,7 @@ class ArtworkProvider extends ChangeNotifier {
     }
 
     const operation = 'create_artwork';
+    final epoch = _accountEpoch;
     final loadingGeneration = _beginLoading(operation);
     try {
       final coverUrl = await ArtContentService.uploadMedia(
@@ -547,6 +548,9 @@ class ArtworkProvider extends ChangeNotifier {
         },
       );
 
+      // A created artwork that arrives after a sign-out is not cached for the
+      // next account.
+      if (epoch != _accountEpoch) return null;
       addOrUpdateArtwork(artwork);
       final wallet = artwork.walletAddress;
       if (wallet != null && wallet.trim().isNotEmpty) {
@@ -557,7 +561,7 @@ class ArtworkProvider extends ChangeNotifier {
       }
       return artwork;
     } catch (e) {
-      _setError('Failed to create artwork: $e');
+      if (epoch == _accountEpoch) _setError('Failed to create artwork: $e');
       return null;
     } finally {
       _endLoading(operation, loadingGeneration);
@@ -572,39 +576,44 @@ class ArtworkProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Caches [artwork] only while [epoch] is still the account in use. Returns
+  /// whether it was cached: a result that arrives after a sign-out is not
+  /// written back into the next account's cache.
+  bool _cacheForAccount(int epoch, Artwork artwork) {
+    if (epoch != _accountEpoch) return false;
+    addOrUpdateArtwork(artwork);
+    _invalidateShowcaseForArtwork(artwork);
+    return true;
+  }
+
   Future<Artwork?> publishArtwork(String artworkId) async {
     final operation = 'publish_artwork_$artworkId';
+    final epoch = _accountEpoch;
     final loadingGeneration = _beginLoading(operation);
     try {
       final updated = await _backendApi.publishArtwork(artworkId);
       if (updated != null) {
-        addOrUpdateArtwork(updated);
-        _invalidateShowcaseForArtwork(updated);
-        return updated;
+        return _cacheForAccount(epoch, updated) ? updated : null;
       }
 
       // Backend returned null even though request succeeded (sparse/empty response).
       // Try to refresh the artwork to verify the publish worked.
       try {
         final refreshed = await _backendApi.getArtwork(artworkId);
-        addOrUpdateArtwork(refreshed);
-        _invalidateShowcaseForArtwork(refreshed);
-        return refreshed;
+        return _cacheForAccount(epoch, refreshed) ? refreshed : null;
       } catch (_) {
         // Refresh failed. Check if we have a cached artwork and update it optimistically.
         final cached = getArtworkById(artworkId);
         if (cached != null) {
           // Return optimistically updated artwork (marked as public)
           final optimistic = cached.copyWith(isPublic: true);
-          addOrUpdateArtwork(optimistic);
-          _invalidateShowcaseForArtwork(optimistic);
-          return optimistic;
+          return _cacheForAccount(epoch, optimistic) ? optimistic : null;
         }
         // No cached artwork; backend likely succeeded but we can't verify
         return null;
       }
     } catch (e) {
-      _setError('Failed to publish artwork: $e');
+      if (epoch == _accountEpoch) _setError('Failed to publish artwork: $e');
       return null;
     } finally {
       _endLoading(operation, loadingGeneration);
@@ -613,37 +622,32 @@ class ArtworkProvider extends ChangeNotifier {
 
   Future<Artwork?> unpublishArtwork(String artworkId) async {
     final operation = 'unpublish_artwork_$artworkId';
+    final epoch = _accountEpoch;
     final loadingGeneration = _beginLoading(operation);
     try {
       final updated = await _backendApi.unpublishArtwork(artworkId);
       if (updated != null) {
-        addOrUpdateArtwork(updated);
-        _invalidateShowcaseForArtwork(updated);
-        return updated;
+        return _cacheForAccount(epoch, updated) ? updated : null;
       }
 
       // Backend returned null even though request succeeded (sparse/empty response).
       // Try to refresh the artwork to verify the unpublish worked.
       try {
         final refreshed = await _backendApi.getArtwork(artworkId);
-        addOrUpdateArtwork(refreshed);
-        _invalidateShowcaseForArtwork(refreshed);
-        return refreshed;
+        return _cacheForAccount(epoch, refreshed) ? refreshed : null;
       } catch (_) {
         // Refresh failed. Check if we have a cached artwork and update it optimistically.
         final cached = getArtworkById(artworkId);
         if (cached != null) {
           // Return optimistically updated artwork (marked as not public)
           final optimistic = cached.copyWith(isPublic: false);
-          addOrUpdateArtwork(optimistic);
-          _invalidateShowcaseForArtwork(optimistic);
-          return optimistic;
+          return _cacheForAccount(epoch, optimistic) ? optimistic : null;
         }
         // No cached artwork; backend likely succeeded but we can't verify
         return null;
       }
     } catch (e) {
-      _setError('Failed to unpublish artwork: $e');
+      if (epoch == _accountEpoch) _setError('Failed to unpublish artwork: $e');
       return null;
     } finally {
       _endLoading(operation, loadingGeneration);
@@ -669,9 +673,15 @@ class ArtworkProvider extends ChangeNotifier {
     if (isLoading(operation)) {
       return const ArtworkUpdateResult.alreadyInFlight();
     }
+    final epoch = _accountEpoch;
     final loadingGeneration = _beginLoading(operation);
     try {
       final updated = await _backendApi.updateArtwork(id, updates);
+      // The write may have reached the server, but its result belongs to an
+      // account that has since signed out: nothing is cached for the next one.
+      if (epoch != _accountEpoch) {
+        return ArtworkUpdateResult.acknowledged(null);
+      }
       if (updated != null) {
         _commitSavedArtwork(updated);
         return ArtworkUpdateResult.confirmed(updated);
@@ -686,7 +696,7 @@ class ArtworkProvider extends ChangeNotifier {
       return ArtworkUpdateResult.acknowledged(patched);
     } catch (e) {
       final failure = classifyArtworkUpdateFailure(e);
-      _setError('Failed to update artwork: $e');
+      if (epoch == _accountEpoch) _setError('Failed to update artwork: $e');
       return ArtworkUpdateResult.failed(failure);
     } finally {
       _endLoading(operation, loadingGeneration);

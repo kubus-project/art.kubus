@@ -4,6 +4,7 @@ import '../config/config.dart';
 import '../models/achievement_progress.dart';
 import '../models/achievements.dart' as backend_achievements;
 import '../models/task.dart';
+import '../services/account_identity.dart';
 import '../services/achievement_service.dart' as achievement_svc;
 import '../services/task_service.dart';
 
@@ -34,6 +35,37 @@ class TaskProvider extends ChangeNotifier {
   String? _error;
   AchievementHydrationStatus _achievementHydrationStatus =
       AchievementHydrationStatus.idle;
+
+  TaskProvider() {
+    AccountIdentity.addListener(_handleAccountIdentityChanged);
+  }
+
+  // Bumped on every identity change, so a progress read that started under an
+  // earlier account is discarded when it lands.
+  int _accountEpoch = 0;
+
+  void _handleAccountIdentityChanged() => clearAccountScopedState();
+
+  /// Drops the achievement and task progress of the account that just signed
+  /// out, and the summary the backend sent for it. The next account starts
+  /// from nothing and loads its own progress.
+  void clearAccountScopedState() {
+    _accountEpoch += 1;
+    _taskProgress.clear();
+    _achievementProgress.clear();
+    _backendDefinitionsById.clear();
+    _totalKub8Earned = 0;
+    _achievementHydrationStatus = AchievementHydrationStatus.idle;
+    _isLoading = false;
+    _error = null;
+    notifyListeners();
+  }
+
+  @override
+  void dispose() {
+    AccountIdentity.removeListener(_handleAccountIdentityChanged);
+    super.dispose();
+  }
 
   List<TaskProgress> get taskProgress => List.unmodifiable(_taskProgress);
   List<AchievementProgress> get achievementProgress =>
@@ -296,6 +328,7 @@ class TaskProvider extends ChangeNotifier {
     final id = walletAddress.trim();
     if (id.isEmpty) return;
 
+    final epoch = _accountEpoch;
     _isLoading = true;
     notifyListeners();
 
@@ -308,6 +341,8 @@ class TaskProvider extends ChangeNotifier {
 
       final achievementService = achievement_svc.AchievementService();
       final progressData = await achievementService.getAchievementProgress(id);
+      // Progress read for an account that has since signed out: discarded.
+      if (epoch != _accountEpoch) return;
       AppConfig.debugPrint(
         'TaskProvider: loaded progress from backend (${progressData.length} entries)',
       );
@@ -330,17 +365,23 @@ class TaskProvider extends ChangeNotifier {
       _error = null;
     } catch (e) {
       AppConfig.debugPrint('TaskProvider: loadProgressFromBackend failed: $e');
-      _error = 'Failed to load progress: $e';
-      if (_taskProgress.isEmpty || _achievementProgress.isEmpty) {
-        initializeProgress();
+      if (epoch == _accountEpoch) {
+        _error = 'Failed to load progress: $e';
+        if (_taskProgress.isEmpty || _achievementProgress.isEmpty) {
+          initializeProgress();
+        }
       }
     } finally {
-      _isLoading = false;
-      notifyListeners();
+      // A stale load must not clear the loading flag of a newer one.
+      if (epoch == _accountEpoch) {
+        _isLoading = false;
+        notifyListeners();
+      }
     }
   }
 
   Future<void> refreshAchievementsForCurrentUser() async {
+    final epoch = _accountEpoch;
     _isLoading = true;
     _achievementHydrationStatus = AchievementHydrationStatus.loading;
     notifyListeners();
@@ -348,6 +389,8 @@ class TaskProvider extends ChangeNotifier {
     try {
       final summary =
           await achievement_svc.AchievementService().getMyAchievements();
+      // Summary for an account that has since signed out: discarded.
+      if (epoch != _accountEpoch) return;
       _applySummary(summary);
       _achievementHydrationStatus = _backendDefinitionsById.isNotEmpty
           ? AchievementHydrationStatus.ready
@@ -356,20 +399,24 @@ class TaskProvider extends ChangeNotifier {
     } catch (e) {
       AppConfig.debugPrint(
           'TaskProvider: refreshAchievementsForCurrentUser failed: $e');
-      _error = 'Failed to refresh achievements: $e';
-      _achievementHydrationStatus = AchievementHydrationStatus.failed;
-      if (_achievementProgress.isEmpty) {
-        _achievementProgress.addAll(_staticFallbackDefinitions().map((def) {
-          return AchievementProgress(
-            achievementId: def.code,
-            currentProgress: 0,
-            isCompleted: false,
-          );
-        }));
+      if (epoch == _accountEpoch) {
+        _error = 'Failed to refresh achievements: $e';
+        _achievementHydrationStatus = AchievementHydrationStatus.failed;
+        if (_achievementProgress.isEmpty) {
+          _achievementProgress.addAll(_staticFallbackDefinitions().map((def) {
+            return AchievementProgress(
+              achievementId: def.code,
+              currentProgress: 0,
+              isCompleted: false,
+            );
+          }));
+        }
       }
     } finally {
-      _isLoading = false;
-      notifyListeners();
+      if (epoch == _accountEpoch) {
+        _isLoading = false;
+        notifyListeners();
+      }
     }
   }
 

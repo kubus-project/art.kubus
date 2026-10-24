@@ -1,7 +1,10 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import '../models/institution.dart';
 import '../providers/dao_provider.dart';
 import '../providers/profile_provider.dart';
+import '../services/account_identity.dart';
 import '../services/backend_api_service.dart';
 import '../services/institution_storage.dart';
 import '../utils/dao_role_verification.dart';
@@ -21,7 +24,45 @@ class InstitutionProvider extends ChangeNotifier {
   VoidCallback? _profileListener;
   VoidCallback? _daoListener;
 
-  InstitutionProvider();
+  InstitutionProvider() {
+    AccountIdentity.addListener(_handleAccountIdentityChanged);
+  }
+
+  // Bumped on every identity change, so a load that started under an earlier
+  // account is discarded when it lands.
+  int _accountEpoch = 0;
+
+  void _handleAccountIdentityChanged() => clearAccountScopedState();
+
+  /// Drops the institutions and events held in memory for the account that
+  /// just signed out. The device storage they came from is purged on the same
+  /// change, and the next [initialize] rebuilds the lists from the public read.
+  void clearAccountScopedState() {
+    final wasInitialized = _initialized;
+    _accountEpoch += 1;
+    final epoch = _accountEpoch;
+    _institutions = [];
+    _events = [];
+    _selectedInstitution = null;
+    _derivedInstitution = null;
+    _selectedEvent = null;
+    _isLoading = false;
+    notifyListeners();
+    if (wasInitialized) {
+      // Screens read these lists without loading them, so the public lists are
+      // requested again for the account now in use.
+      unawaited(_reloadPublicLists(epoch));
+    }
+  }
+
+  /// Requests the public institution and event lists again. The device storage
+  /// is not read here: it is purged on the same identity change and may still
+  /// hold the previous account's records when this runs.
+  Future<void> _reloadPublicLists(int epoch) async {
+    await _tryLoadFromBackendAndPersist(epoch);
+    if (epoch != _accountEpoch) return;
+    _syncDerivedInstitution(notify: true);
+  }
 
   // Getters
   List<Institution> get institutions =>
@@ -92,13 +133,18 @@ class InstitutionProvider extends ChangeNotifier {
 
   Future<void> _loadData(
       {required bool seedMockIfEmpty, required bool tryBackend}) async {
+    final epoch = _accountEpoch;
     _isLoading = true;
     notifyListeners();
 
     try {
       // Load local cache first for instant UI and offline mode.
-      _institutions = await _storage.loadInstitutions();
-      _events = await _storage.loadEvents();
+      final localInstitutions = await _storage.loadInstitutions();
+      final localEvents = await _storage.loadEvents();
+      // Read for an account that has since signed out: nothing is kept.
+      if (epoch != _accountEpoch) return;
+      _institutions = localInstitutions;
+      _events = localEvents;
 
       if (_institutions.isEmpty && seedMockIfEmpty) {
         _seedMockData();
@@ -106,20 +152,24 @@ class InstitutionProvider extends ChangeNotifier {
       }
 
       if (tryBackend) {
-        await _tryLoadFromBackendAndPersist();
+        await _tryLoadFromBackendAndPersist(epoch);
       }
+      if (epoch != _accountEpoch) return;
       _syncDerivedInstitution(notify: false);
     } catch (e) {
       if (kDebugMode) {
         debugPrint('InstitutionProvider: Error loading institution data: $e');
       }
     } finally {
-      _isLoading = false;
-      notifyListeners();
+      // A stale load must not clear the loading flag of a newer one.
+      if (epoch == _accountEpoch) {
+        _isLoading = false;
+        notifyListeners();
+      }
     }
   }
 
-  Future<void> _tryLoadFromBackendAndPersist() async {
+  Future<void> _tryLoadFromBackendAndPersist(int epoch) async {
     try {
       final api = BackendApiService();
 
@@ -134,6 +184,8 @@ class InstitutionProvider extends ChangeNotifier {
           .map(_eventFromBackendJson)
           .where((e) => e.id.isNotEmpty)
           .toList();
+      // A response for an account that has since signed out is not kept.
+      if (epoch != _accountEpoch) return;
 
       // If backend endpoints are unavailable (404) the API returns empty lists.
       // Only overwrite local state when the backend returns real data.
@@ -516,6 +568,7 @@ class InstitutionProvider extends ChangeNotifier {
 
   @override
   void dispose() {
+    AccountIdentity.removeListener(_handleAccountIdentityChanged);
     if (_profileProvider != null && _profileListener != null) {
       try {
         _profileProvider!.removeListener(_profileListener!);

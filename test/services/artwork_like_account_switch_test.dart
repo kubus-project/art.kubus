@@ -10,11 +10,14 @@ import 'package:art_kubus/providers/wallet_provider.dart';
 import 'package:art_kubus/services/account_identity.dart';
 import 'package:art_kubus/services/backend_api_service.dart';
 import 'package:art_kubus/services/block_list_service.dart';
+import 'package:art_kubus/services/http_client_factory.dart';
 import 'package:art_kubus/services/pending_action_executor.dart';
 import 'package:art_kubus/services/settings_service.dart';
 import 'package:art_kubus/utils/wallet_utils.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:http/http.dart' as http;
+import 'package:http/testing.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -139,15 +142,34 @@ class _ServerApi implements ArtworkBackendApi {
   @override
   Future<Artwork?> updateArtwork(
           String artworkId, Map<String, dynamic> updates) =>
-      throw UnimplementedError();
+      _write(artworkId, title: updates['title'] as String?);
 
   @override
   Future<Artwork?> publishArtwork(String artworkId) =>
-      throw UnimplementedError();
+      _write(artworkId, isPublic: true);
 
   @override
   Future<Artwork?> unpublishArtwork(String artworkId) =>
-      throw UnimplementedError();
+      _write(artworkId, isPublic: false);
+
+  /// Holds the next artwork write (publish, unpublish or update) open until the
+  /// test completes it.
+  Completer<void>? writeGate;
+
+  Future<Artwork?> _write(
+    String artworkId, {
+    bool? isPublic,
+    String? title,
+  }) async {
+    final gate = writeGate;
+    writeGate = null;
+    if (gate != null) await gate.future;
+    final base = served[artworkId] ?? _artwork(id: artworkId);
+    return base.copyWith(
+      isPublic: isPublic ?? base.isPublic,
+      title: title ?? base.title,
+    );
+  }
 
   @override
   Future<int?> discoverArtworkWithCount(String artworkId) =>
@@ -259,6 +281,107 @@ Future<void> _logout(ArtworkProvider artworks) => SettingsService.logout(
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
+
+  group('artwork writes in flight when the account changes', () {
+    test(
+        'a publish that lands after the switch is not cached for the next '
+        'account', () async {
+      final api = _server()..writeGate = Completer<void>();
+      final gate = api.writeGate!;
+      final artworks = ArtworkProvider(backendApi: api);
+      artworks.seedArtworksForTesting(<Artwork>[
+        _artwork(
+            id: 'art-private', isPublic: false, walletAddress: 'WALLETAAA'),
+      ]);
+
+      final publish = artworks.publishArtwork('art-private');
+      await _logout(artworks);
+      gate.complete();
+
+      expect(await publish, isNull);
+      expect(artworks.getArtworkById('art-private'), isNull);
+    });
+
+    test(
+        'an unpublish that lands after the switch does not overwrite the '
+        'cached artwork', () async {
+      final api = _server()..writeGate = Completer<void>();
+      final gate = api.writeGate!;
+      final artworks = ArtworkProvider(backendApi: api);
+      artworks.seedArtworksForTesting(<Artwork>[_artwork()]);
+
+      final unpublish = artworks.unpublishArtwork('art-1');
+      await _logout(artworks);
+      gate.complete();
+
+      expect(await unpublish, isNull);
+      expect(artworks.getArtworkById('art-1')!.isPublic, isTrue);
+    });
+
+    test(
+        'a saved edit that lands after the switch is not cached for the next '
+        'account', () async {
+      final api = _server()..writeGate = Completer<void>();
+      final gate = api.writeGate!;
+      final artworks = ArtworkProvider(backendApi: api);
+      artworks.seedArtworksForTesting(<Artwork>[_artwork()]);
+
+      final save = artworks.saveArtwork('art-1', <String, dynamic>{
+        'title': 'Renamed by the previous account',
+      });
+      await _logout(artworks);
+      gate.complete();
+
+      final result = await save;
+      expect(result.artwork, isNull);
+      expect(artworks.getArtworkById('art-1')!.title, 'Harbour Light');
+    });
+
+    test(
+        'a created artwork whose cover upload lands after the switch is not '
+        'cached for the next account', () async {
+      final backend = BackendApiService();
+      final uploadStarted = Completer<void>();
+      final gate = Completer<void>();
+      backend.setHttpClient(MockClient((request) async {
+        if (!uploadStarted.isCompleted) uploadStarted.complete();
+        await gate.future;
+        return http.Response(
+          jsonEncode(<String, Object?>{
+            'data': <String, Object?>{
+              'url': 'https://cdn.example.test/cover.png',
+            },
+          }),
+          200,
+          headers: const <String, String>{'content-type': 'application/json'},
+        );
+      }));
+      addTearDown(() => backend.setHttpClient(createPlatformHttpClient()));
+      final artworks = ArtworkProvider(backendApi: _server());
+
+      final create = artworks.createArtwork(
+        title: 'Created by the previous account',
+        description: 'Description',
+        position: const LatLng(46.0511, 14.5051),
+        artistName: 'Artist',
+        rewards: 0,
+        coverImageBytes: Uint8List.fromList(<int>[1, 2, 3]),
+        coverImageFilename: 'cover.png',
+        arEnabled: false,
+      );
+      await uploadStarted.future;
+      await _logout(artworks);
+      gate.complete();
+
+      expect(await create, isNull);
+      expect(
+        artworks.artworks.where(
+          (artwork) => artwork.title == 'Created by the previous account',
+        ),
+        isEmpty,
+      );
+    });
+  });
 
   setUp(() async {
     AccountIdentity.resetForTesting();

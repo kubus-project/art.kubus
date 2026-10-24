@@ -7,6 +7,7 @@ import '../l10n/app_localizations_en.dart';
 import '../l10n/app_localizations_sl.dart';
 import '../models/artwork.dart';
 import '../models/collectible.dart';
+import '../services/account_identity.dart';
 import '../services/backend_api_service.dart';
 import '../services/collectibles_storage.dart';
 import '../utils/artwork_media_resolver.dart';
@@ -14,7 +15,28 @@ import 'artwork_provider.dart';
 
 class CollectiblesProvider with ChangeNotifier {
   CollectiblesProvider({BackendApiService? backendApiService})
-      : _backendApiService = backendApiService ?? BackendApiService();
+      : _backendApiService = backendApiService ?? BackendApiService() {
+    AccountIdentity.addListener(_handleAccountIdentityChanged);
+  }
+
+  // Bumped on every identity change, so a read that started under an earlier
+  // account is discarded when it lands.
+  int _accountEpoch = 0;
+
+  void _handleAccountIdentityChanged() => clearAccountScopedState();
+
+  /// Drops the collectibles held in memory for the account that just signed
+  /// out: the legacy series and collectibles (their device storage is purged on
+  /// the same change) and the per-wallet index fetched from the backend.
+  void clearAccountScopedState() {
+    _accountEpoch += 1;
+    _legacySeries.clear();
+    _legacyCollectibles.clear();
+    _walletCollectibleIndex.clear();
+    _isLoading = false;
+    _error = null;
+    notifyListeners();
+  }
 
   final List<CollectibleSeries> _legacySeries = [];
   final List<Collectible> _legacyCollectibles = [];
@@ -65,11 +87,14 @@ class CollectiblesProvider with ChangeNotifier {
   String _canonicalWallet(String raw) => raw.trim().toLowerCase();
 
   Future<void> initialize({bool loadMockIfEmpty = false}) async {
+    final epoch = _accountEpoch;
     _setLoading(true);
 
     try {
       final loadedSeries = await _storage.loadSeries();
       final loadedCollectibles = await _storage.loadCollectibles();
+      // Read for an account that has since signed out: nothing is kept.
+      if (epoch != _accountEpoch) return;
 
       _legacySeries
         ..clear()
@@ -100,6 +125,7 @@ class CollectiblesProvider with ChangeNotifier {
     if (normalized.isEmpty) return;
     if (!force && _walletCollectibleIndex.containsKey(normalized)) return;
 
+    final epoch = _accountEpoch;
     try {
       final response = await _backendApiService.getWalletCollectibleIndex(
         normalized,
@@ -109,6 +135,8 @@ class CollectiblesProvider with ChangeNotifier {
           ? payload['collectibles']
           : response['collectibles'];
       final records = _normalizeBackendCollectibleRecords(rawCollectibles);
+      // An index read for an account that has since signed out is not kept.
+      if (epoch != _accountEpoch) return;
       _walletCollectibleIndex[normalized] = records;
       notifyListeners();
     } catch (_) {
@@ -512,6 +540,7 @@ class CollectiblesProvider with ChangeNotifier {
 
   @override
   void dispose() {
+    AccountIdentity.removeListener(_handleAccountIdentityChanged);
     _artworkProvider?.removeListener(_handleArtworkProviderChanged);
     super.dispose();
   }
