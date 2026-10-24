@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:art_kubus/l10n/app_localizations.dart';
+import 'package:art_kubus/models/dao.dart';
 import 'package:art_kubus/models/user_profile.dart';
 import 'package:art_kubus/providers/collab_provider.dart';
 import 'package:art_kubus/providers/dao_provider.dart';
@@ -57,6 +58,54 @@ UserProfile _emailOnlyUser() {
 
 const _walletAddress = 'WalletHub1111111111111111111111111111111111';
 
+/// Signer-capable wallet: the active key matches the account wallet, so the
+/// wallet guard passes without a reconnect or account flow.
+class _SignerSolanaWalletService extends SolanaWalletService {
+  _SignerSolanaWalletService(this._address);
+
+  final String _address;
+
+  @override
+  String? get activePublicKey => _address;
+
+  @override
+  Future<double> getSplTokenBalance({
+    required String owner,
+    required String mint,
+    int? expectedDecimals,
+  }) async {
+    return 0;
+  }
+}
+
+/// Counts DAO submissions; the real provider would sign and POST.
+class _SubmitCountingDao extends DAOProvider {
+  _SubmitCountingDao() : super(solanaWalletService: _NoSignerWalletService());
+
+  int submitCalls = 0;
+
+  @override
+  Future<DAOReview?> submitInstitutionReview({
+    required String organization,
+    required String contact,
+    required String focus,
+    required String mission,
+    Map<String, dynamic>? metadata,
+  }) async {
+    submitCalls++;
+    return DAOReview(
+      id: 'review-submitted',
+      walletAddress: _walletAddress,
+      portfolioUrl: '',
+      medium: focus,
+      statement: mission,
+      status: 'pending',
+      createdAt: DateTime.utc(2026, 10, 1),
+      metadata: const <String, dynamic>{'role': 'institution'},
+    );
+  }
+}
+
 UserProfile _walletUser() {
   return UserProfile(
     id: 'user-wallet',
@@ -76,6 +125,8 @@ Future<List<String>> _pumpHub(
   required List<String> requests,
   bool signedIn = false,
   bool embedded = false,
+  WalletProvider? walletProvider,
+  DAOProvider? daoProvider,
   Map<String, Object> initialPrefs = const <String, Object>{},
 }) async {
   SharedPreferences.setMockInitialValues(<String, Object>{...initialPrefs});
@@ -108,16 +159,18 @@ Future<List<String>> _pumpHub(
   if (user != null) {
     profileProvider.setCurrentUser(user);
   }
-  final daoProvider =
-      DAOProvider(solanaWalletService: _NoSignerWalletService());
+  final dao =
+      daoProvider ?? DAOProvider(solanaWalletService: _NoSignerWalletService());
 
   await tester.pumpWidget(
     MultiProvider(
       providers: [
         ChangeNotifierProvider<ThemeProvider>.value(value: themeProvider),
         ChangeNotifierProvider<ProfileProvider>.value(value: profileProvider),
-        ChangeNotifierProvider<DAOProvider>.value(value: daoProvider),
-        ChangeNotifierProvider<WalletProvider>(create: (_) => WalletProvider()),
+        ChangeNotifierProvider<DAOProvider>.value(value: dao),
+        ChangeNotifierProvider<WalletProvider>(
+          create: (_) => walletProvider ?? WalletProvider(),
+        ),
         ChangeNotifierProvider<Web3Provider>(create: (_) => Web3Provider()),
         ChangeNotifierProvider<CollabProvider>(create: (_) => CollabProvider()),
         ChangeNotifierProvider<NotificationProvider>(
@@ -309,5 +362,68 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byType(Web3OnboardingScreen), findsOneWidget);
+  });
+
+  testWidgets(
+      'wallet-ready user passes the signer guard and submits the DAO review once',
+      (tester) async {
+    final requests = <String>[];
+    final walletProvider = WalletProvider(
+      solanaWalletService: _SignerSolanaWalletService(_walletAddress),
+      deferInit: true,
+    )
+      ..setCurrentWalletAddressForTesting(_walletAddress)
+      ..seedAccountSessionForTesting(
+        email: 'wallet@example.com',
+        backendProfile: const <String, dynamic>{},
+      );
+    final dao = _SubmitCountingDao();
+    await _pumpHub(
+      tester,
+      user: _walletUser(),
+      requests: requests,
+      signedIn: true,
+      walletProvider: walletProvider,
+      daoProvider: dao,
+      // A wallet holder who has seen the first-visit explanation must not have
+      // it covering the hub under test.
+      initialPrefs: <String, Object>{
+        '${InstitutionHubOnboardingData.featureKey}_onboarding_completed': true,
+      },
+    );
+
+    final context = tester.element(find.byType(InstitutionHub));
+    final l10n = AppLocalizations.of(context)!;
+
+    await tester.tap(find.text(l10n.institutionHubApplyForReviewAction));
+    await tester.pumpAndSettle();
+
+    final fields = find.descendant(
+      of: find.byType(BackdropGlassSheet),
+      matching: find.byType(TextFormField),
+    );
+    expect(fields, findsNWidgets(4));
+    await tester.enterText(fields.at(0), 'Kubus Gallery');
+    await tester.enterText(fields.at(1), 'hello@example.com');
+    await tester.enterText(fields.at(2), 'Digital art');
+    await tester.enterText(
+      fields.at(3),
+      'We host public programmes for emerging artists.',
+    );
+
+    await tester.tap(find.text(l10n.institutionHubApplicationSubmitButton));
+    await tester.pumpAndSettle();
+
+    expect(
+      requests.any((r) => r.startsWith('route ')),
+      isFalse,
+      reason: 'a signer-ready wallet passes the guard without account flow',
+    );
+    expect(dao.submitCalls, 1, reason: 'the DAO submit runs exactly once');
+    expect(
+      find.byType(BackdropGlassSheet),
+      findsNothing,
+      reason: 'a successful submit closes the application sheet',
+    );
   });
 }
