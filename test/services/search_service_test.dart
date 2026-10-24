@@ -1,3 +1,4 @@
+import 'package:art_kubus/models/institution.dart';
 import 'package:art_kubus/services/backend_api_service.dart';
 import 'package:art_kubus/services/search_service.dart';
 import 'package:art_kubus/widgets/search/kubus_search_config.dart';
@@ -208,5 +209,61 @@ void main() {
 
       expect(results, isEmpty);
     });
+  });
+
+  test(
+      'search never lists the wallet-derived institution of the signed-in user',
+      () async {
+    final derived = Institution(
+      id: 'WalletSelfDerived1111',
+      name: 'Zvezda Gallery',
+      description: '',
+      type: 'institution',
+      address: '',
+      latitude: 0,
+      longitude: 0,
+      contactEmail: '',
+      website: '',
+      stats: InstitutionStats(
+        totalVisitors: 0,
+        activeEvents: 0,
+        artworkViews: 0,
+        revenue: 0,
+        visitorGrowth: 0,
+        revenueGrowth: 0,
+      ),
+      createdAt: DateTime.utc(2026, 1, 1),
+      isSelfDerivedFromWallet: true,
+    );
+    final directory = Institution(
+      id: 'inst-directory-1',
+      name: 'Zvezda Gallery Public',
+      description: '',
+      type: 'gallery',
+      address: 'Ljubljana',
+      latitude: 46.05,
+      longitude: 14.5,
+      contactEmail: '',
+      website: '',
+      stats: derived.stats,
+      createdAt: DateTime.utc(2026, 1, 1),
+    );
+
+    final results = await SearchService(
+      backendApi: _FakeBackendApiService(const <Map<String, dynamic>>[]),
+    ).fetchResults(
+      snapshot: SearchContextSnapshot(institutions: [derived, directory]),
+      query: 'Zvezda',
+      config: const KubusSearchConfig(
+        scope: KubusSearchScope.home,
+        allowedKinds: <KubusSearchResultKind>{
+          KubusSearchResultKind.institution
+        },
+      ),
+    );
+
+    final ids = results.map((r) => r.id).toList();
+    expect(ids, contains('inst-directory-1'));
+    expect(ids, isNot(contains('WalletSelfDerived1111')));
   });
 }

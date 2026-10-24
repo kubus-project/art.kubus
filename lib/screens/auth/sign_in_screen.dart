@@ -23,6 +23,7 @@ import '../../widgets/kubus_auth_method_button.dart';
 import '../../widgets/kubus_button.dart';
 import '../../widgets/auth_entry_shell.dart';
 import '../../widgets/auth/post_auth_loading_screen.dart';
+import '../../widgets/common/kubus_password_visibility_toggle.dart';
 import '../../utils/design_tokens.dart';
 import '../../utils/kubus_color_roles.dart';
 import '../../utils/auth_google_wallet.dart';
@@ -1021,15 +1022,11 @@ class _SignInScreenState extends State<SignInScreen> {
             context,
             label: AppLocalizations.of(context)!.commonPassword,
             compact: compact,
-            suffixIcon: IconButton(
+            suffixIcon: KubusPasswordVisibilityToggle(
+              obscured: _obscureEmailPassword,
               onPressed: () {
                 setState(() => _obscureEmailPassword = !_obscureEmailPassword);
               },
-              icon: Icon(
-                _obscureEmailPassword
-                    ? Icons.visibility_outlined
-                    : Icons.visibility_off_outlined,
-              ),
             ),
           ),
         ),

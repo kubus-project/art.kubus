@@ -4087,6 +4087,10 @@ class AppLocalizationsEn extends AppLocalizations {
       'Connect a wallet before submitting.';
 
   @override
+  String get institutionHubApplicationWalletWhy =>
+      'Applying is signed with your wallet, so the review stays tied to a wallet you control. Browsing institutions does not need one.';
+
+  @override
   String get institutionHubApplicationSubmittedToast =>
       'Application submitted for governance review.';
 
@@ -4144,6 +4148,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get institutionHubCtaConnectWalletToApply => 'Connect wallet to apply';
+
+  @override
+  String get institutionHubCtaApplyAsInstitution => 'Apply as an institution';
 
   @override
   String get institutionHubDaoStatusSyncedLabel =>
