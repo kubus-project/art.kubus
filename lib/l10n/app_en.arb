@@ -7905,5 +7905,44 @@
         "type": "String"
       }
     }
+  },
+  "artistPortfolioSectionAuthored": "Authored artworks",
+  "artistPortfolioSectionPublicArt": "Added public art",
+  "artistPortfolioSectionCollections": "Collections & exhibitions",
+  "artistPortfolioSectionLabelWithCount": "{label} ({count})",
+  "@artistPortfolioSectionLabelWithCount": {
+    "placeholders": {
+      "label": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "artistPortfolioAuthoredUnsupported": "Authored artworks cannot be listed separately on this server yet.",
+  "artistPortfolioPublicArtUnsupported": "Added public art from artworks cannot be listed separately on this server yet. Your map contributions are still shown.",
+  "artistPortfolioSectionLoadFailed": "This list could not be loaded.",
+  "artistPortfolioLoadMore": "Load more",
+  "artistPortfolioPublicArtEmptyTitle": "No public art added yet",
+  "artistPortfolioPublicArtEmptyDescription": "Public art you document on the map appears here. It stays credited to its artist.",
+  "artistPortfolioCollectionsEmptyTitle": "No collections or exhibitions yet",
+  "artistPortfolioCollectionsEmptyDescription": "Collections and exhibitions you create appear here.",
+  "artistPortfolioArtistLine": "By {artist}",
+  "@artistPortfolioArtistLine": {
+    "placeholders": {
+      "artist": {
+        "type": "String"
+      }
+    }
+  },
+  "artistPortfolioAddedByYou": "Added by you",
+  "artistPortfolioCardActionsLabel": "Actions for {title}",
+  "@artistPortfolioCardActionsLabel": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
   }
 }

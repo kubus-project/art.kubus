@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:art_kubus/models/artwork.dart';
+import 'package:art_kubus/models/portfolio_entry.dart';
 import 'package:art_kubus/screens/web3/artist/artist_portfolio_screen.dart';
 import 'package:art_kubus/services/backend_api_service.dart';
 import 'package:flutter/material.dart';
@@ -33,7 +34,10 @@ Artwork _buildArtwork({
   );
 }
 
-Future<void> _pumpScreen(
+/// Records the studio cards the screen asks to open instead of navigating.
+typedef _OpenEntrySpy = List<PortfolioEntry> Function();
+
+Future<_OpenEntrySpy> _pumpScreen(
   WidgetTester tester, {
   required List<Artwork> artworks,
   Size size = const Size(390, 844),
@@ -42,7 +46,8 @@ Future<void> _pumpScreen(
   api.setAuthTokenForTesting('test-token');
   api.setHttpClient(
     MockClient((request) async {
-      if (request.url.path == '/api/artworks') {
+      final path = request.url.path;
+      if (path == '/api/artworks') {
         return http.Response(
           jsonEncode(<String, Object?>{
             'success': true,
@@ -65,7 +70,37 @@ Future<void> _pumpScreen(
           headers: const <String, String>{'content-type': 'application/json'},
         );
       }
-      if (request.url.path == '/api/collections') {
+      if (path == '/api/profiles/wallet-1/artworks') {
+        // The owner's authored scope: active records only, drafts included
+        // because the request is authenticated. Documented is empty here.
+        final relationship = request.url.queryParameters['relationship'];
+        final rows = relationship == 'authored'
+            ? artworks
+                .where((artwork) => artwork.isActive)
+                .map((artwork) => <String, Object?>{
+                      'id': artwork.id,
+                      'title': artwork.title,
+                      'artistName': artwork.artist,
+                      'createdAt': artwork.createdAt.toIso8601String(),
+                    })
+                .toList(growable: false)
+            : const <Object?>[];
+        return http.Response(
+          jsonEncode(<String, Object?>{
+            'success': true,
+            'relationship': relationship,
+            'data': rows,
+            'pagination': <String, Object?>{
+              'limit': 24,
+              'offset': 0,
+              'total': rows.length,
+            },
+          }),
+          200,
+          headers: const <String, String>{'content-type': 'application/json'},
+        );
+      }
+      if (path == '/api/art-markers/mine') {
         return http.Response(
           jsonEncode(<String, Object?>{
             'success': true,
@@ -75,7 +110,17 @@ Future<void> _pumpScreen(
           headers: const <String, String>{'content-type': 'application/json'},
         );
       }
-      if (request.url.path == '/api/exhibitions') {
+      if (path == '/api/collections') {
+        return http.Response(
+          jsonEncode(<String, Object?>{
+            'success': true,
+            'data': const <Object?>[],
+          }),
+          200,
+          headers: const <String, String>{'content-type': 'application/json'},
+        );
+      }
+      if (path == '/api/exhibitions') {
         return http.Response(
           jsonEncode(<String, Object?>{
             'success': true,
@@ -93,6 +138,8 @@ Future<void> _pumpScreen(
   final provider = PortfolioProvider(api: api);
   provider.setWalletAddress('wallet-1');
 
+  final opened = <PortfolioEntry>[];
+
   tester.view.physicalSize = size;
   tester.view.devicePixelRatio = 1.0;
   addTearDown(tester.view.reset);
@@ -105,8 +152,13 @@ Future<void> _pumpScreen(
         supportedLocales: AppLocalizations.supportedLocales,
         home: MediaQuery(
           data: MediaQueryData(size: size),
-          child: const Scaffold(
-            body: ArtistPortfolioScreen(walletAddress: 'wallet-1'),
+          child: Scaffold(
+            body: ArtistPortfolioScreen(
+              walletAddress: 'wallet-1',
+              // Card taps are observed here rather than navigated, so these
+              // tests stay about the studio contract.
+              onOpenEntry: (context, entry) async => opened.add(entry),
+            ),
           ),
         ),
       ),
@@ -114,11 +166,12 @@ Future<void> _pumpScreen(
   );
 
   await tester.pumpAndSettle();
+  return () => opened;
 }
 
 /// How many columns the gallery actually laid out.
 int _galleryColumns(WidgetTester tester) {
-  final grid = tester.widget<GridView>(find.byType(GridView));
+  final grid = tester.widget<SliverGrid>(find.byType(SliverGrid));
   final delegate =
       grid.gridDelegate as SliverGridDelegateWithFixedCrossAxisCount;
   return delegate.crossAxisCount;
@@ -132,7 +185,7 @@ void main() {
   });
 
   testWidgets('public active artworks expose promote actions', (tester) async {
-    await _pumpScreen(
+    final opened = await _pumpScreen(
       tester,
       artworks: <Artwork>[
         _buildArtwork(
@@ -147,22 +200,25 @@ void main() {
     final context = tester.element(find.byType(ArtistPortfolioScreen));
     final l10n = AppLocalizations.of(context)!;
 
-    await tester.tap(find.byTooltip(l10n.commonMore));
+    await tester.tap(find.text(l10n.commonActions));
     await tester.pumpAndSettle();
     expect(find.text(l10n.eventDetailPromoteLabel), findsOneWidget);
 
     await tester.tapAt(const Offset(20, 20));
     await tester.pumpAndSettle();
 
+    // A card tap opens the artwork, never the actions sheet.
     await tester.tap(find.text('Public Artwork'));
     await tester.pumpAndSettle();
 
-    expect(find.text(l10n.eventDetailPromoteLabel), findsOneWidget);
+    expect(find.text(l10n.eventDetailPromoteLabel), findsNothing);
+    expect(opened(), hasLength(1));
+    expect(opened().single.id, 'art-1');
   });
 
   testWidgets('draft and inactive artworks do not expose promote actions',
       (tester) async {
-    await _pumpScreen(
+    final opened = await _pumpScreen(
       tester,
       artworks: <Artwork>[
         _buildArtwork(
@@ -186,7 +242,7 @@ void main() {
     final context = tester.element(find.byType(ArtistPortfolioScreen));
     final l10n = AppLocalizations.of(context)!;
 
-    await tester.tap(find.byTooltip(l10n.commonMore).first);
+    await tester.tap(find.text(l10n.commonActions).first);
     await tester.pumpAndSettle();
     expect(find.text(l10n.eventDetailPromoteLabel), findsNothing);
 
@@ -196,6 +252,7 @@ void main() {
     await tester.tap(find.text('Draft Artwork'));
     await tester.pumpAndSettle();
     expect(find.text(l10n.eventDetailPromoteLabel), findsNothing);
+    expect(opened().map((entry) => entry.id), <String>['art-2']);
   });
 
   group('the gallery is a responsive, image-led workspace', () {
@@ -230,7 +287,8 @@ void main() {
       });
     }
 
-    testWidgets('every card carries its publication state and one overflow',
+    testWidgets(
+        'every card carries its publication state and one actions control',
         (tester) async {
       await _pumpScreen(
         tester,
@@ -263,7 +321,7 @@ void main() {
         find.text(l10n.artistGalleryFilterDraft.toUpperCase()),
         findsOneWidget,
       );
-      expect(find.byTooltip(l10n.commonMore), findsNWidgets(2));
+      expect(find.text(l10n.commonActions), findsNWidgets(2));
     });
   });
 }

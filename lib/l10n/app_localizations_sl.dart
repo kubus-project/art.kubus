@@ -18853,4 +18853,61 @@ class AppLocalizationsSl extends AppLocalizations {
   String promotionCheckoutReturnSessionLabel(String sessionId) {
     return 'Seja Stripe: $sessionId';
   }
+
+  @override
+  String get artistPortfolioSectionAuthored => 'Avtorska dela';
+
+  @override
+  String get artistPortfolioSectionPublicArt => 'Dodana javna umetnost';
+
+  @override
+  String get artistPortfolioSectionCollections => 'Zbirke in razstave';
+
+  @override
+  String artistPortfolioSectionLabelWithCount(String label, int count) {
+    return '$label ($count)';
+  }
+
+  @override
+  String get artistPortfolioAuthoredUnsupported =>
+      'Avtorskih del na tem strežniku zaenkrat ni mogoče prikazati ločeno.';
+
+  @override
+  String get artistPortfolioPublicArtUnsupported =>
+      'Dodane javne umetnosti iz del na tem strežniku zaenkrat ni mogoče prikazati ločeno. Vaši prispevki na zemljevidu so prikazani spodaj.';
+
+  @override
+  String get artistPortfolioSectionLoadFailed =>
+      'Seznama ni bilo mogoče naložiti.';
+
+  @override
+  String get artistPortfolioLoadMore => 'Naloži več';
+
+  @override
+  String get artistPortfolioPublicArtEmptyTitle =>
+      'Še ni dodane javne umetnosti';
+
+  @override
+  String get artistPortfolioPublicArtEmptyDescription =>
+      'Javna umetnost, ki jo dokumentirate na zemljevidu, se prikaže tukaj. Ostane pripisana svojemu avtorju.';
+
+  @override
+  String get artistPortfolioCollectionsEmptyTitle => 'Še ni zbirk ali razstav';
+
+  @override
+  String get artistPortfolioCollectionsEmptyDescription =>
+      'Zbirke in razstave, ki jih ustvarite, se prikažejo tukaj.';
+
+  @override
+  String artistPortfolioArtistLine(String artist) {
+    return 'Avtor: $artist';
+  }
+
+  @override
+  String get artistPortfolioAddedByYou => 'Dodali ste';
+
+  @override
+  String artistPortfolioCardActionsLabel(String title) {
+    return 'Dejanja za $title';
+  }
 }

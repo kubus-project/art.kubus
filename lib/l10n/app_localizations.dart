@@ -32348,6 +32348,96 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Stripe session: {sessionId}'**
   String promotionCheckoutReturnSessionLabel(String sessionId);
+
+  /// No description provided for @artistPortfolioSectionAuthored.
+  ///
+  /// In en, this message translates to:
+  /// **'Authored artworks'**
+  String get artistPortfolioSectionAuthored;
+
+  /// No description provided for @artistPortfolioSectionPublicArt.
+  ///
+  /// In en, this message translates to:
+  /// **'Added public art'**
+  String get artistPortfolioSectionPublicArt;
+
+  /// No description provided for @artistPortfolioSectionCollections.
+  ///
+  /// In en, this message translates to:
+  /// **'Collections & exhibitions'**
+  String get artistPortfolioSectionCollections;
+
+  /// No description provided for @artistPortfolioSectionLabelWithCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{label} ({count})'**
+  String artistPortfolioSectionLabelWithCount(String label, int count);
+
+  /// No description provided for @artistPortfolioAuthoredUnsupported.
+  ///
+  /// In en, this message translates to:
+  /// **'Authored artworks cannot be listed separately on this server yet.'**
+  String get artistPortfolioAuthoredUnsupported;
+
+  /// No description provided for @artistPortfolioPublicArtUnsupported.
+  ///
+  /// In en, this message translates to:
+  /// **'Added public art from artworks cannot be listed separately on this server yet. Your map contributions are still shown.'**
+  String get artistPortfolioPublicArtUnsupported;
+
+  /// No description provided for @artistPortfolioSectionLoadFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'This list could not be loaded.'**
+  String get artistPortfolioSectionLoadFailed;
+
+  /// No description provided for @artistPortfolioLoadMore.
+  ///
+  /// In en, this message translates to:
+  /// **'Load more'**
+  String get artistPortfolioLoadMore;
+
+  /// No description provided for @artistPortfolioPublicArtEmptyTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'No public art added yet'**
+  String get artistPortfolioPublicArtEmptyTitle;
+
+  /// No description provided for @artistPortfolioPublicArtEmptyDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Public art you document on the map appears here. It stays credited to its artist.'**
+  String get artistPortfolioPublicArtEmptyDescription;
+
+  /// No description provided for @artistPortfolioCollectionsEmptyTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'No collections or exhibitions yet'**
+  String get artistPortfolioCollectionsEmptyTitle;
+
+  /// No description provided for @artistPortfolioCollectionsEmptyDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Collections and exhibitions you create appear here.'**
+  String get artistPortfolioCollectionsEmptyDescription;
+
+  /// No description provided for @artistPortfolioArtistLine.
+  ///
+  /// In en, this message translates to:
+  /// **'By {artist}'**
+  String artistPortfolioArtistLine(String artist);
+
+  /// No description provided for @artistPortfolioAddedByYou.
+  ///
+  /// In en, this message translates to:
+  /// **'Added by you'**
+  String get artistPortfolioAddedByYou;
+
+  /// No description provided for @artistPortfolioCardActionsLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Actions for {title}'**
+  String artistPortfolioCardActionsLabel(String title);
 }
 
 class _AppLocalizationsDelegate

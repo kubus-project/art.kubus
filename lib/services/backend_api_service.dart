@@ -4222,12 +4222,17 @@ class BackendApiService
   ///
   /// Older backends ignore `relationship`; check
   /// [ProfileArtworksPage.relationshipHonoured] before trusting the scope.
+  ///
+  /// [includeAuth] is for the signed-in owner reading their own scope: the
+  /// backend returns the owner's private drafts only to an authenticated
+  /// owner. Public callers keep the default anonymous read.
   Future<ProfileArtworksPage> getProfileArtworks(
     String walletAddress, {
     required String relationship,
     int limit = 20,
     int offset = 0,
     String? status,
+    bool includeAuth = false,
   }) async {
     try {
       final queryParams = <String, String>{
@@ -4237,13 +4242,16 @@ class BackendApiService
       };
       if (status != null) queryParams['status'] = status;
 
+      if (includeAuth) {
+        await _ensureAuthBeforeRequest();
+      }
       final uri = Uri.parse(
         '$baseUrl/api/profiles/$walletAddress/artworks',
       ).replace(queryParameters: queryParams);
       final response = await _get(
         uri,
-        includeAuth: false,
-        headers: _getHeaders(includeAuth: false),
+        includeAuth: includeAuth,
+        headers: _getHeaders(includeAuth: includeAuth),
       );
 
       if (response.statusCode == 200) {
