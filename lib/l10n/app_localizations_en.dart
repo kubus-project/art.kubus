@@ -4920,6 +4920,25 @@ class AppLocalizationsEn extends AppLocalizations {
   String get mapCenterOnMeTooltip => 'Center on me';
 
   @override
+  String get mapCenterOnMeLocating => 'Finding your location…';
+
+  @override
+  String get mapCenterOnMePermissionDenied =>
+      'Allow location access to center the map on you.';
+
+  @override
+  String get mapCenterOnMePermissionBlocked =>
+      'Location access is blocked for art.kubus. Enable it in app settings to center the map on you.';
+
+  @override
+  String get mapCenterOnMeServicesDisabled =>
+      'Turn on location services to center the map on you.';
+
+  @override
+  String get mapCenterOnMeTimedOut =>
+      'Finding your location took too long. Try again.';
+
+  @override
   String get mapAddMapMarkerTooltip => 'Add map marker';
 
   @override
