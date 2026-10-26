@@ -9,6 +9,7 @@ import '../providers/storage_provider.dart';
 import '../utils/geo_bounds.dart';
 import 'backend_api_service.dart';
 import 'achievement_service.dart';
+import 'public_fallback_service.dart';
 import 'storage_config.dart';
 import 'socket_service.dart';
 import 'telemetry/contribution_type.dart';
@@ -63,9 +64,10 @@ class MapMarkerService {
   /// specific marker resolve it here first so an offline device can still
   /// label a link, then fall back to showing the reference as unavailable
   /// rather than guessing.
-  List<ArtMarker> get cachedMarkers => List<ArtMarker>.unmodifiable(
-        _cachedMarkers,
-      );
+  List<ArtMarker> get cachedMarkers =>
+      PublicFallbackService().isIpfsFallbackMode
+          ? const <ArtMarker>[]
+          : List<ArtMarker>.unmodifiable(_cachedMarkers);
   final StreamController<ArtMarker> _markerStreamController =
       StreamController<ArtMarker>.broadcast();
   final StreamController<String> _markerDeletedController =
@@ -247,6 +249,12 @@ class MapMarkerService {
     required void Function(List<ArtMarker> markers) onCacheHit,
     required void Function(List<ArtMarker> markers) onSuccess,
   }) async {
+    // Marker snapshots are intentionally empty in this mode, so bypass live
+    // radius/bounds caches as well.
+    if (PublicFallbackService().isIpfsFallbackMode) {
+      return const <ArtMarker>[];
+    }
+
     if (_rateLimitUntil != null && DateTime.now().isBefore(_rateLimitUntil!)) {
       final cached = _peekCachedMarkers(key) ?? _cachedMarkers;
       return _filterValidMarkers(cached);
@@ -267,6 +275,9 @@ class MapMarkerService {
     return _dedupeInFlight(key, () async {
       try {
         final markers = await fetcher();
+        if (PublicFallbackService().isIpfsFallbackMode) {
+          return const <ArtMarker>[];
+        }
 
         _rateLimitUntil = null;
         final filtered = _filterValidMarkers(markers);
@@ -277,6 +288,9 @@ class MapMarkerService {
         onSuccess(filtered);
         return filtered;
       } catch (e) {
+        if (PublicFallbackService().isIpfsFallbackMode) {
+          return const <ArtMarker>[];
+        }
         final message = e.toString().toLowerCase();
         if (message.contains('rate limit') ||
             message.contains('429') ||
@@ -512,6 +526,7 @@ class MapMarkerService {
   }
 
   void notifyMarkerUpserted(ArtMarker marker) {
+    if (PublicFallbackService().isIpfsFallbackMode) return;
     if (!_isValidPosition(marker.position)) return;
 
     final shouldKeep = _lastQueryWasBounds
@@ -735,6 +750,8 @@ class MapMarkerService {
 
   void _handleSocketMarker(Map<String, dynamic> payload) {
     try {
+      if (PublicFallbackService().isIpfsFallbackMode) return;
+
       final event = payload['event']?.toString() ?? '';
       final deleted =
           payload['deleted'] == true || event == 'art-marker:deleted';
@@ -747,32 +764,15 @@ class MapMarkerService {
 
       final marker = _markerFromSocketPayload(payload);
       if (marker == null || !_isValidPosition(marker.position)) return;
-      final shouldKeep = _lastQueryWasBounds
-          ? (_lastQueryBounds != null &&
-              _boundsContains(_lastQueryBounds!, marker.position))
-          : (_lastQueryCenter != null &&
-              _distance.as(
-                    LengthUnit.Kilometer,
-                    _lastQueryCenter!,
-                    marker.position,
-                  ) <=
-                  _lastQueryRadiusKm + 0.5);
-
-      // If we have an active cache window and the marker is nearby, merge it in-place.
-      if (shouldKeep) {
-        final existingIndex =
-            _cachedMarkers.indexWhere((m) => m.id == marker.id);
-        if (existingIndex >= 0) {
-          _cachedMarkers[existingIndex] = marker;
-        } else {
-          _cachedMarkers.add(marker);
-        }
-      }
-      _markerStreamController.add(marker);
+      notifyMarkerUpserted(marker);
     } catch (e) {
       _log('MapMarkerService: failed to handle socket marker: $e');
     }
   }
+
+  @visibleForTesting
+  void debugHandleSocketMarker(Map<String, dynamic> payload) =>
+      _handleSocketMarker(payload);
 
   double _asDouble(dynamic value, [double fallback = 0]) {
     if (value is num) return value.toDouble();

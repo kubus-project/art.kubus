@@ -1,12 +1,18 @@
+import 'package:art_kubus/core/public_entry_navigation.dart';
 import 'package:art_kubus/providers/public_entity_takeover_provider.dart';
 import 'package:art_kubus/services/share/share_deep_link_parser.dart';
 import 'package:art_kubus/services/share/share_types.dart';
 import 'package:art_kubus/widgets/public_entity_takeover_ready.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 
 void main() {
+  final navigation = PublicEntryNavigation.instance;
+  setUp(navigation.resetForTest);
+  tearDown(navigation.resetForTest);
+
   const cases = <(ShareEntityType, String)>[
     (ShareEntityType.profile, 'profiles'),
     (ShareEntityType.event, 'events'),
@@ -75,6 +81,87 @@ void main() {
     expect(provider.isReady, isFalse);
   });
 
+  testWidgets('a new provider seed supersedes the old entry claim',
+      (tester) async {
+    final provider = PublicEntityTakeoverProvider();
+    provider.seed(
+      initialUri: Uri.parse('/en/events/event-1'),
+      target: const ShareDeepLinkTarget(
+        type: ShareEntityType.event,
+        id: 'event-1',
+        localeCode: 'en',
+      ),
+    );
+    await tester.pumpWidget(
+      ChangeNotifierProvider.value(
+        value: provider,
+        child: const MaterialApp(
+          home: PublicEntityTakeoverReady(
+            type: ShareEntityType.event,
+            entityId: 'event-1',
+            child: Text('first event'),
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+    expect(navigation.visibleEntityUrl, '/en/events/event-1');
+
+    provider.seed(
+      initialUri: Uri.parse('/sl/dogodki/event-2'),
+      target: const ShareDeepLinkTarget(
+        type: ShareEntityType.event,
+        id: 'event-2',
+        localeCode: 'sl',
+      ),
+    );
+
+    expect(navigation.visibleEntityUrl, isNull);
+    expect(navigation.pendingEntryUrl, '/sl/dogodki/event-2');
+  });
+
+  testWidgets('a live entity claim updates when the app locale changes',
+      (tester) async {
+    await tester.pumpWidget(
+      ChangeNotifierProvider(
+        create: (_) => PublicEntityTakeoverProvider(),
+        child: const _LocaleSwitchingEntity(),
+      ),
+    );
+    await tester.pump();
+    expect(navigation.visibleEntityUrl, '/en/events/event-1');
+
+    await tester.tap(find.text('switch locale'));
+    await tester.pumpAndSettle();
+    expect(navigation.visibleEntityUrl, '/sl/dogodki/event-1');
+  });
+
+  testWidgets('entry locale changes preserve its query and fragment',
+      (tester) async {
+    final provider = PublicEntityTakeoverProvider();
+    provider.seed(
+      initialUri: Uri.parse('/en/events/event-1?campaign=qa#venue'),
+      target: const ShareDeepLinkTarget(
+        type: ShareEntityType.event,
+        id: 'event-1',
+        localeCode: 'en',
+      ),
+    );
+    await tester.pumpWidget(
+      ChangeNotifierProvider.value(
+        value: provider,
+        child: const _LocaleSwitchingEntity(),
+      ),
+    );
+    await tester.pump();
+    expect(navigation.visibleEntityUrl, '/en/events/event-1?campaign=qa#venue');
+
+    await tester.tap(find.text('switch locale'));
+    await tester.pumpAndSettle();
+    expect(
+        navigation.visibleEntityUrl, '/sl/dogodki/event-1?campaign=qa#venue');
+  });
+
   testWidgets(
       'signals from the painted frame before a shell rebuild disposes it',
       (tester) async {
@@ -103,6 +190,53 @@ void main() {
     await tester.pump();
     expect(find.text('replacement shell'), findsOneWidget);
   });
+
+  testWidgets(
+      'a not-found view holds the entity URL claim without signalling ready',
+      (tester) async {
+    const entryUrl = '/en/artworks/bad-id';
+    final provider = PublicEntityTakeoverProvider();
+    provider.seed(
+      initialUri: Uri.parse('/en/artworks/bad-id'),
+      target: const ShareDeepLinkTarget(
+        type: ShareEntityType.artwork,
+        id: 'bad-id',
+        localeCode: 'en',
+      ),
+    );
+    final ready = ValueNotifier<bool>(false);
+
+    await tester.pumpWidget(
+      ChangeNotifierProvider.value(
+        value: provider,
+        child: MaterialApp(
+          home: ValueListenableBuilder<bool>(
+            valueListenable: ready,
+            builder: (_, isReady, __) => PublicEntityTakeoverReady(
+              type: ShareEntityType.artwork,
+              entityId: 'bad-id',
+              signalReady: isReady,
+              child: Text(isReady ? 'artwork' : 'not found'),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+
+    expect(provider.isReady, isFalse,
+        reason: 'the server-rendered fallback must stay active');
+    expect(navigation.visibleEntityUrl, entryUrl,
+        reason: 'the page still describes the requested entity');
+    expect(navigation.entryIsTop, isTrue,
+        reason: 'so the first browser Back leaves the app');
+
+    // The same widget becomes the loaded view: now it signals.
+    ready.value = true;
+    await tester.pump();
+    await tester.pump();
+    expect(provider.isReady, isTrue);
+  });
 }
 
 class _DisposeEntityOnFollowingFrame extends StatefulWidget {
@@ -111,6 +245,41 @@ class _DisposeEntityOnFollowingFrame extends StatefulWidget {
   @override
   State<_DisposeEntityOnFollowingFrame> createState() =>
       _DisposeEntityOnFollowingFrameState();
+}
+
+class _LocaleSwitchingEntity extends StatefulWidget {
+  const _LocaleSwitchingEntity();
+
+  @override
+  State<_LocaleSwitchingEntity> createState() => _LocaleSwitchingEntityState();
+}
+
+class _LocaleSwitchingEntityState extends State<_LocaleSwitchingEntity> {
+  Locale _locale = const Locale('en');
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      locale: _locale,
+      supportedLocales: const <Locale>[Locale('en'), Locale('sl')],
+      localizationsDelegates: GlobalMaterialLocalizations.delegates,
+      home: Scaffold(
+        body: Column(
+          children: <Widget>[
+            TextButton(
+              onPressed: () => setState(() => _locale = const Locale('sl')),
+              child: const Text('switch locale'),
+            ),
+            const PublicEntityTakeoverReady(
+              type: ShareEntityType.event,
+              entityId: 'event-1',
+              child: Text('localized event'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
 class _DisposeEntityOnFollowingFrameState

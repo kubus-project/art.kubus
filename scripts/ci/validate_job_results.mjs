@@ -12,7 +12,7 @@ import {
 } from './pr_validation_tier.mjs';
 
 // Jobs the draft tier never runs by design (job-level tier gate in pr-validation.yml).
-export const TIER_GATED_JOBS = ['web_artifact', 'android', 'ios'];
+export const TIER_GATED_JOBS = ['web_artifact', 'map_browser_regression', 'android', 'ios'];
 
 // One summary line per skipped job, so a skip is visibly "not run by tier" rather than a pass.
 export function describeSkippedJobs(needs, expectedJobs, tier) {

@@ -2283,6 +2283,18 @@ abstract class AppLocalizations {
   /// **'Your session has expired. Sign in again to continue.'**
   String get authReauthDialogMessage;
 
+  /// Title of the dialog shown after the backend reports that the signed-in account is suspended and the app has signed the user out.
+  ///
+  /// In en, this message translates to:
+  /// **'Account suspended'**
+  String get authAccountSuspendedTitle;
+
+  /// Message of the dialog shown after the backend reports that the signed-in account is suspended and the app has signed the user out.
+  ///
+  /// In en, this message translates to:
+  /// **'Access to this account has been suspended, so you have been signed out. Your wallet on this device is not affected. If you think this is a mistake, contact support.'**
+  String get authAccountSuspendedMessage;
+
   /// No description provided for @authAccountCreatedProfileLoading.
   ///
   /// In en, this message translates to:
@@ -7245,6 +7257,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Connect a wallet before submitting.'**
   String get institutionHubApplicationWalletRequired;
+
+  /// No description provided for @institutionHubApplicationWalletWhy.
+  ///
+  /// In en, this message translates to:
+  /// **'Applying is signed with your wallet, so the review stays tied to a wallet you control. Browsing institutions does not need one.'**
+  String get institutionHubApplicationWalletWhy;
 
   /// No description provided for @institutionHubApplicationSubmittedToast.
   ///

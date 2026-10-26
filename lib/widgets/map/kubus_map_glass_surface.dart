@@ -8,7 +8,7 @@ import '../../services/webgl_context_helper.dart';
 import '../../utils/design_tokens.dart';
 import '../glass_components.dart';
 import 'glass/kubus_map_native_backdrop_channel.dart';
-import 'glass/kubus_map_platform_backdrop_host.dart';
+import 'glass/kubus_map_platform_backdrop_mount.dart';
 
 enum KubusMapGlassSurfaceKind { panel, card, button }
 

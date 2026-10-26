@@ -1,6 +1,9 @@
-import 'package:flutter/foundation.dart';
+import 'package:flutter/widgets.dart';
+import 'package:provider/provider.dart';
 
 import '../config/config.dart';
+import '../core/public_entry_navigation.dart';
+import '../core/shell_routes.dart';
 import '../core/startup_trace.dart';
 import '../services/public_entity_takeover_bridge.dart';
 import '../services/share/share_deep_link_parser.dart';
@@ -19,15 +22,22 @@ class PublicEntityTakeoverTarget {
   final String id;
   final String path;
   final String browserRoute;
+
+  /// Locale is sent separately so host and app readiness cannot disagree.
+  String get locale => path.startsWith('/sl/') ? 'sl' : 'en';
 }
 
 class PublicEntityTakeoverProvider extends ChangeNotifier {
   PublicEntityTakeoverTarget? _target;
   Map<String, dynamic>? _bootstrap;
   bool _readyDispatched = false;
+  bool _failureDispatched = false;
+  bool _resolvedNotFoundDispatched = false;
 
   PublicEntityTakeoverTarget? get target => _target;
   bool get isReady => _readyDispatched;
+  bool get isFailed => _failureDispatched;
+  bool get isResolvedNotFound => _resolvedNotFoundDispatched;
   Map<String, dynamic>? get bootstrap => _bootstrap;
 
   bool _supportsBootstrapVersion(dynamic version) =>
@@ -115,26 +125,55 @@ class PublicEntityTakeoverProvider extends ChangeNotifier {
     if (segment == null || type == null) return;
     final expectedPath = '/$locale/$segment/${Uri.encodeComponent(target.id)}';
     if (initialUri.path != expectedPath) return;
+    final startupBrowserRoute =
+        PublicEntryNavigation.instance.takeStartupBrowserRouteFor(expectedPath);
+    final browserUri = startupBrowserRoute == null
+        ? initialUri
+        : Uri.parse(startupBrowserRoute);
 
     final next = PublicEntityTakeoverTarget(
       type: type,
       id: target.id,
       path: initialUri.path,
       browserRoute: Uri(
-        path: initialUri.path,
-        query: initialUri.hasQuery ? initialUri.query : null,
-        fragment: initialUri.hasFragment ? initialUri.fragment : null,
+        path: browserUri.path,
+        query: browserUri.hasQuery ? browserUri.query : null,
+        fragment: browserUri.hasFragment ? browserUri.fragment : null,
       ).toString(),
     );
-    if (_sameTarget(_target, next)) return;
+    final shellRoute = target.type == ShareEntityType.marker
+        ? ShellRoutes.map
+        : ShellRoutes.main;
+    if (_sameTarget(_target, next)) {
+      // The browser history returned to this entity after the app had moved on
+      // (its entry was released when its screen left): re-arm the entry so the
+      // restored page keeps the canonical address while it loads. A no-op while
+      // the entry is still the live one.
+      PublicEntryNavigation.instance.setEntry(
+        type: target.type,
+        entityId: target.id,
+        browserRoute: next.browserRoute,
+        shellRoute: shellRoute,
+      );
+      return;
+    }
 
     _target = next;
     _bootstrap = null;
     _readyDispatched = false;
+    _failureDispatched = false;
+    _resolvedNotFoundDispatched = false;
+    PublicEntryNavigation.instance.setEntry(
+      type: target.type,
+      entityId: target.id,
+      browserRoute: next.browserRoute,
+      shellRoute: shellRoute,
+    );
     dispatchPublicEntityRouteParsed(
       type: next.type,
       id: next.id,
       path: next.path,
+      locale: next.locale,
     );
     notifyListeners();
   }
@@ -210,6 +249,25 @@ class PublicEntityTakeoverProvider extends ChangeNotifier {
     return returnRouteFor(ShareEntityType.artwork, artworkId);
   }
 
+  /// Sign-in return route for a protected action on [type]/[entityId]: the
+  /// exact canonical public URL when that entity is the current public entry,
+  /// otherwise [fallback] (a compact in-app alias).
+  static String returnRouteOr(
+    BuildContext context,
+    ShareEntityType type,
+    String entityId,
+    String fallback,
+  ) {
+    try {
+      return context
+              .read<PublicEntityTakeoverProvider>()
+              .returnRouteFor(type, entityId) ??
+          fallback;
+    } catch (_) {
+      return fallback;
+    }
+  }
+
   String? returnRouteFor(ShareEntityType type, String entityId) {
     final current = _target;
     if (current == null ||
@@ -229,7 +287,8 @@ class PublicEntityTakeoverProvider extends ChangeNotifier {
     if (current == null ||
         current.type != _wireType(type) ||
         current.id != entityId ||
-        _readyDispatched) {
+        _readyDispatched ||
+        _resolvedNotFoundDispatched) {
       return Future<void>.value();
     }
 
@@ -246,6 +305,63 @@ class PublicEntityTakeoverProvider extends ChangeNotifier {
       type: current.type,
       id: current.id,
       path: current.path,
+      locale: current.locale,
+    );
+    notifyListeners();
+    return Future<void>.value();
+  }
+
+  /// Reports that [entityId] could not be loaded for lack of an answer (rate
+  /// limit, outage, transport). The web host shows its failed state with a
+  /// manual Refresh. Idempotent, and a no-op unless this entity still owns a
+  /// pending takeover, so a failure never covers a page that is already ready.
+  /// Nothing here retries, reloads, or changes the address.
+  Future<void> markEntityFailed(ShareEntityType type, String entityId) {
+    final current = _target;
+    if (current == null ||
+        current.type != _wireType(type) ||
+        current.id != entityId ||
+        _readyDispatched ||
+        _resolvedNotFoundDispatched ||
+        _failureDispatched) {
+      return Future<void>.value();
+    }
+    _failureDispatched = true;
+    dispatchPublicEntityFailed(
+      type: current.type,
+      id: current.id,
+      path: current.path,
+      locale: current.locale,
+    );
+    notifyListeners();
+    return Future<void>.value();
+  }
+
+  /// Reports that [entityId] has a definitive answer that it does not exist
+  /// (the API returned 404). The screen shows its own not-found state at the
+  /// same URL, so the web host removes the SSR overlay and hands the page to
+  /// the app, exactly as for a ready entity. This is not a failure: it never
+  /// offers Refresh, and nothing here retries or changes the address.
+  /// Idempotent, and a no-op unless this entity still owns a pending takeover.
+  Future<void> markEntityResolvedNotFound(
+    ShareEntityType type,
+    String entityId,
+  ) {
+    final current = _target;
+    if (current == null ||
+        current.type != _wireType(type) ||
+        current.id != entityId ||
+        _readyDispatched ||
+        _resolvedNotFoundDispatched ||
+        _failureDispatched) {
+      return Future<void>.value();
+    }
+    _resolvedNotFoundDispatched = true;
+    dispatchPublicEntityResolvedNotFound(
+      type: current.type,
+      id: current.id,
+      path: current.path,
+      locale: current.locale,
     );
     notifyListeners();
     return Future<void>.value();
@@ -261,7 +377,18 @@ class PublicEntityTakeoverProvider extends ChangeNotifier {
         left?.browserRoute == right.browserRoute;
   }
 
-  String? _localizedSegment(ShareEntityType type, String locale) {
+  /// The localized canonical path of an entity (`/en/artworks/{id}`,
+  /// `/sl/umetnine/{id}`); any language other than `sl` uses English.
+  static String localizedCanonicalPath(
+    ShareEntityType type,
+    String entityId,
+    String languageCode,
+  ) {
+    final locale = languageCode == 'sl' ? 'sl' : 'en';
+    return '/$locale/${_localizedSegment(type, locale)}/${Uri.encodeComponent(entityId.trim())}';
+  }
+
+  static String? _localizedSegment(ShareEntityType type, String locale) {
     return switch (type) {
       ShareEntityType.artwork => locale == 'sl' ? 'umetnine' : 'artworks',
       ShareEntityType.profile => locale == 'sl' ? 'profili' : 'profiles',

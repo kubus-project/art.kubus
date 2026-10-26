@@ -492,6 +492,8 @@ class Artwork {
     // only way to explicitly clear a nullable field.
     bool clearPrice = false,
     bool clearArScale = false,
+    bool clearDiscoveredAt = false,
+    bool clearDiscoveryUserId = false,
   }) {
     return Artwork(
       id: id ?? this.id,
@@ -517,8 +519,11 @@ class Artwork {
       rewards: rewards ?? this.rewards,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
-      discoveredAt: discoveredAt ?? this.discoveredAt,
-      discoveryUserId: discoveryUserId ?? this.discoveryUserId,
+      discoveredAt:
+          clearDiscoveredAt ? null : (discoveredAt ?? this.discoveredAt),
+      discoveryUserId: clearDiscoveryUserId
+          ? null
+          : (discoveryUserId ?? this.discoveryUserId),
       arMarkerId: arMarkerId ?? this.arMarkerId,
       arConfigId: arConfigId ?? this.arConfigId,
       arStatus: arStatus ?? this.arStatus,

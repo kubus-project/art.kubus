@@ -43,6 +43,7 @@ import 'media_upload_optimizer.dart';
 import 'telemetry/kubus_client_context.dart';
 import 'telemetry/telemetry_uuid.dart';
 import 'node/turn_configuration.dart';
+import 'account_identity.dart';
 
 part 'backend_api_service_auth_helpers.dart';
 part 'backend_api_service_auth_account_helpers.dart';
@@ -360,6 +361,14 @@ class BackendApiService
 
   http.Client _client = http.Client();
   AuthSessionCoordinator? _authCoordinator;
+
+  /// Bumped at every sign-out (see [clearAuth]). Account requests capture it when
+  /// they start and drop their local writes once it has moved on, so a response
+  /// that lands after sign-out cannot repopulate the next session's state.
+  int _authSessionEpoch = 0;
+
+  /// Epoch of the current authenticated session; changes at every sign-out.
+  int get authSessionEpoch => _authSessionEpoch;
   MediaUploadOptimizer _mediaUploadOptimizer = const MediaUploadOptimizer();
 
   // Used only for diagnostic logging; the actual behavior is determined by the
@@ -608,6 +617,7 @@ class BackendApiService
   void setAuthTokenForTesting(String? token) {
     _authToken = token;
     _authWalletCanonical = _tryExtractWalletFromToken(token);
+    AccountIdentity.setAccountKey(_accountKeyOf(token));
   }
 
   @visibleForTesting
@@ -990,11 +1000,42 @@ class BackendApiService
     await ensureAuthLoaded(walletAddress: desiredCanonical);
   }
 
+  /// The account a token belongs to: its wallet and user id from the payload.
+  /// Empty when the token cannot be read.
+  String _authIdentityOf(String? token) {
+    final payload = _tryDecodeJwtPayload((token ?? '').trim());
+    if (payload == null) return '';
+    final wallet = _tryExtractWalletFromToken(token) ?? '';
+    final userId = (payload['user_id'] ?? payload['id'] ?? payload['sub'] ?? '')
+        .toString()
+        .trim();
+    return '$wallet|$userId';
+  }
+
+  /// The stable id of the account a token belongs to, for the device records
+  /// kept per account. Empty when the token cannot be read (a guest).
+  String _accountKeyOf(String? token) {
+    final payload = _tryDecodeJwtPayload((token ?? '').trim());
+    if (payload == null) return '';
+    for (final claim in const ['user_id', 'id', 'sub']) {
+      final value = (payload[claim] ?? '').toString().trim();
+      if (value.isNotEmpty) return value;
+    }
+    return _tryExtractWalletFromToken(token) ?? '';
+  }
+
   /// Set authentication token for API requests
   Future<void> setAuthToken(String token) async {
+    final previousIdentity = _authIdentityOf(_authToken);
     _authToken = token;
     _authWalletCanonical = _tryExtractWalletFromToken(token);
+    AccountIdentity.setAccountKey(_accountKeyOf(token));
     AppConfig.debugPrint('BackendApiService: Auth token set (in-memory)');
+    // A token for another account ends the previous identity's local state.
+    final nextIdentity = _authIdentityOf(token);
+    if (previousIdentity.isNotEmpty && previousIdentity != nextIdentity) {
+      await AccountIdentity.notifyChanged();
+    }
     if (!_hasInitializedBinding) {
       AppConfig.debugPrint(
         'BackendApiService: skipping auth token persistence (binding not initialized)',
@@ -1131,6 +1172,7 @@ class BackendApiService
         if (AuthGatingService.isAccessTokenValid(token)) {
           _authToken = token;
           _authWalletCanonical = _tryExtractWalletFromToken(token);
+          AccountIdentity.setAccountKey(_accountKeyOf(token));
           await resolveLastSignInMethod();
           AppConfig.debugPrint(
             'BackendApiService: Auth token loaded (in-memory)',
@@ -1138,6 +1180,7 @@ class BackendApiService
         } else {
           _authToken = null;
           _authWalletCanonical = null;
+          AccountIdentity.setAccountKey('');
           AppConfig.debugPrint(
             'BackendApiService: Stored auth token is expired; ignoring',
           );
@@ -1175,9 +1218,15 @@ class BackendApiService
 
   /// Clear authentication
   Future<void> clearAuth() async {
+    _authSessionEpoch += 1;
     _authToken = null;
     _authWalletCanonical = null;
     _authCoordinator?.reset();
+    // Every way the session ends comes through here (sign-out, a token for
+    // another wallet, a deleted or suspended account). The session is now a
+    // guest's. Listeners run before the first await below.
+    AccountIdentity.setAccountKey('');
+    await AccountIdentity.notifyChanged();
     try {
       await _secureStorage
           .delete(key: 'jwt_token')
@@ -1200,6 +1249,10 @@ class BackendApiService
         await prefs.remove(key);
       }
       await prefs.remove(PreferenceKeys.authLastSignInMethodV1);
+      // Account-scoped email and security status; sign-in repopulates them.
+      for (final key in secureAccountStatusPrefKeys) {
+        await prefs.remove(key);
+      }
       AppConfig.debugPrint(
         'BackendApiService: Auth cleared from SharedPreferences',
       );
@@ -1284,6 +1337,33 @@ class BackendApiService
         lower.contains('invalid') ||
         lower.contains('authentication required') ||
         lower.contains('unauthorized');
+  }
+
+  /// Reports that the backend refused this session because the account is
+  /// suspended (socket `auth:error` / handshake rejection). Goes through the
+  /// same coordinator as a REST `403 ACCOUNT_INACTIVE`, so there is one path
+  /// that ends the session. Returns whether a coordinator took it.
+  Future<bool> reportAccountInactive({required String source}) async {
+    final coordinator = _authCoordinator;
+    if (coordinator == null) {
+      // Production binds the SecurityGateProvider at startup; without one the
+      // most that can be done here is to drop the credentials, never to keep a
+      // suspended session alive.
+      await clearAuth();
+      return false;
+    }
+    await coordinator.handleAuthFailure(
+      AuthFailureContext(
+        statusCode: 403,
+        method: source,
+        path: '/socket.io',
+        body: jsonEncode(<String, Object>{
+          'success': false,
+          'errorCode': AccountInactiveSignal.errorCode,
+        }),
+      ),
+    );
+    return true;
   }
 
   bool _isAuthFailureStatus({
@@ -1532,13 +1612,20 @@ class BackendApiService
     );
 
     final coordinator = _authCoordinator;
-    final isAuthFailure = includeAuth &&
+    final accountInactive = includeAuth &&
         coordinator != null &&
-        AppConfig.isFeatureEnabled('rePromptLoginOnExpiry') &&
-        _isAuthFailureStatus(
+        AccountInactiveSignal.isRestResponse(
           statusCode: response.statusCode,
-          responseBody: response.body,
+          body: response.body,
         );
+    final isAuthFailure = accountInactive ||
+        (includeAuth &&
+            coordinator != null &&
+            AppConfig.isFeatureEnabled('rePromptLoginOnExpiry') &&
+            _isAuthFailureStatus(
+              statusCode: response.statusCode,
+              responseBody: response.body,
+            ));
 
     if (!isAuthFailure) {
       if (_isSuccessStatus(response.statusCode)) {
@@ -1611,10 +1698,12 @@ class BackendApiService
       return response;
     }
 
-    if (retriedAfterReauth) {
+    if (retriedAfterReauth && !accountInactive) {
       return response;
     }
 
+    // A suspended account is ended by the coordinator and never retried: the
+    // result is never a success, so the request below is not replayed.
     final result = await coordinator.handleAuthFailure(
       AuthFailureContext(
         statusCode: response.statusCode,
@@ -1933,16 +2022,23 @@ class BackendApiService
     }
 
     final coordinator = _authCoordinator;
-    final isAuthFailure = includeAuth &&
+    final accountInactive = includeAuth &&
         coordinator != null &&
-        AppConfig.isFeatureEnabled('rePromptLoginOnExpiry') &&
-        _isAuthFailureStatus(
+        AccountInactiveSignal.isRestResponse(
           statusCode: response.statusCode,
-          responseBody: response.body,
+          body: response.body,
         );
+    final isAuthFailure = accountInactive ||
+        (includeAuth &&
+            coordinator != null &&
+            AppConfig.isFeatureEnabled('rePromptLoginOnExpiry') &&
+            _isAuthFailureStatus(
+              statusCode: response.statusCode,
+              responseBody: response.body,
+            ));
 
     if (!isAuthFailure) return response;
-    if (retriedAfterReauth) return response;
+    if (retriedAfterReauth && !accountInactive) return response;
 
     final result = await coordinator.handleAuthFailure(
       AuthFailureContext(
@@ -2000,6 +2096,7 @@ class BackendApiService
     required String? email,
     required bool emailVerified,
     required bool emailAuthEnabled,
+    int? sessionEpoch,
   }) async {
     await _backendApiPersistSecureAccountStatus(
       hasEmail: hasEmail,
@@ -2007,6 +2104,7 @@ class BackendApiService
       email: email,
       emailVerified: emailVerified,
       emailAuthEnabled: emailAuthEnabled,
+      sessionEpoch: sessionEpoch,
     );
   }
 
@@ -2018,14 +2116,18 @@ class BackendApiService
     return _backendApiGetCachedSecureAccountStatus(this);
   }
 
+  /// [sessionEpoch] is the epoch captured when the request that produced [body]
+  /// started. A body that arrives after sign-out is then discarded.
   Future<void> syncSecureAccountStatusFromResponse(
     Map<String, dynamic> body, {
     bool fetchIfMissing = true,
+    int? sessionEpoch,
   }) async {
     await _backendApiSyncSecureAccountStatusFromResponse(
       this,
       body,
       fetchIfMissing: fetchIfMissing,
+      sessionEpoch: sessionEpoch,
     );
   }
 
@@ -2069,6 +2171,7 @@ class BackendApiService
     bool includeAuth = true,
     bool allowOrbitFallback = false,
     bool allowImplicitBackendFailover = true,
+    bool orbitAnswerIsAuthoritative = false,
   }) async {
     final key = _rateLimitKey('GET', uri);
     if (_isRateLimited(key)) {
@@ -2186,6 +2289,16 @@ class BackendApiService
       'fetch_json_orbit_failed:${fallbackUri.path}:${fallbackResponse.statusCode}',
       'BackendApiService: Orbit fallback failed ${fallbackResponse.statusCode} for ${fallbackUri.path}',
     );
+    final fallbackStatus = fallbackResponse.statusCode;
+    if (orbitAnswerIsAuthoritative &&
+        fallbackStatus >= 400 &&
+        fallbackStatus < 500 &&
+        fallbackStatus != 408) {
+      // The mirror answered: the entity is absent there (404) or refused. Report
+      // that answer as the status itself, so the caller sees it as a 4xx answer
+      // and not as an outage, while the primary failure stays in the message.
+      throw Exception('Request failed: $fallbackStatus ($primaryFailure)');
+    }
     throw Exception(
         '$primaryFailure (Orbit fallback failed: ${fallbackResponse.statusCode})');
   }
@@ -2423,12 +2536,14 @@ class BackendApiService
     Map<String, String>? queryParameters,
     bool includeAuth = true,
     bool allowOrbitFallback = false,
+    bool orbitAnswerIsAuthoritative = false,
   }) {
     return _fetchJson(
       _buildApiUri(rawBaseUrl, path, queryParameters: queryParameters),
       includeAuth: includeAuth,
       allowOrbitFallback: allowOrbitFallback,
       allowImplicitBackendFailover: false,
+      orbitAnswerIsAuthoritative: orbitAnswerIsAuthoritative,
     );
   }
 
@@ -2482,10 +2597,15 @@ class BackendApiService
     return const <int>{502, 503, 504, 522, 523, 524, 530}.contains(status);
   }
 
+  /// [snapshotMissIsFailure] is for public-entry reads that must tell "absent"
+  /// from "unreachable": when every live read failed with an outage and the
+  /// snapshot has no entry either, the outage is rethrown instead of a null
+  /// answer. Default callers keep the snapshot's null.
   Future<R> _performPublicRead<R>({
     required Future<R> Function(String baseUrl) liveRead,
     required Future<R> Function() snapshotRead,
     bool allowSnapshot = true,
+    bool snapshotMissIsFailure = false,
   }) async {
     Object? lastFallbackEligibleError;
 
@@ -2510,14 +2630,21 @@ class BackendApiService
     }
 
     if (allowSnapshot) {
+      final R snapshotResult;
       try {
-        return await snapshotRead();
+        snapshotResult = await snapshotRead();
       } catch (snapshotError) {
         if (lastFallbackEligibleError != null) {
           throw lastFallbackEligibleError;
         }
         rethrow;
       }
+      if (snapshotMissIsFailure &&
+          snapshotResult == null &&
+          lastFallbackEligibleError != null) {
+        throw lastFallbackEligibleError;
+      }
+      return snapshotResult;
     }
 
     if (lastFallbackEligibleError != null) {
@@ -4530,45 +4657,62 @@ class BackendApiService
     String markerId, {
     bool allowOrbitFallback = true,
   }) async {
-    final id = markerId.trim();
-    if (id.isEmpty) return null;
-
     try {
-      return await _performPublicRead<ArtMarker?>(
-        liveRead: (candidateBaseUrl) async {
-          final data = await _fetchJsonFromBaseUrl(
-            candidateBaseUrl,
-            '/api/art-markers/$id',
-            includeAuth: false,
-            allowOrbitFallback: allowOrbitFallback,
-          );
-
-          final payload =
-              data['data'] ?? data['marker'] ?? data['artMarker'] ?? data;
-          if (payload is Map<String, dynamic>) {
-            return _artMarkerFromBackendJson(payload);
-          }
-          if (payload is Map) {
-            return _artMarkerFromBackendJson(
-              Map<String, dynamic>.from(payload),
-            );
-          }
-          return null;
-        },
-        snapshotRead: () async {
-          final markers = await _loadSnapshotDatasetMaps('markers');
-          for (final entry in markers) {
-            if ((entry['id'] ?? '').toString().trim() == id) {
-              return _artMarkerFromBackendJson(entry);
-            }
-          }
-          return null;
-        },
+      return await getArtMarkerOrThrow(
+        markerId,
+        allowOrbitFallback: allowOrbitFallback,
       );
     } catch (e) {
       AppConfig.debugPrint('BackendApiService.getArtMarker failed: $e');
       return null;
     }
+  }
+
+  /// [getArtMarker] for public-entry reads: a failed lookup throws instead of
+  /// returning null, so the caller can tell a transient failure from a marker
+  /// that does not exist (`PublicEntityLoadOutcome`).
+  Future<ArtMarker?> getArtMarkerOrThrow(
+    String markerId, {
+    bool allowOrbitFallback = true,
+  }) async {
+    final id = markerId.trim();
+    if (id.isEmpty) return null;
+
+    return _performPublicRead<ArtMarker?>(
+      // A failed primary and mirror read is an outage, not an absent marker:
+      // the snapshot may not hold the marker and must not turn it into null.
+      snapshotMissIsFailure: true,
+      liveRead: (candidateBaseUrl) async {
+        final data = await _fetchJsonFromBaseUrl(
+          candidateBaseUrl,
+          '/api/art-markers/$id',
+          includeAuth: false,
+          allowOrbitFallback: allowOrbitFallback,
+          orbitAnswerIsAuthoritative: true,
+        );
+
+        final payload =
+            data['data'] ?? data['marker'] ?? data['artMarker'] ?? data;
+        if (payload is Map<String, dynamic>) {
+          return _artMarkerFromBackendJson(payload);
+        }
+        if (payload is Map) {
+          return _artMarkerFromBackendJson(
+            Map<String, dynamic>.from(payload),
+          );
+        }
+        return null;
+      },
+      snapshotRead: () async {
+        final markers = await _loadSnapshotDatasetMaps('markers');
+        for (final entry in markers) {
+          if ((entry['id'] ?? '').toString().trim() == id) {
+            return _artMarkerFromBackendJson(entry);
+          }
+        }
+        return null;
+      },
+    );
   }
 
   /// Get map markers linked through the authoritative artwork relation.

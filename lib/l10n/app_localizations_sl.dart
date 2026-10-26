@@ -1252,6 +1252,13 @@ class AppLocalizationsSl extends AppLocalizations {
       'Tvoja seja je potekla. Za nadaljevanje se znova prijavi.';
 
   @override
+  String get authAccountSuspendedTitle => 'Račun je suspendiran';
+
+  @override
+  String get authAccountSuspendedMessage =>
+      'Dostop do tega računa je suspendiran, zato je bila seja končana. Denarnica na tej napravi ni prizadeta. Če meniš, da gre za napako, se obrni na podporo.';
+
+  @override
   String get authAccountCreatedProfileLoading =>
       'Račun je ustvarjen. Profil se nalaga v ozadju.';
 
@@ -4110,6 +4117,10 @@ class AppLocalizationsSl extends AppLocalizations {
   @override
   String get institutionHubApplicationWalletRequired =>
       'Pred oddajo poveži denarnico.';
+
+  @override
+  String get institutionHubApplicationWalletWhy =>
+      'Prijava se podpiše z vašo denarnico, zato pregled ostane vezan na denarnico, ki jo nadzorujete. Za brskanje po institucijah denarnica ni potrebna.';
 
   @override
   String get institutionHubApplicationSubmittedToast =>

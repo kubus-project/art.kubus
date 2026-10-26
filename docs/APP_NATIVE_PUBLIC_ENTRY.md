@@ -137,12 +137,52 @@ contracts before modifying the handoff.
 
 ## 6. Takeover correctness
 
-`web/public_flutter_takeover.js` currently contains a 1500 ms fallback that
-can synthesize `kubus:public-entity-ready` after the engine and route are ready
-even if the entity screen itself has not declared a meaningful frame.
+`web/public_flutter_takeover.js` shows loading copy after about 500 ms and a
+slow state after about 8 s. Neither is a failure, and no timer declares failure.
 
-That contradicts the documented readiness contract and must be removed or
-replaced with a non-takeover failure path.
+Failure happens only on an actual bootstrap or resource error:
+
+- `error` events for the Flutter bootstrap, `main.dart`, CanvasKit or Skwasm
+  scripts, from a window capture listener and the bootstrap element; and
+- a Resource Timing check of `flutter_bootstrap.js`, run at script execution
+  and again at `DOMContentLoaded`. Firefox can fire the deferred script's error
+  before the takeover script runs, so the error event alone is not enough. A
+  request with `responseStatus` 0 or 400 or higher fails. A pending or
+  successful request, or an undefined `responseStatus` in older browsers, never
+  fails.
+
+On failure the SSR page stays visible with one manual Refresh control. There is
+no automatic reload. A late `kubus:public-entity-ready` cannot cover a failed
+SSR page.
+
+Flutter also reports a pending entity whose load got no answer (rate limit 429,
+408, 5xx, transport failure) through `kubus:public-entity-failed`, with the same
+entity detail as the ready signal. The host applies the same idempotent failure.
+A 404 or other 4xx is an answer and stays not found. The marker entry keeps its
+address on this path; it is not dropped to the plain map. No timer declares
+failure and nothing reloads automatically.
+
+What counts as "no answer" on the marker entry:
+
+- A primary read that fails with 5xx, 408 or transport, followed by an Orbit
+  mirror read that fails the same way, is an outage. `getArtMarkerOrThrow`
+  rethrows it. The public marker snapshot never holds markers, so its empty
+  answer must not turn the outage into "not found".
+- A primary 404 is an answer, and the mirror is not asked.
+- A primary outage followed by an explicit mirror 4xx (for example 404) is an
+  answer: not found.
+
+Not-found is resolved, not failed. When the profile load gets a definitive
+not-found answer (the API's 404, or a profile without a usable package), the
+profile screens signal `kubus:public-entity-resolved` once the app's not-found
+state is on screen. The host removes its overlay and marks the takeover
+`resolved` with no failed copy and no Refresh. The entity URL stays. A resolved
+takeover can never become failed or ready afterwards.
+
+Known behaviour, unchanged here: a marker 404 still goes to the existing
+`entryUnresolved` path, which rewrites the address to `/map`. No resolved signal
+is sent on that path, so the SSR overlay can remain in its slow state while the
+app shows the map. Changing it needs a marker not-found design of its own.
 
 Target rule:
 
@@ -185,6 +225,30 @@ When no native app owns the URL:
 - Back/Forward reflects visible product navigation;
 - auth begins only at protected actions;
 - opening from search must not create canonical → compact → `/app` history hops.
+
+Implementation (web only; native paths are unchanged behind `kIsWeb`):
+
+- The root Navigator is driven by a framework `Router`
+  (`BrowserEntryRouterDelegate` in `lib/core/browser_entry_router.dart`). It
+  owns browser reporting and popstate restoration; the Navigator stays the
+  app's navigation owner.
+- `BrowserHistoryMirror` records the entries this page created. An in-app Back
+  to the entry directly below steps the browser back instead of pushing a
+  duplicate. A reload restores the mirror from the entry's stored state
+  (`historyIndex`, `historyBack`), so the first Back after a refresh behaves
+  the same way.
+- A browser traversal that needs a different page starts a restore; for
+  `restoreCooldown` (800 ms) the page starts up undisturbed. Traversals arriving
+  in that window are coalesced to the latest one, and visible-address reports
+  from the starting page are ignored until it settles. Traversals are compared
+  with the page on screen, so a hash-only change never replays a stale fragment.
+- An account gate (`/sign-in`, `/register`) that replaces a pending public entry
+  before its shell appears takes over the address; the return target stays in
+  the gate's arguments.
+- A direct `/map?lat&lng&z` entry validates and applies its camera through the
+  existing shared map controller on mobile and desktop. Browser history
+  restores the camera from each visible URL, while the complete map query and
+  fragment remain in the address bar through shell initialization.
 
 The existing `/app/*` route remains only as an internal/backward-compatible
 surface while migration is in progress; new public entry should not depend on it.

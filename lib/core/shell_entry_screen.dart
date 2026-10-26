@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../main_app.dart';
+import '../features/map/shared/map_entry_camera.dart';
 import '../providers/main_tab_provider.dart';
 import '../screens/desktop/desktop_shell.dart';
 
@@ -12,18 +13,21 @@ class ShellEntryScreen extends StatefulWidget {
     super.key,
     required this.mobileTabIndex,
     required this.desktopInitialIndex,
+    this.initialMapCamera,
   });
 
-  const ShellEntryScreen.map({super.key})
+  const ShellEntryScreen.map({super.key, this.initialMapCamera})
       : mobileTabIndex = 0,
         desktopInitialIndex = 1;
 
   const ShellEntryScreen.community({super.key})
       : mobileTabIndex = 2,
-        desktopInitialIndex = 2;
+        desktopInitialIndex = 2,
+        initialMapCamera = null;
 
   final int mobileTabIndex;
   final int desktopInitialIndex;
+  final MapEntryCamera? initialMapCamera;
 
   @override
   State<ShellEntryScreen> createState() => _ShellEntryScreenState();
@@ -48,8 +52,11 @@ class _ShellEntryScreenState extends State<ShellEntryScreen> {
   @override
   Widget build(BuildContext context) {
     if (DesktopBreakpoints.isDesktop(context)) {
-      return DesktopShell(initialIndex: widget.desktopInitialIndex);
+      return DesktopShell(
+        initialIndex: widget.desktopInitialIndex,
+        initialMapCamera: widget.initialMapCamera,
+      );
     }
-    return const MainApp();
+    return MainApp(initialMapCamera: widget.initialMapCamera);
   }
 }

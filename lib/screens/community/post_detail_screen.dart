@@ -26,6 +26,7 @@ import '../../services/profile_package_mutation_tracker.dart';
 import '../../services/share/share_service.dart';
 import '../../services/share/share_types.dart';
 import '../../providers/app_refresh_provider.dart';
+import '../../providers/public_entity_takeover_provider.dart';
 import '../../providers/community_comments_provider.dart';
 import '../../providers/community_hub_provider.dart';
 import '../../providers/community_interactions_provider.dart';
@@ -416,7 +417,12 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
     final authenticated = await const ContextualAuthGate().ensureAuthenticated(
       context,
       actionLabel: l10n.commonLikes.toLowerCase(),
-      returnRoute: '/p/${Uri.encodeComponent(_post!.id)}',
+      returnRoute: PublicEntityTakeoverProvider.returnRouteOr(
+        context,
+        ShareEntityType.post,
+        _post!.id,
+        '/p/${Uri.encodeComponent(_post!.id)}',
+      ),
       actionType: PendingActionType.like,
       targetType: PendingActionTargetType.post,
       targetId: _post!.id,
@@ -515,7 +521,12 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
     final authenticated = await const ContextualAuthGate().ensureAuthenticated(
       context,
       actionLabel: l10n.commonComments.toLowerCase(),
-      returnRoute: '/p/${Uri.encodeComponent(postId)}',
+      returnRoute: PublicEntityTakeoverProvider.returnRouteOr(
+        context,
+        ShareEntityType.post,
+        postId,
+        '/p/${Uri.encodeComponent(postId)}',
+      ),
       actionType: PendingActionType.comment,
       targetType: PendingActionTargetType.post,
       targetId: postId,
@@ -1888,7 +1899,12 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
     final authenticated = await const ContextualAuthGate().ensureAuthenticated(
       context,
       actionLabel: l10n.commonSave.toLowerCase(),
-      returnRoute: '/p/${Uri.encodeComponent(post.id)}',
+      returnRoute: PublicEntityTakeoverProvider.returnRouteOr(
+        context,
+        ShareEntityType.post,
+        post.id,
+        '/p/${Uri.encodeComponent(post.id)}',
+      ),
       actionType: PendingActionType.save,
       targetType: PendingActionTargetType.post,
       targetId: post.id,
@@ -2596,10 +2612,11 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
         _error == null &&
         post != null &&
         (requestedId.isEmpty || post.id == requestedId);
-    if (!isExactLoadedPost) return content;
+    if (!isExactLoadedPost && requestedId.isEmpty) return content;
     return PublicEntityTakeoverReady(
       type: ShareEntityType.post,
-      entityId: post.id,
+      entityId: isExactLoadedPost ? post.id : requestedId,
+      signalReady: isExactLoadedPost,
       child: content,
     );
   }

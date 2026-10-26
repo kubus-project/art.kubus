@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import '../../utils/design_tokens.dart';
 import '../../utils/kubus_color_roles.dart';
 import '../common/kubus_focus_ring.dart';
+import '../common/kubus_password_visibility_toggle.dart';
 
 /// PRODUCT v5 form language.
 ///
@@ -268,19 +269,15 @@ class _KubusFormTextFieldState extends State<KubusFormTextField> {
 
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
     final roles = KubusColorRoles.of(context);
     final isPassword = widget.kind == KubusFieldKind.password;
     final isMultiline = widget.kind == KubusFieldKind.multiline;
 
     Widget? suffixIcon = widget.suffixIcon;
     if (isPassword) {
-      suffixIcon = IconButton(
-        tooltip: _obscured ? l10n.formShowPassword : l10n.formHidePassword,
+      suffixIcon = KubusPasswordVisibilityToggle(
+        obscured: _obscured,
         onPressed: () => setState(() => _obscured = !_obscured),
-        icon: Icon(
-          _obscured ? Icons.visibility_outlined : Icons.visibility_off_outlined,
-        ),
       );
     }
 

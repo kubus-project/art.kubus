@@ -1,7 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
-import '../../../widgets/map/glass/kubus_map_platform_backdrop_host.dart';
+import '../../../widgets/map/glass/kubus_map_platform_backdrop_mount.dart';
 import 'map_marker_chrome_occlusion_plan.dart';
 
 /// Keeps passive map chrome mounted for stable measurement while removing

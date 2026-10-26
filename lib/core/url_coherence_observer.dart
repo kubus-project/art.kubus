@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
 
+import 'public_entry_navigation.dart';
+
 /// Keeps the browser URL describing the page that is actually visible.
 ///
 /// Flutter's Navigator tells the engine about a route only while the top route
@@ -20,22 +22,46 @@ import 'package:flutter/services.dart';
 /// from what the address bar was last told. It never changes navigation, only
 /// what the URL says.
 ///
-/// Limit: an entity opened in-app is still an unnamed route, so after Back the
-/// address is the page it was opened from (for example `/map`), not the
-/// entity. An entity reached through its canonical link keeps that link,
-/// because the shell route beneath it carries the canonical name.
+/// Entity screens are mostly unnamed (and on desktop they live in the shell's
+/// own stack, not the Navigator), so they [PublicEntryNavigation.claim] their
+/// URL while they are the top screen; the topmost visible claim wins over the
+/// named page beneath it.
 class UrlCoherenceObserver extends NavigatorObserver {
   UrlCoherenceObserver({
     bool? enabled,
     void Function(String url)? report,
+    void Function(String url)? reportBack,
+    void Function(String url)? reportReplace,
+    PublicEntryNavigation? entityUrls,
+    String? Function()? currentBrowserUrl,
   })  : _enabled = enabled ?? kIsWeb,
-        _report = report ?? _reportToEngine;
+        _report = report ?? _reportToEngine,
+        _reportBack = reportBack,
+        _reportReplace = reportReplace,
+        _entityUrls = entityUrls ?? PublicEntryNavigation.instance,
+        _currentBrowserUrl =
+            currentBrowserUrl ?? (kIsWeb ? _browserUrl : _noBrowserUrl) {
+    if (_enabled) _entityUrls.addListener(_schedule);
+  }
 
   final bool _enabled;
   final void Function(String url) _report;
+
+  /// Reports an address that became visible without a page push, which is the
+  /// visitor going Back in the app. Falls back to [_report] when not given.
+  final void Function(String url)? _reportBack;
+
+  /// Reports a correction nobody navigated to (an unresolvable entry dropped):
+  /// it must replace the current history entry. Falls back to [_report].
+  final void Function(String url)? _reportReplace;
+  final PublicEntryNavigation _entityUrls;
+  final String? Function() _currentBrowserUrl;
   final List<Route<dynamic>> _stack = <Route<dynamic>>[];
   String? _shownUrl;
   bool _scheduled = false;
+  bool _pushedSinceSync = false;
+  bool _replacedSinceSync = false;
+  ShellRouteNavigation? _pendingShellNavigation;
 
   /// The URL the observer believes the address bar currently shows.
   @visibleForTesting
@@ -44,13 +70,23 @@ class UrlCoherenceObserver extends NavigatorObserver {
   /// The URL the visible page should be showing, from the current stack.
   @visibleForTesting
   String? get desiredUrl {
+    final entityUrl = _entityUrls.visibleEntityUrl;
+    if (entityUrl != null) return entityUrl;
+    final pendingEntryUrl = _entityUrls.pendingEntryUrl;
+    if (pendingEntryUrl != null) return pendingEntryUrl;
     for (var i = _stack.length - 1; i >= 0; i--) {
       final route = _stack[i];
       if (route is! PageRoute<dynamic>) continue;
       final name = route.settings.name?.trim();
-      if (name != null && name.isNotEmpty) return name;
+      if (name != null && name.isNotEmpty) {
+        return _entityUrls.underlyingShellRouteFor(name) ?? name;
+      }
     }
     return null;
+  }
+
+  void dispose() {
+    if (_enabled) _entityUrls.removeListener(_schedule);
   }
 
   @override
@@ -58,7 +94,9 @@ class UrlCoherenceObserver extends NavigatorObserver {
     // Dialogs, sheets and popups are not pages: they cannot change the URL and
     // must not force a frame on a hot path.
     if (route is! PageRoute<dynamic>) return;
+    _pushedSinceSync = true;
     _stack.add(route);
+    if (_enabled) _entityUrls.pageOpened(route.settings.name);
     _schedule();
   }
 
@@ -81,8 +119,10 @@ class UrlCoherenceObserver extends NavigatorObserver {
     if (newRoute is! PageRoute<dynamic> && oldRoute is! PageRoute<dynamic>) {
       return;
     }
+    _replacedSinceSync = true;
     final index = oldRoute == null ? -1 : _stack.indexOf(oldRoute);
     if (newRoute != null && newRoute is PageRoute<dynamic>) {
+      if (_enabled) _entityUrls.pageOpened(newRoute.settings.name);
       if (index >= 0) {
         _stack[index] = newRoute;
       } else {
@@ -98,25 +138,83 @@ class UrlCoherenceObserver extends NavigatorObserver {
     if (!_enabled || _scheduled) return;
     _scheduled = true;
     // Run after the frame so the Navigator's own report has already happened
-    // and this is always the last write for the stack it describes.
+    // and this is always the last write for the stack it describes. Flutter's
+    // initial-route replacement can report from a later callback in that same
+    // frame, though, so verify the live browser URL once more on the next
+    // frame. This matters for public entries: the shell is the underlying app
+    // route, while the original entity URL must stay visible until the entry
+    // claim is deliberately superseded.
     SchedulerBinding.instance.addPostFrameCallback((_) {
       _scheduled = false;
       _sync();
+      _pushedSinceSync = false;
+      _replacedSinceSync = false;
+      SchedulerBinding.instance.addPostFrameCallback((_) => _sync());
+      SchedulerBinding.instance.ensureVisualUpdate();
     });
     SchedulerBinding.instance.ensureVisualUpdate();
   }
 
   void _sync() {
+    final latestShellNavigation = _entityUrls.takeShellRouteNavigation();
+    if (latestShellNavigation != null) {
+      _pendingShellNavigation = latestShellNavigation;
+    }
     final desired = desiredUrl;
-    if (desired == null) return;
-    if (_shownUrl == null) {
-      // First named page: the browser is already on the URL that produced it.
-      _shownUrl = desired;
+    if (desired == null) {
+      _pendingShellNavigation = null;
       return;
     }
-    if (desired == _shownUrl) return;
+    // The browser is on the URL that opened the app. Off the web (and in
+    // tests) assume the first named page is that URL.
+    final current = _currentBrowserUrl();
+    _shownUrl ??= current ?? desired;
+    // Navigator can update browser history after the first post-frame report.
+    // Compare with the live location as well as our last write so that an
+    // unchanged pending entry claim repairs that later shell-route overwrite.
+    if (desired == _shownUrl && (current == null || current == desired)) {
+      _pendingShellNavigation = null;
+      return;
+    }
+    if (current == desired) {
+      _shownUrl = desired;
+      _pendingShellNavigation = null;
+      return;
+    }
     _shownUrl = desired;
-    _report(desired);
+    if (_entityUrls.takeReplaceNextAddress() ||
+        (_replacedSinceSync && !_pushedSinceSync)) {
+      // A page replacing another (the startup shell redirect, for example)
+      // replaces its history entry: Back must not return to the page it
+      // replaced, which would only redirect again.
+      (_reportReplace ?? _report)(desired);
+      _pendingShellNavigation = null;
+      return;
+    }
+    final shellNavigation = _pendingShellNavigation;
+    if (shellNavigation == ShellRouteNavigation.forward) {
+      _report(desired);
+      return;
+    }
+    if (shellNavigation == ShellRouteNavigation.back) {
+      (_reportBack ?? _report)(desired);
+      return;
+    }
+    // A change that no page push caused is the visitor going back (a pop, or an
+    // entity sub-screen closing): let the router step the browser back instead
+    // of adding an entry for a page that is already in the history.
+    (_pushedSinceSync ? _report : _reportBack ?? _report)(desired);
+  }
+
+  static String? _noBrowserUrl() => null;
+
+  static String? _browserUrl() {
+    final base = Uri.base;
+    return Uri(
+      path: base.path,
+      query: base.hasQuery ? base.query : null,
+      fragment: base.hasFragment ? base.fragment : null,
+    ).toString();
   }
 
   static void _reportToEngine(String url) {

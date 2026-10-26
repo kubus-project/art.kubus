@@ -1,7 +1,9 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:art_kubus/features/map/controller/map_target_coordinator.dart';
 import 'package:art_kubus/models/art_marker.dart';
+import 'package:art_kubus/services/backend_api_service.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:latlong2/latlong.dart';
 
@@ -34,12 +36,14 @@ class _Harness {
     this.markersByArtwork = const <ArtMarker>[],
     this.markersFromTarget = const <ArtMarker>[],
     this.throwDuringFetch = false,
+    this.fetchError,
     this.throwDuringMove = false,
   }) {
     coordinator = MapTargetCoordinator(
       loadedMarkers: () => markers,
       fetchMarkerById: (id) async {
         events.add('fetch-marker:$id');
+        if (fetchError != null) throw fetchError!;
         if (throwDuringFetch) throw StateError('fetch failed');
         final pending = markerFetchCompleter;
         return pending == null ? markerById : pending.future;
@@ -96,6 +100,7 @@ class _Harness {
   final List<ArtMarker> markersByArtwork;
   final List<ArtMarker> markersFromTarget;
   final bool throwDuringFetch;
+  final Object? fetchError;
   final bool throwDuringMove;
   final List<ArtMarker> markers = <ArtMarker>[];
   final List<String> events = <String>[];
@@ -458,8 +463,11 @@ void main() {
     final fetchResult = await fetchHarness.coordinator.submit(
       const MapTargetIntent(exactMarkerId: 'm1'),
     );
-    expect(fetchResult, MapTargetResult.notFound);
-    expect(fetchHarness.events, contains('fallback:notFound'));
+    // An unrecognised fetch failure may hide a marker that exists: it is a
+    // transient failure, never a missing marker.
+    expect(fetchResult, MapTargetResult.transientFailure);
+    expect(fetchHarness.events, contains('fallback:transientFailure'));
+    expect(fetchHarness.events, isNot(contains('fallback:notFound')));
 
     final moveHarness = _Harness(throwDuringMove: true)
       ..markers.add(_marker(id: 'm2'));
@@ -488,5 +496,192 @@ void main() {
     harness.coordinator.selectionChanged(null);
     expect(harness.pinnedMarkerId, isNull);
     expect(harness.events.last, 'pin:null');
+  });
+
+  group('public marker entry under a failed lookup', () {
+    test('a 429 marker lookup is a transient failure, never a missing marker',
+        () async {
+      final harness = _Harness(
+        fetchError: const BackendApiRequestException(
+          statusCode: 429,
+          path: '/api/art-markers/m1',
+        ),
+      );
+      harness.coordinator
+        ..setMapControllerReady(true)
+        ..setStyleReady(true);
+
+      final result = await harness.coordinator.submit(
+        const MapTargetIntent(exactMarkerId: 'm1'),
+      );
+
+      expect(result, MapTargetResult.transientFailure);
+      expect(harness.events, contains('fallback:transientFailure'));
+      expect(harness.events, contains('terminal:transientFailure'));
+      expect(harness.events, isNot(contains('fallback:notFound')));
+      expect(harness.selectedMarker, isNull);
+      expect(harness.pinnedMarkerId, isNull);
+      expect(
+        mapTargetEntryEffectFor(result),
+        MapTargetEntryEffect.markFailed,
+        reason: 'the public entry reports a failed handoff and keeps its '
+            'address; it does not call entryUnresolved',
+      );
+    });
+
+    for (final error in <Object>[
+      Exception('Rate limit exceeded. Please retry shortly.'),
+      Exception('Request failed: 500'),
+      const SocketException('connection refused'),
+      TimeoutException('timed out'),
+    ]) {
+      test('$error fails the lookup transiently', () async {
+        final harness = _Harness(fetchError: error);
+        harness.coordinator
+          ..setMapControllerReady(true)
+          ..setStyleReady(true);
+        final result = await harness.coordinator.submit(
+          const MapTargetIntent(exactMarkerId: 'm1'),
+        );
+        expect(result, MapTargetResult.transientFailure);
+      });
+    }
+
+    test('a 404 marker lookup stays a missing marker', () async {
+      final harness = _Harness(
+        fetchError: const BackendApiRequestException(
+          statusCode: 404,
+          path: '/api/art-markers/m1',
+        ),
+      );
+      harness.coordinator
+        ..setMapControllerReady(true)
+        ..setStyleReady(true);
+      final result = await harness.coordinator.submit(
+        const MapTargetIntent(exactMarkerId: 'm1'),
+      );
+      expect(result, MapTargetResult.notFound);
+      expect(
+        mapTargetEntryEffectFor(result),
+        MapTargetEntryEffect.unresolved,
+      );
+    });
+
+    // The exact messages BackendApiService raises when the primary read and
+    // its Orbit mirror both fail (see getArtMarkerOrThrow).
+    for (final error in <Object>[
+      Exception(
+          'Request failed: 503 (Request failed: 503 (Orbit fallback failed: 503))'),
+      Exception('Request failed: 503 (Orbit fallback failed: 502)'),
+    ]) {
+      test('$error is an outage on both routes: transient', () async {
+        final harness = _Harness(fetchError: error);
+        harness.coordinator
+          ..setMapControllerReady(true)
+          ..setStyleReady(true);
+        final result = await harness.coordinator.submit(
+          const MapTargetIntent(exactMarkerId: 'm1'),
+        );
+        expect(result, MapTargetResult.transientFailure);
+        expect(
+          mapTargetEntryEffectFor(result),
+          MapTargetEntryEffect.markFailed,
+        );
+      });
+    }
+
+    test("the mirror's 404 after a primary outage is a missing marker",
+        () async {
+      final harness = _Harness(
+        fetchError: Exception('Request failed: 404 (Request failed: 503)'),
+      );
+      harness.coordinator
+        ..setMapControllerReady(true)
+        ..setStyleReady(true);
+      final result = await harness.coordinator.submit(
+        const MapTargetIntent(exactMarkerId: 'm1'),
+      );
+      expect(result, MapTargetResult.notFound);
+      expect(
+        mapTargetEntryEffectFor(result),
+        MapTargetEntryEffect.unresolved,
+      );
+    });
+
+    test('a 429 on the exact marker still resolves through its artwork',
+        () async {
+      final related = _marker(id: 'm9', artworkId: 'a1');
+      final harness = _Harness(
+        fetchError: const BackendApiRequestException(
+          statusCode: 429,
+          path: '/api/art-markers/m1',
+        ),
+        markersByArtwork: <ArtMarker>[related],
+      );
+      harness.coordinator
+        ..setMapControllerReady(true)
+        ..setStyleReady(true);
+
+      final future = harness.coordinator.submit(
+        const MapTargetIntent(exactMarkerId: 'm1', artworkId: 'a1'),
+      );
+      await harness.settle();
+      harness.coordinator.acknowledgeOverlay('m9');
+
+      expect(await future, MapTargetResult.overlayOpened);
+      expect(harness.selectedMarker?.id, 'm9');
+    });
+
+    test(
+        'a 429 with coordinates reports a transient failure, not the '
+        'coordinates-only fallback', () async {
+      final harness = _Harness(
+        fetchError: const BackendApiRequestException(
+          statusCode: 429,
+          path: '/api/art-markers/m1',
+        ),
+      );
+      harness.coordinator
+        ..setMapControllerReady(true)
+        ..setStyleReady(true);
+
+      final result = await harness.coordinator.submit(
+        const MapTargetIntent(
+          exactMarkerId: 'm1',
+          preferredPosition: LatLng(46.0569, 14.5058),
+        ),
+      );
+
+      expect(result, MapTargetResult.transientFailure);
+      expect(harness.events, isNot(contains('move')));
+      expect(harness.events, isNot(contains('fallback:coordinatesOnly')));
+    });
+
+    test('an absent marker (null answer) stays notFound', () async {
+      final harness = _Harness();
+      harness.coordinator
+        ..setMapControllerReady(true)
+        ..setStyleReady(true);
+      final result = await harness.coordinator.submit(
+        const MapTargetIntent(exactMarkerId: 'm1'),
+      );
+      expect(result, MapTargetResult.notFound);
+    });
+
+    test('the effect mapping keeps the entry rules for each terminal result',
+        () {
+      expect(mapTargetEntryEffectFor(MapTargetResult.overlayOpened),
+          MapTargetEntryEffect.markReady);
+      expect(mapTargetEntryEffectFor(MapTargetResult.transientFailure),
+          MapTargetEntryEffect.markFailed);
+      expect(mapTargetEntryEffectFor(MapTargetResult.notFound),
+          MapTargetEntryEffect.unresolved);
+      expect(mapTargetEntryEffectFor(MapTargetResult.coordinatesOnly),
+          MapTargetEntryEffect.unresolved);
+      expect(mapTargetEntryEffectFor(MapTargetResult.cancelled),
+          MapTargetEntryEffect.none);
+      expect(mapTargetEntryEffectFor(MapTargetResult.superseded),
+          MapTargetEntryEffect.none);
+    });
   });
 }

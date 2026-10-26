@@ -8,6 +8,7 @@ import '../models/profile_identity_data.dart';
 import '../models/saved_item.dart';
 import '../providers/saved_items_provider.dart';
 import '../models/promotion.dart';
+import '../services/account_identity.dart';
 import '../services/backend_api_service.dart';
 import '../services/user_action_logger.dart';
 import '../utils/wallet_utils.dart';
@@ -879,15 +880,20 @@ class CommunityService {
       details: details,
     );
 
-    // Optional local record for client-side dedupe/UX.
+    // Optional local record for client-side dedupe/UX, kept per account. A
+    // guest has no stored record.
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final reports = prefs.getStringList('reported_posts') ?? [];
-      final reportData =
-          '${post.id}|$reason|${DateTime.now().millisecondsSinceEpoch}';
-      if (!reports.contains(reportData)) {
-        reports.add(reportData);
-        await prefs.setStringList('reported_posts', reports);
+      await AccountIdentity.adoptLegacyRecords(AccountIdentity.accountKey);
+      final key = AccountIdentity.scopedKey(AccountIdentity.reportedPostsKey);
+      if (key != null) {
+        final prefs = await SharedPreferences.getInstance();
+        final reports = prefs.getStringList(key) ?? [];
+        final reportData =
+            '${post.id}|$reason|${DateTime.now().millisecondsSinceEpoch}';
+        if (!reports.contains(reportData)) {
+          reports.add(reportData);
+          await prefs.setStringList(key, reports);
+        }
       }
     } catch (_) {}
 
