@@ -352,8 +352,11 @@ class _ArtistPortfolioScreenState extends State<ArtistPortfolioScreen> {
     // An empty state is only true once the section has actually loaded; before
     // the first page arrives (including the frame after a wallet switch) the
     // section shows nothing rather than a misleading "no artworks yet".
+    // A client-side filter can hide every loaded row while later pages still
+    // hold matches, so the section is only empty once no more pages remain.
     final showEmpty = entries.isEmpty &&
         status.loaded &&
+        !status.hasMore &&
         !initialLoading &&
         !unsupported &&
         status.error == null;
@@ -391,7 +394,9 @@ class _ArtistPortfolioScreenState extends State<ArtistPortfolioScreen> {
           ),
         if (entries.isNotEmpty)
           _buildGallery(context, entries, provider, section, l10n),
-        if (entries.isNotEmpty && status.hasMore)
+        // Shown whenever more pages exist, even if the client filter hides every
+        // loaded row, so matches on later pages stay reachable.
+        if (status.hasMore)
           SliverToBoxAdapter(
             child: _buildLoadMore(l10n, provider, section, status),
           ),

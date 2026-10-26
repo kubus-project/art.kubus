@@ -530,6 +530,27 @@ void main() {
       expect(harness.controller.allowsPassiveCamera, isTrue);
     });
 
+    test(
+        'a passive camera decision read after a tap yields, even if it was '
+        'granted before the tap', () async {
+      final harness = _Harness();
+      // A passive acquisition started while the camera was still free must
+      // re-read this grant when its result is applied, not reuse the old one.
+      expect(harness.controller.allowsPassiveCamera, isTrue);
+      final settlement = harness.tapWithoutFix();
+
+      expect(harness.acquireCalls, <bool>[true],
+          reason: 'the tap starts its own explicit request');
+      expect(harness.controller.allowsPassiveCamera, isFalse,
+          reason: 'a pending deliberate request owns the camera');
+
+      harness.inFlight.single.complete(harness.liveFix(_here));
+      expect(await settlement, MapRecenterSettlement.centeredOnLiveFix);
+      expect(harness.moves, <LatLng>[_here]);
+      expect(harness.controller.allowsPassiveCamera, isFalse,
+          reason: 'the deliberate move still owns the camera after settling');
+    });
+
     test('dispose stops late results from moving the camera or reporting',
         () async {
       final harness = _Harness();

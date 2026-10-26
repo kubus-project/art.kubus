@@ -3714,8 +3714,11 @@ class _MapScreenState extends State<MapScreen>
     bool moveCamera = true,
   }) async {
     // Only an explicit request may move the camera while a deliberate move
-    // owns it; passive refreshes yield to it.
-    final allowCamera =
+    // owns it; passive refreshes yield to it. Ownership is read when the
+    // result is applied, after the awaits below: a passive acquisition that
+    // began before a "center on me" tap must not carry a stale grant into the
+    // recenter's ownership window.
+    bool cameraAllowed() =>
         moveCamera && (promptForPermission || _recenter.allowsPassiveCamera);
     final navigation = _walkingNavigationProvider;
     if (promptForPermission && navigation?.isVisible == true) {
@@ -3743,7 +3746,7 @@ class _MapScreenState extends State<MapScreen>
           _updateCurrentPosition(
             fallback,
             isLiveFix: false,
-            allowCamera: allowCamera,
+            allowCamera: cameraAllowed(),
           );
         }
       }
@@ -3772,7 +3775,7 @@ class _MapScreenState extends State<MapScreen>
       accuracyMeters: fix.accuracyMeters,
       timestampMs: fix.timestamp.millisecondsSinceEpoch,
       isLiveFix: true,
-      allowCamera: allowCamera,
+      allowCamera: cameraAllowed(),
     );
     WalkingNavigationDiagnostics.record('live_fix_acquired');
     if (kIsWeb) {

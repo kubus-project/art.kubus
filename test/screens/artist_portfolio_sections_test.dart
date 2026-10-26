@@ -375,6 +375,59 @@ void main() {
     });
 
     testWidgets(
+        'a filter that hides every loaded row keeps load more and does not '
+        'claim the section is empty while pages remain', (tester) async {
+      final backend = _Backend(accounts: <String, _Account>{
+        'wallet-1': _Account(
+          authored: <Map<String, Object?>>[
+            for (var i = 0; i < 30; i++) _scoped('p$i', 'Piece $i'),
+          ],
+          records: <Map<String, Object?>>[
+            for (var i = 0; i < 30; i++) _record('p$i', 'Piece $i'),
+          ],
+        ),
+      });
+      final provider = await _pump(tester, backend: backend);
+      final l10n = _l10n(tester);
+
+      // The first page holds only published rows, so a draft filter hides
+      // every loaded row while the remaining pages may still hold matches.
+      provider.setStatusFilter(PortfolioPublishState.draft);
+      await tester.pumpAndSettle();
+
+      expect(find.text('Piece 0'), findsNothing);
+      expect(find.text(l10n.artistPortfolioLoadMore), findsOneWidget);
+      expect(find.text(l10n.artistGalleryEmptyTitle), findsNothing);
+    });
+
+    testWidgets(
+        'a filter that hides every row of a fully loaded section shows the '
+        'empty state without load more', (tester) async {
+      final backend = _Backend(accounts: <String, _Account>{
+        'wallet-1': _Account(
+          authored: <Map<String, Object?>>[
+            _scoped('p0', 'Piece 0'),
+            _scoped('p1', 'Piece 1'),
+            _scoped('p2', 'Piece 2'),
+          ],
+          records: <Map<String, Object?>>[
+            _record('p0', 'Piece 0'),
+            _record('p1', 'Piece 1'),
+            _record('p2', 'Piece 2'),
+          ],
+        ),
+      });
+      final provider = await _pump(tester, backend: backend);
+      final l10n = _l10n(tester);
+
+      provider.setStatusFilter(PortfolioPublishState.draft);
+      await tester.pumpAndSettle();
+
+      expect(find.text(l10n.artistGalleryEmptyTitle), findsOneWidget);
+      expect(find.text(l10n.artistPortfolioLoadMore), findsNothing);
+    });
+
+    testWidgets(
         'public art count is the documented total plus marker-only '
         'contributions', (tester) async {
       final backend = _Backend(accounts: <String, _Account>{
