@@ -1869,6 +1869,11 @@
   "mapShowGridViewTooltip": "Prikaži mrežo",
   "mapSortResultsTooltip": "Razvrsti rezultate",
   "mapCenterOnMeTooltip": "Središči na meni",
+  "mapCenterOnMeLocating": "Pridobivanje vaše lokacije…",
+  "mapCenterOnMePermissionDenied": "Za središčenje zemljevida na vas dovolite dostop do lokacije.",
+  "mapCenterOnMePermissionBlocked": "Dostop do lokacije je za art.kubus blokiran. Omogočite ga v nastavitvah aplikacije, da zemljevid središčite na vas.",
+  "mapCenterOnMeServicesDisabled": "Za središčenje zemljevida na vas vklopite lokacijske storitve.",
+  "mapCenterOnMeTimedOut": "Pridobivanje lokacije je trajalo predolgo. Poskusite znova.",
   "mapAddMapMarkerTooltip": "Dodaj označevalec",
   "mapToolsTitle": "Orodja zemljevida",
   "mapAttributionsTitle": "Avtorstvo zemljevida",
@@ -7841,6 +7846,45 @@
   "@promotionCheckoutReturnSessionLabel": {
     "placeholders": {
       "sessionId": {
+        "type": "String"
+      }
+    }
+  },
+  "artistPortfolioSectionAuthored": "Avtorska dela",
+  "artistPortfolioSectionPublicArt": "Dodana javna umetnost",
+  "artistPortfolioSectionCollections": "Zbirke in razstave",
+  "artistPortfolioSectionLabelWithCount": "{label} ({count})",
+  "@artistPortfolioSectionLabelWithCount": {
+    "placeholders": {
+      "label": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "artistPortfolioAuthoredUnsupported": "Avtorskih del na tem strežniku zaenkrat ni mogoče prikazati ločeno.",
+  "artistPortfolioPublicArtUnsupported": "Dodane javne umetnosti iz del na tem strežniku zaenkrat ni mogoče prikazati ločeno. Vaši prispevki na zemljevidu so prikazani spodaj.",
+  "artistPortfolioSectionLoadFailed": "Seznama ni bilo mogoče naložiti.",
+  "artistPortfolioLoadMore": "Naloži več",
+  "artistPortfolioPublicArtEmptyTitle": "Še ni dodane javne umetnosti",
+  "artistPortfolioPublicArtEmptyDescription": "Javna umetnost, ki jo dokumentirate na zemljevidu, se prikaže tukaj. Ostane pripisana svojemu avtorju.",
+  "artistPortfolioCollectionsEmptyTitle": "Še ni zbirk ali razstav",
+  "artistPortfolioCollectionsEmptyDescription": "Zbirke in razstave, ki jih ustvarite, se prikažejo tukaj.",
+  "artistPortfolioArtistLine": "Avtor: {artist}",
+  "@artistPortfolioArtistLine": {
+    "placeholders": {
+      "artist": {
+        "type": "String"
+      }
+    }
+  },
+  "artistPortfolioAddedByYou": "Dodali ste",
+  "artistPortfolioCardActionsLabel": "Dejanja za {title}",
+  "@artistPortfolioCardActionsLabel": {
+    "placeholders": {
+      "title": {
         "type": "String"
       }
     }

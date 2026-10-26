@@ -478,6 +478,34 @@ void main() {
               .toList(growable: false)),
           '/api/exhibitions' =>
             ok(<String, Object?>{'exhibitions': const <Object?>[]}),
+          // The owner's authored scope, as the backend answers it: active
+          // records, drafts included for the authenticated owner. Documented
+          // is empty in this fixture.
+          '/api/profiles/wallet-1/artworks' => () {
+              final relationship = request.url.queryParameters['relationship'];
+              final rows = relationship == 'authored'
+                  ? artworks
+                      .where((a) => a.isActive)
+                      .map((a) => <String, Object?>{
+                            'id': a.id,
+                            'title': a.title,
+                            'category': a.category,
+                            'artistName': a.artist,
+                            'createdAt': a.createdAt.toIso8601String(),
+                          })
+                      .toList(growable: false)
+                  : const <Object?>[];
+              return <String, Object?>{
+                'success': true,
+                'relationship': relationship,
+                'data': rows,
+                'pagination': <String, Object?>{
+                  'limit': 24,
+                  'offset': 0,
+                  'total': rows.length,
+                },
+              };
+            }(),
           _ => ok(const <Object?>[]),
         };
         return http.Response(

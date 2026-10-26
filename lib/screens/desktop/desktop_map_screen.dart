@@ -86,6 +86,8 @@ import '../../features/map/controller/map_view_preferences_controller.dart';
 import '../../features/map/shared/map_marker_collision_config.dart';
 import '../../features/map/shared/map_screen_constants.dart';
 import '../../features/map/shared/map_initial_viewport.dart';
+import '../../features/map/shared/map_recenter_controller.dart';
+import '../../features/map/shared/map_recenter_feedback.dart';
 import '../../features/map/navigation/walking_navigation_models.dart';
 import '../../features/map/navigation/walking_navigation_map_coordinator.dart';
 import '../../features/map/shared/map_artwork_filtering.dart';
@@ -321,7 +323,38 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
   double? _userLocationAccuracyMeters;
   int? _userLocationTimestampMs;
   bool _autoFollow = true;
-  bool _isLocating = false;
+  late final MapRecenterController _recenter = MapRecenterController(
+    acquire: ({required bool requestPermission}) =>
+        _acquireUserFix(requestPermission: requestPermission),
+    isFollowing: () => _autoFollow,
+    setFollowing: (value) {
+      _kubusMapController.setAutoFollow(value);
+      _safeSetState(() => _autoFollow = value);
+    },
+    moveCamera: (target) =>
+        unawaited(_moveCamera(target, math.max(_effectiveZoom, 15))),
+    cameraDuration: () => KubusMapMotion.fromMediaQuery(
+      animationTheme: context.animationTheme,
+      mediaQuery: MediaQuery.of(context),
+    ).clusterExpand.duration,
+    reportUnavailable: (status) {
+      if (!mounted) return;
+      MapRecenterFeedback.showUnavailable(
+        context,
+        status: status,
+        api: _walkingLocationApi,
+        onRetry: _recenterOnUser,
+      );
+    },
+    onLocatingChanged: (locating) {
+      if (!mounted) return;
+      if (locating) {
+        MapRecenterFeedback.showLocating(context);
+      } else {
+        MapRecenterFeedback.hideLocating(context);
+      }
+    },
+  );
   _RightSidebarContent? _rightSidebarContent;
   bool get _showFiltersPanel =>
       _mapUiStateCoordinator.value.contextSurface == MapContextSurface.filters;
@@ -648,6 +681,9 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       registeredMapImagesOut: _registeredMapImages,
       onAutoFollowChanged: (value) {
         if (!mounted) return;
+        // Follow-off is a manual pan or zoom, a selection or a deliberate
+        // navigation. Each one outranks a pending center request.
+        if (!value) _recenter.supersede();
         _safeSetState(() => _autoFollow = value);
       },
       onSelectionChanged: (state) {
@@ -2323,6 +2359,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
   /// follow-me, whose location refreshes would otherwise re-centre the camera
   /// and undo it (see the matching helper on the phone map).
   void _yieldFollowToDeliberateCamera() {
+    _recenter.supersede();
     if (!_autoFollow) return;
     _kubusMapController.setAutoFollow(false);
     _safeSetState(() => _autoFollow = false);
@@ -2587,6 +2624,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     PublicEntryNavigation.instance.release(_publicMarkerUrlClaim);
     _publicMarkerUrlClaim = null;
     _publicMarkerUrlClaimId = null;
+    _recenter.dispose();
     _userLocationAnimator.dispose();
     _compassSubscription?.cancel();
     _headingExpiryTimer?.cancel();
@@ -3073,90 +3111,111 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     return map;
   }
 
+  /// The "center on me" control: a deliberate request, see
+  /// [MapRecenterController].
+  void _recenterOnUser() {
+    unawaited(
+      _recenter.recenterOnUser(
+        knownPosition: _userLocation,
+        knownAccuracyMeters: _userLocationAccuracyMeters,
+        knownTimestampMs: _userLocationTimestampMs,
+      ),
+    );
+  }
+
+  /// Refreshes the live fix and, when asked or following, moves the camera.
+  /// A result overtaken by a newer deliberate request or navigation updates the
+  /// location but never moves the camera.
   Future<void> _refreshUserLocation({
     bool animate = false,
     bool requestPermission = false,
   }) async {
-    if (_isLocating) return;
-    setState(() => _isLocating = true);
-    try {
-      final navigation = _walkingNavigationProvider;
-      if (requestPermission && navigation?.isVisible == true) {
-        navigation!.beginLocationRequest(lease: _walkingNavigationLease);
-      }
-      final result = await _walkingLocationApi.acquireLiveFix(
-        requestPermission: requestPermission,
-      );
-      final fix = result.fix;
-      if (!result.isAvailable || fix == null) {
-        if (navigation?.isVisible == true) {
-          navigation!.reportLocationAccess(
-            result.status,
-            lease: _walkingNavigationLease,
-          );
-        }
-        if (requestPermission &&
-            _filterState.scope == KubusMapScope.nearMe &&
-            mounted) {
-          setState(() {
-            _filterState = _filterState.withScope(
-              KubusMapScope.currentViewport,
-            );
-            _loadedViewportBounds = null;
-            _loadedViewportZoomBucket = null;
-          });
-          unawaited(_loadMarkersForCurrentView(force: true));
-        }
-        return;
-      }
-      final current = fix.position;
-      if (!mounted) return;
-      setState(() {
-        _userLocation = current;
-        _userLocationAccuracyMeters = fix.accuracyMeters;
-        _userLocationTimestampMs = fix.timestamp.millisecondsSinceEpoch;
-        // The route overview owns the camera until Resume; see the mobile
-        // screen for the same rule.
-        if (_autoFollow &&
-            !(_walkingNavigationMapCoordinator?.isRouteOverviewActive ??
-                false)) {
-          _cameraCenter = current;
-        }
-      });
-      unawaited(_syncUserLocation());
-      final walkingNavigation = navigation;
-      if (walkingNavigation != null && walkingNavigation.isVisible) {
-        await walkingNavigation.updatePosition(
-          current,
-          accuracyMeters: fix.accuracyMeters,
+    final revision = _recenter.revision;
+    final result = await _acquireUserFix(requestPermission: requestPermission);
+    final fix = result.fix;
+    if (!mounted || !result.isAvailable || fix == null) return;
+    if (revision != _recenter.revision || _recenter.hasPendingRequest) return;
+    if (animate || _autoFollow) {
+      _moveCamera(fix.position, math.max(_effectiveZoom, 15));
+    }
+  }
+
+  /// Acquires one live fix and applies it to the map's location state. It never
+  /// moves the camera; callers decide that.
+  Future<WalkingLocationAccessResult> _acquireUserFix({
+    required bool requestPermission,
+  }) async {
+    final navigation = _walkingNavigationProvider;
+    if (requestPermission && navigation?.isVisible == true) {
+      navigation!.beginLocationRequest(lease: _walkingNavigationLease);
+    }
+    final result = await _walkingLocationApi.acquireLiveFix(
+      requestPermission: requestPermission,
+    );
+    final fix = result.fix;
+    if (!result.isAvailable || fix == null) {
+      if (navigation?.isVisible == true) {
+        navigation!.reportLocationAccess(
+          result.status,
           lease: _walkingNavigationLease,
         );
-        if (!mounted) return;
-        _startWalkingPositionStream();
       }
-      WalkingNavigationDiagnostics.record('live_fix_acquired');
-      _mapDataCoordinator.refreshNearMeForLocation(current);
-
-      final selectedMarker = _kubusMapController.selectedMarkerData;
-      if (selectedMarker != null) {
-        context.read<AttendanceProvider>().updateProximity(
-              markerId: selectedMarker.id,
-              lat: current.latitude,
-              lng: current.longitude,
-              distanceMeters:
-                  _calculateDistance(current, selectedMarker.position),
-              activationRadiusMeters: selectedMarker.activationRadius,
-              requiresProximity: selectedMarker.requiresProximity,
-              accuracyMeters: _userLocationAccuracyMeters,
-              timestampMs: _userLocationTimestampMs,
-            );
+      if (requestPermission &&
+          _filterState.scope == KubusMapScope.nearMe &&
+          mounted) {
+        setState(() {
+          _filterState = _filterState.withScope(
+            KubusMapScope.currentViewport,
+          );
+          _loadedViewportBounds = null;
+          _loadedViewportZoomBucket = null;
+        });
+        unawaited(_loadMarkersForCurrentView(force: true));
       }
-      if (animate || _autoFollow) {
-        _moveCamera(current, math.max(_effectiveZoom, 15));
-      }
-    } finally {
-      if (mounted) setState(() => _isLocating = false);
+      return result;
     }
+    final current = fix.position;
+    if (!mounted) return result;
+    setState(() {
+      _userLocation = current;
+      _userLocationAccuracyMeters = fix.accuracyMeters;
+      _userLocationTimestampMs = fix.timestamp.millisecondsSinceEpoch;
+      // The route overview owns the camera until Resume; see the mobile
+      // screen for the same rule.
+      if (_autoFollow &&
+          !(_walkingNavigationMapCoordinator?.isRouteOverviewActive ?? false)) {
+        _cameraCenter = current;
+      }
+    });
+    unawaited(_syncUserLocation());
+    final walkingNavigation = navigation;
+    if (walkingNavigation != null && walkingNavigation.isVisible) {
+      await walkingNavigation.updatePosition(
+        current,
+        accuracyMeters: fix.accuracyMeters,
+        lease: _walkingNavigationLease,
+      );
+      if (!mounted) return result;
+      _startWalkingPositionStream();
+    }
+    WalkingNavigationDiagnostics.record('live_fix_acquired');
+    _mapDataCoordinator.refreshNearMeForLocation(current);
+
+    final selectedMarker = _kubusMapController.selectedMarkerData;
+    if (selectedMarker != null) {
+      context.read<AttendanceProvider>().updateProximity(
+            markerId: selectedMarker.id,
+            lat: current.latitude,
+            lng: current.longitude,
+            distanceMeters:
+                _calculateDistance(current, selectedMarker.position),
+            activationRadiusMeters: selectedMarker.activationRadius,
+            requiresProximity: selectedMarker.requiresProximity,
+            accuracyMeters: _userLocationAccuracyMeters,
+            timestampMs: _userLocationTimestampMs,
+          );
+    }
+    return result;
   }
 
   void _startWalkingPositionStream() {
@@ -4552,10 +4611,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
           controller: _kubusMapController,
           layout: KubusMapPrimaryControlsLayout.desktopToolbar,
           accentColor: themeProvider.accentColor,
-          onCenterOnMe: () {
-            _kubusMapController.setAutoFollow(true);
-            _refreshUserLocation(animate: true, requestPermission: true);
-          },
+          onCenterOnMe: _recenterOnUser,
           centerOnMeActive: _autoFollow,
           centerOnMeTooltip: l10n.mapCenterOnMeTooltip,
           onCreateMarker: () {

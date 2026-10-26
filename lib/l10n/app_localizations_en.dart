@@ -4920,6 +4920,25 @@ class AppLocalizationsEn extends AppLocalizations {
   String get mapCenterOnMeTooltip => 'Center on me';
 
   @override
+  String get mapCenterOnMeLocating => 'Finding your location…';
+
+  @override
+  String get mapCenterOnMePermissionDenied =>
+      'Allow location access to center the map on you.';
+
+  @override
+  String get mapCenterOnMePermissionBlocked =>
+      'Location access is blocked for art.kubus. Enable it in app settings to center the map on you.';
+
+  @override
+  String get mapCenterOnMeServicesDisabled =>
+      'Turn on location services to center the map on you.';
+
+  @override
+  String get mapCenterOnMeTimedOut =>
+      'Finding your location took too long. Try again.';
+
+  @override
   String get mapAddMapMarkerTooltip => 'Add map marker';
 
   @override
@@ -18658,5 +18677,62 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String promotionCheckoutReturnSessionLabel(String sessionId) {
     return 'Stripe session: $sessionId';
+  }
+
+  @override
+  String get artistPortfolioSectionAuthored => 'Authored artworks';
+
+  @override
+  String get artistPortfolioSectionPublicArt => 'Added public art';
+
+  @override
+  String get artistPortfolioSectionCollections => 'Collections & exhibitions';
+
+  @override
+  String artistPortfolioSectionLabelWithCount(String label, int count) {
+    return '$label ($count)';
+  }
+
+  @override
+  String get artistPortfolioAuthoredUnsupported =>
+      'Authored artworks cannot be listed separately on this server yet.';
+
+  @override
+  String get artistPortfolioPublicArtUnsupported =>
+      'Added public art from artworks cannot be listed separately on this server yet. Your map contributions are still shown.';
+
+  @override
+  String get artistPortfolioSectionLoadFailed =>
+      'This list could not be loaded.';
+
+  @override
+  String get artistPortfolioLoadMore => 'Load more';
+
+  @override
+  String get artistPortfolioPublicArtEmptyTitle => 'No public art added yet';
+
+  @override
+  String get artistPortfolioPublicArtEmptyDescription =>
+      'Public art you document on the map appears here. It stays credited to its artist.';
+
+  @override
+  String get artistPortfolioCollectionsEmptyTitle =>
+      'No collections or exhibitions yet';
+
+  @override
+  String get artistPortfolioCollectionsEmptyDescription =>
+      'Collections and exhibitions you create appear here.';
+
+  @override
+  String artistPortfolioArtistLine(String artist) {
+    return 'By $artist';
+  }
+
+  @override
+  String get artistPortfolioAddedByYou => 'Added by you';
+
+  @override
+  String artistPortfolioCardActionsLabel(String title) {
+    return 'Actions for $title';
   }
 }

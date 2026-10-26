@@ -27,6 +27,8 @@ import '../features/map/shared/map_marker_overlay_presentation.dart';
 import '../features/map/shared/map_marker_selection_resolver.dart';
 import '../features/map/shared/map_overlay_sizing.dart';
 import '../features/map/shared/map_passive_chrome_visibility.dart';
+import '../features/map/shared/map_recenter_controller.dart';
+import '../features/map/shared/map_recenter_feedback.dart';
 import '../features/map/shared/map_search_filter_assembly.dart';
 import '../providers/artwork_provider.dart';
 import '../providers/task_provider.dart';
@@ -744,6 +746,9 @@ class _MapScreenState extends State<MapScreen>
       registeredMapImagesOut: _registeredMapImages,
       onAutoFollowChanged: (value) {
         if (!mounted) return;
+        // Follow-off is a manual pan or zoom, a selection or a deliberate
+        // navigation. Each one outranks a pending center request.
+        if (!value) _recenter.supersede();
         _safeSetState(() => _autoFollow = value);
       },
       onSelectionChanged: (state) {
@@ -2216,6 +2221,7 @@ class _MapScreenState extends State<MapScreen>
     PublicEntryNavigation.instance.release(_publicMarkerUrlClaim);
     _publicMarkerUrlClaim = null;
     _publicMarkerUrlClaimId = null;
+    _recenter.dispose();
     _userLocationAnimator.dispose();
     _headingExpiryTimer?.cancel();
     _mapSearchFocusNode.dispose();
@@ -3702,10 +3708,18 @@ class _MapScreenState extends State<MapScreen>
   /// shared boolean, so a still-starting stream is never raced against an
   /// immediate `locationUnavailable` transition, and a precise permission or
   /// service failure is never downgraded to a generic one.
-  Future<WalkingLocationAccessStatus?> _getLocation({
+  Future<WalkingLocationAccessResult?> _getLocation({
     bool fromTimer = false,
     bool promptForPermission = true,
+    bool moveCamera = true,
   }) async {
+    // Only an explicit request may move the camera while a deliberate move
+    // owns it; passive refreshes yield to it. Ownership is read when the
+    // result is applied, after the awaits below: a passive acquisition that
+    // began before a "center on me" tap must not carry a stale grant into the
+    // recenter's ownership window.
+    bool cameraAllowed() =>
+        moveCamera && (promptForPermission || _recenter.allowsPassiveCamera);
     final navigation = _walkingNavigationProvider;
     if (promptForPermission && navigation?.isVisible == true) {
       _hasLiveLocationFix = false;
@@ -3729,7 +3743,11 @@ class _MapScreenState extends State<MapScreen>
         final prefs = await SharedPreferences.getInstance();
         final fallback = _loadFallbackPosition(prefs);
         if (fallback != null && mounted) {
-          _updateCurrentPosition(fallback, isLiveFix: false);
+          _updateCurrentPosition(
+            fallback,
+            isLiveFix: false,
+            allowCamera: cameraAllowed(),
+          );
         }
       }
       if (promptForPermission &&
@@ -3742,7 +3760,7 @@ class _MapScreenState extends State<MapScreen>
         });
         unawaited(_loadMarkersForCurrentView(force: true));
       }
-      return result.status;
+      return result;
     }
 
     final prefs = await SharedPreferences.getInstance();
@@ -3757,6 +3775,7 @@ class _MapScreenState extends State<MapScreen>
       accuracyMeters: fix.accuracyMeters,
       timestampMs: fix.timestamp.millisecondsSinceEpoch,
       isLiveFix: true,
+      allowCamera: cameraAllowed(),
     );
     WalkingNavigationDiagnostics.record('live_fix_acquired');
     if (kIsWeb) {
@@ -3767,7 +3786,7 @@ class _MapScreenState extends State<MapScreen>
     if (!fromTimer || _artMarkers.isEmpty) {
       await _maybeRefreshMarkers(fix.position, force: false);
     }
-    return WalkingLocationAccessStatus.available;
+    return result;
   }
 
   void _startLocationTimer() {
@@ -3805,6 +3824,7 @@ class _MapScreenState extends State<MapScreen>
             accuracyMeters: fix.accuracyMeters,
             timestampMs: fix.timestamp.millisecondsSinceEpoch,
             isLiveFix: true,
+            allowCamera: _recenter.allowsPassiveCamera,
           );
         },
         onError: (Object error, StackTrace st) {
@@ -3856,6 +3876,7 @@ class _MapScreenState extends State<MapScreen>
             accuracyMeters: fix.accuracyMeters,
             timestampMs: fix.timestamp.millisecondsSinceEpoch,
             isLiveFix: true,
+            allowCamera: _recenter.allowsPassiveCamera,
           );
         },
         onError: (Object error, StackTrace stack) {
@@ -4131,7 +4152,7 @@ class _MapScreenState extends State<MapScreen>
       _kubusMapController.setAutoFollow(true);
     }
 
-    final status = await _getLocation(promptForPermission: true);
+    final status = (await _getLocation(promptForPermission: true))?.status;
     if (!mounted) return null;
 
     final isWalkingRequest = reason.startsWith('walking_navigation');
@@ -4177,25 +4198,21 @@ class _MapScreenState extends State<MapScreen>
   /// stream that cancels the move before it gets anywhere: a cold map link
   /// selected the right marker but stayed at world scale.
   void _yieldFollowToDeliberateCamera() {
+    _recenter.supersede();
     if (!_autoFollow) return;
     _kubusMapController.setAutoFollow(false);
     _safeSetState(() => _autoFollow = false);
   }
 
+  /// The "center on me" control. Every tap recenters and engages follow; it
+  /// never switches follow off. Follow-off is a manual pan or zoom.
   Future<void> _handleCenterOnMeTap() async {
-    if (_currentPosition == null) {
-      await _promptForLocationThenCenter(reason: 'center_on_me');
-      return;
-    }
-
-    final enable = !_autoFollow;
-    setState(() => _autoFollow = enable);
-    _kubusMapController.setAutoFollow(enable);
-    if (enable) {
-      unawaited(
-        _animateMapTo(_currentPosition!, zoom: math.max(_lastZoom, 16)),
-      );
-    }
+    if (!mounted) return;
+    await _recenter.recenterOnUser(
+      knownPosition: _hasLiveLocationFix ? _currentPosition : null,
+      knownAccuracyMeters: _currentPositionAccuracyMeters,
+      knownTimestampMs: _currentPositionTimestampMs,
+    );
   }
 
   void _updateCurrentPosition(
@@ -4204,6 +4221,7 @@ class _MapScreenState extends State<MapScreen>
     double? accuracyMeters,
     int? timestampMs,
     bool isLiveFix = false,
+    bool allowCamera = true,
   }) {
     if (!mounted) return;
     final bool isInitial = _currentPosition == null;
@@ -4212,8 +4230,9 @@ class _MapScreenState extends State<MapScreen>
     // pushes the freshly fitted route back out of the viewport.
     final bool routeOverviewOwnsCamera =
         _walkingNavigationMapCoordinator?.isRouteOverviewActive ?? false;
-    final bool allowCenter =
-        !routeOverviewOwnsCamera && (shouldCenter || _autoFollow || isInitial);
+    final bool allowCenter = allowCamera &&
+        !routeOverviewOwnsCamera &&
+        (shouldCenter || _autoFollow || isInitial);
 
     setState(() {
       _currentPosition = position;
@@ -4280,13 +4299,15 @@ class _MapScreenState extends State<MapScreen>
       // Animate to navigation icon when moving
       _locationIndicatorController?.forward();
 
-      if (_autoFollow && _currentPosition != null) {
+      // A heading update re-aims a follow camera, but never restarts a
+      // deliberate move that owns the camera (see MapRecenterController).
+      if (_autoFollow && _recenter.allowsPassiveCamera) {
         unawaited(
-          _animateMapTo(_currentPosition!, zoom: _lastZoom, rotation: heading),
-        );
-      } else if (_autoFollow) {
-        unawaited(
-          _animateMapTo(_cameraCenter, zoom: _lastZoom, rotation: heading),
+          _animateMapTo(
+            _currentPosition ?? _cameraCenter,
+            zoom: _lastZoom,
+            rotation: heading,
+          ),
         );
       }
     } else if (mounted && heading == null) {
@@ -4782,6 +4803,52 @@ class _MapScreenState extends State<MapScreen>
 
   late final KubusUserLocationAnimator _userLocationAnimator =
       KubusUserLocationAnimator(write: _writeUserLocation);
+
+  /// "Center on me" intent. Explicit taps, passive acquisitions and camera
+  /// ownership are arbitrated here, see [MapRecenterController].
+  late final MapRecenterController _recenter = MapRecenterController(
+    acquire: ({required bool requestPermission}) async =>
+        await _getLocation(
+          promptForPermission: requestPermission,
+          moveCamera: false,
+        ) ??
+        const WalkingLocationAccessResult(
+          WalkingLocationAccessStatus.liveLocationUnavailable,
+        ),
+    isFollowing: () => _autoFollow,
+    setFollowing: (value) {
+      _kubusMapController.setAutoFollow(value);
+      _safeSetState(() => _autoFollow = value);
+    },
+    moveCamera: (target) => unawaited(
+      _animateMapTo(
+        target,
+        zoom: math.max(_lastZoom, 16),
+        rotation: _autoFollow ? _direction : null,
+      ),
+    ),
+    cameraDuration: () => KubusMapMotion.fromMediaQuery(
+      animationTheme: context.animationTheme,
+      mediaQuery: MediaQuery.of(context),
+    ).clusterExpand.duration,
+    reportUnavailable: (status) {
+      if (!mounted) return;
+      MapRecenterFeedback.showUnavailable(
+        context,
+        status: status,
+        api: _walkingLocationApi,
+        onRetry: () => unawaited(_handleCenterOnMeTap()),
+      );
+    },
+    onLocatingChanged: (locating) {
+      if (!mounted) return;
+      if (locating) {
+        MapRecenterFeedback.showLocating(context);
+      } else {
+        MapRecenterFeedback.hideLocating(context);
+      }
+    },
+  );
 
   Future<void> _syncUserLocation() async {
     if (!mounted || !_styleInitialized) return;
