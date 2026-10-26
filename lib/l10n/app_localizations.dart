@@ -8740,6 +8740,36 @@ abstract class AppLocalizations {
   /// **'Center on me'**
   String get mapCenterOnMeTooltip;
 
+  /// No description provided for @mapCenterOnMeLocating.
+  ///
+  /// In en, this message translates to:
+  /// **'Finding your location…'**
+  String get mapCenterOnMeLocating;
+
+  /// No description provided for @mapCenterOnMePermissionDenied.
+  ///
+  /// In en, this message translates to:
+  /// **'Allow location access to center the map on you.'**
+  String get mapCenterOnMePermissionDenied;
+
+  /// No description provided for @mapCenterOnMePermissionBlocked.
+  ///
+  /// In en, this message translates to:
+  /// **'Location access is blocked for art.kubus. Enable it in app settings to center the map on you.'**
+  String get mapCenterOnMePermissionBlocked;
+
+  /// No description provided for @mapCenterOnMeServicesDisabled.
+  ///
+  /// In en, this message translates to:
+  /// **'Turn on location services to center the map on you.'**
+  String get mapCenterOnMeServicesDisabled;
+
+  /// No description provided for @mapCenterOnMeTimedOut.
+  ///
+  /// In en, this message translates to:
+  /// **'Finding your location took too long. Try again.'**
+  String get mapCenterOnMeTimedOut;
+
   /// No description provided for @mapAddMapMarkerTooltip.
   ///
   /// In en, this message translates to:

@@ -4956,6 +4956,25 @@ class AppLocalizationsSl extends AppLocalizations {
   String get mapCenterOnMeTooltip => 'Središči na meni';
 
   @override
+  String get mapCenterOnMeLocating => 'Pridobivanje vaše lokacije…';
+
+  @override
+  String get mapCenterOnMePermissionDenied =>
+      'Za središčenje zemljevida na vas dovolite dostop do lokacije.';
+
+  @override
+  String get mapCenterOnMePermissionBlocked =>
+      'Dostop do lokacije je za art.kubus blokiran. Omogočite ga v nastavitvah aplikacije, da zemljevid središčite na vas.';
+
+  @override
+  String get mapCenterOnMeServicesDisabled =>
+      'Za središčenje zemljevida na vas vklopite lokacijske storitve.';
+
+  @override
+  String get mapCenterOnMeTimedOut =>
+      'Pridobivanje lokacije je trajalo predolgo. Poskusite znova.';
+
+  @override
   String get mapAddMapMarkerTooltip => 'Dodaj označevalec';
 
   @override
