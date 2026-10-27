@@ -983,8 +983,10 @@ function runCapability({ locale = 'en', main = false, state = 'pending' } = {}) 
   const clickHandlers = [];
   let reloads = 0;
   doc.addEventListener = (name, callback) => { if (name === 'click') clickHandlers.push(callback); };
+  const pageshow = [];
   const global = {
     document: doc,
+    addEventListener: (name, callback) => { if (name === 'pageshow') pageshow.push(callback); },
     location: { reload: () => { reloads += 1; } },
     setTimeout: (callback, delay) => {
       timers.push({ callback, delay });
@@ -1002,6 +1004,7 @@ function runCapability({ locale = 'en', main = false, state = 'pending' } = {}) 
     html: doc.documentElement,
     click: (target) => clickHandlers.forEach((handler) => handler({ target })),
     reloads: () => reloads,
+    pageshow: () => pageshow.forEach((callback) => callback()),
     fireSafety: () => timers.forEach((timer) => timer.callback()),
   };
 }
@@ -1049,6 +1052,15 @@ test('capability: Retry reloads once even when the takeover script never ran, an
   assert.equal(retry.disabled, true);
   page.click(retry);
   assert.equal(page.reloads(), 1, 'a second activation does not reload again');
+  // A cancelled reload or a back-forward-cache restore re-enables the button, by pageshow or after 4 s.
+  page.pageshow();
+  assert.equal(retry.disabled, false);
+  page.click(retry);
+  assert.equal(page.reloads(), 2);
+  assert.equal(retry.disabled, true);
+  assert.equal(page.timers.some((timer) => timer.delay === 4000), true);
+  page.timers.filter((timer) => timer.delay === 4000).forEach((timer) => timer.callback());
+  assert.equal(retry.disabled, false);
   const owned = runCapability({ main: true });
   owned.click(owned.status.querySelector('[data-kubus-takeover-refresh]'));
   assert.equal(owned.reloads(), 0, 'the takeover script owns the button once it exists');

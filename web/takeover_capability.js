@@ -29,6 +29,10 @@
     }
     if (!node || node.disabled) return;
     node.disabled = true;
+    // A cancelled reload, or a page restored from the back-forward cache, must not leave Retry dead.
+    var enable = function () { node.disabled = false; };
+    globalThis.addEventListener("pageshow", enable, { once: true });
+    setTimeout(enable, 4000);
     globalThis.location.reload();
   });
 })();
