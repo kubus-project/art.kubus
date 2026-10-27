@@ -1,0 +1,277 @@
+{
+ "label": "cand",
+ "port": "5102",
+ "cases": [
+  {
+   "tag": "en-390x844-nofonts",
+   "loading": {
+    "cls": 0,
+    "shifts": [],
+    "long": []
+   },
+   "steady": {
+    "threads": {
+     "CrBrowserMain": 3,
+     "PerfettoTrace": 1,
+     "Compositor": 15,
+     "VizCompositorThread": 16,
+     "GpuVSyncThread": 2982,
+     "StackSamplingProfiler": 16,
+     "CrGpuMain": 2950
+    },
+    "layout": 0,
+    "updateLayoutTree": 0,
+    "paint": 0,
+    "commit": 0,
+    "scriptMs": 0,
+    "layerize": 0
+   },
+   "handoff": {
+    "cls": 0,
+    "shifts": []
+   }
+  },
+  {
+   "tag": "en-390x844-webfonts",
+   "loading": {
+    "cls": 0,
+    "shifts": [],
+    "long": []
+   },
+   "steady": {
+    "threads": {
+     "PerfettoTrace": 2,
+     "CrBrowserMain": 2,
+     "VizCompositorThread": 18,
+     "GpuVSyncThread": 2999,
+     "CrGpuMain": 2942,
+     "Compositor": 17,
+     "StackSamplingProfiler": 17,
+     "ThreadPoolServiceThread": 1
+    },
+    "layout": 0,
+    "updateLayoutTree": 0,
+    "paint": 0,
+    "commit": 0,
+    "scriptMs": 0,
+    "layerize": 0
+   },
+   "handoff": {
+    "cls": 0,
+    "shifts": []
+   }
+  },
+  {
+   "tag": "sl-390x844-nofonts",
+   "loading": {
+    "cls": 0,
+    "shifts": [],
+    "long": []
+   },
+   "steady": {
+    "threads": {
+     "PerfettoTrace": 3,
+     "CrBrowserMain": 2,
+     "CrRendererMain": 1,
+     "VizCompositorThread": 16,
+     "CrGpuMain": 2963,
+     "Compositor": 14,
+     "GpuVSyncThread": 2999,
+     "StackSamplingProfiler": 16
+    },
+    "layout": 0,
+    "updateLayoutTree": 0,
+    "paint": 0,
+    "commit": 0,
+    "scriptMs": 0,
+    "layerize": 0
+   },
+   "handoff": {
+    "cls": 0,
+    "shifts": []
+   }
+  },
+  {
+   "tag": "sl-390x844-webfonts",
+   "loading": {
+    "cls": 0,
+    "shifts": [],
+    "long": []
+   },
+   "steady": {
+    "threads": {
+     "PerfettoTrace": 2,
+     "CrBrowserMain": 2,
+     "CrRendererMain": 1,
+     "VizCompositorThread": 19,
+     "GpuVSyncThread": 2999,
+     "Compositor": 18,
+     "CrGpuMain": 2913,
+     "ThreadPoolServiceThread": 2
+    },
+    "layout": 0,
+    "updateLayoutTree": 0,
+    "paint": 0,
+    "commit": 0,
+    "scriptMs": 0,
+    "layerize": 0
+   },
+   "handoff": {
+    "cls": 0,
+    "shifts": []
+   }
+  },
+  {
+   "tag": "en-1280x800-nofonts",
+   "loading": {
+    "cls": 0,
+    "shifts": [],
+    "long": []
+   },
+   "steady": {
+    "threads": {
+     "PerfettoTrace": 2,
+     "CrBrowserMain": 2,
+     "GpuVSyncThread": 2999,
+     "VizCompositorThread": 19,
+     "Compositor": 17,
+     "CrGpuMain": 2946
+    },
+    "layout": 0,
+    "updateLayoutTree": 0,
+    "paint": 0,
+    "commit": 0,
+    "scriptMs": 0,
+    "layerize": 0
+   },
+   "handoff": {
+    "cls": 0,
+    "shifts": []
+   }
+  },
+  {
+   "tag": "en-1280x800-webfonts",
+   "loading": {
+    "cls": 0.0004,
+    "shifts": [
+     {
+      "v": 0.0004,
+      "at": 280,
+      "src": [
+       "#text.",
+       "FIGCAPTION."
+      ]
+     }
+    ],
+    "long": []
+   },
+   "steady": {
+    "threads": {
+     "PerfettoTrace": 2,
+     "CrBrowserMain": 2,
+     "Compositor": 15,
+     "GpuVSyncThread": 2982,
+     "VizCompositorThread": 16,
+     "CrGpuMain": 2903
+    },
+    "layout": 0,
+    "updateLayoutTree": 0,
+    "paint": 0,
+    "commit": 0,
+    "scriptMs": 0,
+    "layerize": 0
+   },
+   "handoff": {
+    "cls": 0.0004,
+    "shifts": [
+     {
+      "v": 0.0004,
+      "at": 558,
+      "src": [
+       "#text.",
+       "FIGCAPTION."
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "tag": "sl-1280x800-nofonts",
+   "loading": {
+    "cls": 0,
+    "shifts": [],
+    "long": []
+   },
+   "steady": {
+    "threads": {
+     "PerfettoTrace": 3,
+     "CrBrowserMain": 5,
+     "CrRendererMain": 1,
+     "Compositor": 22,
+     "VizCompositorThread": 23,
+     "CrGpuMain": 2923,
+     "GpuVSyncThread": 2982,
+     "ThreadPoolServiceThread": 2
+    },
+    "layout": 0,
+    "updateLayoutTree": 0,
+    "paint": 0,
+    "commit": 0,
+    "scriptMs": 0,
+    "layerize": 0
+   },
+   "handoff": {
+    "cls": 0,
+    "shifts": []
+   }
+  },
+  {
+   "tag": "sl-1280x800-webfonts",
+   "loading": {
+    "cls": 0.0006,
+    "shifts": [
+     {
+      "v": 0.0006,
+      "at": 271,
+      "src": [
+       "#text.",
+       "#text."
+      ]
+     }
+    ],
+    "long": []
+   },
+   "steady": {
+    "threads": {
+     "PerfettoTrace": 2,
+     "CrBrowserMain": 2,
+     "CrRendererMain": 1,
+     "VizCompositorThread": 28,
+     "GpuVSyncThread": 2999,
+     "Compositor": 27,
+     "CrGpuMain": 2926,
+     "StackSamplingProfiler": 11
+    },
+    "layout": 0,
+    "updateLayoutTree": 0,
+    "paint": 0,
+    "commit": 0,
+    "scriptMs": 0,
+    "layerize": 0
+   },
+   "handoff": {
+    "cls": 0.0006,
+    "shifts": [
+     {
+      "v": 0.0006,
+      "at": 268,
+      "src": [
+       "#text.",
+       "#text."
+      ]
+     }
+    ]
+   }
+  }
+ ]
+}

@@ -1,0 +1,47 @@
+'use strict';
+
+// The WORLD HANDOFF design lives in the backend (src/services/takeoverStatusDesign.js) and is copied,
+// byte for byte, into web/seo-proxy.php by scripts/sync_takeover_status_design.mjs. The backend test pins the
+// same SHA-256, so a change to one side without the other fails CI on whichever repository is behind.
+const assert = require('node:assert/strict');
+const crypto = require('node:crypto');
+const fs = require('node:fs');
+const path = require('node:path');
+const test = require('node:test');
+
+const SEO_PROXY = path.join(__dirname, '..', 'web', 'seo-proxy.php');
+const DESIGN_SHA256 = '8e2dcf8a095e4b7dbe4466134dcdf8d84a9b349f7e54a22f98ba3e670b7b6043';
+
+// A PHP constant defined as concatenated single-quoted literals (no escapes: the sync script refuses quotes and backslashes).
+const phpConstant = (source, name) => {
+  const match = new RegExp(`const ${name} = ([\\s\\S]*?);\\r?\\n`).exec(source);
+  assert.ok(match, `${name} exists in seo-proxy.php`);
+  return [...match[1].matchAll(/'([^']*)'/g)].map((m) => m[1]).join('');
+};
+
+test('the PHP gateway carries the pinned WORLD HANDOFF design, byte for byte', () => {
+  const php = fs.readFileSync(SEO_PROXY, 'utf8');
+  const css = phpConstant(php, 'KUBUS_TAKEOVER_STATUS_CSS');
+  const svg = phpConstant(php, 'KUBUS_TAKEOVER_GLOBE_SVG');
+  const hash = crypto.createHash('sha256').update(`${css}\u0000${svg}`).digest('hex');
+  assert.equal(hash, DESIGN_SHA256, 'run scripts/sync_takeover_status_design.mjs <backend> and update both pinned hashes');
+});
+
+test('the PHP gateway section carries the same structure and copy as the backend section', () => {
+  const php = fs.readFileSync(SEO_PROXY, 'utf8');
+  for (const copy of [
+    'THE WORLD IS OPENING',
+    'Preparing the full interactive experience. You can keep exploring this page while it loads.',
+    'SVET UMETNOSTI SE ODPIRA',
+    'Pripravljamo celotno interaktivno izkušnjo. Med nalaganjem lahko še naprej raziskujete to stran.',
+  ]) {
+    assert.ok(php.includes(copy), `gateway has ${copy}`);
+  }
+  assert.match(php, /\. KUBUS_TAKEOVER_GLOBE_SVG/);
+  assert.match(php, /class="takeover-label"/);
+  assert.match(php, /class="takeover-note"/);
+  assert.match(php, /class="takeover-trace" aria-hidden="true"/);
+  // one live region, on the message only
+  const markup = /function takeoverStatusMarkup[\s\S]*?\n}\n/.exec(php)[0];
+  assert.equal(markup.match(/role="status"/g).length, 1);
+});

@@ -1,0 +1,268 @@
+{
+ "label": "base",
+ "port": "5101",
+ "cases": [
+  {
+   "tag": "en-390x844-nofonts",
+   "loading": {
+    "cls": 0,
+    "shifts": [],
+    "long": []
+   },
+   "steady": {
+    "threads": {
+     "CrBrowserMain": 3,
+     "PerfettoTrace": 1,
+     "StackSamplingProfiler": 16
+    },
+    "layout": 0,
+    "updateLayoutTree": 0,
+    "paint": 0,
+    "commit": 0,
+    "scriptMs": 0,
+    "layerize": 0
+   },
+   "handoff": {
+    "cls": 0,
+    "shifts": []
+   }
+  },
+  {
+   "tag": "en-390x844-webfonts",
+   "loading": {
+    "cls": 0,
+    "shifts": [],
+    "long": []
+   },
+   "steady": {
+    "threads": {
+     "PerfettoTrace": 2,
+     "CrBrowserMain": 2,
+     "StackSamplingProfiler": 24
+    },
+    "layout": 0,
+    "updateLayoutTree": 0,
+    "paint": 0,
+    "commit": 0,
+    "scriptMs": 0,
+    "layerize": 0
+   },
+   "handoff": {
+    "cls": 0,
+    "shifts": []
+   }
+  },
+  {
+   "tag": "sl-390x844-nofonts",
+   "loading": {
+    "cls": 0,
+    "shifts": [],
+    "long": []
+   },
+   "steady": {
+    "threads": {
+     "CrBrowserMain": 2,
+     "PerfettoTrace": 4,
+     "StackSamplingProfiler": 14
+    },
+    "layout": 0,
+    "updateLayoutTree": 0,
+    "paint": 0,
+    "commit": 0,
+    "scriptMs": 0,
+    "layerize": 0
+   },
+   "handoff": {
+    "cls": 0,
+    "shifts": []
+   }
+  },
+  {
+   "tag": "sl-390x844-webfonts",
+   "loading": {
+    "cls": 0,
+    "shifts": [],
+    "long": []
+   },
+   "steady": {
+    "threads": {
+     "PerfettoTrace": 2,
+     "CrBrowserMain": 2,
+     "StackSamplingProfiler": 11,
+     "ThreadPoolServiceThread": 1
+    },
+    "layout": 0,
+    "updateLayoutTree": 0,
+    "paint": 0,
+    "commit": 0,
+    "scriptMs": 0,
+    "layerize": 0
+   },
+   "handoff": {
+    "cls": 0,
+    "shifts": []
+   }
+  },
+  {
+   "tag": "en-1280x800-nofonts",
+   "loading": {
+    "cls": 0,
+    "shifts": [],
+    "long": []
+   },
+   "steady": {
+    "threads": {
+     "PerfettoTrace": 1,
+     "CrBrowserMain": 2,
+     "StackSamplingProfiler": 12,
+     "ThreadPoolServiceThread": 1
+    },
+    "layout": 0,
+    "updateLayoutTree": 0,
+    "paint": 0,
+    "commit": 0,
+    "scriptMs": 0,
+    "layerize": 0
+   },
+   "handoff": {
+    "cls": 0,
+    "shifts": []
+   }
+  },
+  {
+   "tag": "en-1280x800-webfonts",
+   "loading": {
+    "cls": 0.0005,
+    "shifts": [
+     {
+      "v": 0.0005,
+      "at": 284,
+      "src": [
+       "#text.",
+       "SPAN.takeover-actions"
+      ]
+     }
+    ],
+    "long": []
+   },
+   "steady": {
+    "threads": {
+     "PerfettoTrace": 1,
+     "CrBrowserMain": 2,
+     "StackSamplingProfiler": 12,
+     "ThreadPoolServiceThread": 1
+    },
+    "layout": 0,
+    "updateLayoutTree": 0,
+    "paint": 0,
+    "commit": 0,
+    "scriptMs": 0,
+    "layerize": 0
+   },
+   "handoff": {
+    "cls": 0.0005,
+    "shifts": [
+     {
+      "v": 0.0005,
+      "at": 275,
+      "src": [
+       "#text.",
+       "SPAN.takeover-actions"
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "tag": "sl-1280x800-nofonts",
+   "loading": {
+    "cls": 0,
+    "shifts": [],
+    "long": []
+   },
+   "steady": {
+    "threads": {
+     "PerfettoTrace": 1,
+     "CrBrowserMain": 4,
+     "StackSamplingProfiler": 11,
+     "CrGpuMain": 1
+    },
+    "layout": 0,
+    "updateLayoutTree": 0,
+    "paint": 0,
+    "commit": 0,
+    "scriptMs": 0,
+    "layerize": 0
+   },
+   "handoff": {
+    "cls": 0,
+    "shifts": []
+   }
+  },
+  {
+   "tag": "sl-1280x800-webfonts",
+   "loading": {
+    "cls": 0.0009,
+    "shifts": [
+     {
+      "v": 0.0009,
+      "at": 239,
+      "src": [
+       "#text.",
+       "SPAN.takeover-actions"
+      ]
+     },
+     {
+      "v": 0,
+      "at": 247,
+      "src": [
+       "#text.",
+       "A.product-map-link"
+      ]
+     }
+    ],
+    "long": []
+   },
+   "steady": {
+    "threads": {
+     "PerfettoTrace": 1,
+     "CrBrowserMain": 3
+    },
+    "layout": 0,
+    "updateLayoutTree": 0,
+    "paint": 0,
+    "commit": 0,
+    "scriptMs": 0,
+    "layerize": 0
+   },
+   "handoff": {
+    "cls": 0.0005,
+    "shifts": [
+     {
+      "v": 0,
+      "at": 253,
+      "src": [
+       "#text.",
+       "A.product-map-link"
+      ]
+     },
+     {
+      "v": 0.0001,
+      "at": 274,
+      "src": [
+       "#text."
+      ]
+     },
+     {
+      "v": 0.0004,
+      "at": 381,
+      "src": [
+       "SPAN.takeover-actions",
+       "#text."
+      ]
+     }
+    ]
+   }
+  }
+ ]
+}

@@ -865,21 +865,32 @@ test('PHP gateway: the section markup carries the backend contract attributes an
   }
 });
 
-test('PHP gateway: the status CSS has no reserved height, no visibility hiding, and no opacity; focus and touch sizes hold', () => {
+test('PHP gateway: the status CSS has no reserved height, no visibility hiding, opacity only in keyframes; focus and touch sizes hold', () => {
   const gateway = fs.readFileSync(SEO_PROXY, 'utf8');
   const css = /const KUBUS_TAKEOVER_STATUS_CSS = ([\s\S]*?);\r?\n/.exec(gateway);
   assert.ok(css, 'status CSS constant exists');
   const block = css[1];
   assert.doesNotMatch(block, /height:\s*min\(8rem/);
   assert.doesNotMatch(block, /visibility:\s*hidden/);
-  assert.doesNotMatch(block, /opacity/);
+  assert.doesNotMatch(block.replace(/@keyframes [\w-]+\{[^@]*?\}\}/g, '').replace(/#flutter-takeover-status(\[data-state=failed\])? \.(tg-|ts)[^{]*\{[^}]*\}/g, ''), /opacity/, 'text never gets an opacity; only graphics (.tg-*, .ts) carry one');
   assert.match(block, /#flutter-takeover-status\[hidden\]\{display:none\}/);
-  assert.match(block, /outline:3px solid var\(--color-focus/);
+  assert.match(block, /outline:3px solid var\(--s-focus\)/);
   assert.match(block, /min-height:2\.75rem/);
-  assert.match(block, /flex:1 1 16rem/);
-  assert.match(block, /flex-wrap:wrap/);
-  assert.match(block, /@media\(max-width:420px\)/);
+  assert.match(block, /grid-template-columns:auto minmax\(0,1fr\)/);
+  assert.match(block, /@media\(min-width:760px\)/);
+  assert.match(block, /@media\(prefers-reduced-motion:reduce\)/);
   assert.match(gateway, /KUBUS_TAKEOVER_STATUS_CSS \. '<\/style>'/);
+});
+
+test('a hidden tab pauses the section animations, and showing it again resumes them', () => {
+  const page = buildPage('en');
+  assert.equal(page.status.getAttribute('data-paused'), null);
+  page.doc.hidden = true;
+  page.fireDocumentEvent('visibilitychange');
+  assert.equal(page.status.getAttribute('data-paused'), '');
+  page.doc.hidden = false;
+  page.fireDocumentEvent('visibilitychange');
+  assert.equal(page.status.getAttribute('data-paused'), null);
 });
 
 test('Retry is re-enabled after the reset timeout when no reload happened', () => {
@@ -951,14 +962,14 @@ test('a failure before the reveal text lands is not overwritten by the loading t
   assert.equal(page.message.textContent, COPY.en.failure);
 });
 
-test('PHP gateway: Retry uses the backend accent token names and a distinct disabled look without opacity', () => {
+test('PHP gateway: actions use the backend accent token names and a distinct disabled look', () => {
   const gateway = fs.readFileSync(SEO_PROXY, 'utf8');
   const css = /const KUBUS_TAKEOVER_STATUS_CSS = ([\s\S]*?);\r?\n/.exec(gateway)[1];
   assert.doesNotMatch(css, /--color-primary|--color-on-primary/);
   assert.match(css, /var\(--color-accent,/);
   assert.match(css, /var\(--color-on-accent,/);
   assert.match(css, /\[data-kubus-takeover-refresh\]:disabled\{border-style:dashed;[^}]*color:var\(--color-muted/);
-  assert.doesNotMatch(css, /opacity/);
+  assert.doesNotMatch(css.replace(/@keyframes [\w-]+\{[^@]*?\}\}/g, '').replace(/#flutter-takeover-status(\[data-state=failed\])? \.(tg-|ts)[^{]*\{[^}]*\}/g, ''), /opacity/);
 });
 
 test('the takeover script re-enables Retry on pageshow and removes the section at the end of the fade', () => {
@@ -1107,10 +1118,10 @@ test('PHP gateway: the capability script is emitted once in the head, and the pr
   assert.match(gateway, /preg_replace\('\/<\\\/head>\/i', \$takeoverStyle \. \$capabilityScript \. '<\/head>'/);
   const css = /const KUBUS_TAKEOVER_STATUS_CSS = ([\s\S]*?);\r?\n/.exec(gateway)[1];
   const hiddenRule = css.indexOf('#flutter-takeover-status[hidden]{display:none}');
-  const capableRule = css.indexOf('html.kubus-takeover-capable #flutter-takeover-status[hidden][data-state=pending]{display:flex}');
+  const capableRule = css.indexOf('html.kubus-takeover-capable #flutter-takeover-status[hidden][data-state=pending]{display:grid}');
   assert.ok(hiddenRule >= 0, 'hidden rule exists');
   assert.ok(capableRule > hiddenRule, 'capability rule follows the hidden rule');
-  assert.doesNotMatch(css, /opacity|visibility:\s*hidden/);
+  assert.doesNotMatch(css.replace(/@keyframes [\w-]+\{[^@]*?\}\}/g, '').replace(/#flutter-takeover-status(\[data-state=failed\])? \.(tg-|ts)[^{]*\{[^}]*\}/g, ''), /opacity|visibility:\s*hidden/);
 });
 
 test('PHP gateway: the capability script is added after the early return, so an existing host passes through unchanged', () => {

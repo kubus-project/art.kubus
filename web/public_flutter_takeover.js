@@ -185,6 +185,14 @@
     statusEl.setAttribute("aria-hidden", "true");
   };
 
+  // A hidden tab has nothing to animate for: the section's CSS animations pause (one event, no timers).
+  const syncPaused = () => {
+    if (!statusEl) return;
+    if (document.hidden) statusEl.setAttribute("data-paused", "");
+    else statusEl.removeAttribute("data-paused");
+  };
+  document.addEventListener("visibilitychange", syncPaused);
+
   const STATUS_REMOVE_DELAY_MS = 80;
   const removeStatusElement = () => {
     if (!statusEl) return;
