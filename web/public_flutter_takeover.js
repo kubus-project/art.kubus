@@ -192,6 +192,8 @@
     else statusEl.removeAttribute("data-paused");
   };
   document.addEventListener("visibilitychange", syncPaused);
+  // A page opened in a background tab starts paused.
+  syncPaused();
 
   const STATUS_REMOVE_DELAY_MS = 80;
   const removeStatusElement = () => {

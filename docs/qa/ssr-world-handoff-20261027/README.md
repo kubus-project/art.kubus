@@ -28,8 +28,8 @@ tab keep the static globe with the same hierarchy and every action.
 
 3 to 4 times taller, message 1.7 to 2.5 times larger. At 320×700 the entity title is below the first viewport (it was
 at 544), but the breadcrumbs and the image start are visible; at 390×844 and up the title is on screen. No horizontal
-overflow in any captured state, action height 44 px, loading and slow states have the same box, failure is shorter
-(240 to 264 px).
+overflow in any captured state, action height 44 px, loading and slow states have the same box, failure is a compact frame
+(208 to 264 px).
 
 Animation: four static SVG layers (three longitude arcs each, 15 degrees apart) cross-fade with `opacity` in an 8 s
 loop (a 60 degree turn repeats the graticule, so it is seamless); the marker is an HTML box moved along a tilted
@@ -63,6 +63,10 @@ bootstrap, gzip like the edge. Interleaved A/B (baseline and candidate alternati
 - 99-point runs (1 point) coincide with FCP outliers of 700 to 800 ms and occur in both arms across batches (baseline
   1 of 16 desktop A/B runs plus earlier batches, candidate 3 of 16). Medians are equal; this is environmental noise,
   not a measured regression. Stated plainly: the candidate was not 100 in every desktop run.
+- Speed Index equals FCP in the A/B above. In a later run on a busier machine it rose above FCP in both arms
+  (desktop EN, interleaved: baseline 543 to 758 ms, candidate 567 to 649 ms), so that spread is environmental. An
+  earlier candidate whose still frame differed from the animation's first frame did show a real SI penalty
+  (690 vs 444 ms); making the still frame identical to animation time zero removed it.
 - Real production SSR pages (`app.kubus.site`, `lighthouse-production-reference.json`) score 21 to 25 mobile and
   about 50 desktop because they load the whole Flutter app (about 18 MB). They are not a 100 baseline; the harness
   isolates the section's own cost.
@@ -81,6 +85,14 @@ One live region (the message), decorative graphics `aria-hidden`, no heading in 
 document, tab order Retry then Go to app, 3 px focus ring, Lighthouse accessibility 100, native EN and SL copy
 (`a11y.json`). After the handoff the document is made inert by the existing takeover, so focus falls to the body as
 before. Native-language review of the Slovenian copy is a separate gate.
+
+## Compatibility
+
+- New backend + the old production web JS (`app.kubus.site/public_flutter_takeover.js`, no capability file): the
+  section stays `hidden` (`display:none`), 0 animations, CLS 0, no stuck loader.
+- No JavaScript: the section stays hidden; the ordinary SSR document is untouched (`en-light-390x844-ssr-nojs`).
+- The first-paint handshake (`takeover_capability.js` + the `[hidden][data-state=pending]` rule) is unchanged except
+  that the displayed value is `grid`.
 
 ## Browsers and states captured
 

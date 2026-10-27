@@ -10,7 +10,7 @@ const path = require('node:path');
 const test = require('node:test');
 
 const SEO_PROXY = path.join(__dirname, '..', 'web', 'seo-proxy.php');
-const DESIGN_SHA256 = '8e2dcf8a095e4b7dbe4466134dcdf8d84a9b349f7e54a22f98ba3e670b7b6043';
+const DESIGN_SHA256 = '0fd9827aac60f7b123d6cb23883777ef10648acd3fad882b8ba8e6481c6cfe51';
 
 // A PHP constant defined as concatenated single-quoted literals (no escapes: the sync script refuses quotes and backslashes).
 const phpConstant = (source, name) => {
@@ -41,6 +41,13 @@ test('the PHP gateway section carries the same structure and copy as the backend
   assert.match(php, /class="takeover-label"/);
   assert.match(php, /class="takeover-note"/);
   assert.match(php, /class="takeover-trace" aria-hidden="true"/);
+  // the same child order as the backend: globe, label, message, note, trace, actions
+  const order = ['KUBUS_TAKEOVER_GLOBE_SVG', 'class="takeover-label"', 'data-kubus-takeover-message', 'class="takeover-note"', 'class="takeover-trace"', 'data-kubus-takeover-actions'].map((needle) => {
+    const index = php.indexOf(needle, php.indexOf('function takeoverStatusMarkup'));
+    assert.ok(index > 0, `${needle} in the gateway markup`);
+    return index;
+  });
+  assert.deepEqual(order, [...order].sort((x, y) => x - y), 'child order matches the backend');
   // one live region, on the message only
   const markup = /function takeoverStatusMarkup[\s\S]*?\n}\n/.exec(php)[0];
   assert.equal(markup.match(/role="status"/g).length, 1);

@@ -242,6 +242,7 @@ function countAll(node, selector) {
 // resourceEntries, readyState, path.
 function buildPage(locale = 'en', options = {}) {
   const doc = new FakeDocument();
+  if (options.hidden) doc.hidden = true;
   const html = doc.documentElement;
   const entityPath = options.path || pathFor(locale);
 
@@ -880,6 +881,11 @@ test('PHP gateway: the status CSS has no reserved height, no visibility hiding, 
   assert.match(block, /@media\(min-width:760px\)/);
   assert.match(block, /@media\(prefers-reduced-motion:reduce\)/);
   assert.match(gateway, /KUBUS_TAKEOVER_STATUS_CSS \. '<\/style>'/);
+});
+
+test('a page opened in a hidden tab starts paused', () => {
+  const page = buildPage('en', { hidden: true });
+  assert.equal(page.status.getAttribute('data-paused'), '');
 });
 
 test('a hidden tab pauses the section animations, and showing it again resumes them', () => {
