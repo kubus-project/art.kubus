@@ -37,6 +37,7 @@
 
   let transitionCleanup = null;
   let slowTimer = null;
+  let retryTimer = null;
   let entityIsReady = false;
   let failureShown = false;
   let bootstrapElement = null;
@@ -152,17 +153,38 @@
 
   const part = (selector) => (statusEl ? statusEl.querySelector(selector) : null);
 
+  // A section that becomes visible starts with an empty message, and the text is written in the next task.
+  // Assistive technology announces a live region reliably that way, not from the hidden-to-shown switch.
   const setStatus = (state, message, visible) => {
     if (!statusEl) return;
+    const revealing = visible && statusEl.hidden;
     statusEl.dataset.state = state;
     statusEl.hidden = !visible;
     const text = part("[data-kubus-takeover-message]");
-    if (text) text.textContent = message;
+    if (!text) return;
+    if (revealing) {
+      text.textContent = "";
+      globalThis.setTimeout(() => {
+        if (statusEl && statusEl.dataset.state === state) text.textContent = message;
+      }, 0);
+    } else {
+      text.textContent = message;
+    }
   };
 
-  const removeStatus = (state) => {
+  // On handoff the section keeps its box and only loses visibility, so the content does not shift
+  // during the fade. It is removed from the document when the transition completes.
+  const hideStatus = (state) => {
     if (!statusEl) return;
-    setStatus(state, "", false);
+    statusEl.dataset.state = state;
+    statusEl.style.visibility = "hidden";
+    statusEl.setAttribute("aria-hidden", "true");
+    const text = part("[data-kubus-takeover-message]");
+    if (text) text.textContent = "";
+  };
+
+  const removeStatusElement = () => {
+    if (!statusEl) return;
     statusEl.remove();
     statusEl = null;
   };
@@ -258,6 +280,7 @@
       transitionCleanup = null;
     }
     root.classList.add("kubus-takeover-complete");
+    removeStatusElement();
     mark("flutter_takeover_completed");
     globalThis.dispatchEvent(new CustomEvent("kubus:flutter-takeover-completed"));
   };
@@ -323,7 +346,7 @@
     entityIsReady = true;
     clearTimers();
     releaseBootstrapListeners();
-    removeStatus(state);
+    hideStatus(state);
     mark(markName);
     activate();
   };
@@ -354,13 +377,28 @@
     }
   });
 
-  // One reload per activation. The button disables itself, so a repeated activation cannot reload twice.
+  // Retry re-enables after a timeout, and on pageshow. A reload that is cancelled, or a page restored
+  // from the back-forward cache, must not leave the button disabled.
+  const RETRY_RESET_MS = 4000;
+  const enableRetry = () => {
+    if (retryTimer !== null) {
+      globalThis.clearTimeout(retryTimer);
+      retryTimer = null;
+    }
+    if (retryButton) retryButton.disabled = false;
+  };
+  // One reload per activation: the button disables itself until the reset or a pageshow.
   const onRetry = () => {
     if (!retryButton || retryButton.disabled) return;
     retryButton.disabled = true;
+    retryTimer = globalThis.setTimeout(() => {
+      retryTimer = null;
+      enableRetry();
+    }, RETRY_RESET_MS);
     globalThis.location.reload();
   };
   retryButton?.addEventListener("click", onRetry);
+  globalThis.addEventListener("pageshow", enableRetry);
 
   // The section is visible at once in the loading state, with no delay and no dependency on bootstrap.
   setInactive();

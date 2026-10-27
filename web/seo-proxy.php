@@ -28,11 +28,11 @@ const KUBUS_TAKEOVER_STATUS_CSS = '#flutter-takeover-status{box-sizing:border-bo
     . '#flutter-takeover-status [data-kubus-takeover-message]{flex:1 1 16rem;margin:0}'
     . '#flutter-takeover-status .takeover-actions{display:flex;flex-wrap:wrap;gap:.5rem}'
     . '#flutter-takeover-status [data-kubus-takeover-refresh],#flutter-takeover-status [data-kubus-takeover-app]{display:inline-flex;align-items:center;justify-content:center;min-height:2.75rem;padding:.5rem 1.1rem;border:1px solid var(--color-border,#8c8478);border-radius:999px;background:var(--color-surface,#fffdf8);color:var(--color-text,#1d1b16);font:inherit;font-weight:600;text-decoration:none;cursor:pointer}'
-    . '#flutter-takeover-status [data-kubus-takeover-refresh]{background:var(--color-primary,#1d1b16);border-color:transparent;color:var(--color-on-primary,#fffdf8)}'
-    . '#flutter-takeover-status [data-kubus-takeover-refresh]:disabled{cursor:default}'
+    . '#flutter-takeover-status [data-kubus-takeover-refresh]{background:var(--color-accent,#1d1b16);border-color:transparent;color:var(--color-on-accent,#fffdf8)}'
+    . '#flutter-takeover-status [data-kubus-takeover-refresh]:disabled{border-style:dashed;background:transparent;color:var(--color-muted,#6b6357);cursor:default}'
     . '#flutter-takeover-status [data-kubus-takeover-refresh]:focus-visible,#flutter-takeover-status [data-kubus-takeover-app]:focus-visible{outline:3px solid var(--color-focus,#1a5fb4);outline-offset:2px}'
     . '@media(max-width:420px){#flutter-takeover-status .takeover-actions{flex:1 1 100%;width:100%}#flutter-takeover-status [data-kubus-takeover-refresh],#flutter-takeover-status [data-kubus-takeover-app]{flex:1 1 auto}}'
-    . '@media(prefers-color-scheme:dark){#flutter-takeover-status{background:var(--color-surface,#1c1b19);color:var(--color-text,#f4efe6);border-color:var(--color-border,#4a463f)}#flutter-takeover-status [data-kubus-takeover-refresh],#flutter-takeover-status [data-kubus-takeover-app]{border-color:var(--color-border,#6d675d);background:var(--color-surface,#1c1b19);color:var(--color-text,#f4efe6)}#flutter-takeover-status [data-kubus-takeover-refresh]{background:var(--color-primary,#f4efe6);border-color:transparent;color:var(--color-on-primary,#1c1b19)}}';
+    . '@media(prefers-color-scheme:dark){#flutter-takeover-status{background:var(--color-surface,#1c1b19);color:var(--color-text,#f4efe6);border-color:var(--color-border,#4a463f)}#flutter-takeover-status [data-kubus-takeover-refresh],#flutter-takeover-status [data-kubus-takeover-app]{border-color:var(--color-border,#6d675d);background:var(--color-surface,#1c1b19);color:var(--color-text,#f4efe6)}#flutter-takeover-status [data-kubus-takeover-refresh]{background:var(--color-accent,#f4efe6);border-color:transparent;color:var(--color-on-accent,#1c1b19)}}';
 
 function sendGatewayError(int $status, string $title, string $message): void
 {

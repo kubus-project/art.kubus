@@ -69,6 +69,7 @@ class FakeElement {
     this.parentNode = null;
     this.textContent = '';
     this.inert = false;
+    this.style = {};
     this.listeners = new Map();
     this.classes = new Set();
     this.classList = {
@@ -290,7 +291,7 @@ function buildPage(locale = 'en', options = {}) {
       mark: (name) => marks.push(name),
       getEntriesByType: (type) => (type === 'resource' ? resourceEntries : []),
     },
-    matchMedia: () => ({ matches: true }),
+    matchMedia: () => ({ matches: options.reducedMotion !== false }),
     setTimeout: (callback, delay) => {
       const id = ++nextTimerId;
       timers.set(id, { callback, at: currentTime + delay });
@@ -347,6 +348,7 @@ function buildPage(locale = 'en', options = {}) {
     get refreshButton() { return page.status?.querySelector('[data-kubus-takeover-refresh]') ?? null; },
     get appLink() { return page.status?.querySelector('[data-kubus-takeover-app]') ?? null; },
   };
+  if (!options.skipInitialTick) advance(0);
   return page;
 }
 
@@ -859,4 +861,84 @@ test('PHP gateway: the status CSS has no reserved height, no visibility hiding, 
   assert.match(block, /flex-wrap:wrap/);
   assert.match(block, /@media\(max-width:420px\)/);
   assert.match(gateway, /KUBUS_TAKEOVER_STATUS_CSS \. '<\/style>'/);
+});
+
+test('Retry is re-enabled after the reset timeout when no reload happened', () => {
+  const page = buildPage('en');
+  page.global.kubusPublicTakeover.fail();
+  page.refreshButton.click();
+  assert.equal(page.refreshButton.disabled, true);
+  page.advance(3999);
+  assert.equal(page.refreshButton.disabled, true, 'still disabled inside the 4 s window');
+  page.advance(1);
+  assert.equal(page.refreshButton.disabled, false, 're-enabled at 4 s');
+  page.refreshButton.click();
+  assert.equal(page.reloadCount, 2, 'a new activation reloads again');
+});
+
+test('Retry is re-enabled by pageshow, for a cancelled reload or a back-forward cache restore', () => {
+  const page = buildPage('en');
+  page.global.kubusPublicTakeover.fail();
+  page.refreshButton.click();
+  assert.equal(page.refreshButton.disabled, true);
+  page.global.dispatchEvent({ type: 'pageshow', persisted: true });
+  assert.equal(page.refreshButton.disabled, false);
+  page.refreshButton.click();
+  assert.equal(page.reloadCount, 2);
+});
+
+test('handoff keeps the section box (visibility only) during the fade, then removes it, one section throughout', () => {
+  const page = buildPage('en', { reducedMotion: false, bootstrapElement: true });
+  page.global.kubusPublicTakeover.bootstrapStarted();
+  assert.equal(page.statusCount, 1);
+  const section = page.status;
+  page.dispatchEntity(exactEntity('en'));
+  assert.equal(page.classes.has('kubus-takeover-active'), true);
+  assert.equal(page.classes.has('kubus-takeover-complete'), false, 'the fade is still running');
+  assert.equal(page.status, section, 'the section stays in the document during the fade');
+  assert.equal(section.style.visibility, 'hidden');
+  assert.equal(section.hidden, false, 'no display change, so no layout shift');
+  assert.equal(page.statusCount, 1);
+  page.advance(259);
+  assert.equal(page.status, section);
+  page.advance(1);
+  assert.equal(page.classes.has('kubus-takeover-complete'), true);
+  assert.equal(page.status, null);
+  assert.equal(section.parentNode, null);
+  assert.equal(page.statusCount, 0);
+});
+
+test('the live message is cleared on reveal and written in the next task, in one message span', () => {
+  const page = buildPage('en', { status: 'none', skipInitialTick: true });
+  assert.equal(page.message.textContent, '', 'the reveal starts with an empty message');
+  assert.equal(page.statusCount, 1);
+  assert.equal(countAll(page.status, '[data-kubus-takeover-message]'), 1);
+  page.advance(0);
+  assert.equal(page.message.textContent, COPY.en.loading);
+  assert.equal(countAll(page.status, '[data-kubus-takeover-message]'), 1);
+});
+
+test('a failure before the reveal text lands is not overwritten by the loading text', () => {
+  const page = buildPage('en', {
+    skipInitialTick: true, bootstrapElement: true, resourceEntries: [bootstrapEntry(0)],
+  });
+  page.advance(0);
+  assert.equal(page.status.dataset.state, 'failed');
+  assert.equal(page.message.textContent, COPY.en.failure);
+});
+
+test('PHP gateway: Retry uses the backend accent token names and a distinct disabled look without opacity', () => {
+  const gateway = fs.readFileSync(SEO_PROXY, 'utf8');
+  const css = /const KUBUS_TAKEOVER_STATUS_CSS = ([\s\S]*?);\r?\n/.exec(gateway)[1];
+  assert.doesNotMatch(css, /--color-primary|--color-on-primary/);
+  assert.match(css, /var\(--color-accent,/);
+  assert.match(css, /var\(--color-on-accent,/);
+  assert.match(css, /\[data-kubus-takeover-refresh\]:disabled\{border-style:dashed;[^}]*color:var\(--color-muted/);
+  assert.doesNotMatch(css, /opacity/);
+});
+
+test('the takeover script re-enables Retry on pageshow and removes the section at the end of the fade', () => {
+  const js = fs.readFileSync(TAKEOVER_JS, 'utf8');
+  assert.match(js, /globalThis\.addEventListener\("pageshow", enableRetry\)/);
+  assert.match(js, /root\.classList\.add\("kubus-takeover-complete"\);\s*removeStatusElement\(\);/);
 });
