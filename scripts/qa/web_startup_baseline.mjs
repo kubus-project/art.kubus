@@ -82,7 +82,7 @@ export function classify(url) {
   if (/solana|helius|rpcpool|quiknode|triton/.test(hostname)) return 'solana-rpc';
   if (/ipfs|dweb\.link|pinata|w3s\.link|nftstorage|arweave/.test(hostname)) return 'ipfs';
   if (/api\.kubus\.site$/.test(hostname)) return pathname.startsWith('/uploads/') ? 'backend-media' : 'backend-api';
-  if (/cartocdn|basemaps|maptiler|tiles|openfreemap/.test(hostname)) return 'map-tiles';
+  if (/maptiler|tiles|openfreemap/.test(hostname)) return 'map-tiles';
   if (/fonts\.(gstatic|googleapis)\.com/.test(hostname)) return 'google-fonts';
   if (/accounts\.google\.com|gstatic\.com|googleapis\.com/.test(hostname)) return 'google-identity';
   if (/gstatic|unpkg|jsdelivr|cdnjs/.test(hostname)) return 'cdn';

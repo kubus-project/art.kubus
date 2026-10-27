@@ -55,7 +55,7 @@ class KubusMapMobileRailGeometry {
 /// (`assets/map_styles/kubus_*.json`). The native MapLibre attribution control
 /// is hidden on web (see `web/index.html`), so this line is the visible credit.
 const String kubusMapAttributionCredit =
-    '© OpenStreetMap contributors, © CARTO';
+    'OpenFreeMap © OpenMapTiles Data from OpenStreetMap';
 
 /// Flat map chrome: ONE surface level per cluster.
 ///

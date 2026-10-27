@@ -57,7 +57,9 @@ Future<void> showKubusMapAttributionDialog(BuildContext context) async {
           children: [
             item('MapLibre', 'Map rendering engine'),
             const SizedBox(height: KubusSpacing.sm),
-            item('CARTO', 'Basemap style and cartography'),
+            item('OpenFreeMap', 'Basemap vector tiles and fonts'),
+            const SizedBox(height: KubusSpacing.sm),
+            item('OpenMapTiles', 'Basemap tile schema'),
             const SizedBox(height: KubusSpacing.sm),
             item('OpenStreetMap', 'Map data contributors'),
           ],
