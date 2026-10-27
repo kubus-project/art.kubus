@@ -9,12 +9,13 @@ import 'package:flutter_test/flutter_test.dart';
 ///
 /// Two things are protected here.
 ///
-/// 1. The CARTO raster outage. CARTO revoked unauthenticated access to its
-///    legacy raster basemaps
-///    (`{a-d}.basemaps.cartocdn.com/{light_all,dark_all}/{z}/{x}/{y}.png`), so
-///    the bundled Kubus styles started rendering "API key required" watermark
-///    tiles in production. The styles now build on CARTO's public *vector*
-///    basemap infrastructure and must never fall back onto the raster service.
+/// 1. The basemap provider contract. The styles are keyless and OpenFreeMap
+///    native: an OpenMapTiles vector source and glyph endpoint on
+///    `tiles.openfreemap.org`, only fonts OpenFreeMap hosts, and no reference
+///    to the retired CARTO basemap hosts (whose raster service started
+///    returning "API key required" watermark tiles). Provider URLs live in the
+///    style assets only; a different provider means a different style asset
+///    (`MAP_STYLE_*_ASSET`), never code changes.
 ///
 /// 2. The semantic-zoom contract. The basemap exists to orient people around
 ///    artworks: cities have to read as cities before individual buildings
@@ -23,7 +24,7 @@ import 'package:flutter_test/flutter_test.dart';
 ///    source has nothing to draw anyway.
 ///
 /// The assertions deliberately key off `source-layer`, filters and zoom ranges
-/// rather than individual CARTO layer ids, so ordinary cartographic tuning does
+/// rather than individual layer ids, so ordinary cartographic tuning does
 /// not break them.
 void main() {
   // The bundled styles are always validated: `MapStyleService` falls back to
@@ -37,8 +38,8 @@ void main() {
   // `AppConfig` deliberately allows a deployment to point at a different
   // checked-in style via `--dart-define=MAP_STYLE_{LIGHT,DARK}_ASSET=...`.
   // Honour that contract instead of pinning the defaults, but pull whatever is
-  // configured into the same validation so an override cannot smuggle the
-  // revoked raster endpoints back into production.
+  // configured into the same validation so an override cannot smuggle a
+  // raster or CARTO endpoint back into production.
   final configuredAssets = <String, String>{
     'configured light': AppConfig.mapStyleLightAsset,
     'configured dark': AppConfig.mapStyleDarkAsset,
@@ -65,7 +66,7 @@ void main() {
   List<Map<String, dynamic>> layersOf(Map<String, dynamic> style) =>
       (style['layers'] as List<dynamic>).cast<Map<String, dynamic>>();
 
-  /// Layers drawn from `source-layer` in the CARTO vector source.
+  /// Layers drawn from `source-layer` in the vector source.
   List<Map<String, dynamic>> fromSourceLayer(
     Map<String, dynamic> style,
     String sourceLayer,
@@ -166,23 +167,54 @@ void main() {
         expect(style['version'], 8);
       });
 
-      test('does not reference the revoked CARTO raster basemaps', () {
+      test('is keyless and OpenFreeMap native, with no CARTO reference', () {
         final raw = File(assetPath).readAsStringSync();
+        final lower = raw.toLowerCase();
 
+        expect(lower, isNot(contains('cartocdn')));
+        expect(lower, isNot(contains('carto-raster')));
         expect(raw, isNot(contains('light_all')));
         expect(raw, isNot(contains('dark_all')));
-        expect(raw, isNot(contains('carto-raster')));
-        // The unauthenticated raster PNG service in any subdomain/path form.
+        expect(lower, isNot(contains('api_key')));
+        expect(lower, isNot(contains('?key=')));
+        // No raster tile endpoint at all, whatever the provider.
+        expect(lower, isNot(contains('.png')));
+
+        final style = readStyle(assetPath);
+        final sources = style['sources'] as Map<String, dynamic>;
+        for (final source in sources.values.cast<Map<String, dynamic>>()) {
+          expect(source['url'], 'https://tiles.openfreemap.org/planet');
+        }
         expect(
-          raw,
-          isNot(matches(RegExp(r'basemaps\.cartocdn\.com/[^"]*\.png'))),
-          reason: 'legacy CARTO raster PNG tiles now require an API key',
+          style['glyphs'],
+          'https://tiles.openfreemap.org/fonts/{fontstack}/{range}.pbf',
         );
-        // No CARTO raster tile endpoint at all, whatever the tile extension.
-        expect(
-          raw,
-          isNot(matches(RegExp(r'https?://[a-d]\.basemaps\.cartocdn\.com'))),
-        );
+      });
+
+      test('only asks for fonts OpenFreeMap hosts', () {
+        // OpenFreeMap's glyph server does not composite a missing font out of a
+        // stack: an unknown face 404s the whole range and the labels vanish.
+        const hosted = <String>{
+          'Noto Sans Regular',
+          'Noto Sans Bold',
+          'Noto Sans Italic',
+          'Noto Sans Bold Italic',
+        };
+        final style = readStyle(assetPath);
+        for (final layer in layersOf(style)) {
+          final layout = layer['layout'];
+          if (layout is! Map<String, dynamic>) continue;
+          final fonts = layout['text-font'];
+          if (fonts == null) continue;
+          expect(fonts, isA<List>(), reason: '${layer['id']} text-font');
+          for (final font in (fonts as List).cast<String>()) {
+            expect(
+              hosted,
+              contains(font),
+              reason: '${layer['id']} uses a font OpenFreeMap does not host',
+            );
+          }
+        }
       });
 
       test('has no raster sources or raster layers', () {
@@ -202,7 +234,8 @@ void main() {
         expect(
           layers.where((layer) => layer['type'] == 'raster'),
           isEmpty,
-          reason: 'raster layers depend on the revoked raster service',
+          reason:
+              'the basemap is vector-only; raster layers are out of contract',
         );
         expect(
           layers.map((layer) => layer['id']),
@@ -395,9 +428,9 @@ void main() {
         expect(buildings, isNotEmpty);
 
         for (final layer in buildings) {
-          // CARTO's `carto.streets` source ships zero building features below
-          // z13 (z13 is one merged built-up mass, z14 is real footprints), so
-          // pulling buildings lower just costs work and renders nothing.
+          // OpenFreeMap's OpenMapTiles source ships no building features below
+          // z13 (footprint detail arrives at z14), so pulling buildings lower
+          // just costs work and renders nothing.
           expect(
             minZoomOf(layer),
             greaterThanOrEqualTo(13),
@@ -521,7 +554,7 @@ void main() {
     });
   }
 
-  test('no production map style ships a CARTO API key', () {
+  test('no production map style ships an API key or token', () {
     for (final assetPath in styleAssets.values) {
       final raw = File(assetPath).readAsStringSync().toLowerCase();
       expect(raw, isNot(contains('api_key')));

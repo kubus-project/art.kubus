@@ -574,7 +574,7 @@ async function coverTraffic(page) {
   return page.evaluate(() => {
     const entries = performance
       .getEntriesByType('resource')
-      .filter((e) => /\.(jpe?g|png|webp)(\?|$)/i.test(e.name) && !/cartocdn|gstatic|googleapis/.test(e.name));
+      .filter((e) => /\.(jpe?g|png|webp)(\?|$)/i.test(e.name) && !/openfreemap|gstatic|googleapis/.test(e.name));
     return {
       requests: entries.length,
       transferBytes: entries.reduce((sum, e) => sum + (e.transferSize || 0), 0),
@@ -653,7 +653,7 @@ async function degradedBasemap(browser, browserName, viewport, scheme, report) {
   await context.addInitScript(HOOK);
   run.network = await containNetwork(context);
   // Fail only the basemap vector tiles / fonts / sprites, not the app or API.
-  await context.route(/cartocdn\.com/, (route) => route.abort('failed'));
+  await context.route(/openfreemap\.org/, (route) => route.abort('failed'));
   const page = await context.newPage();
   page.on('pageerror', (e) => run.console.push(`[pageerror] ${e.message.slice(0, 200)}`));
   try {
@@ -1438,7 +1438,7 @@ async function zoomScenario(browserName, scheme, report) {
         await settle(page, 1800);
         await shot(`${tag}-04b-attribution`);
         const attribText = await semanticsText(page);
-        check(run, `${tag}: the attribution dialog names its sources`, /openstreetmap|maplibre|carto|©/i.test(attribText), attribText.slice(0, 200));
+        check(run, `${tag}: the attribution dialog names its sources`, /openstreetmap|maplibre|openfreemap|©/i.test(attribText), attribText.slice(0, 200));
         boxes = controlsOf(await interactiveBoxes(page));
         check(run, `${tag}: attribution dialog - every control sits inside the viewport`, boxes.every(inside), JSON.stringify(boxes.filter((b) => !inside(b)).slice(0, 4)));
       }

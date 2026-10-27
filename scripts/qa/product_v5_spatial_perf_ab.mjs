@@ -559,7 +559,7 @@ async function oneRun(config, viewport, runIndex) {
     const cover = await page.evaluate(() => {
       const entries = performance
         .getEntriesByType('resource')
-        .filter((e) => /\.(jpe?g|png|webp)(\?|$)/i.test(e.name) && !/cartocdn|gstatic|googleapis/.test(e.name));
+        .filter((e) => /\.(jpe?g|png|webp)(\?|$)/i.test(e.name) && !/openfreemap|gstatic|googleapis/.test(e.name));
       return {
         requests: entries.length,
         decodedKb: Math.round(entries.reduce((s, e) => s + (e.decodedBodySize || 0), 0) / 1024),
