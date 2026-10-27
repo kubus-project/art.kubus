@@ -144,7 +144,7 @@ await ctx.route(/api\.kubus\.site/, async (route) => {
   }
   return route.fulfill({ status: 503, headers: cors, body: '' });
 });
-await ctx.route((url) => url.origin !== origin && !/api\.kubus\.site|cartocdn|openstreetmap|basemaps|kubus\.site/.test(url.hostname), (r) => r.fulfill({ status: 503, body: '' }));
+await ctx.route((url) => url.origin !== origin && !/api\.kubus\.site|openfreemap|openstreetmap|kubus\.site/.test(url.hostname), (r) => r.fulfill({ status: 503, body: '' }));
 
 const page = await ctx.newPage();
 const errors = [];

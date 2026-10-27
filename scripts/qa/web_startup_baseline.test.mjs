@@ -9,7 +9,7 @@ test('requests are classified by origin', () => {
   assert.equal(classify('https://api.kubus.site/api/artworks?page=1'), 'backend-api');
   assert.equal(classify('https://api.kubus.site/uploads/a.jpg'), 'backend-media');
   assert.equal(classify('https://ipfs.io/ipfs/bafy'), 'ipfs');
-  assert.equal(classify('https://tiles.basemaps.cartocdn.com/vector/1/2/3.mvt'), 'map-tiles');
+  assert.equal(classify('https://tiles.openfreemap.org/planet/20260101_000000_pt/1/2/3.pbf'), 'map-tiles');
 });
 
 test('only identical requests count as repeats; overlap marks them concurrent', () => {

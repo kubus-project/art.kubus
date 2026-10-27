@@ -63,6 +63,47 @@ style: an older feature-building completion must not overwrite a newer dataset.
 Source-publication generation and controller/style freshness are separate guards.
 Do not use source generation to cancel useful cover jobs on every ordinary refresh.
 
+## Basemap provider
+
+The basemap is OpenFreeMap's public OpenMapTiles vector tiles, keyless: no API key,
+account or paid service. Every provider URL lives in the two bundled styles
+(`assets/map_styles/kubus_{light,dark}.json`) and nowhere in Dart: the vector source
+(`https://tiles.openfreemap.org/planet`), the glyph endpoint, and the source
+`attribution`. Dart only mirrors the attribution text (`kubusMapAttributionCredit`,
+asserted equal to the styles by `kubus_map_chrome_test.dart`) and names the sources
+in the attribution dialog. The web site (`art.kubus.site`) vendors the same two files
+byte for byte and owns the provider registry that rewrites them at load time; see its
+`docs/map.md`.
+
+- The styles are the Kubus cartography (our palette and layer structure, derived from
+  the CARTO Positron look) drawn on OpenFreeMap data; OpenFreeMap's stock styles are
+  not used, and no CARTO resource is requested.
+- Fonts must be Noto Sans Regular, Bold, Italic or Bold Italic: OpenFreeMap does not
+  composite a missing font out of a stack, so an unknown face drops the labels. Noto
+  Sans replaces the former Montserrat labels (slightly narrower and bolder); it is a
+  known visual delta.
+- OpenFreeMap tiles carry a single local `name`, so the bilingual place names CARTO
+  joined ("Maniago / Mania") are lost. Known limitation; localised labels are not
+  handled in the basemap.
+- There is no production fallback basemap. If OpenFreeMap is unreachable no basemap
+  tiles are drawn until it recovers.
+- Buildings first exist at z13 (footprint detail at z14). The styles' semantic-zoom
+  contract and `production_map_styles_test.dart` depend on it.
+- Attribution ("OpenFreeMap © OpenMapTiles Data from OpenStreetMap") must stay visible.
+- OpenStreetMap's community raster tile servers are never a fallback: their usage
+  policy forbids unrestricted production use.
+- `MAP_STYLE_LIGHT_ASSET` / `MAP_STYLE_DARK_ASSET` select a different checked-in style;
+  that is the provider switch. `production_map_styles_test.dart` validates whatever is
+  configured.
+
+Self-hosted Protomaps (PMTiles) is planned, not implemented. Protomaps tiles use a
+different vector schema from OpenMapTiles, so the Kubus styles cannot be reused: it
+needs Protomaps-schema styles, a self-hosted PMTiles archive (HTTP Range and CORS),
+self-hosted glyphs, `pmtiles://` support confirmed on the pinned `maplibre_gl` native
+(Android, iOS) and web builds, and the style-contract test extended per schema.
+Self-hosting OpenFreeMap itself needs none of that: same schema, only the URLs in the
+styles change.
+
 ## Marker presentation and grouping
 
 Canonical marker visibility depends on marker data and canonical icon assets, never

@@ -20,7 +20,7 @@ art.kubus is an open-source public art map. A single Flutter codebase runs on An
 | Project site | https://art.kubus.site |
 | License | MPL-2.0 (client). The backend is a separate repository with separate terms |
 | Stack | Flutter, Dart, `maplibre_gl` (native and web), Provider |
-| Map | MapLibre GL with vendored styles in `assets/map_styles/`, CARTO vector tiles built on OpenStreetMap data |
+| Map | MapLibre GL with vendored styles in `assets/map_styles/`, OpenFreeMap vector tiles (OpenMapTiles schema) built on OpenStreetMap data |
 | Platforms | Android, iOS, web, Windows, macOS, Linux |
 | Languages | English, Slovenian |
 | Status | Alpha, active development |
