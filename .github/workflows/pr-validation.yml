@@ -109,7 +109,7 @@ jobs:
         run: |
           npm run verify:toolchain:node
           npm run verify:architecture
-          node --test scripts/ci/workflow_contracts.test.mjs test/public_flutter_takeover.test.js scripts/qa/web_runtime_contract.test.mjs
+          node --test scripts/ci/workflow_contracts.test.mjs test/public_flutter_takeover.test.js scripts/qa/web_runtime_contract.test.mjs scripts/qa/map_request_policy.test.mjs
           node --test scripts/qa/staging/isolation.test.mjs
           node scripts/ci/backend_gitlink_contract.mjs
       - name: Validate deployment contracts locally
