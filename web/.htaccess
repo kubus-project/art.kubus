@@ -19,7 +19,7 @@
   # is picked up immediately (prevents the classic "stale main.dart.js after
   # release" bug). These are cheap 304s, and the Flutter service worker still
   # serves them offline.
-  <FilesMatch "(^index\.html$|^flutter_bootstrap\.js$|^flutter_service_worker\.js$|^main\.dart\.js$|\.json$)">
+  <FilesMatch "(^index\.html$|^flutter_bootstrap\.js$|^flutter_service_worker\.js$|^main\.dart\.js$|^public_flutter_takeover\.js$|^takeover_capability\.js$|\.json$)">
     Header set Cache-Control "no-cache, max-age=0, must-revalidate"
   </FilesMatch>
 
