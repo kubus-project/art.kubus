@@ -5,6 +5,35 @@ declare(strict_types=1);
 const KUBUS_SEO_UPSTREAM_ORIGIN = 'https://api.kubus.site';
 const KUBUS_TAKEOVER_CSP = "default-src 'none'; script-src 'self' 'wasm-unsafe-eval' https://accounts.google.com/gsi/client; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' https: data: blob:; font-src 'self' data: https://fonts.gstatic.com; connect-src 'self' https: wss: blob:; media-src 'self' https: data: blob:; worker-src 'self' blob:; frame-src https://accounts.google.com; base-uri 'self'; form-action 'none'; frame-ancestors 'none'";
 
+// Copy mirrors web/public_flutter_takeover.js exactly (the static gateway test checks parity).
+const KUBUS_TAKEOVER_COPY = [
+    'en' => [
+        'loading' => 'The world of art is coming into focus…',
+        'failure' => "The world of art couldn't open this time. Try refreshing the page or come back later.",
+        'retry' => 'Retry',
+        'app' => 'Go to app',
+    ],
+    'sl' => [
+        'loading' => 'Svet umetnosti se izrisuje …',
+        'failure' => 'Svet umetnosti se tokrat ni mogel odpreti. Poskusite osvežiti stran ali se vrnite pozneje.',
+        'retry' => 'Poskusi znova',
+        'app' => 'Pojdi v aplikacijo',
+    ],
+];
+
+// Tokens are the site's custom properties; the fallbacks keep the section legible if a token is absent.
+// The hidden rule is explicit because the author display value would otherwise override the UA hidden style.
+const KUBUS_TAKEOVER_STATUS_CSS = '#flutter-takeover-status{box-sizing:border-box;display:flex;flex-wrap:wrap;align-items:center;gap:.75rem 1rem;width:min(100%,56rem);margin:1rem auto;padding:.75rem 1rem;border:1px solid var(--color-border,#d7d0c4);border-radius:.75rem;background:var(--color-surface,#fffdf8);color:var(--color-text,#1d1b16);font:inherit;line-height:1.5}'
+    . '#flutter-takeover-status[hidden]{display:none}'
+    . '#flutter-takeover-status [data-kubus-takeover-message]{flex:1 1 16rem;margin:0}'
+    . '#flutter-takeover-status .takeover-actions{display:flex;flex-wrap:wrap;gap:.5rem}'
+    . '#flutter-takeover-status [data-kubus-takeover-refresh],#flutter-takeover-status [data-kubus-takeover-app]{display:inline-flex;align-items:center;justify-content:center;min-height:2.75rem;padding:.5rem 1.1rem;border:1px solid var(--color-border,#8c8478);border-radius:999px;background:var(--color-surface,#fffdf8);color:var(--color-text,#1d1b16);font:inherit;font-weight:600;text-decoration:none;cursor:pointer}'
+    . '#flutter-takeover-status [data-kubus-takeover-refresh]{background:var(--color-primary,#1d1b16);border-color:transparent;color:var(--color-on-primary,#fffdf8)}'
+    . '#flutter-takeover-status [data-kubus-takeover-refresh]:disabled{cursor:default}'
+    . '#flutter-takeover-status [data-kubus-takeover-refresh]:focus-visible,#flutter-takeover-status [data-kubus-takeover-app]:focus-visible{outline:3px solid var(--color-focus,#1a5fb4);outline-offset:2px}'
+    . '@media(max-width:420px){#flutter-takeover-status .takeover-actions{flex:1 1 100%;width:100%}#flutter-takeover-status [data-kubus-takeover-refresh],#flutter-takeover-status [data-kubus-takeover-app]{flex:1 1 auto}}'
+    . '@media(prefers-color-scheme:dark){#flutter-takeover-status{background:var(--color-surface,#1c1b19);color:var(--color-text,#f4efe6);border-color:var(--color-border,#4a463f)}#flutter-takeover-status [data-kubus-takeover-refresh],#flutter-takeover-status [data-kubus-takeover-app]{border-color:var(--color-border,#6d675d);background:var(--color-surface,#1c1b19);color:var(--color-text,#f4efe6)}#flutter-takeover-status [data-kubus-takeover-refresh]{background:var(--color-primary,#f4efe6);border-color:transparent;color:var(--color-on-primary,#1c1b19)}}';
+
 function sendGatewayError(int $status, string $title, string $message): void
 {
     http_response_code($status);
@@ -87,7 +116,34 @@ function takeoverTargetForPath(string $path): ?array
         'type' => $type,
         'id' => $id,
         'path' => rtrim($path, '/'),
+        'locale' => $locale,
     ];
+}
+
+function takeoverEscape(string $value): string
+{
+    return htmlspecialchars($value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+}
+
+/**
+ * Inline loading section for the PHP gateway path. The backend renders the same markup and
+ * attribute names (web/public_flutter_takeover.js reads them), so the two paths behave alike.
+ * The section starts hidden; the takeover script reveals it at once.
+ */
+function takeoverStatusMarkup(string $locale): string
+{
+    $copy = KUBUS_TAKEOVER_COPY[$locale];
+    $href = takeoverEscape('/map?lang=' . $locale);
+
+    return '<div id="flutter-takeover-status" data-kubus-takeover-status data-state="pending" data-locale="' . takeoverEscape($locale) . '"'
+        . ' data-loading-text="' . takeoverEscape($copy['loading']) . '" data-failure-text="' . takeoverEscape($copy['failure']) . '"'
+        . ' data-refresh-label="' . takeoverEscape($copy['retry']) . '" data-app-label="' . takeoverEscape($copy['app']) . '"'
+        . ' data-app-href="' . $href . '" hidden>'
+        . '<span data-kubus-takeover-message role="status" aria-live="polite" aria-atomic="true">' . takeoverEscape($copy['loading']) . '</span>'
+        . '<span class="takeover-actions" data-kubus-takeover-actions>'
+        . '<button type="button" data-kubus-takeover-refresh>' . takeoverEscape($copy['retry']) . '</button>'
+        . '<a data-kubus-takeover-app href="' . $href . '">' . takeoverEscape($copy['app']) . '</a>'
+        . '</span></div>';
 }
 
 function injectTakeoverShell(string $html, array $target): ?string
@@ -99,21 +155,44 @@ function injectTakeoverShell(string $html, array $target): ?string
         return null;
     }
 
+    $locale = (string) ($target['locale'] ?? '');
+    if (!in_array($locale, ['en', 'sl'], true)) {
+        return null;
+    }
+
     $type = htmlspecialchars((string) $target['type'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
     $id = htmlspecialchars((string) $target['id'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
     $path = htmlspecialchars((string) $target['path'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
-    $takeoverStyle = '<base href="/"><style id="kubus-takeover-edge-style">#flutter-host{position:fixed;inset:0;width:100%;height:100%;z-index:1000;visibility:visible;opacity:1;pointer-events:none;background:inherit}#public-document{position:relative;z-index:1001;min-height:100vh;background:inherit;opacity:1;transition:opacity 200ms ease}html.kubus-takeover-active #flutter-host{pointer-events:auto}html.kubus-takeover-active #public-document{opacity:0;pointer-events:none}html.kubus-takeover-complete #public-document{visibility:hidden}@media(prefers-reduced-motion:reduce){#public-document{transition-duration:.01ms!important}}</style>';
+    $takeoverStyle = '<base href="/"><style id="kubus-takeover-edge-style">#flutter-host{position:fixed;inset:0;width:100%;height:100%;z-index:1000;visibility:visible;opacity:1;pointer-events:none;background:inherit}#public-document{position:relative;z-index:1001;min-height:100vh;background:inherit;opacity:1;transition:opacity 200ms ease}html.kubus-takeover-active #flutter-host{pointer-events:auto}html.kubus-takeover-active #public-document{opacity:0;pointer-events:none}html.kubus-takeover-complete #public-document{visibility:hidden}@media(prefers-reduced-motion:reduce){#public-document{transition-duration:.01ms!important}}' . KUBUS_TAKEOVER_STATUS_CSS . '</style>';
     $html = preg_replace('/<\/head>/i', $takeoverStyle . '</head>', $html, 1);
     if (!is_string($html)) {
         return null;
     }
 
-    $html = preg_replace('/(<body\b[^>]*>)/i', '$1<div id="public-document">', $html, 1);
+    // Decided before the wrapper and host exist: a page that already carries a status section gets no second one.
+    $needsStatus = stripos($html, 'data-kubus-takeover-status') === false;
+
+    $documentOpen = '<div id="public-document">';
+    $html = preg_replace('/(<body\b[^>]*>)/i', '$1' . $documentOpen, $html, 1);
     if (!is_string($html)) {
         return null;
     }
 
-    $bootstrap = '</div><div id="flutter-host" aria-hidden="true" inert data-entity-type="' . $type . '" data-entity-id="' . $id . '" data-entity-path="' . $path . '"></div>'
+    if ($needsStatus) {
+        // Same placement as the backend: after the first header of the public document, else first child.
+        $insertAt = stripos($html, $documentOpen);
+        if ($insertAt === false) {
+            return null;
+        }
+        $insertAt += strlen($documentOpen);
+        $headerEnd = stripos($html, '</header>', $insertAt);
+        if ($headerEnd !== false) {
+            $insertAt = $headerEnd + strlen('</header>');
+        }
+        $html = substr($html, 0, $insertAt) . takeoverStatusMarkup($locale) . substr($html, $insertAt);
+    }
+
+    $bootstrap = '</div><div id="flutter-host" aria-hidden="true" inert data-entity-type="' . $type . '" data-entity-id="' . $id . '" data-entity-path="' . $path . '" data-locale="' . takeoverEscape($locale) . '"></div>'
         . '<script src="/public_flutter_takeover.js" defer></script>'
         . '<script src="/flutter_bootstrap.js" defer></script>';
     $html = preg_replace('/<\/body>/i', $bootstrap . '</body>', $html, 1);

@@ -137,7 +137,7 @@ contracts before modifying the handoff.
 
 ## 6. Takeover correctness
 
-`web/public_flutter_takeover.js` shows loading copy after about 500 ms and a
+`web/public_flutter_takeover.js` shows the inline loading section at once and a
 slow state after about 8 s. Neither is a failure, and no timer declares failure.
 
 Failure happens only on an actual bootstrap or resource error:
@@ -151,8 +151,17 @@ Failure happens only on an actual bootstrap or resource error:
   successful request, or an undefined `responseStatus` in older browsers, never
   fails.
 
-On failure the SSR page stays visible with one manual Refresh control. There is
-no automatic reload. A late `kubus:public-entity-ready` cannot cover a failed
+On failure the SSR page stays visible with the inline section: the message,
+Retry and Go to app. Retry reloads once and disables itself. There is
+no automatic reload.
+
+Inline loading section: the backend (and the PHP gateway, when the backend page
+lacks one) renders `#flutter-takeover-status` with `data-locale`, a message,
+Retry and a Go to app link to `/map?lang=<locale>`. The section is revealed at
+script execution, and is removed on the exact entity's ready or resolved answer.
+Older markup gets the actions group added. Its Go to app link is taken from the
+markup only when it is a same-origin single-slash path that is not the entity
+itself. A late `kubus:public-entity-ready` cannot cover a failed
 SSR page.
 
 Flutter also reports a pending entity whose load got no answer (rate limit 429,
