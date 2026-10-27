@@ -185,6 +185,7 @@
     statusEl.setAttribute("aria-hidden", "true");
   };
 
+  const STATUS_REMOVE_DELAY_MS = 80;
   const removeStatusElement = () => {
     if (!statusEl) return;
     statusEl.remove();
@@ -282,7 +283,9 @@
       transitionCleanup = null;
     }
     root.classList.add("kubus-takeover-complete");
-    removeStatusElement();
+    // The document is hidden from this frame on. Removing the section in the same frame still counts as a layout
+    // shift of the content in Chromium (visible with reduced motion, where there is no fade), so it goes a few frames later.
+    globalThis.setTimeout(removeStatusElement, STATUS_REMOVE_DELAY_MS);
     mark("flutter_takeover_completed");
     globalThis.dispatchEvent(new CustomEvent("kubus:flutter-takeover-completed"));
   };

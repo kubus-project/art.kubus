@@ -425,6 +425,9 @@ test('ready for the exact entity removes the status element from the document', 
   const section = page.status;
   page.global.location.pathname = pathFor('sl');
   page.dispatchEntity(exactEntity('sl'));
+  assert.equal(page.status, section, 'hidden at handoff, removed a few frames later');
+  assert.equal(section.style.visibility, 'hidden');
+  page.advance(80);
   assert.equal(page.status, null);
   assert.equal(page.statusCount, 0);
   assert.equal(section.parentNode, null, 'the detached section is no longer in the page');
@@ -640,6 +643,7 @@ test('a failed-entity signal after the exact entity is ready changes nothing and
   const exact = exactEntity('en');
   page.dispatchEntity(exact);
   assert.equal(page.classes.has('kubus-takeover-active'), true);
+  page.advance(80);
   assert.equal(page.status, null);
 
   page.global.dispatchEvent(new page.global.CustomEvent('kubus:public-entity-failed', { detail: exact }));
@@ -666,6 +670,7 @@ test('a resolved not-found signal removes the overlay without the failed state o
   assert.equal(page.classes.has('kubus-takeover-active'), false);
 
   signalResolved(JSON.stringify(exact));
+  page.advance(80);
   assert.equal(page.status, null, 'the section is removed on handoff');
   assert.equal(page.classes.has('kubus-takeover-active'), true, 'the app is handed the page');
   assert.equal(page.classes.has('kubus-takeover-complete'), true);
@@ -742,6 +747,7 @@ test('an old-backend section (no actions group, Refresh label) gets the actions 
 
   page.global.kubusPublicTakeover.bootstrapStarted();
   page.dispatchEntity(exactEntity('en'));
+  page.advance(80);
   assert.equal(page.status, null);
   assert.equal(page.classes.has('kubus-takeover-active'), true);
 });
@@ -917,6 +923,10 @@ test('handoff keeps the section box (visibility only) during the fade, then remo
   assert.equal(page.status, section);
   page.advance(1);
   assert.equal(page.classes.has('kubus-takeover-complete'), true);
+  assert.equal(page.status, section, 'still present in the frame where the document becomes hidden: removing it then counts as a layout shift');
+  page.advance(79);
+  assert.equal(page.status, section);
+  page.advance(1);
   assert.equal(page.status, null);
   assert.equal(section.parentNode, null);
   assert.equal(page.statusCount, 0);
@@ -954,7 +964,7 @@ test('PHP gateway: Retry uses the backend accent token names and a distinct disa
 test('the takeover script re-enables Retry on pageshow and removes the section at the end of the fade', () => {
   const js = fs.readFileSync(TAKEOVER_JS, 'utf8');
   assert.match(js, /globalThis\.addEventListener\("pageshow", enableRetry\)/);
-  assert.match(js, /root\.classList\.add\("kubus-takeover-complete"\);\s*removeStatusElement\(\);/);
+  assert.match(js, /root\.classList\.add\("kubus-takeover-complete"\);[\s\S]*?globalThis\.setTimeout\(removeStatusElement, STATUS_REMOVE_DELAY_MS\);/);
 });
 
 // The pre-paint capability handshake (web/takeover_capability.js), loaded from <head> before first paint.
