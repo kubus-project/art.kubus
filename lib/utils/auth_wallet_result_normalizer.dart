@@ -47,12 +47,22 @@ const String _noTokenFailureReason =
 Future<NormalizedWalletAuthResult> normalizeWalletAuthResult({
   required Object? routeResult,
   required BackendApiService api,
+  required int expectedSessionEpoch,
   String? fallbackWalletAddress,
   bool hadAuthBeforeOpen = false,
 }) async {
   final fallbackWallet = _clean(fallbackWalletAddress);
   final apiToken = _clean(api.getAuthToken());
   final currentAuthWallet = _clean(api.getCurrentAuthWalletAddress());
+  final startEpoch = expectedSessionEpoch;
+  final returnedToken =
+      routeResult is Map ? _extractToken(_stringKeyedMap(routeResult)) : '';
+  // A nested wallet login may already have committed its returned token.
+  // Nothing else can authorize a result from an ended route attempt.
+  if (startEpoch != api.authSessionEpoch &&
+      (returnedToken.isEmpty || returnedToken != apiToken)) {
+    return const NormalizedWalletAuthResult.failed(_noTokenFailureReason);
+  }
 
   void logResult(String result, {String? detail}) {
     if (!kDebugMode) return;
@@ -86,13 +96,12 @@ Future<NormalizedWalletAuthResult> normalizeWalletAuthResult({
       // The wallet flow returned a session token: persist it so
       // getAuthToken()/Authorization headers see it immediately.
       if (payloadToken != apiToken) {
-        final epoch = api.authSessionEpoch;
         try {
           await api.persistAuthTokensFromResponse({
             'token': payloadToken,
             if (_extractRefreshToken(map).isNotEmpty)
               'refreshToken': _extractRefreshToken(map),
-          }, sessionEpoch: epoch);
+          }, sessionEpoch: startEpoch);
         } catch (_) {
           return const NormalizedWalletAuthResult.failed(_noTokenFailureReason);
         }
@@ -111,7 +120,12 @@ Future<NormalizedWalletAuthResult> normalizeWalletAuthResult({
     // itself (challenge/sign/login) is the only other acceptable evidence,
     // and it must be able to load /api/profiles/me.
     if (apiToken.isNotEmpty) {
+      final verificationEpoch = api.authSessionEpoch;
       final verified = await _verifyTokenWithProfile(api, logResult);
+      if (verificationEpoch != api.authSessionEpoch ||
+          api.getAuthToken() != apiToken) {
+        return const NormalizedWalletAuthResult.failed(_noTokenFailureReason);
+      }
       if (verified != null) {
         final mergedWallet = _firstNonEmpty([
           _extractWalletAddress(map),
@@ -163,7 +177,12 @@ Future<NormalizedWalletAuthResult> normalizeWalletAuthResult({
   // A token that appeared during the flow (persisted by wallet login) is
   // acceptable only when /api/profiles/me confirms it.
   if (apiToken.isNotEmpty) {
+    final verificationEpoch = api.authSessionEpoch;
     final verified = await _verifyTokenWithProfile(api, logResult);
+    if (verificationEpoch != api.authSessionEpoch ||
+        api.getAuthToken() != apiToken) {
+      return const NormalizedWalletAuthResult.failed(_noTokenFailureReason);
+    }
     if (verified != null) {
       final walletAddress = _firstNonEmpty([
         _walletFromMap(verified),
