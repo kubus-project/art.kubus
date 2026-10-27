@@ -18,4 +18,17 @@
     var failure = status.getAttribute("data-failure-text");
     if (message && failure) message.textContent = failure;
   }, 12000);
+
+  // Retry must work even when the main takeover script never ran (blocked, failed or not yet executed).
+  // Once that script is present it owns the button, so this handler steps aside. One reload per activation.
+  document.addEventListener("click", function (event) {
+    if (globalThis.kubusPublicTakeover !== undefined) return;
+    var node = event.target;
+    while (node && !(node.getAttribute && node.getAttribute("data-kubus-takeover-refresh") != null)) {
+      node = node.parentNode;
+    }
+    if (!node || node.disabled) return;
+    node.disabled = true;
+    globalThis.location.reload();
+  });
 })();

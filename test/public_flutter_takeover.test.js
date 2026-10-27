@@ -970,8 +970,12 @@ function runCapability({ locale = 'en', main = false, state = 'pending' } = {}) 
   doc.documentElement.appendChild(body);
 
   const timers = [];
+  const clickHandlers = [];
+  let reloads = 0;
+  doc.addEventListener = (name, callback) => { if (name === 'click') clickHandlers.push(callback); };
   const global = {
     document: doc,
+    location: { reload: () => { reloads += 1; } },
     setTimeout: (callback, delay) => {
       timers.push({ callback, delay });
       return timers.length;
@@ -986,6 +990,8 @@ function runCapability({ locale = 'en', main = false, state = 'pending' } = {}) 
     status,
     timers,
     html: doc.documentElement,
+    click: (target) => clickHandlers.forEach((handler) => handler({ target })),
+    reloads: () => reloads,
     fireSafety: () => timers.forEach((timer) => timer.callback()),
   };
 }
@@ -1023,6 +1029,22 @@ test('capability: a page whose takeover script ran, or whose section left pendin
   loading.fireSafety();
   assert.equal(loading.status.dataset.state, 'loading');
   assert.equal(loading.status.hidden, true, 'the capability script does not unhide a section it did not time out');
+});
+
+test('capability: Retry reloads once even when the takeover script never ran, and steps aside when it did', () => {
+  const page = runCapability();
+  const retry = page.status.querySelector('[data-kubus-takeover-refresh]');
+  page.click(retry);
+  assert.equal(page.reloads(), 1);
+  assert.equal(retry.disabled, true);
+  page.click(retry);
+  assert.equal(page.reloads(), 1, 'a second activation does not reload again');
+  const owned = runCapability({ main: true });
+  owned.click(owned.status.querySelector('[data-kubus-takeover-refresh]'));
+  assert.equal(owned.reloads(), 0, 'the takeover script owns the button once it exists');
+  const elsewhere = runCapability();
+  elsewhere.click(elsewhere.status.querySelector('[data-kubus-takeover-message]'));
+  assert.equal(elsewhere.reloads(), 0);
 });
 
 test('capable page: the section is shown at once with its loading text, and no empty message is ever written', () => {
