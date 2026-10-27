@@ -1,15 +1,39 @@
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../services/telemetry/optional_analytics_consent.dart';
+
 /// Configuration provider that manages app-wide settings
 /// Loads settings from SharedPreferences and provides reactive updates
 class ConfigProvider extends ChangeNotifier {
+  ConfigProvider({OptionalAnalyticsConsent? analyticsConsent})
+      : _analyticsConsent =
+            analyticsConsent ?? OptionalAnalyticsConsent.instance {
+    _enableAnalytics = _analyticsConsent.granted;
+    _analyticsConsent.addListener(_onAnalyticsConsentChanged);
+  }
+
+  final OptionalAnalyticsConsent _analyticsConsent;
+
+  void _onAnalyticsConsentChanged() {
+    final next = _analyticsConsent.granted;
+    if (_enableAnalytics == next) return;
+    _enableAnalytics = next;
+    notifyListeners();
+  }
+
+  @override
+  void dispose() {
+    _analyticsConsent.removeListener(_onAnalyticsConsentChanged);
+    super.dispose();
+  }
+
   static const String _serverVersionKey = 'serverVersion';
   static const String _serverVersionFetchedAtKey = 'serverVersionFetchedAtMs';
 
   // Default values (fallback if no preferences exist)
   bool _useRealBlockchain = true;
-  bool _enableAnalytics = true;
+  bool _enableAnalytics = false;
   bool _enableCrashReporting = true;
   String? _serverVersion;
   DateTime? _serverVersionFetchedAt;
@@ -28,21 +52,17 @@ class ConfigProvider extends ChangeNotifier {
 
   /// Load all settings from SharedPreferences
   Future<void> _loadSettings() async {
+    await _analyticsConsent.refresh();
     try {
       final prefs = await SharedPreferences.getInstance();
 
       _useRealBlockchain = prefs.getBool('useRealBlockchain') ?? true;
-      final legacyAnalytics = prefs.getBool('analytics');
       final legacyCrashReporting = prefs.getBool('crashReporting');
-      _enableAnalytics =
-          prefs.getBool('enableAnalytics') ?? legacyAnalytics ?? true;
+      _enableAnalytics = _analyticsConsent.granted;
       _enableCrashReporting =
           prefs.getBool('enableCrashReporting') ?? legacyCrashReporting ?? true;
       // Migrate the only legacy aliases while keeping the canonical keys that
       // ConfigProvider owns. New writes never go through SettingsService.
-      if (!prefs.containsKey('enableAnalytics') && legacyAnalytics != null) {
-        await prefs.setBool('enableAnalytics', legacyAnalytics);
-      }
       if (!prefs.containsKey('enableCrashReporting') &&
           legacyCrashReporting != null) {
         await prefs.setBool('enableCrashReporting', legacyCrashReporting);
@@ -64,7 +84,8 @@ class ConfigProvider extends ChangeNotifier {
       if (kDebugMode) {
         debugPrint('Error loading config settings: $e');
       }
-      // Keep default values if loading fails
+      // A failed preference load never restores a historical opt-in.
+      await _analyticsConsent.setGranted(false);
     }
   }
 
@@ -79,11 +100,8 @@ class ConfigProvider extends ChangeNotifier {
 
   /// Update analytics setting
   Future<void> setEnableAnalytics(bool value) async {
-    if (_enableAnalytics != value) {
-      _enableAnalytics = value;
-      notifyListeners();
-      await _saveSetting('enableAnalytics', value);
-    }
+    await _analyticsConsent.setGranted(value);
+    _onAnalyticsConsentChanged();
   }
 
   /// Update crash reporting setting
@@ -139,6 +157,7 @@ class ConfigProvider extends ChangeNotifier {
 
   /// Reset all settings to defaults
   Future<void> resetToDefaults() async {
+    await _analyticsConsent.setGranted(false);
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.remove('useRealBlockchain');
@@ -150,7 +169,7 @@ class ConfigProvider extends ChangeNotifier {
       await prefs.remove(_serverVersionFetchedAtKey);
 
       _useRealBlockchain = true;
-      _enableAnalytics = true;
+      _enableAnalytics = false;
       _enableCrashReporting = true;
       _serverVersion = null;
       _serverVersionFetchedAt = null;
