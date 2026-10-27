@@ -25,6 +25,7 @@ const KUBUS_TAKEOVER_COPY = [
 // The hidden rule is explicit because the author display value would otherwise override the UA hidden style.
 const KUBUS_TAKEOVER_STATUS_CSS = '#flutter-takeover-status{box-sizing:border-box;display:flex;flex-wrap:wrap;align-items:center;gap:.75rem 1rem;width:min(100%,56rem);margin:1rem auto;padding:.75rem 1rem;border:1px solid var(--color-border,#d7d0c4);border-radius:.75rem;background:var(--color-surface,#fffdf8);color:var(--color-text,#1d1b16);font:inherit;line-height:1.5}'
     . '#flutter-takeover-status[hidden]{display:none}'
+    . 'html.kubus-takeover-capable #flutter-takeover-status[hidden][data-state=pending]{display:flex}'
     . '#flutter-takeover-status [data-kubus-takeover-message]{flex:1 1 16rem;margin:0}'
     . '#flutter-takeover-status .takeover-actions{display:flex;flex-wrap:wrap;gap:.5rem}'
     . '#flutter-takeover-status [data-kubus-takeover-refresh],#flutter-takeover-status [data-kubus-takeover-app]{display:inline-flex;align-items:center;justify-content:center;min-height:2.75rem;padding:.5rem 1.1rem;border:1px solid var(--color-border,#8c8478);border-radius:999px;background:var(--color-surface,#fffdf8);color:var(--color-text,#1d1b16);font:inherit;font-weight:600;text-decoration:none;cursor:pointer}'
@@ -164,7 +165,12 @@ function injectTakeoverShell(string $html, array $target): ?string
     $id = htmlspecialchars((string) $target['id'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
     $path = htmlspecialchars((string) $target['path'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
     $takeoverStyle = '<base href="/"><style id="kubus-takeover-edge-style">#flutter-host{position:fixed;inset:0;width:100%;height:100%;z-index:1000;visibility:visible;opacity:1;pointer-events:none;background:inherit}#public-document{position:relative;z-index:1001;min-height:100vh;background:inherit;opacity:1;transition:opacity 200ms ease}html.kubus-takeover-active #flutter-host{pointer-events:auto}html.kubus-takeover-active #public-document{opacity:0;pointer-events:none}html.kubus-takeover-complete #public-document{visibility:hidden}@media(prefers-reduced-motion:reduce){#public-document{transition-duration:.01ms!important}}' . KUBUS_TAKEOVER_STATUS_CSS . '</style>';
-    $html = preg_replace('/<\/head>/i', $takeoverStyle . '</head>', $html, 1);
+    // The capability handshake runs before first paint, so the section can be painted with no layout shift.
+    // It is emitted once; a page that already carries it keeps its own tag.
+    $capabilityScript = stripos($html, 'takeover_capability.js') === false
+        ? '<script src="/takeover_capability.js"></script>'
+        : '';
+    $html = preg_replace('/<\/head>/i', $takeoverStyle . $capabilityScript . '</head>', $html, 1);
     if (!is_string($html)) {
         return null;
     }

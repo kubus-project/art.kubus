@@ -8,6 +8,9 @@
   }
 
   const root = document.documentElement;
+  // Set by web/takeover_capability.js before first paint: the section is already painted, so the
+  // reveal below must not blank the message first (an empty message collapses a line = layout shift).
+  const capable = root.classList.contains("kubus-takeover-capable");
   const expected = Object.freeze({
     type: host.dataset.entityType || "",
     id: host.dataset.entityId || "",
@@ -153,11 +156,12 @@
 
   const part = (selector) => (statusEl ? statusEl.querySelector(selector) : null);
 
-  // A section that becomes visible starts with an empty message, and the text is written in the next task.
-  // Assistive technology announces a live region reliably that way, not from the hidden-to-shown switch.
+  // A section that becomes visible without the capability handshake starts with an empty message, and the text
+  // is written in the next task. Assistive technology announces a live region reliably that way, not from the
+  // hidden-to-shown switch. A capable page already painted the section, so its text is written at once.
   const setStatus = (state, message, visible) => {
     if (!statusEl) return;
-    const revealing = visible && statusEl.hidden;
+    const revealing = visible && statusEl.hidden && !capable;
     statusEl.dataset.state = state;
     statusEl.hidden = !visible;
     const text = part("[data-kubus-takeover-message]");

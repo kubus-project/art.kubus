@@ -7,6 +7,7 @@ const vm = require('node:vm');
 const ORIGIN = 'https://app.kubus.site';
 const TAKEOVER_JS = path.join(__dirname, '..', 'web', 'public_flutter_takeover.js');
 const SEO_PROXY = path.join(__dirname, '..', 'web', 'seo-proxy.php');
+const CAPABILITY_JS = path.join(__dirname, '..', 'web', 'takeover_capability.js');
 
 const COPY = {
   en: {
@@ -252,6 +253,16 @@ function buildPage(locale = 'en', options = {}) {
   if (statusMode === 'old') publicDocument.appendChild(oldBackendStatus(locale));
   publicDocument.appendChild(element('main', {}, 'SSR content'));
   body.appendChild(publicDocument);
+  // Records every write to the live message, so a test can prove that no empty text is ever written.
+  const textWrites = [];
+  if (options.trackMessageWrites) {
+    const message = publicDocument.querySelector('[data-kubus-takeover-message]');
+    let value = message.textContent;
+    Object.defineProperty(message, 'textContent', {
+      get: () => value,
+      set: (next) => { textWrites.push(next); value = next; },
+    });
+  }
 
   const host = element('div', {
     id: 'flutter-host',
@@ -312,6 +323,7 @@ function buildPage(locale = 'en', options = {}) {
     URL,
   };
   global.globalThis = global;
+  if (options.capable) html.classes.add('kubus-takeover-capable');
   vm.runInNewContext(fs.readFileSync(TAKEOVER_JS, 'utf8'), global, { filename: TAKEOVER_JS });
 
   const advance = (duration) => {
@@ -336,6 +348,7 @@ function buildPage(locale = 'en', options = {}) {
     publicDocument,
     bootstrapScript,
     marks,
+    textWrites,
     classes: html.classes,
     advance,
     dispatchEntity: (detail) => global.dispatchEvent(new global.CustomEvent('kubus:public-entity-ready', { detail })),
@@ -942,4 +955,124 @@ test('the takeover script re-enables Retry on pageshow and removes the section a
   const js = fs.readFileSync(TAKEOVER_JS, 'utf8');
   assert.match(js, /globalThis\.addEventListener\("pageshow", enableRetry\)/);
   assert.match(js, /root\.classList\.add\("kubus-takeover-complete"\);\s*removeStatusElement\(\);/);
+});
+
+// The pre-paint capability handshake (web/takeover_capability.js), loaded from <head> before first paint.
+function runCapability({ locale = 'en', main = false, state = 'pending' } = {}) {
+  const doc = new FakeDocument();
+  const body = element('body');
+  const publicDocument = element('div', { id: 'public-document' });
+  publicDocument.appendChild(element('header'));
+  const status = backendStatus(locale);
+  status.setAttribute('data-state', state);
+  publicDocument.appendChild(status);
+  body.appendChild(publicDocument);
+  doc.documentElement.appendChild(body);
+
+  const timers = [];
+  const global = {
+    document: doc,
+    setTimeout: (callback, delay) => {
+      timers.push({ callback, delay });
+      return timers.length;
+    },
+    clearTimeout: () => {},
+  };
+  if (main) global.kubusPublicTakeover = Object.freeze({});
+  global.globalThis = global;
+  vm.runInNewContext(fs.readFileSync(CAPABILITY_JS, 'utf8'), global, { filename: CAPABILITY_JS });
+
+  return {
+    status,
+    timers,
+    html: doc.documentElement,
+    fireSafety: () => timers.forEach((timer) => timer.callback()),
+  };
+}
+
+test('capability: the class is set before any takeover script, and the handshake only arms a 12 s safety', () => {
+  const page = runCapability();
+  assert.equal(page.html.classes.has('kubus-takeover-capable'), true);
+  assert.equal(page.timers.length, 1);
+  assert.equal(page.timers[0].delay, 12000);
+  assert.equal(page.status.hidden, true, 'the capability script never reveals the section by itself');
+  assert.equal(page.status.dataset.state, 'pending');
+});
+
+for (const locale of ['en', 'sl']) {
+  test(`capability: 12 s without the takeover script enters the failed state with the ${locale} failure text, Retry and Go to app`, () => {
+    const page = runCapability({ locale });
+    page.fireSafety();
+    assert.equal(page.status.dataset.state, 'failed');
+    assert.equal(page.status.hidden, false, 'the failed state is visible, not hidden by the pending-only rule');
+    assert.equal(page.status.querySelector('[data-kubus-takeover-message]').textContent, COPY[locale].failure);
+    assert.equal(page.status.querySelector('[data-kubus-takeover-refresh]').textContent, COPY[locale].retry);
+    const app = page.status.querySelector('[data-kubus-takeover-app]');
+    assert.equal(app.textContent, COPY[locale].app);
+    assert.equal(app.getAttribute('href'), `/map?lang=${locale}`);
+  });
+}
+
+test('capability: a page whose takeover script ran, or whose section left pending, is not changed at 12 s', () => {
+  const ran = runCapability({ main: true });
+  ran.fireSafety();
+  assert.equal(ran.status.dataset.state, 'pending');
+  assert.equal(ran.status.hidden, true);
+
+  const loading = runCapability({ state: 'loading' });
+  loading.fireSafety();
+  assert.equal(loading.status.dataset.state, 'loading');
+  assert.equal(loading.status.hidden, true, 'the capability script does not unhide a section it did not time out');
+});
+
+test('capable page: the section is shown at once with its loading text, and no empty message is ever written', () => {
+  const page = buildPage('en', { capable: true, trackMessageWrites: true, skipInitialTick: true });
+  assert.equal(page.classes.has('kubus-takeover-capable'), true);
+  assert.equal(page.status.hidden, false);
+  assert.equal(page.status.dataset.state, 'loading');
+  assert.equal(page.message.textContent, COPY.en.loading);
+  page.advance(0);
+  assert.deepEqual(page.textWrites, [COPY.en.loading]);
+});
+
+test('capable page: a bootstrap failure shows the failure text and both actions, with no empty step', () => {
+  const page = buildPage('sl', {
+    capable: true, trackMessageWrites: true, bootstrapElement: true, resourceEntries: [bootstrapEntry(0)],
+  });
+  assert.equal(page.status.dataset.state, 'failed');
+  assert.equal(page.status.hidden, false);
+  assert.equal(page.message.textContent, COPY.sl.failure);
+  assert.equal(page.textWrites.includes(''), false);
+  assert.equal(page.refreshButton.textContent, COPY.sl.retry);
+  assert.equal(page.appLink.textContent, COPY.sl.app);
+});
+
+test('a page without the capability class keeps the reveal path: the message is blanked, then written in the next task', () => {
+  const page = buildPage('en', { status: 'current', trackMessageWrites: true, skipInitialTick: true });
+  assert.equal(page.classes.has('kubus-takeover-capable'), false);
+  assert.equal(page.status.hidden, false);
+  assert.equal(page.message.textContent, '');
+  page.advance(0);
+  assert.deepEqual(page.textWrites, ['', COPY.en.loading]);
+});
+
+test('PHP gateway: the capability script is emitted once in the head, and the pre-paint rule follows the hidden rule', () => {
+  const gateway = fs.readFileSync(SEO_PROXY, 'utf8');
+  assert.match(gateway, /\$capabilityScript = stripos\(\$html, 'takeover_capability\.js'\) === false/);
+  assert.match(gateway, /'<script src="\/takeover_capability\.js"><\/script>'/);
+  assert.match(gateway, /preg_replace\('\/<\\\/head>\/i', \$takeoverStyle \. \$capabilityScript \. '<\/head>'/);
+  const css = /const KUBUS_TAKEOVER_STATUS_CSS = ([\s\S]*?);\r?\n/.exec(gateway)[1];
+  const hiddenRule = css.indexOf('#flutter-takeover-status[hidden]{display:none}');
+  const capableRule = css.indexOf('html.kubus-takeover-capable #flutter-takeover-status[hidden][data-state=pending]{display:flex}');
+  assert.ok(hiddenRule >= 0, 'hidden rule exists');
+  assert.ok(capableRule > hiddenRule, 'capability rule follows the hidden rule');
+  assert.doesNotMatch(css, /opacity|visibility:\s*hidden/);
+});
+
+test('PHP gateway: the capability script is added after the early return, so an existing host passes through unchanged', () => {
+  const gateway = fs.readFileSync(SEO_PROXY, 'utf8');
+  const guard = gateway.indexOf("stripos($html, 'id=\"flutter-host\"')");
+  const capability = gateway.indexOf('$capabilityScript = stripos');
+  assert.ok(guard > 0 && capability > guard, 'the flutter-host guard returns before any injection');
+  assert.match(gateway.slice(guard, capability), /return \$html;/);
 });
