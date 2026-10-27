@@ -1,3 +1,4 @@
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'dart:convert';
 
 import 'package:art_kubus/config/config.dart';
@@ -24,6 +25,9 @@ void main() {
   });
 
   setUp(() async {
+    FlutterSecureStorage.setMockInitialValues({});
+    BackendApiService().resetCredentialStoreForTesting();
+    BackendApiService().setAuthTokenForTesting(null);
     SharedPreferences.setMockInitialValues(<String, Object>{});
     await PublicFallbackService().resetForTesting();
     final api = BackendApiService();

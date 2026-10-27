@@ -135,6 +135,7 @@ void main() {
     late Map<String, String> secureValues;
 
     setUp(() {
+      BackendApiService().resetCredentialStoreForTesting();
       SharedPreferences.setMockInitialValues(_signedInPrefs());
       secureValues = _installSecureStorage();
     });
@@ -189,6 +190,7 @@ void main() {
 
   group('a response for a session that ended is discarded', () {
     setUp(() {
+      BackendApiService().resetCredentialStoreForTesting();
       SharedPreferences.setMockInitialValues(<String, Object>{});
       _installSecureStorage();
     });
@@ -236,6 +238,7 @@ void main() {
 
   group('a profile fetched for a session that ended is not cached', () {
     setUp(() async {
+      BackendApiService().resetCredentialStoreForTesting();
       SharedPreferences.setMockInitialValues(<String, Object>{});
       _installSecureStorage();
       await UserService.clearCache();

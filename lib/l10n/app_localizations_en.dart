@@ -5571,6 +5571,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get messagesAttachmentFailedToLoadImage => 'Failed to load image';
 
   @override
+  String get messagesAttachmentUnavailable => 'Attachment is unavailable.';
+
+  @override
   String get messagesAttachmentVideoLabel => 'Video';
 
   @override

@@ -5621,6 +5621,9 @@ class AppLocalizationsSl extends AppLocalizations {
   String get messagesAttachmentFailedToLoadImage => 'Slike ni mogoče naložiti';
 
   @override
+  String get messagesAttachmentUnavailable => 'Priloga ni na voljo.';
+
+  @override
   String get messagesAttachmentVideoLabel => 'Video';
 
   @override

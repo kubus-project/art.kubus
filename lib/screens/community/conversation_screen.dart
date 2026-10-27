@@ -30,6 +30,7 @@ import '../../widgets/identity/kubus_identity_avatar.dart';
 import '../../widgets/inline_loading.dart';
 import '../../widgets/messaging/message_grouping.dart';
 import '../../widgets/messaging/messaging_composer.dart';
+import '../../widgets/messaging/private_message_attachment.dart';
 import '../../utils/creator_display_format.dart';
 import '../../utils/wallet_utils.dart';
 import '../../utils/search_suggestions.dart';
@@ -2085,6 +2086,17 @@ class _ConversationScreenState extends State<ConversationScreen> {
             .toString()
             .toLowerCase();
     final sizeLabel = attachment['size']?.toString();
+    if (Uri.tryParse(url)?.path.startsWith('/api/messages/') == true) {
+      return PrivateMessageAttachment(
+        key: ValueKey('private:$url'),
+        url: url,
+        filename: fileName,
+        mimeType: (attachment['mimeType'] ??
+                attachment['contentType'] ??
+                'application/octet-stream')
+            .toString(),
+      );
+    }
 
     final isImage = contentType.startsWith('image/') ||
         url.endsWith('.png') ||

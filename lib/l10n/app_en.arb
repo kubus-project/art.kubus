@@ -2228,6 +2228,7 @@
   "messagesDeleteConversationFailedToast": "Unable to delete conversation right now.",
   "messagesAttachmentDefaultFilename": "attachment",
   "messagesAttachmentFailedToLoadImage": "Failed to load image",
+  "messagesAttachmentUnavailable": "Attachment is unavailable.",
   "messagesAttachmentVideoLabel": "Video",
   "messagesAttachmentPlayVideoButton": "Play Video",
   "messagesAttachmentDownloadButton": "Download",

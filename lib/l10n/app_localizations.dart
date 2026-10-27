@@ -9844,6 +9844,9 @@ abstract class AppLocalizations {
   /// **'Failed to load image'**
   String get messagesAttachmentFailedToLoadImage;
 
+  /// A private attachment cannot be retrieved in the current session.
+  String get messagesAttachmentUnavailable;
+
   /// No description provided for @messagesAttachmentVideoLabel.
   ///
   /// In en, this message translates to:

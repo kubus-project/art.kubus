@@ -86,20 +86,18 @@ Future<NormalizedWalletAuthResult> normalizeWalletAuthResult({
       // The wallet flow returned a session token: persist it so
       // getAuthToken()/Authorization headers see it immediately.
       if (payloadToken != apiToken) {
+        final epoch = api.authSessionEpoch;
         try {
-          await api.setAuthToken(payloadToken);
-        } catch (e) {
-          if (kDebugMode) {
-            AppConfig.debugPrint(
-              'AuthWalletResultNormalizer: token persistence failed (${e.runtimeType})',
-            );
-          }
+          await api.persistAuthTokensFromResponse({
+            'token': payloadToken,
+            if (_extractRefreshToken(map).isNotEmpty)
+              'refreshToken': _extractRefreshToken(map),
+          }, sessionEpoch: epoch);
+        } catch (_) {
+          return const NormalizedWalletAuthResult.failed(_noTokenFailureReason);
         }
-        final refreshToken = _extractRefreshToken(map);
-        if (refreshToken.isNotEmpty) {
-          try {
-            await api.setRefreshToken(refreshToken);
-          } catch (_) {}
+        if (api.getAuthToken() != payloadToken) {
+          return const NormalizedWalletAuthResult.failed(_noTokenFailureReason);
         }
       }
       logResult('success', detail: 'payload-token');
@@ -130,8 +128,7 @@ Future<NormalizedWalletAuthResult> normalizeWalletAuthResult({
                 if (map['data'] is Map) ..._stringKeyedMap(map['data'] as Map),
                 'user': <String, dynamic>{
                   ...verified,
-                  if (map['data'] is Map &&
-                      (map['data'] as Map)['user'] is Map)
+                  if (map['data'] is Map && (map['data'] as Map)['user'] is Map)
                     ..._stringKeyedMap((map['data'] as Map)['user'] as Map),
                 },
               },
