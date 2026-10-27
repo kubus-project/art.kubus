@@ -172,15 +172,13 @@
     }
   };
 
-  // On handoff the section keeps its box and only loses visibility, so the content does not shift
+  // On handoff the section keeps its box, text included, and only loses visibility, so the content does not shift
   // during the fade. It is removed from the document when the transition completes.
   const hideStatus = (state) => {
     if (!statusEl) return;
     statusEl.dataset.state = state;
     statusEl.style.visibility = "hidden";
     statusEl.setAttribute("aria-hidden", "true");
-    const text = part("[data-kubus-takeover-message]");
-    if (text) text.textContent = "";
   };
 
   const removeStatusElement = () => {

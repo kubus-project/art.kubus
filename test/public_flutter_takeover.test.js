@@ -898,6 +898,7 @@ test('handoff keeps the section box (visibility only) during the fade, then remo
   assert.equal(page.status, section, 'the section stays in the document during the fade');
   assert.equal(section.style.visibility, 'hidden');
   assert.equal(section.hidden, false, 'no display change, so no layout shift');
+  assert.equal(page.message.textContent, COPY.en.loading, 'the text stays, so a wrapped message keeps its height during the fade');
   assert.equal(page.statusCount, 1);
   page.advance(259);
   assert.equal(page.status, section);
