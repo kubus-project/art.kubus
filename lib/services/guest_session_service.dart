@@ -2,6 +2,8 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart' show kIsWeb, visibleForTesting;
 import 'package:shared_preferences/shared_preferences.dart';
+import 'telemetry/optional_analytics_consent.dart';
+import 'account_identity.dart';
 
 /// Captures campaign attribution from the launch URL and, independently,
 /// guest-first discovery state when `mode=guest` or a supported intent exists.
@@ -113,6 +115,8 @@ class GuestSessionService {
   static String? _entryRouteSnapshot;
   static DateTime? _launchSnapshotCapturedAt;
   static Future<void>? _captureFuture;
+  static String? _launchConsentRevision;
+  static String? _launchAccountKey;
   static Completer<void>? _platformInitialLinkCompleter;
 
   /// Whether a platform launch URL has been frozen for this process.
@@ -148,7 +152,16 @@ class GuestSessionService {
       // arrives later as an `initialUri`. Leave the snapshot unset so that
       // call can still supply it, instead of freezing an empty one.
       if (uri == null) return;
-      _launchSnapshot = Map<String, String>.unmodifiable(uri.queryParameters);
+      _launchConsentRevision = OptionalAnalyticsConsent.instance.revision;
+      _launchAccountKey = AccountIdentity.accountKey;
+      _launchSnapshot = Map<String, String>.unmodifiable({
+        for (final entry in uri.queryParameters.entries)
+          if (entry.key == 'mode' ||
+              entry.key == 'intent' ||
+              (OptionalAnalyticsConsent.instance.granted &&
+                  utmKeys.contains(entry.key)))
+            entry.key: entry.value,
+      });
       _entryRouteSnapshot = normalizeEntryRoute(uri.path);
       _launchSnapshotCapturedAt = DateTime.now().toUtc();
     } catch (_) {
@@ -163,6 +176,8 @@ class GuestSessionService {
     _entryRouteSnapshot = null;
     _launchSnapshotCapturedAt = null;
     _captureFuture = null;
+    _launchConsentRevision = null;
+    _launchAccountKey = null;
     _platformInitialLinkCompleter = null;
   }
 
@@ -259,6 +274,34 @@ class GuestSessionService {
       await p.setString(intentKey, intent);
     }
 
+    // Functional guest/intent routing remains available without measurement.
+    // Campaign device storage needs an explicit current choice, not a build flag.
+    final consent = OptionalAnalyticsConsent.instance;
+    final accountKey = AccountIdentity.accountKey;
+    final allowed = await consent.refresh();
+    final generation = consent.generation;
+    bool current() =>
+        consent.granted &&
+        consent.generation == generation &&
+        AccountIdentity.accountKey == accountKey;
+    if (!allowed || !current()) {
+      await clearAcquisitionAttribution(prefs: p);
+      if (intents.contains(intent)) await p.setString(intentKey, intent);
+      return;
+    }
+    final desiredScope =
+        '${p.getString(OptionalAnalyticsConsent.prefsKey)}:$accountKey';
+    if (p.getString('kubus_entry_attribution_scope_v2') != desiredScope) {
+      await clearAcquisitionAttribution(
+          prefs: p, preserveFunctionalIntent: true);
+    }
+    await p.setString('kubus_entry_attribution_scope_v2',
+        '${p.getString(OptionalAnalyticsConsent.prefsKey)}:$accountKey');
+    if (!current()) {
+      await clearAcquisitionAttribution(
+          prefs: p, preserveFunctionalIntent: true);
+      return;
+    }
     final hasLaunchAttribution = utmKeys.any(
       (key) => (params[key] ?? '').trim().isNotEmpty,
     );
@@ -279,6 +322,11 @@ class GuestSessionService {
     for (final key in utmKeys) {
       final value = (params[key] ?? '').trim();
       if (value.isNotEmpty) {
+        if (!current()) {
+          await clearAcquisitionAttribution(
+              prefs: p, preserveFunctionalIntent: true);
+          return;
+        }
         await p.setString('$_utmPrefix$key', _clip(value, 200));
       }
     }
@@ -303,6 +351,10 @@ class GuestSessionService {
         entryRoute.isNotEmpty &&
         (hasLaunchAttribution || (p.getString(entryRouteKey) ?? '').isEmpty)) {
       await p.setString(entryRouteKey, entryRoute);
+    }
+    if (!current()) {
+      await clearAcquisitionAttribution(
+          prefs: p, preserveFunctionalIntent: true);
     }
   }
 
@@ -377,14 +429,32 @@ class GuestSessionService {
   /// outlive the campaign it belonged to.
   static Future<void> clearAcquisitionAttribution({
     SharedPreferences? prefs,
+    bool preserveFunctionalIntent = false,
   }) async {
     final p = prefs ?? await SharedPreferences.getInstance();
-    for (final key in utmKeys) {
-      await p.remove('$_utmPrefix$key');
+    if (_launchSnapshot != null) {
+      _launchSnapshot = Map<String, String>.unmodifiable({
+        for (final entry in _launchSnapshot!.entries)
+          if (!utmKeys.contains(entry.key)) entry.key: entry.value,
+      });
     }
-    await p.remove(entryRouteKey);
-    await p.remove(intentKey);
-    await p.remove(attributionCapturedAtKey);
+    Object? failure;
+    for (final key in [
+      ...utmKeys.map((key) => '$_utmPrefix$key'),
+      entryRouteKey,
+      if (!preserveFunctionalIntent) intentKey,
+      attributionCapturedAtKey,
+      'kubus_entry_attribution_scope_v2',
+    ]) {
+      try {
+        if (!await p.remove(key)) {
+          failure ??= StateError('Campaign removal failed');
+        }
+      } catch (error) {
+        failure ??= error;
+      }
+    }
+    if (failure != null) throw failure;
   }
 
   /// Landing route for this visitor, preferring the persisted first-touch value.
@@ -435,8 +505,20 @@ class GuestSessionService {
   }
 
   static Map<String, String> entryUtmSync(SharedPreferences prefs) {
-    final params = _attributionLaunchParams();
-    final storedIsFresh = isStoredAttributionFreshSync(prefs);
+    final consent = OptionalAnalyticsConsent.instance;
+    if (!consent.granted ||
+        !OptionalAnalyticsConsent.hasStoredPermission(prefs)) {
+      return {};
+    }
+    final scope =
+        '${prefs.getString(OptionalAnalyticsConsent.prefsKey)}:${AccountIdentity.accountKey}';
+    final params = _launchConsentRevision == consent.revision &&
+            _launchAccountKey == AccountIdentity.accountKey
+        ? _attributionLaunchParams()
+        : const <String, String>{};
+    final storedIsFresh =
+        prefs.getString('kubus_entry_attribution_scope_v2') == scope &&
+            isStoredAttributionFreshSync(prefs);
     final out = <String, String>{};
     for (final key in utmKeys) {
       // Prefer the persisted first-touch value; fall back to the live launch

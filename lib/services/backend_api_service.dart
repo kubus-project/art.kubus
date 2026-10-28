@@ -41,6 +41,7 @@ import 'auth_session_coordinator.dart';
 import 'http_client_factory.dart';
 import 'media_upload_optimizer.dart';
 import 'telemetry/kubus_client_context.dart';
+import 'telemetry/optional_analytics_consent.dart';
 import 'telemetry/telemetry_uuid.dart';
 import 'node/turn_configuration.dart';
 import 'account_identity.dart';
@@ -10077,20 +10078,33 @@ class BackendApiService
   /// Ingest app client telemetry in batches (best-effort; non-blocking).
   ///
   /// POST /api/analytics/app
-  Future<http.Response?> postAppTelemetry(String jsonBody) async {
+  Future<http.Response?> postAppTelemetry(String jsonBody,
+      {int? consentGeneration, int? accountSessionEpoch}) async {
+    final consent = OptionalAnalyticsConsent.instance;
+    final generation = consentGeneration ?? consent.generation;
+    final accountEpoch = accountSessionEpoch ?? authSessionEpoch;
     try {
+      if (!await consent.refresh() || generation != consent.generation) {
+        return null;
+      }
+      if (accountEpoch != authSessionEpoch) return null;
+      final claims = getCurrentAuthTokenClaims();
+      final actor = (claims?['id'] ?? claims?['sub'])?.toString();
+      final payload = jsonDecode(jsonBody) as Map;
+      final events = payload['events'];
+      if (events is! List ||
+          events.any(
+              (event) => event is! Map || event['actor_user_id'] != actor)) {
+        return null;
+      }
       final uri = Uri.parse('$baseUrl/api/analytics/app');
-      final response = await _post(
-        uri,
-        includeAuth: false,
-        headers: _getHeaders(includeAuth: false),
-        body: jsonBody,
-        isIdempotent: true,
-        timeout: const Duration(seconds: 6),
-      );
-      return response;
-    } catch (e) {
-      AppConfig.debugPrint('BackendApiService.postAppTelemetry failed: $e');
+      // Optional measurement does not use authenticated request replay or
+      // failover retries. The final permission check precedes network handoff.
+      if (!consent.granted || generation != consent.generation) return null;
+      return await _client
+          .post(uri, headers: _getHeaders(includeAuth: false), body: jsonBody)
+          .timeout(const Duration(seconds: 6));
+    } catch (_) {
       return null;
     }
   }

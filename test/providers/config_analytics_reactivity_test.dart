@@ -17,6 +17,7 @@ void main() {
   test('analytics preference updates StatsProvider without reconstruction',
       () async {
     final config = ConfigProvider();
+    addTearDown(config.dispose);
     await config.initialize();
     final stats = StatsProvider()..bindConfigProvider(config);
     var configNotifications = 0;
@@ -63,6 +64,7 @@ void main() {
       'analytics': false,
     });
     final config = ConfigProvider();
+    addTearDown(config.dispose);
     await config.initialize();
 
     expect(config.enableAnalytics, isFalse);

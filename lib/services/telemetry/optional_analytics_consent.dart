@@ -1,3 +1,6 @@
+import 'dart:convert';
+import 'dart:math';
+
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -20,8 +23,10 @@ class OptionalAnalyticsConsent extends ChangeNotifier {
   static const String prefsKey = 'optional_analytics_consent_v2';
 
   AnalyticsPreferencesGetter _preferencesGetter;
-  Future<void> _pending = Future<void>.value();
+  Future<void>? _pending;
   bool _granted = false;
+  String? _revision;
+  String? get revision => _revision;
   int _generation = 0;
   // A failed denial must not be undone by re-reading the old durable grant.
   bool _unpersistedWithdrawal = false;
@@ -37,10 +42,13 @@ class OptionalAnalyticsConsent extends ChangeNotifier {
   }
 
   Future<void> _serialize(Future<void> Function() operation) {
-    final next = _pending.then((_) => operation());
+    final previous = _pending;
+    final next = previous == null
+        ? Future<void>.sync(operation)
+        : previous.then((_) => operation());
     // Keep the chain usable after a failed platform operation.
     _pending = next.catchError((Object _) {});
-    return _pending;
+    return _pending!;
   }
 
   /// Reloads durable state, including changes from another browser tab.
@@ -51,9 +59,17 @@ class OptionalAnalyticsConsent extends ChangeNotifier {
       try {
         final prefs = await _preferencesGetter();
         await prefs.reload();
-        final value = prefs.get(prefsKey) == true;
+        final receipt = _readReceipt(prefs);
         if (_generation == expectedGeneration) {
-          _apply(value && !_unpersistedWithdrawal);
+          final revision = receipt?['revision'] as String?;
+          final changed = revision != _revision;
+          _revision = revision;
+          if (changed) {
+            _generation += 1;
+          }
+          final old = _granted;
+          _apply(receipt?['granted'] == true && !_unpersistedWithdrawal);
+          if (changed && old == _granted) notifyListeners();
         }
       } catch (_) {
         if (_generation == expectedGeneration) _apply(false);
@@ -64,6 +80,8 @@ class OptionalAnalyticsConsent extends ChangeNotifier {
 
   Future<void> setGranted(bool value) {
     final operationGeneration = ++_generation;
+    final revision =
+        '${DateTime.now().microsecondsSinceEpoch}-${Random.secure().nextInt(1 << 32)}';
     if (!value) _unpersistedWithdrawal = true;
     // Granting also waits in the denied state until the write succeeds.
     _granted = false;
@@ -71,10 +89,12 @@ class OptionalAnalyticsConsent extends ChangeNotifier {
     return _serialize(() async {
       try {
         final prefs = await _preferencesGetter();
-        final saved = await prefs.setBool(prefsKey, value);
+        final saved = await prefs.setString(prefsKey,
+            jsonEncode({'v': 2, 'granted': value, 'revision': revision}));
         if (!saved) throw StateError('Analytics choice was not persisted');
         if (_generation == operationGeneration) {
           _unpersistedWithdrawal = false;
+          _revision = revision;
           _apply(value);
         }
         // Compatibility only: this key is never read as a permission grant.
@@ -87,13 +107,39 @@ class OptionalAnalyticsConsent extends ChangeNotifier {
     });
   }
 
+  static Map<String, dynamic>? _readReceipt(SharedPreferences prefs) {
+    try {
+      final raw = prefs.get(prefsKey);
+      if (raw is! String) return null;
+      final value = jsonDecode(raw);
+      if (value is! Map ||
+          value['v'] != 2 ||
+          value['granted'] is! bool ||
+          value['revision'] is! String ||
+          (value['revision'] as String).isEmpty) {
+        return null;
+      }
+      return Map<String, dynamic>.from(value);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  static String? storedRevision(SharedPreferences prefs) =>
+      _readReceipt(prefs)?['revision'] as String?;
+
+  static bool hasStoredPermission(SharedPreferences prefs) =>
+      _readReceipt(prefs)?['granted'] == true;
+
   @visibleForTesting
   Future<void> resetForTesting({
     AnalyticsPreferencesGetter? preferencesGetter,
   }) async {
     await _pending;
+    _pending = null;
     _preferencesGetter = preferencesGetter ?? SharedPreferences.getInstance;
     _granted = false;
+    _revision = null;
     _generation = 0;
     _unpersistedWithdrawal = false;
     notifyListeners();

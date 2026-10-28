@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:art_kubus/providers/config_provider.dart';
 import 'package:art_kubus/services/telemetry/optional_analytics_consent.dart';
@@ -21,7 +22,8 @@ class _FaultStore extends InMemorySharedPreferencesStore {
   @override
   Future<bool> setValue(String valueType, String key, Object value) async {
     if (key.endsWith(OptionalAnalyticsConsent.prefsKey)) {
-      choices.add(value);
+      final decoded = value is String ? jsonDecode(value) : value;
+      if (decoded is Map) choices.add(decoded['granted'] as bool);
       await writeGate?.future;
       if (failWrites) return false;
     }
@@ -58,13 +60,18 @@ void main() {
     expect(await consent.refresh(), isFalse);
   });
 
-  test('only exact versioned boolean true grants consent', () async {
+  test('only a valid versioned explicit-choice receipt grants consent',
+      () async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(OptionalAnalyticsConsent.prefsKey, 'true');
     expect(await consent.refresh(), isFalse);
-    await prefs.setBool(OptionalAnalyticsConsent.prefsKey, true);
+    await prefs.setString(OptionalAnalyticsConsent.prefsKey,
+        jsonEncode({'v': 2, 'granted': true, 'revision': 'synthetic-choice'}));
     expect(await consent.refresh(), isTrue);
-    await prefs.setBool(OptionalAnalyticsConsent.prefsKey, false);
+    await prefs.setString(
+        OptionalAnalyticsConsent.prefsKey,
+        jsonEncode(
+            {'v': 2, 'granted': false, 'revision': 'synthetic-refusal'}));
     expect(await consent.refresh(), isFalse);
   });
 
@@ -177,7 +184,8 @@ void main() {
     await provider.initialize();
     expect(provider.enableAnalytics, isFalse);
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool(OptionalAnalyticsConsent.prefsKey, true);
+    await prefs.setString(OptionalAnalyticsConsent.prefsKey,
+        jsonEncode({'v': 2, 'granted': true, 'revision': 'synthetic-choice'}));
     await consent.refresh();
     expect(provider.enableAnalytics, isTrue);
     store.throwReads = true;
@@ -201,5 +209,18 @@ void main() {
     await provider.resetToDefaults();
     expect(provider.enableAnalytics, isFalse);
     expect(await consent.refresh(), isFalse);
+  });
+  test(
+      'a missed withdrawal and reacceptance changes generation even when final choice is true',
+      () async {
+    await consent.setGranted(true);
+    final before = consent.generation;
+    final other = OptionalAnalyticsConsent.forTesting(
+        preferencesGetter: SharedPreferences.getInstance);
+    addTearDown(other.dispose);
+    await other.setGranted(false);
+    await other.setGranted(true);
+    expect(await consent.refresh(), isTrue);
+    expect(consent.generation, greaterThan(before));
   });
 }

@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'telemetry_config.dart';
+import 'optional_analytics_consent.dart';
 import 'telemetry_event.dart';
 
 abstract class TelemetryEventQueue {
@@ -16,7 +17,8 @@ abstract class TelemetryEventQueue {
 }
 
 class InMemoryTelemetryEventQueue implements TelemetryEventQueue {
-  InMemoryTelemetryEventQueue({this.maxLength = AppTelemetryConfig.maxQueueLength});
+  InMemoryTelemetryEventQueue(
+      {this.maxLength = AppTelemetryConfig.maxQueueLength});
 
   final int maxLength;
   final List<AppTelemetryEvent> _events = [];
@@ -70,6 +72,9 @@ class SharedPreferencesTelemetryEventQueue implements TelemetryEventQueue {
   SharedPreferences? _prefs;
   final List<String> _encoded = [];
   int _dropped = 0;
+  String? _scope;
+  String _currentScope(SharedPreferences prefs) =>
+      '${prefs.getString('user_id') ?? 'guest'}:${prefs.getString(OptionalAnalyticsConsent.prefsKey)}';
   Future<void> _op = Future.value();
   Timer? _persistTimer;
 
@@ -78,10 +83,21 @@ class SharedPreferencesTelemetryEventQueue implements TelemetryEventQueue {
     if (_initialized) return;
     _prefs = await SharedPreferences.getInstance();
     final prefs = _prefs!;
-    final stored = prefs.getStringList(queueKey) ?? const <String>[];
-    _encoded
-      ..clear()
-      ..addAll(stored);
+    await prefs.remove('app_telemetry_queue_v2');
+    _encoded.clear();
+    if (OptionalAnalyticsConsent.hasStoredPermission(prefs)) {
+      final stored = prefs.getStringList(queueKey) ?? const <String>[];
+      final scope = _currentScope(prefs);
+      _scope = scope;
+      if (prefs.getString('${queueKey}_scope') == scope) {
+        _encoded.addAll(stored.where(_fresh));
+      }
+      await prefs.setString('${queueKey}_scope', scope);
+      await prefs.setStringList(queueKey, List<String>.from(_encoded));
+    } else {
+      await prefs.remove(queueKey);
+      await prefs.remove('${queueKey}_scope');
+    }
     _dropped = prefs.getInt(droppedCountKey) ?? 0;
     _initialized = true;
   }
@@ -95,6 +111,14 @@ class SharedPreferencesTelemetryEventQueue implements TelemetryEventQueue {
   @override
   Future<void> enqueue(AppTelemetryEvent event) => _withLock(() async {
         await init();
+        if (!OptionalAnalyticsConsent.hasStoredPermission(_prefs!)) return;
+        final scope = _currentScope(_prefs!);
+        if (_scope != scope) {
+          _encoded.clear();
+          _scope = scope;
+        }
+        final actor = _prefs!.getString('user_id');
+        if (event.actorUserId != actor) return;
         _encoded.add(event.toJsonString());
         if (_encoded.length > maxLength) {
           final overflow = _encoded.length - maxLength;
@@ -105,8 +129,10 @@ class SharedPreferencesTelemetryEventQueue implements TelemetryEventQueue {
       });
 
   @override
-  Future<List<AppTelemetryEvent>> peekBatch(int maxEvents) => _withLock(() async {
+  Future<List<AppTelemetryEvent>> peekBatch(int maxEvents) =>
+      _withLock(() async {
         await init();
+        _encoded.removeWhere((raw) => !_fresh(raw));
         if (_encoded.isEmpty) return const [];
         final n = maxEvents.clamp(0, _encoded.length);
         final batch = <AppTelemetryEvent>[];
@@ -115,7 +141,8 @@ class SharedPreferencesTelemetryEventQueue implements TelemetryEventQueue {
             final decoded = jsonDecode(raw);
             if (decoded is Map) {
               batch.add(
-                AppTelemetryEvent.fromJson(decoded.map((k, v) => MapEntry(k.toString(), v))),
+                AppTelemetryEvent.fromJson(
+                    decoded.map((k, v) => MapEntry(k.toString(), v))),
               );
             }
           } catch (_) {
@@ -137,21 +164,53 @@ class SharedPreferencesTelemetryEventQueue implements TelemetryEventQueue {
   @override
   Future<void> clear() => _withLock(() async {
         await init();
+        _persistTimer?.cancel();
+        _persistTimer = null;
         _encoded.clear();
-        _schedulePersist();
+        _scope = null;
+        final prefs = _prefs!;
+        await prefs.remove(queueKey);
+        await prefs.remove('${queueKey}_scope');
+        await prefs.remove('app_telemetry_queue_v2');
       });
+
+  bool _fresh(String raw) {
+    try {
+      final event = jsonDecode(raw) as Map;
+      final at = DateTime.tryParse(event['event_time']?.toString() ?? '');
+      final now = DateTime.now().toUtc();
+      return at != null &&
+          !at.isAfter(now) &&
+          now.difference(at) <= AppTelemetryConfig.maxQueueAge;
+    } catch (_) {
+      return false;
+    }
+  }
 
   void _schedulePersist() {
     _persistTimer?.cancel();
     _persistTimer = Timer(const Duration(milliseconds: 250), () {
       _persistTimer = null;
-      unawaited(_persist());
+      unawaited(_persist().catchError((Object _) {}));
     });
   }
 
   Future<void> _persist() => _withLock(() async {
         final prefs = _prefs;
         if (!_initialized || prefs == null) return;
+        if (!OptionalAnalyticsConsent.hasStoredPermission(prefs)) {
+          _encoded.clear();
+          await prefs.remove(queueKey);
+          await prefs.remove('${queueKey}_scope');
+          return;
+        }
+        if (_scope != _currentScope(prefs)) {
+          _encoded.clear();
+          await prefs.remove(queueKey);
+          await prefs.remove('${queueKey}_scope');
+          return;
+        }
+        await prefs.setString('${queueKey}_scope', _scope!);
         await prefs.setStringList(queueKey, List<String>.from(_encoded));
         await prefs.setInt(droppedCountKey, _dropped);
       });
@@ -168,4 +227,3 @@ class SharedPreferencesTelemetryEventQueue implements TelemetryEventQueue {
     return completer.future;
   }
 }
-

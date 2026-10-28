@@ -4,6 +4,7 @@ import 'package:http/http.dart' as http;
 
 import '../../services/backend_api_service.dart';
 import 'telemetry_config.dart';
+import 'optional_analytics_consent.dart';
 import 'telemetry_event.dart';
 
 class TelemetrySendResult {
@@ -19,13 +20,18 @@ class TelemetrySendResult {
   final Duration? retryAfter;
   final int? statusCode;
 
-  factory TelemetrySendResult.ok() => const TelemetrySendResult._(ok: true, shouldDrop: false);
+  factory TelemetrySendResult.ok() =>
+      const TelemetrySendResult._(ok: true, shouldDrop: false);
 
   factory TelemetrySendResult.retry({Duration? retryAfter, int? statusCode}) =>
-      TelemetrySendResult._(ok: false, shouldDrop: false, retryAfter: retryAfter, statusCode: statusCode);
+      TelemetrySendResult._(
+          ok: false,
+          shouldDrop: false,
+          retryAfter: retryAfter,
+          statusCode: statusCode);
 
-  factory TelemetrySendResult.drop({int? statusCode}) =>
-      TelemetrySendResult._(ok: false, shouldDrop: true, statusCode: statusCode);
+  factory TelemetrySendResult.drop({int? statusCode}) => TelemetrySendResult._(
+      ok: false, shouldDrop: true, statusCode: statusCode);
 }
 
 abstract class TelemetrySender {
@@ -33,7 +39,8 @@ abstract class TelemetrySender {
 }
 
 class BackendTelemetrySender implements TelemetrySender {
-  BackendTelemetrySender({BackendApiService? backend}) : _backend = backend ?? BackendApiService();
+  BackendTelemetrySender({BackendApiService? backend})
+      : _backend = backend ?? BackendApiService();
 
   final BackendApiService _backend;
 
@@ -41,20 +48,30 @@ class BackendTelemetrySender implements TelemetrySender {
   Future<TelemetrySendResult> sendBatch(List<AppTelemetryEvent> events) async {
     if (events.isEmpty) return TelemetrySendResult.ok();
 
+    final generation = OptionalAnalyticsConsent.instance.generation;
+    final accountEpoch = _backend.authSessionEpoch;
     try {
+      if (!await OptionalAnalyticsConsent.instance.refresh() ||
+          generation != OptionalAnalyticsConsent.instance.generation) {
+        return TelemetrySendResult.drop();
+      }
       final payload = jsonEncode({
         'property': AppTelemetryConfig.property,
         'events': events.map((e) => e.toJson()).toList(growable: false),
       });
 
-      final res = await _backend.postAppTelemetry(payload);
+      final res = await _backend.postAppTelemetry(payload,
+          consentGeneration: generation, accountSessionEpoch: accountEpoch);
       if (res == null) return TelemetrySendResult.retry();
 
-      if (res.statusCode == 204 || (res.statusCode >= 200 && res.statusCode < 300)) {
+      if (res.statusCode == 204 ||
+          (res.statusCode >= 200 && res.statusCode < 300)) {
         return TelemetrySendResult.ok();
       }
 
-      if (res.statusCode == 400 || res.statusCode == 401 || res.statusCode == 403) {
+      if (res.statusCode == 400 ||
+          res.statusCode == 401 ||
+          res.statusCode == 403) {
         return TelemetrySendResult.drop(statusCode: res.statusCode);
       }
 
@@ -64,7 +81,8 @@ class BackendTelemetrySender implements TelemetrySender {
 
       if (res.statusCode == 429) {
         final retryAfter = _parseRetryAfter(res);
-        return TelemetrySendResult.retry(retryAfter: retryAfter, statusCode: res.statusCode);
+        return TelemetrySendResult.retry(
+            retryAfter: retryAfter, statusCode: res.statusCode);
       }
 
       if (res.statusCode >= 500) {

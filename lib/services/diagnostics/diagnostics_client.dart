@@ -79,17 +79,13 @@ class DiagnosticsClient {
         'method': method,
         'path': uri.path,
         'status_code': statusCode,
-        'response_preview': responseBody.length > 300
-            ? responseBody.substring(0, 300)
-            : responseBody,
+        // Response bodies can contain private content; status and request ID suffice.
       }),
     });
   }
 
   bool get _enabled =>
-      AppConfig.enableCrashReporting ||
-      AppConfig.enableAnalytics ||
-      kDebugMode;
+      AppConfig.enableCrashReporting || AppConfig.enableAnalytics || kDebugMode;
 
   bool _shouldSendWarning() {
     _warningCounter += 1;
@@ -149,7 +145,9 @@ class DiagnosticsClient {
       } else if (value is List) {
         output[key] = value.take(25).map((item) {
           if (item is String) return _redact(item);
-          if (item is Map) return _sanitizeMetadata(Map<String, dynamic>.from(item));
+          if (item is Map) {
+            return _sanitizeMetadata(Map<String, dynamic>.from(item));
+          }
           return item;
         }).toList(growable: false);
       } else {
@@ -174,10 +172,18 @@ class DiagnosticsClient {
 
   String _redact(String value) {
     var out = value;
-    out = out.replaceAll(RegExp(r'Bearer\s+[A-Za-z0-9._~+/=-]+', caseSensitive: false), 'Bearer [redacted]');
-    out = out.replaceAll(RegExp(r'(token|password|secret|private[_-]?key)=([^&\s]+)', caseSensitive: false), r'$1=[redacted]');
-    out = out.replaceAll(RegExp(r'postgres(?:ql)?://[^\s]+', caseSensitive: false), 'postgres://[redacted]');
-    out = out.replaceAll(RegExp(r'redis(?:s)?://[^\s]+', caseSensitive: false), 'redis://[redacted]');
+    out = out.replaceAll(
+        RegExp(r'Bearer\s+[A-Za-z0-9._~+/=-]+', caseSensitive: false),
+        'Bearer [redacted]');
+    out = out.replaceAll(
+        RegExp(r'(token|password|secret|private[_-]?key)=([^&\s]+)',
+            caseSensitive: false),
+        r'$1=[redacted]');
+    out = out.replaceAll(
+        RegExp(r'postgres(?:ql)?://[^\s]+', caseSensitive: false),
+        'postgres://[redacted]');
+    out = out.replaceAll(RegExp(r'redis(?:s)?://[^\s]+', caseSensitive: false),
+        'redis://[redacted]');
     if (out.length > 2000) out = out.substring(0, 2000);
     return out;
   }
