@@ -10,7 +10,7 @@ const path = require('node:path');
 const test = require('node:test');
 
 const SEO_PROXY = path.join(__dirname, '..', 'web', 'seo-proxy.php');
-const DESIGN_SHA256 = '0fd9827aac60f7b123d6cb23883777ef10648acd3fad882b8ba8e6481c6cfe51';
+const DESIGN_SHA256 = '70c83c5d082389fbc3c70eb4f870c3df1e4e324a179fac10f3daed260b3e6619';
 
 // A PHP constant defined as concatenated single-quoted literals (no escapes: the sync script refuses quotes and backslashes).
 const phpConstant = (source, name) => {

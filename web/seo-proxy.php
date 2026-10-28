@@ -38,7 +38,7 @@ const KUBUS_TAKEOVER_STATUS_CSS = '#flutter-takeover-status{--s-text:var(--color
     . '#flutter-takeover-status [data-kubus-takeover-message]{grid-area:2/1/3/-1;display:block;margin:.125rem 0 0;font-size:clamp(1.5rem,1.1rem + 1.6vw,2.25rem);font-weight:600;line-height:1.12;letter-spacing:-.01em;text-wrap:balance;color:var(--s-text)}'
     . '#flutter-takeover-status .takeover-note{grid-area:3/1/4/-1;max-width:36rem;font-size:.9375rem;line-height:1.45;color:var(--s-muted)}'
     . '#flutter-takeover-status .takeover-trace{grid-area:4/1/5/-1;position:relative;overflow:hidden;width:min(100%,22rem);height:2px;background:var(--s-rule)}'
-    . '#flutter-takeover-status .takeover-actions{grid-area:5/1/6/-1;display:grid;grid-template-columns:1fr 1fr;gap:.75rem;margin-top:.25rem}'
+    . '#flutter-takeover-status .takeover-actions{grid-area:5/1/6/-1;display:grid;grid-template-columns:repeat(auto-fit,minmax(7.5rem,1fr));gap:.75rem;margin-top:.25rem}'
     . '#flutter-takeover-status [data-kubus-takeover-refresh],#flutter-takeover-status [data-kubus-takeover-app]{display:inline-flex;align-items:center;justify-content:center;min-height:2.75rem;padding:.5rem 1.25rem;border:1px solid var(--s-text);border-radius:.25rem;background:transparent;color:var(--s-text);font:inherit;font-weight:600;line-height:1.25;text-align:center;text-decoration:none;cursor:pointer}'
     . '#flutter-takeover-status [data-kubus-takeover-app],#flutter-takeover-status[data-state=failed] [data-kubus-takeover-refresh]{background:var(--s-accent);border-color:var(--s-accent);color:var(--s-on)}'
     . '#flutter-takeover-status[data-state=failed] [data-kubus-takeover-app]{background:transparent;border-color:var(--s-text);color:var(--s-text)}'
