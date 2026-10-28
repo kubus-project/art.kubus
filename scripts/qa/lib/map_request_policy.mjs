@@ -243,20 +243,37 @@ export const MAP_CONTENT_PROBE_INIT = `
  */
 export function readMapContentSnapshotInPage() {
   const maps = (window.__kubusQaMaps || []).map((map) => {
-    const container = map.getContainer ? map.getContainer() : null;
-    const canvas = map.getCanvas ? map.getCanvas() : null;
-    let renderedFeatures = 0;
+    const id = map.__kubusQaId;
+    let container = null;
     try {
-      renderedFeatures = map.queryRenderedFeatures().length;
+      container = map.getContainer ? map.getContainer() : null;
     } catch (_) {}
+    const containerConnected = Boolean(container && container.isConnected);
+    const removed = Boolean(map._removed);
+    // A removed or detached map is never judged, and its readiness methods are not
+    // called: after remove() the style is gone and areTilesLoaded() throws, which
+    // would abort the smoke even though a healthy replacement map is on screen.
+    if (removed || !containerConnected) {
+      return {
+        id, containerConnected, removed, zoom: null, styleLoaded: false, tilesLoaded: false, renderedFeatures: 0, canvas: null,
+      };
+    }
+    const read = (fn, fallback) => {
+      try {
+        return fn();
+      } catch (_) {
+        return fallback;
+      }
+    };
+    const canvas = read(() => (map.getCanvas ? map.getCanvas() : null), null);
     return {
-      id: map.__kubusQaId,
-      containerConnected: Boolean(container && container.isConnected),
-      removed: Boolean(map._removed),
-      zoom: map.getZoom(),
-      styleLoaded: map.isStyleLoaded(),
-      tilesLoaded: map.areTilesLoaded(),
-      renderedFeatures,
+      id,
+      containerConnected,
+      removed,
+      zoom: read(() => map.getZoom(), null),
+      styleLoaded: read(() => map.isStyleLoaded(), false),
+      tilesLoaded: read(() => map.areTilesLoaded(), false),
+      renderedFeatures: read(() => map.queryRenderedFeatures().length, 0),
       canvas: canvas ? { w: canvas.width, h: canvas.height } : null,
     };
   });

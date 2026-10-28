@@ -11,6 +11,7 @@ import {
   classifyRequestFailure,
   classifyTileResponse,
   evaluateRequestFailures,
+  readMapContentSnapshotInPage,
 } from './lib/map_request_policy.mjs';
 
 const TILESET = 'https://tiles.openfreemap.org/planet/20261025_080012_pt';
@@ -248,4 +249,65 @@ test('the smoke wires this policy in instead of failing on every request failure
   assert.match(smoke, /from '\.\/lib\/map_request_policy\.mjs'/);
   assert.match(smoke, /evaluateRequestFailures\(/);
   assert.match(smoke, /MAP_CONTENT_PROBE_INIT/);
+});
+
+// Minimal stand-ins for MapLibre maps, to run the real in-page probe in Node.
+function fakeMap({ id, connected = true, removed = false, throwsWhenRemoved = false, tiles = true, features = 5 }) {
+  const guard = (value) => () => {
+    if (removed && throwsWhenRemoved) throw new TypeError('Cannot convert undefined or null to object');
+    return typeof value === 'function' ? value() : value;
+  };
+  return {
+    __kubusQaId: id,
+    _removed: removed,
+    getContainer: () => ({ isConnected: connected }),
+    getCanvas: () => ({ width: 800, height: 600 }),
+    getZoom: guard(2.5),
+    isStyleLoaded: guard(true),
+    areTilesLoaded: guard(tiles),
+    queryRenderedFeatures: guard(() => new Array(features)),
+  };
+}
+
+function probe(maps) {
+  const previous = { window: globalThis.window, location: globalThis.location };
+  globalThis.window = { __kubusQaMaps: maps };
+  globalThis.location = { href: 'http://127.0.0.1/' };
+  try {
+    return readMapContentSnapshotInPage();
+  } finally {
+    globalThis.window = previous.window;
+    globalThis.location = previous.location;
+  }
+}
+
+test('the in-page probe skips removed maps without calling their readiness methods', () => {
+  const removed = fakeMap({ id: 1, removed: true, throwsWhenRemoved: true });
+  const healthy = fakeMap({ id: 2 });
+  const snapshot = probe([removed, healthy]);
+  assert.equal(snapshot.maps.length, 2);
+  assert.equal(snapshot.maps[0].removed, true);
+  assert.equal(snapshot.maps[0].tilesLoaded, false);
+  const verdict = assessMapContentSnapshot(snapshot);
+  assert.equal(verdict.visible, true);
+  assert.equal(verdict.map.id, 2);
+});
+
+test('the in-page probe does not read a detached map, and a throwing method fails safe instead of throwing', () => {
+  const detached = fakeMap({ id: 1, connected: false });
+  detached.areTilesLoaded = () => { throw new Error('must not be called'); };
+  const flaky = fakeMap({ id: 2 });
+  flaky.areTilesLoaded = () => { throw new TypeError('boom'); };
+  const snapshot = probe([detached, flaky]);
+  assert.equal(snapshot.maps[0].containerConnected, false);
+  assert.equal(snapshot.maps[1].tilesLoaded, false);
+  const verdict = assessMapContentSnapshot(snapshot);
+  assert.equal(verdict.visible, false);
+  assert.deepEqual(verdict.reasons, ['tiles for the final viewport not loaded']);
+});
+
+test('the in-page probe still reports a healthy map as visible content', () => {
+  const verdict = assessMapContentSnapshot(probe([fakeMap({ id: 7 })]));
+  assert.equal(verdict.visible, true);
+  assert.equal(verdict.map.renderedFeatures, 5);
 });
