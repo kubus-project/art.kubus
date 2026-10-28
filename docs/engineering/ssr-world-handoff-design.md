@@ -18,16 +18,21 @@ The PHP constants are generated, never hand-edited:
 node scripts/sync_takeover_status_design.mjs ../art.kubus-backend
 ```
 
-Both repositories pin the same SHA-256 of `css + NUL + svg` (backend `__tests__/seoPublicPages.test.js`, this repo
+Both repositories pin the same SHA-256 of `css + NUL + svg` (currently `f8be2c08e74a07cadee1bfcf2cebb0b663961bf947f75963ff6e7267450268f4`; backend `__tests__/seoPublicPages.test.js`, this repo
 `test/takeover_status_design_parity.test.js`). Changing the design means: edit the backend module, run the sync
 script, update the hash in both tests. A change on one side only fails CI on whichever repository is behind.
 
 ## Composition
 
-Label (`THE WORLD IS OPENING`, Space Mono), message (Sofia Sans 24 to 36 px, the only live region), note, a fine
-trace, then Retry and Go to app; an inline globe leads on the left (wide) or above (narrow). While loading, Go to
-app is the primary action; once loading has failed, Retry is. Copy lives in `LOCALES` (backend), `KUBUS_TAKEOVER_COPY`
-(PHP) and `public_flutter_takeover.js` (failure and loading text, kept in parity by tests).
+Label (`THE WORLD IS OPENING`, Space Mono) and message (Sofia Sans 24 to 36 px, the only live region) sit in one
+`takeover-head` wrapper, then a note, a fine trace and Retry and Go to app. Mobile is a compact flex section: the
+globe (3.25 rem) sits beside the head, and the head wraps below the globe when text is scaled up. The trace leaves
+the flow and becomes the section's 2 px bottom edge. From 760 px the section is a wide two-column grid: the globe
+(8.5 rem) spans the left column and the head, note, trace (max 22 rem) and actions stack in the right column. On
+tall phones (max width 760 px, min height 800 px) the entity hero image is capped to `min(55vh, max(18rem,
+100svh - 32rem))` while the section is shown, so the entity title's first line stays above the fold. While loading,
+Go to app is the primary action; once loading has failed, Retry is. Copy lives in `LOCALES` (backend),
+`KUBUS_TAKEOVER_COPY` (PHP) and `public_flutter_takeover.js` (failure and loading text, kept in parity by tests).
 
 ## Performance rules (each one is enforced by a test or was measured)
 

@@ -10,7 +10,7 @@ const path = require('node:path');
 const test = require('node:test');
 
 const SEO_PROXY = path.join(__dirname, '..', 'web', 'seo-proxy.php');
-const DESIGN_SHA256 = '0fd9827aac60f7b123d6cb23883777ef10648acd3fad882b8ba8e6481c6cfe51';
+const DESIGN_SHA256 = 'f8be2c08e74a07cadee1bfcf2cebb0b663961bf947f75963ff6e7267450268f4';
 
 // A PHP constant defined as concatenated single-quoted literals (no escapes: the sync script refuses quotes and backslashes).
 const phpConstant = (source, name) => {
@@ -41,8 +41,8 @@ test('the PHP gateway section carries the same structure and copy as the backend
   assert.match(php, /class="takeover-label"/);
   assert.match(php, /class="takeover-note"/);
   assert.match(php, /class="takeover-trace" aria-hidden="true"/);
-  // the same child order as the backend: globe, label, message, note, trace, actions
-  const order = ['KUBUS_TAKEOVER_GLOBE_SVG', 'class="takeover-label"', 'data-kubus-takeover-message', 'class="takeover-note"', 'class="takeover-trace"', 'data-kubus-takeover-actions'].map((needle) => {
+  // the same child order as the backend: globe, head (label, message), note, trace, actions
+  const order = ['KUBUS_TAKEOVER_GLOBE_SVG', 'class="takeover-head"', 'class="takeover-label"', 'data-kubus-takeover-message', 'class="takeover-note"', 'class="takeover-trace"', 'data-kubus-takeover-actions'].map((needle) => {
     const index = php.indexOf(needle, php.indexOf('function takeoverStatusMarkup'));
     assert.ok(index > 0, `${needle} in the gateway markup`);
     return index;
@@ -51,4 +51,10 @@ test('the PHP gateway section carries the same structure and copy as the backend
   // one live region, on the message only
   const markup = /function takeoverStatusMarkup[\s\S]*?\n}\n/.exec(php)[0];
   assert.equal(markup.match(/role="status"/g).length, 1);
+  // label and message sit inside the head wrapper, and the wrapper closes before the note
+  assert.match(
+    markup,
+    /'<span class="takeover-head">'[\s\S]*?class="takeover-label"[\s\S]*?data-kubus-takeover-message[\s\S]*?'<\/span>'\s*\.\s*'<span class="takeover-note">'/,
+    'label and message are inside takeover-head, which closes before the note',
+  );
 });

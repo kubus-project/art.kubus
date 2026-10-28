@@ -17,6 +17,9 @@ tilted orbit with one travelling marker) leads on the left (>= 760 px) or above.
 while loading; Retry is once loading has failed. EN and SL copy as specified. Reduced motion, failure and a hidden
 tab keep the static globe with the same hierarchy and every action.
 
+The "after" columns were measured on the candidate before the compact mobile layout (backend `72ea267`, the head
+beside the globe, the trace as the bottom edge, the tall-phone hero cap). They are not re-measured on that layout.
+
 | viewport | before: height / message | after: height / message | entity H1 top before / after |
 | --- | --- | --- | --- |
 | 320×700 | 93 px / 14.4 px | 282 px / 24.0 px | 544 / 729 |

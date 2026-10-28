@@ -1,0 +1,194 @@
+[
+ {
+  "w": 320,
+  "h": 700,
+  "loc": "en",
+  "cls": 0,
+  "sectionShifts": 0,
+  "boxTopRange": [
+   54,
+   54
+  ],
+  "boxHeightRange": [
+   198,
+   198
+  ],
+  "samples": 225,
+  "shifts": [
+   {
+    "v": 0.0002789969308035714,
+    "t": 429,
+    "hadInput": true,
+    "src": [
+     "LI:",
+     "LI:"
+    ]
+   }
+  ]
+ },
+ {
+  "w": 320,
+  "h": 700,
+  "loc": "sl",
+  "cls": 0,
+  "sectionShifts": 1,
+  "boxTopRange": [
+   54,
+   54
+  ],
+  "boxHeightRange": [
+   212,
+   232
+  ],
+  "samples": 264,
+  "shifts": [
+   {
+    "v": 0.020177688735650512,
+    "t": 327,
+    "hadInput": true,
+    "src": [
+     "#content:",
+     ".takeover-actions:IN-STATUS",
+     "#text:",
+     ".product-map-link:",
+     ".takeover-trace:IN-STATUS"
+    ]
+   }
+  ]
+ },
+ {
+  "w": 390,
+  "h": 844,
+  "loc": "en",
+  "cls": 0,
+  "sectionShifts": 0,
+  "boxTopRange": [
+   54,
+   54
+  ],
+  "boxHeightRange": [
+   198,
+   198
+  ],
+  "samples": 224,
+  "shifts": [
+   {
+    "v": 0.02611098986562953,
+    "t": 307,
+    "hadInput": true,
+    "src": [
+     ".entity-detail:",
+     "FIGCAPTION:"
+    ]
+   },
+   {
+    "v": 0.00015746933149236977,
+    "t": 419,
+    "hadInput": true,
+    "src": [
+     "LI:",
+     "LI:"
+    ]
+   }
+  ]
+ },
+ {
+  "w": 390,
+  "h": 844,
+  "loc": "sl",
+  "cls": 0,
+  "sectionShifts": 1,
+  "boxTopRange": [
+   54,
+   54
+  ],
+  "boxHeightRange": [
+   180,
+   198
+  ],
+  "samples": 226,
+  "shifts": [
+   {
+    "v": 0.020815135262443135,
+    "t": 203,
+    "hadInput": true,
+    "src": [
+     ".entity-detail:",
+     "FIGCAPTION:"
+    ]
+   },
+   {
+    "v": 0.020420742638593482,
+    "t": 325,
+    "hadInput": true,
+    "src": [
+     "#content:",
+     ".takeover-actions:IN-STATUS",
+     ".takeover-head:IN-STATUS",
+     ".takeover-note:IN-STATUS",
+     ".tg-orbit:IN-STATUS"
+    ]
+   }
+  ]
+ },
+ {
+  "w": 1280,
+  "h": 800,
+  "loc": "en",
+  "cls": 0.0005,
+  "sectionShifts": 0,
+  "boxTopRange": [
+   59,
+   59
+  ],
+  "boxHeightRange": [
+   265,
+   265
+  ],
+  "samples": 225,
+  "shifts": [
+   {
+    "v": 0.0005370080471038818,
+    "t": 331,
+    "hadInput": false,
+    "src": [
+     "#text:",
+     "#text:",
+     "#text:",
+     "#text:",
+     "#text:"
+    ]
+   }
+  ]
+ },
+ {
+  "w": 1280,
+  "h": 800,
+  "loc": "sl",
+  "cls": 0.0006,
+  "sectionShifts": 1,
+  "boxTopRange": [
+   59,
+   59
+  ],
+  "boxHeightRange": [
+   265,
+   265
+  ],
+  "samples": 226,
+  "shifts": [
+   {
+    "v": 0.0006295459270477295,
+    "t": 314,
+    "hadInput": false,
+    "src": [
+     "#text:",
+     "#text:",
+     "#text:",
+     "A:IN-STATUS",
+     "#text:"
+    ]
+   }
+  ]
+ }
+]
