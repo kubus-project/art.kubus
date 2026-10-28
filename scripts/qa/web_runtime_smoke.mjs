@@ -7,6 +7,14 @@ import { fileURLToPath } from 'node:url';
 import { chromium, devices, firefox, webkit } from 'playwright';
 
 import { buildStableApiStub } from './web_runtime_contract.mjs';
+import {
+  MAP_CONTENT_PROBE_INIT,
+  assessMapContentSnapshot,
+  classifyRequestFailure,
+  describeFailure,
+  evaluateRequestFailures,
+  readMapContentSnapshotInPage,
+} from './lib/map_request_policy.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -250,12 +258,39 @@ async function installStableNetworkStubs(page) {
   });
 }
 
+/** Upper bound for the map to show content again after a tile was cancelled. */
+const MAP_CONTENT_SETTLE_MS = 10000;
+
+/**
+ * Snapshot the map before teardown. When a tile was cancelled, poll briefly so
+ * the map can finish its viewport. The policy then decides whether the
+ * snapshot shows content. A map that never shows content fails the capture.
+ */
+async function captureMapContent(page, failures) {
+  const cancelledTile = failures.some(
+    (failure) => classifyRequestFailure(failure).tolerable,
+  );
+  const deadline = Date.now() + (cancelledTile ? MAP_CONTENT_SETTLE_MS : 0);
+  let snapshot = await page.evaluate(readMapContentSnapshotInPage);
+  while (
+    cancelledTile &&
+    !assessMapContentSnapshot(snapshot).visible &&
+    Date.now() < deadline
+  ) {
+    await sleep(500);
+    snapshot = await page.evaluate(readMapContentSnapshotInPage);
+  }
+  return snapshot;
+}
+
 async function captureRuntime(contextOptions, name, { appLanguage } = {}) {
   const context = await browser.newContext(contextOptions);
   const page = await context.newPage();
   const consoleEntries = [];
   const httpErrors = [];
   const pageErrors = [];
+  // Structured records: { url, method, resourceType, errorText }. The policy in
+  // lib/map_request_policy.mjs decides which ones are tolerated.
   const requestFailures = [];
 
   page.on('console', (msg) => {
@@ -270,9 +305,12 @@ async function captureRuntime(contextOptions, name, { appLanguage } = {}) {
     }
   });
   page.on('requestfailed', (request) => {
-    requestFailures.push(
-      `${request.method()} ${request.url()} ${request.failure()?.errorText || ''}`.trim(),
-    );
+    requestFailures.push({
+      url: request.url(),
+      method: request.method(),
+      resourceType: request.resourceType(),
+      errorText: request.failure()?.errorText || '',
+    });
   });
   await installStableNetworkStubs(page);
 
@@ -291,6 +329,8 @@ async function captureRuntime(contextOptions, name, { appLanguage } = {}) {
       set('selected_language', JSON.stringify(language));
     }
   }, appLanguage || null);
+  // Records MapLibre map instances so the content check can see what is on screen.
+  await page.addInitScript(MAP_CONTENT_PROBE_INIT);
 
   // Every capture uses a fresh Playwright context. Do not pass the production
   // clear_sw escape hatch here: index.html responds to it with location.replace,
@@ -332,9 +372,22 @@ async function captureRuntime(contextOptions, name, { appLanguage } = {}) {
     };
   });
 
+  // Judge the map while it is still attached: a cancelled OpenFreeMap tile is
+  // tolerated only if this snapshot shows the map with content.
+  const mapContent = await captureMapContent(page, requestFailures);
+
   const consoleErrors = consoleEntries.filter((entry) =>
     entry.startsWith('[error]'),
   );
+
+  await context.close();
+
+  // Judge every failure recorded for this capture, including any that landed
+  // while the context was closing.
+  const requestPolicy = evaluateRequestFailures({
+    failures: requestFailures,
+    mapContent,
+  });
   await fs.writeFile(
     path.join(artifactDir, `${name}.json`),
     JSON.stringify(
@@ -344,7 +397,13 @@ async function captureRuntime(contextOptions, name, { appLanguage } = {}) {
         consoleErrors,
         httpErrors,
         pageErrors,
-        requestFailures,
+        requestFailures: requestFailures.map(describeFailure),
+        toleratedTileCancellations: requestPolicy.tolerated.map(describeFailure),
+        mapContent: {
+          visible: requestPolicy.contentVerdict.visible,
+          reasons: requestPolicy.contentVerdict.reasons,
+          map: requestPolicy.contentVerdict.map || null,
+        },
         screenshotPath,
       },
       null,
@@ -352,8 +411,6 @@ async function captureRuntime(contextOptions, name, { appLanguage } = {}) {
     ),
     'utf8',
   );
-
-  await context.close();
 
   if (
     state.flutterViewCount + state.glassPaneCount + state.canvasCount ===
@@ -370,9 +427,19 @@ async function captureRuntime(contextOptions, name, { appLanguage } = {}) {
   if (httpErrors.length > 0) {
     throw new Error(`${name}: HTTP errors found: ${httpErrors.join(' | ')}`);
   }
-  if (requestFailures.length > 0) {
+  if (!requestPolicy.ok) {
     throw new Error(
-      `${name}: request failures found: ${requestFailures.join(' | ')}`,
+      `${name}: request failures found: ${requestPolicy.fatal
+        .map(describeFailure)
+        .join(' | ')}`,
+    );
+  }
+  if (requestPolicy.tolerated.length > 0) {
+    console.log(
+      `${name}: tolerated ${requestPolicy.tolerated.length} cancelled OpenFreeMap ` +
+        `tile request(s) with visible map content: ${requestPolicy.tolerated
+          .map(describeFailure)
+          .join(' | ')}`,
     );
   }
 
@@ -386,7 +453,8 @@ async function captureRuntime(contextOptions, name, { appLanguage } = {}) {
     consoleErrorCount: consoleErrors.length,
     httpErrorCount: httpErrors.length,
     pageErrorCount: pageErrors.length,
-    requestFailureCount: requestFailures.length,
+    requestFailureCount: requestPolicy.fatal.length,
+    toleratedTileCancellationCount: requestPolicy.tolerated.length,
   };
 }
 
