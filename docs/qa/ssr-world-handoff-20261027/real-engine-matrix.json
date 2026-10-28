@@ -1,0 +1,4030 @@
+[
+ {
+  "tag": "chromium-mobile-en-normal",
+  "scenario": "normal",
+  "engine": "chromium",
+  "size": "mobile",
+  "locale": "en",
+  "raw": {
+   "h1": true,
+   "canonical": true,
+   "hreflang": 0,
+   "jsonld": true,
+   "statusSection": true,
+   "bytes": 29226
+  },
+  "loading": {
+   "path": "/en/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669",
+   "state": "loading",
+   "statusVisible": true,
+   "statusRemoved": false,
+   "classes": "kubus-takeover-capable",
+   "marks": {
+    "public_ssr_visible": 188,
+    "flutter_bootstrap_started": 240
+   },
+   "events": [],
+   "docInert": false,
+   "docAriaHidden": null,
+   "hostInert": true,
+   "hostAriaHidden": "true",
+   "ssrH1": "Mary's column",
+   "flutterEls": false,
+   "anims": 6
+  },
+  "settled": true,
+  "settleMs": 2459,
+  "after": {
+   "path": "/en/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669",
+   "state": null,
+   "statusVisible": false,
+   "statusRemoved": true,
+   "classes": "kubus-takeover-capable kubus-takeover-active kubus-takeover-complete",
+   "marks": {
+    "public_ssr_visible": 188,
+    "flutter_bootstrap_started": 240,
+    "flutter_engine_ready": 1228,
+    "public_entity_route_parsed": 1286,
+    "public_entity_ready": 2185,
+    "flutter_takeover_completed": 2451
+   },
+   "events": [
+    {
+     "n": "kubus:public-entity-route-parsed",
+     "t": 1286,
+     "d": "{\"type\":\"artwork\",\"id\":\"2890e5ec-3fdd-474e-a0ee-b16e5097b669\",\"path\":\"/en/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669\",\"locale\":\"en\"}"
+    },
+    {
+     "n": "kubus:public-entity-ready",
+     "t": 2185,
+     "d": "{\"type\":\"artwork\",\"id\":\"2890e5ec-3fdd-474e-a0ee-b16e5097b669\",\"path\":\"/en/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669\",\"locale\":\"en\"}"
+    },
+    {
+     "n": "kubus:flutter-takeover-completed",
+     "t": 2451,
+     "d": "null"
+    }
+   ],
+   "docInert": true,
+   "docAriaHidden": "true",
+   "hostInert": false,
+   "hostAriaHidden": null,
+   "ssrH1": "Mary's column",
+   "flutterEls": true,
+   "anims": 0
+  },
+  "apiCalls": [
+   "/api/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669",
+   "/api/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669/view"
+  ],
+  "errors": []
+ },
+ {
+  "tag": "chromium-mobile-en-delayed",
+  "scenario": "delayed",
+  "engine": "chromium",
+  "size": "mobile",
+  "locale": "en",
+  "raw": {
+   "h1": true,
+   "canonical": true,
+   "hreflang": 0,
+   "jsonld": true,
+   "statusSection": true,
+   "bytes": 29226
+  },
+  "loading": {
+   "path": "/en/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669",
+   "state": "loading",
+   "statusVisible": true,
+   "statusRemoved": false,
+   "classes": "kubus-takeover-capable",
+   "marks": {
+    "public_ssr_visible": 186,
+    "flutter_bootstrap_started": 194
+   },
+   "events": [],
+   "docInert": false,
+   "docAriaHidden": null,
+   "hostInert": true,
+   "hostAriaHidden": "true",
+   "ssrH1": "Mary's column",
+   "flutterEls": false,
+   "anims": 6
+  },
+  "settled": true,
+  "settleMs": 8788,
+  "after": {
+   "path": "/en/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669",
+   "state": null,
+   "statusVisible": false,
+   "statusRemoved": true,
+   "classes": "kubus-takeover-capable kubus-takeover-active kubus-takeover-complete",
+   "marks": {
+    "public_ssr_visible": 186,
+    "flutter_bootstrap_started": 194,
+    "flutter_engine_ready": 7360,
+    "public_entity_route_parsed": 7419,
+    "public_entity_ready": 8523,
+    "flutter_takeover_completed": 8783
+   },
+   "events": [
+    {
+     "n": "kubus:public-entity-route-parsed",
+     "t": 7419,
+     "d": "{\"type\":\"artwork\",\"id\":\"2890e5ec-3fdd-474e-a0ee-b16e5097b669\",\"path\":\"/en/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669\",\"locale\":\"en\"}"
+    },
+    {
+     "n": "kubus:public-entity-ready",
+     "t": 8523,
+     "d": "{\"type\":\"artwork\",\"id\":\"2890e5ec-3fdd-474e-a0ee-b16e5097b669\",\"path\":\"/en/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669\",\"locale\":\"en\"}"
+    },
+    {
+     "n": "kubus:flutter-takeover-completed",
+     "t": 8783,
+     "d": "null"
+    }
+   ],
+   "docInert": true,
+   "docAriaHidden": "true",
+   "hostInert": false,
+   "hostAriaHidden": null,
+   "ssrH1": "Mary's column",
+   "flutterEls": true,
+   "anims": 0
+  },
+  "apiCalls": [
+   "/api/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669",
+   "/api/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669/view"
+  ],
+  "errors": []
+ },
+ {
+  "tag": "chromium-mobile-en-fail-bootstrap",
+  "scenario": "fail-bootstrap",
+  "engine": "chromium",
+  "size": "mobile",
+  "locale": "en",
+  "raw": {
+   "h1": true,
+   "canonical": true,
+   "hreflang": 0,
+   "jsonld": true,
+   "statusSection": true,
+   "bytes": 29226
+  },
+  "loading": {
+   "path": "/en/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669",
+   "state": "failed",
+   "statusVisible": true,
+   "statusRemoved": false,
+   "classes": "kubus-takeover-capable",
+   "marks": {
+    "public_ssr_visible": 200,
+    "flutter_takeover_failed": 200
+   },
+   "events": [],
+   "docInert": false,
+   "docAriaHidden": null,
+   "hostInert": true,
+   "hostAriaHidden": "true",
+   "ssrH1": "Mary's column",
+   "flutterEls": false,
+   "anims": 0
+  },
+  "settled": true,
+  "settleMs": 1259,
+  "after": {
+   "path": "/en/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669",
+   "state": "failed",
+   "statusVisible": true,
+   "statusRemoved": false,
+   "classes": "kubus-takeover-capable",
+   "marks": {
+    "public_ssr_visible": 200,
+    "flutter_takeover_failed": 200
+   },
+   "events": [],
+   "docInert": false,
+   "docAriaHidden": null,
+   "hostInert": true,
+   "hostAriaHidden": "true",
+   "ssrH1": "Mary's column",
+   "flutterEls": false,
+   "anims": 0
+  },
+  "apiCalls": [],
+  "failure": {
+   "ssrReadable": true,
+   "retryEnabled": true,
+   "appHref": "/map?lang=en",
+   "reloads": 1
+  },
+  "errors": []
+ },
+ {
+  "tag": "chromium-mobile-en-fail-mainjs",
+  "scenario": "fail-mainjs",
+  "engine": "chromium",
+  "size": "mobile",
+  "locale": "en",
+  "raw": {
+   "h1": true,
+   "canonical": true,
+   "hreflang": 0,
+   "jsonld": true,
+   "statusSection": true,
+   "bytes": 29226
+  },
+  "loading": {
+   "path": "/en/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669",
+   "state": "failed",
+   "statusVisible": true,
+   "statusRemoved": false,
+   "classes": "kubus-takeover-capable",
+   "marks": {
+    "public_ssr_visible": 186,
+    "flutter_bootstrap_started": 195,
+    "flutter_takeover_failed": 206
+   },
+   "events": [],
+   "docInert": false,
+   "docAriaHidden": null,
+   "hostInert": true,
+   "hostAriaHidden": "true",
+   "ssrH1": "Mary's column",
+   "flutterEls": false,
+   "anims": 0
+  },
+  "settled": true,
+  "settleMs": 1020,
+  "after": {
+   "path": "/en/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669",
+   "state": "failed",
+   "statusVisible": true,
+   "statusRemoved": false,
+   "classes": "kubus-takeover-capable",
+   "marks": {
+    "public_ssr_visible": 186,
+    "flutter_bootstrap_started": 195,
+    "flutter_takeover_failed": 206
+   },
+   "events": [],
+   "docInert": false,
+   "docAriaHidden": null,
+   "hostInert": true,
+   "hostAriaHidden": "true",
+   "ssrH1": "Mary's column",
+   "flutterEls": false,
+   "anims": 0
+  },
+  "apiCalls": [],
+  "failure": {
+   "ssrReadable": true,
+   "retryEnabled": true,
+   "appHref": "/map?lang=en",
+   "reloads": 1
+  },
+  "errors": []
+ },
+ {
+  "tag": "chromium-mobile-en-fail-api",
+  "scenario": "fail-api",
+  "engine": "chromium",
+  "size": "mobile",
+  "locale": "en",
+  "raw": {
+   "h1": true,
+   "canonical": true,
+   "hreflang": 0,
+   "jsonld": true,
+   "statusSection": true,
+   "bytes": 29226
+  },
+  "loading": {
+   "path": "/en/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669",
+   "state": "loading",
+   "statusVisible": true,
+   "statusRemoved": false,
+   "classes": "kubus-takeover-capable",
+   "marks": {
+    "public_ssr_visible": 207,
+    "flutter_bootstrap_started": 214
+   },
+   "events": [],
+   "docInert": false,
+   "docAriaHidden": null,
+   "hostInert": true,
+   "hostAriaHidden": "true",
+   "ssrH1": "Mary's column",
+   "flutterEls": false,
+   "anims": 6
+  },
+  "settled": true,
+  "settleMs": 2511,
+  "after": {
+   "path": "/en/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669",
+   "state": null,
+   "statusVisible": false,
+   "statusRemoved": true,
+   "classes": "kubus-takeover-capable kubus-takeover-active kubus-takeover-complete",
+   "marks": {
+    "public_ssr_visible": 207,
+    "flutter_bootstrap_started": 214,
+    "flutter_engine_ready": 1190,
+    "public_entity_route_parsed": 1250,
+    "public_entity_ready": 2215,
+    "flutter_takeover_completed": 2476
+   },
+   "events": [
+    {
+     "n": "kubus:public-entity-route-parsed",
+     "t": 1250,
+     "d": "{\"type\":\"artwork\",\"id\":\"2890e5ec-3fdd-474e-a0ee-b16e5097b669\",\"path\":\"/en/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669\",\"locale\":\"en\"}"
+    },
+    {
+     "n": "kubus:public-entity-ready",
+     "t": 2215,
+     "d": "{\"type\":\"artwork\",\"id\":\"2890e5ec-3fdd-474e-a0ee-b16e5097b669\",\"path\":\"/en/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669\",\"locale\":\"en\"}"
+    },
+    {
+     "n": "kubus:flutter-takeover-completed",
+     "t": 2476,
+     "d": "null"
+    }
+   ],
+   "docInert": true,
+   "docAriaHidden": "true",
+   "hostInert": false,
+   "hostAriaHidden": null,
+   "ssrH1": "Mary's column",
+   "flutterEls": true,
+   "anims": 0
+  },
+  "apiCalls": [
+   "/api/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669",
+   "/api/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669?source=orbit",
+   "https://bapi.kubus.site/api/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669",
+   "https://bapi.kubus.site/api/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669?source=orbit",
+   "/api/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669/view"
+  ],
+  "failure": {
+   "ssrReadable": false,
+   "retryEnabled": false,
+   "appHref": null,
+   "reloads": 0
+  },
+  "errors": []
+ },
+ {
+  "tag": "chromium-mobile-en-nav",
+  "scenario": "nav",
+  "engine": "chromium",
+  "size": "mobile",
+  "locale": "en",
+  "raw": {
+   "h1": true,
+   "canonical": true,
+   "hreflang": 0,
+   "jsonld": true,
+   "statusSection": true,
+   "bytes": 29226
+  },
+  "loading": {
+   "path": "/en/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669",
+   "state": "loading",
+   "statusVisible": true,
+   "statusRemoved": false,
+   "classes": "kubus-takeover-capable",
+   "marks": {
+    "public_ssr_visible": 181,
+    "flutter_bootstrap_started": 190
+   },
+   "events": [],
+   "docInert": false,
+   "docAriaHidden": null,
+   "hostInert": true,
+   "hostAriaHidden": "true",
+   "ssrH1": "Mary's column",
+   "flutterEls": false,
+   "anims": 6
+  },
+  "settled": true,
+  "settleMs": 2677,
+  "after": {
+   "path": "/en/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669",
+   "state": null,
+   "statusVisible": false,
+   "statusRemoved": true,
+   "classes": "kubus-takeover-capable kubus-takeover-active kubus-takeover-complete",
+   "marks": {
+    "public_ssr_visible": 181,
+    "flutter_bootstrap_started": 190,
+    "flutter_engine_ready": 1204,
+    "public_entity_route_parsed": 1265,
+    "public_entity_ready": 2391,
+    "flutter_takeover_completed": 2659
+   },
+   "events": [
+    {
+     "n": "kubus:public-entity-route-parsed",
+     "t": 1265,
+     "d": "{\"type\":\"artwork\",\"id\":\"2890e5ec-3fdd-474e-a0ee-b16e5097b669\",\"path\":\"/en/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669\",\"locale\":\"en\"}"
+    },
+    {
+     "n": "kubus:public-entity-ready",
+     "t": 2391,
+     "d": "{\"type\":\"artwork\",\"id\":\"2890e5ec-3fdd-474e-a0ee-b16e5097b669\",\"path\":\"/en/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669\",\"locale\":\"en\"}"
+    },
+    {
+     "n": "kubus:flutter-takeover-completed",
+     "t": 2659,
+     "d": "null"
+    }
+   ],
+   "docInert": true,
+   "docAriaHidden": "true",
+   "hostInert": false,
+   "hostAriaHidden": null,
+   "ssrH1": "Mary's column",
+   "flutterEls": true,
+   "anims": 0
+  },
+  "apiCalls": [
+   "/api/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669",
+   "/api/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669/view",
+   "/api/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669",
+   "/api/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669/view"
+  ],
+  "nav": {
+   "appHref": "/map?lang=en",
+   "afterClick": "/en/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669",
+   "afterBack": "about:blank",
+   "backSnapshot": {
+    "path": "blank",
+    "state": null,
+    "statusVisible": false,
+    "statusRemoved": true,
+    "classes": "",
+    "marks": {},
+    "events": [],
+    "docInert": false,
+    "hostInert": false,
+    "ssrH1": null,
+    "flutterEls": false,
+    "anims": 0
+   }
+  },
+  "errors": []
+ },
+ {
+  "tag": "chromium-mobile-sl-normal",
+  "scenario": "normal",
+  "engine": "chromium",
+  "size": "mobile",
+  "locale": "sl",
+  "raw": {
+   "h1": true,
+   "canonical": true,
+   "hreflang": 0,
+   "jsonld": true,
+   "statusSection": true,
+   "bytes": 29340
+  },
+  "loading": {
+   "path": "/sl/umetnine/2890e5ec-3fdd-474e-a0ee-b16e5097b669",
+   "state": "loading",
+   "statusVisible": true,
+   "statusRemoved": false,
+   "classes": "kubus-takeover-capable",
+   "marks": {
+    "public_ssr_visible": 188,
+    "flutter_bootstrap_started": 209
+   },
+   "events": [],
+   "docInert": false,
+   "docAriaHidden": null,
+   "hostInert": true,
+   "hostAriaHidden": "true",
+   "ssrH1": "Mary's column",
+   "flutterEls": false,
+   "anims": 6
+  },
+  "settled": true,
+  "settleMs": 2575,
+  "after": {
+   "path": "/sl/umetnine/2890e5ec-3fdd-474e-a0ee-b16e5097b669",
+   "state": null,
+   "statusVisible": false,
+   "statusRemoved": true,
+   "classes": "kubus-takeover-capable kubus-takeover-active kubus-takeover-complete",
+   "marks": {
+    "public_ssr_visible": 188,
+    "flutter_bootstrap_started": 209,
+    "flutter_engine_ready": 1207,
+    "public_entity_route_parsed": 1258,
+    "public_entity_ready": 2284,
+    "flutter_takeover_completed": 2557
+   },
+   "events": [
+    {
+     "n": "kubus:public-entity-route-parsed",
+     "t": 1257,
+     "d": "{\"type\":\"artwork\",\"id\":\"2890e5ec-3fdd-474e-a0ee-b16e5097b669\",\"path\":\"/sl/umetnine/2890e5ec-3fdd-474e-a0ee-b16e5097b669\",\"locale\":\"sl\"}"
+    },
+    {
+     "n": "kubus:public-entity-ready",
+     "t": 2284,
+     "d": "{\"type\":\"artwork\",\"id\":\"2890e5ec-3fdd-474e-a0ee-b16e5097b669\",\"path\":\"/sl/umetnine/2890e5ec-3fdd-474e-a0ee-b16e5097b669\",\"locale\":\"sl\"}"
+    },
+    {
+     "n": "kubus:flutter-takeover-completed",
+     "t": 2557,
+     "d": "null"
+    }
+   ],
+   "docInert": true,
+   "docAriaHidden": "true",
+   "hostInert": false,
+   "hostAriaHidden": null,
+   "ssrH1": "Mary's column",
+   "flutterEls": true,
+   "anims": 0
+  },
+  "apiCalls": [
+   "/api/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669",
+   "/api/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669/view"
+  ],
+  "errors": []
+ },
+ {
+  "tag": "chromium-mobile-sl-delayed",
+  "scenario": "delayed",
+  "engine": "chromium",
+  "size": "mobile",
+  "locale": "sl",
+  "raw": {
+   "h1": true,
+   "canonical": true,
+   "hreflang": 0,
+   "jsonld": true,
+   "statusSection": true,
+   "bytes": 29340
+  },
+  "loading": {
+   "path": "/sl/umetnine/2890e5ec-3fdd-474e-a0ee-b16e5097b669",
+   "state": "loading",
+   "statusVisible": true,
+   "statusRemoved": false,
+   "classes": "kubus-takeover-capable",
+   "marks": {
+    "public_ssr_visible": 193,
+    "flutter_bootstrap_started": 202
+   },
+   "events": [],
+   "docInert": false,
+   "docAriaHidden": null,
+   "hostInert": true,
+   "hostAriaHidden": "true",
+   "ssrH1": "Mary's column",
+   "flutterEls": false,
+   "anims": 6
+  },
+  "settled": true,
+  "settleMs": 8730,
+  "after": {
+   "path": "/sl/umetnine/2890e5ec-3fdd-474e-a0ee-b16e5097b669",
+   "state": null,
+   "statusVisible": false,
+   "statusRemoved": true,
+   "classes": "kubus-takeover-capable kubus-takeover-active kubus-takeover-complete",
+   "marks": {
+    "public_ssr_visible": 193,
+    "flutter_bootstrap_started": 202,
+    "flutter_engine_ready": 7375,
+    "public_entity_route_parsed": 7441,
+    "public_entity_ready": 8463,
+    "flutter_takeover_completed": 8725
+   },
+   "events": [
+    {
+     "n": "kubus:public-entity-route-parsed",
+     "t": 7441,
+     "d": "{\"type\":\"artwork\",\"id\":\"2890e5ec-3fdd-474e-a0ee-b16e5097b669\",\"path\":\"/sl/umetnine/2890e5ec-3fdd-474e-a0ee-b16e5097b669\",\"locale\":\"sl\"}"
+    },
+    {
+     "n": "kubus:public-entity-ready",
+     "t": 8462,
+     "d": "{\"type\":\"artwork\",\"id\":\"2890e5ec-3fdd-474e-a0ee-b16e5097b669\",\"path\":\"/sl/umetnine/2890e5ec-3fdd-474e-a0ee-b16e5097b669\",\"locale\":\"sl\"}"
+    },
+    {
+     "n": "kubus:flutter-takeover-completed",
+     "t": 8725,
+     "d": "null"
+    }
+   ],
+   "docInert": true,
+   "docAriaHidden": "true",
+   "hostInert": false,
+   "hostAriaHidden": null,
+   "ssrH1": "Mary's column",
+   "flutterEls": true,
+   "anims": 0
+  },
+  "apiCalls": [
+   "/api/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669",
+   "/api/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669/view"
+  ],
+  "errors": []
+ },
+ {
+  "tag": "chromium-mobile-sl-fail-bootstrap",
+  "scenario": "fail-bootstrap",
+  "engine": "chromium",
+  "size": "mobile",
+  "locale": "sl",
+  "raw": {
+   "h1": true,
+   "canonical": true,
+   "hreflang": 0,
+   "jsonld": true,
+   "statusSection": true,
+   "bytes": 29340
+  },
+  "loading": {
+   "path": "/sl/umetnine/2890e5ec-3fdd-474e-a0ee-b16e5097b669",
+   "state": "failed",
+   "statusVisible": true,
+   "statusRemoved": false,
+   "classes": "kubus-takeover-capable",
+   "marks": {
+    "public_ssr_visible": 201,
+    "flutter_takeover_failed": 202
+   },
+   "events": [],
+   "docInert": false,
+   "docAriaHidden": null,
+   "hostInert": true,
+   "hostAriaHidden": "true",
+   "ssrH1": "Mary's column",
+   "flutterEls": false,
+   "anims": 0
+  },
+  "settled": true,
+  "settleMs": 1040,
+  "after": {
+   "path": "/sl/umetnine/2890e5ec-3fdd-474e-a0ee-b16e5097b669",
+   "state": "failed",
+   "statusVisible": true,
+   "statusRemoved": false,
+   "classes": "kubus-takeover-capable",
+   "marks": {
+    "public_ssr_visible": 201,
+    "flutter_takeover_failed": 202
+   },
+   "events": [],
+   "docInert": false,
+   "docAriaHidden": null,
+   "hostInert": true,
+   "hostAriaHidden": "true",
+   "ssrH1": "Mary's column",
+   "flutterEls": false,
+   "anims": 0
+  },
+  "apiCalls": [],
+  "failure": {
+   "ssrReadable": true,
+   "retryEnabled": true,
+   "appHref": "/map?lang=sl",
+   "reloads": 1
+  },
+  "errors": []
+ },
+ {
+  "tag": "chromium-mobile-sl-fail-mainjs",
+  "scenario": "fail-mainjs",
+  "engine": "chromium",
+  "size": "mobile",
+  "locale": "sl",
+  "raw": {
+   "h1": true,
+   "canonical": true,
+   "hreflang": 0,
+   "jsonld": true,
+   "statusSection": true,
+   "bytes": 29340
+  },
+  "loading": {
+   "path": "/sl/umetnine/2890e5ec-3fdd-474e-a0ee-b16e5097b669",
+   "state": "failed",
+   "statusVisible": true,
+   "statusRemoved": false,
+   "classes": "kubus-takeover-capable",
+   "marks": {
+    "public_ssr_visible": 184,
+    "flutter_bootstrap_started": 192,
+    "flutter_takeover_failed": 259
+   },
+   "events": [],
+   "docInert": false,
+   "docAriaHidden": null,
+   "hostInert": true,
+   "hostAriaHidden": "true",
+   "ssrH1": "Mary's column",
+   "flutterEls": false,
+   "anims": 0
+  },
+  "settled": true,
+  "settleMs": 1070,
+  "after": {
+   "path": "/sl/umetnine/2890e5ec-3fdd-474e-a0ee-b16e5097b669",
+   "state": "failed",
+   "statusVisible": true,
+   "statusRemoved": false,
+   "classes": "kubus-takeover-capable",
+   "marks": {
+    "public_ssr_visible": 184,
+    "flutter_bootstrap_started": 192,
+    "flutter_takeover_failed": 259
+   },
+   "events": [],
+   "docInert": false,
+   "docAriaHidden": null,
+   "hostInert": true,
+   "hostAriaHidden": "true",
+   "ssrH1": "Mary's column",
+   "flutterEls": false,
+   "anims": 0
+  },
+  "apiCalls": [],
+  "failure": {
+   "ssrReadable": true,
+   "retryEnabled": true,
+   "appHref": "/map?lang=sl",
+   "reloads": 1
+  },
+  "errors": []
+ },
+ {
+  "tag": "chromium-mobile-sl-fail-api",
+  "scenario": "fail-api",
+  "engine": "chromium",
+  "size": "mobile",
+  "locale": "sl",
+  "raw": {
+   "h1": true,
+   "canonical": true,
+   "hreflang": 0,
+   "jsonld": true,
+   "statusSection": true,
+   "bytes": 29340
+  },
+  "loading": {
+   "path": "/sl/umetnine/2890e5ec-3fdd-474e-a0ee-b16e5097b669",
+   "state": "loading",
+   "statusVisible": true,
+   "statusRemoved": false,
+   "classes": "kubus-takeover-capable",
+   "marks": {
+    "public_ssr_visible": 201,
+    "flutter_bootstrap_started": 210
+   },
+   "events": [],
+   "docInert": false,
+   "docAriaHidden": null,
+   "hostInert": true,
+   "hostAriaHidden": "true",
+   "ssrH1": "Mary's column",
+   "flutterEls": false,
+   "anims": 6
+  },
+  "settled": true,
+  "settleMs": 2632,
+  "after": {
+   "path": "/sl/umetnine/2890e5ec-3fdd-474e-a0ee-b16e5097b669",
+   "state": null,
+   "statusVisible": false,
+   "statusRemoved": true,
+   "classes": "kubus-takeover-capable kubus-takeover-active kubus-takeover-complete",
+   "marks": {
+    "public_ssr_visible": 201,
+    "flutter_bootstrap_started": 210,
+    "flutter_engine_ready": 1202,
+    "public_entity_route_parsed": 1261,
+    "public_entity_ready": 2238,
+    "flutter_takeover_completed": 2508
+   },
+   "events": [
+    {
+     "n": "kubus:public-entity-route-parsed",
+     "t": 1261,
+     "d": "{\"type\":\"artwork\",\"id\":\"2890e5ec-3fdd-474e-a0ee-b16e5097b669\",\"path\":\"/sl/umetnine/2890e5ec-3fdd-474e-a0ee-b16e5097b669\",\"locale\":\"sl\"}"
+    },
+    {
+     "n": "kubus:public-entity-ready",
+     "t": 2238,
+     "d": "{\"type\":\"artwork\",\"id\":\"2890e5ec-3fdd-474e-a0ee-b16e5097b669\",\"path\":\"/sl/umetnine/2890e5ec-3fdd-474e-a0ee-b16e5097b669\",\"locale\":\"sl\"}"
+    },
+    {
+     "n": "kubus:flutter-takeover-completed",
+     "t": 2508,
+     "d": "null"
+    }
+   ],
+   "docInert": true,
+   "docAriaHidden": "true",
+   "hostInert": false,
+   "hostAriaHidden": null,
+   "ssrH1": "Mary's column",
+   "flutterEls": true,
+   "anims": 0
+  },
+  "apiCalls": [
+   "/api/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669",
+   "/api/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669?source=orbit",
+   "https://bapi.kubus.site/api/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669",
+   "https://bapi.kubus.site/api/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669?source=orbit",
+   "/api/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669/view"
+  ],
+  "failure": {
+   "ssrReadable": false,
+   "retryEnabled": false,
+   "appHref": null,
+   "reloads": 0
+  },
+  "errors": []
+ },
+ {
+  "tag": "chromium-mobile-sl-nav",
+  "scenario": "nav",
+  "engine": "chromium",
+  "size": "mobile",
+  "locale": "sl",
+  "raw": {
+   "h1": true,
+   "canonical": true,
+   "hreflang": 0,
+   "jsonld": true,
+   "statusSection": true,
+   "bytes": 29340
+  },
+  "loading": {
+   "path": "/sl/umetnine/2890e5ec-3fdd-474e-a0ee-b16e5097b669",
+   "state": "loading",
+   "statusVisible": true,
+   "statusRemoved": false,
+   "classes": "kubus-takeover-capable",
+   "marks": {
+    "public_ssr_visible": 184,
+    "flutter_bootstrap_started": 197
+   },
+   "events": [],
+   "docInert": false,
+   "docAriaHidden": null,
+   "hostInert": true,
+   "hostAriaHidden": "true",
+   "ssrH1": "Mary's column",
+   "flutterEls": false,
+   "anims": 6
+  },
+  "settled": true,
+  "settleMs": 2936,
+  "after": {
+   "path": "/sl/umetnine/2890e5ec-3fdd-474e-a0ee-b16e5097b669",
+   "state": null,
+   "statusVisible": false,
+   "statusRemoved": true,
+   "classes": "kubus-takeover-capable kubus-takeover-active kubus-takeover-complete",
+   "marks": {
+    "public_ssr_visible": 184,
+    "flutter_bootstrap_started": 197,
+    "flutter_engine_ready": 1175,
+    "public_entity_route_parsed": 1225,
+    "public_entity_ready": 2643,
+    "flutter_takeover_completed": 2914
+   },
+   "events": [
+    {
+     "n": "kubus:public-entity-route-parsed",
+     "t": 1225,
+     "d": "{\"type\":\"artwork\",\"id\":\"2890e5ec-3fdd-474e-a0ee-b16e5097b669\",\"path\":\"/sl/umetnine/2890e5ec-3fdd-474e-a0ee-b16e5097b669\",\"locale\":\"sl\"}"
+    },
+    {
+     "n": "kubus:public-entity-ready",
+     "t": 2643,
+     "d": "{\"type\":\"artwork\",\"id\":\"2890e5ec-3fdd-474e-a0ee-b16e5097b669\",\"path\":\"/sl/umetnine/2890e5ec-3fdd-474e-a0ee-b16e5097b669\",\"locale\":\"sl\"}"
+    },
+    {
+     "n": "kubus:flutter-takeover-completed",
+     "t": 2914,
+     "d": "null"
+    }
+   ],
+   "docInert": true,
+   "docAriaHidden": "true",
+   "hostInert": false,
+   "hostAriaHidden": null,
+   "ssrH1": "Mary's column",
+   "flutterEls": true,
+   "anims": 0
+  },
+  "apiCalls": [
+   "/api/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669",
+   "/api/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669/view",
+   "/api/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669",
+   "/api/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669/view"
+  ],
+  "nav": {
+   "appHref": "/map?lang=sl",
+   "afterClick": "/sl/umetnine/2890e5ec-3fdd-474e-a0ee-b16e5097b669",
+   "afterBack": "about:blank",
+   "backSnapshot": {
+    "path": "blank",
+    "state": null,
+    "statusVisible": false,
+    "statusRemoved": true,
+    "classes": "",
+    "marks": {},
+    "events": [],
+    "docInert": false,
+    "hostInert": false,
+    "ssrH1": null,
+    "flutterEls": false,
+    "anims": 0
+   }
+  },
+  "errors": []
+ },
+ {
+  "tag": "chromium-desktop-en-normal",
+  "scenario": "normal",
+  "engine": "chromium",
+  "size": "desktop",
+  "locale": "en",
+  "raw": {
+   "h1": true,
+   "canonical": true,
+   "hreflang": 0,
+   "jsonld": true,
+   "statusSection": true,
+   "bytes": 29226
+  },
+  "loading": {
+   "path": "/en/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669",
+   "state": "loading",
+   "statusVisible": true,
+   "statusRemoved": false,
+   "classes": "kubus-takeover-capable",
+   "marks": {
+    "public_ssr_visible": 204,
+    "flutter_bootstrap_started": 230
+   },
+   "events": [],
+   "docInert": false,
+   "docAriaHidden": null,
+   "hostInert": true,
+   "hostAriaHidden": "true",
+   "ssrH1": "Mary's column",
+   "flutterEls": false,
+   "anims": 6
+  },
+  "settled": true,
+  "settleMs": 2508,
+  "after": {
+   "path": "/en/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669",
+   "state": null,
+   "statusVisible": false,
+   "statusRemoved": true,
+   "classes": "kubus-takeover-capable kubus-takeover-active kubus-takeover-complete",
+   "marks": {
+    "public_ssr_visible": 204,
+    "flutter_bootstrap_started": 230,
+    "flutter_engine_ready": 1286,
+    "public_entity_route_parsed": 1346,
+    "public_entity_ready": 2240,
+    "flutter_takeover_completed": 2500
+   },
+   "events": [
+    {
+     "n": "kubus:public-entity-route-parsed",
+     "t": 1346,
+     "d": "{\"type\":\"artwork\",\"id\":\"2890e5ec-3fdd-474e-a0ee-b16e5097b669\",\"path\":\"/en/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669\",\"locale\":\"en\"}"
+    },
+    {
+     "n": "kubus:public-entity-ready",
+     "t": 2240,
+     "d": "{\"type\":\"artwork\",\"id\":\"2890e5ec-3fdd-474e-a0ee-b16e5097b669\",\"path\":\"/en/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669\",\"locale\":\"en\"}"
+    },
+    {
+     "n": "kubus:flutter-takeover-completed",
+     "t": 2500,
+     "d": "null"
+    }
+   ],
+   "docInert": true,
+   "docAriaHidden": "true",
+   "hostInert": false,
+   "hostAriaHidden": null,
+   "ssrH1": "Mary's column",
+   "flutterEls": true,
+   "anims": 0
+  },
+  "apiCalls": [
+   "/api/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669",
+   "/api/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669/comments?page=1&limit=100",
+   "/api/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669/view",
+   "/api/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669/comments?page=1&limit=100",
+   "/api/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669/spatial",
+   "https://bapi.kubus.site/api/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669/comments?page=1&limit=100",
+   "https://bapi.kubus.site/api/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669/comments?page=1&limit=100"
+  ],
+  "errors": []
+ },
+ {
+  "tag": "chromium-desktop-en-delayed",
+  "scenario": "delayed",
+  "engine": "chromium",
+  "size": "desktop",
+  "locale": "en",
+  "raw": {
+   "h1": true,
+   "canonical": true,
+   "hreflang": 0,
+   "jsonld": true,
+   "statusSection": true,
+   "bytes": 29226
+  },
+  "loading": {
+   "path": "/en/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669",
+   "state": "loading",
+   "statusVisible": true,
+   "statusRemoved": false,
+   "classes": "kubus-takeover-capable",
+   "marks": {
+    "public_ssr_visible": 185,
+    "flutter_bootstrap_started": 203
+   },
+   "events": [],
+   "docInert": false,
+   "docAriaHidden": null,
+   "hostInert": true,
+   "hostAriaHidden": "true",
+   "ssrH1": "Mary's column",
+   "flutterEls": false,
+   "anims": 6
+  },
+  "settled": true,
+  "settleMs": 8575,
+  "after": {
+   "path": "/en/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669",
+   "state": null,
+   "statusVisible": false,
+   "statusRemoved": true,
+   "classes": "kubus-takeover-capable kubus-takeover-active kubus-takeover-complete",
+   "marks": {
+    "public_ssr_visible": 185,
+    "flutter_bootstrap_started": 203,
+    "flutter_engine_ready": 7351,
+    "public_entity_route_parsed": 7414,
+    "public_entity_ready": 8287,
+    "flutter_takeover_completed": 8557
+   },
+   "events": [
+    {
+     "n": "kubus:public-entity-route-parsed",
+     "t": 7414,
+     "d": "{\"type\":\"artwork\",\"id\":\"2890e5ec-3fdd-474e-a0ee-b16e5097b669\",\"path\":\"/en/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669\",\"locale\":\"en\"}"
+    },
+    {
+     "n": "kubus:public-entity-ready",
+     "t": 8287,
+     "d": "{\"type\":\"artwork\",\"id\":\"2890e5ec-3fdd-474e-a0ee-b16e5097b669\",\"path\":\"/en/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669\",\"locale\":\"en\"}"
+    },
+    {
+     "n": "kubus:flutter-takeover-completed",
+     "t": 8557,
+     "d": "null"
+    }
+   ],
+   "docInert": true,
+   "docAriaHidden": "true",
+   "hostInert": false,
+   "hostAriaHidden": null,
+   "ssrH1": "Mary's column",
+   "flutterEls": true,
+   "anims": 0
+  },
+  "apiCalls": [
+   "/api/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669",
+   "/api/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669/comments?page=1&limit=100",
+   "/api/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669/view",
+   "/api/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669/comments?page=1&limit=100",
+   "/api/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669/spatial",
+   "https://bapi.kubus.site/api/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669/comments?page=1&limit=100",
+   "https://bapi.kubus.site/api/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669/comments?page=1&limit=100"
+  ],
+  "errors": []
+ },
+ {
+  "tag": "chromium-desktop-en-fail-bootstrap",
+  "scenario": "fail-bootstrap",
+  "engine": "chromium",
+  "size": "desktop",
+  "locale": "en",
+  "raw": {
+   "h1": true,
+   "canonical": true,
+   "hreflang": 0,
+   "jsonld": true,
+   "statusSection": true,
+   "bytes": 29226
+  },
+  "loading": {
+   "path": "/en/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669",
+   "state": "failed",
+   "statusVisible": true,
+   "statusRemoved": false,
+   "classes": "kubus-takeover-capable",
+   "marks": {
+    "public_ssr_visible": 185,
+    "flutter_takeover_failed": 185
+   },
+   "events": [],
+   "docInert": false,
+   "docAriaHidden": null,
+   "hostInert": true,
+   "hostAriaHidden": "true",
+   "ssrH1": "Mary's column",
+   "flutterEls": false,
+   "anims": 0
+  },
+  "settled": true,
+  "settleMs": 1058,
+  "after": {
+   "path": "/en/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669",
+   "state": "failed",
+   "statusVisible": true,
+   "statusRemoved": false,
+   "classes": "kubus-takeover-capable",
+   "marks": {
+    "public_ssr_visible": 185,
+    "flutter_takeover_failed": 185
+   },
+   "events": [],
+   "docInert": false,
+   "docAriaHidden": null,
+   "hostInert": true,
+   "hostAriaHidden": "true",
+   "ssrH1": "Mary's column",
+   "flutterEls": false,
+   "anims": 0
+  },
+  "apiCalls": [],
+  "failure": {
+   "ssrReadable": true,
+   "retryEnabled": true,
+   "appHref": "/map?lang=en",
+   "reloads": 1
+  },
+  "errors": []
+ },
+ {
+  "tag": "chromium-desktop-en-fail-mainjs",
+  "scenario": "fail-mainjs",
+  "engine": "chromium",
+  "size": "desktop",
+  "locale": "en",
+  "raw": {
+   "h1": true,
+   "canonical": true,
+   "hreflang": 0,
+   "jsonld": true,
+   "statusSection": true,
+   "bytes": 29226
+  },
+  "loading": {
+   "path": "/en/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669",
+   "state": "failed",
+   "statusVisible": true,
+   "statusRemoved": false,
+   "classes": "kubus-takeover-capable",
+   "marks": {
+    "public_ssr_visible": 188,
+    "flutter_bootstrap_started": 196,
+    "flutter_takeover_failed": 208
+   },
+   "events": [],
+   "docInert": false,
+   "docAriaHidden": null,
+   "hostInert": true,
+   "hostAriaHidden": "true",
+   "ssrH1": "Mary's column",
+   "flutterEls": false,
+   "anims": 0
+  },
+  "settled": true,
+  "settleMs": 1096,
+  "after": {
+   "path": "/en/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669",
+   "state": "failed",
+   "statusVisible": true,
+   "statusRemoved": false,
+   "classes": "kubus-takeover-capable",
+   "marks": {
+    "public_ssr_visible": 188,
+    "flutter_bootstrap_started": 196,
+    "flutter_takeover_failed": 208
+   },
+   "events": [],
+   "docInert": false,
+   "docAriaHidden": null,
+   "hostInert": true,
+   "hostAriaHidden": "true",
+   "ssrH1": "Mary's column",
+   "flutterEls": false,
+   "anims": 0
+  },
+  "apiCalls": [],
+  "failure": {
+   "ssrReadable": true,
+   "retryEnabled": true,
+   "appHref": "/map?lang=en",
+   "reloads": 1
+  },
+  "errors": []
+ },
+ {
+  "tag": "chromium-desktop-en-fail-api",
+  "scenario": "fail-api",
+  "engine": "chromium",
+  "size": "desktop",
+  "locale": "en",
+  "raw": {
+   "h1": true,
+   "canonical": true,
+   "hreflang": 0,
+   "jsonld": true,
+   "statusSection": true,
+   "bytes": 29226
+  },
+  "loading": {
+   "path": "/en/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669",
+   "state": "loading",
+   "statusVisible": true,
+   "statusRemoved": false,
+   "classes": "kubus-takeover-capable",
+   "marks": {
+    "public_ssr_visible": 217,
+    "flutter_bootstrap_started": 226
+   },
+   "events": [],
+   "docInert": false,
+   "docAriaHidden": null,
+   "hostInert": true,
+   "hostAriaHidden": "true",
+   "ssrH1": "Mary's column",
+   "flutterEls": false,
+   "anims": 6
+  },
+  "settled": true,
+  "settleMs": 2495,
+  "after": {
+   "path": "/en/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669",
+   "state": null,
+   "statusVisible": false,
+   "statusRemoved": true,
+   "classes": "kubus-takeover-capable kubus-takeover-active kubus-takeover-complete",
+   "marks": {
+    "public_ssr_visible": 217,
+    "flutter_bootstrap_started": 226,
+    "flutter_engine_ready": 1197,
+    "public_entity_route_parsed": 1256,
+    "public_entity_ready": 2221,
+    "flutter_takeover_completed": 2484
+   },
+   "events": [
+    {
+     "n": "kubus:public-entity-route-parsed",
+     "t": 1256,
+     "d": "{\"type\":\"artwork\",\"id\":\"2890e5ec-3fdd-474e-a0ee-b16e5097b669\",\"path\":\"/en/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669\",\"locale\":\"en\"}"
+    },
+    {
+     "n": "kubus:public-entity-ready",
+     "t": 2221,
+     "d": "{\"type\":\"artwork\",\"id\":\"2890e5ec-3fdd-474e-a0ee-b16e5097b669\",\"path\":\"/en/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669\",\"locale\":\"en\"}"
+    },
+    {
+     "n": "kubus:flutter-takeover-completed",
+     "t": 2484,
+     "d": "null"
+    }
+   ],
+   "docInert": true,
+   "docAriaHidden": "true",
+   "hostInert": false,
+   "hostAriaHidden": null,
+   "ssrH1": "Mary's column",
+   "flutterEls": true,
+   "anims": 0
+  },
+  "apiCalls": [
+   "/api/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669",
+   "/api/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669?source=orbit",
+   "https://bapi.kubus.site/api/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669",
+   "https://bapi.kubus.site/api/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669?source=orbit",
+   "/api/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669/comments?page=1&limit=100",
+   "/api/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669/view",
+   "/api/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669/comments?page=1&limit=100",
+   "/api/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669/spatial",
+   "https://bapi.kubus.site/api/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669/spatial"
+  ],
+  "failure": {
+   "ssrReadable": false,
+   "retryEnabled": false,
+   "appHref": null,
+   "reloads": 0
+  },
+  "errors": []
+ },
+ {
+  "tag": "chromium-desktop-en-nav",
+  "scenario": "nav",
+  "engine": "chromium",
+  "size": "desktop",
+  "locale": "en",
+  "raw": {
+   "h1": true,
+   "canonical": true,
+   "hreflang": 0,
+   "jsonld": true,
+   "statusSection": true,
+   "bytes": 29226
+  },
+  "loading": {
+   "path": "/en/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669",
+   "state": "loading",
+   "statusVisible": true,
+   "statusRemoved": false,
+   "classes": "kubus-takeover-capable",
+   "marks": {
+    "public_ssr_visible": 189,
+    "flutter_bootstrap_started": 198
+   },
+   "events": [],
+   "docInert": false,
+   "docAriaHidden": null,
+   "hostInert": true,
+   "hostAriaHidden": "true",
+   "ssrH1": "Mary's column",
+   "flutterEls": false,
+   "anims": 6
+  },
+  "settled": true,
+  "settleMs": 2440,
+  "after": {
+   "path": "/en/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669",
+   "state": null,
+   "statusVisible": false,
+   "statusRemoved": true,
+   "classes": "kubus-takeover-capable kubus-takeover-active kubus-takeover-complete",
+   "marks": {
+    "public_ssr_visible": 189,
+    "flutter_bootstrap_started": 198,
+    "flutter_engine_ready": 1161,
+    "public_entity_route_parsed": 1222,
+    "public_entity_ready": 2168,
+    "flutter_takeover_completed": 2428
+   },
+   "events": [
+    {
+     "n": "kubus:public-entity-route-parsed",
+     "t": 1222,
+     "d": "{\"type\":\"artwork\",\"id\":\"2890e5ec-3fdd-474e-a0ee-b16e5097b669\",\"path\":\"/en/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669\",\"locale\":\"en\"}"
+    },
+    {
+     "n": "kubus:public-entity-ready",
+     "t": 2168,
+     "d": "{\"type\":\"artwork\",\"id\":\"2890e5ec-3fdd-474e-a0ee-b16e5097b669\",\"path\":\"/en/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669\",\"locale\":\"en\"}"
+    },
+    {
+     "n": "kubus:flutter-takeover-completed",
+     "t": 2428,
+     "d": "null"
+    }
+   ],
+   "docInert": true,
+   "docAriaHidden": "true",
+   "hostInert": false,
+   "hostAriaHidden": null,
+   "ssrH1": "Mary's column",
+   "flutterEls": true,
+   "anims": 0
+  },
+  "apiCalls": [
+   "/api/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669",
+   "/api/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669/comments?page=1&limit=100",
+   "/api/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669/view",
+   "/api/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669/comments?page=1&limit=100",
+   "/api/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669/spatial",
+   "https://bapi.kubus.site/api/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669/comments?page=1&limit=100",
+   "https://bapi.kubus.site/api/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669/comments?page=1&limit=100",
+   "/api/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669",
+   "/api/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669/comments?page=1&limit=100",
+   "/api/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669/view",
+   "/api/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669/comments?page=1&limit=100",
+   "/api/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669/spatial",
+   "https://bapi.kubus.site/api/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669/comments?page=1&limit=100",
+   "https://bapi.kubus.site/api/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669/comments?page=1&limit=100"
+  ],
+  "nav": {
+   "appHref": "/map?lang=en",
+   "afterClick": "/en/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669",
+   "afterBack": "about:blank",
+   "backSnapshot": {
+    "path": "blank",
+    "state": null,
+    "statusVisible": false,
+    "statusRemoved": true,
+    "classes": "",
+    "marks": {},
+    "events": [],
+    "docInert": false,
+    "hostInert": false,
+    "ssrH1": null,
+    "flutterEls": false,
+    "anims": 0
+   }
+  },
+  "errors": []
+ },
+ {
+  "tag": "chromium-desktop-sl-normal",
+  "scenario": "normal",
+  "engine": "chromium",
+  "size": "desktop",
+  "locale": "sl",
+  "raw": {
+   "h1": true,
+   "canonical": true,
+   "hreflang": 0,
+   "jsonld": true,
+   "statusSection": true,
+   "bytes": 29340
+  },
+  "loading": {
+   "path": "/sl/umetnine/2890e5ec-3fdd-474e-a0ee-b16e5097b669",
+   "state": "loading",
+   "statusVisible": true,
+   "statusRemoved": false,
+   "classes": "kubus-takeover-capable",
+   "marks": {
+    "public_ssr_visible": 186,
+    "flutter_bootstrap_started": 195
+   },
+   "events": [],
+   "docInert": false,
+   "docAriaHidden": null,
+   "hostInert": true,
+   "hostAriaHidden": "true",
+   "ssrH1": "Mary's column",
+   "flutterEls": false,
+   "anims": 6
+  },
+  "settled": true,
+  "settleMs": 2481,
+  "after": {
+   "path": "/sl/umetnine/2890e5ec-3fdd-474e-a0ee-b16e5097b669",
+   "state": null,
+   "statusVisible": false,
+   "statusRemoved": true,
+   "classes": "kubus-takeover-capable kubus-takeover-active kubus-takeover-complete",
+   "marks": {
+    "public_ssr_visible": 186,
+    "flutter_bootstrap_started": 195,
+    "flutter_engine_ready": 1203,
+    "public_entity_route_parsed": 1260,
+    "public_entity_ready": 2206,
+    "flutter_takeover_completed": 2467
+   },
+   "events": [
+    {
+     "n": "kubus:public-entity-route-parsed",
+     "t": 1260,
+     "d": "{\"type\":\"artwork\",\"id\":\"2890e5ec-3fdd-474e-a0ee-b16e5097b669\",\"path\":\"/sl/umetnine/2890e5ec-3fdd-474e-a0ee-b16e5097b669\",\"locale\":\"sl\"}"
+    },
+    {
+     "n": "kubus:public-entity-ready",
+     "t": 2206,
+     "d": "{\"type\":\"artwork\",\"id\":\"2890e5ec-3fdd-474e-a0ee-b16e5097b669\",\"path\":\"/sl/umetnine/2890e5ec-3fdd-474e-a0ee-b16e5097b669\",\"locale\":\"sl\"}"
+    },
+    {
+     "n": "kubus:flutter-takeover-completed",
+     "t": 2467,
+     "d": "null"
+    }
+   ],
+   "docInert": true,
+   "docAriaHidden": "true",
+   "hostInert": false,
+   "hostAriaHidden": null,
+   "ssrH1": "Mary's column",
+   "flutterEls": true,
+   "anims": 0
+  },
+  "apiCalls": [
+   "/api/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669",
+   "/api/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669/comments?page=1&limit=100",
+   "/api/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669/view",
+   "/api/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669/comments?page=1&limit=100",
+   "/api/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669/spatial",
+   "https://bapi.kubus.site/api/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669/comments?page=1&limit=100",
+   "https://bapi.kubus.site/api/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669/comments?page=1&limit=100"
+  ],
+  "errors": []
+ },
+ {
+  "tag": "chromium-desktop-sl-delayed",
+  "scenario": "delayed",
+  "engine": "chromium",
+  "size": "desktop",
+  "locale": "sl",
+  "raw": {
+   "h1": true,
+   "canonical": true,
+   "hreflang": 0,
+   "jsonld": true,
+   "statusSection": true,
+   "bytes": 29340
+  },
+  "loading": {
+   "path": "/sl/umetnine/2890e5ec-3fdd-474e-a0ee-b16e5097b669",
+   "state": "loading",
+   "statusVisible": true,
+   "statusRemoved": false,
+   "classes": "kubus-takeover-capable",
+   "marks": {
+    "public_ssr_visible": 183,
+    "flutter_bootstrap_started": 192
+   },
+   "events": [],
+   "docInert": false,
+   "docAriaHidden": null,
+   "hostInert": true,
+   "hostAriaHidden": "true",
+   "ssrH1": "Mary's column",
+   "flutterEls": false,
+   "anims": 6
+  },
+  "settled": true,
+  "settleMs": 8520,
+  "after": {
+   "path": "/sl/umetnine/2890e5ec-3fdd-474e-a0ee-b16e5097b669",
+   "state": null,
+   "statusVisible": false,
+   "statusRemoved": true,
+   "classes": "kubus-takeover-capable kubus-takeover-active kubus-takeover-complete",
+   "marks": {
+    "public_ssr_visible": 183,
+    "flutter_bootstrap_started": 192,
+    "flutter_engine_ready": 7350,
+    "public_entity_route_parsed": 7419,
+    "public_entity_ready": 8235,
+    "flutter_takeover_completed": 8518
+   },
+   "events": [
+    {
+     "n": "kubus:public-entity-route-parsed",
+     "t": 7419,
+     "d": "{\"type\":\"artwork\",\"id\":\"2890e5ec-3fdd-474e-a0ee-b16e5097b669\",\"path\":\"/sl/umetnine/2890e5ec-3fdd-474e-a0ee-b16e5097b669\",\"locale\":\"sl\"}"
+    },
+    {
+     "n": "kubus:public-entity-ready",
+     "t": 8235,
+     "d": "{\"type\":\"artwork\",\"id\":\"2890e5ec-3fdd-474e-a0ee-b16e5097b669\",\"path\":\"/sl/umetnine/2890e5ec-3fdd-474e-a0ee-b16e5097b669\",\"locale\":\"sl\"}"
+    },
+    {
+     "n": "kubus:flutter-takeover-completed",
+     "t": 8518,
+     "d": "null"
+    }
+   ],
+   "docInert": true,
+   "docAriaHidden": "true",
+   "hostInert": false,
+   "hostAriaHidden": null,
+   "ssrH1": "Mary's column",
+   "flutterEls": true,
+   "anims": 0
+  },
+  "apiCalls": [
+   "/api/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669",
+   "/api/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669/comments?page=1&limit=100",
+   "/api/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669/view",
+   "/api/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669/comments?page=1&limit=100",
+   "/api/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669/spatial",
+   "https://bapi.kubus.site/api/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669/comments?page=1&limit=100",
+   "https://bapi.kubus.site/api/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669/comments?page=1&limit=100"
+  ],
+  "errors": []
+ },
+ {
+  "tag": "chromium-desktop-sl-fail-bootstrap",
+  "scenario": "fail-bootstrap",
+  "engine": "chromium",
+  "size": "desktop",
+  "locale": "sl",
+  "raw": {
+   "h1": true,
+   "canonical": true,
+   "hreflang": 0,
+   "jsonld": true,
+   "statusSection": true,
+   "bytes": 29340
+  },
+  "loading": {
+   "path": "/sl/umetnine/2890e5ec-3fdd-474e-a0ee-b16e5097b669",
+   "state": "failed",
+   "statusVisible": true,
+   "statusRemoved": false,
+   "classes": "kubus-takeover-capable",
+   "marks": {
+    "public_ssr_visible": 204,
+    "flutter_takeover_failed": 204
+   },
+   "events": [],
+   "docInert": false,
+   "docAriaHidden": null,
+   "hostInert": true,
+   "hostAriaHidden": "true",
+   "ssrH1": "Mary's column",
+   "flutterEls": false,
+   "anims": 0
+  },
+  "settled": true,
+  "settleMs": 1074,
+  "after": {
+   "path": "/sl/umetnine/2890e5ec-3fdd-474e-a0ee-b16e5097b669",
+   "state": "failed",
+   "statusVisible": true,
+   "statusRemoved": false,
+   "classes": "kubus-takeover-capable",
+   "marks": {
+    "public_ssr_visible": 204,
+    "flutter_takeover_failed": 204
+   },
+   "events": [],
+   "docInert": false,
+   "docAriaHidden": null,
+   "hostInert": true,
+   "hostAriaHidden": "true",
+   "ssrH1": "Mary's column",
+   "flutterEls": false,
+   "anims": 0
+  },
+  "apiCalls": [],
+  "failure": {
+   "ssrReadable": true,
+   "retryEnabled": true,
+   "appHref": "/map?lang=sl",
+   "reloads": 1
+  },
+  "errors": []
+ },
+ {
+  "tag": "chromium-desktop-sl-fail-mainjs",
+  "scenario": "fail-mainjs",
+  "engine": "chromium",
+  "size": "desktop",
+  "locale": "sl",
+  "raw": {
+   "h1": true,
+   "canonical": true,
+   "hreflang": 0,
+   "jsonld": true,
+   "statusSection": true,
+   "bytes": 29340
+  },
+  "loading": {
+   "path": "/sl/umetnine/2890e5ec-3fdd-474e-a0ee-b16e5097b669",
+   "state": "failed",
+   "statusVisible": true,
+   "statusRemoved": false,
+   "classes": "kubus-takeover-capable",
+   "marks": {
+    "public_ssr_visible": 182,
+    "flutter_bootstrap_started": 192,
+    "flutter_takeover_failed": 215
+   },
+   "events": [],
+   "docInert": false,
+   "docAriaHidden": null,
+   "hostInert": true,
+   "hostAriaHidden": "true",
+   "ssrH1": "Mary's column",
+   "flutterEls": false,
+   "anims": 0
+  },
+  "settled": true,
+  "settleMs": 1120,
+  "after": {
+   "path": "/sl/umetnine/2890e5ec-3fdd-474e-a0ee-b16e5097b669",
+   "state": "failed",
+   "statusVisible": true,
+   "statusRemoved": false,
+   "classes": "kubus-takeover-capable",
+   "marks": {
+    "public_ssr_visible": 182,
+    "flutter_bootstrap_started": 192,
+    "flutter_takeover_failed": 215
+   },
+   "events": [],
+   "docInert": false,
+   "docAriaHidden": null,
+   "hostInert": true,
+   "hostAriaHidden": "true",
+   "ssrH1": "Mary's column",
+   "flutterEls": false,
+   "anims": 0
+  },
+  "apiCalls": [],
+  "failure": {
+   "ssrReadable": true,
+   "retryEnabled": true,
+   "appHref": "/map?lang=sl",
+   "reloads": 1
+  },
+  "errors": []
+ },
+ {
+  "tag": "chromium-desktop-sl-fail-api",
+  "scenario": "fail-api",
+  "engine": "chromium",
+  "size": "desktop",
+  "locale": "sl",
+  "raw": {
+   "h1": true,
+   "canonical": true,
+   "hreflang": 0,
+   "jsonld": true,
+   "statusSection": true,
+   "bytes": 29340
+  },
+  "loading": {
+   "path": "/sl/umetnine/2890e5ec-3fdd-474e-a0ee-b16e5097b669",
+   "state": "loading",
+   "statusVisible": true,
+   "statusRemoved": false,
+   "classes": "kubus-takeover-capable",
+   "marks": {
+    "public_ssr_visible": 194,
+    "flutter_bootstrap_started": 203
+   },
+   "events": [],
+   "docInert": false,
+   "docAriaHidden": null,
+   "hostInert": true,
+   "hostAriaHidden": "true",
+   "ssrH1": "Mary's column",
+   "flutterEls": false,
+   "anims": 6
+  },
+  "settled": true,
+  "settleMs": 2510,
+  "after": {
+   "path": "/sl/umetnine/2890e5ec-3fdd-474e-a0ee-b16e5097b669",
+   "state": null,
+   "statusVisible": false,
+   "statusRemoved": true,
+   "classes": "kubus-takeover-capable kubus-takeover-active kubus-takeover-complete",
+   "marks": {
+    "public_ssr_visible": 194,
+    "flutter_bootstrap_started": 203,
+    "flutter_engine_ready": 1204,
+    "public_entity_route_parsed": 1261,
+    "public_entity_ready": 2241,
+    "flutter_takeover_completed": 2505
+   },
+   "events": [
+    {
+     "n": "kubus:public-entity-route-parsed",
+     "t": 1261,
+     "d": "{\"type\":\"artwork\",\"id\":\"2890e5ec-3fdd-474e-a0ee-b16e5097b669\",\"path\":\"/sl/umetnine/2890e5ec-3fdd-474e-a0ee-b16e5097b669\",\"locale\":\"sl\"}"
+    },
+    {
+     "n": "kubus:public-entity-ready",
+     "t": 2241,
+     "d": "{\"type\":\"artwork\",\"id\":\"2890e5ec-3fdd-474e-a0ee-b16e5097b669\",\"path\":\"/sl/umetnine/2890e5ec-3fdd-474e-a0ee-b16e5097b669\",\"locale\":\"sl\"}"
+    },
+    {
+     "n": "kubus:flutter-takeover-completed",
+     "t": 2506,
+     "d": "null"
+    }
+   ],
+   "docInert": true,
+   "docAriaHidden": "true",
+   "hostInert": false,
+   "hostAriaHidden": null,
+   "ssrH1": "Mary's column",
+   "flutterEls": true,
+   "anims": 0
+  },
+  "apiCalls": [
+   "/api/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669",
+   "/api/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669?source=orbit",
+   "https://bapi.kubus.site/api/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669",
+   "https://bapi.kubus.site/api/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669?source=orbit",
+   "/api/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669/comments?page=1&limit=100",
+   "/api/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669/view",
+   "/api/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669/comments?page=1&limit=100",
+   "/api/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669/spatial",
+   "https://bapi.kubus.site/api/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669/spatial"
+  ],
+  "failure": {
+   "ssrReadable": false,
+   "retryEnabled": false,
+   "appHref": null,
+   "reloads": 0
+  },
+  "errors": []
+ },
+ {
+  "tag": "chromium-desktop-sl-nav",
+  "scenario": "nav",
+  "engine": "chromium",
+  "size": "desktop",
+  "locale": "sl",
+  "raw": {
+   "h1": true,
+   "canonical": true,
+   "hreflang": 0,
+   "jsonld": true,
+   "statusSection": true,
+   "bytes": 29340
+  },
+  "loading": {
+   "path": "/sl/umetnine/2890e5ec-3fdd-474e-a0ee-b16e5097b669",
+   "state": "loading",
+   "statusVisible": true,
+   "statusRemoved": false,
+   "classes": "kubus-takeover-capable",
+   "marks": {
+    "public_ssr_visible": 190,
+    "flutter_bootstrap_started": 200
+   },
+   "events": [],
+   "docInert": false,
+   "docAriaHidden": null,
+   "hostInert": true,
+   "hostAriaHidden": "true",
+   "ssrH1": "Mary's column",
+   "flutterEls": false,
+   "anims": 6
+  },
+  "settled": true,
+  "settleMs": 2451,
+  "after": {
+   "path": "/sl/umetnine/2890e5ec-3fdd-474e-a0ee-b16e5097b669",
+   "state": null,
+   "statusVisible": false,
+   "statusRemoved": true,
+   "classes": "kubus-takeover-capable kubus-takeover-active kubus-takeover-complete",
+   "marks": {
+    "public_ssr_visible": 190,
+    "flutter_bootstrap_started": 200,
+    "flutter_engine_ready": 1146,
+    "public_entity_route_parsed": 1202,
+    "public_entity_ready": 2181,
+    "flutter_takeover_completed": 2443
+   },
+   "events": [
+    {
+     "n": "kubus:public-entity-route-parsed",
+     "t": 1202,
+     "d": "{\"type\":\"artwork\",\"id\":\"2890e5ec-3fdd-474e-a0ee-b16e5097b669\",\"path\":\"/sl/umetnine/2890e5ec-3fdd-474e-a0ee-b16e5097b669\",\"locale\":\"sl\"}"
+    },
+    {
+     "n": "kubus:public-entity-ready",
+     "t": 2181,
+     "d": "{\"type\":\"artwork\",\"id\":\"2890e5ec-3fdd-474e-a0ee-b16e5097b669\",\"path\":\"/sl/umetnine/2890e5ec-3fdd-474e-a0ee-b16e5097b669\",\"locale\":\"sl\"}"
+    },
+    {
+     "n": "kubus:flutter-takeover-completed",
+     "t": 2443,
+     "d": "null"
+    }
+   ],
+   "docInert": true,
+   "docAriaHidden": "true",
+   "hostInert": false,
+   "hostAriaHidden": null,
+   "ssrH1": "Mary's column",
+   "flutterEls": true,
+   "anims": 0
+  },
+  "apiCalls": [
+   "/api/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669",
+   "/api/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669/comments?page=1&limit=100",
+   "/api/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669/view",
+   "/api/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669/comments?page=1&limit=100",
+   "/api/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669/spatial",
+   "https://bapi.kubus.site/api/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669/comments?page=1&limit=100",
+   "https://bapi.kubus.site/api/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669/comments?page=1&limit=100",
+   "/api/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669",
+   "/api/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669/comments?page=1&limit=100",
+   "/api/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669/view",
+   "/api/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669/comments?page=1&limit=100",
+   "/api/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669/spatial",
+   "https://bapi.kubus.site/api/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669/comments?page=1&limit=100",
+   "https://bapi.kubus.site/api/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669/comments?page=1&limit=100"
+  ],
+  "nav": {
+   "appHref": "/map?lang=sl",
+   "afterClick": "/sl/umetnine/2890e5ec-3fdd-474e-a0ee-b16e5097b669",
+   "afterBack": "about:blank",
+   "backSnapshot": {
+    "path": "blank",
+    "state": null,
+    "statusVisible": false,
+    "statusRemoved": true,
+    "classes": "",
+    "marks": {},
+    "events": [],
+    "docInert": false,
+    "hostInert": false,
+    "ssrH1": null,
+    "flutterEls": false,
+    "anims": 0
+   }
+  },
+  "errors": []
+ },
+ {
+  "tag": "firefox-mobile-en-normal",
+  "scenario": "normal",
+  "engine": "firefox",
+  "size": "mobile",
+  "locale": "en",
+  "raw": {
+   "h1": true,
+   "canonical": true,
+   "hreflang": 0,
+   "jsonld": true,
+   "statusSection": true,
+   "bytes": 29226
+  },
+  "loading": {
+   "path": "/en/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669",
+   "state": "loading",
+   "statusVisible": true,
+   "statusRemoved": false,
+   "classes": "kubus-takeover-capable",
+   "marks": {
+    "public_ssr_visible": 215,
+    "flutter_bootstrap_started": 482
+   },
+   "events": [],
+   "docInert": false,
+   "docAriaHidden": null,
+   "hostInert": true,
+   "hostAriaHidden": "true",
+   "ssrH1": "Mary's column",
+   "flutterEls": false,
+   "anims": 6
+  },
+  "settled": true,
+  "settleMs": 2998,
+  "after": {
+   "path": "/en/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669",
+   "state": null,
+   "statusVisible": false,
+   "statusRemoved": true,
+   "classes": "kubus-takeover-capable kubus-takeover-active kubus-takeover-complete",
+   "marks": {
+    "public_ssr_visible": 215,
+    "flutter_bootstrap_started": 482,
+    "flutter_engine_ready": 1523,
+    "public_entity_route_parsed": 1553,
+    "public_entity_ready": 2536,
+    "flutter_takeover_completed": 2903
+   },
+   "events": [
+    {
+     "n": "kubus:public-entity-route-parsed",
+     "t": 1553,
+     "d": "{\"type\":\"artwork\",\"id\":\"2890e5ec-3fdd-474e-a0ee-b16e5097b669\",\"path\":\"/en/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669\",\"locale\":\"en\"}"
+    },
+    {
+     "n": "kubus:public-entity-ready",
+     "t": 2536,
+     "d": "{\"type\":\"artwork\",\"id\":\"2890e5ec-3fdd-474e-a0ee-b16e5097b669\",\"path\":\"/en/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669\",\"locale\":\"en\"}"
+    },
+    {
+     "n": "kubus:flutter-takeover-completed",
+     "t": 2903,
+     "d": "null"
+    }
+   ],
+   "docInert": true,
+   "docAriaHidden": "true",
+   "hostInert": false,
+   "hostAriaHidden": null,
+   "ssrH1": "Mary's column",
+   "flutterEls": true,
+   "anims": 0
+  },
+  "apiCalls": [
+   "/api/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669",
+   "/api/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669/view"
+  ],
+  "errors": []
+ },
+ {
+  "tag": "firefox-mobile-en-delayed",
+  "scenario": "delayed",
+  "engine": "firefox",
+  "size": "mobile",
+  "locale": "en",
+  "raw": {
+   "h1": true,
+   "canonical": true,
+   "hreflang": 0,
+   "jsonld": true,
+   "statusSection": true,
+   "bytes": 29226
+  },
+  "loading": {
+   "path": "/en/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669",
+   "state": "loading",
+   "statusVisible": true,
+   "statusRemoved": false,
+   "classes": "kubus-takeover-capable",
+   "marks": {
+    "public_ssr_visible": 169,
+    "flutter_bootstrap_started": 342
+   },
+   "events": [],
+   "docInert": false,
+   "docAriaHidden": null,
+   "hostInert": true,
+   "hostAriaHidden": "true",
+   "ssrH1": "Mary's column",
+   "flutterEls": false,
+   "anims": 6
+  },
+  "settled": true,
+  "settleMs": 8741,
+  "after": {
+   "path": "/en/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669",
+   "state": null,
+   "statusVisible": false,
+   "statusRemoved": true,
+   "classes": "kubus-takeover-capable kubus-takeover-active kubus-takeover-complete",
+   "marks": {
+    "public_ssr_visible": 169,
+    "flutter_bootstrap_started": 342,
+    "flutter_engine_ready": 7328,
+    "public_entity_route_parsed": 7357,
+    "public_entity_ready": 8336,
+    "flutter_takeover_completed": 8675
+   },
+   "events": [
+    {
+     "n": "kubus:public-entity-route-parsed",
+     "t": 7356,
+     "d": "{\"type\":\"artwork\",\"id\":\"2890e5ec-3fdd-474e-a0ee-b16e5097b669\",\"path\":\"/en/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669\",\"locale\":\"en\"}"
+    },
+    {
+     "n": "kubus:public-entity-ready",
+     "t": 8336,
+     "d": "{\"type\":\"artwork\",\"id\":\"2890e5ec-3fdd-474e-a0ee-b16e5097b669\",\"path\":\"/en/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669\",\"locale\":\"en\"}"
+    },
+    {
+     "n": "kubus:flutter-takeover-completed",
+     "t": 8675,
+     "d": "null"
+    }
+   ],
+   "docInert": true,
+   "docAriaHidden": "true",
+   "hostInert": false,
+   "hostAriaHidden": null,
+   "ssrH1": "Mary's column",
+   "flutterEls": true,
+   "anims": 0
+  },
+  "apiCalls": [
+   "/api/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669",
+   "/api/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669/view"
+  ],
+  "errors": []
+ },
+ {
+  "tag": "firefox-mobile-en-fail-bootstrap",
+  "scenario": "fail-bootstrap",
+  "engine": "firefox",
+  "size": "mobile",
+  "locale": "en",
+  "raw": {
+   "h1": true,
+   "canonical": true,
+   "hreflang": 0,
+   "jsonld": true,
+   "statusSection": true,
+   "bytes": 29226
+  },
+  "loading": {
+   "path": "/en/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669",
+   "state": "failed",
+   "statusVisible": true,
+   "statusRemoved": false,
+   "classes": "kubus-takeover-capable",
+   "marks": {
+    "public_ssr_visible": 176,
+    "flutter_takeover_failed": 176
+   },
+   "events": [],
+   "docInert": false,
+   "docAriaHidden": null,
+   "hostInert": true,
+   "hostAriaHidden": "true",
+   "ssrH1": "Mary's column",
+   "flutterEls": false,
+   "anims": 0
+  },
+  "settled": true,
+  "settleMs": 955,
+  "after": {
+   "path": "/en/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669",
+   "state": "failed",
+   "statusVisible": true,
+   "statusRemoved": false,
+   "classes": "kubus-takeover-capable",
+   "marks": {
+    "public_ssr_visible": 176,
+    "flutter_takeover_failed": 176
+   },
+   "events": [],
+   "docInert": false,
+   "docAriaHidden": null,
+   "hostInert": true,
+   "hostAriaHidden": "true",
+   "ssrH1": "Mary's column",
+   "flutterEls": false,
+   "anims": 0
+  },
+  "apiCalls": [],
+  "failure": {
+   "ssrReadable": true,
+   "retryEnabled": true,
+   "appHref": "/map?lang=en",
+   "reloads": 1
+  },
+  "errors": []
+ },
+ {
+  "tag": "firefox-mobile-en-fail-mainjs",
+  "scenario": "fail-mainjs",
+  "engine": "firefox",
+  "size": "mobile",
+  "locale": "en",
+  "raw": {
+   "h1": true,
+   "canonical": true,
+   "hreflang": 0,
+   "jsonld": true,
+   "statusSection": true,
+   "bytes": 29226
+  },
+  "loading": {
+   "path": "/en/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669",
+   "state": "failed",
+   "statusVisible": true,
+   "statusRemoved": false,
+   "classes": "kubus-takeover-capable",
+   "marks": {
+    "public_ssr_visible": 170,
+    "flutter_bootstrap_started": 351,
+    "flutter_takeover_failed": 379
+   },
+   "events": [],
+   "docInert": false,
+   "docAriaHidden": null,
+   "hostInert": true,
+   "hostAriaHidden": "true",
+   "ssrH1": "Mary's column",
+   "flutterEls": false,
+   "anims": 0
+  },
+  "settled": true,
+  "settleMs": 1131,
+  "after": {
+   "path": "/en/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669",
+   "state": "failed",
+   "statusVisible": true,
+   "statusRemoved": false,
+   "classes": "kubus-takeover-capable",
+   "marks": {
+    "public_ssr_visible": 170,
+    "flutter_bootstrap_started": 351,
+    "flutter_takeover_failed": 379
+   },
+   "events": [],
+   "docInert": false,
+   "docAriaHidden": null,
+   "hostInert": true,
+   "hostAriaHidden": "true",
+   "ssrH1": "Mary's column",
+   "flutterEls": false,
+   "anims": 0
+  },
+  "apiCalls": [],
+  "failure": {
+   "ssrReadable": true,
+   "retryEnabled": true,
+   "appHref": "/map?lang=en",
+   "reloads": 1
+  },
+  "errors": []
+ },
+ {
+  "tag": "firefox-mobile-en-fail-api",
+  "scenario": "fail-api",
+  "engine": "firefox",
+  "size": "mobile",
+  "locale": "en",
+  "raw": {
+   "h1": true,
+   "canonical": true,
+   "hreflang": 0,
+   "jsonld": true,
+   "statusSection": true,
+   "bytes": 29226
+  },
+  "loading": {
+   "path": "/en/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669",
+   "state": "loading",
+   "statusVisible": true,
+   "statusRemoved": false,
+   "classes": "kubus-takeover-capable",
+   "marks": {
+    "public_ssr_visible": 182,
+    "flutter_bootstrap_started": 357
+   },
+   "events": [],
+   "docInert": false,
+   "docAriaHidden": null,
+   "hostInert": true,
+   "hostAriaHidden": "true",
+   "ssrH1": "Mary's column",
+   "flutterEls": false,
+   "anims": 6
+  },
+  "settled": true,
+  "settleMs": 2630,
+  "after": {
+   "path": "/en/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669",
+   "state": null,
+   "statusVisible": false,
+   "statusRemoved": true,
+   "classes": "kubus-takeover-capable kubus-takeover-active kubus-takeover-complete",
+   "marks": {
+    "public_ssr_visible": 182,
+    "flutter_bootstrap_started": 357,
+    "flutter_engine_ready": 1361,
+    "public_entity_route_parsed": 1391,
+    "public_entity_ready": 2346,
+    "flutter_takeover_completed": 2629
+   },
+   "events": [
+    {
+     "n": "kubus:public-entity-route-parsed",
+     "t": 1391,
+     "d": "{\"type\":\"artwork\",\"id\":\"2890e5ec-3fdd-474e-a0ee-b16e5097b669\",\"path\":\"/en/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669\",\"locale\":\"en\"}"
+    },
+    {
+     "n": "kubus:public-entity-ready",
+     "t": 2346,
+     "d": "{\"type\":\"artwork\",\"id\":\"2890e5ec-3fdd-474e-a0ee-b16e5097b669\",\"path\":\"/en/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669\",\"locale\":\"en\"}"
+    },
+    {
+     "n": "kubus:flutter-takeover-completed",
+     "t": 2629,
+     "d": "null"
+    }
+   ],
+   "docInert": true,
+   "docAriaHidden": "true",
+   "hostInert": false,
+   "hostAriaHidden": null,
+   "ssrH1": "Mary's column",
+   "flutterEls": true,
+   "anims": 0
+  },
+  "apiCalls": [
+   "/api/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669",
+   "/api/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669?source=orbit",
+   "/api/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669/view",
+   "https://bapi.kubus.site/api/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669",
+   "https://bapi.kubus.site/api/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669?source=orbit"
+  ],
+  "failure": {
+   "ssrReadable": false,
+   "retryEnabled": false,
+   "appHref": null,
+   "reloads": 0
+  },
+  "errors": []
+ },
+ {
+  "tag": "firefox-mobile-en-nav",
+  "scenario": "nav",
+  "engine": "firefox",
+  "size": "mobile",
+  "locale": "en",
+  "raw": {
+   "h1": true,
+   "canonical": true,
+   "hreflang": 0,
+   "jsonld": true,
+   "statusSection": true,
+   "bytes": 29226
+  },
+  "loading": {
+   "path": "/en/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669",
+   "state": "loading",
+   "statusVisible": true,
+   "statusRemoved": false,
+   "classes": "kubus-takeover-capable",
+   "marks": {
+    "public_ssr_visible": 199,
+    "flutter_bootstrap_started": 323
+   },
+   "events": [],
+   "docInert": false,
+   "docAriaHidden": null,
+   "hostInert": true,
+   "hostAriaHidden": "true",
+   "ssrH1": "Mary's column",
+   "flutterEls": false,
+   "anims": 6
+  },
+  "settled": true,
+  "settleMs": 2158,
+  "after": {
+   "path": "/en/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669",
+   "state": null,
+   "statusVisible": false,
+   "statusRemoved": true,
+   "classes": "kubus-takeover-capable kubus-takeover-active kubus-takeover-complete",
+   "marks": {
+    "public_ssr_visible": 199,
+    "flutter_bootstrap_started": 323,
+    "flutter_engine_ready": 1159,
+    "public_entity_route_parsed": 1184,
+    "public_entity_ready": 1877,
+    "flutter_takeover_completed": 2150
+   },
+   "events": [
+    {
+     "n": "kubus:public-entity-route-parsed",
+     "t": 1184,
+     "d": "{\"type\":\"artwork\",\"id\":\"2890e5ec-3fdd-474e-a0ee-b16e5097b669\",\"path\":\"/en/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669\",\"locale\":\"en\"}"
+    },
+    {
+     "n": "kubus:public-entity-ready",
+     "t": 1877,
+     "d": "{\"type\":\"artwork\",\"id\":\"2890e5ec-3fdd-474e-a0ee-b16e5097b669\",\"path\":\"/en/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669\",\"locale\":\"en\"}"
+    },
+    {
+     "n": "kubus:flutter-takeover-completed",
+     "t": 2150,
+     "d": "null"
+    }
+   ],
+   "docInert": true,
+   "docAriaHidden": "true",
+   "hostInert": false,
+   "hostAriaHidden": null,
+   "ssrH1": "Mary's column",
+   "flutterEls": true,
+   "anims": 0
+  },
+  "apiCalls": [
+   "/api/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669",
+   "/api/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669/view",
+   "/api/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669",
+   "/api/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669/view"
+  ],
+  "nav": {
+   "appHref": "/map?lang=en",
+   "afterClick": "/map?lang=en",
+   "afterBack": "/en/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669",
+   "backSnapshot": {
+    "path": "/en/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669",
+    "state": null,
+    "statusVisible": false,
+    "statusRemoved": true,
+    "classes": "kubus-takeover-capable kubus-takeover-active kubus-takeover-complete",
+    "marks": {
+     "public_ssr_visible": 51,
+     "flutter_bootstrap_started": 56,
+     "flutter_engine_ready": 853,
+     "public_entity_route_parsed": 871,
+     "public_entity_ready": 1614,
+     "flutter_takeover_completed": 1889
+    },
+    "events": [
+     {
+      "n": "kubus:public-entity-route-parsed",
+      "t": 871,
+      "d": "{\"type\":\"artwork\",\"id\":\"2890e5ec-3fdd-474e-a0ee-b16e5097b669\",\"path\":\"/en/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669\",\"locale\":\"en\"}"
+     },
+     {
+      "n": "kubus:public-entity-ready",
+      "t": 1614,
+      "d": "{\"type\":\"artwork\",\"id\":\"2890e5ec-3fdd-474e-a0ee-b16e5097b669\",\"path\":\"/en/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669\",\"locale\":\"en\"}"
+     },
+     {
+      "n": "kubus:flutter-takeover-completed",
+      "t": 1889,
+      "d": "null"
+     }
+    ],
+    "docInert": true,
+    "docAriaHidden": "true",
+    "hostInert": false,
+    "hostAriaHidden": null,
+    "ssrH1": "Mary's column",
+    "flutterEls": true,
+    "anims": 0
+   }
+  },
+  "errors": []
+ },
+ {
+  "tag": "firefox-mobile-sl-normal",
+  "scenario": "normal",
+  "engine": "firefox",
+  "size": "mobile",
+  "locale": "sl",
+  "raw": {
+   "h1": true,
+   "canonical": true,
+   "hreflang": 0,
+   "jsonld": true,
+   "statusSection": true,
+   "bytes": 29340
+  },
+  "loading": {
+   "path": "/sl/umetnine/2890e5ec-3fdd-474e-a0ee-b16e5097b669",
+   "state": "loading",
+   "statusVisible": true,
+   "statusRemoved": false,
+   "classes": "kubus-takeover-capable",
+   "marks": {
+    "public_ssr_visible": 156,
+    "flutter_bootstrap_started": 309
+   },
+   "events": [],
+   "docInert": false,
+   "docAriaHidden": null,
+   "hostInert": true,
+   "hostAriaHidden": "true",
+   "ssrH1": "Mary's column",
+   "flutterEls": false,
+   "anims": 6
+  },
+  "settled": true,
+  "settleMs": 2175,
+  "after": {
+   "path": "/sl/umetnine/2890e5ec-3fdd-474e-a0ee-b16e5097b669",
+   "state": null,
+   "statusVisible": false,
+   "statusRemoved": true,
+   "classes": "kubus-takeover-capable kubus-takeover-active kubus-takeover-complete",
+   "marks": {
+    "public_ssr_visible": 156,
+    "flutter_bootstrap_started": 309,
+    "flutter_engine_ready": 1131,
+    "public_entity_route_parsed": 1154,
+    "public_entity_ready": 1902,
+    "flutter_takeover_completed": 2171
+   },
+   "events": [
+    {
+     "n": "kubus:public-entity-route-parsed",
+     "t": 1154,
+     "d": "{\"type\":\"artwork\",\"id\":\"2890e5ec-3fdd-474e-a0ee-b16e5097b669\",\"path\":\"/sl/umetnine/2890e5ec-3fdd-474e-a0ee-b16e5097b669\",\"locale\":\"sl\"}"
+    },
+    {
+     "n": "kubus:public-entity-ready",
+     "t": 1902,
+     "d": "{\"type\":\"artwork\",\"id\":\"2890e5ec-3fdd-474e-a0ee-b16e5097b669\",\"path\":\"/sl/umetnine/2890e5ec-3fdd-474e-a0ee-b16e5097b669\",\"locale\":\"sl\"}"
+    },
+    {
+     "n": "kubus:flutter-takeover-completed",
+     "t": 2171,
+     "d": "null"
+    }
+   ],
+   "docInert": true,
+   "docAriaHidden": "true",
+   "hostInert": false,
+   "hostAriaHidden": null,
+   "ssrH1": "Mary's column",
+   "flutterEls": true,
+   "anims": 0
+  },
+  "apiCalls": [
+   "/api/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669",
+   "/api/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669/view"
+  ],
+  "errors": []
+ },
+ {
+  "tag": "firefox-mobile-sl-delayed",
+  "scenario": "delayed",
+  "engine": "firefox",
+  "size": "mobile",
+  "locale": "sl",
+  "raw": {
+   "h1": true,
+   "canonical": true,
+   "hreflang": 0,
+   "jsonld": true,
+   "statusSection": true,
+   "bytes": 29340
+  },
+  "loading": {
+   "path": "/sl/umetnine/2890e5ec-3fdd-474e-a0ee-b16e5097b669",
+   "state": "loading",
+   "statusVisible": true,
+   "statusRemoved": false,
+   "classes": "kubus-takeover-capable",
+   "marks": {
+    "public_ssr_visible": 162,
+    "flutter_bootstrap_started": 312
+   },
+   "events": [],
+   "docInert": false,
+   "docAriaHidden": null,
+   "hostInert": true,
+   "hostAriaHidden": "true",
+   "ssrH1": "Mary's column",
+   "flutterEls": false,
+   "anims": 6
+  },
+  "settled": true,
+  "settleMs": 8117,
+  "after": {
+   "path": "/sl/umetnine/2890e5ec-3fdd-474e-a0ee-b16e5097b669",
+   "state": null,
+   "statusVisible": false,
+   "statusRemoved": true,
+   "classes": "kubus-takeover-capable kubus-takeover-active kubus-takeover-complete",
+   "marks": {
+    "public_ssr_visible": 162,
+    "flutter_bootstrap_started": 312,
+    "flutter_engine_ready": 7094,
+    "public_entity_route_parsed": 7118,
+    "public_entity_ready": 7847,
+    "flutter_takeover_completed": 8109
+   },
+   "events": [
+    {
+     "n": "kubus:public-entity-route-parsed",
+     "t": 7118,
+     "d": "{\"type\":\"artwork\",\"id\":\"2890e5ec-3fdd-474e-a0ee-b16e5097b669\",\"path\":\"/sl/umetnine/2890e5ec-3fdd-474e-a0ee-b16e5097b669\",\"locale\":\"sl\"}"
+    },
+    {
+     "n": "kubus:public-entity-ready",
+     "t": 7847,
+     "d": "{\"type\":\"artwork\",\"id\":\"2890e5ec-3fdd-474e-a0ee-b16e5097b669\",\"path\":\"/sl/umetnine/2890e5ec-3fdd-474e-a0ee-b16e5097b669\",\"locale\":\"sl\"}"
+    },
+    {
+     "n": "kubus:flutter-takeover-completed",
+     "t": 8109,
+     "d": "null"
+    }
+   ],
+   "docInert": true,
+   "docAriaHidden": "true",
+   "hostInert": false,
+   "hostAriaHidden": null,
+   "ssrH1": "Mary's column",
+   "flutterEls": true,
+   "anims": 0
+  },
+  "apiCalls": [
+   "/api/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669",
+   "/api/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669/view"
+  ],
+  "errors": []
+ },
+ {
+  "tag": "firefox-mobile-sl-fail-bootstrap",
+  "scenario": "fail-bootstrap",
+  "engine": "firefox",
+  "size": "mobile",
+  "locale": "sl",
+  "raw": {
+   "h1": true,
+   "canonical": true,
+   "hreflang": 0,
+   "jsonld": true,
+   "statusSection": true,
+   "bytes": 29340
+  },
+  "loading": {
+   "path": "/sl/umetnine/2890e5ec-3fdd-474e-a0ee-b16e5097b669",
+   "state": "failed",
+   "statusVisible": true,
+   "statusRemoved": false,
+   "classes": "kubus-takeover-capable",
+   "marks": {
+    "public_ssr_visible": 156,
+    "flutter_takeover_failed": 156
+   },
+   "events": [],
+   "docInert": false,
+   "docAriaHidden": null,
+   "hostInert": true,
+   "hostAriaHidden": "true",
+   "ssrH1": "Mary's column",
+   "flutterEls": false,
+   "anims": 0
+  },
+  "settled": true,
+  "settleMs": 924,
+  "after": {
+   "path": "/sl/umetnine/2890e5ec-3fdd-474e-a0ee-b16e5097b669",
+   "state": "failed",
+   "statusVisible": true,
+   "statusRemoved": false,
+   "classes": "kubus-takeover-capable",
+   "marks": {
+    "public_ssr_visible": 156,
+    "flutter_takeover_failed": 156
+   },
+   "events": [],
+   "docInert": false,
+   "docAriaHidden": null,
+   "hostInert": true,
+   "hostAriaHidden": "true",
+   "ssrH1": "Mary's column",
+   "flutterEls": false,
+   "anims": 0
+  },
+  "apiCalls": [],
+  "failure": {
+   "ssrReadable": true,
+   "retryEnabled": true,
+   "appHref": "/map?lang=sl",
+   "reloads": 1
+  },
+  "errors": []
+ },
+ {
+  "tag": "firefox-mobile-sl-fail-mainjs",
+  "scenario": "fail-mainjs",
+  "engine": "firefox",
+  "size": "mobile",
+  "locale": "sl",
+  "raw": {
+   "h1": true,
+   "canonical": true,
+   "hreflang": 0,
+   "jsonld": true,
+   "statusSection": true,
+   "bytes": 29340
+  },
+  "loading": {
+   "path": "/sl/umetnine/2890e5ec-3fdd-474e-a0ee-b16e5097b669",
+   "state": "failed",
+   "statusVisible": true,
+   "statusRemoved": false,
+   "classes": "kubus-takeover-capable",
+   "marks": {
+    "public_ssr_visible": 165,
+    "flutter_bootstrap_started": 329,
+    "flutter_takeover_failed": 353
+   },
+   "events": [],
+   "docInert": false,
+   "docAriaHidden": null,
+   "hostInert": true,
+   "hostAriaHidden": "true",
+   "ssrH1": "Mary's column",
+   "flutterEls": false,
+   "anims": 0
+  },
+  "settled": true,
+  "settleMs": 1100,
+  "after": {
+   "path": "/sl/umetnine/2890e5ec-3fdd-474e-a0ee-b16e5097b669",
+   "state": "failed",
+   "statusVisible": true,
+   "statusRemoved": false,
+   "classes": "kubus-takeover-capable",
+   "marks": {
+    "public_ssr_visible": 165,
+    "flutter_bootstrap_started": 329,
+    "flutter_takeover_failed": 353
+   },
+   "events": [],
+   "docInert": false,
+   "docAriaHidden": null,
+   "hostInert": true,
+   "hostAriaHidden": "true",
+   "ssrH1": "Mary's column",
+   "flutterEls": false,
+   "anims": 0
+  },
+  "apiCalls": [],
+  "failure": {
+   "ssrReadable": true,
+   "retryEnabled": true,
+   "appHref": "/map?lang=sl",
+   "reloads": 1
+  },
+  "errors": []
+ },
+ {
+  "tag": "firefox-mobile-sl-fail-api",
+  "scenario": "fail-api",
+  "engine": "firefox",
+  "size": "mobile",
+  "locale": "sl",
+  "raw": {
+   "h1": true,
+   "canonical": true,
+   "hreflang": 0,
+   "jsonld": true,
+   "statusSection": true,
+   "bytes": 29340
+  },
+  "loading": {
+   "path": "/sl/umetnine/2890e5ec-3fdd-474e-a0ee-b16e5097b669",
+   "state": "loading",
+   "statusVisible": true,
+   "statusRemoved": false,
+   "classes": "kubus-takeover-capable",
+   "marks": {
+    "public_ssr_visible": 187,
+    "flutter_bootstrap_started": 341
+   },
+   "events": [],
+   "docInert": false,
+   "docAriaHidden": null,
+   "hostInert": true,
+   "hostAriaHidden": "true",
+   "ssrH1": "Mary's column",
+   "flutterEls": false,
+   "anims": 6
+  },
+  "settled": true,
+  "settleMs": 2176,
+  "after": {
+   "path": "/sl/umetnine/2890e5ec-3fdd-474e-a0ee-b16e5097b669",
+   "state": null,
+   "statusVisible": false,
+   "statusRemoved": true,
+   "classes": "kubus-takeover-capable kubus-takeover-active kubus-takeover-complete",
+   "marks": {
+    "public_ssr_visible": 187,
+    "flutter_bootstrap_started": 341,
+    "flutter_engine_ready": 1189,
+    "public_entity_route_parsed": 1213,
+    "public_entity_ready": 1903,
+    "flutter_takeover_completed": 2169
+   },
+   "events": [
+    {
+     "n": "kubus:public-entity-route-parsed",
+     "t": 1213,
+     "d": "{\"type\":\"artwork\",\"id\":\"2890e5ec-3fdd-474e-a0ee-b16e5097b669\",\"path\":\"/sl/umetnine/2890e5ec-3fdd-474e-a0ee-b16e5097b669\",\"locale\":\"sl\"}"
+    },
+    {
+     "n": "kubus:public-entity-ready",
+     "t": 1902,
+     "d": "{\"type\":\"artwork\",\"id\":\"2890e5ec-3fdd-474e-a0ee-b16e5097b669\",\"path\":\"/sl/umetnine/2890e5ec-3fdd-474e-a0ee-b16e5097b669\",\"locale\":\"sl\"}"
+    },
+    {
+     "n": "kubus:flutter-takeover-completed",
+     "t": 2169,
+     "d": "null"
+    }
+   ],
+   "docInert": true,
+   "docAriaHidden": "true",
+   "hostInert": false,
+   "hostAriaHidden": null,
+   "ssrH1": "Mary's column",
+   "flutterEls": true,
+   "anims": 0
+  },
+  "apiCalls": [
+   "/api/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669",
+   "/api/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669?source=orbit",
+   "/api/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669/view",
+   "https://bapi.kubus.site/api/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669",
+   "https://bapi.kubus.site/api/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669?source=orbit"
+  ],
+  "failure": {
+   "ssrReadable": false,
+   "retryEnabled": false,
+   "appHref": null,
+   "reloads": 0
+  },
+  "errors": []
+ },
+ {
+  "tag": "firefox-mobile-sl-nav",
+  "scenario": "nav",
+  "engine": "firefox",
+  "size": "mobile",
+  "locale": "sl",
+  "raw": {
+   "h1": true,
+   "canonical": true,
+   "hreflang": 0,
+   "jsonld": true,
+   "statusSection": true,
+   "bytes": 29340
+  },
+  "loading": {
+   "path": "/sl/umetnine/2890e5ec-3fdd-474e-a0ee-b16e5097b669",
+   "state": "loading",
+   "statusVisible": true,
+   "statusRemoved": false,
+   "classes": "kubus-takeover-capable",
+   "marks": {
+    "public_ssr_visible": 176,
+    "flutter_bootstrap_started": 345
+   },
+   "events": [],
+   "docInert": false,
+   "docAriaHidden": null,
+   "hostInert": true,
+   "hostAriaHidden": "true",
+   "ssrH1": "Mary's column",
+   "flutterEls": false,
+   "anims": 6
+  },
+  "settled": true,
+  "settleMs": 2281,
+  "after": {
+   "path": "/sl/umetnine/2890e5ec-3fdd-474e-a0ee-b16e5097b669",
+   "state": null,
+   "statusVisible": false,
+   "statusRemoved": true,
+   "classes": "kubus-takeover-capable kubus-takeover-active kubus-takeover-complete",
+   "marks": {
+    "public_ssr_visible": 176,
+    "flutter_bootstrap_started": 345,
+    "flutter_engine_ready": 1205,
+    "public_entity_route_parsed": 1233,
+    "public_entity_ready": 2001,
+    "flutter_takeover_completed": 2273
+   },
+   "events": [
+    {
+     "n": "kubus:public-entity-route-parsed",
+     "t": 1233,
+     "d": "{\"type\":\"artwork\",\"id\":\"2890e5ec-3fdd-474e-a0ee-b16e5097b669\",\"path\":\"/sl/umetnine/2890e5ec-3fdd-474e-a0ee-b16e5097b669\",\"locale\":\"sl\"}"
+    },
+    {
+     "n": "kubus:public-entity-ready",
+     "t": 2000,
+     "d": "{\"type\":\"artwork\",\"id\":\"2890e5ec-3fdd-474e-a0ee-b16e5097b669\",\"path\":\"/sl/umetnine/2890e5ec-3fdd-474e-a0ee-b16e5097b669\",\"locale\":\"sl\"}"
+    },
+    {
+     "n": "kubus:flutter-takeover-completed",
+     "t": 2273,
+     "d": "null"
+    }
+   ],
+   "docInert": true,
+   "docAriaHidden": "true",
+   "hostInert": false,
+   "hostAriaHidden": null,
+   "ssrH1": "Mary's column",
+   "flutterEls": true,
+   "anims": 0
+  },
+  "apiCalls": [
+   "/api/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669",
+   "/api/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669/view",
+   "/api/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669",
+   "/api/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669/view"
+  ],
+  "nav": {
+   "appHref": "/map?lang=sl",
+   "afterClick": "/map?lang=sl",
+   "afterBack": "/sl/umetnine/2890e5ec-3fdd-474e-a0ee-b16e5097b669",
+   "backSnapshot": {
+    "path": "/sl/umetnine/2890e5ec-3fdd-474e-a0ee-b16e5097b669",
+    "state": null,
+    "statusVisible": false,
+    "statusRemoved": true,
+    "classes": "kubus-takeover-capable kubus-takeover-active kubus-takeover-complete",
+    "marks": {
+     "public_ssr_visible": 35,
+     "flutter_bootstrap_started": 36,
+     "flutter_engine_ready": 864,
+     "public_entity_route_parsed": 885,
+     "public_entity_ready": 1612,
+     "flutter_takeover_completed": 1881
+    },
+    "events": [
+     {
+      "n": "kubus:public-entity-route-parsed",
+      "t": 885,
+      "d": "{\"type\":\"artwork\",\"id\":\"2890e5ec-3fdd-474e-a0ee-b16e5097b669\",\"path\":\"/sl/umetnine/2890e5ec-3fdd-474e-a0ee-b16e5097b669\",\"locale\":\"sl\"}"
+     },
+     {
+      "n": "kubus:public-entity-ready",
+      "t": 1612,
+      "d": "{\"type\":\"artwork\",\"id\":\"2890e5ec-3fdd-474e-a0ee-b16e5097b669\",\"path\":\"/sl/umetnine/2890e5ec-3fdd-474e-a0ee-b16e5097b669\",\"locale\":\"sl\"}"
+     },
+     {
+      "n": "kubus:flutter-takeover-completed",
+      "t": 1881,
+      "d": "null"
+     }
+    ],
+    "docInert": true,
+    "docAriaHidden": "true",
+    "hostInert": false,
+    "hostAriaHidden": null,
+    "ssrH1": "Mary's column",
+    "flutterEls": true,
+    "anims": 0
+   }
+  },
+  "errors": []
+ },
+ {
+  "tag": "firefox-desktop-en-normal",
+  "scenario": "normal",
+  "engine": "firefox",
+  "size": "desktop",
+  "locale": "en",
+  "raw": {
+   "h1": true,
+   "canonical": true,
+   "hreflang": 0,
+   "jsonld": true,
+   "statusSection": true,
+   "bytes": 29226
+  },
+  "loading": {
+   "path": "/en/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669",
+   "state": "loading",
+   "statusVisible": true,
+   "statusRemoved": false,
+   "classes": "kubus-takeover-capable",
+   "marks": {
+    "public_ssr_visible": 162,
+    "flutter_bootstrap_started": 296
+   },
+   "events": [],
+   "docInert": false,
+   "docAriaHidden": null,
+   "hostInert": true,
+   "hostAriaHidden": "true",
+   "ssrH1": "Mary's column",
+   "flutterEls": false,
+   "anims": 6
+  },
+  "settled": true,
+  "settleMs": 2385,
+  "after": {
+   "path": "/en/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669",
+   "state": null,
+   "statusVisible": false,
+   "statusRemoved": true,
+   "classes": "kubus-takeover-capable kubus-takeover-active kubus-takeover-complete",
+   "marks": {
+    "public_ssr_visible": 162,
+    "flutter_bootstrap_started": 296,
+    "flutter_engine_ready": 1145,
+    "public_entity_route_parsed": 1166,
+    "public_entity_ready": 1953,
+    "flutter_takeover_completed": 2381
+   },
+   "events": [
+    {
+     "n": "kubus:public-entity-route-parsed",
+     "t": 1166,
+     "d": "{\"type\":\"artwork\",\"id\":\"2890e5ec-3fdd-474e-a0ee-b16e5097b669\",\"path\":\"/en/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669\",\"locale\":\"en\"}"
+    },
+    {
+     "n": "kubus:public-entity-ready",
+     "t": 1953,
+     "d": "{\"type\":\"artwork\",\"id\":\"2890e5ec-3fdd-474e-a0ee-b16e5097b669\",\"path\":\"/en/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669\",\"locale\":\"en\"}"
+    },
+    {
+     "n": "kubus:flutter-takeover-completed",
+     "t": 2381,
+     "d": "null"
+    }
+   ],
+   "docInert": true,
+   "docAriaHidden": "true",
+   "hostInert": false,
+   "hostAriaHidden": null,
+   "ssrH1": "Mary's column",
+   "flutterEls": true,
+   "anims": 0
+  },
+  "apiCalls": [
+   "/api/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669",
+   "/api/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669/comments?page=1&limit=100",
+   "/api/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669/view",
+   "/api/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669/comments?page=1&limit=100",
+   "/api/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669/spatial",
+   "https://bapi.kubus.site/api/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669/comments?page=1&limit=100",
+   "https://bapi.kubus.site/api/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669/comments?page=1&limit=100"
+  ],
+  "errors": []
+ },
+ {
+  "tag": "firefox-desktop-en-delayed",
+  "scenario": "delayed",
+  "engine": "firefox",
+  "size": "desktop",
+  "locale": "en",
+  "raw": {
+   "h1": true,
+   "canonical": true,
+   "hreflang": 0,
+   "jsonld": true,
+   "statusSection": true,
+   "bytes": 29226
+  },
+  "loading": {
+   "path": "/en/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669",
+   "state": "loading",
+   "statusVisible": true,
+   "statusRemoved": false,
+   "classes": "kubus-takeover-capable",
+   "marks": {
+    "public_ssr_visible": 161,
+    "flutter_bootstrap_started": 278
+   },
+   "events": [],
+   "docInert": false,
+   "docAriaHidden": null,
+   "hostInert": true,
+   "hostAriaHidden": "true",
+   "ssrH1": "Mary's column",
+   "flutterEls": false,
+   "anims": 6
+  },
+  "settled": true,
+  "settleMs": 8151,
+  "after": {
+   "path": "/en/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669",
+   "state": null,
+   "statusVisible": false,
+   "statusRemoved": true,
+   "classes": "kubus-takeover-capable kubus-takeover-active kubus-takeover-complete",
+   "marks": {
+    "public_ssr_visible": 161,
+    "flutter_bootstrap_started": 278,
+    "flutter_engine_ready": 7054,
+    "public_entity_route_parsed": 7085,
+    "public_entity_ready": 7862,
+    "flutter_takeover_completed": 8134
+   },
+   "events": [
+    {
+     "n": "kubus:public-entity-route-parsed",
+     "t": 7085,
+     "d": "{\"type\":\"artwork\",\"id\":\"2890e5ec-3fdd-474e-a0ee-b16e5097b669\",\"path\":\"/en/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669\",\"locale\":\"en\"}"
+    },
+    {
+     "n": "kubus:public-entity-ready",
+     "t": 7861,
+     "d": "{\"type\":\"artwork\",\"id\":\"2890e5ec-3fdd-474e-a0ee-b16e5097b669\",\"path\":\"/en/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669\",\"locale\":\"en\"}"
+    },
+    {
+     "n": "kubus:flutter-takeover-completed",
+     "t": 8134,
+     "d": "null"
+    }
+   ],
+   "docInert": true,
+   "docAriaHidden": "true",
+   "hostInert": false,
+   "hostAriaHidden": null,
+   "ssrH1": "Mary's column",
+   "flutterEls": true,
+   "anims": 0
+  },
+  "apiCalls": [
+   "/api/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669",
+   "/api/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669/comments?page=1&limit=100",
+   "/api/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669/view",
+   "/api/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669/comments?page=1&limit=100",
+   "/api/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669/spatial",
+   "https://bapi.kubus.site/api/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669/comments?page=1&limit=100",
+   "https://bapi.kubus.site/api/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669/comments?page=1&limit=100"
+  ],
+  "errors": []
+ },
+ {
+  "tag": "firefox-desktop-en-fail-bootstrap",
+  "scenario": "fail-bootstrap",
+  "engine": "firefox",
+  "size": "desktop",
+  "locale": "en",
+  "raw": {
+   "h1": true,
+   "canonical": true,
+   "hreflang": 0,
+   "jsonld": true,
+   "statusSection": true,
+   "bytes": 29226
+  },
+  "loading": {
+   "path": "/en/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669",
+   "state": "failed",
+   "statusVisible": true,
+   "statusRemoved": false,
+   "classes": "kubus-takeover-capable",
+   "marks": {
+    "public_ssr_visible": 174,
+    "flutter_takeover_failed": 175
+   },
+   "events": [],
+   "docInert": false,
+   "docAriaHidden": null,
+   "hostInert": true,
+   "hostAriaHidden": "true",
+   "ssrH1": "Mary's column",
+   "flutterEls": false,
+   "anims": 0
+  },
+  "settled": true,
+  "settleMs": 956,
+  "after": {
+   "path": "/en/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669",
+   "state": "failed",
+   "statusVisible": true,
+   "statusRemoved": false,
+   "classes": "kubus-takeover-capable",
+   "marks": {
+    "public_ssr_visible": 174,
+    "flutter_takeover_failed": 175
+   },
+   "events": [],
+   "docInert": false,
+   "docAriaHidden": null,
+   "hostInert": true,
+   "hostAriaHidden": "true",
+   "ssrH1": "Mary's column",
+   "flutterEls": false,
+   "anims": 0
+  },
+  "apiCalls": [],
+  "failure": {
+   "ssrReadable": true,
+   "retryEnabled": true,
+   "appHref": "/map?lang=en",
+   "reloads": 1
+  },
+  "errors": []
+ },
+ {
+  "tag": "firefox-desktop-en-fail-mainjs",
+  "scenario": "fail-mainjs",
+  "engine": "firefox",
+  "size": "desktop",
+  "locale": "en",
+  "raw": {
+   "h1": true,
+   "canonical": true,
+   "hreflang": 0,
+   "jsonld": true,
+   "statusSection": true,
+   "bytes": 29226
+  },
+  "loading": {
+   "path": "/en/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669",
+   "state": "failed",
+   "statusVisible": true,
+   "statusRemoved": false,
+   "classes": "kubus-takeover-capable",
+   "marks": {
+    "public_ssr_visible": 173,
+    "flutter_bootstrap_started": 291,
+    "flutter_takeover_failed": 311
+   },
+   "events": [],
+   "docInert": false,
+   "docAriaHidden": null,
+   "hostInert": true,
+   "hostAriaHidden": "true",
+   "ssrH1": "Mary's column",
+   "flutterEls": false,
+   "anims": 0
+  },
+  "settled": true,
+  "settleMs": 1068,
+  "after": {
+   "path": "/en/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669",
+   "state": "failed",
+   "statusVisible": true,
+   "statusRemoved": false,
+   "classes": "kubus-takeover-capable",
+   "marks": {
+    "public_ssr_visible": 173,
+    "flutter_bootstrap_started": 291,
+    "flutter_takeover_failed": 311
+   },
+   "events": [],
+   "docInert": false,
+   "docAriaHidden": null,
+   "hostInert": true,
+   "hostAriaHidden": "true",
+   "ssrH1": "Mary's column",
+   "flutterEls": false,
+   "anims": 0
+  },
+  "apiCalls": [],
+  "failure": {
+   "ssrReadable": true,
+   "retryEnabled": true,
+   "appHref": "/map?lang=en",
+   "reloads": 1
+  },
+  "errors": []
+ },
+ {
+  "tag": "firefox-desktop-en-fail-api",
+  "scenario": "fail-api",
+  "engine": "firefox",
+  "size": "desktop",
+  "locale": "en",
+  "raw": {
+   "h1": true,
+   "canonical": true,
+   "hreflang": 0,
+   "jsonld": true,
+   "statusSection": true,
+   "bytes": 29226
+  },
+  "loading": {
+   "path": "/en/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669",
+   "state": "loading",
+   "statusVisible": true,
+   "statusRemoved": false,
+   "classes": "kubus-takeover-capable",
+   "marks": {
+    "public_ssr_visible": 168,
+    "flutter_bootstrap_started": 301
+   },
+   "events": [],
+   "docInert": false,
+   "docAriaHidden": null,
+   "hostInert": true,
+   "hostAriaHidden": "true",
+   "ssrH1": "Mary's column",
+   "flutterEls": false,
+   "anims": 6
+  },
+  "settled": true,
+  "settleMs": 2198,
+  "after": {
+   "path": "/en/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669",
+   "state": null,
+   "statusVisible": false,
+   "statusRemoved": true,
+   "classes": "kubus-takeover-capable kubus-takeover-active kubus-takeover-complete",
+   "marks": {
+    "public_ssr_visible": 168,
+    "flutter_bootstrap_started": 301,
+    "flutter_engine_ready": 1166,
+    "public_entity_route_parsed": 1188,
+    "public_entity_ready": 1928,
+    "flutter_takeover_completed": 2190
+   },
+   "events": [
+    {
+     "n": "kubus:public-entity-route-parsed",
+     "t": 1188,
+     "d": "{\"type\":\"artwork\",\"id\":\"2890e5ec-3fdd-474e-a0ee-b16e5097b669\",\"path\":\"/en/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669\",\"locale\":\"en\"}"
+    },
+    {
+     "n": "kubus:public-entity-ready",
+     "t": 1928,
+     "d": "{\"type\":\"artwork\",\"id\":\"2890e5ec-3fdd-474e-a0ee-b16e5097b669\",\"path\":\"/en/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669\",\"locale\":\"en\"}"
+    },
+    {
+     "n": "kubus:flutter-takeover-completed",
+     "t": 2191,
+     "d": "null"
+    }
+   ],
+   "docInert": true,
+   "docAriaHidden": "true",
+   "hostInert": false,
+   "hostAriaHidden": null,
+   "ssrH1": "Mary's column",
+   "flutterEls": true,
+   "anims": 0
+  },
+  "apiCalls": [
+   "/api/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669",
+   "/api/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669?source=orbit",
+   "/api/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669/comments?page=1&limit=100",
+   "/api/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669/view",
+   "/api/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669/comments?page=1&limit=100",
+   "/api/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669/spatial",
+   "https://bapi.kubus.site/api/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669",
+   "https://bapi.kubus.site/api/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669/spatial",
+   "https://bapi.kubus.site/api/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669?source=orbit"
+  ],
+  "failure": {
+   "ssrReadable": false,
+   "retryEnabled": false,
+   "appHref": null,
+   "reloads": 0
+  },
+  "errors": []
+ },
+ {
+  "tag": "firefox-desktop-en-nav",
+  "scenario": "nav",
+  "engine": "firefox",
+  "size": "desktop",
+  "locale": "en",
+  "raw": {
+   "h1": true,
+   "canonical": true,
+   "hreflang": 0,
+   "jsonld": true,
+   "statusSection": true,
+   "bytes": 29226
+  },
+  "loading": {
+   "path": "/en/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669",
+   "state": "loading",
+   "statusVisible": true,
+   "statusRemoved": false,
+   "classes": "kubus-takeover-capable",
+   "marks": {
+    "public_ssr_visible": 176,
+    "flutter_bootstrap_started": 314,
+    "flutter_engine_ready": 1104,
+    "public_entity_route_parsed": 1126
+   },
+   "events": [
+    {
+     "n": "kubus:public-entity-route-parsed",
+     "t": 1126,
+     "d": "{\"type\":\"artwork\",\"id\":\"2890e5ec-3fdd-474e-a0ee-b16e5097b669\",\"path\":\"/en/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669\",\"locale\":\"en\"}"
+    }
+   ],
+   "docInert": false,
+   "docAriaHidden": null,
+   "hostInert": true,
+   "hostAriaHidden": "true",
+   "ssrH1": "Mary's column",
+   "flutterEls": true,
+   "anims": 6
+  },
+  "settled": true,
+  "settleMs": 2184,
+  "after": {
+   "path": "/en/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669",
+   "state": null,
+   "statusVisible": false,
+   "statusRemoved": true,
+   "classes": "kubus-takeover-capable kubus-takeover-active kubus-takeover-complete",
+   "marks": {
+    "public_ssr_visible": 176,
+    "flutter_bootstrap_started": 314,
+    "flutter_engine_ready": 1104,
+    "public_entity_route_parsed": 1126,
+    "public_entity_ready": 1886,
+    "flutter_takeover_completed": 2177
+   },
+   "events": [
+    {
+     "n": "kubus:public-entity-route-parsed",
+     "t": 1126,
+     "d": "{\"type\":\"artwork\",\"id\":\"2890e5ec-3fdd-474e-a0ee-b16e5097b669\",\"path\":\"/en/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669\",\"locale\":\"en\"}"
+    },
+    {
+     "n": "kubus:public-entity-ready",
+     "t": 1886,
+     "d": "{\"type\":\"artwork\",\"id\":\"2890e5ec-3fdd-474e-a0ee-b16e5097b669\",\"path\":\"/en/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669\",\"locale\":\"en\"}"
+    },
+    {
+     "n": "kubus:flutter-takeover-completed",
+     "t": 2177,
+     "d": "null"
+    }
+   ],
+   "docInert": true,
+   "docAriaHidden": "true",
+   "hostInert": false,
+   "hostAriaHidden": null,
+   "ssrH1": "Mary's column",
+   "flutterEls": true,
+   "anims": 0
+  },
+  "apiCalls": [
+   "/api/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669",
+   "/api/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669/comments?page=1&limit=100",
+   "/api/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669/view",
+   "/api/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669/comments?page=1&limit=100",
+   "/api/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669/spatial",
+   "https://bapi.kubus.site/api/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669/comments?page=1&limit=100",
+   "https://bapi.kubus.site/api/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669/comments?page=1&limit=100",
+   "/api/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669",
+   "/api/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669/comments?page=1&limit=100",
+   "/api/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669/view",
+   "/api/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669/comments?page=1&limit=100",
+   "/api/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669/spatial",
+   "https://bapi.kubus.site/api/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669/comments?page=1&limit=100",
+   "https://bapi.kubus.site/api/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669/comments?page=1&limit=100"
+  ],
+  "nav": {
+   "appHref": "/map?lang=en",
+   "afterClick": "/map?lang=en",
+   "afterBack": "/en/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669",
+   "backSnapshot": {
+    "path": "/en/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669",
+    "state": null,
+    "statusVisible": false,
+    "statusRemoved": true,
+    "classes": "kubus-takeover-capable kubus-takeover-active kubus-takeover-complete",
+    "marks": {
+     "public_ssr_visible": 39,
+     "flutter_bootstrap_started": 44,
+     "flutter_engine_ready": 868,
+     "public_entity_route_parsed": 888,
+     "public_entity_ready": 1631,
+     "flutter_takeover_completed": 1900
+    },
+    "events": [
+     {
+      "n": "kubus:public-entity-route-parsed",
+      "t": 888,
+      "d": "{\"type\":\"artwork\",\"id\":\"2890e5ec-3fdd-474e-a0ee-b16e5097b669\",\"path\":\"/en/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669\",\"locale\":\"en\"}"
+     },
+     {
+      "n": "kubus:public-entity-ready",
+      "t": 1631,
+      "d": "{\"type\":\"artwork\",\"id\":\"2890e5ec-3fdd-474e-a0ee-b16e5097b669\",\"path\":\"/en/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669\",\"locale\":\"en\"}"
+     },
+     {
+      "n": "kubus:flutter-takeover-completed",
+      "t": 1900,
+      "d": "null"
+     }
+    ],
+    "docInert": true,
+    "docAriaHidden": "true",
+    "hostInert": false,
+    "hostAriaHidden": null,
+    "ssrH1": "Mary's column",
+    "flutterEls": true,
+    "anims": 0
+   }
+  },
+  "errors": []
+ },
+ {
+  "tag": "firefox-desktop-sl-normal",
+  "scenario": "normal",
+  "engine": "firefox",
+  "size": "desktop",
+  "locale": "sl",
+  "raw": {
+   "h1": true,
+   "canonical": true,
+   "hreflang": 0,
+   "jsonld": true,
+   "statusSection": true,
+   "bytes": 29340
+  },
+  "loading": {
+   "path": "/sl/umetnine/2890e5ec-3fdd-474e-a0ee-b16e5097b669",
+   "state": "loading",
+   "statusVisible": true,
+   "statusRemoved": false,
+   "classes": "kubus-takeover-capable",
+   "marks": {
+    "public_ssr_visible": 164,
+    "flutter_bootstrap_started": 281
+   },
+   "events": [],
+   "docInert": false,
+   "docAriaHidden": null,
+   "hostInert": true,
+   "hostAriaHidden": "true",
+   "ssrH1": "Mary's column",
+   "flutterEls": false,
+   "anims": 6
+  },
+  "settled": true,
+  "settleMs": 2179,
+  "after": {
+   "path": "/sl/umetnine/2890e5ec-3fdd-474e-a0ee-b16e5097b669",
+   "state": null,
+   "statusVisible": false,
+   "statusRemoved": true,
+   "classes": "kubus-takeover-capable kubus-takeover-active kubus-takeover-complete",
+   "marks": {
+    "public_ssr_visible": 164,
+    "flutter_bootstrap_started": 281,
+    "flutter_engine_ready": 1105,
+    "public_entity_route_parsed": 1126,
+    "public_entity_ready": 1907,
+    "flutter_takeover_completed": 2173
+   },
+   "events": [
+    {
+     "n": "kubus:public-entity-route-parsed",
+     "t": 1126,
+     "d": "{\"type\":\"artwork\",\"id\":\"2890e5ec-3fdd-474e-a0ee-b16e5097b669\",\"path\":\"/sl/umetnine/2890e5ec-3fdd-474e-a0ee-b16e5097b669\",\"locale\":\"sl\"}"
+    },
+    {
+     "n": "kubus:public-entity-ready",
+     "t": 1907,
+     "d": "{\"type\":\"artwork\",\"id\":\"2890e5ec-3fdd-474e-a0ee-b16e5097b669\",\"path\":\"/sl/umetnine/2890e5ec-3fdd-474e-a0ee-b16e5097b669\",\"locale\":\"sl\"}"
+    },
+    {
+     "n": "kubus:flutter-takeover-completed",
+     "t": 2173,
+     "d": "null"
+    }
+   ],
+   "docInert": true,
+   "docAriaHidden": "true",
+   "hostInert": false,
+   "hostAriaHidden": null,
+   "ssrH1": "Mary's column",
+   "flutterEls": true,
+   "anims": 0
+  },
+  "apiCalls": [
+   "/api/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669",
+   "/api/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669/comments?page=1&limit=100",
+   "/api/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669/view",
+   "/api/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669/comments?page=1&limit=100",
+   "/api/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669/spatial",
+   "https://bapi.kubus.site/api/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669/comments?page=1&limit=100",
+   "https://bapi.kubus.site/api/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669/comments?page=1&limit=100"
+  ],
+  "errors": []
+ },
+ {
+  "tag": "firefox-desktop-sl-delayed",
+  "scenario": "delayed",
+  "engine": "firefox",
+  "size": "desktop",
+  "locale": "sl",
+  "raw": {
+   "h1": true,
+   "canonical": true,
+   "hreflang": 0,
+   "jsonld": true,
+   "statusSection": true,
+   "bytes": 29340
+  },
+  "loading": {
+   "path": "/sl/umetnine/2890e5ec-3fdd-474e-a0ee-b16e5097b669",
+   "state": "loading",
+   "statusVisible": true,
+   "statusRemoved": false,
+   "classes": "kubus-takeover-capable",
+   "marks": {
+    "public_ssr_visible": 179,
+    "flutter_bootstrap_started": 309
+   },
+   "events": [],
+   "docInert": false,
+   "docAriaHidden": null,
+   "hostInert": true,
+   "hostAriaHidden": "true",
+   "ssrH1": "Mary's column",
+   "flutterEls": false,
+   "anims": 6
+  },
+  "settled": true,
+  "settleMs": 8133,
+  "after": {
+   "path": "/sl/umetnine/2890e5ec-3fdd-474e-a0ee-b16e5097b669",
+   "state": null,
+   "statusVisible": false,
+   "statusRemoved": true,
+   "classes": "kubus-takeover-capable kubus-takeover-active kubus-takeover-complete",
+   "marks": {
+    "public_ssr_visible": 179,
+    "flutter_bootstrap_started": 309,
+    "flutter_engine_ready": 7089,
+    "public_entity_route_parsed": 7114,
+    "public_entity_ready": 7850,
+    "flutter_takeover_completed": 8122
+   },
+   "events": [
+    {
+     "n": "kubus:public-entity-route-parsed",
+     "t": 7114,
+     "d": "{\"type\":\"artwork\",\"id\":\"2890e5ec-3fdd-474e-a0ee-b16e5097b669\",\"path\":\"/sl/umetnine/2890e5ec-3fdd-474e-a0ee-b16e5097b669\",\"locale\":\"sl\"}"
+    },
+    {
+     "n": "kubus:public-entity-ready",
+     "t": 7850,
+     "d": "{\"type\":\"artwork\",\"id\":\"2890e5ec-3fdd-474e-a0ee-b16e5097b669\",\"path\":\"/sl/umetnine/2890e5ec-3fdd-474e-a0ee-b16e5097b669\",\"locale\":\"sl\"}"
+    },
+    {
+     "n": "kubus:flutter-takeover-completed",
+     "t": 8122,
+     "d": "null"
+    }
+   ],
+   "docInert": true,
+   "docAriaHidden": "true",
+   "hostInert": false,
+   "hostAriaHidden": null,
+   "ssrH1": "Mary's column",
+   "flutterEls": true,
+   "anims": 0
+  },
+  "apiCalls": [
+   "/api/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669",
+   "/api/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669/comments?page=1&limit=100",
+   "/api/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669/view",
+   "/api/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669/comments?page=1&limit=100",
+   "/api/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669/spatial",
+   "https://bapi.kubus.site/api/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669/comments?page=1&limit=100",
+   "https://bapi.kubus.site/api/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669/comments?page=1&limit=100"
+  ],
+  "errors": []
+ },
+ {
+  "tag": "firefox-desktop-sl-fail-bootstrap",
+  "scenario": "fail-bootstrap",
+  "engine": "firefox",
+  "size": "desktop",
+  "locale": "sl",
+  "raw": {
+   "h1": true,
+   "canonical": true,
+   "hreflang": 0,
+   "jsonld": true,
+   "statusSection": true,
+   "bytes": 29340
+  },
+  "loading": {
+   "path": "/sl/umetnine/2890e5ec-3fdd-474e-a0ee-b16e5097b669",
+   "state": "failed",
+   "statusVisible": true,
+   "statusRemoved": false,
+   "classes": "kubus-takeover-capable",
+   "marks": {
+    "public_ssr_visible": 159,
+    "flutter_takeover_failed": 159
+   },
+   "events": [],
+   "docInert": false,
+   "docAriaHidden": null,
+   "hostInert": true,
+   "hostAriaHidden": "true",
+   "ssrH1": "Mary's column",
+   "flutterEls": false,
+   "anims": 0
+  },
+  "settled": true,
+  "settleMs": 951,
+  "after": {
+   "path": "/sl/umetnine/2890e5ec-3fdd-474e-a0ee-b16e5097b669",
+   "state": "failed",
+   "statusVisible": true,
+   "statusRemoved": false,
+   "classes": "kubus-takeover-capable",
+   "marks": {
+    "public_ssr_visible": 159,
+    "flutter_takeover_failed": 159
+   },
+   "events": [],
+   "docInert": false,
+   "docAriaHidden": null,
+   "hostInert": true,
+   "hostAriaHidden": "true",
+   "ssrH1": "Mary's column",
+   "flutterEls": false,
+   "anims": 0
+  },
+  "apiCalls": [],
+  "failure": {
+   "ssrReadable": true,
+   "retryEnabled": true,
+   "appHref": "/map?lang=sl",
+   "reloads": 1
+  },
+  "errors": []
+ },
+ {
+  "tag": "firefox-desktop-sl-fail-mainjs",
+  "scenario": "fail-mainjs",
+  "engine": "firefox",
+  "size": "desktop",
+  "locale": "sl",
+  "raw": {
+   "h1": true,
+   "canonical": true,
+   "hreflang": 0,
+   "jsonld": true,
+   "statusSection": true,
+   "bytes": 29340
+  },
+  "loading": {
+   "path": "/sl/umetnine/2890e5ec-3fdd-474e-a0ee-b16e5097b669",
+   "state": "failed",
+   "statusVisible": true,
+   "statusRemoved": false,
+   "classes": "kubus-takeover-capable",
+   "marks": {
+    "public_ssr_visible": 169,
+    "flutter_bootstrap_started": 297,
+    "flutter_takeover_failed": 321
+   },
+   "events": [],
+   "docInert": false,
+   "docAriaHidden": null,
+   "hostInert": true,
+   "hostAriaHidden": "true",
+   "ssrH1": "Mary's column",
+   "flutterEls": false,
+   "anims": 0
+  },
+  "settled": true,
+  "settleMs": 1084,
+  "after": {
+   "path": "/sl/umetnine/2890e5ec-3fdd-474e-a0ee-b16e5097b669",
+   "state": "failed",
+   "statusVisible": true,
+   "statusRemoved": false,
+   "classes": "kubus-takeover-capable",
+   "marks": {
+    "public_ssr_visible": 169,
+    "flutter_bootstrap_started": 297,
+    "flutter_takeover_failed": 321
+   },
+   "events": [],
+   "docInert": false,
+   "docAriaHidden": null,
+   "hostInert": true,
+   "hostAriaHidden": "true",
+   "ssrH1": "Mary's column",
+   "flutterEls": false,
+   "anims": 0
+  },
+  "apiCalls": [],
+  "failure": {
+   "ssrReadable": true,
+   "retryEnabled": true,
+   "appHref": "/map?lang=sl",
+   "reloads": 1
+  },
+  "errors": []
+ },
+ {
+  "tag": "firefox-desktop-sl-fail-api",
+  "scenario": "fail-api",
+  "engine": "firefox",
+  "size": "desktop",
+  "locale": "sl",
+  "raw": {
+   "h1": true,
+   "canonical": true,
+   "hreflang": 0,
+   "jsonld": true,
+   "statusSection": true,
+   "bytes": 29340
+  },
+  "loading": {
+   "path": "/sl/umetnine/2890e5ec-3fdd-474e-a0ee-b16e5097b669",
+   "state": "loading",
+   "statusVisible": true,
+   "statusRemoved": false,
+   "classes": "kubus-takeover-capable",
+   "marks": {
+    "public_ssr_visible": 162,
+    "flutter_bootstrap_started": 291
+   },
+   "events": [],
+   "docInert": false,
+   "docAriaHidden": null,
+   "hostInert": true,
+   "hostAriaHidden": "true",
+   "ssrH1": "Mary's column",
+   "flutterEls": false,
+   "anims": 6
+  },
+  "settled": true,
+  "settleMs": 2232,
+  "after": {
+   "path": "/sl/umetnine/2890e5ec-3fdd-474e-a0ee-b16e5097b669",
+   "state": null,
+   "statusVisible": false,
+   "statusRemoved": true,
+   "classes": "kubus-takeover-capable kubus-takeover-active kubus-takeover-complete",
+   "marks": {
+    "public_ssr_visible": 162,
+    "flutter_bootstrap_started": 291,
+    "flutter_engine_ready": 1121,
+    "public_entity_route_parsed": 1144,
+    "public_entity_ready": 1944,
+    "flutter_takeover_completed": 2225
+   },
+   "events": [
+    {
+     "n": "kubus:public-entity-route-parsed",
+     "t": 1144,
+     "d": "{\"type\":\"artwork\",\"id\":\"2890e5ec-3fdd-474e-a0ee-b16e5097b669\",\"path\":\"/sl/umetnine/2890e5ec-3fdd-474e-a0ee-b16e5097b669\",\"locale\":\"sl\"}"
+    },
+    {
+     "n": "kubus:public-entity-ready",
+     "t": 1944,
+     "d": "{\"type\":\"artwork\",\"id\":\"2890e5ec-3fdd-474e-a0ee-b16e5097b669\",\"path\":\"/sl/umetnine/2890e5ec-3fdd-474e-a0ee-b16e5097b669\",\"locale\":\"sl\"}"
+    },
+    {
+     "n": "kubus:flutter-takeover-completed",
+     "t": 2225,
+     "d": "null"
+    }
+   ],
+   "docInert": true,
+   "docAriaHidden": "true",
+   "hostInert": false,
+   "hostAriaHidden": null,
+   "ssrH1": "Mary's column",
+   "flutterEls": true,
+   "anims": 0
+  },
+  "apiCalls": [
+   "/api/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669",
+   "/api/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669?source=orbit",
+   "https://bapi.kubus.site/api/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669",
+   "/api/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669/comments?page=1&limit=100",
+   "/api/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669/view",
+   "https://bapi.kubus.site/api/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669?source=orbit",
+   "/api/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669/comments?page=1&limit=100",
+   "/api/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669/spatial",
+   "https://bapi.kubus.site/api/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669/spatial"
+  ],
+  "failure": {
+   "ssrReadable": false,
+   "retryEnabled": false,
+   "appHref": null,
+   "reloads": 0
+  },
+  "errors": []
+ },
+ {
+  "tag": "firefox-desktop-sl-nav",
+  "scenario": "nav",
+  "engine": "firefox",
+  "size": "desktop",
+  "locale": "sl",
+  "raw": {
+   "h1": true,
+   "canonical": true,
+   "hreflang": 0,
+   "jsonld": true,
+   "statusSection": true,
+   "bytes": 29340
+  },
+  "loading": {
+   "path": "/sl/umetnine/2890e5ec-3fdd-474e-a0ee-b16e5097b669",
+   "state": "loading",
+   "statusVisible": true,
+   "statusRemoved": false,
+   "classes": "kubus-takeover-capable",
+   "marks": {
+    "public_ssr_visible": 169,
+    "flutter_bootstrap_started": 312
+   },
+   "events": [],
+   "docInert": false,
+   "docAriaHidden": null,
+   "hostInert": true,
+   "hostAriaHidden": "true",
+   "ssrH1": "Mary's column",
+   "flutterEls": false,
+   "anims": 6
+  },
+  "settled": true,
+  "settleMs": 2477,
+  "after": {
+   "path": "/sl/umetnine/2890e5ec-3fdd-474e-a0ee-b16e5097b669",
+   "state": null,
+   "statusVisible": false,
+   "statusRemoved": true,
+   "classes": "kubus-takeover-capable kubus-takeover-active kubus-takeover-complete",
+   "marks": {
+    "public_ssr_visible": 169,
+    "flutter_bootstrap_started": 312,
+    "flutter_engine_ready": 1157,
+    "public_entity_route_parsed": 1182,
+    "public_entity_ready": 2008,
+    "flutter_takeover_completed": 2472
+   },
+   "events": [
+    {
+     "n": "kubus:public-entity-route-parsed",
+     "t": 1182,
+     "d": "{\"type\":\"artwork\",\"id\":\"2890e5ec-3fdd-474e-a0ee-b16e5097b669\",\"path\":\"/sl/umetnine/2890e5ec-3fdd-474e-a0ee-b16e5097b669\",\"locale\":\"sl\"}"
+    },
+    {
+     "n": "kubus:public-entity-ready",
+     "t": 2008,
+     "d": "{\"type\":\"artwork\",\"id\":\"2890e5ec-3fdd-474e-a0ee-b16e5097b669\",\"path\":\"/sl/umetnine/2890e5ec-3fdd-474e-a0ee-b16e5097b669\",\"locale\":\"sl\"}"
+    },
+    {
+     "n": "kubus:flutter-takeover-completed",
+     "t": 2472,
+     "d": "null"
+    }
+   ],
+   "docInert": true,
+   "docAriaHidden": "true",
+   "hostInert": false,
+   "hostAriaHidden": null,
+   "ssrH1": "Mary's column",
+   "flutterEls": true,
+   "anims": 0
+  },
+  "apiCalls": [
+   "/api/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669",
+   "/api/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669/comments?page=1&limit=100",
+   "/api/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669/view",
+   "/api/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669/comments?page=1&limit=100",
+   "/api/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669/spatial",
+   "https://bapi.kubus.site/api/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669/comments?page=1&limit=100",
+   "https://bapi.kubus.site/api/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669/comments?page=1&limit=100",
+   "/api/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669",
+   "/api/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669/comments?page=1&limit=100",
+   "/api/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669/view",
+   "/api/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669/comments?page=1&limit=100",
+   "/api/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669/spatial",
+   "https://bapi.kubus.site/api/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669/comments?page=1&limit=100",
+   "https://bapi.kubus.site/api/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669/comments?page=1&limit=100"
+  ],
+  "nav": {
+   "appHref": "/map?lang=sl",
+   "afterClick": "/map?lang=sl",
+   "afterBack": "/sl/umetnine/2890e5ec-3fdd-474e-a0ee-b16e5097b669",
+   "backSnapshot": {
+    "path": "/sl/umetnine/2890e5ec-3fdd-474e-a0ee-b16e5097b669",
+    "state": null,
+    "statusVisible": false,
+    "statusRemoved": true,
+    "classes": "kubus-takeover-capable kubus-takeover-active kubus-takeover-complete",
+    "marks": {
+     "public_ssr_visible": 40,
+     "flutter_bootstrap_started": 47,
+     "flutter_engine_ready": 885,
+     "public_entity_route_parsed": 905,
+     "public_entity_ready": 1777,
+     "flutter_takeover_completed": 2050
+    },
+    "events": [
+     {
+      "n": "kubus:public-entity-route-parsed",
+      "t": 905,
+      "d": "{\"type\":\"artwork\",\"id\":\"2890e5ec-3fdd-474e-a0ee-b16e5097b669\",\"path\":\"/sl/umetnine/2890e5ec-3fdd-474e-a0ee-b16e5097b669\",\"locale\":\"sl\"}"
+     },
+     {
+      "n": "kubus:public-entity-ready",
+      "t": 1777,
+      "d": "{\"type\":\"artwork\",\"id\":\"2890e5ec-3fdd-474e-a0ee-b16e5097b669\",\"path\":\"/sl/umetnine/2890e5ec-3fdd-474e-a0ee-b16e5097b669\",\"locale\":\"sl\"}"
+     },
+     {
+      "n": "kubus:flutter-takeover-completed",
+      "t": 2050,
+      "d": "null"
+     }
+    ],
+    "docInert": true,
+    "docAriaHidden": "true",
+    "hostInert": false,
+    "hostAriaHidden": null,
+    "ssrH1": "Mary's column",
+    "flutterEls": true,
+    "anims": 0
+   }
+  },
+  "errors": []
+ }
+]
