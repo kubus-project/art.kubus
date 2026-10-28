@@ -6,11 +6,13 @@ void dispatchPublicEntityRouteParsed({
   required String type,
   required String id,
   required String path,
+  required String locale,
 }) {
   implementation.dispatchPublicEntityRouteParsed(
     type: type,
     id: id,
     path: path,
+    locale: locale,
   );
 }
 
@@ -18,8 +20,14 @@ void dispatchPublicEntityReady({
   required String type,
   required String id,
   required String path,
+  required String locale,
 }) {
-  implementation.dispatchPublicEntityReady(type: type, id: id, path: path);
+  implementation.dispatchPublicEntityReady(
+    type: type,
+    id: id,
+    path: path,
+    locale: locale,
+  );
 }
 
 Map<String, dynamic>? readPublicEntityBootstrap() =>

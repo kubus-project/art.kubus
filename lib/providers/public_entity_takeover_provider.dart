@@ -19,6 +19,9 @@ class PublicEntityTakeoverTarget {
   final String id;
   final String path;
   final String browserRoute;
+
+  /// Locale is sent separately so host and app readiness cannot disagree.
+  String get locale => path.startsWith('/sl/') ? 'sl' : 'en';
 }
 
 class PublicEntityTakeoverProvider extends ChangeNotifier {
@@ -135,6 +138,7 @@ class PublicEntityTakeoverProvider extends ChangeNotifier {
       type: next.type,
       id: next.id,
       path: next.path,
+      locale: next.locale,
     );
     notifyListeners();
   }
@@ -246,6 +250,7 @@ class PublicEntityTakeoverProvider extends ChangeNotifier {
       type: current.type,
       id: current.id,
       path: current.path,
+      locale: current.locale,
     );
     notifyListeners();
     return Future<void>.value();
