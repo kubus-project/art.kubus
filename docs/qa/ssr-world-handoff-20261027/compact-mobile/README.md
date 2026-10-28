@@ -1,5 +1,19 @@
 # WORLD HANDOFF: compact mobile layout, 2026-10-28
 
+## Correction 2026-10-28: hero cap removed
+
+- Owner decision: the entity hero cap (`min(55vh, max(18rem, 100svh - 32rem))` on tall phones while the handoff section is shown) is
+  removed. art.kubus is an archive, so the artwork photo is not cropped to make room for the section. The shared design no longer
+  contains `.entity-media`, `max-height` or `:has(`. No other status-dependent height rule replaces it.
+- Consequence: the title may need scrolling on tall phones. The 'title visible' and 'hero height' columns of the table below for
+  390x844 and 412x915 (cap 464 -> 332 px, 503 -> 403 px) no longer apply. The table is kept as the record of the capped measurement.
+- Unchanged: the compact section, globe, message, Retry and Go to app, the accessible layout, and first-paint stability.
+- Design hash after the correction, on both repositories: `67d5646157a09d963ed6a56de79407cf6246f5923760a904b773549f463c7ce5`
+  (the hash above is the pre-correction value).
+- Backend artwork photos are framed whole (`object-fit: contain`, artwork pages only, `.entity-artwork .entity-media img`). The measured baseline shows the ordinary SSR layout already crops this 2:3 portrait artwork with `object-fit: cover`
+  (visible fraction 62 to 89% on phones, 80.6% at 768x1024, 67.7% at 1440x900), which is why the artwork-only `contain` rule is added.
+  The `contain` rule is not measured in this rig.
+
 Owner revision of PRs backend #148 / app #369: the 282 px status section pushed real artwork titles below the first
 screen. Measured with the real dev web artifact, the backend renderer of backend commit `72ea267` and the real
 production artwork "Mary's column" (see `../real-engine-and-performance.md` for the rig). Engine withheld so the
