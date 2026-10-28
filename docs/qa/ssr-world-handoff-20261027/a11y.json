@@ -1,0 +1,70 @@
+{
+ "en": {
+  "tree": {
+   "live": [
+    {
+     "tag": "SPAN",
+     "text": "The world of art is coming into focus…"
+    }
+   ],
+   "decorative": true,
+   "headings": 0,
+   "h1InDocument": 1,
+   "focusables": [
+    "Retry",
+    "Go to app"
+   ]
+  },
+  "tabOrder": [
+   "art.kubus",
+   "Map",
+   "Retry",
+   "Go to app",
+   "Open art map",
+   "Open art map"
+  ],
+  "ring": {
+   "outline": "solid 3px",
+   "offset": "3px"
+  },
+  "afterHandoff": {
+   "active": "BODY",
+   "statusGone": true,
+   "path": "/en/artworks/11111111-1111-4111-8111-111111111111"
+  }
+ },
+ "sl": {
+  "tree": {
+   "live": [
+    {
+     "tag": "SPAN",
+     "text": "Svet umetnosti se izrisuje …"
+    }
+   ],
+   "decorative": true,
+   "headings": 0,
+   "h1InDocument": 1,
+   "focusables": [
+    "Poskusi znova",
+    "Pojdi v aplikacijo"
+   ]
+  },
+  "tabOrder": [
+   "art.kubus",
+   "Zemljevid",
+   "Poskusi znova",
+   "Pojdi v aplikacijo",
+   "Odprti zemljevid umetnos",
+   "Odprti zemljevid umetnos"
+  ],
+  "ring": {
+   "outline": "solid 3px",
+   "offset": "3px"
+  },
+  "afterHandoff": {
+   "active": "BODY",
+   "statusGone": true,
+   "path": "/sl/umetnine/11111111-1111-4111-8111-111111111111"
+  }
+ }
+}

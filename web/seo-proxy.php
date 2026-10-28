@@ -8,12 +8,16 @@ const KUBUS_TAKEOVER_CSP = "default-src 'none'; script-src 'self' 'wasm-unsafe-e
 // Copy mirrors web/public_flutter_takeover.js exactly (the static gateway test checks parity).
 const KUBUS_TAKEOVER_COPY = [
     'en' => [
+        'label' => 'THE WORLD IS OPENING',
+        'note' => 'Preparing the full interactive experience. You can keep exploring this page while it loads.',
         'loading' => 'The world of art is coming into focus…',
         'failure' => "The world of art couldn't open this time. Try refreshing the page or come back later.",
         'retry' => 'Retry',
         'app' => 'Go to app',
     ],
     'sl' => [
+        'label' => 'SVET UMETNOSTI SE ODPIRA',
+        'note' => 'Pripravljamo celotno interaktivno izkušnjo. Med nalaganjem lahko še naprej raziskujete to stran.',
         'loading' => 'Svet umetnosti se izrisuje …',
         'failure' => 'Svet umetnosti se tokrat ni mogel odpreti. Poskusite osvežiti stran ali se vrnite pozneje.',
         'retry' => 'Poskusi znova',
@@ -21,19 +25,44 @@ const KUBUS_TAKEOVER_COPY = [
     ],
 ];
 
-// Tokens are the site's custom properties; the fallbacks keep the section legible if a token is absent.
-// The hidden rule is explicit because the author display value would otherwise override the UA hidden style.
-const KUBUS_TAKEOVER_STATUS_CSS = '#flutter-takeover-status{box-sizing:border-box;display:flex;flex-wrap:wrap;align-items:center;gap:.75rem 1rem;width:min(100%,56rem);margin:1rem auto;padding:.75rem 1rem;border:1px solid var(--color-border,#d7d0c4);border-radius:.75rem;background:var(--color-surface,#fffdf8);color:var(--color-text,#1d1b16);font:inherit;line-height:1.5}'
+// The WORLD HANDOFF section design. A byte-identical copy of the backend's takeoverStatusDesign.js (both repositories pin the same hash in a test);
+// section-local tokens fall back to the document's own tokens, so it stays legible on a page without them.
+const KUBUS_TAKEOVER_STATUS_CSS = '#flutter-takeover-status{--s-text:var(--color-text,#20251f);--s-muted:var(--color-muted,#626b61);--s-accent:var(--color-accent,#315b4d);--s-on:var(--color-on-accent,#fff);--s-rule:var(--color-border,#c9cec3);--s-bg:var(--color-bg,#f4f5f1);--s-focus:var(--color-focus,#0969da)}'
+    . '@media(prefers-color-scheme:dark){#flutter-takeover-status{--s-text:var(--color-text,#eef1e9);--s-muted:var(--color-muted,#aeb8ab);--s-accent:var(--color-accent,#9ac4ae);--s-on:var(--color-on-accent,#06211f);--s-rule:var(--color-border,#3a433b);--s-bg:var(--color-bg,#151915);--s-focus:var(--color-focus,#9bc2ff)}}'
+    . '#flutter-takeover-status{box-sizing:border-box;display:grid;grid-template-columns:auto minmax(0,1fr);align-items:center;column-gap:1rem;row-gap:.5rem;width:100%;max-width:var(--content,76rem);margin:0 auto;padding:1rem 1rem 1.25rem;border-bottom:1px solid var(--s-rule);color:var(--s-text);line-height:1.5}'
     . '#flutter-takeover-status[hidden]{display:none}'
-    . 'html.kubus-takeover-capable #flutter-takeover-status[hidden][data-state=pending]{display:flex}'
-    . '#flutter-takeover-status [data-kubus-takeover-message]{flex:1 1 16rem;margin:0}'
-    . '#flutter-takeover-status .takeover-actions{display:flex;flex-wrap:wrap;gap:.5rem}'
-    . '#flutter-takeover-status [data-kubus-takeover-refresh],#flutter-takeover-status [data-kubus-takeover-app]{display:inline-flex;align-items:center;justify-content:center;min-height:2.75rem;padding:.5rem 1.1rem;border:1px solid var(--color-border,#8c8478);border-radius:999px;background:var(--color-surface,#fffdf8);color:var(--color-text,#1d1b16);font:inherit;font-weight:600;text-decoration:none;cursor:pointer}'
-    . '#flutter-takeover-status [data-kubus-takeover-refresh]{background:var(--color-accent,#1d1b16);border-color:transparent;color:var(--color-on-accent,#fffdf8)}'
-    . '#flutter-takeover-status [data-kubus-takeover-refresh]:disabled{border-style:dashed;background:transparent;color:var(--color-muted,#6b6357);cursor:default}'
-    . '#flutter-takeover-status [data-kubus-takeover-refresh]:focus-visible,#flutter-takeover-status [data-kubus-takeover-app]:focus-visible{outline:3px solid var(--color-focus,#1a5fb4);outline-offset:2px}'
-    . '@media(max-width:420px){#flutter-takeover-status .takeover-actions{flex:1 1 100%;width:100%}#flutter-takeover-status [data-kubus-takeover-refresh],#flutter-takeover-status [data-kubus-takeover-app]{flex:1 1 auto}}'
-    . '@media(prefers-color-scheme:dark){#flutter-takeover-status{background:var(--color-surface,#1c1b19);color:var(--color-text,#f4efe6);border-color:var(--color-border,#4a463f)}#flutter-takeover-status [data-kubus-takeover-refresh],#flutter-takeover-status [data-kubus-takeover-app]{border-color:var(--color-border,#6d675d);background:var(--color-surface,#1c1b19);color:var(--color-text,#f4efe6)}#flutter-takeover-status [data-kubus-takeover-refresh]{background:var(--color-accent,#f4efe6);border-color:transparent;color:var(--color-on-accent,#1c1b19)}}';
+    . 'html.kubus-takeover-capable #flutter-takeover-status[hidden][data-state=pending]{display:grid}'
+    . '#flutter-takeover-status[data-state=slow]{color:var(--color-muted)}'
+    . '#flutter-takeover-status .takeover-globe{--g:4rem;grid-area:1/1;display:grid;width:var(--g);height:var(--g);color:var(--s-accent)}'
+    . '#flutter-takeover-status .takeover-label{grid-area:1/2;font:400 .72rem/1.3 "Space Mono",ui-monospace,monospace;letter-spacing:.14em;color:var(--s-accent)}'
+    . '#flutter-takeover-status [data-kubus-takeover-message]{grid-area:2/1/3/-1;display:block;margin:.125rem 0 0;font-size:clamp(1.5rem,1.1rem + 1.6vw,2.25rem);font-weight:600;line-height:1.12;letter-spacing:-.01em;text-wrap:balance;color:var(--s-text)}'
+    . '#flutter-takeover-status .takeover-note{grid-area:3/1/4/-1;max-width:36rem;font-size:.9375rem;line-height:1.45;color:var(--s-muted)}'
+    . '#flutter-takeover-status .takeover-trace{grid-area:4/1/5/-1;position:relative;overflow:hidden;width:min(100%,22rem);height:2px;background:var(--s-rule)}'
+    . '#flutter-takeover-status .takeover-actions{grid-area:5/1/6/-1;display:grid;grid-template-columns:1fr 1fr;gap:.75rem;margin-top:.25rem}'
+    . '#flutter-takeover-status [data-kubus-takeover-refresh],#flutter-takeover-status [data-kubus-takeover-app]{display:inline-flex;align-items:center;justify-content:center;min-height:2.75rem;padding:.5rem 1.25rem;border:1px solid var(--s-text);border-radius:.25rem;background:transparent;color:var(--s-text);font:inherit;font-weight:600;line-height:1.25;text-align:center;text-decoration:none;cursor:pointer}'
+    . '#flutter-takeover-status [data-kubus-takeover-app],#flutter-takeover-status[data-state=failed] [data-kubus-takeover-refresh]{background:var(--s-accent);border-color:var(--s-accent);color:var(--s-on)}'
+    . '#flutter-takeover-status[data-state=failed] [data-kubus-takeover-app]{background:transparent;border-color:var(--s-text);color:var(--s-text)}'
+    . '#flutter-takeover-status [data-kubus-takeover-refresh]:disabled{border-style:dashed;background:transparent;color:var(--color-muted,#626b61);cursor:default}'
+    . '#flutter-takeover-status [data-kubus-takeover-refresh]:focus-visible,#flutter-takeover-status [data-kubus-takeover-app]:focus-visible{outline:3px solid var(--s-focus);outline-offset:3px}'
+    . '@media(min-width:760px){#flutter-takeover-status{column-gap:2.5rem;padding:2rem 1.5rem 2.25rem}#flutter-takeover-status .takeover-globe{--g:8.5rem;grid-area:1/1/6/2}#flutter-takeover-status .takeover-label{grid-area:1/2}#flutter-takeover-status [data-kubus-takeover-message]{grid-area:2/2}#flutter-takeover-status .takeover-note{grid-area:3/2;font-size:1rem;line-height:1.55}#flutter-takeover-status .takeover-trace{grid-area:4/2}#flutter-takeover-status .takeover-actions{grid-area:5/2;display:flex;flex-wrap:wrap;margin-top:.75rem}}'
+    . '#flutter-takeover-status .takeover-globe>*{grid-area:1/1;width:100%;height:100%}'
+    . '#flutter-takeover-status .tg-d{fill:var(--s-bg)}'
+    . '#flutter-takeover-status .tg-pose{opacity:0}'
+    . '#flutter-takeover-status .tg-p0{opacity:1}'
+    . '#flutter-takeover-status .tg-orbit{display:grid;place-items:center;transform:rotate(-24deg)}'
+    . '#flutter-takeover-status .ts{width:calc(var(--g)*.0375);height:calc(var(--g)*.0375);border-radius:50%;background:currentColor;opacity:.65;transform:translate(calc(var(--g)*.475),0)}'
+    . '#flutter-takeover-status:is([data-state=loading],[data-state=slow]) .tg-pose{animation:kubus-pose 8s linear infinite}#flutter-takeover-status:is([data-state=loading],[data-state=slow]) .tg-p1{animation-delay:-6s}#flutter-takeover-status:is([data-state=loading],[data-state=slow]) .tg-p2{animation-delay:-4s}#flutter-takeover-status:is([data-state=loading],[data-state=slow]) .tg-p3{animation-delay:-2s}#flutter-takeover-status:is([data-state=loading],[data-state=slow]) .ts{animation:kubus-orbit 8s linear infinite}#flutter-takeover-status:is([data-state=loading],[data-state=slow]) .takeover-trace::after{animation:kubus-trace 2.6s cubic-bezier(.45,0,.55,1) infinite}'
+    . '#flutter-takeover-status .takeover-trace::after{content:"";position:absolute;inset:0 auto 0 0;width:34%;background:var(--s-accent);transform:translateX(-100%)}'
+    . '@keyframes kubus-pose{0%{opacity:1}25%{opacity:0}75%{opacity:0}100%{opacity:1}}'
+    . '@keyframes kubus-orbit{0%{transform:translate(calc(var(--g)*0.475),calc(var(--g)*0));opacity:0.65}6.25%{transform:translate(calc(var(--g)*0.4388),calc(var(--g)*0.0619));opacity:1}12.5%{transform:translate(calc(var(--g)*0.3359),calc(var(--g)*0.1143));opacity:1}18.75%{transform:translate(calc(var(--g)*0.1818),calc(var(--g)*0.1494));opacity:1}25%{transform:translate(calc(var(--g)*0),calc(var(--g)*0.1617));opacity:1}31.25%{transform:translate(calc(var(--g)*-0.1818),calc(var(--g)*0.1494));opacity:1}37.5%{transform:translate(calc(var(--g)*-0.3359),calc(var(--g)*0.1143));opacity:1}43.75%{transform:translate(calc(var(--g)*-0.4388),calc(var(--g)*0.0619));opacity:1}50%{transform:translate(calc(var(--g)*-0.475),calc(var(--g)*0));opacity:0.65}56.25%{transform:translate(calc(var(--g)*-0.4388),calc(var(--g)*-0.0619));opacity:0.3}62.5%{transform:translate(calc(var(--g)*-0.3359),calc(var(--g)*-0.1143));opacity:0.3}68.75%{transform:translate(calc(var(--g)*-0.1818),calc(var(--g)*-0.1494));opacity:0.3}75%{transform:translate(calc(var(--g)*0),calc(var(--g)*-0.1617));opacity:0.3}81.25%{transform:translate(calc(var(--g)*0.1818),calc(var(--g)*-0.1494));opacity:0.3}87.5%{transform:translate(calc(var(--g)*0.3359),calc(var(--g)*-0.1143));opacity:0.3}93.75%{transform:translate(calc(var(--g)*0.4388),calc(var(--g)*-0.0619));opacity:0.3}100%{transform:translate(calc(var(--g)*0.475),calc(var(--g)*0));opacity:0.65}}'
+    . '@keyframes kubus-trace{from{transform:translateX(-100%)}to{transform:translateX(300%)}}'
+    . '#flutter-takeover-status[data-state=failed] .takeover-label,#flutter-takeover-status[data-state=failed] .takeover-note,#flutter-takeover-status[data-state=failed] .takeover-trace,#flutter-takeover-status[data-state=failed] .tg-orbit{display:none}'
+    . '#flutter-takeover-status[data-paused] .tg-pose,#flutter-takeover-status[data-paused] .ts,#flutter-takeover-status[data-paused] .takeover-trace::after{animation-play-state:paused!important}'
+    . '@media(prefers-reduced-motion:reduce){#flutter-takeover-status .tg-pose,#flutter-takeover-status .ts,#flutter-takeover-status .takeover-trace::after{animation:none!important}#flutter-takeover-status .takeover-trace::after{display:none}}'
+    . '#flutter-takeover-status[data-state=failed] .tg-pose:not(.tg-p0){opacity:0}'
+    . '#flutter-takeover-status[data-state=failed]{row-gap:0}#flutter-takeover-status[data-state=failed] .takeover-actions{margin-top:.75rem}';
+
+const KUBUS_TAKEOVER_GLOBE_SVG = '<span class="takeover-globe" aria-hidden="true"><svg viewBox="0 0 120 120" aria-hidden="true" focusable="false"><g transform="rotate(-24 60 60)"><g transform="translate(0 60) scale(1 .34) translate(0 -60)"><circle cx="60" cy="60" r="57" fill="none" stroke="currentColor" stroke-width="1" stroke-dasharray="2 4" vector-effect="non-scaling-stroke"/></g></g><circle class="tg-d" cx="60" cy="60" r="44"/><g fill="none" stroke="currentColor"><circle cx="60" cy="60" r="44" stroke-width="2"/><path d="M16 60h88M22 38h76M22 82h76M38 22h44M38 98h44" stroke-width="1.25" stroke-opacity=".4"/></g></svg><svg viewBox="0 0 120 120" aria-hidden="true" focusable="false" class="tg-pose tg-p0"><g fill="none" stroke="currentColor" stroke-width="1.25"><ellipse cx="60" cy="60" rx="5.7" ry="44"/><ellipse cx="60" cy="60" rx="40.7" ry="44"/><ellipse cx="60" cy="60" rx="34.9" ry="44"/></g></svg><svg viewBox="0 0 120 120" aria-hidden="true" focusable="false" class="tg-pose tg-p1"><g fill="none" stroke="currentColor" stroke-width="1.25"><ellipse cx="60" cy="60" rx="16.8" ry="44"/><ellipse cx="60" cy="60" rx="43.6" ry="44"/><ellipse cx="60" cy="60" rx="26.8" ry="44"/></g></svg><svg viewBox="0 0 120 120" aria-hidden="true" focusable="false" class="tg-pose tg-p2"><g fill="none" stroke="currentColor" stroke-width="1.25"><ellipse cx="60" cy="60" rx="26.8" ry="44"/><ellipse cx="60" cy="60" rx="43.6" ry="44"/><ellipse cx="60" cy="60" rx="16.8" ry="44"/></g></svg><svg viewBox="0 0 120 120" aria-hidden="true" focusable="false" class="tg-pose tg-p3"><g fill="none" stroke="currentColor" stroke-width="1.25"><ellipse cx="60" cy="60" rx="34.9" ry="44"/><ellipse cx="60" cy="60" rx="40.7" ry="44"/><ellipse cx="60" cy="60" rx="5.7" ry="44"/></g></svg><svg viewBox="0 0 120 120" aria-hidden="true" focusable="false"><g transform="rotate(-24 60 60)"><g transform="translate(0 60) scale(1 .34) translate(0 -60)"><path d="M3 60a57 57 0 0 0 114 0" fill="none" stroke="currentColor" stroke-width="1.5" vector-effect="non-scaling-stroke"/></g></g></svg><span class="tg-orbit"><span class="ts"></span></span></span>';
 
 function sendGatewayError(int $status, string $title, string $message): void
 {
@@ -140,7 +169,11 @@ function takeoverStatusMarkup(string $locale): string
         . ' data-loading-text="' . takeoverEscape($copy['loading']) . '" data-failure-text="' . takeoverEscape($copy['failure']) . '"'
         . ' data-refresh-label="' . takeoverEscape($copy['retry']) . '" data-app-label="' . takeoverEscape($copy['app']) . '"'
         . ' data-app-href="' . $href . '" hidden>'
+        . KUBUS_TAKEOVER_GLOBE_SVG
+        . '<span class="takeover-label">' . takeoverEscape($copy['label']) . '</span>'
         . '<span data-kubus-takeover-message role="status" aria-live="polite" aria-atomic="true">' . takeoverEscape($copy['loading']) . '</span>'
+        . '<span class="takeover-note">' . takeoverEscape($copy['note']) . '</span>'
+        . '<span class="takeover-trace" aria-hidden="true"></span>'
         . '<span class="takeover-actions" data-kubus-takeover-actions>'
         . '<button type="button" data-kubus-takeover-refresh>' . takeoverEscape($copy['retry']) . '</button>'
         . '<a data-kubus-takeover-app href="' . $href . '">' . takeoverEscape($copy['app']) . '</a>'
