@@ -1,3 +1,5 @@
+import 'optional_analytics_consent.dart';
+
 class KubusClientContextSnapshot {
   const KubusClientContextSnapshot({
     required this.sessionId,
@@ -15,7 +17,8 @@ class KubusClientContextSnapshot {
     return {
       'x-kubus-session-id': sessionId,
       'x-kubus-screen-name': screenName,
-      if (screenRoute != null && screenRoute!.isNotEmpty) 'x-kubus-screen-route': screenRoute!,
+      if (screenRoute != null && screenRoute!.isNotEmpty)
+        'x-kubus-screen-route': screenRoute!,
       'x-kubus-flow-stage': flowStage,
     };
   }
@@ -59,11 +62,16 @@ class KubusClientContext {
 
   Map<String, String> get headers {
     final snapshot = _snapshot;
-    if (!_enabled || snapshot == null) return const {};
+    if (!_enabled ||
+        !OptionalAnalyticsConsent.instance.granted ||
+        snapshot == null) {
+      return const {};
+    }
     return snapshot.toHeaders();
   }
 
-  KubusClientContextSnapshot? get snapshot => _enabled ? _snapshot : null;
+  KubusClientContextSnapshot? get snapshot =>
+      _enabled && OptionalAnalyticsConsent.instance.granted ? _snapshot : null;
 
   static String? _clamp(String? value, int maxLen) {
     final raw = (value ?? '').trim();

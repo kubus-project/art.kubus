@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:art_kubus/config/config.dart';
 import 'package:art_kubus/services/backend_api_service.dart';
+import 'package:art_kubus/services/telemetry/optional_analytics_consent.dart';
 import 'package:art_kubus/services/http_client_factory.dart';
 import 'package:art_kubus/services/telemetry/kubus_client_context.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -30,8 +31,13 @@ void main() {
     BackendApiService.disableHttpFailureDiagnosticsForTesting = true;
   });
 
-  setUp(() {
-    SharedPreferences.setMockInitialValues(<String, Object>{});
+  setUp(() async {
+    await OptionalAnalyticsConsent.instance.resetForTesting();
+    SharedPreferences.setMockInitialValues(<String, Object>{
+      OptionalAnalyticsConsent.prefsKey:
+          '{"v":2,"granted":true,"revision":"campaign-fixture"}'
+    });
+    await OptionalAnalyticsConsent.instance.refresh();
     BackendApiService().setAuthTokenForTesting(_validAuthToken);
     KubusClientContext.instance.setEnabled(true);
     KubusClientContext.instance.update(

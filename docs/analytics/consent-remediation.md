@@ -18,6 +18,15 @@ Security/operational diagnostics are a separate processing path. This patch remo
 
 ## Verification and rollout
 
-Tests cover preference failures, missing/legacy values, consent-period changes, withdrawal, restart, persisted queue migration/expiry, actor transitions, concurrent flushes, delayed actual preference writes and guarded HTTP handoffs. SharedPreferences/native IO fault injection is synthetic evidence, not physical device or deployed browser acceptance. Browser cross-tab and family-domain cookies must be checked against the actual deployed origin configuration. The Vue website and Flutter app use distinct consent storage implementations; do not describe them as sharing one browser consent cookie without further integration evidence.
+Tests cover preference failures, missing/legacy values, consent-period changes, withdrawal, restart, persisted queue migration/expiry, actor transitions, concurrent flushes, delayed actual preference writes and guarded HTTP handoffs. SharedPreferences/native IO fault injection is synthetic evidence, not physical device or deployed browser acceptance. Browser cross-tab and family-domain cookies must be checked against the actual deployed origin configuration. The Vue websites and Flutter app keep distinct positive choices. A browser app choice is bound to the observed family consent cookie/revision context. A later family-context change invalidates that earlier app receipt, and website acceptance alone never grants app measurement. Native choices remain device-specific. Actual family-domain cookie routing still requires coordinated deployment acceptance.
 
 Rollback before deployment: revert the candidate code together with its consent authority/provider prerequisite. Do not interpret the old preference or a v2 queue as consent during a rollback. No live database migration or server retention change is included.
+
+
+## Browser follow-up
+
+The browser permission getter and optional request-context headers check the family cookie context synchronously; a 500 ms observer plus focus/visibility checks triggers queue cleanup. Network handoff refreshes permission again. The app does not write the website consent cookie or silently grant website analytics. An explicit new app choice applies to the app only and binds to the then-current family context. Receipt revisions use a JavaScript-safe random-number bound; the synthetic release-browser harness caught and corrected the native-only bit-shift bound.
+
+Measurement intentionally drops unsent guest/account backlog and campaign state on an actor transition. A campaign's pre-account stages are not retrospectively relabelled as account events; reports must not assume one continuous measurement session across account creation/sign-out. This affects funnel continuity but does not prevent account creation, artwork contribution or other product actions.
+
+Both HTTP diagnostics paths now omit response-body previews. The diagnostics path still has its own activation, metadata and server-retention requirements; refusing analytics is not a promise to suppress operational security records.

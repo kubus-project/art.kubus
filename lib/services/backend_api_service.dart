@@ -882,9 +882,6 @@ class BackendApiService
     unawaited(() async {
       try {
         final context = KubusClientContext.instance.snapshot;
-        final bodyPreview = response.body.length > 300
-            ? response.body.substring(0, 300)
-            : response.body;
         final payload = <String, dynamic>{
           'eventId': TelemetryUuid.v4(),
           'source': 'flutter_http',
@@ -902,7 +899,6 @@ class BackendApiService
             'method': method.toUpperCase(),
             'path': path,
             'status_code': status,
-            'response_preview': bodyPreview,
           }),
         };
         final jsonBody = jsonEncode(payload);

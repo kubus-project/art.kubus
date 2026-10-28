@@ -1,8 +1,10 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:math';
 
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'family_consent_context.dart';
 
 typedef AnalyticsPreferencesGetter = Future<SharedPreferences> Function();
 
@@ -11,18 +13,27 @@ typedef AnalyticsPreferencesGetter = Future<SharedPreferences> Function();
 /// Legacy preferences never imply consent. A grant becomes effective only after
 /// successful persistence; withdrawal invalidates in-flight work synchronously.
 class OptionalAnalyticsConsent extends ChangeNotifier {
-  OptionalAnalyticsConsent._({AnalyticsPreferencesGetter? preferencesGetter})
-      : _preferencesGetter = preferencesGetter ?? SharedPreferences.getInstance;
+  OptionalAnalyticsConsent._(
+      {AnalyticsPreferencesGetter? preferencesGetter,
+      String? Function()? familyContextGetter})
+      : _preferencesGetter = preferencesGetter ?? SharedPreferences.getInstance,
+        _familyContextGetter = familyContextGetter ?? readFamilyConsentContext;
 
   @visibleForTesting
   OptionalAnalyticsConsent.forTesting({
     required AnalyticsPreferencesGetter preferencesGetter,
-  }) : this._(preferencesGetter: preferencesGetter);
+    String? Function()? familyContextGetter,
+  }) : this._(
+            preferencesGetter: preferencesGetter,
+            familyContextGetter: familyContextGetter);
 
   static final OptionalAnalyticsConsent instance = OptionalAnalyticsConsent._();
   static const String prefsKey = 'optional_analytics_consent_v2';
 
   AnalyticsPreferencesGetter _preferencesGetter;
+  final String? Function() _familyContextGetter;
+  String? _familyContext;
+  void Function()? _stopFamilyObserver;
   Future<void>? _pending;
   bool _granted = false;
   String? _revision;
@@ -31,7 +42,10 @@ class OptionalAnalyticsConsent extends ChangeNotifier {
   // A failed denial must not be undone by re-reading the old durable grant.
   bool _unpersistedWithdrawal = false;
 
-  bool get granted => _granted;
+  bool get granted =>
+      _granted &&
+      _familyContextGetter() != '!unavailable' &&
+      _familyContextGetter() == _familyContext;
   int get generation => _generation;
 
   void _apply(bool value) {
@@ -54,13 +68,17 @@ class OptionalAnalyticsConsent extends ChangeNotifier {
   /// Reloads durable state, including changes from another browser tab.
   /// Pending writes and generation checks prevent stale reads reviving consent.
   Future<bool> refresh() async {
+    _stopFamilyObserver ??=
+        observeFamilyConsentContext(() => unawaited(refresh()));
     final expectedGeneration = _generation;
     await _serialize(() async {
       try {
         final prefs = await _preferencesGetter();
         await prefs.reload();
-        final receipt = _readReceipt(prefs);
+        final family = _familyContextGetter();
+        final receipt = _readReceipt(prefs, familyContext: family);
         if (_generation == expectedGeneration) {
+          _familyContext = family;
           final revision = receipt?['revision'] as String?;
           final changed = revision != _revision;
           _revision = revision;
@@ -75,13 +93,14 @@ class OptionalAnalyticsConsent extends ChangeNotifier {
         if (_generation == expectedGeneration) _apply(false);
       }
     });
-    return _granted;
+    return granted;
   }
 
   Future<void> setGranted(bool value) {
+    final family = _familyContextGetter();
     final operationGeneration = ++_generation;
     final revision =
-        '${DateTime.now().microsecondsSinceEpoch}-${Random.secure().nextInt(1 << 32)}';
+        '${DateTime.now().microsecondsSinceEpoch}-${Random.secure().nextInt(0x7fffffff)}';
     if (!value) _unpersistedWithdrawal = true;
     // Granting also waits in the denied state until the write succeeds.
     _granted = false;
@@ -89,13 +108,23 @@ class OptionalAnalyticsConsent extends ChangeNotifier {
     return _serialize(() async {
       try {
         final prefs = await _preferencesGetter();
-        final saved = await prefs.setString(prefsKey,
-            jsonEncode({'v': 2, 'granted': value, 'revision': revision}));
+        if (value && family == '!unavailable') {
+          throw StateError('Family preferences unavailable');
+        }
+        final saved = await prefs.setString(
+            prefsKey,
+            jsonEncode({
+              'v': 2,
+              'granted': value,
+              'revision': revision,
+              if (family != null) 'familyContext': family,
+            }));
         if (!saved) throw StateError('Analytics choice was not persisted');
         if (_generation == operationGeneration) {
           _unpersistedWithdrawal = false;
           _revision = revision;
-          _apply(value);
+          _familyContext = family;
+          _apply(value && family == _familyContextGetter());
         }
         // Compatibility only: this key is never read as a permission grant.
         try {
@@ -107,7 +136,8 @@ class OptionalAnalyticsConsent extends ChangeNotifier {
     });
   }
 
-  static Map<String, dynamic>? _readReceipt(SharedPreferences prefs) {
+  static Map<String, dynamic>? _readReceipt(SharedPreferences prefs,
+      {String? familyContext}) {
     try {
       final raw = prefs.get(prefsKey);
       if (raw is! String) return null;
@@ -117,6 +147,11 @@ class OptionalAnalyticsConsent extends ChangeNotifier {
           value['granted'] is! bool ||
           value['revision'] is! String ||
           (value['revision'] as String).isEmpty) {
+        return null;
+      }
+      if (familyContext != null &&
+          (familyContext == '!unavailable' ||
+              value['familyContext'] != familyContext)) {
         return null;
       }
       return Map<String, dynamic>.from(value);
@@ -129,7 +164,9 @@ class OptionalAnalyticsConsent extends ChangeNotifier {
       _readReceipt(prefs)?['revision'] as String?;
 
   static bool hasStoredPermission(SharedPreferences prefs) =>
-      _readReceipt(prefs)?['granted'] == true;
+      _readReceipt(prefs,
+          familyContext: readFamilyConsentContext())?['granted'] ==
+      true;
 
   @visibleForTesting
   Future<void> resetForTesting({
@@ -142,6 +179,13 @@ class OptionalAnalyticsConsent extends ChangeNotifier {
     _revision = null;
     _generation = 0;
     _unpersistedWithdrawal = false;
+    _familyContext = null;
     notifyListeners();
+  }
+
+  @override
+  void dispose() {
+    _stopFamilyObserver?.call();
+    super.dispose();
   }
 }

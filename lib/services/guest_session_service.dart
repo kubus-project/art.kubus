@@ -411,6 +411,14 @@ class GuestSessionService {
     try {
       final p = prefs ?? await SharedPreferences.getInstance();
       if (!_hasStoredAttribution(p)) return;
+      final scope =
+          '${p.getString(OptionalAnalyticsConsent.prefsKey)}:${AccountIdentity.accountKey}';
+      if (!OptionalAnalyticsConsent.hasStoredPermission(p) ||
+          p.getString('kubus_entry_attribution_scope_v2') != scope) {
+        await clearAcquisitionAttribution(
+            prefs: p, preserveFunctionalIntent: true);
+        return;
+      }
       if (storedAttributionCapturedAt(p) == null) {
         await p.setInt(
           attributionCapturedAtKey,
