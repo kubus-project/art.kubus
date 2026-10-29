@@ -1,10 +1,9 @@
 # art.kubus 0.8.5: public entry, SSR WORLD HANDOFF and keyless basemap
 
-Status: **PREPARED** (2026-10-29). This record is updated to **RELEASED** in a follow-up commit once
-the tag, the signed artifacts and the production web deployment exist. Statuses are kept separate:
-**implemented**, **tested**, **reviewed**, **merged**, **deployed** and **released** are never
-inferred from one another. Maturity stays 0.8.x-alpha. Version 0.8.5 is already set on `dev`
-(`pubspec.yaml`, `package.json`, `version.json`); the build number and date come from CI.
+Status: **RELEASED** on 2026-10-29. Tag `v0.8.5` is on `master` `d5c51643` (the `dev` to `master` merge commit,
+[#380](https://github.com/kubus-project/art.kubus/pull/380)); the GitHub Release is published (not a prerelease), and
+production web is live at the same commit. Statuses are kept separate: **implemented**, **tested**, **reviewed**,
+**merged**, **deployed** and **released** are never inferred from one another. Maturity stays 0.8.x-alpha.
 
 0.8.5 follows 0.8.4 (tag `v0.8.4`, `master` `8c2c571f`). It adds no Web2.5 features. Walletless
 community work remains deferred to 0.9 (see "Deferred").
@@ -45,6 +44,25 @@ App changes on `dev` since 0.8.4:
 | Web handoff | #366 inline loading section with Retry and Go to app, #368 / #369 / #370 WORLD HANDOFF design in the PHP gateway with a pinned parity test, #367 web smoke tolerates only cancelled OpenFreeMap tiles |
 | API | #353 a write is never replayed on another backend when it may have committed |
 
+## Released artifacts and deployment
+
+- **Web deployed:** `release-production.yml` run 40909894439 on `d5c51643`, approved through `production-web`.
+  `app.kubus.site/kubus-web-revision.txt` reports `d5c51643`, `version.json` reports 0.8.5, the post-promotion
+  production smoke passed, and entity pages report `X-Kubus-Backend-Revision: e0d2a0e1`.
+- **Mobile:** `Mobile release` run 40909878532 (tag `v0.8.5`), build number 263020014, published the release with
+  `SHA256SUMS` and `release-manifest.json` (every file verified against the checksums).
+  - **Android** APK and AAB are signed with the release keystore. The APK certificate SHA-256
+    `42:68:42:AD:10:CB:AF:2F:45:31:5B:EA:69:36:25:3E:C3:2D:42:B4:4D:25:F6:93:5A:1D:2B:9C:E3:B1:C8:A3`
+    matches the fingerprint in the live `/.well-known/assetlinks.json`.
+  - **iOS** is an **unsigned** IPA for re-signing (`signed: false`, `distributable: false`): the `ios-release`
+    environment has no Apple signing secrets and `IOS_RELEASE_ENABLED` is unset.
+- **Acceptance before the promotion:** local Docker run of the `dev` web build against backend `e0d2a0e1`:
+  server-rendered pages 164 + 56 + 56 cases with no regression, real engine on Chromium, Firefox and WebKit 0 findings,
+  axe 0 section violations. The remaining harness findings (entity API outage hands over to the app by design, a cold
+  first hero lookup) are identical to the previous accepted run.
+- **Review:** Codex review was unavailable (usage limit); an independent release-level review found no blocker. Its
+  build-number concern does not apply: mobile build numbers come from the CI date and run number.
+
 ## Known limitations (open, not passes)
 
 - Flutter engine startup is about 53 s at 4x CPU on slow 4G; the server-rendered page carries the first paint.
@@ -54,13 +72,17 @@ App changes on `dev` since 0.8.4:
 - The home standby backend is stale (v0.8.1) with no database; it answers SSR pages with 503 and is not a working failover.
 - As last recorded on 2026-10-24: IPFS cluster pinning wedged and the DNSLink pointer stale; HA replication unhealthy.
 - Not verified on a physical Android device; installed-native App Links for 0.8.5 are unverified.
+- The iOS artifact is unsigned and not distributable until Apple signing is configured.
+- GitGuardian reports one fake-JWT test fixture on #380 (its signature decodes to the text "signature"); a narrow
+  ignore is in [#381](https://github.com/kubus-project/art.kubus/pull/381).
+- The `backend` gitlink in this repository still points at `ee3b880`, not the deployed `e0d2a0e1`.
 
 ## Deferred to 0.9
 
 Walletless account posting and direct messages (backend #104 / #105 / #106, app #340 / #341), the wallet-optional
 creator work (app #254 / #256 / #280, backend #81 / #82 / #88) and the spatial viewer bundles (app #258, backend #83).
 
-## Release procedure
+## Release procedure (as executed)
 
 `dev` to `master` by a **merge commit** (no squash or rebase), tag `v0.8.5` on the resulting `master` commit,
 the `Mobile release` workflow builds and signs the Android APK/AAB and the iOS IPA from the tag, then the
