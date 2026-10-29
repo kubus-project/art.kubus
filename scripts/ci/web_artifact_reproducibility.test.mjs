@@ -73,3 +73,15 @@ test('web artifact workflow derives all volatile inputs from the source commit',
   assert.match(workflow, /find build\/web -type f \\?\( -name '\*\.wasm\.br'/);
   assert.doesNotMatch(workflow, /gzip -n -kf6 "\$file"|brotli -f/);
 });
+
+test('the service worker version is normalized before the manifest is sealed', () => {
+  const workflow = readFileSync(workflowPath, 'utf8');
+  const prepared = workflow.indexOf('scripts/deploy/prepare_web_artifact.mjs');
+  const sealed = workflow.indexOf('xargs -0 sha256sum');
+
+  assert.ok(prepared > 0 && sealed > prepared, 'prepare_web_artifact.mjs must run before SHA256SUMS is generated');
+
+  // `flutter build web` bakes Random().nextInt(1 << 32) into the bootstrap and index.html.
+  const prepareScript = readFileSync(resolve(repositoryRoot, 'scripts/deploy/prepare_web_artifact.mjs'), 'utf8');
+  assert.match(prepareScript, /normalizeServiceWorkerVersion\(artifactDir, sourceSha\)/);
+});

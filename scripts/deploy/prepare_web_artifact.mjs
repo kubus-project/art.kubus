@@ -2,6 +2,8 @@
 import { readFileSync, readdirSync, statSync, writeFileSync } from 'node:fs';
 import { basename, join, resolve } from 'node:path';
 
+import { normalizeServiceWorkerVersion } from './normalize_service_worker_version.mjs';
+
 function arg(name) {
   const index = process.argv.indexOf(name);
   return index === -1 ? null : process.argv[index + 1];
@@ -45,6 +47,7 @@ if (environment === 'development') {
   throw new Error('production artifact unexpectedly contains the staging noindex block');
 }
 writeFileSync(htaccessPath, htaccess);
+const serviceWorker = normalizeServiceWorkerVersion(artifactDir, sourceSha);
 writeFileSync(join(artifactDir, 'kubus-web-revision.txt'), `${sourceSha}\n`);
 writeFileSync(join(artifactDir, 'kubus-deployment-metadata.json'), `${JSON.stringify({ environment, sourceSha, artifact: `flutter-web-${environment}-${sourceSha}` }, null, 2)}\n`);
 
@@ -64,4 +67,4 @@ if (environment === 'development') {
   }
 }
 
-process.stdout.write(`Prepared ${environment} web artifact for ${sourceSha}.\n`);
+process.stdout.write(`Prepared ${environment} web artifact for ${sourceSha}${serviceWorker ? ` (service worker version ${serviceWorker.replacement})` : ''}.\n`);
