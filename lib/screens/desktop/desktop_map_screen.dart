@@ -36,6 +36,7 @@ import '../../models/exhibition.dart';
 import '../../models/map_marker_subject.dart';
 import '../../config/config.dart';
 import '../../core/app_route_observer.dart';
+import '../../core/public_entry_navigation.dart';
 import '../../services/guest_session_service.dart';
 import '../../services/telemetry/telemetry_service.dart';
 import '../../services/map_attribution_helper.dart';
@@ -46,6 +47,7 @@ import '../../services/map_data_controller.dart';
 import '../../services/share/share_service.dart';
 import '../../services/share/share_types.dart';
 import '../../services/map_marker_service.dart';
+import '../../services/public_fallback_service.dart';
 import '../../services/ar_service.dart';
 import '../../services/walking_location_service.dart';
 import '../../services/walking_navigation_diagnostics.dart';
@@ -84,6 +86,8 @@ import '../../features/map/controller/map_view_preferences_controller.dart';
 import '../../features/map/shared/map_marker_collision_config.dart';
 import '../../features/map/shared/map_screen_constants.dart';
 import '../../features/map/shared/map_initial_viewport.dart';
+import '../../features/map/shared/map_recenter_controller.dart';
+import '../../features/map/shared/map_recenter_feedback.dart';
 import '../../features/map/navigation/walking_navigation_models.dart';
 import '../../features/map/navigation/walking_navigation_map_coordinator.dart';
 import '../../features/map/shared/map_artwork_filtering.dart';
@@ -125,7 +129,7 @@ import '../../widgets/map/discovery/kubus_discovery_path_card.dart'
 import '../../widgets/map/dialogs/kubus_map_attribution_dialog.dart';
 import '../../widgets/map/kubus_map_chrome.dart';
 import '../../widgets/map/dialogs/street_art_claims_dialog.dart';
-import '../../widgets/map/glass/kubus_map_platform_backdrop_host.dart';
+import '../../widgets/map/glass/kubus_map_platform_backdrop_mount.dart';
 import '../../widgets/map/kubus_map_glass_surface.dart';
 import '../../widgets/common/kubus_filter_panel.dart';
 import '../../features/map/detail/marker_info_detail_presentation.dart';
@@ -310,6 +314,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
   List<ArtMarker> _artMarkers = [];
   bool _isLoadingMarkers = false; // Tracks the latest marker request
   int _markerRequestId = 0;
+  bool _lastObservedIpfsFallbackMode = false;
   MarkerSubjectLoader get _subjectLoader => MarkerSubjectLoader(context);
   StreamSubscription<CompassEvent>? _compassSubscription;
   Timer? _headingExpiryTimer;
@@ -318,7 +323,38 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
   double? _userLocationAccuracyMeters;
   int? _userLocationTimestampMs;
   bool _autoFollow = true;
-  bool _isLocating = false;
+  late final MapRecenterController _recenter = MapRecenterController(
+    acquire: ({required bool requestPermission}) =>
+        _acquireUserFix(requestPermission: requestPermission),
+    isFollowing: () => _autoFollow,
+    setFollowing: (value) {
+      _kubusMapController.setAutoFollow(value);
+      _safeSetState(() => _autoFollow = value);
+    },
+    moveCamera: (target) =>
+        unawaited(_moveCamera(target, math.max(_effectiveZoom, 15))),
+    cameraDuration: () => KubusMapMotion.fromMediaQuery(
+      animationTheme: context.animationTheme,
+      mediaQuery: MediaQuery.of(context),
+    ).clusterExpand.duration,
+    reportUnavailable: (status) {
+      if (!mounted) return;
+      MapRecenterFeedback.showUnavailable(
+        context,
+        status: status,
+        api: _walkingLocationApi,
+        onRetry: _recenterOnUser,
+      );
+    },
+    onLocatingChanged: (locating) {
+      if (!mounted) return;
+      if (locating) {
+        MapRecenterFeedback.showLocating(context);
+      } else {
+        MapRecenterFeedback.hideLocating(context);
+      }
+    },
+  );
   _RightSidebarContent? _rightSidebarContent;
   bool get _showFiltersPanel =>
       _mapUiStateCoordinator.value.contextSurface == MapContextSurface.filters;
@@ -352,6 +388,9 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
   late final WalkingNavigationLocationCoordinator _walkingLocationCoordinator;
   bool _isAppForeground = true;
   bool _isRouteVisible = true;
+  Object? _publicMarkerUrlClaim;
+  String? _publicMarkerUrlClaimId;
+  String? _publicMarkerUrlLanguage;
   PageRoute<dynamic>? _subscribedRoute;
   int _markerOpenRequestId = 0;
   int _markerOpenSurfaceRevision = -1;
@@ -449,7 +488,10 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
   @override
   double get clusterTopologyZoom => _regroupGate.topologyZoomFor(_cameraZoom);
   @override
-  MapMarkerOverview? get markerOverview => _overviewController.drawableOverview;
+  MapMarkerOverview? get markerOverview =>
+      PublicFallbackService().isIpfsFallbackMode
+          ? null
+          : _overviewController.drawableOverview;
 
   /// The overview can express the content-layer toggles but not filters that
   /// depend on per-artwork state, so those fall back to detailed markers.
@@ -519,8 +561,44 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       };
 
   @override
+  void didUpdateWidget(covariant DesktopMapScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+
+    final center = widget.initialCenter;
+    final cameraChanged = oldWidget.initialCenter != center ||
+        oldWidget.initialZoom != widget.initialZoom;
+    if (!cameraChanged ||
+        center == null ||
+        widget.initialMarkerId != null ||
+        widget.initialArtworkId != null ||
+        widget.initialSubjectId != null) {
+      return;
+    }
+
+    // Browser Back/Forward may change a map URL without rebuilding the shell.
+    // The existing map controller applies the new entry camera while marker
+    // targets and user-follow continue to own their established paths.
+    _yieldFollowToDeliberateCamera();
+    _autoFollow = false;
+    _kubusMapController.setAutoFollow(false);
+    _cameraCenter = center;
+    _cameraZoom = widget.initialZoom ?? _cameraZoom;
+    _initialLocaleViewportApplied = true;
+    unawaited(
+      _mapCameraController.animateTo(
+        center,
+        zoom: _cameraZoom,
+        duration: Duration.zero,
+      ),
+    );
+  }
+
+  @override
   void initState() {
     super.initState();
+    final fallbackService = PublicFallbackService();
+    _lastObservedIpfsFallbackMode = fallbackService.isIpfsFallbackMode;
+    fallbackService.addListener(_handlePublicFallbackModeChanged);
     if (!kIsWeb &&
         (defaultTargetPlatform == TargetPlatform.android ||
             defaultTargetPlatform == TargetPlatform.iOS)) {
@@ -603,6 +681,9 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       registeredMapImagesOut: _registeredMapImages,
       onAutoFollowChanged: (value) {
         if (!mounted) return;
+        // Follow-off is a manual pan or zoom, a selection or a deliberate
+        // navigation. Each one outranks a pending center request.
+        if (!value) _recenter.supersede();
         _safeSetState(() => _autoFollow = value);
       },
       onSelectionChanged: (state) {
@@ -652,6 +733,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
         );
 
         final marker = state.selectedMarker;
+        _syncPublicMarkerUrlClaim(state.selectedMarkerId);
         if (marker != null) {
           _linkedSubjectCoordinator.selectionChanged(marker);
           // Run selection-only side effects once per selection token.
@@ -721,7 +803,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
 
     _mapTargetCoordinator = MapTargetCoordinator(
       loadedMarkers: () => _artMarkers,
-      fetchMarkerById: MapDataController().getArtMarkerById,
+      fetchMarkerById: MapDataController().getArtMarkerForDirectTarget,
       fetchMarkersByArtwork: MapDataController().getArtMarkersByArtwork,
       loadMarkersAround: _loadMarkersAroundTarget,
       mergeMarkers: _mergeDirectTargetMarkers,
@@ -961,6 +1043,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       _tutorialOverlayController = overlayController;
     }
     _syncRootTutorialBinding();
+    _syncPublicMarkerUrlClaim(_kubusMapController.selectedMarkerId);
   }
 
   void _resolveInitialLocaleViewport() {
@@ -1744,10 +1827,27 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     final messenger = ScaffoldMessenger.maybeOf(context);
     final l10n = AppLocalizations.of(context);
     if (messenger == null || l10n == null) return;
-    final message = result == MapTargetResult.coordinatesOnly
-        ? l10n.mapTargetMarkerUnavailableToast
-        : l10n.mapTargetNotFoundToast;
+    final message = switch (result) {
+      MapTargetResult.coordinatesOnly => l10n.mapTargetMarkerUnavailableToast,
+      MapTargetResult.transientFailure => l10n.entityUnavailableBody,
+      _ => l10n.mapTargetNotFoundToast,
+    };
     messenger.showKubusSnackBar(SnackBar(content: Text(message)));
+  }
+
+  void _signalMarkerTakeoverFailed(String markerId) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      try {
+        unawaited(
+          context.read<PublicEntityTakeoverProvider>().markEntityFailed(
+                ShareEntityType.marker,
+                markerId,
+              ),
+        );
+      } catch (_) {}
+    });
+    WidgetsBinding.instance.ensureVisualUpdate();
   }
 
   void _handleMapTargetTerminal(
@@ -1755,22 +1855,38 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     MapTargetResult result,
   ) {
     final markerId = intent.exactMarkerId?.trim() ?? '';
-    if (result != MapTargetResult.overlayOpened || markerId.isEmpty) return;
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      try {
-        unawaited(
-          context.read<PublicEntityTakeoverProvider>().markEntityReady(
-                ShareEntityType.marker,
-                markerId,
-              ),
+    if (markerId.isEmpty) return;
+    switch (mapTargetEntryEffectFor(result)) {
+      case MapTargetEntryEffect.unresolved:
+        // The requested marker never resolved, so it can never claim the
+        // address: stop it pinning a phantom marker URL over the plain map.
+        PublicEntryNavigation.instance.entryUnresolved(
+          ShareEntityType.marker,
+          markerId,
         );
-      } catch (_) {}
-    });
-    // An idle app schedules no frame, and a post-frame callback does not ask
-    // for one: without this the readiness (and with it the public takeover)
-    // would wait for the next unrelated frame.
-    WidgetsBinding.instance.ensureVisualUpdate();
+      case MapTargetEntryEffect.markFailed:
+        // The lookup failed without an answer: the marker may exist, so the
+        // entity keeps its address (no entryUnresolved, no URL rewrite).
+        _signalMarkerTakeoverFailed(markerId);
+      case MapTargetEntryEffect.markReady:
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (!mounted) return;
+          try {
+            unawaited(
+              context.read<PublicEntityTakeoverProvider>().markEntityReady(
+                    ShareEntityType.marker,
+                    markerId,
+                  ),
+            );
+          } catch (_) {}
+        });
+        // An idle app schedules no frame, and a post-frame callback does not ask
+        // for one: without this the readiness (and with it the public takeover)
+        // would wait for the next unrelated frame.
+        WidgetsBinding.instance.ensureVisualUpdate();
+      case MapTargetEntryEffect.none:
+        break;
+    }
   }
 
   LatLng get _effectiveCenter => _cameraCenter;
@@ -1821,11 +1937,61 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       _deactivateRootTutorialOwner(reason: 'desktop-map-route-hidden');
     }
     _isRouteVisible = isVisible;
+    PublicEntryNavigation.instance.visibilityChanged();
     _handleActiveStateChanged();
     _syncRootTutorialBinding();
     if (isVisible) {
       _scheduleWebMapResizeRecovery(reason: 'routeVisible');
     }
+  }
+
+  void _syncPublicMarkerUrlClaim(String? selectedMarkerId) {
+    final navigation = PublicEntryNavigation.instance;
+    final nextId = selectedMarkerId?.trim();
+    final locale = Localizations.maybeLocaleOf(context)?.languageCode == 'sl'
+        ? 'sl'
+        : 'en';
+    if (!kIsWeb || nextId == null || nextId.isEmpty) {
+      final previousId = _publicMarkerUrlClaimId;
+      final hadClaim = _publicMarkerUrlClaim != null;
+      navigation.release(_publicMarkerUrlClaim);
+      _publicMarkerUrlClaim = null;
+      _publicMarkerUrlClaimId = null;
+      _publicMarkerUrlLanguage = null;
+      if (previousId != null) {
+        navigation.abandonEntry(ShareEntityType.marker, previousId);
+      }
+      if (hadClaim || previousId != null) navigation.visibilityChanged();
+      return;
+    }
+    if (_publicMarkerUrlClaimId == nextId &&
+        _publicMarkerUrlLanguage == locale) {
+      return;
+    }
+
+    final previousId = _publicMarkerUrlClaimId;
+    navigation.release(_publicMarkerUrlClaim);
+    if (previousId != null && previousId != nextId) {
+      navigation.abandonEntry(ShareEntityType.marker, previousId);
+    }
+    _publicMarkerUrlClaim = navigation.claim(
+      context,
+      type: ShareEntityType.marker,
+      entityId: nextId,
+      localizedPath: (languageCode) =>
+          PublicEntityTakeoverProvider.localizedCanonicalPath(
+        ShareEntityType.marker,
+        nextId,
+        languageCode,
+      ),
+      isShowing: () =>
+          mounted &&
+          _isRouteVisible &&
+          _kubusMapController.selectedMarkerId == nextId,
+    );
+    _publicMarkerUrlClaimId = nextId;
+    _publicMarkerUrlLanguage = locale;
+    navigation.visibilityChanged();
   }
 
   void _scheduleWebMapResizeRecovery({required String reason}) {
@@ -1930,6 +2096,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
   /// current camera viewport. This keeps deep links and search selections
   /// reliable when their marker is outside the loaded viewport snapshot.
   Future<void> _loadMarkersAroundTarget(LatLng position) async {
+    if (PublicFallbackService().isIpfsFallbackMode) return;
     if (!_pollingEnabled) return;
     if (_isLoadingMarkers) {
       _pendingTargetMarkerLoad = position;
@@ -1940,6 +2107,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
   }
 
   Future<void> _loadMarkersAroundTargetNow(LatLng position) async {
+    if (PublicFallbackService().isIpfsFallbackMode) return;
     if (!_pollingEnabled || _isLoadingMarkers) return;
 
     final artworkProvider = context.read<ArtworkProvider>();
@@ -1958,6 +2126,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
         filtersKey: _markerQueryFiltersKey(),
       );
       if (!mounted || requestId != _markerRequestId) return;
+      if (PublicFallbackService().isIpfsFallbackMode) return;
 
       _mergeDirectTargetMarkers(result.markers);
       unawaited(_syncMapMarkers(themeProvider: themeProvider));
@@ -2190,6 +2359,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
   /// follow-me, whose location refreshes would otherwise re-centre the camera
   /// and undo it (see the matching helper on the phone map).
   void _yieldFollowToDeliberateCamera() {
+    _recenter.supersede();
     if (!_autoFollow) return;
     _kubusMapController.setAutoFollow(false);
     _safeSetState(() => _autoFollow = false);
@@ -2450,6 +2620,11 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
 
   @override
   void dispose() {
+    PublicFallbackService().removeListener(_handlePublicFallbackModeChanged);
+    PublicEntryNavigation.instance.release(_publicMarkerUrlClaim);
+    _publicMarkerUrlClaim = null;
+    _publicMarkerUrlClaimId = null;
+    _recenter.dispose();
     _userLocationAnimator.dispose();
     _compassSubscription?.cancel();
     _headingExpiryTimer?.cancel();
@@ -2936,90 +3111,111 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     return map;
   }
 
+  /// The "center on me" control: a deliberate request, see
+  /// [MapRecenterController].
+  void _recenterOnUser() {
+    unawaited(
+      _recenter.recenterOnUser(
+        knownPosition: _userLocation,
+        knownAccuracyMeters: _userLocationAccuracyMeters,
+        knownTimestampMs: _userLocationTimestampMs,
+      ),
+    );
+  }
+
+  /// Refreshes the live fix and, when asked or following, moves the camera.
+  /// A result overtaken by a newer deliberate request or navigation updates the
+  /// location but never moves the camera.
   Future<void> _refreshUserLocation({
     bool animate = false,
     bool requestPermission = false,
   }) async {
-    if (_isLocating) return;
-    setState(() => _isLocating = true);
-    try {
-      final navigation = _walkingNavigationProvider;
-      if (requestPermission && navigation?.isVisible == true) {
-        navigation!.beginLocationRequest(lease: _walkingNavigationLease);
-      }
-      final result = await _walkingLocationApi.acquireLiveFix(
-        requestPermission: requestPermission,
-      );
-      final fix = result.fix;
-      if (!result.isAvailable || fix == null) {
-        if (navigation?.isVisible == true) {
-          navigation!.reportLocationAccess(
-            result.status,
-            lease: _walkingNavigationLease,
-          );
-        }
-        if (requestPermission &&
-            _filterState.scope == KubusMapScope.nearMe &&
-            mounted) {
-          setState(() {
-            _filterState = _filterState.withScope(
-              KubusMapScope.currentViewport,
-            );
-            _loadedViewportBounds = null;
-            _loadedViewportZoomBucket = null;
-          });
-          unawaited(_loadMarkersForCurrentView(force: true));
-        }
-        return;
-      }
-      final current = fix.position;
-      if (!mounted) return;
-      setState(() {
-        _userLocation = current;
-        _userLocationAccuracyMeters = fix.accuracyMeters;
-        _userLocationTimestampMs = fix.timestamp.millisecondsSinceEpoch;
-        // The route overview owns the camera until Resume; see the mobile
-        // screen for the same rule.
-        if (_autoFollow &&
-            !(_walkingNavigationMapCoordinator?.isRouteOverviewActive ??
-                false)) {
-          _cameraCenter = current;
-        }
-      });
-      unawaited(_syncUserLocation());
-      final walkingNavigation = navigation;
-      if (walkingNavigation != null && walkingNavigation.isVisible) {
-        await walkingNavigation.updatePosition(
-          current,
-          accuracyMeters: fix.accuracyMeters,
+    final revision = _recenter.revision;
+    final result = await _acquireUserFix(requestPermission: requestPermission);
+    final fix = result.fix;
+    if (!mounted || !result.isAvailable || fix == null) return;
+    if (revision != _recenter.revision || _recenter.hasPendingRequest) return;
+    if (animate || _autoFollow) {
+      _moveCamera(fix.position, math.max(_effectiveZoom, 15));
+    }
+  }
+
+  /// Acquires one live fix and applies it to the map's location state. It never
+  /// moves the camera; callers decide that.
+  Future<WalkingLocationAccessResult> _acquireUserFix({
+    required bool requestPermission,
+  }) async {
+    final navigation = _walkingNavigationProvider;
+    if (requestPermission && navigation?.isVisible == true) {
+      navigation!.beginLocationRequest(lease: _walkingNavigationLease);
+    }
+    final result = await _walkingLocationApi.acquireLiveFix(
+      requestPermission: requestPermission,
+    );
+    final fix = result.fix;
+    if (!result.isAvailable || fix == null) {
+      if (navigation?.isVisible == true) {
+        navigation!.reportLocationAccess(
+          result.status,
           lease: _walkingNavigationLease,
         );
-        if (!mounted) return;
-        _startWalkingPositionStream();
       }
-      WalkingNavigationDiagnostics.record('live_fix_acquired');
-      _mapDataCoordinator.refreshNearMeForLocation(current);
-
-      final selectedMarker = _kubusMapController.selectedMarkerData;
-      if (selectedMarker != null) {
-        context.read<AttendanceProvider>().updateProximity(
-              markerId: selectedMarker.id,
-              lat: current.latitude,
-              lng: current.longitude,
-              distanceMeters:
-                  _calculateDistance(current, selectedMarker.position),
-              activationRadiusMeters: selectedMarker.activationRadius,
-              requiresProximity: selectedMarker.requiresProximity,
-              accuracyMeters: _userLocationAccuracyMeters,
-              timestampMs: _userLocationTimestampMs,
-            );
+      if (requestPermission &&
+          _filterState.scope == KubusMapScope.nearMe &&
+          mounted) {
+        setState(() {
+          _filterState = _filterState.withScope(
+            KubusMapScope.currentViewport,
+          );
+          _loadedViewportBounds = null;
+          _loadedViewportZoomBucket = null;
+        });
+        unawaited(_loadMarkersForCurrentView(force: true));
       }
-      if (animate || _autoFollow) {
-        _moveCamera(current, math.max(_effectiveZoom, 15));
-      }
-    } finally {
-      if (mounted) setState(() => _isLocating = false);
+      return result;
     }
+    final current = fix.position;
+    if (!mounted) return result;
+    setState(() {
+      _userLocation = current;
+      _userLocationAccuracyMeters = fix.accuracyMeters;
+      _userLocationTimestampMs = fix.timestamp.millisecondsSinceEpoch;
+      // The route overview owns the camera until Resume; see the mobile
+      // screen for the same rule.
+      if (_autoFollow &&
+          !(_walkingNavigationMapCoordinator?.isRouteOverviewActive ?? false)) {
+        _cameraCenter = current;
+      }
+    });
+    unawaited(_syncUserLocation());
+    final walkingNavigation = navigation;
+    if (walkingNavigation != null && walkingNavigation.isVisible) {
+      await walkingNavigation.updatePosition(
+        current,
+        accuracyMeters: fix.accuracyMeters,
+        lease: _walkingNavigationLease,
+      );
+      if (!mounted) return result;
+      _startWalkingPositionStream();
+    }
+    WalkingNavigationDiagnostics.record('live_fix_acquired');
+    _mapDataCoordinator.refreshNearMeForLocation(current);
+
+    final selectedMarker = _kubusMapController.selectedMarkerData;
+    if (selectedMarker != null) {
+      context.read<AttendanceProvider>().updateProximity(
+            markerId: selectedMarker.id,
+            lat: current.latitude,
+            lng: current.longitude,
+            distanceMeters:
+                _calculateDistance(current, selectedMarker.position),
+            activationRadiusMeters: selectedMarker.activationRadius,
+            requiresProximity: selectedMarker.requiresProximity,
+            accuracyMeters: _userLocationAccuracyMeters,
+            timestampMs: _userLocationTimestampMs,
+          );
+    }
+    return result;
   }
 
   void _startWalkingPositionStream() {
@@ -4415,10 +4611,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
           controller: _kubusMapController,
           layout: KubusMapPrimaryControlsLayout.desktopToolbar,
           accentColor: themeProvider.accentColor,
-          onCenterOnMe: () {
-            _kubusMapController.setAutoFollow(true);
-            _refreshUserLocation(animate: true, requestPermission: true);
-          },
+          onCenterOnMe: _recenterOnUser,
           centerOnMeActive: _autoFollow,
           centerOnMeTooltip: l10n.mapCenterOnMeTooltip,
           onCreateMarker: () {
@@ -5092,6 +5285,9 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
   }
 
   List<ArtMarker> _computeVisibleMarkers() {
+    if (PublicFallbackService().isIpfsFallbackMode) {
+      return const <ArtMarker>[];
+    }
     final artworkProvider = context.read<ArtworkProvider>();
     Artwork? artworkFor(ArtMarker marker) {
       final id = marker.artworkId;
@@ -5123,6 +5319,72 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       alwaysIncludeMarkerIds: pinnedIds.isEmpty ? null : pinnedIds,
     );
   }
+
+  void _handlePublicFallbackModeChanged() {
+    final isIpfsFallback = PublicFallbackService().isIpfsFallbackMode;
+    if (_lastObservedIpfsFallbackMode == isIpfsFallback) return;
+    _lastObservedIpfsFallbackMode = isIpfsFallback;
+    if (!mounted) return;
+
+    if (isIpfsFallback) {
+      _markerRequestId += 1;
+      _isLoadingMarkers = false;
+      _pendingMarkerRefresh = false;
+      _pendingMarkerRefreshForce = false;
+      _lastMarkerFetchCenter = null;
+      _lastMarkerFetchTime = null;
+      _loadedViewportBounds = null;
+      _loadedViewportZoomBucket = null;
+      _pendingRestoreMarker = null;
+      _overviewController.deactivate();
+      _artMarkers = const <ArtMarker>[];
+      _kubusMapController.dismissSelection();
+      _kubusMapController.setMarkers(const <ArtMarker>[]);
+      _safeSetState(() {});
+      _applyVisibleMarkers();
+      unawaited(
+        _syncMapMarkersSafe(themeProvider: context.read<ThemeProvider>()),
+      );
+      return;
+    }
+
+    unawaited(_loadMarkersForCurrentView(force: true));
+  }
+
+  @visibleForTesting
+  void debugSetLoadedMarkersForTest(List<ArtMarker> markers) {
+    _safeSetState(() => _artMarkers = List<ArtMarker>.of(markers));
+    _applyVisibleMarkers();
+  }
+
+  @visibleForTesting
+  Future<void> debugLoadOverviewForTest({
+    required GeoBounds bounds,
+    required double zoom,
+    bool keepForHandoff = false,
+  }) async {
+    final outcome = await _overviewController.refresh(
+      visible: bounds,
+      queryBounds: bounds,
+      zoom: zoom,
+      force: true,
+      allowed: true,
+    );
+    if (keepForHandoff &&
+        (outcome == KubusMapOverviewRefresh.applied ||
+            outcome == KubusMapOverviewRefresh.unchanged)) {
+      _overviewController.deactivate(keepForHandoff: true);
+    }
+  }
+
+  @visibleForTesting
+  List<String> get debugMarkerSourceInputIdsForTest => _kubusMapController
+      .buildRenderedMarkers()
+      .map((rendered) => rendered.marker.id)
+      .toList(growable: false);
+
+  @visibleForTesting
+  bool get debugHasDrawableOverviewForTest => markerOverview != null;
 
   List<Artwork> _getFilteredArtworks(
     List<Artwork> artworks, {
@@ -5183,6 +5445,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
   }
 
   Future<void> _loadMarkersForCurrentView({bool force = false}) async {
+    if (PublicFallbackService().isIpfsFallbackMode) return;
     if (!_pollingEnabled) {
       _queuePendingMarkerRefresh(force: force);
       return;
@@ -5197,6 +5460,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     if (useBoundsQuery) {
       zoomBucket = MapViewportUtils.zoomBucket(_cameraZoom);
       final visible = await _getVisibleGeoBounds();
+      if (PublicFallbackService().isIpfsFallbackMode) return;
       if (visible == null) return;
       bounds = MapViewportUtils.expandBounds(
         visible,
@@ -5218,6 +5482,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     bool force = false,
     int? zoomBucket,
   }) async {
+    if (PublicFallbackService().isIpfsFallbackMode) return;
     if (!_pollingEnabled) {
       _queuePendingMarkerRefresh(force: force);
       return;
@@ -5283,6 +5548,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
         allowed: _overviewAllowedByFilters,
       );
       if (!mounted) return;
+      if (PublicFallbackService().isIpfsFallbackMode) return;
       switch (overviewOutcome) {
         case KubusMapOverviewRefresh.applied:
           unawaited(_syncMapMarkers(themeProvider: themeProvider));
@@ -5353,6 +5619,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
             );
       if (!mounted) return;
       if (requestId != _markerRequestId) return;
+      if (PublicFallbackService().isIpfsFallbackMode) return;
 
       final merged = useBoundsQuery
           ? ArtMarkerListDiff.upsertById(
@@ -5556,6 +5823,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
   }
 
   void _handleMarkerCreated(ArtMarker marker) {
+    if (PublicFallbackService().isIpfsFallbackMode) return;
     if (!marker.hasValidPosition) return;
 
     final existingIndex = _artMarkers.indexWhere((m) => m.id == marker.id);

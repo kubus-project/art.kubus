@@ -73,7 +73,7 @@ void main() {
   );
 
   test(
-    'getArtMarkersByArtwork falls back to the public snapshot when the relation endpoint is unavailable',
+    'getArtMarkersByArtwork never serves marker rows from the public snapshot when the relation endpoint is unavailable',
     () async {
       const artworkId = '11111111-1111-4111-8111-111111111111';
       const markerCid =
@@ -131,10 +131,12 @@ void main() {
         artworkId,
       );
 
+      // Immutable snapshots cannot prove current marker visibility, so even a
+      // well-formed, cached marker snapshot must be withheld (see
+      // PublicFallbackService.loadDatasetArray). The relation lookup degrades
+      // to the safe empty state instead of resurrecting a possibly revoked row.
       expect(requestCount, 1);
-      expect(markers, hasLength(1));
-      expect(markers.single.id, markerId);
-      expect(markers.single.artworkId, artworkId);
+      expect(markers, isEmpty);
     },
   );
 

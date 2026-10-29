@@ -157,8 +157,8 @@ class _MnemonicRevealContentState extends State<MnemonicRevealContent> {
     } catch (_) {
       if (!mounted) return;
       messenger.showKubusSnackBar(
-        const SnackBar(
-          content: Text('Unable to copy the recovery phrase on this device.'),
+        SnackBar(
+          content: Text(l10n.mnemonicRevealCopyUnavailableToast),
         ),
         tone: KubusSnackBarTone.error,
       );

@@ -187,6 +187,40 @@ void main() {
       );
     });
 
+    test('rail builder never reads keyed chrome geometry mid-build', () {
+      // The rail rebuilds on every Nearby extent change, and that change can
+      // deactivate the search chrome in the same build pass. Its GlobalKey then
+      // still resolves to a detached render object, and reading it throws
+      // ("Null check operator used on a null value" on web). Geometry must be
+      // captured post-frame and only read from fields in the builder.
+      final builderStart = source.indexOf('Widget _buildPrimaryControls(');
+      final builderEnd = source.indexOf(
+        'void _scheduleNearbySheetGeometryMeasurement({',
+        builderStart,
+      );
+      expect(builderStart, greaterThanOrEqualTo(0));
+      expect(builderEnd, greaterThan(builderStart));
+      final builder = source.substring(builderStart, builderEnd);
+      expect(builder, contains('final railHeight = _measuredRailHeight;'));
+      expect(builder, isNot(contains('_rectInMapViewport(')));
+
+      final measureStart =
+          source.indexOf('void _scheduleMobileRailMeasurement(');
+      final measureEnd =
+          source.indexOf('void _openMobileMapTools() {', measureStart);
+      expect(measureStart, greaterThanOrEqualTo(0));
+      expect(measureEnd, greaterThan(measureStart));
+      final measurement = source.substring(measureStart, measureEnd);
+      expect(
+        measurement,
+        contains('_measuredTopChromeBottom = math.max('),
+      );
+      expect(
+        measurement,
+        contains('_measuredRailHeight = railRect?.height ?? 0.0;'),
+      );
+    });
+
     test('create marker becomes dominant only after prerequisites', () {
       final walletGuard =
           source.indexOf('if (wallet == null || wallet.isEmpty)');

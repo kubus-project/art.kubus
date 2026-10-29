@@ -426,6 +426,9 @@ class PublicActionOutboxService extends ChangeNotifier {
   ) async {
     Object? lastError;
 
+    // Unlike other writes (BackendApiService.mayRepeatOnAnotherBackend), this batch
+    // may be resent to every write base: each action carries a clientActionId the
+    // backend records in public_action_replays and answers as a duplicate.
     for (final baseUrl in _fallbackService.preferredWriteBaseUrls) {
       try {
         final response = await _client

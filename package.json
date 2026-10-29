@@ -1,6 +1,6 @@
 {
   "name": "art-kubus-workspace",
-  "version": "0.8.4",
+  "version": "0.8.5",
   "private": true,
   "packageManager": "npm@11.7.0",
   "engines": {

@@ -43,6 +43,7 @@ import 'media_upload_optimizer.dart';
 import 'telemetry/kubus_client_context.dart';
 import 'telemetry/telemetry_uuid.dart';
 import 'node/turn_configuration.dart';
+import 'account_identity.dart';
 
 part 'backend_api_service_auth_helpers.dart';
 part 'backend_api_service_auth_account_helpers.dart';
@@ -360,6 +361,14 @@ class BackendApiService
 
   http.Client _client = http.Client();
   AuthSessionCoordinator? _authCoordinator;
+
+  /// Bumped at every sign-out (see [clearAuth]). Account requests capture it when
+  /// they start and drop their local writes once it has moved on, so a response
+  /// that lands after sign-out cannot repopulate the next session's state.
+  int _authSessionEpoch = 0;
+
+  /// Epoch of the current authenticated session; changes at every sign-out.
+  int get authSessionEpoch => _authSessionEpoch;
   MediaUploadOptimizer _mediaUploadOptimizer = const MediaUploadOptimizer();
 
   // Used only for diagnostic logging; the actual behavior is determined by the
@@ -608,6 +617,7 @@ class BackendApiService
   void setAuthTokenForTesting(String? token) {
     _authToken = token;
     _authWalletCanonical = _tryExtractWalletFromToken(token);
+    AccountIdentity.setAccountKey(_accountKeyOf(token));
   }
 
   @visibleForTesting
@@ -773,19 +783,17 @@ class BackendApiService
     return out.length > 1000 ? out.substring(0, 1000) : out;
   }
 
+  /// Best-effort, single attempt: diagnostics carry no bearer token and are
+  /// never retried or failed over, so a broken backend cannot amplify reports.
   Future<http.Response?> postClientDiagnostics(String jsonBody) async {
     try {
-      final headers = _getHeaders(includeAuth: false);
-      final token = (_authToken ?? '').trim();
-      if (token.isNotEmpty) {
-        headers['Authorization'] = 'Bearer $token';
-      }
       return await _post(
         Uri.parse('$baseUrl/api/diagnostics/error'),
         includeAuth: false,
-        headers: headers,
+        headers: _getHeaders(includeAuth: false),
         body: jsonBody,
-        isIdempotent: true,
+        isIdempotent: false,
+        allowImplicitBackendFailover: false,
         timeout: const Duration(seconds: 5),
       );
     } catch (_) {
@@ -803,6 +811,35 @@ class BackendApiService
   @visibleForTesting
   static bool disableHttpFailureDiagnosticsForTesting = false;
 
+  static String _diagnosticsPathWithoutQuery(String rawPath) {
+    final queryStart = rawPath.indexOf('?');
+    return queryStart < 0 ? rawPath : rawPath.substring(0, queryStart);
+  }
+
+  static final RegExp _diagnosticsUuidSegment = RegExp(
+    r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$',
+  );
+  static final RegExp _diagnosticsNumericSegment = RegExp(r'^\d+$');
+  static final RegExp _diagnosticsHexSegment =
+      RegExp(r'^0x[0-9a-fA-F]+$', caseSensitive: false);
+  static final RegExp _diagnosticsBase58Segment =
+      RegExp(r'^[1-9A-HJ-NP-Za-km-z]{32,}$');
+
+  /// Collapses identifier-like path segments so `/api/profiles/<id>` reports
+  /// for different ids share one dedupe key.
+  static String _diagnosticsDedupePath(String path) {
+    return _diagnosticsPathWithoutQuery(path).split('/').map((segment) {
+      if (segment.isEmpty) return segment;
+      if (_diagnosticsUuidSegment.hasMatch(segment) ||
+          _diagnosticsNumericSegment.hasMatch(segment) ||
+          _diagnosticsHexSegment.hasMatch(segment) ||
+          _diagnosticsBase58Segment.hasMatch(segment)) {
+        return ':id';
+      }
+      return segment;
+    }).join('/');
+  }
+
   void _captureHttpFailureDiagnostics({
     required String method,
     required Uri uri,
@@ -815,8 +852,9 @@ class BackendApiService
     // 401/403 without a session is an expected guest outcome, not a defect;
     // reporting each one doubles guest request volume for no signal.
     if ((status == 401 || status == 403) && !hasAuthSession) return;
-    // Dedupe repeats: one report per method+path+status per window.
-    final dedupeKey = '$method ${uri.path} $status';
+    // Dedupe repeats: one report per method+normalized path+status per window.
+    final path = _diagnosticsPathWithoutQuery(uri.path);
+    final dedupeKey = '$method ${_diagnosticsDedupePath(path)} $status';
     final lastAt = _diagnosticsLastReportAt[dedupeKey];
     final now = DateTime.now();
     if (lastAt != null && now.difference(lastAt) < _diagnosticsRepeatWindow) {
@@ -850,7 +888,7 @@ class BackendApiService
           'requestId': _lastRequestId,
           'metadata': _sanitizeDiagnosticsMetadata({
             'method': method.toUpperCase(),
-            'path': uri.path,
+            'path': path,
             'status_code': status,
             'response_preview': bodyPreview,
           }),
@@ -962,11 +1000,42 @@ class BackendApiService
     await ensureAuthLoaded(walletAddress: desiredCanonical);
   }
 
+  /// The account a token belongs to: its wallet and user id from the payload.
+  /// Empty when the token cannot be read.
+  String _authIdentityOf(String? token) {
+    final payload = _tryDecodeJwtPayload((token ?? '').trim());
+    if (payload == null) return '';
+    final wallet = _tryExtractWalletFromToken(token) ?? '';
+    final userId = (payload['user_id'] ?? payload['id'] ?? payload['sub'] ?? '')
+        .toString()
+        .trim();
+    return '$wallet|$userId';
+  }
+
+  /// The stable id of the account a token belongs to, for the device records
+  /// kept per account. Empty when the token cannot be read (a guest).
+  String _accountKeyOf(String? token) {
+    final payload = _tryDecodeJwtPayload((token ?? '').trim());
+    if (payload == null) return '';
+    for (final claim in const ['user_id', 'id', 'sub']) {
+      final value = (payload[claim] ?? '').toString().trim();
+      if (value.isNotEmpty) return value;
+    }
+    return _tryExtractWalletFromToken(token) ?? '';
+  }
+
   /// Set authentication token for API requests
   Future<void> setAuthToken(String token) async {
+    final previousIdentity = _authIdentityOf(_authToken);
     _authToken = token;
     _authWalletCanonical = _tryExtractWalletFromToken(token);
+    AccountIdentity.setAccountKey(_accountKeyOf(token));
     AppConfig.debugPrint('BackendApiService: Auth token set (in-memory)');
+    // A token for another account ends the previous identity's local state.
+    final nextIdentity = _authIdentityOf(token);
+    if (previousIdentity.isNotEmpty && previousIdentity != nextIdentity) {
+      await AccountIdentity.notifyChanged();
+    }
     if (!_hasInitializedBinding) {
       AppConfig.debugPrint(
         'BackendApiService: skipping auth token persistence (binding not initialized)',
@@ -1103,6 +1172,7 @@ class BackendApiService
         if (AuthGatingService.isAccessTokenValid(token)) {
           _authToken = token;
           _authWalletCanonical = _tryExtractWalletFromToken(token);
+          AccountIdentity.setAccountKey(_accountKeyOf(token));
           await resolveLastSignInMethod();
           AppConfig.debugPrint(
             'BackendApiService: Auth token loaded (in-memory)',
@@ -1110,6 +1180,7 @@ class BackendApiService
         } else {
           _authToken = null;
           _authWalletCanonical = null;
+          AccountIdentity.setAccountKey('');
           AppConfig.debugPrint(
             'BackendApiService: Stored auth token is expired; ignoring',
           );
@@ -1147,9 +1218,15 @@ class BackendApiService
 
   /// Clear authentication
   Future<void> clearAuth() async {
+    _authSessionEpoch += 1;
     _authToken = null;
     _authWalletCanonical = null;
     _authCoordinator?.reset();
+    // Every way the session ends comes through here (sign-out, a token for
+    // another wallet, a deleted or suspended account). The session is now a
+    // guest's. Listeners run before the first await below.
+    AccountIdentity.setAccountKey('');
+    await AccountIdentity.notifyChanged();
     try {
       await _secureStorage
           .delete(key: 'jwt_token')
@@ -1172,6 +1249,10 @@ class BackendApiService
         await prefs.remove(key);
       }
       await prefs.remove(PreferenceKeys.authLastSignInMethodV1);
+      // Account-scoped email and security status; sign-in repopulates them.
+      for (final key in secureAccountStatusPrefKeys) {
+        await prefs.remove(key);
+      }
       AppConfig.debugPrint(
         'BackendApiService: Auth cleared from SharedPreferences',
       );
@@ -1258,6 +1339,33 @@ class BackendApiService
         lower.contains('unauthorized');
   }
 
+  /// Reports that the backend refused this session because the account is
+  /// suspended (socket `auth:error` / handshake rejection). Goes through the
+  /// same coordinator as a REST `403 ACCOUNT_INACTIVE`, so there is one path
+  /// that ends the session. Returns whether a coordinator took it.
+  Future<bool> reportAccountInactive({required String source}) async {
+    final coordinator = _authCoordinator;
+    if (coordinator == null) {
+      // Production binds the SecurityGateProvider at startup; without one the
+      // most that can be done here is to drop the credentials, never to keep a
+      // suspended session alive.
+      await clearAuth();
+      return false;
+    }
+    await coordinator.handleAuthFailure(
+      AuthFailureContext(
+        statusCode: 403,
+        method: source,
+        path: '/socket.io',
+        body: jsonEncode(<String, Object>{
+          'success': false,
+          'errorCode': AccountInactiveSignal.errorCode,
+        }),
+      ),
+    );
+    return true;
+  }
+
   bool _isAuthFailureStatus({
     required int statusCode,
     required String? responseBody,
@@ -1310,6 +1418,7 @@ class BackendApiService
     bool retriedAfterReauth = false,
     bool retriedAfterWritableRedirect = false,
     bool allowImplicitBackendFailover = true,
+    bool replaySafe = false,
     Set<String>? attemptedBackendOrigins,
   }) async {
     final attemptedOrigins = Set<String>.from(
@@ -1447,7 +1556,13 @@ class BackendApiService
           throw ArgumentError('Unsupported method: $method');
       }
     } catch (error) {
-      if (allowImplicitBackendFailover && _isFallbackEligibleReadError(error)) {
+      if (allowImplicitBackendFailover &&
+          _isFallbackEligibleReadError(error) &&
+          mayRepeatOnAnotherBackend(
+            method: method,
+            replaySafe: replaySafe,
+            error: error,
+          )) {
         final failoverUri = _nextImplicitFailoverUri(
           uri,
           method: method,
@@ -1462,6 +1577,7 @@ class BackendApiService
             body: body,
             encoding: encoding,
             isIdempotent: isIdempotent,
+            replaySafe: replaySafe,
             timeout: timeout,
             retriedAfterReauth: retriedAfterReauth,
             retriedAfterWritableRedirect: retriedAfterWritableRedirect,
@@ -1496,13 +1612,20 @@ class BackendApiService
     );
 
     final coordinator = _authCoordinator;
-    final isAuthFailure = includeAuth &&
+    final accountInactive = includeAuth &&
         coordinator != null &&
-        AppConfig.isFeatureEnabled('rePromptLoginOnExpiry') &&
-        _isAuthFailureStatus(
+        AccountInactiveSignal.isRestResponse(
           statusCode: response.statusCode,
-          responseBody: response.body,
+          body: response.body,
         );
+    final isAuthFailure = accountInactive ||
+        (includeAuth &&
+            coordinator != null &&
+            AppConfig.isFeatureEnabled('rePromptLoginOnExpiry') &&
+            _isAuthFailureStatus(
+              statusCode: response.statusCode,
+              responseBody: response.body,
+            ));
 
     if (!isAuthFailure) {
       if (_isSuccessStatus(response.statusCode)) {
@@ -1530,6 +1653,7 @@ class BackendApiService
             body: body,
             encoding: encoding,
             isIdempotent: isIdempotent,
+            replaySafe: replaySafe,
             timeout: timeout,
             retriedAfterReauth: retriedAfterReauth,
             retriedAfterWritableRedirect: true,
@@ -1541,7 +1665,12 @@ class BackendApiService
       }
 
       if (allowImplicitBackendFailover &&
-          _shouldImplicitFailoverOnStatus(method, response.statusCode)) {
+          _shouldImplicitFailoverOnStatus(method, response.statusCode) &&
+          mayRepeatOnAnotherBackend(
+            method: method,
+            replaySafe: replaySafe,
+            statusCode: response.statusCode,
+          )) {
         final failoverUri = _nextImplicitFailoverUri(
           uri,
           method: method,
@@ -1556,6 +1685,7 @@ class BackendApiService
             body: body,
             encoding: encoding,
             isIdempotent: isIdempotent,
+            replaySafe: replaySafe,
             timeout: timeout,
             retriedAfterReauth: retriedAfterReauth,
             retriedAfterWritableRedirect: retriedAfterWritableRedirect,
@@ -1568,10 +1698,12 @@ class BackendApiService
       return response;
     }
 
-    if (retriedAfterReauth) {
+    if (retriedAfterReauth && !accountInactive) {
       return response;
     }
 
+    // A suspended account is ended by the coordinator and never retried: the
+    // result is never a success, so the request below is not replayed.
     final result = await coordinator.handleAuthFailure(
       AuthFailureContext(
         statusCode: response.statusCode,
@@ -1596,6 +1728,7 @@ class BackendApiService
         body: body,
         encoding: encoding,
         isIdempotent: isIdempotent,
+        replaySafe: replaySafe,
         timeout: timeout,
         retriedAfterReauth: true,
         retriedAfterWritableRedirect: retriedAfterWritableRedirect,
@@ -1732,6 +1865,7 @@ class BackendApiService
     bool retriedAfterReauth = false,
     bool retriedAfterWritableRedirect = false,
     bool allowImplicitBackendFailover = true,
+    bool replaySafe = false,
     Set<String>? attemptedBackendOrigins,
   }) async {
     _lastMultipartTimeoutForTesting = timeout;
@@ -1774,7 +1908,13 @@ class BackendApiService
       if (error is TimeoutException) {
         rethrow;
       }
-      if (allowImplicitBackendFailover && _isFallbackEligibleReadError(error)) {
+      if (allowImplicitBackendFailover &&
+          _isFallbackEligibleReadError(error) &&
+          mayRepeatOnAnotherBackend(
+            method: request.method,
+            replaySafe: replaySafe,
+            error: error,
+          )) {
         final failoverUri = _nextImplicitFailoverUri(
           request.url,
           method: request.method,
@@ -1798,6 +1938,7 @@ class BackendApiService
             retriedAfterReauth: retriedAfterReauth,
             retriedAfterWritableRedirect: retriedAfterWritableRedirect,
             allowImplicitBackendFailover: allowImplicitBackendFailover,
+            replaySafe: replaySafe,
             attemptedBackendOrigins: attemptedOrigins,
           );
         }
@@ -1837,6 +1978,7 @@ class BackendApiService
           retriedAfterReauth: retriedAfterReauth,
           retriedAfterWritableRedirect: true,
           allowImplicitBackendFailover: false,
+          replaySafe: replaySafe,
           attemptedBackendOrigins: attemptedOrigins,
         );
       }
@@ -1844,7 +1986,12 @@ class BackendApiService
     }
 
     if (allowImplicitBackendFailover &&
-        _shouldImplicitFailoverOnStatus(request.method, response.statusCode)) {
+        _shouldImplicitFailoverOnStatus(request.method, response.statusCode) &&
+        mayRepeatOnAnotherBackend(
+          method: request.method,
+          replaySafe: replaySafe,
+          statusCode: response.statusCode,
+        )) {
       final failoverUri = _nextImplicitFailoverUri(
         request.url,
         method: request.method,
@@ -1868,22 +2015,30 @@ class BackendApiService
           retriedAfterReauth: retriedAfterReauth,
           retriedAfterWritableRedirect: retriedAfterWritableRedirect,
           allowImplicitBackendFailover: allowImplicitBackendFailover,
+          replaySafe: replaySafe,
           attemptedBackendOrigins: attemptedOrigins,
         );
       }
     }
 
     final coordinator = _authCoordinator;
-    final isAuthFailure = includeAuth &&
+    final accountInactive = includeAuth &&
         coordinator != null &&
-        AppConfig.isFeatureEnabled('rePromptLoginOnExpiry') &&
-        _isAuthFailureStatus(
+        AccountInactiveSignal.isRestResponse(
           statusCode: response.statusCode,
-          responseBody: response.body,
+          body: response.body,
         );
+    final isAuthFailure = accountInactive ||
+        (includeAuth &&
+            coordinator != null &&
+            AppConfig.isFeatureEnabled('rePromptLoginOnExpiry') &&
+            _isAuthFailureStatus(
+              statusCode: response.statusCode,
+              responseBody: response.body,
+            ));
 
     if (!isAuthFailure) return response;
-    if (retriedAfterReauth) return response;
+    if (retriedAfterReauth && !accountInactive) return response;
 
     final result = await coordinator.handleAuthFailure(
       AuthFailureContext(
@@ -1906,6 +2061,7 @@ class BackendApiService
       retriedAfterReauth: true,
       retriedAfterWritableRedirect: retriedAfterWritableRedirect,
       allowImplicitBackendFailover: allowImplicitBackendFailover,
+      replaySafe: replaySafe,
       attemptedBackendOrigins: attemptedOrigins,
     );
   }
@@ -1940,6 +2096,7 @@ class BackendApiService
     required String? email,
     required bool emailVerified,
     required bool emailAuthEnabled,
+    int? sessionEpoch,
   }) async {
     await _backendApiPersistSecureAccountStatus(
       hasEmail: hasEmail,
@@ -1947,6 +2104,7 @@ class BackendApiService
       email: email,
       emailVerified: emailVerified,
       emailAuthEnabled: emailAuthEnabled,
+      sessionEpoch: sessionEpoch,
     );
   }
 
@@ -1958,14 +2116,18 @@ class BackendApiService
     return _backendApiGetCachedSecureAccountStatus(this);
   }
 
+  /// [sessionEpoch] is the epoch captured when the request that produced [body]
+  /// started. A body that arrives after sign-out is then discarded.
   Future<void> syncSecureAccountStatusFromResponse(
     Map<String, dynamic> body, {
     bool fetchIfMissing = true,
+    int? sessionEpoch,
   }) async {
     await _backendApiSyncSecureAccountStatusFromResponse(
       this,
       body,
       fetchIfMissing: fetchIfMissing,
+      sessionEpoch: sessionEpoch,
     );
   }
 
@@ -2009,6 +2171,7 @@ class BackendApiService
     bool includeAuth = true,
     bool allowOrbitFallback = false,
     bool allowImplicitBackendFailover = true,
+    bool orbitAnswerIsAuthoritative = false,
   }) async {
     final key = _rateLimitKey('GET', uri);
     if (_isRateLimited(key)) {
@@ -2126,6 +2289,16 @@ class BackendApiService
       'fetch_json_orbit_failed:${fallbackUri.path}:${fallbackResponse.statusCode}',
       'BackendApiService: Orbit fallback failed ${fallbackResponse.statusCode} for ${fallbackUri.path}',
     );
+    final fallbackStatus = fallbackResponse.statusCode;
+    if (orbitAnswerIsAuthoritative &&
+        fallbackStatus >= 400 &&
+        fallbackStatus < 500 &&
+        fallbackStatus != 408) {
+      // The mirror answered: the entity is absent there (404) or refused. Report
+      // that answer as the status itself, so the caller sees it as a 4xx answer
+      // and not as an outage, while the primary failure stays in the message.
+      throw Exception('Request failed: $fallbackStatus ($primaryFailure)');
+    }
     throw Exception(
         '$primaryFailure (Orbit fallback failed: ${fallbackResponse.statusCode})');
   }
@@ -2267,7 +2440,7 @@ class BackendApiService
         nestedResponse['code']?.toString() == 'NODE_NOT_WRITABLE') {
       return true;
     }
-    return response.body.contains('NODE_NOT_WRITABLE');
+    return false;
   }
 
   Uri? _redirectNodeNotWritableRequest(
@@ -2363,13 +2536,44 @@ class BackendApiService
     Map<String, String>? queryParameters,
     bool includeAuth = true,
     bool allowOrbitFallback = false,
+    bool orbitAnswerIsAuthoritative = false,
   }) {
     return _fetchJson(
       _buildApiUri(rawBaseUrl, path, queryParameters: queryParameters),
       includeAuth: includeAuth,
       allowOrbitFallback: allowOrbitFallback,
       allowImplicitBackendFailover: false,
+      orbitAnswerIsAuthoritative: orbitAnswerIsAuthoritative,
     );
+  }
+
+  /// Whether an unconfirmed request may be repeated on another backend.
+  /// Reads and operations with authoritative server replay protection may move.
+  /// Generic HTTP statuses and transport error text never prove non-commit.
+  /// NODE_NOT_WRITABLE is a structured rejection from the pre-mutation guard.
+  @visibleForTesting
+  static bool mayRepeatOnAnotherBackend({
+    required String method,
+    required bool replaySafe,
+    int? statusCode,
+    Object? error,
+  }) {
+    final normalized = method.toUpperCase();
+    if (normalized == 'GET' ||
+        normalized == 'HEAD' ||
+        normalized == 'OPTIONS') {
+      return true;
+    }
+    if (replaySafe) return true;
+    if (error is BackendApiRequestException && error.statusCode == 503) {
+      try {
+        final payload = jsonDecode(error.body ?? '');
+        return payload is Map && payload['code'] == 'NODE_NOT_WRITABLE';
+      } on FormatException {
+        return false;
+      }
+    }
+    return false;
   }
 
   bool _isFallbackEligibleReadError(Object error) {
@@ -2393,10 +2597,15 @@ class BackendApiService
     return const <int>{502, 503, 504, 522, 523, 524, 530}.contains(status);
   }
 
+  /// [snapshotMissIsFailure] is for public-entry reads that must tell "absent"
+  /// from "unreachable": when every live read failed with an outage and the
+  /// snapshot has no entry either, the outage is rethrown instead of a null
+  /// answer. Default callers keep the snapshot's null.
   Future<R> _performPublicRead<R>({
     required Future<R> Function(String baseUrl) liveRead,
     required Future<R> Function() snapshotRead,
     bool allowSnapshot = true,
+    bool snapshotMissIsFailure = false,
   }) async {
     Object? lastFallbackEligibleError;
 
@@ -2421,14 +2630,21 @@ class BackendApiService
     }
 
     if (allowSnapshot) {
+      final R snapshotResult;
       try {
-        return await snapshotRead();
+        snapshotResult = await snapshotRead();
       } catch (snapshotError) {
         if (lastFallbackEligibleError != null) {
           throw lastFallbackEligibleError;
         }
         rethrow;
       }
+      if (snapshotMissIsFailure &&
+          snapshotResult == null &&
+          lastFallbackEligibleError != null) {
+        throw lastFallbackEligibleError;
+      }
+      return snapshotResult;
     }
 
     if (lastFallbackEligibleError != null) {
@@ -2459,6 +2675,7 @@ class BackendApiService
     Object? body,
     Encoding? encoding,
     bool isIdempotent = false,
+    bool replaySafe = false,
     Duration timeout = AppConfig.requestTimeout,
   }) async {
     http.Response? lastResponse;
@@ -2466,6 +2683,17 @@ class BackendApiService
 
     for (final candidateBaseUrl
         in _publicFallbackService.preferredWriteBaseUrls) {
+      // A later candidate only gets this request when the previous failure
+      // proves it was not applied, or repeating it is harmless.
+      if ((lastResponse != null || lastError != null) &&
+          !mayRepeatOnAnotherBackend(
+            method: method,
+            replaySafe: replaySafe,
+            statusCode: lastError == null ? lastResponse?.statusCode : null,
+            error: lastError,
+          )) {
+        break;
+      }
       final uri = _buildApiUri(candidateBaseUrl, path);
       try {
         final response = await _request(
@@ -2476,6 +2704,7 @@ class BackendApiService
           body: body,
           encoding: encoding,
           isIdempotent: isIdempotent,
+          replaySafe: replaySafe,
           timeout: timeout,
           allowImplicitBackendFailover: false,
         );
@@ -2489,8 +2718,10 @@ class BackendApiService
           return response;
         }
         lastResponse = response;
+        lastError = null;
       } catch (error) {
         lastError = error;
+        lastResponse = null;
       }
     }
 
@@ -2509,6 +2740,7 @@ class BackendApiService
     Object? body,
     Encoding? encoding,
     bool isIdempotent = false,
+    bool replaySafe = false,
     Duration timeout = AppConfig.requestTimeout,
   }) async {
     http.Response? lastResponse;
@@ -2520,6 +2752,17 @@ class BackendApiService
         : _publicFallbackService.preferredWriteBaseUrls;
 
     for (final candidateBaseUrl in candidateBaseUrls) {
+      // A later candidate only gets this request when the previous failure
+      // proves it was not applied, or repeating it is harmless.
+      if ((lastResponse != null || lastError != null) &&
+          !mayRepeatOnAnotherBackend(
+            method: normalizedMethod,
+            replaySafe: replaySafe,
+            statusCode: lastError == null ? lastResponse?.statusCode : null,
+            error: lastError,
+          )) {
+        break;
+      }
       final uri = _buildApiUri(
         candidateBaseUrl,
         normalizedPath,
@@ -2534,6 +2777,7 @@ class BackendApiService
           body: body,
           encoding: encoding,
           isIdempotent: isIdempotent || normalizedMethod == 'GET',
+          replaySafe: replaySafe,
           timeout: timeout,
           allowImplicitBackendFailover: false,
         );
@@ -2547,8 +2791,10 @@ class BackendApiService
           return response;
         }
         lastResponse = response;
+        lastError = null;
       } catch (error) {
         lastError = error;
+        lastResponse = null;
       }
     }
 
@@ -3976,12 +4222,17 @@ class BackendApiService
   ///
   /// Older backends ignore `relationship`; check
   /// [ProfileArtworksPage.relationshipHonoured] before trusting the scope.
+  ///
+  /// [includeAuth] is for the signed-in owner reading their own scope: the
+  /// backend returns the owner's private drafts only to an authenticated
+  /// owner. Public callers keep the default anonymous read.
   Future<ProfileArtworksPage> getProfileArtworks(
     String walletAddress, {
     required String relationship,
     int limit = 20,
     int offset = 0,
     String? status,
+    bool includeAuth = false,
   }) async {
     try {
       final queryParams = <String, String>{
@@ -3991,13 +4242,16 @@ class BackendApiService
       };
       if (status != null) queryParams['status'] = status;
 
+      if (includeAuth) {
+        await _ensureAuthBeforeRequest();
+      }
       final uri = Uri.parse(
         '$baseUrl/api/profiles/$walletAddress/artworks',
       ).replace(queryParameters: queryParams);
       final response = await _get(
         uri,
-        includeAuth: false,
-        headers: _getHeaders(includeAuth: false),
+        includeAuth: includeAuth,
+        headers: _getHeaders(includeAuth: includeAuth),
       );
 
       if (response.statusCode == 200) {
@@ -4411,45 +4665,62 @@ class BackendApiService
     String markerId, {
     bool allowOrbitFallback = true,
   }) async {
-    final id = markerId.trim();
-    if (id.isEmpty) return null;
-
     try {
-      return await _performPublicRead<ArtMarker?>(
-        liveRead: (candidateBaseUrl) async {
-          final data = await _fetchJsonFromBaseUrl(
-            candidateBaseUrl,
-            '/api/art-markers/$id',
-            includeAuth: false,
-            allowOrbitFallback: allowOrbitFallback,
-          );
-
-          final payload =
-              data['data'] ?? data['marker'] ?? data['artMarker'] ?? data;
-          if (payload is Map<String, dynamic>) {
-            return _artMarkerFromBackendJson(payload);
-          }
-          if (payload is Map) {
-            return _artMarkerFromBackendJson(
-              Map<String, dynamic>.from(payload),
-            );
-          }
-          return null;
-        },
-        snapshotRead: () async {
-          final markers = await _loadSnapshotDatasetMaps('markers');
-          for (final entry in markers) {
-            if ((entry['id'] ?? '').toString().trim() == id) {
-              return _artMarkerFromBackendJson(entry);
-            }
-          }
-          return null;
-        },
+      return await getArtMarkerOrThrow(
+        markerId,
+        allowOrbitFallback: allowOrbitFallback,
       );
     } catch (e) {
       AppConfig.debugPrint('BackendApiService.getArtMarker failed: $e');
       return null;
     }
+  }
+
+  /// [getArtMarker] for public-entry reads: a failed lookup throws instead of
+  /// returning null, so the caller can tell a transient failure from a marker
+  /// that does not exist (`PublicEntityLoadOutcome`).
+  Future<ArtMarker?> getArtMarkerOrThrow(
+    String markerId, {
+    bool allowOrbitFallback = true,
+  }) async {
+    final id = markerId.trim();
+    if (id.isEmpty) return null;
+
+    return _performPublicRead<ArtMarker?>(
+      // A failed primary and mirror read is an outage, not an absent marker:
+      // the snapshot may not hold the marker and must not turn it into null.
+      snapshotMissIsFailure: true,
+      liveRead: (candidateBaseUrl) async {
+        final data = await _fetchJsonFromBaseUrl(
+          candidateBaseUrl,
+          '/api/art-markers/$id',
+          includeAuth: false,
+          allowOrbitFallback: allowOrbitFallback,
+          orbitAnswerIsAuthoritative: true,
+        );
+
+        final payload =
+            data['data'] ?? data['marker'] ?? data['artMarker'] ?? data;
+        if (payload is Map<String, dynamic>) {
+          return _artMarkerFromBackendJson(payload);
+        }
+        if (payload is Map) {
+          return _artMarkerFromBackendJson(
+            Map<String, dynamic>.from(payload),
+          );
+        }
+        return null;
+      },
+      snapshotRead: () async {
+        final markers = await _loadSnapshotDatasetMaps('markers');
+        for (final entry in markers) {
+          if ((entry['id'] ?? '').toString().trim() == id) {
+            return _artMarkerFromBackendJson(entry);
+          }
+        }
+        return null;
+      },
+    );
   }
 
   /// Get map markers linked through the authoritative artwork relation.
@@ -6275,6 +6546,7 @@ class BackendApiService
     int limit = 20,
     bool? arOnly,
     String? authorWallet,
+    String? authorUserId,
     bool? followingOnly,
     String? surface,
     String? tag,
@@ -6291,6 +6563,12 @@ class BackendApiService
 
       if (arOnly != null) queryParams['arOnly'] = arOnly.toString();
       if (authorWallet != null) queryParams['authorWallet'] = authorWallet;
+      final normalizedAuthorUserId = authorUserId?.trim() ?? '';
+      if (normalizedAuthorUserId.isNotEmpty) {
+        // Older backends ignore unknown parameters; callers that cannot
+        // trust the response must filter client-side.
+        queryParams['authorUserId'] = normalizedAuthorUserId;
+      }
       if (followingOnly != null) {
         queryParams['followingOnly'] = followingOnly.toString();
       }
@@ -6351,6 +6629,11 @@ class BackendApiService
                 authorWallet.trim().isNotEmpty &&
                 WalletUtils.canonical(post.authorWallet) !=
                     WalletUtils.canonical(authorWallet)) {
+              return false;
+            }
+            if (normalizedAuthorUserId.isNotEmpty &&
+                (post.authorIdentityData.userId ?? '').trim().toLowerCase() !=
+                    normalizedAuthorUserId.toLowerCase()) {
               return false;
             }
             if (tag != null && tag.trim().isNotEmpty) {

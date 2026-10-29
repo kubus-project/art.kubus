@@ -147,7 +147,7 @@ async function containNetwork(context) {
       (url) =>
         url.origin !== localOrigin &&
         url.origin !== new URL(apiOrigin).origin &&
-        !/kubus\.site|cartocdn|openstreetmap|basemaps/.test(url.hostname),
+        !/kubus\.site|openfreemap|openstreetmap/.test(url.hostname),
       (route) => route.fulfill({ status: 503, body: '' }),
     );
   }

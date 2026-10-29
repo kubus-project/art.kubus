@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import '../config/config.dart';
 import '../models/art_marker.dart';
 import 'backend_api_service.dart';
+import 'public_fallback_service.dart';
 
 @immutable
 class MapDataControllerStats {
@@ -96,11 +97,36 @@ class MapDataController {
     _debugMarkersByArtworkInFlightDedupes = 0;
   }
 
+  /// Null when the marker is absent or its lookup failed. Public-entry direct
+  /// targets use [getArtMarkerForDirectTarget] so a failure is not mistaken for
+  /// a missing marker.
   Future<ArtMarker?> getArtMarkerById(String markerId) {
+    return _loadArtMarkerById(markerId).catchError((Object e, StackTrace st) {
+      // Best-effort: keep failures local and avoid poisoning caches.
+      if (kDebugMode) {
+        AppConfig.debugPrint(
+            'MapDataController: getArtMarkerById($markerId) failed: $e');
+        AppConfig.debugPrint('MapDataController: getArtMarkerById stack: $st');
+      }
+      return null;
+    });
+  }
+
+  /// Throws when the lookup fails (rate limit, outage, transport), so the map
+  /// target coordinator can report a transient failure instead of "not found".
+  /// Resolves to null only when the marker does not exist.
+  Future<ArtMarker?> getArtMarkerForDirectTarget(String markerId) =>
+      _loadArtMarkerById(markerId);
+
+  Future<ArtMarker?> _loadArtMarkerById(String markerId) {
     final id = markerId.trim();
     if (id.isEmpty) return Future<ArtMarker?>.value(null);
 
     _debugMarkerByIdCalls += 1;
+    // Do not let an in-memory live result bypass the public fallback contract.
+    if (PublicFallbackService().isIpfsFallbackMode) {
+      return Future<ArtMarker?>.value(null);
+    }
 
     final cached = _markerByIdCache[id];
     if (cached != null &&
@@ -115,20 +141,15 @@ class MapDataController {
       return inFlight;
     }
 
-    final future = _backendApiService.getArtMarker(id).then((marker) {
+    // A failed lookup throws and caches nothing (the cache is written only on
+    // an answer).
+    final future = _backendApiService.getArtMarkerOrThrow(id).then((marker) {
+      if (PublicFallbackService().isIpfsFallbackMode) return null;
       _markerByIdCache[id] = _MarkerByIdCacheEntry(
         marker: marker,
         fetchedAt: DateTime.now(),
       );
       return marker;
-    }).catchError((Object e, StackTrace st) {
-      // Best-effort: keep failures local and avoid poisoning caches.
-      if (kDebugMode) {
-        AppConfig.debugPrint(
-            'MapDataController: getArtMarkerById($id) failed: $e');
-        AppConfig.debugPrint('MapDataController: getArtMarkerById stack: $st');
-      }
-      return null;
     }).whenComplete(() {
       _inFlightMarkerById.remove(id);
     });
@@ -142,6 +163,9 @@ class MapDataController {
     if (id.isEmpty) return Future<List<ArtMarker>>.value(const <ArtMarker>[]);
 
     _debugMarkersByArtworkCalls += 1;
+    if (PublicFallbackService().isIpfsFallbackMode) {
+      return Future<List<ArtMarker>>.value(const <ArtMarker>[]);
+    }
 
     final cached = _markersByArtworkCache[id];
     if (cached != null &&
@@ -157,6 +181,9 @@ class MapDataController {
     }
 
     final future = _backendApiService.getArtMarkersByArtwork(id).then((items) {
+      if (PublicFallbackService().isIpfsFallbackMode) {
+        return const <ArtMarker>[];
+      }
       final markers = List<ArtMarker>.unmodifiable(items);
       _markersByArtworkCache[id] = _MarkersByArtworkCacheEntry(
         markers: markers,

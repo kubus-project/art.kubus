@@ -9,6 +9,7 @@ import '../models/user.dart';
 import '../services/backend_api_service.dart';
 import '../services/profile_package_mutation_tracker.dart';
 import '../services/profile_package_service.dart';
+import '../services/public_entity_load_outcome.dart';
 import '../services/user_service.dart';
 import '../utils/wallet_utils.dart';
 import 'community_interactions_provider.dart';
@@ -21,12 +22,26 @@ import 'stats_provider.dart';
 /// extended posts/showcase update separately. Profile-affecting writes should
 /// go through ProfilePackageMutationTracker so cached achievements stay stable
 /// and backend definitions are never synthesized locally.
+final RegExp _profileUuidPattern = RegExp(
+  r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$',
+);
+
+bool _isProfileUuid(String value) => _profileUuidPattern.hasMatch(value);
+
+bool _isPublicProfileWallet(String value) {
+  final normalized = value.trim();
+  return normalized.isNotEmpty &&
+      !_isProfileUuid(normalized) &&
+      !normalized.toLowerCase().startsWith('linked_auth:');
+}
+
 class ProfilePackageController extends ChangeNotifier {
   ProfilePackageController({
     required String walletAddress,
     String? username,
     ProfileCriticalPackage? initialCriticalPackage,
-    Future<ProfileCriticalPackage?>? initialCriticalPackageFuture,
+    Future<PublicEntityLoadOutcome<ProfileCriticalPackage>>?
+        initialCriticalPackageFuture,
     Future<ProfileExtendedPackage?>? initialExtendedPackageFuture,
     ProfilePackage? initialPackage,
     Future<ProfilePackage?>? initialPackageFuture,
@@ -35,7 +50,9 @@ class ProfilePackageController extends ChangeNotifier {
         _initialCriticalPackage =
             initialCriticalPackage ?? initialPackage?.critical,
         _initialCriticalPackageFuture = initialCriticalPackageFuture ??
-            initialPackageFuture?.then((package) => package?.critical),
+            initialPackageFuture?.then(
+              (package) => _criticalOutcomeOf(package?.critical),
+            ),
         _initialExtendedPackageFuture = initialExtendedPackageFuture ??
             initialPackageFuture?.then((package) => package?.extended) {
     final package = initialPackage;
@@ -51,13 +68,29 @@ class ProfilePackageController extends ChangeNotifier {
   final String _walletAddress;
   final String? _username;
   final ProfileCriticalPackage? _initialCriticalPackage;
-  final Future<ProfileCriticalPackage?>? _initialCriticalPackageFuture;
+  final Future<PublicEntityLoadOutcome<ProfileCriticalPackage>>?
+      _initialCriticalPackageFuture;
+
+  static PublicEntityLoadOutcome<ProfileCriticalPackage> _criticalOutcomeOf(
+    ProfileCriticalPackage? critical,
+  ) =>
+      critical == null
+          ? const PublicEntityNotFound()
+          : PublicEntityFound(critical);
   final Future<ProfileExtendedPackage?>? _initialExtendedPackageFuture;
 
   ProfilePackage? _package;
   bool _isLoadingCritical = true;
   bool _isLoadingExtended = false;
   Object? _error;
+  // True when the last critical load failed without an answer (rate limit,
+  // outage, transport). The screen then shows a retryable failure instead of
+  // "not found", and signals a pending public takeover as failed.
+  bool _criticalLoadFailedTransiently = false;
+  // True when the last critical load got a definitive answer with no usable
+  // profile (the API's not-found), so the screen shows its not-found state. A
+  // pending public takeover is then resolved, not failed.
+  bool _criticalLoadNotFound = false;
   List<CommunityPost> _posts = <CommunityPost>[];
   bool _postsLoading = true;
   int _currentPage = 1;
@@ -79,9 +112,57 @@ class ProfilePackageController extends ChangeNotifier {
 
   ProfilePackage? get package => _package;
   User? get user => _package?.user;
+
+  /// Public wallet of the profile, or null for walletless account profiles.
+  String? get _postsAuthorWallet {
+    for (final candidate in <String?>[user?.id, _walletAddress]) {
+      final value = candidate?.trim() ?? '';
+      if (_isPublicProfileWallet(value)) return value;
+    }
+    return null;
+  }
+
+  /// Account user id (UUID) of the profile when one is known.
+  String? get _postsAuthorUserId {
+    for (final candidate in <String?>[user?.id, _walletAddress]) {
+      final value = candidate?.trim() ?? '';
+      if (value.isNotEmpty && _isProfileUuid(value)) return value;
+    }
+    return null;
+  }
+
+  /// The one author key sent with profile post requests. A wallet wins; the
+  /// backend ANDs authorWallet with authorUserId, so sending both can only drop
+  /// posts. Both null means nothing is fetched (never the global feed).
+  ({String? wallet, String? userId}) get _postsAuthorKey {
+    final wallet = _postsAuthorWallet;
+    if (wallet != null) return (wallet: wallet, userId: null);
+    return (wallet: null, userId: _postsAuthorUserId);
+  }
+
+  /// Posts for this profile. A walletless profile sends `authorUserId` only,
+  /// and every returned post is re-checked against that id, so a backend that
+  /// ignores the parameter cannot show other authors' posts here.
+  List<CommunityPost> _ownPostsOnly(
+    List<CommunityPost> posts, {
+    required String? wallet,
+    required String? userId,
+  }) {
+    if (wallet != null) return posts;
+    if (userId == null) return const <CommunityPost>[];
+    final expected = userId.toLowerCase();
+    return posts
+        .where((post) =>
+            (post.authorIdentityData.userId ?? '').trim().toLowerCase() ==
+            expected)
+        .toList(growable: false);
+  }
+
   bool get isLoadingCritical => _isLoadingCritical;
   bool get isLoadingExtended => _isLoadingExtended;
   Object? get error => _error;
+  bool get criticalLoadFailedTransiently => _criticalLoadFailedTransiently;
+  bool get criticalLoadNotFound => _criticalLoadNotFound;
   List<CommunityPost> get posts => List<CommunityPost>.unmodifiable(_posts);
   bool get postsLoading => _postsLoading;
   bool get loadingMore => _loadingMore;
@@ -141,6 +222,8 @@ class ProfilePackageController extends ChangeNotifier {
   }) async {
     final epoch = ++_loadEpoch;
     _error = null;
+    _criticalLoadFailedTransiently = false;
+    _criticalLoadNotFound = false;
     if (_package == null) {
       _isLoadingCritical = true;
       _notifyListenersSafe();
@@ -163,17 +246,22 @@ class ProfilePackageController extends ChangeNotifier {
     }
 
     try {
-      final critical = !forceRefresh && _initialCriticalPackageFuture != null
+      final outcome = !forceRefresh && _initialCriticalPackageFuture != null
           ? await _initialCriticalPackageFuture
-          : await ProfilePackageService.loadPublicProfileCriticalPackage(
+          : await ProfilePackageService.loadPublicProfileCriticalOutcome(
               _walletAddress,
               forceRefresh: forceRefresh,
               username: _username,
             );
       if (epoch != _loadEpoch) return;
+      final critical = outcome.valueOrNull;
       if (critical == null || !critical.isComplete) {
         _package = null;
         _isLoadingCritical = false;
+        _criticalLoadFailedTransiently =
+            outcome is PublicEntityTransientFailure<ProfileCriticalPackage>;
+        // Every other empty result is the screen's not-found state: an answer.
+        _criticalLoadNotFound = !_criticalLoadFailedTransiently;
         _error = StateError('Profile package critical load failed');
         _notifyListenersSafe();
         return;
@@ -267,6 +355,8 @@ class ProfilePackageController extends ChangeNotifier {
     );
     _isLoadingCritical = false;
     _error = null;
+    _criticalLoadFailedTransiently = false;
+    _criticalLoadNotFound = false;
     _publicStreetArtAddedCount = critical.publicStats['publicStreetArtAdded'] ??
         _publicStreetArtAddedCount;
     _notifyListenersSafe();
@@ -424,11 +514,18 @@ class ProfilePackageController extends ChangeNotifier {
 
     try {
       const pageSize = 20;
-      final posts = await BackendApiService().getCommunityPosts(
-        page: _currentPage,
-        limit: pageSize,
-        authorWallet: currentUser.id,
-      );
+      final key = _postsAuthorKey;
+      final wallet = key.wallet;
+      final userId = key.userId;
+      final fetched = (wallet == null && userId == null)
+          ? const <CommunityPost>[]
+          : await BackendApiService().getCommunityPosts(
+              page: _currentPage,
+              limit: pageSize,
+              authorWallet: wallet,
+              authorUserId: userId,
+            );
+      final posts = _ownPostsOnly(fetched, wallet: wallet, userId: userId);
       await _hydratePostInteractions(
         posts,
         savedItemsProvider: savedItemsProvider,
@@ -436,12 +533,13 @@ class ProfilePackageController extends ChangeNotifier {
       );
       _posts = posts;
       _postsLoading = false;
-      _isLastPage = posts.length < pageSize;
+      _isLastPage = fetched.length < pageSize;
       _postsError = null;
-      patchStats(<String, int>{'posts': posts.length});
+      // The page length is not the total: counts come from the stats endpoint.
       ProfilePackageMutationTracker.postsPatched(
         wallet: currentUser.id,
         posts: _posts,
+        updateCount: false,
       );
       _notifyListenersSafe();
     } catch (e) {
@@ -469,11 +567,18 @@ class ProfilePackageController extends ChangeNotifier {
 
     try {
       const pageSize = 20;
-      final more = await BackendApiService().getCommunityPosts(
-        page: _currentPage,
-        limit: pageSize,
-        authorWallet: currentUser.id,
-      );
+      final key = _postsAuthorKey;
+      final wallet = key.wallet;
+      final userId = key.userId;
+      final fetched = (wallet == null && userId == null)
+          ? const <CommunityPost>[]
+          : await BackendApiService().getCommunityPosts(
+              page: _currentPage,
+              limit: pageSize,
+              authorWallet: wallet,
+              authorUserId: userId,
+            );
+      final more = _ownPostsOnly(fetched, wallet: wallet, userId: userId);
       await _hydratePostInteractions(
         more,
         savedItemsProvider: savedItemsProvider,
@@ -481,7 +586,7 @@ class ProfilePackageController extends ChangeNotifier {
       );
       // A new list: the one in hand may be fixed-length or unmodifiable.
       _posts = <CommunityPost>[..._posts, ...more];
-      _isLastPage = more.length < pageSize;
+      _isLastPage = fetched.length < pageSize;
       _loadingMore = false;
       ProfilePackageMutationTracker.postsPatched(
         wallet: currentUser.id,

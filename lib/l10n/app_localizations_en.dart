@@ -1252,6 +1252,13 @@ class AppLocalizationsEn extends AppLocalizations {
       'Your session has expired. Sign in again to continue.';
 
   @override
+  String get authAccountSuspendedTitle => 'Account suspended';
+
+  @override
+  String get authAccountSuspendedMessage =>
+      'Access to this account has been suspended, so you have been signed out. Your wallet on this device is not affected. If you think this is a mistake, contact support.';
+
+  @override
   String get authAccountCreatedProfileLoading =>
       'Account created. Loading your profile in the background.';
 
@@ -4080,6 +4087,10 @@ class AppLocalizationsEn extends AppLocalizations {
       'Connect a wallet before submitting.';
 
   @override
+  String get institutionHubApplicationWalletWhy =>
+      'Applying is signed with your wallet, so the review stays tied to a wallet you control. Browsing institutions does not need one.';
+
+  @override
   String get institutionHubApplicationSubmittedToast =>
       'Application submitted for governance review.';
 
@@ -4907,6 +4918,25 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get mapCenterOnMeTooltip => 'Center on me';
+
+  @override
+  String get mapCenterOnMeLocating => 'Finding your location…';
+
+  @override
+  String get mapCenterOnMePermissionDenied =>
+      'Allow location access to center the map on you.';
+
+  @override
+  String get mapCenterOnMePermissionBlocked =>
+      'Location access is blocked for art.kubus. Enable it in app settings to center the map on you.';
+
+  @override
+  String get mapCenterOnMeServicesDisabled =>
+      'Turn on location services to center the map on you.';
+
+  @override
+  String get mapCenterOnMeTimedOut =>
+      'Finding your location took too long. Try again.';
 
   @override
   String get mapAddMapMarkerTooltip => 'Add map marker';
@@ -7984,6 +8014,21 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get qrScannerSwitchCameraFailedToast => 'Unable to switch camera.';
+
+  @override
+  String get qrScannerTorchOnTooltip => 'Turn on flashlight';
+
+  @override
+  String get qrScannerTorchOffTooltip => 'Turn off flashlight';
+
+  @override
+  String get qrScannerSwitchCameraTooltip => 'Switch camera';
+
+  @override
+  String get commentLikeTooltip => 'Like comment';
+
+  @override
+  String get commentUnlikeTooltip => 'Unlike comment';
 
   @override
   String get artworkNotFound => 'Artwork not found';
@@ -18514,4 +18559,180 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get contributionApplication => 'View application status';
+
+  @override
+  String get arMarkerManagerTitle => 'AR Marker';
+
+  @override
+  String get arMarkerManagerSubtitle =>
+      'Set up a printable marker so people can scan and unlock the AR experience.';
+
+  @override
+  String get arMarkerManagerOnlyPngToast => 'Only PNG markers are supported.';
+
+  @override
+  String get arMarkerManagerSquareRequiredToast =>
+      'Marker must be square (width == height).';
+
+  @override
+  String arMarkerManagerTooSmallToast(int minPx) {
+    return 'Marker is too small. Minimum is $minPx×${minPx}px.';
+  }
+
+  @override
+  String arMarkerManagerTooLargeToast(int maxPx) {
+    return 'Marker is too large. Maximum is $maxPx×${maxPx}px.';
+  }
+
+  @override
+  String get arMarkerManagerModeTitle => 'Marker mode';
+
+  @override
+  String get arMarkerManagerAutoGenerateTitle => 'Auto-generate';
+
+  @override
+  String get arMarkerManagerAutoGenerateSubtitle =>
+      'kubus generates a marker for this artwork.';
+
+  @override
+  String get arMarkerManagerUploadOwnTitle => 'Upload my own';
+
+  @override
+  String arMarkerManagerUploadOwnSubtitle(int minPx, int maxPx) {
+    return 'Upload a square PNG marker ($minPx–${maxPx}px).';
+  }
+
+  @override
+  String get arMarkerManagerSizeLabel => 'Marker size (px)';
+
+  @override
+  String get arMarkerManagerGenerateButton => 'Generate';
+
+  @override
+  String get arMarkerManagerRegenerateButton => 'Regenerate';
+
+  @override
+  String get arMarkerManagerRequirementsTitle => 'Upload requirements';
+
+  @override
+  String arMarkerManagerRequirementsBody(int minPx, int maxPx) {
+    return 'PNG only • Square • $minPx–${maxPx}px • High contrast • Leave a safe border for printing.';
+  }
+
+  @override
+  String get arMarkerManagerSelectPngButton => 'Select PNG';
+
+  @override
+  String get arMarkerManagerChangeFileButton => 'Change file';
+
+  @override
+  String get arMarkerManagerUploadButton => 'Upload marker';
+
+  @override
+  String get arMarkerManagerPreviewTitle => 'Preview';
+
+  @override
+  String get arMarkerManagerDownloadButton => 'Download marker';
+
+  @override
+  String get arMarkerManagerSavedToast => 'AR setup saved.';
+
+  @override
+  String get promotionCheckoutOpenAppButton => 'Open app';
+
+  @override
+  String get arCreateArtworkLocationMarkerTitle =>
+      'Create artwork location marker';
+
+  @override
+  String get mnemonicRevealCopyUnavailableToast =>
+      'Unable to copy the recovery phrase on this device.';
+
+  @override
+  String get promotionCheckoutReturnAppBarTitle => 'Promotion Checkout';
+
+  @override
+  String get promotionCheckoutReturnDefaultTitle => 'Promotion checkout';
+
+  @override
+  String get promotionCheckoutReturnSuccessTitle =>
+      'Promotion payment received';
+
+  @override
+  String get promotionCheckoutReturnSuccessBody =>
+      'Your payment was received. The promotion request is now waiting for admin review.';
+
+  @override
+  String get promotionCheckoutReturnCancelledTitle =>
+      'Promotion checkout cancelled';
+
+  @override
+  String get promotionCheckoutReturnCancelledBody =>
+      'No payment was captured. You can return to the app and submit the promotion again when ready.';
+
+  @override
+  String get promotionCheckoutReturnDefaultBody =>
+      'Return to the app to review the current status of your promotion request.';
+
+  @override
+  String promotionCheckoutReturnSessionLabel(String sessionId) {
+    return 'Stripe session: $sessionId';
+  }
+
+  @override
+  String get artistPortfolioSectionAuthored => 'Authored artworks';
+
+  @override
+  String get artistPortfolioSectionPublicArt => 'Added public art';
+
+  @override
+  String get artistPortfolioSectionCollections => 'Collections & exhibitions';
+
+  @override
+  String artistPortfolioSectionLabelWithCount(String label, int count) {
+    return '$label ($count)';
+  }
+
+  @override
+  String get artistPortfolioAuthoredUnsupported =>
+      'Authored artworks cannot be listed separately on this server yet.';
+
+  @override
+  String get artistPortfolioPublicArtUnsupported =>
+      'Added public art from artworks cannot be listed separately on this server yet. Your map contributions are still shown.';
+
+  @override
+  String get artistPortfolioSectionLoadFailed =>
+      'This list could not be loaded.';
+
+  @override
+  String get artistPortfolioLoadMore => 'Load more';
+
+  @override
+  String get artistPortfolioPublicArtEmptyTitle => 'No public art added yet';
+
+  @override
+  String get artistPortfolioPublicArtEmptyDescription =>
+      'Public art you document on the map appears here. It stays credited to its artist.';
+
+  @override
+  String get artistPortfolioCollectionsEmptyTitle =>
+      'No collections or exhibitions yet';
+
+  @override
+  String get artistPortfolioCollectionsEmptyDescription =>
+      'Collections and exhibitions you create appear here.';
+
+  @override
+  String artistPortfolioArtistLine(String artist) {
+    return 'By $artist';
+  }
+
+  @override
+  String get artistPortfolioAddedByYou => 'Added by you';
+
+  @override
+  String artistPortfolioCardActionsLabel(String title) {
+    return 'Actions for $title';
+  }
 }

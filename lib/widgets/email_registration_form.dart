@@ -1,5 +1,6 @@
 import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:art_kubus/utils/design_tokens.dart';
+import 'package:art_kubus/widgets/common/kubus_password_visibility_toggle.dart';
 import 'package:art_kubus/widgets/kubus_button.dart';
 import 'package:flutter/material.dart';
 
@@ -87,8 +88,9 @@ class _EmailRegistrationFormState extends State<EmailRegistrationForm> {
       ),
     );
     final fieldSpacing = widget.compact ? KubusSpacing.sm : KubusSpacing.md;
-    final showOptionalUsernameSection =
-        widget.showUsername && widget.usernameController != null && !widget.requireUsername;
+    final showOptionalUsernameSection = widget.showUsername &&
+        widget.usernameController != null &&
+        !widget.requireUsername;
 
     return AutofillGroup(
       child: Column(
@@ -126,15 +128,11 @@ class _EmailRegistrationFormState extends State<EmailRegistrationForm> {
             decoration: _decoration(
               labelText: l10n.commonPassword,
               errorText: widget.passwordError,
-              suffixIcon: IconButton(
+              suffixIcon: KubusPasswordVisibilityToggle(
+                obscured: _obscurePassword,
                 onPressed: () {
                   setState(() => _obscurePassword = !_obscurePassword);
                 },
-                icon: Icon(
-                  _obscurePassword
-                      ? Icons.visibility_outlined
-                      : Icons.visibility_off_outlined,
-                ),
               ),
               border: border,
               colorScheme: colorScheme,
@@ -162,16 +160,12 @@ class _EmailRegistrationFormState extends State<EmailRegistrationForm> {
             decoration: _decoration(
               labelText: l10n.commonConfirmPassword,
               errorText: widget.confirmPasswordError,
-              suffixIcon: IconButton(
+              suffixIcon: KubusPasswordVisibilityToggle(
+                obscured: _obscureConfirmPassword,
                 onPressed: () {
                   setState(
                       () => _obscureConfirmPassword = !_obscureConfirmPassword);
                 },
-                icon: Icon(
-                  _obscureConfirmPassword
-                      ? Icons.visibility_outlined
-                      : Icons.visibility_off_outlined,
-                ),
               ),
               border: border,
               colorScheme: colorScheme,
@@ -185,7 +179,8 @@ class _EmailRegistrationFormState extends State<EmailRegistrationForm> {
             if (showOptionalUsernameSection)
               DecoratedBox(
                 decoration: BoxDecoration(
-                  color: colorScheme.surface.withValues(alpha: isDark ? 0.18 : 0.62),
+                  color: colorScheme.surface
+                      .withValues(alpha: isDark ? 0.18 : 0.62),
                   borderRadius: BorderRadius.circular(widget.compact ? 14 : 16),
                   border: Border.all(
                     color: colorScheme.outlineVariant.withValues(alpha: 0.16),

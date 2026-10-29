@@ -1252,6 +1252,13 @@ class AppLocalizationsSl extends AppLocalizations {
       'Tvoja seja je potekla. Za nadaljevanje se znova prijavi.';
 
   @override
+  String get authAccountSuspendedTitle => 'Račun je suspendiran';
+
+  @override
+  String get authAccountSuspendedMessage =>
+      'Dostop do tega računa je suspendiran, zato je bila seja končana. Denarnica na tej napravi ni prizadeta. Če meniš, da gre za napako, se obrni na podporo.';
+
+  @override
   String get authAccountCreatedProfileLoading =>
       'Račun je ustvarjen. Profil se nalaga v ozadju.';
 
@@ -4112,6 +4119,10 @@ class AppLocalizationsSl extends AppLocalizations {
       'Pred oddajo poveži denarnico.';
 
   @override
+  String get institutionHubApplicationWalletWhy =>
+      'Prijava se podpiše z vašo denarnico, zato pregled ostane vezan na denarnico, ki jo nadzorujete. Za brskanje po institucijah denarnica ni potrebna.';
+
+  @override
   String get institutionHubApplicationSubmittedToast =>
       'Prijava je oddana v pregled upravljanja.';
 
@@ -4943,6 +4954,25 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get mapCenterOnMeTooltip => 'Središči na meni';
+
+  @override
+  String get mapCenterOnMeLocating => 'Pridobivanje vaše lokacije…';
+
+  @override
+  String get mapCenterOnMePermissionDenied =>
+      'Za središčenje zemljevida na vas dovolite dostop do lokacije.';
+
+  @override
+  String get mapCenterOnMePermissionBlocked =>
+      'Dostop do lokacije je za art.kubus blokiran. Omogočite ga v nastavitvah aplikacije, da zemljevid središčite na vas.';
+
+  @override
+  String get mapCenterOnMeServicesDisabled =>
+      'Za središčenje zemljevida na vas vklopite lokacijske storitve.';
+
+  @override
+  String get mapCenterOnMeTimedOut =>
+      'Pridobivanje lokacije je trajalo predolgo. Poskusite znova.';
 
   @override
   String get mapAddMapMarkerTooltip => 'Dodaj označevalec';
@@ -8044,6 +8074,21 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get qrScannerSwitchCameraFailedToast => 'Kamere ni mogoče zamenjati.';
+
+  @override
+  String get qrScannerTorchOnTooltip => 'Vklopi bliskavico';
+
+  @override
+  String get qrScannerTorchOffTooltip => 'Izklopi bliskavico';
+
+  @override
+  String get qrScannerSwitchCameraTooltip => 'Preklopi kamero';
+
+  @override
+  String get commentLikeTooltip => 'Všečkaj komentar';
+
+  @override
+  String get commentUnlikeTooltip => 'Odstrani všeček s komentarja';
 
   @override
   String get artworkNotFound => 'Umetnina ni najdena';
@@ -18708,4 +18753,180 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get contributionApplication => 'Preveri stanje prijave';
+
+  @override
+  String get arMarkerManagerTitle => 'AR označevalec';
+
+  @override
+  String get arMarkerManagerSubtitle =>
+      'Nastavi označevalec za tisk, da ga drugi lahko skenirajo in odklenejo AR izkušnjo.';
+
+  @override
+  String get arMarkerManagerOnlyPngToast => 'Podprti so le PNG označevalci.';
+
+  @override
+  String get arMarkerManagerSquareRequiredToast =>
+      'Označevalec mora biti kvadraten (širina == višina).';
+
+  @override
+  String arMarkerManagerTooSmallToast(int minPx) {
+    return 'Označevalec je premajhen. Najmanj $minPx×${minPx}px.';
+  }
+
+  @override
+  String arMarkerManagerTooLargeToast(int maxPx) {
+    return 'Označevalec je prevelik. Največ $maxPx×${maxPx}px.';
+  }
+
+  @override
+  String get arMarkerManagerModeTitle => 'Način označevalca';
+
+  @override
+  String get arMarkerManagerAutoGenerateTitle => 'Samodejno ustvari';
+
+  @override
+  String get arMarkerManagerAutoGenerateSubtitle =>
+      'kubus ustvari označevalec za to umetnino.';
+
+  @override
+  String get arMarkerManagerUploadOwnTitle => 'Naloži svojega';
+
+  @override
+  String arMarkerManagerUploadOwnSubtitle(int minPx, int maxPx) {
+    return 'Naloži kvadratni PNG označevalec ($minPx–${maxPx}px).';
+  }
+
+  @override
+  String get arMarkerManagerSizeLabel => 'Velikost označevalca (px)';
+
+  @override
+  String get arMarkerManagerGenerateButton => 'Ustvari';
+
+  @override
+  String get arMarkerManagerRegenerateButton => 'Ustvari znova';
+
+  @override
+  String get arMarkerManagerRequirementsTitle => 'Zahteve za nalaganje';
+
+  @override
+  String arMarkerManagerRequirementsBody(int minPx, int maxPx) {
+    return 'Samo PNG • Kvadratno • $minPx–${maxPx}px • Visok kontrast • Pusti varen rob za tiskanje.';
+  }
+
+  @override
+  String get arMarkerManagerSelectPngButton => 'Izberi PNG';
+
+  @override
+  String get arMarkerManagerChangeFileButton => 'Zamenjaj datoteko';
+
+  @override
+  String get arMarkerManagerUploadButton => 'Naloži označevalec';
+
+  @override
+  String get arMarkerManagerPreviewTitle => 'Predogled';
+
+  @override
+  String get arMarkerManagerDownloadButton => 'Prenesi označevalec';
+
+  @override
+  String get arMarkerManagerSavedToast => 'AR nastavitev je shranjena.';
+
+  @override
+  String get promotionCheckoutOpenAppButton => 'Odpri aplikacijo';
+
+  @override
+  String get arCreateArtworkLocationMarkerTitle =>
+      'Ustvari lokacijski označevalec umetnine';
+
+  @override
+  String get mnemonicRevealCopyUnavailableToast =>
+      'Obnovitvene fraze na tej napravi ni mogoče kopirati.';
+
+  @override
+  String get promotionCheckoutReturnAppBarTitle => 'Plačilo promocije';
+
+  @override
+  String get promotionCheckoutReturnDefaultTitle => 'Plačilo promocije';
+
+  @override
+  String get promotionCheckoutReturnSuccessTitle =>
+      'Plačilo za promocijo je prejeto';
+
+  @override
+  String get promotionCheckoutReturnSuccessBody =>
+      'Plačilo je prejeto. Zahteva za promocijo zdaj čaka na pregled administratorja.';
+
+  @override
+  String get promotionCheckoutReturnCancelledTitle =>
+      'Plačilo za promocijo je preklicano';
+
+  @override
+  String get promotionCheckoutReturnCancelledBody =>
+      'Plačilo ni bilo izvedeno. Ko boste pripravljeni, se vrnite v aplikacijo in promocijo znova oddajte.';
+
+  @override
+  String get promotionCheckoutReturnDefaultBody =>
+      'Vrnite se v aplikacijo in preverite trenutno stanje zahteve za promocijo.';
+
+  @override
+  String promotionCheckoutReturnSessionLabel(String sessionId) {
+    return 'Seja Stripe: $sessionId';
+  }
+
+  @override
+  String get artistPortfolioSectionAuthored => 'Avtorska dela';
+
+  @override
+  String get artistPortfolioSectionPublicArt => 'Dodana javna umetnost';
+
+  @override
+  String get artistPortfolioSectionCollections => 'Zbirke in razstave';
+
+  @override
+  String artistPortfolioSectionLabelWithCount(String label, int count) {
+    return '$label ($count)';
+  }
+
+  @override
+  String get artistPortfolioAuthoredUnsupported =>
+      'Avtorskih del na tem strežniku zaenkrat ni mogoče prikazati ločeno.';
+
+  @override
+  String get artistPortfolioPublicArtUnsupported =>
+      'Dodane javne umetnosti iz del na tem strežniku zaenkrat ni mogoče prikazati ločeno. Vaši prispevki na zemljevidu so prikazani spodaj.';
+
+  @override
+  String get artistPortfolioSectionLoadFailed =>
+      'Seznama ni bilo mogoče naložiti.';
+
+  @override
+  String get artistPortfolioLoadMore => 'Naloži več';
+
+  @override
+  String get artistPortfolioPublicArtEmptyTitle =>
+      'Še ni dodane javne umetnosti';
+
+  @override
+  String get artistPortfolioPublicArtEmptyDescription =>
+      'Javna umetnost, ki jo dokumentirate na zemljevidu, se prikaže tukaj. Ostane pripisana svojemu avtorju.';
+
+  @override
+  String get artistPortfolioCollectionsEmptyTitle => 'Še ni zbirk ali razstav';
+
+  @override
+  String get artistPortfolioCollectionsEmptyDescription =>
+      'Zbirke in razstave, ki jih ustvarite, se prikažejo tukaj.';
+
+  @override
+  String artistPortfolioArtistLine(String artist) {
+    return 'Avtor: $artist';
+  }
+
+  @override
+  String get artistPortfolioAddedByYou => 'Dodali ste';
+
+  @override
+  String artistPortfolioCardActionsLabel(String title) {
+    return 'Dejanja za $title';
+  }
 }

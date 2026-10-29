@@ -2283,6 +2283,18 @@ abstract class AppLocalizations {
   /// **'Your session has expired. Sign in again to continue.'**
   String get authReauthDialogMessage;
 
+  /// Title of the dialog shown after the backend reports that the signed-in account is suspended and the app has signed the user out.
+  ///
+  /// In en, this message translates to:
+  /// **'Account suspended'**
+  String get authAccountSuspendedTitle;
+
+  /// Message of the dialog shown after the backend reports that the signed-in account is suspended and the app has signed the user out.
+  ///
+  /// In en, this message translates to:
+  /// **'Access to this account has been suspended, so you have been signed out. Your wallet on this device is not affected. If you think this is a mistake, contact support.'**
+  String get authAccountSuspendedMessage;
+
   /// No description provided for @authAccountCreatedProfileLoading.
   ///
   /// In en, this message translates to:
@@ -7246,6 +7258,12 @@ abstract class AppLocalizations {
   /// **'Connect a wallet before submitting.'**
   String get institutionHubApplicationWalletRequired;
 
+  /// No description provided for @institutionHubApplicationWalletWhy.
+  ///
+  /// In en, this message translates to:
+  /// **'Applying is signed with your wallet, so the review stays tied to a wallet you control. Browsing institutions does not need one.'**
+  String get institutionHubApplicationWalletWhy;
+
   /// No description provided for @institutionHubApplicationSubmittedToast.
   ///
   /// In en, this message translates to:
@@ -8721,6 +8739,36 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Center on me'**
   String get mapCenterOnMeTooltip;
+
+  /// No description provided for @mapCenterOnMeLocating.
+  ///
+  /// In en, this message translates to:
+  /// **'Finding your location…'**
+  String get mapCenterOnMeLocating;
+
+  /// No description provided for @mapCenterOnMePermissionDenied.
+  ///
+  /// In en, this message translates to:
+  /// **'Allow location access to center the map on you.'**
+  String get mapCenterOnMePermissionDenied;
+
+  /// No description provided for @mapCenterOnMePermissionBlocked.
+  ///
+  /// In en, this message translates to:
+  /// **'Location access is blocked for art.kubus. Enable it in app settings to center the map on you.'**
+  String get mapCenterOnMePermissionBlocked;
+
+  /// No description provided for @mapCenterOnMeServicesDisabled.
+  ///
+  /// In en, this message translates to:
+  /// **'Turn on location services to center the map on you.'**
+  String get mapCenterOnMeServicesDisabled;
+
+  /// No description provided for @mapCenterOnMeTimedOut.
+  ///
+  /// In en, this message translates to:
+  /// **'Finding your location took too long. Try again.'**
+  String get mapCenterOnMeTimedOut;
 
   /// No description provided for @mapAddMapMarkerTooltip.
   ///
@@ -13950,6 +13998,36 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Unable to switch camera.'**
   String get qrScannerSwitchCameraFailedToast;
+
+  /// No description provided for @qrScannerTorchOnTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Turn on flashlight'**
+  String get qrScannerTorchOnTooltip;
+
+  /// No description provided for @qrScannerTorchOffTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Turn off flashlight'**
+  String get qrScannerTorchOffTooltip;
+
+  /// No description provided for @qrScannerSwitchCameraTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Switch camera'**
+  String get qrScannerSwitchCameraTooltip;
+
+  /// No description provided for @commentLikeTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Like comment'**
+  String get commentLikeTooltip;
+
+  /// No description provided for @commentUnlikeTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Unlike comment'**
+  String get commentUnlikeTooltip;
 
   /// No description provided for @artworkNotFound.
   ///
@@ -23621,22 +23699,32 @@ abstract class AppLocalizations {
   /// **'Profile image upload timed out. Please try a smaller image or retry.'**
   String get profileEditAvatarUploadTimeoutToast;
 
+  /// No description provided for @profileEditErrorSignInAgainToast.
+  ///
   /// In en, this message translates to:
   /// **'Your session has expired. Sign in again to save your profile.'**
   String get profileEditErrorSignInAgainToast;
 
+  /// No description provided for @profileEditErrorOwnershipMismatchToast.
+  ///
   /// In en, this message translates to:
   /// **'This profile belongs to a different account. Sign in with the owning account and try again.'**
   String get profileEditErrorOwnershipMismatchToast;
 
+  /// No description provided for @profileEditAvatarErrorTooLargeToast.
+  ///
   /// In en, this message translates to:
   /// **'This image is too large. Choose a smaller image and try again.'**
   String get profileEditAvatarErrorTooLargeToast;
 
+  /// No description provided for @profileEditAvatarErrorUnsupportedTypeToast.
+  ///
   /// In en, this message translates to:
   /// **'This image format is not supported. Choose a JPG, PNG, WebP or GIF image.'**
   String get profileEditAvatarErrorUnsupportedTypeToast;
 
+  /// No description provided for @profileEditAvatarErrorRateLimitedToast.
+  ///
   /// In en, this message translates to:
   /// **'Too many uploads right now. Wait a moment and try again.'**
   String get profileEditAvatarErrorRateLimitedToast;
@@ -24904,7 +24992,7 @@ abstract class AppLocalizations {
   /// No description provided for @profilePerformancePublicStreetArtAddedTitle.
   ///
   /// In en, this message translates to:
-  /// **'Added Public Art'**
+  /// **'Public art documented'**
   String get profilePerformancePublicStreetArtAddedTitle;
 
   /// No description provided for @profileMenuSavedItemsTitle.
@@ -32092,6 +32180,294 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'View application status'**
   String get contributionApplication;
+
+  /// No description provided for @arMarkerManagerTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'AR Marker'**
+  String get arMarkerManagerTitle;
+
+  /// No description provided for @arMarkerManagerSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Set up a printable marker so people can scan and unlock the AR experience.'**
+  String get arMarkerManagerSubtitle;
+
+  /// No description provided for @arMarkerManagerOnlyPngToast.
+  ///
+  /// In en, this message translates to:
+  /// **'Only PNG markers are supported.'**
+  String get arMarkerManagerOnlyPngToast;
+
+  /// No description provided for @arMarkerManagerSquareRequiredToast.
+  ///
+  /// In en, this message translates to:
+  /// **'Marker must be square (width == height).'**
+  String get arMarkerManagerSquareRequiredToast;
+
+  /// No description provided for @arMarkerManagerTooSmallToast.
+  ///
+  /// In en, this message translates to:
+  /// **'Marker is too small. Minimum is {minPx}×{minPx}px.'**
+  String arMarkerManagerTooSmallToast(int minPx);
+
+  /// No description provided for @arMarkerManagerTooLargeToast.
+  ///
+  /// In en, this message translates to:
+  /// **'Marker is too large. Maximum is {maxPx}×{maxPx}px.'**
+  String arMarkerManagerTooLargeToast(int maxPx);
+
+  /// No description provided for @arMarkerManagerModeTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Marker mode'**
+  String get arMarkerManagerModeTitle;
+
+  /// No description provided for @arMarkerManagerAutoGenerateTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Auto-generate'**
+  String get arMarkerManagerAutoGenerateTitle;
+
+  /// No description provided for @arMarkerManagerAutoGenerateSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'kubus generates a marker for this artwork.'**
+  String get arMarkerManagerAutoGenerateSubtitle;
+
+  /// No description provided for @arMarkerManagerUploadOwnTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Upload my own'**
+  String get arMarkerManagerUploadOwnTitle;
+
+  /// No description provided for @arMarkerManagerUploadOwnSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Upload a square PNG marker ({minPx}–{maxPx}px).'**
+  String arMarkerManagerUploadOwnSubtitle(int minPx, int maxPx);
+
+  /// No description provided for @arMarkerManagerSizeLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Marker size (px)'**
+  String get arMarkerManagerSizeLabel;
+
+  /// No description provided for @arMarkerManagerGenerateButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Generate'**
+  String get arMarkerManagerGenerateButton;
+
+  /// No description provided for @arMarkerManagerRegenerateButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Regenerate'**
+  String get arMarkerManagerRegenerateButton;
+
+  /// No description provided for @arMarkerManagerRequirementsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Upload requirements'**
+  String get arMarkerManagerRequirementsTitle;
+
+  /// No description provided for @arMarkerManagerRequirementsBody.
+  ///
+  /// In en, this message translates to:
+  /// **'PNG only • Square • {minPx}–{maxPx}px • High contrast • Leave a safe border for printing.'**
+  String arMarkerManagerRequirementsBody(int minPx, int maxPx);
+
+  /// No description provided for @arMarkerManagerSelectPngButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Select PNG'**
+  String get arMarkerManagerSelectPngButton;
+
+  /// No description provided for @arMarkerManagerChangeFileButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Change file'**
+  String get arMarkerManagerChangeFileButton;
+
+  /// No description provided for @arMarkerManagerUploadButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Upload marker'**
+  String get arMarkerManagerUploadButton;
+
+  /// No description provided for @arMarkerManagerPreviewTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Preview'**
+  String get arMarkerManagerPreviewTitle;
+
+  /// No description provided for @arMarkerManagerDownloadButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Download marker'**
+  String get arMarkerManagerDownloadButton;
+
+  /// No description provided for @arMarkerManagerSavedToast.
+  ///
+  /// In en, this message translates to:
+  /// **'AR setup saved.'**
+  String get arMarkerManagerSavedToast;
+
+  /// No description provided for @promotionCheckoutOpenAppButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Open app'**
+  String get promotionCheckoutOpenAppButton;
+
+  /// No description provided for @arCreateArtworkLocationMarkerTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Create artwork location marker'**
+  String get arCreateArtworkLocationMarkerTitle;
+
+  /// No description provided for @mnemonicRevealCopyUnavailableToast.
+  ///
+  /// In en, this message translates to:
+  /// **'Unable to copy the recovery phrase on this device.'**
+  String get mnemonicRevealCopyUnavailableToast;
+
+  /// App bar title of the screen shown after returning from Stripe promotion checkout.
+  ///
+  /// In en, this message translates to:
+  /// **'Promotion Checkout'**
+  String get promotionCheckoutReturnAppBarTitle;
+
+  /// Status title when the promotion checkout return status is unknown or still pending.
+  ///
+  /// In en, this message translates to:
+  /// **'Promotion checkout'**
+  String get promotionCheckoutReturnDefaultTitle;
+
+  /// Status title after a successful promotion checkout return.
+  ///
+  /// In en, this message translates to:
+  /// **'Promotion payment received'**
+  String get promotionCheckoutReturnSuccessTitle;
+
+  /// Explanatory body text after a successful promotion checkout return.
+  ///
+  /// In en, this message translates to:
+  /// **'Your payment was received. The promotion request is now waiting for admin review.'**
+  String get promotionCheckoutReturnSuccessBody;
+
+  /// Status title when the user cancels promotion checkout.
+  ///
+  /// In en, this message translates to:
+  /// **'Promotion checkout cancelled'**
+  String get promotionCheckoutReturnCancelledTitle;
+
+  /// Explanatory body text when the user cancels promotion checkout.
+  ///
+  /// In en, this message translates to:
+  /// **'No payment was captured. You can return to the app and submit the promotion again when ready.'**
+  String get promotionCheckoutReturnCancelledBody;
+
+  /// Explanatory body text when the promotion checkout return status is unknown or still pending.
+  ///
+  /// In en, this message translates to:
+  /// **'Return to the app to review the current status of your promotion request.'**
+  String get promotionCheckoutReturnDefaultBody;
+
+  /// Label showing the Stripe checkout session id on the promotion checkout return screen.
+  ///
+  /// In en, this message translates to:
+  /// **'Stripe session: {sessionId}'**
+  String promotionCheckoutReturnSessionLabel(String sessionId);
+
+  /// No description provided for @artistPortfolioSectionAuthored.
+  ///
+  /// In en, this message translates to:
+  /// **'Authored artworks'**
+  String get artistPortfolioSectionAuthored;
+
+  /// No description provided for @artistPortfolioSectionPublicArt.
+  ///
+  /// In en, this message translates to:
+  /// **'Added public art'**
+  String get artistPortfolioSectionPublicArt;
+
+  /// No description provided for @artistPortfolioSectionCollections.
+  ///
+  /// In en, this message translates to:
+  /// **'Collections & exhibitions'**
+  String get artistPortfolioSectionCollections;
+
+  /// No description provided for @artistPortfolioSectionLabelWithCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{label} ({count})'**
+  String artistPortfolioSectionLabelWithCount(String label, int count);
+
+  /// No description provided for @artistPortfolioAuthoredUnsupported.
+  ///
+  /// In en, this message translates to:
+  /// **'Authored artworks cannot be listed separately on this server yet.'**
+  String get artistPortfolioAuthoredUnsupported;
+
+  /// No description provided for @artistPortfolioPublicArtUnsupported.
+  ///
+  /// In en, this message translates to:
+  /// **'Added public art from artworks cannot be listed separately on this server yet. Your map contributions are still shown.'**
+  String get artistPortfolioPublicArtUnsupported;
+
+  /// No description provided for @artistPortfolioSectionLoadFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'This list could not be loaded.'**
+  String get artistPortfolioSectionLoadFailed;
+
+  /// No description provided for @artistPortfolioLoadMore.
+  ///
+  /// In en, this message translates to:
+  /// **'Load more'**
+  String get artistPortfolioLoadMore;
+
+  /// No description provided for @artistPortfolioPublicArtEmptyTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'No public art added yet'**
+  String get artistPortfolioPublicArtEmptyTitle;
+
+  /// No description provided for @artistPortfolioPublicArtEmptyDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Public art you document on the map appears here. It stays credited to its artist.'**
+  String get artistPortfolioPublicArtEmptyDescription;
+
+  /// No description provided for @artistPortfolioCollectionsEmptyTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'No collections or exhibitions yet'**
+  String get artistPortfolioCollectionsEmptyTitle;
+
+  /// No description provided for @artistPortfolioCollectionsEmptyDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Collections and exhibitions you create appear here.'**
+  String get artistPortfolioCollectionsEmptyDescription;
+
+  /// No description provided for @artistPortfolioArtistLine.
+  ///
+  /// In en, this message translates to:
+  /// **'By {artist}'**
+  String artistPortfolioArtistLine(String artist);
+
+  /// No description provided for @artistPortfolioAddedByYou.
+  ///
+  /// In en, this message translates to:
+  /// **'Added by you'**
+  String get artistPortfolioAddedByYou;
+
+  /// No description provided for @artistPortfolioCardActionsLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Actions for {title}'**
+  String artistPortfolioCardActionsLabel(String title);
 }
 
 class _AppLocalizationsDelegate

@@ -65,8 +65,12 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
       _inlineError = null;
     });
     try {
+      final sessionEpoch = BackendApiService().authSessionEpoch;
       final response = await BackendApiService().verifyEmail(token: token);
-      await BackendApiService().syncSecureAccountStatusFromResponse(response);
+      await BackendApiService().syncSecureAccountStatusFromResponse(
+        response,
+        sessionEpoch: sessionEpoch,
+      );
       // Verification is an auth-continuation event: the backend returns a fresh
       // session token for the same user. Persist it before showing the success
       // screen so a link opened in a clean browser/tab can return to a
@@ -116,11 +120,13 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
       _inlineError = null;
     });
     try {
+      final sessionEpoch = BackendApiService().authSessionEpoch;
       final response =
           await BackendApiService().resendEmailVerification(email: email);
       await BackendApiService().syncSecureAccountStatusFromResponse(
         response,
         fetchIfMissing: false,
+        sessionEpoch: sessionEpoch,
       );
       final payload = response['data'] is Map<String, dynamic>
           ? response['data'] as Map<String, dynamic>

@@ -2,7 +2,7 @@ import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:art_kubus/widgets/tutorial/interactive_tutorial_overlay.dart';
 import 'package:art_kubus/widgets/tutorial/tutorial_overlay_controller.dart';
 import 'package:art_kubus/widgets/tutorial/tutorial_overlay_driver.dart';
-import 'package:art_kubus/widgets/tutorial/tutorial_overlay_host.dart';
+import 'package:art_kubus/widgets/tutorial/tutorial_overlay_mount.dart';
 import 'package:art_kubus/widgets/tutorial/tutorial_overlay_presenter.dart';
 import 'package:art_kubus/widgets/tutorial/tutorial_overlay_scope.dart';
 import 'package:flutter/material.dart';

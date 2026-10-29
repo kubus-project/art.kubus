@@ -572,10 +572,10 @@ class _CollectionDetailScreenState extends State<CollectionDetailScreen> {
           ];
 
           final content = CustomScrollView(slivers: slivers);
-          if (collection == null) return content;
           return PublicEntityTakeoverReady(
             type: ShareEntityType.collection,
-            entityId: collection.id,
+            entityId: collection?.id ?? widget.collectionId,
+            signalReady: collection != null,
             child: content,
           );
         },

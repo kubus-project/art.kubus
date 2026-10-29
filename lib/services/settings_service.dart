@@ -10,7 +10,9 @@ import '../features/map/session/kubus_map_session_memory.dart';
 import 'backend_api_service.dart';
 import 'onboarding_state_service.dart';
 import 'push_notification_service.dart';
+import 'socket_service.dart';
 import 'pending_action_service.dart';
+import 'profile_package_service.dart';
 import 'telemetry/telemetry_service.dart';
 
 /// Centralized storage and side-effect helpers for settings.
@@ -144,17 +146,29 @@ class SettingsService {
   }
 
   /// Clear all local session/auth data and disconnect wallet.
+  ///
+  /// With [preserveWallet] the account session still ends in full, but the
+  /// local wallet (its connection, cached recovery phrase and persisted
+  /// identity) is left exactly as it was. Used when the backend, not the user,
+  /// ended the session (a suspended account).
   static Future<void> logout({
     required WalletProvider walletProvider,
     required BackendApiService backendApi,
     NotificationProvider? notificationProvider,
     ProfileProvider? profileProvider,
     SavedItemsProvider? savedItemsProvider,
+    bool preserveWallet = false,
   }) async {
     // First, and synchronous: nothing below may fail before the map's memory of
     // this account (camera, filters, search, selection) is gone.
     KubusMapSessionMemory.clearAll();
     await backendApi.clearAuth();
+    // Cached public profile packages, in memory and persisted, belong to the
+    // session that is ending; the next sign-in starts with none.
+    await ProfilePackageService.clearForSignOut();
+    // The socket still holds the signed-out token; close it so neither a
+    // reconnect nor a new handshake can carry that token.
+    SocketService().disconnect();
     notificationProvider?.reset();
     profileProvider?.signOut();
     await savedItemsProvider?.resetForLogout();
@@ -162,10 +176,14 @@ class SettingsService {
       await PushNotificationService().cancelAllNotifications();
     } catch (_) {}
 
-    await walletProvider.disconnectWallet(preserveAuthenticatedWallet: false);
+    if (preserveWallet) {
+      await walletProvider.clearAccountSessionKeepWallet();
+    } else {
+      await walletProvider.disconnectWallet(preserveAuthenticatedWallet: false);
+    }
 
     final prefs = await SharedPreferences.getInstance();
-    const removeKeys = {
+    final removeKeys = <String>{
       'jwt_token',
       'token',
       'auth_token',
@@ -174,15 +192,26 @@ class SettingsService {
       'refreshToken',
       'auth_refresh_token',
       'authRefreshToken',
-      'wallet_address',
-      'wallet',
-      'walletAddress',
-      'has_wallet',
+      if (!preserveWallet) ...const [
+        'wallet_address',
+        'wallet',
+        'walletAddress',
+        'has_wallet',
+      ],
       'user_id',
       PreferenceKeys.hasCompletedAuthOnboarding,
       'notification_permission_granted',
       'last_inactive_ts',
       'lock_timeout_seconds',
+      // Profile privacy mirrors hold the previous account's preferences. The
+      // profile provider reads them before the next account's profile loads.
+      'private_profile',
+      'allow_messages',
+      'show_activity_status',
+      'show_achievements',
+      'showAchievements',
+      'share_last_visited_location',
+      'show_collection',
       // A remembered activation intent belongs to the session that captured
       // it. Leaving it behind would offer the previous user's pending Save or
       // Follow to whoever signs in next on this device.

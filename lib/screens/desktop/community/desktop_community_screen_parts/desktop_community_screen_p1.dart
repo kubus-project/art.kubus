@@ -1053,6 +1053,7 @@ extension _DesktopCommunityScreenStatePart1 on _DesktopCommunityScreenState {
       child: ConversationScreen(
         conversation: conversation,
         onClose: _popPane,
+        presentation: ConversationPresentation.embedded,
       ),
     );
   }

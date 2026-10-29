@@ -71,9 +71,10 @@ class _InstitutionHubState extends State<InstitutionHub> {
   @override
   void initState() {
     super.initState();
-    _checkOnboarding();
     WidgetsBinding.instance.addPostFrameCallback(
         (_) => _loadInstitutionReviewStatus(forceRefresh: true));
+    WidgetsBinding.instance
+        .addPostFrameCallback((_) => unawaited(_checkOnboarding()));
   }
 
   @override
@@ -97,12 +98,18 @@ class _InstitutionHubState extends State<InstitutionHub> {
     }
   }
 
+  // First-visit Web3 onboarding is for users with a wallet. Guests and
+  // email-only accounts browse institutions without wallet education; the
+  // help action still opens the same explanation on request.
   Future<void> _checkOnboarding() async {
-    if (await isOnboardingNeeded(InstitutionHubOnboardingData.featureKey)) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        _showOnboarding();
-      });
+    if (!mounted || _resolveWalletAddress().isEmpty) return;
+    if (!await isOnboardingNeeded(InstitutionHubOnboardingData.featureKey)) {
+      return;
     }
+    if (!mounted) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _showOnboarding();
+    });
   }
 
   void _showOnboarding() {
@@ -376,6 +383,14 @@ class _InstitutionHubState extends State<InstitutionHub> {
       title: l10n.navigationScreenInstitutionHub,
       lede: lede,
       actions: [
+        // The embedded layout has no app bar, so the help entry lives here.
+        if (widget.embedded)
+          KubusButton(
+            onPressed: _showOnboarding,
+            icon: Icons.help_outline,
+            label: l10n.institutionHubHelpTooltip,
+            variant: KubusButtonVariant.quiet,
+          ),
         if (canSelfServeInstitutionPromotion)
           KubusButton(
             onPressed: _openInstitutionPromotionFlow,
@@ -430,16 +445,21 @@ class _InstitutionHubState extends State<InstitutionHub> {
             : isPending
                 ? KubusStatusTone.warning
                 : KubusStatusTone.neutral;
-    final canSubmit = wallet.isNotEmpty &&
-        !_reviewLoading &&
-        (!isPending && !isApprovedInstitution || isRejected);
-    final ctaLabel = !canSubmit
-        ? (isApprovedInstitution
-            ? l10n.institutionHubCtaApprovedByDao
-            : isPending
-                ? l10n.institutionHubCtaPendingDaoReview
-                : l10n.institutionHubCtaConnectWalletToApply)
-        : l10n.institutionHubApplyForReviewAction;
+    // Opening the application form needs no wallet, so email-only and guest
+    // users can read and fill it. Only submitting needs a wallet signature;
+    // that is requested by WalletActionGuard when the user submits.
+    final canApply =
+        !_reviewLoading && (!isPending && !isApprovedInstitution || isRejected);
+    final String ctaLabel;
+    if (isApprovedInstitution) {
+      ctaLabel = l10n.institutionHubCtaApprovedByDao;
+    } else if (isPending) {
+      ctaLabel = l10n.institutionHubCtaPendingDaoReview;
+    } else if (wallet.isEmpty) {
+      ctaLabel = l10n.institutionHubCtaConnectWalletToApply;
+    } else {
+      ctaLabel = l10n.institutionHubApplyForReviewAction;
+    }
     final IconData ctaIcon = isApprovedInstitution
         ? Icons.verified_outlined
         : isPending
@@ -458,6 +478,9 @@ class _InstitutionHubState extends State<InstitutionHub> {
                   ? l10n.institutionHubRejectedResubmitMessage
                   : null;
     }
+    if (detail == null && wallet.isEmpty && canApply) {
+      detail = l10n.institutionHubApplicationWalletWhy;
+    }
 
     return KubusStatusPanel(
       title: l10n.institutionHubApplicationTitle,
@@ -468,11 +491,11 @@ class _InstitutionHubState extends State<InstitutionHub> {
       meta: review != null ? l10n.institutionHubDaoStatusSyncedLabel : null,
       detail: detail,
       action: KubusButton(
-        onPressed: canSubmit ? () => _showInstitutionApplicationModal() : null,
+        onPressed: canApply ? () => _showInstitutionApplicationModal() : null,
         label: ctaLabel,
         icon: ctaIcon,
         isFullWidth: true,
-        variant: canSubmit
+        variant: canApply
             ? KubusButtonVariant.primary
             : KubusButtonVariant.secondary,
       ),
@@ -628,6 +651,7 @@ class _InstitutionHubState extends State<InstitutionHub> {
     _missionController.clear();
     _focusController.clear();
     final scaffold = ScaffoldMessenger.of(context);
+    final needsWallet = _resolveWalletAddress().isEmpty;
 
     showModalBottomSheet(
       context: context,
@@ -655,6 +679,16 @@ class _InstitutionHubState extends State<InstitutionHub> {
                     showHandle: false,
                   ),
                   const SizedBox(height: KubusSpacing.sm),
+                  if (needsWallet) ...[
+                    KubusNoticeBanner(
+                      icon: Icons.account_balance_wallet_outlined,
+                      title: l10n.institutionHubCtaConnectWalletToApply,
+                      message: l10n.institutionHubApplicationWalletWhy,
+                      tone: KubusStatusTone.neutral,
+                      margin: EdgeInsets.zero,
+                    ),
+                    const SizedBox(height: KubusSpacing.md),
+                  ],
                   TextFormField(
                     controller: _organizationController,
                     decoration: InputDecoration(
@@ -718,6 +752,18 @@ class _InstitutionHubState extends State<InstitutionHub> {
                         final walletProvider = context.read<WalletProvider>();
                         final web3Provider = context.read<Web3Provider>();
                         final daoProvider = context.read<DAOProvider>();
+                        // The wallet signature is requested here, at submit,
+                        // not when the form opens. A declined or unfinished
+                        // guard keeps the form and its input on screen.
+                        final canProceed =
+                            await WalletActionGuard.ensureSignerAccess(
+                          context: context,
+                          profileProvider: profileProvider,
+                          walletProvider: walletProvider,
+                        );
+                        if (!mounted || !canProceed) {
+                          return;
+                        }
                         final wallet =
                             profileProvider.currentUser?.walletAddress ??
                                 web3Provider.walletAddress;
@@ -729,15 +775,6 @@ class _InstitutionHubState extends State<InstitutionHub> {
                               ),
                             ),
                           );
-                          return;
-                        }
-                        final canProceed =
-                            await WalletActionGuard.ensureSignerAccess(
-                          context: context,
-                          profileProvider: profileProvider,
-                          walletProvider: walletProvider,
-                        );
-                        if (!mounted || !canProceed) {
                           return;
                         }
                         sheetNavigator.pop();

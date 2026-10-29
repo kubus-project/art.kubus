@@ -14,6 +14,7 @@ import '../models/user.dart';
 import '../utils/profile_showcase_normalizer.dart';
 import '../utils/wallet_utils.dart';
 import 'backend_api_service.dart';
+import 'public_entity_load_outcome.dart';
 import 'stats_api_service.dart';
 import 'user_service.dart';
 
@@ -65,8 +66,10 @@ class ProfilePackageService {
       <String, ProfileCriticalPackage>{};
   static final Map<String, ProfileExtendedPackage> _extendedCache =
       <String, ProfileExtendedPackage>{};
-  static final Map<String, Future<ProfileCriticalPackage?>> _criticalInFlight =
-      <String, Future<ProfileCriticalPackage?>>{};
+  static final Map<String,
+          Future<PublicEntityLoadOutcome<ProfileCriticalPackage>>>
+      _criticalInFlight =
+      <String, Future<PublicEntityLoadOutcome<ProfileCriticalPackage>>>{};
   static final Map<String, Future<ProfileExtendedPackage?>> _extendedInFlight =
       <String, Future<ProfileExtendedPackage?>>{};
   static final Map<String, DateTime> _failedAt = <String, DateTime>{};
@@ -74,15 +77,56 @@ class ProfilePackageService {
   static final Map<String, int> _extendedInvalidationEpoch = <String, int>{};
   static bool _persistentCacheLoaded = false;
 
+  /// Account session the packages were loaded under. [clearForSignOut] ends it:
+  /// a load that started earlier neither stores nor returns its result.
+  static int get _sessionEpoch => BackendApiService().authSessionEpoch;
+
+  /// Drops every cached and in-flight package and the persisted copies. Sign-out
+  /// calls this so the next sign-in never reads the previous session's packages.
+  static Future<void> clearForSignOut({SharedPreferences? prefs}) async {
+    _criticalCache.clear();
+    _extendedCache.clear();
+    _criticalInFlight.clear();
+    _extendedInFlight.clear();
+    _failedAt.clear();
+    _persistentCacheLoaded = false;
+    try {
+      final store = prefs ?? await SharedPreferences.getInstance();
+      await store.remove(_criticalCachePrefsKey);
+      await store.remove('profile_package_cache_v1');
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('ProfilePackageService.clearForSignOut: $e');
+      }
+    }
+  }
+
   static Future<ProfileCriticalPackage?> loadPublicProfileCriticalPackage(
     String walletAddress, {
     bool forceRefresh = false,
     String? username,
   }) async {
-    final lookup = _ProfileLookup(walletAddress, username: username);
-    if (!lookup.hasLookup) return null;
+    final outcome = await loadPublicProfileCriticalOutcome(
+      walletAddress,
+      forceRefresh: forceRefresh,
+      username: username,
+    );
+    return outcome.valueOrNull;
+  }
 
-    await _ensurePersistentCacheLoaded();
+  /// Public-entry variant of [loadPublicProfileCriticalPackage]: a failed
+  /// lookup is a [PublicEntityTransientFailure], never a missing profile.
+  static Future<PublicEntityLoadOutcome<ProfileCriticalPackage>>
+      loadPublicProfileCriticalOutcome(
+    String walletAddress, {
+    bool forceRefresh = false,
+    String? username,
+  }) async {
+    final lookup = _ProfileLookup(walletAddress, username: username);
+    if (!lookup.hasLookup) return const PublicEntityNotFound();
+
+    final sessionEpoch = _sessionEpoch;
+    await _ensurePersistentCacheLoaded(sessionEpoch);
 
     final cached = _criticalCache[lookup.cacheKey] ??
         (lookup.wallet.isNotEmpty ? _criticalCache[lookup.wallet] : null);
@@ -92,7 +136,7 @@ class ProfilePackageService {
         cached.isFresh(cacheTtl)) {
       _debugTelemetry('profile_package_critical_cache_hit',
           wallet: cached.user.id);
-      return cached;
+      return PublicEntityFound(cached);
     }
     if (!forceRefresh && cached != null && cached.isComplete) {
       _debugTelemetry('profile_package_critical_stale_hit',
@@ -109,14 +153,22 @@ class ProfilePackageService {
     final invalidationEpoch = shouldCheckInvalidation
         ? (_criticalInvalidationEpoch[lookup.wallet] ?? 0)
         : 0;
-    final future = _loadFreshPublicProfileCriticalPackage(lookup);
+    final future = _loadFreshPublicProfileCriticalOutcome(
+      lookup,
+      sessionEpoch: sessionEpoch,
+    );
     _criticalInFlight[lookup.cacheKey] = future;
     try {
-      final critical = await future;
+      final outcome = await future;
+      // A result for a session that has ended is neither returned nor stored.
+      if (sessionEpoch != _sessionEpoch) {
+        return const PublicEntityNotFound();
+      }
+      final critical = outcome.valueOrNull;
       if (critical != null && critical.isComplete) {
         if (shouldCheckInvalidation &&
             _criticalInvalidatedSince(critical.user.id, invalidationEpoch)) {
-          return null;
+          return const PublicEntityNotFound();
         }
         _storeCriticalPackage(critical);
         if (lookup.wallet.isEmpty && lookup.cacheKey.isNotEmpty) {
@@ -131,7 +183,7 @@ class ProfilePackageService {
       } else {
         _failedAt[lookup.cacheKey] = DateTime.now();
       }
-      return critical;
+      return outcome;
     } finally {
       watch.stop();
       _debugTelemetry(
@@ -139,7 +191,9 @@ class ProfilePackageService {
         wallet: lookup.cacheKey,
         value: watch.elapsedMilliseconds,
       );
-      _criticalInFlight.remove(lookup.cacheKey);
+      if (identical(_criticalInFlight[lookup.cacheKey], future)) {
+        _criticalInFlight.remove(lookup.cacheKey);
+      }
     }
   }
 
@@ -157,6 +211,7 @@ class ProfilePackageService {
         _extendedCache[wallet] ?? _extendedCache[WalletUtils.normalize(wallet)];
     if (!forceRefresh && cached != null) return cached;
 
+    final sessionEpoch = _sessionEpoch;
     final inFlightKey = '$wallet|posts:$includePosts|showcase:$includeShowcase';
     final existing = _extendedInFlight[inFlightKey];
     if (existing != null) return existing;
@@ -173,6 +228,8 @@ class ProfilePackageService {
     _extendedInFlight[inFlightKey] = future;
     try {
       final extended = await future;
+      // A result for a session that has ended is neither returned nor stored.
+      if (sessionEpoch != _sessionEpoch) return null;
       if (extended != null) {
         if (_extendedInvalidatedSince(wallet, invalidationEpoch)) {
           return null;
@@ -187,7 +244,9 @@ class ProfilePackageService {
         wallet: wallet,
         value: watch.elapsedMilliseconds,
       );
-      _extendedInFlight.remove(inFlightKey);
+      if (identical(_extendedInFlight[inFlightKey], future)) {
+        _extendedInFlight.remove(inFlightKey);
+      }
     }
   }
 
@@ -269,6 +328,21 @@ class ProfilePackageService {
     String? username,
   }) {
     return loadPublicProfileCriticalPackage(
+      walletAddress,
+      forceRefresh: forceRefresh,
+      username: username,
+    );
+  }
+
+  /// Prefetch for a public entry: the outcome carries a failed lookup through
+  /// to the screen that takes over the address.
+  static Future<PublicEntityLoadOutcome<ProfileCriticalPackage>>
+      prefetchPublicProfileCriticalOutcome(
+    String walletAddress, {
+    bool forceRefresh = false,
+    String? username,
+  }) {
+    return loadPublicProfileCriticalOutcome(
       walletAddress,
       forceRefresh: forceRefresh,
       username: username,
@@ -490,17 +564,38 @@ class ProfilePackageService {
     }
   }
 
+  static Future<PublicEntityLoadOutcome<ProfileCriticalPackage>>
+      _loadFreshPublicProfileCriticalOutcome(
+    _ProfileLookup lookup, {
+    required int sessionEpoch,
+  }) async {
+    try {
+      final critical = await _loadFreshPublicProfileCriticalPackage(
+        lookup,
+        sessionEpoch: sessionEpoch,
+      );
+      return critical == null
+          ? const PublicEntityNotFound()
+          : PublicEntityFound(critical);
+    } catch (error) {
+      return classifyPublicEntityLoadError<ProfileCriticalPackage>(error);
+    }
+  }
+
   static Future<ProfileCriticalPackage?> _loadFreshPublicProfileCriticalPackage(
-    _ProfileLookup lookup,
-  ) async {
+    _ProfileLookup lookup, {
+    required int sessionEpoch,
+  }) async {
     final hasIdentifier = lookup.wallet.isNotEmpty;
     final canPrefetchWalletPackage = hasIdentifier && !lookup.isUuid;
 
+    // Rethrows so a failed lookup stays distinguishable from a missing profile.
     final userFuture = hasIdentifier
         ? UserService.getUserById(
             lookup.wallet,
             forceRefresh: true,
             includeAchievements: false,
+            rethrowErrors: true,
           )
         : UserService.getUserByUsername(
             lookup.username ?? '',
@@ -552,7 +647,10 @@ class ProfilePackageService {
     );
 
     if (critical.isComplete) {
-      UserService.setUsersInCacheAuthoritative([critical.user]);
+      UserService.setUsersInCacheAuthoritative(
+        [critical.user],
+        sessionEpoch: sessionEpoch,
+      );
     }
     return critical;
   }
@@ -811,7 +909,7 @@ class ProfilePackageService {
     return (_extendedInvalidationEpoch[wallet] ?? 0) != startEpoch;
   }
 
-  static Future<void> _ensurePersistentCacheLoaded() async {
+  static Future<void> _ensurePersistentCacheLoaded(int sessionEpoch) async {
     if (_persistentCacheLoaded) return;
     _persistentCacheLoaded = true;
     try {
@@ -833,6 +931,11 @@ class ProfilePackageService {
               : ProfilePackage.fromJson(map).critical;
           if (!critical.isComplete) continue;
           if (!critical.isFresh(const Duration(hours: 24))) continue;
+          if (sessionEpoch != _sessionEpoch) {
+            // The session that replaces this one loads its own copy.
+            _persistentCacheLoaded = false;
+            return;
+          }
           _storeCriticalPackage(critical, persist: false);
         } catch (_) {}
       }

@@ -1,9 +1,73 @@
+import 'dart:async';
+
+import 'package:art_kubus/core/public_entry_navigation.dart';
 import 'package:art_kubus/providers/public_entity_takeover_provider.dart';
 import 'package:art_kubus/services/share/share_deep_link_parser.dart';
 import 'package:art_kubus/services/share/share_types.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:provider/provider.dart';
 
 void main() {
+  test('keeps the frozen startup fragment and consumes it only once', () {
+    final navigation = PublicEntryNavigation.instance;
+    navigation.resetForTest();
+    navigation.captureStartupBrowserRoute(
+      Uri.parse('https://app.example/en/artworks/art-42?ref=launch#details'),
+    );
+    final provider = PublicEntityTakeoverProvider();
+    provider.seed(
+      initialUri: Uri.parse('/en/artworks/art-42?ref=launch'),
+      target: const ShareDeepLinkTarget(
+        type: ShareEntityType.artwork,
+        id: 'art-42',
+        localeCode: 'en',
+      ),
+    );
+
+    expect(provider.returnRouteForArtwork('art-42'),
+        '/en/artworks/art-42?ref=launch#details');
+
+    provider.seed(
+      initialUri: Uri.parse('/en/artworks/art-43?ref=next'),
+      target: const ShareDeepLinkTarget(
+        type: ShareEntityType.artwork,
+        id: 'art-43',
+        localeCode: 'en',
+      ),
+    );
+    expect(provider.returnRouteForArtwork('art-43'),
+        '/en/artworks/art-43?ref=next');
+    expect(
+        navigation.takeStartupBrowserRouteFor('/en/artworks/art-43'), isNull);
+    navigation.resetForTest();
+  });
+
+  test('a restored entity re-arms the entry its screen released', () {
+    final navigation = PublicEntryNavigation.instance;
+    navigation.resetForTest();
+    final provider = PublicEntityTakeoverProvider();
+    const target = ShareDeepLinkTarget(
+      type: ShareEntityType.collection,
+      id: 'c1',
+      localeCode: 'en',
+    );
+    final uri = Uri.parse('/en/collections/c1');
+
+    provider.seed(initialUri: uri, target: target);
+    expect(navigation.pendingEntryUrl, '/en/collections/c1');
+
+    // The visitor moved on: the entity screen left and released its entry.
+    navigation.abandonEntry(ShareEntityType.collection, 'c1');
+    expect(navigation.pendingEntryUrl, isNull);
+
+    // Browser Back restores the page: the same target is seeded again.
+    provider.seed(initialUri: uri, target: target);
+    expect(navigation.pendingEntryUrl, '/en/collections/c1',
+        reason: 'the restored page must keep its address while it loads');
+    navigation.resetForTest();
+  });
+
   test('seeds only an exact localized canonical artwork pathname', () {
     final provider = PublicEntityTakeoverProvider();
     const target = ShareDeepLinkTarget(
@@ -419,6 +483,175 @@ void main() {
       );
     },
   );
+
+  testWidgets(
+      'protected-action return route keeps the canonical URL only for its entity',
+      (tester) async {
+    final provider = PublicEntityTakeoverProvider()
+      ..seed(
+        initialUri: Uri.parse('/en/posts/post-7?ref=feed#comments'),
+        target: const ShareDeepLinkTarget(
+          type: ShareEntityType.post,
+          id: 'post-7',
+          localeCode: 'en',
+        ),
+      );
+    late BuildContext withProvider;
+    late BuildContext withoutProvider;
+    await tester.pumpWidget(Directionality(
+      textDirection: TextDirection.ltr,
+      child: Column(children: [
+        Builder(builder: (context) {
+          withoutProvider = context;
+          return const SizedBox();
+        }),
+        ChangeNotifierProvider<PublicEntityTakeoverProvider>.value(
+          value: provider,
+          child: Builder(builder: (context) {
+            withProvider = context;
+            return const SizedBox();
+          }),
+        ),
+      ]),
+    ));
+
+    String route(BuildContext context, ShareEntityType type, String id) =>
+        PublicEntityTakeoverProvider.returnRouteOr(
+            context, type, id, '/fallback/$id');
+
+    expect(route(withProvider, ShareEntityType.post, 'post-7'),
+        '/en/posts/post-7?ref=feed#comments');
+    expect(route(withProvider, ShareEntityType.post, 'post-8'),
+        '/fallback/post-8');
+    expect(route(withProvider, ShareEntityType.profile, 'post-7'),
+        '/fallback/post-7');
+    expect(route(withoutProvider, ShareEntityType.post, 'post-7'),
+        '/fallback/post-7');
+  });
+
+  test('a failed lookup reports failure once, only for its pending entity', () {
+    final navigation = PublicEntryNavigation.instance;
+    navigation.resetForTest();
+    final provider = PublicEntityTakeoverProvider();
+    const target = ShareDeepLinkTarget(
+      type: ShareEntityType.profile,
+      id: 'p1',
+      localeCode: 'en',
+    );
+    provider.seed(initialUri: Uri.parse('/en/profiles/p1'), target: target);
+
+    unawaited(provider.markEntityFailed(ShareEntityType.profile, 'other'));
+    expect(provider.isFailed, isFalse,
+        reason: 'another entity cannot fail this takeover');
+
+    unawaited(provider.markEntityFailed(ShareEntityType.profile, 'p1'));
+    unawaited(provider.markEntityFailed(ShareEntityType.profile, 'p1'));
+    expect(provider.isFailed, isTrue);
+    expect(provider.isReady, isFalse);
+    // The failed entity keeps its canonical address: it was not abandoned.
+    expect(navigation.pendingEntryUrl, '/en/profiles/p1');
+    expect(provider.returnRouteFor(ShareEntityType.profile, 'p1'),
+        '/en/profiles/p1');
+    navigation.resetForTest();
+  });
+
+  test('a failure never follows a ready entity', () {
+    final navigation = PublicEntryNavigation.instance;
+    navigation.resetForTest();
+    final provider = PublicEntityTakeoverProvider();
+    provider.seed(
+      initialUri: Uri.parse('/en/map/m1'),
+      target: const ShareDeepLinkTarget(
+        type: ShareEntityType.marker,
+        id: 'm1',
+        localeCode: 'en',
+      ),
+    );
+    unawaited(provider.markEntityReady(ShareEntityType.marker, 'm1'));
+    expect(provider.isReady, isTrue);
+
+    unawaited(provider.markEntityFailed(ShareEntityType.marker, 'm1'));
+    expect(provider.isFailed, isFalse);
+    navigation.resetForTest();
+  });
+
+  test('a marker entry keeps the entity URL through readiness and failure', () {
+    final navigation = PublicEntryNavigation.instance;
+    navigation.resetForTest();
+    final provider = PublicEntityTakeoverProvider();
+    const target = ShareDeepLinkTarget(
+      type: ShareEntityType.marker,
+      id: 'm2',
+      localeCode: 'sl',
+    );
+    provider.seed(initialUri: Uri.parse('/sl/zemljevid/m2'), target: target);
+
+    // Success: the marker opens and the entry is ready; the address stays on
+    // the entity URL, not the locale-free /map shell route.
+    expect(navigation.pendingEntryUrl, '/sl/zemljevid/m2');
+    unawaited(provider.markEntityReady(ShareEntityType.marker, 'm2'));
+    expect(navigation.pendingEntryUrl, '/sl/zemljevid/m2');
+    expect(provider.returnRouteFor(ShareEntityType.marker, 'm2'),
+        '/sl/zemljevid/m2');
+    navigation.resetForTest();
+  });
+
+  test('a not-found profile resolves its pending takeover, never fails it', () {
+    final navigation = PublicEntryNavigation.instance;
+    navigation.resetForTest();
+    final provider = PublicEntityTakeoverProvider();
+    const target = ShareDeepLinkTarget(
+      type: ShareEntityType.profile,
+      id: 'p2',
+      localeCode: 'en',
+    );
+    provider.seed(initialUri: Uri.parse('/en/profiles/p2'), target: target);
+
+    unawaited(
+        provider.markEntityResolvedNotFound(ShareEntityType.profile, 'other'));
+    expect(provider.isResolvedNotFound, isFalse,
+        reason: 'another entity cannot resolve this takeover');
+
+    unawaited(
+        provider.markEntityResolvedNotFound(ShareEntityType.profile, 'p2'));
+    unawaited(
+        provider.markEntityResolvedNotFound(ShareEntityType.profile, 'p2'));
+    expect(provider.isResolvedNotFound, isTrue);
+    expect(provider.isFailed, isFalse, reason: 'not found is not a failure');
+    expect(provider.isReady, isFalse);
+
+    // Once resolved, neither a failure nor a ready signal follows it.
+    unawaited(provider.markEntityFailed(ShareEntityType.profile, 'p2'));
+    unawaited(provider.markEntityReady(ShareEntityType.profile, 'p2'));
+    expect(provider.isFailed, isFalse);
+    expect(provider.isReady, isFalse);
+    // The entity keeps its canonical address.
+    expect(navigation.pendingEntryUrl, '/en/profiles/p2');
+    expect(provider.returnRouteFor(ShareEntityType.profile, 'p2'),
+        '/en/profiles/p2');
+    navigation.resetForTest();
+  });
+
+  test('a failed takeover is never resolved as not found', () {
+    final navigation = PublicEntryNavigation.instance;
+    navigation.resetForTest();
+    final provider = PublicEntityTakeoverProvider();
+    provider.seed(
+      initialUri: Uri.parse('/en/profiles/p3'),
+      target: const ShareDeepLinkTarget(
+        type: ShareEntityType.profile,
+        id: 'p3',
+        localeCode: 'en',
+      ),
+    );
+    unawaited(provider.markEntityFailed(ShareEntityType.profile, 'p3'));
+    expect(provider.isFailed, isTrue);
+
+    unawaited(
+        provider.markEntityResolvedNotFound(ShareEntityType.profile, 'p3'));
+    expect(provider.isResolvedNotFound, isFalse);
+    navigation.resetForTest();
+  });
 
   test('the takeover target carries the locale of its canonical path', () {
     for (final (locale, segment) in <(String, String)>[

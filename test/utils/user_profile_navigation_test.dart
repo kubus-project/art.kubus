@@ -3,6 +3,7 @@ import 'package:art_kubus/models/profile_package.dart';
 import 'package:art_kubus/models/user.dart' as identity;
 import 'package:art_kubus/providers/main_tab_provider.dart';
 import 'package:art_kubus/providers/profile_provider.dart';
+import 'package:art_kubus/providers/public_entity_takeover_provider.dart';
 import 'package:art_kubus/screens/community/user_profile_screen.dart'
     as visitor;
 import 'package:art_kubus/screens/desktop/community/desktop_profile_screen.dart'
@@ -10,6 +11,10 @@ import 'package:art_kubus/screens/desktop/community/desktop_profile_screen.dart'
 import 'package:art_kubus/screens/desktop/community/desktop_user_profile_screen.dart'
     as desktop_visitor;
 import 'package:art_kubus/screens/desktop/desktop_shell_scope.dart';
+import 'package:art_kubus/services/share/share_deep_link_parser.dart';
+import 'package:art_kubus/services/share/share_types.dart';
+import 'package:art_kubus/services/public_entity_load_outcome.dart';
+import 'package:art_kubus/utils/share_deep_link_navigation.dart';
 import 'package:art_kubus/utils/user_profile_navigation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -56,7 +61,8 @@ void main() {
                 context,
                 userId: '',
                 username: 'current_artist',
-                initialCriticalPackageFuture: Future.value(resolved),
+                initialCriticalPackageFuture:
+                    Future.value(PublicEntityFound(resolved)),
               ),
               child: const Text('Open resolved profile'),
             ),
@@ -196,6 +202,93 @@ void main() {
 
     expect(pushedScreen, isA<desktop_visitor.UserProfileScreen>());
     expect(pushedScreen, isNot(isA<desktop_owner.ProfileScreen>()));
+  });
+
+  Future<Widget?> openSharedProfileOnDesktop(
+    WidgetTester tester, {
+    required PublicEntityTakeoverProvider takeover,
+  }) async {
+    final profileProvider = ProfileProvider()..setCurrentUser(_ownerProfile());
+    Widget? pushedScreen;
+    await tester.pumpWidget(
+      MultiProvider(
+        providers: [
+          ChangeNotifierProvider<ProfileProvider>.value(value: profileProvider),
+          ChangeNotifierProvider<PublicEntityTakeoverProvider>.value(
+            value: takeover,
+          ),
+        ],
+        child: MaterialApp(
+          home: MediaQuery(
+            data: const MediaQueryData(size: Size(1440, 900)),
+            child: DesktopShellScope(
+              pushScreen: (screen) => pushedScreen = screen,
+              popScreen: () {},
+              navigateToRoute: (_) {},
+              openNotifications: () {},
+              openFunctionsPanel: (_, {content}) {},
+              setFunctionsPanelContent: (_) {},
+              closeFunctionsPanel: () {},
+              canPop: false,
+              child: Builder(
+                builder: (context) => Scaffold(
+                  body: TextButton(
+                    onPressed: () => ShareDeepLinkNavigation.open(
+                      context,
+                      const ShareDeepLinkTarget(
+                        type: ShareEntityType.profile,
+                        id: _accountId,
+                        localeCode: 'sl',
+                      ),
+                    ),
+                    child: const Text('Open shared profile'),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.tap(find.text('Open shared profile'));
+    await tester.pump();
+    return pushedScreen;
+  }
+
+  testWidgets(
+      'canonical public entry of the signed-in account opens the public profile',
+      (tester) async {
+    final takeover = PublicEntityTakeoverProvider()
+      ..seed(
+        initialUri: Uri.parse('/sl/profili/$_accountId'),
+        target: const ShareDeepLinkTarget(
+          type: ShareEntityType.profile,
+          id: _accountId,
+          localeCode: 'sl',
+        ),
+      );
+    expect(takeover.target?.path, '/sl/profili/$_accountId');
+
+    final pushedScreen =
+        await openSharedProfileOnDesktop(tester, takeover: takeover);
+
+    // Only the public screen wraps the loaded profile in
+    // PublicEntityTakeoverReady, so only it can retire the SSR frame.
+    expect(pushedScreen, isA<desktop_visitor.UserProfileScreen>());
+    expect(
+      (pushedScreen! as desktop_visitor.UserProfileScreen).userId,
+      _accountId,
+    );
+  });
+
+  testWidgets('shared own-profile link without a public entry keeps owner view',
+      (tester) async {
+    final pushedScreen = await openSharedProfileOnDesktop(
+      tester,
+      takeover: PublicEntityTakeoverProvider(),
+    );
+
+    expect(pushedScreen, isA<desktop_owner.ProfileScreen>());
   });
 
   testWidgets('an upper-case UUID still reaches the owner profile',

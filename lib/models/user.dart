@@ -1,5 +1,6 @@
 import 'achievement_progress.dart';
 import 'achievements.dart' as backend_achievements;
+import 'profile_identity_data.dart' show ProfileIdentityRoles;
 
 class User {
   final String id;
@@ -23,6 +24,14 @@ class User {
   final bool isVerified;
   final bool isArtist;
   final bool isInstitution;
+
+  /// Whether each role value was stated by a source (true, or an explicit
+  /// false). An unstated value, from a partial conversation or search payload
+  /// or a synthetic fallback record, must not revoke a role already known from
+  /// a fuller source. A true value is always a statement, see [roleStatements].
+  final bool isArtistSpecified;
+  final bool isInstitutionSpecified;
+  final bool isVerifiedSpecified;
   final bool showAchievements;
   final String joinedDate;
   final List<AchievementProgress> achievementProgress;
@@ -44,11 +53,27 @@ class User {
     required this.isVerified,
     this.isArtist = false,
     this.isInstitution = false,
+    this.isArtistSpecified = false,
+    this.isInstitutionSpecified = false,
+    this.isVerifiedSpecified = false,
     this.showAchievements = true,
     required this.joinedDate,
     this.achievementProgress = const [],
     this.achievementDefinitions = const [],
   });
+
+  /// The artist / institution / verified statements this record carries. A
+  /// true value always counts as stated. Merge sources with
+  /// [ProfileIdentityRoles.merge]: a stated value replaces the cached one and
+  /// an unstated value keeps it.
+  ProfileIdentityRoles get roleStatements => ProfileIdentityRoles(
+        isArtist: isArtist,
+        isInstitution: isInstitution,
+        isVerified: isVerified,
+        isArtistSpecified: isArtistSpecified || isArtist,
+        isInstitutionSpecified: isInstitutionSpecified || isInstitution,
+        isVerifiedSpecified: isVerifiedSpecified || isVerified,
+      );
 
   User copyWith({
     String? id,
@@ -66,6 +91,9 @@ class User {
     bool? isVerified,
     bool? isArtist,
     bool? isInstitution,
+    bool? isArtistSpecified,
+    bool? isInstitutionSpecified,
+    bool? isVerifiedSpecified,
     bool? showAchievements,
     String? joinedDate,
     List<AchievementProgress>? achievementProgress,
@@ -87,6 +115,12 @@ class User {
       isVerified: isVerified ?? this.isVerified,
       isArtist: isArtist ?? this.isArtist,
       isInstitution: isInstitution ?? this.isInstitution,
+      isArtistSpecified:
+          isArtistSpecified ?? (isArtist != null || this.isArtistSpecified),
+      isInstitutionSpecified: isInstitutionSpecified ??
+          (isInstitution != null || this.isInstitutionSpecified),
+      isVerifiedSpecified: isVerifiedSpecified ??
+          (isVerified != null || this.isVerifiedSpecified),
       showAchievements: showAchievements ?? this.showAchievements,
       joinedDate: joinedDate ?? this.joinedDate,
       achievementProgress: achievementProgress ?? this.achievementProgress,

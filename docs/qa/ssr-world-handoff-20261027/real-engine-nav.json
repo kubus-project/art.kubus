@@ -1,0 +1,194 @@
+[
+ {
+  "engine": "chromium",
+  "size": "mobile",
+  "locale": "en",
+  "before": {
+   "url": "/en/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669",
+   "status": "loading",
+   "complete": false,
+   "shell": false
+  },
+  "href": "/map?lang=en",
+  "afterClick": {
+   "url": "/map?lang=en",
+   "status": null,
+   "complete": false,
+   "shell": true
+  },
+  "afterBack": {
+   "url": "/en/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669",
+   "status": null,
+   "complete": true,
+   "shell": true
+  }
+ },
+ {
+  "engine": "chromium",
+  "size": "mobile",
+  "locale": "sl",
+  "before": {
+   "url": "/sl/umetnine/2890e5ec-3fdd-474e-a0ee-b16e5097b669",
+   "status": "loading",
+   "complete": false,
+   "shell": false
+  },
+  "href": "/map?lang=sl",
+  "afterClick": {
+   "url": "/map?lang=sl",
+   "status": null,
+   "complete": false,
+   "shell": true
+  },
+  "afterBack": {
+   "url": "/sl/umetnine/2890e5ec-3fdd-474e-a0ee-b16e5097b669",
+   "status": null,
+   "complete": true,
+   "shell": true
+  }
+ },
+ {
+  "engine": "chromium",
+  "size": "desktop",
+  "locale": "en",
+  "before": {
+   "url": "/en/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669",
+   "status": "loading",
+   "complete": false,
+   "shell": false
+  },
+  "href": "/map?lang=en",
+  "afterClick": {
+   "url": "/map?lang=en",
+   "status": null,
+   "complete": false,
+   "shell": true
+  },
+  "afterBack": {
+   "url": "/en/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669",
+   "status": null,
+   "complete": true,
+   "shell": true
+  }
+ },
+ {
+  "engine": "chromium",
+  "size": "desktop",
+  "locale": "sl",
+  "before": {
+   "url": "/sl/umetnine/2890e5ec-3fdd-474e-a0ee-b16e5097b669",
+   "status": "loading",
+   "complete": false,
+   "shell": false
+  },
+  "href": "/map?lang=sl",
+  "afterClick": {
+   "url": "/map?lang=sl",
+   "status": null,
+   "complete": false,
+   "shell": true
+  },
+  "afterBack": {
+   "url": "/sl/umetnine/2890e5ec-3fdd-474e-a0ee-b16e5097b669",
+   "status": null,
+   "complete": true,
+   "shell": true
+  }
+ },
+ {
+  "engine": "firefox",
+  "size": "mobile",
+  "locale": "en",
+  "before": {
+   "url": "/en/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669",
+   "status": "loading",
+   "complete": false,
+   "shell": false
+  },
+  "href": "/map?lang=en",
+  "afterClick": {
+   "url": "/map?lang=en",
+   "status": null,
+   "complete": false,
+   "shell": true
+  },
+  "afterBack": {
+   "url": "/en/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669",
+   "status": null,
+   "complete": true,
+   "shell": true
+  }
+ },
+ {
+  "engine": "firefox",
+  "size": "mobile",
+  "locale": "sl",
+  "before": {
+   "url": "/sl/umetnine/2890e5ec-3fdd-474e-a0ee-b16e5097b669",
+   "status": "loading",
+   "complete": false,
+   "shell": false
+  },
+  "href": "/map?lang=sl",
+  "afterClick": {
+   "url": "/map?lang=sl",
+   "status": null,
+   "complete": false,
+   "shell": true
+  },
+  "afterBack": {
+   "url": "/sl/umetnine/2890e5ec-3fdd-474e-a0ee-b16e5097b669",
+   "status": null,
+   "complete": true,
+   "shell": true
+  }
+ },
+ {
+  "engine": "firefox",
+  "size": "desktop",
+  "locale": "en",
+  "before": {
+   "url": "/en/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669",
+   "status": "loading",
+   "complete": false,
+   "shell": false
+  },
+  "href": "/map?lang=en",
+  "afterClick": {
+   "url": "/map?lang=en",
+   "status": null,
+   "complete": false,
+   "shell": true
+  },
+  "afterBack": {
+   "url": "/en/artworks/2890e5ec-3fdd-474e-a0ee-b16e5097b669",
+   "status": null,
+   "complete": true,
+   "shell": true
+  }
+ },
+ {
+  "engine": "firefox",
+  "size": "desktop",
+  "locale": "sl",
+  "before": {
+   "url": "/sl/umetnine/2890e5ec-3fdd-474e-a0ee-b16e5097b669",
+   "status": "loading",
+   "complete": false,
+   "shell": false
+  },
+  "href": "/map?lang=sl",
+  "afterClick": {
+   "url": "/map?lang=sl",
+   "status": null,
+   "complete": false,
+   "shell": true
+  },
+  "afterBack": {
+   "url": "/sl/umetnine/2890e5ec-3fdd-474e-a0ee-b16e5097b669",
+   "status": null,
+   "complete": true,
+   "shell": true
+  }
+ }
+]

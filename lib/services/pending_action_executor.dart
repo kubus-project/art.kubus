@@ -221,7 +221,13 @@ class PendingActionExecutor {
         PendingActionOutcome.targetUnavailable,
       );
     }
-    final ok = await artworkProvider.setLiked(intent.targetId, true);
+    // Confirmed like: the server write is what counts, so a cached "already
+    // liked" flag must not turn this into a success with no request sent.
+    final ok = await artworkProvider.setLiked(
+      intent.targetId,
+      true,
+      confirmOnServer: true,
+    );
     return PendingActionExecutionResult(
       ok ? PendingActionOutcome.completed : PendingActionOutcome.failed,
     );

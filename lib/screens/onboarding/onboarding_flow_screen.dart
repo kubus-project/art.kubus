@@ -453,6 +453,9 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
       _flushPendingAvatarUploadIfPossible();
 
   @visibleForTesting
+  bool get debugHasStagedAvatar => _pendingAvatarBytes != null;
+
+  @visibleForTesting
   Future<void> debugEnsureAvatarHydratedForMainShell(
       String? uploadedAvatarUrl) {
     final profileProvider =
@@ -2100,7 +2103,8 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
       await _flushPendingAvatarUploadIfPossible();
     }
 
-    if (!mounted) return;
+    // A staged avatar that failed to persist keeps the step open for retry.
+    if (!mounted || _pendingAvatarBytes != null) return;
     await _markCompleted(_OnboardingStep.profile);
   }
 
@@ -2115,7 +2119,8 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
     _refreshAuthDerivedSteps();
     await _syncLocalProfileDraftToBackendIfPossible();
     await _flushPendingAvatarUploadIfPossible();
-    if (!mounted) return;
+    // A staged avatar that failed to persist keeps the step open for retry.
+    if (!mounted || _pendingAvatarBytes != null) return;
     if (_steps.contains(_OnboardingStep.account)) {
       await _markCompleted(_OnboardingStep.account);
     } else {
@@ -2228,7 +2233,8 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
     }
     await _syncLocalProfileDraftToBackendIfPossible();
     await _flushPendingAvatarUploadIfPossible();
-    if (!mounted) return;
+    // A staged avatar that failed to persist keeps the step open for retry.
+    if (!mounted || _pendingAvatarBytes != null) return;
     await _markCompleted(_OnboardingStep.account);
   }
 
@@ -2273,9 +2279,13 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
         walletAddress: wallet,
         avatar: resolvedUrl,
       );
-      // saveProfile reports failure by returning false; keep the staged
-      // avatar so it can be retried.
-      if (!saved) return null;
+      if (!saved) {
+        // saveProfile reports backend failures by returning false. Keep the
+        // staged bytes so the step can retry instead of pinning the avatar
+        // only in memory.
+        _reportStagedAvatarSaveFailed();
+        return null;
+      }
 
       _localProfileDraft = <String, String>{
         ..._localProfileDraft,
@@ -2289,8 +2299,20 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
       return resolvedUrl;
     } catch (_) {
       // Keep staged avatar for retry after auth/session settles.
+      _reportStagedAvatarSaveFailed();
       return null;
     }
+  }
+
+  /// Shows the existing avatar error copy when a staged avatar could not be
+  /// persisted. The bytes stay staged so the step can be retried.
+  void _reportStagedAvatarSaveFailed() {
+    if (!mounted) return;
+    final l10n = AppLocalizations.of(context)!;
+    ScaffoldMessenger.of(context).showKubusSnackBar(
+      SnackBar(content: Text(l10n.messagesUpdateAvatarFailedToast)),
+      tone: KubusSnackBarTone.error,
+    );
   }
 
   /// Ensures the authenticated profile state carries a displayable avatar before

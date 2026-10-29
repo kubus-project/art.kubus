@@ -30,6 +30,34 @@ void dispatchPublicEntityReady({
   );
 }
 
+void dispatchPublicEntityResolvedNotFound({
+  required String type,
+  required String id,
+  required String path,
+  required String locale,
+}) {
+  implementation.dispatchPublicEntityResolvedNotFound(
+    type: type,
+    id: id,
+    path: path,
+    locale: locale,
+  );
+}
+
+void dispatchPublicEntityFailed({
+  required String type,
+  required String id,
+  required String path,
+  required String locale,
+}) {
+  implementation.dispatchPublicEntityFailed(
+    type: type,
+    id: id,
+    path: path,
+    locale: locale,
+  );
+}
+
 Map<String, dynamic>? readPublicEntityBootstrap() =>
     implementation.readPublicEntityBootstrap();
 

@@ -439,6 +439,144 @@ void main() {
     });
   });
 
+  group('roles across profile lookups and identity changes', () {
+    const profileId = '6f1c2b1e-4d3a-4b8e-9c7d-2a1b3c4d5e6f';
+    final api = BackendApiService();
+    var profileRequests = 0;
+    var profilePayload = <String, dynamic>{};
+
+    User userFor(String id,
+            {bool isArtist = false, bool isInstitution = false}) =>
+        User(
+          id: id,
+          name: 'Cached',
+          username: 'cached',
+          bio: '',
+          followersCount: 0,
+          followingCount: 0,
+          postsCount: 0,
+          isFollowing: false,
+          isVerified: false,
+          isArtist: isArtist,
+          isInstitution: isInstitution,
+          joinedDate: '',
+        );
+
+    KubusIdentityAvatar avatarFor(String wallet,
+            {bool fetch = false, List<String> aliases = const <String>[]}) =>
+        KubusIdentityAvatar(
+          wallet: wallet,
+          walletAliases: aliases,
+          radius: 22,
+          enableProfileNavigation: false,
+          fetchMissingAvatar: fetch,
+          allowFabricatedFallback: true,
+        );
+
+    setUp(() {
+      SharedPreferences.setMockInitialValues(<String, Object>{});
+      BackendApiService.disableHttpFailureDiagnosticsForTesting = true;
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(_secureStorage, (call) async => null);
+      profileRequests = 0;
+      api.setHttpClient(MockClient((request) async {
+        if (request.url.path.startsWith('/api/profiles/')) {
+          profileRequests++;
+          return http.Response(
+            jsonEncode(profilePayload),
+            200,
+            headers: <String, String>{'content-type': 'application/json'},
+          );
+        }
+        return http.Response('Not found', 404);
+      }));
+    });
+
+    tearDown(() async {
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(_secureStorage, null);
+      api.setHttpClient(
+          MockClient((_) async => http.Response('Not found', 404)));
+      BackendApiService.disableHttpFailureDiagnosticsForTesting = false;
+      await UserService.clearCache();
+    });
+
+    testWidgets(
+        'an unstated lookup keeps the cached artist badge on every frame',
+        (tester) async {
+      UserService.setUsersInCacheAuthoritative(
+          [userFor(_wallet, isArtist: true)]);
+      profilePayload = <String, dynamic>{
+        'id': profileId,
+        'walletAddress': _wallet,
+        'username': 'cached',
+        'displayName': 'Cached',
+      };
+      await tester.pumpWidget(_app(
+          avatarFor(profileId, fetch: true, aliases: const <String>[_wallet])));
+      expect(find.byKey(_badgeKey), findsOneWidget);
+
+      var gaps = 0;
+      for (var i = 0; i < 6; i++) {
+        await tester.runAsync(
+            () => Future<void>.delayed(const Duration(milliseconds: 20)));
+        await tester.pump();
+        if (find.byKey(_badgeKey).evaluate().isEmpty) gaps++;
+      }
+      expect(profileRequests, greaterThan(0));
+      expect(gaps, 0);
+      expect(UserService.getCachedUser(_wallet)?.isArtist, isTrue);
+      expect(find.byIcon(Icons.brush_rounded), findsOneWidget);
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump(const Duration(seconds: 1));
+    });
+
+    testWidgets('an explicit false from the lookup removes the cached badge',
+        (tester) async {
+      UserService.setUsersInCacheAuthoritative(
+          [userFor(_wallet, isArtist: true)]);
+      profilePayload = <String, dynamic>{
+        'id': profileId,
+        'walletAddress': _wallet,
+        'username': 'cached',
+        'displayName': 'Cached',
+        'roles': <String, dynamic>{'artist': false, 'institution': false},
+        'isVerified': false,
+      };
+      await tester.pumpWidget(_app(
+          avatarFor(profileId, fetch: true, aliases: const <String>[_wallet])));
+      for (var i = 0;
+          i < 10 && find.byKey(_badgeKey).evaluate().isNotEmpty;
+          i++) {
+        await tester.runAsync(
+            () => Future<void>.delayed(const Duration(milliseconds: 20)));
+        await tester.pump();
+      }
+      expect(profileRequests, greaterThan(0));
+      expect(UserService.getCachedUser(_wallet)?.isArtist, isFalse);
+      expect(find.byKey(_badgeKey), findsNothing);
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump(const Duration(seconds: 1));
+    });
+
+    testWidgets(
+        'an identity change shows the new account cached roles on its first '
+        'frame', (tester) async {
+      const otherWallet = '9xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU';
+      UserService.setUsersInCacheAuthoritative([
+        userFor(_wallet, isInstitution: true),
+        userFor(otherWallet, isArtist: true),
+      ]);
+      await tester.pumpWidget(_app(avatarFor(_wallet)));
+      await tester.pump();
+      expect(find.byIcon(Icons.account_balance_rounded), findsOneWidget);
+
+      await tester.pumpWidget(_app(avatarFor(otherWallet)));
+      expect(find.byIcon(Icons.brush_rounded), findsOneWidget);
+      expect(find.byIcon(Icons.account_balance_rounded), findsNothing);
+    });
+  });
+
   group('presence of the badge', () {
     testWidgets('an account with no stated role draws no badge at all',
         (tester) async {

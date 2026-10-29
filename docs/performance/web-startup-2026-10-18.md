@@ -13,7 +13,7 @@ Status: browser-console evidence from a Firefox session supplied by the project 
 | Off-chain metadata | `dweb.link` and `ipfs.io` 403/CORS, then Pinata fallback | KUB8 metadata availability, not a reason to disable CORS |
 | Auth | `GET /api/profiles/me` 401 | Investigate session state and initiator; don't blindly retry for anonymous users |
 | Artworks | Public `GET /api/artworks?page=1&limit=100` and wallet-scoped query | May have different privacy semantics; don't merge blindly |
-| Map | CARTO vector tiles, font PBFs | Expected for the active map; check only actual cache, viewport and tile budget |
+| Map | OpenFreeMap vector tiles, font PBFs | Expected for the active map; check only actual cache, viewport and tile budget |
 
 ### Console notes
 - Firefox's `user-select: undefined` CSS parsing warning is real, but not a confirmed fatal listener exception.

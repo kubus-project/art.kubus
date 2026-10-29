@@ -12,6 +12,20 @@ void dispatchPublicEntityReady({
   required String locale,
 }) {}
 
+void dispatchPublicEntityFailed({
+  required String type,
+  required String id,
+  required String path,
+  required String locale,
+}) {}
+
+void dispatchPublicEntityResolvedNotFound({
+  required String type,
+  required String id,
+  required String path,
+  required String locale,
+}) {}
+
 Map<String, dynamic>? readPublicEntityBootstrap() => null;
 
 String? readPublicEntityDocumentTitle() => null;

@@ -1,11 +1,13 @@
 import 'dart:async';
 
 import 'package:art_kubus/utils/design_tokens.dart';
+import 'package:art_kubus/features/map/shared/map_entry_camera.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:pointer_interceptor/pointer_interceptor.dart';
 import 'package:provider/provider.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
+import '../../core/public_entry_navigation.dart';
 import '../../providers/app_refresh_provider.dart';
 import '../../providers/chat_provider.dart';
 import '../../providers/collab_provider.dart';
@@ -133,8 +135,13 @@ DesktopProfileHydration resolveDesktopProfileHydration({
 /// Main desktop shell that provides the sidebar navigation
 class DesktopShell extends StatefulWidget {
   final int initialIndex;
+  final MapEntryCamera? initialMapCamera;
 
-  const DesktopShell({super.key, this.initialIndex = 0});
+  const DesktopShell({
+    super.key,
+    this.initialIndex = 0,
+    this.initialMapCamera,
+  });
 
   @override
   State<DesktopShell> createState() => _DesktopShellState();
@@ -316,6 +323,9 @@ class _DesktopShellState extends State<DesktopShell>
         _closeFunctionsPanel();
       }
     }
+    PublicEntryNavigation.instance.recordShellRouteNavigation(
+      ShellRouteNavigation.forward,
+    );
     setState(() {
       _screenStack.add(screen);
       if (!_dispatchingInitialCanonicalEntry) {
@@ -329,6 +339,9 @@ class _DesktopShellState extends State<DesktopShell>
   /// Pop a screen from the in-shell stack
   void _popScreenFromStack() {
     if (_screenStack.isNotEmpty) {
+      PublicEntryNavigation.instance.recordShellRouteNavigation(
+        ShellRouteNavigation.back,
+      );
       setState(() {
         _screenStack.removeLast();
         _canonicalPublicEntryTarget = null;
@@ -340,6 +353,11 @@ class _DesktopShellState extends State<DesktopShell>
 
   /// Navigate to a specific route within the shell (clears screen stack)
   void _navigateToRoute(String route) {
+    if (route != _activeRoute || _screenStack.isNotEmpty) {
+      PublicEntryNavigation.instance.recordShellRouteNavigation(
+        ShellRouteNavigation.forward,
+      );
+    }
     final leavingExplore = _activeRoute == '/explore' && route != '/explore';
     if (leavingExplore) {
       _deactivateExploreTutorial(reason: 'desktop-shell-route-change');
@@ -466,6 +484,12 @@ class _DesktopShellState extends State<DesktopShell>
       return;
     }
 
+    if (_activeRoute != item.route || _screenStack.isNotEmpty) {
+      PublicEntryNavigation.instance.recordShellRouteNavigation(
+        ShellRouteNavigation.forward,
+      );
+    }
+
     final leavingExplore =
         _activeRoute == '/explore' && item.route != '/explore';
     if (leavingExplore) {
@@ -563,7 +587,12 @@ class _DesktopShellState extends State<DesktopShell>
   Widget _buildCurrentScreen(String route) {
     switch (route) {
       case '/explore':
-        return const DesktopMapScreen();
+        final camera = widget.initialMapCamera;
+        return DesktopMapScreen(
+          initialCenter: camera?.center,
+          initialZoom: camera?.zoom,
+          autoFollow: camera == null,
+        );
       case '/community':
         return const DesktopCommunityScreen();
       case '/messages':
@@ -1166,6 +1195,9 @@ class _DesktopShellState extends State<DesktopShell>
     if (_activeRoute == '/explore') {
       _deactivateExploreTutorial(reason: 'desktop-shell-wallet-route');
     }
+    PublicEntryNavigation.instance.recordShellRouteNavigation(
+      ShellRouteNavigation.forward,
+    );
     setState(() {
       _activeRoute = _walletRoute;
       _screenStack.clear();

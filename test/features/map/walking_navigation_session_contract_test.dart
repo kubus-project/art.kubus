@@ -54,19 +54,20 @@ void main() {
         File('lib/screens/desktop/desktop_map_screen.dart').readAsStringSync();
     final compactDesktop = desktop.replaceAll(RegExp(r'\s+'), ' ');
 
-    final recenterStart = compactDesktop.indexOf('onCenterOnMe: () {');
-    final recenterEnd = compactDesktop.indexOf(
-      'if (_userLocation == null)',
-      recenterStart,
-    );
-    expect(recenterStart, greaterThanOrEqualTo(0));
-    expect(recenterEnd, greaterThan(recenterStart));
-    expect(
-      compactDesktop.substring(recenterStart, recenterEnd),
-      contains(
-        '_refreshUserLocation(animate: true, requestPermission: true);',
-      ),
-    );
+    // The control hands its tap to the recenter coordinator, which owns the
+    // explicit (prompting) acquisition. Behaviour is pinned in
+    // map_recenter_controller_test.dart; this keeps the wiring honest.
+    expect(compactDesktop, contains('onCenterOnMe: _recenterOnUser,'));
+    final recenterBody = compactDesktop.indexOf('void _recenterOnUser() {');
+    expect(recenterBody, greaterThanOrEqualTo(0));
+    final recenterCall =
+        compactDesktop.indexOf('_recenter.recenterOnUser(', recenterBody);
+    expect(recenterCall, greaterThanOrEqualTo(0));
+    expect(recenterCall - recenterBody, lessThan(300));
+    final coordinator = File(
+      'lib/features/map/shared/map_recenter_controller.dart',
+    ).readAsStringSync();
+    expect(coordinator, contains('acquire(requestPermission: true)'));
 
     final initialRefreshStart = compactDesktop.indexOf(
       'final bool shouldAnimateToUser',

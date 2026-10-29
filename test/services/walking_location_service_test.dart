@@ -147,4 +147,29 @@ void main() {
 
     expect(result.status, WalkingLocationAccessStatus.timedOut);
   });
+
+  test('live acquisition never reuses an earlier fix, even for recentering',
+      () async {
+    var loads = 0;
+    final service = GeolocatorWalkingLocationService(
+      serviceEnabled: () async => true,
+      checkPermission: () async => LocationPermission.whileInUse,
+      liveFixLoader: () async {
+        loads += 1;
+        if (loads == 1) return _fix;
+        throw StateError('no fresh fix');
+      },
+    );
+
+    final first = await service.acquireLiveFix(requestPermission: false);
+    final second = await service.acquireLiveFix(requestPermission: false);
+
+    expect(first.status, WalkingLocationAccessStatus.available);
+    expect(
+      second.status,
+      WalkingLocationAccessStatus.liveLocationUnavailable,
+      reason: 'a previous fix must never satisfy a walking live request',
+    );
+    expect(loads, 2);
+  });
 }

@@ -1,17 +1,32 @@
 import 'package:art_kubus/core/url_coherence_observer.dart';
+import 'package:art_kubus/core/public_entry_navigation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:art_kubus/services/share/share_types.dart';
 
 class _Harness {
-  _Harness() {
-    observer = UrlCoherenceObserver(enabled: true, report: reports.add);
+  _Harness({PublicEntryNavigation? entityUrls}) {
+    observer = UrlCoherenceObserver(
+      enabled: true,
+      report: (url) {
+        reports.add(url);
+        browserUrl = url;
+      },
+      currentBrowserUrl: () => browserUrl,
+      entityUrls: entityUrls,
+    );
+    // Observers listen to the shared singleton; a stale one from an earlier
+    // test must not consume state meant for the current test's observer.
+    addTearDown(observer.dispose);
   }
 
   final List<String> reports = <String>[];
   final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
+  String? browserUrl;
   late final UrlCoherenceObserver observer;
 
   Widget build({String initialRoute = '/en/artworks/a1'}) {
+    browserUrl ??= initialRoute;
     return MaterialApp(
       navigatorKey: navigatorKey,
       navigatorObservers: <NavigatorObserver>[observer],
@@ -29,6 +44,8 @@ class _Harness {
 }
 
 void main() {
+  tearDown(() => PublicEntryNavigation.instance.resetForTest());
+
   testWidgets('the first named page is the address bar, not a change',
       (tester) async {
     final harness = _Harness();
@@ -125,6 +142,36 @@ void main() {
     expect(harness.reports, <String>['/en/events/e1']);
   });
 
+  testWidgets(
+      'a pending public entry repairs a later Navigator shell URL overwrite',
+      (tester) async {
+    final entryNavigation = PublicEntryNavigation.instance;
+    entryNavigation.setEntry(
+      type: ShareEntityType.artwork,
+      entityId: 'a1',
+      browserRoute: '/en/artworks/a1?source=share#cover',
+      shellRoute: '/main',
+    );
+    final harness = _Harness(entityUrls: entryNavigation)
+      ..browserUrl = '/en/artworks/a1?source=share#cover';
+    await tester.pumpWidget(harness.build());
+    await tester.pumpAndSettle();
+
+    // Navigator's startup replacement can land after the observer's first
+    // frame callback. Simulate that external write, then a readiness/claim
+    // notification; the observer must compare with the browser, not only its
+    // stale last-reported URL.
+    harness.browserUrl = '/main';
+    entryNavigation.visibilityChanged();
+    await tester.pumpAndSettle();
+
+    expect(harness.reports, <String>[
+      '/en/artworks/a1?source=share#cover',
+    ]);
+    expect(harness.browserUrl, '/en/artworks/a1?source=share#cover');
+    expect(harness.observer.desiredUrl, '/en/artworks/a1?source=share#cover');
+  });
+
   testWidgets('does nothing when disabled (non-web platforms)', (tester) async {
     final reports = <String>[];
     final observer = UrlCoherenceObserver(enabled: false, report: reports.add);
@@ -141,5 +188,215 @@ void main() {
     await tester.pump();
 
     expect(reports, isEmpty);
+  });
+
+  testWidgets('a pop reports through reportBack, a push through report',
+      (tester) async {
+    final forward = <String>[];
+    final back = <String>[];
+    String? browserUrl = '/main';
+    final observer = UrlCoherenceObserver(
+      enabled: true,
+      report: (url) {
+        forward.add(url);
+        browserUrl = url;
+      },
+      reportBack: (url) {
+        back.add(url);
+        browserUrl = url;
+      },
+      currentBrowserUrl: () => browserUrl,
+    );
+    final navigatorKey = GlobalKey<NavigatorState>();
+    await tester.pumpWidget(MaterialApp(
+      navigatorKey: navigatorKey,
+      navigatorObservers: <NavigatorObserver>[observer],
+      initialRoute: '/main',
+      onGenerateRoute: (settings) => MaterialPageRoute<void>(
+        settings: settings,
+        builder: (_) => Text('page ${settings.name}'),
+      ),
+    ));
+    await tester.pumpAndSettle();
+
+    navigatorKey.currentState!.pushNamed('/map');
+    await tester.pumpAndSettle();
+    expect(forward, <String>['/map']);
+    expect(back, isEmpty);
+
+    navigatorKey.currentState!.pop();
+    await tester.pumpAndSettle();
+    expect(forward, <String>['/map']);
+    expect(back, <String>['/main'],
+        reason: 'returning to the page below must not push another entry');
+    observer.dispose();
+  });
+
+  testWidgets('dropping an unresolvable entry reports a replacing correction',
+      (tester) async {
+    const entryUrl = '/en/map/bad-marker';
+    PublicEntryNavigation.instance.setEntry(
+      type: ShareEntityType.marker,
+      entityId: 'bad-marker',
+      browserRoute: entryUrl,
+      shellRoute: '/map',
+    );
+    final forward = <String>[];
+    final replaced = <String>[];
+    String? browserUrl = entryUrl;
+    final observer = UrlCoherenceObserver(
+      enabled: true,
+      report: (url) {
+        forward.add(url);
+        browserUrl = url;
+      },
+      reportReplace: (url) {
+        replaced.add(url);
+        browserUrl = url;
+      },
+      currentBrowserUrl: () => browserUrl,
+    );
+    final navigatorKey = GlobalKey<NavigatorState>();
+    await tester.pumpWidget(MaterialApp(
+      navigatorKey: navigatorKey,
+      navigatorObservers: <NavigatorObserver>[observer],
+      initialRoute: '/map',
+      onGenerateRoute: (settings) => MaterialPageRoute<void>(
+        settings: settings,
+        builder: (_) => Text('page ${settings.name}'),
+      ),
+    ));
+    await tester.pumpAndSettle();
+    expect(forward, isEmpty);
+    expect(replaced, isEmpty, reason: 'the pending entry holds its address');
+
+    PublicEntryNavigation.instance
+        .entryUnresolved(ShareEntityType.marker, 'bad-marker');
+    await tester.pumpAndSettle();
+
+    expect(replaced, <String>['/map']);
+    expect(forward, isEmpty);
+    observer.dispose();
+  });
+
+  testWidgets('a page that replaces another replaces its history entry',
+      (tester) async {
+    final forward = <String>[];
+    final replaced = <String>[];
+    String? browserUrl = '/';
+    final observer = UrlCoherenceObserver(
+      enabled: true,
+      report: (url) {
+        forward.add(url);
+        browserUrl = url;
+      },
+      reportReplace: (url) {
+        replaced.add(url);
+        browserUrl = url;
+      },
+      currentBrowserUrl: () => browserUrl,
+    );
+    final navigatorKey = GlobalKey<NavigatorState>();
+    await tester.pumpWidget(MaterialApp(
+      navigatorKey: navigatorKey,
+      navigatorObservers: <NavigatorObserver>[observer],
+      initialRoute: '/',
+      onGenerateRoute: (settings) => MaterialPageRoute<void>(
+        settings: settings,
+        builder: (_) => Text('page ${settings.name}'),
+      ),
+    ));
+    await tester.pumpAndSettle();
+
+    // AppInitializer opens the shell with pushReplacement: `/` becomes `/map`.
+    navigatorKey.currentState!.pushReplacementNamed('/map');
+    await tester.pumpAndSettle();
+    expect(replaced, <String>['/map']);
+    expect(forward, isEmpty);
+
+    navigatorKey.currentState!.pushNamed('/sign-in');
+    await tester.pumpAndSettle();
+    expect(forward, <String>['/sign-in'],
+        reason: 'an ordinary push still adds an entry');
+    observer.dispose();
+  });
+
+  testWidgets(
+      'desktop shell forward after reload keeps entity history and back restores it',
+      (tester) async {
+    const entryUrl = '/en/artworks/a1?source=share#cover';
+    final entryNavigation = PublicEntryNavigation.instance;
+    entryNavigation.setEntry(
+      type: ShareEntityType.artwork,
+      entityId: 'a1',
+      browserRoute: entryUrl,
+      shellRoute: '/main',
+    );
+    final forward = <String>[];
+    final back = <String>[];
+    String? browserUrl = entryUrl;
+    final observer = UrlCoherenceObserver(
+      enabled: true,
+      report: (url) {
+        forward.add(url);
+        browserUrl = url;
+      },
+      reportBack: (url) {
+        back.add(url);
+        browserUrl = url;
+      },
+      currentBrowserUrl: () => browserUrl,
+      entityUrls: entryNavigation,
+    );
+    addTearDown(observer.dispose);
+
+    var entityVisible = true;
+    Object? claim;
+    late StateSetter setEntityVisible;
+    Widget buildEntity(BuildContext context) => StatefulBuilder(
+          builder: (context, setState) {
+            setEntityVisible = setState;
+            claim ??= entryNavigation.claim(
+              context,
+              type: ShareEntityType.artwork,
+              entityId: 'a1',
+              localizedPath: (_) => '/en/artworks/a1',
+              isShowing: () => entityVisible,
+            );
+            return Text(entityVisible ? 'reloaded entity' : 'shell page');
+          },
+        );
+    await tester.pumpWidget(MaterialApp(
+      navigatorObservers: <NavigatorObserver>[observer],
+      initialRoute: '/main',
+      onGenerateInitialRoutes: (_) => <Route<dynamic>>[
+        MaterialPageRoute<void>(
+          settings: const RouteSettings(name: '/main'),
+          builder: buildEntity,
+        ),
+      ],
+      onGenerateRoute: (settings) => MaterialPageRoute<void>(
+        settings: settings,
+        builder: buildEntity,
+      ),
+    ));
+    await tester.pumpAndSettle();
+
+    expect(entryNavigation.visibleEntityUrl, entryUrl);
+    expect(browserUrl, entryUrl);
+
+    entryNavigation.recordShellRouteNavigation(ShellRouteNavigation.forward);
+    setEntityVisible(() => entityVisible = false);
+    entryNavigation.visibilityChanged();
+    await tester.pumpAndSettle();
+    expect(forward, <String>['/main']);
+    expect(browserUrl, '/main');
+
+    entryNavigation.recordShellRouteNavigation(ShellRouteNavigation.back);
+    setEntityVisible(() => entityVisible = true);
+    entryNavigation.visibilityChanged();
+    await tester.pumpAndSettle();
+    expect(back, <String>[entryUrl]);
+    expect(browserUrl, entryUrl);
   });
 }
