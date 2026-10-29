@@ -38,7 +38,13 @@ export function normalizeServiceWorkerVersion(directory, sourceSha) {
     return null;
   }
   const found = [...bootstrap.matchAll(VERSION_PATTERN)].map((match) => match[1]);
-  if (found.length === 0) return null;
+  if (found.length === 0) {
+    // A declaration we cannot parse must not silently bring the random value back.
+    if (/\bflutterServiceWorkerVersion\s*=\s*(?!null\b)\S/.test(bootstrap)) {
+      throw new Error('flutter_bootstrap.js declares a service worker version in an unrecognised form');
+    }
+    return null;
+  }
   if (found.length !== 1) throw new Error('flutter_bootstrap.js must declare exactly one service worker version');
 
   const original = found[0];

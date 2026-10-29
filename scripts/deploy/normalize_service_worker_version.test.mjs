@@ -133,3 +133,15 @@ test('a build without a service worker version is left untouched', () => {
     rmSync(dir, { recursive: true, force: true });
   }
 });
+
+test('an unrecognised service worker declaration fails closed', () => {
+  const dir = makeBuild('4107033965');
+  try {
+    writeFileSync(join(dir, 'flutter_bootstrap.js'), 'const flutterServiceWorkerVersion = `abc-123`;');
+    assert.throws(() => normalizeServiceWorkerVersion(dir, SHA), /unrecognised form/);
+    writeFileSync(join(dir, 'flutter_bootstrap.js'), 'const flutterServiceWorkerVersion = null;');
+    assert.equal(normalizeServiceWorkerVersion(dir, SHA), null);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
