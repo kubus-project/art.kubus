@@ -242,6 +242,7 @@ class _ConversationScreenState extends State<ConversationScreen> {
     // Load messages and other conversation initialization off the main path
     _persistCacheSnapshots();
     Future(() async {
+      if (!mounted) return;
       try {
         await _load();
       } catch (e) {
