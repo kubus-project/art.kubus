@@ -419,4 +419,22 @@ void main() {
       );
     },
   );
+
+  test('the takeover target carries the locale of its canonical path', () {
+    for (final (locale, segment) in <(String, String)>[
+      ('en', 'artworks'),
+      ('sl', 'umetnine'),
+    ]) {
+      final provider = PublicEntityTakeoverProvider();
+      provider.seed(
+        initialUri: Uri.parse('/$locale/$segment/art-1'),
+        target: ShareDeepLinkTarget(
+          type: ShareEntityType.artwork,
+          id: 'art-1',
+          localeCode: locale,
+        ),
+      );
+      expect(provider.target?.locale, locale);
+    }
+  });
 }
