@@ -22,6 +22,7 @@ import '../../services/socket_service.dart';
 import '../../providers/profile_provider.dart';
 import '../../providers/cache_provider.dart';
 import '../../services/user_service.dart';
+import '../../services/account_cache_store.dart';
 import '../../services/backend_api_service.dart';
 import '../../services/event_bus.dart';
 import '../../services/push_notification_service.dart';
@@ -147,6 +148,7 @@ class _ConversationScreenState extends State<ConversationScreen> {
   final Map<String, GlobalKey> _messageKeys = {};
   // Header-only compatibility caches. Message sender rows must resolve identity
   // through ChatProvider's participant identity cache.
+  AccountCacheScope _headerCacheScope = AccountCacheScope.capture();
   final Map<String, String?> _headerAvatarUrlCache = {};
   final Map<String, String?> _headerDisplayNameCache = {};
   Timer? _scrollDebounce;
@@ -349,7 +351,18 @@ class _ConversationScreenState extends State<ConversationScreen> {
     } catch (_) {}
   }
 
-  void _persistCacheSnapshots() {
+  void _syncHeaderCacheScope() {
+    if (_headerCacheScope.isCurrent) return;
+    _headerCacheScope = AccountCacheScope.capture();
+    _headerAvatarUrlCache.clear();
+    _headerDisplayNameCache.clear();
+    _conversationAvatar = null;
+    _conversationMembers = [];
+  }
+
+  void _persistCacheSnapshots({AccountCacheScope? scope}) {
+    if (scope != null && !scope.isCurrent) return;
+    _syncHeaderCacheScope();
     if (!mounted || !_cacheProvider.isInitialized) return;
     final avatarPayload = <String, String?>{};
     final displayPayload = <String, String?>{};
@@ -366,6 +379,7 @@ class _ConversationScreenState extends State<ConversationScreen> {
     });
     if (avatarPayload.isEmpty && displayPayload.isEmpty) return;
     unawaited(_cacheProvider.mergeProfiles(
+      scope: scope ?? _headerCacheScope,
       avatars: avatarPayload.isEmpty ? null : avatarPayload,
       displayNames: displayPayload.isEmpty ? null : displayPayload,
     ));
@@ -431,6 +445,8 @@ class _ConversationScreenState extends State<ConversationScreen> {
 
   /// Load the messages and associated member data for this conversation.
   Future<void> _load() async {
+    _syncHeaderCacheScope();
+    final cacheScope = AccountCacheScope.capture();
     // Capture current wallet synchronously to avoid using BuildContext inside background async futures
     final profile = Provider.of<ProfileProvider>(context, listen: false);
     final myWallet = (profile.currentUser?.walletAddress ?? '');
@@ -443,7 +459,7 @@ class _ConversationScreenState extends State<ConversationScreen> {
       debugPrint('ConversationScreen._load: loadMessages failed: $e');
       list = [];
     }
-    if (!mounted) return;
+    if (!mounted || !cacheScope.isCurrent) return;
     _seedAndHydrateParticipants(list);
 
     // Build a set of remote senders for header fallback only. Message row
@@ -476,7 +492,7 @@ class _ConversationScreenState extends State<ConversationScreen> {
     }
     debugPrint(
         'ConversationScreen._load: ${list.length} messages loaded for ${widget.conversation.id}');
-    _persistCacheSnapshots();
+    _persistCacheSnapshots(scope: cacheScope);
 
     // Open conversation subscription, mark read, and fetch members in background; don't block initial render.
     Future(() async {
@@ -493,6 +509,7 @@ class _ConversationScreenState extends State<ConversationScreen> {
 
       try {
         final mems = await _chatProvider.fetchMembers(widget.conversation.id);
+        if (!mounted || !cacheScope.isCurrent) return;
         final wallets = (mems as List)
             .map((e) => (e['wallet_address'] as String?) ?? '')
             .where(
@@ -553,6 +570,7 @@ class _ConversationScreenState extends State<ConversationScreen> {
             }
             if (missing.isNotEmpty) {
               final users = await UserService.getUsersByWallets(missing);
+              if (!mounted || !cacheScope.isCurrent) return;
               try {
                 EventBus().emitProfilesUpdated(users);
               } catch (_) {}
@@ -605,7 +623,7 @@ class _ConversationScreenState extends State<ConversationScreen> {
               'ConversationScreen._load: header avatar=$_conversationAvatar, members=${_conversationMembers.length}, display cache keys=${_headerDisplayNameCache.keys.length}');
           _seedHeaderCacheIntoParticipantProvider();
           setState(() {});
-          _persistCacheSnapshots();
+          _persistCacheSnapshots(scope: cacheScope);
         }
       } catch (e) {
         debugPrint(

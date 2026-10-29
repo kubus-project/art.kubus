@@ -942,8 +942,8 @@ void main() {
     });
 
     test(
-        'blocks written before accounts were scoped go to the first account '
-        'that signs in', () async {
+        'unowned legacy blocks are discarded without attributing them to the next account',
+        () async {
       SharedPreferences.setMockInitialValues(<String, Object>{
         'blocked_wallets_v1': '["$walletX"]',
       });
@@ -951,20 +951,22 @@ void main() {
       final blocks = BlockListService();
 
       await api.setAuthToken(tokenA);
-      expect(await blocks.isWalletBlocked(walletX), isTrue);
+      expect(await blocks.isWalletBlocked(walletX), isFalse);
 
       await api.setAuthToken(tokenB);
       expect(await blocks.isWalletBlocked(walletX), isFalse);
 
       final prefs = await SharedPreferences.getInstance();
       expect(prefs.containsKey('blocked_wallets_v1'), isFalse);
-      expect(prefs.getString('blocked_wallets_v1.user-a'), contains(walletX));
+      expect(prefs.containsKey('blocked_wallets_v1.user-a'), isFalse);
     });
 
-    test('reported posts follow the same rule: adopted once, then per account',
+    test(
+        'unowned legacy reports are discarded while scoped reports stay private',
         () async {
       SharedPreferences.setMockInitialValues(<String, Object>{
         'reported_posts': <String>['post-1|spam|1'],
+        'reported_posts.user-a': <String>['owned-a|spam|1'],
       });
       final api = BackendApiService();
 
@@ -973,7 +975,7 @@ void main() {
       final prefs = await SharedPreferences.getInstance();
       expect(
         prefs.getStringList('reported_posts.user-a'),
-        <String>['post-1|spam|1'],
+        <String>['owned-a|spam|1'],
       );
       expect(prefs.containsKey('reported_posts'), isFalse);
 

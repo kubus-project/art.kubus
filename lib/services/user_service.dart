@@ -1,12 +1,13 @@
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'dart:convert';
 import '../config/config.dart';
 import '../models/achievement_progress.dart';
 import '../models/achievements.dart' as backend_achievements;
 import '../models/profile_identity_data.dart';
 import '../models/user.dart';
 import 'backend_api_service.dart';
+import 'account_cache_store.dart';
+import 'account_identity.dart';
 import 'profile_package_mutation_tracker.dart';
 import 'stats_api_service.dart';
 import 'achievement_service.dart' as achievement_svc;
@@ -99,6 +100,29 @@ class UserService {
   // NOTE: Removed prior cacheVersion notifier. UI components should call
   // UserService.getUsersByWallets/getUserById for explicit fetches and not rely on
   // an implicit cache notification system.
+
+  static String _scopeOwner = AccountCacheStore.owner;
+  static int _scopeGeneration = AccountCacheStore.generation;
+
+  static bool _scopeListenerRegistered = false;
+
+  static void _ensureCacheScope() {
+    if (!_scopeListenerRegistered) {
+      _scopeListenerRegistered = true;
+      AccountIdentity.addListener(_ensureCacheScope);
+    }
+    if (_scopeOwner == AccountCacheStore.owner &&
+        _scopeGeneration == AccountCacheStore.generation) {
+      return;
+    }
+    _scopeOwner = AccountCacheStore.owner;
+    _scopeGeneration = AccountCacheStore.generation;
+    _cache.clear();
+    _cacheTimestamps.clear();
+    _legacyCacheMissingCoverKey.clear();
+    _profileMediaRevisionByUser.clear();
+    _profileMediaBustByUser.clear();
+  }
 
   // Sample users data
   static final List<User> _sampleUsers = [
@@ -380,6 +404,7 @@ class UserService {
       {bool forceRefresh = false,
       bool includeAchievements = true,
       bool rethrowErrors = false}) async {
+    _ensureCacheScope();
     final sessionEpoch = BackendApiService().authSessionEpoch;
     try {
       // Consult cache first (unless caller requests fresh data)
@@ -638,6 +663,7 @@ class UserService {
   }
 
   static User? _cachedUserFor(String userId) {
+    _ensureCacheScope();
     final canonical = WalletUtils.canonical(userId);
     return _cache[userId] ?? (canonical.isEmpty ? null : _cache[canonical]);
   }
@@ -698,9 +724,7 @@ class UserService {
       final trimmed = url.trim();
       if (trimmed.isEmpty) return null;
       // Treat DiceBear/placeholder URLs as missing so UI renders local initials instead of remote SVGs
-      if (isPlaceholderAvatarUrl(trimmed)) {
-        return null;
-      }
+      if (isPlaceholderAvatarUrl(trimmed)) return null;
       if (trimmed.contains('api.dicebear.com') && trimmed.contains('/svg')) {
         return trimmed.replaceAll('/svg', '/png');
       }
@@ -792,6 +816,7 @@ class UserService {
     required bool allowNullMediaOverwrite,
     int? sessionEpoch,
   }) {
+    _ensureCacheScope();
     // A write captured under a session that has since ended is dropped whole,
     // so it reaches neither memory nor the persisted cache of the next account.
     if (sessionEpoch != null &&
@@ -939,7 +964,9 @@ class UserService {
 
   static Future<void> _persistCache() async {
     try {
-      final prefs = await SharedPreferences.getInstance();
+      _ensureCacheScope();
+      final account = _scopeOwner;
+      final generation = _scopeGeneration;
       // Build map of wallet -> serialized user + cachedAt
       final map = <String, dynamic>{};
       final entries = _cache.keys.toList();
@@ -965,7 +992,8 @@ class UserService {
           );
         }
       }
-      await prefs.setString(_cachePrefsKey, json.encode(map));
+      await AccountCacheStore.write(_cachePrefsKey, map,
+          account: account, generation: generation);
     } catch (e) {
       if (kDebugMode) {
         debugPrint('UserService._persistCache: $e');
@@ -980,9 +1008,15 @@ class UserService {
       _maxEntries = maxEntries;
       _ttlMillis = ttl.inMilliseconds;
       _legacyCacheMissingCoverKey.clear();
-      final prefs = await SharedPreferences.getInstance();
-      final raw = prefs.getString(_cachePrefsKey) ?? '{}';
-      final Map<String, dynamic> map = json.decode(raw) as Map<String, dynamic>;
+      _ensureCacheScope();
+      final account = _scopeOwner;
+      final generation = _scopeGeneration;
+      final raw = await AccountCacheStore.read(_cachePrefsKey);
+      if (account != AccountCacheStore.owner ||
+          generation != AccountCacheStore.generation) {
+        return;
+      }
+      final map = Map<String, dynamic>.from(raw as Map? ?? const {});
       final now = DateTime.now().millisecondsSinceEpoch;
       final entries = <String, User>{};
       final timestamps = <String, int>{};
@@ -1090,6 +1124,7 @@ class UserService {
   /// and useful for UI paths that need immediate access to previously persisted
   /// user profiles without performing async calls.
   static User? getCachedUser(String userId) {
+    _ensureCacheScope();
     try {
       if (userId.isEmpty) return null;
       return _cache[userId];
@@ -1100,6 +1135,7 @@ class UserService {
 
   /// Returns a map of cached User objects for the given ids. Non-existing ids are omitted.
   static Map<String, User> getCachedUsers(List<String> walletIds) {
+    _ensureCacheScope();
     final Map<String, User> result = {};
     try {
       for (final id in walletIds) {
@@ -1119,8 +1155,9 @@ class UserService {
       _legacyCacheMissingCoverKey.clear();
       _profileMediaRevisionByUser.clear();
       _profileMediaBustByUser.clear();
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.remove(_cachePrefsKey);
+      await AccountCacheStore.write(_cachePrefsKey, <String, dynamic>{},
+          account: AccountCacheStore.owner,
+          generation: AccountCacheStore.generation);
     } catch (e) {
       if (kDebugMode) {
         debugPrint('UserService.clearCache: $e');
@@ -1132,6 +1169,7 @@ class UserService {
     String username, {
     bool includeAchievements = true,
   }) async {
+    _ensureCacheScope();
     final sessionEpoch = BackendApiService().authSessionEpoch;
     final trimmed = username.trim();
     if (trimmed.isEmpty) return null;
@@ -1270,14 +1308,22 @@ class UserService {
   static Future<List<String>?> _readFollowingCache({
     String? walletAddress,
   }) async {
+    final account = AccountCacheStore.owner;
+    final generation = AccountCacheStore.generation;
     final activeWallet = WalletUtils.canonical(
         walletAddress ?? await _activeWalletAddressFromPrefs());
     if (activeWallet.isEmpty) return null;
-    final prefs = await SharedPreferences.getInstance();
-    final followingJson = prefs.getString(_followingKeyForWallet(activeWallet));
-    if (followingJson == null || followingJson.isEmpty) return null;
+    final followingJson =
+        await AccountCacheStore.read(_followingKeyForWallet(activeWallet));
+    if (account != AccountCacheStore.owner ||
+        generation != AccountCacheStore.generation) {
+      return null;
+    }
+    if (followingJson == null) {
+      return null;
+    }
     try {
-      return List<String>.from(json.decode(followingJson))
+      return List<String>.from(followingJson as List)
           .map(WalletUtils.canonical)
           .where((wallet) => wallet.isNotEmpty)
           .toSet()
@@ -1304,6 +1350,8 @@ class UserService {
   static Future<List<String>?> getKnownFollowingUsers({
     String? walletAddress,
   }) async {
+    final account = AccountCacheStore.owner;
+    final generation = AccountCacheStore.generation;
     final activeWallet = WalletUtils.canonical(
         walletAddress ?? await _activeWalletAddressFromPrefs());
     if (activeWallet.isEmpty) return null;
@@ -1324,11 +1372,19 @@ class UserService {
           .where((wallet) => wallet.isNotEmpty)
           .toSet()
           .toList(growable: false);
+      if (account != AccountCacheStore.owner ||
+          generation != AccountCacheStore.generation) {
+        return null;
+      }
       await _saveFollowingUsers(wallets, walletAddress: activeWallet);
       return wallets;
     } catch (e) {
       if (kDebugMode) {
         debugPrint('UserService.getFollowingUsers: backend refresh failed: $e');
+      }
+      if (account != AccountCacheStore.owner ||
+          generation != AccountCacheStore.generation) {
+        return null;
       }
       return _readFollowingCache(walletAddress: activeWallet);
     }
@@ -1341,16 +1397,16 @@ class UserService {
     final activeWallet = WalletUtils.canonical(
         walletAddress ?? await _activeWalletAddressFromPrefs());
     if (activeWallet.isEmpty) return;
-    final prefs = await SharedPreferences.getInstance();
+    final account = AccountCacheStore.owner;
+    final generation = AccountCacheStore.generation;
     final canonicalWallets = wallets
         .map(WalletUtils.canonical)
         .where((wallet) => wallet.isNotEmpty)
         .toSet()
         .toList(growable: false);
-    await prefs.setString(
-      _followingKeyForWallet(activeWallet),
-      json.encode(canonicalWallets),
-    );
+    await AccountCacheStore.write(
+        _followingKeyForWallet(activeWallet), canonicalWallets,
+        account: account, generation: generation);
   }
 
   static Future<void> followUser(String walletAddress) async {
@@ -1725,6 +1781,7 @@ class UserService {
   }
 
   static String? _cacheEntryKeyFor(String userId) {
+    _ensureCacheScope();
     if (_cache.containsKey(userId)) return userId;
     final canonical = WalletUtils.canonical(userId);
     if (canonical.isNotEmpty && _cache.containsKey(canonical)) return canonical;
@@ -1984,6 +2041,7 @@ class UserService {
   /// background (non-blocking) to avoid slowing down profile fetch paths.
   static Future<void> fetchAndUpdateUserStats(String walletAddress) async {
     if (walletAddress.isEmpty) return;
+    _ensureCacheScope();
     final sessionEpoch = BackendApiService().authSessionEpoch;
 
     final normalizedWallet = WalletUtils.canonical(walletAddress);
@@ -2055,6 +2113,7 @@ class UserService {
   /// - `batchFirstThreshold`: if the number of wallets >= this threshold, call the batch endpoint first.
   static Future<List<User>> getUsersByWallets(List<String> wallets,
       {bool forceRefresh = false, int batchFirstThreshold = 4}) async {
+    _ensureCacheScope();
     final sessionEpoch = BackendApiService().authSessionEpoch;
     final results = <User>[];
     final clean = wallets.where((w) => w.isNotEmpty).toSet().toList();

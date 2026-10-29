@@ -1,12 +1,11 @@
-import 'dart:convert';
-
 import 'package:flutter/foundation.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import '../services/account_cache_store.dart';
+import '../services/account_identity.dart';
 import '../services/user_service.dart';
 import '../utils/wallet_utils.dart';
 
 /// Centralized cache for lightweight profile data (avatars, display names, etc.).
-/// Backed by [SharedPreferences] so multiple screens can reuse previously
+/// Backed by account-scoped device preferences so multiple screens can reuse previously
 /// resolved identities without refetching from the backend.
 class CacheProvider extends ChangeNotifier {
   static const _avatarKey = 'cache_provider_avatars_v1';
@@ -16,22 +15,78 @@ class CacheProvider extends ChangeNotifier {
   final Map<String, String> _avatarCache = <String, String>{};
   final Map<String, String> _displayNameCache = <String, String>{};
 
-  SharedPreferences? _prefs;
-  bool _initialized = false;
-  bool get isInitialized => _initialized;
+  String _owner = AccountCacheStore.owner;
+  int _generation = AccountCacheStore.generation;
+  DateTime? _loadedAt;
 
-  Map<String, String> get avatarSnapshot => Map.unmodifiable(_avatarCache);
-  Map<String, String> get displayNameSnapshot => Map.unmodifiable(_displayNameCache);
+  CacheProvider() {
+    AccountIdentity.addListener(_handleIdentityChanged);
+  }
+
+  void _handleIdentityChanged() {
+    _invalidate();
+    notifyListeners();
+  }
+
+  void _invalidate() {
+    _avatarCache.clear();
+    _displayNameCache.clear();
+    _initialized = false;
+    _loadedAt = null;
+    _owner = AccountCacheStore.owner;
+    _generation = AccountCacheStore.generation;
+  }
+
+  void _syncScope() {
+    if (_owner != AccountCacheStore.owner ||
+        _generation != AccountCacheStore.generation ||
+        (_loadedAt != null &&
+            DateTime.now().difference(_loadedAt!) >=
+                const Duration(hours: 24))) {
+      _invalidate();
+    }
+  }
+
+  @override
+  void dispose() {
+    AccountIdentity.removeListener(_handleIdentityChanged);
+    super.dispose();
+  }
+
+  bool _initialized = false;
+  bool get isInitialized {
+    _syncScope();
+    return _initialized;
+  }
+
+  Map<String, String> get avatarSnapshot {
+    _syncScope();
+    return Map.unmodifiable(_avatarCache);
+  }
+
+  Map<String, String> get displayNameSnapshot {
+    _syncScope();
+    return Map.unmodifiable(_displayNameCache);
+  }
 
   Future<void> initialize() async {
+    _syncScope();
     if (_initialized) return;
-    _prefs = await SharedPreferences.getInstance();
+    final owner = _owner;
+    final generation = _generation;
+    final avatars = await AccountCacheStore.read(_avatarKey);
+    final names = await AccountCacheStore.read(_displayNameKey);
+    if (owner != AccountCacheStore.owner ||
+        generation != AccountCacheStore.generation) {
+      return;
+    }
     _avatarCache
       ..clear()
-      ..addAll(_decodeMap(_prefs?.getString(_avatarKey)));
+      ..addAll(_decodeMap(avatars));
     _displayNameCache
       ..clear()
-      ..addAll(_decodeMap(_prefs?.getString(_displayNameKey)));
+      ..addAll(_decodeMap(names));
+    _loadedAt = DateTime.now();
     if (_purgeInvalidAvatarEntries()) {
       await _persist(_avatarKey, _avatarCache);
     }
@@ -40,7 +95,13 @@ class CacheProvider extends ChangeNotifier {
 
   Future<void> setAvatar(String wallet, String? url) async {
     if (wallet.trim().isEmpty) return;
+    final owner = AccountCacheStore.owner;
+    final generation = AccountCacheStore.generation;
     await _ensureReady();
+    if (owner != AccountCacheStore.owner ||
+        generation != AccountCacheStore.generation) {
+      return;
+    }
     final key = _normalizeWallet(wallet);
     final sanitized = _sanitizeAvatar(url);
     if (sanitized == null) {
@@ -58,8 +119,18 @@ class CacheProvider extends ChangeNotifier {
   }
 
   Future<void> setDisplayName(String wallet, String? displayName) async {
-    if (wallet.trim().isEmpty || displayName == null || displayName.trim().isEmpty) return;
+    if (wallet.trim().isEmpty ||
+        displayName == null ||
+        displayName.trim().isEmpty) {
+      return;
+    }
+    final owner = AccountCacheStore.owner;
+    final generation = AccountCacheStore.generation;
     await _ensureReady();
+    if (owner != AccountCacheStore.owner ||
+        generation != AccountCacheStore.generation) {
+      return;
+    }
     final key = _normalizeWallet(wallet);
     final candidate = displayName.trim();
     if (_displayNameCache[key] == candidate) return;
@@ -70,18 +141,34 @@ class CacheProvider extends ChangeNotifier {
   }
 
   String? getAvatar(String wallet) {
+    _syncScope();
     if (!_initialized) return null;
     return _avatarCache[_normalizeWallet(wallet)];
   }
 
   String? getDisplayName(String wallet) {
+    _syncScope();
     if (!_initialized) return null;
     return _displayNameCache[_normalizeWallet(wallet)];
   }
 
-  Future<void> mergeProfiles({Map<String, String?>? avatars, Map<String, String?>? displayNames}) async {
-    if ((avatars == null || avatars.isEmpty) && (displayNames == null || displayNames.isEmpty)) return;
+  Future<void> mergeProfiles(
+      {Map<String, String?>? avatars,
+      Map<String, String?>? displayNames,
+      AccountCacheScope? scope}) async {
+    if ((avatars == null || avatars.isEmpty) &&
+        (displayNames == null || displayNames.isEmpty)) {
+      return;
+    }
+    final captured = scope ?? AccountCacheScope.capture();
+    if (!captured.isCurrent) return;
+    final owner = captured.account;
+    final generation = captured.generation;
     await _ensureReady();
+    if (owner != AccountCacheStore.owner ||
+        generation != AccountCacheStore.generation) {
+      return;
+    }
     bool changed = false;
     if (avatars != null && avatars.isNotEmpty) {
       for (final entry in avatars.entries) {
@@ -96,6 +183,8 @@ class CacheProvider extends ChangeNotifier {
       _prune(_avatarCache);
       if (changed) await _persist(_avatarKey, _avatarCache);
     }
+
+    if (!captured.isCurrent) return;
 
     bool displayChanged = false;
     if (displayNames != null && displayNames.isNotEmpty) {
@@ -116,10 +205,12 @@ class CacheProvider extends ChangeNotifier {
     if (changed || displayChanged) notifyListeners();
   }
 
-  Map<String, String> _decodeMap(String? raw) {
-    if (raw == null || raw.isEmpty) return <String, String>{};
+  Map<String, String> _decodeMap(dynamic raw) {
+    if (raw == null) {
+      return <String, String>{};
+    }
     try {
-      final decoded = jsonDecode(raw) as Map<String, dynamic>;
+      final decoded = Map<String, dynamic>.from(raw as Map);
       return decoded.map((key, value) => MapEntry(key, value?.toString() ?? ''))
         ..removeWhere((_, value) => value.isEmpty);
     } catch (_) {
@@ -128,11 +219,12 @@ class CacheProvider extends ChangeNotifier {
   }
 
   Future<void> _persist(String key, Map<String, String> map) async {
-    if (_prefs == null) return;
-    await _prefs!.setString(key, jsonEncode(map));
+    await AccountCacheStore.write(key, map,
+        account: _owner, generation: _generation);
   }
 
   Future<void> _ensureReady() async {
+    _syncScope();
     if (_initialized) return;
     await initialize();
   }

@@ -6,6 +6,7 @@ import 'package:art_kubus/models/achievements.dart' as achievements;
 import 'package:art_kubus/models/profile_package.dart';
 import 'package:art_kubus/models/user.dart';
 import 'package:art_kubus/services/backend_api_service.dart';
+import 'package:art_kubus/services/account_cache_store.dart';
 import 'package:art_kubus/services/http_client_factory.dart';
 import 'package:art_kubus/services/profile_package_service.dart';
 import 'package:art_kubus/services/user_service.dart';
@@ -377,7 +378,7 @@ void main() {
     );
   });
 
-  test('old v1 cache migration restores complete critical package', () async {
+  test('unowned v1 cache is discarded and cannot supply a profile', () async {
     final legacy = _legacyCriticalJson(wallet: wallet);
     SharedPreferences.setMockInitialValues(<String, Object>{
       'profile_package_cache_v1': jsonEncode(<String, Object?>{
@@ -395,10 +396,10 @@ void main() {
     final critical =
         await ProfilePackageService.loadPublicProfileCriticalPackage(wallet);
 
-    expect(critical, isNotNull);
-    expect(critical!.achievementDefinitions.single.title,
-        'Legacy Backend Milestone');
-    expect(networkCalls, 0);
+    expect(critical, isNull);
+    expect(networkCalls, greaterThan(0));
+    final prefs = await SharedPreferences.getInstance();
+    expect(prefs.containsKey('profile_package_cache_v1'), isFalse);
   });
 
   test('critical invalidation prevents stale in-flight result from caching',
@@ -511,7 +512,7 @@ void main() {
 
       expect(await load, isNull);
       await _settle();
-      expect(prefs.getString('profile_critical_cache_v3'), isNull);
+      expect(await AccountCacheStore.read('profile_critical_cache_v3'), isNull);
 
       // Positive control: a load for the new session does persist its package,
       // so the absence above is not an artifact of the persistence path.
@@ -522,7 +523,8 @@ void main() {
       );
       expect(fresh?.user.id, wallet);
       await _settle();
-      expect(prefs.getString('profile_critical_cache_v3'), isNotNull);
+      expect(
+          await AccountCacheStore.read('profile_critical_cache_v3'), isNotNull);
     });
 
     test('a superseded in-flight load leaves the newer load registered',
