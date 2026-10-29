@@ -1,0 +1,8 @@
+# GitGuardian scan configuration (applies to the GitHub integration and ggshield).
+# This one fixture builds a deliberately fake JWT (its signature segment decodes to the
+# text "signature"), so the scanner reports a valid-looking token that never was one.
+# Only this file is ignored; the rest of test/ and all of lib/ stay scanned.
+version: 2
+secret:
+  ignored_paths:
+    - test/services/backend_api_diagnostics_post_test.dart
