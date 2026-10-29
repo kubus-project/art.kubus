@@ -27,22 +27,106 @@ if (takeoverHost) {
   engineConfig.hostElement = takeoverHost;
 }
 
-try {
-  Promise.resolve(_flutter.loader.load({
-    serviceWorkerSettings: {
-      serviceWorkerVersion: flutterServiceWorkerVersion,
-    },
-    config: engineConfig,
-    onEntrypointLoaded: async (engineInitializer) => {
-      try {
-        const appRunner = await engineInitializer.initializeEngine(engineConfig);
-        takeover?.engineReady();
-        await appRunner.runApp();
-      } catch (_) {
-        takeover?.fail();
-      }
-    },
-  })).catch(() => takeover?.fail());
-} catch (_) {
-  takeover?.fail();
+// Engine start-up failures do not always reach the catch handlers below. When only canvaskit.wasm fails, the loader
+// rejects detached promises (TypeError "Failed to fetch" raised from this file, or a WebAssembly "compile ... HTTP
+// status code is not ok" error), so the takeover controller would show the loading state forever. Until the engine is
+// ready, such a rejection is a failed start. Only rejections that name the engine's own loader or assets count;
+// unrelated rejections never do. A request that merely hangs raises nothing, so a ceiling bounds it: it is far beyond
+// the slowest measured start (about 56 s at 4x CPU on slow 4G) and shows the failure state with Retry, never a
+// fake readiness.
+const ENGINE_READY_CEILING_MS = 150000;
+let stopWatchingEngineStart = () => {};
+// Firefox and Safari raise a bare fetch error with an EMPTY stack ("NetworkError when attempting to fetch resource.",
+// "Load failed"). Nothing else on a server-rendered entity page makes network calls before the engine is ready, so such a
+// rejection with an empty or engine-owned stack is the engine's; one carrying another script's stack is not.
+const GENERIC_FETCH_FAILURE = /^(Failed to fetch|NetworkError when attempting to fetch resource\.?|Load failed|Fetch failed)$/i;
+const isEngineStartupRejection = (reason) => {
+  const text = String((reason && reason.message) || reason || "");
+  const stack = String((reason && reason.stack) || "");
+  if (/service ?worker/i.test(text)) return false;
+  const ownStack = stack.includes("flutter_bootstrap.js") || stack.includes("canvaskit") || stack.includes("main.dart.js");
+  if (GENERIC_FETCH_FAILURE.test(text.trim()) && (stack === "" || ownStack)) return true;
+  return /canvaskit|skwasm|WebAssembly|application\/wasm|dynamically imported module/i.test(text) || ownStack;
+};
+const watchEngineStart = () => {
+  if (!takeover) return;
+  let ceiling = null;
+  const onRejection = (event) => {
+    if (!isEngineStartupRejection(event.reason)) return;
+    stopWatchingEngineStart();
+    takeover.fail();
+  };
+  stopWatchingEngineStart = () => {
+    globalThis.removeEventListener("unhandledrejection", onRejection);
+    if (ceiling !== null) globalThis.clearTimeout(ceiling);
+    ceiling = null;
+  };
+  globalThis.addEventListener("unhandledrejection", onRejection);
+  ceiling = globalThis.setTimeout(() => {
+    stopWatchingEngineStart();
+    takeover.fail();
+  }, ENGINE_READY_CEILING_MS);
+};
+
+const startEngine = () => {
+  watchEngineStart();
+  try {
+    Promise.resolve(_flutter.loader.load({
+      serviceWorkerSettings: {
+        serviceWorkerVersion: flutterServiceWorkerVersion,
+      },
+      config: engineConfig,
+      onEntrypointLoaded: async (engineInitializer) => {
+        try {
+          const appRunner = await engineInitializer.initializeEngine(engineConfig);
+          stopWatchingEngineStart();
+          takeover?.engineReady();
+          await appRunner.runApp();
+        } catch (_) {
+          stopWatchingEngineStart();
+          takeover?.fail();
+        }
+      },
+    })).catch(() => {
+      stopWatchingEngineStart();
+      takeover?.fail();
+    });
+  } catch (_) {
+    stopWatchingEngineStart();
+    takeover?.fail();
+  }
+};
+
+// A public entity page is already readable: its server-rendered document is the first paint and the LCP. Let that
+// document finish loading and the main thread go idle before the engine's download, compile and boot compete for it
+// (on a throttled phone they otherwise delay the LCP paint by tens of seconds). This script is still requested and
+// run immediately, so the takeover controller's bootstrap checks are unchanged; only the engine start waits, and the
+// wait is capped so a slow third-party resource can never hold the app back for long. App routes start at once.
+const ENGINE_START_CAP_MS = 6000;
+const startWhenDocumentIsPainted = (start) => {
+  let started = false;
+  const go = () => {
+    if (started) return;
+    started = true;
+    start();
+  };
+  const afterLoad = () => {
+    if (typeof globalThis.requestIdleCallback === "function") {
+      globalThis.requestIdleCallback(() => globalThis.setTimeout(go, 150), { timeout: 2000 });
+    } else {
+      globalThis.setTimeout(go, 1000);
+    }
+  };
+  globalThis.setTimeout(go, ENGINE_START_CAP_MS);
+  if (document.readyState === "complete") {
+    afterLoad();
+  } else {
+    globalThis.addEventListener("load", afterLoad, { once: true });
+  }
+};
+
+if (document.getElementById("kubus-public-entity-bootstrap")) {
+  startWhenDocumentIsPainted(startEngine);
+} else {
+  startEngine();
 }

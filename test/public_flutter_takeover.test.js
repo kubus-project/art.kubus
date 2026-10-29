@@ -271,7 +271,7 @@ function buildPage(locale = 'en', options = {}) {
     'data-entity-type': 'artwork',
     'data-entity-id': 'art-1',
     'data-entity-path': entityPath,
-    'data-locale': locale,
+    ...(options.noHostLocale ? {} : { 'data-locale': locale }),
   });
   body.appendChild(host);
 
@@ -1136,4 +1136,25 @@ test('PHP gateway: the capability script is added after the early return, so an 
   const capability = gateway.indexOf('$capabilityScript = stripos');
   assert.ok(guard > 0 && capability > guard, 'the flutter-host guard returns before any injection');
   assert.match(gateway.slice(guard, capability), /return \$html;/);
+});
+
+test('a host without data-locale (a backend older than the loading section) takes its locale from the canonical path', () => {
+  for (const locale of ['en', 'sl']) {
+    const page = buildPage(locale, { status: 'old', noHostLocale: true });
+    page.global.kubusPublicTakeover.bootstrapStarted();
+    assert.equal(page.message.textContent, COPY[locale].loading, `${locale} copy is localized from the path`);
+    page.dispatchEntity({ ...exactEntity(locale), locale: locale === 'sl' ? 'en' : 'sl' });
+    assert.equal(page.classes.has('kubus-takeover-active'), false, 'a wrong locale never takes over');
+    page.dispatchEntity(exactEntity(locale));
+    assert.equal(page.classes.has('kubus-takeover-active'), true, `${locale} exact entity takes over`);
+    assert.equal(page.marks.includes('public_entity_ready'), true);
+  }
+});
+
+test('a host with neither data-locale nor a localized canonical path still never takes over', () => {
+  const page = buildPage('en', { status: 'old', noHostLocale: true, path: '/artworks/art-1' });
+  page.global.kubusPublicTakeover.bootstrapStarted();
+  page.global.location.pathname = '/artworks/art-1';
+  page.dispatchEntity({ type: 'artwork', id: 'art-1', path: '/artworks/art-1', locale: 'en' });
+  assert.equal(page.classes.has('kubus-takeover-active'), false);
 });
