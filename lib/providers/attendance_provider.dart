@@ -56,14 +56,20 @@ class AttendanceChallengeDto {
   });
 
   factory AttendanceChallengeDto.fromApi(Map<String, dynamic> json) {
-    final data = (json['data'] is Map) ? Map<String, dynamic>.from(json['data'] as Map) : json;
+    final data = (json['data'] is Map)
+        ? Map<String, dynamic>.from(json['data'] as Map)
+        : json;
     final expiresRaw = (data['expiresAt'] ?? data['expires_at'])?.toString();
-    final attendedAtRaw = (data['attendedAt'] ?? data['attended_at'])?.toString();
+    final attendedAtRaw =
+        (data['attendedAt'] ?? data['attended_at'])?.toString();
     return AttendanceChallengeDto(
       markerId: (data['markerId'] ?? data['marker_id'] ?? '').toString(),
-      alreadyAttended: (data['alreadyAttended'] ?? data['already_attended']) == true,
-      attendedAt: attendedAtRaw != null ? DateTime.tryParse(attendedAtRaw) : null,
-      challengeToken: (data['challengeToken'] ?? data['challenge_token'] ?? '').toString(),
+      alreadyAttended:
+          (data['alreadyAttended'] ?? data['already_attended']) == true,
+      attendedAt:
+          attendedAtRaw != null ? DateTime.tryParse(attendedAtRaw) : null,
+      challengeToken:
+          (data['challengeToken'] ?? data['challenge_token'] ?? '').toString(),
       expiresAt: expiresRaw != null
           ? (DateTime.tryParse(expiresRaw) ?? DateTime.now().toUtc())
           : DateTime.now().toUtc(),
@@ -95,22 +101,27 @@ class AttendanceConfirmDto {
   });
 
   factory AttendanceConfirmDto.fromApi(Map<String, dynamic> json) {
-    final data = (json['data'] is Map) ? Map<String, dynamic>.from(json['data'] as Map) : json;
+    final data = (json['data'] is Map)
+        ? Map<String, dynamic>.from(json['data'] as Map)
+        : json;
     final parsedAttestations = () {
       final raw = data['attestations'];
       if (raw is List) {
         return raw
             .whereType<Map>()
-            .map((item) => UnifiedAttestation.fromJson(
-                Map<String, dynamic>.from(item)))
+            .map((item) =>
+                UnifiedAttestation.fromJson(Map<String, dynamic>.from(item)))
             .toList(growable: false);
       }
 
       // Backward compatibility for older payloads that only returned
       // attendance/POAP/achievement fields.
-      final poap = (data['poap'] is Map) ? Map<String, dynamic>.from(data['poap'] as Map) : null;
-      final subject =
-          (data['subject'] is Map) ? Map<String, dynamic>.from(data['subject'] as Map) : null;
+      final poap = (data['poap'] is Map)
+          ? Map<String, dynamic>.from(data['poap'] as Map)
+          : null;
+      final subject = (data['subject'] is Map)
+          ? Map<String, dynamic>.from(data['subject'] as Map)
+          : null;
       final markerId = (subject?['markerId'] ?? '').toString();
       final subjectType = (subject?['subjectType'] ?? 'art_marker').toString();
       final subjectId = (subject?['subjectId'] ?? markerId).toString();
@@ -123,7 +134,8 @@ class AttendanceConfirmDto {
             'type': 'attendance',
             'subjectType': subjectType,
             'subjectId': subjectId,
-            'status': data['attendanceRecorded'] == true ? 'recorded' : 'idempotent',
+            'status':
+                data['attendanceRecorded'] == true ? 'recorded' : 'idempotent',
             'usage': const <String>['trust', 'eligibility', 'discovery'],
             'mint': const <String, dynamic>{
               'eligible': false,
@@ -139,7 +151,9 @@ class AttendanceConfirmDto {
       }
       if (poap != null) {
         final status = (poap['status'] ?? '').toString().trim();
-        if (status.isNotEmpty && status != 'none' && status != 'not_configured') {
+        if (status.isNotEmpty &&
+            status != 'none' &&
+            status != 'not_configured') {
           fallback.add(
             UnifiedAttestation.fromJson(<String, dynamic>{
               'id': 'poap:${poap['eventId'] ?? markerId}',
@@ -170,9 +184,15 @@ class AttendanceConfirmDto {
           ? List<dynamic>.from(data['achievementsUnlocked'] as List)
           : const <dynamic>[],
       attestations: parsedAttestations,
-      poap: (data['poap'] is Map) ? Map<String, dynamic>.from(data['poap'] as Map) : null,
-      kub8: (data['kub8'] is Map) ? Map<String, dynamic>.from(data['kub8'] as Map) : null,
-      subject: (data['subject'] is Map) ? Map<String, dynamic>.from(data['subject'] as Map) : null,
+      poap: (data['poap'] is Map)
+          ? Map<String, dynamic>.from(data['poap'] as Map)
+          : null,
+      kub8: (data['kub8'] is Map)
+          ? Map<String, dynamic>.from(data['kub8'] as Map)
+          : null,
+      subject: (data['subject'] is Map)
+          ? Map<String, dynamic>.from(data['subject'] as Map)
+          : null,
     );
   }
 }
@@ -202,12 +222,14 @@ class AttendanceMarkerState {
 
 class AttendanceProvider extends ChangeNotifier {
   final BackendApiService _api;
-  final Map<String, AttendanceMarkerState> _statesByMarkerId = <String, AttendanceMarkerState>{};
+  final Map<String, AttendanceMarkerState> _statesByMarkerId =
+      <String, AttendanceMarkerState>{};
 
   bool _isSignedIn = false;
   String? _walletAddress;
 
-  AttendanceProvider({BackendApiService? api}) : _api = api ?? BackendApiService();
+  AttendanceProvider({BackendApiService? api})
+      : _api = api ?? BackendApiService();
 
   void bindAuthContext({
     required bool isSignedIn,
@@ -273,7 +295,9 @@ class AttendanceProvider extends ChangeNotifier {
       if (!hasListeners) return false;
       if (previous == null) return true;
       if (previous.withinRadius != next.withinRadius) return true;
-      if ((previous.distanceMeters - next.distanceMeters).abs() >= 5.0) return true;
+      if ((previous.distanceMeters - next.distanceMeters).abs() >= 5.0) {
+        return true;
+      }
       return false;
     }();
 
@@ -337,7 +361,8 @@ class AttendanceProvider extends ChangeNotifier {
     if (snapshot == null) return null;
 
     // Client-side guard to avoid unnecessary requests when we know it's invalid.
-    if (snapshot.requiresProximity && (!state.hasFreshProximity || !snapshot.withinRadius)) {
+    if (snapshot.requiresProximity &&
+        (!state.hasFreshProximity || !snapshot.withinRadius)) {
       return null;
     }
 
@@ -355,7 +380,11 @@ class AttendanceProvider extends ChangeNotifier {
       final raw = await _api.confirmAttendance(
         markerId: id,
         challengeToken: challenge.challengeToken,
-        clientLocation: snapshot.toClientLocationPayload(),
+        // Only disclose location when the marker requires proximity proof.
+        // The server still decides whether that proof is required and valid.
+        clientLocation: snapshot.requiresProximity
+            ? snapshot.toClientLocationPayload()
+            : const <String, dynamic>{},
         walletAddress: _walletAddress,
       );
       final dto = AttendanceConfirmDto.fromApi(raw);
@@ -383,4 +412,3 @@ class AttendanceProvider extends ChangeNotifier {
     }
   }
 }
-

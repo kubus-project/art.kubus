@@ -5318,7 +5318,7 @@ class BackendApiService
         body: jsonEncode({
           'markerId': markerId.trim(),
           'challengeToken': challengeToken,
-          'clientLocation': clientLocation,
+          if (clientLocation.isNotEmpty) 'clientLocation': clientLocation,
         }),
       );
 
@@ -5330,7 +5330,7 @@ class BackendApiService
           body: jsonEncode({
             'markerId': markerId.trim(),
             'challengeToken': challengeToken,
-            'clientLocation': clientLocation,
+            if (clientLocation.isNotEmpty) 'clientLocation': clientLocation,
           }),
         );
 
