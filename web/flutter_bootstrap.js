@@ -36,12 +36,17 @@ if (takeoverHost) {
 // fake readiness.
 const ENGINE_READY_CEILING_MS = 150000;
 let stopWatchingEngineStart = () => {};
+// Firefox and Safari raise a bare fetch error with an EMPTY stack ("NetworkError when attempting to fetch resource.",
+// "Load failed"). Nothing else on a server-rendered entity page makes network calls before the engine is ready, so such a
+// rejection with an empty or engine-owned stack is the engine's; one carrying another script's stack is not.
+const GENERIC_FETCH_FAILURE = /^(Failed to fetch|NetworkError when attempting to fetch resource\.?|Load failed|Fetch failed)$/i;
 const isEngineStartupRejection = (reason) => {
   const text = String((reason && reason.message) || reason || "");
   const stack = String((reason && reason.stack) || "");
   if (/service ?worker/i.test(text)) return false;
-  return /canvaskit|skwasm|WebAssembly|dynamically imported module/i.test(text) ||
-    stack.includes("flutter_bootstrap.js") || stack.includes("canvaskit") || stack.includes("main.dart.js");
+  const ownStack = stack.includes("flutter_bootstrap.js") || stack.includes("canvaskit") || stack.includes("main.dart.js");
+  if (GENERIC_FETCH_FAILURE.test(text.trim()) && (stack === "" || ownStack)) return true;
+  return /canvaskit|skwasm|WebAssembly|dynamically imported module/i.test(text) || ownStack;
 };
 const watchEngineStart = () => {
   if (!takeover) return;
