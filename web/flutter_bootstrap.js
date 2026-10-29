@@ -46,7 +46,7 @@ const isEngineStartupRejection = (reason) => {
   if (/service ?worker/i.test(text)) return false;
   const ownStack = stack.includes("flutter_bootstrap.js") || stack.includes("canvaskit") || stack.includes("main.dart.js");
   if (GENERIC_FETCH_FAILURE.test(text.trim()) && (stack === "" || ownStack)) return true;
-  return /canvaskit|skwasm|WebAssembly|dynamically imported module/i.test(text) || ownStack;
+  return /canvaskit|skwasm|WebAssembly|application\/wasm|dynamically imported module/i.test(text) || ownStack;
 };
 const watchEngineStart = () => {
   if (!takeover) return;

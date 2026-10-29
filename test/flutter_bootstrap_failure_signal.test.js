@@ -107,3 +107,9 @@ test('Firefox and Safari bare fetch errors (empty stack) fail the takeover; a fo
   assert.equal(foreign.fails, 0);
 });
 
+test("Safari's wasm MIME-type rejection (a 404 or 503 for canvaskit.wasm) fails the takeover", () => {
+  const s = run();
+  s.reject(rejection("Unexpected response MIME type. Expected 'application/wasm'", ''));
+  assert.equal(s.fails, 1);
+});
+
