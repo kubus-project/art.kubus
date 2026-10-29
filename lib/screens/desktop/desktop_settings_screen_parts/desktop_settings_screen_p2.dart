@@ -34,9 +34,12 @@ extension _DesktopSettingsScreenStatePart2 on _DesktopSettingsScreenState {
                         .accentColor,
                 foregroundColor: Colors.white),
             onPressed: () {
-              Navigator.pop(context);
-              ScaffoldMessenger.of(context).showKubusSnackBar(SnackBar(
-                  content: Text(l10n.desktopSettingsExportingDataToast)));
+              Navigator.of(context).pop();
+              if (!mounted) return;
+              Navigator.of(this.context).push(MaterialPageRoute(
+                builder: (_) => const SupportCenterScreen(
+                    initialSection: SupportSection.contact),
+              ));
             },
             child: Text(l10n.settingsExportButton),
           ),
@@ -654,8 +657,7 @@ extension _DesktopSettingsScreenStatePart2 on _DesktopSettingsScreenState {
             _buildSettingsRow(
               l10n.settingsDataExportTileTitle,
               l10n.settingsDataExportTileSubtitle,
-              Icons.download,
-              isDestructive: true,
+              Icons.mail_outline,
               onTap: _showDataExportDialog,
             ),
             const SizedBox(height: 12),

@@ -1093,8 +1093,8 @@
   "settingsCrashReportingTileSubtitle": "Send crash reports automatically",
   "settingsSkipOnboardingTileTitle": "Skip onboarding",
   "settingsSkipOnboardingTileSubtitle": "Skip welcome screens for returning users",
-  "settingsDataExportTileTitle": "Data export",
-  "settingsDataExportTileSubtitle": "Download your data",
+  "settingsDataExportTileTitle": "Request a copy of my data",
+  "settingsDataExportTileSubtitle": "Contact support to request a copy",
   "settingsResetPermissionFlagsTileTitle": "Reset permission flags",
   "settingsResetPermissionFlagsTileSubtitle": "Clear saved permission/service prompts",
   "settingsAboutSectionTitle": "About",
@@ -1183,15 +1183,15 @@
   "settingsResetPermissionFlagsDialogBody": "This will clear the app's stored permission and service request flags. Use this to re-trigger permission prompts if needed.",
   "settingsPermissionFlagsResetToast": "Permission flags reset",
   "settingsResetButton": "Reset",
-  "settingsExportDataDialogTitle": "Export data",
-  "settingsExportDataDialogBody": "This will create a file with your app data (excluding private keys).",
+  "settingsExportDataDialogTitle": "Request a copy of my data",
+  "settingsExportDataDialogBody": "Submit the support form to request a copy. This action does not create a file. You can also contact support@kubus.site.",
   "settingsDataExportedToast": "Data exported: {count} categories",
   "@settingsDataExportedToast": {
     "placeholders": {
       "count": {}
     }
   },
-  "settingsExportButton": "Export",
+  "settingsExportButton": "Open request form",
   "settingsResetAppDialogTitle": "Reset app",
   "settingsResetAppDialogBody": "This will clear app data and settings on this device. It disconnects the wallet session here, but it does not delete the wallet itself.",
   "settingsAppResetSuccessToast": "App reset successfully. Please restart the app.",

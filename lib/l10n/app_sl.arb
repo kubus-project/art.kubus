@@ -1089,8 +1089,8 @@
   "settingsCrashReportingTileSubtitle": "Samodejno pošlji poročila o zrušitvah",
   "settingsSkipOnboardingTileTitle": "Preskoči uvod",
   "settingsSkipOnboardingTileSubtitle": "Preskoči pozdravne zaslone za vračajoče uporabnike",
-  "settingsDataExportTileTitle": "Izvoz podatkov",
-  "settingsDataExportTileSubtitle": "Prenesi svoje podatke",
+  "settingsDataExportTileTitle": "Zahtevaj kopijo svojih podatkov",
+  "settingsDataExportTileSubtitle": "Za kopijo podatkov se obrni na podporo",
   "settingsResetPermissionFlagsTileTitle": "Ponastavi zastavice dovoljenj",
   "settingsResetPermissionFlagsTileSubtitle": "Počisti shranjene pozive za dovoljenja/storitve",
   "settingsAboutSectionTitle": "O aplikaciji",
@@ -1179,15 +1179,15 @@
   "settingsResetPermissionFlagsDialogBody": "To bo počistilo shranjene zastavice pozivov za dovoljenja in storitve. Uporabi, če želiš ponovno sprožiti pozive za dovoljenja.",
   "settingsPermissionFlagsResetToast": "Zastavice dovoljenj so ponastavljene",
   "settingsResetButton": "Ponastavi",
-  "settingsExportDataDialogTitle": "Izvoz podatkov",
-  "settingsExportDataDialogBody": "To bo ustvarilo datoteko s tvojimi podatki aplikacije (brez zasebnih ključev).",
+  "settingsExportDataDialogTitle": "Zahtevaj kopijo svojih podatkov",
+  "settingsExportDataDialogBody": "Kopijo svojih podatkov lahko zahtevaš prek obrazca za podporo. S tem dejanjem datoteka še ne nastane. Pišeš nam lahko tudi na support@kubus.site.",
   "settingsDataExportedToast": "Podatki izvoženi: {count} kategorij",
   "@settingsDataExportedToast": {
     "placeholders": {
       "count": {}
     }
   },
-  "settingsExportButton": "Izvozi",
+  "settingsExportButton": "Odpri obrazec za zahtevo",
   "settingsResetAppDialogTitle": "Ponastavi aplikacijo",
   "settingsResetAppDialogBody": "To bo izbrisalo podatke in nastavitve na tej napravi. Seja denarnice se tukaj prekine, sama denarnica pa se ne izbriše.",
   "settingsAppResetSuccessToast": "Aplikacija je uspešno ponastavljena. Prosim, znova jo zaženi.",

@@ -48,7 +48,7 @@ extension _SettingsScreenStatePart2 on _SettingsScreenState {
         _buildSettingsTile(
           l10n.settingsDataExportTileTitle,
           l10n.settingsDataExportTileSubtitle,
-          Icons.download,
+          Icons.mail_outline,
           onTap: () => _showDataExportDialog(),
         ),
         _buildSettingsTile(
@@ -1132,36 +1132,13 @@ extension _SettingsScreenStatePart2 on _SettingsScreenState {
                       .accentColor,
               foregroundColor: Colors.white,
             ),
-            onPressed: () async {
-              final navigator = Navigator.of(context);
-              final messenger = ScaffoldMessenger.of(context);
-
-              // Prepare export data
-              final prefs = await SharedPreferences.getInstance();
-              final exportData = {
-                'profile': {
-                  'profileVisibility':
-                      prefs.getString('profileVisibility') ?? 'Public',
-                  'showAchievements': prefs.getBool('showAchievements') ?? true,
-                  'showFriends': prefs.getBool('showFriends') ?? true,
-                },
-                'settings': {
-                  'enableAnalytics': prefs.getBool('enableAnalytics') ?? true,
-                  'enableCrashReporting':
-                      prefs.getBool('enableCrashReporting') ?? true,
-                  'skipOnboarding':
-                      prefs.getBool('skipOnboardingForReturningUsers') ?? true,
-                },
-                'exportDate': DateTime.now().toIso8601String(),
-              };
-
+            onPressed: () {
+              Navigator.of(context).pop();
               if (!mounted) return;
-              navigator.pop();
-              messenger.showKubusSnackBar(
-                SnackBar(
-                    content: Text(
-                        l10n.settingsDataExportedToast(exportData.length))),
-              );
+              Navigator.of(this.context).push(MaterialPageRoute(
+                builder: (_) => const SupportCenterScreen(
+                    initialSection: SupportSection.contact),
+              ));
             },
             child: Text(l10n.settingsExportButton),
           ),
