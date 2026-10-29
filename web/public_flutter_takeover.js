@@ -11,11 +11,16 @@
   // Set by web/takeover_capability.js before first paint: the section is already painted, so the
   // reveal below must not blank the message first (an empty message collapses a line = layout shift).
   const capable = root.classList.contains("kubus-takeover-capable");
+  // A backend that predates the loading-section design renders the host without data-locale (the home standby
+  // runs one). The canonical path carries the same fact, by the same rule the app uses to send `locale`
+  // (/sl/... is Slovenian, /en/... English), so the exact-entity check still works and the copy is localized.
+  const hostPath = host.dataset.entityPath || "";
+  const pathLocale = hostPath.startsWith("/sl/") ? "sl" : hostPath.startsWith("/en/") ? "en" : "";
   const expected = Object.freeze({
     type: host.dataset.entityType || "",
     id: host.dataset.entityId || "",
-    path: host.dataset.entityPath || "",
-    locale: host.dataset.locale || "",
+    path: hostPath,
+    locale: host.dataset.locale || pathLocale,
   });
 
   // Copy is chosen by comparing the locale, never looked up by a dataset value,
