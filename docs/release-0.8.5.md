@@ -73,8 +73,10 @@ App changes on `dev` since 0.8.4:
 - As last recorded on 2026-10-24: IPFS cluster pinning wedged and the DNSLink pointer stale; HA replication unhealthy.
 - Not verified on a physical Android device; installed-native App Links for 0.8.5 are unverified.
 - The iOS artifact is unsigned and not distributable until Apple signing is configured.
-- GitGuardian reports one fake-JWT test fixture on #380 (its signature decodes to the text "signature"); a narrow
-  ignore is in [#381](https://github.com/kubus-project/art.kubus/pull/381).
+- GitGuardian reports one fake-JWT test fixture on #380 (`test/services/backend_api_diagnostics_post_test.dart`; its
+  signature decodes to the text "signature"). It is not a required check and the token never was a credential.
+  A `.gitguardian.yaml` does not suppress the hosted integration, so it needs dismissing as a test credential in the
+  GitGuardian workspace.
 - The `backend` gitlink in this repository still points at `ee3b880`, not the deployed `e0d2a0e1`.
 
 ## Deferred to 0.9
