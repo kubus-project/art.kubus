@@ -3185,7 +3185,7 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get settingsDeleteAccountDialogBody =>
-      'S strežnikov bomo odstranili tvoj profil in podatke skupnosti. Tvoja denarnica ostane tvoja in jo lahko še vedno obnoviš z obnovitveno frazo.';
+      'Z zaprtjem računa izgubiš dostop do njega. Nekateri podatki lahko zahtevajo dodaten pregled ali se še hranijo. Tvoja denarnica ostane tvoja in jo lahko obnoviš z obnovitveno frazo.';
 
   @override
   String get settingsFinalConfirmationTitle => 'Končna potrditev';
@@ -3203,7 +3203,7 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get settingsAccountDeletedToast =>
-      'Račun je izbrisan. Vsi podatki so odstranjeni.';
+      'Zaprtje računa je bilo zahtevano. Nekateri podatki lahko zahtevajo dodaten pregled ali se še hranijo.';
 
   @override
   String get settingsDeleteForeverButton => 'Izbriši za vedno';

@@ -3160,7 +3160,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get settingsDeleteAccountDialogBody =>
-      'We will remove your profile and community data from our servers. Your wallet remains yours, and you can still restore access with your recovery phrase.';
+      'Closing your account ends your access. Some data may require further review or be retained. Your wallet remains yours and can be restored with its recovery phrase.';
 
   @override
   String get settingsFinalConfirmationTitle => 'Final confirmation';
@@ -3178,7 +3178,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get settingsAccountDeletedToast =>
-      'Account deleted. All data has been removed.';
+      'Account closure requested. Some data may require further review or be retained.';
 
   @override
   String get settingsDeleteForeverButton => 'Delete forever';

@@ -5611,7 +5611,7 @@ abstract class AppLocalizations {
   /// No description provided for @settingsDeleteAccountDialogBody.
   ///
   /// In en, this message translates to:
-  /// **'We will remove your profile and community data from our servers. Your wallet remains yours, and you can still restore access with your recovery phrase.'**
+  /// **'Closing your account ends your access. Some data may require further review or be retained. Your wallet remains yours and can be restored with its recovery phrase.'**
   String get settingsDeleteAccountDialogBody;
 
   /// No description provided for @settingsFinalConfirmationTitle.
@@ -5641,7 +5641,7 @@ abstract class AppLocalizations {
   /// No description provided for @settingsAccountDeletedToast.
   ///
   /// In en, this message translates to:
-  /// **'Account deleted. All data has been removed.'**
+  /// **'Account closure requested. Some data may require further review or be retained.'**
   String get settingsAccountDeletedToast;
 
   /// No description provided for @settingsDeleteForeverButton.
