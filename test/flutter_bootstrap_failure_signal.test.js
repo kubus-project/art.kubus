@@ -94,3 +94,22 @@ test('an app route (no takeover) installs nothing and cannot throw', () => {
   assert.equal((s.listeners.unhandledrejection || []).length, 0);
   assert.equal(s.ceiling(), undefined);
 });
+
+test('Firefox and Safari bare fetch errors (empty stack) fail the takeover; a foreign script stack does not', () => {
+  for (const message of ['NetworkError when attempting to fetch resource.', 'Load failed', 'Failed to fetch']) {
+    const s = run();
+    s.reject(rejection(message, ''));
+    assert.equal(s.fails, 1, message);
+  }
+  const foreign = run();
+  foreign.reject(rejection('Failed to fetch', 'at track (http://x/analytics.js:1:1)'));
+  foreign.reject(rejection('Load failed', 'at x (http://x/other.js:2:2)'));
+  assert.equal(foreign.fails, 0);
+});
+
+test("Safari's wasm MIME-type rejection (a 404 or 503 for canvaskit.wasm) fails the takeover", () => {
+  const s = run();
+  s.reject(rejection("Unexpected response MIME type. Expected 'application/wasm'", ''));
+  assert.equal(s.fails, 1);
+});
+
