@@ -7252,6 +7252,12 @@ abstract class AppLocalizations {
   /// **'Describe your mission in at least 20 characters.'**
   String get institutionHubApplicationMissionRequired;
 
+  /// No description provided for @institutionHubApplicationWalletBannerTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'A wallet signature is needed to submit'**
+  String get institutionHubApplicationWalletBannerTitle;
+
   /// No description provided for @institutionHubApplicationWalletRequired.
   ///
   /// In en, this message translates to:
@@ -7360,11 +7366,11 @@ abstract class AppLocalizations {
   /// **'Pending governance review'**
   String get institutionHubCtaPendingDaoReview;
 
-  /// No description provided for @institutionHubCtaConnectWalletToApply.
+  /// No description provided for @institutionHubCtaApplyAsInstitution.
   ///
   /// In en, this message translates to:
-  /// **'Connect wallet to apply'**
-  String get institutionHubCtaConnectWalletToApply;
+  /// **'Apply as an institution'**
+  String get institutionHubCtaApplyAsInstitution;
 
   /// No description provided for @institutionHubDaoStatusSyncedLabel.
   ///
