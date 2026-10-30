@@ -1,7 +1,8 @@
 # art.kubus 0.8.5: public entry, SSR WORLD HANDOFF and keyless basemap
 
-Status: **RELEASED** on 2026-10-29. Tag `v0.8.5` is on `master` `d5c51643` (the `dev` to `master` merge commit,
-[#380](https://github.com/kubus-project/art.kubus/pull/380)); the GitHub Release is published (not a prerelease), and
+Status: **RELEASED** on 2026-10-29. Tag `v0.8.5` is on `master` `d5c5164378f447f9ede2d7d821b5eef156471704`
+(`d5c51643`, the `dev` to `master` merge commit, [#380](https://github.com/kubus-project/art.kubus/pull/380)); the
+[GitHub Release](https://github.com/kubus-project/art.kubus/releases/tag/v0.8.5) is published (not a prerelease), and
 production web is live at the same commit. Statuses are kept separate: **implemented**, **tested**, **reviewed**,
 **merged**, **deployed** and **released** are never inferred from one another. Maturity stays 0.8.x-alpha.
 
@@ -48,7 +49,9 @@ App changes on `dev` since 0.8.4:
 
 - **Web deployed:** `release-production.yml` run 40909894439 on `d5c51643`, approved through `production-web`.
   `app.kubus.site/kubus-web-revision.txt` reports `d5c51643`, `version.json` reports 0.8.5, the post-promotion
-  production smoke passed, and entity pages report `X-Kubus-Backend-Revision: e0d2a0e1`.
+  production smoke passed, and entity pages report `X-Kubus-Backend-Revision: e0d2a0e1`. Re-read independently on
+  2026-10-30 from a live entity page: `X-Kubus-Web-Revision: d5c5164378f447f9ede2d7d821b5eef156471704` and
+  `X-Kubus-Backend-Revision: e0d2a0e15c74ac3ec484b57443ee396898b37abd`.
 - **Mobile:** `Mobile release` run 40909878532 (tag `v0.8.5`), build number 263020014, published the release with
   `SHA256SUMS` and `release-manifest.json` (every file verified against the checksums).
   - **Android** APK and AAB are signed with the release keystore. The APK certificate SHA-256
@@ -72,12 +75,28 @@ App changes on `dev` since 0.8.4:
 - The home standby backend is stale (v0.8.1) with no database; it answers SSR pages with 503 and is not a working failover.
 - As last recorded on 2026-10-24: IPFS cluster pinning wedged and the DNSLink pointer stale; HA replication unhealthy.
 - Not verified on a physical Android device; installed-native App Links for 0.8.5 are unverified.
-- The iOS artifact is unsigned and not distributable until Apple signing is configured.
+- The iOS artifact is unsigned and not distributable until Apple signing is configured (see "iOS signing" below).
 - GitGuardian reports one fake-JWT test fixture on #380 (`test/services/backend_api_diagnostics_post_test.dart`; its
   signature decodes to the text "signature"). It is not a required check and the token never was a credential.
   A `.gitguardian.yaml` does not suppress the hosted integration, so it needs dismissing as a test credential in the
   GitGuardian workspace.
-- The `backend` gitlink in this repository still points at `ee3b880`, not the deployed `e0d2a0e1`.
+  Checked 2026-10-30 without reproducing the value: HS256 header, claims `sub` and `role` only (no `exp`), signature
+  is the nine literal bytes `signature` (a real HS256 signature is 32 bytes), so no secret can verify it against any
+  environment. The hosted finding's status cannot be queried from here: dismissal is a **manual action** for a
+  GitGuardian workspace operator (mark as test credential / false positive). The check passes on PRs that do not
+  contain the file (for example #383). Secret scanning stays enabled.
+- The `backend` gitlink was stale at `ee3b880` (2026-09-11) when 0.8.5 was released; `dev` pins the deployed
+  `e0d2a0e1` from [#383](https://github.com/kubus-project/art.kubus/pull/383). The tag and `master` keep the old pin
+  (history is not rewritten). The pin is a CI reference and records what is deployed; it deploys nothing.
+
+## iOS signing (operational follow-up)
+
+The `v0.8.5` iOS IPA is the unsigned output of the build, published for re-signing only. Producing a signed,
+distributable build is a separate operational task, not part of this release: configure the `ios-release` environment
+with the secrets `IOS_DISTRIBUTION_CERTIFICATE_BASE64`, `IOS_DISTRIBUTION_CERTIFICATE_PASSWORD` and
+`IOS_PROVISIONING_PROFILE_BASE64`, the variables `IOS_TEAM_ID`, `IOS_BUNDLE_ID` and `IOS_EXPORT_METHOD`, and set
+`IOS_RELEASE_ENABLED=true`. The workflow then verifies the bundle identifier, team and embedded profile before it
+publishes. A signed build is published as a new release; the `v0.8.5` tag and its assets are not replaced.
 
 ## Deferred to 0.9
 
