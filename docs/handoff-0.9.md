@@ -3,6 +3,25 @@
 Written 2026-10-20 (session 10). Every branch below is preserved exactly as listed. None of them was rebased, merged or deleted.
 Reconcile them in the dedicated 0.9 session against the final released 0.8.4 base, not against today's dev.
 
+## Owner decisions after v0.8.5 (2026-10-30)
+
+These supersede the older ordering below where they conflict.
+
+- **Community posting reference implementation: backend #104.** Account-owned community posts and reposts are
+  re-derived from #104. Do not merge its old branch. Study its unique behaviour, reconcile it with current backend
+  `master` (current authorization and account identity), reconcile app #280 and #340, preserve its relevant tests and
+  deliver it as one new focused integration PR when the 0.9 programme begins.
+- **Migrations:** backend `master` is at migration 116 as of v0.8.5. Re-check the registry and use the next unused
+  prefix after it (never reuse 099-104, 111, 113 or 114 from the preserved branches; `101_account_notifications` is
+  obsolete because `master` already has 112).
+- **Backend #82 stays a reference** for what #104 does not cover: attendance, achievements, rewards and wallet-free
+  community participation outside the overlapping posting implementation. Its community-posting part is dropped in
+  favour of #104.
+- **Institution applications:** the CTA is "Apply as an institution" (app #388). Guests can open and fill the form,
+  and the explanation of the wallet need is shown before submission. The wallet signature stays required at
+  submission until the 0.9 wallet-optional account architecture deliberately changes it.
+- None of this is integrated during the post-v0.8.5 cleanup.
+
 ## Released 0.8.4 base (2026-10-21)
 - App: `master` `8c2c571f` (tag `v0.8.4`). `dev` gains the release merge commit through the record PR.
 - Backend: `master` `34cbb0c` (#110 integration, then #111), deployed on Oracle. Production migrations through 112.
