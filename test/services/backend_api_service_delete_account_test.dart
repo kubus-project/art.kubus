@@ -29,6 +29,18 @@ String _jwtFor(String userId) {
   return 'e30.$payload.';
 }
 
+String walletJwt(String wallet, {String level = 'wallet_signed'}) {
+  final payload = base64Url
+      .encode(utf8.encode(jsonEncode({
+        'id': 'synthetic-user',
+        'walletAddress': wallet,
+        'authLevel': level,
+        'exp': 2100000000
+      })))
+      .replaceAll('=', '');
+  return 'e30.$payload.';
+}
+
 class FailedReceiptStore extends AuthCredentialStore {
   FailedReceiptStore() : super(web: true);
   @override
@@ -204,5 +216,60 @@ void main() {
     await expectLater(api.deleteMyAccount(), throwsStateError);
     expect(methods, ['POST']);
     expect(api.getAuthToken(), isNotNull);
+  });
+
+  for (final deprecated in [false, true]) {
+    test(
+        'wallet closure alias (deprecated=$deprecated) shares prepared account closure',
+        () async {
+      const wallet = '11111111111111111111111111111111';
+      api.setAuthTokenForTesting(walletJwt(wallet));
+      final paths = <String>[];
+      api.setHttpClient(MockClient((request) async {
+        paths.add(request.url.path);
+        return request.url.path.endsWith('/prepare')
+            ? preparedReceipt()
+            : http.Response('{"success":true}', 200);
+      }));
+      if (deprecated) {
+        // Intentionally exercise the existing deprecated public entry point.
+        // ignore: deprecated_member_use_from_same_package
+        await api.deleteMyAccountData(walletAddress: wallet);
+      } else {
+        await api.deleteMyWalletScopedData(walletAddress: wallet);
+      }
+      expect(paths, ['/api/auth/account-closure/prepare', '/api/auth/me']);
+      expect((await api.loadAccountClosureReceipt())?.operationId, receiptId);
+      expect(api.getAuthToken(), isNull);
+    });
+  }
+
+  test('wallet alias rejects another wallet without switching auth or sending',
+      () async {
+    final original = walletJwt('11111111111111111111111111111111');
+    api.setAuthTokenForTesting(original);
+    var requests = 0;
+    api.setHttpClient(MockClient((_) async {
+      requests++;
+      return preparedReceipt();
+    }));
+    await expectLater(
+        api.deleteMyWalletScopedData(
+            walletAddress: '22222222222222222222222222222222'),
+        throwsStateError);
+    expect(requests, 0);
+    expect(api.getAuthToken(), original);
+  });
+
+  test('wallet alias retains wallet-signed authority requirement', () async {
+    api.setAuthTokenForTesting(
+        walletJwt('11111111111111111111111111111111', level: 'account_linked'));
+    var requests = 0;
+    api.setHttpClient(MockClient((_) async {
+      requests++;
+      return preparedReceipt();
+    }));
+    await expectLater(api.deleteMyWalletScopedData(), throwsStateError);
+    expect(requests, 0);
   });
 }

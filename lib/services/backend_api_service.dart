@@ -10682,38 +10682,36 @@ class BackendApiService
     }
   }
 
-  /// Delete wallet-scoped off-chain data (profile + community content) for
-  /// the wallet in the current session token.
+  /// Existing wallet-scoped entry point for account closure.
   ///
-  /// LEGACY + WALLET-SCOPED ONLY: this does NOT delete the authenticated
-  /// account. Use [deleteMyAccount] for account deletion.
-  /// DELETE /api/profiles/me
+  /// This closes the authenticated account through [deleteMyAccount], including
+  /// its receipt protocol. The optional wallet only validates the current
+  /// signed-in wallet; it never selects an account or changes authentication.
+  /// Wallet-signed authority remains required for callers of this old entry.
   Future<void> deleteMyWalletScopedData({String? walletAddress}) async {
-    try {
-      await _ensureAuthBeforeRequest(walletAddress: walletAddress);
-      final response = await _delete(
-        Uri.parse('$baseUrl/api/profiles/me'),
-        headers: _getHeaders(),
-        isIdempotent: true,
-      );
-      if (response.statusCode != 200 && response.statusCode != 204) {
-        throw Exception(
-          'Failed to delete account data: ${response.statusCode}',
-        );
-      }
-    } catch (e) {
-      AppConfig.debugPrint(
-        'BackendApiService.deleteMyWalletScopedData failed: $e',
-      );
-      rethrow;
+    if ((_authToken ?? '').trim().isEmpty) await loadAuthToken();
+    final payload = _tryDecodeJwtPayload((_authToken ?? '').trim());
+    final currentWallet = _tryExtractWalletFromToken(_authToken) ?? '';
+    final requestedWallet = WalletUtils.canonical(walletAddress);
+    final level = (payload?['authLevel'] ?? payload?['walletAuthority'] ?? '')
+        .toString()
+        .trim()
+        .toLowerCase();
+    final provider =
+        (payload?['authProvider'] ?? '').toString().trim().toLowerCase();
+    if (currentWallet.isEmpty ||
+        (level != 'wallet_signed' && provider != 'wallet_signature')) {
+      throw StateError('Wallet-signed account authentication is required');
     }
+    if (requestedWallet.isNotEmpty && requestedWallet != currentWallet) {
+      throw StateError(
+          'Account closure wallet does not match the signed-in account');
+    }
+    await deleteMyAccount();
   }
 
-  /// Deprecated name kept for compatibility; wallet-scoped data only.
-  @Deprecated(
-    'Use deleteMyAccount for account deletion or '
-    'deleteMyWalletScopedData for wallet-scoped data removal.',
-  )
+  /// Existing deprecated name; this closes the authenticated account.
+  @Deprecated('Use deleteMyAccount for account closure and its status receipt.')
   Future<void> deleteMyAccountData({String? walletAddress}) =>
       deleteMyWalletScopedData(walletAddress: walletAddress);
 
