@@ -92,11 +92,20 @@ App changes on `dev` since 0.8.4:
 ## iOS signing (operational follow-up)
 
 The `v0.8.5` iOS IPA is the unsigned output of the build, published for re-signing only. Producing a signed,
-distributable build is a separate operational task, not part of this release: configure the `ios-release` environment
-with the secrets `IOS_DISTRIBUTION_CERTIFICATE_BASE64`, `IOS_DISTRIBUTION_CERTIFICATE_PASSWORD` and
-`IOS_PROVISIONING_PROFILE_BASE64`, the variables `IOS_TEAM_ID`, `IOS_BUNDLE_ID` and `IOS_EXPORT_METHOD`, and set
-`IOS_RELEASE_ENABLED=true`. The workflow then verifies the bundle identifier, team and embedded profile before it
-publishes. A signed build is published as a new release; the `v0.8.5` tag and its assets are not replaced.
+distributable build is a separate operational task, not part of this release. The canonical checklist is "Mobile
+environments" in [`DEPLOYMENT_GATES.md`](DEPLOYMENT_GATES.md); in short, two different places are involved:
+
+- **Repository variable** (Settings > Secrets and variables > Actions > Variables): `IOS_RELEASE_ENABLED=true`. It must
+  not live in the `ios-release` environment. `mobile-release.yml` reads it in the `source` job, which has no
+  environment, so an environment-scoped copy is ignored and the release stays `ios_mode=unsigned`.
+- **`ios-release` environment secrets:** `IOS_DISTRIBUTION_CERTIFICATE_BASE64`, `IOS_DISTRIBUTION_CERTIFICATE_PASSWORD`
+  and `IOS_PROVISIONING_PROFILE_BASE64`. The variables `IOS_TEAM_ID`, `IOS_BUNDLE_ID` and `IOS_EXPORT_METHOD` may live in
+  the environment or the repository.
+
+Setting the variable alone does not sign anything: once it is `true` the signed job must succeed, and a missing secret
+fails the run instead of falling back to an unsigned IPA, so enable it only when the signing material is in place. The
+workflow then verifies the bundle identifier, team and embedded profile before it publishes. A signed build is
+published as a new release; the `v0.8.5` tag and its assets are not replaced.
 
 ## Deferred to 0.9
 
