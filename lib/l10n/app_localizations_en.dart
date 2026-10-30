@@ -4084,6 +4084,10 @@ class AppLocalizationsEn extends AppLocalizations {
       'Describe your mission in at least 20 characters.';
 
   @override
+  String get institutionHubApplicationWalletBannerTitle =>
+      'A wallet signature is needed to submit';
+
+  @override
   String get institutionHubApplicationWalletRequired =>
       'Connect a wallet before submitting.';
 
@@ -4148,7 +4152,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get institutionHubCtaPendingDaoReview => 'Pending governance review';
 
   @override
-  String get institutionHubCtaConnectWalletToApply => 'Connect wallet to apply';
+  String get institutionHubCtaApplyAsInstitution => 'Apply as an institution';
 
   @override
   String get institutionHubDaoStatusSyncedLabel =>

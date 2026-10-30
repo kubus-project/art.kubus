@@ -1,0 +1,184 @@
+[
+ {
+  "w": 320,
+  "h": 700,
+  "loc": "en",
+  "cls": 0,
+  "sectionShifts": 1,
+  "boxTopRange": [
+   54,
+   54
+  ],
+  "boxHeightRange": [
+   282,
+   304
+  ],
+  "samples": 224,
+  "shifts": [
+   {
+    "v": 0.019050204081632653,
+    "t": 390,
+    "hadInput": true,
+    "src": [
+     "#content:",
+     ".takeover-actions:IN-STATUS",
+     ".takeover-trace:IN-STATUS",
+     "::after:IN-STATUS"
+    ]
+   }
+  ]
+ },
+ {
+  "w": 320,
+  "h": 700,
+  "loc": "sl",
+  "cls": 0,
+  "sectionShifts": 1,
+  "boxTopRange": [
+   54,
+   54
+  ],
+  "boxHeightRange": [
+   291,
+   318
+  ],
+  "samples": 226,
+  "shifts": [
+   {
+    "v": 0.027664795918367346,
+    "t": 312,
+    "hadInput": true,
+    "src": [
+     "#content:",
+     ".takeover-note:IN-STATUS",
+     ".takeover-actions:IN-STATUS",
+     ".takeover-trace:IN-STATUS"
+    ]
+   },
+   {
+    "v": 0.00006703752790178571,
+    "t": 323,
+    "hadInput": true,
+    "src": [
+     "#text:",
+     ".product-map-link:"
+    ]
+   }
+  ]
+ },
+ {
+  "w": 390,
+  "h": 844,
+  "loc": "en",
+  "cls": 0,
+  "sectionShifts": 0,
+  "boxTopRange": [
+   54,
+   54
+  ],
+  "boxHeightRange": [
+   282,
+   282
+  ],
+  "samples": 226,
+  "shifts": [
+   {
+    "v": 0.0001643158241659511,
+    "t": 316,
+    "hadInput": true,
+    "src": [
+     "LI:",
+     "LI:"
+    ]
+   }
+  ]
+ },
+ {
+  "w": 390,
+  "h": 844,
+  "loc": "sl",
+  "cls": 0,
+  "sectionShifts": 0,
+  "boxTopRange": [
+   54,
+   54
+  ],
+  "boxHeightRange": [
+   255,
+   255
+  ],
+  "samples": 226,
+  "shifts": [
+   {
+    "v": 0.00008583048481442638,
+    "t": 313,
+    "hadInput": true,
+    "src": [
+     "LI:",
+     "#text:",
+     ".product-map-link:"
+    ]
+   }
+  ]
+ },
+ {
+  "w": 1280,
+  "h": 800,
+  "loc": "en",
+  "cls": 0.0005,
+  "sectionShifts": 0,
+  "boxTopRange": [
+   59,
+   59
+  ],
+  "boxHeightRange": [
+   266,
+   266
+  ],
+  "samples": 226,
+  "shifts": [
+   {
+    "v": 0.0005301713943481446,
+    "t": 327,
+    "hadInput": false,
+    "src": [
+     "#text:",
+     "#text:",
+     "#text:",
+     "#text:",
+     "#text:"
+    ]
+   }
+  ]
+ },
+ {
+  "w": 1280,
+  "h": 800,
+  "loc": "sl",
+  "cls": 0.0006,
+  "sectionShifts": 1,
+  "boxTopRange": [
+   59,
+   59
+  ],
+  "boxHeightRange": [
+   266,
+   266
+  ],
+  "samples": 224,
+  "shifts": [
+   {
+    "v": 0.0006219280242919922,
+    "t": 447,
+    "hadInput": false,
+    "src": [
+     "#text:",
+     "#text:",
+     "#text:",
+     "A:IN-STATUS",
+     "#text:"
+    ]
+   }
+  ]
+ }
+]

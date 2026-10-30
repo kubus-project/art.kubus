@@ -197,9 +197,10 @@ class SearchService {
     return institutions
         .where(
           (institution) =>
-              institution.name.toLowerCase().contains(query) ||
-              institution.description.toLowerCase().contains(query) ||
-              institution.address.toLowerCase().contains(query),
+              !institution.isSelfDerivedFromWallet &&
+              (institution.name.toLowerCase().contains(query) ||
+                  institution.description.toLowerCase().contains(query) ||
+                  institution.address.toLowerCase().contains(query)),
         )
         .map(
           (institution) => KubusSearchResult(

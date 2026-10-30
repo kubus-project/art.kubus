@@ -4116,6 +4116,10 @@ class AppLocalizationsSl extends AppLocalizations {
       'Opiši poslanstvo z vsaj 20 znaki.';
 
   @override
+  String get institutionHubApplicationWalletBannerTitle =>
+      'Za oddajo je potreben podpis z denarnico';
+
+  @override
   String get institutionHubApplicationWalletRequired =>
       'Pred oddajo poveži denarnico.';
 
@@ -4181,8 +4185,8 @@ class AppLocalizationsSl extends AppLocalizations {
   String get institutionHubCtaPendingDaoReview => 'Čaka na pregled upravljanja';
 
   @override
-  String get institutionHubCtaConnectWalletToApply =>
-      'Poveži denarnico za prijavo';
+  String get institutionHubCtaApplyAsInstitution =>
+      'Prijavi se kot institucija';
 
   @override
   String get institutionHubDaoStatusSyncedLabel =>

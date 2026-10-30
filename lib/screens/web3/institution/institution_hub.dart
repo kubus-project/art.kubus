@@ -456,7 +456,7 @@ class _InstitutionHubState extends State<InstitutionHub> {
     } else if (isPending) {
       ctaLabel = l10n.institutionHubCtaPendingDaoReview;
     } else if (wallet.isEmpty) {
-      ctaLabel = l10n.institutionHubCtaConnectWalletToApply;
+      ctaLabel = l10n.institutionHubCtaApplyAsInstitution;
     } else {
       ctaLabel = l10n.institutionHubApplyForReviewAction;
     }
@@ -682,7 +682,7 @@ class _InstitutionHubState extends State<InstitutionHub> {
                   if (needsWallet) ...[
                     KubusNoticeBanner(
                       icon: Icons.account_balance_wallet_outlined,
-                      title: l10n.institutionHubCtaConnectWalletToApply,
+                      title: l10n.institutionHubApplicationWalletBannerTitle,
                       message: l10n.institutionHubApplicationWalletWhy,
                       tone: KubusStatusTone.neutral,
                       margin: EdgeInsets.zero,
