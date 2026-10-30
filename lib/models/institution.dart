@@ -22,6 +22,11 @@ class Institution {
   final bool isVerified;
   final DateTime createdAt;
 
+  /// True only for the synthetic entry the provider builds from the signed-in
+  /// user's own wallet. It is the user's own identity, so it is a default
+  /// (event creator) but must not appear in search or map subject lists.
+  final bool isSelfDerivedFromWallet;
+
   Institution({
     required this.id,
     required this.name,
@@ -37,6 +42,7 @@ class Institution {
     required this.stats,
     this.isVerified = false,
     required this.createdAt,
+    this.isSelfDerivedFromWallet = false,
   });
 
   /// Hero imagery for an institution: the first safe of the cover, then the
@@ -100,6 +106,7 @@ class Institution {
     InstitutionStats? stats,
     bool? isVerified,
     DateTime? createdAt,
+    bool? isSelfDerivedFromWallet,
   }) {
     return Institution(
       id: id ?? this.id,
@@ -116,6 +123,8 @@ class Institution {
       stats: stats ?? this.stats,
       isVerified: isVerified ?? this.isVerified,
       createdAt: createdAt ?? this.createdAt,
+      isSelfDerivedFromWallet:
+          isSelfDerivedFromWallet ?? this.isSelfDerivedFromWallet,
     );
   }
 }

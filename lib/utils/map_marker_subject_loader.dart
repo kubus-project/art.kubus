@@ -14,6 +14,15 @@ import '../providers/wallet_provider.dart';
 import '../config/config.dart';
 import 'wallet_utils.dart';
 
+/// The institutions offered as map marker subjects. The signed-in user's own
+/// wallet-derived institution is an event creator default only, not a subject.
+@visibleForTesting
+List<Institution> markerSubjectInstitutions(List<Institution> institutions) {
+  return institutions
+      .where((institution) => !institution.isSelfDerivedFromWallet)
+      .toList(growable: false);
+}
+
 class MarkerSubjectData {
   final List<Artwork> artworks;
   final List<Exhibition> exhibitions;
@@ -54,9 +63,9 @@ class MarkerSubjectLoader {
       exhibitions: AppConfig.isFeatureEnabled('exhibitions')
           ? List<Exhibition>.from(exhibitionsProvider.exhibitions)
           : const <Exhibition>[],
-      institutions: List<Institution>.from(institutionProvider.institutions),
-      events: List<KubusEvent>.from(
-          eventsProvider?.events ?? const <KubusEvent>[]),
+      institutions: markerSubjectInstitutions(institutionProvider.institutions),
+      events:
+          List<KubusEvent>.from(eventsProvider?.events ?? const <KubusEvent>[]),
       delegates: List<Delegate>.from(daoProvider.delegates),
     );
   }
@@ -78,7 +87,8 @@ class MarkerSubjectLoader {
         eventsProvider != null && (force || !eventsProvider.initialized);
     final shouldLoadDelegates = force || daoProvider.delegates.isEmpty;
     final exhibitionsEnabled = AppConfig.isFeatureEnabled('exhibitions');
-    final shouldLoadExhibitions = exhibitionsEnabled && (force || !exhibitionsProvider.initialized);
+    final shouldLoadExhibitions =
+        exhibitionsEnabled && (force || !exhibitionsProvider.initialized);
 
     final fetches = <Future<void>>[];
     if (shouldLoadArtworks) {
@@ -112,7 +122,8 @@ class MarkerSubjectLoader {
         exhibitions: exhibitionsEnabled
             ? List<Exhibition>.from(exhibitionsProvider.exhibitions)
             : const <Exhibition>[],
-        institutions: List<Institution>.from(institutionProvider.institutions),
+        institutions:
+            markerSubjectInstitutions(institutionProvider.institutions),
         events: List<KubusEvent>.from(
             eventsProvider?.events ?? const <KubusEvent>[]),
         delegates: List<Delegate>.from(daoProvider.delegates),
@@ -132,7 +143,8 @@ class MarkerSubjectLoader {
     }
   }
 
-  List<Artwork> _filterOwnedArtworks(List<Artwork> artworks, String? walletAddress) {
+  List<Artwork> _filterOwnedArtworks(
+      List<Artwork> artworks, String? walletAddress) {
     final normalizedWallet = WalletUtils.canonical(walletAddress);
     if (normalizedWallet.isEmpty) return const <Artwork>[];
 

@@ -415,6 +415,7 @@ class InstitutionProvider extends ChangeNotifier {
       // the self-editable profile.isInstitution flag.
       isVerified: isApprovedInstitution,
       createdAt: profile.createdAt,
+      isSelfDerivedFromWallet: true,
     );
   }
 
@@ -431,6 +432,7 @@ class InstitutionProvider extends ChangeNotifier {
         a.longitude == b.longitude &&
         a.contactEmail == b.contactEmail &&
         a.website == b.website &&
+        a.isSelfDerivedFromWallet == b.isSelfDerivedFromWallet &&
         a.coverImageUrl == b.coverImageUrl &&
         a.logoUrl == b.logoUrl &&
         a.stats.totalVisitors == b.stats.totalVisitors &&
