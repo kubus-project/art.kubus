@@ -5635,7 +5635,7 @@ abstract class AppLocalizations {
   /// No description provided for @settingsDeleteAccountBackendFailedToast.
   ///
   /// In en, this message translates to:
-  /// **'Backend deletion failed. Please try again.'**
+  /// **'Closure could not be confirmed. Check its status before trying again.'**
   String get settingsDeleteAccountBackendFailedToast;
 
   /// No description provided for @settingsAccountDeletedToast.
@@ -9844,7 +9844,10 @@ abstract class AppLocalizations {
   /// **'Failed to load image'**
   String get messagesAttachmentFailedToLoadImage;
 
-  /// A private attachment cannot be retrieved in the current session.
+  /// No description provided for @messagesAttachmentUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Attachment is unavailable.'**
   String get messagesAttachmentUnavailable;
 
   /// No description provided for @messagesAttachmentVideoLabel.
@@ -32471,6 +32474,84 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Actions for {title}'**
   String artistPortfolioCardActionsLabel(String title);
+
+  /// No description provided for @accountClosureStatusTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Account closure status'**
+  String get accountClosureStatusTitle;
+
+  /// No description provided for @accountClosureReceived.
+  ///
+  /// In en, this message translates to:
+  /// **'Request received'**
+  String get accountClosureReceived;
+
+  /// No description provided for @accountClosureProcessing.
+  ///
+  /// In en, this message translates to:
+  /// **'Processing'**
+  String get accountClosureProcessing;
+
+  /// No description provided for @accountClosureReviewRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Review required'**
+  String get accountClosureReviewRequired;
+
+  /// No description provided for @accountClosureCompletedManaged.
+  ///
+  /// In en, this message translates to:
+  /// **'Completed within managed systems'**
+  String get accountClosureCompletedManaged;
+
+  /// No description provided for @accountClosureLimitations.
+  ///
+  /// In en, this message translates to:
+  /// **'Closure covers systems we manage. Some records may need lawful retention or review. Independently held copies and previously distributed public content may remain.'**
+  String get accountClosureLimitations;
+
+  /// No description provided for @accountClosureLawfulRetention.
+  ///
+  /// In en, this message translates to:
+  /// **'Some records are retained under a documented lawful basis and retention review.'**
+  String get accountClosureLawfulRetention;
+
+  /// No description provided for @accountClosureStatusUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Status could not be confirmed. Try again later or check the receipt. This does not confirm completion.'**
+  String get accountClosureStatusUnavailable;
+
+  /// No description provided for @accountClosureCopyReceipt.
+  ///
+  /// In en, this message translates to:
+  /// **'Copy private status receipt'**
+  String get accountClosureCopyReceipt;
+
+  /// No description provided for @accountClosureReceiptPrivacy.
+  ///
+  /// In en, this message translates to:
+  /// **'Keep this receipt privately. Anyone holding it can view the closure status. In a browser, save a copy before closing or reloading the page; the browser keeps it only in memory.'**
+  String get accountClosureReceiptPrivacy;
+
+  /// No description provided for @accountClosureRefresh.
+  ///
+  /// In en, this message translates to:
+  /// **'Check status'**
+  String get accountClosureRefresh;
+
+  /// No description provided for @accountClosurePasteReceipt.
+  ///
+  /// In en, this message translates to:
+  /// **'Paste private status receipt'**
+  String get accountClosurePasteReceipt;
+
+  /// No description provided for @accountClosureContinue.
+  ///
+  /// In en, this message translates to:
+  /// **'Continue to welcome'**
+  String get accountClosureContinue;
 }
 
 class _AppLocalizationsDelegate

@@ -37,6 +37,7 @@ import 'public_fallback_service.dart';
 import 'user_action_logger.dart';
 import 'auth_gating_service.dart';
 import 'auth_credential_store.dart';
+import '../models/account_closure.dart';
 import 'auth_session_coordinator.dart';
 import 'http_client_factory.dart';
 import 'media_upload_optimizer.dart';
@@ -10573,6 +10574,41 @@ class BackendApiService
     }
   }
 
+  /// Read the separately stored, status-only account closure capability.
+  Future<AccountClosureReceipt?> loadAccountClosureReceipt() async {
+    final value = await _credentialStore.readClosureReceipt();
+    if (value == null) return null;
+    return AccountClosureReceipt.fromJson(
+        Map<String, dynamic>.from(jsonDecode(value) as Map));
+  }
+
+  Future<void> saveAccountClosureReceipt(AccountClosureReceipt receipt) =>
+      _credentialStore.saveClosureReceipt(receipt.encode());
+
+  Future<AccountClosureStatus> getAccountClosureStatus(
+      AccountClosureReceipt receipt) async {
+    final response = await _post(
+      Uri.parse('$baseUrl/api/auth/account-closure/status'),
+      includeAuth: false,
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ${receipt.statusToken}'
+      },
+      body: jsonEncode({'operationId': receipt.operationId}),
+      isIdempotent: true,
+      allowImplicitBackendFailover: false,
+    );
+    if (response.statusCode != 200) {
+      throw BackendApiRequestException(
+          statusCode: response.statusCode,
+          path: '/api/auth/account-closure/status',
+          body: null);
+    }
+    final body = jsonDecode(response.body) as Map<String, dynamic>;
+    return AccountClosureStatus.fromJson(
+        Map<String, dynamic>.from(body['data'] as Map));
+  }
+
   /// Delete the authenticated account (`users.id` from the JWT).
   ///
   /// This is the only correct way to delete an account from settings. It
@@ -10590,10 +10626,44 @@ class BackendApiService
         'Authentication required: sign in again before deleting your account.',
       );
     }
+    final closureEpoch = _authSessionEpoch;
+    final closureToken = _authToken!;
+    void requireSameSession() {
+      if (_authSessionEpoch != closureEpoch || _authToken != closureToken) {
+        throw StateError('Account closure session changed');
+      }
+    }
+
+    final closureHeaders = {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer $closureToken'
+    };
     try {
+      // Obtain and verify storage of a status-only receipt before revoking login.
+      // If DELETE commits but the response is lost, this capability still works.
+      final prepared = await _post(
+        Uri.parse('$baseUrl/api/auth/account-closure/prepare'),
+        includeAuth: false,
+        headers: closureHeaders,
+        body: '{}',
+        isIdempotent: true,
+      );
+      if (prepared.statusCode != 200) {
+        throw BackendApiRequestException(
+            statusCode: prepared.statusCode,
+            path: '/api/auth/account-closure/prepare',
+            body: null);
+      }
+      requireSameSession();
+      final preparedBody = jsonDecode(prepared.body) as Map<String, dynamic>;
+      final receipt = AccountClosureReceipt.fromJson(
+          Map<String, dynamic>.from(preparedBody['closure'] as Map));
+      await saveAccountClosureReceipt(receipt);
+      requireSameSession();
       final response = await _delete(
         Uri.parse('$baseUrl/api/auth/me'),
-        headers: _getHeaders(),
+        includeAuth: false,
+        headers: closureHeaders,
         isIdempotent: true,
       );
       if (response.statusCode != 200 && response.statusCode != 204) {
@@ -10603,9 +10673,11 @@ class BackendApiService
           body: response.body,
         );
       }
+      requireSameSession();
       await clearAuth();
     } catch (e) {
-      AppConfig.debugPrint('BackendApiService.deleteMyAccount failed: $e');
+      AppConfig.debugPrint(
+          'BackendApiService.deleteMyAccount failed (${e.runtimeType})');
       rethrow;
     }
   }

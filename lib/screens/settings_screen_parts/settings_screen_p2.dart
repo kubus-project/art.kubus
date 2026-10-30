@@ -1305,7 +1305,8 @@ extension _SettingsScreenStatePart2 on _SettingsScreenState {
                 try {
                   await BackendApiService().deleteMyAccount();
                 } catch (e) {
-                  debugPrint('SettingsScreen: backend deletion failed: $e');
+                  debugPrint(
+                      'SettingsScreen: closure unconfirmed (${e.runtimeType})');
                   messenger.showKubusSnackBar(
                     SnackBar(
                         content:
@@ -1313,6 +1314,7 @@ extension _SettingsScreenStatePart2 on _SettingsScreenState {
                   );
                   if (!mounted) return;
                   dialogNavigator.pop();
+                  dialogNavigator.pushNamed('/account-closure');
                   return;
                 }
 
@@ -1331,7 +1333,8 @@ extension _SettingsScreenStatePart2 on _SettingsScreenState {
                     duration: const Duration(seconds: 3),
                   ),
                 );
-                _restartToOnboarding();
+                dialogNavigator.pushNamedAndRemoveUntil(
+                    '/account-closure', (_) => false);
               } else {
                 if (!mounted) return;
                 dialogNavigator.pop();

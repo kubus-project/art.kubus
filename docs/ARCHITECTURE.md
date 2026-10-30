@@ -31,6 +31,23 @@ changes update both schema snapshots. IPFS/OrbitDB and optional kubus Node avail
 do not make private drafts, messages or account material part of the public archive.
 `node.kubus.site` visitor analytics and `kubus-node` fleet telemetry are separate.
 
+## Account closure status
+
+Account settings prepare a status-only capability through `BackendApiService`
+before requesting closure. `AuthCredentialStore` stores that receipt separately
+from login authority: native storage uses the existing secure-store plugin and
+verifies the write; browsers retain it only in memory. A failed receipt write
+prevents closure. Closure requests capture the current account session and do
+not reauthenticate as a different account while a request is in flight.
+
+The public `/account-closure` screen uses the receipt bearer, never normal login,
+to read the server-confirmed state. It is reachable from welcome after logout,
+and both settings layouts open it after closure. Users can explicitly copy or
+paste their private receipt for browser reload recovery. Receipts never appear
+in route URLs or preferences. Completion means managed-system completion;
+lawful retention and independent-copy limitations remain visible. Native
+secure-store/device and deployed browser behavior require separate acceptance.
+
 ## Deployment and public fallback invariants
 
 The recorded deployment model uses Oracle writable primary, home standby backend

@@ -195,4 +195,40 @@ void main() {
     await expectLater(AuthCredentialStore(web: false).readAccess(),
         throwsA(isA<TypeError>()));
   });
+
+  test(
+      'native closure receipt survives auth revocation, preference reset and restart',
+      () async {
+    final store = AuthCredentialStore(web: false);
+    await store.saveClosureReceipt('synthetic-private-receipt');
+    await store.save('jwt_token', 'synthetic-auth');
+    await store.clear();
+    await (await SharedPreferences.getInstance()).clear();
+    expect(await AuthCredentialStore(web: false).readClosureReceipt(),
+        'synthetic-private-receipt');
+    expect(await store.readAccess(), isNull);
+    expect(secure.keys, contains(AuthCredentialStore.closureReceiptKey));
+    expect((await SharedPreferences.getInstance()).getKeys(),
+        isNot(contains(AuthCredentialStore.closureReceiptKey)));
+  });
+
+  test('browser closure receipt survives logout in memory and never persists',
+      () async {
+    final store = AuthCredentialStore(web: true);
+    await store.saveClosureReceipt('synthetic-private-receipt');
+    await store.clear();
+    expect(await store.readClosureReceipt(), 'synthetic-private-receipt');
+    expect(await AuthCredentialStore(web: true).readClosureReceipt(), isNull);
+    expect(secure, isEmpty);
+    expect((await SharedPreferences.getInstance()).getKeys(),
+        isNot(contains(AuthCredentialStore.closureReceiptKey)));
+  });
+
+  test('native receipt persistence failure is surfaced', () async {
+    failWrite = true;
+    await expectLater(
+        AuthCredentialStore(web: false)
+            .saveClosureReceipt('synthetic-private-receipt'),
+        throwsA(isA<PlatformException>()));
+  });
 }

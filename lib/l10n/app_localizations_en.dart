@@ -3174,7 +3174,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get settingsDeleteAccountBackendFailedToast =>
-      'Backend deletion failed. Please try again.';
+      'Closure could not be confirmed. Check its status before trying again.';
 
   @override
   String get settingsAccountDeletedToast =>
@@ -18739,4 +18739,48 @@ class AppLocalizationsEn extends AppLocalizations {
   String artistPortfolioCardActionsLabel(String title) {
     return 'Actions for $title';
   }
+
+  @override
+  String get accountClosureStatusTitle => 'Account closure status';
+
+  @override
+  String get accountClosureReceived => 'Request received';
+
+  @override
+  String get accountClosureProcessing => 'Processing';
+
+  @override
+  String get accountClosureReviewRequired => 'Review required';
+
+  @override
+  String get accountClosureCompletedManaged =>
+      'Completed within managed systems';
+
+  @override
+  String get accountClosureLimitations =>
+      'Closure covers systems we manage. Some records may need lawful retention or review. Independently held copies and previously distributed public content may remain.';
+
+  @override
+  String get accountClosureLawfulRetention =>
+      'Some records are retained under a documented lawful basis and retention review.';
+
+  @override
+  String get accountClosureStatusUnavailable =>
+      'Status could not be confirmed. Try again later or check the receipt. This does not confirm completion.';
+
+  @override
+  String get accountClosureCopyReceipt => 'Copy private status receipt';
+
+  @override
+  String get accountClosureReceiptPrivacy =>
+      'Keep this receipt privately. Anyone holding it can view the closure status. In a browser, save a copy before closing or reloading the page; the browser keeps it only in memory.';
+
+  @override
+  String get accountClosureRefresh => 'Check status';
+
+  @override
+  String get accountClosurePasteReceipt => 'Paste private status receipt';
+
+  @override
+  String get accountClosureContinue => 'Continue to welcome';
 }

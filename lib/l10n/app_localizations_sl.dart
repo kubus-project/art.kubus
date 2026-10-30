@@ -3199,7 +3199,7 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get settingsDeleteAccountBackendFailedToast =>
-      'Brisanje na strežniku ni uspelo. Poskusi znova.';
+      'Zaprtja ni bilo mogoče potrditi. Pred ponovnim poskusom preverite stanje.';
 
   @override
   String get settingsAccountDeletedToast =>
@@ -18933,4 +18933,49 @@ class AppLocalizationsSl extends AppLocalizations {
   String artistPortfolioCardActionsLabel(String title) {
     return 'Dejanja za $title';
   }
+
+  @override
+  String get accountClosureStatusTitle => 'Stanje zaprtja računa';
+
+  @override
+  String get accountClosureReceived => 'Zahtevo smo prejeli';
+
+  @override
+  String get accountClosureProcessing => 'Obdelava poteka';
+
+  @override
+  String get accountClosureReviewRequired => 'Potreben je pregled';
+
+  @override
+  String get accountClosureCompletedManaged =>
+      'Zaključeno v sistemih, ki jih upravljamo';
+
+  @override
+  String get accountClosureLimitations =>
+      'Zaprtje zajema sisteme, ki jih upravljamo. Nekateri zapisi lahko zahtevajo zakonito hrambo ali pregled. Neodvisne kopije in že razširjena javna vsebina lahko ostanejo.';
+
+  @override
+  String get accountClosureLawfulRetention =>
+      'Nekatere zapise hranimo na dokumentirani pravni podlagi in ob pregledu roka hrambe.';
+
+  @override
+  String get accountClosureStatusUnavailable =>
+      'Stanja ni bilo mogoče potrditi. Poskusite pozneje ali preverite potrdilo. To ne pomeni, da je postopek zaključen.';
+
+  @override
+  String get accountClosureCopyReceipt => 'Kopiraj zasebno potrdilo za vpogled';
+
+  @override
+  String get accountClosureReceiptPrivacy =>
+      'Potrdilo hranite zasebno. Vsakdo, ki ga ima, lahko preveri stanje zaprtja. V brskalniku shranite kopijo pred zaprtjem ali ponovnim nalaganjem strani; brskalnik ga hrani samo v pomnilniku.';
+
+  @override
+  String get accountClosureRefresh => 'Preveri stanje';
+
+  @override
+  String get accountClosurePasteReceipt =>
+      'Prilepite zasebno potrdilo za vpogled';
+
+  @override
+  String get accountClosureContinue => 'Nadaljuj na pozdravni zaslon';
 }
