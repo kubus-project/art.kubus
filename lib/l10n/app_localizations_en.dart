@@ -2867,10 +2867,11 @@ class AppLocalizationsEn extends AppLocalizations {
       'Skip welcome screens for returning users';
 
   @override
-  String get settingsDataExportTileTitle => 'Data export';
+  String get settingsDataExportTileTitle => 'Request a copy of my data';
 
   @override
-  String get settingsDataExportTileSubtitle => 'Download your data';
+  String get settingsDataExportTileSubtitle =>
+      'Contact support to request a copy';
 
   @override
   String get settingsResetPermissionFlagsTileTitle => 'Reset permission flags';
@@ -3129,11 +3130,11 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsResetButton => 'Reset';
 
   @override
-  String get settingsExportDataDialogTitle => 'Export data';
+  String get settingsExportDataDialogTitle => 'Download a copy of my data';
 
   @override
   String get settingsExportDataDialogBody =>
-      'This will create a file with your app data (excluding private keys).';
+      'Creates one file with the data this account holds: profile, posts, comments, collections, artworks, saved items, notifications, messages you sent, support requests and upload records. Passwords, sign-in tokens and staff notes are not included. For anything else, contact support@kubus.site.';
 
   @override
   String settingsDataExportedToast(Object count) {
@@ -3141,7 +3142,27 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get settingsExportButton => 'Export';
+  String get settingsExportButton => 'Open request form';
+
+  @override
+  String get settingsExportDownloadButton => 'Download';
+
+  @override
+  String get settingsExportPreparing => 'Preparing your data…';
+
+  @override
+  String get settingsExportReady => 'Your data file is ready.';
+
+  @override
+  String get settingsExportSignInRequired => 'Sign in to download your data.';
+
+  @override
+  String get settingsExportTooManyRequests =>
+      'Too many requests. Please try again later.';
+
+  @override
+  String get settingsExportFailed =>
+      'Your data could not be prepared. Try again or contact support@kubus.site.';
 
   @override
   String get settingsResetAppDialogTitle => 'Reset app';
@@ -3159,7 +3180,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get settingsDeleteAccountDialogBody =>
-      'We will remove your profile and community data from our servers. Your wallet remains yours, and you can still restore access with your recovery phrase.';
+      'Closing your account ends your access. Some data may require further review or be retained. Your wallet remains yours and can be restored with its recovery phrase.';
 
   @override
   String get settingsFinalConfirmationTitle => 'Final confirmation';
@@ -3173,11 +3194,11 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get settingsDeleteAccountBackendFailedToast =>
-      'Backend deletion failed. Please try again.';
+      'Closure could not be confirmed. Check its status before trying again.';
 
   @override
   String get settingsAccountDeletedToast =>
-      'Account deleted. All data has been removed.';
+      'Account closure requested. Some data may require further review or be retained.';
 
   @override
   String get settingsDeleteForeverButton => 'Delete forever';
@@ -5573,6 +5594,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get messagesAttachmentFailedToLoadImage => 'Failed to load image';
+
+  @override
+  String get messagesAttachmentUnavailable => 'Attachment is unavailable.';
 
   @override
   String get messagesAttachmentVideoLabel => 'Video';
@@ -18739,4 +18763,195 @@ class AppLocalizationsEn extends AppLocalizations {
   String artistPortfolioCardActionsLabel(String title) {
     return 'Actions for $title';
   }
+
+  @override
+  String get accountClosureStatusTitle => 'Account closure status';
+
+  @override
+  String get accountClosureReceived => 'Request received';
+
+  @override
+  String get accountClosureProcessing => 'Processing';
+
+  @override
+  String get accountClosureReviewRequired => 'Review required';
+
+  @override
+  String get accountClosureCompletedManaged =>
+      'Completed within managed systems';
+
+  @override
+  String get accountClosureLimitations =>
+      'Closure covers systems we manage. Some records may need lawful retention or review. Independently held copies and previously distributed public content may remain.';
+
+  @override
+  String get accountClosureLawfulRetention =>
+      'Some records are retained under a documented lawful basis and retention review.';
+
+  @override
+  String get accountClosureStatusUnavailable =>
+      'Status could not be confirmed. Try again later or check the receipt. This does not confirm completion.';
+
+  @override
+  String get accountClosureCopyReceipt => 'Copy private status receipt';
+
+  @override
+  String get accountClosureReceiptPrivacy =>
+      'Keep this receipt privately. Anyone holding it can view the closure status. In a browser, save a copy before closing or reloading the page; the browser keeps it only in memory.';
+
+  @override
+  String get accountClosureRefresh => 'Check status';
+
+  @override
+  String get accountClosurePasteReceipt => 'Paste private status receipt';
+
+  @override
+  String get accountClosureContinue => 'Continue to welcome';
+
+  @override
+  String get reportContentTitle => 'Report content';
+
+  @override
+  String get reportContentCategoryLabel => 'What is the problem?';
+
+  @override
+  String get reportCategoryIllegalContent => 'Illegal content';
+
+  @override
+  String get reportCategoryCopyright => 'Copyright or other rights';
+
+  @override
+  String get reportCategoryPrivacy => 'Privacy';
+
+  @override
+  String get reportCategoryHarassment => 'Harassment';
+
+  @override
+  String get reportCategorySpam => 'Spam';
+
+  @override
+  String get reportCategoryImpersonation => 'Impersonation';
+
+  @override
+  String get reportCategorySafety => 'Safety concern';
+
+  @override
+  String get reportCategoryOther => 'Other';
+
+  @override
+  String get reportContentDetailsLabel => 'Details';
+
+  @override
+  String get reportContentDetailsRequired =>
+      'Explain what is wrong and where. This is required for this kind of report.';
+
+  @override
+  String get reportContentGoodFaith =>
+      'I state in good faith that the information in this report is accurate and complete.';
+
+  @override
+  String get reportContentContactLabel => 'Contact email (optional)';
+
+  @override
+  String get reportContentContactInvalid => 'Enter a valid email address.';
+
+  @override
+  String get reportContentAccountNote =>
+      'Your report is linked to your account so that we can tell you what was decided.';
+
+  @override
+  String get reportContentSubmit => 'Send report';
+
+  @override
+  String get moderationScreenTitle => 'Reports and decisions';
+
+  @override
+  String get moderationEntrySubtitle =>
+      'Reports you filed and decisions about your content';
+
+  @override
+  String get moderationReportsHeading => 'Reports you filed';
+
+  @override
+  String get moderationDecisionsHeading => 'Decisions about your content';
+
+  @override
+  String get moderationNoReports => 'You have not filed any reports.';
+
+  @override
+  String get moderationNoDecisions => 'No decision affects your content.';
+
+  @override
+  String get moderationStatusOpen => 'Received';
+
+  @override
+  String get moderationStatusTriaged => 'Being reviewed';
+
+  @override
+  String get moderationStatusResolved => 'Decided';
+
+  @override
+  String get moderationStatusClosed => 'Closed';
+
+  @override
+  String get moderationOutcomeNoAction => 'No action taken';
+
+  @override
+  String get moderationOutcomeContentRemoved => 'Content removed';
+
+  @override
+  String get moderationOutcomeContentRestricted => 'Content restricted';
+
+  @override
+  String get moderationOutcomeAccountAction => 'Action on an account';
+
+  @override
+  String get moderationOutcomeReferred => 'Referred';
+
+  @override
+  String get moderationOutcomeOther => 'Other decision';
+
+  @override
+  String get moderationReasonsLabel => 'Reasons';
+
+  @override
+  String get moderationRequestReconsideration => 'Ask for a second look';
+
+  @override
+  String get moderationReconsiderationRequested => 'Second look requested';
+
+  @override
+  String get moderationAppeal => 'Appeal this decision';
+
+  @override
+  String get moderationAppealSent => 'Appeal sent';
+
+  @override
+  String get moderationAppealUpheld => 'Appeal result: decision upheld';
+
+  @override
+  String get moderationAppealReversed => 'Appeal result: decision reversed';
+
+  @override
+  String get moderationNoteHint => 'Tell us why';
+
+  @override
+  String get moderationNoteRequired => 'Explain your appeal.';
+
+  @override
+  String get moderationActionSent => 'Sent.';
+
+  @override
+  String get moderationActionAlreadySent => 'This was already sent.';
+
+  @override
+  String get moderationActionUnavailable =>
+      'This decision is no longer available.';
+
+  @override
+  String get moderationSignInRequired =>
+      'Sign in to see your reports and decisions.';
+
+  @override
+  String get moderationLoadFailed => 'Could not load your reports. Try again.';
 }

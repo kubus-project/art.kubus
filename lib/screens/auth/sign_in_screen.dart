@@ -268,6 +268,7 @@ class _SignInScreenState extends State<SignInScreen> {
 
   Future<void> _handleWalletFlowResult(
     Object? routeResult, {
+    required int expectedSessionEpoch,
     BackendApiService? apiOverride,
     String? fallbackWalletAddress,
     bool hadAuthBeforeOpen = false,
@@ -277,6 +278,7 @@ class _SignInScreenState extends State<SignInScreen> {
     final normalized = await normalizeWalletAuthResult(
       routeResult: routeResult,
       api: apiForNormalize,
+      expectedSessionEpoch: expectedSessionEpoch,
       fallbackWalletAddress: fallbackWalletAddress ??
           _walletInlineRequiredWalletAddress ??
           walletProvider.currentWalletAddress,
@@ -324,6 +326,8 @@ class _SignInScreenState extends State<SignInScreen> {
   }) {
     return _handleWalletFlowResult(
       routeResult,
+      expectedSessionEpoch:
+          (apiOverride ?? BackendApiService()).authSessionEpoch,
       apiOverride: apiOverride,
       fallbackWalletAddress: fallbackWalletAddress,
       hadAuthBeforeOpen: hadAuthBeforeOpen,
@@ -588,6 +592,7 @@ class _SignInScreenState extends State<SignInScreen> {
       FocusManager.instance.primaryFocus?.unfocus();
       final api = BackendApiService();
       final hadAuthBeforeOpen = (api.getAuthToken() ?? '').trim().isNotEmpty;
+      final expectedSessionEpoch = api.authSessionEpoch;
       final completer = Completer<Object?>();
       _walletFlowCompleter = completer;
 
@@ -612,6 +617,7 @@ class _SignInScreenState extends State<SignInScreen> {
 
       await _handleWalletFlowResult(
         routeResult,
+        expectedSessionEpoch: expectedSessionEpoch,
         fallbackWalletAddress: requiredWalletAddress,
         hadAuthBeforeOpen: hadAuthBeforeOpen,
       );

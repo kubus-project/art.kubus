@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 import 'package:art_kubus/models/protected_action_requirements.dart';
 import 'package:art_kubus/services/backend_api_service.dart';
@@ -172,6 +173,8 @@ void main() {
 
   setUp(() {
     SharedPreferences.setMockInitialValues(<String, Object>{});
+    FlutterSecureStorage.setMockInitialValues({});
+    BackendApiService().resetCredentialStoreForTesting();
   });
 
   tearDown(() {

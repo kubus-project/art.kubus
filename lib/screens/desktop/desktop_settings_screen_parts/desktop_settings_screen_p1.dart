@@ -1169,12 +1169,13 @@ extension _DesktopSettingsScreenStatePart1 on _DesktopSettingsScreenState {
                 await BackendApiService().deleteMyAccount();
               } catch (e) {
                 debugPrint(
-                    'DesktopSettingsScreen: backend deletion failed: $e');
+                    'DesktopSettingsScreen: closure unconfirmed (${e.runtimeType})');
                 messenger.showKubusSnackBar(SnackBar(
                     content:
                         Text(l10n.settingsDeleteAccountBackendFailedToast)));
                 if (!mounted) return;
                 navigator.pop();
+                navigator.pushNamed('/account-closure');
                 return;
               }
 
@@ -1188,7 +1189,8 @@ extension _DesktopSettingsScreenStatePart1 on _DesktopSettingsScreenState {
               navigator.pop();
               messenger.showKubusSnackBar(
                   SnackBar(content: Text(l10n.settingsAccountDeletedToast)));
-              _restartToOnboarding();
+              navigator.pushNamedAndRemoveUntil(
+                  '/account-closure', (_) => false);
             },
             child: Text(l10n.settingsDeleteForeverButton),
           ),

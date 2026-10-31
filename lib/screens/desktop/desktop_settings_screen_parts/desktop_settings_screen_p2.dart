@@ -5,44 +5,7 @@ part of '../desktop_settings_screen.dart';
 // the State's _applyState shim.
 extension _DesktopSettingsScreenStatePart2 on _DesktopSettingsScreenState {
   void _showDataExportDialog() {
-    final l10n = AppLocalizations.of(context)!;
-    showKubusDialog(
-      context: context,
-      builder: (context) => KubusAlertDialog(
-        size: KubusDialogSize.compact,
-        backgroundColor: Theme.of(context).colorScheme.surface,
-        title: Text(
-          l10n.settingsExportDataDialogTitle,
-          style: KubusTextStyles.sheetTitle.copyWith(
-            color: Theme.of(context).colorScheme.onSurface,
-          ),
-        ),
-        content: Text(
-          l10n.settingsExportDataDialogBody,
-          style: KubusTextStyles.detailBody.copyWith(
-            color: Theme.of(context).colorScheme.onSurface,
-          ),
-        ),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: Text(l10n.commonCancel)),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-                backgroundColor:
-                    Provider.of<ThemeProvider>(context, listen: false)
-                        .accentColor,
-                foregroundColor: Colors.white),
-            onPressed: () {
-              Navigator.pop(context);
-              ScaffoldMessenger.of(context).showKubusSnackBar(SnackBar(
-                  content: Text(l10n.desktopSettingsExportingDataToast)));
-            },
-            child: Text(l10n.settingsExportButton),
-          ),
-        ],
-      ),
-    );
+    showAccountDataExportDialog(context);
   }
 
   void _showClearCacheDialog() {
@@ -654,9 +617,18 @@ extension _DesktopSettingsScreenStatePart2 on _DesktopSettingsScreenState {
             _buildSettingsRow(
               l10n.settingsDataExportTileTitle,
               l10n.settingsDataExportTileSubtitle,
-              Icons.download,
-              isDestructive: true,
+              Icons.mail_outline,
               onTap: _showDataExportDialog,
+            ),
+            const SizedBox(height: 12),
+            _buildSettingsRow(
+              l10n.moderationScreenTitle,
+              l10n.moderationEntrySubtitle,
+              Icons.flag_outlined,
+              onTap: () => Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                    builder: (_) => const MyReportsScreen()),
+              ),
             ),
             const SizedBox(height: 12),
             _buildSettingsRow(

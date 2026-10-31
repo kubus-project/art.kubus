@@ -13,11 +13,13 @@ import 'package:art_kubus/providers/notification_provider.dart';
 import 'package:art_kubus/providers/platform_provider.dart';
 import 'package:art_kubus/providers/profile_provider.dart';
 import 'package:art_kubus/providers/security_gate_provider.dart';
+import 'package:art_kubus/providers/support_center_provider.dart';
 import 'package:art_kubus/providers/themeprovider.dart';
 import 'package:art_kubus/providers/wallet_provider.dart';
 import 'package:art_kubus/providers/web3provider.dart';
 import 'package:art_kubus/screens/desktop/desktop_settings_screen.dart';
 import 'package:art_kubus/screens/settings_screen.dart';
+import 'package:art_kubus/screens/support_center_screen.dart';
 import 'package:art_kubus/services/backend_api_service.dart';
 import 'package:art_kubus/services/encrypted_wallet_backup_service.dart';
 import 'package:art_kubus/utils/wallet_backup_status.dart';
@@ -130,6 +132,7 @@ class _AllowAllSecurityGateProvider extends SecurityGateProvider {
 Widget _buildSettingsApp(
   _FakeWalletProvider walletProvider, {
   Widget? home,
+  Locale locale = const Locale('en'),
 }) {
   final web3Provider = Web3Provider()..bindWalletProvider(walletProvider);
   final content = home ?? const SettingsScreen();
@@ -146,9 +149,7 @@ Widget _buildSettingsApp(
       ),
       ChangeNotifierProvider<WalletProvider>.value(value: walletProvider),
       ChangeNotifierProvider<Web3Provider>.value(value: web3Provider),
-      ChangeNotifierProvider<PlatformProvider>(
-        create: (_) => PlatformProvider(),
-      ),
+      ChangeNotifierProvider<PlatformProvider>.value(value: PlatformProvider()),
       ChangeNotifierProvider<ProfileProvider>(
         create: (_) => ProfileProvider()
           ..setCurrentUser(
@@ -173,9 +174,12 @@ Widget _buildSettingsApp(
       ChangeNotifierProvider<EmailPreferencesProvider>(
         create: (_) => _FakeEmailPreferencesProvider(),
       ),
+      ChangeNotifierProvider<SupportCenterProvider>(
+        create: (_) => SupportCenterProvider(supportEnabled: true),
+      ),
     ],
     child: MaterialApp(
-      locale: Locale('en'),
+      locale: locale,
       supportedLocales: AppLocalizations.supportedLocales,
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       home: content,
@@ -186,11 +190,14 @@ Widget _buildSettingsApp(
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   final l10n = AppLocalizationsEn();
+  final requests = <http.Request>[];
 
   setUp(() {
+    requests.clear();
     SharedPreferences.setMockInitialValues(<String, Object>{});
     BackendApiService().setHttpClient(
       MockClient((request) async {
+        requests.add(request);
         return http.Response(
           jsonEncode(<String, dynamic>{'success': false}),
           404,
@@ -405,4 +412,72 @@ void main() {
       findsOneWidget,
     );
   });
+  for (final desktop in [false, true]) {
+    for (final language in ['en', 'sl']) {
+      testWidgets(
+          'data copy request opens an unsent support form ($desktop, $language)',
+          (tester) async {
+        await tester.binding.setSurfaceSize(
+            desktop ? const Size(1440, 1000) : const Size(420, 900));
+        tester.view.physicalSize =
+            desktop ? const Size(1440, 1000) : const Size(420, 900);
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
+        addTearDown(() => tester.binding.setSurfaceSize(null));
+        final wallet = _FakeWalletProvider(
+            walletAddressValue: 'wallet123',
+            hasWalletIdentityValue: true,
+            hasSignerValue: true,
+            isReadOnlySessionValue: false,
+            mnemonicBackupRequiredValue: false);
+        await tester.pumpWidget(_buildSettingsApp(wallet,
+            home: desktop
+                ? const DesktopSettingsScreen()
+                : const SettingsScreen(),
+            locale: Locale(language)));
+        await tester.pump();
+        await tester.pump(const Duration(seconds: 2));
+        final title = language == 'en'
+            ? 'Request a copy of my data'
+            : 'Zahtevaj kopijo svojih podatkov';
+        if (desktop) {
+          final section =
+              find.text(language == 'en' ? 'Danger zone' : 'Nevarno območje');
+          await tester.scrollUntilVisible(section, 200,
+              scrollable: find.byType(Scrollable).first);
+          await tester.ensureVisible(section);
+          await tester.tap(section);
+          await tester.pump(const Duration(seconds: 1));
+        }
+        await tester.scrollUntilVisible(find.text(title), 300,
+            scrollable: find.byType(Scrollable).last);
+        await tester.ensureVisible(find.text(title).first);
+        await tester.pump();
+        await tester.tap(find.text(title).first);
+        await tester.pump(const Duration(seconds: 1));
+        expect(find.textContaining('support@kubus.site'), findsOneWidget);
+        expect(
+            find.text(language == 'en'
+                ? 'Open request form'
+                : 'Odpri obrazec za zahtevo'),
+            findsOneWidget);
+        await tester.tap(find.text(language == 'en'
+            ? 'Open request form'
+            : 'Odpri obrazec za zahtevo'));
+        await tester.pump();
+        await tester.pump(const Duration(seconds: 1));
+        final destination = tester
+            .widget<SupportCenterScreen>(find.byType(SupportCenterScreen));
+        expect(destination.initialSection, SupportSection.contact);
+        expect(find.byType(TextFormField), findsWidgets);
+        expect(find.textContaining('Data exported:'), findsNothing);
+        expect(
+            requests.where((request) =>
+                request.method == 'POST' &&
+                request.url.path.contains('support')),
+            isEmpty);
+      });
+    }
+  }
 }

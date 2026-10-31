@@ -9,7 +9,7 @@ import 'package:art_kubus/screens/support_center_screen.dart';
 import 'package:art_kubus/services/backend_api_service.dart';
 import 'package:art_kubus/services/http_client_factory.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
@@ -22,11 +22,6 @@ const _authToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.'
     'signature';
 
 const _gateTitle = 'Create a free account to send a support request';
-
-/// The secure-storage channel answers at once with nothing stored. Unmocked, a
-/// guest's session read waits out its timeout in widget tests.
-const _secureStorage =
-    MethodChannel('plugins.it_nomads.com/flutter_secure_storage');
 
 BackendApiService get api => BackendApiService();
 
@@ -91,17 +86,15 @@ void main() {
 
   setUp(() async {
     api.setAuthTokenForTesting(null);
+    api.resetCredentialStoreForTesting();
+    FlutterSecureStorage.setMockInitialValues(<String, String>{});
     requests = <http.Request>[];
-    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-        .setMockMethodCallHandler(_secureStorage, (call) async => null);
     l10n = await AppLocalizations.delegate.load(const Locale('en'));
   });
 
   tearDown(() {
     api.setAuthTokenForTesting(null);
     api.setHttpClient(createPlatformHttpClient());
-    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-        .setMockMethodCallHandler(_secureStorage, null);
   });
 
   void fakeBackend(Future<http.Response> Function(http.Request) handler) {
@@ -109,6 +102,14 @@ void main() {
       requests.add(request);
       return handler(request);
     }));
+  }
+
+  /// A session left by a previous run: the credential is in the platform
+  /// store, and preferences carry nothing secret.
+  void storeSession() {
+    FlutterSecureStorage.setMockInitialValues(
+        <String, String>{'jwt_token': _authToken});
+    api.resetCredentialStoreForTesting();
   }
 
   Future<void> settle(WidgetTester tester) async {
@@ -139,9 +140,8 @@ void main() {
     tester.view.physicalSize = const Size(800, 1000);
     tester.view.devicePixelRatio = 1.0;
     addTearDown(tester.view.reset);
-    SharedPreferences.setMockInitialValues(<String, Object>{
-      'jwt_token': _authToken,
-    });
+    storeSession();
+    SharedPreferences.setMockInitialValues(<String, Object>{});
     fakeBackend((_) async => _ok(<Object?>[_ticket()]));
 
     await tester.pumpWidget(_coldApp(SupportSection.requests));
@@ -176,9 +176,8 @@ void main() {
     tester.view.physicalSize = const Size(800, 1000);
     tester.view.devicePixelRatio = 1.0;
     addTearDown(tester.view.reset);
-    SharedPreferences.setMockInitialValues(<String, Object>{
-      'jwt_token': _authToken,
-    });
+    storeSession();
+    SharedPreferences.setMockInitialValues(<String, Object>{});
     fakeBackend((request) async {
       if (request.method == 'POST') return _ok(_ticket(), status: 201);
       return _ok(<Object?>[]);
@@ -202,9 +201,8 @@ void main() {
     tester.view.physicalSize = const Size(800, 1000);
     tester.view.devicePixelRatio = 1.0;
     addTearDown(tester.view.reset);
-    SharedPreferences.setMockInitialValues(<String, Object>{
-      'jwt_token': _authToken,
-    });
+    storeSession();
+    SharedPreferences.setMockInitialValues(<String, Object>{});
     fakeBackend((request) async {
       if (request.method == 'POST') return _ok(_ticket(), status: 201);
       return _ok(<Object?>[]);

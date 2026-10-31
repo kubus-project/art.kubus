@@ -658,13 +658,10 @@ class SecurityGateProvider extends ChangeNotifier
     // that cannot be decoded (e.g. test stubs without dots) must not satisfy
     // this check, so we use extractJwtExpiryUtc rather than isAccessTokenValid
     // (which returns true when no exp claim is present).
+    await BackendApiService().loadAuthToken();
     final inMemoryToken = (BackendApiService().getAuthToken() ?? '').trim();
     final hasValidInMemorySession = _tokenHasFutureExpiry(inMemoryToken);
-    final storedToken = prefs != null
-        ? (AuthGatingService.readStoredAccessToken(prefs) ?? '').trim()
-        : '';
-    final hasValidStoredSession = _tokenHasFutureExpiry(storedToken);
-    if (hasValidInMemorySession || hasValidStoredSession) {
+    if (hasValidInMemorySession) {
       _cooldownUntil = DateTime.now().add(_promptCooldown);
       return const AuthReauthResult(AuthReauthOutcome.notEnabled,
           message: 'Session still valid; not an expiry');

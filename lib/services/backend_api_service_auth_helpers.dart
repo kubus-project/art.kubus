@@ -1,26 +1,24 @@
 part of 'backend_api_service.dart';
 
-Future<void> _backendApiPersistTokenFromResponse(
+Future<int> _backendApiPersistTokenFromResponse(
   BackendApiService service,
-  Map<String, dynamic> body,
-) async {
-  final payload = _backendApiResponsePayload(body);
-
-  final token = payload['token'] as String? ?? body['token'] as String?;
-  if (token != null && token.isNotEmpty) {
-    await service.setAuthToken(token);
-    try {
-      await service._secureStorage.write(key: 'jwt_token', value: token);
-    } catch (_) {}
+  Map<String, dynamic> body, {
+  required int expectedEpoch,
+}) async {
+  if (expectedEpoch != service.authSessionEpoch) {
+    throw StateError('Authentication session ended');
   }
-
-  final refreshToken = payload['refreshToken'] as String? ??
+  final payload = _backendApiResponsePayload(body);
+  final token = payload['token'] as String? ?? body['token'] as String?;
+  final refresh = payload['refreshToken'] as String? ??
       payload['refresh_token'] as String? ??
       body['refreshToken'] as String? ??
       body['refresh_token'] as String?;
-  if (refreshToken != null && refreshToken.isNotEmpty) {
-    await service.setRefreshToken(refreshToken);
+  if (token != null && token.isNotEmpty) {
+    return service._commitAuthSession(token,
+        refreshToken: refresh, expectedEpoch: expectedEpoch);
   }
+  return service.authSessionEpoch;
 }
 
 Map<String, dynamic> _backendApiResponsePayload(Map<String, dynamic> body) {

@@ -1,6 +1,6 @@
 import 'dart:async';
 
-import 'package:shared_preferences/shared_preferences.dart';
+import '../telemetry/optional_analytics_consent.dart';
 
 import '../../config/config.dart';
 import '../telemetry/telemetry_uuid.dart';
@@ -34,7 +34,7 @@ class MetaConversionAdapter {
   static String get pixelId => AppConfig.metaPixelId;
 
   static bool get isConfigured =>
-      AppConfig.enableMetaPixel && pixelId.trim().isNotEmpty;
+      false; // No reviewed recipient-specific consent/activation is configured.
 
   Future<void> ensureInitialized() async {
     if (!isConfigured) return;
@@ -94,12 +94,6 @@ class MetaConversionAdapter {
     }
   }
 
-  Future<bool> _hasAnalyticsConsent() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      return prefs.getBool('enableAnalytics') ?? true;
-    } catch (_) {
-      return false;
-    }
-  }
+  Future<bool> _hasAnalyticsConsent() =>
+      OptionalAnalyticsConsent.instance.refresh();
 }

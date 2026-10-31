@@ -1,4 +1,5 @@
 import 'package:art_kubus/providers/config_provider.dart';
+import 'package:art_kubus/services/telemetry/optional_analytics_consent.dart';
 import 'package:art_kubus/providers/stats_provider.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -6,7 +7,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  setUp(() {
+  setUp(() async {
+    await OptionalAnalyticsConsent.instance.resetForTesting();
     SharedPreferences.setMockInitialValues(<String, Object>{
       'enableAnalytics': false,
     });
@@ -15,6 +17,7 @@ void main() {
   test('analytics preference updates StatsProvider without reconstruction',
       () async {
     final config = ConfigProvider();
+    addTearDown(config.dispose);
     await config.initialize();
     final stats = StatsProvider()..bindConfigProvider(config);
     var configNotifications = 0;
@@ -61,6 +64,7 @@ void main() {
       'analytics': false,
     });
     final config = ConfigProvider();
+    addTearDown(config.dispose);
     await config.initialize();
 
     expect(config.enableAnalytics, isFalse);
@@ -71,6 +75,6 @@ void main() {
     final restored = ConfigProvider();
     await restored.initialize();
 
-    expect(restored.enableAnalytics, isTrue);
+    expect(restored.enableAnalytics, isFalse);
   });
 }

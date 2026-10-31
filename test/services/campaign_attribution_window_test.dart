@@ -8,6 +8,7 @@
 library;
 
 import 'package:art_kubus/services/guest_session_service.dart';
+import 'package:art_kubus/services/telemetry/optional_analytics_consent.dart';
 import 'package:art_kubus/services/telemetry/kubus_client_context.dart';
 import 'package:art_kubus/services/telemetry/telemetry_event.dart';
 import 'package:art_kubus/services/telemetry/telemetry_event_queue.dart';
@@ -49,8 +50,13 @@ Future<SharedPreferences> _capture(Uri uri) async {
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  setUp(() {
-    SharedPreferences.setMockInitialValues(<String, Object>{});
+  setUp(() async {
+    await OptionalAnalyticsConsent.instance.resetForTesting();
+    SharedPreferences.setMockInitialValues(<String, Object>{
+      OptionalAnalyticsConsent.prefsKey:
+          '{"v":2,"granted":true,"revision":"campaign-fixture"}'
+    });
+    await OptionalAnalyticsConsent.instance.refresh();
     GuestSessionService.resetLaunchSnapshotForTest();
     KubusClientContext.instance.setEnabled(false);
   });
@@ -84,7 +90,11 @@ void main() {
     // UTMs but were normalised away, and the backend's direct-acquisition
     // cohort requires the route.
     for (final path in const <String>['/en', '/sl']) {
-      SharedPreferences.setMockInitialValues(<String, Object>{});
+      SharedPreferences.setMockInitialValues(<String, Object>{
+        OptionalAnalyticsConsent.prefsKey:
+            '{"v":2,"granted":true,"revision":"campaign-fixture"}'
+      });
+      await OptionalAnalyticsConsent.instance.refresh();
       final prefs = await _capture(_campaign(path: path));
       expect(
         GuestSessionService.entryRouteSync(prefs),
@@ -178,7 +188,7 @@ void main() {
       queue: queue,
       sender: _NoopSender(),
     );
-    addTearDown(() => svc.setAnalyticsPreferenceEnabled(false));
+    addTearDown(svc.dispose);
     await svc.ensureInitialized();
     await svc.trackAppEntry();
 
@@ -199,7 +209,7 @@ void main() {
         queue: queue,
         sender: _NoopSender(),
       );
-      addTearDown(() => svc.setAnalyticsPreferenceEnabled(false));
+      addTearDown(svc.dispose);
       await svc.ensureInitialized();
       await svc.trackAppEntry();
 
@@ -263,29 +273,18 @@ void main() {
     expect(GuestSessionService.entryRouteSync(prefs), '/map');
   });
 
-  test('an unstamped legacy touch is adopted, not dropped or immortal',
+  test(
+      'an unscoped legacy campaign is discarded rather than adopted into a new consent period',
       () async {
-    // An install that upgrades mid-campaign has UTMs and no timestamp. Wiping
-    // them would discard live attribution; leaving them unstamped would restore
-    // the unbounded behaviour this window replaces.
     SharedPreferences.setMockInitialValues(<String, Object>{
-      'kubus_entry_utm_utm_campaign': 'open_call_en_aug_2026',
+      'kubus_entry_utm_utm_campaign': 'unverified-legacy',
       'kubus_entry_route_v1': '/register',
     });
     final prefs = await SharedPreferences.getInstance();
-
-    expect(GuestSessionService.isStoredAttributionFreshSync(prefs), isTrue);
     await GuestSessionService.pruneExpiredAttribution(prefs: prefs);
-
-    expect(
-      GuestSessionService.entryUtmSync(prefs)['utm_campaign'],
-      'open_call_en_aug_2026',
-    );
-    expect(
-      GuestSessionService.storedAttributionCapturedAt(prefs),
-      isNotNull,
-      reason: 'adopted now, so it expires one window from the upgrade',
-    );
+    expect(GuestSessionService.entryUtmSync(prefs), isEmpty);
+    expect(prefs.getString('kubus_entry_utm_utm_campaign'), isNull);
+    expect(GuestSessionService.storedAttributionCapturedAt(prefs), isNull);
   });
 
   test(

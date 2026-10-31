@@ -305,6 +305,7 @@ Future<Map<String, dynamic>> _backendApiSaveProfileImpl(
           ?.toString();
   await service._ensureAuthBeforeRequest(walletAddress: walletAddress);
 
+  final sessionEpoch = service.authSessionEpoch;
   const int maxRetries = 3;
   int attempt = 0;
   while (true) {
@@ -325,7 +326,8 @@ Future<Map<String, dynamic>> _backendApiSaveProfileImpl(
         final data = jsonDecode(response.body) as Map<String, dynamic>;
         // Some legacy backends used to return a token. Keep support.
         if (data['token'] is String && (data['token'] as String).isNotEmpty) {
-          await service.setAuthToken(data['token'] as String);
+          await service.setAuthToken(data['token'] as String,
+              expectedEpoch: sessionEpoch);
           AppConfig.debugPrint(
             'BackendApiService.saveProfile: token received and stored from profile creation',
           );

@@ -8,6 +8,7 @@ class AppTelemetryConfig {
   static const String ingestEndpointPath = '/api/analytics/app';
 
   static const int maxQueueLength = 500;
+  static const Duration maxQueueAge = Duration(hours: 24);
   static const int maxBatchSize = 25;
   static const int maxEventBytes = 8 * 1024;
 
@@ -19,7 +20,7 @@ class AppTelemetryConfig {
 
   static const Duration sessionRotation = Duration(hours: 6);
 
-  static const String queuePrefsKey = 'app_telemetry_queue_v2';
+  static const String queuePrefsKey = 'app_telemetry_queue_v3';
   static const String droppedCountPrefsKey = 'app_telemetry_dropped_v1';
 
   /// The telemetry session survives an app restart within [sessionRotation].

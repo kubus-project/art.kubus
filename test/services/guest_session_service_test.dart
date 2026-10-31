@@ -1,3 +1,4 @@
+import 'package:art_kubus/services/telemetry/optional_analytics_consent.dart';
 import 'package:art_kubus/services/guest_session_service.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -32,10 +33,15 @@ void main() {
 
   test('entryUtmSync returns only the persisted UTM values', () async {
     SharedPreferences.setMockInitialValues(<String, Object>{
+      OptionalAnalyticsConsent.prefsKey:
+          '{"v":2,"granted":true,"revision":"fixture"}',
+      'kubus_entry_attribution_scope_v2':
+          '{"v":2,"granted":true,"revision":"fixture"}:',
       'kubus_entry_utm_utm_source': 'facebook',
       'kubus_entry_utm_utm_campaign': 'early-access',
     });
     final prefs = await SharedPreferences.getInstance();
+    await OptionalAnalyticsConsent.instance.refresh();
     final utm = GuestSessionService.entryUtmSync(prefs);
     expect(utm, <String, String>{
       'utm_source': 'facebook',

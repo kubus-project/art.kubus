@@ -84,7 +84,7 @@ void main() {
         diagnosticsBodies.add(request.body);
         return http.Response('{"success":true}', 202);
       }
-      return http.Response('boom', 500);
+      return http.Response('SYNTHETIC_PRIVATE_RESPONSE_BODY_SENTINEL', 500);
     }));
 
     await expectLater(
@@ -101,6 +101,10 @@ void main() {
     final payload =
         jsonDecode(diagnosticsBodies.single) as Map<String, dynamic>;
     final metadata = payload['metadata'] as Map<String, dynamic>;
+    expect(metadata.containsKey('response_preview'), isFalse);
+    expect(diagnosticsBodies.single,
+        isNot(contains('SYNTHETIC_PRIVATE_RESPONSE_BODY_SENTINEL')));
+    expect(metadata['status_code'], 500);
     expect(metadata['path'], '/api/profiles/$firstId');
     expect(metadata['path'].toString().contains('?'), isFalse);
   });

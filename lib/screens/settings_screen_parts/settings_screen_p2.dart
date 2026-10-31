@@ -48,8 +48,16 @@ extension _SettingsScreenStatePart2 on _SettingsScreenState {
         _buildSettingsTile(
           l10n.settingsDataExportTileTitle,
           l10n.settingsDataExportTileSubtitle,
-          Icons.download,
+          Icons.mail_outline,
           onTap: () => _showDataExportDialog(),
+        ),
+        _buildSettingsTile(
+          l10n.moderationScreenTitle,
+          l10n.moderationEntrySubtitle,
+          Icons.flag_outlined,
+          onTap: () => Navigator.of(context).push(
+            MaterialPageRoute<void>(builder: (_) => const MyReportsScreen()),
+          ),
         ),
         _buildSettingsTile(
           l10n.settingsResetPermissionFlagsTileTitle,
@@ -1096,78 +1104,7 @@ extension _SettingsScreenStatePart2 on _SettingsScreenState {
   }
 
   void _showDataExportDialog() {
-    final l10n = AppLocalizations.of(context)!;
-    showKubusDialog(
-      context: context,
-      builder: (context) => KubusAlertDialog(
-        size: KubusDialogSize.compact,
-        backgroundColor: Theme.of(context).colorScheme.surface,
-        title: Text(
-          l10n.settingsExportDataDialogTitle,
-          style: KubusTypography.inter(
-            color: Theme.of(context).colorScheme.onSurface,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        content: Text(
-          l10n.settingsExportDataDialogBody,
-          style: KubusTypography.inter(
-            color: Theme.of(context).colorScheme.onSurface,
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text(
-              l10n.commonCancel,
-              style: KubusTypography.inter(
-                color: Theme.of(context).colorScheme.outline,
-              ),
-            ),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor:
-                  Provider.of<ThemeProvider>(context, listen: false)
-                      .accentColor,
-              foregroundColor: Colors.white,
-            ),
-            onPressed: () async {
-              final navigator = Navigator.of(context);
-              final messenger = ScaffoldMessenger.of(context);
-
-              // Prepare export data
-              final prefs = await SharedPreferences.getInstance();
-              final exportData = {
-                'profile': {
-                  'profileVisibility':
-                      prefs.getString('profileVisibility') ?? 'Public',
-                  'showAchievements': prefs.getBool('showAchievements') ?? true,
-                  'showFriends': prefs.getBool('showFriends') ?? true,
-                },
-                'settings': {
-                  'enableAnalytics': prefs.getBool('enableAnalytics') ?? true,
-                  'enableCrashReporting':
-                      prefs.getBool('enableCrashReporting') ?? true,
-                  'skipOnboarding':
-                      prefs.getBool('skipOnboardingForReturningUsers') ?? true,
-                },
-                'exportDate': DateTime.now().toIso8601String(),
-              };
-
-              if (!mounted) return;
-              navigator.pop();
-              messenger.showKubusSnackBar(
-                SnackBar(
-                    content: Text(
-                        l10n.settingsDataExportedToast(exportData.length))),
-              );
-            },
-            child: Text(l10n.settingsExportButton),
-          ),
-        ],
-      ),
-    );
+    showAccountDataExportDialog(context);
   }
 
   void _showResetDialog() {
@@ -1328,7 +1265,8 @@ extension _SettingsScreenStatePart2 on _SettingsScreenState {
                 try {
                   await BackendApiService().deleteMyAccount();
                 } catch (e) {
-                  debugPrint('SettingsScreen: backend deletion failed: $e');
+                  debugPrint(
+                      'SettingsScreen: closure unconfirmed (${e.runtimeType})');
                   messenger.showKubusSnackBar(
                     SnackBar(
                         content:
@@ -1336,6 +1274,7 @@ extension _SettingsScreenStatePart2 on _SettingsScreenState {
                   );
                   if (!mounted) return;
                   dialogNavigator.pop();
+                  dialogNavigator.pushNamed('/account-closure');
                   return;
                 }
 
@@ -1354,7 +1293,8 @@ extension _SettingsScreenStatePart2 on _SettingsScreenState {
                     duration: const Duration(seconds: 3),
                   ),
                 );
-                _restartToOnboarding();
+                dialogNavigator.pushNamedAndRemoveUntil(
+                    '/account-closure', (_) => false);
               } else {
                 if (!mounted) return;
                 dialogNavigator.pop();

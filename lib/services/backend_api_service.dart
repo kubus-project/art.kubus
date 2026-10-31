@@ -5,7 +5,6 @@ import 'package:flutter/widgets.dart';
 import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
 import 'package:latlong2/latlong.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/art_marker.dart';
 import '../models/map_marker_overview.dart';
@@ -37,10 +36,13 @@ import 'public_action_outbox_service.dart';
 import 'public_fallback_service.dart';
 import 'user_action_logger.dart';
 import 'auth_gating_service.dart';
+import 'auth_credential_store.dart';
+import '../models/account_closure.dart';
 import 'auth_session_coordinator.dart';
 import 'http_client_factory.dart';
 import 'media_upload_optimizer.dart';
 import 'telemetry/kubus_client_context.dart';
+import 'telemetry/optional_analytics_consent.dart';
 import 'telemetry/telemetry_uuid.dart';
 import 'node/turn_configuration.dart';
 import 'account_identity.dart';
@@ -362,12 +364,12 @@ class BackendApiService
   http.Client _client = http.Client();
   AuthSessionCoordinator? _authCoordinator;
 
-  /// Bumped at every sign-out (see [clearAuth]). Account requests capture it when
+  /// Bumped at every credential commit and sign-out. Account requests capture it when
   /// they start and drop their local writes once it has moved on, so a response
   /// that lands after sign-out cannot repopulate the next session's state.
   int _authSessionEpoch = 0;
 
-  /// Epoch of the current authenticated session; changes at every sign-out.
+  /// Epoch of the current credential session; changes on commit and sign-out.
   int get authSessionEpoch => _authSessionEpoch;
   MediaUploadOptimizer _mediaUploadOptimizer = const MediaUploadOptimizer();
 
@@ -381,9 +383,10 @@ class BackendApiService
   final PublicActionOutboxService _publicActionOutboxService =
       PublicActionOutboxService();
   String? _authToken;
+  String? _credentialTargetToken;
   String? _authWalletCanonical;
   String? _preferredWalletCanonical;
-  final FlutterSecureStorage _secureStorage = const FlutterSecureStorage();
+  AuthCredentialStore _credentialStore = AuthCredentialStore();
   Future<void>? _authInitFuture;
   final Map<String, DateTime> _rateLimitResets = {};
   final Map<String, DateTime> _debugLogThrottle = <String, DateTime>{};
@@ -563,10 +566,13 @@ class BackendApiService
     return AuthSignInMethod.unknown;
   }
 
-  Future<void> setLastSignInMethod(AuthSignInMethod method) async {
+  Future<void> setLastSignInMethod(AuthSignInMethod method,
+      {int? sessionEpoch}) async {
+    final epoch = sessionEpoch ?? _authSessionEpoch;
     final value = _authSignInMethodToStorageValue(method);
     try {
       final prefs = await SharedPreferences.getInstance();
+      if (epoch != _authSessionEpoch) return;
       if (value.isEmpty) {
         await prefs.remove(PreferenceKeys.authLastSignInMethodV1);
       } else {
@@ -614,8 +620,15 @@ class BackendApiService
   }
 
   @visibleForTesting
+  void resetCredentialStoreForTesting({AuthCredentialStore? store}) {
+    _credentialStore = store ?? AuthCredentialStore();
+    _authInitFuture = null;
+  }
+
+  @visibleForTesting
   void setAuthTokenForTesting(String? token) {
     _authToken = token;
+    _credentialTargetToken = token;
     _authWalletCanonical = _tryExtractWalletFromToken(token);
     AccountIdentity.setAccountKey(_accountKeyOf(token));
   }
@@ -870,9 +883,6 @@ class BackendApiService
     unawaited(() async {
       try {
         final context = KubusClientContext.instance.snapshot;
-        final bodyPreview = response.body.length > 300
-            ? response.body.substring(0, 300)
-            : response.body;
         final payload = <String, dynamic>{
           'eventId': TelemetryUuid.v4(),
           'source': 'flutter_http',
@@ -890,7 +900,6 @@ class BackendApiService
             'method': method.toUpperCase(),
             'path': path,
             'status_code': status,
-            'response_preview': bodyPreview,
           }),
         };
         final jsonBody = jsonEncode(payload);
@@ -1024,243 +1033,137 @@ class BackendApiService
     return _tryExtractWalletFromToken(token) ?? '';
   }
 
-  /// Set authentication token for API requests
-  Future<void> setAuthToken(String token) async {
+  /// Native secure persistence; browser credentials remain in memory only.
+  Future<void> setAuthToken(String token, {int? expectedEpoch}) async {
+    await _commitAuthSession(token, expectedEpoch: expectedEpoch);
+  }
+
+  Future<int> _commitAuthSession(String token,
+      {String? refreshToken, int? expectedEpoch}) async {
+    if (expectedEpoch != null && expectedEpoch != _authSessionEpoch) {
+      throw StateError('Authentication request belongs to an ended session');
+    }
+    final epoch = ++_authSessionEpoch;
+    _credentialTargetToken = token;
     final previousIdentity = _authIdentityOf(_authToken);
-    _authToken = token;
-    _authWalletCanonical = _tryExtractWalletFromToken(token);
-    AccountIdentity.setAccountKey(_accountKeyOf(token));
-    AppConfig.debugPrint('BackendApiService: Auth token set (in-memory)');
-    // A token for another account ends the previous identity's local state.
-    final nextIdentity = _authIdentityOf(token);
-    if (previousIdentity.isNotEmpty && previousIdentity != nextIdentity) {
-      await AccountIdentity.notifyChanged();
-    }
-    if (!_hasInitializedBinding) {
-      AppConfig.debugPrint(
-        'BackendApiService: skipping auth token persistence (binding not initialized)',
-      );
-      return;
-    }
-    // Persist token to secure storage and shared preferences (web fallback)
     try {
-      await _secureStorage
-          .write(key: 'jwt_token', value: token)
-          .timeout(const Duration(milliseconds: 800));
-      AppConfig.debugPrint(
-        'BackendApiService: Auth token written to secure storage',
-      );
-    } catch (e) {
-      AppConfig.debugPrint(
-        'BackendApiService: failed to write secure storage token: $e',
-      );
-    }
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString('jwt_token', token);
-      await prefs.setBool(PreferenceKeys.hasCompletedAuthOnboarding, true);
-      AppConfig.debugPrint(
-        'BackendApiService: Auth token written to SharedPreferences fallback',
-      );
-    } catch (e) {
-      AppConfig.debugPrint(
-        'BackendApiService: failed to write prefs token: $e',
-      );
-    }
-  }
-
-  Future<void> setRefreshToken(String token) async {
-    final trimmed = token.trim();
-    if (trimmed.isEmpty) return;
-    if (!_hasInitializedBinding) {
-      AppConfig.debugPrint(
-        'BackendApiService: skipping refresh token persistence (binding not initialized)',
-      );
-      return;
-    }
-    try {
-      await _secureStorage
-          .write(key: 'refresh_token', value: trimmed)
-          .timeout(const Duration(milliseconds: 800));
-      AppConfig.debugPrint(
-        'BackendApiService: Refresh token written to secure storage',
-      );
-    } catch (e) {
-      AppConfig.debugPrint(
-        'BackendApiService: failed to write refresh token: $e',
-      );
-    }
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString('refresh_token', trimmed);
-    } catch (e) {
-      AppConfig.debugPrint(
-        'BackendApiService: failed to write refresh token to prefs: $e',
-      );
-    }
-  }
-
-  Future<void> _loadRefreshTokenFromStorage() async {
-    String? refreshToken;
-    try {
-      refreshToken = await _secureStorage
-          .read(key: 'refresh_token')
-          .timeout(const Duration(milliseconds: 800));
-    } catch (e) {
-      AppConfig.debugPrint(
-        'BackendApiService: refresh token secure storage read failed: $e',
-      );
-    }
-
-    if (refreshToken == null || refreshToken.isEmpty) {
-      try {
-        final prefs = await SharedPreferences.getInstance();
-        refreshToken = AuthGatingService.readStoredRefreshToken(prefs);
-      } catch (e) {
-        AppConfig.debugPrint(
-          'BackendApiService: refresh token prefs read failed: $e',
-        );
+      final stored = !_hasInitializedBinding ||
+          await _credentialStore
+              .saveSession(token, refreshToken)
+              .timeout(const Duration(seconds: 3));
+      if (!stored || epoch != _authSessionEpoch) {
+        throw StateError('Authentication session changed');
       }
+      _authToken = token;
+      _authWalletCanonical = _tryExtractWalletFromToken(token);
+      AccountIdentity.setAccountKey(_accountKeyOf(token));
+      if (previousIdentity.isNotEmpty &&
+          previousIdentity != _authIdentityOf(token)) {
+        await AccountIdentity.notifyChanged();
+      }
+      if (epoch != _authSessionEpoch) {
+        throw StateError('Authentication session changed');
+      }
+      if (_hasInitializedBinding) {
+        final prefs = await SharedPreferences.getInstance();
+        if (epoch == _authSessionEpoch) {
+          await prefs.setBool(PreferenceKeys.hasCompletedAuthOnboarding, true);
+        }
+      }
+      return epoch;
+    } catch (_) {
+      if (epoch == _authSessionEpoch) await clearAuth();
+      rethrow;
     }
+  }
 
-    if (refreshToken != null && refreshToken.trim().isNotEmpty) {}
+  Future<void> setRefreshToken(String token,
+      {required String forAccessToken}) async {
+    if (token.trim().isEmpty || !_hasInitializedBinding) return;
+    final epoch = _authSessionEpoch;
+    bool current() =>
+        epoch == _authSessionEpoch &&
+        _credentialTargetToken == forAccessToken &&
+        _authToken == forAccessToken;
+    if (!current()) return;
+    try {
+      await _credentialStore
+          .save('refresh_token', token.trim(), isCurrent: current)
+          .timeout(const Duration(seconds: 3));
+    } catch (_) {
+      if (current()) await clearAuth();
+      rethrow;
+    }
   }
 
   Future<bool> refreshAuthTokenFromStorage() async {
-    // The backend does not expose /api/auth/refresh. Keep this compatibility
-    // shim non-transport so older call sites cannot accidentally depend on a
-    // missing route or infer signer restoration from stored session state.
-    await _loadRefreshTokenFromStorage();
-    AppConfig.debugPrint(
-      'BackendApiService.refreshAuthTokenFromStorage: refresh transport is not configured',
-    );
+    // There is no backend refresh endpoint. Never infer a usable session from
+    // a refresh credential or a preference hint.
     return false;
   }
 
-  /// Load auth token from secure storage
   Future<void> loadAuthToken() async {
+    if ((_authToken ?? '').isNotEmpty) return;
+    final epoch = _authSessionEpoch;
     try {
-      String? token;
-      try {
-        token = await _secureStorage
-            .read(key: 'jwt_token')
-            .timeout(const Duration(milliseconds: 800));
-      } catch (e) {
-        AppConfig.debugPrint(
-          'BackendApiService: secure storage read failed: $e',
-        );
+      final token = await _credentialStore
+          .readAccess()
+          .timeout(const Duration(seconds: 1));
+      if (epoch != _authSessionEpoch || (_authToken ?? '').isNotEmpty) return;
+      if (token != null &&
+          token.isNotEmpty &&
+          AuthGatingService.isAccessTokenValid(token)) {
+        _authToken = token;
+        _authWalletCanonical = _tryExtractWalletFromToken(token);
+        AccountIdentity.setAccountKey(_accountKeyOf(token));
+        await resolveLastSignInMethod();
       }
-
-      // Fallback to SharedPreferences (useful for web builds where secure storage may not persist)
-      if (token == null || token.isEmpty) {
-        try {
-          final prefs = await SharedPreferences.getInstance();
-          // Try known access token keys for backward compatibility
-          token = AuthGatingService.readStoredAccessToken(prefs);
-          if (token != null && token.isNotEmpty) {
-            AppConfig.debugPrint(
-              'BackendApiService: Auth token loaded from SharedPreferences fallback',
-            );
-          }
-        } catch (e) {
-          AppConfig.debugPrint(
-            'BackendApiService: SharedPreferences fallback failed: $e',
-          );
-        }
-      }
-      if (token != null && token.isNotEmpty) {
-        if (AuthGatingService.isAccessTokenValid(token)) {
-          _authToken = token;
-          _authWalletCanonical = _tryExtractWalletFromToken(token);
-          AccountIdentity.setAccountKey(_accountKeyOf(token));
-          await resolveLastSignInMethod();
-          AppConfig.debugPrint(
-            'BackendApiService: Auth token loaded (in-memory)',
-          );
-        } else {
-          _authToken = null;
-          _authWalletCanonical = null;
-          AccountIdentity.setAccountKey('');
-          AppConfig.debugPrint(
-            'BackendApiService: Stored auth token is expired; ignoring',
-          );
-        }
-        // Attempt to decode exp field for debug information
-        try {
-          final parts = token.split('.');
-          if (parts.length >= 2) {
-            final payload = base64Url.normalize(parts[1]);
-            final decoded = utf8.decode(base64Url.decode(payload));
-            final map = jsonDecode(decoded) as Map<String, dynamic>;
-            if (map.containsKey('exp')) {
-              final exp = (map['exp'] as num).toInt();
-              final now = DateTime.now().millisecondsSinceEpoch ~/ 1000;
-              final secsLeft = exp - now;
-              AppConfig.debugPrint(
-                'BackendApiService: token expiry in $secsLeft seconds',
-              );
-            }
-          }
-        } catch (e) {
-          AppConfig.debugPrint(
-            'BackendApiService: failed to decode token expiry: $e',
-          );
-        }
-      } else {
-        AppConfig.debugPrint('BackendApiService: No stored auth token found');
-      }
-
-      await _loadRefreshTokenFromStorage();
-    } catch (e) {
-      AppConfig.debugPrint('BackendApiService: Error loading auth token: $e');
+    } catch (_) {
+      // Unavailable/corrupt storage is not a session and never enables a
+      // preference fallback. No platform error text or credential is logged.
+      AppConfig.debugPrint(
+          'BackendApiService: credential restoration unavailable');
     }
   }
 
-  /// Clear authentication
+  /// Local sign-out is immediate. Cleanup failures do not skip other stores or
+  /// prevent socket/profile cleanup. A durable marker blocks restart restore
+  /// when an OS secret could not be removed.
   Future<void> clearAuth() async {
     _authSessionEpoch += 1;
     _authToken = null;
+    _credentialTargetToken = null;
     _authWalletCanonical = null;
     _authCoordinator?.reset();
-    // Every way the session ends comes through here (sign-out, a token for
-    // another wallet, a deleted or suspended account). The session is now a
-    // guest's. Listeners run before the first await below.
     AccountIdentity.setAccountKey('');
-    await AccountIdentity.notifyChanged();
+    final epoch = _authSessionEpoch;
+    final cleanup = _credentialStore.clear();
     try {
-      await _secureStorage
-          .delete(key: 'jwt_token')
-          .timeout(const Duration(milliseconds: 800));
-      await _secureStorage
-          .delete(key: 'refresh_token')
-          .timeout(const Duration(milliseconds: 800));
-      AppConfig.debugPrint(
-        'BackendApiService: Auth cleared from secure storage',
-      );
-    } catch (e) {
-      AppConfig.debugPrint('BackendApiService: Error clearing auth token: $e');
+      await AccountIdentity.notifyChanged().timeout(const Duration(seconds: 1));
+    } catch (_) {}
+    try {
+      final result = await cleanup.timeout(const Duration(seconds: 3));
+      if (!result.complete || !result.restartBlocked) {
+        AppConfig.debugPrint(
+            'BackendApiService: credential cleanup incomplete; restoration blocked where marker persisted');
+      }
+    } catch (_) {
+      // The serialized cleanup continues: timing out must not allow a late
+      // write to overtake deletion or a new account's persistence.
+      AppConfig.debugPrint('BackendApiService: credential cleanup pending');
     }
     try {
       final prefs = await SharedPreferences.getInstance();
-      for (final key in AuthGatingService.accessTokenKeys) {
-        await prefs.remove(key);
+      for (final key in [
+        PreferenceKeys.authLastSignInMethodV1,
+        ...secureAccountStatusPrefKeys
+      ]) {
+        if (epoch != _authSessionEpoch) break;
+        try {
+          await prefs.remove(key);
+        } catch (_) {}
       }
-      for (final key in AuthGatingService.refreshTokenKeys) {
-        await prefs.remove(key);
-      }
-      await prefs.remove(PreferenceKeys.authLastSignInMethodV1);
-      // Account-scoped email and security status; sign-in repopulates them.
-      for (final key in secureAccountStatusPrefKeys) {
-        await prefs.remove(key);
-      }
-      AppConfig.debugPrint(
-        'BackendApiService: Auth cleared from SharedPreferences',
-      );
-    } catch (e) {
-      AppConfig.debugPrint(
-        'BackendApiService: Error clearing prefs auth token: $e',
-      );
-    }
+    } catch (_) {}
   }
 
   /// Loads a stored backend account session without issuing a new account token
@@ -1274,16 +1177,6 @@ class BackendApiService
       final token = (_authToken ?? '').trim();
       if (token.isNotEmpty && AuthGatingService.isAccessTokenValid(token)) {
         return true;
-      }
-
-      if (!allowRefresh) return false;
-
-      final prefs = await SharedPreferences.getInstance();
-      final sessionStatus = AuthGatingService.evaluateStoredSession(
-        prefs: prefs,
-      );
-      if (sessionStatus != StoredSessionStatus.refreshRequired) {
-        return false;
       }
 
       return false;
@@ -2066,9 +1959,10 @@ class BackendApiService
     );
   }
 
-  Future<void> _persistTokenFromResponse(Map<String, dynamic> body) async {
-    await _backendApiPersistTokenFromResponse(this, body);
-  }
+  Future<int> _persistTokenFromResponse(Map<String, dynamic> body,
+          {required int expectedEpoch}) =>
+      _backendApiPersistTokenFromResponse(this, body,
+          expectedEpoch: expectedEpoch);
 
   /// Persists the backend JWT (and refresh token) returned inside an auth
   /// success response (`data.token` / `token`). Used by auth-continuation
@@ -2076,8 +1970,10 @@ class BackendApiService
   /// returns a fresh authenticated session for the same user.
   ///
   /// Returns true when a non-empty token was persisted.
-  Future<bool> persistAuthTokensFromResponse(Map<String, dynamic> body) async {
-    await _backendApiPersistTokenFromResponse(this, body);
+  Future<bool> persistAuthTokensFromResponse(Map<String, dynamic> body,
+      {int? sessionEpoch}) async {
+    await _backendApiPersistTokenFromResponse(this, body,
+        expectedEpoch: sessionEpoch ?? _authSessionEpoch);
     final token = (getAuthToken() ?? '').trim();
     return token.isNotEmpty;
   }
@@ -3553,6 +3449,36 @@ class BackendApiService
 
   /// Fetch messages for a conversation
   /// GET /api/messages/:conversationId/messages
+  /// Private media never goes through public image proxies or URL launchers.
+  /// Only this backend origin and exact attachment route can receive the bearer.
+  Future<Uint8List> fetchPrivateMessageAttachment(String reference) async {
+    final base = Uri.parse(baseUrl);
+    final uri = base.resolve(reference);
+    final uuid = r'[0-9a-fA-F-]{36}';
+    final route =
+        RegExp('^/api/messages/$uuid/messages/$uuid/attachments/$uuid\$');
+    if (uri.origin != base.origin ||
+        uri.userInfo.isNotEmpty ||
+        uri.hasQuery ||
+        uri.hasFragment ||
+        !route.hasMatch(uri.path)) {
+      throw ArgumentError('Invalid private attachment URL');
+    }
+    await loadAuthToken();
+    final epoch = _authSessionEpoch;
+    if ((_authToken ?? '').isEmpty) throw StateError('Authentication required');
+    final request = http.Request('GET', uri)..followRedirects = false;
+    request.headers.addAll(_getHeaders());
+    final streamed =
+        await _client.send(request).timeout(AppConfig.requestTimeout);
+    final response = await http.Response.fromStream(streamed)
+        .timeout(AppConfig.requestTimeout);
+    if (epoch != _authSessionEpoch || response.statusCode != 200) {
+      throw StateError('Attachment is unavailable for this session');
+    }
+    return response.bodyBytes;
+  }
+
   Future<Map<String, dynamic>> fetchMessages(
     String conversationId, {
     int page = 1,
@@ -5393,7 +5319,7 @@ class BackendApiService
         body: jsonEncode({
           'markerId': markerId.trim(),
           'challengeToken': challengeToken,
-          'clientLocation': clientLocation,
+          if (clientLocation.isNotEmpty) 'clientLocation': clientLocation,
         }),
       );
 
@@ -5405,7 +5331,7 @@ class BackendApiService
           body: jsonEncode({
             'markerId': markerId.trim(),
             'challengeToken': challengeToken,
-            'clientLocation': clientLocation,
+            if (clientLocation.isNotEmpty) 'clientLocation': clientLocation,
           }),
         );
 
@@ -8122,6 +8048,24 @@ class BackendApiService
 
   /// Get users that a user is following
   /// GET /api/community/following/:walletAddress
+  /// The signed-in account's own data as one JSON document (F03). The server
+  /// scopes it to the verified account; nothing here selects whose data it is.
+  Future<List<int>> fetchAccountDataExport() async {
+    final uri = Uri.parse('$baseUrl/api/account/data-export');
+    final response = await _get(
+      uri,
+      includeAuth: true,
+      headers: _getHeaders(includeAuth: true),
+      timeout: const Duration(seconds: 60),
+    );
+    if (response.statusCode == 200) return response.bodyBytes;
+    throw BackendApiRequestException(
+      statusCode: response.statusCode,
+      path: uri.path,
+      retryAfter: parseHttpRetryAfter(response.headers['retry-after']),
+    );
+  }
+
   Future<List<Map<String, dynamic>>> getFollowing({
     required String walletAddress,
     int page = 1,
@@ -8220,6 +8164,9 @@ class BackendApiService
     String? targetTextId,
     required String reason,
     String? details,
+    String? reasonCode,
+    bool goodFaithStatement = false,
+    String? contactEmail,
   }) async {
     try {
       await _ensureAuthBeforeRequest();
@@ -8228,6 +8175,16 @@ class BackendApiService
         'targetType': targetType.trim(),
         'reason': reason.trim(),
       };
+
+      final normalizedReasonCode = (reasonCode ?? '').trim();
+      if (normalizedReasonCode.isNotEmpty) {
+        payload['reasonCode'] = normalizedReasonCode;
+      }
+      if (goodFaithStatement) payload['goodFaithStatement'] = true;
+      final normalizedContactEmail = (contactEmail ?? '').trim();
+      if (normalizedContactEmail.isNotEmpty) {
+        payload['contactEmail'] = normalizedContactEmail;
+      }
 
       final normalizedTargetId = (targetId ?? '').trim();
       if (normalizedTargetId.isNotEmpty) {
@@ -8272,6 +8229,67 @@ class BackendApiService
       AppConfig.debugPrint('BackendApiService.submitReport failed: $e');
       rethrow;
     }
+  }
+
+  /// The signed-in account's own reports with the recorded decision and its
+  /// reasons. GET /api/reports/mine
+  Future<List<Map<String, dynamic>>> getMyReports() =>
+      _getModerationList('/api/reports/mine');
+
+  /// Decisions that affect the signed-in account's own content, with the
+  /// statement of reasons written for them. GET /api/reports/decisions-about-me
+  Future<List<Map<String, dynamic>>> getDecisionsAboutMe() =>
+      _getModerationList('/api/reports/decisions-about-me');
+
+  Future<List<Map<String, dynamic>>> _getModerationList(String path) async {
+    await _ensureAuthBeforeRequest();
+    final uri = Uri.parse('$baseUrl$path');
+    final response = await _get(
+      uri,
+      includeAuth: true,
+      headers: _getHeaders(includeAuth: true),
+    );
+    if (response.statusCode != 200) {
+      throw BackendApiRequestException(
+        statusCode: response.statusCode,
+        path: uri.path,
+        retryAfter: parseHttpRetryAfter(response.headers['retry-after']),
+      );
+    }
+    final decoded = jsonDecode(response.body);
+    final data = decoded is Map<String, dynamic> ? decoded['data'] : null;
+    if (data is! List) return <Map<String, dynamic>>[];
+    return data.whereType<Map<String, dynamic>>().toList();
+  }
+
+  /// The reporter asks for a decision on their report to be looked at again.
+  /// POST /api/reports/:id/reconsideration
+  Future<void> requestReportReconsideration(String reportId, {String? note}) =>
+      _postModerationRequest('/api/reports/$reportId/reconsideration', note);
+
+  /// The affected person appeals a decision about their content or account.
+  /// POST /api/reports/:id/appeal
+  Future<void> appealModerationDecision(String reportId,
+          {required String note}) =>
+      _postModerationRequest('/api/reports/$reportId/appeal', note);
+
+  Future<void> _postModerationRequest(String path, String? note) async {
+    await _ensureAuthBeforeRequest();
+    final uri = Uri.parse('$baseUrl$path');
+    final trimmed = (note ?? '').trim();
+    final response = await _post(
+      uri,
+      headers: _getHeaders(),
+      body: jsonEncode(
+          <String, dynamic>{if (trimmed.isNotEmpty) 'note': trimmed}),
+      isIdempotent: false,
+    );
+    if (response.statusCode == 200 || response.statusCode == 201) return;
+    throw BackendApiRequestException(
+      statusCode: response.statusCode,
+      path: uri.path,
+      retryAfter: parseHttpRetryAfter(response.headers['retry-after']),
+    );
   }
 
   /// Create a support or bug ticket for the signed-in account.
@@ -10149,20 +10167,33 @@ class BackendApiService
   /// Ingest app client telemetry in batches (best-effort; non-blocking).
   ///
   /// POST /api/analytics/app
-  Future<http.Response?> postAppTelemetry(String jsonBody) async {
+  Future<http.Response?> postAppTelemetry(String jsonBody,
+      {int? consentGeneration, int? accountSessionEpoch}) async {
+    final consent = OptionalAnalyticsConsent.instance;
+    final generation = consentGeneration ?? consent.generation;
+    final accountEpoch = accountSessionEpoch ?? authSessionEpoch;
     try {
+      if (!await consent.refresh() || generation != consent.generation) {
+        return null;
+      }
+      if (accountEpoch != authSessionEpoch) return null;
+      final claims = getCurrentAuthTokenClaims();
+      final actor = (claims?['id'] ?? claims?['sub'])?.toString();
+      final payload = jsonDecode(jsonBody) as Map;
+      final events = payload['events'];
+      if (events is! List ||
+          events.any(
+              (event) => event is! Map || event['actor_user_id'] != actor)) {
+        return null;
+      }
       final uri = Uri.parse('$baseUrl/api/analytics/app');
-      final response = await _post(
-        uri,
-        includeAuth: false,
-        headers: _getHeaders(includeAuth: false),
-        body: jsonBody,
-        isIdempotent: true,
-        timeout: const Duration(seconds: 6),
-      );
-      return response;
-    } catch (e) {
-      AppConfig.debugPrint('BackendApiService.postAppTelemetry failed: $e');
+      // Optional measurement does not use authenticated request replay or
+      // failover retries. The final permission check precedes network handoff.
+      if (!consent.granted || generation != consent.generation) return null;
+      return await _client
+          .post(uri, headers: _getHeaders(includeAuth: false), body: jsonBody)
+          .timeout(const Duration(seconds: 6));
+    } catch (_) {
       return null;
     }
   }
@@ -10635,6 +10666,41 @@ class BackendApiService
     }
   }
 
+  /// Read the separately stored, status-only account closure capability.
+  Future<AccountClosureReceipt?> loadAccountClosureReceipt() async {
+    final value = await _credentialStore.readClosureReceipt();
+    if (value == null) return null;
+    return AccountClosureReceipt.fromJson(
+        Map<String, dynamic>.from(jsonDecode(value) as Map));
+  }
+
+  Future<void> saveAccountClosureReceipt(AccountClosureReceipt receipt) =>
+      _credentialStore.saveClosureReceipt(receipt.encode());
+
+  Future<AccountClosureStatus> getAccountClosureStatus(
+      AccountClosureReceipt receipt) async {
+    final response = await _post(
+      Uri.parse('$baseUrl/api/auth/account-closure/status'),
+      includeAuth: false,
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ${receipt.statusToken}'
+      },
+      body: jsonEncode({'operationId': receipt.operationId}),
+      isIdempotent: true,
+      allowImplicitBackendFailover: false,
+    );
+    if (response.statusCode != 200) {
+      throw BackendApiRequestException(
+          statusCode: response.statusCode,
+          path: '/api/auth/account-closure/status',
+          body: null);
+    }
+    final body = jsonDecode(response.body) as Map<String, dynamic>;
+    return AccountClosureStatus.fromJson(
+        Map<String, dynamic>.from(body['data'] as Map));
+  }
+
   /// Delete the authenticated account (`users.id` from the JWT).
   ///
   /// This is the only correct way to delete an account from settings. It
@@ -10652,10 +10718,44 @@ class BackendApiService
         'Authentication required: sign in again before deleting your account.',
       );
     }
+    final closureEpoch = _authSessionEpoch;
+    final closureToken = _authToken!;
+    void requireSameSession() {
+      if (_authSessionEpoch != closureEpoch || _authToken != closureToken) {
+        throw StateError('Account closure session changed');
+      }
+    }
+
+    final closureHeaders = {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer $closureToken'
+    };
     try {
+      // Obtain and verify storage of a status-only receipt before revoking login.
+      // If DELETE commits but the response is lost, this capability still works.
+      final prepared = await _post(
+        Uri.parse('$baseUrl/api/auth/account-closure/prepare'),
+        includeAuth: false,
+        headers: closureHeaders,
+        body: '{}',
+        isIdempotent: true,
+      );
+      if (prepared.statusCode != 200) {
+        throw BackendApiRequestException(
+            statusCode: prepared.statusCode,
+            path: '/api/auth/account-closure/prepare',
+            body: null);
+      }
+      requireSameSession();
+      final preparedBody = jsonDecode(prepared.body) as Map<String, dynamic>;
+      final receipt = AccountClosureReceipt.fromJson(
+          Map<String, dynamic>.from(preparedBody['closure'] as Map));
+      await saveAccountClosureReceipt(receipt);
+      requireSameSession();
       final response = await _delete(
         Uri.parse('$baseUrl/api/auth/me'),
-        headers: _getHeaders(),
+        includeAuth: false,
+        headers: closureHeaders,
         isIdempotent: true,
       );
       if (response.statusCode != 200 && response.statusCode != 204) {
@@ -10665,45 +10765,45 @@ class BackendApiService
           body: response.body,
         );
       }
+      requireSameSession();
       await clearAuth();
     } catch (e) {
-      AppConfig.debugPrint('BackendApiService.deleteMyAccount failed: $e');
-      rethrow;
-    }
-  }
-
-  /// Delete wallet-scoped off-chain data (profile + community content) for
-  /// the wallet in the current session token.
-  ///
-  /// LEGACY + WALLET-SCOPED ONLY: this does NOT delete the authenticated
-  /// account. Use [deleteMyAccount] for account deletion.
-  /// DELETE /api/profiles/me
-  Future<void> deleteMyWalletScopedData({String? walletAddress}) async {
-    try {
-      await _ensureAuthBeforeRequest(walletAddress: walletAddress);
-      final response = await _delete(
-        Uri.parse('$baseUrl/api/profiles/me'),
-        headers: _getHeaders(),
-        isIdempotent: true,
-      );
-      if (response.statusCode != 200 && response.statusCode != 204) {
-        throw Exception(
-          'Failed to delete account data: ${response.statusCode}',
-        );
-      }
-    } catch (e) {
       AppConfig.debugPrint(
-        'BackendApiService.deleteMyWalletScopedData failed: $e',
-      );
+          'BackendApiService.deleteMyAccount failed (${e.runtimeType})');
       rethrow;
     }
   }
 
-  /// Deprecated name kept for compatibility; wallet-scoped data only.
-  @Deprecated(
-    'Use deleteMyAccount for account deletion or '
-    'deleteMyWalletScopedData for wallet-scoped data removal.',
-  )
+  /// Existing wallet-scoped entry point for account closure.
+  ///
+  /// This closes the authenticated account through [deleteMyAccount], including
+  /// its receipt protocol. The optional wallet only validates the current
+  /// signed-in wallet; it never selects an account or changes authentication.
+  /// Wallet-signed authority remains required for callers of this old entry.
+  Future<void> deleteMyWalletScopedData({String? walletAddress}) async {
+    if ((_authToken ?? '').trim().isEmpty) await loadAuthToken();
+    final payload = _tryDecodeJwtPayload((_authToken ?? '').trim());
+    final currentWallet = _tryExtractWalletFromToken(_authToken) ?? '';
+    final requestedWallet = WalletUtils.canonical(walletAddress);
+    final level = (payload?['authLevel'] ?? payload?['walletAuthority'] ?? '')
+        .toString()
+        .trim()
+        .toLowerCase();
+    final provider =
+        (payload?['authProvider'] ?? '').toString().trim().toLowerCase();
+    if (currentWallet.isEmpty ||
+        (level != 'wallet_signed' && provider != 'wallet_signature')) {
+      throw StateError('Wallet-signed account authentication is required');
+    }
+    if (requestedWallet.isNotEmpty && requestedWallet != currentWallet) {
+      throw StateError(
+          'Account closure wallet does not match the signed-in account');
+    }
+    await deleteMyAccount();
+  }
+
+  /// Existing deprecated name; this closes the authenticated account.
+  @Deprecated('Use deleteMyAccount for account closure and its status receipt.')
   Future<void> deleteMyAccountData({String? walletAddress}) =>
       deleteMyWalletScopedData(walletAddress: walletAddress);
 

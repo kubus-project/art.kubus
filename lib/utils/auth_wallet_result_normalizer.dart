@@ -47,12 +47,22 @@ const String _noTokenFailureReason =
 Future<NormalizedWalletAuthResult> normalizeWalletAuthResult({
   required Object? routeResult,
   required BackendApiService api,
+  required int expectedSessionEpoch,
   String? fallbackWalletAddress,
   bool hadAuthBeforeOpen = false,
 }) async {
   final fallbackWallet = _clean(fallbackWalletAddress);
   final apiToken = _clean(api.getAuthToken());
   final currentAuthWallet = _clean(api.getCurrentAuthWalletAddress());
+  final startEpoch = expectedSessionEpoch;
+  final returnedToken =
+      routeResult is Map ? _extractToken(_stringKeyedMap(routeResult)) : '';
+  // A nested wallet login may already have committed its returned token.
+  // Nothing else can authorize a result from an ended route attempt.
+  if (startEpoch != api.authSessionEpoch &&
+      (returnedToken.isEmpty || returnedToken != apiToken)) {
+    return const NormalizedWalletAuthResult.failed(_noTokenFailureReason);
+  }
 
   void logResult(String result, {String? detail}) {
     if (!kDebugMode) return;
@@ -87,19 +97,16 @@ Future<NormalizedWalletAuthResult> normalizeWalletAuthResult({
       // getAuthToken()/Authorization headers see it immediately.
       if (payloadToken != apiToken) {
         try {
-          await api.setAuthToken(payloadToken);
-        } catch (e) {
-          if (kDebugMode) {
-            AppConfig.debugPrint(
-              'AuthWalletResultNormalizer: token persistence failed (${e.runtimeType})',
-            );
-          }
+          await api.persistAuthTokensFromResponse({
+            'token': payloadToken,
+            if (_extractRefreshToken(map).isNotEmpty)
+              'refreshToken': _extractRefreshToken(map),
+          }, sessionEpoch: startEpoch);
+        } catch (_) {
+          return const NormalizedWalletAuthResult.failed(_noTokenFailureReason);
         }
-        final refreshToken = _extractRefreshToken(map);
-        if (refreshToken.isNotEmpty) {
-          try {
-            await api.setRefreshToken(refreshToken);
-          } catch (_) {}
+        if (api.getAuthToken() != payloadToken) {
+          return const NormalizedWalletAuthResult.failed(_noTokenFailureReason);
         }
       }
       logResult('success', detail: 'payload-token');
@@ -113,7 +120,12 @@ Future<NormalizedWalletAuthResult> normalizeWalletAuthResult({
     // itself (challenge/sign/login) is the only other acceptable evidence,
     // and it must be able to load /api/profiles/me.
     if (apiToken.isNotEmpty) {
+      final verificationEpoch = api.authSessionEpoch;
       final verified = await _verifyTokenWithProfile(api, logResult);
+      if (verificationEpoch != api.authSessionEpoch ||
+          api.getAuthToken() != apiToken) {
+        return const NormalizedWalletAuthResult.failed(_noTokenFailureReason);
+      }
       if (verified != null) {
         final mergedWallet = _firstNonEmpty([
           _extractWalletAddress(map),
@@ -130,8 +142,7 @@ Future<NormalizedWalletAuthResult> normalizeWalletAuthResult({
                 if (map['data'] is Map) ..._stringKeyedMap(map['data'] as Map),
                 'user': <String, dynamic>{
                   ...verified,
-                  if (map['data'] is Map &&
-                      (map['data'] as Map)['user'] is Map)
+                  if (map['data'] is Map && (map['data'] as Map)['user'] is Map)
                     ..._stringKeyedMap((map['data'] as Map)['user'] as Map),
                 },
               },
@@ -166,7 +177,12 @@ Future<NormalizedWalletAuthResult> normalizeWalletAuthResult({
   // A token that appeared during the flow (persisted by wallet login) is
   // acceptable only when /api/profiles/me confirms it.
   if (apiToken.isNotEmpty) {
+    final verificationEpoch = api.authSessionEpoch;
     final verified = await _verifyTokenWithProfile(api, logResult);
+    if (verificationEpoch != api.authSessionEpoch ||
+        api.getAuthToken() != apiToken) {
+      return const NormalizedWalletAuthResult.failed(_noTokenFailureReason);
+    }
     if (verified != null) {
       final walletAddress = _firstNonEmpty([
         _walletFromMap(verified),

@@ -117,6 +117,7 @@ void main() {
     SharedPreferences.setMockInitialValues(<String, Object>{});
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(_secureStorage, (call) async => null);
+    api.resetCredentialStoreForTesting();
     api.setAuthTokenForTesting(_authToken);
   });
 

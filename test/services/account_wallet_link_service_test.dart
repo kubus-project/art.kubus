@@ -1,3 +1,4 @@
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'dart:convert';
 
 import 'package:art_kubus/providers/chat_provider.dart';
@@ -119,6 +120,9 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   setUp(() {
+    FlutterSecureStorage.setMockInitialValues({});
+    BackendApiService().resetCredentialStoreForTesting();
+    BackendApiService().setAuthTokenForTesting(null);
     SharedPreferences.setMockInitialValues(<String, Object>{});
   });
 
