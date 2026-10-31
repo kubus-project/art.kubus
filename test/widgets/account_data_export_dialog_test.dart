@@ -4,6 +4,7 @@ import 'dart:typed_data';
 import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:art_kubus/services/account_data_export_service.dart';
 import 'package:art_kubus/widgets/account_data_export_dialog.dart';
+import 'package:art_kubus/widgets/inline_loading.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -92,7 +93,7 @@ void main() {
     await tester.pump();
 
     expect(find.text(en.settingsExportPreparing), findsOneWidget);
-    expect(find.byType(CircularProgressIndicator), findsOneWidget);
+    expect(find.byType(InlineLoading), findsOneWidget);
     await tester.tap(find.text(en.settingsExportDownloadButton),
         warnIfMissed: false);
     await tester.pump();

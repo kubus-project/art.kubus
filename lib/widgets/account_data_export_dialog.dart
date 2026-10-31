@@ -5,6 +5,7 @@ import '../screens/support_center_screen.dart';
 import '../services/account_data_export_service.dart';
 import '../utils/design_tokens.dart';
 import 'glass_components.dart';
+import 'inline_loading.dart';
 
 enum _ExportChoice { contactSupport }
 
@@ -103,9 +104,9 @@ class _AccountDataExportDialogState extends State<_AccountDataExportDialog> {
               children: [
                 if (_busy) ...[
                   const SizedBox(
-                    width: 16,
-                    height: 16,
-                    child: CircularProgressIndicator(strokeWidth: 2),
+                    width: 18,
+                    height: 18,
+                    child: InlineLoading(tileSize: 6),
                   ),
                   const SizedBox(width: 12),
                 ],
