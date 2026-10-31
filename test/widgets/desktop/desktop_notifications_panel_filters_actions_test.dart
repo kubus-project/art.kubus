@@ -5,25 +5,24 @@ import 'package:art_kubus/providers/app_mode_provider.dart';
 import 'package:art_kubus/providers/themeprovider.dart';
 import 'package:art_kubus/providers/recent_activity_provider.dart';
 import 'package:art_kubus/screens/desktop/components/desktop_notifications_panel.dart';
+import 'package:art_kubus/services/account_cache_store.dart';
+import 'package:art_kubus/services/backend_api_service.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../support/account_notifications_fixture.dart';
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  setUp(() {
+  setUp(() async {
+    FlutterSecureStorage.setMockInitialValues(<String, String>{});
+    BackendApiService().resetCredentialStoreForTesting();
+    await AccountCacheStore.resetForTesting();
     SharedPreferences.setMockInitialValues(<String, Object>{
-      'in_app_notifications': <String>[
-        jsonEncode(<String, dynamic>{
-          'type': 'comment',
-          'title': 'New Comment',
-          'body': 'Someone left a comment',
-          'payload': <String, dynamic>{'postId': 'post_123'},
-          'timestamp': '2026-04-06T12:00:00.000Z',
-        }),
-      ],
       'user_action_history': <String>[
         // Legacy-style action entry (no explicit source), still authored by "You".
         jsonEncode(<String, dynamic>{
@@ -38,6 +37,20 @@ void main() {
         }),
       ],
     });
+    await storeInAppNotifications(<Map<String, dynamic>>[
+      <String, dynamic>{
+        'type': 'comment',
+        'title': 'New Comment',
+        'body': 'Someone left a comment',
+        'payload': <String, dynamic>{'postId': 'post_123'},
+        'timestamp': hoursAgo(2),
+      },
+    ]);
+  });
+
+  tearDown(() async {
+    BackendApiService().setAuthTokenForTesting(null);
+    await AccountCacheStore.resetForTesting();
   });
 
   testWidgets('DesktopNotificationsPanel hides user action entries',
