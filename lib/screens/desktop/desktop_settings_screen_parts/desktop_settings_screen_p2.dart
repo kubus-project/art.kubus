@@ -622,6 +622,16 @@ extension _DesktopSettingsScreenStatePart2 on _DesktopSettingsScreenState {
             ),
             const SizedBox(height: 12),
             _buildSettingsRow(
+              l10n.moderationScreenTitle,
+              l10n.moderationEntrySubtitle,
+              Icons.flag_outlined,
+              onTap: () => Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                    builder: (_) => const MyReportsScreen()),
+              ),
+            ),
+            const SizedBox(height: 12),
+            _buildSettingsRow(
               l10n.settingsResetAppTileTitle,
               l10n.settingsResetAppTileSubtitle,
               Icons.refresh,

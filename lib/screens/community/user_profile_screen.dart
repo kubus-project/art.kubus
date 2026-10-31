@@ -59,6 +59,8 @@ import '../../services/socket_service.dart';
 import 'profile_screen_methods.dart';
 import '../../models/dao.dart';
 import '../../widgets/glass_components.dart';
+import '../../widgets/report_content_dialog.dart';
+import '../../services/content_report_service.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
 import '../../widgets/profile/profile_achievements_preview_section.dart';
 import '../../widgets/public_entity_takeover_ready.dart';
@@ -1637,92 +1639,52 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     );
   }
 
-  void _showReportDialog() {
-    final l10n = AppLocalizations.of(context)!;
-    showKubusDialog(
-      context: context,
-      builder: (dialogContext) => KubusAlertDialog(
-        title: Text(
-          l10n.userProfileReportDialogTitle(user!.name),
-          style: KubusTextStyles.sectionTitle,
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              l10n.userProfileReportDialogQuestion,
-              style: KubusTextStyles.sectionSubtitle,
-            ),
-            const SizedBox(height: 16),
-            _buildReportOption(dialogContext, l10n.userProfileReportReasonSpam),
-            _buildReportOption(
-              dialogContext,
-              l10n.userProfileReportReasonInappropriate,
-            ),
-            _buildReportOption(
-              dialogContext,
-              l10n.userProfileReportReasonHarassment,
-            ),
-            _buildReportOption(
-              dialogContext,
-              l10n.userProfileReportReasonOther,
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext),
-            child: Text(l10n.commonCancel),
-          ),
-        ],
-      ),
+  Future<void> _showReportDialog() async {
+    final draft = await showReportContentDialog(
+      context,
+      subject: user?.name,
     );
+    if (draft == null || !mounted) return;
+    await _submitReport(draft);
   }
 
-  Widget _buildReportOption(BuildContext dialogContext, String reason) {
-    return ListTile(
-      title: Text(reason),
-      onTap: () async {
-        final l10n = AppLocalizations.of(context)!;
-        final messenger = ScaffoldMessenger.of(context);
-        final targetWallet = WalletUtils.canonical(user?.id ?? widget.userId);
+  Future<void> _submitReport(ContentReportDraft draft) async {
+    final l10n = AppLocalizations.of(context)!;
+    final messenger = ScaffoldMessenger.of(context);
+    final targetWallet = WalletUtils.canonical(user?.id ?? widget.userId);
 
-        Navigator.pop(dialogContext);
+    if (targetWallet.isEmpty) {
+      messenger.showKubusSnackBar(
+        SnackBar(
+          content: Text(l10n.commonActionFailedToast),
+          duration: const Duration(seconds: 2),
+        ),
+      );
+      return;
+    }
 
-        if (targetWallet.isEmpty) {
-          messenger.showKubusSnackBar(
-            SnackBar(
-              content: Text(l10n.commonActionFailedToast),
-              duration: const Duration(seconds: 2),
-            ),
-          );
-          return;
-        }
-
-        try {
-          await CommunityService.reportUser(
-            targetWallet,
-            reason,
-            details: user?.name,
-          );
-          if (!mounted) return;
-          messenger.showKubusSnackBar(
-            SnackBar(
-              content: Text(l10n.userProfileReportSubmittedToast),
-              duration: const Duration(seconds: 2),
-            ),
-          );
-        } catch (_) {
-          if (!mounted) return;
-          messenger.showKubusSnackBar(
-            SnackBar(
-              content: Text(l10n.commonActionFailedToast),
-              duration: const Duration(seconds: 2),
-            ),
-          );
-        }
-      },
-    );
+    try {
+      await CommunityService.reportUser(
+        targetWallet,
+        draft,
+        subjectName: user?.name,
+      );
+      if (!mounted) return;
+      messenger.showKubusSnackBar(
+        SnackBar(
+          content: Text(l10n.userProfileReportSubmittedToast),
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    } catch (_) {
+      if (!mounted) return;
+      messenger.showKubusSnackBar(
+        SnackBar(
+          content: Text(l10n.commonActionFailedToast),
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    }
   }
 
   String _formatCount(int count) {

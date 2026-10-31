@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import '../../widgets/inline_loading.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
+import 'package:art_kubus/screens/moderation/my_reports_screen.dart';
 import 'package:provider/provider.dart';
 import '../../providers/notification_provider.dart';
 import '../../providers/themeprovider.dart';

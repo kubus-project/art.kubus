@@ -32594,6 +32594,288 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Continue to welcome'**
   String get accountClosureContinue;
+
+  /// No description provided for @reportContentTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Report content'**
+  String get reportContentTitle;
+
+  /// No description provided for @reportContentCategoryLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'What is the problem?'**
+  String get reportContentCategoryLabel;
+
+  /// No description provided for @reportCategoryIllegalContent.
+  ///
+  /// In en, this message translates to:
+  /// **'Illegal content'**
+  String get reportCategoryIllegalContent;
+
+  /// No description provided for @reportCategoryCopyright.
+  ///
+  /// In en, this message translates to:
+  /// **'Copyright or other rights'**
+  String get reportCategoryCopyright;
+
+  /// No description provided for @reportCategoryPrivacy.
+  ///
+  /// In en, this message translates to:
+  /// **'Privacy'**
+  String get reportCategoryPrivacy;
+
+  /// No description provided for @reportCategoryHarassment.
+  ///
+  /// In en, this message translates to:
+  /// **'Harassment'**
+  String get reportCategoryHarassment;
+
+  /// No description provided for @reportCategorySpam.
+  ///
+  /// In en, this message translates to:
+  /// **'Spam'**
+  String get reportCategorySpam;
+
+  /// No description provided for @reportCategoryImpersonation.
+  ///
+  /// In en, this message translates to:
+  /// **'Impersonation'**
+  String get reportCategoryImpersonation;
+
+  /// No description provided for @reportCategorySafety.
+  ///
+  /// In en, this message translates to:
+  /// **'Safety concern'**
+  String get reportCategorySafety;
+
+  /// No description provided for @reportCategoryOther.
+  ///
+  /// In en, this message translates to:
+  /// **'Other'**
+  String get reportCategoryOther;
+
+  /// No description provided for @reportContentDetailsLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Details'**
+  String get reportContentDetailsLabel;
+
+  /// No description provided for @reportContentDetailsRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Explain what is wrong and where. This is required for this kind of report.'**
+  String get reportContentDetailsRequired;
+
+  /// No description provided for @reportContentGoodFaith.
+  ///
+  /// In en, this message translates to:
+  /// **'I state in good faith that the information in this report is accurate and complete.'**
+  String get reportContentGoodFaith;
+
+  /// No description provided for @reportContentContactLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Contact email (optional)'**
+  String get reportContentContactLabel;
+
+  /// No description provided for @reportContentContactInvalid.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter a valid email address.'**
+  String get reportContentContactInvalid;
+
+  /// No description provided for @reportContentAccountNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Your report is linked to your account so that we can tell you what was decided.'**
+  String get reportContentAccountNote;
+
+  /// No description provided for @reportContentSubmit.
+  ///
+  /// In en, this message translates to:
+  /// **'Send report'**
+  String get reportContentSubmit;
+
+  /// No description provided for @moderationScreenTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Reports and decisions'**
+  String get moderationScreenTitle;
+
+  /// No description provided for @moderationEntrySubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Reports you filed and decisions about your content'**
+  String get moderationEntrySubtitle;
+
+  /// No description provided for @moderationReportsHeading.
+  ///
+  /// In en, this message translates to:
+  /// **'Reports you filed'**
+  String get moderationReportsHeading;
+
+  /// No description provided for @moderationDecisionsHeading.
+  ///
+  /// In en, this message translates to:
+  /// **'Decisions about your content'**
+  String get moderationDecisionsHeading;
+
+  /// No description provided for @moderationNoReports.
+  ///
+  /// In en, this message translates to:
+  /// **'You have not filed any reports.'**
+  String get moderationNoReports;
+
+  /// No description provided for @moderationNoDecisions.
+  ///
+  /// In en, this message translates to:
+  /// **'No decision affects your content.'**
+  String get moderationNoDecisions;
+
+  /// No description provided for @moderationStatusOpen.
+  ///
+  /// In en, this message translates to:
+  /// **'Received'**
+  String get moderationStatusOpen;
+
+  /// No description provided for @moderationStatusTriaged.
+  ///
+  /// In en, this message translates to:
+  /// **'Being reviewed'**
+  String get moderationStatusTriaged;
+
+  /// No description provided for @moderationStatusResolved.
+  ///
+  /// In en, this message translates to:
+  /// **'Decided'**
+  String get moderationStatusResolved;
+
+  /// No description provided for @moderationStatusClosed.
+  ///
+  /// In en, this message translates to:
+  /// **'Closed'**
+  String get moderationStatusClosed;
+
+  /// No description provided for @moderationOutcomeNoAction.
+  ///
+  /// In en, this message translates to:
+  /// **'No action taken'**
+  String get moderationOutcomeNoAction;
+
+  /// No description provided for @moderationOutcomeContentRemoved.
+  ///
+  /// In en, this message translates to:
+  /// **'Content removed'**
+  String get moderationOutcomeContentRemoved;
+
+  /// No description provided for @moderationOutcomeContentRestricted.
+  ///
+  /// In en, this message translates to:
+  /// **'Content restricted'**
+  String get moderationOutcomeContentRestricted;
+
+  /// No description provided for @moderationOutcomeAccountAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Action on an account'**
+  String get moderationOutcomeAccountAction;
+
+  /// No description provided for @moderationOutcomeReferred.
+  ///
+  /// In en, this message translates to:
+  /// **'Referred'**
+  String get moderationOutcomeReferred;
+
+  /// No description provided for @moderationOutcomeOther.
+  ///
+  /// In en, this message translates to:
+  /// **'Other decision'**
+  String get moderationOutcomeOther;
+
+  /// No description provided for @moderationReasonsLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Reasons'**
+  String get moderationReasonsLabel;
+
+  /// No description provided for @moderationRequestReconsideration.
+  ///
+  /// In en, this message translates to:
+  /// **'Ask for a second look'**
+  String get moderationRequestReconsideration;
+
+  /// No description provided for @moderationReconsiderationRequested.
+  ///
+  /// In en, this message translates to:
+  /// **'Second look requested'**
+  String get moderationReconsiderationRequested;
+
+  /// No description provided for @moderationAppeal.
+  ///
+  /// In en, this message translates to:
+  /// **'Appeal this decision'**
+  String get moderationAppeal;
+
+  /// No description provided for @moderationAppealSent.
+  ///
+  /// In en, this message translates to:
+  /// **'Appeal sent'**
+  String get moderationAppealSent;
+
+  /// No description provided for @moderationAppealUpheld.
+  ///
+  /// In en, this message translates to:
+  /// **'Appeal result: decision upheld'**
+  String get moderationAppealUpheld;
+
+  /// No description provided for @moderationAppealReversed.
+  ///
+  /// In en, this message translates to:
+  /// **'Appeal result: decision reversed'**
+  String get moderationAppealReversed;
+
+  /// No description provided for @moderationNoteHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Tell us why'**
+  String get moderationNoteHint;
+
+  /// No description provided for @moderationNoteRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Explain your appeal.'**
+  String get moderationNoteRequired;
+
+  /// No description provided for @moderationActionSent.
+  ///
+  /// In en, this message translates to:
+  /// **'Sent.'**
+  String get moderationActionSent;
+
+  /// No description provided for @moderationActionAlreadySent.
+  ///
+  /// In en, this message translates to:
+  /// **'This was already sent.'**
+  String get moderationActionAlreadySent;
+
+  /// No description provided for @moderationActionUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'This decision is no longer available.'**
+  String get moderationActionUnavailable;
+
+  /// No description provided for @moderationSignInRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign in to see your reports and decisions.'**
+  String get moderationSignInRequired;
+
+  /// No description provided for @moderationLoadFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not load your reports. Try again.'**
+  String get moderationLoadFailed;
 }
 
 class _AppLocalizationsDelegate

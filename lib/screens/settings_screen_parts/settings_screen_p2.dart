@@ -52,6 +52,14 @@ extension _SettingsScreenStatePart2 on _SettingsScreenState {
           onTap: () => _showDataExportDialog(),
         ),
         _buildSettingsTile(
+          l10n.moderationScreenTitle,
+          l10n.moderationEntrySubtitle,
+          Icons.flag_outlined,
+          onTap: () => Navigator.of(context).push(
+            MaterialPageRoute<void>(builder: (_) => const MyReportsScreen()),
+          ),
+        ),
+        _buildSettingsTile(
           l10n.settingsResetPermissionFlagsTileTitle,
           l10n.settingsResetPermissionFlagsTileSubtitle,
           Icons.location_off,

@@ -18807,4 +18807,151 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get accountClosureContinue => 'Continue to welcome';
+
+  @override
+  String get reportContentTitle => 'Report content';
+
+  @override
+  String get reportContentCategoryLabel => 'What is the problem?';
+
+  @override
+  String get reportCategoryIllegalContent => 'Illegal content';
+
+  @override
+  String get reportCategoryCopyright => 'Copyright or other rights';
+
+  @override
+  String get reportCategoryPrivacy => 'Privacy';
+
+  @override
+  String get reportCategoryHarassment => 'Harassment';
+
+  @override
+  String get reportCategorySpam => 'Spam';
+
+  @override
+  String get reportCategoryImpersonation => 'Impersonation';
+
+  @override
+  String get reportCategorySafety => 'Safety concern';
+
+  @override
+  String get reportCategoryOther => 'Other';
+
+  @override
+  String get reportContentDetailsLabel => 'Details';
+
+  @override
+  String get reportContentDetailsRequired =>
+      'Explain what is wrong and where. This is required for this kind of report.';
+
+  @override
+  String get reportContentGoodFaith =>
+      'I state in good faith that the information in this report is accurate and complete.';
+
+  @override
+  String get reportContentContactLabel => 'Contact email (optional)';
+
+  @override
+  String get reportContentContactInvalid => 'Enter a valid email address.';
+
+  @override
+  String get reportContentAccountNote =>
+      'Your report is linked to your account so that we can tell you what was decided.';
+
+  @override
+  String get reportContentSubmit => 'Send report';
+
+  @override
+  String get moderationScreenTitle => 'Reports and decisions';
+
+  @override
+  String get moderationEntrySubtitle =>
+      'Reports you filed and decisions about your content';
+
+  @override
+  String get moderationReportsHeading => 'Reports you filed';
+
+  @override
+  String get moderationDecisionsHeading => 'Decisions about your content';
+
+  @override
+  String get moderationNoReports => 'You have not filed any reports.';
+
+  @override
+  String get moderationNoDecisions => 'No decision affects your content.';
+
+  @override
+  String get moderationStatusOpen => 'Received';
+
+  @override
+  String get moderationStatusTriaged => 'Being reviewed';
+
+  @override
+  String get moderationStatusResolved => 'Decided';
+
+  @override
+  String get moderationStatusClosed => 'Closed';
+
+  @override
+  String get moderationOutcomeNoAction => 'No action taken';
+
+  @override
+  String get moderationOutcomeContentRemoved => 'Content removed';
+
+  @override
+  String get moderationOutcomeContentRestricted => 'Content restricted';
+
+  @override
+  String get moderationOutcomeAccountAction => 'Action on an account';
+
+  @override
+  String get moderationOutcomeReferred => 'Referred';
+
+  @override
+  String get moderationOutcomeOther => 'Other decision';
+
+  @override
+  String get moderationReasonsLabel => 'Reasons';
+
+  @override
+  String get moderationRequestReconsideration => 'Ask for a second look';
+
+  @override
+  String get moderationReconsiderationRequested => 'Second look requested';
+
+  @override
+  String get moderationAppeal => 'Appeal this decision';
+
+  @override
+  String get moderationAppealSent => 'Appeal sent';
+
+  @override
+  String get moderationAppealUpheld => 'Appeal result: decision upheld';
+
+  @override
+  String get moderationAppealReversed => 'Appeal result: decision reversed';
+
+  @override
+  String get moderationNoteHint => 'Tell us why';
+
+  @override
+  String get moderationNoteRequired => 'Explain your appeal.';
+
+  @override
+  String get moderationActionSent => 'Sent.';
+
+  @override
+  String get moderationActionAlreadySent => 'This was already sent.';
+
+  @override
+  String get moderationActionUnavailable =>
+      'This decision is no longer available.';
+
+  @override
+  String get moderationSignInRequired =>
+      'Sign in to see your reports and decisions.';
+
+  @override
+  String get moderationLoadFailed => 'Could not load your reports. Try again.';
 }

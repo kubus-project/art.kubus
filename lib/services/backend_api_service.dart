@@ -8164,6 +8164,9 @@ class BackendApiService
     String? targetTextId,
     required String reason,
     String? details,
+    String? reasonCode,
+    bool goodFaithStatement = false,
+    String? contactEmail,
   }) async {
     try {
       await _ensureAuthBeforeRequest();
@@ -8172,6 +8175,16 @@ class BackendApiService
         'targetType': targetType.trim(),
         'reason': reason.trim(),
       };
+
+      final normalizedReasonCode = (reasonCode ?? '').trim();
+      if (normalizedReasonCode.isNotEmpty) {
+        payload['reasonCode'] = normalizedReasonCode;
+      }
+      if (goodFaithStatement) payload['goodFaithStatement'] = true;
+      final normalizedContactEmail = (contactEmail ?? '').trim();
+      if (normalizedContactEmail.isNotEmpty) {
+        payload['contactEmail'] = normalizedContactEmail;
+      }
 
       final normalizedTargetId = (targetId ?? '').trim();
       if (normalizedTargetId.isNotEmpty) {
@@ -8216,6 +8229,67 @@ class BackendApiService
       AppConfig.debugPrint('BackendApiService.submitReport failed: $e');
       rethrow;
     }
+  }
+
+  /// The signed-in account's own reports with the recorded decision and its
+  /// reasons. GET /api/reports/mine
+  Future<List<Map<String, dynamic>>> getMyReports() =>
+      _getModerationList('/api/reports/mine');
+
+  /// Decisions that affect the signed-in account's own content, with the
+  /// statement of reasons written for them. GET /api/reports/decisions-about-me
+  Future<List<Map<String, dynamic>>> getDecisionsAboutMe() =>
+      _getModerationList('/api/reports/decisions-about-me');
+
+  Future<List<Map<String, dynamic>>> _getModerationList(String path) async {
+    await _ensureAuthBeforeRequest();
+    final uri = Uri.parse('$baseUrl$path');
+    final response = await _get(
+      uri,
+      includeAuth: true,
+      headers: _getHeaders(includeAuth: true),
+    );
+    if (response.statusCode != 200) {
+      throw BackendApiRequestException(
+        statusCode: response.statusCode,
+        path: uri.path,
+        retryAfter: parseHttpRetryAfter(response.headers['retry-after']),
+      );
+    }
+    final decoded = jsonDecode(response.body);
+    final data = decoded is Map<String, dynamic> ? decoded['data'] : null;
+    if (data is! List) return <Map<String, dynamic>>[];
+    return data.whereType<Map<String, dynamic>>().toList();
+  }
+
+  /// The reporter asks for a decision on their report to be looked at again.
+  /// POST /api/reports/:id/reconsideration
+  Future<void> requestReportReconsideration(String reportId, {String? note}) =>
+      _postModerationRequest('/api/reports/$reportId/reconsideration', note);
+
+  /// The affected person appeals a decision about their content or account.
+  /// POST /api/reports/:id/appeal
+  Future<void> appealModerationDecision(String reportId,
+          {required String note}) =>
+      _postModerationRequest('/api/reports/$reportId/appeal', note);
+
+  Future<void> _postModerationRequest(String path, String? note) async {
+    await _ensureAuthBeforeRequest();
+    final uri = Uri.parse('$baseUrl$path');
+    final trimmed = (note ?? '').trim();
+    final response = await _post(
+      uri,
+      headers: _getHeaders(),
+      body: jsonEncode(
+          <String, dynamic>{if (trimmed.isNotEmpty) 'note': trimmed}),
+      isIdempotent: false,
+    );
+    if (response.statusCode == 200 || response.statusCode == 201) return;
+    throw BackendApiRequestException(
+      statusCode: response.statusCode,
+      path: uri.path,
+      retryAfter: parseHttpRetryAfter(response.headers['retry-after']),
+    );
   }
 
   /// Create a support or bug ticket for the signed-in account.

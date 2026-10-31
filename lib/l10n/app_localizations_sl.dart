@@ -19003,4 +19003,153 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get accountClosureContinue => 'Nadaljuj na pozdravni zaslon';
+
+  @override
+  String get reportContentTitle => 'Prijavi vsebino';
+
+  @override
+  String get reportContentCategoryLabel => 'Kaj je težava?';
+
+  @override
+  String get reportCategoryIllegalContent => 'Nezakonita vsebina';
+
+  @override
+  String get reportCategoryCopyright => 'Avtorske ali druge pravice';
+
+  @override
+  String get reportCategoryPrivacy => 'Zasebnost';
+
+  @override
+  String get reportCategoryHarassment => 'Nadlegovanje';
+
+  @override
+  String get reportCategorySpam => 'Neželena vsebina';
+
+  @override
+  String get reportCategoryImpersonation => 'Lažno predstavljanje';
+
+  @override
+  String get reportCategorySafety => 'Varnostna skrb';
+
+  @override
+  String get reportCategoryOther => 'Drugo';
+
+  @override
+  String get reportContentDetailsLabel => 'Podrobnosti';
+
+  @override
+  String get reportContentDetailsRequired =>
+      'Pojasnite, kaj je narobe in kje. Za to vrsto prijave je to obvezno.';
+
+  @override
+  String get reportContentGoodFaith =>
+      'V dobri veri izjavljam, da so podatki v tej prijavi točni in popolni.';
+
+  @override
+  String get reportContentContactLabel => 'E-pošta za stik (neobvezno)';
+
+  @override
+  String get reportContentContactInvalid => 'Vnesite veljaven e-poštni naslov.';
+
+  @override
+  String get reportContentAccountNote =>
+      'Vaša prijava je povezana z vašim računom, da vam lahko sporočimo, kaj je bilo odločeno.';
+
+  @override
+  String get reportContentSubmit => 'Pošlji prijavo';
+
+  @override
+  String get moderationScreenTitle => 'Prijave in odločitve';
+
+  @override
+  String get moderationEntrySubtitle =>
+      'Prijave, ki ste jih oddali, in odločitve o vaši vsebini';
+
+  @override
+  String get moderationReportsHeading => 'Prijave, ki ste jih oddali';
+
+  @override
+  String get moderationDecisionsHeading => 'Odločitve o vaši vsebini';
+
+  @override
+  String get moderationNoReports => 'Niste oddali nobene prijave.';
+
+  @override
+  String get moderationNoDecisions =>
+      'Nobena odločitev ne vpliva na vašo vsebino.';
+
+  @override
+  String get moderationStatusOpen => 'Prejeto';
+
+  @override
+  String get moderationStatusTriaged => 'V pregledu';
+
+  @override
+  String get moderationStatusResolved => 'Odločeno';
+
+  @override
+  String get moderationStatusClosed => 'Zaključeno';
+
+  @override
+  String get moderationOutcomeNoAction => 'Brez ukrepa';
+
+  @override
+  String get moderationOutcomeContentRemoved => 'Vsebina odstranjena';
+
+  @override
+  String get moderationOutcomeContentRestricted => 'Vsebina omejena';
+
+  @override
+  String get moderationOutcomeAccountAction => 'Ukrep v zvezi z računom';
+
+  @override
+  String get moderationOutcomeReferred => 'Posredovano';
+
+  @override
+  String get moderationOutcomeOther => 'Druga odločitev';
+
+  @override
+  String get moderationReasonsLabel => 'Razlogi';
+
+  @override
+  String get moderationRequestReconsideration => 'Zaprosi za ponovni pregled';
+
+  @override
+  String get moderationReconsiderationRequested => 'Ponovni pregled zahtevan';
+
+  @override
+  String get moderationAppeal => 'Pritoži se na odločitev';
+
+  @override
+  String get moderationAppealSent => 'Pritožba poslana';
+
+  @override
+  String get moderationAppealUpheld => 'Rezultat pritožbe: odločitev potrjena';
+
+  @override
+  String get moderationAppealReversed =>
+      'Rezultat pritožbe: odločitev razveljavljena';
+
+  @override
+  String get moderationNoteHint => 'Povejte nam, zakaj';
+
+  @override
+  String get moderationNoteRequired => 'Pojasnite svojo pritožbo.';
+
+  @override
+  String get moderationActionSent => 'Poslano.';
+
+  @override
+  String get moderationActionAlreadySent => 'To je bilo že poslano.';
+
+  @override
+  String get moderationActionUnavailable => 'Ta odločitev ni več na voljo.';
+
+  @override
+  String get moderationSignInRequired =>
+      'Prijavite se, da vidite svoje prijave in odločitve.';
+
+  @override
+  String get moderationLoadFailed =>
+      'Prijav ni bilo mogoče naložiti. Poskusite znova.';
 }

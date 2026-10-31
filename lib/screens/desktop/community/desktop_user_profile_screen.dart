@@ -61,6 +61,8 @@ import '../../../utils/kubus_color_roles.dart';
 import '../../activity/advanced_analytics_screen.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
 import 'package:art_kubus/widgets/glass_components.dart';
+import 'package:art_kubus/widgets/report_content_dialog.dart';
+import 'package:art_kubus/services/content_report_service.dart';
 import '../../../widgets/profile/profile_achievements_preview_section.dart';
 import '../../../widgets/public_entity_takeover_ready.dart';
 
@@ -2064,65 +2066,19 @@ class _UserProfileScreenState extends State<UserProfileScreen>
     );
   }
 
-  void _showReportDialog() {
-    final l10n = AppLocalizations.of(context)!;
-    showKubusDialog(
-      context: context,
-      builder: (dialogContext) => KubusAlertDialog(
-        backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(KubusRadius.lg),
-        ),
-        title: Text(
-          l10n.userProfileReportDialogTitle(user?.name ?? ''),
-          style: KubusTypography.inter(
-            fontWeight: FontWeight.bold,
-            color: Theme.of(context).colorScheme.onSurface,
-          ),
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              title: Text(l10n.userProfileReportReasonSpam),
-              onTap: () => _submitReport(
-                dialogContext,
-                l10n.userProfileReportReasonSpam,
-              ),
-            ),
-            ListTile(
-              title: Text(l10n.userProfileReportReasonInappropriate),
-              onTap: () => _submitReport(
-                dialogContext,
-                l10n.userProfileReportReasonInappropriate,
-              ),
-            ),
-            ListTile(
-              title: Text(l10n.userProfileReportReasonHarassment),
-              onTap: () => _submitReport(
-                dialogContext,
-                l10n.userProfileReportReasonHarassment,
-              ),
-            ),
-            ListTile(
-              title: Text(l10n.userProfileReportReasonOther),
-              onTap: () => _submitReport(
-                dialogContext,
-                l10n.userProfileReportReasonOther,
-              ),
-            ),
-          ],
-        ),
-      ),
+  Future<void> _showReportDialog() async {
+    final draft = await showReportContentDialog(
+      context,
+      subject: user?.name,
     );
+    if (draft == null || !mounted) return;
+    await _submitReport(draft);
   }
 
-  Future<void> _submitReport(BuildContext dialogContext, String reason) async {
+  Future<void> _submitReport(ContentReportDraft draft) async {
     final l10n = AppLocalizations.of(context)!;
     final messenger = ScaffoldMessenger.of(context);
     final targetWallet = WalletUtils.canonical(user?.id ?? widget.userId);
-
-    Navigator.pop(dialogContext);
 
     if (targetWallet.isEmpty) {
       messenger.showKubusSnackBar(
@@ -2134,17 +2090,23 @@ class _UserProfileScreenState extends State<UserProfileScreen>
     try {
       await CommunityService.reportUser(
         targetWallet,
-        reason,
-        details: user?.name,
+        draft,
+        subjectName: user?.name,
       );
       if (!mounted) return;
       messenger.showKubusSnackBar(
-        SnackBar(content: Text(l10n.userProfileReportSubmittedToast)),
+        SnackBar(
+          content: Text(l10n.userProfileReportSubmittedToast),
+          duration: const Duration(seconds: 2),
+        ),
       );
     } catch (_) {
       if (!mounted) return;
       messenger.showKubusSnackBar(
-        SnackBar(content: Text(l10n.commonActionFailedToast)),
+        SnackBar(
+          content: Text(l10n.commonActionFailedToast),
+          duration: const Duration(seconds: 2),
+        ),
       );
     }
   }
