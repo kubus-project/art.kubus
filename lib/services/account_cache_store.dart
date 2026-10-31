@@ -42,7 +42,7 @@ abstract final class AccountCacheStore {
   static int _generation = 0;
   static bool _disabled = false;
   static bool _legacyCleaned = false;
-  static Future<void> _tail = Future<void>.value();
+  static Future<void>? _tail;
 
   static String _owner = '';
 
@@ -53,7 +53,10 @@ abstract final class AccountCacheStore {
   static int get generation => _generation;
 
   static Future<T> _serialized<T>(Future<T> Function() operation) {
-    final result = _tail.then((_) => operation());
+    final previous = _tail;
+    final result = previous == null
+        ? Future<T>.sync(operation)
+        : previous.then((_) => operation());
     _tail = result.then<void>((_) {}, onError: (Object _, StackTrace __) {});
     return result;
   }
@@ -197,6 +200,14 @@ abstract final class AccountCacheStore {
         _disabled = true;
       }
     });
+  }
+
+  /// Starts a test with an empty queue. A widget test can end with a cache
+  /// operation still in flight; its zone is gone, so it never completes and
+  /// would hold every later [read] and [write] of the isolate behind it.
+  @visibleForTesting
+  static void discardQueueForTesting() {
+    _tail = null;
   }
 
   @visibleForTesting

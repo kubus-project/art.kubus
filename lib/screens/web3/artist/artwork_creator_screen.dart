@@ -643,14 +643,7 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
 
     if (sent > 0) {
       drafts.clearDraftCollaborationInvites(widget.draftId);
-      unawaited(
-        collab.loadCollaborators(
-          'artwork',
-          artworkId,
-          refresh: true,
-          showLoadingIndicator: false,
-        ),
-      );
+      unawaited(collab.refreshCollaboratorsInBackground('artwork', artworkId));
     }
 
     if (failed == 0) {

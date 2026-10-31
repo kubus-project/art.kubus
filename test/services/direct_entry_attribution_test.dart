@@ -5,6 +5,7 @@ import 'package:art_kubus/core/shell_routes.dart';
 import 'package:art_kubus/providers/platform_deep_link_listener_provider.dart';
 import 'package:art_kubus/services/telemetry/contribution_type.dart';
 import 'package:art_kubus/services/telemetry/kubus_client_context.dart';
+import 'package:art_kubus/services/telemetry/optional_analytics_consent.dart';
 import 'package:art_kubus/services/telemetry/telemetry_event.dart';
 import 'package:art_kubus/services/telemetry/telemetry_event_queue.dart';
 import 'package:art_kubus/services/telemetry/telemetry_sender.dart';
@@ -28,6 +29,11 @@ class _BlockingQueue extends InMemoryTelemetryEventQueue {
   void release() => _ready.complete();
 }
 
+const _consentPrefs = <String, Object>{
+  OptionalAnalyticsConsent.prefsKey:
+      '{"v":2,"granted":true,"revision":"direct-entry-fixture"}',
+};
+
 /// A direct ad landing: straight on `/register`, no `mode=guest`, no `intent`.
 final _directRegisterEntry = Uri.parse(
   'https://app.kubus.site/register'
@@ -40,13 +46,18 @@ final _directRegisterEntry = Uri.parse(
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  setUp(() {
-    SharedPreferences.setMockInitialValues(<String, Object>{});
+  setUp(() async {
+    // Campaign attribution is optional analytics: it is captured only for a
+    // visitor with durable consent, so the fixture is a consenting visitor.
+    await OptionalAnalyticsConsent.instance.resetForTesting();
+    SharedPreferences.setMockInitialValues(<String, Object>{..._consentPrefs});
+    await OptionalAnalyticsConsent.instance.refresh();
     GuestSessionService.resetLaunchSnapshotForTest();
     KubusClientContext.instance.setEnabled(false);
   });
 
-  tearDown(() {
+  tearDown(() async {
+    await OptionalAnalyticsConsent.instance.resetForTesting();
     GuestSessionService.resetLaunchSnapshotForTest();
     KubusClientContext.instance.setEnabled(false);
   });
@@ -271,6 +282,7 @@ void main() {
       'a later attributed campaign replaces the route with its UTMs',
       () async {
         SharedPreferences.setMockInitialValues(<String, Object>{
+          ..._consentPrefs,
           GuestSessionService.entryRouteKey: '/map',
           'kubus_entry_utm_utm_campaign': 'old_map_campaign',
         });
@@ -294,6 +306,7 @@ void main() {
 
     test('a replacement touch clears omitted optional UTM values', () async {
       SharedPreferences.setMockInitialValues(<String, Object>{
+        ..._consentPrefs,
         GuestSessionService.entryRouteKey: '/map',
         'kubus_entry_utm_utm_campaign': 'old_map_campaign',
         'kubus_entry_utm_utm_content': 'old_creative',
@@ -375,7 +388,9 @@ void main() {
         sender: _NoopSender(),
       );
       await svc.ensureInitialized();
-      addTearDown(() => svc.setAnalyticsPreferenceEnabled(false));
+      // Not setAnalyticsPreferenceEnabled(false): that schedules a privacy wipe
+      // which finishes during the next test and erases its attribution.
+      addTearDown(svc.dispose);
       return (svc, queue);
     }
 
@@ -392,6 +407,7 @@ void main() {
           queue: queue,
           sender: _NoopSender(),
         );
+        addTearDown(svc.dispose);
         var secondCompleted = false;
 
         final first = svc.ensureInitialized();

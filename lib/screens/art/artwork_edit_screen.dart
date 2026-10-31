@@ -514,13 +514,7 @@ class _ArtworkEditScreenState extends State<ArtworkEditScreen> {
       await provider.fetchArtworkIfNeeded(id);
       if (collabProvider != null) {
         unawaited(
-          collabProvider.loadCollaborators(
-            'artwork',
-            id,
-            refresh: true,
-            showLoadingIndicator: false,
-          ),
-        );
+            collabProvider.refreshCollaboratorsInBackground('artwork', id));
       }
     } catch (_) {
       // Surface a friendly error; provider already logs in debug.

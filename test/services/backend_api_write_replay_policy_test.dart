@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'package:art_kubus/config/config.dart';
 import 'package:art_kubus/services/backend_api_service.dart';
 import 'package:art_kubus/services/public_fallback_service.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
@@ -28,6 +29,9 @@ void main() {
   });
 
   setUp(() async {
+    // A successful login persists the session through the platform store.
+    FlutterSecureStorage.setMockInitialValues(<String, String>{});
+    BackendApiService().resetCredentialStoreForTesting();
     SharedPreferences.setMockInitialValues(<String, Object>{});
     await PublicFallbackService().resetForTesting();
     BackendApiService().setAuthTokenForTesting(_validAuthToken);

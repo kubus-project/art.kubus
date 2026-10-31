@@ -254,8 +254,7 @@ class CollabProvider extends ChangeNotifier {
       if (entityType.isEmpty || entityId.isEmpty) return;
       final key = _key(entityType, entityId);
       if (!_membersByEntityKey.containsKey(key)) return;
-      unawaited(loadCollaborators(entityType, entityId,
-          refresh: true, showLoadingIndicator: false));
+      unawaited(refreshCollaboratorsInBackground(entityType, entityId));
     }
   }
 
@@ -641,6 +640,24 @@ class CollabProvider extends ChangeNotifier {
       if (showLoadingIndicator) {
         _setLoading(false);
       }
+    }
+  }
+
+  /// Refresh for callers that do not wait for the answer. A failure is already
+  /// kept in [error]; it must not escape as an uncaught asynchronous error.
+  Future<void> refreshCollaboratorsInBackground(
+    String entityType,
+    String entityId,
+  ) async {
+    try {
+      await loadCollaborators(
+        entityType,
+        entityId,
+        refresh: true,
+        showLoadingIndicator: false,
+      );
+    } catch (_) {
+      // Recorded by loadCollaborators.
     }
   }
 
