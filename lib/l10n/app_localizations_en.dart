@@ -3130,11 +3130,11 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsResetButton => 'Reset';
 
   @override
-  String get settingsExportDataDialogTitle => 'Request a copy of my data';
+  String get settingsExportDataDialogTitle => 'Download a copy of my data';
 
   @override
   String get settingsExportDataDialogBody =>
-      'Submit the support form to request a copy. This action does not create a file. You can also contact support@kubus.site.';
+      'Creates one file with the data this account holds: profile, posts, comments, collections, artworks, saved items, notifications, messages you sent, support requests and upload records. Passwords, sign-in tokens and staff notes are not included. For anything else, contact support@kubus.site.';
 
   @override
   String settingsDataExportedToast(Object count) {
@@ -3143,6 +3143,26 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get settingsExportButton => 'Open request form';
+
+  @override
+  String get settingsExportDownloadButton => 'Download';
+
+  @override
+  String get settingsExportPreparing => 'Preparing your data…';
+
+  @override
+  String get settingsExportReady => 'Your data file is ready.';
+
+  @override
+  String get settingsExportSignInRequired => 'Sign in to download your data.';
+
+  @override
+  String get settingsExportTooManyRequests =>
+      'Too many requests. Please try again later.';
+
+  @override
+  String get settingsExportFailed =>
+      'Your data could not be prepared. Try again or contact support@kubus.site.';
 
   @override
   String get settingsResetAppDialogTitle => 'Reset app';

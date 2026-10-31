@@ -5,47 +5,7 @@ part of '../desktop_settings_screen.dart';
 // the State's _applyState shim.
 extension _DesktopSettingsScreenStatePart2 on _DesktopSettingsScreenState {
   void _showDataExportDialog() {
-    final l10n = AppLocalizations.of(context)!;
-    showKubusDialog(
-      context: context,
-      builder: (context) => KubusAlertDialog(
-        size: KubusDialogSize.compact,
-        backgroundColor: Theme.of(context).colorScheme.surface,
-        title: Text(
-          l10n.settingsExportDataDialogTitle,
-          style: KubusTextStyles.sheetTitle.copyWith(
-            color: Theme.of(context).colorScheme.onSurface,
-          ),
-        ),
-        content: Text(
-          l10n.settingsExportDataDialogBody,
-          style: KubusTextStyles.detailBody.copyWith(
-            color: Theme.of(context).colorScheme.onSurface,
-          ),
-        ),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: Text(l10n.commonCancel)),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-                backgroundColor:
-                    Provider.of<ThemeProvider>(context, listen: false)
-                        .accentColor,
-                foregroundColor: Colors.white),
-            onPressed: () {
-              Navigator.of(context).pop();
-              if (!mounted) return;
-              Navigator.of(this.context).push(MaterialPageRoute(
-                builder: (_) => const SupportCenterScreen(
-                    initialSection: SupportSection.contact),
-              ));
-            },
-            child: Text(l10n.settingsExportButton),
-          ),
-        ],
-      ),
-    );
+    showAccountDataExportDialog(context);
   }
 
   void _showClearCacheDialog() {

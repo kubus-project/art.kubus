@@ -3155,11 +3155,11 @@ class AppLocalizationsSl extends AppLocalizations {
   String get settingsResetButton => 'Ponastavi';
 
   @override
-  String get settingsExportDataDialogTitle => 'Zahtevaj kopijo svojih podatkov';
+  String get settingsExportDataDialogTitle => 'Prenesi kopijo svojih podatkov';
 
   @override
   String get settingsExportDataDialogBody =>
-      'Kopijo svojih podatkov lahko zahtevaš prek obrazca za podporo. S tem dejanjem datoteka še ne nastane. Pišeš nam lahko tudi na support@kubus.site.';
+      'Ustvari eno datoteko s podatki, ki jih hrani ta račun: profil, objave, komentarji, zbirke, umetniška dela, shranjeni elementi, obvestila, sporočila, ki si jih poslal/a, zahtevki za podporo in zapisi o nalaganjih. Gesla, prijavni žetoni in interne opombe osebja niso vključeni. Za vse ostalo piši na support@kubus.site.';
 
   @override
   String settingsDataExportedToast(Object count) {
@@ -3168,6 +3168,27 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get settingsExportButton => 'Odpri obrazec za zahtevo';
+
+  @override
+  String get settingsExportDownloadButton => 'Prenesi';
+
+  @override
+  String get settingsExportPreparing => 'Pripravljam tvoje podatke …';
+
+  @override
+  String get settingsExportReady =>
+      'Datoteka s tvojimi podatki je pripravljena.';
+
+  @override
+  String get settingsExportSignInRequired => 'Za prenos podatkov se prijavi.';
+
+  @override
+  String get settingsExportTooManyRequests =>
+      'Preveč zahtev. Poskusi znova pozneje.';
+
+  @override
+  String get settingsExportFailed =>
+      'Podatkov ni bilo mogoče pripraviti. Poskusi znova ali piši na support@kubus.site.';
 
   @override
   String get settingsResetAppDialogTitle => 'Ponastavi aplikacijo';

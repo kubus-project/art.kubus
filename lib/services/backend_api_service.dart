@@ -8048,6 +8048,24 @@ class BackendApiService
 
   /// Get users that a user is following
   /// GET /api/community/following/:walletAddress
+  /// The signed-in account's own data as one JSON document (F03). The server
+  /// scopes it to the verified account; nothing here selects whose data it is.
+  Future<List<int>> fetchAccountDataExport() async {
+    final uri = Uri.parse('$baseUrl/api/account/data-export');
+    final response = await _get(
+      uri,
+      includeAuth: true,
+      headers: _getHeaders(includeAuth: true),
+      timeout: const Duration(seconds: 60),
+    );
+    if (response.statusCode == 200) return response.bodyBytes;
+    throw BackendApiRequestException(
+      statusCode: response.statusCode,
+      path: uri.path,
+      retryAfter: parseHttpRetryAfter(response.headers['retry-after']),
+    );
+  }
+
   Future<List<Map<String, dynamic>>> getFollowing({
     required String walletAddress,
     int page = 1,

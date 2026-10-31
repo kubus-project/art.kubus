@@ -1183,8 +1183,8 @@
   "settingsResetPermissionFlagsDialogBody": "This will clear the app's stored permission and service request flags. Use this to re-trigger permission prompts if needed.",
   "settingsPermissionFlagsResetToast": "Permission flags reset",
   "settingsResetButton": "Reset",
-  "settingsExportDataDialogTitle": "Request a copy of my data",
-  "settingsExportDataDialogBody": "Submit the support form to request a copy. This action does not create a file. You can also contact support@kubus.site.",
+  "settingsExportDataDialogTitle": "Download a copy of my data",
+  "settingsExportDataDialogBody": "Creates one file with the data this account holds: profile, posts, comments, collections, artworks, saved items, notifications, messages you sent, support requests and upload records. Passwords, sign-in tokens and staff notes are not included. For anything else, contact support@kubus.site.",
   "settingsDataExportedToast": "Data exported: {count} categories",
   "@settingsDataExportedToast": {
     "placeholders": {
@@ -1192,6 +1192,12 @@
     }
   },
   "settingsExportButton": "Open request form",
+  "settingsExportDownloadButton": "Download",
+  "settingsExportPreparing": "Preparing your data…",
+  "settingsExportReady": "Your data file is ready.",
+  "settingsExportSignInRequired": "Sign in to download your data.",
+  "settingsExportTooManyRequests": "Too many requests. Please try again later.",
+  "settingsExportFailed": "Your data could not be prepared. Try again or contact support@kubus.site.",
   "settingsResetAppDialogTitle": "Reset app",
   "settingsResetAppDialogBody": "This will clear app data and settings on this device. It disconnects the wallet session here, but it does not delete the wallet itself.",
   "settingsAppResetSuccessToast": "App reset successfully. Please restart the app.",

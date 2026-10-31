@@ -5563,13 +5563,13 @@ abstract class AppLocalizations {
   /// No description provided for @settingsExportDataDialogTitle.
   ///
   /// In en, this message translates to:
-  /// **'Request a copy of my data'**
+  /// **'Download a copy of my data'**
   String get settingsExportDataDialogTitle;
 
   /// No description provided for @settingsExportDataDialogBody.
   ///
   /// In en, this message translates to:
-  /// **'Submit the support form to request a copy. This action does not create a file. You can also contact support@kubus.site.'**
+  /// **'Creates one file with the data this account holds: profile, posts, comments, collections, artworks, saved items, notifications, messages you sent, support requests and upload records. Passwords, sign-in tokens and staff notes are not included. For anything else, contact support@kubus.site.'**
   String get settingsExportDataDialogBody;
 
   /// No description provided for @settingsDataExportedToast.
@@ -5583,6 +5583,42 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Open request form'**
   String get settingsExportButton;
+
+  /// No description provided for @settingsExportDownloadButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Download'**
+  String get settingsExportDownloadButton;
+
+  /// No description provided for @settingsExportPreparing.
+  ///
+  /// In en, this message translates to:
+  /// **'Preparing your data…'**
+  String get settingsExportPreparing;
+
+  /// No description provided for @settingsExportReady.
+  ///
+  /// In en, this message translates to:
+  /// **'Your data file is ready.'**
+  String get settingsExportReady;
+
+  /// No description provided for @settingsExportSignInRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign in to download your data.'**
+  String get settingsExportSignInRequired;
+
+  /// No description provided for @settingsExportTooManyRequests.
+  ///
+  /// In en, this message translates to:
+  /// **'Too many requests. Please try again later.'**
+  String get settingsExportTooManyRequests;
+
+  /// No description provided for @settingsExportFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Your data could not be prepared. Try again or contact support@kubus.site.'**
+  String get settingsExportFailed;
 
   /// No description provided for @settingsResetAppDialogTitle.
   ///

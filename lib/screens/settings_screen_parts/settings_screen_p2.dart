@@ -1096,55 +1096,7 @@ extension _SettingsScreenStatePart2 on _SettingsScreenState {
   }
 
   void _showDataExportDialog() {
-    final l10n = AppLocalizations.of(context)!;
-    showKubusDialog(
-      context: context,
-      builder: (context) => KubusAlertDialog(
-        size: KubusDialogSize.compact,
-        backgroundColor: Theme.of(context).colorScheme.surface,
-        title: Text(
-          l10n.settingsExportDataDialogTitle,
-          style: KubusTypography.inter(
-            color: Theme.of(context).colorScheme.onSurface,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        content: Text(
-          l10n.settingsExportDataDialogBody,
-          style: KubusTypography.inter(
-            color: Theme.of(context).colorScheme.onSurface,
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text(
-              l10n.commonCancel,
-              style: KubusTypography.inter(
-                color: Theme.of(context).colorScheme.outline,
-              ),
-            ),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor:
-                  Provider.of<ThemeProvider>(context, listen: false)
-                      .accentColor,
-              foregroundColor: Colors.white,
-            ),
-            onPressed: () {
-              Navigator.of(context).pop();
-              if (!mounted) return;
-              Navigator.of(this.context).push(MaterialPageRoute(
-                builder: (_) => const SupportCenterScreen(
-                    initialSection: SupportSection.contact),
-              ));
-            },
-            child: Text(l10n.settingsExportButton),
-          ),
-        ],
-      ),
-    );
+    showAccountDataExportDialog(context);
   }
 
   void _showResetDialog() {

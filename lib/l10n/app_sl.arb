@@ -1179,8 +1179,8 @@
   "settingsResetPermissionFlagsDialogBody": "To bo počistilo shranjene zastavice pozivov za dovoljenja in storitve. Uporabi, če želiš ponovno sprožiti pozive za dovoljenja.",
   "settingsPermissionFlagsResetToast": "Zastavice dovoljenj so ponastavljene",
   "settingsResetButton": "Ponastavi",
-  "settingsExportDataDialogTitle": "Zahtevaj kopijo svojih podatkov",
-  "settingsExportDataDialogBody": "Kopijo svojih podatkov lahko zahtevaš prek obrazca za podporo. S tem dejanjem datoteka še ne nastane. Pišeš nam lahko tudi na support@kubus.site.",
+  "settingsExportDataDialogTitle": "Prenesi kopijo svojih podatkov",
+  "settingsExportDataDialogBody": "Ustvari eno datoteko s podatki, ki jih hrani ta račun: profil, objave, komentarji, zbirke, umetniška dela, shranjeni elementi, obvestila, sporočila, ki si jih poslal/a, zahtevki za podporo in zapisi o nalaganjih. Gesla, prijavni žetoni in interne opombe osebja niso vključeni. Za vse ostalo piši na support@kubus.site.",
   "settingsDataExportedToast": "Podatki izvoženi: {count} kategorij",
   "@settingsDataExportedToast": {
     "placeholders": {
@@ -1188,6 +1188,12 @@
     }
   },
   "settingsExportButton": "Odpri obrazec za zahtevo",
+  "settingsExportDownloadButton": "Prenesi",
+  "settingsExportPreparing": "Pripravljam tvoje podatke …",
+  "settingsExportReady": "Datoteka s tvojimi podatki je pripravljena.",
+  "settingsExportSignInRequired": "Za prenos podatkov se prijavi.",
+  "settingsExportTooManyRequests": "Preveč zahtev. Poskusi znova pozneje.",
+  "settingsExportFailed": "Podatkov ni bilo mogoče pripraviti. Poskusi znova ali piši na support@kubus.site.",
   "settingsResetAppDialogTitle": "Ponastavi aplikacijo",
   "settingsResetAppDialogBody": "To bo izbrisalo podatke in nastavitve na tej napravi. Seja denarnice se tukaj prekine, sama denarnica pa se ne izbriše.",
   "settingsAppResetSuccessToast": "Aplikacija je uspešno ponastavljena. Prosim, znova jo zaženi.",
