@@ -459,8 +459,15 @@ jobs:
           channel: stable
           cache: true
       - run: flutter pub get
-      - name: Record the iOS toolchain
+      - name: Select and record the iOS toolchain
         run: |
+          set -euo pipefail
+          # Apple requires the Xcode 26 SDK or later for App Store Connect uploads
+          # (since 2026-04-28); the runner image default is older. Fail loudly rather
+          # than build an IPA that cannot be uploaded.
+          best="$(ls -d /Applications/Xcode_*.app | sed 's#.*/Xcode_##; s#\.app$##' | sort -V | awk -F. '$1 >= 26' | tail -n 1)"
+          [ -n "$best" ] || { echo '::error::No Xcode 26 or later is installed on this runner image.'; exit 1; }
+          sudo xcode-select -s "/Applications/Xcode_${best}.app"
           {
             echo '### iOS toolchain'
             xcodebuild -version
