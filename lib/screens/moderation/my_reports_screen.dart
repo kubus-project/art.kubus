@@ -154,8 +154,8 @@ class _MyReportsScreenState extends State<MyReportsScreen> {
                   onPressed: () => _askAndSend(
                     title: l10n.moderationRequestReconsideration,
                     noteRequired: false,
-                    send: (note) => _service.requestReconsideration(report.id,
-                        note: note),
+                    send: (note) =>
+                        _service.requestReconsideration(report.id, note: note),
                   ),
                   child: Text(l10n.moderationRequestReconsideration),
                 ),

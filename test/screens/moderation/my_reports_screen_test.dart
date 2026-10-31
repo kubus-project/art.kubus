@@ -96,8 +96,8 @@ Future<void> _pump(
 void main() {
   testWidgets('shows decisions about the person and the reports they filed',
       (tester) async {
-    await _pump(tester,
-        _FakeService(reports: [_report()], decisions: [_decision()]));
+    await _pump(
+        tester, _FakeService(reports: [_report()], decisions: [_decision()]));
     expect(find.text('Decisions about your content'), findsOneWidget);
     expect(find.textContaining('Your post broke the posting rules.'),
         findsOneWidget);
@@ -146,8 +146,7 @@ void main() {
     expect(service.calls, ['reconsider:r1:']);
   });
 
-  testWidgets('already-requested items offer no second action',
-      (tester) async {
+  testWidgets('already-requested items offer no second action', (tester) async {
     await _pump(
         tester,
         _FakeService(
@@ -199,8 +198,8 @@ void main() {
   testWidgets('a failed load is explained and can be retried', (tester) async {
     await _pump(
         tester, _FakeService(loadOutcome: ModerationActionOutcome.failed));
-    expect(find.text('Could not load your reports. Try again.'),
-        findsOneWidget);
+    expect(
+        find.text('Could not load your reports. Try again.'), findsOneWidget);
     expect(find.text('Retry'), findsOneWidget);
   });
 
