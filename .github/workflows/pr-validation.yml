@@ -459,6 +459,13 @@ jobs:
           channel: stable
           cache: true
       - run: flutter pub get
+      - name: Record the iOS toolchain
+        run: |
+          {
+            echo '### iOS toolchain'
+            xcodebuild -version
+            echo "iphoneos SDK $(xcrun --sdk iphoneos --show-sdk-version)"
+          } | tee -a "$GITHUB_STEP_SUMMARY"
       - run: flutter build ios --release --no-codesign
 
   web_routing:

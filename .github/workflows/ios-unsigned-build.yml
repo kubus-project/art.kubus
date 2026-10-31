@@ -63,6 +63,13 @@ jobs:
       - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2
         with: { flutter-version: '3.44.2', channel: stable, cache: true }
       - run: flutter pub get
+      - name: Record the iOS toolchain
+        run: |
+          {
+            echo '### iOS toolchain'
+            xcodebuild -version
+            echo "iphoneos SDK $(xcrun --sdk iphoneos --show-sdk-version)"
+          } | tee -a "$GITHUB_STEP_SUMMARY"
       - name: Prepare build configuration
         env:
           KUBUS_BACKEND_URL: ${{ vars.KUBUS_BACKEND_URL }}
