@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'dart:js_interop';
 import 'package:web/web.dart' as web;
 
@@ -32,12 +31,13 @@ void Function() observeFamilyConsentContext(void Function() changed) {
   }
 
   final listener = ((web.Event _) => check()).toJS;
-  final timer =
-      Timer.periodic(const Duration(milliseconds: 500), (_) => check());
+  // A browser interval, not a Dart Timer: the page-lifetime observer must not
+  // register with a test zone's fake clock, and it is cancelled below.
+  final interval = web.window.setInterval((() => check()).toJS, 500.toJS);
   web.window.addEventListener('focus', listener);
   web.document.addEventListener('visibilitychange', listener);
   return () {
-    timer.cancel();
+    web.window.clearInterval(interval);
     web.window.removeEventListener('focus', listener);
     web.document.removeEventListener('visibilitychange', listener);
   };
