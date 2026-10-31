@@ -4,7 +4,6 @@ import 'dart:convert';
 import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:art_kubus/models/profile_identity_data.dart';
 import 'package:art_kubus/models/user.dart';
-import 'package:art_kubus/services/account_cache_store.dart';
 import 'package:art_kubus/services/user_service.dart';
 import 'package:art_kubus/widgets/identity/kubus_identity_avatar.dart';
 import 'package:flutter/material.dart';
@@ -118,8 +117,6 @@ void main() {
     });
 
     tearDown(() async {
-      // The test body can end with cache IO pending in a zone that no longer runs.
-      AccountCacheStore.discardQueueForTesting();
       TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
           .setMockMethodCallHandler(_secureStorage, null);
       api.setHttpClient(
@@ -250,8 +247,6 @@ void main() {
     });
 
     tearDown(() async {
-      // The test body can end with cache IO pending in a zone that no longer runs.
-      AccountCacheStore.discardQueueForTesting();
       await UserService.clearCache();
     });
 
@@ -502,8 +497,6 @@ void main() {
     });
 
     tearDown(() async {
-      // The test body can end with cache IO pending in a zone that no longer runs.
-      AccountCacheStore.discardQueueForTesting();
       TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
           .setMockMethodCallHandler(_secureStorage, null);
       api.setHttpClient(

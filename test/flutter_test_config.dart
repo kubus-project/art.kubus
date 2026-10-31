@@ -11,6 +11,11 @@ Future<void> testExecutable(FutureOr<void> Function() testMain) async {
   SocketService.debugDisableConnect = true;
   // A previous test may have ended with account-cache IO pending in a zone that
   // no longer runs; that must not hold up this test's cache reads and writes.
-  setUp(AccountCacheStore.discardQueueForTesting);
+  setUp(() {
+    AccountCacheStore.discardQueueForTesting();
+    // Test-level teardowns run before a file's own tearDown callbacks. That tearDown may
+    // await a cache write, which would otherwise queue behind IO the finished test left pending.
+    addTearDown(AccountCacheStore.discardQueueForTesting);
+  });
   await testMain();
 }
