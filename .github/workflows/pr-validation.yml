@@ -410,6 +410,18 @@ jobs:
         # exercises the plugin's Kotlin sources.
         run: ./gradlew :arcore_flutter_plugin:testDebugUnitTest --console=plain
       - run: flutter build apk --release
+      - name: Check the merged release manifest permissions
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Plugins can add permissions the app manifest does not declare, so the
+          # merged manifest of the built APK is what counts.
+          perms="$("${ANDROID_HOME}/build-tools/36.0.0/aapt2" dump permissions build/app/outputs/flutter-apk/app-release.apk)"
+          { echo '### Merged manifest permissions'; echo '```'; echo "$perms"; echo '```'; } | tee -a "$GITHUB_STEP_SUMMARY"
+          if echo "$perms" | grep -E 'MANAGE_EXTERNAL_STORAGE|WRITE_EXTERNAL_STORAGE'; then
+            echo '::error::Broad storage permissions are present in the merged release manifest.'
+            exit 1
+          fi
       - name: Sign and verify the device-test APK
         shell: bash
         env:
