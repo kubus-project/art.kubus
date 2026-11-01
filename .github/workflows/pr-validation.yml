@@ -418,8 +418,14 @@ jobs:
           # merged manifest of the built APK is what counts.
           perms="$("${ANDROID_HOME}/build-tools/36.0.0/aapt2" dump permissions build/app/outputs/flutter-apk/app-release.apk)"
           { echo '### Merged manifest permissions'; echo '```'; echo "$perms"; echo '```'; } | tee -a "$GITHUB_STEP_SUMMARY"
-          if echo "$perms" | grep -E 'MANAGE_EXTERNAL_STORAGE|WRITE_EXTERNAL_STORAGE'; then
-            echo '::error::Broad storage permissions are present in the merged release manifest.'
+          # A plugin adds WRITE_EXTERNAL_STORAGE capped at API 28, which is legacy-only and
+          # harmless; all-files access and an uncapped write permission are not allowed.
+          if echo "$perms" | grep -E 'MANAGE_EXTERNAL_STORAGE'; then
+            echo '::error::All-files access is present in the merged release manifest.'
+            exit 1
+          fi
+          if echo "$perms" | grep -E 'WRITE_EXTERNAL_STORAGE' | grep -vE "maxSdkVersion='(2[0-9]|1[0-9]|[0-9])'"; then
+            echo '::error::An uncapped WRITE_EXTERNAL_STORAGE is present in the merged release manifest.'
             exit 1
           fi
       - name: Sign and verify the device-test APK
