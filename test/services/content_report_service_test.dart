@@ -121,6 +121,8 @@ void main() {
             'decidedAt': '2026-10-31T11:00:00.000Z',
             'appealRequestedAt': null,
             'appealResult': null,
+            'contentState': 'restricted',
+            'reinstatement': null,
           }
         ],
       ).load();
@@ -129,6 +131,8 @@ void main() {
       expect(overview.reports.single.canRequestReconsideration, isTrue);
       expect(overview.reports.single.outcomeReason, 'Removed.');
       expect(overview.decisions.single.canAppeal, isTrue);
+      expect(overview.decisions.single.contentState, 'restricted');
+      expect(overview.decisions.single.reinstatement, isNull);
       expect(
           overview.decisions.single.statementOfReasons, 'It broke the rules.');
     });

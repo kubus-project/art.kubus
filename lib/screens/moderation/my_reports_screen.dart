@@ -166,6 +166,22 @@ class _MyReportsScreenState extends State<MyReportsScreen> {
     );
   }
 
+  /// What happened to the content itself, in the person's words.
+  Widget _contentState(AppLocalizations l10n, DecisionAboutMe decision) {
+    final text = decision.contentState == 'restored'
+        ? l10n.moderationContentRestored
+        : decision.reinstatement == 'under_review'
+            ? l10n.moderationRestorationUnderReview
+            : decision.contentState == 'restricted'
+                ? l10n.moderationContentRestricted
+                : null;
+    if (text == null) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.only(top: KubusSpacing.xs),
+      child: Text(text, key: ValueKey<String>('content-state-${decision.id}')),
+    );
+  }
+
   Widget _decisionTile(AppLocalizations l10n, DecisionAboutMe decision) {
     final result = decision.appealResult;
     return Card(
@@ -178,6 +194,7 @@ class _MyReportsScreenState extends State<MyReportsScreen> {
             Text(_outcomeLabel(l10n, decision.outcome),
                 style: Theme.of(context).textTheme.titleSmall),
             _reasons(l10n, decision.statementOfReasons),
+            _contentState(l10n, decision),
             if (result != null) ...[
               Padding(
                 padding: const EdgeInsets.only(top: KubusSpacing.xs),

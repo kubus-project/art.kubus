@@ -8017,5 +8017,8 @@
   "moderationActionAlreadySent": "This was already sent.",
   "moderationActionUnavailable": "This decision is no longer available.",
   "moderationSignInRequired": "Sign in to see your reports and decisions.",
-  "moderationLoadFailed": "Could not load your reports. Try again."
+  "moderationLoadFailed": "Could not load your reports. Try again.",
+  "moderationContentRestricted": "This content is not shown publicly.",
+  "moderationContentRestored": "This content was restored.",
+  "moderationRestorationUnderReview": "The content has not been restored yet; restoring it is under review."
 }

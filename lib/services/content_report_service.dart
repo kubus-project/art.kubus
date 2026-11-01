@@ -101,6 +101,8 @@ class DecisionAboutMe {
     required this.appealRequested,
     required this.appealResult,
     required this.appealResultReason,
+    this.contentState,
+    this.reinstatement,
   });
 
   factory DecisionAboutMe.fromJson(Map<String, dynamic> json) =>
@@ -113,6 +115,8 @@ class DecisionAboutMe {
         appealRequested: json['appealRequestedAt'] != null,
         appealResult: json['appealResult']?.toString(),
         appealResultReason: json['appealResultReason']?.toString(),
+        contentState: json['contentState']?.toString(),
+        reinstatement: json['reinstatement']?.toString(),
       );
 
   final String id;
@@ -123,6 +127,13 @@ class DecisionAboutMe {
   final bool appealRequested;
   final String? appealResult;
   final String? appealResultReason;
+
+  /// `restricted` while the decision is in force, `restored` once the content was put
+  /// back, null for decisions that were only recorded.
+  final String? contentState;
+
+  /// `restored` or `under_review` after a reversed appeal; null otherwise.
+  final String? reinstatement;
 
   bool get canAppeal => !appealRequested;
 }

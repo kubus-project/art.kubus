@@ -32876,6 +32876,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Could not load your reports. Try again.'**
   String get moderationLoadFailed;
+
+  /// No description provided for @moderationContentRestricted.
+  ///
+  /// In en, this message translates to:
+  /// **'This content is not shown publicly.'**
+  String get moderationContentRestricted;
+
+  /// No description provided for @moderationContentRestored.
+  ///
+  /// In en, this message translates to:
+  /// **'This content was restored.'**
+  String get moderationContentRestored;
+
+  /// No description provided for @moderationRestorationUnderReview.
+  ///
+  /// In en, this message translates to:
+  /// **'The content has not been restored yet; restoring it is under review.'**
+  String get moderationRestorationUnderReview;
 }
 
 class _AppLocalizationsDelegate

@@ -19152,4 +19152,14 @@ class AppLocalizationsSl extends AppLocalizations {
   @override
   String get moderationLoadFailed =>
       'Prijav ni bilo mogoče naložiti. Poskusite znova.';
+
+  @override
+  String get moderationContentRestricted => 'Ta vsebina ni javno prikazana.';
+
+  @override
+  String get moderationContentRestored => 'Ta vsebina je bila obnovljena.';
+
+  @override
+  String get moderationRestorationUnderReview =>
+      'Vsebina še ni obnovljena; obnova se pregleduje.';
 }

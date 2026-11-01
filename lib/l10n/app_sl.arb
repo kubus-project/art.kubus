@@ -7956,5 +7956,8 @@
   "moderationActionAlreadySent": "To je bilo že poslano.",
   "moderationActionUnavailable": "Ta odločitev ni več na voljo.",
   "moderationSignInRequired": "Prijavite se, da vidite svoje prijave in odločitve.",
-  "moderationLoadFailed": "Prijav ni bilo mogoče naložiti. Poskusite znova."
+  "moderationLoadFailed": "Prijav ni bilo mogoče naložiti. Poskusite znova.",
+  "moderationContentRestricted": "Ta vsebina ni javno prikazana.",
+  "moderationContentRestored": "Ta vsebina je bila obnovljena.",
+  "moderationRestorationUnderReview": "Vsebina še ni obnovljena; obnova se pregleduje."
 }

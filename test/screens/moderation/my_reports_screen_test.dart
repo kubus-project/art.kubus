@@ -64,6 +64,8 @@ DecisionAboutMe _decision({
   String id = 'd1',
   bool appealed = false,
   String? result,
+  String? contentState,
+  String? reinstatement,
 }) =>
     DecisionAboutMe(
       id: id,
@@ -74,6 +76,8 @@ DecisionAboutMe _decision({
       appealRequested: appealed,
       appealResult: result,
       appealResultReason: result == null ? null : 'Reviewed again.',
+      contentState: contentState,
+      reinstatement: reinstatement,
     );
 
 Future<void> _pump(
@@ -201,6 +205,51 @@ void main() {
     expect(
         find.text('Could not load your reports. Try again.'), findsOneWidget);
     expect(find.text('Retry'), findsOneWidget);
+  });
+
+  testWidgets('says what happened to the content itself', (tester) async {
+    await _pump(
+        tester,
+        _FakeService(decisions: [
+          _decision(id: 'a', contentState: 'restricted'),
+          _decision(
+              id: 'b',
+              appealed: true,
+              result: 'reversed',
+              contentState: 'restricted',
+              reinstatement: 'under_review'),
+          _decision(
+              id: 'c',
+              appealed: true,
+              result: 'reversed',
+              contentState: 'restored',
+              reinstatement: 'restored'),
+          _decision(id: 'd'),
+        ]));
+    expect(find.text('This content is not shown publicly.'), findsOneWidget);
+    expect(
+        find.text(
+            'The content has not been restored yet; restoring it is under review.'),
+        findsOneWidget);
+    expect(find.text('This content was restored.'), findsOneWidget);
+    expect(find.byKey(const ValueKey<String>('content-state-d')), findsNothing);
+  });
+
+  testWidgets('content state in Slovenian', (tester) async {
+    await _pump(
+        tester,
+        _FakeService(decisions: [
+          _decision(id: 'a', contentState: 'restricted'),
+          _decision(
+              id: 'c',
+              appealed: true,
+              result: 'reversed',
+              contentState: 'restored',
+              reinstatement: 'restored'),
+        ]),
+        locale: const Locale('sl'));
+    expect(find.text('Ta vsebina ni javno prikazana.'), findsOneWidget);
+    expect(find.text('Ta vsebina je bila obnovljena.'), findsOneWidget);
   });
 
   testWidgets('Slovenian copy', (tester) async {

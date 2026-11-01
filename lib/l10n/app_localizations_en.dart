@@ -18954,4 +18954,15 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get moderationLoadFailed => 'Could not load your reports. Try again.';
+
+  @override
+  String get moderationContentRestricted =>
+      'This content is not shown publicly.';
+
+  @override
+  String get moderationContentRestored => 'This content was restored.';
+
+  @override
+  String get moderationRestorationUnderReview =>
+      'The content has not been restored yet; restoring it is under review.';
 }
