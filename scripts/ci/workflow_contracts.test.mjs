@@ -348,6 +348,17 @@ test('the unsigned iOS build is manual, secret-free and never publishes', () => 
   assert.match(unsigned, /\[ "\$ref" = dev \] \|\| \[ "\$ref" = master \]/);
 });
 
+test('a release candidate tag is signed for testing and never published as a release', () => {
+  const source = jobBlock(workflow('mobile-release.yml'), 'source');
+  assert.match(source, /case "\$tag" in v\*-rc\.\[0-9\]\*\) publish=false; prerelease=true ;; esac/);
+  // The case sits in the tag-push branch, before publish is exported.
+  assert.ok(source.indexOf('publish=false; prerelease=true ;; esac') < source.indexOf('# Manual runs rebuild'));
+  // The signing environments, the master-ancestry gate and the publish condition are unchanged.
+  assert.match(source, /is not contained by master/);
+  assert.match(jobBlock(workflow('mobile-release.yml'), 'android'), /environment: android-release/);
+  assert.match(jobBlock(workflow('mobile-release.yml'), 'publish'), /needs\.source\.outputs\.publish == 'true'/);
+});
+
 function jobBlock(content, name) {
   const start = content.indexOf(`\n  ${name}:\n`);
   assert.ok(start >= 0, `job ${name} is missing`);

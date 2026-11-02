@@ -66,6 +66,9 @@ jobs:
           if [ "$EVENT_NAME" = push ]; then
             tag="$PUSH_TAG"; publish=true; prerelease=false
             build_android=true; build_ios=true
+            # A release candidate (v0.8.6-rc.1) is built and signed by the same protected jobs for
+            # testing, but its artifacts stay workflow artifacts: it is never published as a GitHub Release.
+            case "$tag" in v*-rc.[0-9]*) publish=false; prerelease=true ;; esac
           else
             # Manual runs rebuild an existing release tag. The signing
             # environments admit master only, so the workflow definition is
