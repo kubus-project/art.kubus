@@ -1,14 +1,18 @@
 name: iOS unsigned build
 # Builds an UNSIGNED IPA for testing without an Apple Developer Program
-# membership: sideloading tools (Sideloadly, AltStore) re-sign it on install
-# with the tester's own Apple ID. It needs no secrets or signing environment
-# and never publishes a GitHub Release; the IPA is a workflow artifact only.
-# Signed, distributable IPAs come from mobile-release.yml.
+# membership: sideloading tools (AltStore Classic, Sideloadly) re-sign it on
+# install with the tester's own Apple ID. It needs no secrets or signing
+# environment and never publishes a GitHub Release; the IPA is a workflow
+# artifact only. This is the 0.8.6 iOS channel: sideloaded testing, not the
+# App Store. Signed IPAs would come from mobile-release.yml.
+# Dispatched from master it builds a v* tag, dev or master. Dispatched from an
+# integration/* branch it builds that branch's own head, so a release
+# candidate can be tested on a device before it is merged.
 on:
   workflow_dispatch:
     inputs:
       source_ref:
-        description: 'A v* release tag, or the dev or master branch'
+        description: 'From master: a v* release tag, dev or master. From an integration/* branch: that same branch'
         required: true
         default: master
         type: string
@@ -40,9 +44,20 @@ jobs:
           fail() { echo "::error::$1"; exit 1; }
           # The packaging and checks below are this workflow's own steps, so
           # only the reviewed definition on master may label an artifact with
-          # a release or branch commit.
-          [ "$EVENT_REF" = refs/heads/master ] || fail "Run this workflow from master (dispatched from $EVENT_REF)."
+          # a release or another branch's commit. An integration/* branch may
+          # only build itself (its own definition, its own head, no secrets).
           ref="$SOURCE_REF"
+          if [[ "$EVENT_REF" == refs/heads/integration/* ]]; then
+            [ "$ref" = "${EVENT_REF#refs/heads/}" ] || fail "From $EVENT_REF this workflow builds only that branch (got: $ref)."
+            git fetch --no-tags origin "$ref"
+            sha="$(git rev-parse --verify "refs/remotes/origin/$ref^{commit}")"
+            [ "$sha" = "$GITHUB_SHA" ] || fail 'The branch moved after the run was queued.'
+            git checkout --quiet --detach "$sha"
+            label="$(printf '%s' "$ref" | tr -c 'A-Za-z0-9._-' '-')"
+            printf 'sha=%s\nref=%s\nlabel=%s\n' "$sha" "$ref" "$label" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          [ "$EVENT_REF" = refs/heads/master ] || fail "Run this workflow from master or from an integration/* branch (dispatched from $EVENT_REF)."
           if [[ "$ref" =~ ^v[0-9A-Za-z._-]+$ && "$ref" != *..* ]]; then
             sha="$(git rev-parse -q --verify "refs/tags/$ref^{commit}")" || fail "Tag $ref does not exist."
           elif [ "$ref" = dev ] || [ "$ref" = master ]; then
@@ -113,18 +128,38 @@ jobs:
           [ "$(plist CFBundleShortVersionString "$app/Info.plist")" = "$EXPECTED_VERSION" ] || fail 'version does not match the source'
           [ "$(plist CFBundleVersion "$app/Info.plist")" = "$EXPECTED_BUILD_NUMBER" ] || fail 'build number does not match the metadata'
           [ ! -e "$app/embedded.mobileprovision" ] || fail 'an unsigned build must not embed a provisioning profile'
+          [ ! -d "$app/_CodeSignature" ] || fail 'an unsigned build must not carry a code signature'
+          # AltStore re-signs what it is given: the bundle must be complete and free of unresolved build variables.
+          exe="$(plist CFBundleExecutable "$app/Info.plist")"
+          [ -f "$app/$exe" ] || fail 'the main executable is missing'
+          lipo -archs "$app/$exe" | grep -qw arm64 || fail 'the main executable has no arm64 slice'
+          for fw in Flutter App; do
+            [ -d "$app/Frameworks/$fw.framework" ] || fail "Frameworks/$fw.framework is missing"
+            lipo -archs "$app/Frameworks/$fw.framework/$fw" | grep -qw arm64 || fail "$fw.framework has no arm64 slice"
+          done
+          [ -f "$app/Assets.car" ] || fail 'the compiled asset catalogue is missing'
+          [ -d "$app/Frameworks/App.framework/flutter_assets" ] || fail 'flutter_assets is missing'
+          if plutil -convert xml1 -o - "$app/Info.plist" | grep -F '$(' > /dev/null; then fail 'Info.plist still contains unresolved build variables'; fi
+          for key in NSCameraUsageDescription NSLocationWhenInUseUsageDescription NSFaceIDUsageDescription; do
+            plist "$key" "$app/Info.plist" > /dev/null || fail "$key is missing from Info.plist"
+          done
+          # No entitlements: a free Apple ID cannot provide push, associated domains, Sign in with Apple or app groups.
+          if codesign -d --entitlements - "$app" 2>/dev/null | grep -q '<key>'; then fail 'the app unexpectedly declares entitlements'; fi
           staging="$RUNNER_TEMP/unsigned-ipa"
           mkdir -p "$staging/Payload" release/ios-unsigned
           cp -R "$app" "$staging/Payload/"
           base="art.kubus-$SOURCE_LABEL-$SOURCE_SHA-unsigned"
           (cd "$staging" && zip -qry "$GITHUB_WORKSPACE/release/ios-unsigned/$base.ipa" Payload)
-          printf '{"source_ref":"%s","source_sha":"%s","version":"%s","build_number":"%s","bundle_id":"%s","signed":false,"run_id":"%s"}\n' \
-            "$SOURCE_REF" "$SOURCE_SHA" "$EXPECTED_VERSION" "$EXPECTED_BUILD_NUMBER" "$EXPECTED_BUNDLE_ID" "$GITHUB_RUN_ID" > "release/ios-unsigned/$base.build.json"
+          backend="$(node -e "const d=require('./.dart_tool/public-build-defines.json');console.log(d.BACKEND_BASE_URL||d.KUBUS_BACKEND_URL||'')")"
+          printf '{"source_ref":"%s","source_sha":"%s","version":"%s","build_number":"%s","bundle_id":"%s","backend_url":"%s","signed":false,"channel":"sideloaded-testing","run_id":"%s"}\n' \
+            "$SOURCE_REF" "$SOURCE_SHA" "$EXPECTED_VERSION" "$EXPECTED_BUILD_NUMBER" "$EXPECTED_BUNDLE_ID" "$backend" "$GITHUB_RUN_ID" > "release/ios-unsigned/$base.build.json"
+          unzip -tq "release/ios-unsigned/$base.ipa" > /dev/null || fail 'the IPA archive is corrupt'
+          [ "$(unzip -Z1 "release/ios-unsigned/$base.ipa" | cut -d/ -f1 | sort -u)" = Payload ] || fail 'the IPA must contain only Payload/'
           (cd release/ios-unsigned && shasum -a 256 ./* > SHA256SUMS && cat SHA256SUMS)
           {
             echo "### Unsigned IPA: $SOURCE_REF ($SOURCE_SHA)"
             echo
-            echo "Version $EXPECTED_VERSION ($EXPECTED_BUILD_NUMBER), bundle \`$EXPECTED_BUNDLE_ID\`. Not signed: install it with a sideloading tool such as Sideloadly or AltStore, which re-signs it with your own Apple ID (a free Apple ID's install expires after 7 days)."
+            echo "Version $EXPECTED_VERSION ($EXPECTED_BUILD_NUMBER), bundle \`$EXPECTED_BUNDLE_ID\`. Not signed and not for the App Store: install it with AltStore Classic (or Sideloadly), which re-signs it with your own Apple ID (a free Apple ID's install expires after 7 days). Installation and the limits of a free account: docs/ios-altstore-testing.md."
           } >> "$GITHUB_STEP_SUMMARY"
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:

@@ -340,9 +340,17 @@ test('the unsigned iOS build is manual, secret-free and never publishes', () => 
   assert.doesNotMatch(unsigned, /contents: write|secrets\.|environment:|release-action|gh release/);
   assert.match(unsigned, /flutter build ipa --release --no-codesign/);
   assert.match(unsigned, /embedded\.mobileprovision/);
-  // Only the master definition runs, before any source is resolved.
+  // Master builds releases, dev and master; an integration/* branch builds only itself. Nothing else dispatches.
   assert.match(unsigned, /\[ "\$EVENT_REF" = refs\/heads\/master \] \|\| fail/);
-  assert.ok(unsigned.indexOf('refs/heads/master ] || fail') < unsigned.indexOf('ref="$SOURCE_REF"'));
+  assert.match(unsigned, /\[\[ "\$EVENT_REF" == refs\/heads\/integration\/\* \]\]/);
+  assert.match(unsigned, /\[ "\$ref" = "\$\{EVENT_REF#refs\/heads\/\}" \] \|\| fail/);
+  assert.ok(unsigned.indexOf('refs/heads/integration/*') < unsigned.indexOf('[ "$EVENT_REF" = refs/heads/master ] || fail'));
+  // The package is checked structurally before it is offered for sideloading.
+  assert.match(unsigned, /_CodeSignature/);
+  assert.match(unsigned, /lipo -archs/);
+  assert.match(unsigned, /unresolved build variables/);
+  assert.match(unsigned, /unexpectedly declares entitlements/);
+  assert.match(unsigned, /"channel":"sideloaded-testing"/);
   // Only release tags or the two integration branches are built.
   assert.match(unsigned, /\^v\[0-9A-Za-z\._-\]\+\$/);
   assert.match(unsigned, /\[ "\$ref" = dev \] \|\| \[ "\$ref" = master \]/);
