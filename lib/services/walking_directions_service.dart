@@ -112,6 +112,9 @@ class WalkingDirectionsService implements WalkingDirectionsApi {
   _WalkingGraphRecord? _cachedGraph;
   Completer<void>? _activeAbortTrigger;
   int _graphRequestGeneration = 0;
+  Future<_WalkingGraphRecord>? _inFlightGraph;
+  LatLng? _inFlightOrigin;
+  LatLng? _inFlightDestination;
 
   @override
   Future<WalkingRoute> route({
@@ -155,12 +158,36 @@ class WalkingDirectionsService implements WalkingDirectionsApi {
         destination,
         marginMeters: _graphMarginMeters,
       );
-      graph = await _loadGraph(bounds);
+      graph = await _loadGraphShared(bounds, origin, destination);
       _cachedGraph = graph;
     }
 
     final path = _findPath(graph, origin, destination);
     return _buildRoute(path, origin, destination);
+  }
+
+  Future<_WalkingGraphRecord> _loadGraphShared(
+    _GraphBoundsRecord bounds,
+    LatLng origin,
+    LatLng destination,
+  ) {
+    final existing = _inFlightGraph;
+    if (existing != null &&
+        _inFlightOrigin == origin &&
+        _inFlightDestination == destination) {
+      return existing;
+    }
+    final request = _loadGraph(bounds);
+    _inFlightGraph = request;
+    _inFlightOrigin = origin;
+    _inFlightDestination = destination;
+    return request.whenComplete(() {
+      if (identical(_inFlightGraph, request)) {
+        _inFlightGraph = null;
+        _inFlightOrigin = null;
+        _inFlightDestination = null;
+      }
+    });
   }
 
   Future<_WalkingGraphRecord> _loadGraph(_GraphBoundsRecord bounds) async {

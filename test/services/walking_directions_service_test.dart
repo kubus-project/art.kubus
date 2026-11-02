@@ -548,6 +548,26 @@ void main() {
       service.dispose();
     });
 
+    test('identical concurrent routes share the in-flight graph request',
+        () async {
+      final client = _ControlledClient(_overpassResponse(<Map<String, Object>>[
+        _elementNode(1, _origin),
+        _elementNode(2, _east),
+        _elementNode(3, _destination),
+        _elementWay(10, <int>[1, 2, 3]),
+      ]));
+      final service = _service(client);
+      final first = service.route(origin: _origin, destination: _destination);
+      await client.started.future;
+      final second = service.route(origin: _origin, destination: _destination);
+      await Future<void>.delayed(Duration.zero);
+      expect(client.requests, 1);
+      client.complete();
+      expect((await first).points.last, _destination);
+      expect((await second).points.last, _destination);
+      service.dispose();
+    });
+
     test('cancels an obsolete graph request when a newer route starts',
         () async {
       final client = _AbortAwareClient(
@@ -614,4 +634,21 @@ class _AbortAwareClient extends http.BaseClient {
         response.statusCode,
         headers: response.headers,
       );
+}
+
+class _ControlledClient extends http.BaseClient {
+  _ControlledClient(this.response);
+  final http.Response response;
+  final Completer<http.StreamedResponse> pending = Completer();
+  int requests = 0;
+  final Completer<void> started = Completer();
+  @override
+  Future<http.StreamedResponse> send(http.BaseRequest request) {
+    requests++;
+    if (!started.isCompleted) started.complete();
+    return pending.future;
+  }
+
+  void complete() => pending.complete(http.StreamedResponse(
+      Stream<List<int>>.value(response.bodyBytes), response.statusCode));
 }
