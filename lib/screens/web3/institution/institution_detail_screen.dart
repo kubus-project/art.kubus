@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../../models/institution.dart';
 import '../../../providers/institution_provider.dart';
@@ -162,6 +163,13 @@ class _InstitutionDetailScreenState extends State<InstitutionDetailScreen> {
     final scheme = Theme.of(context).colorScheme;
     final resolvedImage =
         MediaUrlResolver.resolveDisplayUrl(institution.heroImageRef);
+    final resolvedLogo =
+        MediaUrlResolver.resolveDisplayUrl(institution.logoUrl);
+    final website = Uri.tryParse(institution.website.trim());
+    final showWebsite = website != null &&
+        (website.scheme == 'http' || website.scheme == 'https') &&
+        website.host.isNotEmpty &&
+        website.userInfo.isEmpty;
 
     return LiquidGlassCard(
       padding: EdgeInsets.zero,
@@ -173,6 +181,7 @@ class _InstitutionDetailScreenState extends State<InstitutionDetailScreen> {
               top: Radius.circular(KubusRadius.lg),
             ),
             child: SizedBox(
+              key: const ValueKey('institution-cover-image'),
               height: 220,
               width: double.infinity,
               child: resolvedImage == null || resolvedImage.isEmpty
@@ -232,6 +241,23 @@ class _InstitutionDetailScreenState extends State<InstitutionDetailScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                if (resolvedLogo != null && resolvedLogo.isNotEmpty) ...[
+                  ExcludeSemantics(
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(KubusRadius.md),
+                      child: SizedBox(
+                        key: const ValueKey('institution-profile-image'),
+                        width: 64,
+                        height: 64,
+                        child: KubusCachedImage(
+                          imageUrl: resolvedLogo,
+                          fit: BoxFit.contain,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: KubusSpacing.md),
+                ],
                 // One title per screen: the AppBar (standalone) or the desktop
                 // sub-screen header (embedded) already carries the name.
                 if (showName) ...[
@@ -267,6 +293,16 @@ class _InstitutionDetailScreenState extends State<InstitutionDetailScreen> {
                     style: KubusTextStyles.sectionSubtitle.copyWith(
                       color: scheme.onSurface.withValues(alpha: 0.78),
                     ),
+                  ),
+                ],
+                if (showWebsite) ...[
+                  const SizedBox(height: KubusSpacing.sm),
+                  TextButton.icon(
+                    onPressed: () => unawaited(
+                      launchUrl(website, mode: LaunchMode.externalApplication),
+                    ),
+                    icon: const Icon(Icons.open_in_new),
+                    label: Text(website.host),
                   ),
                 ],
                 const SizedBox(height: KubusSpacing.lg),

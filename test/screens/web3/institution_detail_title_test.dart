@@ -4,6 +4,7 @@ import 'package:art_kubus/screens/desktop/desktop_shell_scope.dart';
 import 'package:art_kubus/screens/web3/institution/institution_detail_screen.dart';
 import 'package:art_kubus/services/backend_api_service.dart';
 import 'package:art_kubus/services/http_client_factory.dart';
+import 'package:art_kubus/widgets/common/kubus_cached_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
@@ -114,6 +115,47 @@ void main() {
       reason: 'the AppBar carries the name; the card does not repeat it',
     );
     expect(find.byType(AppBar), findsOneWidget);
+  });
+
+  testWidgets('cover and profile images retain separate roles', (tester) async {
+    BackendApiService().setHttpClient(MockClient((request) async {
+      if (request.url.path == '/api/institutions') {
+        return _json({
+          'success': true,
+          'institutions': [
+            {
+              ..._institutionPayload(),
+              'coverImageUrl': 'https://example.com/cover.jpg',
+              'logoUrl': 'https://example.com/logo.jpg',
+            },
+          ],
+        });
+      }
+      if (request.url.path == '/api/events') {
+        return _json({
+          'success': true,
+          'data': {'events': <Object>[]}
+        });
+      }
+      return _json({'success': true, 'data': <String, Object?>{}});
+    }));
+    await _pump(
+      tester,
+      size: const Size(390, 844),
+      child: const InstitutionDetailScreen(institutionId: 'inst-1'),
+    );
+    await tester.pump();
+    final cover = tester.widget<KubusCachedImage>(find.descendant(
+      of: find.byKey(const ValueKey('institution-cover-image')),
+      matching: find.byType(KubusCachedImage),
+    ));
+    final profile = tester.widget<KubusCachedImage>(find.descendant(
+      of: find.byKey(const ValueKey('institution-profile-image')),
+      matching: find.byType(KubusCachedImage),
+    ));
+    expect(cover.imageUrl, 'https://example.com/cover.jpg');
+    expect(profile.imageUrl, 'https://example.com/logo.jpg');
+    expect(find.text('example.com'), findsOneWidget);
   });
 
   testWidgets(
