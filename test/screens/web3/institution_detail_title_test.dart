@@ -233,6 +233,29 @@ void main() {
     expect(map.initialCenter?.longitude, 14.5051);
   });
 
+  testWidgets('an institution without coordinates has no map action',
+      (tester) async {
+    BackendApiService().setHttpClient(MockClient((request) async {
+      if (request.url.path == '/api/institutions') {
+        return _json({
+          'success': true,
+          'institutions': [
+            {..._institutionPayload(), 'latitude': 0, 'longitude': 0},
+          ],
+        });
+      }
+      return _json({
+        'success': true,
+        'data': {'events': <Object>[]},
+      });
+    }));
+    await _pump(tester,
+        size: const Size(390, 844),
+        child: const InstitutionDetailScreen(institutionId: 'inst-1'));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('institution-open-on-map')), findsNothing);
+  });
+
   testWidgets(
       'embedded under a sub-screen with the same title: one title, from the shell',
       (tester) async {
