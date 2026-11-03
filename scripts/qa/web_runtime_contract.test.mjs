@@ -321,7 +321,7 @@ test('Flutter index positions art.kubus as an open art map', () => {
   assert.match(html, /<title>art\.kubus — Open Art Map and Community Platform<\/title>/);
   assert.match(html, /open, community-led art map/);
   assert.match(html, /"@type": "WebSite"/);
-  assert.match(html, /<link rel="canonical" href="https:\/\/app\.kubus\.site\/en">/);
+  assert.match(html, /<link rel="canonical" href="https:\/\/app\.kubus\.site\/">/);
   assert.match(html, /"@type": "Organization"/);
   assert.match(html, /"@type": "WebApplication"/);
   assert.doesNotMatch(html, /<meta name="keywords"/);
