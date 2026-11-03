@@ -178,8 +178,12 @@ technical contract:
 All text is stripped, normalized, escaped, and truncated at a word boundary.
 JSON-LD is serialized with `<`, `>`, `&`, and Unicode line separators escaped.
 Only HTTP(S) media URLs or known relative storage paths are emitted. Entity
-images are preferred; `web/images/social-preview-default.webp` is the 1200×630
-branded fallback.
+images are preferred; `web/images/social-preview.png` (1280×640, the approved art.kubus
+social image, a byte-identical copy of `docs/branding/social-preview.png`) is the
+branded fallback. Favicons are dark-backed (`web/favicon*.png`, `favicon.ico`)
+because the logo glyph is white and a transparent icon is blank on the white
+surface search results draw it on; regenerate them with the brand-asset script
+in the release evidence if the logo changes.
 
 ## Sitemaps, robots, caching, and failures
 
