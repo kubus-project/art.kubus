@@ -15,7 +15,9 @@ String localizedDocumentTitle(Locale locale) {
 String artworkDocumentTitle(String title, String? artist) {
   final name = title.trim();
   final by = artist?.trim() ?? '';
-  final unknown = by.isEmpty || by.toLowerCase() == 'unknown' || by.toLowerCase() == 'unknown artist';
+  final unknown = by.isEmpty ||
+      by.toLowerCase() == 'unknown' ||
+      by.toLowerCase() == 'unknown artist';
   return unknown ? '$name | art.kubus' : '$name by $by | art.kubus';
 }
 

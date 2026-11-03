@@ -138,8 +138,8 @@ void main() {
   test('an artwork title matches the server-rendered one', () {
     expect(artworkDocumentTitle('River Memory', 'Maja Novak'),
         'River Memory by Maja Novak | art.kubus');
-    expect(artworkDocumentTitle(' River Memory ', ''),
-        'River Memory | art.kubus');
+    expect(
+        artworkDocumentTitle(' River Memory ', ''), 'River Memory | art.kubus');
     expect(artworkDocumentTitle('River Memory', 'Unknown artist'),
         'River Memory | art.kubus');
   });
@@ -152,6 +152,7 @@ void main() {
     expect(observer.title.value, 'First artwork | art.kubus');
     navigator.currentState!.pushReplacementNamed('/main');
     await tester.pumpAndSettle();
-    expect(observer.title.value, 'art.kubus'); // the test observer's fallback; the app's fallback is null
+    expect(observer.title.value,
+        'art.kubus'); // the test observer's fallback; the app's fallback is null
   });
 }

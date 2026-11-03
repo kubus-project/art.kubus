@@ -6,6 +6,9 @@
 //   ARTWORK_PATH   a published artwork path, e.g. /en/artworks/<id>   (optional; skips the entity checks when unset)
 //   BROWSERS       comma list                            (default chromium,firefox)
 //   QA_OUT         output directory for screenshots/results
+//
+// The contexts pin locale en-US: Playwright's Firefox otherwise reports navigator.language as the string "undefined" on some documents,
+// which makes the engine throw "invalid language tag" at start-up (an emulation artifact, not a product defect).
 // Exits non-zero on any failed check.
 import fs from 'node:fs';
 import path from 'node:path';
@@ -47,8 +50,7 @@ const enableSemantics = async (page) => {
   await page.evaluate(() => { const el = document.querySelector('flt-semantics-placeholder') || document.querySelector('[aria-label="Enable accessibility"]'); if (el) el.click(); }).catch(() => {});
   await page.waitForTimeout(800);
 };
-const click = async (page, re) => {
-  const box = await page.evaluate((src) => {
+const findBox = (page, re) => page.evaluate((src) => {
     const rx = new RegExp(src, 'i');
     const name = (n) => (n.getAttribute('aria-label') || n.textContent || '').trim();
     const m = Array.from(document.querySelectorAll('flt-semantics')).filter((n) => rx.test(name(n))).filter((n) => { const r = n.getBoundingClientRect(); return r.width > 4 && r.height > 4; })
@@ -57,6 +59,9 @@ const click = async (page, re) => {
     const r = m[0].getBoundingClientRect();
     return { x: r.x + r.width / 2, y: r.y + r.height / 2 };
   }, re.source);
+const click = async (page, re, waitMs = 10000) => {
+  let box = await findBox(page, re);
+  for (const end = Date.now() + waitMs; !box && Date.now() < end;) { await page.waitForTimeout(500); box = await findBox(page, re); }
   if (!box) return false;
   await page.mouse.click(box.x, box.y);
   await page.waitForTimeout(2500);
@@ -79,9 +84,9 @@ for (const browserName of BROWSERS) {
       check(browserName, `${p}: served title is localized, not the generic brand`, served.title && served.title !== generic && (lang === 'sl' ? /Odprti zemljevid/.test(served.title) : /Open Art Map/.test(served.title)), served.title);
       check(browserName, `${p}: Open Graph and Twitter images are the approved social image`, served.ogImage === APPROVED_IMAGE && served.twitterImage === APPROVED_IMAGE, `${served.ogImage} | ${served.twitterImage}`);
       check(browserName, `${p}: Open Graph and Twitter titles match the title`, unescape(served.ogTitle) === unescape(served.title) && unescape(served.twitterTitle) === unescape(served.title), `${served.ogTitle} | ${served.twitterTitle}`);
-      const ctx = await browser.newContext({ viewport: { width: 1280, height: 900 } });
+      const ctx = await browser.newContext({ viewport: { width: 1280, height: 900 }, locale: 'en-US' });
       const page = await ctx.newPage();
-      const errors = []; page.on('pageerror', (e) => errors.push(String(e).slice(0, 160)));
+      const errors = []; page.on('pageerror', (e) => errors.push(String((e && (e.stack || e.message)) || e).replace(/\s+/g, ' ').slice(0, 400)));
       const fontRequests = []; page.on('request', (r) => { if (/fonts\.(googleapis|gstatic)\.com/.test(r.url())) fontRequests.push(r.url()); });
       await page.goto(WEB + p, { waitUntil: 'load' });
       const early = await page.title();
@@ -120,7 +125,7 @@ for (const browserName of BROWSERS) {
       const served = head(servedRaw);
       const expected = unescape(served.title);
       check(browserName, `${ARTWORK_PATH}: served title is artwork-specific`, expected && !/^art\.kubus/.test(expected) && / \| art\.kubus$/.test(expected), expected);
-      const ctx = await browser.newContext({ viewport: { width: 1280, height: 900 } });
+      const ctx = await browser.newContext({ viewport: { width: 1280, height: 900 }, locale: 'en-US' });
       const page = await ctx.newPage();
       await page.goto(WEB + ARTWORK_PATH, { waitUntil: 'load' });
       await page.waitForTimeout(12000);
