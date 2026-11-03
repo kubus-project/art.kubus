@@ -122,6 +122,23 @@ void main() {
     expect(provider.status, WalkingNavigationStatus.idle);
   });
 
+  test('does not report success when directions contain no usable geometry',
+      () async {
+    final api = _FakeDirectionsApi(const WalkingRoute(
+      points: <LatLng>[],
+      steps: <WalkingRouteStep>[],
+      distanceMeters: 0,
+      durationSeconds: 0,
+    ));
+    final provider = WalkingNavigationProvider(directionsApi: api);
+    addTearDown(provider.dispose);
+    provider.prepare(intent);
+    await provider.updatePosition(origin);
+    expect(provider.route, isNull);
+    expect(provider.status, WalkingNavigationStatus.error);
+    expect(provider.failureKind, WalkingNavigationFailureKind.noRoute);
+  });
+
   test('routine location updates do not restart a pending route', () async {
     final request = Completer<WalkingRoute>();
     final api = _CompleterDirectionsApi(<Completer<WalkingRoute>>[request]);

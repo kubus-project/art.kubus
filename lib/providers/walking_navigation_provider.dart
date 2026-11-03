@@ -316,6 +316,13 @@ class WalkingNavigationProvider extends ChangeNotifier {
           destination: intent.destination,
         );
         if (generation != _requestGeneration || _intent != intent) return;
+        final features = route.toGeoJson()['features'];
+        if (features is! List || features.isEmpty) {
+          throw const WalkingDirectionsException(
+            'The walking route has no usable geometry.',
+            type: WalkingDirectionsErrorType.noRoute,
+          );
+        }
         _route = route;
         _status = WalkingNavigationStatus.active;
         _failureKind = null;
