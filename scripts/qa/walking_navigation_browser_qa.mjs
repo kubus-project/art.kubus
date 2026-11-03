@@ -36,10 +36,11 @@ const fixtureServer = http.createServer(async (req, res) => {
   res.writeHead(valid ? 200 : 400, {'content-type':'application/json'});
   res.end(JSON.stringify(valid ? {elements} : {error:'invalid fixture request'}));
 });
-await new Promise((resolve, reject) => fixtureServer.listen(49487, '127.0.0.1', resolve).on('error', reject));
+const external = process.env.WALKING_QA_EXTERNAL_GRAPH === '1';
+if (!external) await new Promise((resolve, reject) => fixtureServer.listen(49487, '127.0.0.1', resolve).on('error', reject));
 const report = [];
 for (const [name, browserType] of Object.entries({chromium, firefox})) {
-  const result = {browser:name, fixture:true, graphRequests:[], diagnostics:[], pageErrors:[], status:'FAIL'};
+  const result = {browser:name, fixture:!external, graphRequests:[], diagnostics:[], pageErrors:[], status:'FAIL'};
   activeResult = result;
   let browser;
   try {
@@ -49,6 +50,14 @@ for (const [name, browserType] of Object.entries({chromium, firefox})) {
     const page = await context.newPage();
     page.on('console', msg => {const text=msg.text(); if (text.includes('WalkingNavigation:')) result.diagnostics.push(text);});
     page.on('pageerror', err => result.pageErrors.push(String(err)));
+    if (external && process.env.WALKING_QA_GRAPH_PORT) await page.route('**/api/walking-graph', route => route.continue({url:`http://127.0.0.1:${process.env.WALKING_QA_GRAPH_PORT}/api/walking-graph`}));
+    if (external) page.on('response', response => {
+      const request=response.request();
+      if (!request.url().endsWith('/api/walking-graph')) return;
+      let body; try {body=JSON.parse(request.postData() || '{}');} catch (_) {body=null;}
+      const valid=body && Object.keys(body).sort().join(',') === 'east,north,south,west' && Object.values(body).every(Number.isFinite);
+      result.graphRequests.push({method:request.method(),path:'/api/walking-graph',validSchema:Boolean(valid),status:response.status()});
+    });
     await page.goto(base + '/debug/walking-route?live=1', {waitUntil:'domcontentloaded',timeout:120000});
     const deadline=Date.now()+120000;
     while (Date.now()<deadline && !result.diagnostics.some(x=>x.includes('route_visually_ready'))) await page.waitForTimeout(500);
@@ -81,5 +90,5 @@ for (const [name, browserType] of Object.entries({chromium, firefox})) {
   await fs.writeFile(path.join(out,`${name}-result.json`),JSON.stringify(result,null,2));
   console.log(JSON.stringify(result,null,2));
 }
-await new Promise(resolve => fixtureServer.close(resolve));
+if (!external) await new Promise(resolve => fixtureServer.close(resolve));
 if (report.some(x=>x.status!=='PASS')) process.exitCode=1;
