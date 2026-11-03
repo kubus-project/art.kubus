@@ -52,6 +52,36 @@ void main() {
       expect(first, unchanged);
       expect(first, isNot(updated));
     });
+
+    test(
+        'reads approved visitor information and rejects pending or unsafe data',
+        () {
+      final data = _payload();
+      data['visitorAccess'] = {
+        'status': 'approved',
+        'sourceUrl': 'https://museum.example/visit',
+        'verifiedAt': '2026-11-02T12:00:00Z',
+        'visitorInfo': {'admission': 'Free'},
+        'bookingUrl': 'https://museum.example/book',
+      };
+      final institution = Institution.fromJson(data);
+      expect(institution.visitorAccess?.visitorInfo['admission'], 'Free');
+      expect(
+          institution.visitorAccess?.bookingUrl, 'https://museum.example/book');
+      expect(Institution.fromJson(institution.toJson()).visitorAccess,
+          institution.visitorAccess);
+      data['visitorAccess'] = {
+        ...data['visitorAccess'] as Map,
+        'status': 'needs_review'
+      };
+      expect(Institution.fromJson(data).visitorAccess, isNull);
+      data['visitorAccess'] = {
+        ...data['visitorAccess'] as Map,
+        'status': 'approved',
+        'sourceUrl': 'https://user:pass@museum.example/'
+      };
+      expect(Institution.fromJson(data).visitorAccess, isNull);
+    });
   });
 }
 

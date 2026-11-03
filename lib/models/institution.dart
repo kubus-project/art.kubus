@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import '../utils/media_url_resolver.dart';
 import 'event.dart' show KubusEvent;
 
@@ -82,6 +84,61 @@ class InstitutionImageAttribution {
   }
 }
 
+/// Public visitor information approved independently from source collection.
+class InstitutionVisitorAccess {
+  const InstitutionVisitorAccess(
+      {required this.sourceUrl,
+      required this.verifiedAt,
+      required this.visitorInfo,
+      this.bookingUrl});
+
+  final String sourceUrl;
+  final DateTime verifiedAt;
+  final Map<String, dynamic> visitorInfo;
+  final String? bookingUrl;
+
+  static InstitutionVisitorAccess? fromJson(Object? value) {
+    if (value is! Map || value['status'] != 'approved') return null;
+    final source =
+        InstitutionImageAttribution._safeAttributionUrl(value['sourceUrl']);
+    final date = value['verifiedAt'] is String
+        ? DateTime.tryParse(value['verifiedAt'] as String)
+        : null;
+    if (source == null || date == null) return null;
+    final rawInfo = value['visitorInfo'];
+    final info = rawInfo is Map
+        ? Map<String, dynamic>.fromEntries(rawInfo.entries
+            .where((e) => e.key is String)
+            .map((e) => MapEntry(e.key as String, e.value)))
+        : <String, dynamic>{};
+    return InstitutionVisitorAccess(
+        sourceUrl: source,
+        verifiedAt: date,
+        visitorInfo: info,
+        bookingUrl: InstitutionImageAttribution._safeAttributionUrl(
+            value['bookingUrl']));
+  }
+
+  Map<String, dynamic> toJson() => {
+        'status': 'approved',
+        'sourceUrl': sourceUrl,
+        'verifiedAt': verifiedAt.toIso8601String(),
+        'visitorInfo': visitorInfo,
+        'bookingUrl': bookingUrl
+      };
+
+  @override
+  bool operator ==(Object other) =>
+      other is InstitutionVisitorAccess &&
+      sourceUrl == other.sourceUrl &&
+      verifiedAt == other.verifiedAt &&
+      bookingUrl == other.bookingUrl &&
+      jsonEncode(visitorInfo) == jsonEncode(other.visitorInfo);
+  @override
+  int get hashCode =>
+      Object.hash(sourceUrl, verifiedAt, bookingUrl, jsonEncode(visitorInfo));
+}
+
 // Institution and Events Models
 class Institution {
   final String id;
@@ -101,6 +158,7 @@ class Institution {
   final String? logoUrl;
   final InstitutionImageAttribution? coverAttribution;
   final InstitutionImageAttribution? logoAttribution;
+  final InstitutionVisitorAccess? visitorAccess;
   final List<InstitutionDiscipline> disciplines;
   final InstitutionStats stats;
   final bool isVerified;
@@ -125,6 +183,7 @@ class Institution {
     this.logoUrl,
     this.coverAttribution,
     this.logoAttribution,
+    this.visitorAccess,
     this.disciplines = const [],
     required this.stats,
     this.isVerified = false,
@@ -155,6 +214,7 @@ class Institution {
       logoUrl: boundary.logoUrl,
       coverAttribution: _attribution(json['coverAttribution']),
       logoAttribution: _attribution(json['logoAttribution']),
+      visitorAccess: InstitutionVisitorAccess.fromJson(json['visitorAccess']),
       disciplines: (json['disciplines'] is List
               ? json['disciplines'] as List
               : const [])
@@ -190,6 +250,7 @@ class Institution {
       if (coverAttribution != null)
         'coverAttribution': coverAttribution!.toJson(),
       if (logoAttribution != null) 'logoAttribution': logoAttribution!.toJson(),
+      if (visitorAccess != null) 'visitorAccess': visitorAccess!.toJson(),
       'disciplines': disciplines.map((d) => d.toJson()).toList(growable: false),
       'stats': stats.toJson(),
       'isVerified': isVerified,
@@ -211,6 +272,7 @@ class Institution {
     String? logoUrl,
     InstitutionImageAttribution? coverAttribution,
     InstitutionImageAttribution? logoAttribution,
+    InstitutionVisitorAccess? visitorAccess,
     List<InstitutionDiscipline>? disciplines,
     InstitutionStats? stats,
     bool? isVerified,
@@ -231,6 +293,7 @@ class Institution {
       logoUrl: logoUrl ?? this.logoUrl,
       coverAttribution: coverAttribution ?? this.coverAttribution,
       logoAttribution: logoAttribution ?? this.logoAttribution,
+      visitorAccess: visitorAccess ?? this.visitorAccess,
       disciplines: disciplines ?? this.disciplines,
       stats: stats ?? this.stats,
       isVerified: isVerified ?? this.isVerified,
