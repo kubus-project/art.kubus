@@ -1,6 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 
+/// The document title of the application's own pages (home, map, settings...), by language. These are the strings the
+/// server-rendered homepages already declare (`/en` and `/sl` shells, `og:title`), so hydration never replaces a
+/// localized title with the generic brand name.
+String localizedDocumentTitle(Locale locale) {
+  return locale.languageCode.toLowerCase() == 'sl'
+      ? 'art.kubus — Odprti zemljevid umetnosti in skupnostna platforma'
+      : 'art.kubus — Open Art Map and Community Platform';
+}
+
 /// Keeps the browser tab title describing the page that is actually visible.
 ///
 /// A canonical entity URL is served with a semantic `<title>` that the app
@@ -16,7 +25,7 @@ import 'package:flutter/scheduler.dart';
 /// 2. the retained server title, only for the page that took over the
 ///    canonical URL at launch (it follows that page through a replacement and
 ///    returns when the page becomes visible again);
-/// 3. the localized application title.
+/// 3. no override (null): the localized application title, see [localizedDocumentTitle].
 class DocumentTitleObserver extends NavigatorObserver {
   DocumentTitleObserver({
     this.retainedTitle,
@@ -26,7 +35,8 @@ class DocumentTitleObserver extends NavigatorObserver {
 
   /// Process-wide instance used by the app; tests build their own.
   static final DocumentTitleObserver shared = DocumentTitleObserver(
-    fallbackTitle: () => 'art.kubus',
+    // No override: the app's own pages use the localized document title resolved where the Title widget is built.
+    fallbackTitle: () => null,
   );
 
   final String? Function() fallbackTitle;
@@ -85,7 +95,8 @@ class DocumentTitleObserver extends NavigatorObserver {
     } else {
       resolved = fallbackTitle();
     }
-    if (resolved != null && resolved != title.value) title.value = resolved;
+    // A page without a title of its own clears the previous page's title (null = the localized application title).
+    if (resolved != title.value) title.value = resolved;
   }
 
   void _schedule() {

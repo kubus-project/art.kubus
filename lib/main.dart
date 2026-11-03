@@ -474,8 +474,7 @@ class _AppLauncherState extends State<AppLauncher> {
               localizationsDelegates: AppLocalizations.localizationsDelegates,
               onGenerateTitle: (context) =>
                   publicEntityDocumentTitle() ??
-                  AppLocalizations.of(context)?.appTitle ??
-                  'art.kubus',
+                  localizedDocumentTitle(Localizations.localeOf(context)),
               theme: themeProvider.lightTheme,
               darkTheme: themeProvider.darkTheme,
               themeMode: themeProvider.themeMode,
@@ -1782,8 +1781,7 @@ class _ArtKubusState extends State<ArtKubus> with WidgetsBindingObserver {
             valueListenable: _documentTitleObserver.title,
             builder: (context, documentTitle, shell) => Title(
               title: documentTitle ??
-                  AppLocalizations.of(context)?.appTitle ??
-                  'art.kubus',
+                  localizedDocumentTitle(Localizations.localeOf(context)),
               color: Theme.of(context).primaryColor,
               child: shell!,
             ),
@@ -1814,8 +1812,7 @@ class _ArtKubusState extends State<ArtKubus> with WidgetsBindingObserver {
             onGenerateTitle: (context) =>
                 _documentTitleObserver.title.value ??
                 publicEntityDocumentTitle() ??
-                AppLocalizations.of(context)?.appTitle ??
-                'art.kubus',
+                localizedDocumentTitle(Localizations.localeOf(context)),
             theme: themeProvider.lightTheme,
             darkTheme: themeProvider.darkTheme,
             themeMode: themeProvider.themeMode,
@@ -1833,8 +1830,7 @@ class _ArtKubusState extends State<ArtKubus> with WidgetsBindingObserver {
             onGenerateTitle: (context) =>
                 _documentTitleObserver.title.value ??
                 publicEntityDocumentTitle() ??
-                AppLocalizations.of(context)?.appTitle ??
-                'art.kubus',
+                localizedDocumentTitle(Localizations.localeOf(context)),
             theme: themeProvider.lightTheme,
             darkTheme: themeProvider.darkTheme,
             themeMode: themeProvider.themeMode,

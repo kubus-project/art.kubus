@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 
 /// Product-family structural palette. Spatial and category colours remain in
 /// their existing map/data token families and are not derived from this set.
@@ -477,9 +476,8 @@ class KubusTypography {
     );
   }
 
-  /// Display face used by map marker overlays/attribution (Outfit).
-  ///
-  /// Central home so widgets never call `GoogleFonts.*` directly.
+  /// Display face used by map marker overlays/attribution. It is the bundled Sofia Sans (the established content face),
+  /// so no font is fetched from a third party at runtime (Outfit used to be downloaded from fonts.gstatic.com).
   static TextStyle outfit({
     double? fontSize,
     FontWeight? fontWeight,
@@ -487,7 +485,8 @@ class KubusTypography {
     double? height,
     double? letterSpacing,
   }) {
-    return GoogleFonts.outfit(
+    return TextStyle(
+      fontFamily: 'Sofia Sans',
       fontSize: fontSize,
       fontWeight: fontWeight,
       color: color,
