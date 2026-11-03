@@ -241,7 +241,9 @@ class _InstitutionDetailScreenState extends State<InstitutionDetailScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                if (resolvedLogo != null && resolvedLogo.isNotEmpty) ...[
+                if (resolvedLogo != null &&
+                    resolvedLogo.isNotEmpty &&
+                    resolvedLogo != resolvedImage) ...[
                   ExcludeSemantics(
                     child: ClipRRect(
                       borderRadius: BorderRadius.circular(KubusRadius.md),

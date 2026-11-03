@@ -158,6 +158,38 @@ void main() {
     expect(find.text('example.com'), findsOneWidget);
   });
 
+  testWidgets('logo-only profile does not repeat the hero image',
+      (tester) async {
+    BackendApiService().setHttpClient(MockClient((request) async {
+      if (request.url.path == '/api/institutions') {
+        return _json({
+          'success': true,
+          'institutions': [
+            {
+              ..._institutionPayload(),
+              'logoUrl': 'https://example.com/logo.jpg'
+            },
+          ],
+        });
+      }
+      if (request.url.path == '/api/events') {
+        return _json({
+          'success': true,
+          'data': {'events': <Object>[]}
+        });
+      }
+      return _json({'success': true, 'data': <String, Object?>{}});
+    }));
+    await _pump(tester,
+        size: const Size(390, 844),
+        child: const InstitutionDetailScreen(institutionId: 'inst-1'));
+    await tester.pump();
+    expect(
+        find.byKey(const ValueKey('institution-cover-image')), findsOneWidget);
+    expect(
+        find.byKey(const ValueKey('institution-profile-image')), findsNothing);
+  });
+
   testWidgets(
       'embedded under a sub-screen with the same title: one title, from the shell',
       (tester) async {
