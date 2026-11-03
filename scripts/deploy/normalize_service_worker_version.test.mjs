@@ -19,13 +19,14 @@ function makeBuild(randomVersion, { extra = {} } = {}) {
   const dir = mkdtempSync(join(tmpdir(), 'kubus-sw-version-'));
   const declaration = `"${randomVersion}" ${NOTICE}`;
   writeFileSync(join(dir, 'flutter_bootstrap.js'), `const flutterServiceWorkerVersion = ${declaration};\nbootstrap();\n`);
-  writeFileSync(join(dir, 'index.html'), [
-    '<html><script>',
+  // The real root document (artifact preparation derives the /en and /sl homepages from it) plus the build's version script.
+  const realIndex = readFileSync(join(scriptDir, '..', '..', 'web', 'index.html'), 'utf8');
+  writeFileSync(join(dir, 'index.html'), realIndex.replace('</head>', [
+    '<script>',
     `// \`${declaration}\` is replaced during \`flutter build web\`.`,
     `var raw = String.raw\`${declaration}\`;`,
-    '</script></html>',
-    '',
-  ].join('\n'));
+    '</script></head>',
+  ].join('\n')));
   writeFileSync(join(dir, 'main.dart.js'), 'compiled();\n');
   writeFileSync(join(dir, '.htaccess'), '<IfModule mod_rewrite.c>\nRewriteEngine On\n</IfModule>\n');
   for (const [name, content] of Object.entries(extra)) {

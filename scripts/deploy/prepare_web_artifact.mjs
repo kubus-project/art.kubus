@@ -48,12 +48,13 @@ if (environment === 'development') {
   throw new Error('production artifact unexpectedly contains the staging noindex block');
 }
 writeFileSync(htaccessPath, htaccess);
+const serviceWorker = normalizeServiceWorkerVersion(artifactDir, sourceSha);
 
-// Crawlable per-locale homepages derived from the built root document (see locale_shells.mjs).
+// Crawlable per-locale homepages, derived AFTER normalization so they carry the normalized service worker version
+// (the normalizer rewrites only flutter_bootstrap.js and index.html and fails closed on any other file holding the random value).
 for (const [name, html] of Object.entries(localeShells(readFileSync(indexPath, 'utf8')))) {
   writeFileSync(join(artifactDir, name), html);
 }
-const serviceWorker = normalizeServiceWorkerVersion(artifactDir, sourceSha);
 writeFileSync(join(artifactDir, 'kubus-web-revision.txt'), `${sourceSha}\n`);
 writeFileSync(join(artifactDir, 'kubus-deployment-metadata.json'), `${JSON.stringify({ environment, sourceSha, artifact: `flutter-web-${environment}-${sourceSha}` }, null, 2)}\n`);
 
