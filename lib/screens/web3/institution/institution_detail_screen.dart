@@ -276,6 +276,10 @@ class _InstitutionDetailScreenState extends State<InstitutionDetailScreen> {
                   runSpacing: KubusSpacing.sm,
                   children: [
                     _DetailChip(label: institution.type),
+                    for (final discipline in institution.disciplines)
+                      _DetailChip(
+                          label: discipline.labelFor(
+                              Localizations.localeOf(context).languageCode)),
                     if (institution.isVerified)
                       const _DetailChip(
                         label: 'Verified',
@@ -475,7 +479,7 @@ class _DetailChip extends StatelessWidget {
             Icon(icon, size: 16, color: scheme.primary),
             const SizedBox(width: KubusSpacing.xs),
           ],
-          Text(label),
+          Flexible(child: Text(label)),
         ],
       ),
     );

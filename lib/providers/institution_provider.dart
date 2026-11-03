@@ -435,6 +435,7 @@ class InstitutionProvider extends ChangeNotifier {
         a.isSelfDerivedFromWallet == b.isSelfDerivedFromWallet &&
         a.coverImageUrl == b.coverImageUrl &&
         a.logoUrl == b.logoUrl &&
+        listEquals(a.disciplines, b.disciplines) &&
         a.stats.totalVisitors == b.stats.totalVisitors &&
         a.stats.activeEvents == b.stats.activeEvents &&
         a.stats.artworkViews == b.stats.artworkViews &&

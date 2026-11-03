@@ -127,6 +127,13 @@ void main() {
               ..._institutionPayload(),
               'coverImageUrl': 'https://example.com/cover.jpg',
               'logoUrl': 'https://example.com/logo.jpg',
+              'disciplines': [
+                {
+                  'code': 'painting',
+                  'labelEn': 'Painting',
+                  'labelSl': 'Slikarstvo'
+                },
+              ],
             },
           ],
         });
@@ -156,6 +163,7 @@ void main() {
     expect(cover.imageUrl, 'https://example.com/cover.jpg');
     expect(profile.imageUrl, 'https://example.com/logo.jpg');
     expect(find.text('example.com'), findsOneWidget);
+    expect(find.text('Painting'), findsOneWidget);
   });
 
   testWidgets('logo-only profile does not repeat the hero image',

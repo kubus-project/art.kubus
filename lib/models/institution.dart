@@ -1,6 +1,27 @@
 import '../utils/media_url_resolver.dart';
 import 'event.dart' show KubusEvent;
 
+class InstitutionDiscipline {
+  const InstitutionDiscipline(
+      {required this.code, required this.labelEn, required this.labelSl});
+  final String code;
+  final String labelEn;
+  final String labelSl;
+
+  String labelFor(String languageCode) =>
+      languageCode == 'sl' && labelSl.isNotEmpty ? labelSl : labelEn;
+  Map<String, dynamic> toJson() =>
+      {'code': code, 'labelEn': labelEn, 'labelSl': labelSl};
+  @override
+  bool operator ==(Object other) =>
+      other is InstitutionDiscipline &&
+      code == other.code &&
+      labelEn == other.labelEn &&
+      labelSl == other.labelSl;
+  @override
+  int get hashCode => Object.hash(code, labelEn, labelSl);
+}
+
 // Institution and Events Models
 class Institution {
   final String id;
@@ -18,6 +39,7 @@ class Institution {
 
   /// Schema-backed logo (`institutions.logo_url`), raw reference.
   final String? logoUrl;
+  final List<InstitutionDiscipline> disciplines;
   final InstitutionStats stats;
   final bool isVerified;
   final DateTime createdAt;
@@ -39,6 +61,7 @@ class Institution {
     required this.website,
     this.coverImageUrl,
     this.logoUrl,
+    this.disciplines = const [],
     required this.stats,
     this.isVerified = false,
     required this.createdAt,
@@ -66,6 +89,19 @@ class Institution {
       website: json['website'],
       coverImageUrl: boundary.coverImageUrl,
       logoUrl: boundary.logoUrl,
+      disciplines: (json['disciplines'] is List
+              ? json['disciplines'] as List
+              : const [])
+          .whereType<Map>()
+          .where((v) =>
+              v['code'] is String &&
+              v['labelEn'] is String &&
+              (v['labelEn'] as String).trim().isNotEmpty)
+          .map((v) => InstitutionDiscipline(
+              code: v['code'] as String,
+              labelEn: v['labelEn'] as String,
+              labelSl: v['labelSl'] is String ? v['labelSl'] as String : ''))
+          .toList(growable: false),
       stats: InstitutionStats.fromJson(json['stats']),
       isVerified: json['isVerified'] ?? false,
       createdAt: DateTime.parse(json['createdAt']),
@@ -85,6 +121,7 @@ class Institution {
       'website': website,
       'coverImageUrl': coverImageUrl,
       'logoUrl': logoUrl,
+      'disciplines': disciplines.map((d) => d.toJson()).toList(growable: false),
       'stats': stats.toJson(),
       'isVerified': isVerified,
       'createdAt': createdAt.toIso8601String(),
@@ -103,6 +140,7 @@ class Institution {
     String? website,
     String? coverImageUrl,
     String? logoUrl,
+    List<InstitutionDiscipline>? disciplines,
     InstitutionStats? stats,
     bool? isVerified,
     DateTime? createdAt,
@@ -120,6 +158,7 @@ class Institution {
       website: website ?? this.website,
       coverImageUrl: coverImageUrl ?? this.coverImageUrl,
       logoUrl: logoUrl ?? this.logoUrl,
+      disciplines: disciplines ?? this.disciplines,
       stats: stats ?? this.stats,
       isVerified: isVerified ?? this.isVerified,
       createdAt: createdAt ?? this.createdAt,
