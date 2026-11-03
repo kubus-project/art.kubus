@@ -122,6 +122,33 @@ void main() {
     expect(provider.status, WalkingNavigationStatus.idle);
   });
 
+  test('routine location updates do not restart a pending route', () async {
+    final request = Completer<WalkingRoute>();
+    final api = _CompleterDirectionsApi(<Completer<WalkingRoute>>[request]);
+    final provider = WalkingNavigationProvider(directionsApi: api);
+    addTearDown(provider.dispose);
+    provider.prepare(intent);
+    final first = provider.updatePosition(origin);
+    await provider.updatePosition(const LatLng(46.05691, 14.50571));
+    expect(api.destinations, <LatLng>[destination]);
+    request.complete(_route(origin, destination));
+    await first;
+    expect(provider.status, WalkingNavigationStatus.active);
+  });
+
+  test('replacing or ending a session cancels pending directions', () {
+    final api = _CancellableDirectionsApi();
+    final provider = WalkingNavigationProvider(directionsApi: api);
+    addTearDown(provider.dispose);
+
+    provider.prepare(intent);
+    expect(api.cancellations, 1);
+    provider.prepare(intent);
+    expect(api.cancellations, 2);
+    provider.stop();
+    expect(api.cancellations, 3);
+  });
+
   test('a new intent starts a fresh request while the old one is in flight',
       () async {
     const secondDestination = LatLng(46.0600, 14.5100);
@@ -192,6 +219,18 @@ void main() {
     expect(provider.route, isNull);
     expect(provider.currentPosition, isNull);
     expect(provider.failureKind, isNull);
+  });
+
+  test('dispose invalidates a pending request before it completes', () async {
+    final request = Completer<WalkingRoute>();
+    final api = _CompleterDirectionsApi(<Completer<WalkingRoute>>[request]);
+    final provider = WalkingNavigationProvider(directionsApi: api);
+    provider.prepare(intent);
+    final update = provider.updatePosition(origin);
+    provider.dispose();
+    request.complete(_route(origin, destination));
+    await update;
+    expect(provider.route, isNull);
   });
 
   test('reroute resets progress before applying the replacement geometry',
@@ -523,4 +562,17 @@ class _SequenceDirectionsApi implements WalkingDirectionsApi {
 
   @override
   void dispose() {}
+}
+
+class _CancellableDirectionsApi
+    implements WalkingDirectionsApi, CancellableWalkingDirections {
+  int cancellations = 0;
+  @override
+  void cancelPending() => cancellations++;
+  @override
+  void dispose() {}
+  @override
+  Future<WalkingRoute> route(
+          {required LatLng origin, required LatLng destination}) =>
+      throw UnimplementedError();
 }

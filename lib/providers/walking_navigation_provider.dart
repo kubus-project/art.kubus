@@ -76,6 +76,10 @@ class WalkingNavigationProvider extends ChangeNotifier {
 
   void prepare(WalkingNavigationIntent intent) {
     _requestGeneration += 1;
+    final directions = _directionsApi;
+    if (directions is CancellableWalkingDirections) {
+      (directions as CancellableWalkingDirections).cancelPending();
+    }
     _routeRequest = null;
     _routeRequestGeneration = null;
     _intent = intent;
@@ -262,6 +266,10 @@ class WalkingNavigationProvider extends ChangeNotifier {
 
   void stop() {
     _requestGeneration += 1;
+    final directions = _directionsApi;
+    if (directions is CancellableWalkingDirections) {
+      (directions as CancellableWalkingDirections).cancelPending();
+    }
     _routeRequest = null;
     _routeRequestGeneration = null;
     _status = WalkingNavigationStatus.idle;
@@ -515,6 +523,9 @@ class WalkingNavigationProvider extends ChangeNotifier {
 
   @override
   void dispose() {
+    _requestGeneration += 1;
+    _routeRequest = null;
+    _routeRequestGeneration = null;
     _directionsApi.dispose();
     super.dispose();
   }
