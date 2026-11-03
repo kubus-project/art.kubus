@@ -94,6 +94,9 @@ class WalkingDirectionsService
                 : null),
         _endpoints = _validatedEndpoints(
           endpoints ?? _configuredEndpoints(AppConfig.walkingGraphEndpoints),
+          // Without explicit external endpoints the first-party endpoint is the only source (it exists whenever the
+          // endpoints were not injected).
+          allowEmpty: endpoints == null,
         ),
         _timeout = timeout,
         _minimumRequestInterval = minimumRequestInterval,
@@ -875,13 +878,16 @@ class WalkingDirectionsService
       .map((value) => value.trim())
       .where((value) => value.isNotEmpty);
 
-  static List<Uri> _validatedEndpoints(Iterable<String> rawEndpoints) {
+  static List<Uri> _validatedEndpoints(
+    Iterable<String> rawEndpoints, {
+    bool allowEmpty = false,
+  }) {
     final endpoints = <Uri>[];
     for (final raw in rawEndpoints) {
       final endpoint = _validatedEndpoint(raw);
       if (!endpoints.contains(endpoint)) endpoints.add(endpoint);
     }
-    if (endpoints.isEmpty) {
+    if (endpoints.isEmpty && !allowEmpty) {
       throw ArgumentError.value(
         rawEndpoints,
         'endpoints',

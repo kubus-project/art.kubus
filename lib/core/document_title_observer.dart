@@ -10,6 +10,15 @@ String localizedDocumentTitle(Locale locale) {
       : 'art.kubus — Open Art Map and Community Platform';
 }
 
+/// The title of an artwork page, identical to the one the server renders (`<title>`, `og:title`): `Title by Artist | art.kubus`,
+/// or `Title | art.kubus` when no artist is known. Nothing is invented for a missing artist.
+String artworkDocumentTitle(String title, String? artist) {
+  final name = title.trim();
+  final by = artist?.trim() ?? '';
+  final unknown = by.isEmpty || by.toLowerCase() == 'unknown' || by.toLowerCase() == 'unknown artist';
+  return unknown ? '$name | art.kubus' : '$name by $by | art.kubus';
+}
+
 /// Keeps the browser tab title describing the page that is actually visible.
 ///
 /// A canonical entity URL is served with a semantic `<title>` that the app

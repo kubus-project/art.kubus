@@ -320,12 +320,37 @@ void main() {
       service.dispose();
     });
 
-    test('default endpoint list tries first-party before public OSM instances',
-        () async {
+    for (final status in <int>[404, 429, 500, 503]) {
+      test(
+          'by default only the first-party endpoint is used: HTTP $status never reaches a third-party Overpass server',
+          () async {
+        final requested = <Uri>[];
+        final client = MockClient((request) async {
+          requested.add(request.url);
+          return http.Response('unavailable', status);
+        });
+        final service = WalkingDirectionsService(
+          client: client,
+          minimumRequestInterval: Duration.zero,
+          maximumSnapDistanceMeters: 300,
+        );
+
+        await expectLater(
+          service.route(origin: _origin, destination: _destination),
+          throwsA(isA<WalkingDirectionsException>()),
+        );
+
+        expect(requested, <Uri>[
+          Uri.parse('https://api.kubus.site/api/walking-graph'),
+        ]);
+        service.dispose();
+      });
+    }
+
+    test('the first-party endpoint serves the route by default', () async {
       final requested = <Uri>[];
       final client = MockClient((request) async {
         requested.add(request.url);
-        if (requested.length <= 2) return http.Response('busy', 429);
         return _overpassResponse(<Map<String, Object>>[
           _elementNode(1, _origin),
           _elementNode(2, _east),
@@ -341,11 +366,7 @@ void main() {
 
       await service.route(origin: _origin, destination: _destination);
 
-      expect(requested, <Uri>[
-        Uri.parse('https://api.kubus.site/api/walking-graph'),
-        Uri.parse('https://overpass-api.de/api/interpreter'),
-        Uri.parse('https://overpass.private.coffee/api/interpreter'),
-      ]);
+      expect(requested.map((u) => u.host).toSet(), <String>{'api.kubus.site'});
       service.dispose();
     });
 

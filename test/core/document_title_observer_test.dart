@@ -134,4 +134,13 @@ void main() {
     await tester.pumpAndSettle();
     expect(observer.title.value, 'First artwork | art.kubus');
   });
+
+  test('an artwork title matches the server-rendered one', () {
+    expect(artworkDocumentTitle('River Memory', 'Maja Novak'),
+        'River Memory by Maja Novak | art.kubus');
+    expect(artworkDocumentTitle(' River Memory ', ''),
+        'River Memory | art.kubus');
+    expect(artworkDocumentTitle('River Memory', 'Unknown artist'),
+        'River Memory | art.kubus');
+  });
 }

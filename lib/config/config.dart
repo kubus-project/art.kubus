@@ -161,13 +161,13 @@ class AppConfig {
     defaultValue: true,
   );
 
-  /// Ordered raw OpenStreetMap graph endpoints used by the client-side route
-  /// engine. Entries are comma-separated so an owned Overpass deployment can
-  /// take priority while retaining an explicit fallback.
+  /// Optional EXTERNAL OpenStreetMap graph endpoints, comma-separated, tried only after the first-party
+  /// `/api/walking-graph` endpoint. **Empty by default**: the app never sends a user's route area to a third-party Overpass
+  /// server on its own. The backend is the single place that decides whether an external provider may be used
+  /// (`WALKING_GRAPH_ALLOW_PUBLIC_FALLBACK`); setting this at build time is an explicit operator decision.
   static const String walkingGraphEndpoints = String.fromEnvironment(
     'OVERPASS_WALKING_ENDPOINTS',
-    defaultValue: 'https://overpass-api.de/api/interpreter,'
-        'https://overpass.private.coffee/api/interpreter',
+    defaultValue: '',
   );
 
   /// Map: allow public/street art marker type submissions.

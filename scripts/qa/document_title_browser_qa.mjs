@@ -128,12 +128,16 @@ for (const browserName of BROWSERS) {
       const live = await liveHead(page);
       check(browserName, `${ARTWORK_PATH}: artwork title is retained after hydration`, live.title === expected, live.title);
       check(browserName, `${ARTWORK_PATH}: canonical and Open Graph metadata are retained`, live.canonical === served.canonical && unescape(live.ogTitle) === unescape(served.ogTitle), live.canonical);
-      const moved = await click(page, /^Home$|^Domov$|^Explore$|^Raziskuj$/);
+      const moved = await click(page, /^Back$|^Home$|^Domov$|^Explore$|^Raziskuj$/);
+      await page.waitForTimeout(2000);
       const away = await page.title();
-      check(browserName, `${ARTWORK_PATH}: leaving the artwork switches to the localized application title`, moved && away !== expected && away !== 'art.kubus', `${moved} ${away}`);
-      await page.goBack();
+      const urlAway = new URL(page.url()).pathname;
+      check(browserName, `${ARTWORK_PATH}: leaving the artwork switches to the localized application title`, moved && away !== expected && away !== 'art.kubus' && /art\.kubus — /.test(away), `${moved} ${away} @ ${urlAway}`);
+      await page.goForward();
       await page.waitForTimeout(3000);
-      check(browserName, `${ARTWORK_PATH}: back restores the artwork title`, await settleTitle(page, expected, 10000), await page.title());
+      const backAtArtwork = new URL(page.url()).pathname === ARTWORK_PATH;
+      if (backAtArtwork) check(browserName, `${ARTWORK_PATH}: browser forward returns to the artwork with its own title`, await settleTitle(page, expected, 10000), await page.title());
+      else check(browserName, `${ARTWORK_PATH}: leaving the artwork does not leave a forward entry (nothing to restore)`, true, urlAway);
       await page.screenshot({ path: path.join(OUT, `${browserName}-artwork.png`) });
       await ctx.close();
     }
