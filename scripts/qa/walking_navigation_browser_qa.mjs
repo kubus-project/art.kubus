@@ -39,7 +39,7 @@ const fixtureServer = http.createServer(async (req, res) => {
 const external = process.env.WALKING_QA_EXTERNAL_GRAPH === '1';
 if (!external) await new Promise((resolve, reject) => fixtureServer.listen(49487, '127.0.0.1', resolve).on('error', reject));
 const report = [];
-for (const [name, browserType] of Object.entries({chromium, firefox})) {
+for (const [name, browserType] of Object.entries({chromium, firefox}).filter(([n])=>!process.env.WALKING_QA_BROWSER||n===process.env.WALKING_QA_BROWSER)) {
   const result = {browser:name, fixture:!external, graphRequests:[], diagnostics:[], pageErrors:[], status:'FAIL'};
   activeResult = result;
   let browser;
