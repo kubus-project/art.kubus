@@ -207,10 +207,12 @@ class DeterministicWalkingDirectionsApi implements WalkingDirectionsApi {
 
 /// Supplies a fixed live fix so the harness never prompts for permissions.
 class DeterministicWalkingLocationService implements WalkingLocationApi {
-  DeterministicWalkingLocationService({this.streamInterval});
+  DeterministicWalkingLocationService(
+      {this.streamInterval, this.simulateWalk = false});
 
   /// When set, emits repeated fixes so follow-mode behaviour can be observed.
   final Duration? streamInterval;
+  final bool simulateWalk;
 
   @override
   Future<WalkingLocationAccessResult> acquireLiveFix({
@@ -225,7 +227,16 @@ class DeterministicWalkingLocationService implements WalkingLocationApi {
   Stream<WalkingLocationFix> liveFixes() {
     final interval = streamInterval;
     if (interval == null) return const Stream<WalkingLocationFix>.empty();
-    return Stream<WalkingLocationFix>.periodic(interval, (_) => _fix());
+    return Stream<WalkingLocationFix>.periodic(interval, (tick) {
+      if (!simulateWalk || tick < 3) return _fix();
+      // Follow the frozen pedestrian route, then move away for enough samples
+      // after the production reroute cooldown to exercise real rerouting.
+      final point = tick < 23
+          ? WalkingNavigationDebugHarness.routePoints[10]
+          : const LatLng(46.0530, 14.5080);
+      return WalkingLocationFix(
+          position: point, accuracyMeters: 5, timestamp: DateTime.now());
+    });
   }
 
   @override

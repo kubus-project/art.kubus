@@ -1425,6 +1425,7 @@ class _ArtKubusState extends State<ArtKubus> with WidgetsBindingObserver {
       return MaterialPageRoute(
         builder: (_) => WalkingRouteRenderHarnessScreen(
           useLiveRoutingSource: uri.queryParameters['live'] == '1',
+          simulateWalk: uri.queryParameters['simulateWalk'] == '1',
         ),
         settings: RouteSettings(name: WalkingNavigationDebugHarness.routeName),
       );

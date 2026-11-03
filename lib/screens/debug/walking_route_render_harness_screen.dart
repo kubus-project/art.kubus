@@ -16,12 +16,17 @@ import '../map_screen.dart';
 /// visibility, and the route-overview camera fit — is untouched production
 /// code, so a missing line here is a genuine rendering failure.
 class WalkingRouteRenderHarnessScreen extends StatefulWidget {
-  const WalkingRouteRenderHarnessScreen({super.key, this.useLiveRoutingSource});
+  const WalkingRouteRenderHarnessScreen({
+    super.key,
+    this.useLiveRoutingSource,
+    this.simulateWalk = false,
+  });
 
   /// When true the real [WalkingDirectionsService] is used with the harness's
   /// fixed coordinates, so the routing source can be validated separately from
   /// rendering without depending on GPS.
   final bool? useLiveRoutingSource;
+  final bool simulateWalk;
 
   @override
   State<WalkingRouteRenderHarnessScreen> createState() =>
@@ -71,7 +76,10 @@ class _WalkingRouteRenderHarnessScreenState
       initialZoom: 16,
       autoFollow: false,
       walkingNavigationIntent: WalkingNavigationDebugHarness.intent,
-      walkingLocationApi: DeterministicWalkingLocationService(),
+      walkingLocationApi: DeterministicWalkingLocationService(
+        streamInterval: widget.simulateWalk ? const Duration(seconds: 1) : null,
+        simulateWalk: widget.simulateWalk,
+      ),
     );
   }
 }
