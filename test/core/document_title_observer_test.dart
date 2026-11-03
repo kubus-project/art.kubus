@@ -143,4 +143,15 @@ void main() {
     expect(artworkDocumentTitle('River Memory', 'Unknown artist'),
         'River Memory | art.kubus');
   });
+
+  testWidgets(
+      'replacing the entity page with another named URL ends the retained title',
+      (tester) async {
+    final navigator = GlobalKey<NavigatorState>();
+    final observer = await boot(tester, navigator);
+    expect(observer.title.value, 'First artwork | art.kubus');
+    navigator.currentState!.pushReplacementNamed('/main');
+    await tester.pumpAndSettle();
+    expect(observer.title.value, 'art.kubus'); // the test observer's fallback; the app's fallback is null
+  });
 }

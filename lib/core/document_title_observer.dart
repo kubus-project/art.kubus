@@ -83,6 +83,17 @@ class DocumentTitleObserver extends NavigatorObserver {
     return null;
   }
 
+  /// The retained server title describes the canonical URL it was rendered for. The page may follow that URL through a
+  /// replacement (the app shell replacing the server document), but once the visible page is a different NAMED URL the
+  /// retained title no longer applies.
+  bool _retainedUrlStillCurrent() {
+    final path = retainedPath;
+    if (path == null || _stack.isEmpty) return true;
+    // Only the visible page's own name counts: routes below it (the default initial-route chain) say nothing about it.
+    final name = _stack.last.settings.name?.trim();
+    return name == null || name.isEmpty || name == path;
+  }
+
   @visibleForTesting
   void reconcile() {
     if (_stack.isEmpty) return;
@@ -99,7 +110,9 @@ class DocumentTitleObserver extends NavigatorObserver {
     final registered = _entityTitles[top];
     if (registered != null) {
       resolved = registered;
-    } else if (identical(top, _retainedRoute) && retainedTitle != null) {
+    } else if (identical(top, _retainedRoute) &&
+        retainedTitle != null &&
+        _retainedUrlStillCurrent()) {
       resolved = retainedTitle;
     } else {
       resolved = fallbackTitle();
