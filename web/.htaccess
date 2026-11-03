@@ -71,6 +71,13 @@
   # homepages and the root issued a 308 to /en. The Flutter locale resolver
   # (LocaleProvider.localeCodeFromUri) reads the /en|/sl path prefix and selects
   # the language before the first meaningful frame.
+  # Release artifacts also carry index.en.html / index.sl.html (derived from the built root document by
+  # scripts/deploy/locale_shells.mjs): each bare locale root declares itself canonical with reciprocal hreflang.
+  # The file test keeps the source tree, which has no derived shells, on the shared document.
+  RewriteCond %{DOCUMENT_ROOT}/index.en.html -f
+  RewriteRule ^en/?$ index.en.html [L]
+  RewriteCond %{DOCUMENT_ROOT}/index.sl.html -f
+  RewriteRule ^sl/?$ index.sl.html [L]
   RewriteRule ^(?:en|sl)/?$ index.html [L]
 
   # Deeper localized public-record routes (e.g. /en/artworks/:id,

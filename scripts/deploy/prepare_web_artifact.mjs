@@ -3,6 +3,7 @@ import { readFileSync, readdirSync, statSync, writeFileSync } from 'node:fs';
 import { basename, join, resolve } from 'node:path';
 
 import { normalizeServiceWorkerVersion } from './normalize_service_worker_version.mjs';
+import { localeShells } from './locale_shells.mjs';
 
 function arg(name) {
   const index = process.argv.indexOf(name);
@@ -47,6 +48,11 @@ if (environment === 'development') {
   throw new Error('production artifact unexpectedly contains the staging noindex block');
 }
 writeFileSync(htaccessPath, htaccess);
+
+// Crawlable per-locale homepages derived from the built root document (see locale_shells.mjs).
+for (const [name, html] of Object.entries(localeShells(readFileSync(indexPath, 'utf8')))) {
+  writeFileSync(join(artifactDir, name), html);
+}
 const serviceWorker = normalizeServiceWorkerVersion(artifactDir, sourceSha);
 writeFileSync(join(artifactDir, 'kubus-web-revision.txt'), `${sourceSha}\n`);
 writeFileSync(join(artifactDir, 'kubus-deployment-metadata.json'), `${JSON.stringify({ environment, sourceSha, artifact: `flutter-web-${environment}-${sourceSha}` }, null, 2)}\n`);
