@@ -22,7 +22,7 @@ const _testToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.'
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
-  testWidgets('capture synthetic institution profile on phone and desktop',
+  testWidgets('capture synthetic institution profile across breakpoints',
       (tester) async {
     final output = Platform.environment['KUBUS_INSTITUTION_VISUAL_QA'];
     if (output == null || output.isEmpty) {
@@ -46,6 +46,16 @@ void main() {
       'website': 'https://example.test',
       'coverImageUrl': 'https://profile-fixture.invalid/wide.png',
       'logoUrl': 'https://profile-fixture.invalid/tall.png',
+      'coverAttribution': {
+        'credit': 'Synthetic cover photographer',
+        'sourceUrl': 'https://example.test/cover',
+        'licenseUrl': 'https://example.test/cover-license',
+      },
+      'logoAttribution': {
+        'credit': 'Synthetic institution archive',
+        'sourceUrl': 'https://example.test/logo',
+        'licenseUrl': 'https://example.test/logo-license',
+      },
       'disciplines': [
         {'code': 'painting', 'labelEn': 'Painting', 'labelSl': 'Slikarstvo'},
         {
@@ -85,6 +95,7 @@ void main() {
     try {
       for (final scene in [
         (name: 'phone', size: const Size(390, 844)),
+        (name: 'tablet', size: const Size(800, 1100)),
         (name: 'desktop', size: const Size(1440, 900))
       ]) {
         await tester.pumpWidget(const SizedBox.shrink());
@@ -101,6 +112,12 @@ void main() {
         await tester.pump();
         expect(errors, isEmpty);
         expect(find.text('Painting'), findsOneWidget);
+        expect(find.textContaining('Synthetic cover photographer'),
+            findsOneWidget);
+        expect(find.textContaining('Synthetic institution archive'),
+            findsOneWidget);
+        expect(find.byKey(const ValueKey('institution-open-on-map')),
+            findsOneWidget);
         final bytes = await tester.runAsync(() async {
           final root = tester.binding.rootElement!.renderObject!;
           final layer = root.debugLayer! as OffsetLayer;

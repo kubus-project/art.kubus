@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:art_kubus/screens/desktop/desktop_shell_scope.dart';
+import 'package:art_kubus/screens/desktop/desktop_map_screen.dart';
 import 'package:art_kubus/screens/web3/institution/institution_detail_screen.dart';
 import 'package:art_kubus/services/backend_api_service.dart';
 import 'package:art_kubus/services/http_client_factory.dart';
@@ -196,6 +197,40 @@ void main() {
         find.byKey(const ValueKey('institution-cover-image')), findsOneWidget);
     expect(
         find.byKey(const ValueKey('institution-profile-image')), findsNothing);
+  });
+
+  testWidgets('open on map passes the institution identity and coordinates',
+      (tester) async {
+    Widget? destination;
+    String? route;
+    await _pump(
+      tester,
+      size: const Size(1440, 900),
+      child: DesktopShellScope(
+        pushScreen: (screen) => destination = screen,
+        popScreen: () {},
+        navigateToRoute: (value) => route = value,
+        openNotifications: () {},
+        openFunctionsPanel: (_, {Widget? content}) {},
+        setFunctionsPanelContent: (_) {},
+        closeFunctionsPanel: () {},
+        canPop: true,
+        child: const InstitutionDetailScreen(institutionId: 'inst-1'),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester
+        .ensureVisible(find.byKey(const ValueKey('institution-open-on-map')));
+    await tester.tap(find.byKey(const ValueKey('institution-open-on-map')));
+    expect(route, '/explore');
+    expect(destination, isA<DesktopSubScreen>());
+    final subScreen = destination! as DesktopSubScreen;
+    expect(subScreen.child, isA<DesktopMapScreen>());
+    final map = subScreen.child as DesktopMapScreen;
+    expect(map.initialSubjectId, 'inst-1');
+    expect(map.initialSubjectType, 'institution');
+    expect(map.initialCenter?.latitude, 46.0511);
+    expect(map.initialCenter?.longitude, 14.5051);
   });
 
   testWidgets(

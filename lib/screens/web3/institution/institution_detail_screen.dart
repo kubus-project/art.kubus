@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
+import 'package:latlong2/latlong.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -12,6 +13,8 @@ import '../../../services/telemetry/telemetry_service.dart';
 import '../../../utils/design_tokens.dart';
 import '../../../screens/desktop/desktop_shell_scope.dart';
 import '../../../utils/media_url_resolver.dart';
+import '../../../utils/map_coordinate_rules.dart';
+import '../../../utils/map_navigation.dart';
 import '../../../widgets/common/kubus_cached_image.dart';
 import '../../../widgets/empty_state_card.dart';
 import '../../../widgets/glass_components.dart';
@@ -144,6 +147,65 @@ class _InstitutionDetailScreenState extends State<InstitutionDetailScreen> {
     );
   }
 
+  void _openInstitutionOnMap(Institution institution) {
+    final position = LatLng(institution.latitude, institution.longitude);
+    if (!isValidMapCoordinate(position)) return;
+    MapNavigation.open(
+      context,
+      center: position,
+      zoom: 16,
+      initialSubjectId: institution.id,
+      initialSubjectType: 'institution',
+      initialTargetLabel: institution.name,
+    );
+  }
+
+  Widget _buildImageAttribution(
+    BuildContext context,
+    InstitutionImageAttribution? attribution,
+  ) {
+    if (attribution == null || attribution.isEmpty) {
+      return const SizedBox.shrink();
+    }
+    final l10n = AppLocalizations.of(context)!;
+    final scheme = Theme.of(context).colorScheme;
+    return Padding(
+      padding: const EdgeInsets.only(top: KubusSpacing.xs),
+      child: Wrap(
+        spacing: KubusSpacing.sm,
+        runSpacing: KubusSpacing.xxs,
+        crossAxisAlignment: WrapCrossAlignment.center,
+        children: [
+          if (attribution.credit != null)
+            Text(
+              '${l10n.artworkProvenanceCredit}: ${attribution.credit}',
+              style: KubusTypography.textTheme.bodySmall?.copyWith(
+                color: scheme.onSurfaceVariant,
+              ),
+            ),
+          if (attribution.sourceUrl != null)
+            TextButton(
+              key: const ValueKey('institution-image-source-link'),
+              onPressed: () => unawaited(launchUrl(
+                Uri.parse(attribution.sourceUrl!),
+                mode: LaunchMode.externalApplication,
+              )),
+              child: Text(l10n.artworkProvenanceSource),
+            ),
+          if (attribution.licenseUrl != null)
+            TextButton(
+              key: const ValueKey('institution-image-license-link'),
+              onPressed: () => unawaited(launchUrl(
+                Uri.parse(attribution.licenseUrl!),
+                mode: LaunchMode.externalApplication,
+              )),
+              child: Text(l10n.artworkProvenanceLicense),
+            ),
+        ],
+      ),
+    );
+  }
+
   /// Whether the header card repeats the institution name. A standalone screen
   /// shows the name in its AppBar, so the card does not. Embedded in a desktop
   /// sub-screen, the card repeats it only when the sub-screen header carries a
@@ -161,10 +223,18 @@ class _InstitutionDetailScreenState extends State<InstitutionDetailScreen> {
     required bool showName,
   }) {
     final scheme = Theme.of(context).colorScheme;
+    final l10n = AppLocalizations.of(context)!;
     final resolvedImage =
         MediaUrlResolver.resolveDisplayUrl(institution.heroImageRef);
+    final resolvedCover =
+        MediaUrlResolver.resolveDisplayUrl(institution.coverImageUrl);
     final resolvedLogo =
         MediaUrlResolver.resolveDisplayUrl(institution.logoUrl);
+    final heroAttribution = resolvedImage != null &&
+            resolvedImage.isNotEmpty &&
+            resolvedImage == resolvedCover
+        ? institution.coverAttribution
+        : institution.logoAttribution;
     final website = Uri.tryParse(institution.website.trim());
     final showWebsite = website != null &&
         (website.scheme == 'http' || website.scheme == 'https') &&
@@ -237,6 +307,10 @@ class _InstitutionDetailScreenState extends State<InstitutionDetailScreen> {
             ),
           ),
           Padding(
+            padding: const EdgeInsets.symmetric(horizontal: KubusSpacing.lg),
+            child: _buildImageAttribution(context, heroAttribution),
+          ),
+          Padding(
             padding: const EdgeInsets.all(KubusSpacing.lg),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -258,6 +332,7 @@ class _InstitutionDetailScreenState extends State<InstitutionDetailScreen> {
                       ),
                     ),
                   ),
+                  _buildImageAttribution(context, institution.logoAttribution),
                   const SizedBox(height: KubusSpacing.md),
                 ],
                 // One title per screen: the AppBar (standalone) or the desktop
@@ -309,6 +384,19 @@ class _InstitutionDetailScreenState extends State<InstitutionDetailScreen> {
                     ),
                     icon: const Icon(Icons.open_in_new),
                     label: Text(website.host),
+                  ),
+                ],
+                if (isValidMapCoordinate(
+                  LatLng(institution.latitude, institution.longitude),
+                )) ...[
+                  Align(
+                    alignment: AlignmentDirectional.centerStart,
+                    child: TextButton.icon(
+                      key: const ValueKey('institution-open-on-map'),
+                      onPressed: () => _openInstitutionOnMap(institution),
+                      icon: const Icon(Icons.map_outlined),
+                      label: Text(l10n.commonOpenOnMap),
+                    ),
                   ),
                 ],
                 const SizedBox(height: KubusSpacing.lg),

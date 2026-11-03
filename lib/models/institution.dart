@@ -22,6 +22,66 @@ class InstitutionDiscipline {
   int get hashCode => Object.hash(code, labelEn, labelSl);
 }
 
+/// Public credit and links supplied for one institution image.
+/// Invalid or absent URLs are discarded at the JSON boundary.
+class InstitutionImageAttribution {
+  const InstitutionImageAttribution({
+    this.credit,
+    this.sourceUrl,
+    this.licenseUrl,
+  });
+
+  final String? credit;
+  final String? sourceUrl;
+  final String? licenseUrl;
+
+  bool get isEmpty => credit == null && sourceUrl == null && licenseUrl == null;
+
+  @override
+  bool operator ==(Object other) =>
+      other is InstitutionImageAttribution &&
+      other.credit == credit &&
+      other.sourceUrl == sourceUrl &&
+      other.licenseUrl == licenseUrl;
+
+  @override
+  int get hashCode => Object.hash(credit, sourceUrl, licenseUrl);
+
+  factory InstitutionImageAttribution.fromJson(Object? value) {
+    if (value is! Map) return const InstitutionImageAttribution();
+    return InstitutionImageAttribution(
+      credit: _cleanText(value['credit']),
+      sourceUrl: _safeAttributionUrl(value['sourceUrl']),
+      licenseUrl: _safeAttributionUrl(value['licenseUrl']),
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+        'credit': credit,
+        'sourceUrl': sourceUrl,
+        'licenseUrl': licenseUrl,
+      };
+
+  static String? _cleanText(Object? value) {
+    if (value is! String) return null;
+    final text = value.trim();
+    return text.isEmpty ? null : text;
+  }
+
+  static String? _safeAttributionUrl(Object? value) {
+    final text = _cleanText(value);
+    if (text == null) return null;
+    final uri = Uri.tryParse(text);
+    if (uri == null ||
+        (uri.scheme != 'http' && uri.scheme != 'https') ||
+        uri.host.isEmpty ||
+        uri.userInfo.isNotEmpty) {
+      return null;
+    }
+    return uri.toString();
+  }
+}
+
 // Institution and Events Models
 class Institution {
   final String id;
@@ -39,6 +99,8 @@ class Institution {
 
   /// Schema-backed logo (`institutions.logo_url`), raw reference.
   final String? logoUrl;
+  final InstitutionImageAttribution? coverAttribution;
+  final InstitutionImageAttribution? logoAttribution;
   final List<InstitutionDiscipline> disciplines;
   final InstitutionStats stats;
   final bool isVerified;
@@ -61,6 +123,8 @@ class Institution {
     required this.website,
     this.coverImageUrl,
     this.logoUrl,
+    this.coverAttribution,
+    this.logoAttribution,
     this.disciplines = const [],
     required this.stats,
     this.isVerified = false,
@@ -89,6 +153,8 @@ class Institution {
       website: json['website'],
       coverImageUrl: boundary.coverImageUrl,
       logoUrl: boundary.logoUrl,
+      coverAttribution: _attribution(json['coverAttribution']),
+      logoAttribution: _attribution(json['logoAttribution']),
       disciplines: (json['disciplines'] is List
               ? json['disciplines'] as List
               : const [])
@@ -121,6 +187,9 @@ class Institution {
       'website': website,
       'coverImageUrl': coverImageUrl,
       'logoUrl': logoUrl,
+      if (coverAttribution != null)
+        'coverAttribution': coverAttribution!.toJson(),
+      if (logoAttribution != null) 'logoAttribution': logoAttribution!.toJson(),
       'disciplines': disciplines.map((d) => d.toJson()).toList(growable: false),
       'stats': stats.toJson(),
       'isVerified': isVerified,
@@ -140,6 +209,8 @@ class Institution {
     String? website,
     String? coverImageUrl,
     String? logoUrl,
+    InstitutionImageAttribution? coverAttribution,
+    InstitutionImageAttribution? logoAttribution,
     List<InstitutionDiscipline>? disciplines,
     InstitutionStats? stats,
     bool? isVerified,
@@ -158,6 +229,8 @@ class Institution {
       website: website ?? this.website,
       coverImageUrl: coverImageUrl ?? this.coverImageUrl,
       logoUrl: logoUrl ?? this.logoUrl,
+      coverAttribution: coverAttribution ?? this.coverAttribution,
+      logoAttribution: logoAttribution ?? this.logoAttribution,
       disciplines: disciplines ?? this.disciplines,
       stats: stats ?? this.stats,
       isVerified: isVerified ?? this.isVerified,
@@ -165,6 +238,12 @@ class Institution {
       isSelfDerivedFromWallet:
           isSelfDerivedFromWallet ?? this.isSelfDerivedFromWallet,
     );
+  }
+
+  static InstitutionImageAttribution? _attribution(Object? value) {
+    if (value == null) return null;
+    final attribution = InstitutionImageAttribution.fromJson(value);
+    return attribution.isEmpty ? null : attribution;
   }
 }
 
