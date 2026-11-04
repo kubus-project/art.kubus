@@ -923,6 +923,11 @@ class UserService {
   static Map<String, dynamic> _cacheUserToJson(User u, int cachedAt) {
     return {
       'id': u.id,
+      // Account identity survives a restart, so a walletless account restored
+      // from the cache still follows/messages by its real identity.
+      if (u.userId != null) 'userId': u.userId,
+      if (u.walletAddress != null) 'walletAddress': u.walletAddress,
+      'allowsMessages': u.allowsMessages,
       'name': u.name,
       'username': u.username,
       'bio': u.bio,
@@ -1052,6 +1057,14 @@ class UserService {
           final cachedRoles = ProfileIdentityRoles.fromProfileMap(v);
           final user = User(
             id: v['id']?.toString() ?? k,
+            userId: _verifiedAccountId(v['userId']),
+            walletAddress:
+                WalletUtils.looksLikeWallet(v['walletAddress']?.toString())
+                    ? v['walletAddress'].toString()
+                    : null,
+            allowsMessages: v['allowsMessages'] is bool
+                ? v['allowsMessages'] as bool
+                : true,
             name: v['name']?.toString() ?? 'Unknown artist',
             username: (v['username']?.toString() ?? '')
                 .replaceFirst(RegExp(r'^@+'), ''),
