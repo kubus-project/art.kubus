@@ -32726,6 +32726,9 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'We could not load this institution right now.'**
   String get institutionDetailLoadErrorDescription;
+
+  /// Label for opening the account explicitly linked to a venue.
+  String get institutionDetailAccountProfileAction;
 }
 
 class _AppLocalizationsDelegate

@@ -7966,5 +7966,6 @@
   "institutionDetailNotFoundTitle": "Ustanove ni mogoče najti",
   "institutionDetailNotFoundDescription": "Te ustanove ni bilo mogoče najti.",
   "institutionDetailLoadErrorTitle": "Ustanove ni mogoče naložiti",
-  "institutionDetailLoadErrorDescription": "Ustanove trenutno ni mogoče naložiti."
+  "institutionDetailLoadErrorDescription": "Ustanove trenutno ni mogoče naložiti.",
+  "institutionDetailAccountProfileAction": "Odpri profil računa"
 }
