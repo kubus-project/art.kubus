@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import '../utils/media_url_resolver.dart';
+import '../utils/wallet_utils.dart';
 import 'event.dart' show KubusEvent;
 
 class InstitutionDiscipline {
@@ -372,6 +373,11 @@ class VerifiedInstitutionAccountProfile {
   final String? userId;
   final String? username;
   final String? displayName;
+
+  /// The linked public profile's own wallet, never a member's. Null when the
+  /// account has no wallet: a conversation is wallet-addressed, so Message is
+  /// only offered for a wallet present here.
+  final String? walletAddress;
   final bool allowMessages;
 
   const VerifiedInstitutionAccountProfile({
@@ -379,12 +385,18 @@ class VerifiedInstitutionAccountProfile {
     this.userId,
     this.username,
     this.displayName,
+    this.walletAddress,
     required this.allowMessages,
   });
 
+  /// The wallet the existing messaging flow can address, or null. Only a
+  /// wallet-shaped value counts; a placeholder such as `linked_auth:` does not.
+  bool get canMessage => allowMessages && walletAddress != null;
+
   factory VerifiedInstitutionAccountProfile.fromJson(Object? value) {
-    if (value is! Map)
+    if (value is! Map) {
       throw const FormatException('Invalid verified account profile');
+    }
     final profileId =
         _nullableTrimmedString(value['profileId'] ?? value['profile_id']);
     if (profileId == null || profileId.isEmpty) {
@@ -396,9 +408,17 @@ class VerifiedInstitutionAccountProfile {
       username: _nullableTrimmedString(value['username']),
       displayName:
           _nullableTrimmedString(value['displayName'] ?? value['display_name']),
+      walletAddress: _linkedWalletAddress(_nullableTrimmedString(
+          value['walletAddress'] ?? value['wallet_address'])),
       allowMessages:
           value['allowMessages'] == true || value['allow_messages'] == true,
     );
+  }
+
+  static String? _linkedWalletAddress(String? raw) {
+    if (raw == null || !WalletUtils.looksLikeWallet(raw)) return null;
+    final canonical = WalletUtils.canonical(raw);
+    return canonical.isEmpty ? null : canonical;
   }
 
   Map<String, dynamic> toJson() => {
@@ -406,6 +426,7 @@ class VerifiedInstitutionAccountProfile {
         if (userId != null) 'userId': userId,
         if (username != null) 'username': username,
         if (displayName != null) 'displayName': displayName,
+        if (walletAddress != null) 'walletAddress': walletAddress,
         'allowMessages': allowMessages,
       };
 }

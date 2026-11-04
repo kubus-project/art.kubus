@@ -408,6 +408,7 @@ const _linkScenes = <({String name, Size size})>[
 Map<String, Object?> _withVerifiedAccount(
   Map<String, Object?> payload, {
   required String? username,
+  String? walletAddress,
 }) =>
     {
       ...payload,
@@ -416,13 +417,18 @@ Map<String, Object?> _withVerifiedAccount(
         'userId': _qaUserId,
         if (username != null) 'username': username,
         'displayName': payload['name'],
+        if (walletAddress != null) 'walletAddress': walletAddress,
         'allowMessages': true,
       },
     };
 
+/// A synthetic base58 wallet for the linked profile in the visual fixtures. It
+/// is not a real account: it only lets the Message action render.
+const _qaAccountWallet = 'G1mUnv6Yv3xq8mzbwb9c8rD2zYw3Lk5nVq4tJ7yHp2Ar';
+
 /// Renders the venue at every capture size in light and dark. Linked captures
-/// must show the handle, Follow and the account button; unlinked captures must
-/// show none of them.
+/// show the handle and Follow (and Message when [message] is set); unlinked
+/// captures show none of them.
 Future<void> _renderLinkScenes(
   WidgetTester tester, {
   required String prefix,
@@ -430,6 +436,7 @@ Future<void> _renderLinkScenes(
   required HttpClient Function() imageClient,
   required String? handle,
   required String? captureDir,
+  bool message = false,
 }) async {
   _serveInstitution(payload);
   final previous = debugNetworkImageHttpClientProvider;
@@ -452,7 +459,8 @@ Future<void> _renderLinkScenes(
         if (handle != null) {
           expect(find.text('@$handle'), findsOneWidget, reason: label);
           expect(find.text('Follow'), findsOneWidget, reason: label);
-          expect(find.text('Message'), findsNothing, reason: label);
+          expect(find.text('Message'), message ? findsOneWidget : findsNothing,
+              reason: label);
           expect(find.byKey(_accountButtonKey), findsOneWidget, reason: label);
         } else {
           expect(find.textContaining('@'), findsNothing, reason: label);
@@ -676,6 +684,29 @@ void main() {
       }),
       handle: 'narodnagalerija',
       captureDir: captureDir,
+    );
+  }, skip: _real == null);
+
+  testWidgets(
+      'verified account with a wallet and messages allowed shows Message beside Follow at every size',
+      (tester) async {
+    final real = _real!;
+    await tester.runAsync(QaFontLoader.ensureLoaded);
+    await _renderLinkScenes(
+      tester,
+      prefix: 'verified-message-narodna',
+      payload: _withVerifiedAccount(
+        _apiPayloadFromRealProfile(real),
+        username: 'narodnagalerija',
+        walletAddress: _qaAccountWallet,
+      ),
+      imageClient: () => _BytesHttpClient({
+        '/real-cover.jpg': real.coverBytes,
+        '/real-profile.jpg': real.logoBytes,
+      }),
+      handle: 'narodnagalerija',
+      captureDir: captureDir,
+      message: true,
     );
   }, skip: _real == null);
 

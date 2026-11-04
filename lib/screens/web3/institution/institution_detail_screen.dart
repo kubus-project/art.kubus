@@ -6,7 +6,9 @@ import 'package:latlong2/latlong.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../../../core/conversation_navigator.dart';
 import '../../../models/institution.dart';
+import '../../../providers/chat_provider.dart';
 import '../../../providers/institution_provider.dart';
 import '../../../services/backend_api_service.dart';
 import '../../../services/contextual_auth_gate.dart';
@@ -235,9 +237,9 @@ class _InstitutionDetailScreenState extends State<InstitutionDetailScreen> {
   }
 
   /// Follow / unfollow the verified account by its users.id, through the same
-  /// account-id endpoints and reconciliation the user profile uses. Signed-out
-  /// visitors get the account gate and no pending intent: a replayed follow
-  /// would address the wallet route, which an account-only target does not have.
+  /// account-id endpoints and reconciliation the user profile uses. A signed-out
+  /// visitor gets the account gate and a follow intent keyed by the account id;
+  /// the executor replays that intent through the account-id route.
   Future<void> _toggleAccountFollow({
     required String accountUserId,
     required String accountName,
@@ -250,6 +252,9 @@ class _InstitutionDetailScreenState extends State<InstitutionDetailScreen> {
       context,
       actionLabel: l10n.commonFollow.toLowerCase(),
       returnRoute: '/main',
+      actionType: PendingActionType.follow,
+      targetType: PendingActionTargetType.user,
+      targetId: accountUserId,
       targetLabel: accountName,
       sourceScreen: 'institution_detail',
     );
@@ -293,6 +298,73 @@ class _InstitutionDetailScreenState extends State<InstitutionDetailScreen> {
           content: Text(l10n.userProfileFollowUpdateFailedToast),
           duration: const Duration(seconds: 3),
           backgroundColor: theme.colorScheme.error,
+        ),
+      );
+    }
+  }
+
+  /// Opens a conversation with the verified account's own wallet, through the
+  /// same wallet-addressed flow and gate the user profile uses. The wallet is
+  /// the only target: an account id or the venue id is never sent.
+  Future<void> _messageAccount({
+    required String wallet,
+    required String accountName,
+  }) async {
+    final l10n = AppLocalizations.of(context)!;
+    final authenticated = await const ContextualAuthGate().ensureAuthenticated(
+      context,
+      requirements: ProtectedActionRequirements.participant,
+      actionLabel: l10n.userProfileMessageButtonLabel.toLowerCase(),
+      returnRoute: '/main',
+      targetLabel: accountName,
+      sourceScreen: 'institution_detail',
+    );
+    if (!authenticated || !mounted) return;
+    final chatProvider = Provider.of<ChatProvider>(context, listen: false);
+    final messenger = ScaffoldMessenger.of(context);
+    final chatAuth = chatProvider.isAuthenticated;
+    try {
+      final conv = await chatProvider.createConversation('', false, [wallet]);
+      if (!mounted) return;
+      if (conv == null) {
+        messenger.showKubusSnackBar(
+          SnackBar(
+            content: Text(chatAuth
+                ? l10n.userProfileConversationOpenFailedToast
+                : l10n.userProfileMessageLoginRequiredToast),
+          ),
+        );
+        return;
+      }
+      final preloaded = chatProvider.getPreloadedProfileMapsForConversation(
+        conv.id,
+      );
+      final rawMembers =
+          (preloaded['members'] as List<dynamic>?)?.cast<String>() ??
+              <String>[];
+      final members = rawMembers.isNotEmpty ? rawMembers : <String>[wallet];
+      final avatars = Map<String, String?>.from(
+        (preloaded['avatars'] as Map<String, String?>?) ?? <String, String?>{},
+      );
+      final names = Map<String, String?>.from(
+        (preloaded['names'] as Map<String, String?>?) ?? <String, String?>{},
+      );
+      if ((names[members.first] ?? '').isEmpty) {
+        names[members.first] = accountName;
+      }
+      await ConversationNavigator.openConversationWithPreload(
+        context,
+        conv,
+        preloadedMembers: members,
+        preloadedAvatars: avatars,
+        preloadedDisplayNames: names,
+      );
+    } catch (error) {
+      debugPrint('InstitutionDetailScreen: account message failed: $error');
+      if (!mounted) return;
+      messenger.showKubusSnackBar(
+        SnackBar(
+          content: Text(l10n.userProfileConversationOpenGenericErrorToast),
         ),
       );
     }
@@ -499,22 +571,36 @@ class _InstitutionDetailScreenState extends State<InstitutionDetailScreen> {
     final viewerIsAccount = account != null &&
         (UserProfileNavigation.isCurrentUser(context, account.profileId) ||
             UserProfileNavigation.isCurrentUser(context, accountUserId));
-    // Follow needs the account's users.id. Message is not offered here: the
-    // conversation API is keyed by wallet and the verified-account contract
-    // carries no wallet, so the existing messaging flow cannot address it.
-    final accountActions = accountUserId != null && !viewerIsAccount
+    // Follow needs the account's users.id; Message needs the account's own
+    // wallet and an allowed preference. Each action is offered only when its
+    // target exists, and neither is ever derived from a venue or member id.
+    final followUserId = viewerIsAccount ? null : accountUserId;
+    final messageWallet =
+        viewerIsAccount || account == null || !account.canMessage
+            ? null
+            : account.walletAddress;
+    final accountName = account?.displayName ?? name;
+    final accountActions = followUserId != null || messageWallet != null
         ? ProfileRelationshipActions(
             isFollowing: _accountIsFollowing ?? false,
             isFollowLoading: _accountFollowInFlight,
-            onFollow: () => unawaited(_toggleAccountFollow(
-              accountUserId: accountUserId,
-              accountName: account?.displayName ?? name,
-            )),
-            onMessage: () {},
+            onFollow: followUserId == null
+                ? () {}
+                : () => unawaited(_toggleAccountFollow(
+                      accountUserId: followUserId,
+                      accountName: accountName,
+                    )),
+            onMessage: messageWallet == null
+                ? () {}
+                : () => unawaited(_messageAccount(
+                      wallet: messageWallet,
+                      accountName: accountName,
+                    )),
             followLabel: l10n.userProfileFollowButton,
             followingLabel: l10n.userProfileFollowingButton,
             messageLabel: l10n.userProfileMessageButtonLabel,
-            showMessage: false,
+            showFollow: followUserId != null,
+            showMessage: messageWallet != null,
           )
         : null;
     final hasStats = stats.activeEvents > 0 ||
@@ -659,12 +745,17 @@ class _InstitutionDetailScreenState extends State<InstitutionDetailScreen> {
           children: [
             hero,
             if (credits.any((c) => c.cover))
-              // Top corner of the cover: the lower edge carries the hero's
-              // identity and Follow row, which this button must never overlap.
+              // The accepted position is the cover's bottom-right corner. Only
+              // when a Follow / Message row shares the hero's lower edge does
+              // the button move to the top corner, so the two never overlap.
               Positioned(
                 key: const ValueKey('institution-cover-credit-button'),
                 right: KubusSpacing.sm,
-                top: KubusSpacing.sm,
+                top: accountActions == null
+                    ? ProfileIdentityHero.coverHeightWithImage -
+                        _creditButtonSize -
+                        KubusSpacing.sm
+                    : KubusSpacing.sm,
                 child: _buildCreditButton(context),
               ),
           ],
