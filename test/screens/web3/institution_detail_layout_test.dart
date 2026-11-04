@@ -3,7 +3,10 @@ import 'dart:convert';
 import 'package:art_kubus/screens/web3/institution/institution_detail_screen.dart';
 import 'package:art_kubus/services/backend_api_service.dart';
 import 'package:art_kubus/services/http_client_factory.dart';
+import 'package:art_kubus/widgets/avatar_widget.dart';
 import 'package:art_kubus/widgets/common/kubus_cached_image.dart';
+import 'package:art_kubus/widgets/profile/profile_cover_field.dart';
+import 'package:art_kubus/widgets/profile/profile_identity_hero.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
@@ -16,7 +19,9 @@ const _validAuthToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.'
     'eyJleHAiOjQ3MzM4NTYwMDAsIndhbGxldEFkZHJlc3MiOiJXYWxsZXRUZXN0MTExMTExMTExMTExMTExMTExMTExMTExMTExMSJ9.'
     'signature';
 
-const _coverKey = ValueKey('institution-cover-image');
+// The shared ProfileIdentityHero owns the cover; the institution screen does
+// not key its own cover widget.
+const _coverKey = ValueKey('profile-identity-hero-cover');
 const _avatarKey = ValueKey('institution-profile-image');
 const _mapKey = ValueKey('institution-open-on-map');
 
@@ -227,12 +232,21 @@ void main() {
     expect(errors, isEmpty);
     final avatar = tester.getRect(find.byKey(_avatarKey));
     final cover = tester.getRect(find.byKey(_coverKey));
-    expect(avatar.size, const Size(88, 88));
-    // Top of the avatar sits 44 dp below the cover top: half of it overlaps.
-    expect(avatar.top - cover.top, 176);
-    final image = tester.widget<KubusCachedImage>(find.descendant(
+    // The hero's avatar is the 42 dp radius mark, bare: no frame or padding.
+    expect(avatar.size, const Size(84, 84));
+    // The shared hero lifts the identity row by plateOverlap into the cover,
+    // so the avatar's top sits that far below the cover top and overlaps the
+    // cover's lower edge.
+    expect(
+      avatar.top - cover.top,
+      ProfileIdentityHero.coverHeightWithImage -
+          ProfileIdentityHero.plateOverlap,
+    );
+    expect(avatar.top, lessThan(cover.bottom));
+    // The avatar mounts its logo as a plain network image, cropped to cover.
+    final image = tester.widget<Image>(find.descendant(
       of: find.byKey(_avatarKey),
-      matching: find.byType(KubusCachedImage),
+      matching: find.byType(Image),
     ));
     expect(image.fit, BoxFit.cover);
   });
@@ -247,7 +261,10 @@ void main() {
       ),
     );
     expect(errors, isEmpty);
-    expect(find.byKey(_avatarKey), findsNothing);
+    // The avatar slot stays for the identity row; it carries no second copy
+    // of the cover file, so it falls back to the neutral mark.
+    final avatar = tester.widget<AvatarWidget>(find.byKey(_avatarKey));
+    expect(avatar.avatarUrl, isNull);
   });
 
   testWidgets('without images the hero falls back without a broken icon',
@@ -255,9 +272,12 @@ void main() {
     final errors = await _pump(tester, institution: _payload());
     expect(errors, isEmpty);
     expect(find.byKey(_coverKey), findsOneWidget);
-    expect(find.byKey(_avatarKey), findsNothing);
+    final avatar = tester.widget<AvatarWidget>(find.byKey(_avatarKey));
+    expect(avatar.avatarUrl, isNull);
     expect(find.byIcon(Icons.image_outlined), findsNothing);
-    expect(find.byIcon(Icons.apartment_outlined), findsOneWidget);
+    // With no approved cover the hero paints its authored role field, not an
+    // icon, so the cover is a designed surface rather than a broken image.
+    expect(find.byType(ProfileCoverField), findsOneWidget);
     expect(
         find.byKey(const ValueKey('institution-image-credits')), findsNothing);
   });

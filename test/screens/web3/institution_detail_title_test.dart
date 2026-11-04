@@ -100,7 +100,8 @@ void main() {
     BackendApiService().setHttpClient(createPlatformHttpClient());
   });
 
-  testWidgets('standalone (phone): the institution name is the one title',
+  testWidgets(
+      'standalone (phone): the name is the app bar title and the identity plate name',
       (tester) async {
     final renderErrors = await _pump(
       tester,
@@ -110,10 +111,12 @@ void main() {
     await tester.pumpAndSettle();
     expect(renderErrors, isEmpty);
 
+    // The shared ProfileIdentityHero carries the name beside the avatar by
+    // design, so the app bar and the identity plate each show it once.
     expect(
       find.text(_institutionName),
-      findsOneWidget,
-      reason: 'the AppBar carries the name; the card does not repeat it',
+      findsNWidgets(2),
+      reason: 'the AppBar title and the hero identity name',
     );
     expect(find.byType(AppBar), findsOneWidget);
   });
@@ -154,20 +157,22 @@ void main() {
     );
     await tester.pump();
     final cover = tester.widget<KubusCachedImage>(find.descendant(
-      of: find.byKey(const ValueKey('institution-cover-image')),
+      of: find.byKey(const ValueKey('profile-identity-hero-cover')),
       matching: find.byType(KubusCachedImage),
     ));
-    final profile = tester.widget<KubusCachedImage>(find.descendant(
+    // The avatar mounts the logo as a plain network image.
+    final profile = tester.widget<Image>(find.descendant(
       of: find.byKey(const ValueKey('institution-profile-image')),
-      matching: find.byType(KubusCachedImage),
+      matching: find.byType(Image),
     ));
     expect(cover.imageUrl, 'https://example.com/cover.jpg');
-    expect(profile.imageUrl, 'https://example.com/logo.jpg');
+    expect((profile.image as NetworkImage).url, 'https://example.com/logo.jpg');
     expect(find.text('example.com'), findsOneWidget);
     expect(find.text('Painting'), findsOneWidget);
   });
 
-  testWidgets('logo-only profile uses the logo once, as the avatar, not as hero',
+  testWidgets(
+      'logo-only profile uses the logo once, as the avatar, not as hero',
       (tester) async {
     BackendApiService().setHttpClient(MockClient((request) async {
       if (request.url.path == '/api/institutions') {
@@ -194,17 +199,17 @@ void main() {
         child: const InstitutionDetailScreen(institutionId: 'inst-1'));
     await tester.pump();
     // The hero is the neutral fallback, never the logo file.
-    final hero = find.byKey(const ValueKey('institution-cover-image'));
+    final hero = find.byKey(const ValueKey('profile-identity-hero-cover'));
     expect(hero, findsOneWidget);
     expect(
       find.descendant(of: hero, matching: find.byType(KubusCachedImage)),
       findsNothing,
     );
-    final avatar = tester.widget<KubusCachedImage>(find.descendant(
+    final avatar = tester.widget<Image>(find.descendant(
       of: find.byKey(const ValueKey('institution-profile-image')),
-      matching: find.byType(KubusCachedImage),
+      matching: find.byType(Image),
     ));
-    expect(avatar.imageUrl, 'https://example.com/logo.jpg');
+    expect((avatar.image as NetworkImage).url, 'https://example.com/logo.jpg');
   });
 
   testWidgets('open on map passes the institution identity and coordinates',
@@ -265,7 +270,7 @@ void main() {
   });
 
   testWidgets(
-      'embedded under a sub-screen with the same title: one title, from the shell',
+      'embedded under a sub-screen with the same title: no second app bar',
       (tester) async {
     final renderErrors = await _pump(
       tester,
@@ -283,12 +288,14 @@ void main() {
     await tester.pumpAndSettle();
     expect(renderErrors, isEmpty);
 
+    // The sub-screen header and the shared identity plate each carry the
+    // name; the body adds no second app bar.
     expect(
       find.text(_institutionName),
-      findsOneWidget,
-      reason:
-          'the sub-screen header owns the name; the body does not repeat it',
+      findsNWidgets(2),
+      reason: 'the sub-screen header and the hero identity name',
     );
+    expect(find.byType(AppBar), findsNothing);
   });
 
   testWidgets(
