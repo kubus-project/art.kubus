@@ -7,6 +7,7 @@ import 'dart:ui' as ui;
 import 'package:art_kubus/screens/web3/institution/institution_detail_screen.dart';
 import 'package:art_kubus/services/backend_api_service.dart';
 import 'package:art_kubus/services/http_client_factory.dart';
+import 'package:art_kubus/widgets/profile/profile_identity_hero.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -420,7 +421,9 @@ void main() {
     expect(
         find.text('Synthetic Museum of Cultural Heritage'), findsNWidgets(2));
     expect(find.byKey(_avatarKey), findsOneWidget);
-    expect(find.byIcon(Icons.apartment_outlined), findsWidgets);
+    expect(find.byType(ProfileIdentityHero), findsOneWidget);
+    expect(find.byKey(const ValueKey('profile-identity-hero-cover')),
+        findsOneWidget);
     expect(
         find.byKey(const ValueKey('institution-image-credits')), findsNothing);
   });

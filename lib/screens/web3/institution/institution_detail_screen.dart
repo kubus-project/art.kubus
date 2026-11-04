@@ -14,17 +14,13 @@ import '../../../utils/design_tokens.dart';
 import '../../../utils/media_url_resolver.dart';
 import '../../../utils/map_coordinate_rules.dart';
 import '../../../utils/map_navigation.dart';
-import '../../../widgets/common/kubus_cached_image.dart';
+import '../../../widgets/avatar_widget.dart';
+import '../../../widgets/profile/profile_identity_hero.dart';
 import '../../../widgets/empty_state_card.dart';
 import '../../../widgets/glass_components.dart';
 import '../../../widgets/inline_loading.dart';
 import '../../events/event_detail_screen.dart';
 import '../../../providers/activation_prompt_provider.dart';
-
-/// Cover height. The profile avatar overlaps its lower edge by half its size.
-const double _coverHeight = 220;
-const double _avatarSize = 88;
-const double _avatarOverlap = _avatarSize / 2;
 
 /// Minimum touch target of the photo-credit affordance.
 const double _creditButtonSize = 44;
@@ -335,97 +331,6 @@ class _InstitutionDetailScreenState extends State<InstitutionDetailScreen> {
     );
   }
 
-  Widget _buildImageFallback(BuildContext context, {double iconSize = 48}) {
-    final scheme = Theme.of(context).colorScheme;
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            scheme.primary.withValues(alpha: 0.22),
-            scheme.secondary.withValues(alpha: 0.18),
-          ],
-        ),
-      ),
-      child: Center(
-        child: Icon(
-          Icons.apartment_outlined,
-          size: iconSize,
-          color: scheme.onSurface.withValues(alpha: 0.72),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildCover(
-    BuildContext context,
-    Institution institution,
-    String? coverUrl,
-  ) {
-    final l10n = AppLocalizations.of(context)!;
-    return ClipRRect(
-      borderRadius: const BorderRadius.vertical(
-        top: Radius.circular(KubusRadius.lg),
-      ),
-      child: SizedBox(
-        key: const ValueKey('institution-cover-image'),
-        height: _coverHeight,
-        width: double.infinity,
-        child: coverUrl == null
-            ? _buildImageFallback(context)
-            : KubusCachedImage(
-                imageUrl: coverUrl,
-                fit: BoxFit.cover,
-                semanticLabel: l10n.institutionDetailCoverSemanticLabel(
-                  institution.name.trim(),
-                ),
-                placeholderBuilder: (context) => _buildImageFallback(context),
-                errorBuilder: (context, _, __) => _buildImageFallback(context),
-              ),
-      ),
-    );
-  }
-
-  /// The profile image as a rounded square that overlaps the cover's lower
-  /// edge. It is shown only when it is a different file from the cover.
-  Widget _buildAvatar(
-    BuildContext context,
-    Institution institution,
-    String? logoUrl,
-  ) {
-    final l10n = AppLocalizations.of(context)!;
-    final scheme = Theme.of(context).colorScheme;
-    return Container(
-      key: const ValueKey('institution-profile-image'),
-      width: _avatarSize,
-      height: _avatarSize,
-      padding: const EdgeInsets.all(3),
-      decoration: BoxDecoration(
-        color: scheme.surface,
-        borderRadius: BorderRadius.circular(KubusRadius.md + 3),
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(KubusRadius.md),
-        child: logoUrl == null
-            ? _buildImageFallback(context, iconSize: 28)
-            : KubusCachedImage(
-                imageUrl: logoUrl,
-                fit: BoxFit.cover,
-                semanticLabel: l10n.institutionDetailLogoSemanticLabel(
-                  institution.name.trim(),
-                ),
-                placeholderBuilder: (context) => _buildImageFallback(
-                  context,
-                  iconSize: 28,
-                ),
-                errorBuilder: (context, _, __) => _buildImageFallback(
-                  context,
-                  iconSize: 28,
-                ),
-              ),
-      ),
-    );
-  }
-
   Widget _buildCreditsFooter(
     BuildContext context,
     List<({bool cover, InstitutionImageAttribution attribution})> credits,
@@ -472,9 +377,8 @@ class _InstitutionDetailScreenState extends State<InstitutionDetailScreen> {
 
   Widget _buildHeaderCard(
     BuildContext context,
-    Institution institution, {
-    required bool showName,
-  }) {
+    Institution institution,
+  ) {
     final scheme = Theme.of(context).colorScheme;
     final l10n = AppLocalizations.of(context)!;
     final coverUrl = MediaUrlResolver.resolveDisplayUrl(
@@ -512,17 +416,6 @@ class _InstitutionDetailScreenState extends State<InstitutionDetailScreen> {
     final content = Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // One title per screen: the AppBar (standalone) or the desktop
-        // sub-screen header (embedded) already carries the name.
-        if (showName && name.isNotEmpty) ...[
-          Text(
-            name,
-            style: KubusTextStyles.screenTitle.copyWith(
-              color: scheme.onSurface,
-            ),
-          ),
-          const SizedBox(height: KubusSpacing.sm),
-        ],
         Wrap(
           spacing: KubusSpacing.sm,
           runSpacing: KubusSpacing.sm,
@@ -612,21 +505,50 @@ class _InstitutionDetailScreenState extends State<InstitutionDetailScreen> {
       ],
     );
 
-    return LiquidGlassCard(
-      padding: EdgeInsets.zero,
-      child: Stack(
-        children: [
-          Column(
+    final hero = ProfileIdentityHero(
+      displayName: name,
+      isArtist: false,
+      isInstitution: true,
+      isVerified: institution.isVerified,
+      coverImageUrl: coverUrl,
+      coverSemanticLabel: l10n.institutionDetailCoverSemanticLabel(name),
+      avatarRadius: 42,
+      avatar: AvatarWidget(
+        key: const ValueKey('institution-profile-image'),
+        wallet: '',
+        displayName: name,
+        avatarUrl: avatarUrl,
+        radius: 42,
+        fetchMissingAvatar: false,
+        enableProfileNavigation: false,
+        showStatusIndicator: false,
+      ),
+    );
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Stack(
+          children: [
+            hero,
+            if (credits.any((c) => c.cover))
+              Positioned(
+                key: const ValueKey('institution-cover-credit-button'),
+                right: KubusSpacing.sm,
+                top: ProfileIdentityHero.coverHeightWithImage -
+                    _creditButtonSize -
+                    KubusSpacing.sm,
+                child: _buildCreditButton(context),
+              ),
+          ],
+        ),
+        const SizedBox(height: KubusSpacing.lg),
+        LiquidGlassCard(
+          padding: EdgeInsets.zero,
+          child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _buildCover(context, institution, coverUrl),
               Padding(
-                padding: EdgeInsets.fromLTRB(
-                  KubusSpacing.lg,
-                  _avatarOverlap + KubusSpacing.md,
-                  KubusSpacing.lg,
-                  KubusSpacing.lg,
-                ),
+                padding: const EdgeInsets.all(KubusSpacing.lg),
                 child: Align(
                   alignment: AlignmentDirectional.topStart,
                   child: ConstrainedBox(
@@ -638,32 +560,8 @@ class _InstitutionDetailScreenState extends State<InstitutionDetailScreen> {
               if (credits.isNotEmpty) _buildCreditsFooter(context, credits),
             ],
           ),
-          Positioned(
-            left: KubusSpacing.lg,
-            top: _coverHeight - _avatarOverlap,
-            child: _buildAvatar(context, institution, avatarUrl),
-          ),
-          // Photo-credit affordances: one per image that shows a credit. Each
-          // 44 dp hit area sits in the image's bottom-right corner.
-          if (credits.any((c) => c.cover))
-            Positioned(
-              key: const ValueKey('institution-cover-credit-button'),
-              right: KubusSpacing.sm,
-              top: _coverHeight - _creditButtonSize - KubusSpacing.sm,
-              child: _buildCreditButton(context),
-            ),
-          if (avatarUrl != null && credits.any((c) => !c.cover))
-            Positioned(
-              key: const ValueKey('institution-avatar-credit-button'),
-              left: KubusSpacing.lg + _avatarSize - _creditButtonSize,
-              top: _coverHeight -
-                  _avatarOverlap +
-                  _avatarSize -
-                  _creditButtonSize,
-              child: _buildCreditButton(context),
-            ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 
@@ -819,7 +717,6 @@ class _InstitutionDetailScreenState extends State<InstitutionDetailScreen> {
                   _buildHeaderCard(
                     context,
                     institution,
-                    showName: true,
                   ),
                   const SizedBox(height: KubusSpacing.lg),
                   if (institution.visitorAccess != null) ...[
