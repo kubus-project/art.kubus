@@ -106,7 +106,7 @@ class _RealFixture {
 _RealFixture? _loadRealFixture() {
   final file = _dbopsFile(
     // The assembled research profile (research + media records), not editorially approved.
-    'data/institutions/orchestration-20261104/e2e/run1/profiles/narodna-galerija.profile.json',
+    'data/institutions/orchestration-20261104/e2e/final/profiles/narodna-galerija.profile.json',
   );
   if (!file.existsSync()) return null;
   final profile = jsonDecode(file.readAsStringSync()) as Map<String, Object?>;
