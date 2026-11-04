@@ -4,7 +4,6 @@ import 'package:art_kubus/screens/web3/institution/institution_detail_screen.dar
 import 'package:art_kubus/services/backend_api_service.dart';
 import 'package:art_kubus/services/http_client_factory.dart';
 import 'package:art_kubus/widgets/avatar_widget.dart';
-import 'package:art_kubus/widgets/common/kubus_cached_image.dart';
 import 'package:art_kubus/widgets/profile/profile_cover_field.dart';
 import 'package:art_kubus/widgets/profile/profile_identity_hero.dart';
 import 'package:flutter/material.dart';
