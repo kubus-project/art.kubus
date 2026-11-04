@@ -446,6 +446,49 @@ void main() {
   });
 
   testWidgets(
+      'the cover credit button is a 44 dp target that scrolls to the credits, and is absent without a credit',
+      (tester) async {
+    await tester.runAsync(QaFontLoader.ensureLoaded);
+    final fixture = ProfileImageHttpFixture();
+    await tester.runAsync(fixture.prepare);
+    final previous = debugNetworkImageHttpClientProvider;
+    debugNetworkImageHttpClientProvider = () => fixture.createHttpClient(null);
+    const button = ValueKey('institution-cover-credit-button');
+    const credits = ValueKey('institution-image-credits');
+    try {
+      _serveInstitution(_syntheticPayload());
+      expect(
+          await _renderScene(tester,
+              size: const Size(390, 560), brightness: Brightness.light),
+          isEmpty);
+      expect(find.byKey(button), findsOneWidget);
+      final target = tester.getSize(find.byKey(button));
+      expect(target.width, greaterThanOrEqualTo(44));
+      expect(target.height, greaterThanOrEqualTo(44));
+      expect(find.byTooltip('Photo credits'), findsWidgets);
+      final viewport = tester.view.physicalSize / tester.view.devicePixelRatio;
+      expect(
+          tester.getRect(find.byKey(credits)).top, greaterThan(viewport.height),
+          reason: 'on a phone the credits start below the first screen');
+      await tester.tap(find.byKey(button));
+      await tester.pumpAndSettle();
+      final after = tester.getRect(find.byKey(credits));
+      expect(after.top, lessThan(viewport.height));
+      expect(after.top, greaterThanOrEqualTo(0));
+
+      final noCredit = _syntheticPayload()..remove('coverAttribution');
+      _serveInstitution(noCredit);
+      expect(
+          await _renderScene(tester,
+              size: const Size(390, 560), brightness: Brightness.light),
+          isEmpty);
+      expect(find.byKey(button), findsNothing);
+    } finally {
+      debugNetworkImageHttpClientProvider = previous;
+    }
+  });
+
+  testWidgets(
       'real researched profile renders at phone, tablet and desktop, light and dark',
       (tester) async {
     final real = _real!;
