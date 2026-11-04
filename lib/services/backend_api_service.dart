@@ -286,7 +286,6 @@ abstract class ProfileBackendApi {
   Future<void> followUser(String walletAddress);
   Future<void> unfollowUser(String walletAddress);
   Future<bool> isFollowing(String walletAddress);
-  Future<bool> isFollowingAccount(String userId);
 
   Future<Map<String, dynamic>?> getDAOReview({required String idOrWallet});
 }
@@ -8279,7 +8278,8 @@ class BackendApiService
     }
   }
 
-  @override
+  /// Account-id follow state for walletless public profiles (not part of
+  /// [ProfileBackendApi], so existing fakes of that interface stay valid).
   Future<bool> isFollowingAccount(String userId) async {
     final targetId = userId.trim().toLowerCase();
     if (targetId.isEmpty) return false;

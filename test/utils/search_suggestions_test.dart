@@ -82,6 +82,24 @@ void main() {
     );
   });
 
+  test('a profile-backed institution opens its own account, never a member',
+      () {
+    // Its subject id is the account itself (a wallet), not a venue record.
+    expect(
+      InstitutionNavigation.resolveProfileTargetId(
+          institutionId: 'wallet_inst_1'),
+      'wallet_inst_1',
+    );
+    // Payload keys never redirect a profile-backed institution elsewhere.
+    expect(
+      InstitutionNavigation.resolveProfileTargetId(
+        institutionId: 'wallet_inst_1',
+        data: <String, dynamic>{'ownerWallet': 'someone-else'},
+      ),
+      'wallet_inst_1',
+    );
+  });
+
   test('a profile row keeps its wallet, the id it is found by', () {
     final results = normalizeSearchSuggestionsPayload(
       <Map<String, dynamic>>[
