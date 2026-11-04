@@ -405,6 +405,26 @@ void main() {
     BackendApiService().setHttpClient(createPlatformHttpClient());
   });
 
+  testWidgets('institution identity remains visible without approved images',
+      (tester) async {
+    final payload = _syntheticPayload()
+      ..remove('coverImageUrl')
+      ..remove('logoUrl')
+      ..remove('coverAttribution')
+      ..remove('logoAttribution');
+    _serveInstitution(payload);
+    expect(
+        await _renderScene(tester,
+            size: const Size(390, 844), brightness: Brightness.light),
+        isEmpty);
+    expect(
+        find.text('Synthetic Museum of Cultural Heritage'), findsNWidgets(2));
+    expect(find.byKey(_avatarKey), findsOneWidget);
+    expect(find.byIcon(Icons.apartment_outlined), findsWidgets);
+    expect(
+        find.byKey(const ValueKey('institution-image-credits')), findsNothing);
+  });
+
   testWidgets('synthetic institution profile renders approved sections (CI)',
       (tester) async {
     await tester.runAsync(QaFontLoader.ensureLoaded);
@@ -513,8 +533,8 @@ void main() {
           );
           expect(errors, isEmpty, reason: label);
 
-          // The AppBar carries the one title; the card does not repeat it.
-          expect(find.text(real.name), findsOneWidget, reason: label);
+          // Navigation and the profile identity each show the institution name.
+          expect(find.text(real.name), findsNWidgets(2), reason: label);
           expect(find.text('Museum'), findsOneWidget, reason: label);
           for (final discipline in const [
             'Historical art',

@@ -11,7 +11,6 @@ import '../../../providers/institution_provider.dart';
 import '../../../services/backend_api_service.dart';
 import '../../../services/telemetry/telemetry_service.dart';
 import '../../../utils/design_tokens.dart';
-import '../../../screens/desktop/desktop_shell_scope.dart';
 import '../../../utils/media_url_resolver.dart';
 import '../../../utils/map_coordinate_rules.dart';
 import '../../../utils/map_navigation.dart';
@@ -391,7 +390,7 @@ class _InstitutionDetailScreenState extends State<InstitutionDetailScreen> {
   Widget _buildAvatar(
     BuildContext context,
     Institution institution,
-    String logoUrl,
+    String? logoUrl,
   ) {
     final l10n = AppLocalizations.of(context)!;
     final scheme = Theme.of(context).colorScheme;
@@ -406,21 +405,23 @@ class _InstitutionDetailScreenState extends State<InstitutionDetailScreen> {
       ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(KubusRadius.md),
-        child: KubusCachedImage(
-          imageUrl: logoUrl,
-          fit: BoxFit.cover,
-          semanticLabel: l10n.institutionDetailLogoSemanticLabel(
-            institution.name.trim(),
-          ),
-          placeholderBuilder: (context) => _buildImageFallback(
-            context,
-            iconSize: 28,
-          ),
-          errorBuilder: (context, _, __) => _buildImageFallback(
-            context,
-            iconSize: 28,
-          ),
-        ),
+        child: logoUrl == null
+            ? _buildImageFallback(context, iconSize: 28)
+            : KubusCachedImage(
+                imageUrl: logoUrl,
+                fit: BoxFit.cover,
+                semanticLabel: l10n.institutionDetailLogoSemanticLabel(
+                  institution.name.trim(),
+                ),
+                placeholderBuilder: (context) => _buildImageFallback(
+                  context,
+                  iconSize: 28,
+                ),
+                errorBuilder: (context, _, __) => _buildImageFallback(
+                  context,
+                  iconSize: 28,
+                ),
+              ),
       ),
     );
   }
@@ -467,17 +468,6 @@ class _InstitutionDetailScreenState extends State<InstitutionDetailScreen> {
         ),
       ),
     );
-  }
-
-  /// Whether the header card repeats the institution name. A standalone screen
-  /// shows the name in its AppBar, so the card does not. Embedded in a desktop
-  /// sub-screen, the card repeats it only when the sub-screen header carries a
-  /// different string (a raw link with its own label).
-  bool _bodyShowsName(BuildContext context, Institution institution) {
-    if (!widget.embedded) return false;
-    final hostTitle =
-        context.findAncestorWidgetOfExactType<DesktopSubScreen>()?.title.trim();
-    return hostTitle != institution.name.trim();
   }
 
   Widget _buildHeaderCard(
@@ -633,9 +623,7 @@ class _InstitutionDetailScreenState extends State<InstitutionDetailScreen> {
               Padding(
                 padding: EdgeInsets.fromLTRB(
                   KubusSpacing.lg,
-                  avatarUrl == null
-                      ? KubusSpacing.lg
-                      : _avatarOverlap + KubusSpacing.md,
+                  _avatarOverlap + KubusSpacing.md,
                   KubusSpacing.lg,
                   KubusSpacing.lg,
                 ),
@@ -650,12 +638,11 @@ class _InstitutionDetailScreenState extends State<InstitutionDetailScreen> {
               if (credits.isNotEmpty) _buildCreditsFooter(context, credits),
             ],
           ),
-          if (avatarUrl != null)
-            Positioned(
-              left: KubusSpacing.lg,
-              top: _coverHeight - _avatarOverlap,
-              child: _buildAvatar(context, institution, avatarUrl),
-            ),
+          Positioned(
+            left: KubusSpacing.lg,
+            top: _coverHeight - _avatarOverlap,
+            child: _buildAvatar(context, institution, avatarUrl),
+          ),
           // Photo-credit affordances: one per image that shows a credit. Each
           // 44 dp hit area sits in the image's bottom-right corner.
           if (credits.any((c) => c.cover))
@@ -832,7 +819,7 @@ class _InstitutionDetailScreenState extends State<InstitutionDetailScreen> {
                   _buildHeaderCard(
                     context,
                     institution,
-                    showName: _bodyShowsName(context, institution),
+                    showName: true,
                   ),
                   const SizedBox(height: KubusSpacing.lg),
                   if (institution.visitorAccess != null) ...[
