@@ -24,35 +24,140 @@ class InstitutionDiscipline {
   int get hashCode => Object.hash(code, labelEn, labelSl);
 }
 
+/// Public venue kind. The exact backend `kind` code is used when present; the
+/// older `type` guess (museum, gallery, cultural_center) is only a fallback.
+enum InstitutionKind {
+  museum,
+  gallery,
+  artsCentre,
+  exhibitionSpace,
+  culturalCentre,
+  other;
+
+  /// Resolves the displayed kind, or null when neither field names one.
+  /// Unrecognised exact codes (archive, library, ...) resolve to [other].
+  static InstitutionKind? resolve({String? kind, String? type}) {
+    final code = kind?.trim().toLowerCase();
+    if (code != null && code.isNotEmpty) {
+      return switch (code) {
+        'museum' => InstitutionKind.museum,
+        'gallery' => InstitutionKind.gallery,
+        'arts_centre' => InstitutionKind.artsCentre,
+        'exhibition_space' => InstitutionKind.exhibitionSpace,
+        'cultural_centre' => InstitutionKind.culturalCentre,
+        _ => InstitutionKind.other,
+      };
+    }
+    return switch (type?.trim().toLowerCase()) {
+      'museum' => InstitutionKind.museum,
+      'gallery' => InstitutionKind.gallery,
+      'cultural_center' => InstitutionKind.culturalCentre,
+      _ => null,
+    };
+  }
+}
+
+/// Admission category approved in visitor information.
+enum InstitutionAdmission {
+  free,
+  paid,
+  mixed;
+
+  static InstitutionAdmission? parse(String? value) {
+    return switch (value?.trim().toLowerCase()) {
+      'free' => InstitutionAdmission.free,
+      'paid' => InstitutionAdmission.paid,
+      'mixed' => InstitutionAdmission.mixed,
+      _ => null,
+    };
+  }
+}
+
 /// Public credit and links supplied for one institution image.
 /// Invalid or absent URLs are discarded at the JSON boundary.
 class InstitutionImageAttribution {
   const InstitutionImageAttribution({
     this.credit,
+    this.author,
     this.sourceUrl,
     this.licenseUrl,
   });
 
+  /// The full credit line required by the licence.
   final String? credit;
+
+  /// The photographer alone, when the backend provides it.
+  final String? author;
   final String? sourceUrl;
   final String? licenseUrl;
 
+  /// Short attribution for display next to separate licence and source links:
+  /// the author when known, otherwise the full credit line.
+  String? get displayCredit => author ?? credit;
+
   bool get isEmpty => credit == null && sourceUrl == null && licenseUrl == null;
+
+  static final RegExp _ccVersion = RegExp(r'^\d+\.\d+$');
+  static const Set<String> _ccTypes = {
+    'by',
+    'by-sa',
+    'by-nc',
+    'by-nd',
+    'by-nc-sa',
+    'by-nc-nd',
+  };
+
+  /// Canonical Creative Commons path segments of [licenseUrl], or null.
+  List<String>? get _licensePath {
+    final url = licenseUrl;
+    if (url == null) return null;
+    final uri = Uri.tryParse(url);
+    if (uri == null || uri.host != 'creativecommons.org') return null;
+    return uri.pathSegments.where((s) => s.isNotEmpty).toList(growable: false);
+  }
+
+  /// Short licence name derived from [licenseUrl], for example `CC BY-SA 4.0`.
+  /// Null when the URL is not a recognised Creative Commons licence.
+  String? get licenseName {
+    final path = _licensePath;
+    if (path == null || path.length != 3) return null;
+    final version = path[2];
+    if (!_ccVersion.hasMatch(version)) return null;
+    if (path[0] == 'licenses' && _ccTypes.contains(path[1])) {
+      return 'CC ${path[1].toUpperCase()} $version';
+    }
+    if (path[0] == 'publicdomain' && path[1] == 'zero') {
+      return 'CC0 $version';
+    }
+    return null;
+  }
+
+  /// True when [licenseUrl] is the Creative Commons public domain mark.
+  bool get isPublicDomain {
+    final path = _licensePath;
+    return path != null &&
+        path.length == 3 &&
+        path[0] == 'publicdomain' &&
+        path[1] == 'mark' &&
+        _ccVersion.hasMatch(path[2]);
+  }
 
   @override
   bool operator ==(Object other) =>
       other is InstitutionImageAttribution &&
       other.credit == credit &&
+      other.author == author &&
       other.sourceUrl == sourceUrl &&
       other.licenseUrl == licenseUrl;
 
   @override
-  int get hashCode => Object.hash(credit, sourceUrl, licenseUrl);
+  int get hashCode => Object.hash(credit, author, sourceUrl, licenseUrl);
 
   factory InstitutionImageAttribution.fromJson(Object? value) {
     if (value is! Map) return const InstitutionImageAttribution();
     return InstitutionImageAttribution(
       credit: _cleanText(value['credit']),
+      author: _cleanText(value['author']),
       sourceUrl: _safeAttributionUrl(value['sourceUrl']),
       licenseUrl: _safeAttributionUrl(value['licenseUrl']),
     );
@@ -60,6 +165,7 @@ class InstitutionImageAttribution {
 
   Map<String, dynamic> toJson() => {
         'credit': credit,
+        if (author != null) 'author': author,
         'sourceUrl': sourceUrl,
         'licenseUrl': licenseUrl,
       };
@@ -96,6 +202,34 @@ class InstitutionVisitorAccess {
   final DateTime verifiedAt;
   final Map<String, dynamic> visitorInfo;
   final String? bookingUrl;
+
+  String? _infoText(String key) {
+    final value = visitorInfo[key];
+    if (value is! String) return null;
+    final text = value.trim();
+    return text.isEmpty ? null : text;
+  }
+
+  /// Opening hours as approved text, in the language of its source.
+  String? get openingHoursText => _infoText('openingHoursText');
+
+  /// Accessibility information as approved text.
+  String? get accessibilityNote => _infoText('accessibilityNote');
+
+  /// Known admission category, or null when the text is free-form or unknown.
+  InstitutionAdmission? get admission =>
+      InstitutionAdmission.parse(_infoText('admission'));
+
+  /// Admission text that is not one of the known categories, or null.
+  String? get admissionText {
+    final raw = _infoText('admission');
+    if (raw == null ||
+        InstitutionAdmission.parse(raw) != null ||
+        raw.toLowerCase() == 'unknown') {
+      return null;
+    }
+    return raw;
+  }
 
   static InstitutionVisitorAccess? fromJson(Object? value) {
     if (value is! Map || value['status'] != 'approved') return null;
@@ -145,6 +279,10 @@ class Institution {
   final String name;
   final String description;
   final String type; // 'gallery', 'museum', 'cultural_center'
+
+  /// Exact venue kind code from the backend (`museum`, `arts_centre`, ...).
+  /// Null for payloads that predate the field.
+  final String? kind;
   final String address;
   final double latitude;
   final double longitude;
@@ -174,6 +312,7 @@ class Institution {
     required this.name,
     required this.description,
     required this.type,
+    this.kind,
     required this.address,
     required this.latitude,
     required this.longitude,
@@ -198,6 +337,10 @@ class Institution {
   String? get heroImageRef =>
       MediaUrlResolver.firstSafeRef(<String?>[coverImageUrl, logoUrl]);
 
+  /// The venue kind to display, from [kind] or the legacy [type] guess.
+  InstitutionKind? get institutionKind =>
+      InstitutionKind.resolve(kind: kind, type: type);
+
   factory Institution.fromJson(Map<String, dynamic> json) {
     final boundary = _InstitutionImageBoundary.read(json);
     return Institution(
@@ -205,6 +348,7 @@ class Institution {
       name: json['name'],
       description: json['description'],
       type: json['type'],
+      kind: _nullableTrimmedString(json['kind']),
       address: json['address'],
       latitude: json['latitude'].toDouble(),
       longitude: json['longitude'].toDouble(),
@@ -240,6 +384,7 @@ class Institution {
       'name': name,
       'description': description,
       'type': type,
+      if (kind != null) 'kind': kind,
       'address': address,
       'latitude': latitude,
       'longitude': longitude,
@@ -263,6 +408,7 @@ class Institution {
     String? name,
     String? description,
     String? type,
+    String? kind,
     String? address,
     double? latitude,
     double? longitude,
@@ -284,6 +430,7 @@ class Institution {
       name: name ?? this.name,
       description: description ?? this.description,
       type: type ?? this.type,
+      kind: kind ?? this.kind,
       address: address ?? this.address,
       latitude: latitude ?? this.latitude,
       longitude: longitude ?? this.longitude,
@@ -706,6 +853,12 @@ class Event {
       createdBy: createdBy ?? this.createdBy,
     );
   }
+}
+
+String? _nullableTrimmedString(Object? value) {
+  if (value is! String) return null;
+  final trimmed = value.trim();
+  return trimmed.isEmpty ? null : trimmed;
 }
 
 String _eventString(dynamic value) => (value ?? '').toString().trim();

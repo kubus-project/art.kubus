@@ -32474,6 +32474,252 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Actions for {title}'**
   String artistPortfolioCardActionsLabel(String title);
+
+  /// No description provided for @institutionDetailKindMuseum.
+  ///
+  /// In en, this message translates to:
+  /// **'Museum'**
+  String get institutionDetailKindMuseum;
+
+  /// No description provided for @institutionDetailKindGallery.
+  ///
+  /// In en, this message translates to:
+  /// **'Gallery'**
+  String get institutionDetailKindGallery;
+
+  /// No description provided for @institutionDetailKindArtsCentre.
+  ///
+  /// In en, this message translates to:
+  /// **'Arts centre'**
+  String get institutionDetailKindArtsCentre;
+
+  /// No description provided for @institutionDetailKindExhibitionSpace.
+  ///
+  /// In en, this message translates to:
+  /// **'Exhibition space'**
+  String get institutionDetailKindExhibitionSpace;
+
+  /// No description provided for @institutionDetailKindCulturalCentre.
+  ///
+  /// In en, this message translates to:
+  /// **'Cultural centre'**
+  String get institutionDetailKindCulturalCentre;
+
+  /// No description provided for @institutionDetailKindOther.
+  ///
+  /// In en, this message translates to:
+  /// **'Other venue'**
+  String get institutionDetailKindOther;
+
+  /// No description provided for @institutionDetailVerifiedChip.
+  ///
+  /// In en, this message translates to:
+  /// **'Verified'**
+  String get institutionDetailVerifiedChip;
+
+  /// No description provided for @institutionDetailCoverSemanticLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Cover image of {name}'**
+  String institutionDetailCoverSemanticLabel(Object name);
+
+  /// No description provided for @institutionDetailLogoSemanticLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Logo of {name}'**
+  String institutionDetailLogoSemanticLabel(Object name);
+
+  /// No description provided for @institutionDetailCreditsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Image credits'**
+  String get institutionDetailCreditsTitle;
+
+  /// No description provided for @institutionDetailPhotoLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Photo'**
+  String get institutionDetailPhotoLabel;
+
+  /// No description provided for @institutionDetailPhotoCredit.
+  ///
+  /// In en, this message translates to:
+  /// **'Photo: {author}'**
+  String institutionDetailPhotoCredit(Object author);
+
+  /// No description provided for @institutionDetailCoverPhotoLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Cover photo'**
+  String get institutionDetailCoverPhotoLabel;
+
+  /// No description provided for @institutionDetailProfilePhotoLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Profile photo'**
+  String get institutionDetailProfilePhotoLabel;
+
+  /// No description provided for @institutionDetailCoverPhotoCredit.
+  ///
+  /// In en, this message translates to:
+  /// **'Cover photo: {author}'**
+  String institutionDetailCoverPhotoCredit(Object author);
+
+  /// No description provided for @institutionDetailProfilePhotoCredit.
+  ///
+  /// In en, this message translates to:
+  /// **'Profile photo: {author}'**
+  String institutionDetailProfilePhotoCredit(Object author);
+
+  /// No description provided for @institutionDetailLicenceFallback.
+  ///
+  /// In en, this message translates to:
+  /// **'Licence'**
+  String get institutionDetailLicenceFallback;
+
+  /// No description provided for @institutionDetailPublicDomain.
+  ///
+  /// In en, this message translates to:
+  /// **'Public domain'**
+  String get institutionDetailPublicDomain;
+
+  /// No description provided for @institutionDetailSourceLink.
+  ///
+  /// In en, this message translates to:
+  /// **'Source'**
+  String get institutionDetailSourceLink;
+
+  /// No description provided for @institutionDetailLicenceLinkSemantics.
+  ///
+  /// In en, this message translates to:
+  /// **'Photo licence {licence}, opens in browser'**
+  String institutionDetailLicenceLinkSemantics(Object licence);
+
+  /// No description provided for @institutionDetailSourceLinkSemantics.
+  ///
+  /// In en, this message translates to:
+  /// **'Photo source, opens in browser'**
+  String get institutionDetailSourceLinkSemantics;
+
+  /// No description provided for @institutionDetailVisitTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Visit'**
+  String get institutionDetailVisitTitle;
+
+  /// No description provided for @institutionDetailOpeningHours.
+  ///
+  /// In en, this message translates to:
+  /// **'Opening hours'**
+  String get institutionDetailOpeningHours;
+
+  /// No description provided for @institutionDetailAdmission.
+  ///
+  /// In en, this message translates to:
+  /// **'Admission'**
+  String get institutionDetailAdmission;
+
+  /// No description provided for @institutionDetailAdmissionFree.
+  ///
+  /// In en, this message translates to:
+  /// **'Free'**
+  String get institutionDetailAdmissionFree;
+
+  /// No description provided for @institutionDetailAdmissionPaid.
+  ///
+  /// In en, this message translates to:
+  /// **'Paid'**
+  String get institutionDetailAdmissionPaid;
+
+  /// No description provided for @institutionDetailAdmissionMixed.
+  ///
+  /// In en, this message translates to:
+  /// **'Free and paid'**
+  String get institutionDetailAdmissionMixed;
+
+  /// No description provided for @institutionDetailAccessibility.
+  ///
+  /// In en, this message translates to:
+  /// **'Accessibility'**
+  String get institutionDetailAccessibility;
+
+  /// No description provided for @institutionDetailBookingLink.
+  ///
+  /// In en, this message translates to:
+  /// **'Book a visit'**
+  String get institutionDetailBookingLink;
+
+  /// No description provided for @institutionDetailVisitorSourceLink.
+  ///
+  /// In en, this message translates to:
+  /// **'Official visitor information'**
+  String get institutionDetailVisitorSourceLink;
+
+  /// No description provided for @institutionDetailStatActiveEvents.
+  ///
+  /// In en, this message translates to:
+  /// **'Active events'**
+  String get institutionDetailStatActiveEvents;
+
+  /// No description provided for @institutionDetailStatArtworkViews.
+  ///
+  /// In en, this message translates to:
+  /// **'Artwork views'**
+  String get institutionDetailStatArtworkViews;
+
+  /// No description provided for @institutionDetailStatVisitors.
+  ///
+  /// In en, this message translates to:
+  /// **'Visitors'**
+  String get institutionDetailStatVisitors;
+
+  /// No description provided for @institutionDetailEventsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Events'**
+  String get institutionDetailEventsTitle;
+
+  /// No description provided for @institutionDetailNoEventsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'No events yet'**
+  String get institutionDetailNoEventsTitle;
+
+  /// No description provided for @institutionDetailNoEventsDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'This institution does not have public events scheduled right now.'**
+  String get institutionDetailNoEventsDescription;
+
+  /// No description provided for @institutionDetailFallbackTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Institution'**
+  String get institutionDetailFallbackTitle;
+
+  /// No description provided for @institutionDetailNotFoundTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Institution not found'**
+  String get institutionDetailNotFoundTitle;
+
+  /// No description provided for @institutionDetailNotFoundDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'We could not find this institution.'**
+  String get institutionDetailNotFoundDescription;
+
+  /// No description provided for @institutionDetailLoadErrorTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Unable to load institution'**
+  String get institutionDetailLoadErrorTitle;
+
+  /// No description provided for @institutionDetailLoadErrorDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'We could not load this institution right now.'**
+  String get institutionDetailLoadErrorDescription;
 }
 
 class _AppLocalizationsDelegate

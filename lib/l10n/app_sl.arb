@@ -7889,5 +7889,76 @@
         "type": "String"
       }
     }
-  }
+  },
+  "institutionDetailKindMuseum": "Muzej",
+  "institutionDetailKindGallery": "Galerija",
+  "institutionDetailKindArtsCentre": "Umetniški center",
+  "institutionDetailKindExhibitionSpace": "Razstavni prostor",
+  "institutionDetailKindCulturalCentre": "Kulturni center",
+  "institutionDetailKindOther": "Drug prostor",
+  "institutionDetailVerifiedChip": "Preverjeno",
+  "institutionDetailCoverSemanticLabel": "Naslovna slika: {name}",
+  "@institutionDetailCoverSemanticLabel": {
+    "placeholders": {
+      "name": {}
+    }
+  },
+  "institutionDetailLogoSemanticLabel": "Logotip: {name}",
+  "@institutionDetailLogoSemanticLabel": {
+    "placeholders": {
+      "name": {}
+    }
+  },
+  "institutionDetailCreditsTitle": "Zasluge za slike",
+  "institutionDetailPhotoLabel": "Foto",
+  "institutionDetailPhotoCredit": "Foto: {author}",
+  "@institutionDetailPhotoCredit": {
+    "placeholders": {
+      "author": {}
+    }
+  },
+  "institutionDetailCoverPhotoLabel": "Naslovna fotografija",
+  "institutionDetailProfilePhotoLabel": "Profilna fotografija",
+  "institutionDetailCoverPhotoCredit": "Naslovna fotografija: {author}",
+  "@institutionDetailCoverPhotoCredit": {
+    "placeholders": {
+      "author": {}
+    }
+  },
+  "institutionDetailProfilePhotoCredit": "Profilna fotografija: {author}",
+  "@institutionDetailProfilePhotoCredit": {
+    "placeholders": {
+      "author": {}
+    }
+  },
+  "institutionDetailLicenceFallback": "Licenca",
+  "institutionDetailPublicDomain": "Javna last",
+  "institutionDetailSourceLink": "Vir",
+  "institutionDetailLicenceLinkSemantics": "Licenca slike {licence}, odpre se v brskalniku",
+  "@institutionDetailLicenceLinkSemantics": {
+    "placeholders": {
+      "licence": {}
+    }
+  },
+  "institutionDetailSourceLinkSemantics": "Vir slike, odpre se v brskalniku",
+  "institutionDetailVisitTitle": "Obisk",
+  "institutionDetailOpeningHours": "Odpiralni čas",
+  "institutionDetailAdmission": "Vstopnina",
+  "institutionDetailAdmissionFree": "Brezplačno",
+  "institutionDetailAdmissionPaid": "Plačljivo",
+  "institutionDetailAdmissionMixed": "Brezplačno in plačljivo",
+  "institutionDetailAccessibility": "Dostopnost",
+  "institutionDetailBookingLink": "Rezerviraj obisk",
+  "institutionDetailVisitorSourceLink": "Uradne informacije za obiskovalce",
+  "institutionDetailStatActiveEvents": "Aktivni dogodki",
+  "institutionDetailStatArtworkViews": "Ogledi umetnin",
+  "institutionDetailStatVisitors": "Obiskovalci",
+  "institutionDetailEventsTitle": "Dogodki",
+  "institutionDetailNoEventsTitle": "Dogodkov še ni",
+  "institutionDetailNoEventsDescription": "Ta ustanova trenutno nima javno napovedanih dogodkov.",
+  "institutionDetailFallbackTitle": "Ustanova",
+  "institutionDetailNotFoundTitle": "Ustanove ni mogoče najti",
+  "institutionDetailNotFoundDescription": "Te ustanove ni bilo mogoče najti.",
+  "institutionDetailLoadErrorTitle": "Ustanove ni mogoče naložiti",
+  "institutionDetailLoadErrorDescription": "Ustanove trenutno ni mogoče naložiti."
 }

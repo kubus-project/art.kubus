@@ -167,7 +167,7 @@ void main() {
     expect(find.text('Painting'), findsOneWidget);
   });
 
-  testWidgets('logo-only profile does not repeat the hero image',
+  testWidgets('logo-only profile uses the logo once, as the avatar, not as hero',
       (tester) async {
     BackendApiService().setHttpClient(MockClient((request) async {
       if (request.url.path == '/api/institutions') {
@@ -193,10 +193,18 @@ void main() {
         size: const Size(390, 844),
         child: const InstitutionDetailScreen(institutionId: 'inst-1'));
     await tester.pump();
+    // The hero is the neutral fallback, never the logo file.
+    final hero = find.byKey(const ValueKey('institution-cover-image'));
+    expect(hero, findsOneWidget);
     expect(
-        find.byKey(const ValueKey('institution-cover-image')), findsOneWidget);
-    expect(
-        find.byKey(const ValueKey('institution-profile-image')), findsNothing);
+      find.descendant(of: hero, matching: find.byType(KubusCachedImage)),
+      findsNothing,
+    );
+    final avatar = tester.widget<KubusCachedImage>(find.descendant(
+      of: find.byKey(const ValueKey('institution-profile-image')),
+      matching: find.byType(KubusCachedImage),
+    ));
+    expect(avatar.imageUrl, 'https://example.com/logo.jpg');
   });
 
   testWidgets('open on map passes the institution identity and coordinates',

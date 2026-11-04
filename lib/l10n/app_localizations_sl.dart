@@ -18933,4 +18933,144 @@ class AppLocalizationsSl extends AppLocalizations {
   String artistPortfolioCardActionsLabel(String title) {
     return 'Dejanja za $title';
   }
+
+  @override
+  String get institutionDetailKindMuseum => 'Muzej';
+
+  @override
+  String get institutionDetailKindGallery => 'Galerija';
+
+  @override
+  String get institutionDetailKindArtsCentre => 'Umetniški center';
+
+  @override
+  String get institutionDetailKindExhibitionSpace => 'Razstavni prostor';
+
+  @override
+  String get institutionDetailKindCulturalCentre => 'Kulturni center';
+
+  @override
+  String get institutionDetailKindOther => 'Drug prostor';
+
+  @override
+  String get institutionDetailVerifiedChip => 'Preverjeno';
+
+  @override
+  String institutionDetailCoverSemanticLabel(Object name) {
+    return 'Naslovna slika: $name';
+  }
+
+  @override
+  String institutionDetailLogoSemanticLabel(Object name) {
+    return 'Logotip: $name';
+  }
+
+  @override
+  String get institutionDetailCreditsTitle => 'Zasluge za slike';
+
+  @override
+  String get institutionDetailPhotoLabel => 'Foto';
+
+  @override
+  String institutionDetailPhotoCredit(Object author) {
+    return 'Foto: $author';
+  }
+
+  @override
+  String get institutionDetailCoverPhotoLabel => 'Naslovna fotografija';
+
+  @override
+  String get institutionDetailProfilePhotoLabel => 'Profilna fotografija';
+
+  @override
+  String institutionDetailCoverPhotoCredit(Object author) {
+    return 'Naslovna fotografija: $author';
+  }
+
+  @override
+  String institutionDetailProfilePhotoCredit(Object author) {
+    return 'Profilna fotografija: $author';
+  }
+
+  @override
+  String get institutionDetailLicenceFallback => 'Licenca';
+
+  @override
+  String get institutionDetailPublicDomain => 'Javna last';
+
+  @override
+  String get institutionDetailSourceLink => 'Vir';
+
+  @override
+  String institutionDetailLicenceLinkSemantics(Object licence) {
+    return 'Licenca slike $licence, odpre se v brskalniku';
+  }
+
+  @override
+  String get institutionDetailSourceLinkSemantics =>
+      'Vir slike, odpre se v brskalniku';
+
+  @override
+  String get institutionDetailVisitTitle => 'Obisk';
+
+  @override
+  String get institutionDetailOpeningHours => 'Odpiralni čas';
+
+  @override
+  String get institutionDetailAdmission => 'Vstopnina';
+
+  @override
+  String get institutionDetailAdmissionFree => 'Brezplačno';
+
+  @override
+  String get institutionDetailAdmissionPaid => 'Plačljivo';
+
+  @override
+  String get institutionDetailAdmissionMixed => 'Brezplačno in plačljivo';
+
+  @override
+  String get institutionDetailAccessibility => 'Dostopnost';
+
+  @override
+  String get institutionDetailBookingLink => 'Rezerviraj obisk';
+
+  @override
+  String get institutionDetailVisitorSourceLink =>
+      'Uradne informacije za obiskovalce';
+
+  @override
+  String get institutionDetailStatActiveEvents => 'Aktivni dogodki';
+
+  @override
+  String get institutionDetailStatArtworkViews => 'Ogledi umetnin';
+
+  @override
+  String get institutionDetailStatVisitors => 'Obiskovalci';
+
+  @override
+  String get institutionDetailEventsTitle => 'Dogodki';
+
+  @override
+  String get institutionDetailNoEventsTitle => 'Dogodkov še ni';
+
+  @override
+  String get institutionDetailNoEventsDescription =>
+      'Ta ustanova trenutno nima javno napovedanih dogodkov.';
+
+  @override
+  String get institutionDetailFallbackTitle => 'Ustanova';
+
+  @override
+  String get institutionDetailNotFoundTitle => 'Ustanove ni mogoče najti';
+
+  @override
+  String get institutionDetailNotFoundDescription =>
+      'Te ustanove ni bilo mogoče najti.';
+
+  @override
+  String get institutionDetailLoadErrorTitle => 'Ustanove ni mogoče naložiti';
+
+  @override
+  String get institutionDetailLoadErrorDescription =>
+      'Ustanove trenutno ni mogoče naložiti.';
 }
