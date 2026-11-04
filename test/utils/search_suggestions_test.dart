@@ -51,14 +51,52 @@ void main() {
 
     expect(results, hasLength(1));
     expect(results.first.containsKey('wallet'), isFalse);
-    // Opened from search, the institution goes to its own screen, not to a
-    // profile fetched by the institution id (which 404s).
+    // A venue id or membership owner is never account-link evidence.
     expect(
       InstitutionNavigation.resolveProfileTargetId(
         institutionId: institutionId,
         data: results.first,
       ),
       isNull,
+    );
+  });
+
+  test('only an explicit verified profile target routes to account profile UX',
+      () {
+    expect(
+      InstitutionNavigation.resolveProfileTargetId(
+        institutionId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+        data: <String, dynamic>{
+          'userId': 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',
+          'walletAddress': 'owner-wallet',
+        },
+      ),
+      isNull,
+    );
+    expect(
+      InstitutionNavigation.resolveProfileTargetId(
+        institutionId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+        explicitProfileTargetId: 'cccccccc-cccc-4ccc-8ccc-cccccccccccc',
+      ),
+      'cccccccc-cccc-4ccc-8ccc-cccccccccccc',
+    );
+  });
+
+  test('a profile-backed institution opens its own account, never a member',
+      () {
+    // Its subject id is the account itself (a wallet), not a venue record.
+    expect(
+      InstitutionNavigation.resolveProfileTargetId(
+          institutionId: 'wallet_inst_1'),
+      'wallet_inst_1',
+    );
+    // Payload keys never redirect a profile-backed institution elsewhere.
+    expect(
+      InstitutionNavigation.resolveProfileTargetId(
+        institutionId: 'wallet_inst_1',
+        data: <String, dynamic>{'ownerWallet': 'someone-else'},
+      ),
+      'wallet_inst_1',
     );
   });
 

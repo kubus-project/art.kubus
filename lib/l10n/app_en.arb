@@ -8027,5 +8027,6 @@
   "institutionDetailNotFoundTitle": "Institution not found",
   "institutionDetailNotFoundDescription": "We could not find this institution.",
   "institutionDetailLoadErrorTitle": "Unable to load institution",
-  "institutionDetailLoadErrorDescription": "We could not load this institution right now."
+  "institutionDetailLoadErrorDescription": "We could not load this institution right now.",
+  "institutionDetailAccountProfileAction": "Open account profile"
 }

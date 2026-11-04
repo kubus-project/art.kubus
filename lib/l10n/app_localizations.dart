@@ -32726,6 +32726,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'We could not load this institution right now.'**
   String get institutionDetailLoadErrorDescription;
+
+  /// No description provided for @institutionDetailAccountProfileAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Open account profile'**
+  String get institutionDetailAccountProfileAction;
 }
 
 class _AppLocalizationsDelegate

@@ -6,15 +6,22 @@ import 'package:latlong2/latlong.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../../../core/conversation_navigator.dart';
 import '../../../models/institution.dart';
+import '../../../providers/chat_provider.dart';
 import '../../../providers/institution_provider.dart';
 import '../../../services/backend_api_service.dart';
+import '../../../services/contextual_auth_gate.dart';
 import '../../../services/telemetry/telemetry_service.dart';
+import '../../../services/user_service.dart';
 import '../../../utils/design_tokens.dart';
 import '../../../utils/media_url_resolver.dart';
 import '../../../utils/map_coordinate_rules.dart';
 import '../../../utils/map_navigation.dart';
+import '../../../utils/user_profile_navigation.dart';
 import '../../../widgets/avatar_widget.dart';
+import '../../../widgets/detail/profile_relationship_actions.dart';
+import '../../../widgets/kubus_snackbar.dart';
 import '../../../widgets/profile/profile_identity_hero.dart';
 import '../../../widgets/empty_state_card.dart';
 import '../../../widgets/glass_components.dart';
@@ -50,6 +57,11 @@ class _InstitutionDetailScreenState extends State<InstitutionDetailScreen> {
   List<Event> _events = const <Event>[];
   bool _loading = true;
   String? _error;
+
+  /// Follow state of the explicitly verified account. Null until the status
+  /// answers; it is only ever read for a verified link with an account UUID.
+  bool? _accountIsFollowing;
+  bool _accountFollowInFlight = false;
 
   /// Anchors the image credits footer; the photo-credit buttons scroll to it.
   final GlobalKey _creditsFooterKey = GlobalKey();
@@ -155,6 +167,10 @@ class _InstitutionDetailScreenState extends State<InstitutionDetailScreen> {
         _events = List<Event>.unmodifiable(events);
         _loading = false;
       });
+      final linkedUserId = institution?.verifiedAccountProfile?.userId;
+      if (linkedUserId != null) {
+        unawaited(_refreshAccountFollowState(linkedUserId));
+      }
     } catch (error) {
       if (!mounted) return;
       setState(() {
@@ -212,6 +228,147 @@ class _InstitutionDetailScreenState extends State<InstitutionDetailScreen> {
       initialSubjectType: 'institution',
       initialTargetLabel: institution.name,
     );
+  }
+
+  Future<void> _refreshAccountFollowState(String accountUserId) async {
+    final following =
+        await UserService.fetchAuthoritativeFollowStateByUserId(accountUserId);
+    if (!mounted || following == null) return;
+    setState(() => _accountIsFollowing = following);
+  }
+
+  /// Follow / unfollow the verified account by its users.id, through the same
+  /// account-id endpoints and reconciliation the user profile uses. A signed-out
+  /// visitor gets the account gate and a follow intent keyed by the account id;
+  /// the executor replays that intent through the account-id route.
+  Future<void> _toggleAccountFollow({
+    required String accountUserId,
+    required String accountName,
+  }) async {
+    if (_accountFollowInFlight) return;
+    final l10n = AppLocalizations.of(context)!;
+    final messenger = ScaffoldMessenger.of(context);
+    final theme = Theme.of(context);
+    final authenticated = await const ContextualAuthGate().ensureAuthenticated(
+      context,
+      actionLabel: l10n.commonFollow.toLowerCase(),
+      returnRoute: '/main',
+      actionType: PendingActionType.follow,
+      targetType: PendingActionTargetType.user,
+      targetId: accountUserId,
+      targetLabel: accountName,
+      sourceScreen: 'institution_detail',
+    );
+    if (!authenticated || !mounted) return;
+
+    final requestedIsFollowing = !(_accountIsFollowing ?? false);
+    setState(() => _accountFollowInFlight = true);
+    bool? confirmed;
+    try {
+      final mutation = await UserService.setFollowStateByUserId(
+        accountUserId,
+        shouldFollow: requestedIsFollowing,
+      );
+      confirmed = mutation.pending
+          ? await UserService.fetchAuthoritativeFollowStateByUserId(
+              accountUserId)
+          : mutation.isFollowing;
+    } catch (error) {
+      debugPrint('InstitutionDetailScreen: account follow failed: $error');
+      confirmed = await UserService.fetchAuthoritativeFollowStateByUserId(
+          accountUserId);
+    }
+    if (!mounted) return;
+    setState(() {
+      _accountFollowInFlight = false;
+      if (confirmed != null) _accountIsFollowing = confirmed;
+    });
+    if (confirmed == requestedIsFollowing) {
+      messenger.showKubusSnackBar(
+        SnackBar(
+          content: Text(requestedIsFollowing
+              ? l10n.userProfileNowFollowingToast(accountName)
+              : l10n.userProfileUnfollowedToast(accountName)),
+          duration: const Duration(seconds: 2),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    } else {
+      messenger.showKubusSnackBar(
+        SnackBar(
+          content: Text(l10n.userProfileFollowUpdateFailedToast),
+          duration: const Duration(seconds: 3),
+          backgroundColor: theme.colorScheme.error,
+        ),
+      );
+    }
+  }
+
+  /// Opens a conversation with the verified account's own wallet, through the
+  /// same wallet-addressed flow and gate the user profile uses. The wallet is
+  /// the only target: an account id or the venue id is never sent.
+  Future<void> _messageAccount({
+    required String wallet,
+    required String accountName,
+  }) async {
+    final l10n = AppLocalizations.of(context)!;
+    final authenticated = await const ContextualAuthGate().ensureAuthenticated(
+      context,
+      requirements: ProtectedActionRequirements.participant,
+      actionLabel: l10n.userProfileMessageButtonLabel.toLowerCase(),
+      returnRoute: '/main',
+      targetLabel: accountName,
+      sourceScreen: 'institution_detail',
+    );
+    if (!authenticated || !mounted) return;
+    final chatProvider = Provider.of<ChatProvider>(context, listen: false);
+    final messenger = ScaffoldMessenger.of(context);
+    final chatAuth = chatProvider.isAuthenticated;
+    try {
+      final conv = await chatProvider.createConversation('', false, [wallet]);
+      if (!mounted) return;
+      if (conv == null) {
+        messenger.showKubusSnackBar(
+          SnackBar(
+            content: Text(chatAuth
+                ? l10n.userProfileConversationOpenFailedToast
+                : l10n.userProfileMessageLoginRequiredToast),
+          ),
+        );
+        return;
+      }
+      final preloaded = chatProvider.getPreloadedProfileMapsForConversation(
+        conv.id,
+      );
+      final rawMembers =
+          (preloaded['members'] as List<dynamic>?)?.cast<String>() ??
+              <String>[];
+      final members = rawMembers.isNotEmpty ? rawMembers : <String>[wallet];
+      final avatars = Map<String, String?>.from(
+        (preloaded['avatars'] as Map<String, String?>?) ?? <String, String?>{},
+      );
+      final names = Map<String, String?>.from(
+        (preloaded['names'] as Map<String, String?>?) ?? <String, String?>{},
+      );
+      if ((names[members.first] ?? '').isEmpty) {
+        names[members.first] = accountName;
+      }
+      await ConversationNavigator.openConversationWithPreload(
+        context,
+        conv,
+        preloadedMembers: members,
+        preloadedAvatars: avatars,
+        preloadedDisplayNames: names,
+      );
+    } catch (error) {
+      debugPrint('InstitutionDetailScreen: account message failed: $error');
+      if (!mounted) return;
+      messenger.showKubusSnackBar(
+        SnackBar(
+          content: Text(l10n.userProfileConversationOpenGenericErrorToast),
+        ),
+      );
+    }
   }
 
   /// Only plain public http(s) links are offered; credentials are refused.
@@ -410,6 +567,43 @@ class _InstitutionDetailScreenState extends State<InstitutionDetailScreen> {
       LatLng(institution.latitude, institution.longitude),
     );
     final stats = institution.stats;
+    final account = institution.verifiedAccountProfile;
+    final accountUserId = account?.userId;
+    final viewerIsAccount = account != null &&
+        (UserProfileNavigation.isCurrentUser(context, account.profileId) ||
+            UserProfileNavigation.isCurrentUser(context, accountUserId));
+    // Follow needs the account's users.id; Message needs the account's own
+    // wallet and an allowed preference. Each action is offered only when its
+    // target exists, and neither is ever derived from a venue or member id.
+    final followUserId = viewerIsAccount ? null : accountUserId;
+    final messageWallet =
+        viewerIsAccount || account == null || !account.canMessage
+            ? null
+            : account.walletAddress;
+    final accountName = account?.displayName ?? name;
+    final accountActions = followUserId != null || messageWallet != null
+        ? ProfileRelationshipActions(
+            isFollowing: _accountIsFollowing ?? false,
+            isFollowLoading: _accountFollowInFlight,
+            onFollow: followUserId == null
+                ? () {}
+                : () => unawaited(_toggleAccountFollow(
+                      accountUserId: followUserId,
+                      accountName: accountName,
+                    )),
+            onMessage: messageWallet == null
+                ? () {}
+                : () => unawaited(_messageAccount(
+                      wallet: messageWallet,
+                      accountName: accountName,
+                    )),
+            followLabel: l10n.userProfileFollowButton,
+            followingLabel: l10n.userProfileFollowingButton,
+            messageLabel: l10n.userProfileMessageButtonLabel,
+            showFollow: followUserId != null,
+            showMessage: messageWallet != null,
+          )
+        : null;
     final hasStats = stats.activeEvents > 0 ||
         stats.artworkViews > 0 ||
         stats.totalVisitors > 0;
@@ -435,6 +629,22 @@ class _InstitutionDetailScreenState extends State<InstitutionDetailScreen> {
               ),
           ],
         ),
+        if (account != null) ...[
+          const SizedBox(height: KubusSpacing.sm),
+          Align(
+            alignment: AlignmentDirectional.centerStart,
+            child: TextButton.icon(
+              key: const ValueKey('institution-linked-account-profile'),
+              // The profile route resolves a public profile id directly.
+              onPressed: () => unawaited(UserProfileNavigation.open(
+                context,
+                userId: account.profileId,
+              )),
+              icon: const Icon(Icons.account_circle_outlined),
+              label: Text(l10n.institutionDetailAccountProfileAction),
+            ),
+          ),
+        ],
         if (description.isNotEmpty) ...[
           const SizedBox(height: KubusSpacing.lg),
           Text(
@@ -508,6 +718,10 @@ class _InstitutionDetailScreenState extends State<InstitutionDetailScreen> {
 
     final hero = ProfileIdentityHero(
       displayName: name,
+      // Only a verified link carries a handle. ProfileHandle drops blank,
+      // wallet-shaped and placeholder usernames, so none is ever invented.
+      handle: account?.username,
+      actions: accountActions,
       isArtist: false,
       isInstitution: true,
       isVerified: institution.isVerified,
@@ -532,12 +746,17 @@ class _InstitutionDetailScreenState extends State<InstitutionDetailScreen> {
           children: [
             hero,
             if (credits.any((c) => c.cover))
+              // The accepted position is the cover's bottom-right corner. Only
+              // when a Follow / Message row shares the hero's lower edge does
+              // the button move to the top corner, so the two never overlap.
               Positioned(
                 key: const ValueKey('institution-cover-credit-button'),
                 right: KubusSpacing.sm,
-                top: ProfileIdentityHero.coverHeightWithImage -
-                    _creditButtonSize -
-                    KubusSpacing.sm,
+                top: accountActions == null
+                    ? ProfileIdentityHero.coverHeightWithImage -
+                        _creditButtonSize -
+                        KubusSpacing.sm
+                    : KubusSpacing.sm,
                 child: _buildCreditButton(context),
               ),
           ],

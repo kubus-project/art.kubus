@@ -19078,4 +19078,7 @@ class AppLocalizationsSl extends AppLocalizations {
   @override
   String get institutionDetailLoadErrorDescription =>
       'Ustanove trenutno ni mogoče naložiti.';
+
+  @override
+  String get institutionDetailAccountProfileAction => 'Odpri profil računa';
 }

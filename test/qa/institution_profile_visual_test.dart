@@ -390,6 +390,93 @@ Map<String, Object?> _syntheticPayload() => {
       'createdAt': '2026-07-01T10:00:00.000Z',
     };
 
+const _accountButtonKey = ValueKey('institution-linked-account-profile');
+const _qaProfileId = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
+const _qaUserId = 'cccccccc-cccc-4ccc-8ccc-cccccccccccc';
+const _longVenueName = 'Moderna galerija in Muzej sodobne umetnosti Metelkova';
+const _longHandle = 'moderna-galerija-muzej-sodobne-umetnosti-metelkova';
+
+/// Phone, tablet and desktop for the account-link captures.
+const _linkScenes = <({String name, Size size})>[
+  (name: 'phone-390x844', size: Size(390, 844)),
+  (name: 'tablet-820x1180', size: Size(820, 1180)),
+  (name: 'desktop-1440x900', size: Size(1440, 900)),
+];
+
+/// The payload the backend serves for a venue whose public account an admin
+/// verified: the explicit link only, never inferred from the venue itself.
+Map<String, Object?> _withVerifiedAccount(
+  Map<String, Object?> payload, {
+  required String? username,
+  String? walletAddress,
+}) =>
+    {
+      ...payload,
+      'verifiedAccountProfile': {
+        'profileId': _qaProfileId,
+        'userId': _qaUserId,
+        if (username != null) 'username': username,
+        'displayName': payload['name'],
+        if (walletAddress != null) 'walletAddress': walletAddress,
+        'allowMessages': true,
+      },
+    };
+
+/// A synthetic base58 wallet for the linked profile in the visual fixtures. It
+/// is not a real account: it only lets the Message action render.
+const _qaAccountWallet = 'G1mUnv6Yv3xq8mzbwb9c8rD2zYw3Lk5nVq4tJ7yHp2Ar';
+
+/// Renders the venue at every capture size in light and dark. Linked captures
+/// show the handle and Follow (and Message when [message] is set); unlinked
+/// captures show none of them.
+Future<void> _renderLinkScenes(
+  WidgetTester tester, {
+  required String prefix,
+  required Map<String, Object?> payload,
+  required HttpClient Function() imageClient,
+  required String? handle,
+  required String? captureDir,
+  bool message = false,
+}) async {
+  _serveInstitution(payload);
+  final previous = debugNetworkImageHttpClientProvider;
+  debugNetworkImageHttpClientProvider = imageClient;
+  try {
+    if (captureDir != null) {
+      Directory(captureDir).createSync(recursive: true);
+    }
+    for (final brightness in [Brightness.light, Brightness.dark]) {
+      for (final scene in _linkScenes) {
+        final label = '$prefix-${scene.name}-${brightness.name}';
+        final errors = await _renderScene(
+          tester,
+          size: scene.size,
+          brightness: brightness,
+        );
+        expect(errors, isEmpty, reason: label);
+        expect(find.text(payload['name']! as String), findsWidgets,
+            reason: label);
+        if (handle != null) {
+          expect(find.text('@$handle'), findsOneWidget, reason: label);
+          expect(find.text('Follow'), findsOneWidget, reason: label);
+          expect(find.text('Message'), message ? findsOneWidget : findsNothing,
+              reason: label);
+          expect(find.byKey(_accountButtonKey), findsOneWidget, reason: label);
+        } else {
+          expect(find.textContaining('@'), findsNothing, reason: label);
+          expect(find.text('Follow'), findsNothing, reason: label);
+          expect(find.byKey(_accountButtonKey), findsNothing, reason: label);
+        }
+        if (captureDir != null) {
+          await _capture(tester, '$captureDir/$label.png');
+        }
+      }
+    }
+  } finally {
+    debugNetworkImageHttpClientProvider = previous;
+  }
+}
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
@@ -578,4 +665,92 @@ void main() {
       debugNetworkImageHttpClientProvider = previous;
     }
   }, skip: _real == null);
+
+  testWidgets(
+      'verified account: Narodna galerija shows its handle, Follow and account button at every size',
+      (tester) async {
+    final real = _real!;
+    await tester.runAsync(QaFontLoader.ensureLoaded);
+    await _renderLinkScenes(
+      tester,
+      prefix: 'verified-narodna',
+      payload: _withVerifiedAccount(
+        _apiPayloadFromRealProfile(real),
+        username: 'narodnagalerija',
+      ),
+      imageClient: () => _BytesHttpClient({
+        '/real-cover.jpg': real.coverBytes,
+        '/real-profile.jpg': real.logoBytes,
+      }),
+      handle: 'narodnagalerija',
+      captureDir: captureDir,
+    );
+  }, skip: _real == null);
+
+  testWidgets(
+      'verified account with a wallet and messages allowed shows Message beside Follow at every size',
+      (tester) async {
+    final real = _real!;
+    await tester.runAsync(QaFontLoader.ensureLoaded);
+    await _renderLinkScenes(
+      tester,
+      prefix: 'verified-message-narodna',
+      payload: _withVerifiedAccount(
+        _apiPayloadFromRealProfile(real),
+        username: 'narodnagalerija',
+        walletAddress: _qaAccountWallet,
+      ),
+      imageClient: () => _BytesHttpClient({
+        '/real-cover.jpg': real.coverBytes,
+        '/real-profile.jpg': real.logoBytes,
+      }),
+      handle: 'narodnagalerija',
+      captureDir: captureDir,
+      message: true,
+    );
+  }, skip: _real == null);
+
+  testWidgets(
+      'unlinked: Narodna galerija shows no handle, follow, message or account button at every size',
+      (tester) async {
+    final real = _real!;
+    await tester.runAsync(QaFontLoader.ensureLoaded);
+    await _renderLinkScenes(
+      tester,
+      prefix: 'unlinked-narodna',
+      payload: _apiPayloadFromRealProfile(real),
+      imageClient: () => _BytesHttpClient({
+        '/real-cover.jpg': real.coverBytes,
+        '/real-profile.jpg': real.logoBytes,
+      }),
+      handle: null,
+      captureDir: captureDir,
+    );
+  }, skip: _real == null);
+
+  testWidgets(
+      'long name with a verified handle fits at every size, and the unlinked twin has no handle',
+      (tester) async {
+    await tester.runAsync(QaFontLoader.ensureLoaded);
+    final fixture = ProfileImageHttpFixture();
+    await tester.runAsync(fixture.prepare);
+    HttpClient imageClient() => fixture.createHttpClient(null);
+    final longName = _syntheticPayload()..['name'] = _longVenueName;
+    await _renderLinkScenes(
+      tester,
+      prefix: 'verified-long',
+      payload: _withVerifiedAccount(longName, username: _longHandle),
+      imageClient: imageClient,
+      handle: _longHandle,
+      captureDir: captureDir,
+    );
+    await _renderLinkScenes(
+      tester,
+      prefix: 'unlinked-long',
+      payload: _syntheticPayload()..['name'] = _longVenueName,
+      imageClient: imageClient,
+      handle: null,
+      captureDir: captureDir,
+    );
+  });
 }

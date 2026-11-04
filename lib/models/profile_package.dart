@@ -360,6 +360,9 @@ class _ProfilePackageJson {
   static Map<String, dynamic> userToJson(User user) {
     return <String, dynamic>{
       'id': user.id,
+      if (user.userId != null) 'userId': user.userId,
+      if (user.walletAddress != null) 'walletAddress': user.walletAddress,
+      'allowsMessages': user.allowsMessages,
       'name': user.name,
       'username': user.username,
       'bio': user.bio,
@@ -382,6 +385,11 @@ class _ProfilePackageJson {
   static User userFromJson(Map<String, dynamic> json) {
     return User(
       id: json['id']?.toString() ?? '',
+      userId: stringOrNull(json['userId']),
+      walletAddress: stringOrNull(json['walletAddress']),
+      allowsMessages: json['allowsMessages'] is bool
+          ? json['allowsMessages'] as bool
+          : true,
       name: json['name']?.toString() ?? 'Unknown artist',
       username: json['username']?.toString() ?? '',
       bio: json['bio']?.toString() ?? '',

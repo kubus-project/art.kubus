@@ -292,7 +292,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
       ),
       actionType: PendingActionType.follow,
       targetType: PendingActionTargetType.user,
-      targetId: profile.id,
+      targetId: profile.followTargetId ?? profile.id,
       targetLabel: profile.name,
       sourceScreen: 'user_profile',
     );
@@ -305,12 +305,18 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
 
     UserFollowMutationResult mutation;
     try {
-      mutation = await UserService.toggleFollowWithResult(
-        profile.id,
-        displayName: profile.name,
-        username: profile.username,
-        avatarUrl: profile.profileImageUrl,
-      );
+      final accountId = user?.userId;
+      mutation = accountId != null
+          ? await UserService.setFollowStateByUserId(
+              accountId,
+              shouldFollow: requestedIsFollowing,
+            )
+          : await UserService.toggleFollowWithResult(
+              profile.id,
+              displayName: profile.name,
+              username: profile.username,
+              avatarUrl: profile.profileImageUrl,
+            );
     } catch (e) {
       debugPrint(
         'UserProfileScreen: failed to toggle follow for ${profile.id}: $e',
@@ -435,13 +441,18 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
   }
 
   Future<bool?> _reconcileUncertainFollow(User profile) async {
-    final state = await UserService.fetchAuthoritativeFollowState(profile.id);
+    final state = profile.userId != null
+        ? await UserService.fetchAuthoritativeFollowStateByUserId(
+            profile.userId!)
+        : await UserService.fetchAuthoritativeFollowState(profile.id);
     if (state != null) {
       _profileController.patchUser((latest) => latest.copyWith(
             isFollowing: state,
           ));
     }
-    await _loadUserStats(skipFollowersOverwrite: true, forceRefresh: true);
+    if (profile.walletAddress != null) {
+      await _loadUserStats(skipFollowersOverwrite: true, forceRefresh: true);
+    }
     return state;
   }
 
@@ -734,6 +745,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                   followLabel: l10n.userProfileFollowButton,
                   followingLabel: l10n.userProfileFollowingButton,
                   messageLabel: l10n.userProfileMessageButtonLabel,
+                  showMessage: user!.supportsMessaging,
                 ),
         ),
         const SizedBox(height: DetailSpacing.lg),
@@ -893,6 +905,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
             followLabel: l10n.userProfileFollowButton,
             followingLabel: l10n.userProfileFollowingButton,
             messageLabel: l10n.userProfileMessageButtonLabel,
+            showMessage: profile.supportsMessaging,
           ),
       ],
     );
@@ -1202,6 +1215,10 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
   }
 
   Future<void> _openMessageConversation(AppLocalizations l10n) async {
+    // Conversations are addressed by wallet only. Without a linked wallet there
+    // is no message target, so nothing is sent and no id is substituted.
+    final messageTarget = user?.messagingWallet;
+    if (user?.supportsMessaging != true || messageTarget == null) return;
     final authenticated = await const ContextualAuthGate().ensureAuthenticated(
       requirements: ProtectedActionRequirements.participant,
       context,
@@ -1220,7 +1237,8 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     final messenger = ScaffoldMessenger.of(context);
     final chatAuth = chatProvider.isAuthenticated;
     try {
-      final conv = await chatProvider.createConversation('', false, [user!.id]);
+      final conv =
+          await chatProvider.createConversation('', false, [messageTarget]);
       if (conv != null) {
         if (!mounted) return;
         final preloaded = Provider.of<ChatProvider>(
@@ -1232,7 +1250,8 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
         final rawMembers =
             (preloaded['members'] as List<dynamic>?)?.cast<String>() ??
                 <String>[];
-        final members = rawMembers.isNotEmpty ? rawMembers : <String>[user!.id];
+        final members =
+            rawMembers.isNotEmpty ? rawMembers : <String>[messageTarget];
         final rawAvatars = (preloaded['avatars'] as Map<String, String?>?) ??
             <String, String?>{};
         final avatars = Map<String, String?>.from(rawAvatars);

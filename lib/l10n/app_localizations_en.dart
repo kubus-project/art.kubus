@@ -18884,4 +18884,7 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get institutionDetailLoadErrorDescription =>
       'We could not load this institution right now.';
+
+  @override
+  String get institutionDetailAccountProfileAction => 'Open account profile';
 }
