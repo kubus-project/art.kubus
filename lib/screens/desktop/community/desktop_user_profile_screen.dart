@@ -1696,7 +1696,7 @@ class _UserProfileScreenState extends State<UserProfileScreen>
       ),
       actionType: PendingActionType.follow,
       targetType: PendingActionTargetType.user,
-      targetId: profile.id,
+      targetId: profile.followTargetId ?? profile.id,
       targetLabel: profile.name,
       sourceScreen: 'desktop_user_profile',
     );
@@ -1867,7 +1867,7 @@ class _UserProfileScreenState extends State<UserProfileScreen>
   Future<void> _openConversation() async {
     // Conversations are addressed by wallet only. Without a linked wallet there
     // is no message target, so nothing is sent and no id is substituted.
-    final messageTarget = user?.walletAddress;
+    final messageTarget = user?.messagingWallet;
     if (user?.supportsMessaging != true || messageTarget == null) return;
     final l10n = AppLocalizations.of(context)!;
     final authenticated = await const ContextualAuthGate().ensureAuthenticated(

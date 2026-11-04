@@ -8,9 +8,10 @@ User _user({
   String? walletAddress,
   String? userId = _accountUuid,
   bool allowsMessages = true,
+  String id = 'profile-id-not-a-wallet',
 }) =>
     User(
-      id: 'profile-id-not-a-wallet',
+      id: id,
       userId: userId,
       walletAddress: walletAddress,
       allowsMessages: allowsMessages,
@@ -65,5 +66,35 @@ void main() {
     expect(linked.supportsMessaging, isTrue);
     expect(linked.copyWith(allowsMessages: false).supportsMessaging, isFalse);
     expect(user.copyWith(walletAddress: null).supportsMessaging, isFalse);
+  });
+
+  // Review 5 P1: username routes, the persisted user cache and profile packages
+  // build wallet-keyed users that carry the wallet only in `id`.
+  test('a legacy wallet-keyed user without walletAddress can still be messaged',
+      () {
+    final user = _user(id: _wallet, walletAddress: null, userId: null);
+    expect(user.messagingWallet, _wallet);
+    expect(user.supportsMessaging, isTrue);
+  });
+
+  test('an account or profile UUID in id is never treated as a wallet', () {
+    final user = _user(id: _accountUuid, walletAddress: null, userId: null);
+    expect(user.messagingWallet, isNull);
+    expect(user.supportsMessaging, isFalse);
+    expect(user.followTargetId, isNull);
+  });
+
+  test('messages disallowed hides messaging even for a wallet-keyed user', () {
+    final user = _user(id: _wallet, walletAddress: null, allowsMessages: false);
+    expect(user.supportsMessaging, isFalse);
+  });
+
+  // Review 5 P2: a queued follow must target what the live follow targets.
+  test('the follow target is the account UUID when known, else the wallet', () {
+    expect(_user(walletAddress: _wallet).followTargetId, _accountUuid);
+    expect(_user(id: _wallet, walletAddress: null, userId: null).followTargetId,
+        _wallet);
+    expect(_user(walletAddress: _wallet, userId: 'not-a-uuid').followTargetId,
+        _wallet);
   });
 }

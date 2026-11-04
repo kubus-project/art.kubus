@@ -1,6 +1,7 @@
 import 'achievement_progress.dart';
 import 'achievements.dart' as backend_achievements;
 import 'profile_identity_data.dart' show ProfileIdentityRoles;
+import '../utils/wallet_utils.dart';
 
 class User {
   final String id;
@@ -48,12 +49,34 @@ class User {
   final List<AchievementProgress> achievementProgress;
   final List<backend_achievements.AchievementDefinition> achievementDefinitions;
 
-  /// A conversation can be opened with this account only when its preferences
-  /// allow messages and a real linked wallet exists to address it. Without a
-  /// wallet there is no message target: [id] and [userId] are never used as one,
-  /// because the conversation API is keyed by wallet.
-  bool get supportsMessaging =>
-      allowsMessages && (walletAddress?.trim().isNotEmpty ?? false);
+  static final RegExp _uuidPattern = RegExp(
+    r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$',
+    caseSensitive: false,
+  );
+
+  /// The wallet a conversation is addressed to: the explicit [walletAddress],
+  /// else a legacy wallet-keyed [id] (username routes, caches and profile
+  /// packages build users that carry the wallet only in [id]). An account or
+  /// profile UUID is never a wallet, even though it is long and alphanumeric.
+  String? get messagingWallet {
+    final explicit = walletAddress?.trim();
+    if (explicit != null && explicit.isNotEmpty) return explicit;
+    final legacy = id.trim();
+    if (legacy.isEmpty || _uuidPattern.hasMatch(legacy)) return null;
+    return WalletUtils.looksLikeWallet(legacy) ? legacy : null;
+  }
+
+  /// A conversation can be opened only when messages are allowed and a real
+  /// wallet exists to address it ([messagingWallet]); [userId] is never used.
+  bool get supportsMessaging => allowsMessages && messagingWallet != null;
+
+  /// The identity a follow (live or replayed after sign-in) must target: the
+  /// account UUID when known, else the wallet. Null when neither is known.
+  String? get followTargetId {
+    final account = userId?.trim();
+    if (account != null && _uuidPattern.hasMatch(account)) return account;
+    return messagingWallet;
+  }
 
   const User({
     required this.id,
