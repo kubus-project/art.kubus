@@ -18775,12 +18775,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get institutionDetailCreditsTitle => 'Image credits';
 
   @override
-  String get institutionDetailPhotoLabel => 'Photo';
-
-  @override
-  String institutionDetailPhotoCredit(Object author) {
-    return 'Photo: $author';
-  }
+  String get institutionDetailPhotoCreditsAction => 'Photo credits';
 
   @override
   String get institutionDetailCoverPhotoLabel => 'Cover photo';

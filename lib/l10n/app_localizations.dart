@@ -32535,17 +32535,11 @@ abstract class AppLocalizations {
   /// **'Image credits'**
   String get institutionDetailCreditsTitle;
 
-  /// No description provided for @institutionDetailPhotoLabel.
+  /// No description provided for @institutionDetailPhotoCreditsAction.
   ///
   /// In en, this message translates to:
-  /// **'Photo'**
-  String get institutionDetailPhotoLabel;
-
-  /// No description provided for @institutionDetailPhotoCredit.
-  ///
-  /// In en, this message translates to:
-  /// **'Photo: {author}'**
-  String institutionDetailPhotoCredit(Object author);
+  /// **'Photo credits'**
+  String get institutionDetailPhotoCreditsAction;
 
   /// No description provided for @institutionDetailCoverPhotoLabel.
   ///

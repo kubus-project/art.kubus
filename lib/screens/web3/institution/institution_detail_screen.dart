@@ -27,6 +27,9 @@ const double _coverHeight = 220;
 const double _avatarSize = 88;
 const double _avatarOverlap = _avatarSize / 2;
 
+/// Minimum touch target of the photo-credit affordance.
+const double _creditButtonSize = 44;
+
 /// Reading width for the text column. The cover stays full width.
 const double _readingWidth = 720;
 
@@ -52,6 +55,49 @@ class _InstitutionDetailScreenState extends State<InstitutionDetailScreen> {
   List<Event> _events = const <Event>[];
   bool _loading = true;
   String? _error;
+
+  /// Anchors the image credits footer; the photo-credit buttons scroll to it.
+  final GlobalKey _creditsFooterKey = GlobalKey();
+
+  /// Small info button over an image: a translucent circle inside a 44 dp hit
+  /// area that scrolls to the image credits.
+  Widget _buildCreditButton(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final scheme = Theme.of(context).colorScheme;
+    final label = l10n.institutionDetailPhotoCreditsAction;
+    return IconButton(
+      tooltip: label,
+      onPressed: _scrollToCredits,
+      padding: EdgeInsets.zero,
+      constraints: const BoxConstraints.tightFor(
+        width: _creditButtonSize,
+        height: _creditButtonSize,
+      ),
+      icon: DecoratedBox(
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          color: scheme.scrim.withValues(alpha: 0.5),
+        ),
+        child: const SizedBox.square(
+          dimension: 28,
+          child: Icon(Icons.info_outline, size: 18, color: Colors.white),
+        ),
+      ),
+    );
+  }
+
+  void _scrollToCredits() {
+    final targetContext = _creditsFooterKey.currentContext;
+    if (targetContext == null) return;
+    final reduceMotion = MediaQuery.disableAnimationsOf(targetContext);
+    unawaited(Scrollable.ensureVisible(
+      targetContext,
+      alignment: 1.0,
+      duration:
+          reduceMotion ? Duration.zero : const Duration(milliseconds: 350),
+      curve: Curves.easeOutCubic,
+    ));
+  }
 
   @override
   void initState() {
@@ -268,7 +314,10 @@ class _InstitutionDetailScreenState extends State<InstitutionDetailScreen> {
         if (sourceUrl != null) ...[
           Text(' · ', style: textStyle),
           _CreditLink(
-            label: l10n.institutionDetailSourceLink,
+            // A Commons file page is named by its file title; other sources
+            // keep the generic label.
+            label: attribution.commonsFileTitle ??
+                l10n.institutionDetailSourceLink,
             semanticsLabel: l10n.institutionDetailSourceLinkSemantics,
             onPressed: () => _openExternal(Uri.parse(sourceUrl)),
           ),
@@ -382,37 +431,40 @@ class _InstitutionDetailScreenState extends State<InstitutionDetailScreen> {
   ) {
     final l10n = AppLocalizations.of(context)!;
     final scheme = Theme.of(context).colorScheme;
-    return Container(
-      key: const ValueKey('institution-image-credits'),
-      width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(
-        KubusSpacing.lg,
-        KubusSpacing.md,
-        KubusSpacing.lg,
-        KubusSpacing.lg,
-      ),
-      decoration: BoxDecoration(
-        border: Border(
-          top: BorderSide(color: scheme.outline.withValues(alpha: 0.18)),
+    return KeyedSubtree(
+      key: _creditsFooterKey,
+      child: Container(
+        key: const ValueKey('institution-image-credits'),
+        width: double.infinity,
+        padding: const EdgeInsets.fromLTRB(
+          KubusSpacing.lg,
+          KubusSpacing.md,
+          KubusSpacing.lg,
+          KubusSpacing.lg,
         ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            l10n.institutionDetailCreditsTitle,
-            style: KubusTextStyles.navMetaLabel.copyWith(
-              color: scheme.onSurface.withValues(alpha: 0.64),
-            ),
+        decoration: BoxDecoration(
+          border: Border(
+            top: BorderSide(color: scheme.outline.withValues(alpha: 0.18)),
           ),
-          const SizedBox(height: KubusSpacing.xs),
-          for (final credit in credits)
-            Padding(
-              padding: const EdgeInsets.only(bottom: KubusSpacing.xxs),
-              child: _buildImageCredit(context, credit.attribution,
-                  cover: credit.cover),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              l10n.institutionDetailCreditsTitle,
+              style: KubusTextStyles.navMetaLabel.copyWith(
+                color: scheme.onSurface.withValues(alpha: 0.64),
+              ),
             ),
-        ],
+            const SizedBox(height: KubusSpacing.xs),
+            for (final credit in credits)
+              Padding(
+                padding: const EdgeInsets.only(bottom: KubusSpacing.xxs),
+                child: _buildImageCredit(context, credit.attribution,
+                    cover: credit.cover),
+              ),
+          ],
+        ),
       ),
     );
   }
@@ -603,6 +655,25 @@ class _InstitutionDetailScreenState extends State<InstitutionDetailScreen> {
               left: KubusSpacing.lg,
               top: _coverHeight - _avatarOverlap,
               child: _buildAvatar(context, institution, avatarUrl),
+            ),
+          // Photo-credit affordances: one per image that shows a credit. Each
+          // 44 dp hit area sits in the image's bottom-right corner.
+          if (credits.any((c) => c.cover))
+            Positioned(
+              key: const ValueKey('institution-cover-credit-button'),
+              right: KubusSpacing.sm,
+              top: _coverHeight - _creditButtonSize - KubusSpacing.sm,
+              child: _buildCreditButton(context),
+            ),
+          if (avatarUrl != null && credits.any((c) => !c.cover))
+            Positioned(
+              key: const ValueKey('institution-avatar-credit-button'),
+              left: KubusSpacing.lg + _avatarSize - _creditButtonSize,
+              top: _coverHeight -
+                  _avatarOverlap +
+                  _avatarSize -
+                  _creditButtonSize,
+              child: _buildCreditButton(context),
             ),
         ],
       ),
@@ -811,7 +882,7 @@ class _CreditLink extends StatelessWidget {
         onPressed: onPressed,
         style: TextButton.styleFrom(
           padding: const EdgeInsets.symmetric(horizontal: KubusSpacing.xxs),
-          minimumSize: const Size(0, 32),
+          minimumSize: const Size(0, 44),
           tapTargetSize: MaterialTapTargetSize.shrinkWrap,
         ),
         child: Text(

@@ -100,7 +100,36 @@ class InstitutionImageAttribution {
   /// the author when known, otherwise the full credit line.
   String? get displayCredit => author ?? credit;
 
-  bool get isEmpty => credit == null && sourceUrl == null && licenseUrl == null;
+  /// True when there is nothing to show: no credit, author, link or depicted
+  /// creator. A lone author or depicted creator is still a credit.
+  bool get isEmpty =>
+      credit == null &&
+      author == null &&
+      sourceUrl == null &&
+      licenseUrl == null &&
+      depictedWorks.isEmpty;
+
+  /// Link text for [sourceUrl] when it is a Wikimedia Commons file page
+  /// (`…/wiki/File:Name.ext`): the decoded file title without the `File:`
+  /// prefix and with underscores as spaces. Null for any other URL.
+  String? get commonsFileTitle => commonsFileTitleOf(sourceUrl);
+
+  /// Pure form of [commonsFileTitle], for any source URL string.
+  static String? commonsFileTitleOf(String? url) {
+    if (url == null) return null;
+    final uri = Uri.tryParse(url);
+    if (uri == null || uri.host != 'commons.wikimedia.org') return null;
+    final segments = uri.pathSegments;
+    if (segments.length != 2 || segments[0] != 'wiki') return null;
+    final page = segments[1];
+    const prefix = 'File:';
+    if (page.length <= prefix.length ||
+        page.substring(0, prefix.length).toLowerCase() != 'file:') {
+      return null;
+    }
+    final title = page.substring(prefix.length).replaceAll('_', ' ').trim();
+    return title.isEmpty ? null : title;
+  }
 
   static final RegExp _ccVersion = RegExp(r'^\d+\.\d+$');
   static const Set<String> _ccTypes = {

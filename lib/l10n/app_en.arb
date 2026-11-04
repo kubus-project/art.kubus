@@ -7971,13 +7971,7 @@
     }
   },
   "institutionDetailCreditsTitle": "Image credits",
-  "institutionDetailPhotoLabel": "Photo",
-  "institutionDetailPhotoCredit": "Photo: {author}",
-  "@institutionDetailPhotoCredit": {
-    "placeholders": {
-      "author": {}
-    }
-  },
+  "institutionDetailPhotoCreditsAction": "Photo credits",
   "institutionDetailCoverPhotoLabel": "Cover photo",
   "institutionDetailProfilePhotoLabel": "Profile photo",
   "institutionDetailCoverPhotoCredit": "Cover photo: {author}",

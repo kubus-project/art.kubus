@@ -7909,14 +7909,8 @@
       "name": {}
     }
   },
-  "institutionDetailCreditsTitle": "Zasluge za slike",
-  "institutionDetailPhotoLabel": "Foto",
-  "institutionDetailPhotoCredit": "Foto: {author}",
-  "@institutionDetailPhotoCredit": {
-    "placeholders": {
-      "author": {}
-    }
-  },
+  "institutionDetailCreditsTitle": "Avtorstvo slik",
+  "institutionDetailPhotoCreditsAction": "Avtorstvo fotografije",
   "institutionDetailCoverPhotoLabel": "Naslovna fotografija",
   "institutionDetailProfilePhotoLabel": "Profilna fotografija",
   "institutionDetailCoverPhotoCredit": "Naslovna fotografija: {author}",

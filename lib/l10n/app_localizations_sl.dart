@@ -18966,15 +18966,10 @@ class AppLocalizationsSl extends AppLocalizations {
   }
 
   @override
-  String get institutionDetailCreditsTitle => 'Zasluge za slike';
+  String get institutionDetailCreditsTitle => 'Avtorstvo slik';
 
   @override
-  String get institutionDetailPhotoLabel => 'Foto';
-
-  @override
-  String institutionDetailPhotoCredit(Object author) {
-    return 'Foto: $author';
-  }
+  String get institutionDetailPhotoCreditsAction => 'Avtorstvo fotografije';
 
   @override
   String get institutionDetailCoverPhotoLabel => 'Naslovna fotografija';
