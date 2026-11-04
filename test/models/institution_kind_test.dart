@@ -163,13 +163,12 @@ void main() {
     });
 
     test('free-form admission is kept as text, unknown is dropped', () {
-      final free = withVisitorInfo({'admission': '5 EUR weekdays'})
-          .visitorAccess!;
+      final free =
+          withVisitorInfo({'admission': '5 EUR weekdays'}).visitorAccess!;
       expect(free.admission, isNull);
       expect(free.admissionText, '5 EUR weekdays');
 
-      final unknown =
-          withVisitorInfo({'admission': 'unknown'}).visitorAccess!;
+      final unknown = withVisitorInfo({'admission': 'unknown'}).visitorAccess!;
       expect(unknown.admission, isNull);
       expect(unknown.admissionText, isNull);
     });
