@@ -2,21 +2,31 @@ import 'dart:async';
 
 import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
+import 'package:latlong2/latlong.dart';
 import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../../models/institution.dart';
 import '../../../providers/institution_provider.dart';
 import '../../../services/backend_api_service.dart';
 import '../../../services/telemetry/telemetry_service.dart';
 import '../../../utils/design_tokens.dart';
-import '../../../screens/desktop/desktop_shell_scope.dart';
 import '../../../utils/media_url_resolver.dart';
-import '../../../widgets/common/kubus_cached_image.dart';
+import '../../../utils/map_coordinate_rules.dart';
+import '../../../utils/map_navigation.dart';
+import '../../../widgets/avatar_widget.dart';
+import '../../../widgets/profile/profile_identity_hero.dart';
 import '../../../widgets/empty_state_card.dart';
 import '../../../widgets/glass_components.dart';
 import '../../../widgets/inline_loading.dart';
 import '../../events/event_detail_screen.dart';
 import '../../../providers/activation_prompt_provider.dart';
+
+/// Minimum touch target of the photo-credit affordance.
+const double _creditButtonSize = 44;
+
+/// Reading width for the text column. The cover stays full width.
+const double _readingWidth = 720;
 
 class InstitutionDetailScreen extends StatefulWidget {
   const InstitutionDetailScreen({
@@ -40,6 +50,49 @@ class _InstitutionDetailScreenState extends State<InstitutionDetailScreen> {
   List<Event> _events = const <Event>[];
   bool _loading = true;
   String? _error;
+
+  /// Anchors the image credits footer; the photo-credit buttons scroll to it.
+  final GlobalKey _creditsFooterKey = GlobalKey();
+
+  /// Small info button over an image: a translucent circle inside a 44 dp hit
+  /// area that scrolls to the image credits.
+  Widget _buildCreditButton(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final scheme = Theme.of(context).colorScheme;
+    final label = l10n.institutionDetailPhotoCreditsAction;
+    return IconButton(
+      tooltip: label,
+      onPressed: _scrollToCredits,
+      padding: EdgeInsets.zero,
+      constraints: const BoxConstraints.tightFor(
+        width: _creditButtonSize,
+        height: _creditButtonSize,
+      ),
+      icon: DecoratedBox(
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          color: scheme.scrim.withValues(alpha: 0.5),
+        ),
+        child: const SizedBox.square(
+          dimension: 28,
+          child: Icon(Icons.info_outline, size: 18, color: Colors.white),
+        ),
+      ),
+    );
+  }
+
+  void _scrollToCredits() {
+    final targetContext = _creditsFooterKey.currentContext;
+    if (targetContext == null) return;
+    final reduceMotion = MediaQuery.disableAnimationsOf(targetContext);
+    unawaited(Scrollable.ensureVisible(
+      targetContext,
+      alignment: 1.0,
+      duration:
+          reduceMotion ? Duration.zero : const Duration(milliseconds: 350),
+      curve: Curves.easeOutCubic,
+    ));
+  }
 
   @override
   void initState() {
@@ -135,6 +188,11 @@ class _InstitutionDetailScreenState extends State<InstitutionDetailScreen> {
     return '$start - $end';
   }
 
+  /// Website, booking, licence and source links only (not directions).
+  void _openExternal(Uri uri) {
+    unawaited(launchUrl(uri, mode: LaunchMode.externalApplication));
+  }
+
   Future<void> _openEvent(Event event) async {
     await Navigator.of(context).push(
       MaterialPageRoute(
@@ -143,153 +201,425 @@ class _InstitutionDetailScreenState extends State<InstitutionDetailScreen> {
     );
   }
 
-  /// Whether the header card repeats the institution name. A standalone screen
-  /// shows the name in its AppBar, so the card does not. Embedded in a desktop
-  /// sub-screen, the card repeats it only when the sub-screen header carries a
-  /// different string (a raw link with its own label).
-  bool _bodyShowsName(BuildContext context, Institution institution) {
-    if (!widget.embedded) return false;
-    final hostTitle =
-        context.findAncestorWidgetOfExactType<DesktopSubScreen>()?.title.trim();
-    return hostTitle != institution.name.trim();
+  void _openInstitutionOnMap(Institution institution) {
+    final position = LatLng(institution.latitude, institution.longitude);
+    if (!isValidMapCoordinate(position)) return;
+    MapNavigation.open(
+      context,
+      center: position,
+      zoom: 16,
+      initialSubjectId: institution.id,
+      initialSubjectType: 'institution',
+      initialTargetLabel: institution.name,
+    );
+  }
+
+  /// Only plain public http(s) links are offered; credentials are refused.
+  static Uri? _websiteUri(String raw) {
+    final website = Uri.tryParse(raw.trim());
+    if (website == null) return null;
+    final isWeb = website.scheme == 'http' || website.scheme == 'https';
+    if (!isWeb || website.host.isEmpty || website.userInfo.isNotEmpty) {
+      return null;
+    }
+    return website;
+  }
+
+  static String _kindLabel(AppLocalizations l10n, InstitutionKind kind) {
+    return switch (kind) {
+      InstitutionKind.museum => l10n.institutionDetailKindMuseum,
+      InstitutionKind.gallery => l10n.institutionDetailKindGallery,
+      InstitutionKind.artsCentre => l10n.institutionDetailKindArtsCentre,
+      InstitutionKind.exhibitionSpace =>
+        l10n.institutionDetailKindExhibitionSpace,
+      InstitutionKind.culturalCentre =>
+        l10n.institutionDetailKindCulturalCentre,
+      InstitutionKind.other => l10n.institutionDetailKindOther,
+    };
+  }
+
+  /// Licence text for a credit: the CC name, the public domain mark, or a
+  /// generic "Licence" link when the licence URL is not a known CC URL.
+  static String? _licenceLabel(
+    AppLocalizations l10n,
+    InstitutionImageAttribution attribution,
+  ) {
+    final name = attribution.licenseName;
+    if (name != null) return name;
+    if (attribution.isPublicDomain) return l10n.institutionDetailPublicDomain;
+    return attribution.licenseUrl == null
+        ? null
+        : l10n.institutionDetailLicenceFallback;
+  }
+
+  static String? _admissionLabel(
+    AppLocalizations l10n,
+    InstitutionVisitorAccess access,
+  ) {
+    final known = access.admission;
+    if (known != null) {
+      return switch (known) {
+        InstitutionAdmission.free => l10n.institutionDetailAdmissionFree,
+        InstitutionAdmission.paid => l10n.institutionDetailAdmissionPaid,
+        InstitutionAdmission.mixed => l10n.institutionDetailAdmissionMixed,
+      };
+    }
+    return access.admissionText;
+  }
+
+  /// `Cover photo: <author> · <licence> · Source` (or Profile photo), with the licence and source as
+  /// tappable links. Missing parts are left out rather than shown empty.
+  Widget _buildImageCredit(
+    BuildContext context,
+    InstitutionImageAttribution attribution, {
+    required bool cover,
+  }) {
+    final l10n = AppLocalizations.of(context)!;
+    final scheme = Theme.of(context).colorScheme;
+    final textStyle = KubusTypography.textTheme.bodySmall?.copyWith(
+      color: scheme.onSurfaceVariant,
+    );
+    final credit = attribution.displayCredit;
+    final licenceUrl = attribution.licenseUrl;
+    final licenceLabel = _licenceLabel(l10n, attribution);
+    final sourceUrl = attribution.sourceUrl;
+    return Wrap(
+      crossAxisAlignment: WrapCrossAlignment.center,
+      children: [
+        Text(
+          switch ((cover, credit)) {
+            (true, null) => l10n.institutionDetailCoverPhotoLabel,
+            (false, null) => l10n.institutionDetailProfilePhotoLabel,
+            (true, final String author) =>
+              l10n.institutionDetailCoverPhotoCredit(author),
+            (false, final String author) =>
+              l10n.institutionDetailProfilePhotoCredit(author),
+          },
+          style: textStyle,
+        ),
+        if (licenceUrl != null && licenceLabel != null) ...[
+          Text(' · ', style: textStyle),
+          _CreditLink(
+            label: licenceLabel,
+            semanticsLabel: l10n.institutionDetailLicenceLinkSemantics(
+              licenceLabel,
+            ),
+            onPressed: () => _openExternal(Uri.parse(licenceUrl)),
+          ),
+        ],
+        if (sourceUrl != null) ...[
+          Text(' · ', style: textStyle),
+          _CreditLink(
+            // A Commons file page is named by its file title; other sources
+            // keep the generic label.
+            label: attribution.commonsFileTitle ??
+                l10n.institutionDetailSourceLink,
+            semanticsLabel: l10n.institutionDetailSourceLinkSemantics,
+            onPressed: () => _openExternal(Uri.parse(sourceUrl)),
+          ),
+        ],
+        // Creators of works shown in the photo (e.g. the architect).
+        for (final work in attribution.depictedWorks) ...[
+          Text(' · ', style: textStyle),
+          Text(
+            work.isArchitecture
+                ? l10n.institutionDetailDepictedArchitecture(work.author)
+                : l10n.institutionDetailDepictedArtwork(work.author),
+            style: textStyle,
+          ),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildCreditsFooter(
+    BuildContext context,
+    List<({bool cover, InstitutionImageAttribution attribution})> credits,
+  ) {
+    final l10n = AppLocalizations.of(context)!;
+    final scheme = Theme.of(context).colorScheme;
+    return KeyedSubtree(
+      key: _creditsFooterKey,
+      child: Container(
+        key: const ValueKey('institution-image-credits'),
+        width: double.infinity,
+        padding: const EdgeInsets.fromLTRB(
+          KubusSpacing.lg,
+          KubusSpacing.md,
+          KubusSpacing.lg,
+          KubusSpacing.lg,
+        ),
+        decoration: BoxDecoration(
+          border: Border(
+            top: BorderSide(color: scheme.outline.withValues(alpha: 0.18)),
+          ),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              l10n.institutionDetailCreditsTitle,
+              style: KubusTextStyles.navMetaLabel.copyWith(
+                color: scheme.onSurface.withValues(alpha: 0.64),
+              ),
+            ),
+            const SizedBox(height: KubusSpacing.xs),
+            for (final credit in credits)
+              Padding(
+                padding: const EdgeInsets.only(bottom: KubusSpacing.xxs),
+                child: _buildImageCredit(context, credit.attribution,
+                    cover: credit.cover),
+              ),
+          ],
+        ),
+      ),
+    );
   }
 
   Widget _buildHeaderCard(
     BuildContext context,
-    Institution institution, {
-    required bool showName,
-  }) {
+    Institution institution,
+  ) {
     final scheme = Theme.of(context).colorScheme;
-    final resolvedImage =
-        MediaUrlResolver.resolveDisplayUrl(institution.heroImageRef);
+    final l10n = AppLocalizations.of(context)!;
+    final coverUrl = MediaUrlResolver.resolveDisplayUrl(
+      MediaUrlResolver.firstSafeRef(<String?>[institution.coverImageUrl]),
+    );
+    final logoUrl = MediaUrlResolver.resolveDisplayUrl(
+      MediaUrlResolver.firstSafeRef(<String?>[institution.logoUrl]),
+    );
+    // A logo is never the hero: it appears once, as the avatar, and only when
+    // it is not the same file as the cover.
+    final avatarUrl = logoUrl != null && logoUrl != coverUrl ? logoUrl : null;
+
+    // Credits are shown only for images that are actually on screen.
+    // Each credit names the role of its image, so the reader knows which photo it covers.
+    final credits = <({bool cover, InstitutionImageAttribution attribution})>[
+      if (coverUrl != null && institution.coverAttribution != null)
+        (cover: true, attribution: institution.coverAttribution!),
+      if (avatarUrl != null && institution.logoAttribution != null)
+        (cover: false, attribution: institution.logoAttribution!),
+    ].where((entry) => !entry.attribution.isEmpty).toList(growable: false);
+
+    final name = institution.name.trim();
+    final kind = institution.institutionKind;
+    final website = _websiteUri(institution.website);
+    final address = institution.address.trim();
+    final description = institution.description.trim();
+    final hasMap = isValidMapCoordinate(
+      LatLng(institution.latitude, institution.longitude),
+    );
+    final stats = institution.stats;
+    final hasStats = stats.activeEvents > 0 ||
+        stats.artworkViews > 0 ||
+        stats.totalVisitors > 0;
+
+    final content = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Wrap(
+          spacing: KubusSpacing.sm,
+          runSpacing: KubusSpacing.sm,
+          children: [
+            if (kind != null) _DetailChip(label: _kindLabel(l10n, kind)),
+            for (final discipline in institution.disciplines)
+              _DetailChip(
+                label: discipline.labelFor(
+                  Localizations.localeOf(context).languageCode,
+                ),
+              ),
+            if (institution.isVerified)
+              _DetailChip(
+                label: l10n.institutionDetailVerifiedChip,
+                icon: Icons.verified_outlined,
+              ),
+          ],
+        ),
+        if (description.isNotEmpty) ...[
+          const SizedBox(height: KubusSpacing.lg),
+          Text(
+            description,
+            style: KubusTextStyles.sectionSubtitle.copyWith(
+              color: scheme.onSurface.withValues(alpha: 0.78),
+            ),
+          ),
+        ],
+        if (address.isNotEmpty) ...[
+          const SizedBox(height: KubusSpacing.lg),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(Icons.place_outlined, size: 18, color: scheme.primary),
+              const SizedBox(width: KubusSpacing.xs),
+              Expanded(
+                child: Text(
+                  address,
+                  style: KubusTextStyles.detailBody.copyWith(
+                    color: scheme.onSurface,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+        if (hasMap)
+          Align(
+            alignment: AlignmentDirectional.centerStart,
+            child: TextButton.icon(
+              key: const ValueKey('institution-open-on-map'),
+              onPressed: () => _openInstitutionOnMap(institution),
+              icon: const Icon(Icons.map_outlined),
+              label: Text(l10n.commonOpenOnMap),
+            ),
+          ),
+        if (website != null)
+          Align(
+            alignment: AlignmentDirectional.centerStart,
+            child: TextButton.icon(
+              key: const ValueKey('institution-website-link'),
+              onPressed: () => _openExternal(website),
+              icon: const Icon(Icons.open_in_new),
+              label: Text(website.host),
+            ),
+          ),
+        if (hasStats) ...[
+          const SizedBox(height: KubusSpacing.lg),
+          Wrap(
+            spacing: KubusSpacing.md,
+            runSpacing: KubusSpacing.md,
+            children: [
+              _StatTile(
+                label: l10n.institutionDetailStatActiveEvents,
+                value: stats.activeEvents.toString(),
+              ),
+              _StatTile(
+                label: l10n.institutionDetailStatArtworkViews,
+                value: stats.artworkViews.toString(),
+              ),
+              _StatTile(
+                label: l10n.institutionDetailStatVisitors,
+                value: stats.totalVisitors.toString(),
+              ),
+            ],
+          ),
+        ],
+      ],
+    );
+
+    final hero = ProfileIdentityHero(
+      displayName: name,
+      isArtist: false,
+      isInstitution: true,
+      isVerified: institution.isVerified,
+      coverImageUrl: coverUrl,
+      coverSemanticLabel: l10n.institutionDetailCoverSemanticLabel(name),
+      avatarRadius: 42,
+      avatar: AvatarWidget(
+        key: const ValueKey('institution-profile-image'),
+        wallet: '',
+        displayName: name,
+        avatarUrl: avatarUrl,
+        radius: 42,
+        fetchMissingAvatar: false,
+        enableProfileNavigation: false,
+        showStatusIndicator: false,
+      ),
+    );
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Stack(
+          children: [
+            hero,
+            if (credits.any((c) => c.cover))
+              Positioned(
+                key: const ValueKey('institution-cover-credit-button'),
+                right: KubusSpacing.sm,
+                top: ProfileIdentityHero.coverHeightWithImage -
+                    _creditButtonSize -
+                    KubusSpacing.sm,
+                child: _buildCreditButton(context),
+              ),
+          ],
+        ),
+        const SizedBox(height: KubusSpacing.lg),
+        LiquidGlassCard(
+          padding: EdgeInsets.zero,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Padding(
+                padding: const EdgeInsets.all(KubusSpacing.lg),
+                child: Align(
+                  alignment: AlignmentDirectional.topStart,
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: _readingWidth),
+                    child: content,
+                  ),
+                ),
+              ),
+              if (credits.isNotEmpty) _buildCreditsFooter(context, credits),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildVisitSection(
+    BuildContext context,
+    InstitutionVisitorAccess access,
+  ) {
+    final l10n = AppLocalizations.of(context)!;
+    final scheme = Theme.of(context).colorScheme;
+    final hours = access.openingHoursText;
+    final admission = _admissionLabel(l10n, access);
+    final accessibility = access.accessibilityNote;
+    final booking =
+        access.bookingUrl == null ? null : Uri.tryParse(access.bookingUrl!);
+    final source = Uri.tryParse(access.sourceUrl);
 
     return LiquidGlassCard(
-      padding: EdgeInsets.zero,
+      key: const ValueKey('institution-visit-section'),
+      padding: const EdgeInsets.all(KubusSpacing.lg),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          ClipRRect(
-            borderRadius: const BorderRadius.vertical(
-              top: Radius.circular(KubusRadius.lg),
-            ),
-            child: SizedBox(
-              height: 220,
-              width: double.infinity,
-              child: resolvedImage == null || resolvedImage.isEmpty
-                  ? DecoratedBox(
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [
-                            scheme.primary.withValues(alpha: 0.22),
-                            scheme.secondary.withValues(alpha: 0.18),
-                          ],
-                        ),
-                      ),
-                      child: Icon(
-                        Icons.apartment_outlined,
-                        size: 48,
-                        color: scheme.onSurface.withValues(alpha: 0.72),
-                      ),
-                    )
-                  : KubusCachedImage(
-                      imageUrl: resolvedImage,
-                      fit: BoxFit.cover,
-                      placeholderBuilder: (_) => DecoratedBox(
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            colors: [
-                              scheme.primary.withValues(alpha: 0.22),
-                              scheme.secondary.withValues(alpha: 0.18),
-                            ],
-                          ),
-                        ),
-                        child: Icon(
-                          Icons.apartment_outlined,
-                          size: 48,
-                          color: scheme.onSurface.withValues(alpha: 0.72),
-                        ),
-                      ),
-                      errorBuilder: (_, __, ___) => DecoratedBox(
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            colors: [
-                              scheme.primary.withValues(alpha: 0.22),
-                              scheme.secondary.withValues(alpha: 0.18),
-                            ],
-                          ),
-                        ),
-                        child: Icon(
-                          Icons.apartment_outlined,
-                          size: 48,
-                          color: scheme.onSurface.withValues(alpha: 0.72),
-                        ),
-                      ),
-                    ),
+          Text(
+            l10n.institutionDetailVisitTitle,
+            style: KubusTextStyles.sectionTitle.copyWith(
+              color: scheme.onSurface,
             ),
           ),
-          Padding(
-            padding: const EdgeInsets.all(KubusSpacing.lg),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // One title per screen: the AppBar (standalone) or the desktop
-                // sub-screen header (embedded) already carries the name.
-                if (showName) ...[
-                  Text(
-                    institution.name,
-                    style: KubusTextStyles.screenTitle.copyWith(
-                      color: scheme.onSurface,
-                    ),
-                  ),
-                  const SizedBox(height: KubusSpacing.sm),
-                ],
-                Wrap(
-                  spacing: KubusSpacing.sm,
-                  runSpacing: KubusSpacing.sm,
-                  children: [
-                    _DetailChip(label: institution.type),
-                    if (institution.isVerified)
-                      const _DetailChip(
-                        label: 'Verified',
-                        icon: Icons.verified_outlined,
-                      ),
-                    if (institution.address.trim().isNotEmpty)
-                      _DetailChip(
-                        label: institution.address.trim(),
-                        icon: Icons.place_outlined,
-                      ),
-                  ],
-                ),
-                if (institution.description.trim().isNotEmpty) ...[
-                  const SizedBox(height: KubusSpacing.lg),
-                  Text(
-                    institution.description.trim(),
-                    style: KubusTextStyles.sectionSubtitle.copyWith(
-                      color: scheme.onSurface.withValues(alpha: 0.78),
-                    ),
-                  ),
-                ],
-                const SizedBox(height: KubusSpacing.lg),
-                Wrap(
-                  spacing: KubusSpacing.md,
-                  runSpacing: KubusSpacing.md,
-                  children: [
-                    _StatTile(
-                      label: 'Active events',
-                      value: institution.stats.activeEvents.toString(),
-                    ),
-                    _StatTile(
-                      label: 'Artwork views',
-                      value: institution.stats.artworkViews.toString(),
-                    ),
-                    _StatTile(
-                      label: 'Visitors',
-                      value: institution.stats.totalVisitors.toString(),
-                    ),
-                  ],
-                ),
-              ],
+          const SizedBox(height: KubusSpacing.md),
+          if (hours != null)
+            _InfoRow(label: l10n.institutionDetailOpeningHours, value: hours),
+          if (admission != null)
+            _InfoRow(label: l10n.institutionDetailAdmission, value: admission),
+          if (accessibility != null)
+            _InfoRow(
+              label: l10n.institutionDetailAccessibility,
+              value: accessibility,
             ),
+          Wrap(
+            spacing: KubusSpacing.sm,
+            runSpacing: KubusSpacing.xs,
+            children: [
+              if (booking != null)
+                TextButton.icon(
+                  key: const ValueKey('institution-booking-link'),
+                  onPressed: () => _openExternal(booking),
+                  icon: const Icon(Icons.event_available_outlined),
+                  label: Text(l10n.institutionDetailBookingLink),
+                ),
+              if (source != null)
+                TextButton.icon(
+                  key: const ValueKey('institution-visitor-source-link'),
+                  onPressed: () => _openExternal(source),
+                  icon: const Icon(Icons.open_in_new),
+                  label: Text(l10n.institutionDetailVisitorSourceLink),
+                ),
+            ],
           ),
         ],
       ),
@@ -297,13 +627,13 @@ class _InstitutionDetailScreenState extends State<InstitutionDetailScreen> {
   }
 
   Widget _buildEventsSection(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final scheme = Theme.of(context).colorScheme;
     if (_events.isEmpty) {
-      return const EmptyStateCard(
+      return EmptyStateCard(
         icon: Icons.event_busy_outlined,
-        title: 'No events yet',
-        description:
-            'This institution does not have public events scheduled right now.',
+        title: l10n.institutionDetailNoEventsTitle,
+        description: l10n.institutionDetailNoEventsDescription,
       );
     }
 
@@ -315,7 +645,7 @@ class _InstitutionDetailScreenState extends State<InstitutionDetailScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Events',
+            l10n.institutionDetailEventsTitle,
             style: KubusTextStyles.sectionTitle.copyWith(
               color: scheme.onSurface,
             ),
@@ -364,18 +694,20 @@ class _InstitutionDetailScreenState extends State<InstitutionDetailScreen> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
+    final institution = _institution;
+    final name = institution?.name.trim() ?? '';
 
     final body = _loading
         ? const Center(child: InlineLoading(expand: false))
-        : _institution == null
+        : institution == null
             ? EmptyStateCard(
                 icon: Icons.apartment_outlined,
                 title: _error == null
-                    ? 'Institution not found'
-                    : 'Unable to load institution',
+                    ? l10n.institutionDetailNotFoundTitle
+                    : l10n.institutionDetailLoadErrorTitle,
                 description: _error == null
-                    ? 'We could not find this institution.'
-                    : 'We could not load this institution right now.',
+                    ? l10n.institutionDetailNotFoundDescription
+                    : l10n.institutionDetailLoadErrorDescription,
                 showAction: true,
                 actionLabel: l10n.commonRetry,
                 onAction: _loadInstitution,
@@ -385,10 +717,13 @@ class _InstitutionDetailScreenState extends State<InstitutionDetailScreen> {
                 children: [
                   _buildHeaderCard(
                     context,
-                    _institution!,
-                    showName: _bodyShowsName(context, _institution!),
+                    institution,
                   ),
                   const SizedBox(height: KubusSpacing.lg),
+                  if (institution.visitorAccess != null) ...[
+                    _buildVisitSection(context, institution.visitorAccess!),
+                    const SizedBox(height: KubusSpacing.lg),
+                  ],
                   _buildEventsSection(context),
                 ],
               );
@@ -400,11 +735,84 @@ class _InstitutionDetailScreenState extends State<InstitutionDetailScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          _institution?.name ?? 'Institution',
+          name.isEmpty ? l10n.institutionDetailFallbackTitle : name,
           style: KubusTextStyles.mobileAppBarTitle,
         ),
       ),
       body: body,
+    );
+  }
+}
+
+/// A tappable credit link. The semantics label names the destination; the
+/// visible text stays short so the credit line still fits a phone width.
+class _CreditLink extends StatelessWidget {
+  const _CreditLink({
+    required this.label,
+    required this.semanticsLabel,
+    required this.onPressed,
+  });
+
+  final String label;
+  final String semanticsLabel;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Semantics(
+      link: true,
+      label: semanticsLabel,
+      child: TextButton(
+        onPressed: onPressed,
+        style: TextButton.styleFrom(
+          padding: const EdgeInsets.symmetric(horizontal: KubusSpacing.xxs),
+          minimumSize: const Size(0, 44),
+          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+        ),
+        child: Text(
+          label,
+          style: KubusTypography.textTheme.bodySmall?.copyWith(
+            color: scheme.primary,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _InfoRow extends StatelessWidget {
+  const _InfoRow({
+    required this.label,
+    required this.value,
+  });
+
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: KubusSpacing.md),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: KubusTextStyles.navMetaLabel.copyWith(
+              color: scheme.onSurface.withValues(alpha: 0.64),
+            ),
+          ),
+          const SizedBox(height: KubusSpacing.xxs),
+          Text(
+            value,
+            style: KubusTextStyles.detailBody.copyWith(
+              color: scheme.onSurface,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -437,7 +845,7 @@ class _DetailChip extends StatelessWidget {
             Icon(icon, size: 16, color: scheme.primary),
             const SizedBox(width: KubusSpacing.xs),
           ],
-          Text(label),
+          Flexible(child: Text(label)),
         ],
       ),
     );

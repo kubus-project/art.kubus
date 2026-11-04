@@ -18739,4 +18739,149 @@ class AppLocalizationsEn extends AppLocalizations {
   String artistPortfolioCardActionsLabel(String title) {
     return 'Actions for $title';
   }
+
+  @override
+  String get institutionDetailKindMuseum => 'Museum';
+
+  @override
+  String get institutionDetailKindGallery => 'Gallery';
+
+  @override
+  String get institutionDetailKindArtsCentre => 'Arts centre';
+
+  @override
+  String get institutionDetailKindExhibitionSpace => 'Exhibition space';
+
+  @override
+  String get institutionDetailKindCulturalCentre => 'Cultural centre';
+
+  @override
+  String get institutionDetailKindOther => 'Other venue';
+
+  @override
+  String get institutionDetailVerifiedChip => 'Verified';
+
+  @override
+  String institutionDetailCoverSemanticLabel(Object name) {
+    return 'Cover image of $name';
+  }
+
+  @override
+  String institutionDetailLogoSemanticLabel(Object name) {
+    return 'Logo of $name';
+  }
+
+  @override
+  String get institutionDetailCreditsTitle => 'Image credits';
+
+  @override
+  String get institutionDetailPhotoCreditsAction => 'Photo credits';
+
+  @override
+  String get institutionDetailCoverPhotoLabel => 'Cover photo';
+
+  @override
+  String get institutionDetailProfilePhotoLabel => 'Profile photo';
+
+  @override
+  String institutionDetailCoverPhotoCredit(Object author) {
+    return 'Cover photo: $author';
+  }
+
+  @override
+  String institutionDetailProfilePhotoCredit(Object author) {
+    return 'Profile photo: $author';
+  }
+
+  @override
+  String institutionDetailDepictedArchitecture(Object author) {
+    return 'Architecture: $author';
+  }
+
+  @override
+  String institutionDetailDepictedArtwork(Object author) {
+    return 'Artwork: $author';
+  }
+
+  @override
+  String get institutionDetailLicenceFallback => 'Licence';
+
+  @override
+  String get institutionDetailPublicDomain => 'Public domain';
+
+  @override
+  String get institutionDetailSourceLink => 'Source';
+
+  @override
+  String institutionDetailLicenceLinkSemantics(Object licence) {
+    return 'Photo licence $licence, opens in browser';
+  }
+
+  @override
+  String get institutionDetailSourceLinkSemantics =>
+      'Photo source, opens in browser';
+
+  @override
+  String get institutionDetailVisitTitle => 'Visit';
+
+  @override
+  String get institutionDetailOpeningHours => 'Opening hours';
+
+  @override
+  String get institutionDetailAdmission => 'Admission';
+
+  @override
+  String get institutionDetailAdmissionFree => 'Free';
+
+  @override
+  String get institutionDetailAdmissionPaid => 'Paid';
+
+  @override
+  String get institutionDetailAdmissionMixed => 'Free and paid';
+
+  @override
+  String get institutionDetailAccessibility => 'Accessibility';
+
+  @override
+  String get institutionDetailBookingLink => 'Book a visit';
+
+  @override
+  String get institutionDetailVisitorSourceLink =>
+      'Official visitor information';
+
+  @override
+  String get institutionDetailStatActiveEvents => 'Active events';
+
+  @override
+  String get institutionDetailStatArtworkViews => 'Artwork views';
+
+  @override
+  String get institutionDetailStatVisitors => 'Visitors';
+
+  @override
+  String get institutionDetailEventsTitle => 'Events';
+
+  @override
+  String get institutionDetailNoEventsTitle => 'No events yet';
+
+  @override
+  String get institutionDetailNoEventsDescription =>
+      'This institution does not have public events scheduled right now.';
+
+  @override
+  String get institutionDetailFallbackTitle => 'Institution';
+
+  @override
+  String get institutionDetailNotFoundTitle => 'Institution not found';
+
+  @override
+  String get institutionDetailNotFoundDescription =>
+      'We could not find this institution.';
+
+  @override
+  String get institutionDetailLoadErrorTitle => 'Unable to load institution';
+
+  @override
+  String get institutionDetailLoadErrorDescription =>
+      'We could not load this institution right now.';
 }

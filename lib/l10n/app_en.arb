@@ -7950,5 +7950,82 @@
         "type": "String"
       }
     }
-  }
+  },
+  "institutionDetailKindMuseum": "Museum",
+  "institutionDetailKindGallery": "Gallery",
+  "institutionDetailKindArtsCentre": "Arts centre",
+  "institutionDetailKindExhibitionSpace": "Exhibition space",
+  "institutionDetailKindCulturalCentre": "Cultural centre",
+  "institutionDetailKindOther": "Other venue",
+  "institutionDetailVerifiedChip": "Verified",
+  "institutionDetailCoverSemanticLabel": "Cover image of {name}",
+  "@institutionDetailCoverSemanticLabel": {
+    "placeholders": {
+      "name": {}
+    }
+  },
+  "institutionDetailLogoSemanticLabel": "Logo of {name}",
+  "@institutionDetailLogoSemanticLabel": {
+    "placeholders": {
+      "name": {}
+    }
+  },
+  "institutionDetailCreditsTitle": "Image credits",
+  "institutionDetailPhotoCreditsAction": "Photo credits",
+  "institutionDetailCoverPhotoLabel": "Cover photo",
+  "institutionDetailProfilePhotoLabel": "Profile photo",
+  "institutionDetailCoverPhotoCredit": "Cover photo: {author}",
+  "@institutionDetailCoverPhotoCredit": {
+    "placeholders": {
+      "author": {}
+    }
+  },
+  "institutionDetailProfilePhotoCredit": "Profile photo: {author}",
+  "@institutionDetailProfilePhotoCredit": {
+    "placeholders": {
+      "author": {}
+    }
+  },
+  "institutionDetailDepictedArchitecture": "Architecture: {author}",
+  "@institutionDetailDepictedArchitecture": {
+    "placeholders": {
+      "author": {}
+    }
+  },
+  "institutionDetailDepictedArtwork": "Artwork: {author}",
+  "@institutionDetailDepictedArtwork": {
+    "placeholders": {
+      "author": {}
+    }
+  },
+  "institutionDetailLicenceFallback": "Licence",
+  "institutionDetailPublicDomain": "Public domain",
+  "institutionDetailSourceLink": "Source",
+  "institutionDetailLicenceLinkSemantics": "Photo licence {licence}, opens in browser",
+  "@institutionDetailLicenceLinkSemantics": {
+    "placeholders": {
+      "licence": {}
+    }
+  },
+  "institutionDetailSourceLinkSemantics": "Photo source, opens in browser",
+  "institutionDetailVisitTitle": "Visit",
+  "institutionDetailOpeningHours": "Opening hours",
+  "institutionDetailAdmission": "Admission",
+  "institutionDetailAdmissionFree": "Free",
+  "institutionDetailAdmissionPaid": "Paid",
+  "institutionDetailAdmissionMixed": "Free and paid",
+  "institutionDetailAccessibility": "Accessibility",
+  "institutionDetailBookingLink": "Book a visit",
+  "institutionDetailVisitorSourceLink": "Official visitor information",
+  "institutionDetailStatActiveEvents": "Active events",
+  "institutionDetailStatArtworkViews": "Artwork views",
+  "institutionDetailStatVisitors": "Visitors",
+  "institutionDetailEventsTitle": "Events",
+  "institutionDetailNoEventsTitle": "No events yet",
+  "institutionDetailNoEventsDescription": "This institution does not have public events scheduled right now.",
+  "institutionDetailFallbackTitle": "Institution",
+  "institutionDetailNotFoundTitle": "Institution not found",
+  "institutionDetailNotFoundDescription": "We could not find this institution.",
+  "institutionDetailLoadErrorTitle": "Unable to load institution",
+  "institutionDetailLoadErrorDescription": "We could not load this institution right now."
 }
