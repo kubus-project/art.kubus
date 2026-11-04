@@ -65,32 +65,10 @@ class InstitutionNavigation {
     final explicit = _normalizedText(explicitProfileTargetId);
     if (explicit != null) return explicit;
 
-    if (data != null) {
-      for (final key in const <String>[
-        'profileTargetId',
-        'profile_target_id',
-        'profileId',
-        'profile_id',
-        'walletAddress',
-        'wallet_address',
-        'wallet',
-        'ownerWallet',
-        'owner_wallet',
-        'userId',
-        'user_id',
-      ]) {
-        final value = _normalizedText(data[key]?.toString());
-        if (value != null) {
-          return value;
-        }
-      }
-    }
-
-    final normalizedInstitutionId = _normalizedText(institutionId);
-    if (normalizedInstitutionId == null || looksLikeInstitutionRecordId(normalizedInstitutionId)) {
-      return null;
-    }
-    return normalizedInstitutionId;
+    // A venue id, membership user id, owner wallet, or arbitrary payload key
+    // never proves a public account relation. Callers must pass an explicit
+    // profile target obtained from the verified account-link contract.
+    return null;
   }
 
   static bool looksLikeInstitutionRecordId(String value) {

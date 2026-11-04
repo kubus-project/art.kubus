@@ -286,6 +286,7 @@ abstract class ProfileBackendApi {
   Future<void> followUser(String walletAddress);
   Future<void> unfollowUser(String walletAddress);
   Future<bool> isFollowing(String walletAddress);
+  Future<bool> isFollowingAccount(String userId);
 
   Future<Map<String, dynamic>?> getDAOReview({required String idOrWallet});
 }
@@ -8014,6 +8015,74 @@ class BackendApiService
     }
   }
 
+  /// Follow a walletless or wallet-bound account by its canonical users.id.
+  Future<FollowMutationRecord?> followAccountWithResponse(String userId) async {
+    final targetId = userId.trim().toLowerCase();
+    final encoded = Uri.encodeComponent(targetId);
+    try {
+      final response = await _sendQueueablePublicAction(
+        method: 'POST',
+        path: '/api/community/follow/account/$encoded',
+        actionType: 'follow',
+        entityType: 'profile',
+        entityId: targetId,
+        isIdempotent: true,
+      );
+      if (response == null || !_isSuccessStatus(response.statusCode)) {
+        return FollowMutationRecord.fallback(isFollowing: false);
+      }
+      final mutation = _followMutationRecordFromResponse(
+        response,
+        fallbackIsFollowing: true,
+      );
+      if (mutation.success == false) {
+        throw BackendApiRequestException(
+          statusCode: response.statusCode,
+          path: '/api/community/follow/account/$encoded',
+          body: response.body,
+        );
+      }
+      return mutation;
+    } catch (e) {
+      AppConfig.debugPrint('BackendApiService.followAccount failed: $e');
+      rethrow;
+    }
+  }
+
+  Future<FollowMutationRecord?> unfollowAccountWithResponse(
+      String userId) async {
+    final targetId = userId.trim().toLowerCase();
+    final encoded = Uri.encodeComponent(targetId);
+    try {
+      final response = await _sendQueueablePublicAction(
+        method: 'DELETE',
+        path: '/api/community/follow/account/$encoded',
+        actionType: 'unfollow',
+        entityType: 'profile',
+        entityId: targetId,
+        isIdempotent: true,
+      );
+      if (response == null || !_isSuccessStatus(response.statusCode)) {
+        return FollowMutationRecord.fallback(isFollowing: true);
+      }
+      final mutation = _followMutationRecordFromResponse(
+        response,
+        fallbackIsFollowing: false,
+      );
+      if (mutation.success == false) {
+        throw BackendApiRequestException(
+          statusCode: response.statusCode,
+          path: '/api/community/follow/account/$encoded',
+          body: response.body,
+        );
+      }
+      return mutation;
+    } catch (e) {
+      AppConfig.debugPrint('BackendApiService.unfollowAccount failed: $e');
+      rethrow;
+    }
+  }
+
   @override
   Future<void> followUser(String walletAddress) async {
     await followUserWithResponse(walletAddress);
@@ -8208,6 +8277,27 @@ class BackendApiService
       AppConfig.debugPrint('BackendApiService.isFollowing failed: $e');
       rethrow;
     }
+  }
+
+  @override
+  Future<bool> isFollowingAccount(String userId) async {
+    final targetId = userId.trim().toLowerCase();
+    if (targetId.isEmpty) return false;
+    await ensureAuthLoaded();
+    if (!hasAuthSession) return false;
+    final uri = Uri.parse(
+        '$baseUrl/api/community/follow/account/${Uri.encodeComponent(targetId)}/status');
+    final response = await _get(uri, headers: _getHeaders());
+    if (!_isSuccessStatus(response.statusCode)) {
+      throw BackendApiRequestException(
+        statusCode: response.statusCode,
+        path: '/api/community/follow/account/$targetId/status',
+        body: response.body,
+      );
+    }
+    final decoded = _backendApiDecodeJsonMap(response.body);
+    if (decoded == null) return false;
+    return decoded['isFollowing'] == true || decoded['is_following'] == true;
   }
 
   // ==================== Reports / Moderation ====================

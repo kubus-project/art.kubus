@@ -72,6 +72,10 @@ class UserAchievementSummaryResult extends UserAchievementSummaryPayload {
 }
 
 class UserService {
+  static final RegExp _accountIdPattern = RegExp(
+    r'^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$',
+    caseSensitive: false,
+  );
   static const String _followingKey = 'following_users';
   static const String _cachePrefsKey = 'user_cache_v1';
   static const String _placeholderAvatarScheme = 'placeholder://';
@@ -308,6 +312,26 @@ class UserService {
     }
   }
 
+  static String? _verifiedAccountId(Object? value) {
+    final candidate = (value ?? '').toString().trim().toLowerCase();
+    return _accountIdPattern.hasMatch(candidate) ? candidate : null;
+  }
+
+  static Future<bool?> fetchAuthoritativeFollowStateByUserId(
+      String userId) async {
+    final accountId = _verifiedAccountId(userId);
+    if (accountId == null) return null;
+    try {
+      return await BackendApiService().isFollowingAccount(accountId);
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint(
+            'UserService.fetchAuthoritativeFollowStateByUserId failed: $e');
+      }
+      return null;
+    }
+  }
+
   static void _reconcileFollowMutationCache({
     required String targetWallet,
     required bool isFollowing,
@@ -429,6 +453,17 @@ class UserService {
       final profile = await BackendApiService().getProfileByWallet(userId);
 
       final profileRoles = ProfileIdentityRoles.fromProfileMap(profile);
+      final accountUserId =
+          _verifiedAccountId(profile['userId'] ?? profile['user_id']);
+      final rawProfileWallet = (profile['walletAddress'] ??
+              profile['wallet_address'] ??
+              profile['wallet'] ??
+              '')
+          .toString()
+          .trim();
+      final publicWalletAddress = WalletUtils.looksLikeWallet(rawProfileWallet)
+          ? WalletUtils.canonical(rawProfileWallet)
+          : '';
       final resolvedWallet = WalletUtils.canonical(
         (profile['targetWallet'] ??
                 profile['target_wallet'] ??
@@ -464,7 +499,10 @@ class UserService {
           : 0;
       final isFollowing = profileIsFollowing
           ? true
-          : await _fetchAuthoritativeFollowState(resolvedWallet);
+          : accountUserId != null
+              ? (await fetchAuthoritativeFollowStateByUserId(accountUserId) ??
+                  false)
+              : await _fetchAuthoritativeFollowState(resolvedWallet);
       // Try to parse embedded stats if the profile payload contains them
       int followersFromProfile = topLevelFollowers;
       int followingFromProfile = topLevelFollowing;
@@ -568,6 +606,13 @@ class UserService {
           : (safeUsername.isNotEmpty ? safeUsername : 'Unknown artist');
       var user = User(
         id: resolvedWallet,
+        userId: accountUserId,
+        walletAddress: publicWalletAddress.isEmpty ? null : publicWalletAddress,
+        supportsMessaging: (profile['preferences'] is Map
+                ? (profile['preferences']['allowMessages'] != false &&
+                    profile['preferences']['allow_messages'] != false)
+                : true) &&
+            publicWalletAddress.isNotEmpty,
         name: effectiveName,
         username: safeUsername,
         bio: profile['bio']?.toString() ?? '',
@@ -1544,6 +1589,49 @@ class UserService {
       displayName: displayName,
       username: username,
       avatarUrl: avatarUrl,
+    );
+  }
+
+  static Future<UserFollowMutationResult> setFollowStateByUserId(
+    String userId, {
+    required bool shouldFollow,
+  }) async {
+    final accountId = _verifiedAccountId(userId);
+    if (accountId == null) {
+      throw ArgumentError.value(
+          userId, 'userId', 'A canonical account UUID is required');
+    }
+    final api = BackendApiService();
+    final mutation = shouldFollow
+        ? await api.followAccountWithResponse(accountId)
+        : await api.unfollowAccountWithResponse(accountId);
+    if (mutation == null || mutation.pending || mutation.fromFallback) {
+      return UserFollowMutationResult(
+        isFollowing: !shouldFollow,
+        targetWallet: '',
+        pending: true,
+        requestedIsFollowing: shouldFollow,
+      );
+    }
+    if (mutation.success == false) {
+      throw BackendApiRequestException(
+        statusCode: 200,
+        path: '/api/community/follow/account/$accountId',
+        body: mutation.message,
+      );
+    }
+    return UserFollowMutationResult(
+      isFollowing: mutation.isFollowing,
+      targetWallet: '',
+      followersCount: mutation.followersCount,
+      followingCount: mutation.followingCount,
+      actorFollowingCount: mutation.actorFollowingCount,
+      changed: mutation.changed,
+      followCreated: mutation.followCreated,
+      unfollowed: mutation.unfollowed,
+      removed: mutation.removed,
+      hasCanonicalPayload: mutation.hasCanonicalPayload,
+      requestedIsFollowing: shouldFollow,
     );
   }
 
