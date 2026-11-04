@@ -27,6 +27,13 @@ enum PendingActionOutcome {
 /// The account's like on a post as the backend confirmed it.
 typedef PostLikeSnapshot = ({bool isLiked, int? likeCount});
 
+/// Sets the follow state of one target. The target is either a wallet (the
+/// wallet route) or a canonical account UUID (the account-id route).
+typedef FollowStateSetter = Future<UserFollowMutationResult> Function(
+  String targetId, {
+  required bool shouldFollow,
+});
+
 class PendingActionExecutionResult {
   const PendingActionExecutionResult(this.outcome, {this.postLike});
 
@@ -72,11 +79,17 @@ class PendingActionExecutor {
   const PendingActionExecutor({
     PostLikedLoader? loadPostLiked,
     PostLiker? likePost,
+    FollowStateSetter? setWalletFollow,
+    FollowStateSetter? setAccountFollow,
   })  : _loadPostLiked = loadPostLiked,
-        _likePost = likePost;
+        _likePost = likePost,
+        _setWalletFollow = setWalletFollow,
+        _setAccountFollow = setAccountFollow;
 
   final PostLikedLoader? _loadPostLiked;
   final PostLiker? _likePost;
+  final FollowStateSetter? _setWalletFollow;
+  final FollowStateSetter? _setAccountFollow;
 
   Future<PostLikeSnapshot?> _readPostLiked(String postId) async {
     final override = _loadPostLiked;
@@ -298,10 +311,7 @@ class PendingActionExecutor {
         PendingActionOutcome.targetUnavailable,
       );
     }
-    final result = await UserService.setFollowState(
-      intent.targetId,
-      shouldFollow: true,
-    );
+    final result = await _sendFollow(intent.targetId.trim());
     if (result.pending) {
       // A queued request only tells us the pre-request local state. Keep this
       // continuation retryable until the server confirms the relationship.
@@ -312,6 +322,23 @@ class PendingActionExecutor {
           ? PendingActionOutcome.completed
           : PendingActionOutcome.failed,
     );
+  }
+
+  /// An account UUID target follows through the account-id route; anything
+  /// else is a wallet and keeps the wallet route. The two are never mixed: a
+  /// wallet-keyed replay of an account id would hit the wrong endpoint.
+  Future<UserFollowMutationResult> _sendFollow(String targetId) {
+    final accountId = UserService.accountIdOrNull(targetId);
+    if (accountId != null) {
+      final override = _setAccountFollow;
+      return override != null
+          ? override(accountId, shouldFollow: true)
+          : UserService.setFollowStateByUserId(accountId, shouldFollow: true);
+    }
+    final override = _setWalletFollow;
+    return override != null
+        ? override(targetId, shouldFollow: true)
+        : UserService.setFollowState(targetId, shouldFollow: true);
   }
 
   PendingActionOutcome _classify(Object error) {

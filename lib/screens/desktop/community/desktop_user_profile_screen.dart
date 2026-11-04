@@ -1865,7 +1865,10 @@ class _UserProfileScreenState extends State<UserProfileScreen>
   }
 
   Future<void> _openConversation() async {
-    if (user?.supportsMessaging == false) return;
+    // Conversations are addressed by wallet only. Without a linked wallet there
+    // is no message target, so nothing is sent and no id is substituted.
+    final messageTarget = user?.walletAddress;
+    if (user?.supportsMessaging != true || messageTarget == null) return;
     final l10n = AppLocalizations.of(context)!;
     final authenticated = await const ContextualAuthGate().ensureAuthenticated(
       requirements: ProtectedActionRequirements.participant,
@@ -1884,7 +1887,6 @@ class _UserProfileScreenState extends State<UserProfileScreen>
     final chatAuth = chatProvider.isAuthenticated;
 
     try {
-      final messageTarget = user!.walletAddress ?? user!.id;
       final conv =
           await chatProvider.createConversation('', false, [messageTarget]);
       if (conv != null) {

@@ -12,9 +12,9 @@ class User {
   /// Real linked wallet, kept separate from [id] for walletless accounts.
   final String? walletAddress;
 
-  /// False when the public profile preferences or wallet-backed messaging
-  /// contract do not permit creating a conversation.
-  final bool supportsMessaging;
+  /// The account's public `allowMessages` preference. Messaging additionally
+  /// needs [walletAddress] to address a conversation: see [supportsMessaging].
+  final bool allowsMessages;
   final String name;
   final String username;
   final String bio;
@@ -48,11 +48,18 @@ class User {
   final List<AchievementProgress> achievementProgress;
   final List<backend_achievements.AchievementDefinition> achievementDefinitions;
 
+  /// A conversation can be opened with this account only when its preferences
+  /// allow messages and a real linked wallet exists to address it. Without a
+  /// wallet there is no message target: [id] and [userId] are never used as one,
+  /// because the conversation API is keyed by wallet.
+  bool get supportsMessaging =>
+      allowsMessages && (walletAddress?.trim().isNotEmpty ?? false);
+
   const User({
     required this.id,
     this.userId,
     this.walletAddress,
-    this.supportsMessaging = true,
+    this.allowsMessages = true,
     required this.name,
     required this.username,
     required this.bio,
@@ -93,7 +100,7 @@ class User {
     String? id,
     String? userId,
     String? walletAddress,
-    bool? supportsMessaging,
+    bool? allowsMessages,
     String? name,
     String? username,
     String? bio,
@@ -120,7 +127,7 @@ class User {
       id: id ?? this.id,
       userId: userId ?? this.userId,
       walletAddress: walletAddress ?? this.walletAddress,
-      supportsMessaging: supportsMessaging ?? this.supportsMessaging,
+      allowsMessages: allowsMessages ?? this.allowsMessages,
       name: name ?? this.name,
       username: username ?? this.username,
       bio: bio ?? this.bio,

@@ -317,6 +317,10 @@ class UserService {
     return _accountIdPattern.hasMatch(candidate) ? candidate : null;
   }
 
+  /// The canonical account UUID for [value], or null when it is not one. A
+  /// wallet or any other identifier is never mistaken for an account id.
+  static String? accountIdOrNull(String? value) => _verifiedAccountId(value);
+
   static Future<bool?> fetchAuthoritativeFollowStateByUserId(
       String userId) async {
     final accountId = _verifiedAccountId(userId);
@@ -608,11 +612,12 @@ class UserService {
         id: resolvedWallet,
         userId: accountUserId,
         walletAddress: publicWalletAddress.isEmpty ? null : publicWalletAddress,
-        supportsMessaging: (profile['preferences'] is Map
-                ? (profile['preferences']['allowMessages'] != false &&
-                    profile['preferences']['allow_messages'] != false)
-                : true) &&
-            publicWalletAddress.isNotEmpty,
+        // The wallet requirement lives in User.supportsMessaging: a profile
+        // without a wallet has no message target, whatever its preference.
+        allowsMessages: profile['preferences'] is Map
+            ? (profile['preferences']['allowMessages'] != false &&
+                profile['preferences']['allow_messages'] != false)
+            : true,
         name: effectiveName,
         username: safeUsername,
         bio: profile['bio']?.toString() ?? '',
