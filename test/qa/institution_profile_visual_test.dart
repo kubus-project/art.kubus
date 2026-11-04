@@ -65,6 +65,12 @@ const _disciplineLabelsSl = <String, String>{
   'science and technology': 'Znanost in tehnologija',
 };
 
+final RegExp _notAName = RegExp(
+    r"\b(not identified|unknown|unidentified|anonym\w*|neznan\w*)\b",
+    caseSensitive: false);
+final RegExp _lifeDates =
+    RegExp(r"\s*\(\s*(?:c\.\s*)?\d{3,4}\s*[-–]\s*\d{0,4}\s*\)\s*$");
+
 final String _dbopsRoot =
     Platform.environment['KUBUS_DBOPS_ROOT'] ?? 'G:/kubus-dbops';
 
@@ -123,6 +129,22 @@ Map<String, Object?> _apiPayloadFromRealProfile(_RealFixture real) {
   Map<String, Object?> attribution(Map<String, Object?> media) => {
         'credit': media['credit'],
         'author': media['author'],
+        'depictedWorks': [
+          for (final w in ((((media['rights'] as Map?)?['underlyingWork']
+                      as Map?)?['works'] as List?) ??
+                  const [])
+              .whereType<Map>()
+              // Mirrors the backend: placeholders for unidentified creators
+              // are not names, and life dates are not part of the name.
+              .where((w) =>
+                  w['author'] is String &&
+                  !_notAName.hasMatch(w['author'] as String)))
+            {
+              'type': w['type'],
+              'author':
+                  (w['author'] as String).replaceAll(_lifeDates, '').trim()
+            },
+        ],
         'sourceUrl': media['sourceUrl'],
         'licenseUrl': media['licenseUrl'],
       };

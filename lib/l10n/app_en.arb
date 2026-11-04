@@ -7992,6 +7992,18 @@
       "author": {}
     }
   },
+  "institutionDetailDepictedArchitecture": "Architecture: {author}",
+  "@institutionDetailDepictedArchitecture": {
+    "placeholders": {
+      "author": {}
+    }
+  },
+  "institutionDetailDepictedArtwork": "Artwork: {author}",
+  "@institutionDetailDepictedArtwork": {
+    "placeholders": {
+      "author": {}
+    }
+  },
   "institutionDetailLicenceFallback": "Licence",
   "institutionDetailPublicDomain": "Public domain",
   "institutionDetailSourceLink": "Source",

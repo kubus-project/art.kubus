@@ -7931,6 +7931,18 @@
       "author": {}
     }
   },
+  "institutionDetailDepictedArchitecture": "Arhitektura: {author}",
+  "@institutionDetailDepictedArchitecture": {
+    "placeholders": {
+      "author": {}
+    }
+  },
+  "institutionDetailDepictedArtwork": "Umetniško delo: {author}",
+  "@institutionDetailDepictedArtwork": {
+    "placeholders": {
+      "author": {}
+    }
+  },
   "institutionDetailLicenceFallback": "Licenca",
   "institutionDetailPublicDomain": "Javna last",
   "institutionDetailSourceLink": "Vir",

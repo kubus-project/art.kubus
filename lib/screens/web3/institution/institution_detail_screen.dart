@@ -273,6 +273,16 @@ class _InstitutionDetailScreenState extends State<InstitutionDetailScreen> {
             onPressed: () => _openExternal(Uri.parse(sourceUrl)),
           ),
         ],
+        // Creators of works shown in the photo (e.g. the architect).
+        for (final work in attribution.depictedWorks) ...[
+          Text(' · ', style: textStyle),
+          Text(
+            work.isArchitecture
+                ? l10n.institutionDetailDepictedArchitecture(work.author)
+                : l10n.institutionDetailDepictedArtwork(work.author),
+            style: textStyle,
+          ),
+        ],
       ],
     );
   }

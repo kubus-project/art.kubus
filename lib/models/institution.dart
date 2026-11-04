@@ -81,6 +81,7 @@ class InstitutionImageAttribution {
     this.author,
     this.sourceUrl,
     this.licenseUrl,
+    this.depictedWorks = const [],
   });
 
   /// The full credit line required by the licence.
@@ -90,6 +91,10 @@ class InstitutionImageAttribution {
   final String? author;
   final String? sourceUrl;
   final String? licenseUrl;
+
+  /// Creators of works visible in the image, credited whatever their
+  /// copyright status. A credit is not a permission.
+  final List<InstitutionDepictedWork> depictedWorks;
 
   /// Short attribution for display next to separate licence and source links:
   /// the author when known, otherwise the full credit line.
@@ -147,17 +152,30 @@ class InstitutionImageAttribution {
       other is InstitutionImageAttribution &&
       other.credit == credit &&
       other.author == author &&
+      _sameWorks(other.depictedWorks, depictedWorks) &&
       other.sourceUrl == sourceUrl &&
       other.licenseUrl == licenseUrl;
 
   @override
-  int get hashCode => Object.hash(credit, author, sourceUrl, licenseUrl);
+  int get hashCode => Object.hash(
+      credit, author, sourceUrl, licenseUrl, Object.hashAll(depictedWorks));
+
+  static bool _sameWorks(
+      List<InstitutionDepictedWork> a, List<InstitutionDepictedWork> b) {
+    if (a.length != b.length) return false;
+    for (var i = 0; i < a.length; i++) {
+      if (a[i] != b[i]) return false;
+    }
+    return true;
+  }
 
   factory InstitutionImageAttribution.fromJson(Object? value) {
     if (value is! Map) return const InstitutionImageAttribution();
     return InstitutionImageAttribution(
       credit: _cleanText(value['credit']),
       author: _cleanText(value['author']),
+      depictedWorks:
+          InstitutionDepictedWork.listFromJson(value['depictedWorks']),
       sourceUrl: _safeAttributionUrl(value['sourceUrl']),
       licenseUrl: _safeAttributionUrl(value['licenseUrl']),
     );
@@ -166,6 +184,8 @@ class InstitutionImageAttribution {
   Map<String, dynamic> toJson() => {
         'credit': credit,
         if (author != null) 'author': author,
+        if (depictedWorks.isNotEmpty)
+          'depictedWorks': [for (final w in depictedWorks) w.toJson()],
         'sourceUrl': sourceUrl,
         'licenseUrl': licenseUrl,
       };
@@ -188,6 +208,50 @@ class InstitutionImageAttribution {
     }
     return uri.toString();
   }
+}
+
+/// The creator of a work visible in an institution image (the building's
+/// architect, a sculptor), credited beside the photographer.
+class InstitutionDepictedWork {
+  const InstitutionDepictedWork({required this.type, required this.author});
+
+  /// `architecture`, `sculpture`, `mural` or `artwork`.
+  final String type;
+  final String author;
+
+  bool get isArchitecture => type == 'architecture';
+
+  static const Set<String> _types = {
+    'architecture',
+    'sculpture',
+    'mural',
+    'artwork'
+  };
+
+  static List<InstitutionDepictedWork> listFromJson(Object? value) {
+    if (value is! List) return const [];
+    final out = <InstitutionDepictedWork>[];
+    for (final entry in value) {
+      if (entry is! Map) continue;
+      final type = entry['type'];
+      final author = entry['author'];
+      if (type is! String || !_types.contains(type)) continue;
+      if (author is! String || author.trim().isEmpty) continue;
+      out.add(InstitutionDepictedWork(type: type, author: author.trim()));
+    }
+    return List.unmodifiable(out);
+  }
+
+  Map<String, dynamic> toJson() => {'type': type, 'author': author};
+
+  @override
+  bool operator ==(Object other) =>
+      other is InstitutionDepictedWork &&
+      other.type == type &&
+      other.author == author;
+
+  @override
+  int get hashCode => Object.hash(type, author);
 }
 
 /// Public visitor information approved independently from source collection.

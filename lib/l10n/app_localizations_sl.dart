@@ -18993,6 +18993,16 @@ class AppLocalizationsSl extends AppLocalizations {
   }
 
   @override
+  String institutionDetailDepictedArchitecture(Object author) {
+    return 'Arhitektura: $author';
+  }
+
+  @override
+  String institutionDetailDepictedArtwork(Object author) {
+    return 'Umetniško delo: $author';
+  }
+
+  @override
   String get institutionDetailLicenceFallback => 'Licenca';
 
   @override

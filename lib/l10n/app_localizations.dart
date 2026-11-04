@@ -32571,6 +32571,18 @@ abstract class AppLocalizations {
   /// **'Profile photo: {author}'**
   String institutionDetailProfilePhotoCredit(Object author);
 
+  /// No description provided for @institutionDetailDepictedArchitecture.
+  ///
+  /// In en, this message translates to:
+  /// **'Architecture: {author}'**
+  String institutionDetailDepictedArchitecture(Object author);
+
+  /// No description provided for @institutionDetailDepictedArtwork.
+  ///
+  /// In en, this message translates to:
+  /// **'Artwork: {author}'**
+  String institutionDetailDepictedArtwork(Object author);
+
   /// No description provided for @institutionDetailLicenceFallback.
   ///
   /// In en, this message translates to:
