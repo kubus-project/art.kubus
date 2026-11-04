@@ -4,6 +4,17 @@ import 'profile_identity_data.dart' show ProfileIdentityRoles;
 
 class User {
   final String id;
+
+  /// Canonical account UUID returned by the backend. Nullable for legacy
+  /// wallet-only profiles; it must never be synthesized from a profile UUID.
+  final String? userId;
+
+  /// Real linked wallet, kept separate from [id] for walletless accounts.
+  final String? walletAddress;
+
+  /// False when the public profile preferences or wallet-backed messaging
+  /// contract do not permit creating a conversation.
+  final bool supportsMessaging;
   final String name;
   final String username;
   final String bio;
@@ -39,6 +50,9 @@ class User {
 
   const User({
     required this.id,
+    this.userId,
+    this.walletAddress,
+    this.supportsMessaging = true,
     required this.name,
     required this.username,
     required this.bio,
@@ -77,6 +91,9 @@ class User {
 
   User copyWith({
     String? id,
+    String? userId,
+    String? walletAddress,
+    bool? supportsMessaging,
     String? name,
     String? username,
     String? bio,
@@ -101,6 +118,9 @@ class User {
   }) {
     return User(
       id: id ?? this.id,
+      userId: userId ?? this.userId,
+      walletAddress: walletAddress ?? this.walletAddress,
+      supportsMessaging: supportsMessaging ?? this.supportsMessaging,
       name: name ?? this.name,
       username: username ?? this.username,
       bio: bio ?? this.bio,

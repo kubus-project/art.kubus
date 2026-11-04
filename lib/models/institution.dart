@@ -367,6 +367,49 @@ class InstitutionVisitorAccess {
 }
 
 // Institution and Events Models
+class VerifiedInstitutionAccountProfile {
+  final String profileId;
+  final String? userId;
+  final String? username;
+  final String? displayName;
+  final bool allowMessages;
+
+  const VerifiedInstitutionAccountProfile({
+    required this.profileId,
+    this.userId,
+    this.username,
+    this.displayName,
+    required this.allowMessages,
+  });
+
+  factory VerifiedInstitutionAccountProfile.fromJson(Object? value) {
+    if (value is! Map)
+      throw const FormatException('Invalid verified account profile');
+    final profileId =
+        _nullableTrimmedString(value['profileId'] ?? value['profile_id']);
+    if (profileId == null || profileId.isEmpty) {
+      throw const FormatException('Verified account profile ID is missing');
+    }
+    return VerifiedInstitutionAccountProfile(
+      profileId: profileId,
+      userId: _nullableTrimmedString(value['userId'] ?? value['user_id']),
+      username: _nullableTrimmedString(value['username']),
+      displayName:
+          _nullableTrimmedString(value['displayName'] ?? value['display_name']),
+      allowMessages:
+          value['allowMessages'] == true || value['allow_messages'] == true,
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+        'profileId': profileId,
+        if (userId != null) 'userId': userId,
+        if (username != null) 'username': username,
+        if (displayName != null) 'displayName': displayName,
+        'allowMessages': allowMessages,
+      };
+}
+
 class Institution {
   final String id;
   final String name;
@@ -393,6 +436,7 @@ class Institution {
   final List<InstitutionDiscipline> disciplines;
   final InstitutionStats stats;
   final bool isVerified;
+  final VerifiedInstitutionAccountProfile? verifiedAccountProfile;
   final DateTime createdAt;
 
   /// True only for the synthetic entry the provider builds from the signed-in
@@ -419,6 +463,7 @@ class Institution {
     this.disciplines = const [],
     required this.stats,
     this.isVerified = false,
+    this.verifiedAccountProfile,
     required this.createdAt,
     this.isSelfDerivedFromWallet = false,
   });
@@ -467,6 +512,9 @@ class Institution {
           .toList(growable: false),
       stats: InstitutionStats.fromJson(json['stats']),
       isVerified: json['isVerified'] ?? false,
+      verifiedAccountProfile: json['verifiedAccountProfile'] == null
+          ? null
+          : _tryParseVerifiedAccountProfile(json['verifiedAccountProfile']),
       createdAt: DateTime.parse(json['createdAt']),
     );
   }
@@ -492,6 +540,8 @@ class Institution {
       'disciplines': disciplines.map((d) => d.toJson()).toList(growable: false),
       'stats': stats.toJson(),
       'isVerified': isVerified,
+      if (verifiedAccountProfile != null)
+        'verifiedAccountProfile': verifiedAccountProfile!.toJson(),
       'createdAt': createdAt.toIso8601String(),
     };
   }
@@ -515,6 +565,7 @@ class Institution {
     List<InstitutionDiscipline>? disciplines,
     InstitutionStats? stats,
     bool? isVerified,
+    VerifiedInstitutionAccountProfile? verifiedAccountProfile,
     DateTime? createdAt,
     bool? isSelfDerivedFromWallet,
   }) {
@@ -537,6 +588,8 @@ class Institution {
       disciplines: disciplines ?? this.disciplines,
       stats: stats ?? this.stats,
       isVerified: isVerified ?? this.isVerified,
+      verifiedAccountProfile:
+          verifiedAccountProfile ?? this.verifiedAccountProfile,
       createdAt: createdAt ?? this.createdAt,
       isSelfDerivedFromWallet:
           isSelfDerivedFromWallet ?? this.isSelfDerivedFromWallet,
@@ -547,6 +600,15 @@ class Institution {
     if (value == null) return null;
     final attribution = InstitutionImageAttribution.fromJson(value);
     return attribution.isEmpty ? null : attribution;
+  }
+
+  static VerifiedInstitutionAccountProfile? _tryParseVerifiedAccountProfile(
+      Object? value) {
+    try {
+      return VerifiedInstitutionAccountProfile.fromJson(value);
+    } catch (_) {
+      return null;
+    }
   }
 }
 
