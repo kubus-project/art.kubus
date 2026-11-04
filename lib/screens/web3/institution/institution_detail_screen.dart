@@ -204,16 +204,17 @@ class _InstitutionDetailScreenState extends State<InstitutionDetailScreen> {
     return '$start - $end';
   }
 
+  /// Website, booking, licence and source links only (not directions).
+  void _openExternal(Uri uri) {
+    unawaited(launchUrl(uri, mode: LaunchMode.externalApplication));
+  }
+
   Future<void> _openEvent(Event event) async {
     await Navigator.of(context).push(
       MaterialPageRoute(
         builder: (_) => EventDetailScreen(eventId: event.id),
       ),
     );
-  }
-
-  void _openExternal(Uri uri) {
-    unawaited(launchUrl(uri, mode: LaunchMode.externalApplication));
   }
 
   void _openInstitutionOnMap(Institution institution) {
