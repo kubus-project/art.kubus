@@ -694,6 +694,9 @@ class UserService {
 
   static User _copyWithProfileMedia(User profile, User mediaSource) => User(
         id: profile.id,
+        userId: profile.userId,
+        walletAddress: profile.walletAddress,
+        allowsMessages: profile.allowsMessages,
         name: profile.name,
         username: profile.username,
         bio: profile.bio,
@@ -837,6 +840,21 @@ class UserService {
     );
   }
 
+  /// Account identity survives partial copies: an incoming value wins, and a copy
+  /// that states no identity (no userId and no wallet) keeps the cached identity
+  /// and messaging preference instead of resetting them.
+  static User _withIdentityFrom(User incoming, User? existing) {
+    if (existing == null) return incoming;
+    final identityStated =
+        incoming.userId != null || incoming.walletAddress != null;
+    return incoming.copyWith(
+      userId: incoming.userId ?? existing.userId,
+      walletAddress: incoming.walletAddress ?? existing.walletAddress,
+      allowsMessages:
+          identityStated ? incoming.allowsMessages : existing.allowsMessages,
+    );
+  }
+
   static void _setUsersInCache(
     List<User> users, {
     required bool allowNullMediaOverwrite,
@@ -897,7 +915,7 @@ class UserService {
                 : existing.achievementDefinitions,
           );
         }
-        _cache[u.id] = updated;
+        _cache[u.id] = _withIdentityFrom(updated, existing);
         if (existing?.profileImageUrl != updated.profileImageUrl ||
             existing?.coverImageUrl != updated.coverImageUrl) {
           final revision = ++_profileMediaRevision;
@@ -1610,6 +1628,17 @@ class UserService {
     );
   }
 
+  /// The wallet of a cached account known by its account UUID, if any.
+  static String? _knownWalletForAccount(String accountId) {
+    for (final cached in _cache.values) {
+      if (_verifiedAccountId(cached.userId) == accountId) {
+        final wallet = cached.messagingWallet;
+        if (wallet != null && wallet.isNotEmpty) return wallet;
+      }
+    }
+    return null;
+  }
+
   static Future<UserFollowMutationResult> setFollowStateByUserId(
     String userId, {
     required bool shouldFollow,
@@ -1638,9 +1667,74 @@ class UserService {
         body: mutation.message,
       );
     }
+    final resolvedIsFollowing = mutation.isFollowing;
+    final targetWallet = WalletUtils.canonical(
+        mutation.targetWallet ?? _knownWalletForAccount(accountId) ?? '');
+    final actorWallet = await _activeWalletAddressFromPrefs();
+    // Unknown change: keep counts unless the server reported them.
+    final changed = mutation.changed ?? false;
+    if (targetWallet.isNotEmpty) {
+      try {
+        final followingList = await _loadFollowingUsersFromPrefs();
+        if (resolvedIsFollowing && !followingList.contains(targetWallet)) {
+          followingList.add(targetWallet);
+        } else if (!resolvedIsFollowing) {
+          followingList.remove(targetWallet);
+        }
+        await _saveFollowingUsers(followingList);
+      } catch (e) {
+        if (kDebugMode) {
+          debugPrint(
+              'UserService.setFollowStateByUserId: save following failed: $e');
+        }
+      }
+    }
+    try {
+      if (targetWallet.isNotEmpty) {
+        _reconcileFollowMutationCache(
+          targetWallet: targetWallet,
+          isFollowing: resolvedIsFollowing,
+          changed: changed,
+          mutation: mutation,
+          actorWallet: actorWallet,
+          actorFollowingCount: mutation.actorFollowingCount,
+        );
+      }
+      // Every other cached copy of this account (keyed by profile id or handle).
+      for (final key in _cache.keys.toList(growable: false)) {
+        final cached = _cache[key];
+        if (cached == null || key == targetWallet) continue;
+        if (_verifiedAccountId(cached.userId) != accountId) continue;
+        final current = cached.followersCount;
+        _cache[key] = cached.copyWith(
+          isFollowing: resolvedIsFollowing,
+          followersCount: mutation.followersCount ??
+              (!changed
+                  ? current
+                  : (resolvedIsFollowing
+                      ? current + 1
+                      : (current > 0 ? current - 1 : 0))),
+        );
+      }
+      _persistCache();
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint(
+            'UserService.setFollowStateByUserId: cache reconcile failed: $e');
+      }
+    }
+    if (targetWallet.isNotEmpty) {
+      ProfilePackageMutationTracker.followStateChanged(
+        targetWallet: targetWallet,
+        actorWallet: actorWallet,
+        isFollowing: resolvedIsFollowing,
+        followersCount: mutation.followersCount,
+        followingCount: mutation.actorFollowingCount,
+      );
+    }
     return UserFollowMutationResult(
-      isFollowing: mutation.isFollowing,
-      targetWallet: '',
+      isFollowing: resolvedIsFollowing,
+      targetWallet: targetWallet,
       followersCount: mutation.followersCount,
       followingCount: mutation.followingCount,
       actorFollowingCount: mutation.actorFollowingCount,
