@@ -7,6 +7,8 @@
 /// counts corresponds to something a member really published.
 library;
 
+import 'package:art_kubus/services/telemetry/optional_analytics_consent.dart';
+
 import 'dart:convert';
 import 'dart:typed_data';
 
@@ -68,7 +70,11 @@ void main() {
   });
 
   setUp(() async {
-    SharedPreferences.setMockInitialValues(<String, Object>{});
+    await OptionalAnalyticsConsent.instance.resetForTesting();
+    SharedPreferences.setMockInitialValues(<String, Object>{
+      OptionalAnalyticsConsent.prefsKey:
+          '{"v":2,"granted":true,"revision":"fixture"}',
+    });
     KubusClientContext.instance.setEnabled(false);
     BackendApiService().setAuthTokenForTesting('token');
     queue = InMemoryTelemetryEventQueue();
@@ -80,7 +86,7 @@ void main() {
   });
 
   tearDown(() {
-    telemetry.setAnalyticsPreferenceEnabled(false);
+    telemetry.dispose();
     BackendApiService().setHttpClient(createPlatformHttpClient());
     BackendApiService().setAuthTokenForTesting(null);
     KubusClientContext.instance.setEnabled(false);
@@ -234,7 +240,7 @@ void main() {
         sender: _NoopSender(),
       );
       await brokenTelemetry.ensureInitialized();
-      addTearDown(() => brokenTelemetry.setAnalyticsPreferenceEnabled(false));
+      addTearDown(() => brokenTelemetry.dispose());
 
       BackendApiService().setHttpClient(MockClient((request) async {
         if (request.url.path == '/api/upload') {
@@ -538,16 +544,19 @@ void main() {
       await telemetry.trackSuccessfulContribution(ContributionType.artwork);
 
       final milestones = await eventsOfType('first_contribution_completed');
-      expect(milestones, hasLength(2));
+      expect(milestones, hasLength(1),
+          reason: 'account switching drops A backlog');
       expect(
         milestones.map((e) => e.actorUserId).toSet(),
-        <String>{userA, userB},
+        <String>{userB},
       );
     });
 
     test('a legacy install flag cannot suppress any account milestone',
         () async {
       SharedPreferences.setMockInitialValues(<String, Object>{
+        OptionalAnalyticsConsent.prefsKey:
+            '{"v":2,"granted":true,"revision":"fixture"}',
         'app_telemetry_first_contribution_v1': true,
       });
       final legacyQueue = InMemoryTelemetryEventQueue();
@@ -556,13 +565,19 @@ void main() {
         sender: _NoopSender(),
       );
       await svc.ensureInitialized();
-      addTearDown(() => svc.setAnalyticsPreferenceEnabled(false));
+      addTearDown(() => svc.dispose());
 
       const first = 'bbbbbbbb-cccc-4ddd-8eee-ffffffffffff';
       const second = 'cccccccc-dddd-4eee-8fff-000000000000';
 
       svc.setActorUserId(first);
       await svc.trackSuccessfulContribution(ContributionType.marker);
+      expect(
+          (await legacyQueue.peekBatch(200))
+              .where((e) => e.eventType == 'first_contribution_completed')
+              .single
+              .actorUserId,
+          first);
       svc.setActorUserId(second);
       await svc.trackSuccessfulContribution(ContributionType.marker);
 
@@ -572,8 +587,9 @@ void main() {
           .toList(growable: false);
       expect(
         milestones.map((e) => e.actorUserId).toList(),
-        <String>[first, second],
-        reason: 'an ownerless install flag cannot be assigned to either user',
+        <String>[second],
+        reason:
+            'the second account is not suppressed and the first backlog is discarded',
       );
     });
   });

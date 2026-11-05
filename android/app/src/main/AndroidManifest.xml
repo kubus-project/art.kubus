@@ -4,9 +4,13 @@
 <uses-permission android:name="android.permission.READ_MEDIA_IMAGES"/>
 <uses-permission android:name="android.permission.READ_MEDIA_VIDEO"/>
 <uses-permission android:name="android.permission.READ_MEDIA_AUDIO"/>
-<uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
-<uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
-<uses-permission android:name="android.permission.MANAGE_EXTERNAL_STORAGE" />
+<!--
+  Files are chosen through the system pickers (image_picker, file_picker) and shared
+  from the app cache, so no broad storage access is needed. MANAGE_EXTERNAL_STORAGE
+  ("all files access") and WRITE_EXTERNAL_STORAGE were removed in 0.8.6; READ_EXTERNAL_STORAGE
+  stays only for API 32 and older.
+-->
+<uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" />
 <uses-permission android:name="android.permission.INTERNET" />
 <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
 <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
@@ -27,7 +31,6 @@
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 
     <application
-    android:requestLegacyExternalStorage="true"
         android:label="art.kubus"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher"

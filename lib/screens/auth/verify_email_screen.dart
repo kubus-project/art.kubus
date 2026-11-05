@@ -75,8 +75,8 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
       // session token for the same user. Persist it before showing the success
       // screen so a link opened in a clean browser/tab can return to a
       // logged-in app instance instead of falling back to /sign-in.
-      final sessionEstablished =
-          await BackendApiService().persistAuthTokensFromResponse(response);
+      final sessionEstablished = await BackendApiService()
+          .persistAuthTokensFromResponse(response, sessionEpoch: sessionEpoch);
       unawaited(TelemetryService().trackEmailVerified());
       if (!mounted) return;
       setState(() => _verified = true);

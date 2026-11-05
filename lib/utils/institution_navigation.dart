@@ -65,29 +65,14 @@ class InstitutionNavigation {
     final explicit = _normalizedText(explicitProfileTargetId);
     if (explicit != null) return explicit;
 
-    if (data != null) {
-      for (final key in const <String>[
-        'profileTargetId',
-        'profile_target_id',
-        'profileId',
-        'profile_id',
-        'walletAddress',
-        'wallet_address',
-        'wallet',
-        'ownerWallet',
-        'owner_wallet',
-        'userId',
-        'user_id',
-      ]) {
-        final value = _normalizedText(data[key]?.toString());
-        if (value != null) {
-          return value;
-        }
-      }
-    }
-
+    // A venue record id, membership user id, owner wallet or other payload key
+    // never proves a public account relation: those need an explicit target from
+    // the verified account-link contract. A profile-backed institution, however,
+    // is identified by its own account (its subject id is that account's wallet
+    // or handle, not a venue record UUID), so that id is its own profile target.
     final normalizedInstitutionId = _normalizedText(institutionId);
-    if (normalizedInstitutionId == null || looksLikeInstitutionRecordId(normalizedInstitutionId)) {
+    if (normalizedInstitutionId == null ||
+        looksLikeInstitutionRecordId(normalizedInstitutionId)) {
       return null;
     }
     return normalizedInstitutionId;

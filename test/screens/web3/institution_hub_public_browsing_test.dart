@@ -128,6 +128,7 @@ Future<List<String>> _pumpHub(
   WalletProvider? walletProvider,
   DAOProvider? daoProvider,
   Map<String, Object> initialPrefs = const <String, Object>{},
+  Locale? locale,
 }) async {
   SharedPreferences.setMockInitialValues(<String, Object>{...initialPrefs});
   final api = BackendApiService();
@@ -186,6 +187,7 @@ Future<List<String>> _pumpHub(
           darkTheme: theme.darkTheme,
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
+          locale: locale,
           // The wallet guard may push the app's onboarding route; the test
           // app has no route table, so answer it with an empty page.
           onUnknownRoute: (settings) {
@@ -241,47 +243,66 @@ void main() {
     expect(find.byType(Web3OnboardingScreen), findsNothing);
   });
 
-  testWidgets(
-      'email-only account can tap the apply action; the wallet explanation is shown',
-      (tester) async {
-    final requests = <String>[];
-    await _pumpHub(
-      tester,
-      user: _emailOnlyUser(),
-      requests: requests,
-      signedIn: true,
-    );
+  // The owner's decision: the application CTA is "Apply as an institution", not
+  // "Connect wallet to apply". The form opens without a wallet; the wallet need is
+  // explained inside it, before submission.
+  for (final (locale, cta, walletTitle) in <(Locale, String, String)>[
+    (
+      const Locale('en'),
+      'Apply as an institution',
+      'A wallet signature is needed to submit',
+    ),
+    (
+      const Locale('sl'),
+      'Prijavi se kot institucija',
+      'Za oddajo je potreben podpis z denarnico',
+    ),
+  ]) {
+    testWidgets(
+        'email-only account sees "$cta", can open the form, and the wallet need is explained (${locale.languageCode})',
+        (tester) async {
+      final requests = <String>[];
+      await _pumpHub(
+        tester,
+        user: _emailOnlyUser(),
+        requests: requests,
+        signedIn: true,
+        locale: locale,
+      );
 
-    final context = tester.element(find.byType(InstitutionHub));
-    final l10n = AppLocalizations.of(context)!;
+      final context = tester.element(find.byType(InstitutionHub));
+      final l10n = AppLocalizations.of(context)!;
+      expect(l10n.institutionHubCtaApplyAsInstitution, cta);
+      expect(l10n.institutionHubApplicationWalletBannerTitle, walletTitle);
 
-    // The CTA names the wallet need and stays tappable, so browsing and
-    // filling in the application never require a wallet.
-    expect(
-      _applyButton(tester, l10n.institutionHubCtaConnectWalletToApply)
-          .onPressed,
-      isNotNull,
-    );
+      // The CTA names the action, not the wallet, and stays tappable, so
+      // browsing and filling in the application never require a wallet.
+      expect(find.text(cta), findsOneWidget);
+      expect(_applyButton(tester, cta).onPressed, isNotNull);
+      expect(find.text('Connect wallet to apply'), findsNothing);
 
-    await tester.tap(find.text(l10n.institutionHubCtaConnectWalletToApply));
-    await tester.pumpAndSettle();
+      await tester.tap(find.text(cta));
+      await tester.pumpAndSettle();
 
-    final sheet = find.byType(BackdropGlassSheet);
-    expect(sheet, findsOneWidget);
-    expect(
-      find.descendant(
-        of: sheet,
-        matching: find.text(l10n.institutionHubApplicationWalletWhy),
-      ),
-      findsOneWidget,
-      reason: 'the sheet explains why the submission needs a wallet',
-    );
-    expect(
-      requests.where((r) => r.startsWith('POST ')),
-      isEmpty,
-      reason: 'opening the form sends nothing',
-    );
-  });
+      final sheet = find.byType(BackdropGlassSheet);
+      expect(sheet, findsOneWidget);
+      for (final text in <String>[
+        walletTitle,
+        l10n.institutionHubApplicationWalletWhy,
+      ]) {
+        expect(
+          find.descendant(of: sheet, matching: find.text(text)),
+          findsOneWidget,
+          reason: 'the sheet explains the wallet need before submission',
+        );
+      }
+      expect(
+        requests.where((r) => r.startsWith('POST ')),
+        isEmpty,
+        reason: 'opening the form sends nothing',
+      );
+    });
+  }
 
   testWidgets(
       'email-only submit goes through the wallet guard and sends no DAO review',
@@ -297,7 +318,7 @@ void main() {
     final context = tester.element(find.byType(InstitutionHub));
     final l10n = AppLocalizations.of(context)!;
 
-    await tester.tap(find.text(l10n.institutionHubCtaConnectWalletToApply));
+    await tester.tap(find.text(l10n.institutionHubCtaApplyAsInstitution));
     await tester.pumpAndSettle();
 
     final fields = find.descendant(

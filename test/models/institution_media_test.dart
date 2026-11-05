@@ -32,6 +32,19 @@ Map<String, dynamic> _institutionJson({
 }
 
 void main() {
+  test('disciplines preserve localised labels and ignore malformed data', () {
+    final value = Institution.fromJson(_institutionJson()
+      ..['disciplines'] = [
+        {'code': 'painting', 'labelEn': 'Painting', 'labelSl': 'Slikarstvo'},
+        {'code': 'bad'},
+      ]);
+    expect(value.disciplines, hasLength(1));
+    expect(value.disciplines.first.labelFor('en'), 'Painting');
+    expect(value.disciplines.first.labelFor('sl'), 'Slikarstvo');
+    expect(value.copyWith().toJson()['disciplines'], [
+      {'code': 'painting', 'labelEn': 'Painting', 'labelSl': 'Slikarstvo'},
+    ]);
+  });
   group('Institution imagery comes from the schema-backed fields', () {
     test('cover and logo are read from their schema names', () {
       final institution = Institution.fromJson(_institutionJson(

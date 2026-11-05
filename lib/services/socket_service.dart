@@ -128,6 +128,12 @@ class SocketService {
   void removeMessageReactionListener(NotificationCallback cb) =>
       _removeFromListeners(_messageReactionListeners, cb);
 
+  /// Test seam: when true, [connect] reports failure without creating a socket,
+  /// so a widget test never dials the backend. A real handshake can finish after
+  /// the test has torn down and leave a close timer on its fake clock.
+  @visibleForTesting
+  static bool debugDisableConnect = false;
+
   /// Socket.IO options for a handshake that carries [token].
   ///
   /// `forceNew` is required. Without it socket_io_client reuses the Manager it
@@ -156,6 +162,7 @@ class SocketService {
   /// Connects socket to backend. If `baseUrl` is null uses `BackendApiService().baseUrl`.
   /// Returns true when connected, false on error/timeout.
   Future<bool> connect([String? baseUrl]) async {
+    if (debugDisableConnect) return false;
     final api = BackendApiService();
 
     // Ensure auth token is loaded so we can supply it to the socket handshake.

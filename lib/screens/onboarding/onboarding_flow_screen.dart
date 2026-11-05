@@ -4358,6 +4358,12 @@ class _WelcomeDecisionPanel extends StatelessWidget {
                 child: Text(AppLocalizations.of(context)!.commonSignIn),
               ),
             ),
+            Center(
+                child: TextButton(
+              onPressed: () =>
+                  Navigator.of(context).pushNamed('/account-closure'),
+              child: Text(l10n.accountClosureStatusTitle),
+            )),
           ],
         );
 

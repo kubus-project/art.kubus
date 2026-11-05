@@ -12,6 +12,7 @@ import 'package:art_kubus/services/socket_service.dart';
 import 'package:art_kubus/widgets/auth/pending_action_continuation.dart';
 import 'package:art_kubus/widgets/community/community_post_card.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
@@ -207,9 +208,8 @@ Future<void> _likeAsGuestAndConfirm(WidgetTester tester) async {
 }
 
 /// Lets real and fake time run until the feed's background work has settled.
-/// The feed opens a socket on start-up; in tests the handshake fails at once,
-/// and that failure starts a close timer on the test clock. Real time is given
-/// first so the failure lands, then the clock runs past every timer it starts.
+/// Real time is given first so in-flight work lands, then the clock runs past
+/// every timer it starts.
 Future<void> _drain(WidgetTester tester) async {
   for (var i = 0; i < 30; i++) {
     await tester.runAsync(
@@ -246,8 +246,8 @@ Future<void> _runFeed(
     // nothing is left, or flutter_test reports them as still pending.
     await _drain(tester);
     await tester.pumpWidget(const SizedBox());
-    // A signed-in session opens the chat socket, a singleton that outlives the
-    // test. Close it here, then let the close handshake's timers run out.
+    // Socket connects are disabled for this file (see setUp); close anything a
+    // test left open, then let the close timers run out.
     SocketService().disconnect();
     await _drain(tester);
   } finally {
@@ -264,11 +264,16 @@ void main() {
   late _FakeBackend backend;
 
   setUp(() {
+    // Every test starts with an empty platform credential store and queue.
+    FlutterSecureStorage.setMockInitialValues(<String, String>{});
+    BackendApiService().resetCredentialStoreForTesting();
     SharedPreferences.setMockInitialValues(<String, Object>{});
     BackendApiService().setAuthTokenForTesting(null);
+    SocketService.debugDisableConnect = true;
   });
 
   tearDown(() {
+    SocketService.debugDisableConnect = false;
     BackendApiService().setAuthTokenForTesting(null);
     BackendApiService().setHttpClient(http.Client());
   });

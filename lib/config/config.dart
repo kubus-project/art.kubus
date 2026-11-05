@@ -161,13 +161,13 @@ class AppConfig {
     defaultValue: true,
   );
 
-  /// Ordered raw OpenStreetMap graph endpoints used by the client-side route
-  /// engine. Entries are comma-separated so an owned Overpass deployment can
-  /// take priority while retaining an explicit fallback.
+  /// Optional EXTERNAL OpenStreetMap graph endpoints, comma-separated, tried only after the first-party
+  /// `/api/walking-graph` endpoint. **Empty by default**: the app never sends a user's route area to a third-party Overpass
+  /// server on its own. The backend is the single place that decides whether an external provider may be used
+  /// (`WALKING_GRAPH_ALLOW_PUBLIC_FALLBACK`); setting this at build time is an explicit operator decision.
   static const String walkingGraphEndpoints = String.fromEnvironment(
     'OVERPASS_WALKING_ENDPOINTS',
-    defaultValue: 'https://overpass-api.de/api/interpreter,'
-        'https://overpass.private.coffee/api/interpreter',
+    defaultValue: '',
   );
 
   /// Map: allow public/street art marker type submissions.
@@ -684,15 +684,15 @@ class AppInfo {
   static const String appName = 'art.kubus';
   static const String version = String.fromEnvironment(
     'KUBUS_APP_VERSION',
-    defaultValue: '0.8.5',
+    defaultValue: '0.8.6',
   );
   static const int buildNumber = int.fromEnvironment(
     'KUBUS_BUILD_NUMBER',
-    defaultValue: 26102001,
+    defaultValue: 26103101,
   );
   static const String buildDate = String.fromEnvironment(
     'KUBUS_BUILD_DATE',
-    defaultValue: '2026-10-20',
+    defaultValue: '2026-10-31',
   );
 
   /// Get full version string

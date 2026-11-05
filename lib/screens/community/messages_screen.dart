@@ -10,6 +10,7 @@ import '../../providers/profile_provider.dart';
 import '../../providers/cache_provider.dart';
 import '../../providers/app_mode_provider.dart';
 import '../../services/user_service.dart';
+import '../../services/account_cache_store.dart';
 import '../../services/backend_api_service.dart';
 import '../../models/user.dart';
 import '../../models/conversation.dart';
@@ -541,6 +542,7 @@ class _MessagesScreenState extends State<MessagesScreen> {
   Future<void> _loadConversationAvatars({
     List<Conversation>? targetConvs,
   }) async {
+    final cacheScope = AccountCacheScope.capture();
     try {
       final convs = targetConvs ?? _chatProvider.conversations;
       if (convs.isEmpty) return;
@@ -583,10 +585,11 @@ class _MessagesScreenState extends State<MessagesScreen> {
       for (var i = 0; i < futures.length; i += batchSize) {
         final batch = futures.skip(i).take(batchSize).toList();
         await Future.wait(batch);
+        if (!cacheScope.isCurrent) return;
       }
       if (wallets.isEmpty) return;
       final users = await UserService.getUsersByWallets(wallets.toList());
-      if (!mounted) return;
+      if (!mounted || !cacheScope.isCurrent) return;
       try {
         EventBus().emitProfilesUpdated(users);
       } catch (_) {}
@@ -622,7 +625,8 @@ class _MessagesScreenState extends State<MessagesScreen> {
           if (shouldReplaceName) {
             _conversationNames[c] = name.isNotEmpty ? name : wallet;
           }
-          _persistWalletProfile(wallet, avatar: avatar, displayName: name);
+          _persistWalletProfile(wallet,
+              avatar: avatar, displayName: name, scope: cacheScope);
         }
       }
       setState(() {});
@@ -1351,11 +1355,12 @@ class _MessagesScreenState extends State<MessagesScreen> {
 
   // Proactively fetch members and resolve avatars/names for a single conversation row.
   Future<void> _ensureConversationMembersLoaded(String conversationId) async {
+    final cacheScope = AccountCacheScope.capture();
     if (_pendingMemberLoads.contains(conversationId)) return;
     _pendingMemberLoads.add(conversationId);
     try {
       final mbrs = await _chatProvider.fetchMembers(conversationId);
-      if (!mounted) return;
+      if (!mounted || !cacheScope.isCurrent) return;
 
       final profile = Provider.of<ProfileProvider>(context, listen: false);
       final myWallet = WalletUtils.normalize(
@@ -1404,9 +1409,11 @@ class _MessagesScreenState extends State<MessagesScreen> {
             cachedUser.id,
             avatar: avatar,
             displayName: cachedUser.name,
+            scope: cacheScope,
           );
         } else {
           final users = await UserService.getUsersByWallets(wallets);
+          if (!mounted || !cacheScope.isCurrent) return;
           try {
             EventBus().emitProfilesUpdated(users);
           } catch (_) {}
@@ -1434,7 +1441,8 @@ class _MessagesScreenState extends State<MessagesScreen> {
               _conversationNames[conversationId] =
                   u.name.isNotEmpty ? u.name : u.id;
             }
-            _persistWalletProfile(u.id, avatar: avatar, displayName: u.name);
+            _persistWalletProfile(u.id,
+                avatar: avatar, displayName: u.name, scope: cacheScope);
             debugPrint(
               'MessagesScreen: loaded members for $conversationId -> name=${_conversationNames[conversationId]}, avatar=${_conversationAvatars[conversationId]}',
             );
@@ -1479,6 +1487,7 @@ class _MessagesScreenState extends State<MessagesScreen> {
 
   void _persistWalletProfile(
     String wallet, {
+    required AccountCacheScope scope,
     String? avatar,
     String? displayName,
   }) {
@@ -1495,6 +1504,7 @@ class _MessagesScreenState extends State<MessagesScreen> {
     if (avatarPayload.isEmpty && namePayload.isEmpty) return;
     unawaited(
       _cacheProvider.mergeProfiles(
+        scope: scope,
         avatars: avatarPayload.isEmpty ? null : avatarPayload,
         displayNames: namePayload.isEmpty ? null : namePayload,
       ),

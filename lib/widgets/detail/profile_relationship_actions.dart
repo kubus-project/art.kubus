@@ -31,6 +31,7 @@ class ProfileRelationshipActions extends StatelessWidget {
     required this.followingLabel,
     required this.messageLabel,
     this.isFollowLoading = false,
+    this.showFollow = true,
     this.showMessage = true,
     this.minTargetHeight = 44,
     this.stackBreakpoint = 260,
@@ -43,6 +44,10 @@ class ProfileRelationshipActions extends StatelessWidget {
   final String followLabel;
   final String followingLabel;
   final String messageLabel;
+
+  /// False when the account can be messaged but not followed (no account id
+  /// to follow by): only Message is shown, at full width.
+  final bool showFollow;
   final bool showMessage;
   final double minTargetHeight;
 
@@ -71,7 +76,7 @@ class ProfileRelationshipActions extends StatelessWidget {
     );
 
     if (!showMessage) {
-      return follow;
+      return showFollow ? follow : const SizedBox.shrink();
     }
 
     final message = _minTarget(
@@ -83,6 +88,10 @@ class ProfileRelationshipActions extends StatelessWidget {
         variant: KubusButtonVariant.secondary,
       ),
     );
+
+    if (!showFollow) {
+      return message;
+    }
 
     return LayoutBuilder(
       builder: (context, constraints) {

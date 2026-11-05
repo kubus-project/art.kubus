@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:art_kubus/features/map/navigation/walking_navigation_models.dart';
+import 'package:art_kubus/features/map/navigation/walking_navigation_debug_harness.dart';
 import 'package:art_kubus/services/walking_location_service.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:geolocator/geolocator.dart';
@@ -14,6 +15,17 @@ final _fix = WalkingLocationFix(
 final _timestamp = DateTime(2026, 1, 1);
 
 void main() {
+  test('debug walk emits route progress followed by off-route fixes', () async {
+    final service = DeterministicWalkingLocationService(
+      streamInterval: const Duration(milliseconds: 1),
+      simulateWalk: true,
+    );
+    final fixes = await service.liveFixes().take(25).toList();
+    expect(fixes.first.position, WalkingNavigationDebugHarness.origin);
+    expect(fixes[3].position, WalkingNavigationDebugHarness.routePoints[10]);
+    expect(fixes.last.position, const LatLng(46.0530, 14.5080));
+  });
+
   test('concurrent explicit actions share one permission request and fix',
       () async {
     var requests = 0;

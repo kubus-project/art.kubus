@@ -2,6 +2,7 @@ import 'package:art_kubus/widgets/kubus_button.dart';
 import 'package:art_kubus/widgets/community/community_post_delete.dart';
 import 'dart:async';
 import 'package:art_kubus/widgets/glass_components.dart';
+import 'package:art_kubus/widgets/report_content_dialog.dart';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -1074,79 +1075,29 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
     }
   }
 
-  void _showReportPostDialog() {
+  Future<void> _showReportPostDialog() async {
     final post = _post;
     if (!mounted || post == null) return;
+
+    final draft = await showReportContentDialog(context);
+    if (draft == null || !mounted) return;
+
     final l10n = AppLocalizations.of(context)!;
-
-    showKubusDialog(
-      context: context,
-      builder: (dialogContext) => KubusAlertDialog(
-        title: Text(
-          l10n.postDetailReportPostDialogTitle,
-          style: KubusTypography.inter(fontWeight: FontWeight.bold),
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              l10n.postDetailReportPostDialogQuestion,
-              style: KubusTypography.inter(),
-            ),
-            const SizedBox(height: 16),
-            _buildPostReportOption(
-              dialogContext,
-              post,
-              l10n.userProfileReportReasonSpam,
-            ),
-            _buildPostReportOption(
-              dialogContext,
-              post,
-              l10n.userProfileReportReasonInappropriate,
-            ),
-            _buildPostReportOption(
-              dialogContext,
-              post,
-              l10n.userProfileReportReasonHarassment,
-            ),
-            _buildPostReportOption(
-              dialogContext,
-              post,
-              l10n.userProfileReportReasonOther,
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext),
-            child: Text(l10n.commonCancel),
-          ),
-        ],
+    final messenger = ScaffoldMessenger.of(context);
+    var submitted = true;
+    try {
+      await CommunityService.reportPost(post, draft);
+    } catch (_) {
+      submitted = false;
+    }
+    if (!mounted) return;
+    messenger.showKubusSnackBar(
+      SnackBar(
+        content: Text(submitted
+            ? l10n.userProfileReportSubmittedToast
+            : l10n.commonActionFailedToast),
+        duration: const Duration(seconds: 2),
       ),
-    );
-  }
-
-  Widget _buildPostReportOption(
-    BuildContext dialogContext,
-    CommunityPost post,
-    String reason,
-  ) {
-    return ListTile(
-      title: Text(reason, style: KubusTypography.inter()),
-      onTap: () async {
-        Navigator.pop(dialogContext);
-        try {
-          await CommunityService.reportPost(post, reason);
-        } catch (_) {}
-        if (!mounted) return;
-        final l10n = AppLocalizations.of(context)!;
-        ScaffoldMessenger.of(context).showKubusSnackBar(
-          SnackBar(
-            content: Text(l10n.userProfileReportSubmittedToast),
-            duration: const Duration(seconds: 2),
-          ),
-        );
-      },
     );
   }
 

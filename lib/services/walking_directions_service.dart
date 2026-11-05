@@ -10,6 +10,7 @@ import 'package:latlong2/latlong.dart';
 import '../config/config.dart';
 import '../features/map/navigation/walking_navigation_models.dart';
 import 'http_client_factory.dart';
+import 'walking_navigation_diagnostics.dart';
 
 abstract class WalkingDirectionsApi {
   Future<WalkingRoute> route({
@@ -18,6 +19,11 @@ abstract class WalkingDirectionsApi {
   });
 
   void dispose();
+}
+
+/// Optional cancellation capability for a navigation session's pending work.
+abstract interface class CancellableWalkingDirections {
+  void cancelPending();
 }
 
 enum WalkingDirectionsErrorType {
@@ -63,13 +69,15 @@ class WalkingDirectionsException implements Exception {
 /// Calculates pedestrian routes entirely in the client.
 ///
 /// The service downloads a bounded OpenStreetMap walking graph from an
-/// Overpass interpreter, then performs endpoint snapping, A* path finding and
-/// maneuver generation locally in Dart. The user's coordinates are never sent
-/// to art.kubus and no remote directions engine is involved.
-class WalkingDirectionsService implements WalkingDirectionsApi {
+/// first-party graph endpoint or an Overpass interpreter, then performs
+/// endpoint snapping, A* path finding and maneuver generation locally in Dart.
+/// Graph bounds are sent to the selected provider; routes are computed locally.
+class WalkingDirectionsService
+    implements WalkingDirectionsApi, CancellableWalkingDirections {
   WalkingDirectionsService({
     http.Client? client,
     Iterable<String>? endpoints,
+    Uri? firstPartyEndpoint,
     Duration timeout = const Duration(seconds: 20),
     Duration minimumRequestInterval = const Duration(seconds: 1),
     double maximumRouteDistanceMeters = 8000,
@@ -80,8 +88,15 @@ class WalkingDirectionsService implements WalkingDirectionsApi {
     int maximumElements = 160000,
   })  : _client = client ?? createPlatformHttpClient(),
         _ownsClient = client == null,
+        _firstPartyEndpoint = firstPartyEndpoint ??
+            (endpoints == null
+                ? Uri.parse('${AppConfig.baseApiUrl}/api/walking-graph')
+                : null),
         _endpoints = _validatedEndpoints(
           endpoints ?? _configuredEndpoints(AppConfig.walkingGraphEndpoints),
+          // Without explicit external endpoints the first-party endpoint is the only source (it exists whenever the
+          // endpoints were not injected).
+          allowEmpty: endpoints == null,
         ),
         _timeout = timeout,
         _minimumRequestInterval = minimumRequestInterval,
@@ -98,6 +113,7 @@ class WalkingDirectionsService implements WalkingDirectionsApi {
   final http.Client _client;
   final bool _ownsClient;
   final List<Uri> _endpoints;
+  final Uri? _firstPartyEndpoint;
   final Duration _timeout;
   final Duration _minimumRequestInterval;
   final double _maximumRouteDistanceMeters;
@@ -112,6 +128,9 @@ class WalkingDirectionsService implements WalkingDirectionsApi {
   _WalkingGraphRecord? _cachedGraph;
   Completer<void>? _activeAbortTrigger;
   int _graphRequestGeneration = 0;
+  Future<_WalkingGraphRecord>? _inFlightGraph;
+  _GraphBoundsRecord? _inFlightBounds;
+  LatLng? _inFlightDestination;
 
   @override
   Future<WalkingRoute> route({
@@ -155,12 +174,36 @@ class WalkingDirectionsService implements WalkingDirectionsApi {
         destination,
         marginMeters: _graphMarginMeters,
       );
-      graph = await _loadGraph(bounds);
+      graph = await _loadGraphShared(bounds, origin, destination);
       _cachedGraph = graph;
     }
 
     final path = _findPath(graph, origin, destination);
     return _buildRoute(path, origin, destination);
+  }
+
+  Future<_WalkingGraphRecord> _loadGraphShared(
+    _GraphBoundsRecord bounds,
+    LatLng origin,
+    LatLng destination,
+  ) {
+    final existing = _inFlightGraph;
+    if (existing != null &&
+        _inFlightBounds!.contains(origin) &&
+        _inFlightDestination == destination) {
+      return existing;
+    }
+    final request = _loadGraph(bounds);
+    _inFlightGraph = request;
+    _inFlightBounds = bounds;
+    _inFlightDestination = destination;
+    return request.whenComplete(() {
+      if (identical(_inFlightGraph, request)) {
+        _inFlightGraph = null;
+        _inFlightBounds = null;
+        _inFlightDestination = null;
+      }
+    });
   }
 
   Future<_WalkingGraphRecord> _loadGraph(_GraphBoundsRecord bounds) async {
@@ -175,6 +218,7 @@ class WalkingDirectionsService implements WalkingDirectionsApi {
     final elements = await _fetchGraphElements(
       generation: generation,
       query: query,
+      bounds: bounds,
       headers: headers,
     );
     _throwIfObsolete(generation);
@@ -275,27 +319,45 @@ class WalkingDirectionsService implements WalkingDirectionsApi {
   Future<List<dynamic>> _fetchGraphElements({
     required int generation,
     required String query,
+    required _GraphBoundsRecord bounds,
     required Map<String, String> headers,
   }) async {
     WalkingDirectionsException? lastFailure;
-    for (var index = 0; index < _endpoints.length; index += 1) {
+    final endpoints = <Uri>[
+      if (_firstPartyEndpoint != null) _firstPartyEndpoint,
+      ..._endpoints,
+    ];
+    for (var index = 0; index < endpoints.length; index += 1) {
       _throwIfObsolete(generation);
       await _waitForRequestSlot(generation);
-      final endpoint = _endpoints[index];
+      final endpoint = endpoints[index];
+      final firstParty = _firstPartyEndpoint != null && index == 0;
+      WalkingNavigationDiagnostics.record('graph_request_started',
+          reason:
+              'request=$generation source=${firstParty ? 'firstParty' : 'external'}');
       final abortTrigger = Completer<void>();
       _activeAbortTrigger = abortTrigger;
       final request = http.AbortableRequest(
         'POST',
         endpoint,
         abortTrigger: abortTrigger.future,
-      )
-        ..headers.addAll(headers)
-        ..bodyFields = <String, String>{'data': query};
+      )..headers.addAll(headers);
+      if (firstParty) {
+        request.headers['Content-Type'] = 'application/json';
+        request.body = jsonEncode(<String, double>{
+          'south': bounds.south,
+          'west': bounds.west,
+          'north': bounds.north,
+          'east': bounds.east,
+        });
+      } else {
+        request.bodyFields = <String, String>{'data': query};
+      }
 
       try {
         _lastRequestAt = DateTime.now();
         final response = await _client.send(request).timeout(
-          _timeout,
+          firstParty ? const Duration(seconds: 45) : _timeout,
           onTimeout: () {
             if (!abortTrigger.isCompleted) abortTrigger.complete();
             throw TimeoutException('Walking graph request timed out.');
@@ -315,7 +377,7 @@ class WalkingDirectionsService implements WalkingDirectionsApi {
           } on WalkingDirectionsException catch (failure) {
             if (failure.type !=
                     WalkingDirectionsErrorType.sourceInvalidResponse ||
-                index == _endpoints.length - 1) {
+                index == endpoints.length - 1) {
               rethrow;
             }
             lastFailure = failure;
@@ -328,8 +390,9 @@ class WalkingDirectionsService implements WalkingDirectionsApi {
           endpoint: endpoint,
           statusCode: response.statusCode,
         );
-        if (!failure.isRetryableSourceFailure ||
-            index == _endpoints.length - 1) {
+        if ((!failure.isRetryableSourceFailure &&
+                !(firstParty && response.statusCode == 404)) ||
+            index == endpoints.length - 1) {
           throw failure;
         }
         lastFailure = failure;
@@ -340,7 +403,7 @@ class WalkingDirectionsService implements WalkingDirectionsApi {
           type: WalkingDirectionsErrorType.sourceTimeout,
           endpoint: endpoint,
         );
-        if (index == _endpoints.length - 1) throw failure;
+        if (index == endpoints.length - 1) throw failure;
         lastFailure = failure;
       } on http.RequestAbortedException {
         _throwIfObsolete(generation);
@@ -349,7 +412,7 @@ class WalkingDirectionsService implements WalkingDirectionsApi {
           type: WalkingDirectionsErrorType.sourceTransport,
           endpoint: endpoint,
         );
-        if (index == _endpoints.length - 1) throw failure;
+        if (index == endpoints.length - 1) throw failure;
         lastFailure = failure;
       } on http.ClientException {
         _throwIfObsolete(generation);
@@ -358,7 +421,7 @@ class WalkingDirectionsService implements WalkingDirectionsApi {
           type: WalkingDirectionsErrorType.sourceTransport,
           endpoint: endpoint,
         );
-        if (index == _endpoints.length - 1) throw failure;
+        if (index == endpoints.length - 1) throw failure;
         lastFailure = failure;
       } finally {
         if (identical(_activeAbortTrigger, abortTrigger)) {
@@ -815,13 +878,16 @@ class WalkingDirectionsService implements WalkingDirectionsApi {
       .map((value) => value.trim())
       .where((value) => value.isNotEmpty);
 
-  static List<Uri> _validatedEndpoints(Iterable<String> rawEndpoints) {
+  static List<Uri> _validatedEndpoints(
+    Iterable<String> rawEndpoints, {
+    bool allowEmpty = false,
+  }) {
     final endpoints = <Uri>[];
     for (final raw in rawEndpoints) {
       final endpoint = _validatedEndpoint(raw);
       if (!endpoints.contains(endpoint)) endpoints.add(endpoint);
     }
-    if (endpoints.isEmpty) {
+    if (endpoints.isEmpty && !allowEmpty) {
       throw ArgumentError.value(
         rawEndpoints,
         'endpoints',
@@ -877,9 +943,19 @@ class WalkingDirectionsService implements WalkingDirectionsApi {
   }
 
   @override
-  void dispose() {
+  void cancelPending() {
     _graphRequestGeneration += 1;
+    _inFlightGraph = null;
+    _inFlightBounds = null;
+    _inFlightDestination = null;
     _abortActiveRequest();
+    WalkingNavigationDiagnostics.record('graph_request_cancelled',
+        reason: 'sessionEndedOrReplaced');
+  }
+
+  @override
+  void dispose() {
+    cancelPending();
     if (_ownsClient) _client.close();
   }
 }

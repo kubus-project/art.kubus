@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 const KUBUS_SEO_UPSTREAM_ORIGIN = 'https://api.kubus.site';
-const KUBUS_TAKEOVER_CSP = "default-src 'none'; script-src 'self' 'wasm-unsafe-eval' https://accounts.google.com/gsi/client; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' https: data: blob:; font-src 'self' data: https://fonts.gstatic.com; connect-src 'self' https: wss: blob:; media-src 'self' https: data: blob:; worker-src 'self' blob:; frame-src https://accounts.google.com; base-uri 'self'; form-action 'none'; frame-ancestors 'none'";
+const KUBUS_TAKEOVER_CSP = "default-src 'none'; script-src 'self' 'wasm-unsafe-eval' https://accounts.google.com/gsi/client; style-src 'self' 'unsafe-inline'; img-src 'self' https: data: blob:; font-src 'self' data:; connect-src 'self' https: wss: blob:; media-src 'self' https: data: blob:; worker-src 'self' blob:; frame-src https://accounts.google.com; base-uri 'self'; form-action 'none'; frame-ancestors 'none'";
 
 // Copy mirrors web/public_flutter_takeover.js exactly (the static gateway test checks parity).
 const KUBUS_TAKEOVER_COPY = [

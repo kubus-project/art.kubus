@@ -10,6 +10,7 @@ import 'package:art_kubus/services/backend_api_service.dart';
 import 'package:art_kubus/services/user_service.dart';
 import 'package:art_kubus/utils/wallet_utils.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
@@ -44,10 +45,14 @@ void _backend({required int status}) {
   }));
 }
 
+// The follow graph is read and written through account-scoped cache storage,
+// which finishes on the real event loop, so the calls run under runAsync.
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   setUp(() async {
+    FlutterSecureStorage.setMockInitialValues(<String, String>{});
+    BackendApiService().resetCredentialStoreForTesting();
     SharedPreferences.setMockInitialValues(<String, Object>{
       PreferenceKeys.walletAddress: _viewer,
     });
@@ -81,13 +86,13 @@ void main() {
     final expected = WalletUtils.canonical(_followed);
 
     _backend(status: 200);
-    final online = await sources.signals();
+    final online = (await tester.runAsync(sources.signals))!;
     expect(online.followedWallets, contains(expected));
 
     // The endpoint goes down: the cached follow graph still feeds the ranking
     // instead of every followed boost silently disappearing.
     _backend(status: 503);
-    final offline = await sources.signals();
+    final offline = (await tester.runAsync(sources.signals))!;
     expect(offline.followedWallets, contains(expected));
   });
 
@@ -114,7 +119,7 @@ void main() {
       ),
     );
     _backend(status: 503);
-    final signals = await sources.signals();
+    final signals = (await tester.runAsync(sources.signals))!;
     expect(signals.followedWallets, isEmpty);
   });
 }

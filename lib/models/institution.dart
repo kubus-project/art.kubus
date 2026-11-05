@@ -1,12 +1,445 @@
+import 'dart:convert';
+
 import '../utils/media_url_resolver.dart';
+import '../utils/wallet_utils.dart';
 import 'event.dart' show KubusEvent;
 
+class InstitutionDiscipline {
+  const InstitutionDiscipline(
+      {required this.code, required this.labelEn, required this.labelSl});
+  final String code;
+  final String labelEn;
+  final String labelSl;
+
+  String labelFor(String languageCode) =>
+      languageCode == 'sl' && labelSl.isNotEmpty ? labelSl : labelEn;
+  Map<String, dynamic> toJson() =>
+      {'code': code, 'labelEn': labelEn, 'labelSl': labelSl};
+  @override
+  bool operator ==(Object other) =>
+      other is InstitutionDiscipline &&
+      code == other.code &&
+      labelEn == other.labelEn &&
+      labelSl == other.labelSl;
+  @override
+  int get hashCode => Object.hash(code, labelEn, labelSl);
+}
+
+/// Public venue kind. The exact backend `kind` code is used when present; the
+/// older `type` guess (museum, gallery, cultural_center) is only a fallback.
+enum InstitutionKind {
+  museum,
+  gallery,
+  artsCentre,
+  exhibitionSpace,
+  culturalCentre,
+  other;
+
+  /// Resolves the displayed kind, or null when neither field names one.
+  /// Unrecognised exact codes (archive, library, ...) resolve to [other].
+  static InstitutionKind? resolve({String? kind, String? type}) {
+    final code = kind?.trim().toLowerCase();
+    if (code != null && code.isNotEmpty) {
+      return switch (code) {
+        'museum' => InstitutionKind.museum,
+        'gallery' => InstitutionKind.gallery,
+        'arts_centre' => InstitutionKind.artsCentre,
+        'exhibition_space' => InstitutionKind.exhibitionSpace,
+        'cultural_centre' => InstitutionKind.culturalCentre,
+        _ => InstitutionKind.other,
+      };
+    }
+    return switch (type?.trim().toLowerCase()) {
+      'museum' => InstitutionKind.museum,
+      'gallery' => InstitutionKind.gallery,
+      'cultural_center' => InstitutionKind.culturalCentre,
+      _ => null,
+    };
+  }
+}
+
+/// Admission category approved in visitor information.
+enum InstitutionAdmission {
+  free,
+  paid,
+  mixed;
+
+  static InstitutionAdmission? parse(String? value) {
+    return switch (value?.trim().toLowerCase()) {
+      'free' => InstitutionAdmission.free,
+      'paid' => InstitutionAdmission.paid,
+      'mixed' => InstitutionAdmission.mixed,
+      _ => null,
+    };
+  }
+}
+
+/// Public credit and links supplied for one institution image.
+/// Invalid or absent URLs are discarded at the JSON boundary.
+class InstitutionImageAttribution {
+  const InstitutionImageAttribution({
+    this.credit,
+    this.author,
+    this.sourceUrl,
+    this.licenseUrl,
+    this.depictedWorks = const [],
+  });
+
+  /// The full credit line required by the licence.
+  final String? credit;
+
+  /// The photographer alone, when the backend provides it.
+  final String? author;
+  final String? sourceUrl;
+  final String? licenseUrl;
+
+  /// Creators of works visible in the image, credited whatever their
+  /// copyright status. A credit is not a permission.
+  final List<InstitutionDepictedWork> depictedWorks;
+
+  /// Short attribution for display next to separate licence and source links:
+  /// the author when known, otherwise the full credit line.
+  String? get displayCredit => author ?? credit;
+
+  /// True when there is nothing to show: no credit, author, link or depicted
+  /// creator. A lone author or depicted creator is still a credit.
+  bool get isEmpty =>
+      credit == null &&
+      author == null &&
+      sourceUrl == null &&
+      licenseUrl == null &&
+      depictedWorks.isEmpty;
+
+  /// Link text for [sourceUrl] when it is a Wikimedia Commons file page
+  /// (`…/wiki/File:Name.ext`): the decoded file title without the `File:`
+  /// prefix and with underscores as spaces. Null for any other URL.
+  String? get commonsFileTitle => commonsFileTitleOf(sourceUrl);
+
+  /// Pure form of [commonsFileTitle], for any source URL string.
+  static String? commonsFileTitleOf(String? url) {
+    if (url == null) return null;
+    final uri = Uri.tryParse(url);
+    if (uri == null || uri.host != 'commons.wikimedia.org') return null;
+    final segments = uri.pathSegments;
+    if (segments.length != 2 || segments[0] != 'wiki') return null;
+    final page = segments[1];
+    const prefix = 'File:';
+    if (page.length <= prefix.length ||
+        page.substring(0, prefix.length).toLowerCase() != 'file:') {
+      return null;
+    }
+    final title = page.substring(prefix.length).replaceAll('_', ' ').trim();
+    return title.isEmpty ? null : title;
+  }
+
+  static final RegExp _ccVersion = RegExp(r'^\d+\.\d+$');
+  static const Set<String> _ccTypes = {
+    'by',
+    'by-sa',
+    'by-nc',
+    'by-nd',
+    'by-nc-sa',
+    'by-nc-nd',
+  };
+
+  /// Canonical Creative Commons path segments of [licenseUrl], or null.
+  List<String>? get _licensePath {
+    final url = licenseUrl;
+    if (url == null) return null;
+    final uri = Uri.tryParse(url);
+    if (uri == null || uri.host != 'creativecommons.org') return null;
+    return uri.pathSegments.where((s) => s.isNotEmpty).toList(growable: false);
+  }
+
+  /// Short licence name derived from [licenseUrl], for example `CC BY-SA 4.0`.
+  /// Null when the URL is not a recognised Creative Commons licence.
+  String? get licenseName {
+    final path = _licensePath;
+    if (path == null || path.length != 3) return null;
+    final version = path[2];
+    if (!_ccVersion.hasMatch(version)) return null;
+    if (path[0] == 'licenses' && _ccTypes.contains(path[1])) {
+      return 'CC ${path[1].toUpperCase()} $version';
+    }
+    if (path[0] == 'publicdomain' && path[1] == 'zero') {
+      return 'CC0 $version';
+    }
+    return null;
+  }
+
+  /// True when [licenseUrl] is the Creative Commons public domain mark.
+  bool get isPublicDomain {
+    final path = _licensePath;
+    return path != null &&
+        path.length == 3 &&
+        path[0] == 'publicdomain' &&
+        path[1] == 'mark' &&
+        _ccVersion.hasMatch(path[2]);
+  }
+
+  @override
+  bool operator ==(Object other) =>
+      other is InstitutionImageAttribution &&
+      other.credit == credit &&
+      other.author == author &&
+      _sameWorks(other.depictedWorks, depictedWorks) &&
+      other.sourceUrl == sourceUrl &&
+      other.licenseUrl == licenseUrl;
+
+  @override
+  int get hashCode => Object.hash(
+      credit, author, sourceUrl, licenseUrl, Object.hashAll(depictedWorks));
+
+  static bool _sameWorks(
+      List<InstitutionDepictedWork> a, List<InstitutionDepictedWork> b) {
+    if (a.length != b.length) return false;
+    for (var i = 0; i < a.length; i++) {
+      if (a[i] != b[i]) return false;
+    }
+    return true;
+  }
+
+  factory InstitutionImageAttribution.fromJson(Object? value) {
+    if (value is! Map) return const InstitutionImageAttribution();
+    return InstitutionImageAttribution(
+      credit: _cleanText(value['credit']),
+      author: _cleanText(value['author']),
+      depictedWorks:
+          InstitutionDepictedWork.listFromJson(value['depictedWorks']),
+      sourceUrl: _safeAttributionUrl(value['sourceUrl']),
+      licenseUrl: _safeAttributionUrl(value['licenseUrl']),
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+        'credit': credit,
+        if (author != null) 'author': author,
+        if (depictedWorks.isNotEmpty)
+          'depictedWorks': [for (final w in depictedWorks) w.toJson()],
+        'sourceUrl': sourceUrl,
+        'licenseUrl': licenseUrl,
+      };
+
+  static String? _cleanText(Object? value) {
+    if (value is! String) return null;
+    final text = value.trim();
+    return text.isEmpty ? null : text;
+  }
+
+  static String? _safeAttributionUrl(Object? value) {
+    final text = _cleanText(value);
+    if (text == null) return null;
+    final uri = Uri.tryParse(text);
+    if (uri == null ||
+        (uri.scheme != 'http' && uri.scheme != 'https') ||
+        uri.host.isEmpty ||
+        uri.userInfo.isNotEmpty) {
+      return null;
+    }
+    return uri.toString();
+  }
+}
+
+/// The creator of a work visible in an institution image (the building's
+/// architect, a sculptor), credited beside the photographer.
+class InstitutionDepictedWork {
+  const InstitutionDepictedWork({required this.type, required this.author});
+
+  /// `architecture`, `sculpture`, `mural` or `artwork`.
+  final String type;
+  final String author;
+
+  bool get isArchitecture => type == 'architecture';
+
+  static const Set<String> _types = {
+    'architecture',
+    'sculpture',
+    'mural',
+    'artwork'
+  };
+
+  static List<InstitutionDepictedWork> listFromJson(Object? value) {
+    if (value is! List) return const [];
+    final out = <InstitutionDepictedWork>[];
+    for (final entry in value) {
+      if (entry is! Map) continue;
+      final type = entry['type'];
+      final author = entry['author'];
+      if (type is! String || !_types.contains(type)) continue;
+      if (author is! String || author.trim().isEmpty) continue;
+      out.add(InstitutionDepictedWork(type: type, author: author.trim()));
+    }
+    return List.unmodifiable(out);
+  }
+
+  Map<String, dynamic> toJson() => {'type': type, 'author': author};
+
+  @override
+  bool operator ==(Object other) =>
+      other is InstitutionDepictedWork &&
+      other.type == type &&
+      other.author == author;
+
+  @override
+  int get hashCode => Object.hash(type, author);
+}
+
+/// Public visitor information approved independently from source collection.
+class InstitutionVisitorAccess {
+  const InstitutionVisitorAccess(
+      {required this.sourceUrl,
+      required this.verifiedAt,
+      required this.visitorInfo,
+      this.bookingUrl});
+
+  final String sourceUrl;
+  final DateTime verifiedAt;
+  final Map<String, dynamic> visitorInfo;
+  final String? bookingUrl;
+
+  String? _infoText(String key) {
+    final value = visitorInfo[key];
+    if (value is! String) return null;
+    final text = value.trim();
+    return text.isEmpty ? null : text;
+  }
+
+  /// Opening hours as approved text, in the language of its source.
+  String? get openingHoursText => _infoText('openingHoursText');
+
+  /// Accessibility information as approved text.
+  String? get accessibilityNote => _infoText('accessibilityNote');
+
+  /// Known admission category, or null when the text is free-form or unknown.
+  InstitutionAdmission? get admission =>
+      InstitutionAdmission.parse(_infoText('admission'));
+
+  /// Admission text that is not one of the known categories, or null.
+  String? get admissionText {
+    final raw = _infoText('admission');
+    if (raw == null ||
+        InstitutionAdmission.parse(raw) != null ||
+        raw.toLowerCase() == 'unknown') {
+      return null;
+    }
+    return raw;
+  }
+
+  static InstitutionVisitorAccess? fromJson(Object? value) {
+    if (value is! Map || value['status'] != 'approved') return null;
+    final source =
+        InstitutionImageAttribution._safeAttributionUrl(value['sourceUrl']);
+    final date = value['verifiedAt'] is String
+        ? DateTime.tryParse(value['verifiedAt'] as String)
+        : null;
+    if (source == null || date == null) return null;
+    final rawInfo = value['visitorInfo'];
+    final info = rawInfo is Map
+        ? Map<String, dynamic>.fromEntries(rawInfo.entries
+            .where((e) => e.key is String)
+            .map((e) => MapEntry(e.key as String, e.value)))
+        : <String, dynamic>{};
+    return InstitutionVisitorAccess(
+        sourceUrl: source,
+        verifiedAt: date,
+        visitorInfo: info,
+        bookingUrl: InstitutionImageAttribution._safeAttributionUrl(
+            value['bookingUrl']));
+  }
+
+  Map<String, dynamic> toJson() => {
+        'status': 'approved',
+        'sourceUrl': sourceUrl,
+        'verifiedAt': verifiedAt.toIso8601String(),
+        'visitorInfo': visitorInfo,
+        'bookingUrl': bookingUrl
+      };
+
+  @override
+  bool operator ==(Object other) =>
+      other is InstitutionVisitorAccess &&
+      sourceUrl == other.sourceUrl &&
+      verifiedAt == other.verifiedAt &&
+      bookingUrl == other.bookingUrl &&
+      jsonEncode(visitorInfo) == jsonEncode(other.visitorInfo);
+  @override
+  int get hashCode =>
+      Object.hash(sourceUrl, verifiedAt, bookingUrl, jsonEncode(visitorInfo));
+}
+
 // Institution and Events Models
+class VerifiedInstitutionAccountProfile {
+  final String profileId;
+  final String? userId;
+  final String? username;
+  final String? displayName;
+
+  /// The linked public profile's own wallet, never a member's. Null when the
+  /// account has no wallet: a conversation is wallet-addressed, so Message is
+  /// only offered for a wallet present here.
+  final String? walletAddress;
+  final bool allowMessages;
+
+  const VerifiedInstitutionAccountProfile({
+    required this.profileId,
+    this.userId,
+    this.username,
+    this.displayName,
+    this.walletAddress,
+    required this.allowMessages,
+  });
+
+  /// The wallet the existing messaging flow can address, or null. Only a
+  /// wallet-shaped value counts; a placeholder such as `linked_auth:` does not.
+  bool get canMessage => allowMessages && walletAddress != null;
+
+  factory VerifiedInstitutionAccountProfile.fromJson(Object? value) {
+    if (value is! Map) {
+      throw const FormatException('Invalid verified account profile');
+    }
+    final profileId =
+        _nullableTrimmedString(value['profileId'] ?? value['profile_id']);
+    if (profileId == null || profileId.isEmpty) {
+      throw const FormatException('Verified account profile ID is missing');
+    }
+    return VerifiedInstitutionAccountProfile(
+      profileId: profileId,
+      userId: _nullableTrimmedString(value['userId'] ?? value['user_id']),
+      username: _nullableTrimmedString(value['username']),
+      displayName:
+          _nullableTrimmedString(value['displayName'] ?? value['display_name']),
+      walletAddress: _linkedWalletAddress(_nullableTrimmedString(
+          value['walletAddress'] ?? value['wallet_address'])),
+      allowMessages:
+          value['allowMessages'] == true || value['allow_messages'] == true,
+    );
+  }
+
+  static String? _linkedWalletAddress(String? raw) {
+    if (raw == null || !WalletUtils.looksLikeWallet(raw)) return null;
+    final canonical = WalletUtils.canonical(raw);
+    return canonical.isEmpty ? null : canonical;
+  }
+
+  Map<String, dynamic> toJson() => {
+        'profileId': profileId,
+        if (userId != null) 'userId': userId,
+        if (username != null) 'username': username,
+        if (displayName != null) 'displayName': displayName,
+        if (walletAddress != null) 'walletAddress': walletAddress,
+        'allowMessages': allowMessages,
+      };
+}
+
 class Institution {
   final String id;
   final String name;
   final String description;
   final String type; // 'gallery', 'museum', 'cultural_center'
+
+  /// Exact venue kind code from the backend (`museum`, `arts_centre`, ...).
+  /// Null for payloads that predate the field.
+  final String? kind;
   final String address;
   final double latitude;
   final double longitude;
@@ -18,15 +451,26 @@ class Institution {
 
   /// Schema-backed logo (`institutions.logo_url`), raw reference.
   final String? logoUrl;
+  final InstitutionImageAttribution? coverAttribution;
+  final InstitutionImageAttribution? logoAttribution;
+  final InstitutionVisitorAccess? visitorAccess;
+  final List<InstitutionDiscipline> disciplines;
   final InstitutionStats stats;
   final bool isVerified;
+  final VerifiedInstitutionAccountProfile? verifiedAccountProfile;
   final DateTime createdAt;
+
+  /// True only for the synthetic entry the provider builds from the signed-in
+  /// user's own wallet. It is the user's own identity, so it is a default
+  /// (event creator) but must not appear in search or map subject lists.
+  final bool isSelfDerivedFromWallet;
 
   Institution({
     required this.id,
     required this.name,
     required this.description,
     required this.type,
+    this.kind,
     required this.address,
     required this.latitude,
     required this.longitude,
@@ -34,9 +478,15 @@ class Institution {
     required this.website,
     this.coverImageUrl,
     this.logoUrl,
+    this.coverAttribution,
+    this.logoAttribution,
+    this.visitorAccess,
+    this.disciplines = const [],
     required this.stats,
     this.isVerified = false,
+    this.verifiedAccountProfile,
     required this.createdAt,
+    this.isSelfDerivedFromWallet = false,
   });
 
   /// Hero imagery for an institution: the first safe of the cover, then the
@@ -46,6 +496,10 @@ class Institution {
   String? get heroImageRef =>
       MediaUrlResolver.firstSafeRef(<String?>[coverImageUrl, logoUrl]);
 
+  /// The venue kind to display, from [kind] or the legacy [type] guess.
+  InstitutionKind? get institutionKind =>
+      InstitutionKind.resolve(kind: kind, type: type);
+
   factory Institution.fromJson(Map<String, dynamic> json) {
     final boundary = _InstitutionImageBoundary.read(json);
     return Institution(
@@ -53,6 +507,7 @@ class Institution {
       name: json['name'],
       description: json['description'],
       type: json['type'],
+      kind: _nullableTrimmedString(json['kind']),
       address: json['address'],
       latitude: json['latitude'].toDouble(),
       longitude: json['longitude'].toDouble(),
@@ -60,8 +515,27 @@ class Institution {
       website: json['website'],
       coverImageUrl: boundary.coverImageUrl,
       logoUrl: boundary.logoUrl,
+      coverAttribution: _attribution(json['coverAttribution']),
+      logoAttribution: _attribution(json['logoAttribution']),
+      visitorAccess: InstitutionVisitorAccess.fromJson(json['visitorAccess']),
+      disciplines: (json['disciplines'] is List
+              ? json['disciplines'] as List
+              : const [])
+          .whereType<Map>()
+          .where((v) =>
+              v['code'] is String &&
+              v['labelEn'] is String &&
+              (v['labelEn'] as String).trim().isNotEmpty)
+          .map((v) => InstitutionDiscipline(
+              code: v['code'] as String,
+              labelEn: v['labelEn'] as String,
+              labelSl: v['labelSl'] is String ? v['labelSl'] as String : ''))
+          .toList(growable: false),
       stats: InstitutionStats.fromJson(json['stats']),
       isVerified: json['isVerified'] ?? false,
+      verifiedAccountProfile: json['verifiedAccountProfile'] == null
+          ? null
+          : _tryParseVerifiedAccountProfile(json['verifiedAccountProfile']),
       createdAt: DateTime.parse(json['createdAt']),
     );
   }
@@ -72,6 +546,7 @@ class Institution {
       'name': name,
       'description': description,
       'type': type,
+      if (kind != null) 'kind': kind,
       'address': address,
       'latitude': latitude,
       'longitude': longitude,
@@ -79,8 +554,15 @@ class Institution {
       'website': website,
       'coverImageUrl': coverImageUrl,
       'logoUrl': logoUrl,
+      if (coverAttribution != null)
+        'coverAttribution': coverAttribution!.toJson(),
+      if (logoAttribution != null) 'logoAttribution': logoAttribution!.toJson(),
+      if (visitorAccess != null) 'visitorAccess': visitorAccess!.toJson(),
+      'disciplines': disciplines.map((d) => d.toJson()).toList(growable: false),
       'stats': stats.toJson(),
       'isVerified': isVerified,
+      if (verifiedAccountProfile != null)
+        'verifiedAccountProfile': verifiedAccountProfile!.toJson(),
       'createdAt': createdAt.toIso8601String(),
     };
   }
@@ -90,6 +572,7 @@ class Institution {
     String? name,
     String? description,
     String? type,
+    String? kind,
     String? address,
     double? latitude,
     double? longitude,
@@ -97,15 +580,22 @@ class Institution {
     String? website,
     String? coverImageUrl,
     String? logoUrl,
+    InstitutionImageAttribution? coverAttribution,
+    InstitutionImageAttribution? logoAttribution,
+    InstitutionVisitorAccess? visitorAccess,
+    List<InstitutionDiscipline>? disciplines,
     InstitutionStats? stats,
     bool? isVerified,
+    VerifiedInstitutionAccountProfile? verifiedAccountProfile,
     DateTime? createdAt,
+    bool? isSelfDerivedFromWallet,
   }) {
     return Institution(
       id: id ?? this.id,
       name: name ?? this.name,
       description: description ?? this.description,
       type: type ?? this.type,
+      kind: kind ?? this.kind,
       address: address ?? this.address,
       latitude: latitude ?? this.latitude,
       longitude: longitude ?? this.longitude,
@@ -113,10 +603,33 @@ class Institution {
       website: website ?? this.website,
       coverImageUrl: coverImageUrl ?? this.coverImageUrl,
       logoUrl: logoUrl ?? this.logoUrl,
+      coverAttribution: coverAttribution ?? this.coverAttribution,
+      logoAttribution: logoAttribution ?? this.logoAttribution,
+      visitorAccess: visitorAccess ?? this.visitorAccess,
+      disciplines: disciplines ?? this.disciplines,
       stats: stats ?? this.stats,
       isVerified: isVerified ?? this.isVerified,
+      verifiedAccountProfile:
+          verifiedAccountProfile ?? this.verifiedAccountProfile,
       createdAt: createdAt ?? this.createdAt,
+      isSelfDerivedFromWallet:
+          isSelfDerivedFromWallet ?? this.isSelfDerivedFromWallet,
     );
+  }
+
+  static InstitutionImageAttribution? _attribution(Object? value) {
+    if (value == null) return null;
+    final attribution = InstitutionImageAttribution.fromJson(value);
+    return attribution.isEmpty ? null : attribution;
+  }
+
+  static VerifiedInstitutionAccountProfile? _tryParseVerifiedAccountProfile(
+      Object? value) {
+    try {
+      return VerifiedInstitutionAccountProfile.fromJson(value);
+    } catch (_) {
+      return null;
+    }
   }
 }
 
@@ -516,6 +1029,12 @@ class Event {
       createdBy: createdBy ?? this.createdBy,
     );
   }
+}
+
+String? _nullableTrimmedString(Object? value) {
+  if (value is! String) return null;
+  final trimmed = value.trim();
+  return trimmed.isEmpty ? null : trimmed;
 }
 
 String _eventString(dynamic value) => (value ?? '').toString().trim();

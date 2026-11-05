@@ -6,6 +6,8 @@ import 'package:art_kubus/services/solana_wallet_service.dart';
 import 'package:art_kubus/services/wallet_session_sync_dependencies.dart';
 import 'package:art_kubus/services/wallet_session_sync_service.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:art_kubus/services/backend_api_service.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -72,7 +74,10 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   setUp(() {
+    FlutterSecureStorage.setMockInitialValues({});
     SharedPreferences.setMockInitialValues(<String, Object>{});
+    BackendApiService().resetCredentialStoreForTesting();
+    BackendApiService().setAuthTokenForTesting(null);
   });
 
   testWidgets(
@@ -209,8 +214,13 @@ void main() {
     });
 
     final prefs = await SharedPreferences.getInstance();
-    expect(prefs.getString('jwt_token'), 'refreshed-access-token');
-    expect(prefs.getString('refresh_token'), 'refreshed-refresh-token');
+    expect(prefs.getString('jwt_token'), isNull);
+    expect(BackendApiService().getAuthToken(), 'refreshed-access-token');
+    expect(prefs.getString('refresh_token'), isNull);
+    expect(
+        await tester.runAsync(
+            () => const FlutterSecureStorage().read(key: 'refresh_token')),
+        'refreshed-refresh-token');
   });
 
   testWidgets('bindAuthenticatedWallet ignores linked_auth placeholder wallets',

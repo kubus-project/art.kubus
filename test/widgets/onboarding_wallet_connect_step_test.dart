@@ -1,5 +1,7 @@
 import 'dart:async';
 
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+
 import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:art_kubus/providers/chat_provider.dart';
 import 'package:art_kubus/providers/profile_provider.dart';
@@ -26,6 +28,7 @@ class _FakeWalletProvider extends WalletProvider {
           deferInit: true,
         );
 
+  Future<String>? deferredCreate;
   int createForAccountLinkCalls = 0;
   int importForAccountLinkCalls = 0;
   String? lastImportedMnemonic;
@@ -35,7 +38,7 @@ class _FakeWalletProvider extends WalletProvider {
   @override
   Future<String> createWalletForAccountLink() async {
     createForAccountLinkCalls += 1;
-    return kWallet;
+    return deferredCreate ?? kWallet;
   }
 
   @override
@@ -158,6 +161,9 @@ Future<_Harness> _pumpStep(
 
 Future<void> _settle(WidgetTester tester, [int pumps = 16]) async {
   for (var i = 0; i < pumps; i++) {
+    // Secure storage completes through platform Futures outside FakeAsync.
+    await tester
+        .runAsync(() => Future<void>.delayed(const Duration(milliseconds: 1)));
     await tester.pump(const Duration(milliseconds: 300));
   }
 }
@@ -169,6 +175,8 @@ void main() {
     SharedPreferences.setMockInitialValues(<String, Object>{
       'user_id': kUserId,
     });
+    BackendApiService().resetCredentialStoreForTesting();
+    FlutterSecureStorage.setMockInitialValues({});
     await BackendApiService().setAuthToken(kOriginalToken);
   });
 
@@ -399,4 +407,47 @@ void main() {
     expect(find.text('Import wallet'), findsOneWidget);
     expect(find.text('Connect wallet'), findsNothing);
   });
+  for (final newerAccount in [false, true]) {
+    for (final failWallet in [false, true]) {
+      testWidgets(
+          'late wallet ${failWallet ? "failure" : "success"} cannot restore A after ${newerAccount ? "B login" : "logout"}',
+          (tester) async {
+        final pendingWallet = Completer<String>();
+        final harness = await _pumpStep(tester,
+            linkService: AccountWalletLinkService(
+              bindWallet: (_, {signature}) async =>
+                  fail('stale action must not bind'),
+              fetchMyProfile: () async => fail('stale action must not verify'),
+            ));
+        harness.walletProvider.deferredCreate = pendingWallet.future;
+        await tester.tap(find.text('Create wallet'));
+        await _settle(tester, 2);
+        expect(harness.walletProvider.createForAccountLinkCalls, 1);
+        await tester.runAsync(() async {
+          await BackendApiService().clearAuth();
+          if (newerAccount) {
+            await BackendApiService().setAuthToken('current-B-token');
+          }
+          final prefs = await SharedPreferences.getInstance();
+          await prefs.setString(
+              'user_id', newerAccount ? 'current-B' : 'signed-out-sentinel');
+          await prefs.setString('wallet_address', 'current-wallet-sentinel');
+        });
+        if (failWallet) {
+          pendingWallet.completeError(StateError('synthetic wallet failure'));
+        } else {
+          pendingWallet.complete(kWallet);
+        }
+        await _settle(tester);
+        expect(BackendApiService().getAuthToken(),
+            newerAccount ? 'current-B-token' : isNull);
+        final prefs = await SharedPreferences.getInstance();
+        expect(prefs.getString('user_id'),
+            newerAccount ? 'current-B' : 'signed-out-sentinel');
+        expect(prefs.getString('wallet_address'), 'current-wallet-sentinel');
+        expect(harness.linkedWallets, isEmpty);
+        expect(harness.profileProvider.authenticatedLoads, 0);
+      });
+    }
+  }
 }

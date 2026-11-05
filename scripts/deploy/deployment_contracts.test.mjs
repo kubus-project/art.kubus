@@ -41,7 +41,8 @@ test('artifact preparation isolates staging indexing policy from production', as
   for (const environment of ['development', 'production']) {
     const directory = path.join(temp, environment);
     await mkdir(directory);
-    await writeFile(path.join(directory, 'index.html'), '<html><script src="flutter_bootstrap.js"></script></html>');
+    // The real root document: artifact preparation derives the /en and /sl homepages from it and fails when the head changed shape.
+    await writeFile(path.join(directory, 'index.html'), await readFile(path.join(scriptDir, '..', '..', 'web', 'index.html'), 'utf8'));
     await writeFile(path.join(directory, '.htaccess'), '<IfModule mod_rewrite.c>\nRewriteEngine On\n</IfModule>\n');
     await run(process.execPath, [path.join(scriptDir, 'prepare_web_artifact.mjs'), '--environment', environment, '--source-sha', sha, '--directory', directory]);
     assert.equal((await readFile(path.join(directory, 'kubus-web-revision.txt'), 'utf8')).trim(), sha);

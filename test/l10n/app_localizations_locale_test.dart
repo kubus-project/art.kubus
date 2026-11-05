@@ -3,6 +3,17 @@ import 'package:art_kubus/l10n/app_localizations_sl.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  test('closure copy keeps Slovenian diacritics and bounded completion claims',
+      () {
+    final en = AppLocalizationsEn();
+    final sl = AppLocalizationsSl();
+    expect(sl.accountClosureStatusTitle, 'Stanje zaprtja računa');
+    expect(sl.accountClosureCompletedManaged, startsWith('Zaključeno'));
+    expect(sl.accountClosureLimitations, contains('že razširjena'));
+    expect(en.accountClosureCompletedManaged, contains('managed systems'));
+    expect(en.accountClosureLimitations, contains('may remain'));
+    expect(sl.accountClosureLimitations, isNot(contains('?')));
+  });
   test('generated localizations retain the supported locale safety guard', () {
     expect(AppLocalizationsEn(' en ').localeName, 'en');
     expect(AppLocalizationsSl('sl').localeName, 'sl');

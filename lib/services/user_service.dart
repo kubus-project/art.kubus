@@ -1,12 +1,13 @@
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'dart:convert';
 import '../config/config.dart';
 import '../models/achievement_progress.dart';
 import '../models/achievements.dart' as backend_achievements;
 import '../models/profile_identity_data.dart';
 import '../models/user.dart';
 import 'backend_api_service.dart';
+import 'account_cache_store.dart';
+import 'account_identity.dart';
 import 'profile_package_mutation_tracker.dart';
 import 'stats_api_service.dart';
 import 'achievement_service.dart' as achievement_svc;
@@ -72,6 +73,10 @@ class UserAchievementSummaryResult extends UserAchievementSummaryPayload {
 }
 
 class UserService {
+  static final RegExp _accountIdPattern = RegExp(
+    r'^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$',
+    caseSensitive: false,
+  );
   static const String _followingKey = 'following_users';
   static const String _cachePrefsKey = 'user_cache_v1';
   static const String _placeholderAvatarScheme = 'placeholder://';
@@ -99,6 +104,29 @@ class UserService {
   // NOTE: Removed prior cacheVersion notifier. UI components should call
   // UserService.getUsersByWallets/getUserById for explicit fetches and not rely on
   // an implicit cache notification system.
+
+  static String _scopeOwner = AccountCacheStore.owner;
+  static int _scopeGeneration = AccountCacheStore.generation;
+
+  static bool _scopeListenerRegistered = false;
+
+  static void _ensureCacheScope() {
+    if (!_scopeListenerRegistered) {
+      _scopeListenerRegistered = true;
+      AccountIdentity.addListener(_ensureCacheScope);
+    }
+    if (_scopeOwner == AccountCacheStore.owner &&
+        _scopeGeneration == AccountCacheStore.generation) {
+      return;
+    }
+    _scopeOwner = AccountCacheStore.owner;
+    _scopeGeneration = AccountCacheStore.generation;
+    _cache.clear();
+    _cacheTimestamps.clear();
+    _legacyCacheMissingCoverKey.clear();
+    _profileMediaRevisionByUser.clear();
+    _profileMediaBustByUser.clear();
+  }
 
   // Sample users data
   static final List<User> _sampleUsers = [
@@ -308,6 +336,30 @@ class UserService {
     }
   }
 
+  static String? _verifiedAccountId(Object? value) {
+    final candidate = (value ?? '').toString().trim().toLowerCase();
+    return _accountIdPattern.hasMatch(candidate) ? candidate : null;
+  }
+
+  /// The canonical account UUID for [value], or null when it is not one. A
+  /// wallet or any other identifier is never mistaken for an account id.
+  static String? accountIdOrNull(String? value) => _verifiedAccountId(value);
+
+  static Future<bool?> fetchAuthoritativeFollowStateByUserId(
+      String userId) async {
+    final accountId = _verifiedAccountId(userId);
+    if (accountId == null) return null;
+    try {
+      return await BackendApiService().isFollowingAccount(accountId);
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint(
+            'UserService.fetchAuthoritativeFollowStateByUserId failed: $e');
+      }
+      return null;
+    }
+  }
+
   static void _reconcileFollowMutationCache({
     required String targetWallet,
     required bool isFollowing,
@@ -317,9 +369,11 @@ class UserService {
     int? actorFollowingCount,
   }) {
     final canonicalTarget = WalletUtils.canonical(targetWallet);
-    if (canonicalTarget.isEmpty) return;
 
-    final targetExisting = _cache[canonicalTarget];
+    // A walletless target (official institution account) has no wallet-keyed
+    // entry; the actor's own count below must still be reconciled.
+    final targetExisting =
+        canonicalTarget.isEmpty ? null : _cache[canonicalTarget];
     if (targetExisting != null) {
       final nextFollowersCount = mutation?.followersCount ??
           (() {
@@ -380,6 +434,7 @@ class UserService {
       {bool forceRefresh = false,
       bool includeAchievements = true,
       bool rethrowErrors = false}) async {
+    _ensureCacheScope();
     final sessionEpoch = BackendApiService().authSessionEpoch;
     try {
       // Consult cache first (unless caller requests fresh data)
@@ -429,6 +484,17 @@ class UserService {
       final profile = await BackendApiService().getProfileByWallet(userId);
 
       final profileRoles = ProfileIdentityRoles.fromProfileMap(profile);
+      final accountUserId =
+          _verifiedAccountId(profile['userId'] ?? profile['user_id']);
+      final rawProfileWallet = (profile['walletAddress'] ??
+              profile['wallet_address'] ??
+              profile['wallet'] ??
+              '')
+          .toString()
+          .trim();
+      final publicWalletAddress = WalletUtils.looksLikeWallet(rawProfileWallet)
+          ? WalletUtils.canonical(rawProfileWallet)
+          : '';
       final resolvedWallet = WalletUtils.canonical(
         (profile['targetWallet'] ??
                 profile['target_wallet'] ??
@@ -464,7 +530,10 @@ class UserService {
           : 0;
       final isFollowing = profileIsFollowing
           ? true
-          : await _fetchAuthoritativeFollowState(resolvedWallet);
+          : accountUserId != null
+              ? (await fetchAuthoritativeFollowStateByUserId(accountUserId) ??
+                  false)
+              : await _fetchAuthoritativeFollowState(resolvedWallet);
       // Try to parse embedded stats if the profile payload contains them
       int followersFromProfile = topLevelFollowers;
       int followingFromProfile = topLevelFollowing;
@@ -568,6 +637,14 @@ class UserService {
           : (safeUsername.isNotEmpty ? safeUsername : 'Unknown artist');
       var user = User(
         id: resolvedWallet,
+        userId: accountUserId,
+        walletAddress: publicWalletAddress.isEmpty ? null : publicWalletAddress,
+        // The wallet requirement lives in User.supportsMessaging: a profile
+        // without a wallet has no message target, whatever its preference.
+        allowsMessages: profile['preferences'] is Map
+            ? (profile['preferences']['allowMessages'] != false &&
+                profile['preferences']['allow_messages'] != false)
+            : true,
         name: effectiveName,
         username: safeUsername,
         bio: profile['bio']?.toString() ?? '',
@@ -638,12 +715,16 @@ class UserService {
   }
 
   static User? _cachedUserFor(String userId) {
+    _ensureCacheScope();
     final canonical = WalletUtils.canonical(userId);
     return _cache[userId] ?? (canonical.isEmpty ? null : _cache[canonical]);
   }
 
   static User _copyWithProfileMedia(User profile, User mediaSource) => User(
         id: profile.id,
+        userId: profile.userId,
+        walletAddress: profile.walletAddress,
+        allowsMessages: profile.allowsMessages,
         name: profile.name,
         username: profile.username,
         bio: profile.bio,
@@ -698,9 +779,7 @@ class UserService {
       final trimmed = url.trim();
       if (trimmed.isEmpty) return null;
       // Treat DiceBear/placeholder URLs as missing so UI renders local initials instead of remote SVGs
-      if (isPlaceholderAvatarUrl(trimmed)) {
-        return null;
-      }
+      if (isPlaceholderAvatarUrl(trimmed)) return null;
       if (trimmed.contains('api.dicebear.com') && trimmed.contains('/svg')) {
         return trimmed.replaceAll('/svg', '/png');
       }
@@ -787,11 +866,27 @@ class UserService {
     );
   }
 
+  /// Account identity survives partial copies: an incoming value wins, and a copy
+  /// that states no identity (no userId and no wallet) keeps the cached identity
+  /// and messaging preference instead of resetting them.
+  static User _withIdentityFrom(User incoming, User? existing) {
+    if (existing == null) return incoming;
+    final identityStated =
+        incoming.userId != null || incoming.walletAddress != null;
+    return incoming.copyWith(
+      userId: incoming.userId ?? existing.userId,
+      walletAddress: incoming.walletAddress ?? existing.walletAddress,
+      allowsMessages:
+          identityStated ? incoming.allowsMessages : existing.allowsMessages,
+    );
+  }
+
   static void _setUsersInCache(
     List<User> users, {
     required bool allowNullMediaOverwrite,
     int? sessionEpoch,
   }) {
+    _ensureCacheScope();
     // A write captured under a session that has since ended is dropped whole,
     // so it reaches neither memory nor the persisted cache of the next account.
     if (sessionEpoch != null &&
@@ -847,7 +942,7 @@ class UserService {
                 : existing.achievementDefinitions,
           );
         }
-        _cache[u.id] = updated;
+        _cache[u.id] = _withIdentityFrom(updated, existing);
         if (existing?.profileImageUrl != updated.profileImageUrl ||
             existing?.coverImageUrl != updated.coverImageUrl) {
           final revision = ++_profileMediaRevision;
@@ -873,6 +968,11 @@ class UserService {
   static Map<String, dynamic> _cacheUserToJson(User u, int cachedAt) {
     return {
       'id': u.id,
+      // Account identity survives a restart, so a walletless account restored
+      // from the cache still follows/messages by its real identity.
+      if (u.userId != null) 'userId': u.userId,
+      if (u.walletAddress != null) 'walletAddress': u.walletAddress,
+      'allowsMessages': u.allowsMessages,
       'name': u.name,
       'username': u.username,
       'bio': u.bio,
@@ -939,7 +1039,9 @@ class UserService {
 
   static Future<void> _persistCache() async {
     try {
-      final prefs = await SharedPreferences.getInstance();
+      _ensureCacheScope();
+      final account = _scopeOwner;
+      final generation = _scopeGeneration;
       // Build map of wallet -> serialized user + cachedAt
       final map = <String, dynamic>{};
       final entries = _cache.keys.toList();
@@ -965,7 +1067,8 @@ class UserService {
           );
         }
       }
-      await prefs.setString(_cachePrefsKey, json.encode(map));
+      await AccountCacheStore.write(_cachePrefsKey, map,
+          account: account, generation: generation);
     } catch (e) {
       if (kDebugMode) {
         debugPrint('UserService._persistCache: $e');
@@ -980,9 +1083,15 @@ class UserService {
       _maxEntries = maxEntries;
       _ttlMillis = ttl.inMilliseconds;
       _legacyCacheMissingCoverKey.clear();
-      final prefs = await SharedPreferences.getInstance();
-      final raw = prefs.getString(_cachePrefsKey) ?? '{}';
-      final Map<String, dynamic> map = json.decode(raw) as Map<String, dynamic>;
+      _ensureCacheScope();
+      final account = _scopeOwner;
+      final generation = _scopeGeneration;
+      final raw = await AccountCacheStore.read(_cachePrefsKey);
+      if (account != AccountCacheStore.owner ||
+          generation != AccountCacheStore.generation) {
+        return;
+      }
+      final map = Map<String, dynamic>.from(raw as Map? ?? const {});
       final now = DateTime.now().millisecondsSinceEpoch;
       final entries = <String, User>{};
       final timestamps = <String, int>{};
@@ -1002,6 +1111,14 @@ class UserService {
           final cachedRoles = ProfileIdentityRoles.fromProfileMap(v);
           final user = User(
             id: v['id']?.toString() ?? k,
+            userId: _verifiedAccountId(v['userId']),
+            walletAddress:
+                WalletUtils.looksLikeWallet(v['walletAddress']?.toString())
+                    ? v['walletAddress'].toString()
+                    : null,
+            allowsMessages: v['allowsMessages'] is bool
+                ? v['allowsMessages'] as bool
+                : true,
             name: v['name']?.toString() ?? 'Unknown artist',
             username: (v['username']?.toString() ?? '')
                 .replaceFirst(RegExp(r'^@+'), ''),
@@ -1090,6 +1207,7 @@ class UserService {
   /// and useful for UI paths that need immediate access to previously persisted
   /// user profiles without performing async calls.
   static User? getCachedUser(String userId) {
+    _ensureCacheScope();
     try {
       if (userId.isEmpty) return null;
       return _cache[userId];
@@ -1100,6 +1218,7 @@ class UserService {
 
   /// Returns a map of cached User objects for the given ids. Non-existing ids are omitted.
   static Map<String, User> getCachedUsers(List<String> walletIds) {
+    _ensureCacheScope();
     final Map<String, User> result = {};
     try {
       for (final id in walletIds) {
@@ -1119,8 +1238,9 @@ class UserService {
       _legacyCacheMissingCoverKey.clear();
       _profileMediaRevisionByUser.clear();
       _profileMediaBustByUser.clear();
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.remove(_cachePrefsKey);
+      await AccountCacheStore.write(_cachePrefsKey, <String, dynamic>{},
+          account: AccountCacheStore.owner,
+          generation: AccountCacheStore.generation);
     } catch (e) {
       if (kDebugMode) {
         debugPrint('UserService.clearCache: $e');
@@ -1132,6 +1252,7 @@ class UserService {
     String username, {
     bool includeAchievements = true,
   }) async {
+    _ensureCacheScope();
     final sessionEpoch = BackendApiService().authSessionEpoch;
     final trimmed = username.trim();
     if (trimmed.isEmpty) return null;
@@ -1270,14 +1391,22 @@ class UserService {
   static Future<List<String>?> _readFollowingCache({
     String? walletAddress,
   }) async {
+    final account = AccountCacheStore.owner;
+    final generation = AccountCacheStore.generation;
     final activeWallet = WalletUtils.canonical(
         walletAddress ?? await _activeWalletAddressFromPrefs());
     if (activeWallet.isEmpty) return null;
-    final prefs = await SharedPreferences.getInstance();
-    final followingJson = prefs.getString(_followingKeyForWallet(activeWallet));
-    if (followingJson == null || followingJson.isEmpty) return null;
+    final followingJson =
+        await AccountCacheStore.read(_followingKeyForWallet(activeWallet));
+    if (account != AccountCacheStore.owner ||
+        generation != AccountCacheStore.generation) {
+      return null;
+    }
+    if (followingJson == null) {
+      return null;
+    }
     try {
-      return List<String>.from(json.decode(followingJson))
+      return List<String>.from(followingJson as List)
           .map(WalletUtils.canonical)
           .where((wallet) => wallet.isNotEmpty)
           .toSet()
@@ -1304,6 +1433,8 @@ class UserService {
   static Future<List<String>?> getKnownFollowingUsers({
     String? walletAddress,
   }) async {
+    final account = AccountCacheStore.owner;
+    final generation = AccountCacheStore.generation;
     final activeWallet = WalletUtils.canonical(
         walletAddress ?? await _activeWalletAddressFromPrefs());
     if (activeWallet.isEmpty) return null;
@@ -1324,11 +1455,19 @@ class UserService {
           .where((wallet) => wallet.isNotEmpty)
           .toSet()
           .toList(growable: false);
+      if (account != AccountCacheStore.owner ||
+          generation != AccountCacheStore.generation) {
+        return null;
+      }
       await _saveFollowingUsers(wallets, walletAddress: activeWallet);
       return wallets;
     } catch (e) {
       if (kDebugMode) {
         debugPrint('UserService.getFollowingUsers: backend refresh failed: $e');
+      }
+      if (account != AccountCacheStore.owner ||
+          generation != AccountCacheStore.generation) {
+        return null;
       }
       return _readFollowingCache(walletAddress: activeWallet);
     }
@@ -1341,16 +1480,16 @@ class UserService {
     final activeWallet = WalletUtils.canonical(
         walletAddress ?? await _activeWalletAddressFromPrefs());
     if (activeWallet.isEmpty) return;
-    final prefs = await SharedPreferences.getInstance();
+    final account = AccountCacheStore.owner;
+    final generation = AccountCacheStore.generation;
     final canonicalWallets = wallets
         .map(WalletUtils.canonical)
         .where((wallet) => wallet.isNotEmpty)
         .toSet()
         .toList(growable: false);
-    await prefs.setString(
-      _followingKeyForWallet(activeWallet),
-      json.encode(canonicalWallets),
-    );
+    await AccountCacheStore.write(
+        _followingKeyForWallet(activeWallet), canonicalWallets,
+        account: account, generation: generation);
   }
 
   static Future<void> followUser(String walletAddress) async {
@@ -1547,6 +1686,122 @@ class UserService {
     );
   }
 
+  /// The wallet of a cached account known by its account UUID, if any.
+  static String? _knownWalletForAccount(String accountId) {
+    for (final cached in _cache.values) {
+      if (_verifiedAccountId(cached.userId) == accountId) {
+        final wallet = cached.messagingWallet;
+        if (wallet != null && wallet.isNotEmpty) return wallet;
+      }
+    }
+    return null;
+  }
+
+  static Future<UserFollowMutationResult> setFollowStateByUserId(
+    String userId, {
+    required bool shouldFollow,
+  }) async {
+    final accountId = _verifiedAccountId(userId);
+    if (accountId == null) {
+      throw ArgumentError.value(
+          userId, 'userId', 'A canonical account UUID is required');
+    }
+    final api = BackendApiService();
+    final mutation = shouldFollow
+        ? await api.followAccountWithResponse(accountId)
+        : await api.unfollowAccountWithResponse(accountId);
+    if (mutation == null || mutation.pending || mutation.fromFallback) {
+      return UserFollowMutationResult(
+        isFollowing: !shouldFollow,
+        targetWallet: '',
+        pending: true,
+        requestedIsFollowing: shouldFollow,
+      );
+    }
+    if (mutation.success == false) {
+      throw BackendApiRequestException(
+        statusCode: 200,
+        path: '/api/community/follow/account/$accountId',
+        body: mutation.message,
+      );
+    }
+    final resolvedIsFollowing = mutation.isFollowing;
+    final targetWallet = WalletUtils.canonical(
+        mutation.targetWallet ?? _knownWalletForAccount(accountId) ?? '');
+    final actorWallet = await _activeWalletAddressFromPrefs();
+    // Unknown change: keep counts unless the server reported them.
+    final changed = mutation.changed ?? false;
+    if (targetWallet.isNotEmpty) {
+      try {
+        final followingList = await _loadFollowingUsersFromPrefs();
+        if (resolvedIsFollowing && !followingList.contains(targetWallet)) {
+          followingList.add(targetWallet);
+        } else if (!resolvedIsFollowing) {
+          followingList.remove(targetWallet);
+        }
+        await _saveFollowingUsers(followingList);
+      } catch (e) {
+        if (kDebugMode) {
+          debugPrint(
+              'UserService.setFollowStateByUserId: save following failed: $e');
+        }
+      }
+    }
+    try {
+      _reconcileFollowMutationCache(
+        targetWallet: targetWallet,
+        isFollowing: resolvedIsFollowing,
+        changed: changed,
+        mutation: mutation,
+        actorWallet: actorWallet,
+        actorFollowingCount: mutation.actorFollowingCount,
+      );
+      // Every other cached copy of this account (keyed by profile id or handle).
+      for (final key in _cache.keys.toList(growable: false)) {
+        final cached = _cache[key];
+        if (cached == null || key == targetWallet) continue;
+        if (_verifiedAccountId(cached.userId) != accountId) continue;
+        final current = cached.followersCount;
+        _cache[key] = cached.copyWith(
+          isFollowing: resolvedIsFollowing,
+          followersCount: mutation.followersCount ??
+              (!changed
+                  ? current
+                  : (resolvedIsFollowing
+                      ? current + 1
+                      : (current > 0 ? current - 1 : 0))),
+        );
+      }
+      _persistCache();
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint(
+            'UserService.setFollowStateByUserId: cache reconcile failed: $e');
+      }
+    }
+    ProfilePackageMutationTracker.followStateChanged(
+      targetWallet: targetWallet,
+      targetAccountId: accountId,
+      actorWallet: actorWallet,
+      isFollowing: resolvedIsFollowing,
+      followersCount: mutation.followersCount,
+      followingCount: mutation.actorFollowingCount,
+    );
+    return UserFollowMutationResult(
+      isFollowing: resolvedIsFollowing,
+      targetWallet: targetWallet,
+      followersCount: mutation.followersCount,
+      followingCount: mutation.followingCount,
+      actorFollowingCount: mutation.actorFollowingCount,
+      changed: mutation.changed,
+      followCreated: mutation.followCreated,
+      unfollowed: mutation.unfollowed,
+      removed: mutation.removed,
+      hasCanonicalPayload: mutation.hasCanonicalPayload,
+      requestedIsFollowing: shouldFollow,
+    );
+  }
+
   static Future<bool> toggleFollow(
     String walletAddress, {
     String? displayName,
@@ -1725,6 +1980,7 @@ class UserService {
   }
 
   static String? _cacheEntryKeyFor(String userId) {
+    _ensureCacheScope();
     if (_cache.containsKey(userId)) return userId;
     final canonical = WalletUtils.canonical(userId);
     if (canonical.isNotEmpty && _cache.containsKey(canonical)) return canonical;
@@ -1984,6 +2240,7 @@ class UserService {
   /// background (non-blocking) to avoid slowing down profile fetch paths.
   static Future<void> fetchAndUpdateUserStats(String walletAddress) async {
     if (walletAddress.isEmpty) return;
+    _ensureCacheScope();
     final sessionEpoch = BackendApiService().authSessionEpoch;
 
     final normalizedWallet = WalletUtils.canonical(walletAddress);
@@ -2055,6 +2312,7 @@ class UserService {
   /// - `batchFirstThreshold`: if the number of wallets >= this threshold, call the batch endpoint first.
   static Future<List<User>> getUsersByWallets(List<String> wallets,
       {bool forceRefresh = false, int batchFirstThreshold = 4}) async {
+    _ensureCacheScope();
     final sessionEpoch = BackendApiService().authSessionEpoch;
     final results = <User>[];
     final clean = wallets.where((w) => w.isNotEmpty).toSet().toList();

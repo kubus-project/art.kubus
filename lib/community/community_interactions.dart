@@ -10,6 +10,7 @@ import '../providers/saved_items_provider.dart';
 import '../models/promotion.dart';
 import '../services/account_identity.dart';
 import '../services/backend_api_service.dart';
+import '../services/content_report_service.dart';
 import '../services/user_action_logger.dart';
 import '../utils/wallet_utils.dart';
 import 'community_post_media.dart';
@@ -867,17 +868,24 @@ class CommunityService {
   // Note: Mock post generator removed. Use BackendApiService.getCommunityPosts instead.
 
   // Report post (community moderation)
-  static Future<void> reportPost(CommunityPost post, String reason) async {
+  static Future<void> reportPost(
+      CommunityPost post, ContentReportDraft draft) async {
     if (!AppConfig.enableReporting) return;
 
     final backendApi = BackendApiService();
-    final details = post.content.trim().isEmpty ? null : post.content.trim();
+    final explanation = (draft.details ?? '').trim();
+    final fallback = post.content.trim();
 
     await backendApi.submitReport(
       targetType: 'post',
       targetId: post.id,
-      reason: reason,
-      details: details,
+      reason: draft.category.wire,
+      reasonCode: draft.category.wire,
+      details: explanation.isNotEmpty
+          ? explanation
+          : (fallback.isEmpty ? null : fallback),
+      goodFaithStatement: draft.goodFaithStatement,
+      contactEmail: draft.contactEmail,
     );
 
     // Optional local record for client-side dedupe/UX, kept per account. A
@@ -889,7 +897,7 @@ class CommunityService {
         final prefs = await SharedPreferences.getInstance();
         final reports = prefs.getStringList(key) ?? [];
         final reportData =
-            '${post.id}|$reason|${DateTime.now().millisecondsSinceEpoch}';
+            '${post.id}|${draft.category.wire}|${DateTime.now().millisecondsSinceEpoch}';
         if (!reports.contains(reportData)) {
           reports.add(reportData);
           await prefs.setStringList(key, reports);
@@ -898,21 +906,25 @@ class CommunityService {
     } catch (_) {}
 
     if (AppConfig.enableDebugPrints) {
-      debugPrint('Post ${post.id} reported for: $reason');
+      debugPrint('Post ${post.id} reported for: ${draft.category.wire}');
     }
   }
 
   // Report user (community moderation)
-  static Future<void> reportUser(String walletAddress, String reason,
-      {String? details}) async {
+  static Future<void> reportUser(String walletAddress, ContentReportDraft draft,
+      {String? subjectName}) async {
     if (!AppConfig.enableReporting) return;
 
+    final explanation = (draft.details ?? '').trim();
     final backendApi = BackendApiService();
     await backendApi.submitReport(
       targetType: 'user',
       targetTextId: WalletUtils.canonical(walletAddress),
-      reason: reason,
-      details: details,
+      reason: draft.category.wire,
+      reasonCode: draft.category.wire,
+      details: explanation.isNotEmpty ? explanation : subjectName,
+      goodFaithStatement: draft.goodFaithStatement,
+      contactEmail: draft.contactEmail,
     );
   }
 

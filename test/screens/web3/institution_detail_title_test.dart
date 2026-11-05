@@ -1,9 +1,11 @@
 import 'dart:convert';
 
 import 'package:art_kubus/screens/desktop/desktop_shell_scope.dart';
+import 'package:art_kubus/screens/desktop/desktop_map_screen.dart';
 import 'package:art_kubus/screens/web3/institution/institution_detail_screen.dart';
 import 'package:art_kubus/services/backend_api_service.dart';
 import 'package:art_kubus/services/http_client_factory.dart';
+import 'package:art_kubus/widgets/common/kubus_cached_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
@@ -98,7 +100,8 @@ void main() {
     BackendApiService().setHttpClient(createPlatformHttpClient());
   });
 
-  testWidgets('standalone (phone): the institution name is the one title',
+  testWidgets(
+      'standalone (phone): the name is the app bar title and the identity plate name',
       (tester) async {
     final renderErrors = await _pump(
       tester,
@@ -108,16 +111,166 @@ void main() {
     await tester.pumpAndSettle();
     expect(renderErrors, isEmpty);
 
+    // The shared ProfileIdentityHero carries the name beside the avatar by
+    // design, so the app bar and the identity plate each show it once.
     expect(
       find.text(_institutionName),
-      findsOneWidget,
-      reason: 'the AppBar carries the name; the card does not repeat it',
+      findsNWidgets(2),
+      reason: 'the AppBar title and the hero identity name',
     );
     expect(find.byType(AppBar), findsOneWidget);
   });
 
+  testWidgets('cover and profile images retain separate roles', (tester) async {
+    BackendApiService().setHttpClient(MockClient((request) async {
+      if (request.url.path == '/api/institutions') {
+        return _json({
+          'success': true,
+          'institutions': [
+            {
+              ..._institutionPayload(),
+              'coverImageUrl': 'https://example.com/cover.jpg',
+              'logoUrl': 'https://example.com/logo.jpg',
+              'disciplines': [
+                {
+                  'code': 'painting',
+                  'labelEn': 'Painting',
+                  'labelSl': 'Slikarstvo'
+                },
+              ],
+            },
+          ],
+        });
+      }
+      if (request.url.path == '/api/events') {
+        return _json({
+          'success': true,
+          'data': {'events': <Object>[]}
+        });
+      }
+      return _json({'success': true, 'data': <String, Object?>{}});
+    }));
+    await _pump(
+      tester,
+      size: const Size(390, 844),
+      child: const InstitutionDetailScreen(institutionId: 'inst-1'),
+    );
+    await tester.pump();
+    final cover = tester.widget<KubusCachedImage>(find.descendant(
+      of: find.byKey(const ValueKey('profile-identity-hero-cover')),
+      matching: find.byType(KubusCachedImage),
+    ));
+    // The avatar mounts the logo as a plain network image.
+    final profile = tester.widget<Image>(find.descendant(
+      of: find.byKey(const ValueKey('institution-profile-image')),
+      matching: find.byType(Image),
+    ));
+    expect(cover.imageUrl, 'https://example.com/cover.jpg');
+    expect((profile.image as NetworkImage).url, 'https://example.com/logo.jpg');
+    expect(find.text('example.com'), findsOneWidget);
+    expect(find.text('Painting'), findsOneWidget);
+  });
+
   testWidgets(
-      'embedded under a sub-screen with the same title: one title, from the shell',
+      'logo-only profile uses the logo once, as the avatar, not as hero',
+      (tester) async {
+    BackendApiService().setHttpClient(MockClient((request) async {
+      if (request.url.path == '/api/institutions') {
+        return _json({
+          'success': true,
+          'institutions': [
+            {
+              ..._institutionPayload(),
+              'logoUrl': 'https://example.com/logo.jpg'
+            },
+          ],
+        });
+      }
+      if (request.url.path == '/api/events') {
+        return _json({
+          'success': true,
+          'data': {'events': <Object>[]}
+        });
+      }
+      return _json({'success': true, 'data': <String, Object?>{}});
+    }));
+    await _pump(tester,
+        size: const Size(390, 844),
+        child: const InstitutionDetailScreen(institutionId: 'inst-1'));
+    await tester.pump();
+    // The hero is the neutral fallback, never the logo file.
+    final hero = find.byKey(const ValueKey('profile-identity-hero-cover'));
+    expect(hero, findsOneWidget);
+    expect(
+      find.descendant(of: hero, matching: find.byType(KubusCachedImage)),
+      findsNothing,
+    );
+    final avatar = tester.widget<Image>(find.descendant(
+      of: find.byKey(const ValueKey('institution-profile-image')),
+      matching: find.byType(Image),
+    ));
+    expect((avatar.image as NetworkImage).url, 'https://example.com/logo.jpg');
+  });
+
+  testWidgets('open on map passes the institution identity and coordinates',
+      (tester) async {
+    Widget? destination;
+    String? route;
+    await _pump(
+      tester,
+      size: const Size(1440, 900),
+      child: DesktopShellScope(
+        pushScreen: (screen) => destination = screen,
+        popScreen: () {},
+        navigateToRoute: (value) => route = value,
+        openNotifications: () {},
+        openFunctionsPanel: (_, {Widget? content}) {},
+        setFunctionsPanelContent: (_) {},
+        closeFunctionsPanel: () {},
+        canPop: true,
+        child: const InstitutionDetailScreen(institutionId: 'inst-1'),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester
+        .ensureVisible(find.byKey(const ValueKey('institution-open-on-map')));
+    await tester.tap(find.byKey(const ValueKey('institution-open-on-map')));
+    expect(route, '/explore');
+    expect(destination, isA<DesktopSubScreen>());
+    final subScreen = destination! as DesktopSubScreen;
+    expect(subScreen.child, isA<DesktopMapScreen>());
+    final map = subScreen.child as DesktopMapScreen;
+    expect(map.initialSubjectId, 'inst-1');
+    expect(map.initialSubjectType, 'institution');
+    expect(map.initialCenter?.latitude, 46.0511);
+    expect(map.initialCenter?.longitude, 14.5051);
+  });
+
+  testWidgets('an institution without coordinates has no map action',
+      (tester) async {
+    BackendApiService().setHttpClient(MockClient((request) async {
+      if (request.url.path == '/api/institutions') {
+        return _json({
+          'success': true,
+          'institutions': [
+            {..._institutionPayload(), 'latitude': 0, 'longitude': 0},
+          ],
+        });
+      }
+      return _json({
+        'success': true,
+        'data': {'events': <Object>[]},
+      });
+    }));
+    await _pump(tester,
+        size: const Size(390, 844),
+        child: const InstitutionDetailScreen(institutionId: 'inst-1'));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('institution-open-on-map')), findsNothing);
+  });
+
+  testWidgets(
+      'embedded under a sub-screen with the same title: no second app bar',
       (tester) async {
     final renderErrors = await _pump(
       tester,
@@ -135,12 +288,14 @@ void main() {
     await tester.pumpAndSettle();
     expect(renderErrors, isEmpty);
 
+    // The sub-screen header and the shared identity plate each carry the
+    // name; the body adds no second app bar.
     expect(
       find.text(_institutionName),
-      findsOneWidget,
-      reason:
-          'the sub-screen header owns the name; the body does not repeat it',
+      findsNWidgets(2),
+      reason: 'the sub-screen header and the hero identity name',
     );
+    expect(find.byType(AppBar), findsNothing);
   });
 
   testWidgets(

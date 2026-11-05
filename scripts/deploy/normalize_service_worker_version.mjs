@@ -8,7 +8,8 @@ import { join } from 'node:path';
 // so a commit-derived value keeps its meaning and makes the sealed artifact reproducible.
 
 const VERSION_PATTERN = /\bflutterServiceWorkerVersion\s*=\s*"(\d{1,10})"/g;
-const REWRITTEN_FILES = ['flutter_bootstrap.js', 'index.html'];
+// index.en.html / index.sl.html are the derived locale homepages (locale_shells.mjs); a repeated preparation must rewrite them too.
+const REWRITTEN_FILES = ['flutter_bootstrap.js', 'index.html', 'index.en.html', 'index.sl.html'];
 
 export function deterministicServiceWorkerVersion(sourceSha) {
   if (!/^[0-9a-f]{40}$/.test(sourceSha || '')) throw new Error('source SHA must be 40 lowercase hex characters');

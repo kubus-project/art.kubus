@@ -12,6 +12,7 @@ import 'package:art_kubus/services/auth_redirect_controller.dart';
 import 'package:art_kubus/services/backend_api_service.dart';
 import 'package:art_kubus/widgets/auth/post_auth_loading_screen.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
@@ -86,6 +87,9 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   setUp(() {
+    // Accepting a wallet token stores the session in the platform store.
+    FlutterSecureStorage.setMockInitialValues(<String, String>{});
+    BackendApiService().resetCredentialStoreForTesting();
     SharedPreferences.setMockInitialValues(<String, Object>{});
     final api = BackendApiService();
     api.setAuthTokenForTesting(null);

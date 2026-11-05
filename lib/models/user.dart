@@ -1,9 +1,21 @@
 import 'achievement_progress.dart';
 import 'achievements.dart' as backend_achievements;
 import 'profile_identity_data.dart' show ProfileIdentityRoles;
+import '../utils/wallet_utils.dart';
 
 class User {
   final String id;
+
+  /// Canonical account UUID returned by the backend. Nullable for legacy
+  /// wallet-only profiles; it must never be synthesized from a profile UUID.
+  final String? userId;
+
+  /// Real linked wallet, kept separate from [id] for walletless accounts.
+  final String? walletAddress;
+
+  /// The account's public `allowMessages` preference. Messaging additionally
+  /// needs [walletAddress] to address a conversation: see [supportsMessaging].
+  final bool allowsMessages;
   final String name;
   final String username;
   final String bio;
@@ -37,8 +49,40 @@ class User {
   final List<AchievementProgress> achievementProgress;
   final List<backend_achievements.AchievementDefinition> achievementDefinitions;
 
+  static final RegExp _uuidPattern = RegExp(
+    r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$',
+    caseSensitive: false,
+  );
+
+  /// The wallet a conversation is addressed to: the explicit [walletAddress],
+  /// else a legacy wallet-keyed [id] (username routes, caches and profile
+  /// packages build users that carry the wallet only in [id]). An account or
+  /// profile UUID is never a wallet, even though it is long and alphanumeric.
+  String? get messagingWallet {
+    final explicit = walletAddress?.trim();
+    if (explicit != null && explicit.isNotEmpty) return explicit;
+    final legacy = id.trim();
+    if (legacy.isEmpty || _uuidPattern.hasMatch(legacy)) return null;
+    return WalletUtils.looksLikeWallet(legacy) ? legacy : null;
+  }
+
+  /// A conversation can be opened only when messages are allowed and a real
+  /// wallet exists to address it ([messagingWallet]); [userId] is never used.
+  bool get supportsMessaging => allowsMessages && messagingWallet != null;
+
+  /// The identity a follow (live or replayed after sign-in) must target: the
+  /// account UUID when known, else the wallet. Null when neither is known.
+  String? get followTargetId {
+    final account = userId?.trim();
+    if (account != null && _uuidPattern.hasMatch(account)) return account;
+    return messagingWallet;
+  }
+
   const User({
     required this.id,
+    this.userId,
+    this.walletAddress,
+    this.allowsMessages = true,
     required this.name,
     required this.username,
     required this.bio,
@@ -77,6 +121,9 @@ class User {
 
   User copyWith({
     String? id,
+    String? userId,
+    String? walletAddress,
+    bool? allowsMessages,
     String? name,
     String? username,
     String? bio,
@@ -101,6 +148,9 @@ class User {
   }) {
     return User(
       id: id ?? this.id,
+      userId: userId ?? this.userId,
+      walletAddress: walletAddress ?? this.walletAddress,
+      allowsMessages: allowsMessages ?? this.allowsMessages,
       name: name ?? this.name,
       username: username ?? this.username,
       bio: bio ?? this.bio,

@@ -1,12 +1,23 @@
 import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:art_kubus/screens/community/community_screen.dart';
+import 'package:art_kubus/services/backend_api_service.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../support/product_surface_harness.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
+
+  setUp(() {
+    // A signed-out visitor: the credential restore reads the platform store and
+    // preferences, and both need a double or it waits on a missing plugin.
+    FlutterSecureStorage.setMockInitialValues(<String, String>{});
+    BackendApiService().resetCredentialStoreForTesting();
+    SharedPreferences.setMockInitialValues(<String, Object>{});
+  });
 
   for (final entry in <({Locale locale, double textScale})>[
     (locale: const Locale('en'), textScale: 1),

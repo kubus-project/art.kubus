@@ -6,6 +6,14 @@ const SAMPLE_BUDGET_MARGIN_MS = 3000;
 export const MAX_PHASE_GAP_FRACTION = 0.25;
 const PHASE_STEP_MS = 50;
 
+// Reserve the expected screenshot duration before scheduling a phase wait.
+// Return null when another capture cannot fit inside the current budget.
+export function getSamplingPhaseWaitMs(requestedWaitMs, remainingMs, expectedCaptureMs) {
+  if (remainingMs <= expectedCaptureMs) return null;
+  return Math.min(requestedWaitMs, remainingMs - expectedCaptureMs);
+}
+
+// Budget from the measured (or projected) gap between successive pixel captures.
 export function getSamplingDeadlineMs(
   captureMs,
   {
@@ -14,11 +22,11 @@ export function getSamplingDeadlineMs(
     minFrames = MIN_SETTLED_FRAMES,
     floatPeriodMs = FLOAT_PERIOD_MS,
     maxHoldMs,
-    phaseWaitMs = 0,
+    interCaptureGapMs = 0,
   },
 ) {
   const captureWindowMs =
-    Math.max(minFrames * (captureMs + phaseWaitMs), floatPeriodMs) + captureMs + settleMs;
+    Math.max(minFrames * (captureMs + interCaptureGapMs), floatPeriodMs) + captureMs + settleMs;
   return Math.min(maxHoldMs, Math.max(holdMs + 1000, captureWindowMs + SAMPLE_BUDGET_MARGIN_MS));
 }
 

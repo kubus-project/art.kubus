@@ -14,5 +14,5 @@ for (const [name, size] of Object.entries({ portrait: '180x320', landscape: '320
   run(['-f', 'lavfi', '-i', `testsrc2=size=${size}:rate=24`, '-t', '8', '-c:v', 'libvpx', '-b:v', '160k', '-an', '-y', video]);
   run(['-i', video, '-frames:v', '1', '-y', path.join(output, `${name}.png`)]);
 }
-run(['-i', 'build/web/images/social-preview-default.webp', '-frames:v', '1', '-y', path.join(output, 'artwork.png')]);
+run(['-i', 'build/web/images/social-preview.png', '-frames:v', '1', '-y', path.join(output, 'artwork.png')]);
 console.log(output);

@@ -40,12 +40,14 @@ class _AccountLinkSnapshot {
   const _AccountLinkSnapshot({
     required this.userId,
     required this.token,
+    required this.sessionEpoch,
     required this.prefsStrings,
     required this.prefsBools,
   });
 
   final String userId;
   final String token;
+  final int sessionEpoch;
   final Map<String, String?> prefsStrings;
   final Map<String, bool?> prefsBools;
 }
@@ -101,9 +103,10 @@ class _OnboardingWalletConnectStepState
   }
 
   Future<_AccountLinkSnapshot?> _captureAccountSnapshot() async {
-    final userId = await _resolveCurrentUserId();
-    if (!mounted) return null;
     final backendApi = BackendApiService();
+    final sessionEpoch = backendApi.authSessionEpoch;
+    final userId = await _resolveCurrentUserId();
+    if (!mounted || sessionEpoch != backendApi.authSessionEpoch) return null;
     var token = (backendApi.getAuthToken() ?? '').trim();
     if (token.isEmpty) {
       try {
@@ -116,6 +119,7 @@ class _OnboardingWalletConnectStepState
     }
 
     final prefs = await SharedPreferences.getInstance();
+    if (!mounted || sessionEpoch != backendApi.authSessionEpoch) return null;
     final prefsStrings = <String, String?>{
       for (final key in _snapshotStringKeys) key: prefs.getString(key),
     };
@@ -125,15 +129,23 @@ class _OnboardingWalletConnectStepState
     return _AccountLinkSnapshot(
       userId: userId!,
       token: token,
+      sessionEpoch: sessionEpoch,
       prefsStrings: prefsStrings,
       prefsBools: prefsBools,
     );
   }
 
+  bool _ownsSnapshot(_AccountLinkSnapshot snapshot) =>
+      mounted &&
+      BackendApiService().authSessionEpoch == snapshot.sessionEpoch &&
+      BackendApiService().getAuthToken() == snapshot.token;
+
   Future<void> _restoreSnapshot(_AccountLinkSnapshot snapshot) async {
+    if (!mounted || !_ownsSnapshot(snapshot)) return;
     try {
       final prefs = await SharedPreferences.getInstance();
       for (final entry in snapshot.prefsStrings.entries) {
+        if (!mounted || !_ownsSnapshot(snapshot)) return;
         final value = entry.value;
         if (value == null) {
           await prefs.remove(entry.key);
@@ -142,6 +154,7 @@ class _OnboardingWalletConnectStepState
         }
       }
       for (final entry in snapshot.prefsBools.entries) {
+        if (!mounted || !_ownsSnapshot(snapshot)) return;
         final value = entry.value;
         if (value == null) {
           await prefs.remove(entry.key);
@@ -150,9 +163,8 @@ class _OnboardingWalletConnectStepState
         }
       }
     } catch (_) {}
-    try {
-      await BackendApiService().setAuthToken(snapshot.token);
-    } catch (_) {}
+    // The link service owns guarded credential rollback. A UI snapshot must
+    // never resurrect a token after logout or another account's sign-in.
   }
 
   Future<void> _runWalletAction(
@@ -177,13 +189,14 @@ class _OnboardingWalletConnectStepState
       });
       return;
     }
+    if (!mounted || !_ownsSnapshot(snapshot)) return;
 
     // Persist the account-link guard so an app refresh recovers into this
     // step instead of falling back to sign-in.
     await OnboardingStateService.markAccountLinkStarted(
       userId: snapshot.userId,
     );
-    if (!mounted) return;
+    if (!mounted || !_ownsSnapshot(snapshot)) return;
 
     final profileSnapshot = context.read<ProfileProvider>().currentUser;
     setState(() {
@@ -202,22 +215,21 @@ class _OnboardingWalletConnectStepState
       if (address.isEmpty) {
         throw StateError('Wallet action did not return an address.');
       }
-      if (!mounted) return;
+      if (!mounted || !_ownsSnapshot(snapshot)) return;
       setState(() {
         _localWallet = address;
         _phase = OnboardingWalletLinkPhase.walletReady;
       });
 
-      // 3. Restore the original account auth before the backend bind, in
-      // case the wallet operation touched session state.
-      final backendApi = BackendApiService();
-      await backendApi.setAuthToken(snapshot.token);
+      // Local wallet creation must not replace account authority. A changed
+      // session belongs to a different action and must never be restored here.
       try {
         final prefs = await SharedPreferences.getInstance();
+        if (!mounted || !_ownsSnapshot(snapshot)) return;
         await prefs.setString('user_id', snapshot.userId);
       } catch (_) {}
 
-      if (!mounted) return;
+      if (!mounted || !_ownsSnapshot(snapshot)) return;
       setState(() {
         _phase = OnboardingWalletLinkPhase.linking;
       });
@@ -236,8 +248,22 @@ class _OnboardingWalletConnectStepState
       );
 
       // 8. Verified: the original account owns the wallet.
+      final payload = result.bindPayload['data'] is Map
+          ? result.bindPayload['data'] as Map
+          : result.bindPayload;
+      final committedToken =
+          (payload['token'] ?? result.bindPayload['token'] ?? snapshot.token)
+              .toString();
+      if (!mounted ||
+          result.userId != snapshot.userId ||
+          BackendApiService().getAuthToken() != committedToken) {
+        return;
+      }
+      final committedEpoch = BackendApiService().authSessionEpoch;
       await OnboardingStateService.clearAccountLinkGuard();
-      if (!mounted) return;
+      if (!mounted || BackendApiService().authSessionEpoch != committedEpoch) {
+        return;
+      }
       setState(() {
         _linkedWallet = result.walletAddress;
         _phase = OnboardingWalletLinkPhase.linked;
@@ -248,7 +274,7 @@ class _OnboardingWalletConnectStepState
       // Roll back wallet/session pollution and stay on this step. The guard
       // stays active so a refresh recovers into WalletConnect, never sign-in.
       await _restoreSnapshot(snapshot);
-      if (profileSnapshot != null && mounted) {
+      if (profileSnapshot != null && mounted && _ownsSnapshot(snapshot)) {
         try {
           await context
               .read<ProfileProvider>()

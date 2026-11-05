@@ -524,6 +524,7 @@ class _AppInitializerState extends State<AppInitializer> {
             OnboardingStateService.capabilityScopeSync(prefs),
           ) ??
           ProtectedActionRequirements.accountOnly;
+      await BackendApiService().loadAuthToken();
       final inMemoryToken = BackendApiService().getAuthToken();
       final sessionStatus = (inMemoryToken != null &&
               inMemoryToken.trim().isNotEmpty &&

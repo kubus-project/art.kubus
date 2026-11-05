@@ -2888,10 +2888,11 @@ class AppLocalizationsSl extends AppLocalizations {
       'Preskoči pozdravne zaslone za vračajoče uporabnike';
 
   @override
-  String get settingsDataExportTileTitle => 'Izvoz podatkov';
+  String get settingsDataExportTileTitle => 'Zahtevaj kopijo svojih podatkov';
 
   @override
-  String get settingsDataExportTileSubtitle => 'Prenesi svoje podatke';
+  String get settingsDataExportTileSubtitle =>
+      'Za kopijo podatkov se obrni na podporo';
 
   @override
   String get settingsResetPermissionFlagsTileTitle =>
@@ -3154,11 +3155,11 @@ class AppLocalizationsSl extends AppLocalizations {
   String get settingsResetButton => 'Ponastavi';
 
   @override
-  String get settingsExportDataDialogTitle => 'Izvoz podatkov';
+  String get settingsExportDataDialogTitle => 'Prenesi kopijo svojih podatkov';
 
   @override
   String get settingsExportDataDialogBody =>
-      'To bo ustvarilo datoteko s tvojimi podatki aplikacije (brez zasebnih ključev).';
+      'Ustvari eno datoteko s podatki, ki jih hrani ta račun: profil, objave, komentarji, zbirke, umetniška dela, shranjeni elementi, obvestila, sporočila, ki si jih poslal/a, zahtevki za podporo in zapisi o nalaganjih. Gesla, prijavni žetoni in interne opombe osebja niso vključeni. Za vse ostalo piši na support@kubus.site.';
 
   @override
   String settingsDataExportedToast(Object count) {
@@ -3166,7 +3167,7 @@ class AppLocalizationsSl extends AppLocalizations {
   }
 
   @override
-  String get settingsExportButton => 'Izvozi';
+  String get settingsExportButton => 'Odpri obrazec za zahtevo';
 
   @override
   String get settingsResetAppDialogTitle => 'Ponastavi aplikacijo';
@@ -3184,7 +3185,7 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get settingsDeleteAccountDialogBody =>
-      'S strežnikov bomo odstranili tvoj profil in podatke skupnosti. Tvoja denarnica ostane tvoja in jo lahko še vedno obnoviš z obnovitveno frazo.';
+      'Z zaprtjem računa izgubiš dostop do njega. Nekateri podatki lahko zahtevajo dodaten pregled ali se še hranijo. Tvoja denarnica ostane tvoja in jo lahko obnoviš z obnovitveno frazo.';
 
   @override
   String get settingsFinalConfirmationTitle => 'Končna potrditev';
@@ -3198,11 +3199,11 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get settingsDeleteAccountBackendFailedToast =>
-      'Brisanje na strežniku ni uspelo. Poskusi znova.';
+      'Zaprtja ni bilo mogoče potrditi. Pred ponovnim poskusom preverite stanje.';
 
   @override
   String get settingsAccountDeletedToast =>
-      'Račun je izbrisan. Vsi podatki so odstranjeni.';
+      'Zaprtje računa je bilo zahtevano. Nekateri podatki lahko zahtevajo dodaten pregled ali se še hranijo.';
 
   @override
   String get settingsDeleteForeverButton => 'Izbriši za vedno';
@@ -4115,6 +4116,10 @@ class AppLocalizationsSl extends AppLocalizations {
       'Opiši poslanstvo z vsaj 20 znaki.';
 
   @override
+  String get institutionHubApplicationWalletBannerTitle =>
+      'Za oddajo je potreben podpis z denarnico';
+
+  @override
   String get institutionHubApplicationWalletRequired =>
       'Pred oddajo poveži denarnico.';
 
@@ -4180,8 +4185,8 @@ class AppLocalizationsSl extends AppLocalizations {
   String get institutionHubCtaPendingDaoReview => 'Čaka na pregled upravljanja';
 
   @override
-  String get institutionHubCtaConnectWalletToApply =>
-      'Poveži denarnico za prijavo';
+  String get institutionHubCtaApplyAsInstitution =>
+      'Prijavi se kot institucija';
 
   @override
   String get institutionHubDaoStatusSyncedLabel =>
@@ -18929,4 +18934,380 @@ class AppLocalizationsSl extends AppLocalizations {
   String artistPortfolioCardActionsLabel(String title) {
     return 'Dejanja za $title';
   }
+
+  @override
+  String get institutionDetailKindMuseum => 'Muzej';
+
+  @override
+  String get institutionDetailKindGallery => 'Galerija';
+
+  @override
+  String get institutionDetailKindArtsCentre => 'Umetniški center';
+
+  @override
+  String get institutionDetailKindExhibitionSpace => 'Razstavni prostor';
+
+  @override
+  String get institutionDetailKindCulturalCentre => 'Kulturni center';
+
+  @override
+  String get institutionDetailKindOther => 'Drug prostor';
+
+  @override
+  String get institutionDetailVerifiedChip => 'Preverjeno';
+
+  @override
+  String institutionDetailCoverSemanticLabel(Object name) {
+    return 'Naslovna slika: $name';
+  }
+
+  @override
+  String institutionDetailLogoSemanticLabel(Object name) {
+    return 'Logotip: $name';
+  }
+
+  @override
+  String get institutionDetailCreditsTitle => 'Avtorstvo slik';
+
+  @override
+  String get institutionDetailPhotoCreditsAction => 'Avtorstvo fotografije';
+
+  @override
+  String get institutionDetailCoverPhotoLabel => 'Naslovna fotografija';
+
+  @override
+  String get institutionDetailProfilePhotoLabel => 'Profilna fotografija';
+
+  @override
+  String institutionDetailCoverPhotoCredit(Object author) {
+    return 'Naslovna fotografija: $author';
+  }
+
+  @override
+  String institutionDetailProfilePhotoCredit(Object author) {
+    return 'Profilna fotografija: $author';
+  }
+
+  @override
+  String institutionDetailDepictedArchitecture(Object author) {
+    return 'Arhitektura: $author';
+  }
+
+  @override
+  String institutionDetailDepictedArtwork(Object author) {
+    return 'Umetniško delo: $author';
+  }
+
+  @override
+  String get institutionDetailLicenceFallback => 'Licenca';
+
+  @override
+  String get institutionDetailPublicDomain => 'Javna last';
+
+  @override
+  String get institutionDetailSourceLink => 'Vir';
+
+  @override
+  String institutionDetailLicenceLinkSemantics(Object licence) {
+    return 'Licenca slike $licence, odpre se v brskalniku';
+  }
+
+  @override
+  String get institutionDetailSourceLinkSemantics =>
+      'Vir slike, odpre se v brskalniku';
+
+  @override
+  String get institutionDetailVisitTitle => 'Obisk';
+
+  @override
+  String get institutionDetailOpeningHours => 'Odpiralni čas';
+
+  @override
+  String get institutionDetailAdmission => 'Vstopnina';
+
+  @override
+  String get institutionDetailAdmissionFree => 'Brezplačno';
+
+  @override
+  String get institutionDetailAdmissionPaid => 'Plačljivo';
+
+  @override
+  String get institutionDetailAdmissionMixed => 'Brezplačno in plačljivo';
+
+  @override
+  String get institutionDetailAccessibility => 'Dostopnost';
+
+  @override
+  String get institutionDetailBookingLink => 'Rezerviraj obisk';
+
+  @override
+  String get institutionDetailVisitorSourceLink =>
+      'Uradne informacije za obiskovalce';
+
+  @override
+  String get institutionDetailStatActiveEvents => 'Aktivni dogodki';
+
+  @override
+  String get institutionDetailStatArtworkViews => 'Ogledi umetnin';
+
+  @override
+  String get institutionDetailStatVisitors => 'Obiskovalci';
+
+  @override
+  String get institutionDetailEventsTitle => 'Dogodki';
+
+  @override
+  String get institutionDetailNoEventsTitle => 'Dogodkov še ni';
+
+  @override
+  String get institutionDetailNoEventsDescription =>
+      'Ta ustanova trenutno nima javno napovedanih dogodkov.';
+
+  @override
+  String get institutionDetailFallbackTitle => 'Ustanova';
+
+  @override
+  String get institutionDetailNotFoundTitle => 'Ustanove ni mogoče najti';
+
+  @override
+  String get institutionDetailNotFoundDescription =>
+      'Te ustanove ni bilo mogoče najti.';
+
+  @override
+  String get institutionDetailLoadErrorTitle => 'Ustanove ni mogoče naložiti';
+
+  @override
+  String get institutionDetailLoadErrorDescription =>
+      'Ustanove trenutno ni mogoče naložiti.';
+
+  @override
+  String get institutionDetailAccountProfileAction => 'Odpri profil računa';
+
+  @override
+  String get settingsExportDownloadButton => 'Prenesi';
+
+  @override
+  String get settingsExportPreparing => 'Pripravljam tvoje podatke …';
+
+  @override
+  String get settingsExportReady =>
+      'Datoteka s tvojimi podatki je pripravljena.';
+
+  @override
+  String get settingsExportSignInRequired => 'Za prenos podatkov se prijavi.';
+
+  @override
+  String get settingsExportTooManyRequests =>
+      'Preveč zahtev. Poskusi znova pozneje.';
+
+  @override
+  String get settingsExportFailed =>
+      'Podatkov ni bilo mogoče pripraviti. Poskusi znova ali piši na support@kubus.site.';
+
+  @override
+  String get messagesAttachmentUnavailable => 'Priloga ni na voljo.';
+
+  @override
+  String get accountClosureStatusTitle => 'Stanje zaprtja računa';
+
+  @override
+  String get accountClosureReceived => 'Zahtevo smo prejeli';
+
+  @override
+  String get accountClosureProcessing => 'Obdelava poteka';
+
+  @override
+  String get accountClosureReviewRequired => 'Potreben je pregled';
+
+  @override
+  String get accountClosureCompletedManaged =>
+      'Zaključeno v sistemih, ki jih upravljamo';
+
+  @override
+  String get accountClosureLimitations =>
+      'Zaprtje zajema sisteme, ki jih upravljamo. Nekateri zapisi lahko zahtevajo zakonito hrambo ali pregled. Neodvisne kopije in že razširjena javna vsebina lahko ostanejo.';
+
+  @override
+  String get accountClosureLawfulRetention =>
+      'Nekatere zapise hranimo na dokumentirani pravni podlagi in ob pregledu roka hrambe.';
+
+  @override
+  String get accountClosureStatusUnavailable =>
+      'Stanja ni bilo mogoče potrditi. Poskusite pozneje ali preverite potrdilo. To ne pomeni, da je postopek zaključen.';
+
+  @override
+  String get accountClosureCopyReceipt => 'Kopiraj zasebno potrdilo za vpogled';
+
+  @override
+  String get accountClosureReceiptPrivacy =>
+      'Potrdilo hranite zasebno. Vsakdo, ki ga ima, lahko preveri stanje zaprtja. V brskalniku shranite kopijo pred zaprtjem ali ponovnim nalaganjem strani; brskalnik ga hrani samo v pomnilniku.';
+
+  @override
+  String get accountClosureRefresh => 'Preveri stanje';
+
+  @override
+  String get accountClosurePasteReceipt =>
+      'Prilepite zasebno potrdilo za vpogled';
+
+  @override
+  String get accountClosureContinue => 'Nadaljuj na pozdravni zaslon';
+
+  @override
+  String get reportContentTitle => 'Prijavi vsebino';
+
+  @override
+  String get reportContentCategoryLabel => 'Kaj je težava?';
+
+  @override
+  String get reportCategoryIllegalContent => 'Nezakonita vsebina';
+
+  @override
+  String get reportCategoryCopyright => 'Avtorske ali druge pravice';
+
+  @override
+  String get reportCategoryPrivacy => 'Zasebnost';
+
+  @override
+  String get reportCategoryHarassment => 'Nadlegovanje';
+
+  @override
+  String get reportCategorySpam => 'Neželena vsebina';
+
+  @override
+  String get reportCategoryImpersonation => 'Lažno predstavljanje';
+
+  @override
+  String get reportCategorySafety => 'Varnostna skrb';
+
+  @override
+  String get reportCategoryOther => 'Drugo';
+
+  @override
+  String get reportContentDetailsLabel => 'Podrobnosti';
+
+  @override
+  String get reportContentDetailsRequired =>
+      'Pojasnite, kaj je narobe in kje. Za to vrsto prijave je to obvezno.';
+
+  @override
+  String get reportContentGoodFaith =>
+      'V dobri veri izjavljam, da so podatki v tej prijavi točni in popolni.';
+
+  @override
+  String get reportContentContactLabel => 'E-pošta za stik (neobvezno)';
+
+  @override
+  String get reportContentContactInvalid => 'Vnesite veljaven e-poštni naslov.';
+
+  @override
+  String get reportContentAccountNote =>
+      'Vaša prijava je povezana z vašim računom, da vam lahko sporočimo, kaj je bilo odločeno.';
+
+  @override
+  String get reportContentSubmit => 'Pošlji prijavo';
+
+  @override
+  String get moderationScreenTitle => 'Prijave in odločitve';
+
+  @override
+  String get moderationEntrySubtitle =>
+      'Prijave, ki ste jih oddali, in odločitve o vaši vsebini';
+
+  @override
+  String get moderationReportsHeading => 'Prijave, ki ste jih oddali';
+
+  @override
+  String get moderationDecisionsHeading => 'Odločitve o vaši vsebini';
+
+  @override
+  String get moderationNoReports => 'Niste oddali nobene prijave.';
+
+  @override
+  String get moderationNoDecisions =>
+      'Nobena odločitev ne vpliva na vašo vsebino.';
+
+  @override
+  String get moderationStatusOpen => 'Prejeto';
+
+  @override
+  String get moderationStatusTriaged => 'V pregledu';
+
+  @override
+  String get moderationStatusResolved => 'Odločeno';
+
+  @override
+  String get moderationStatusClosed => 'Zaključeno';
+
+  @override
+  String get moderationOutcomeNoAction => 'Brez ukrepa';
+
+  @override
+  String get moderationOutcomeContentRemoved => 'Vsebina odstranjena';
+
+  @override
+  String get moderationOutcomeContentRestricted => 'Vsebina omejena';
+
+  @override
+  String get moderationOutcomeAccountAction => 'Ukrep v zvezi z računom';
+
+  @override
+  String get moderationOutcomeReferred => 'Posredovano';
+
+  @override
+  String get moderationOutcomeOther => 'Druga odločitev';
+
+  @override
+  String get moderationReasonsLabel => 'Razlogi';
+
+  @override
+  String get moderationRequestReconsideration => 'Zaprosi za ponovni pregled';
+
+  @override
+  String get moderationReconsiderationRequested => 'Ponovni pregled zahtevan';
+
+  @override
+  String get moderationAppeal => 'Pritoži se na odločitev';
+
+  @override
+  String get moderationAppealSent => 'Pritožba poslana';
+
+  @override
+  String get moderationAppealUpheld => 'Rezultat pritožbe: odločitev potrjena';
+
+  @override
+  String get moderationAppealReversed =>
+      'Rezultat pritožbe: odločitev razveljavljena';
+
+  @override
+  String get moderationNoteHint => 'Povejte nam, zakaj';
+
+  @override
+  String get moderationNoteRequired => 'Pojasnite svojo pritožbo.';
+
+  @override
+  String get moderationActionSent => 'Poslano.';
+
+  @override
+  String get moderationActionAlreadySent => 'To je bilo že poslano.';
+
+  @override
+  String get moderationActionUnavailable => 'Ta odločitev ni več na voljo.';
+
+  @override
+  String get moderationSignInRequired =>
+      'Prijavite se, da vidite svoje prijave in odločitve.';
+
+  @override
+  String get moderationLoadFailed =>
+      'Prijav ni bilo mogoče naložiti. Poskusite znova.';
+
+  @override
+  String get moderationContentRestricted => 'Ta vsebina ni javno prikazana.';
+
+  @override
+  String get moderationContentRestored => 'Ta vsebina je bila obnovljena.';
+
+  @override
+  String get moderationRestorationUnderReview =>
+      'Vsebina še ni obnovljena; obnova se pregleduje.';
 }

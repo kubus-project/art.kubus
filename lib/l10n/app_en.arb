@@ -1093,8 +1093,8 @@
   "settingsCrashReportingTileSubtitle": "Send crash reports automatically",
   "settingsSkipOnboardingTileTitle": "Skip onboarding",
   "settingsSkipOnboardingTileSubtitle": "Skip welcome screens for returning users",
-  "settingsDataExportTileTitle": "Data export",
-  "settingsDataExportTileSubtitle": "Download your data",
+  "settingsDataExportTileTitle": "Request a copy of my data",
+  "settingsDataExportTileSubtitle": "Contact support to request a copy",
   "settingsResetPermissionFlagsTileTitle": "Reset permission flags",
   "settingsResetPermissionFlagsTileSubtitle": "Clear saved permission/service prompts",
   "settingsAboutSectionTitle": "About",
@@ -1183,25 +1183,25 @@
   "settingsResetPermissionFlagsDialogBody": "This will clear the app's stored permission and service request flags. Use this to re-trigger permission prompts if needed.",
   "settingsPermissionFlagsResetToast": "Permission flags reset",
   "settingsResetButton": "Reset",
-  "settingsExportDataDialogTitle": "Export data",
-  "settingsExportDataDialogBody": "This will create a file with your app data (excluding private keys).",
+  "settingsExportDataDialogTitle": "Download a copy of my data",
+  "settingsExportDataDialogBody": "Creates one file with the data this account holds: profile, posts, comments, collections, artworks, saved items, notifications, messages you sent, support requests and upload records. Passwords, sign-in tokens and staff notes are not included. For anything else, contact support@kubus.site.",
   "settingsDataExportedToast": "Data exported: {count} categories",
   "@settingsDataExportedToast": {
     "placeholders": {
       "count": {}
     }
   },
-  "settingsExportButton": "Export",
+  "settingsExportButton": "Open request form",
   "settingsResetAppDialogTitle": "Reset app",
   "settingsResetAppDialogBody": "This will clear app data and settings on this device. It disconnects the wallet session here, but it does not delete the wallet itself.",
   "settingsAppResetSuccessToast": "App reset successfully. Please restart the app.",
   "settingsDeleteAccountDialogTitle": "Delete account",
-  "settingsDeleteAccountDialogBody": "We will remove your profile and community data from our servers. Your wallet remains yours, and you can still restore access with your recovery phrase.",
+  "settingsDeleteAccountDialogBody": "Closing your account ends your access. Some data may require further review or be retained. Your wallet remains yours and can be restored with its recovery phrase.",
   "settingsFinalConfirmationTitle": "Final confirmation",
   "settingsDeleteAccountFinalConfirmationBody": "Are you absolutely sure you want to delete your account? This action cannot be undone.",
   "settingsConfirmButton": "Confirm",
-  "settingsDeleteAccountBackendFailedToast": "Backend deletion failed. Please try again.",
-  "settingsAccountDeletedToast": "Account deleted. All data has been removed.",
+  "settingsDeleteAccountBackendFailedToast": "Closure could not be confirmed. Check its status before trying again.",
+  "settingsAccountDeletedToast": "Account closure requested. Some data may require further review or be retained.",
   "settingsDeleteForeverButton": "Delete forever",
   "settingsEnableNotificationsInSystemToast": "Enable notifications in system settings to receive alerts.",
   "settingsLogoutDialogTitle": "Log out",
@@ -1523,6 +1523,7 @@
   "institutionHubApplicationContactRequired": "Share a website or contact email.",
   "institutionHubApplicationFocusRequired": "Let us know your programming focus.",
   "institutionHubApplicationMissionRequired": "Describe your mission in at least 20 characters.",
+  "institutionHubApplicationWalletBannerTitle": "A wallet signature is needed to submit",
   "institutionHubApplicationWalletRequired": "Connect a wallet before submitting.",
   "institutionHubApplicationWalletWhy": "Applying is signed with your wallet, so the review stays tied to a wallet you control. Browsing institutions does not need one.",
   "institutionHubApplicationSubmittedToast": "Application submitted for governance review.",
@@ -1546,7 +1547,7 @@
   "institutionHubDaoStatusNotApplied": "NOT APPLIED",
   "institutionHubCtaApprovedByDao": "Approved by governance review",
   "institutionHubCtaPendingDaoReview": "Pending governance review",
-  "institutionHubCtaConnectWalletToApply": "Connect wallet to apply",
+  "institutionHubCtaApplyAsInstitution": "Apply as an institution",
   "institutionHubDaoStatusSyncedLabel": "Status synced from governance review",
   "institutionHubDaoReviewQueueMessage": "Your submission is in the governance review queue.",
   "institutionHubApprovedToolsMessage": "Congratulations! Approved for institution tools.",
@@ -4537,13 +4538,17 @@
   "communityUploadRateLimitedSeconds": "Upload limit reached. Try again in {seconds} seconds.",
   "@communityUploadRateLimitedSeconds": {
     "placeholders": {
-      "seconds": {"type": "int"}
+      "seconds": {
+        "type": "int"
+      }
     }
   },
   "communityUploadRateLimitedMinutes": "Upload limit reached. Try again in about {minutes} minutes.",
   "@communityUploadRateLimitedMinutes": {
     "placeholders": {
-      "minutes": {"type": "int"}
+      "minutes": {
+        "type": "int"
+      }
     }
   },
   "communityUploadRateLimitedGeneric": "Too many uploads right now. Wait a moment and try again.",
@@ -4561,28 +4566,42 @@
   "communityComposerMediaLimitReached": "You can add up to {max} items to a post.",
   "@communityComposerMediaLimitReached": {
     "placeholders": {
-      "max": {"type": "int"}
+      "max": {
+        "type": "int"
+      }
     }
   },
   "communityComposerMediaTrimmed": "Added {added} of {picked} files. A post holds up to {max} items.",
   "@communityComposerMediaTrimmed": {
     "placeholders": {
-      "added": {"type": "int"},
-      "picked": {"type": "int"},
-      "max": {"type": "int"}
+      "added": {
+        "type": "int"
+      },
+      "picked": {
+        "type": "int"
+      },
+      "max": {
+        "type": "int"
+      }
     }
   },
   "communityComposerValidationRejected": "The server did not accept this post: {detail}. Your draft is kept.",
   "@communityComposerValidationRejected": {
     "placeholders": {
-      "detail": {"type": "String"}
+      "detail": {
+        "type": "String"
+      }
     }
   },
   "communityComposerMediaCount": "{count} of {max} selected",
   "@communityComposerMediaCount": {
     "placeholders": {
-      "count": {"type": "int"},
-      "max": {"type": "int"}
+      "count": {
+        "type": "int"
+      },
+      "max": {
+        "type": "int"
+      }
     }
   },
   "communityComposerMediaMoveEarlier": "Move earlier",
@@ -4600,7 +4619,9 @@
   "communityComposerMediaUploadFailed": "{count} files could not be uploaded. Your draft is kept, so you can retry.",
   "@communityComposerMediaUploadFailed": {
     "placeholders": {
-      "count": {"type": "int"}
+      "count": {
+        "type": "int"
+      }
     }
   },
   "communityComposerMediaStatusPending": "Waiting to upload",
@@ -4622,13 +4643,17 @@
   "communityComposerCharactersRemaining": "{count} characters left",
   "@communityComposerCharactersRemaining": {
     "placeholders": {
-      "count": {"type": "int"}
+      "count": {
+        "type": "int"
+      }
     }
   },
   "communityComposerCharacterLimitExceeded": "Posts can be up to {max} characters. Shorten your text to publish.",
   "@communityComposerCharacterLimitExceeded": {
     "placeholders": {
-      "max": {"type": "int"}
+      "max": {
+        "type": "int"
+      }
     }
   },
   "communityPostShowMore": "more",
@@ -4642,8 +4667,12 @@
   "communityMediaCarouselPosition": "Media {index} of {total}",
   "@communityMediaCarouselPosition": {
     "placeholders": {
-      "index": {"type": "int"},
-      "total": {"type": "int"}
+      "index": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
     }
   },
   "communityMediaPrevious": "Previous media",
@@ -4702,8 +4731,12 @@
   "@communityMediaVideoTime": {
     "description": "0.8.2 community media video player",
     "placeholders": {
-      "position": {"type": "String"},
-      "duration": {"type": "String"}
+      "position": {
+        "type": "String"
+      },
+      "duration": {
+        "type": "String"
+      }
     }
   },
   "communityMediaVideoVolume": "Volume",
@@ -7710,7 +7743,13 @@
     }
   },
   "communityComposerRateLimitedSeconds": "Posting is temporarily limited. Try again in {seconds} seconds. Your draft is kept.",
-  "@communityComposerRateLimitedSeconds": {"placeholders": {"seconds": {"type": "int"}}},
+  "@communityComposerRateLimitedSeconds": {
+    "placeholders": {
+      "seconds": {
+        "type": "int"
+      }
+    }
+  },
   "communityComposerRateLimitedGeneric": "Posting is temporarily limited. Wait before trying again. Your draft is kept.",
   "communityComposerDiscardDraft": "Discard this draft?",
   "communityComposerAlreadyCommitted": "Your post may already be published. Your draft is kept. Check your feed before clearing it or starting a new post.",
@@ -7753,9 +7792,17 @@
   "supportRequestsRefresh": "Refresh",
   "supportRequestsBack": "Back to all requests",
   "supportRequestUpdatedOn": "Updated {date}",
-  "@supportRequestUpdatedOn": {"placeholders": {"date": {}}},
+  "@supportRequestUpdatedOn": {
+    "placeholders": {
+      "date": {}
+    }
+  },
   "supportRequestOpenedOn": "Opened {date}",
-  "@supportRequestOpenedOn": {"placeholders": {"date": {}}},
+  "@supportRequestOpenedOn": {
+    "placeholders": {
+      "date": {}
+    }
+  },
   "supportRequestKindSupport": "Support request",
   "supportRequestKindBug": "Bug report",
   "supportStatusOpen": "Open",
@@ -7794,7 +7841,11 @@
   "communityArtDiscoverySubtitleSaved": "Around the last area you used",
   "communityArtDiscoverySubtitlePublic": "Art and conversations from across the platform",
   "communityArtDiscoveryWithin": "Within {distance}",
-  "@communityArtDiscoveryWithin": {"placeholders": {"distance": {}}},
+  "@communityArtDiscoveryWithin": {
+    "placeholders": {
+      "distance": {}
+    }
+  },
   "communityArtDiscoveryUseMyLocation": "Use my location",
   "communityArtDiscoveryReasonForYou": "For you",
   "communityArtDiscoveryReasonNearby": "Nearby",
@@ -7949,5 +8000,153 @@
         "type": "String"
       }
     }
-  }
+  },
+  "institutionDetailKindMuseum": "Museum",
+  "institutionDetailKindGallery": "Gallery",
+  "institutionDetailKindArtsCentre": "Arts centre",
+  "institutionDetailKindExhibitionSpace": "Exhibition space",
+  "institutionDetailKindCulturalCentre": "Cultural centre",
+  "institutionDetailKindOther": "Other venue",
+  "institutionDetailVerifiedChip": "Verified",
+  "institutionDetailCoverSemanticLabel": "Cover image of {name}",
+  "@institutionDetailCoverSemanticLabel": {
+    "placeholders": {
+      "name": {}
+    }
+  },
+  "institutionDetailLogoSemanticLabel": "Logo of {name}",
+  "@institutionDetailLogoSemanticLabel": {
+    "placeholders": {
+      "name": {}
+    }
+  },
+  "institutionDetailCreditsTitle": "Image credits",
+  "institutionDetailPhotoCreditsAction": "Photo credits",
+  "institutionDetailCoverPhotoLabel": "Cover photo",
+  "institutionDetailProfilePhotoLabel": "Profile photo",
+  "institutionDetailCoverPhotoCredit": "Cover photo: {author}",
+  "@institutionDetailCoverPhotoCredit": {
+    "placeholders": {
+      "author": {}
+    }
+  },
+  "institutionDetailProfilePhotoCredit": "Profile photo: {author}",
+  "@institutionDetailProfilePhotoCredit": {
+    "placeholders": {
+      "author": {}
+    }
+  },
+  "institutionDetailDepictedArchitecture": "Architecture: {author}",
+  "@institutionDetailDepictedArchitecture": {
+    "placeholders": {
+      "author": {}
+    }
+  },
+  "institutionDetailDepictedArtwork": "Artwork: {author}",
+  "@institutionDetailDepictedArtwork": {
+    "placeholders": {
+      "author": {}
+    }
+  },
+  "institutionDetailLicenceFallback": "Licence",
+  "institutionDetailPublicDomain": "Public domain",
+  "institutionDetailSourceLink": "Source",
+  "institutionDetailLicenceLinkSemantics": "Photo licence {licence}, opens in browser",
+  "@institutionDetailLicenceLinkSemantics": {
+    "placeholders": {
+      "licence": {}
+    }
+  },
+  "institutionDetailSourceLinkSemantics": "Photo source, opens in browser",
+  "institutionDetailVisitTitle": "Visit",
+  "institutionDetailOpeningHours": "Opening hours",
+  "institutionDetailAdmission": "Admission",
+  "institutionDetailAdmissionFree": "Free",
+  "institutionDetailAdmissionPaid": "Paid",
+  "institutionDetailAdmissionMixed": "Free and paid",
+  "institutionDetailAccessibility": "Accessibility",
+  "institutionDetailBookingLink": "Book a visit",
+  "institutionDetailVisitorSourceLink": "Official visitor information",
+  "institutionDetailStatActiveEvents": "Active events",
+  "institutionDetailStatArtworkViews": "Artwork views",
+  "institutionDetailStatVisitors": "Visitors",
+  "institutionDetailEventsTitle": "Events",
+  "institutionDetailNoEventsTitle": "No events yet",
+  "institutionDetailNoEventsDescription": "This institution does not have public events scheduled right now.",
+  "institutionDetailFallbackTitle": "Institution",
+  "institutionDetailNotFoundTitle": "Institution not found",
+  "institutionDetailNotFoundDescription": "We could not find this institution.",
+  "institutionDetailLoadErrorTitle": "Unable to load institution",
+  "institutionDetailLoadErrorDescription": "We could not load this institution right now.",
+  "institutionDetailAccountProfileAction": "Open account profile",
+  "settingsExportDownloadButton": "Download",
+  "settingsExportPreparing": "Preparing your data…",
+  "settingsExportReady": "Your data file is ready.",
+  "settingsExportSignInRequired": "Sign in to download your data.",
+  "settingsExportTooManyRequests": "Too many requests. Please try again later.",
+  "settingsExportFailed": "Your data could not be prepared. Try again or contact support@kubus.site.",
+  "messagesAttachmentUnavailable": "Attachment is unavailable.",
+  "accountClosureStatusTitle": "Account closure status",
+  "accountClosureReceived": "Request received",
+  "accountClosureProcessing": "Processing",
+  "accountClosureReviewRequired": "Review required",
+  "accountClosureCompletedManaged": "Completed within managed systems",
+  "accountClosureLimitations": "Closure covers systems we manage. Some records may need lawful retention or review. Independently held copies and previously distributed public content may remain.",
+  "accountClosureLawfulRetention": "Some records are retained under a documented lawful basis and retention review.",
+  "accountClosureStatusUnavailable": "Status could not be confirmed. Try again later or check the receipt. This does not confirm completion.",
+  "accountClosureCopyReceipt": "Copy private status receipt",
+  "accountClosureReceiptPrivacy": "Keep this receipt privately. Anyone holding it can view the closure status. In a browser, save a copy before closing or reloading the page; the browser keeps it only in memory.",
+  "accountClosureRefresh": "Check status",
+  "accountClosurePasteReceipt": "Paste private status receipt",
+  "accountClosureContinue": "Continue to welcome",
+  "reportContentTitle": "Report content",
+  "reportContentCategoryLabel": "What is the problem?",
+  "reportCategoryIllegalContent": "Illegal content",
+  "reportCategoryCopyright": "Copyright or other rights",
+  "reportCategoryPrivacy": "Privacy",
+  "reportCategoryHarassment": "Harassment",
+  "reportCategorySpam": "Spam",
+  "reportCategoryImpersonation": "Impersonation",
+  "reportCategorySafety": "Safety concern",
+  "reportCategoryOther": "Other",
+  "reportContentDetailsLabel": "Details",
+  "reportContentDetailsRequired": "Explain what is wrong and where. This is required for this kind of report.",
+  "reportContentGoodFaith": "I state in good faith that the information in this report is accurate and complete.",
+  "reportContentContactLabel": "Contact email (optional)",
+  "reportContentContactInvalid": "Enter a valid email address.",
+  "reportContentAccountNote": "Your report is linked to your account so that we can tell you what was decided.",
+  "reportContentSubmit": "Send report",
+  "moderationScreenTitle": "Reports and decisions",
+  "moderationEntrySubtitle": "Reports you filed and decisions about your content",
+  "moderationReportsHeading": "Reports you filed",
+  "moderationDecisionsHeading": "Decisions about your content",
+  "moderationNoReports": "You have not filed any reports.",
+  "moderationNoDecisions": "No decision affects your content.",
+  "moderationStatusOpen": "Received",
+  "moderationStatusTriaged": "Being reviewed",
+  "moderationStatusResolved": "Decided",
+  "moderationStatusClosed": "Closed",
+  "moderationOutcomeNoAction": "No action taken",
+  "moderationOutcomeContentRemoved": "Content removed",
+  "moderationOutcomeContentRestricted": "Content restricted",
+  "moderationOutcomeAccountAction": "Action on an account",
+  "moderationOutcomeReferred": "Referred",
+  "moderationOutcomeOther": "Other decision",
+  "moderationReasonsLabel": "Reasons",
+  "moderationRequestReconsideration": "Ask for a second look",
+  "moderationReconsiderationRequested": "Second look requested",
+  "moderationAppeal": "Appeal this decision",
+  "moderationAppealSent": "Appeal sent",
+  "moderationAppealUpheld": "Appeal result: decision upheld",
+  "moderationAppealReversed": "Appeal result: decision reversed",
+  "moderationNoteHint": "Tell us why",
+  "moderationNoteRequired": "Explain your appeal.",
+  "moderationActionSent": "Sent.",
+  "moderationActionAlreadySent": "This was already sent.",
+  "moderationActionUnavailable": "This decision is no longer available.",
+  "moderationSignInRequired": "Sign in to see your reports and decisions.",
+  "moderationLoadFailed": "Could not load your reports. Try again.",
+  "moderationContentRestricted": "This content is not shown publicly.",
+  "moderationContentRestored": "This content was restored.",
+  "moderationRestorationUnderReview": "The content has not been restored yet; restoring it is under review."
 }
