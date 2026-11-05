@@ -241,11 +241,13 @@ async function measureCase(page, helper, c) {
   await page.mouse.move(cx, cy, { steps: 3 });
   const hoverFrames = [];
   const captureDurations = [];
+  const interCaptureGaps = [];
+  let lastCaptureEndedAt = null;
   let sampleDeadlineMs = 25000;
-  // Keep the 14-frame and full-period requirements. If Firefox captures are
-  // slow under CI load, extend this window from measured latency up to 90 sec.
-  // Firefox diagnostics recorded ~4.9 sec per capture: a 60 sec cap cannot
-  // supply 14 painted samples. Sample counts and pixel thresholds stay fixed.
+  // Keep the 14-frame and full-period requirements. Extend the bounded window
+  // from measured capture latency and inter-capture gaps: phase-targeting can
+  // wait longer than a fixed quarter-period estimate. The 90 sec ceiling and
+  // all sample and pixel thresholds stay fixed.
   while (true) {
     const elapsed = Date.now() - t0;
     const coverage = getSettledSamplingCoverage(hoverFrames, {
@@ -265,21 +267,26 @@ async function measureCase(page, helper, c) {
       : 0;
     if (phaseDelayMs) await page.waitForTimeout(phaseDelayMs);
     const captureStarted = Date.now();
+    const interCaptureGapMs =
+      lastCaptureEndedAt === null ? 0 : captureStarted - lastCaptureEndedAt;
+    interCaptureGaps.push(interCaptureGapMs);
     const b64 = await shot();
     const captureEnded = Date.now();
     const captureMs = captureEnded - captureStarted;
     captureDurations.push(captureMs);
     const recentCaptureMs = Math.max(...captureDurations.slice(-5));
+    const recentInterCaptureGapMs = Math.max(...interCaptureGaps.slice(-5));
     sampleDeadlineMs = Math.max(
       sampleDeadlineMs,
       getSamplingDeadlineMs(recentCaptureMs, {
         holdMs,
         settleMs: SETTLE_MS,
         maxHoldMs: MAX_HOLD_MS,
-        phaseWaitMs: FLOAT_PERIOD_MS / 4,
+        interCaptureGapMs: recentInterCaptureGapMs,
       }),
     );
     hoverFrames.push({ t: (captureStarted + captureEnded) / 2 - t0, b64 });
+    lastCaptureEndedAt = captureEnded;
   }
 
   await page.mouse.move(2, VIEW.height - 2, { steps: 3 });
@@ -323,6 +330,7 @@ async function measureCase(page, helper, c) {
     settledSpanMs: settled.length > 1 ? settled.at(-1).t - settled[0].t : 0,
     captureMsMean: +stats(captureDurations).mean.toFixed(1),
     captureMsMax: Math.max(...captureDurations),
+    interCaptureGapMsMax: Math.max(...interCaptureGaps),
     maxPhaseGapMs: +getSettledSamplingCoverage(hoverFrames, { settleMs: SETTLE_MS }).maxPhaseGapMs.toFixed(0),
     sampleDeadlineMs,
     entry: hover.filter((m) => m.t < 400).map((m) => ({ t: m.t, dy: +m.dy.toFixed(2) })),

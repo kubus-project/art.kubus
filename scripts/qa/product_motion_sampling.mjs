@@ -6,6 +6,7 @@ const SAMPLE_BUDGET_MARGIN_MS = 3000;
 export const MAX_PHASE_GAP_FRACTION = 0.25;
 const PHASE_STEP_MS = 50;
 
+// Budget from the measured (or projected) gap between successive pixel captures.
 export function getSamplingDeadlineMs(
   captureMs,
   {
@@ -14,11 +15,11 @@ export function getSamplingDeadlineMs(
     minFrames = MIN_SETTLED_FRAMES,
     floatPeriodMs = FLOAT_PERIOD_MS,
     maxHoldMs,
-    phaseWaitMs = 0,
+    interCaptureGapMs = 0,
   },
 ) {
   const captureWindowMs =
-    Math.max(minFrames * (captureMs + phaseWaitMs), floatPeriodMs) + captureMs + settleMs;
+    Math.max(minFrames * (captureMs + interCaptureGapMs), floatPeriodMs) + captureMs + settleMs;
   return Math.min(maxHoldMs, Math.max(holdMs + 1000, captureWindowMs + SAMPLE_BUDGET_MARGIN_MS));
 }
 
