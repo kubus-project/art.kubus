@@ -32727,6 +32727,120 @@ abstract class AppLocalizations {
   /// **'We could not load this institution right now.'**
   String get institutionDetailLoadErrorDescription;
 
+  /// No description provided for @institutionImportedNoticeTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Not an official profile'**
+  String get institutionImportedNoticeTitle;
+
+  /// No description provided for @institutionImportedNoticeMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'This profile was compiled from public sources on the internet (OpenStreetMap, Wikidata) and is not official. It has not been verified by the institution.'**
+  String get institutionImportedNoticeMessage;
+
+  /// No description provided for @institutionClaimButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Claim this profile'**
+  String get institutionClaimButton;
+
+  /// No description provided for @institutionClaimButtonSemantics.
+  ///
+  /// In en, this message translates to:
+  /// **'Claim this institution profile'**
+  String get institutionClaimButtonSemantics;
+
+  /// No description provided for @institutionClaimAuthAction.
+  ///
+  /// In en, this message translates to:
+  /// **'claim this profile'**
+  String get institutionClaimAuthAction;
+
+  /// No description provided for @institutionClaimPendingTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Claim request under review'**
+  String get institutionClaimPendingTitle;
+
+  /// No description provided for @institutionClaimPendingMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'You asked to claim this profile. An administrator is reviewing your request.'**
+  String get institutionClaimPendingMessage;
+
+  /// No description provided for @institutionClaimSheetTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Claim {name}'**
+  String institutionClaimSheetTitle(String name);
+
+  /// No description provided for @institutionClaimSheetIntro.
+  ///
+  /// In en, this message translates to:
+  /// **'Tell us how you are connected to this institution. An administrator reviews every request before anything changes on the profile.'**
+  String get institutionClaimSheetIntro;
+
+  /// No description provided for @institutionClaimTitleLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Your role at the institution (optional)'**
+  String get institutionClaimTitleLabel;
+
+  /// No description provided for @institutionClaimMessageLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Message to the reviewer *'**
+  String get institutionClaimMessageLabel;
+
+  /// No description provided for @institutionClaimMessageMinError.
+  ///
+  /// In en, this message translates to:
+  /// **'Please write at least {min} characters.'**
+  String institutionClaimMessageMinError(int min);
+
+  /// No description provided for @institutionClaimEvidenceLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Link that shows your connection (optional)'**
+  String get institutionClaimEvidenceLabel;
+
+  /// No description provided for @institutionClaimEvidenceInvalid.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter a full web address starting with https://'**
+  String get institutionClaimEvidenceInvalid;
+
+  /// No description provided for @institutionClaimSubmit.
+  ///
+  /// In en, this message translates to:
+  /// **'Send request'**
+  String get institutionClaimSubmit;
+
+  /// No description provided for @institutionClaimSubmittedToast.
+  ///
+  /// In en, this message translates to:
+  /// **'Claim request sent. An administrator will review it.'**
+  String get institutionClaimSubmittedToast;
+
+  /// No description provided for @institutionClaimAlreadyOpenToast.
+  ///
+  /// In en, this message translates to:
+  /// **'You already have an open claim request for this profile.'**
+  String get institutionClaimAlreadyOpenToast;
+
+  /// No description provided for @institutionClaimUnavailableToast.
+  ///
+  /// In en, this message translates to:
+  /// **'Claim requests are not open yet. Please try again later.'**
+  String get institutionClaimUnavailableToast;
+
+  /// No description provided for @institutionClaimFailedToast.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not send the request. Please try again.'**
+  String get institutionClaimFailedToast;
+
   /// No description provided for @institutionDetailAccountProfileAction.
   ///
   /// In en, this message translates to:

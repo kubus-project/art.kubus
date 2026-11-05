@@ -18887,6 +18887,78 @@ class AppLocalizationsEn extends AppLocalizations {
       'We could not load this institution right now.';
 
   @override
+  String get institutionImportedNoticeTitle => 'Not an official profile';
+
+  @override
+  String get institutionImportedNoticeMessage =>
+      'This profile was compiled from public sources on the internet (OpenStreetMap, Wikidata) and is not official. It has not been verified by the institution.';
+
+  @override
+  String get institutionClaimButton => 'Claim this profile';
+
+  @override
+  String get institutionClaimButtonSemantics =>
+      'Claim this institution profile';
+
+  @override
+  String get institutionClaimAuthAction => 'claim this profile';
+
+  @override
+  String get institutionClaimPendingTitle => 'Claim request under review';
+
+  @override
+  String get institutionClaimPendingMessage =>
+      'You asked to claim this profile. An administrator is reviewing your request.';
+
+  @override
+  String institutionClaimSheetTitle(String name) {
+    return 'Claim $name';
+  }
+
+  @override
+  String get institutionClaimSheetIntro =>
+      'Tell us how you are connected to this institution. An administrator reviews every request before anything changes on the profile.';
+
+  @override
+  String get institutionClaimTitleLabel =>
+      'Your role at the institution (optional)';
+
+  @override
+  String get institutionClaimMessageLabel => 'Message to the reviewer *';
+
+  @override
+  String institutionClaimMessageMinError(int min) {
+    return 'Please write at least $min characters.';
+  }
+
+  @override
+  String get institutionClaimEvidenceLabel =>
+      'Link that shows your connection (optional)';
+
+  @override
+  String get institutionClaimEvidenceInvalid =>
+      'Enter a full web address starting with https://';
+
+  @override
+  String get institutionClaimSubmit => 'Send request';
+
+  @override
+  String get institutionClaimSubmittedToast =>
+      'Claim request sent. An administrator will review it.';
+
+  @override
+  String get institutionClaimAlreadyOpenToast =>
+      'You already have an open claim request for this profile.';
+
+  @override
+  String get institutionClaimUnavailableToast =>
+      'Claim requests are not open yet. Please try again later.';
+
+  @override
+  String get institutionClaimFailedToast =>
+      'Could not send the request. Please try again.';
+
+  @override
   String get institutionDetailAccountProfileAction => 'Open account profile';
 
   @override

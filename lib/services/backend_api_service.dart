@@ -15,6 +15,7 @@ import '../models/kubus_node_models.dart';
 import '../models/community_group.dart';
 import '../models/event.dart';
 import '../models/exhibition.dart';
+import '../models/institution_claim.dart';
 import '../models/community_subject.dart';
 import '../models/profile_artworks_page.dart';
 import '../models/profile_identity_data.dart';
@@ -8798,6 +8799,98 @@ class BackendApiService
     } catch (e) {
       AppConfig.debugPrint('BackendApiService.getInstitution failed: $e');
       return null;
+    }
+  }
+
+  /// Ask to claim an imported institution profile.
+  /// POST /api/institutions/:id/claims (signed-in account; the backend allows
+  /// one open request per account and institution and answers 409 otherwise).
+  ///
+  /// [message] reaches the reviewing administrator. [evidenceUrl], when given,
+  /// is sent as a `document_url` evidence item that the reviewer checks.
+  Future<InstitutionClaimSummary> submitInstitutionClaim({
+    required String institutionId,
+    required String message,
+    String? claimantTitle,
+    String? evidenceUrl,
+  }) async {
+    _throwIfIpfsFallbackUnavailable('Institution claims');
+
+    try {
+      await _ensureAuthBeforeRequest();
+      final uri = Uri.parse('$baseUrl/api/institutions/$institutionId/claims');
+      final title = claimantTitle?.trim() ?? '';
+      final evidence = evidenceUrl?.trim() ?? '';
+      final response = await _post(
+        uri,
+        headers: _getHeaders(),
+        body: jsonEncode(<String, dynamic>{
+          'kind': 'claim',
+          'requestedRole': 'owner',
+          if (title.isNotEmpty) 'claimantTitle': title,
+          'message': message.trim(),
+          if (evidence.isNotEmpty)
+            'evidence': <Map<String, String>>[
+              <String, String>{'type': 'document_url', 'value': evidence},
+            ],
+        }),
+        timeout: const Duration(seconds: 20),
+      );
+
+      if (!_isSuccessStatus(response.statusCode)) {
+        throw BackendApiRequestException(
+          statusCode: response.statusCode,
+          path: uri.path,
+          body: response.body,
+        );
+      }
+
+      final decoded = _decodeResponseMap(response);
+      final data = decoded?['data'];
+      final claim = InstitutionClaimSummary.tryParse(
+        data is Map ? (data['claim'] ?? data) : decoded?['claim'],
+      );
+      if (claim == null) {
+        throw BackendApiRequestException(
+          statusCode: response.statusCode,
+          path: uri.path,
+          body: response.body,
+        );
+      }
+      return claim;
+    } catch (e) {
+      AppConfig.debugPrint(
+          'BackendApiService.submitInstitutionClaim failed: $e');
+      rethrow;
+    }
+  }
+
+  /// The signed-in account's own claim requests (newest first).
+  /// GET /api/institutions/claims/mine
+  Future<List<InstitutionClaimSummary>> getMyInstitutionClaims() async {
+    try {
+      await _ensureAuthBeforeRequest();
+      final uri = Uri.parse('$baseUrl/api/institutions/claims/mine');
+      final response = await _get(uri, headers: _getHeaders());
+      if (!_isSuccessStatus(response.statusCode)) {
+        throw BackendApiRequestException(
+          statusCode: response.statusCode,
+          path: uri.path,
+          body: response.body,
+        );
+      }
+      final decoded = _decodeResponseMap(response);
+      final data = decoded?['data'];
+      final raw = data is Map ? data['claims'] : decoded?['claims'];
+      if (raw is! List) return const <InstitutionClaimSummary>[];
+      return raw
+          .map(InstitutionClaimSummary.tryParse)
+          .whereType<InstitutionClaimSummary>()
+          .toList(growable: false);
+    } catch (e) {
+      AppConfig.debugPrint(
+          'BackendApiService.getMyInstitutionClaims failed: $e');
+      rethrow;
     }
   }
 

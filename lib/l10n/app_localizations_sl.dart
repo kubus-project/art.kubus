@@ -19081,6 +19081,77 @@ class AppLocalizationsSl extends AppLocalizations {
       'Ustanove trenutno ni mogoče naložiti.';
 
   @override
+  String get institutionImportedNoticeTitle => 'Ni uradni profil';
+
+  @override
+  String get institutionImportedNoticeMessage =>
+      'Ta profil je bil sestavljen iz javnih virov na internetu (OpenStreetMap, Wikidata) in ni uraden. Ustanova ga ni preverila.';
+
+  @override
+  String get institutionClaimButton => 'Prevzemi ta profil';
+
+  @override
+  String get institutionClaimButtonSemantics => 'Prevzemi profil te ustanove';
+
+  @override
+  String get institutionClaimAuthAction => 'prevzeli ta profil';
+
+  @override
+  String get institutionClaimPendingTitle =>
+      'Zahtevek za prevzem je v obravnavi';
+
+  @override
+  String get institutionClaimPendingMessage =>
+      'Zaprosili ste za prevzem tega profila. Skrbnik pregleduje vaš zahtevek.';
+
+  @override
+  String institutionClaimSheetTitle(String name) {
+    return 'Prevzem: $name';
+  }
+
+  @override
+  String get institutionClaimSheetIntro =>
+      'Povejte nam, kako ste povezani s to ustanovo. Skrbnik pregleda vsak zahtevek, preden se profil kakor koli spremeni.';
+
+  @override
+  String get institutionClaimTitleLabel => 'Vaša vloga v ustanovi (neobvezno)';
+
+  @override
+  String get institutionClaimMessageLabel => 'Sporočilo pregledovalcu *';
+
+  @override
+  String institutionClaimMessageMinError(int min) {
+    return 'Napišite vsaj $min znakov.';
+  }
+
+  @override
+  String get institutionClaimEvidenceLabel =>
+      'Povezava, ki dokazuje vašo povezanost (neobvezno)';
+
+  @override
+  String get institutionClaimEvidenceInvalid =>
+      'Vnesite celoten spletni naslov, ki se začne s https://';
+
+  @override
+  String get institutionClaimSubmit => 'Pošlji zahtevek';
+
+  @override
+  String get institutionClaimSubmittedToast =>
+      'Zahtevek poslan. Skrbnik ga bo pregledal.';
+
+  @override
+  String get institutionClaimAlreadyOpenToast =>
+      'Za ta profil že imate odprt zahtevek.';
+
+  @override
+  String get institutionClaimUnavailableToast =>
+      'Zahtevki za prevzem še niso odprti. Poskusite znova pozneje.';
+
+  @override
+  String get institutionClaimFailedToast =>
+      'Zahtevka ni bilo mogoče poslati. Poskusite znova.';
+
+  @override
   String get institutionDetailAccountProfileAction => 'Odpri profil računa';
 
   @override

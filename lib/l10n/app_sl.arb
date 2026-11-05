@@ -8013,6 +8013,39 @@
   "institutionDetailNotFoundDescription": "Te ustanove ni bilo mogoče najti.",
   "institutionDetailLoadErrorTitle": "Ustanove ni mogoče naložiti",
   "institutionDetailLoadErrorDescription": "Ustanove trenutno ni mogoče naložiti.",
+  "institutionImportedNoticeTitle": "Ni uradni profil",
+  "institutionImportedNoticeMessage": "Ta profil je bil sestavljen iz javnih virov na internetu (OpenStreetMap, Wikidata) in ni uraden. Ustanova ga ni preverila.",
+  "institutionClaimButton": "Prevzemi ta profil",
+  "institutionClaimButtonSemantics": "Prevzemi profil te ustanove",
+  "institutionClaimAuthAction": "prevzeli ta profil",
+  "institutionClaimPendingTitle": "Zahtevek za prevzem je v obravnavi",
+  "institutionClaimPendingMessage": "Zaprosili ste za prevzem tega profila. Skrbnik pregleduje vaš zahtevek.",
+  "institutionClaimSheetTitle": "Prevzem: {name}",
+  "@institutionClaimSheetTitle": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "institutionClaimSheetIntro": "Povejte nam, kako ste povezani s to ustanovo. Skrbnik pregleda vsak zahtevek, preden se profil kakor koli spremeni.",
+  "institutionClaimTitleLabel": "Vaša vloga v ustanovi (neobvezno)",
+  "institutionClaimMessageLabel": "Sporočilo pregledovalcu *",
+  "institutionClaimMessageMinError": "Napišite vsaj {min} znakov.",
+  "@institutionClaimMessageMinError": {
+    "placeholders": {
+      "min": {
+        "type": "int"
+      }
+    }
+  },
+  "institutionClaimEvidenceLabel": "Povezava, ki dokazuje vašo povezanost (neobvezno)",
+  "institutionClaimEvidenceInvalid": "Vnesite celoten spletni naslov, ki se začne s https://",
+  "institutionClaimSubmit": "Pošlji zahtevek",
+  "institutionClaimSubmittedToast": "Zahtevek poslan. Skrbnik ga bo pregledal.",
+  "institutionClaimAlreadyOpenToast": "Za ta profil že imate odprt zahtevek.",
+  "institutionClaimUnavailableToast": "Zahtevki za prevzem še niso odprti. Poskusite znova pozneje.",
+  "institutionClaimFailedToast": "Zahtevka ni bilo mogoče poslati. Poskusite znova.",
   "institutionDetailAccountProfileAction": "Odpri profil računa",
   "settingsExportDownloadButton": "Prenesi",
   "settingsExportPreparing": "Pripravljam tvoje podatke …",

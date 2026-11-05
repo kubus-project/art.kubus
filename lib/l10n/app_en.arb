@@ -8078,6 +8078,39 @@
   "institutionDetailNotFoundDescription": "We could not find this institution.",
   "institutionDetailLoadErrorTitle": "Unable to load institution",
   "institutionDetailLoadErrorDescription": "We could not load this institution right now.",
+  "institutionImportedNoticeTitle": "Not an official profile",
+  "institutionImportedNoticeMessage": "This profile was compiled from public sources on the internet (OpenStreetMap, Wikidata) and is not official. It has not been verified by the institution.",
+  "institutionClaimButton": "Claim this profile",
+  "institutionClaimButtonSemantics": "Claim this institution profile",
+  "institutionClaimAuthAction": "claim this profile",
+  "institutionClaimPendingTitle": "Claim request under review",
+  "institutionClaimPendingMessage": "You asked to claim this profile. An administrator is reviewing your request.",
+  "institutionClaimSheetTitle": "Claim {name}",
+  "@institutionClaimSheetTitle": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "institutionClaimSheetIntro": "Tell us how you are connected to this institution. An administrator reviews every request before anything changes on the profile.",
+  "institutionClaimTitleLabel": "Your role at the institution (optional)",
+  "institutionClaimMessageLabel": "Message to the reviewer *",
+  "institutionClaimMessageMinError": "Please write at least {min} characters.",
+  "@institutionClaimMessageMinError": {
+    "placeholders": {
+      "min": {
+        "type": "int"
+      }
+    }
+  },
+  "institutionClaimEvidenceLabel": "Link that shows your connection (optional)",
+  "institutionClaimEvidenceInvalid": "Enter a full web address starting with https://",
+  "institutionClaimSubmit": "Send request",
+  "institutionClaimSubmittedToast": "Claim request sent. An administrator will review it.",
+  "institutionClaimAlreadyOpenToast": "You already have an open claim request for this profile.",
+  "institutionClaimUnavailableToast": "Claim requests are not open yet. Please try again later.",
+  "institutionClaimFailedToast": "Could not send the request. Please try again.",
   "institutionDetailAccountProfileAction": "Open account profile",
   "settingsExportDownloadButton": "Download",
   "settingsExportPreparing": "Preparing your data…",
