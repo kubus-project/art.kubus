@@ -369,9 +369,11 @@ class UserService {
     int? actorFollowingCount,
   }) {
     final canonicalTarget = WalletUtils.canonical(targetWallet);
-    if (canonicalTarget.isEmpty) return;
 
-    final targetExisting = _cache[canonicalTarget];
+    // A walletless target (official institution account) has no wallet-keyed
+    // entry; the actor's own count below must still be reconciled.
+    final targetExisting =
+        canonicalTarget.isEmpty ? null : _cache[canonicalTarget];
     if (targetExisting != null) {
       final nextFollowersCount = mutation?.followersCount ??
           (() {
@@ -1746,16 +1748,14 @@ class UserService {
       }
     }
     try {
-      if (targetWallet.isNotEmpty) {
-        _reconcileFollowMutationCache(
-          targetWallet: targetWallet,
-          isFollowing: resolvedIsFollowing,
-          changed: changed,
-          mutation: mutation,
-          actorWallet: actorWallet,
-          actorFollowingCount: mutation.actorFollowingCount,
-        );
-      }
+      _reconcileFollowMutationCache(
+        targetWallet: targetWallet,
+        isFollowing: resolvedIsFollowing,
+        changed: changed,
+        mutation: mutation,
+        actorWallet: actorWallet,
+        actorFollowingCount: mutation.actorFollowingCount,
+      );
       // Every other cached copy of this account (keyed by profile id or handle).
       for (final key in _cache.keys.toList(growable: false)) {
         final cached = _cache[key];
@@ -1779,15 +1779,14 @@ class UserService {
             'UserService.setFollowStateByUserId: cache reconcile failed: $e');
       }
     }
-    if (targetWallet.isNotEmpty) {
-      ProfilePackageMutationTracker.followStateChanged(
-        targetWallet: targetWallet,
-        actorWallet: actorWallet,
-        isFollowing: resolvedIsFollowing,
-        followersCount: mutation.followersCount,
-        followingCount: mutation.actorFollowingCount,
-      );
-    }
+    ProfilePackageMutationTracker.followStateChanged(
+      targetWallet: targetWallet,
+      targetAccountId: accountId,
+      actorWallet: actorWallet,
+      isFollowing: resolvedIsFollowing,
+      followersCount: mutation.followersCount,
+      followingCount: mutation.actorFollowingCount,
+    );
     return UserFollowMutationResult(
       isFollowing: resolvedIsFollowing,
       targetWallet: targetWallet,

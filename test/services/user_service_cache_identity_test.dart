@@ -5,6 +5,7 @@ import 'package:art_kubus/models/user.dart';
 import 'package:art_kubus/services/account_cache_store.dart';
 import 'package:art_kubus/services/backend_api_service.dart';
 import 'package:art_kubus/services/http_client_factory.dart';
+import 'package:art_kubus/services/profile_package_service.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:art_kubus/services/user_service.dart';
@@ -198,6 +199,83 @@ void main() {
       expect(result.targetWallet, _wallet);
     } finally {
       BackendApiService().setHttpClient(createPlatformHttpClient());
+    }
+  });
+
+  // Review thread (PR 394): a walletless target skipped the profile-package and
+  // actor reconciliation entirely, so a cached public profile kept the old
+  // follow state and the actor's following count stayed stale.
+  test(
+      'following a walletless account reconciles its profile package and the actor count',
+      () async {
+    const actorWallet = 'So22222222222222222222222222222222222222223';
+    SharedPreferences.setMockInitialValues({'wallet_address': actorWallet});
+    await UserService.initialize();
+    final epoch = BackendApiService().authSessionEpoch;
+    UserService.setUsersInCacheAuthoritative([
+      accountUser(userId: _accountUuid, followers: 3),
+      User(
+        id: actorWallet,
+        name: 'Actor',
+        username: 'actor',
+        bio: '',
+        followersCount: 0,
+        followingCount: 1,
+        postsCount: 0,
+        isFollowing: false,
+        isVerified: false,
+        joinedDate: 'Joined recently',
+      ),
+    ], sessionEpoch: epoch);
+    // Real shape: the package is keyed by the PROFILE uuid (User.id) while the
+    // follow mutation knows the account only by User.userId.
+    final targetUser = accountUser(userId: _accountUuid, followers: 3);
+    expect(targetUser.id, _profileUuid);
+    expect(targetUser.id, isNot(_accountUuid));
+    ProfilePackageService.setCachedPackageForTesting(ProfilePackage.fromParts(
+      critical: ProfileCriticalPackage(
+        user: targetUser,
+        achievementProgress: const [],
+        achievementDefinitions: const [],
+        publicStats: const <String, int>{'followers': 3},
+        fetchedAt: DateTime.now(),
+        isComplete: true,
+      ),
+    ));
+    ProfilePackageService.aliasCriticalPackageForTesting(
+        'username:citymuseum', _profileUuid);
+    BackendApiService().setHttpClient(MockClient((request) async {
+      if (request.url.path == '/api/community/follow/account/$_accountUuid') {
+        return http.Response(
+            jsonEncode({
+              'success': true,
+              'isFollowing': true,
+              'changed': true,
+              'followCreated': true,
+              'targetUserId': _accountUuid,
+              'followersCount': 4,
+              'actorFollowingCount': 5,
+            }),
+            200,
+            headers: {'content-type': 'application/json'});
+      }
+      return http.Response(jsonEncode({'success': true}), 200,
+          headers: {'content-type': 'application/json'});
+    }));
+    try {
+      final result = await UserService.setFollowStateByUserId(_accountUuid,
+          shouldFollow: true);
+      expect(result.isFollowing, isTrue);
+      expect(result.targetWallet, isEmpty);
+      for (final key in <String>[_profileUuid, 'username:citymuseum']) {
+        final package = ProfilePackageService.getCachedCriticalPackage(key)!;
+        expect(package.user.isFollowing, isTrue, reason: key);
+        expect(package.user.followersCount, 4, reason: key);
+      }
+      expect(UserService.getCachedUser(actorWallet)!.followingCount, 5);
+    } finally {
+      BackendApiService().setHttpClient(createPlatformHttpClient());
+      ProfilePackageService.clearMemoryCacheForTesting();
     }
   });
 }

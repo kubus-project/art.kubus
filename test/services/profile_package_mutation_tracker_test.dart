@@ -64,6 +64,74 @@ void main() {
     expect(critical.achievementDefinitions.single.title, 'Backend title');
   });
 
+  // Review thread (PR 394): a walletless account (official institution account)
+  // is cached only under its account id and `username:` alias, never by wallet.
+  test(
+      'followStateChanged patches a walletless account by identity, including its alias, and still reconciles the actor',
+      () {
+    const accountId = 'cccccccc-cccc-4ccc-8ccc-cccccccccccc';
+    const actorWallet = 'tracker_actor';
+    ProfilePackageService.setCachedPackageForTesting(_package(accountId));
+    ProfilePackageService.aliasCriticalPackageForTesting(
+        'username:citymuseum', accountId);
+    ProfilePackageService.setCachedPackageForTesting(_package(actorWallet));
+
+    ProfilePackageMutationTracker.followStateChanged(
+      targetWallet: '',
+      targetAccountId: accountId,
+      actorWallet: actorWallet,
+      isFollowing: true,
+      followersCount: 9,
+      followingCount: 7,
+    );
+
+    for (final key in <String>[accountId, 'username:citymuseum']) {
+      final critical = ProfilePackageService.getCachedCriticalPackage(key)!;
+      expect(critical.user.isFollowing, isTrue, reason: key);
+      expect(critical.user.followersCount, 9, reason: key);
+      expect(critical.publicStats['followers'], 9, reason: key);
+    }
+    expect(
+      ProfilePackageService.getCachedCriticalPackage(actorWallet)!
+          .user
+          .followingCount,
+      7,
+    );
+  });
+
+  test(
+      'followStateChanged finds a walletless package by User.userId when the profile id differs',
+      () {
+    const accountId = 'cccccccc-cccc-4ccc-8ccc-cccccccccccc';
+    const profileId = 'dddddddd-dddd-4ddd-8ddd-dddddddddddd';
+    final base = _package(profileId);
+    ProfilePackageService.setCachedPackageForTesting(ProfilePackage.fromParts(
+      critical: ProfileCriticalPackage(
+        user: base.user.copyWith(userId: accountId),
+        achievementProgress: base.critical.achievementProgress,
+        achievementDefinitions: base.critical.achievementDefinitions,
+        publicStats: base.critical.publicStats,
+        fetchedAt: DateTime.now(),
+        isComplete: true,
+      ),
+    ));
+    ProfilePackageService.aliasCriticalPackageForTesting(
+        'username:citymuseum', profileId);
+
+    ProfilePackageMutationTracker.followStateChanged(
+      targetWallet: '',
+      targetAccountId: accountId,
+      isFollowing: true,
+      followersCount: 12,
+    );
+
+    for (final key in <String>[profileId, 'username:citymuseum']) {
+      final critical = ProfilePackageService.getCachedCriticalPackage(key)!;
+      expect(critical.user.isFollowing, isTrue, reason: key);
+      expect(critical.user.followersCount, 12, reason: key);
+    }
+  });
+
   test('postCreated invalidates posts and patches achievement result', () {
     ProfilePackageService.setCachedPackageForTesting(_package(wallet));
     ProfilePackageService.setCachedExtendedPackageForTesting(
