@@ -6,6 +6,7 @@ import {
   MIN_SETTLED_FRAMES,
   getMaxPhaseGapMs,
   getNextSampleDelayMs,
+  getSamplingPhaseWaitMs,
   getSettledSamplingCoverage,
   getSamplingDeadlineMs,
 } from './product_motion_sampling.mjs';
@@ -56,7 +57,7 @@ test('reduced motion still requires enough settled samples over the full observa
   assert.equal(result.complete, true);
 });
 
-test('sampling deadline expands for slow captures and stays within its hard cap', () => {
+test('sampling deadline expands for slow captures and stays within its configured cap', () => {
   const options = { holdMs: 3200, settleMs: 600, maxHoldMs: 60000 };
   const normal = getSamplingDeadlineMs(100, options);
   const slow = getSamplingDeadlineMs(2500, options);
@@ -66,6 +67,37 @@ test('sampling deadline expands for slow captures and stays within its hard cap'
   assert.equal(slow, 41100);
   assert.equal(getSamplingDeadlineMs(3000, options), 48600);
   assert.equal(getSamplingDeadlineMs(5000, options), options.maxHoldMs);
+});
+
+test('deadline budgets measured phase-target gaps while preserving the 14-sample threshold', () => {
+  const options = { holdMs: 3200, settleMs: 600, maxHoldMs: 90000 };
+  const captureMs = 2250;
+  const oldQuarterPeriodEstimate = getSamplingDeadlineMs(captureMs, {
+    ...options,
+    interCaptureGapMs: FLOAT_PERIOD_MS / 4,
+  });
+  const observedInterCaptureGapMs = 1500;
+  const measuredGapBudget = getSamplingDeadlineMs(captureMs, {
+    ...options,
+    interCaptureGapMs: observedInterCaptureGapMs,
+  });
+
+  assert.equal(oldQuarterPeriodEstimate, 45050);
+  assert.equal(measuredGapBudget, 58350);
+  assert.ok(measuredGapBudget > oldQuarterPeriodEstimate);
+  assert.ok(measuredGapBudget <= options.maxHoldMs);
+  assert.ok(
+    measuredGapBudget >=
+      MIN_SETTLED_FRAMES * (captureMs + observedInterCaptureGapMs) +
+        captureMs + options.settleMs,
+  );
+});
+
+test('phase waits leave the expected screenshot inside the sampling deadline budget', () => {
+  assert.equal(getSamplingPhaseWaitMs(2100, 4000, 2250), 1750);
+  assert.equal(getSamplingPhaseWaitMs(500, 4000, 2250), 500);
+  assert.equal(getSamplingPhaseWaitMs(0, 2250, 2250), null);
+  assert.equal(getSamplingPhaseWaitMs(0, 1000, 2250), null);
 });
 
 test('CI-length captures can collect required painted frames without relaxing coverage', () => {
@@ -153,6 +185,6 @@ test('a cadence that already lands on fresh phases is never delayed', () => {
 
 test('the sampling deadline budgets phase waits without changing the capture-only budget', () => {
   const options = { holdMs: 3200, settleMs: 600, maxHoldMs: 90000 };
-  assert.equal(getSamplingDeadlineMs(2500, options), getSamplingDeadlineMs(2500, { ...options, phaseWaitMs: 0 }));
-  assert.ok(getSamplingDeadlineMs(2500, { ...options, phaseWaitMs: 550 }) > getSamplingDeadlineMs(2500, options));
+  assert.equal(getSamplingDeadlineMs(2500, options), getSamplingDeadlineMs(2500, { ...options, interCaptureGapMs: 0 }));
+  assert.ok(getSamplingDeadlineMs(2500, { ...options, interCaptureGapMs: 550 }) > getSamplingDeadlineMs(2500, options));
 });

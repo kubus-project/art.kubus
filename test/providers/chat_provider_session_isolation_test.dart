@@ -378,8 +378,10 @@ void main() {
 
     expect(created, isNull);
     expect(provider.conversations, isEmpty);
+    // Nothing was created. Switching wallet may legitimately ask for the new
+    // wallet's debug token, so only the conversation create is forbidden.
     expect(
-      http.requests.where((r) => r.startsWith('POST ')),
+      http.requests.where((r) => r == 'POST /api/messages'),
       isEmpty,
     );
   });

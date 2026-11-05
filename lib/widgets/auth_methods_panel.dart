@@ -319,6 +319,7 @@ class _AuthMethodsPanelState extends State<AuthMethodsPanel> {
 
   Future<void> _handleWalletFlowResult(
     Object? routeResult, {
+    required int expectedSessionEpoch,
     BackendApiService? apiOverride,
     String? fallbackWalletAddress,
     bool hadAuthBeforeOpen = false,
@@ -328,6 +329,7 @@ class _AuthMethodsPanelState extends State<AuthMethodsPanel> {
     final normalized = await normalizeWalletAuthResult(
       routeResult: routeResult,
       api: apiForNormalize,
+      expectedSessionEpoch: expectedSessionEpoch,
       fallbackWalletAddress: fallbackWalletAddress ??
           _walletInlineRequiredWalletAddress ??
           walletProvider.currentWalletAddress,
@@ -378,6 +380,8 @@ class _AuthMethodsPanelState extends State<AuthMethodsPanel> {
   }) {
     return _handleWalletFlowResult(
       routeResult,
+      expectedSessionEpoch:
+          (apiOverride ?? BackendApiService()).authSessionEpoch,
       apiOverride: apiOverride,
       fallbackWalletAddress: fallbackWalletAddress,
       hadAuthBeforeOpen: hadAuthBeforeOpen,
@@ -650,6 +654,7 @@ class _AuthMethodsPanelState extends State<AuthMethodsPanel> {
     }
 
     final api = BackendApiService();
+    final expectedSessionEpoch = api.authSessionEpoch;
     final hadAuthBeforeOpen = (api.getAuthToken() ?? '').trim().isNotEmpty;
     _walletFlowOpening = true;
     try {
@@ -677,6 +682,7 @@ class _AuthMethodsPanelState extends State<AuthMethodsPanel> {
 
       await _handleWalletFlowResult(
         routeResult,
+        expectedSessionEpoch: expectedSessionEpoch,
         fallbackWalletAddress: requiredWalletAddress,
         hadAuthBeforeOpen: hadAuthBeforeOpen,
       );

@@ -382,7 +382,7 @@ class _ArtDetailScreenState extends State<ArtDetailScreen> {
           type: widget.publicEntityType,
           entityId: widget.publicEntryId,
           child: DocumentTitle(
-            title: artwork.title,
+            title: artworkDocumentTitle(artwork.title, artwork.artist),
             child: AnimatedGradientBackground(
               child: Scaffold(
                 backgroundColor: Theme.of(context).colorScheme.surface,

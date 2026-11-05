@@ -1,6 +1,26 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 
+/// The document title of the application's own pages (home, map, settings...), by language. These are the strings the
+/// server-rendered homepages already declare (`/en` and `/sl` shells, `og:title`), so hydration never replaces a
+/// localized title with the generic brand name.
+String localizedDocumentTitle(Locale locale) {
+  return locale.languageCode.toLowerCase() == 'sl'
+      ? 'art.kubus — Odprti zemljevid umetnosti in skupnostna platforma'
+      : 'art.kubus — Open Art Map and Community Platform';
+}
+
+/// The title of an artwork page, identical to the one the server renders (`<title>`, `og:title`): `Title by Artist | art.kubus`,
+/// or `Title | art.kubus` when no artist is known. Nothing is invented for a missing artist.
+String artworkDocumentTitle(String title, String? artist) {
+  final name = title.trim();
+  final by = artist?.trim() ?? '';
+  final unknown = by.isEmpty ||
+      by.toLowerCase() == 'unknown' ||
+      by.toLowerCase() == 'unknown artist';
+  return unknown ? '$name | art.kubus' : '$name by $by | art.kubus';
+}
+
 /// Keeps the browser tab title describing the page that is actually visible.
 ///
 /// A canonical entity URL is served with a semantic `<title>` that the app
@@ -16,7 +36,7 @@ import 'package:flutter/scheduler.dart';
 /// 2. the retained server title, only for the page that took over the
 ///    canonical URL at launch (it follows that page through a replacement and
 ///    returns when the page becomes visible again);
-/// 3. the localized application title.
+/// 3. no override (null): the localized application title, see [localizedDocumentTitle].
 class DocumentTitleObserver extends NavigatorObserver {
   DocumentTitleObserver({
     this.retainedTitle,
@@ -26,7 +46,8 @@ class DocumentTitleObserver extends NavigatorObserver {
 
   /// Process-wide instance used by the app; tests build their own.
   static final DocumentTitleObserver shared = DocumentTitleObserver(
-    fallbackTitle: () => 'art.kubus',
+    // No override: the app's own pages use the localized document title resolved where the Title widget is built.
+    fallbackTitle: () => null,
   );
 
   final String? Function() fallbackTitle;
@@ -64,6 +85,17 @@ class DocumentTitleObserver extends NavigatorObserver {
     return null;
   }
 
+  /// The retained server title describes the canonical URL it was rendered for. The page may follow that URL through a
+  /// replacement (the app shell replacing the server document), but once the visible page is a different NAMED URL the
+  /// retained title no longer applies.
+  bool _retainedUrlStillCurrent() {
+    final path = retainedPath;
+    if (path == null || _stack.isEmpty) return true;
+    // Only the visible page's own name counts: routes below it (the default initial-route chain) say nothing about it.
+    final name = _stack.last.settings.name?.trim();
+    return name == null || name.isEmpty || name == path;
+  }
+
   @visibleForTesting
   void reconcile() {
     if (_stack.isEmpty) return;
@@ -80,12 +112,15 @@ class DocumentTitleObserver extends NavigatorObserver {
     final registered = _entityTitles[top];
     if (registered != null) {
       resolved = registered;
-    } else if (identical(top, _retainedRoute) && retainedTitle != null) {
+    } else if (identical(top, _retainedRoute) &&
+        retainedTitle != null &&
+        _retainedUrlStillCurrent()) {
       resolved = retainedTitle;
     } else {
       resolved = fallbackTitle();
     }
-    if (resolved != null && resolved != title.value) title.value = resolved;
+    // A page without a title of its own clears the previous page's title (null = the localized application title).
+    if (resolved != title.value) title.value = resolved;
   }
 
   void _schedule() {

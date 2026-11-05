@@ -1,4 +1,7 @@
 import 'dart:convert';
+import 'dart:async';
+
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 import 'package:art_kubus/services/backend_api_service.dart';
 import 'package:art_kubus/utils/auth_wallet_result_normalizer.dart';
@@ -59,6 +62,8 @@ void main() {
   setUp(() {
     SharedPreferences.setMockInitialValues(<String, Object>{});
     api = BackendApiService();
+    api.resetCredentialStoreForTesting();
+    FlutterSecureStorage.setMockInitialValues({});
     api.setAuthTokenForTesting(null);
     api.setHttpClient(MockClient((_) async => http.Response('Not found', 404)));
   });
@@ -78,6 +83,7 @@ void main() {
           },
         },
         api: api,
+        expectedSessionEpoch: api.authSessionEpoch,
       );
 
       expect(result.isSuccess, isTrue);
@@ -95,6 +101,7 @@ void main() {
           },
         },
         api: api,
+        expectedSessionEpoch: api.authSessionEpoch,
       );
 
       expect(result.isSuccess, isTrue);
@@ -106,6 +113,7 @@ void main() {
       final result = await normalizeWalletAuthResult(
         routeResult: <String, dynamic>{'accessToken': _jwtWithWallet('abc')},
         api: api,
+        expectedSessionEpoch: api.authSessionEpoch,
       );
 
       expect(result.isSuccess, isTrue);
@@ -115,6 +123,7 @@ void main() {
       final result = await normalizeWalletAuthResult(
         routeResult: <String, dynamic>{'authToken': _jwtWithWallet('abc')},
         api: api,
+        expectedSessionEpoch: api.authSessionEpoch,
       );
 
       expect(result.isSuccess, isTrue);
@@ -126,6 +135,7 @@ void main() {
           'auth': <String, dynamic>{'token': _jwtWithWallet('abc')},
         },
         api: api,
+        expectedSessionEpoch: api.authSessionEpoch,
       );
 
       expect(result.isSuccess, isTrue);
@@ -137,6 +147,7 @@ void main() {
           'session': <String, dynamic>{'token': _jwtWithWallet('abc')},
         },
         api: api,
+        expectedSessionEpoch: api.authSessionEpoch,
       );
 
       expect(result.isSuccess, isTrue);
@@ -152,6 +163,7 @@ void main() {
           },
         },
         api: api,
+        expectedSessionEpoch: api.authSessionEpoch,
       );
 
       expect(result.isFailure, isTrue);
@@ -161,6 +173,7 @@ void main() {
       final result = await normalizeWalletAuthResult(
         routeResult: const <String, dynamic>{'walletAddress': 'abc'},
         api: api,
+        expectedSessionEpoch: api.authSessionEpoch,
       );
 
       expect(result.isFailure, isTrue);
@@ -170,6 +183,7 @@ void main() {
       final result = await normalizeWalletAuthResult(
         routeResult: const <String, dynamic>{'address': 'abc'},
         api: api,
+        expectedSessionEpoch: api.authSessionEpoch,
       );
 
       expect(result.isFailure, isTrue);
@@ -179,6 +193,7 @@ void main() {
       final result = await normalizeWalletAuthResult(
         routeResult: null,
         api: api,
+        expectedSessionEpoch: api.authSessionEpoch,
         fallbackWalletAddress: 'fallback-wallet',
       );
 
@@ -192,6 +207,7 @@ void main() {
           'profile': <String, dynamic>{'id': 'p1'},
         },
         api: api,
+        expectedSessionEpoch: api.authSessionEpoch,
       );
 
       expect(result.isFailure, isTrue);
@@ -210,6 +226,7 @@ void main() {
           },
         },
         api: api,
+        expectedSessionEpoch: api.authSessionEpoch,
       );
 
       expect(result.isSuccess, isTrue);
@@ -229,6 +246,7 @@ void main() {
           },
         },
         api: api,
+        expectedSessionEpoch: api.authSessionEpoch,
       );
 
       expect(result.isFailure, isTrue);
@@ -243,6 +261,7 @@ void main() {
           'error': 'bad',
         },
         api: api,
+        expectedSessionEpoch: api.authSessionEpoch,
       );
 
       expect(result.isFailure, isTrue);
@@ -253,6 +272,7 @@ void main() {
       final result = await normalizeWalletAuthResult(
         routeResult: const <String, dynamic>{'success': true},
         api: api,
+        expectedSessionEpoch: api.authSessionEpoch,
       );
 
       expect(result.isFailure, isTrue);
@@ -262,6 +282,7 @@ void main() {
       final result = await normalizeWalletAuthResult(
         routeResult: 'unexpected',
         api: api,
+        expectedSessionEpoch: api.authSessionEpoch,
       );
 
       expect(result.isFailure, isTrue);
@@ -275,6 +296,7 @@ void main() {
           'unexpected': secretValue,
         },
         api: api,
+        expectedSessionEpoch: api.authSessionEpoch,
       );
 
       expect(result.isFailure, isTrue);
@@ -290,6 +312,7 @@ void main() {
       final result = await normalizeWalletAuthResult(
         routeResult: null,
         api: api,
+        expectedSessionEpoch: api.authSessionEpoch,
       );
 
       expect(result.isSuccess, isTrue);
@@ -305,6 +328,7 @@ void main() {
       final result = await normalizeWalletAuthResult(
         routeResult: null,
         api: api,
+        expectedSessionEpoch: api.authSessionEpoch,
       );
 
       expect(result.isFailure, isTrue);
@@ -317,6 +341,7 @@ void main() {
       final result = await normalizeWalletAuthResult(
         routeResult: null,
         api: api,
+        expectedSessionEpoch: api.authSessionEpoch,
         hadAuthBeforeOpen: true,
       );
 
@@ -327,6 +352,7 @@ void main() {
       final result = await normalizeWalletAuthResult(
         routeResult: null,
         api: api,
+        expectedSessionEpoch: api.authSessionEpoch,
       );
 
       expect(result.isCancelled, isTrue);
@@ -348,9 +374,76 @@ void main() {
     await normalizeWalletAuthResult(
       routeResult: null,
       api: api,
+      expectedSessionEpoch: api.authSessionEpoch,
       fallbackWalletAddress: 'fallback-wallet',
     );
 
     expect(messages.join('\n'), isNot(contains(secretToken)));
+  });
+  for (final newerAccount in [false, true]) {
+    test(
+        'stale returned token is rejected after ${newerAccount ? "B login" : "logout"}',
+        () async {
+      final openedEpoch = api.authSessionEpoch;
+      final oldToken = _jwtWithWallet('old-A');
+      await api.clearAuth();
+      final currentToken = newerAccount ? _jwtWithWallet('current-B') : null;
+      if (currentToken != null) await api.setAuthToken(currentToken);
+      final result = await normalizeWalletAuthResult(
+        routeResult: {'token': oldToken},
+        api: api,
+        expectedSessionEpoch: openedEpoch,
+      );
+      expect(result.isSuccess, isFalse);
+      expect(api.getAuthToken(), currentToken);
+    });
+  }
+
+  test('already committed inner token is accepted across its own epoch change',
+      () async {
+    final openedEpoch = api.authSessionEpoch;
+    final token = _jwtWithWallet('authorized-inner');
+    await api.setAuthToken(token);
+    final result = await normalizeWalletAuthResult(
+      routeResult: {'token': token},
+      api: api,
+      expectedSessionEpoch: openedEpoch,
+    );
+    expect(result.isSuccess, isTrue);
+    expect(api.getAuthToken(), token);
+  });
+
+  test('stale no-token fallback cannot adopt a newer account', () async {
+    final openedEpoch = api.authSessionEpoch;
+    await api.setAuthToken(_jwtWithWallet('newer-B'));
+    api.setHttpClient(_profileMeClient());
+    final result = await normalizeWalletAuthResult(
+      routeResult: {'walletAddress': 'old-A'},
+      api: api,
+      expectedSessionEpoch: openedEpoch,
+    );
+    expect(result.isSuccess, isFalse);
+  });
+
+  test(
+      'profile fallback response is rejected when session changes during verification',
+      () async {
+    api.setAuthTokenForTesting(_jwtWithWallet('old-A'));
+    final started = Completer<void>();
+    final release = Completer<void>();
+    api.setHttpClient(MockClient((_) async {
+      started.complete();
+      await release.future;
+      return http.Response('{"success":true,"data":{"userId":"A"}}', 200);
+    }));
+    final pending = normalizeWalletAuthResult(
+      routeResult: {'walletAddress': 'old-A'},
+      api: api,
+      expectedSessionEpoch: api.authSessionEpoch,
+    );
+    await started.future;
+    await api.clearAuth();
+    release.complete();
+    expect((await pending).isSuccess, isFalse);
   });
 }

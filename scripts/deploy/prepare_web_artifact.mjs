@@ -3,6 +3,7 @@ import { readFileSync, readdirSync, statSync, writeFileSync } from 'node:fs';
 import { basename, join, resolve } from 'node:path';
 
 import { normalizeServiceWorkerVersion } from './normalize_service_worker_version.mjs';
+import { localeShells } from './locale_shells.mjs';
 
 function arg(name) {
   const index = process.argv.indexOf(name);
@@ -48,6 +49,12 @@ if (environment === 'development') {
 }
 writeFileSync(htaccessPath, htaccess);
 const serviceWorker = normalizeServiceWorkerVersion(artifactDir, sourceSha);
+
+// Crawlable per-locale homepages, derived AFTER normalization so they carry the normalized service worker version
+// (the normalizer rewrites only flutter_bootstrap.js and index.html and fails closed on any other file holding the random value).
+for (const [name, html] of Object.entries(localeShells(readFileSync(indexPath, 'utf8')))) {
+  writeFileSync(join(artifactDir, name), html);
+}
 writeFileSync(join(artifactDir, 'kubus-web-revision.txt'), `${sourceSha}\n`);
 writeFileSync(join(artifactDir, 'kubus-deployment-metadata.json'), `${JSON.stringify({ environment, sourceSha, artifact: `flutter-web-${environment}-${sourceSha}` }, null, 2)}\n`);
 

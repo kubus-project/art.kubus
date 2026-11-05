@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -14,6 +13,8 @@ import '../models/user.dart';
 import '../utils/profile_showcase_normalizer.dart';
 import '../utils/wallet_utils.dart';
 import 'backend_api_service.dart';
+import 'account_cache_store.dart';
+import 'account_identity.dart';
 import 'public_entity_load_outcome.dart';
 import 'stats_api_service.dart';
 import 'user_service.dart';
@@ -79,17 +80,43 @@ class ProfilePackageService {
 
   /// Account session the packages were loaded under. [clearForSignOut] ends it:
   /// a load that started earlier neither stores nor returns its result.
-  static int get _sessionEpoch => BackendApiService().authSessionEpoch;
+  static String _cacheOwner = AccountCacheStore.owner;
+  static int _cacheGeneration = AccountCacheStore.generation;
+  static bool _scopeListenerRegistered = false;
 
-  /// Drops every cached and in-flight package and the persisted copies. Sign-out
-  /// calls this so the next sign-in never reads the previous session's packages.
-  static Future<void> clearForSignOut({SharedPreferences? prefs}) async {
+  static void _syncCacheScope() {
+    if (!_scopeListenerRegistered) {
+      _scopeListenerRegistered = true;
+      AccountIdentity.addListener(_syncCacheScope);
+    }
+    if (_cacheOwner == AccountCacheStore.owner &&
+        _cacheGeneration == AccountCacheStore.generation) {
+      return;
+    }
+    _cacheOwner = AccountCacheStore.owner;
+    _cacheGeneration = AccountCacheStore.generation;
+    _clearMemory();
+  }
+
+  static int get _sessionEpoch {
+    _syncCacheScope();
+    return BackendApiService().authSessionEpoch;
+  }
+
+  static void _clearMemory() {
     _criticalCache.clear();
     _extendedCache.clear();
     _criticalInFlight.clear();
     _extendedInFlight.clear();
     _failedAt.clear();
     _persistentCacheLoaded = false;
+  }
+
+  /// Drops every cached and in-flight package and the persisted copies. Sign-out
+  /// calls this so the next sign-in never reads the previous session's packages.
+  static Future<void> clearForSignOut({SharedPreferences? prefs}) async {
+    _clearMemory();
+    await AccountCacheStore.remove(_criticalCachePrefsKey);
     try {
       final store = prefs ?? await SharedPreferences.getInstance();
       await store.remove(_criticalCachePrefsKey);
@@ -284,6 +311,7 @@ class ProfilePackageService {
     String walletAddress, {
     bool allowStale = true,
   }) {
+    _syncCacheScope();
     final wallet = WalletUtils.canonical(walletAddress);
     if (wallet.isEmpty) return null;
     final cached =
@@ -301,6 +329,7 @@ class ProfilePackageService {
     String walletAddress, {
     bool allowStale = true,
   }) {
+    _syncCacheScope();
     final wallet = WalletUtils.canonical(walletAddress);
     if (wallet.isEmpty) return null;
     return _extendedCache[wallet] ??
@@ -380,6 +409,7 @@ class ProfilePackageService {
   }
 
   static ProfilePackageCacheStatus cacheStatus(String walletAddress) {
+    _syncCacheScope();
     final wallet = WalletUtils.canonical(walletAddress);
     if (wallet.isEmpty) return ProfilePackageCacheStatus.none;
     final critical = _criticalCache[wallet];
@@ -436,6 +466,7 @@ class ProfilePackageService {
     String walletAddress,
     User Function(User current) patch,
   ) {
+    _syncCacheScope();
     final wallet = WalletUtils.canonical(walletAddress);
     if (wallet.isEmpty) return;
     final critical = _criticalCache[wallet];
@@ -445,6 +476,7 @@ class ProfilePackageService {
   }
 
   static void patchStats(String walletAddress, Map<String, int> patch) {
+    _syncCacheScope();
     final wallet = WalletUtils.canonical(walletAddress);
     if (wallet.isEmpty || patch.isEmpty) return;
     final critical = _criticalCache[wallet];
@@ -469,6 +501,7 @@ class ProfilePackageService {
     List<CommunityPost> posts, {
     bool updateCount = true,
   }) {
+    _syncCacheScope();
     final wallet = WalletUtils.canonical(walletAddress);
     if (wallet.isEmpty) return;
     final current = _extendedCache[wallet];
@@ -488,6 +521,7 @@ class ProfilePackageService {
     String walletAddress,
     backend.AchievementEventResult result,
   ) {
+    _syncCacheScope();
     final wallet = WalletUtils.canonical(walletAddress);
     if (wallet.isEmpty) return;
     final critical = _criticalCache[wallet];
@@ -841,6 +875,7 @@ class ProfilePackageService {
     ProfileCriticalPackage critical, {
     bool persist = true,
   }) {
+    _syncCacheScope();
     if (!critical.isComplete) return;
     final wallet = WalletUtils.canonical(critical.user.id);
     if (wallet.isEmpty) return;
@@ -856,6 +891,7 @@ class ProfilePackageService {
     String walletAddress,
     ProfileExtendedPackage extended,
   ) {
+    _syncCacheScope();
     final wallet = WalletUtils.canonical(walletAddress);
     if (wallet.isEmpty) return;
     _extendedCache[wallet] = extended;
@@ -913,11 +949,7 @@ class ProfilePackageService {
     if (_persistentCacheLoaded) return;
     _persistentCacheLoaded = true;
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final raw = prefs.getString(_criticalCachePrefsKey) ??
-          prefs.getString('profile_package_cache_v1');
-      if (raw == null || raw.trim().isEmpty) return;
-      final decoded = jsonDecode(raw);
+      final decoded = await AccountCacheStore.read(_criticalCachePrefsKey);
       if (decoded is! Map) return;
       for (final entry in decoded.entries) {
         try {
@@ -947,6 +979,9 @@ class ProfilePackageService {
   }
 
   static Future<void> _persistCriticalCache() async {
+    _syncCacheScope();
+    final account = _cacheOwner;
+    final generation = _cacheGeneration;
     try {
       final entries = _criticalCache.entries
           .where((entry) =>
@@ -959,8 +994,8 @@ class ProfilePackageService {
       final payload = <String, dynamic>{
         for (final entry in limited) entry.key: entry.value.toJson(),
       };
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString(_criticalCachePrefsKey, jsonEncode(payload));
+      await AccountCacheStore.write(_criticalCachePrefsKey, payload,
+          account: account, generation: generation);
     } catch (e) {
       if (kDebugMode) {
         AppConfig.debugPrint('ProfilePackageService._persistCriticalCache: $e');

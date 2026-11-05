@@ -9,7 +9,7 @@
   # on that extension applies the app policy exactly where it was intended and
   # never clobbers the gateway's.
   <FilesMatch "\.html$">
-    Header set Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' 'wasm-unsafe-eval' https://fonts.googleapis.com https://accounts.google.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://accounts.google.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' https: wss: blob:; media-src 'self' blob: data: https:; worker-src 'self' blob:; object-src 'none'; frame-src 'self' https://accounts.google.com;"
+    Header set Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' 'wasm-unsafe-eval' https://accounts.google.com; style-src 'self' 'unsafe-inline' https://accounts.google.com; font-src 'self'; img-src 'self' data: blob: https:; connect-src 'self' https: wss: blob:; media-src 'self' blob: data: https:; worker-src 'self' blob:; object-src 'none'; frame-src 'self' https://accounts.google.com;"
   </FilesMatch>
 
   # --- Caching ---------------------------------------------------------------
@@ -71,6 +71,13 @@
   # homepages and the root issued a 308 to /en. The Flutter locale resolver
   # (LocaleProvider.localeCodeFromUri) reads the /en|/sl path prefix and selects
   # the language before the first meaningful frame.
+  # Release artifacts also carry index.en.html / index.sl.html (derived from the built root document by
+  # scripts/deploy/locale_shells.mjs): each bare locale root declares itself canonical with reciprocal hreflang.
+  # The file test keeps the source tree, which has no derived shells, on the shared document.
+  RewriteCond %{DOCUMENT_ROOT}/index.en.html -f
+  RewriteRule ^en/?$ index.en.html [L]
+  RewriteCond %{DOCUMENT_ROOT}/index.sl.html -f
+  RewriteRule ^sl/?$ index.sl.html [L]
   RewriteRule ^(?:en|sl)/?$ index.html [L]
 
   # Deeper localized public-record routes (e.g. /en/artworks/:id,

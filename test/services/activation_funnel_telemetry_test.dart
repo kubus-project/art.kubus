@@ -1,3 +1,4 @@
+import 'package:art_kubus/services/telemetry/optional_analytics_consent.dart';
 import 'package:art_kubus/services/guest_session_service.dart';
 import 'package:art_kubus/services/telemetry/kubus_client_context.dart';
 import 'package:art_kubus/services/telemetry/telemetry_config.dart';
@@ -16,6 +17,10 @@ class _NoopSender implements TelemetrySender {
 
 /// Campaign attribution as GuestSessionService persists it at guest entry.
 const _campaignPrefs = <String, Object>{
+  'kubus_entry_attribution_scope_v2':
+      '{"v":2,"granted":true,"revision":"fixture"}:',
+  OptionalAnalyticsConsent.prefsKey:
+      '{"v":2,"granted":true,"revision":"fixture"}',
   'kubus_guest_mode_v1': true,
   'kubus_entry_intent_v1': 'discover',
   'kubus_entry_utm_utm_source': 'meta',
@@ -27,8 +32,12 @@ const _campaignPrefs = <String, Object>{
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  setUp(() {
-    SharedPreferences.setMockInitialValues(<String, Object>{});
+  setUp(() async {
+    await OptionalAnalyticsConsent.instance.resetForTesting();
+    SharedPreferences.setMockInitialValues(<String, Object>{
+      OptionalAnalyticsConsent.prefsKey:
+          '{"v":2,"granted":true,"revision":"fixture"}',
+    });
     KubusClientContext.instance.setEnabled(false);
   });
 
@@ -48,7 +57,7 @@ void main() {
       analyticsPreferenceEnabled: analyticsPreferenceEnabled,
     );
     await svc.ensureInitialized();
-    addTearDown(() => svc.setAnalyticsPreferenceEnabled(false));
+    addTearDown(() => svc.dispose());
     return (svc, queue);
   }
 
@@ -113,25 +122,21 @@ void main() {
     }
   });
 
-  test('the same session id spans the guest and account halves', () async {
-    SharedPreferences.setMockInitialValues(_campaignPrefs);
+  test(
+      'account transition starts a new measurement scope and discards guest backlog',
+      () async {
     final (svc, queue) = await makeService();
-
     await svc.trackGuestMapLoaded();
-    // ...visitor authenticates...
+    final guest = (await drain(queue))
+        .firstWhere((e) => e.eventType == 'guest_map_loaded');
+    expect(guest.actorUserId, isNull);
     svc.setActorUserId('11111111-1111-4111-8111-111111111111');
     await svc.trackAccountSessionCreated(method: 'email', isNewAccount: true);
-
     final events = await drain(queue);
-    final sessionIds = events.map((e) => e.sessionId).toSet();
-    expect(sessionIds, hasLength(1),
-        reason: 'the session chain must not break');
-
-    final guest = events.firstWhere((e) => e.eventType == 'guest_map_loaded');
+    expect(events.any((e) => e.eventType == 'guest_map_loaded'), isFalse);
     final activated =
         events.firstWhere((e) => e.eventType == 'account_session_created');
-    expect(guest.actorUserId, isNull);
-    // actor_user_id is attached going forward, without rewriting history.
+    expect(activated.sessionId, isNot(guest.sessionId));
     expect(activated.actorUserId, '11111111-1111-4111-8111-111111111111');
   });
 
@@ -140,12 +145,16 @@ void main() {
     final (first, _) = await makeService();
     final firstSession = first.currentSessionId;
     expect(firstSession, isNotNull);
-    first.setAnalyticsPreferenceEnabled(false);
+    await Future<void>.delayed(Duration.zero);
+    first.dispose();
 
     // Simulate a relaunch (e.g. the visitor came back from a verification
     // email) against the same stored preferences.
     final prefs = await SharedPreferences.getInstance();
-    expect(prefs.getString(AppTelemetryConfig.sessionIdPrefsKey), firstSession);
+    await Future<void>.delayed(Duration.zero);
+    final restored = await makeService();
+    expect(restored.$1.currentSessionId, firstSession);
+    expect(prefs.getString(AppTelemetryConfig.sessionIdPrefsKey), isNull);
   });
 
   test('stage events are not double counted on rebuild', () async {
@@ -260,6 +269,8 @@ void main() {
     // The stored preference is the source of truth: ensureInitialized re-reads
     // it, so setting only the constructor flag would not reflect reality.
     SharedPreferences.setMockInitialValues(<String, Object>{
+      OptionalAnalyticsConsent.prefsKey:
+          '{"v":2,"granted":false,"revision":"fixture"}',
       'enableAnalytics': false,
     });
     final (svc, queue) = await makeService(analyticsPreferenceEnabled: false);
@@ -350,6 +361,7 @@ void main() {
     SharedPreferences.setMockInitialValues(_campaignPrefs);
     final prefs = await SharedPreferences.getInstance();
 
+    await OptionalAnalyticsConsent.instance.refresh();
     await GuestSessionService.clearGuestMode(prefs: prefs);
 
     // The guest flag goes; first-touch campaign attribution must not, or the
@@ -393,6 +405,10 @@ void main() {
     test('keeps entry attribution without any raw pan or zoom values',
         () async {
       SharedPreferences.setMockInitialValues(<String, Object>{
+        OptionalAnalyticsConsent.prefsKey:
+            '{"v":2,"granted":true,"revision":"fixture"}',
+        'kubus_entry_attribution_scope_v2':
+            '{"v":2,"granted":true,"revision":"fixture"}:',
         'kubus_entry_route_v1': '/map',
         'kubus_entry_utm_utm_source': 'newsletter',
       });

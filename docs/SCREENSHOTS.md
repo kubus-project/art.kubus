@@ -9,7 +9,7 @@ README and documentation images live in `docs/screenshots/`. They show the real 
 | `map.png` | Desktop web map, dark theme, guest session, artwork card opened from the nearby list | `scripts/qa/readme_screenshots_capture.mjs`, scenario `map-card-desktop-dark`, downscaled to 1920x1200 |
 | `map_mobile.png` | Mobile web map (390x844 at 2x), dark theme, artwork card opened from the nearby sheet | same script, scenario `map-card-mobile-dark` |
 | `home.png` | Desktop home, light theme, guest session | `scripts/qa/product_v5_wave4_capture.mjs` (Product v5 Wave 4 evidence) |
-| `../branding/social-preview.png` | 1280x640 GitHub social preview composed from `map.png` | composed by hand from the capture above |
+| `../branding/social-preview.png` | 1280x640 social preview (also served as `web/images/social-preview.png`, a byte copy) | rendered from `docs/branding/social-preview-source/` (`render.mjs`, then `optimize.py`); the map panel is `capture/map-card-dark.png`, a real capture of `scripts/qa/readme_screenshots_capture.mjs` scenario `map-card-desktop-dark` on 2026-11-05 (live public data, Ljubljana, photo credit visible in the card) |
 
 The map captures use real public content from `api.kubus.site`. The capture script only lets read-only `GET` requests through; every write and analytics call is stubbed. The browser geolocation is set to central Ljubljana so the nearby list is deterministic. Only artworks whose photo licence is stated in the card (CC BY 3.0 and CC BY 2.0) were chosen for published images.
 

@@ -1,3 +1,4 @@
+import 'package:art_kubus/services/telemetry/optional_analytics_consent.dart';
 import 'package:art_kubus/services/telemetry/kubus_client_context.dart';
 import 'package:art_kubus/services/telemetry/telemetry_config.dart';
 import 'package:art_kubus/services/telemetry/telemetry_event.dart';
@@ -26,8 +27,12 @@ class FakeTelemetrySender implements TelemetrySender {
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  setUp(() {
-    SharedPreferences.setMockInitialValues(<String, Object>{});
+  setUp(() async {
+    await OptionalAnalyticsConsent.instance.resetForTesting();
+    SharedPreferences.setMockInitialValues(<String, Object>{
+      OptionalAnalyticsConsent.prefsKey:
+          '{"v":2,"granted":true,"revision":"fixture"}',
+    });
     KubusClientContext.instance.setEnabled(false);
   });
 
@@ -35,8 +40,7 @@ void main() {
     KubusClientContext.instance.setEnabled(false);
   });
 
-  testWidgets('once-per-session events are not repeated after a reload',
-      (tester) async {
+  test('once-per-session events are not repeated after a reload', () async {
     final firstQueue = InMemoryTelemetryEventQueue();
     final first = TelemetryService.createForTest(
       queue: firstQueue,
@@ -46,10 +50,10 @@ void main() {
     await first.trackAppEntry();
     await first.trackMapEngaged(kind: 'marker_open');
     // Let the fire-and-forget guard persistence finish.
-    await tester.pump(const Duration(milliseconds: 50));
+    await Future<void>.delayed(const Duration(milliseconds: 50));
     expect(await firstQueue.count(), 2);
     final sessionId = (await firstQueue.peekBatch(10)).first.sessionId;
-    first.setAnalyticsPreferenceEnabled(false);
+    first.dispose();
 
     // A full page reload builds a new service over the same stored session.
     final secondQueue = InMemoryTelemetryEventQueue();
@@ -68,10 +72,10 @@ void main() {
     final batch = await secondQueue.peekBatch(10);
     expect(batch, hasLength(1));
     expect(batch.single.sessionId, sessionId);
-    second.setAnalyticsPreferenceEnabled(false);
+    second.dispose();
   });
 
-  testWidgets('a rotated session records its entry again', (tester) async {
+  test('a rotated session records its entry again', () async {
     final queue = InMemoryTelemetryEventQueue();
     final svc = TelemetryService.createForTest(
       queue: queue,
@@ -81,11 +85,12 @@ void main() {
     await svc.trackAppEntry();
     await svc.rotateSession();
     await svc.trackAppEntry();
-    expect(await queue.count(), 2);
-    svc.setAnalyticsPreferenceEnabled(false);
+    expect(await queue.count(), 1,
+        reason: 'rotation discards the previous identity/session queue');
+    svc.dispose();
   });
 
-  testWidgets('TelemetryService queues allowed events', (tester) async {
+  test('TelemetryService queues allowed events', () async {
     final queue = InMemoryTelemetryEventQueue();
     final sender =
         FakeTelemetrySender(<TelemetrySendResult>[TelemetrySendResult.ok()]);
@@ -105,7 +110,7 @@ void main() {
     expect(batch.first.metadata['env'], isNotEmpty);
 
     // Avoid leaving timers running across tests.
-    svc.setAnalyticsPreferenceEnabled(false);
+    svc.dispose();
   });
 
   testWidgets('TelemetryService backs off then retries flush', (tester) async {
@@ -139,6 +144,6 @@ void main() {
     expect(await queue.count(), 0);
 
     // Avoid leaving timers running across tests.
-    svc.setAnalyticsPreferenceEnabled(false);
+    svc.dispose();
   });
 }

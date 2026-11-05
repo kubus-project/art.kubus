@@ -16,7 +16,7 @@ publish_to: "none" # Remove this line if you wish to publish to pub.dev
 # https://developer.apple.com/library/archive/documentation/General/Reference/InfoPlistKeyReference/Articles/CoreFoundationKeys.html
 # In Windows, build-name is used as the major, minor, and patch parts
 # of the product and file versions while build-number is used as the build suffix.
-version: 0.8.5+26102001
+version: 0.8.6+26103101
 
 environment:
   sdk: ">=3.6.0 <4.0.0"
@@ -225,6 +225,29 @@ flutter:
   # removed entirely.
   fonts:
     - family: Sofia Sans
+      fonts:
+        - asset: assets/fonts/product-v5/sofia-sans/SofiaSans-Variable.ttf
+          weight: 100
+        - asset: assets/fonts/product-v5/sofia-sans/SofiaSans-Variable.ttf
+          weight: 200
+        - asset: assets/fonts/product-v5/sofia-sans/SofiaSans-Variable.ttf
+          weight: 300
+        - asset: assets/fonts/product-v5/sofia-sans/SofiaSans-Variable.ttf
+          weight: 400
+        - asset: assets/fonts/product-v5/sofia-sans/SofiaSans-Variable.ttf
+          weight: 500
+        - asset: assets/fonts/product-v5/sofia-sans/SofiaSans-Variable.ttf
+          weight: 600
+        - asset: assets/fonts/product-v5/sofia-sans/SofiaSans-Variable.ttf
+          weight: 700
+        - asset: assets/fonts/product-v5/sofia-sans/SofiaSans-Variable.ttf
+          weight: 800
+        - asset: assets/fonts/product-v5/sofia-sans/SofiaSans-Variable.ttf
+          weight: 900
+    # Flutter's default text style names 'Roboto'; on the web the engine downloads it from fonts.gstatic.com when no such
+    # family is registered. Registering the family with the bundled Sofia Sans keeps every glyph local (no third-party
+    # request) and keeps default-styled text in the product typeface.
+    - family: Roboto
       fonts:
         - asset: assets/fonts/product-v5/sofia-sans/SofiaSans-Variable.ttf
           weight: 100

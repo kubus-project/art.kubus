@@ -320,12 +320,37 @@ void main() {
       service.dispose();
     });
 
-    test('default endpoint list fails over between public OSM instances',
-        () async {
+    for (final status in <int>[404, 429, 500, 503]) {
+      test(
+          'by default only the first-party endpoint is used: HTTP $status never reaches a third-party Overpass server',
+          () async {
+        final requested = <Uri>[];
+        final client = MockClient((request) async {
+          requested.add(request.url);
+          return http.Response('unavailable', status);
+        });
+        final service = WalkingDirectionsService(
+          client: client,
+          minimumRequestInterval: Duration.zero,
+          maximumSnapDistanceMeters: 300,
+        );
+
+        await expectLater(
+          service.route(origin: _origin, destination: _destination),
+          throwsA(isA<WalkingDirectionsException>()),
+        );
+
+        expect(requested, <Uri>[
+          Uri.parse('https://api.kubus.site/api/walking-graph'),
+        ]);
+        service.dispose();
+      });
+    }
+
+    test('the first-party endpoint serves the route by default', () async {
       final requested = <Uri>[];
       final client = MockClient((request) async {
         requested.add(request.url);
-        if (requested.length == 1) return http.Response('busy', 429);
         return _overpassResponse(<Map<String, Object>>[
           _elementNode(1, _origin),
           _elementNode(2, _east),
@@ -341,10 +366,7 @@ void main() {
 
       await service.route(origin: _origin, destination: _destination);
 
-      expect(requested, <Uri>[
-        Uri.parse('https://overpass-api.de/api/interpreter'),
-        Uri.parse('https://overpass.private.coffee/api/interpreter'),
-      ]);
+      expect(requested.map((u) => u.host).toSet(), <String>{'api.kubus.site'});
       service.dispose();
     });
 
@@ -548,6 +570,101 @@ void main() {
       service.dispose();
     });
 
+    test('identical concurrent routes share the in-flight graph request',
+        () async {
+      final client = _ControlledClient(_overpassResponse(<Map<String, Object>>[
+        _elementNode(1, _origin),
+        _elementNode(2, _east),
+        _elementNode(3, _destination),
+        _elementWay(10, <int>[1, 2, 3]),
+      ]));
+      final service = _service(client);
+      final first = service.route(origin: _origin, destination: _destination);
+      await client.started.future;
+      final second = service.route(origin: _origin, destination: _destination);
+      await Future<void>.delayed(Duration.zero);
+      expect(client.requests, 1);
+      client.complete();
+      expect((await first).points.last, _destination);
+      expect((await second).points.last, _destination);
+      service.dispose();
+    });
+
+    test('nearby origins share a pending graph for the same destination',
+        () async {
+      final client = _ControlledClient(_overpassResponse(<Map<String, Object>>[
+        _elementNode(1, _origin),
+        _elementNode(2, _east),
+        _elementNode(3, _destination),
+        _elementWay(10, <int>[1, 2, 3]),
+      ]));
+      final service = _service(client);
+      final first = service.route(origin: _origin, destination: _destination);
+      await client.started.future;
+      final second = service.route(origin: _east, destination: _destination);
+      await Future<void>.delayed(Duration.zero);
+      expect(client.requests, 1);
+      client.complete();
+      expect((await first).points.last, _destination);
+      expect((await second).points.last, _destination);
+      service.dispose();
+    });
+
+    test('first-party request sends only bounded graph coordinates', () async {
+      late http.Request request;
+      final client = MockClient((incoming) async {
+        request = incoming;
+        return _overpassResponse(<Map<String, Object>>[
+          _elementNode(1, _origin),
+          _elementNode(2, _east),
+          _elementNode(3, _destination),
+          _elementWay(10, <int>[1, 2, 3]),
+        ]);
+      });
+      final service = WalkingDirectionsService(
+        client: client,
+        firstPartyEndpoint:
+            Uri.parse('https://first-party.test/api/walking-graph'),
+        endpoints: const <String>['https://fallback.test/api/interpreter'],
+        minimumRequestInterval: Duration.zero,
+      );
+      final route =
+          await service.route(origin: _origin, destination: _destination);
+      expect(route.points.last, _destination);
+      expect(request.url.host, 'first-party.test');
+      expect(request.headers['content-type'], startsWith('application/json'));
+      final payload = jsonDecode(request.body) as Map<String, dynamic>;
+      expect(payload.keys.toSet(), <String>{'south', 'west', 'north', 'east'});
+      expect(payload['south'], lessThan(_origin.latitude));
+      expect(payload['north'], greaterThan(_destination.latitude));
+      service.dispose();
+    });
+
+    test('ending a session aborts the graph and permits a fresh retry',
+        () async {
+      final client = _AbortAwareClient(
+          response: _overpassResponse(<Map<String, Object>>[
+        _elementNode(1, _origin),
+        _elementNode(2, _east),
+        _elementNode(3, _destination),
+        _elementWay(10, <int>[1, 2, 3]),
+      ]));
+      final service = _service(client);
+      final obsolete =
+          service.route(origin: _origin, destination: _destination);
+      await client.firstRequestStarted.future;
+      service.cancelPending();
+      await expectLater(
+          obsolete,
+          throwsA(isA<WalkingDirectionsException>().having((e) => e.type,
+              'type', WalkingDirectionsErrorType.sourceCancelled)));
+      final retry =
+          await service.route(origin: _origin, destination: _destination);
+      expect(retry.points.last, _destination);
+      expect(client.requests, 2);
+      service.dispose();
+    });
+
     test('cancels an obsolete graph request when a newer route starts',
         () async {
       final client = _AbortAwareClient(
@@ -565,7 +682,7 @@ void main() {
         destination: _destination,
       );
       await client.firstRequestStarted.future;
-      final current = service.route(origin: _east, destination: _destination);
+      final current = service.route(origin: _origin, destination: _east);
 
       await expectLater(
         obsolete,
@@ -577,7 +694,7 @@ void main() {
           ),
         ),
       );
-      expect((await current).points.last, _destination);
+      expect((await current).points.last, _east);
       expect(client.requests, 2);
       service.dispose();
     });
@@ -614,4 +731,21 @@ class _AbortAwareClient extends http.BaseClient {
         response.statusCode,
         headers: response.headers,
       );
+}
+
+class _ControlledClient extends http.BaseClient {
+  _ControlledClient(this.response);
+  final http.Response response;
+  final Completer<http.StreamedResponse> pending = Completer();
+  int requests = 0;
+  final Completer<void> started = Completer();
+  @override
+  Future<http.StreamedResponse> send(http.BaseRequest request) {
+    requests++;
+    if (!started.isCompleted) started.complete();
+    return pending.future;
+  }
+
+  void complete() => pending.complete(http.StreamedResponse(
+      Stream<List<int>>.value(response.bodyBytes), response.statusCode));
 }

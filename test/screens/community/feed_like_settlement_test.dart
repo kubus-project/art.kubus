@@ -12,6 +12,7 @@ import 'package:art_kubus/services/socket_service.dart';
 import 'package:art_kubus/widgets/auth/pending_action_continuation.dart';
 import 'package:art_kubus/widgets/community/community_post_card.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
@@ -263,6 +264,9 @@ void main() {
   late _FakeBackend backend;
 
   setUp(() {
+    // Every test starts with an empty platform credential store and queue.
+    FlutterSecureStorage.setMockInitialValues(<String, String>{});
+    BackendApiService().resetCredentialStoreForTesting();
     SharedPreferences.setMockInitialValues(<String, Object>{});
     BackendApiService().setAuthTokenForTesting(null);
     SocketService.debugDisableConnect = true;

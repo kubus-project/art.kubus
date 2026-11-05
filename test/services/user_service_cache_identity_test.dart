@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:art_kubus/models/profile_package.dart';
 import 'package:art_kubus/models/user.dart';
+import 'package:art_kubus/services/account_cache_store.dart';
 import 'package:art_kubus/services/backend_api_service.dart';
 import 'package:art_kubus/services/http_client_factory.dart';
 import 'package:http/http.dart' as http;
@@ -31,6 +32,19 @@ Map<String, Object?> _entry(Map<String, Object?> extra) => {
       ...extra,
     };
 
+/// Seeds the persisted user cache the way the app writes it: through the
+/// owner-bound [AccountCacheStore] envelope. A raw `user_cache_v1` value has no
+/// trustworthy owner, so the store deliberately purges it instead of hydrating it.
+Future<void> _seedUserCache(Map<String, Object?> entries) async {
+  SharedPreferences.setMockInitialValues({});
+  await AccountCacheStore.write(
+    'user_cache_v1',
+    entries,
+    account: AccountCacheStore.owner,
+    generation: AccountCacheStore.generation,
+  );
+}
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
@@ -38,10 +52,8 @@ void main() {
 
   test('a cached walletless account keeps its userId and follows by it',
       () async {
-    SharedPreferences.setMockInitialValues({
-      'user_cache_v1': jsonEncode({
-        _profileUuid: _entry({'userId': _accountUuid, 'allowsMessages': false}),
-      }),
+    await _seedUserCache({
+      _profileUuid: _entry({'userId': _accountUuid, 'allowsMessages': false}),
     });
     await UserService.initialize();
     final user = UserService.getCachedUser(_profileUuid);
@@ -53,22 +65,30 @@ void main() {
   });
 
   test('a cached wallet is restored only when it is wallet-shaped', () async {
-    SharedPreferences.setMockInitialValues({
-      'user_cache_v1': jsonEncode({
-        _profileUuid: _entry({'walletAddress': _wallet}),
-        'other': _entry({'id': 'other', 'walletAddress': 'not a wallet'}),
-      }),
+    await _seedUserCache({
+      _profileUuid: _entry({'walletAddress': _wallet}),
+      'other': _entry({'id': 'other', 'walletAddress': 'not a wallet'}),
     });
     await UserService.initialize();
     expect(UserService.getCachedUser(_profileUuid)!.messagingWallet, _wallet);
     expect(UserService.getCachedUser('other')!.walletAddress, isNull);
   });
 
+  test('an unowned raw user cache is purged and never hydrated', () async {
+    SharedPreferences.setMockInitialValues({
+      'user_cache_v1': jsonEncode({
+        _profileUuid: _entry({'userId': _accountUuid}),
+      }),
+    });
+    await UserService.initialize();
+    expect(UserService.getCachedUser(_profileUuid), isNull);
+    final prefs = await SharedPreferences.getInstance();
+    expect(prefs.containsKey('user_cache_v1'), isFalse);
+  });
+
   test('entries cached before this change still load (legacy defaults)',
       () async {
-    SharedPreferences.setMockInitialValues({
-      'user_cache_v1': jsonEncode({_profileUuid: _entry({})}),
-    });
+    await _seedUserCache({_profileUuid: _entry({})});
     await UserService.initialize();
     final user = UserService.getCachedUser(_profileUuid)!;
     expect(user.userId, isNull);

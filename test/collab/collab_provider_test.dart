@@ -58,9 +58,13 @@ class _FakeCollabApi implements CollabApi {
     throw UnimplementedError();
   }
 
+  Object? collaboratorsFailure;
+
   @override
   Future<List<CollabMember>> listCollaborators(
-      String entityType, String entityId) {
+      String entityType, String entityId) async {
+    final failure = collaboratorsFailure;
+    if (failure != null) throw failure;
     throw UnimplementedError();
   }
 
@@ -227,5 +231,23 @@ void main() {
 
     expect(provider.pendingInviteCount, 0);
     expect(provider.isLoading, false);
+  });
+
+  test('a background collaborator refresh keeps its failure and throws nothing',
+      () async {
+    SharedPreferences.setMockInitialValues({});
+    final api = _FakeCollabApi()
+      ..collaboratorsFailure = const BackendApiRequestException(
+        statusCode: 503,
+        path: '/api/collab/artwork/a1/members',
+      );
+    final provider = CollabProvider(api: api);
+    addTearDown(provider.dispose);
+
+    // Unlike loadCollaborators, this is safe to fire without awaiting.
+    await provider.refreshCollaboratorsInBackground('artwork', 'a1');
+
+    expect(provider.error, isNotNull);
+    expect(provider.isLoading, isFalse);
   });
 }

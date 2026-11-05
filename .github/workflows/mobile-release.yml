@@ -66,6 +66,9 @@ jobs:
           if [ "$EVENT_NAME" = push ]; then
             tag="$PUSH_TAG"; publish=true; prerelease=false
             build_android=true; build_ios=true
+            # A release candidate (v0.8.6-rc.1) is built and signed by the same protected jobs for
+            # testing, but its artifacts stay workflow artifacts: it is never published as a GitHub Release.
+            case "$tag" in v*-rc.[0-9]*) publish=false; prerelease=true ;; esac
           else
             # Manual runs rebuild an existing release tag. The signing
             # environments admit master only, so the workflow definition is
@@ -226,6 +229,20 @@ jobs:
       - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2
         with: { flutter-version: '3.44.2', channel: stable, cache: true }
       - run: flutter pub get
+      - name: Select and record the iOS toolchain
+        run: |
+          set -euo pipefail
+          # Apple requires the Xcode 26 SDK or later for App Store Connect uploads
+          # (since 2026-04-28); the runner image default is older. Fail loudly rather
+          # than build an IPA that cannot be uploaded.
+          best="$(ls -d /Applications/Xcode_*.app | sed 's#.*/Xcode_##; s#\.app$##' | sort -V | awk -F. '$1 >= 26' | tail -n 1)"
+          [ -n "$best" ] || { echo '::error::No Xcode 26 or later is installed on this runner image.'; exit 1; }
+          sudo xcode-select -s "/Applications/Xcode_${best}.app"
+          {
+            echo '### iOS toolchain'
+            xcodebuild -version
+            echo "iphoneos SDK $(xcrun --sdk iphoneos --show-sdk-version)"
+          } | tee -a "$GITHUB_STEP_SUMMARY"
       - name: Prepare build configuration
         env:
           KUBUS_BACKEND_URL: ${{ vars.KUBUS_BACKEND_URL }}
@@ -291,6 +308,37 @@ jobs:
           path: release/ios
           if-no-files-found: error
           retention-days: 30
+      # Off unless the owner sets IOS_ASC_ACTION in the ios-release environment:
+      #   validate - ask App Store Connect to validate the IPA, upload nothing
+      #   upload   - validate, then upload the IPA to App Store Connect (TestFlight processing)
+      # Needs an App Store Connect API key (secrets IOS_ASC_KEY_ID, IOS_ASC_ISSUER_ID,
+      # IOS_ASC_API_KEY_P8_BASE64). Submitting a build for App Review or releasing it
+      # stays a manual App Store Connect action.
+      - name: Validate or upload with App Store Connect
+        if: ${{ vars.IOS_ASC_ACTION == 'validate' || vars.IOS_ASC_ACTION == 'upload' }}
+        shell: bash
+        env:
+          IOS_ASC_ACTION: ${{ vars.IOS_ASC_ACTION }}
+          IOS_ASC_KEY_ID: ${{ secrets.IOS_ASC_KEY_ID }}
+          IOS_ASC_ISSUER_ID: ${{ secrets.IOS_ASC_ISSUER_ID }}
+          IOS_ASC_API_KEY_P8_BASE64: ${{ secrets.IOS_ASC_API_KEY_P8_BASE64 }}
+        run: |
+          set -euo pipefail
+          for name in IOS_ASC_KEY_ID IOS_ASC_ISSUER_ID IOS_ASC_API_KEY_P8_BASE64; do
+            [ -n "${!name}" ] || { echo "::error::$name is not configured in the ios-release environment."; exit 1; }
+          done
+          ipa="$(find release/ios -type f -name '*.ipa' -print -quit)"
+          [ -f "$ipa" ] || { echo '::error::No signed IPA to validate.'; exit 1; }
+          key_dir="$HOME/.appstoreconnect/private_keys"
+          mkdir -p "$key_dir"
+          key_file="$key_dir/AuthKey_${IOS_ASC_KEY_ID}.p8"
+          umask 077
+          printf '%s' "$IOS_ASC_API_KEY_P8_BASE64" | base64 --decode > "$key_file"
+          echo "IOS_ASC_KEY_FILE=$key_file" >> "$GITHUB_ENV"
+          xcrun altool --validate-app -f "$ipa" -t ios --apiKey "$IOS_ASC_KEY_ID" --apiIssuer "$IOS_ASC_ISSUER_ID"
+          if [ "$IOS_ASC_ACTION" = upload ]; then
+            xcrun altool --upload-app -f "$ipa" -t ios --apiKey "$IOS_ASC_KEY_ID" --apiIssuer "$IOS_ASC_ISSUER_ID"
+          fi
       - name: Remove ephemeral iOS signing material
         if: ${{ always() }}
         shell: bash
@@ -301,6 +349,7 @@ jobs:
           # Word splitting is intended: a space-separated list of RUNNER_TEMP paths.
           [ -n "${IOS_SIGNING_TEMP_FILES:-}" ] && rm -f $IOS_SIGNING_TEMP_FILES
           rm -f ios/Flutter/Release-CI.xcconfig
+          [ -n "${IOS_ASC_KEY_FILE:-}" ] && rm -f "$IOS_ASC_KEY_FILE"
           rm -rf "$RUNNER_TEMP/ipa"
           exit 0
 
@@ -327,6 +376,20 @@ jobs:
       - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2
         with: { flutter-version: '3.44.2', channel: stable, cache: true }
       - run: flutter pub get
+      - name: Select and record the iOS toolchain
+        run: |
+          set -euo pipefail
+          # Apple requires the Xcode 26 SDK or later for App Store Connect uploads
+          # (since 2026-04-28); the runner image default is older. Fail loudly rather
+          # than build an IPA that cannot be uploaded.
+          best="$(ls -d /Applications/Xcode_*.app | sed 's#.*/Xcode_##; s#\.app$##' | sort -V | awk -F. '$1 >= 26' | tail -n 1)"
+          [ -n "$best" ] || { echo '::error::No Xcode 26 or later is installed on this runner image.'; exit 1; }
+          sudo xcode-select -s "/Applications/Xcode_${best}.app"
+          {
+            echo '### iOS toolchain'
+            xcodebuild -version
+            echo "iphoneos SDK $(xcrun --sdk iphoneos --show-sdk-version)"
+          } | tee -a "$GITHUB_STEP_SUMMARY"
       - name: Prepare build configuration
         env:
           KUBUS_BACKEND_URL: ${{ vars.KUBUS_BACKEND_URL }}
