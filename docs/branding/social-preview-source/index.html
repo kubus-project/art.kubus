@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>art.kubus social preview (1280x640)</title>
+<style>
+  /* Self-hosted OFL fonts from this folder: no network, no Google Fonts. */
+  @font-face { font-family: "Sofia Sans"; src: url("fonts/SofiaSans-Variable.ttf"); font-weight: 1 1000; font-style: normal; }
+  @font-face { font-family: "Sofia Sans"; src: url("fonts/SofiaSans-Italic-Variable.ttf"); font-weight: 1 1000; font-style: italic; }
+  /* PRODUCT v5 dark palette */
+  :root { --ground: #090C0E; --ink: #EAECE7; --muted: #A3AFB3; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { width: 1280px; height: 640px; background: var(--ground); overflow: hidden; }
+  body { position: relative; font-family: "Sofia Sans", sans-serif; color: var(--ink); -webkit-font-smoothing: antialiased; }
+
+  /* Right: a real capture of the dark map with an artwork card, faded into the ground from the left. */
+  .shot { position: absolute; top: 0; right: 0; width: 900px; height: 640px; overflow: hidden;
+    -webkit-mask-image: linear-gradient(90deg, transparent 0, rgba(0,0,0,.4) 14%, #000 30%);
+            mask-image: linear-gradient(90deg, transparent 0, rgba(0,0,0,.4) 14%, #000 30%); }
+  .shot img { position: absolute; display: block; width: var(--w, 1600px); left: var(--x, 0px); top: var(--y, 0px); }
+  /* Soft vignette keeps the right edge from reading as a hard crop. */
+  .shot::after { content: ""; position: absolute; inset: 0; background: linear-gradient(0deg, rgba(9,12,14,.55), transparent 22%), linear-gradient(180deg, rgba(9,12,14,.4), transparent 16%); }
+
+  .copy { position: absolute; left: 72px; top: 64px; width: 600px; }
+  .mark { display: block; width: 92px; height: 92px; }
+  .wordmark { margin-top: 56px; font-size: 128px; line-height: 1; letter-spacing: -0.02em; white-space: nowrap; }
+  .wordmark .art { font-weight: 400; }
+  .wordmark .kubus { font-weight: 900; font-style: italic; } /* kubus is ALWAYS heavy italic */
+  .title { margin-top: 34px; font-size: 44px; font-weight: 600; line-height: 1.1; letter-spacing: -0.005em; }
+  .sub { margin-top: 22px; font-size: 29px; font-weight: 400; line-height: 1.32; color: var(--muted); }
+</style>
+</head>
+<body>
+  <div class="shot"><img id="shot" src="capture/map-card-dark.png" alt="" style="--w:1236px;--x:-303px;--y:-62px"></div>
+  <div class="copy">
+    <img class="mark" src="kubus-cube-white.png" alt="">
+    <div class="wordmark"><span class="art">art.</span><span class="kubus">kubus</span></div>
+    <div class="title">open-source public art map</div>
+    <div class="sub">discover, document and connect<br>public and street art</div>
+  </div>
+</body>
+</html>

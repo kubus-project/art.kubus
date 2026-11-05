@@ -62,3 +62,21 @@ test('the Apache rules serve derived shells when present and fall back to the ro
   assert.match(htaccess, /RewriteCond %\{DOCUMENT_ROOT\}\/index\.sl\.html -f\s+RewriteRule \^sl\/\?\$ index\.sl\.html \[L\]/);
   assert.match(htaccess, /RewriteRule \^\(\?:en\|sl\)\/\?\$ index\.html \[L\]/);
 });
+
+test('the social preview: alt text, 1280x640 PNG within the size budget, byte-identical to the branding source', () => {
+  const read = (p) => readFileSync(resolve(import.meta.dirname, '../..', p));
+  const served = read('web/images/social-preview.png');
+  assert.ok(served.equals(read('docs/branding/social-preview.png')), 'web/images copy must be byte-identical to docs/branding');
+  assert.equal(served.subarray(1, 4).toString('latin1'), 'PNG');
+  assert.deepEqual([served.readUInt32BE(16), served.readUInt32BE(20)], [1280, 640]);
+  assert.ok(served.length <= 450 * 1024, `preview is ${served.length} bytes; keep it small enough for crawlers`);
+  const en = 'art.kubus, open-source public art map';
+  const sl = 'art.kubus, odprtokodni zemljevid javne umetnosti';
+  assert.equal(get(root, /<meta property="og:image:alt" content="([^"]+)">/), en);
+  assert.equal(get(root, /<meta name="twitter:image:alt" content="([^"]+)">/), en);
+  const slHtml = localeShell(root, 'sl');
+  assert.equal(get(slHtml, /<meta property="og:image:alt" content="([^"]+)">/), sl);
+  assert.equal(get(slHtml, /<meta name="twitter:image:alt" content="([^"]+)">/), sl);
+  assert.equal(get(root, /<meta property="og:image:width" content="([^"]+)">/), '1280');
+  assert.equal(get(root, /<meta property="og:image:height" content="([^"]+)">/), '640');
+});

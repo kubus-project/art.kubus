@@ -12,7 +12,7 @@ const ORIGIN = 'https://app.kubus.site';
 const SL = {
   title: 'art.kubus — Odprti zemljevid umetnosti in skupnostna platforma',
   description: 'Odkrivajte javno umetnost, razstave, umetnike in kulturne prostore na odprtem zemljevidu, ki ga soustvarja skupnost.',
-  imageAlt: 'art.kubus odprti zemljevid umetnosti in skupnostna platforma',
+  imageAlt: 'art.kubus, odprtokodni zemljevid javne umetnosti',
 };
 
 function replaceOnce(html, pattern, replacement, label) {
@@ -38,6 +38,7 @@ export function localeShell(rootHtml, locale) {
     html = replaceOnce(html, metaPattern('property', 'og:title'), `$1${SL.title}$2`, 'og:title');
     html = replaceOnce(html, metaPattern('property', 'og:description'), `$1${SL.description}$2`, 'og:description');
     html = replaceOnce(html, metaPattern('property', 'og:image:alt'), `$1${SL.imageAlt}$2`, 'og:image:alt');
+    html = replaceOnce(html, metaPattern('name', 'twitter:image:alt'), `$1${SL.imageAlt}$2`, 'twitter:image:alt');
     html = replaceOnce(html, metaPattern('property', 'og:locale'), '$1sl_SI$2', 'og:locale');
     html = replaceOnce(html, metaPattern('property', 'og:locale:alternate'), '$1en_US$2', 'og:locale:alternate');
     html = replaceOnce(html, metaPattern('name', 'twitter:title'), `$1${SL.title}$2`, 'twitter:title');
