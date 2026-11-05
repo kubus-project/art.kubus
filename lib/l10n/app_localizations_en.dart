@@ -18959,6 +18959,13 @@ class AppLocalizationsEn extends AppLocalizations {
       'Could not send the request. Please try again.';
 
   @override
+  String get institutionClaimClosedTitle => 'Claiming is not open yet';
+
+  @override
+  String get institutionClaimClosedMessage =>
+      'Requests to claim imported profiles are not open yet. Check back soon.';
+
+  @override
   String get institutionDetailAccountProfileAction => 'Open account profile';
 
   @override

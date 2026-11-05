@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:art_kubus/models/institution.dart';
@@ -62,12 +63,27 @@ Map<String, Object?> _claimJson({String status = 'submitted'}) => {
     };
 
 class _Backend {
-  _Backend(this.institution, {this.myClaims = const [], this.postStatus = 201});
+  _Backend(
+    this.institution, {
+    this.myClaims = const [],
+    this.postStatus = 201,
+    this.claimsStatus,
+    this.holdMine,
+  });
 
   final Map<String, Object?> institution;
   final List<Map<String, Object?>> myClaims;
   final int postStatus;
+
+  /// Forces every claims read to this status (503 = feature off, 502 = outage).
+  /// Null behaves like the real backend with claims on: 401 anonymous, 200 signed in.
+  final int? claimsStatus;
+
+  /// When set, the signed-in claims read waits for this before answering.
+  final Completer<void>? holdMine;
   final List<http.Request> posts = [];
+  final List<http.Request> anonymousProbes = [];
+  final List<http.Request> signedInReads = [];
 
   http.Client client() => MockClient((request) async {
         final path = request.url.path;
@@ -86,10 +102,25 @@ class _Backend {
                 }
               : {'success': false, 'error': 'claim_already_open'};
         } else if (path == '/api/institutions/claims/mine') {
-          data = {
-            'success': true,
-            'data': {'claims': myClaims},
-          };
+          final signedIn = request.headers.containsKey('Authorization');
+          if (!signedIn) anonymousProbes.add(request);
+          if (signedIn) signedInReads.add(request);
+          if (claimsStatus != null) {
+            status = claimsStatus!;
+            data = {
+              'success': false,
+              'error': 'Feature temporarily unavailable'
+            };
+          } else if (!signedIn) {
+            status = 401;
+            data = {'success': false, 'error': 'unauthorized'};
+          } else {
+            await holdMine?.future;
+            data = {
+              'success': true,
+              'data': {'claims': myClaims},
+            };
+          }
         } else if (path == '/api/institutions') {
           data = {
             'success': true,
@@ -291,6 +322,92 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('Claim request under review'), findsNothing);
       expect(find.byKey(_claimButton), findsOneWidget);
+    });
+  });
+
+  group('claims availability', () {
+    testWidgets('claims switched off: notice stays, no button, says so',
+        (tester) async {
+      final backend = _Backend(_payload(), claimsStatus: 503);
+      final errors = await _pump(tester, backend);
+      await tester.pumpAndSettle();
+      expect(errors, isEmpty);
+      expect(find.text(_noticeTitle), findsOneWidget);
+      expect(find.byKey(_claimButton), findsNothing);
+      expect(find.text('Claiming is not open yet'), findsOneWidget);
+      expect(backend.posts, isEmpty);
+    });
+
+    testWidgets('a backend without the feature (404) is treated as off',
+        (tester) async {
+      await _pump(tester, _Backend(_payload(), claimsStatus: 404));
+      await tester.pumpAndSettle();
+      expect(find.byKey(_claimButton), findsNothing);
+      expect(find.text('Claiming is not open yet'), findsOneWidget);
+    });
+
+    testWidgets('an outage is not reported as closed and offers nothing',
+        (tester) async {
+      await _pump(tester, _Backend(_payload(), claimsStatus: 502));
+      await tester.pumpAndSettle();
+      expect(find.text(_noticeTitle), findsOneWidget);
+      expect(find.byKey(_claimButton), findsNothing);
+      expect(find.text('Claiming is not open yet'), findsNothing);
+    });
+
+    testWidgets('the probe is anonymous and only imported listings ask',
+        (tester) async {
+      final imported = _Backend(_payload());
+      await _pump(tester, imported);
+      await tester.pumpAndSettle();
+      expect(imported.anonymousProbes, hasLength(1));
+      expect(
+          imported.anonymousProbes.single.headers.containsKey('Authorization'),
+          isFalse);
+      await tester.pumpWidget(const SizedBox.shrink());
+
+      final claimed = _Backend(_payload(claimState: 'claimed'));
+      await _pump(tester, claimed);
+      await tester.pumpAndSettle();
+      expect(claimed.anonymousProbes, isEmpty);
+      expect(claimed.signedInReads, isEmpty);
+    });
+
+    testWidgets(
+        'signed out: button shows once claims are on, no own-claims read',
+        (tester) async {
+      BackendApiService().setAuthTokenForTesting(null);
+      final backend = _Backend(_payload());
+      await _pump(tester, backend);
+      await tester.pumpAndSettle();
+      expect(find.byKey(_claimButton), findsOneWidget);
+      expect(backend.signedInReads, isEmpty);
+    });
+
+    testWidgets('a claims list that arrives after submitting cannot undo it',
+        (tester) async {
+      final hold = Completer<void>();
+      final backend = _Backend(_payload(), holdMine: hold);
+      await _pump(tester, backend);
+      await tester.pumpAndSettle();
+      // The signed-in read is still waiting; the button is already usable.
+      expect(backend.signedInReads, hasLength(1));
+      expect(find.byKey(_claimButton), findsOneWidget);
+
+      await tester.tap(find.byKey(_claimButton));
+      await tester.pumpAndSettle();
+      await tester.enterText(
+          find.byKey(const ValueKey('institution-claim-message')),
+          'I work at the gallery.');
+      await tester.tap(find.byKey(const ValueKey('institution-claim-submit')));
+      await tester.pumpAndSettle();
+      expect(find.text('Claim request under review'), findsOneWidget);
+
+      // The earlier read now answers with an empty list: it predates the request.
+      hold.complete();
+      await tester.pumpAndSettle();
+      expect(find.text('Claim request under review'), findsOneWidget);
+      expect(find.byKey(_claimButton), findsNothing);
     });
   });
 

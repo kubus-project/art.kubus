@@ -8111,6 +8111,8 @@
   "institutionClaimAlreadyOpenToast": "You already have an open claim request for this profile.",
   "institutionClaimUnavailableToast": "Claim requests are not open yet. Please try again later.",
   "institutionClaimFailedToast": "Could not send the request. Please try again.",
+  "institutionClaimClosedTitle": "Claiming is not open yet",
+  "institutionClaimClosedMessage": "Requests to claim imported profiles are not open yet. Check back soon.",
   "institutionDetailAccountProfileAction": "Open account profile",
   "settingsExportDownloadButton": "Download",
   "settingsExportPreparing": "Preparing your data…",

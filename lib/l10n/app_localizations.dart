@@ -32841,6 +32841,18 @@ abstract class AppLocalizations {
   /// **'Could not send the request. Please try again.'**
   String get institutionClaimFailedToast;
 
+  /// No description provided for @institutionClaimClosedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Claiming is not open yet'**
+  String get institutionClaimClosedTitle;
+
+  /// No description provided for @institutionClaimClosedMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Requests to claim imported profiles are not open yet. Check back soon.'**
+  String get institutionClaimClosedMessage;
+
   /// No description provided for @institutionDetailAccountProfileAction.
   ///
   /// In en, this message translates to:

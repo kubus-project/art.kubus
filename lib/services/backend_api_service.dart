@@ -8802,6 +8802,38 @@ class BackendApiService
     }
   }
 
+  /// Whether this backend currently accepts institution claim requests.
+  ///
+  /// The backend switches claims on with `FEATURE_ENABLE_INSTITUTION_CLAIMS`
+  /// and applies that gate before it asks who the caller is, so an anonymous
+  /// `GET /api/institutions/claims/mine` answers 503 while claims are off and
+  /// 401 while they are on. The app reads that instead of a build-time guess,
+  /// so the claim action appears the moment an operator enables the feature.
+  ///
+  /// Returns true for a definite "on" (200/401/403), false for a definite
+  /// "off" (503, or 404 on a backend that predates the feature) and null when
+  /// the answer is unknown (network failure, gateway error). Callers offer the
+  /// claim action only on true and say nothing on null, so an outage is never
+  /// reported as "claims are closed" and nothing is advertised on a guess.
+  Future<bool?> institutionClaimsAvailable() async {
+    try {
+      final response = await _get(
+        Uri.parse('$baseUrl/api/institutions/claims/mine'),
+        includeAuth: false,
+        headers: _getHeaders(includeAuth: false),
+        timeout: const Duration(seconds: 8),
+      );
+      final code = response.statusCode;
+      if (code == 200 || code == 401 || code == 403) return true;
+      if (code == 503 || code == 404) return false;
+      return null;
+    } catch (e) {
+      AppConfig.debugPrint(
+          'BackendApiService.institutionClaimsAvailable failed: $e');
+      return null;
+    }
+  }
+
   /// Ask to claim an imported institution profile.
   /// POST /api/institutions/:id/claims (signed-in account; the backend allows
   /// one open request per account and institution and answers 409 otherwise).

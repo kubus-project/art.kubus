@@ -8046,6 +8046,8 @@
   "institutionClaimAlreadyOpenToast": "Za ta profil že imate odprt zahtevek.",
   "institutionClaimUnavailableToast": "Zahtevki za prevzem še niso odprti. Poskusite znova pozneje.",
   "institutionClaimFailedToast": "Zahtevka ni bilo mogoče poslati. Poskusite znova.",
+  "institutionClaimClosedTitle": "Prevzem še ni odprt",
+  "institutionClaimClosedMessage": "Zahtevki za prevzem uvoženih profilov še niso odprti. Poskusite znova kmalu.",
   "institutionDetailAccountProfileAction": "Odpri profil računa",
   "settingsExportDownloadButton": "Prenesi",
   "settingsExportPreparing": "Pripravljam tvoje podatke …",

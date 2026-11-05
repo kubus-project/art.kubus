@@ -19152,6 +19152,13 @@ class AppLocalizationsSl extends AppLocalizations {
       'Zahtevka ni bilo mogoče poslati. Poskusite znova.';
 
   @override
+  String get institutionClaimClosedTitle => 'Prevzem še ni odprt';
+
+  @override
+  String get institutionClaimClosedMessage =>
+      'Zahtevki za prevzem uvoženih profilov še niso odprti. Poskusite znova kmalu.';
+
+  @override
   String get institutionDetailAccountProfileAction => 'Odpri profil računa';
 
   @override
