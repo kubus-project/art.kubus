@@ -95,27 +95,40 @@ class ProfilePackageMutationTracker {
     ProfilePackageService.invalidate(resolved);
   }
 
+  /// [targetWallet] may be empty for a walletless account (an official
+  /// institution account); [targetAccountId] then identifies the cached
+  /// packages. The actor's following count is reconciled either way.
   static void followStateChanged({
     required String targetWallet,
+    String? targetAccountId,
     String? actorWallet,
     bool? isFollowing,
     int? followersCount,
     int? followingCount,
   }) {
     final target = _wallet(targetWallet);
-    if (target == null) return;
-    _debug(ProfilePackageMutationKind.followStateChanged, target);
-    ProfilePackageService.patchUser(
-      target,
-      (current) => current.copyWith(
-        isFollowing: isFollowing ?? current.isFollowing,
-        followersCount: followersCount ?? current.followersCount,
-      ),
-    );
-    if (followersCount != null) {
-      ProfilePackageService.patchStats(target, <String, int>{
-        'followers': followersCount,
-      });
+    final targetAccount = _wallet(targetAccountId);
+    User patchFollow(User current) => current.copyWith(
+          isFollowing: isFollowing ?? current.isFollowing,
+          followersCount: followersCount ?? current.followersCount,
+        );
+    if (target != null) {
+      _debug(ProfilePackageMutationKind.followStateChanged, target);
+      ProfilePackageService.patchUser(target, patchFollow);
+      if (followersCount != null) {
+        ProfilePackageService.patchStats(target, <String, int>{
+          'followers': followersCount,
+        });
+      }
+    }
+    if (targetAccount != null && targetAccount != target) {
+      _debug(ProfilePackageMutationKind.followStateChanged, targetAccount);
+      ProfilePackageService.patchUserByIdentity(targetAccount, patchFollow);
+      if (followersCount != null) {
+        ProfilePackageService.patchStatsByIdentity(targetAccount, <String, int>{
+          'followers': followersCount,
+        });
+      }
     }
 
     final actor = _wallet(actorWallet);
