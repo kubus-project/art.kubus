@@ -6,6 +6,7 @@ import {
   MIN_SETTLED_FRAMES,
   getMaxPhaseGapMs,
   getNextSampleDelayMs,
+  getSamplingPhaseWaitMs,
   getSettledSamplingCoverage,
   getSamplingDeadlineMs,
 } from './product_motion_sampling.mjs';
@@ -56,7 +57,7 @@ test('reduced motion still requires enough settled samples over the full observa
   assert.equal(result.complete, true);
 });
 
-test('sampling deadline expands for slow captures and stays within its hard cap', () => {
+test('sampling deadline expands for slow captures and stays within its configured cap', () => {
   const options = { holdMs: 3200, settleMs: 600, maxHoldMs: 60000 };
   const normal = getSamplingDeadlineMs(100, options);
   const slow = getSamplingDeadlineMs(2500, options);
@@ -90,6 +91,13 @@ test('deadline budgets measured phase-target gaps while preserving the 14-sample
       MIN_SETTLED_FRAMES * (captureMs + observedInterCaptureGapMs) +
         captureMs + options.settleMs,
   );
+});
+
+test('phase waits leave the expected screenshot inside the sampling deadline budget', () => {
+  assert.equal(getSamplingPhaseWaitMs(2100, 4000, 2250), 1750);
+  assert.equal(getSamplingPhaseWaitMs(500, 4000, 2250), 500);
+  assert.equal(getSamplingPhaseWaitMs(0, 2250, 2250), null);
+  assert.equal(getSamplingPhaseWaitMs(0, 1000, 2250), null);
 });
 
 test('CI-length captures can collect required painted frames without relaxing coverage', () => {

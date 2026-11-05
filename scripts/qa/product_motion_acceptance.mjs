@@ -35,6 +35,7 @@ import {
   MAX_PHASE_GAP_FRACTION,
   MIN_SETTLED_FRAMES,
   getNextSampleDelayMs,
+  getSamplingPhaseWaitMs,
   getSamplingDeadlineMs,
   getSettledSamplingCoverage,
 } from './product_motion_sampling.mjs';
@@ -228,7 +229,8 @@ async function measureCase(page, helper, c) {
     width: c.w + 28,
     height: c.h + 16 + 44,
   };
-  const shot = async () => (await page.screenshot({ clip, type: 'png' })).toString('base64');
+  const shot = async (timeout) =>
+    (await page.screenshot({ clip, type: 'png', ...(timeout ? { timeout } : {}) })).toString('base64');
   const cx = c.x + c.w / 2;
   const cy = c.y + c.h / 2;
 
@@ -246,8 +248,10 @@ async function measureCase(page, helper, c) {
   let sampleDeadlineMs = 25000;
   // Keep the 14-frame and full-period requirements. Extend the bounded window
   // from measured capture latency and inter-capture gaps: phase-targeting can
-  // wait longer than a fixed quarter-period estimate. The 90 sec ceiling and
-  // all sample and pixel thresholds stay fixed.
+  // wait longer than a fixed quarter-period estimate. The 90 sec sampling
+  // budget is a scheduling cap; phase waits are fitted to it and each capture
+  // gets the remaining Playwright timeout. Browser/event-loop overhead may
+  // finish slightly beyond the target; sample and pixel thresholds stay fixed.
   while (true) {
     const elapsed = Date.now() - t0;
     const coverage = getSettledSamplingCoverage(hoverFrames, {
@@ -265,12 +269,28 @@ async function measureCase(page, helper, c) {
           expectedCaptureMs: captureDurations.at(-1) ?? 0,
         })
       : 0;
-    if (phaseDelayMs) await page.waitForTimeout(phaseDelayMs);
+    const expectedCaptureMs = Math.max(...captureDurations.slice(-5), 0);
+    const remainingBeforeWaitMs = sampleDeadlineMs - (Date.now() - t0);
+    const boundedPhaseDelayMs = getSamplingPhaseWaitMs(
+      phaseDelayMs,
+      remainingBeforeWaitMs,
+      expectedCaptureMs,
+    );
+    if (boundedPhaseDelayMs === null) break;
+    if (boundedPhaseDelayMs) await page.waitForTimeout(boundedPhaseDelayMs);
+    const screenshotBudgetMs = sampleDeadlineMs - (Date.now() - t0);
+    if (screenshotBudgetMs <= 0) break;
     const captureStarted = Date.now();
     const interCaptureGapMs =
       lastCaptureEndedAt === null ? 0 : captureStarted - lastCaptureEndedAt;
     interCaptureGaps.push(interCaptureGapMs);
-    const b64 = await shot();
+    let b64;
+    try {
+      b64 = await shot(Math.max(1, Math.ceil(screenshotBudgetMs)));
+    } catch (error) {
+      if (error?.name === 'TimeoutError' && Date.now() - t0 >= sampleDeadlineMs) break;
+      throw error;
+    }
     const captureEnded = Date.now();
     const captureMs = captureEnded - captureStarted;
     captureDurations.push(captureMs);
