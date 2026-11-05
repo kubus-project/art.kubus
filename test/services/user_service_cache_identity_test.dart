@@ -227,8 +227,11 @@ void main() {
         joinedDate: 'Joined recently',
       ),
     ], sessionEpoch: epoch);
-    final targetUser = accountUser(userId: _accountUuid, followers: 3)
-        .copyWith(id: _accountUuid);
+    // Real shape: the package is keyed by the PROFILE uuid (User.id) while the
+    // follow mutation knows the account only by User.userId.
+    final targetUser = accountUser(userId: _accountUuid, followers: 3);
+    expect(targetUser.id, _profileUuid);
+    expect(targetUser.id, isNot(_accountUuid));
     ProfilePackageService.setCachedPackageForTesting(ProfilePackage.fromParts(
       critical: ProfileCriticalPackage(
         user: targetUser,
@@ -240,7 +243,7 @@ void main() {
       ),
     ));
     ProfilePackageService.aliasCriticalPackageForTesting(
-        'username:citymuseum', _accountUuid);
+        'username:citymuseum', _profileUuid);
     BackendApiService().setHttpClient(MockClient((request) async {
       if (request.url.path == '/api/community/follow/account/$_accountUuid') {
         return http.Response(
@@ -264,7 +267,7 @@ void main() {
           shouldFollow: true);
       expect(result.isFollowing, isTrue);
       expect(result.targetWallet, isEmpty);
-      for (final key in <String>[_accountUuid, 'username:citymuseum']) {
+      for (final key in <String>[_profileUuid, 'username:citymuseum']) {
         final package = ProfilePackageService.getCachedCriticalPackage(key)!;
         expect(package.user.isFollowing, isTrue, reason: key);
         expect(package.user.followersCount, 4, reason: key);

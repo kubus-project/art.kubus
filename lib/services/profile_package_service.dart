@@ -539,7 +539,11 @@ class ProfilePackageService {
     if (id.isEmpty) return;
     final keys = <String>[
       for (final entry in _criticalCache.entries)
-        if (entry.key == id || WalletUtils.canonical(entry.value.user.id) == id)
+        if (entry.key == id ||
+            WalletUtils.canonical(entry.value.user.id) == id ||
+            // A walletless profile is cached under its profile UUID while the
+            // follow mutation knows it by its account UUID (User.userId).
+            WalletUtils.canonical(entry.value.user.userId) == id)
           entry.key,
     ];
     if (keys.isEmpty) return;

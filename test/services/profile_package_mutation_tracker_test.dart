@@ -99,6 +99,39 @@ void main() {
     );
   });
 
+  test(
+      'followStateChanged finds a walletless package by User.userId when the profile id differs',
+      () {
+    const accountId = 'cccccccc-cccc-4ccc-8ccc-cccccccccccc';
+    const profileId = 'dddddddd-dddd-4ddd-8ddd-dddddddddddd';
+    final base = _package(profileId);
+    ProfilePackageService.setCachedPackageForTesting(ProfilePackage.fromParts(
+      critical: ProfileCriticalPackage(
+        user: base.user.copyWith(userId: accountId),
+        achievementProgress: base.critical.achievementProgress,
+        achievementDefinitions: base.critical.achievementDefinitions,
+        publicStats: base.critical.publicStats,
+        fetchedAt: DateTime.now(),
+        isComplete: true,
+      ),
+    ));
+    ProfilePackageService.aliasCriticalPackageForTesting(
+        'username:citymuseum', profileId);
+
+    ProfilePackageMutationTracker.followStateChanged(
+      targetWallet: '',
+      targetAccountId: accountId,
+      isFollowing: true,
+      followersCount: 12,
+    );
+
+    for (final key in <String>[profileId, 'username:citymuseum']) {
+      final critical = ProfilePackageService.getCachedCriticalPackage(key)!;
+      expect(critical.user.isFollowing, isTrue, reason: key);
+      expect(critical.user.followersCount, 12, reason: key);
+    }
+  });
+
   test('postCreated invalidates posts and patches achievement result', () {
     ProfilePackageService.setCachedPackageForTesting(_package(wallet));
     ProfilePackageService.setCachedExtendedPackageForTesting(
