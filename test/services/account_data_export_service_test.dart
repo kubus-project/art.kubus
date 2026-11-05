@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:typed_data';
+import 'dart:ui' show Rect;
 
 import 'package:art_kubus/services/account_data_export_service.dart';
 import 'package:art_kubus/services/backend_api_service.dart';
@@ -114,5 +115,22 @@ void main() {
     final results = await Future.wait([service.run(), service.run()]);
     expect(results, everyElement(AccountDataExportOutcome.saved));
     expect(fetches, 1);
+  });
+  test(
+      'the share anchor reaches the delivery step (iPad needs a popover origin)',
+      () async {
+    Rect? origin;
+    final service = AccountDataExportService(
+      fetch: () async => [1, 2, 3],
+      anchoredDeliver: (bytes, name, shareOrigin) async {
+        origin = shareOrigin;
+      },
+    );
+
+    final outcome =
+        await service.run(shareOrigin: const Rect.fromLTWH(10, 20, 120, 40));
+
+    expect(outcome, AccountDataExportOutcome.saved);
+    expect(origin, const Rect.fromLTWH(10, 20, 120, 40));
   });
 }

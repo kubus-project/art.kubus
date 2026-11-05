@@ -147,17 +147,37 @@ class TelemetryService {
     _initialized = true;
     if (!_enabled) return;
     _sessionId = TelemetryUuid.v4();
-    if (_sender is BackendTelemetrySender) {
-      final claims = BackendApiService().getCurrentAuthTokenClaims();
-      _actorUserId =
-          _normalizeUuid((claims?['id'] ?? claims?['sub'])?.toString());
-    } else {
-      _actorUserId = _normalizeUuid(prefs.getString('user_id'));
-    }
+    _actorUserId = _actorFromSource(prefs);
     _entryAttribution = _loadEntryAttribution(prefs);
     _restoreSession(prefs);
     _syncClientContext();
     _scheduleFlush(AppTelemetryConfig.flushOnEnqueueDelay);
+  }
+
+  /// The signed-in actor as the active sender defines it: the authenticated
+  /// token claims for the backend transport, the stored user id otherwise.
+  String? _actorFromSource(SharedPreferences? prefs) {
+    if (_sender is BackendTelemetrySender) {
+      final claims = BackendApiService().getCurrentAuthTokenClaims();
+      return _normalizeUuid((claims?['id'] ?? claims?['sub'])?.toString());
+    }
+    return _normalizeUuid(prefs?.getString('user_id'));
+  }
+
+  /// Analytics can be enabled after startup (consent granted later). Startup
+  /// only reads the actor while enabled, and a restored credential does not
+  /// notify [AccountIdentity], so without this every later event would carry a
+  /// null actor and be rejected against the authenticated claims.
+  void _refreshActorOnEnable() {
+    if (_sender is BackendTelemetrySender) {
+      _actorUserId = _actorFromSource(null);
+      return;
+    }
+    final epoch = _privacyEpoch;
+    unawaited(SharedPreferences.getInstance().then((prefs) {
+      if (epoch != _privacyEpoch || !_enabled) return;
+      _actorUserId = _actorFromSource(prefs);
+    }).catchError((Object _) {}));
   }
 
   void _accountChanged() {
@@ -215,8 +235,15 @@ class TelemetryService {
       });
     }
     if (_initialized && _enabled) {
-      _sessionId = TelemetryUuid.v4();
-      _sessionStartUtc = DateTime.now().toUtc();
+      // Only a disabled -> enabled transition starts a session. The config
+      // provider re-asserts the preference on unrelated notifications (crash
+      // reporting, server version); rotating then would split an active
+      // session and let once-per-session events fire again.
+      if (!previous) {
+        _sessionId = TelemetryUuid.v4();
+        _sessionStartUtc = DateTime.now().toUtc();
+        _refreshActorOnEnable();
+      }
       _syncClientContext();
     }
   }

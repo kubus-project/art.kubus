@@ -116,6 +116,10 @@ class GuestSessionService {
   static DateTime? _launchSnapshotCapturedAt;
   static Future<void>? _captureFuture;
   static String? _launchConsentRevision;
+  // True when the launch URL was frozen before the stored analytics choice had
+  // loaded (every web cold load). The campaign parameters are then held in
+  // memory only, until the choice resolves.
+  static bool _launchConsentPending = false;
   static String? _launchAccountKey;
   static Completer<void>? _platformInitialLinkCompleter;
 
@@ -152,13 +156,22 @@ class GuestSessionService {
       // arrives later as an `initialUri`. Leave the snapshot unset so that
       // call can still supply it, instead of freezing an empty one.
       if (uri == null) return;
-      _launchConsentRevision = OptionalAnalyticsConsent.instance.revision;
+      final consent = OptionalAnalyticsConsent.instance;
+      _launchConsentRevision = consent.revision;
+      _launchConsentPending = !consent.isResolved;
       _launchAccountKey = AccountIdentity.accountKey;
       _launchSnapshot = Map<String, String>.unmodifiable({
         for (final entry in uri.queryParameters.entries)
           if (entry.key == 'mode' ||
               entry.key == 'intent' ||
-              (OptionalAnalyticsConsent.instance.granted &&
+              // Before the stored choice has loaded, `granted` is false only
+              // because nothing has loaded. Dropping the campaign here would
+              // lose it for every returning visitor who already consented, and
+              // no later refresh could recover it. Nothing is stored or sent
+              // from this map without a current grant; a visitor who turns out
+              // not to have consented has it removed by
+              // [_discardPendingLaunchAttribution].
+              ((consent.granted || _launchConsentPending) &&
                   utmKeys.contains(entry.key)))
             entry.key: entry.value,
       });
@@ -177,8 +190,21 @@ class GuestSessionService {
     _launchSnapshotCapturedAt = null;
     _captureFuture = null;
     _launchConsentRevision = null;
+    _launchConsentPending = false;
     _launchAccountKey = null;
     _platformInitialLinkCompleter = null;
+  }
+
+  /// Removes the campaign parameters that were held while the stored analytics
+  /// choice was still loading, once it is known the visitor has not consented.
+  static void _discardPendingLaunchAttribution() {
+    final snapshot = _launchSnapshot;
+    if (!_launchConsentPending || snapshot == null) return;
+    _launchConsentPending = false;
+    _launchSnapshot = Map<String, String>.unmodifiable({
+      for (final entry in snapshot.entries)
+        if (!utmKeys.contains(entry.key)) entry.key: entry.value,
+    });
   }
 
   /// The route the visitor landed on, without query or fragment.
@@ -285,6 +311,7 @@ class GuestSessionService {
         consent.generation == generation &&
         AccountIdentity.accountKey == accountKey;
     if (!allowed || !current()) {
+      _discardPendingLaunchAttribution();
       await clearAcquisitionAttribution(prefs: p);
       if (intents.contains(intent)) await p.setString(intentKey, intent);
       return;
@@ -520,7 +547,13 @@ class GuestSessionService {
     }
     final scope =
         '${prefs.getString(OptionalAnalyticsConsent.prefsKey)}:${AccountIdentity.accountKey}';
-    final params = _launchConsentRevision == consent.revision &&
+    // A launch frozen before the stored choice loaded is bound to the choice
+    // that was in effect when it first resolved: a returning visitor who had
+    // consented qualifies; one who consented after landing does not.
+    final launchRevision = _launchConsentPending
+        ? consent.firstResolvedRevision
+        : _launchConsentRevision;
+    final params = launchRevision == consent.revision &&
             _launchAccountKey == AccountIdentity.accountKey
         ? _attributionLaunchParams()
         : const <String, String>{};

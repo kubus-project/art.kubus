@@ -38,6 +38,26 @@ class OptionalAnalyticsConsent extends ChangeNotifier {
   bool _granted = false;
   String? _revision;
   String? get revision => _revision;
+  bool _resolved = false;
+  String? _firstResolvedRevision;
+
+  /// True once the durable choice has been read (or replaced) in this process.
+  /// Before that, [granted] is false only because nothing has loaded yet, which
+  /// is not the same as the visitor having refused.
+  bool get isResolved => _resolved;
+
+  /// The choice revision that was in effect when the durable choice first
+  /// resolved; null when the visitor had made no choice at that point. Lets the
+  /// launch attribution tell "returning visitor who already consented" apart
+  /// from "visitor who consented after landing".
+  String? get firstResolvedRevision => _firstResolvedRevision;
+
+  void _markResolved(String? revision) {
+    if (_resolved) return;
+    _resolved = true;
+    _firstResolvedRevision = revision;
+  }
+
   int _generation = 0;
   // A failed denial must not be undone by re-reading the old durable grant.
   bool _unpersistedWithdrawal = false;
@@ -80,6 +100,7 @@ class OptionalAnalyticsConsent extends ChangeNotifier {
         if (_generation == expectedGeneration) {
           _familyContext = family;
           final revision = receipt?['revision'] as String?;
+          _markResolved(revision);
           final changed = revision != _revision;
           _revision = revision;
           if (changed) {
@@ -122,6 +143,9 @@ class OptionalAnalyticsConsent extends ChangeNotifier {
         if (!saved) throw StateError('Analytics choice was not persisted');
         if (_generation == operationGeneration) {
           _unpersistedWithdrawal = false;
+          // A choice made before the stored one was ever read is a choice made
+          // after launch, whatever may have been stored.
+          _markResolved(null);
           _revision = revision;
           _familyContext = family;
           _apply(value && family == _familyContextGetter());
@@ -177,6 +201,8 @@ class OptionalAnalyticsConsent extends ChangeNotifier {
     _preferencesGetter = preferencesGetter ?? SharedPreferences.getInstance;
     _granted = false;
     _revision = null;
+    _resolved = false;
+    _firstResolvedRevision = null;
     _generation = 0;
     _unpersistedWithdrawal = false;
     _familyContext = null;

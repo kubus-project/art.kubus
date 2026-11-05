@@ -40,16 +40,28 @@ class _AccountDataExportDialog extends StatefulWidget {
 }
 
 class _AccountDataExportDialogState extends State<_AccountDataExportDialog> {
+  final GlobalKey _downloadKey = GlobalKey();
   bool _busy = false;
   AccountDataExportOutcome? _outcome;
 
+  /// Where the share popover is anchored on iPad: the Download button, or the
+  /// dialog itself if the button is not laid out.
+  Rect? _shareOrigin() {
+    final box = (_downloadKey.currentContext ?? context).findRenderObject();
+    if (box is! RenderBox || !box.hasSize) return null;
+    return box.localToGlobal(Offset.zero) & box.size;
+  }
+
   Future<void> _download() async {
     if (_busy) return;
+    // Measured before the first await: the dialog may rebuild while the file
+    // is being prepared.
+    final origin = _shareOrigin();
     setState(() {
       _busy = true;
       _outcome = null;
     });
-    final outcome = await widget.service.run();
+    final outcome = await widget.service.run(shareOrigin: origin);
     if (!mounted) return;
     setState(() {
       _busy = false;
@@ -151,6 +163,7 @@ class _AccountDataExportDialogState extends State<_AccountDataExportDialog> {
                 child: Text(l10n.settingsExportButton),
               ),
               ElevatedButton(
+                key: _downloadKey,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: scheme.primary,
                   foregroundColor: scheme.onPrimary,

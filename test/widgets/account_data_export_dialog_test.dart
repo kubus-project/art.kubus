@@ -14,10 +14,12 @@ class _FakeExport extends AccountDataExportService {
   final AccountDataExportOutcome outcome;
   final Completer<void>? gate;
   int runs = 0;
+  Rect? lastShareOrigin;
 
   @override
-  Future<AccountDataExportOutcome> run() async {
+  Future<AccountDataExportOutcome> run({Rect? shareOrigin}) async {
     runs += 1;
+    lastShareOrigin = shareOrigin;
     await gate?.future;
     return outcome;
   }
@@ -157,5 +159,22 @@ void main() {
     );
     expect(await service.run(), AccountDataExportOutcome.saved);
     expect(seen, orderedEquals([123, 125]));
+  });
+  testWidgets('Download anchors the share popover on the button (iPad)',
+      (tester) async {
+    final service = _FakeExport(AccountDataExportOutcome.saved);
+    await _open(tester, service);
+
+    final button = tester.getRect(find
+        .ancestor(
+            of: find.text(en.settingsExportDownloadButton),
+            matching: find.byType(ElevatedButton))
+        .first);
+    await tester.tap(find.text(en.settingsExportDownloadButton));
+    await tester.pumpAndSettle();
+
+    expect(service.lastShareOrigin, isNotNull);
+    expect(service.lastShareOrigin, button);
+    expect(service.lastShareOrigin!.isEmpty, isFalse);
   });
 }
