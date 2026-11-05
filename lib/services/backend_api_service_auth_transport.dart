@@ -142,6 +142,7 @@ extension BackendApiAuthTransport on BackendApiService {
       return false;
     }
 
+    final sessionEpoch = authSessionEpoch;
     try {
       const path = '/api/profiles/issue-token';
       final resp = await _sendAuthRequestWithFailover(
@@ -159,7 +160,7 @@ extension BackendApiAuthTransport on BackendApiService {
         final data = _backendApiMapOrNull(body['data']);
         final token = body['token'] as String? ?? data?['token'] as String?;
         if (token != null && token.isNotEmpty) {
-          await setAuthToken(token);
+          await setAuthToken(token, expectedEpoch: sessionEpoch);
           return true;
         }
       }

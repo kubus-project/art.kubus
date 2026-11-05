@@ -77,16 +77,12 @@
     })();
   </script>
 
-  <link rel="canonical" href="https://app.kubus.site/en">
+  <link rel="canonical" href="https://app.kubus.site/">
   <link rel="alternate" hreflang="en" href="https://app.kubus.site/en">
   <link rel="alternate" hreflang="sl" href="https://app.kubus.site/sl">
-  <link rel="alternate" hreflang="x-default" href="https://app.kubus.site/en">
+  <link rel="alternate" hreflang="x-default" href="https://app.kubus.site/">
 
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <!-- Preload Inter font for CanvasKit to prevent layout exceptions during first render -->
-  <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+  <!-- Typography is self-hosted (Sofia Sans, Space Mono bundled as Flutter assets); no third-party font request is made. -->
 
   <!-- MapLibre GL JS (required by maplibre_gl on web) -->
   <!-- Vendored locally to avoid CSP / CDN availability issues in production. -->
@@ -264,10 +260,13 @@
 
   <meta property="og:site_name" content="art.kubus">
   <meta property="og:type" content="website">
-  <meta property="og:url" content="https://app.kubus.site/en">
+  <meta property="og:url" content="https://app.kubus.site/">
   <meta property="og:title" content="art.kubus — Open Art Map and Community Platform">
   <meta property="og:description" content="Discover public art, exhibitions, artists and cultural spaces through an open, community-led art map.">
-  <meta property="og:image" content="https://app.kubus.site/images/social-preview-default.webp">
+  <meta property="og:image" content="https://app.kubus.site/images/social-preview.png">
+  <meta property="og:image:type" content="image/png">
+  <meta property="og:image:width" content="1280">
+  <meta property="og:image:height" content="640">
   <meta property="og:image:alt" content="art.kubus open art map and community platform">
   <meta property="og:locale" content="en_US">
   <meta property="og:locale:alternate" content="sl_SI">
@@ -275,17 +274,19 @@
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="art.kubus — Open Art Map and Community Platform">
   <meta name="twitter:description" content="Discover public art, exhibitions, artists and cultural spaces through an open, community-led art map.">
-  <meta name="twitter:image" content="https://app.kubus.site/images/social-preview-default.webp">
+  <meta name="twitter:image" content="https://app.kubus.site/images/social-preview.png">
 
   <!-- iOS meta tags & icons -->
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black">
   <meta name="apple-mobile-web-app-title" content="art.kubus">
-  <link rel="apple-touch-icon" href="app-icons/Icon-192.png">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 
   <!-- Favicon -->
-  <link rel="icon" type="image/png" href="favicon.png">
+  <link rel="icon" href="/favicon.ico" sizes="any">
+  <link rel="icon" type="image/png" sizes="48x48" href="/favicon-48.png">
+  <link rel="icon" type="image/png" sizes="192x192" href="/favicon-192.png">
 
   <title>art.kubus — Open Art Map and Community Platform</title>
   <link rel="manifest" href="manifest.json">

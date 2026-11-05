@@ -14,28 +14,16 @@ class WalletSessionSyncService {
   static const Duration _profileRefreshTimeout = Duration(seconds: 5);
 
   Future<void> _persistAuthResponse(
-    BackendApiService backendApi,
-    Object? response,
-  ) async {
+      BackendApiService backendApi, Object? response, int expectedEpoch) async {
     if (response is! Map) return;
     final body = Map<String, dynamic>.from(response);
     final payload = body['data'] is Map
         ? Map<String, dynamic>.from(body['data'] as Map)
         : body;
     final token = (payload['token'] ?? body['token'] ?? '').toString().trim();
-    if (token.isNotEmpty) {
-      await backendApi.setAuthToken(token);
-    }
-    final refreshToken = (payload['refreshToken'] ??
-            payload['refresh_token'] ??
-            body['refreshToken'] ??
-            body['refresh_token'] ??
-            '')
-        .toString()
-        .trim();
-    if (refreshToken.isNotEmpty) {
-      await backendApi.setRefreshToken(refreshToken);
-    }
+    if (token.isEmpty || token == backendApi.getAuthToken()) return;
+    await backendApi.persistAuthTokensFromResponse(body,
+        sessionEpoch: expectedEpoch);
   }
 
   Future<void> _runNonFatal(
@@ -151,13 +139,14 @@ class WalletSessionSyncService {
 
     if (syncBackend) {
       Future<void> bindBackendWallet() async {
+        final epoch = backendApi.authSessionEpoch;
         final response = await (syncBackendWallet ??
             (wallet) => backendApi
                 .bindAuthenticatedWallet(wallet)
                 .timeout(_walletBindTimeout))(
           normalizedWallet,
         );
-        await _persistAuthResponse(backendApi, response);
+        await _persistAuthResponse(backendApi, response, epoch);
       }
 
       if (requireBackendSync) {

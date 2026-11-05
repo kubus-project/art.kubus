@@ -1,4 +1,4 @@
-﻿{
+{
   "@@locale": "sl",
   "appTagline": "kubus - tvoj sopotnik v umetnosti.",
   "appTaglineSupport": "Odkrivaj javno umetnost, ustvarjalce, institucije in zgodbe skupnosti prek odprtega kulturnega zemljevida.",
@@ -1089,8 +1089,8 @@
   "settingsCrashReportingTileSubtitle": "Samodejno pošlji poročila o zrušitvah",
   "settingsSkipOnboardingTileTitle": "Preskoči uvod",
   "settingsSkipOnboardingTileSubtitle": "Preskoči pozdravne zaslone za vračajoče uporabnike",
-  "settingsDataExportTileTitle": "Izvoz podatkov",
-  "settingsDataExportTileSubtitle": "Prenesi svoje podatke",
+  "settingsDataExportTileTitle": "Zahtevaj kopijo svojih podatkov",
+  "settingsDataExportTileSubtitle": "Za kopijo podatkov se obrni na podporo",
   "settingsResetPermissionFlagsTileTitle": "Ponastavi zastavice dovoljenj",
   "settingsResetPermissionFlagsTileSubtitle": "Počisti shranjene pozive za dovoljenja/storitve",
   "settingsAboutSectionTitle": "O aplikaciji",
@@ -1179,25 +1179,25 @@
   "settingsResetPermissionFlagsDialogBody": "To bo počistilo shranjene zastavice pozivov za dovoljenja in storitve. Uporabi, če želiš ponovno sprožiti pozive za dovoljenja.",
   "settingsPermissionFlagsResetToast": "Zastavice dovoljenj so ponastavljene",
   "settingsResetButton": "Ponastavi",
-  "settingsExportDataDialogTitle": "Izvoz podatkov",
-  "settingsExportDataDialogBody": "To bo ustvarilo datoteko s tvojimi podatki aplikacije (brez zasebnih ključev).",
+  "settingsExportDataDialogTitle": "Prenesi kopijo svojih podatkov",
+  "settingsExportDataDialogBody": "Ustvari eno datoteko s podatki, ki jih hrani ta račun: profil, objave, komentarji, zbirke, umetniška dela, shranjeni elementi, obvestila, sporočila, ki si jih poslal/a, zahtevki za podporo in zapisi o nalaganjih. Gesla, prijavni žetoni in interne opombe osebja niso vključeni. Za vse ostalo piši na support@kubus.site.",
   "settingsDataExportedToast": "Podatki izvoženi: {count} kategorij",
   "@settingsDataExportedToast": {
     "placeholders": {
       "count": {}
     }
   },
-  "settingsExportButton": "Izvozi",
+  "settingsExportButton": "Odpri obrazec za zahtevo",
   "settingsResetAppDialogTitle": "Ponastavi aplikacijo",
   "settingsResetAppDialogBody": "To bo izbrisalo podatke in nastavitve na tej napravi. Seja denarnice se tukaj prekine, sama denarnica pa se ne izbriše.",
   "settingsAppResetSuccessToast": "Aplikacija je uspešno ponastavljena. Prosim, znova jo zaženi.",
   "settingsDeleteAccountDialogTitle": "Izbriši račun",
-  "settingsDeleteAccountDialogBody": "S strežnikov bomo odstranili tvoj profil in podatke skupnosti. Tvoja denarnica ostane tvoja in jo lahko še vedno obnoviš z obnovitveno frazo.",
+  "settingsDeleteAccountDialogBody": "Z zaprtjem računa izgubiš dostop do njega. Nekateri podatki lahko zahtevajo dodaten pregled ali se še hranijo. Tvoja denarnica ostane tvoja in jo lahko obnoviš z obnovitveno frazo.",
   "settingsFinalConfirmationTitle": "Končna potrditev",
   "settingsDeleteAccountFinalConfirmationBody": "Si res prepričan/a, da želiš izbrisati račun? Tega dejanja ni mogoče razveljaviti.",
   "settingsConfirmButton": "Potrdi",
-  "settingsDeleteAccountBackendFailedToast": "Brisanje na strežniku ni uspelo. Poskusi znova.",
-  "settingsAccountDeletedToast": "Račun je izbrisan. Vsi podatki so odstranjeni.",
+  "settingsDeleteAccountBackendFailedToast": "Zaprtja ni bilo mogoče potrditi. Pred ponovnim poskusom preverite stanje.",
+  "settingsAccountDeletedToast": "Zaprtje računa je bilo zahtevano. Nekateri podatki lahko zahtevajo dodaten pregled ali se še hranijo.",
   "settingsDeleteForeverButton": "Izbriši za vedno",
   "settingsEnableNotificationsInSystemToast": "Za prejemanje obvestil jih omogoči v sistemskih nastavitvah.",
   "settingsLogoutDialogTitle": "Odjava",
@@ -4250,13 +4250,17 @@
   "communityUploadRateLimitedSeconds": "Dosežena je omejitev nalaganja. Poskusite znova čez {seconds} s.",
   "@communityUploadRateLimitedSeconds": {
     "placeholders": {
-      "seconds": {"type": "int"}
+      "seconds": {
+        "type": "int"
+      }
     }
   },
   "communityUploadRateLimitedMinutes": "Dosežena je omejitev nalaganja. Poskusite znova čez približno {minutes} min.",
   "@communityUploadRateLimitedMinutes": {
     "placeholders": {
-      "minutes": {"type": "int"}
+      "minutes": {
+        "type": "int"
+      }
     }
   },
   "communityUploadRateLimitedGeneric": "Trenutno je preveč nalaganj. Počakajte trenutek in poskusite znova.",
@@ -4274,28 +4278,42 @@
   "communityComposerMediaLimitReached": "V objavo lahko dodate največ {max} predstavnih datotek.",
   "@communityComposerMediaLimitReached": {
     "placeholders": {
-      "max": {"type": "int"}
+      "max": {
+        "type": "int"
+      }
     }
   },
   "communityComposerMediaTrimmed": "Dodanih: {added} od {picked} datotek. Objava vsebuje do {max} elementov.",
   "@communityComposerMediaTrimmed": {
     "placeholders": {
-      "added": {"type": "int"},
-      "picked": {"type": "int"},
-      "max": {"type": "int"}
+      "added": {
+        "type": "int"
+      },
+      "picked": {
+        "type": "int"
+      },
+      "max": {
+        "type": "int"
+      }
     }
   },
   "communityComposerValidationRejected": "Strežnik objave ni sprejel: {detail}. Osnutek je ohranjen.",
   "@communityComposerValidationRejected": {
     "placeholders": {
-      "detail": {"type": "String"}
+      "detail": {
+        "type": "String"
+      }
     }
   },
   "communityComposerMediaCount": "Izbranih: {count} od {max}",
   "@communityComposerMediaCount": {
     "placeholders": {
-      "count": {"type": "int"},
-      "max": {"type": "int"}
+      "count": {
+        "type": "int"
+      },
+      "max": {
+        "type": "int"
+      }
     }
   },
   "communityComposerMediaMoveEarlier": "Premakni nazaj",
@@ -4313,7 +4331,9 @@
   "communityComposerMediaUploadFailed": "{count} datotek ni bilo mogoče naložiti. Osnutek je ohranjen, lahko poskusite znova.",
   "@communityComposerMediaUploadFailed": {
     "placeholders": {
-      "count": {"type": "int"}
+      "count": {
+        "type": "int"
+      }
     }
   },
   "communityComposerMediaStatusPending": "Čaka na nalaganje",
@@ -4335,13 +4355,17 @@
   "communityComposerCharactersRemaining": "Še {count} znakov",
   "@communityComposerCharactersRemaining": {
     "placeholders": {
-      "count": {"type": "int"}
+      "count": {
+        "type": "int"
+      }
     }
   },
   "communityComposerCharacterLimitExceeded": "Objava je lahko dolga največ {max} znakov. Za objavo skrajšajte besedilo.",
   "@communityComposerCharacterLimitExceeded": {
     "placeholders": {
-      "max": {"type": "int"}
+      "max": {
+        "type": "int"
+      }
     }
   },
   "communityPostShowMore": "več",
@@ -4355,8 +4379,12 @@
   "communityMediaCarouselPosition": "Predstavnost {index} od {total}",
   "@communityMediaCarouselPosition": {
     "placeholders": {
-      "index": {"type": "int"},
-      "total": {"type": "int"}
+      "index": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
     }
   },
   "communityMediaPrevious": "Prejšnja predstavnost",
@@ -4415,8 +4443,12 @@
   "@communityMediaVideoTime": {
     "description": "0.8.2 community media video player",
     "placeholders": {
-      "position": {"type": "String"},
-      "duration": {"type": "String"}
+      "position": {
+        "type": "String"
+      },
+      "duration": {
+        "type": "String"
+      }
     }
   },
   "communityMediaVideoVolume": "Glasnost",
@@ -7673,7 +7705,13 @@
   "communitySearchTypeCollections": "Zbirke",
   "searchCollectionArtworkCount": "{count, plural, one{{count} umetnina} two{{count} umetnini} few{{count} umetnine} other{{count} umetnin}}",
   "communityComposerRateLimitedSeconds": "Objavljanje je začasno omejeno. Poskusite znova čez {seconds} s. Osnutek je ohranjen.",
-  "@communityComposerRateLimitedSeconds": {"placeholders": {"seconds": {"type": "int"}}},
+  "@communityComposerRateLimitedSeconds": {
+    "placeholders": {
+      "seconds": {
+        "type": "int"
+      }
+    }
+  },
   "communityComposerRateLimitedGeneric": "Objavljanje je začasno omejeno. Pred ponovnim poskusom počakajte. Osnutek je ohranjen.",
   "communityComposerDiscardDraft": "Želite zavreči ta osnutek?",
   "communityComposerAlreadyCommitted": "Objava je morda že objavljena. Osnutek je ohranjen. Preden ga izbrišete ali začnete novo objavo, preverite vir objav.",
@@ -7716,9 +7754,17 @@
   "supportRequestsRefresh": "Osveži",
   "supportRequestsBack": "Nazaj na vse zahtevke",
   "supportRequestUpdatedOn": "Posodobljeno {date}",
-  "@supportRequestUpdatedOn": {"placeholders": {"date": {}}},
+  "@supportRequestUpdatedOn": {
+    "placeholders": {
+      "date": {}
+    }
+  },
   "supportRequestOpenedOn": "Odprto {date}",
-  "@supportRequestOpenedOn": {"placeholders": {"date": {}}},
+  "@supportRequestOpenedOn": {
+    "placeholders": {
+      "date": {}
+    }
+  },
   "supportRequestKindSupport": "Zahtevek za podporo",
   "supportRequestKindBug": "Prijava napake",
   "supportStatusOpen": "Odprt",
@@ -7967,5 +8013,75 @@
   "institutionDetailNotFoundDescription": "Te ustanove ni bilo mogoče najti.",
   "institutionDetailLoadErrorTitle": "Ustanove ni mogoče naložiti",
   "institutionDetailLoadErrorDescription": "Ustanove trenutno ni mogoče naložiti.",
-  "institutionDetailAccountProfileAction": "Odpri profil računa"
+  "institutionDetailAccountProfileAction": "Odpri profil računa",
+  "settingsExportDownloadButton": "Prenesi",
+  "settingsExportPreparing": "Pripravljam tvoje podatke …",
+  "settingsExportReady": "Datoteka s tvojimi podatki je pripravljena.",
+  "settingsExportSignInRequired": "Za prenos podatkov se prijavi.",
+  "settingsExportTooManyRequests": "Preveč zahtev. Poskusi znova pozneje.",
+  "settingsExportFailed": "Podatkov ni bilo mogoče pripraviti. Poskusi znova ali piši na support@kubus.site.",
+  "messagesAttachmentUnavailable": "Priloga ni na voljo.",
+  "accountClosureStatusTitle": "Stanje zaprtja računa",
+  "accountClosureReceived": "Zahtevo smo prejeli",
+  "accountClosureProcessing": "Obdelava poteka",
+  "accountClosureReviewRequired": "Potreben je pregled",
+  "accountClosureCompletedManaged": "Zaključeno v sistemih, ki jih upravljamo",
+  "accountClosureLimitations": "Zaprtje zajema sisteme, ki jih upravljamo. Nekateri zapisi lahko zahtevajo zakonito hrambo ali pregled. Neodvisne kopije in že razširjena javna vsebina lahko ostanejo.",
+  "accountClosureLawfulRetention": "Nekatere zapise hranimo na dokumentirani pravni podlagi in ob pregledu roka hrambe.",
+  "accountClosureStatusUnavailable": "Stanja ni bilo mogoče potrditi. Poskusite pozneje ali preverite potrdilo. To ne pomeni, da je postopek zaključen.",
+  "accountClosureCopyReceipt": "Kopiraj zasebno potrdilo za vpogled",
+  "accountClosureReceiptPrivacy": "Potrdilo hranite zasebno. Vsakdo, ki ga ima, lahko preveri stanje zaprtja. V brskalniku shranite kopijo pred zaprtjem ali ponovnim nalaganjem strani; brskalnik ga hrani samo v pomnilniku.",
+  "accountClosureRefresh": "Preveri stanje",
+  "accountClosurePasteReceipt": "Prilepite zasebno potrdilo za vpogled",
+  "accountClosureContinue": "Nadaljuj na pozdravni zaslon",
+  "reportContentTitle": "Prijavi vsebino",
+  "reportContentCategoryLabel": "Kaj je težava?",
+  "reportCategoryIllegalContent": "Nezakonita vsebina",
+  "reportCategoryCopyright": "Avtorske ali druge pravice",
+  "reportCategoryPrivacy": "Zasebnost",
+  "reportCategoryHarassment": "Nadlegovanje",
+  "reportCategorySpam": "Neželena vsebina",
+  "reportCategoryImpersonation": "Lažno predstavljanje",
+  "reportCategorySafety": "Varnostna skrb",
+  "reportCategoryOther": "Drugo",
+  "reportContentDetailsLabel": "Podrobnosti",
+  "reportContentDetailsRequired": "Pojasnite, kaj je narobe in kje. Za to vrsto prijave je to obvezno.",
+  "reportContentGoodFaith": "V dobri veri izjavljam, da so podatki v tej prijavi točni in popolni.",
+  "reportContentContactLabel": "E-pošta za stik (neobvezno)",
+  "reportContentContactInvalid": "Vnesite veljaven e-poštni naslov.",
+  "reportContentAccountNote": "Vaša prijava je povezana z vašim računom, da vam lahko sporočimo, kaj je bilo odločeno.",
+  "reportContentSubmit": "Pošlji prijavo",
+  "moderationScreenTitle": "Prijave in odločitve",
+  "moderationEntrySubtitle": "Prijave, ki ste jih oddali, in odločitve o vaši vsebini",
+  "moderationReportsHeading": "Prijave, ki ste jih oddali",
+  "moderationDecisionsHeading": "Odločitve o vaši vsebini",
+  "moderationNoReports": "Niste oddali nobene prijave.",
+  "moderationNoDecisions": "Nobena odločitev ne vpliva na vašo vsebino.",
+  "moderationStatusOpen": "Prejeto",
+  "moderationStatusTriaged": "V pregledu",
+  "moderationStatusResolved": "Odločeno",
+  "moderationStatusClosed": "Zaključeno",
+  "moderationOutcomeNoAction": "Brez ukrepa",
+  "moderationOutcomeContentRemoved": "Vsebina odstranjena",
+  "moderationOutcomeContentRestricted": "Vsebina omejena",
+  "moderationOutcomeAccountAction": "Ukrep v zvezi z računom",
+  "moderationOutcomeReferred": "Posredovano",
+  "moderationOutcomeOther": "Druga odločitev",
+  "moderationReasonsLabel": "Razlogi",
+  "moderationRequestReconsideration": "Zaprosi za ponovni pregled",
+  "moderationReconsiderationRequested": "Ponovni pregled zahtevan",
+  "moderationAppeal": "Pritoži se na odločitev",
+  "moderationAppealSent": "Pritožba poslana",
+  "moderationAppealUpheld": "Rezultat pritožbe: odločitev potrjena",
+  "moderationAppealReversed": "Rezultat pritožbe: odločitev razveljavljena",
+  "moderationNoteHint": "Povejte nam, zakaj",
+  "moderationNoteRequired": "Pojasnite svojo pritožbo.",
+  "moderationActionSent": "Poslano.",
+  "moderationActionAlreadySent": "To je bilo že poslano.",
+  "moderationActionUnavailable": "Ta odločitev ni več na voljo.",
+  "moderationSignInRequired": "Prijavite se, da vidite svoje prijave in odločitve.",
+  "moderationLoadFailed": "Prijav ni bilo mogoče naložiti. Poskusite znova.",
+  "moderationContentRestricted": "Ta vsebina ni javno prikazana.",
+  "moderationContentRestored": "Ta vsebina je bila obnovljena.",
+  "moderationRestorationUnderReview": "Vsebina še ni obnovljena; obnova se pregleduje."
 }

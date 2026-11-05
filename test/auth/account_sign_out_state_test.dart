@@ -125,6 +125,9 @@ User _user(String id) => User(
       profileImageUrl: null,
     );
 
+/// The persisted profile cache is stored per account under this key.
+const String _userCacheKey = 'account_cache_v1.user_cache_v1';
+
 Future<void> _settleWrites() =>
     Future<void>.delayed(const Duration(milliseconds: 20));
 
@@ -135,6 +138,7 @@ void main() {
     late Map<String, String> secureValues;
 
     setUp(() {
+      BackendApiService().resetCredentialStoreForTesting();
       SharedPreferences.setMockInitialValues(_signedInPrefs());
       secureValues = _installSecureStorage();
     });
@@ -189,6 +193,7 @@ void main() {
 
   group('a response for a session that ended is discarded', () {
     setUp(() {
+      BackendApiService().resetCredentialStoreForTesting();
       SharedPreferences.setMockInitialValues(<String, Object>{});
       _installSecureStorage();
     });
@@ -236,6 +241,7 @@ void main() {
 
   group('a profile fetched for a session that ended is not cached', () {
     setUp(() async {
+      BackendApiService().resetCredentialStoreForTesting();
       SharedPreferences.setMockInitialValues(<String, Object>{});
       _installSecureStorage();
       await UserService.clearCache();
@@ -256,7 +262,7 @@ void main() {
 
       expect(UserService.getCachedUser('late-profile'), isNull);
       final prefs = await SharedPreferences.getInstance();
-      expect(prefs.getString('user_cache_v1'), isNull);
+      expect(prefs.getString(_userCacheKey), isNull);
     });
 
     test('a write for the current session is cached and persisted', () async {
@@ -271,7 +277,7 @@ void main() {
       expect(
           UserService.getCachedUser('current-profile')?.id, 'current-profile');
       final prefs = await SharedPreferences.getInstance();
-      expect(prefs.getString('user_cache_v1'), contains('current-profile'));
+      expect(prefs.getString(_userCacheKey), contains('current-profile'));
     });
   });
 

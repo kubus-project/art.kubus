@@ -19,6 +19,7 @@ import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:art_kubus/providers/artwork_drafts_provider.dart';
 import 'package:art_kubus/services/backend_api_service.dart';
 import 'package:art_kubus/services/guest_session_service.dart';
+import 'package:art_kubus/services/telemetry/optional_analytics_consent.dart';
 import 'package:art_kubus/services/http_client_factory.dart';
 import 'package:art_kubus/services/telemetry/kubus_client_context.dart';
 import 'package:art_kubus/services/telemetry/telemetry_event.dart';
@@ -65,8 +66,13 @@ void main() {
     BackendApiService.disableHttpFailureDiagnosticsForTesting = true;
   });
 
-  setUp(() {
-    SharedPreferences.setMockInitialValues(<String, Object>{});
+  setUp(() async {
+    await OptionalAnalyticsConsent.instance.resetForTesting();
+    SharedPreferences.setMockInitialValues(<String, Object>{
+      OptionalAnalyticsConsent.prefsKey:
+          '{"v":2,"granted":true,"revision":"campaign-fixture"}'
+    });
+    await OptionalAnalyticsConsent.instance.refresh();
     GuestSessionService.resetLaunchSnapshotForTest();
     KubusClientContext.instance.setEnabled(false);
     BackendApiService().setAuthTokenForTesting('token');
@@ -104,7 +110,7 @@ void main() {
         sender: _NoopSender(),
       );
       await telemetry.ensureInitialized();
-      addTearDown(() => telemetry.setAnalyticsPreferenceEnabled(false));
+      addTearDown(telemetry.dispose);
       await telemetry.refreshEntryAttribution(prefs: prefs);
 
       // 3. app_entry — the denominator for this funnel.
@@ -127,6 +133,16 @@ void main() {
         method: 'email',
         isNewAccount: true,
       );
+      final guestEvents = await queue.peekBatch(500);
+      for (final stage in [
+        'app_entry',
+        'signup_view',
+        'signup_attempt',
+        'registration_submitted',
+        'account_session_created'
+      ]) {
+        expect(guestEvents.any((event) => event.eventType == stage), isTrue);
+      }
       telemetry.setActorUserId(_artistUserId);
 
       // 8. Onboarding completed.
@@ -197,11 +213,6 @@ void main() {
       // The eight stages the backend's direct_acquisition funnel plots, with
       // contribution_submitted as its activatedStage.
       for (final stage in const <String>[
-        'app_entry',
-        'signup_view',
-        'signup_attempt',
-        'registration_submitted',
-        'account_session_created',
         'onboarding_complete',
         'contribution_started',
         'contribution_submitted',
@@ -223,33 +234,18 @@ void main() {
       expect(milestone.single.actorUserId, _artistUserId);
       expect(milestone.single.metadata['target_type'], 'artwork');
 
-      // 14-16. Every stage carries the campaign and the creative, so the
-      //        session survives both an `open_call_en_aug_2026` campaign filter
-      //        and a `carousel_card_4_add_your_art` creative filter, and the
-      //        entry route puts it in the direct-acquisition cohort.
-      final funnelEvents = events.where((e) => const <String>{
-            'app_entry',
-            'signup_view',
-            'signup_attempt',
-            'registration_submitted',
-            'account_session_created',
-            'onboarding_complete',
-            'contribution_started',
-            'contribution_submitted',
-          }.contains(e.eventType));
-      for (final event in funnelEvents) {
-        expect(event.metadata['utm_source'], 'meta', reason: event.eventType);
-        expect(event.metadata['utm_medium'], 'paid_social',
-            reason: event.eventType);
-        expect(event.metadata['utm_campaign'], 'open_call_en_aug_2026',
-            reason: event.eventType);
-        expect(event.metadata['utm_content'], 'carousel_card_4_add_your_art',
-            reason: event.eventType);
-        expect(event.metadata['entry_route'], '/register',
-            reason: event.eventType);
-        expect(event.metadata.containsKey('guest'), isFalse,
-            reason: '${event.eventType} must stay out of the guest funnel');
+      // Account creation changes the owner of measurement state. Unsent
+      // guest events are not retrospectively relabelled or joined to the account.
+      expect(events.any((event) => event.eventType == 'app_entry'), isFalse);
+      for (final event in events) {
+        expect(event.actorUserId, _artistUserId);
+        expect(event.metadata.containsKey('utm_campaign'), isFalse);
+        expect(event.metadata.containsKey('utm_content'), isFalse);
       }
+      expect(
+          events
+              .every((event) => event.sessionId != guestEvents.first.sessionId),
+          isTrue);
 
       // 17. The session's first (and only) activation type is `artwork`, which
       //     is what firstActivationByType buckets it under.

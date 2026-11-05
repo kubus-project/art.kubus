@@ -178,8 +178,12 @@ technical contract:
 All text is stripped, normalized, escaped, and truncated at a word boundary.
 JSON-LD is serialized with `<`, `>`, `&`, and Unicode line separators escaped.
 Only HTTP(S) media URLs or known relative storage paths are emitted. Entity
-images are preferred; `web/images/social-preview-default.webp` is the 1200×630
-branded fallback.
+images are preferred; `web/images/social-preview.png` (1280×640, the approved art.kubus
+social image, a byte-identical copy of `docs/branding/social-preview.png`) is the
+branded fallback. Favicons are dark-backed (`web/favicon*.png`, `favicon.ico`)
+because the logo glyph is white and a transparent icon is blank on the white
+surface search results draw it on; regenerate them with the brand-asset script
+in the release evidence if the logo changes.
 
 ## Sitemaps, robots, caching, and failures
 
@@ -273,3 +277,13 @@ The web origin requires its standard PHP cURL extension. Renderer availability
 still depends on the Oracle API origin; gateway connection failures return a
 non-cacheable, non-indexable 503. Entity translations are limited to fields
 already stored by the product.
+
+## Root and locale homepages
+
+`/`, `/en` and `/sl` boot the Flutter application directly and stay indexable static shells. They are **three documents**, each its own
+canonical: `/` (x-default alternate, the `WebSite`/`Organization` structured data naming `art.kubus` at `https://app.kubus.site/`), `/en`
+(English) and `/sl` (Slovenian title, description and Open Graph), with reciprocal `hreflang` (en, sl, x-default) on all three. `/en` and `/sl`
+are derived from the **built** root document by `scripts/deploy/locale_shells.mjs` (run by `scripts/deploy/prepare_web_artifact.mjs`) and served by
+`.htaccess` when `index.en.html` / `index.sl.html` exist (the source tree, which has none, falls back to the root document). A change to the root
+head that the derivation cannot find fails the build. Contracts: `scripts/ci/locale_shells.test.mjs` (CI), `scripts/qa/production_seo_contract.mjs`
+(post-deployment). Search Console recrawl of `/`, `/en` and `/sl` is a post-deployment action; Google's displayed site name and favicon follow later.

@@ -157,6 +157,17 @@ async function main() {
     record(`${name}: serves Flutter shell`, hasBundle, `bundle_present=${hasBundle}`);
   }
 
+  // Each bare root declares itself canonical (post-deployment check of scripts/deploy/locale_shells.mjs).
+  for (const [path, expected, lang] of [['/', `${ORIGIN}/`, 'en'], ['/en', `${ORIGIN}/en`, 'en'], ['/sl', `${ORIGIN}/sl`, 'sl']]) {
+    const res = await checkStatus(`${path} identity`, path, 200);
+    if (!res || res.status !== 200) continue;
+    const html = await res.text();
+    const canonical = firstMatch(html, /<link[^>]+rel="canonical"[^>]+href="([^"]+)"/i);
+    record(`${path} is self-canonical`, canonical === expected, `canonical=${canonical ?? '<absent>'}`);
+    record(`${path} declares html lang=${lang}`, new RegExp(`<html lang="${lang}"`).test(html), 'html lang');
+    record(`${path} names the site art.kubus`, /<meta property="og:site_name" content="art\.kubus">/.test(html), 'og:site_name');
+  }
+
   // --- Robots and sitemap ownership -----------------------------------------
   const robotsRes = await checkStatus('robots.txt', '/robots.txt', 200);
   if (robotsRes && robotsRes.status === 200) {

@@ -9,9 +9,12 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../config/config.dart';
 import '../guest_session_service.dart';
+import '../backend_api_service.dart';
+import '../account_identity.dart';
 import 'contribution_type.dart';
 import 'kubus_client_context.dart';
 import 'telemetry_config.dart';
+import 'optional_analytics_consent.dart';
 import 'telemetry_event.dart';
 import 'telemetry_event_queue.dart';
 import 'telemetry_sender.dart';
@@ -30,7 +33,12 @@ class TelemetryService {
 
   bool _initialized = false;
   Future<void>? _initializationFuture;
-  bool _analyticsPreferenceEnabled = true;
+  int _privacyEpoch = 0;
+  Future<void>? _privacyCleanup;
+  Future<void>? _measurementWrites;
+  static const sessionRecordPrefsKey = 'app_telemetry_session_record_v3';
+  bool _consentListenerAttached = false;
+  bool _privacyBlocked = false;
   bool _enabled = false;
   bool? _enabledByBuildFlagOverride;
 
@@ -80,7 +88,6 @@ class TelemetryService {
   }) {
     final svc = TelemetryService._test(queue: queue, sender: sender);
     svc._enabledByBuildFlagOverride = analyticsEnabledByBuildFlag;
-    svc._analyticsPreferenceEnabled = analyticsPreferenceEnabled;
     svc._enabled = analyticsEnabledByBuildFlag && analyticsPreferenceEnabled;
     KubusClientContext.instance.setEnabled(svc._enabled);
     return svc;
@@ -111,59 +118,183 @@ class TelemetryService {
   }
 
   Future<void> _initialize() async {
-    _sessionId = TelemetryUuid.v4();
+    KubusClientContext.instance.setEnabled(false);
+    _sessionId = '';
     _sessionStartUtc = DateTime.now().toUtc();
-
-    try {
-      // Initial-route dispatch may already be persisting a mobile deep link.
-      // Wait before snapshotting metadata so initial route events share it.
-      await GuestSessionService.waitForLaunchAttributionCapture();
-      final prefs = await SharedPreferences.getInstance();
-      _analyticsPreferenceEnabled = prefs.getBool('enableAnalytics') ?? true;
-      _actorUserId = _normalizeUuid(prefs.getString('user_id'));
-      // Age out an acquisition touch that has passed its window before reading
-      // it, so an old campaign cannot attach itself to this session's events.
-      await GuestSessionService.pruneExpiredAttribution(prefs: prefs);
-      _entryAttribution = _loadEntryAttribution(prefs);
-      _restoreSession(prefs);
-    } catch (_) {
-      _analyticsPreferenceEnabled = true;
-      _actorUserId = null;
-      _entryAttribution = const <String, Object?>{};
+    final consent = OptionalAnalyticsConsent.instance;
+    await GuestSessionService.waitForLaunchAttributionCapture();
+    await consent.refresh();
+    if (!_consentListenerAttached) {
+      consent.addListener(_consentChanged);
+      _consentListenerAttached = true;
+      if (_sender is BackendTelemetrySender) {
+        AccountIdentity.addListener(_accountChanged);
+      }
     }
-
-    _enabled = (_enabledByBuildFlagOverride ??
-            AppTelemetryConfig.enabledByBuildFlag) &&
-        _analyticsPreferenceEnabled;
-    KubusClientContext.instance.setEnabled(_enabled);
-
     await _queue.init();
+    await consent.refresh();
+    if (!consent.granted) await _clearOptionalData();
+    await _privacyCleanup;
+    final prefs = await SharedPreferences.getInstance();
+    await consent.refresh();
+    await _privacyCleanup;
+    // From this permission snapshot through context activation there is no await.
+    _enabled = !_privacyBlocked &&
+        (_enabledByBuildFlagOverride ??
+            AppTelemetryConfig.enabledByBuildFlag) &&
+        consent.granted;
+    _observedConsentGeneration = consent.generation;
     _initialized = true;
-
-    if (_enabled) {
-      _syncClientContext();
-      _scheduleFlush(AppTelemetryConfig.flushOnEnqueueDelay);
+    if (!_enabled) return;
+    _sessionId = TelemetryUuid.v4();
+    if (_sender is BackendTelemetrySender) {
+      final claims = BackendApiService().getCurrentAuthTokenClaims();
+      _actorUserId =
+          _normalizeUuid((claims?['id'] ?? claims?['sub'])?.toString());
+    } else {
+      _actorUserId = _normalizeUuid(prefs.getString('user_id'));
     }
+    _entryAttribution = _loadEntryAttribution(prefs);
+    _restoreSession(prefs);
+    _syncClientContext();
+    _scheduleFlush(AppTelemetryConfig.flushOnEnqueueDelay);
+  }
+
+  void _accountChanged() {
+    final claims = BackendApiService().getCurrentAuthTokenClaims();
+    setActorUserId((claims?['id'] ?? claims?['sub'])?.toString());
+  }
+
+  String _measurementScope(SharedPreferences prefs) =>
+      '${_actorUserId ?? 'guest'}:${OptionalAnalyticsConsent.storedRevision(prefs)}';
+
+  int? _observedConsentGeneration;
+  @visibleForTesting
+  void dispose() {
+    _enabled = false;
+    _cancelBackoffTimer();
+    _cancelFlushTimer();
+    if (_consentListenerAttached) {
+      OptionalAnalyticsConsent.instance.removeListener(_consentChanged);
+    }
+    if (_sender is BackendTelemetrySender) {
+      AccountIdentity.removeListener(_accountChanged);
+    }
+    _consentListenerAttached = false;
+  }
+
+  void _consentChanged() {
+    final generation = OptionalAnalyticsConsent.instance.generation;
+    if (generation != _observedConsentGeneration && _enabled) {
+      setAnalyticsPreferenceEnabled(false);
+    }
+    _observedConsentGeneration = generation;
+    setAnalyticsPreferenceEnabled(OptionalAnalyticsConsent.instance.granted);
   }
 
   void setAnalyticsPreferenceEnabled(bool enabled) {
-    _analyticsPreferenceEnabled = enabled;
-    _enabled = (_enabledByBuildFlagOverride ??
+    final next = enabled &&
+        OptionalAnalyticsConsent.instance.granted &&
+        !_privacyBlocked;
+    final previous = _enabled;
+    _enabled = _initialized &&
+        (_enabledByBuildFlagOverride ??
             AppTelemetryConfig.enabledByBuildFlag) &&
-        _analyticsPreferenceEnabled;
+        next;
     KubusClientContext.instance.setEnabled(_enabled);
-    if (!_initialized) return;
-    if (_enabled) {
-      _syncClientContext();
-      _scheduleFlush(const Duration(milliseconds: 250));
-    } else {
+    if (!next || previous != _enabled) {
+      _privacyEpoch += 1;
       _cancelBackoffTimer();
       _cancelFlushTimer();
+      _privacyCleanup = (_privacyCleanup ?? Future<void>.value())
+          .then((_) => _clearOptionalData())
+          .catchError((Object _) {
+        _privacyBlocked = true;
+        _enabled = false;
+        KubusClientContext.instance.setEnabled(false);
+      });
+    }
+    if (_initialized && _enabled) {
+      _sessionId = TelemetryUuid.v4();
+      _sessionStartUtc = DateTime.now().toUtc();
+      _syncClientContext();
     }
   }
 
+  Future<void> _clearOptionalData() async {
+    Object? failure;
+    try {
+      await _queue.clear();
+    } catch (error) {
+      failure = error;
+    }
+    await _measurementWrites;
+    _entryAttribution = const {};
+    _onceKeys.clear();
+    _screenEnteredAtUtc = null;
+    final prefs = await SharedPreferences.getInstance();
+    for (final key in [
+      AppTelemetryConfig.sessionIdPrefsKey,
+      AppTelemetryConfig.sessionStartPrefsKey,
+      AppTelemetryConfig.onceKeysPrefsKey,
+      'app_telemetry_session_scope_v2',
+      sessionRecordPrefsKey
+    ]) {
+      try {
+        if (!await prefs.remove(key)) {
+          failure ??= StateError('Optional storage removal failed');
+        }
+      } catch (error) {
+        failure ??= error;
+      }
+    }
+    for (final key in prefs
+        .getKeys()
+        .where((key) => key.startsWith('app_telemetry_first_'))
+        .toList()) {
+      try {
+        if (!await prefs.remove(key)) {
+          failure ??= StateError('Optional storage removal failed');
+        }
+      } catch (error) {
+        failure ??= error;
+      }
+    }
+    try {
+      await GuestSessionService.clearAcquisitionAttribution(
+          prefs: prefs, preserveFunctionalIntent: true);
+    } catch (error) {
+      failure ??= error;
+    }
+    if (failure != null) throw failure;
+  }
+
   void setActorUserId(String? userId) {
-    _actorUserId = _normalizeUuid(userId);
+    final next = _normalizeUuid(userId);
+    if (next == _actorUserId) return;
+    _privacyEpoch += 1;
+    _actorUserId = next;
+    _cancelBackoffTimer();
+    _cancelFlushTimer();
+    _privacyCleanup = (_privacyCleanup ?? Future<void>.value())
+        .then((_) => _clearOptionalData())
+        .catchError((Object _) {
+      _privacyBlocked = true;
+      _enabled = false;
+      KubusClientContext.instance.setEnabled(false);
+    });
+    if (_initialized) {
+      _sessionId = TelemetryUuid.v4();
+      _sessionStartUtc = DateTime.now().toUtc();
+      if (_enabled) _syncClientContext();
+    }
+  }
+
+  Future<bool> _permissionStillCurrent(int epoch) async {
+    if (!_enabled || epoch != _privacyEpoch) return false;
+    await _privacyCleanup;
+    final allowed = await OptionalAnalyticsConsent.instance.refresh();
+    return allowed && _enabled && epoch == _privacyEpoch;
   }
 
   /// Records the active UI locale so funnel reporting can compare the English
@@ -731,8 +862,9 @@ class TelemetryService {
     required PendingActionMilestone milestone,
     required String targetType,
   }) async {
+    final epoch = _privacyEpoch;
     await ensureInitialized();
-    if (!_enabled) return;
+    if (!await _permissionStillCurrent(epoch)) return;
 
     final eventType = switch (milestone) {
       PendingActionMilestone.save => AppTelemetryEventTypes.firstSaveCompleted,
@@ -745,15 +877,21 @@ class TelemetryService {
     final prefsKey = firstEngagementKey(milestone);
     try {
       final prefs = await SharedPreferences.getInstance();
+      if (!await _permissionStillCurrent(epoch)) return;
       if (prefs.getBool(prefsKey) ?? false) return;
 
       await prefs.setBool(prefsKey, true);
+      if (!await _permissionStillCurrent(epoch)) {
+        await prefs.remove(prefsKey);
+        return;
+      }
     } catch (_) {
       // Storage unavailable: fall through and emit at most once per session.
       if (_onceKeys.contains('$_sessionId::$eventType')) return;
       _onceKeys.add('$_sessionId::$eventType');
     }
 
+    if (!await _permissionStillCurrent(epoch)) return;
     await trackEvent(
       eventType,
       extra: {'target_type': targetType, 'success': true},
@@ -783,6 +921,10 @@ class TelemetryService {
 
   Map<String, Object?> _loadEntryAttribution(SharedPreferences prefs) {
     try {
+      if (prefs.getString('kubus_entry_attribution_scope_v2') !=
+          '${prefs.getString(OptionalAnalyticsConsent.prefsKey)}:${AccountIdentity.accountKey}') {
+        return const {};
+      }
       final attribution = <String, Object?>{};
       GuestSessionService.entryUtmSync(prefs).forEach((key, value) {
         attribution[key] = value;
@@ -831,13 +973,16 @@ class TelemetryService {
     String eventType, {
     Map<String, Object?> extra = const {},
   }) async {
+    final epoch = _privacyEpoch;
+    final wasEnabled = _enabled;
     await ensureInitialized();
-    if (!_enabled) return;
+    if (!wasEnabled || !await _permissionStillCurrent(epoch)) return;
     final normalizedEventType = eventType.trim();
     if (!AppTelemetryEventTypes.allowed.contains(normalizedEventType)) return;
 
     _rotateSessionIfNeeded();
     await _refreshEntryAttributionForEmission();
+    if (!await _permissionStillCurrent(epoch)) return;
 
     final metadata = _buildMetadata(extra: extra);
     final payload = AppTelemetryEvent(
@@ -872,8 +1017,10 @@ class TelemetryService {
         actorUserId: payload.actorUserId,
         metadata: clipped,
       );
+      if (!await _permissionStillCurrent(epoch)) return;
       await _queue.enqueue(clippedEvent);
     } else {
+      if (!await _permissionStillCurrent(epoch)) return;
       await _queue.enqueue(payload);
     }
 
@@ -909,6 +1056,8 @@ class TelemetryService {
   }
 
   Future<void> _emitScreenDurationIfNeeded() async {
+    final epoch = _privacyEpoch;
+    if (!_enabled) return;
     final enteredAt = _screenEnteredAtUtc;
     if (enteredAt == null) return;
     final now = DateTime.now().toUtc();
@@ -932,6 +1081,7 @@ class TelemetryService {
       metadata: metadata,
     );
 
+    if (!await _permissionStillCurrent(epoch)) return;
     await _queue.enqueue(event);
   }
 
@@ -939,8 +1089,10 @@ class TelemetryService {
     String eventType, {
     Map<String, Object?> extra = const {},
   }) async {
+    final epoch = _privacyEpoch;
+    final wasEnabled = _enabled;
     await ensureInitialized();
-    if (!_enabled) return;
+    if (!wasEnabled || !await _permissionStillCurrent(epoch)) return;
     _rotateSessionIfNeeded();
 
     final key = '$_sessionId::$eventType';
@@ -961,8 +1113,10 @@ class TelemetryService {
     required String dedupeKey,
     Map<String, Object?> extra = const {},
   }) async {
+    final epoch = _privacyEpoch;
+    final wasEnabled = _enabled;
     await ensureInitialized();
-    if (!_enabled) return;
+    if (!wasEnabled || !await _permissionStillCurrent(epoch)) return;
     _rotateSessionIfNeeded();
 
     final key = '$_sessionId::$eventType::$dedupeKey';
@@ -1097,9 +1251,13 @@ class TelemetryService {
   /// Called on sign-out: the persisted session id would otherwise keep the
   /// departing account's events and the next visitor's events on one chain.
   Future<void> rotateSession() async {
+    _privacyEpoch += 1;
+    await _privacyCleanup;
+    await _queue.clear();
     _sessionId = TelemetryUuid.v4();
     _sessionStartUtc = DateTime.now().toUtc();
     _onceKeys.clear();
+    if (!_enabled) return;
     _syncClientContext();
     await _persistSession();
     await _persistOnceKeys();
@@ -1124,73 +1282,73 @@ class TelemetryService {
   /// email and come back. Without this, the guest half and the account half of
   /// the funnel land in different `session_id`s and never join.
   void _restoreSession(SharedPreferences prefs) {
-    final storedId =
-        (prefs.getString(AppTelemetryConfig.sessionIdPrefsKey) ?? '').trim();
-    if (!_uuidRegex.hasMatch(storedId)) {
-      unawaited(_persistSession());
-      return;
-    }
-    final storedStart = DateTime.tryParse(
-      prefs.getString(AppTelemetryConfig.sessionStartPrefsKey) ?? '',
-    );
-    if (storedStart == null) {
-      unawaited(_persistSession());
-      return;
-    }
-    final startedAt = storedStart.toUtc();
-    if (DateTime.now().toUtc().difference(startedAt) >=
-        AppTelemetryConfig.sessionRotation) {
-      unawaited(_persistSession());
-      return;
-    }
-    _sessionId = storedId;
-    _sessionStartUtc = startedAt;
-    // Keep the once-per-session guards of this very session, and only those.
-    final storedKeys =
-        prefs.getStringList(AppTelemetryConfig.onceKeysPrefsKey) ??
-            const <String>[];
-    _onceKeys
-      ..clear()
-      ..addAll(storedKeys.where((key) => key.startsWith('$storedId::')));
-    unawaited(_persistSession());
-  }
-
-  Future<void> _persistOnceKeys() async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final prefix = '$_sessionId::';
-      // Tabs of one browser share the session id; keep what another tab has
-      // already recorded instead of overwriting it with this tab's view.
-      final stored = prefs.getStringList(AppTelemetryConfig.onceKeysPrefsKey) ??
-          const <String>[];
-      final merged = <String>{
-        ...stored.where((key) => key.startsWith(prefix)),
-        ..._onceKeys.where((key) => key.startsWith(prefix)),
-      };
-      _onceKeys.addAll(merged);
-      final keys = merged.toList();
-      // A session only ever holds a handful of distinct guards; the cap keeps a
-      // runaway dedupe key from growing storage.
-      await prefs.setStringList(
-        AppTelemetryConfig.onceKeysPrefsKey,
-        keys.length > 200 ? keys.sublist(keys.length - 200) : keys,
-      );
+      final raw = prefs.getString(sessionRecordPrefsKey);
+      final record = raw == null ? null : jsonDecode(raw);
+      if (record is! Map || record['scope'] != _measurementScope(prefs)) {
+        unawaited(_persistSession());
+        return;
+      }
+      final id = record['id'];
+      final start = DateTime.tryParse('${record['start']}');
+      final age =
+          start == null ? null : DateTime.now().toUtc().difference(start);
+      if (id is! String ||
+          !_uuidRegex.hasMatch(id) ||
+          age == null ||
+          age.isNegative ||
+          age >= AppTelemetryConfig.sessionRotation) {
+        unawaited(_persistSession());
+        return;
+      }
+      _sessionId = id;
+      _sessionStartUtc = start!.toUtc();
+      final keys = record['onceKeys'];
+      if (keys is List) {
+        _onceKeys.addAll(
+            keys.whereType<String>().where((key) => key.startsWith('$id::')));
+      }
     } catch (_) {
-      // Dedupe persistence is best effort; in-memory guards still apply.
+      // Invalid or legacy records are never adopted into a new consent scope.
     }
   }
 
-  Future<void> _persistSession() async {
-    try {
+  Future<void> _persistOnceKeys() => _persistSession();
+
+  Future<void> _persistSession() {
+    final epoch = _privacyEpoch;
+    final scope =
+        '${_actorUserId ?? 'guest'}:${OptionalAnalyticsConsent.instance.revision}';
+    final id = _sessionId;
+    final start = _sessionStartUtc.toIso8601String();
+    final keys =
+        _onceKeys.where((key) => key.startsWith('$id::')).take(200).toList();
+    final work = (_measurementWrites ?? Future<void>.value()).then((_) async {
       final prefs = await SharedPreferences.getInstance();
-      await prefs.setString(AppTelemetryConfig.sessionIdPrefsKey, _sessionId);
+      if (!_enabled || epoch != _privacyEpoch) return;
+      if (!OptionalAnalyticsConsent.instance.granted ||
+          !OptionalAnalyticsConsent.hasStoredPermission(prefs) ||
+          _measurementScope(prefs) != scope) {
+        return;
+      }
+      // One atomic value binds the identifier and dedupe guards to their owner.
+      // Serializing writes also prevents a delayed old write overtaking cleanup.
       await prefs.setString(
-        AppTelemetryConfig.sessionStartPrefsKey,
-        _sessionStartUtc.toIso8601String(),
-      );
-    } catch (_) {
-      // Session correlation is best effort; never block telemetry on storage.
-    }
+          sessionRecordPrefsKey,
+          jsonEncode({
+            'scope': scope,
+            'id': id,
+            'start': start,
+            'onceKeys': keys,
+          }));
+      if (!_enabled || epoch != _privacyEpoch) {
+        await prefs.remove(sessionRecordPrefsKey);
+      }
+    });
+    _measurementWrites = work.catchError((Object _) {
+      // Correlation is optional. A failed write must not poison later cleanup.
+    });
+    return _measurementWrites!;
   }
 
   void _updateFlowStageFromScreen() {
@@ -1324,12 +1482,25 @@ class TelemetryService {
     if (!_enabled) return;
     if (_backoffTimer != null) return;
 
+    final epoch = _privacyEpoch;
     _flushing = true;
     try {
+      if (!await _permissionStillCurrent(epoch)) return;
       final batch = await _queue.peekBatch(AppTelemetryConfig.maxBatchSize);
-      if (batch.isEmpty) return;
-
-      final result = await _sender.sendBatch(batch);
+      if (batch.isEmpty || !await _permissionStillCurrent(epoch)) return;
+      final eligible = batch
+          .where((event) =>
+              event.actorUserId == _actorUserId &&
+              DateTime.now().toUtc().difference(event.eventTimeUtc) <=
+                  AppTelemetryConfig.maxQueueAge &&
+              !event.eventTimeUtc.isAfter(DateTime.now().toUtc()))
+          .toList();
+      if (eligible.isEmpty) {
+        await _queue.removeFirst(batch.length);
+        return;
+      }
+      final result = await _sender.sendBatch(eligible);
+      if (!await _permissionStillCurrent(epoch)) return;
       if (result.ok) {
         _consecutiveFailures = 0;
         _cancelBackoffTimer();

@@ -112,6 +112,7 @@ class AccountWalletLinkService {
     String? originalRefreshToken,
     WalletSessionSyncProvidersPayload? providers,
   }) async {
+    var sessionEpoch = _backendApi.authSessionEpoch;
     final normalizedWallet = walletAddress.trim();
     final normalizedUserId = expectedUserId.trim();
     final normalizedToken = originalAuthToken.trim();
@@ -136,10 +137,13 @@ class AccountWalletLinkService {
 
     // Force the original Google/email account token back before binding. A
     // wallet create/import/connect must never decide which account binds.
-    await _backendApi.setAuthToken(normalizedToken);
+    await _backendApi.setAuthToken(normalizedToken,
+        expectedEpoch: sessionEpoch);
+    sessionEpoch = _backendApi.authSessionEpoch;
     final refreshToken = (originalRefreshToken ?? '').trim();
     if (refreshToken.isNotEmpty) {
-      await _backendApi.setRefreshToken(refreshToken);
+      await _backendApi.setRefreshToken(refreshToken,
+          forAccessToken: normalizedToken);
     }
 
     // Prove wallet ownership before binding. The backend requires a signed
@@ -157,11 +161,15 @@ class AccountWalletLinkService {
                   ))
             .timeout(_challengeSignTimeout);
       } catch (error) {
-        await _restoreOriginalToken(normalizedToken, refreshToken);
+        await _restoreOriginalToken(normalizedToken, refreshToken,
+            expectedEpoch: sessionEpoch);
         rethrow;
       }
     }
 
+    if (sessionEpoch != _backendApi.authSessionEpoch) {
+      throw StateError('Account session ended');
+    }
     Map<String, dynamic> bindPayload;
     try {
       bindPayload = await (_bindWalletOverride != null
@@ -175,10 +183,27 @@ class AccountWalletLinkService {
                 ))
           .timeout(_bindTimeout);
     } catch (error) {
-      await _restoreOriginalToken(normalizedToken, refreshToken);
+      await _restoreOriginalToken(normalizedToken, refreshToken,
+          expectedEpoch: sessionEpoch);
       rethrow;
     }
-    await _persistAuthResponse(bindPayload);
+    // The default backend transport already committed its guarded auth pair.
+    // An injected transport is committed here under the original request epoch.
+    final payload =
+        bindPayload['data'] is Map ? bindPayload['data'] as Map : bindPayload;
+    final returnedToken =
+        (payload['token'] ?? bindPayload['token'] ?? '').toString();
+    if (sessionEpoch != _backendApi.authSessionEpoch &&
+        (returnedToken.isEmpty ||
+            returnedToken != _backendApi.getAuthToken())) {
+      throw StateError('Account session ended');
+    }
+    if (returnedToken.isNotEmpty &&
+        returnedToken != _backendApi.getAuthToken()) {
+      await _backendApi.persistAuthTokensFromResponse(bindPayload,
+          sessionEpoch: sessionEpoch);
+    }
+    sessionEpoch = _backendApi.authSessionEpoch;
 
     Map<String, dynamic> profileResponse;
     try {
@@ -187,14 +212,16 @@ class AccountWalletLinkService {
               : _backendApi.getMyProfile())
           .timeout(_verifyTimeout);
     } catch (error) {
-      await _restoreOriginalToken(normalizedToken, refreshToken);
+      await _restoreOriginalToken(normalizedToken, refreshToken,
+          expectedEpoch: sessionEpoch);
       throw AccountWalletLinkVerificationException(
         'Could not verify the wallet link with your account: $error',
       );
     }
 
     if (profileResponse['success'] == false) {
-      await _restoreOriginalToken(normalizedToken, refreshToken);
+      await _restoreOriginalToken(normalizedToken, refreshToken,
+          expectedEpoch: sessionEpoch);
       throw AccountWalletLinkVerificationException(
         'Could not verify the wallet link with your account '
         '(${profileResponse['status'] ?? profileResponse['error'] ?? 'unknown error'}).',
@@ -215,20 +242,25 @@ class AccountWalletLinkService {
         .trim();
 
     if (verifiedUserId.isEmpty || verifiedUserId != normalizedUserId) {
-      await _restoreOriginalToken(normalizedToken, refreshToken);
+      await _restoreOriginalToken(normalizedToken, refreshToken,
+          expectedEpoch: sessionEpoch);
       throw AccountWalletLinkVerificationException(
         'Wallet link verification failed: the wallet was not linked to your '
         'signed-in account. No changes were saved — try again.',
       );
     }
     if (!WalletUtils.equals(verifiedWallet, normalizedWallet)) {
-      await _restoreOriginalToken(normalizedToken, refreshToken);
+      await _restoreOriginalToken(normalizedToken, refreshToken,
+          expectedEpoch: sessionEpoch);
       throw AccountWalletLinkVerificationException(
         'Wallet link verification failed: your account does not report the '
         'new wallet yet. No changes were saved — try again.',
       );
     }
 
+    if (sessionEpoch != _backendApi.authSessionEpoch) {
+      throw StateError('Account session ended');
+    }
     // Verified: the original account owns the wallet. Commit local state.
     await _commitVerifiedLink(
       walletAddress: normalizedWallet,
@@ -268,37 +300,17 @@ class AccountWalletLinkService {
     return walletProvider.signMessage(challenge.message);
   }
 
-  Future<void> _restoreOriginalToken(String token, String refreshToken) async {
+  Future<void> _restoreOriginalToken(String token, String refreshToken,
+      {required int expectedEpoch}) async {
+    if (_backendApi.authSessionEpoch != expectedEpoch) return;
     try {
-      await _backendApi.setAuthToken(token);
-      if (refreshToken.isNotEmpty) {
-        await _backendApi.setRefreshToken(refreshToken);
-      }
-    } catch (e) {
+      await _backendApi.persistAuthTokensFromResponse({
+        'token': token,
+        if (refreshToken.isNotEmpty) 'refreshToken': refreshToken,
+      }, sessionEpoch: expectedEpoch);
+    } catch (_) {
       AppConfig.debugPrint(
-          'AccountWalletLinkService: token restore failed: $e');
-    }
-  }
-
-  Future<void> _persistAuthResponse(Object? response) async {
-    if (response is! Map) return;
-    final body = Map<String, dynamic>.from(response);
-    final payload = body['data'] is Map
-        ? Map<String, dynamic>.from(body['data'] as Map)
-        : body;
-    final token = (payload['token'] ?? body['token'] ?? '').toString().trim();
-    if (token.isNotEmpty) {
-      await _backendApi.setAuthToken(token);
-    }
-    final refreshToken = (payload['refreshToken'] ??
-            payload['refresh_token'] ??
-            body['refreshToken'] ??
-            body['refresh_token'] ??
-            '')
-        .toString()
-        .trim();
-    if (refreshToken.isNotEmpty) {
-      await _backendApi.setRefreshToken(refreshToken);
+          'AccountWalletLinkService: original session was not restored');
     }
   }
 

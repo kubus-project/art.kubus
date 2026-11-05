@@ -93,6 +93,7 @@ import 'screens/auth/reset_password_screen.dart';
 import 'screens/auth/verify_email_screen.dart';
 import 'screens/auth/email_verification_success_screen.dart';
 import 'screens/onboarding/onboarding_flow_screen.dart';
+import 'screens/account_closure_status_screen.dart';
 import 'screens/art/ar_screen.dart';
 import 'screens/art/artwork_detail_route.dart';
 import 'screens/desktop/desktop_shell.dart';
@@ -473,8 +474,7 @@ class _AppLauncherState extends State<AppLauncher> {
               localizationsDelegates: AppLocalizations.localizationsDelegates,
               onGenerateTitle: (context) =>
                   publicEntityDocumentTitle() ??
-                  AppLocalizations.of(context)?.appTitle ??
-                  'art.kubus',
+                  localizedDocumentTitle(Localizations.localeOf(context)),
               theme: themeProvider.lightTheme,
               darkTheme: themeProvider.darkTheme,
               themeMode: themeProvider.themeMode,
@@ -1211,6 +1211,7 @@ class _ArtKubusState extends State<ArtKubus> with WidgetsBindingObserver {
             : const ConnectWallet(initialStep: 1),
         // Post-auth return target for Support Center continuations. Arguments are
         // string-only and identify the section and request, never the draft.
+        '/account-closure': (context) => const AccountClosureStatusScreen(),
         '/support': (context) {
           final args = ModalRoute.of(context)?.settings.arguments;
           final map = args is Map ? args : const <Object?, Object?>{};
@@ -1423,6 +1424,7 @@ class _ArtKubusState extends State<ArtKubus> with WidgetsBindingObserver {
       return MaterialPageRoute(
         builder: (_) => WalkingRouteRenderHarnessScreen(
           useLiveRoutingSource: uri.queryParameters['live'] == '1',
+          simulateWalk: uri.queryParameters['simulateWalk'] == '1',
         ),
         settings: RouteSettings(name: WalkingNavigationDebugHarness.routeName),
       );
@@ -1779,8 +1781,7 @@ class _ArtKubusState extends State<ArtKubus> with WidgetsBindingObserver {
             valueListenable: _documentTitleObserver.title,
             builder: (context, documentTitle, shell) => Title(
               title: documentTitle ??
-                  AppLocalizations.of(context)?.appTitle ??
-                  'art.kubus',
+                  localizedDocumentTitle(Localizations.localeOf(context)),
               color: Theme.of(context).primaryColor,
               child: shell!,
             ),
@@ -1811,8 +1812,7 @@ class _ArtKubusState extends State<ArtKubus> with WidgetsBindingObserver {
             onGenerateTitle: (context) =>
                 _documentTitleObserver.title.value ??
                 publicEntityDocumentTitle() ??
-                AppLocalizations.of(context)?.appTitle ??
-                'art.kubus',
+                localizedDocumentTitle(Localizations.localeOf(context)),
             theme: themeProvider.lightTheme,
             darkTheme: themeProvider.darkTheme,
             themeMode: themeProvider.themeMode,
@@ -1830,8 +1830,7 @@ class _ArtKubusState extends State<ArtKubus> with WidgetsBindingObserver {
             onGenerateTitle: (context) =>
                 _documentTitleObserver.title.value ??
                 publicEntityDocumentTitle() ??
-                AppLocalizations.of(context)?.appTitle ??
-                'art.kubus',
+                localizedDocumentTitle(Localizations.localeOf(context)),
             theme: themeProvider.lightTheme,
             darkTheme: themeProvider.darkTheme,
             themeMode: themeProvider.themeMode,

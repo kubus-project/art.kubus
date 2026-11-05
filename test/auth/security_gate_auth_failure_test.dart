@@ -7,6 +7,7 @@ import 'package:art_kubus/services/backend_api_service.dart';
 import 'package:art_kubus/services/onboarding_state_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// Regression coverage for the "Google/email signup ejects to /sign-in" bug:
@@ -19,9 +20,8 @@ String _jwt({DateTime? expiry}) {
     'sub': 'user-gate-test',
     if (expiry != null) 'exp': expiry.millisecondsSinceEpoch ~/ 1000,
   };
-  final encoded = base64Url
-      .encode(utf8.encode(jsonEncode(payload)))
-      .replaceAll('=', '');
+  final encoded =
+      base64Url.encode(utf8.encode(jsonEncode(payload))).replaceAll('=', '');
   return 'e30.$encoded.';
 }
 
@@ -60,6 +60,8 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   setUp(() {
+    FlutterSecureStorage.setMockInitialValues({});
+    BackendApiService().resetCredentialStoreForTesting();
     SharedPreferences.setMockInitialValues(<String, Object>{});
     BackendApiService().setAuthTokenForTesting(null);
   });
@@ -162,8 +164,7 @@ void main() {
     expect(find.text('route:/sign-in'), findsOneWidget);
   });
 
-  testWidgets(
-      'truly expired session does not hijack the onboarding route',
+  testWidgets('truly expired session does not hijack the onboarding route',
       (tester) async {
     SharedPreferences.setMockInitialValues(<String, Object>{
       'jwt_token': _jwt(

@@ -323,7 +323,7 @@ class _DesktopArtworkDetailScreenState
           type: widget.publicEntityType,
           entityId: widget.publicEntryId,
           child: DocumentTitle(
-            title: artwork.title,
+            title: artworkDocumentTitle(artwork.title, artwork.artist),
             child: Scaffold(
               backgroundColor: scheme.surface,
               appBar: widget.showAppBar

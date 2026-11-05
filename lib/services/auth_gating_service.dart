@@ -105,22 +105,18 @@ class AuthGatingService {
     return hasLocalAccount(prefs: prefs);
   }
 
+  /// Preference records are account hints, never authentication authority.
+  /// Callers load the platform credential store through BackendApiService.
   static StoredSessionStatus evaluateStoredSession({
     required SharedPreferences prefs,
+    String? accessToken,
     DateTime? nowUtc,
   }) {
-    final accessToken = readStoredAccessToken(prefs);
-    if (accessToken != null && accessToken.trim().isNotEmpty) {
-      if (isAccessTokenValid(accessToken, nowUtc: nowUtc)) {
-        return StoredSessionStatus.valid;
-      }
+    if (accessToken != null &&
+        accessToken.trim().isNotEmpty &&
+        isAccessTokenValid(accessToken, nowUtc: nowUtc)) {
+      return StoredSessionStatus.valid;
     }
-
-    final refreshToken = readStoredRefreshToken(prefs);
-    if (refreshToken != null && refreshToken.trim().isNotEmpty) {
-      return StoredSessionStatus.refreshRequired;
-    }
-
     return StoredSessionStatus.invalid;
   }
 }

@@ -255,6 +255,7 @@ void main() {
     late int requests;
 
     setUp(() {
+      BackendApiService().resetCredentialStoreForTesting();
       coordinator = _RecordingCoordinator();
       requests = 0;
       BackendApiService().setAuthTokenForTesting(_jwt());
@@ -320,6 +321,7 @@ void main() {
         );
 
     setUp(() {
+      BackendApiService().resetCredentialStoreForTesting();
       SharedPreferences.setMockInitialValues(<String, Object>{
         'jwt_token': _jwt(),
         'user_id': 'user-suspended',
@@ -481,6 +483,7 @@ void main() {
     late _RecordingCoordinator coordinator;
 
     setUp(() {
+      BackendApiService().resetCredentialStoreForTesting();
       SharedPreferences.setMockInitialValues(<String, Object>{});
       coordinator = _RecordingCoordinator();
       BackendApiService().setAuthTokenForTesting(_jwt());

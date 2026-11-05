@@ -109,7 +109,7 @@ jobs:
         run: |
           npm run verify:toolchain:node
           npm run verify:architecture
-          node --test scripts/ci/workflow_contracts.test.mjs test/public_flutter_takeover.test.js test/takeover_status_design_parity.test.js test/flutter_bootstrap_engine_gate.test.js test/flutter_bootstrap_failure_signal.test.js scripts/qa/web_runtime_contract.test.mjs scripts/qa/map_request_policy.test.mjs
+          node --test scripts/ci/workflow_contracts.test.mjs scripts/ci/locale_shells.test.mjs test/public_flutter_takeover.test.js test/takeover_status_design_parity.test.js test/flutter_bootstrap_engine_gate.test.js test/flutter_bootstrap_failure_signal.test.js scripts/qa/web_runtime_contract.test.mjs scripts/qa/map_request_policy.test.mjs
           node --test scripts/qa/staging/isolation.test.mjs
           node scripts/ci/backend_gitlink_contract.mjs
       - name: Validate deployment contracts locally
@@ -410,6 +410,24 @@ jobs:
         # exercises the plugin's Kotlin sources.
         run: ./gradlew :arcore_flutter_plugin:testDebugUnitTest --console=plain
       - run: flutter build apk --release
+      - name: Check the merged release manifest permissions
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Plugins can add permissions the app manifest does not declare, so the
+          # merged manifest of the built APK is what counts.
+          perms="$("${ANDROID_HOME}/build-tools/36.0.0/aapt2" dump permissions build/app/outputs/flutter-apk/app-release.apk)"
+          { echo '### Merged manifest permissions'; echo '```'; echo "$perms"; echo '```'; } | tee -a "$GITHUB_STEP_SUMMARY"
+          # A plugin adds WRITE_EXTERNAL_STORAGE capped at API 28, which is legacy-only and
+          # harmless; all-files access and an uncapped write permission are not allowed.
+          if echo "$perms" | grep -E 'MANAGE_EXTERNAL_STORAGE'; then
+            echo '::error::All-files access is present in the merged release manifest.'
+            exit 1
+          fi
+          if echo "$perms" | grep -E 'WRITE_EXTERNAL_STORAGE' | grep -vE "maxSdkVersion='(2[0-9]|1[0-9]|[0-9])'"; then
+            echo '::error::An uncapped WRITE_EXTERNAL_STORAGE is present in the merged release manifest.'
+            exit 1
+          fi
       - name: Sign and verify the device-test APK
         shell: bash
         env:
@@ -459,6 +477,20 @@ jobs:
           channel: stable
           cache: true
       - run: flutter pub get
+      - name: Select and record the iOS toolchain
+        run: |
+          set -euo pipefail
+          # Apple requires the Xcode 26 SDK or later for App Store Connect uploads
+          # (since 2026-04-28); the runner image default is older. Fail loudly rather
+          # than build an IPA that cannot be uploaded.
+          best="$(ls -d /Applications/Xcode_*.app | sed 's#.*/Xcode_##; s#\.app$##' | sort -V | awk -F. '$1 >= 26' | tail -n 1)"
+          [ -n "$best" ] || { echo '::error::No Xcode 26 or later is installed on this runner image.'; exit 1; }
+          sudo xcode-select -s "/Applications/Xcode_${best}.app"
+          {
+            echo '### iOS toolchain'
+            xcodebuild -version
+            echo "iphoneos SDK $(xcrun --sdk iphoneos --show-sdk-version)"
+          } | tee -a "$GITHUB_STEP_SUMMARY"
       - run: flutter build ios --release --no-codesign
 
   web_routing:

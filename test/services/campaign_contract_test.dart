@@ -52,7 +52,11 @@ List<String> _literalsAfter(String source, String anchor) {
 /// Locates a sibling checkout, or skips: a developer with only this repo cloned
 /// should not see a red suite, while CI — which has all three — must.
 File? _siblingFile(String relative) {
-  for (final root in const <String>[
+  for (final root in <String>[
+    if (Platform.environment['KUBUS_BACKEND_CHECKOUT'] case final String path)
+      path,
+    if (Platform.environment['KUBUS_ADMIN_CHECKOUT'] case final String path)
+      path,
     'backend',
     '../art.kubus-backend',
     '../admin.kubus',

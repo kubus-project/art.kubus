@@ -146,6 +146,14 @@ speculative filter-syntax change was made.
 
 ## Routing-source findings (measured 2026-07-21, Chrome, localhost origin)
 
+> **Current policy (0.8.6).** The findings below are historical measurements. The app now asks only the
+> art.kubus-owned `POST /api/walking-graph`; `OVERPASS_WALKING_ENDPOINTS` defaults to **empty**, so a build contacts no
+> public Overpass server on its own (the area of a walk is personal data). The backend decides whether a public provider
+> may ever be used (`WALKING_GRAPH_ALLOW_PUBLIC_FALLBACK`, off in production; see the backend `docs/WALKING_GRAPH.md`).
+> A build may still list external endpoints through that define, explicitly, for development. When the owned service is
+> down and nothing is cached the client shows its retryable "route source could not be reached" state (Retry, external
+> maps); it never switches source silently.
+
 Both configured `OVERPASS_WALKING_ENDPOINTS` were exercised from a real browser
 origin with the production query and a fixed Ljubljana bounding box
 (`46.047,14.502,46.053,14.511`):

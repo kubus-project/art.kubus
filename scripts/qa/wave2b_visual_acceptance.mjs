@@ -261,11 +261,11 @@ async function installProfileApiFixture(page) {
       bio: institution
         ? 'A public cultural institution presenting visual art and local history in Ljubljana.'
         : 'Maja Novak is an artist working with public space, ecology and participatory archives across Slovenia.',
-      avatar: `${baseUrl}/images/social-preview-default.webp?entity=${username}`,
-      avatarUrl: `${baseUrl}/images/social-preview-default.webp?entity=${username}`,
-      avatar_url: `${baseUrl}/images/social-preview-default.webp?entity=${username}`,
-      coverImage: `${baseUrl}/images/social-preview-default.webp?entity=${username}-cover`,
-      cover_image_url: `${baseUrl}/images/social-preview-default.webp?entity=${username}-cover`,
+      avatar: `${baseUrl}/images/social-preview.png?entity=${username}`,
+      avatarUrl: `${baseUrl}/images/social-preview.png?entity=${username}`,
+      avatar_url: `${baseUrl}/images/social-preview.png?entity=${username}`,
+      coverImage: `${baseUrl}/images/social-preview.png?entity=${username}-cover`,
+      cover_image_url: `${baseUrl}/images/social-preview.png?entity=${username}-cover`,
       isArtist: !institution,
       is_artist: !institution,
       isInstitution: institution,

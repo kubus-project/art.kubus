@@ -13,6 +13,7 @@ import '../l10n/app_localizations_en.dart';
 import '../l10n/app_localizations_sl.dart';
 import '../models/art_marker.dart';
 import '../utils/reward_semantics.dart';
+import 'account_cache_store.dart';
 
 /// Push notification service for AR proximity alerts and community updates
 class PushNotificationService {
@@ -1321,6 +1322,8 @@ class PushNotificationService {
     double? currentBid,
     String? bidderName,
   }) async {
+    final cacheAccount = AccountCacheStore.owner;
+    final cacheGeneration = AccountCacheStore.generation;
     if (!_permissionGranted) return;
 
     String titleText = 'Auction Update';
@@ -1356,7 +1359,8 @@ class PushNotificationService {
           'actionUrl': 'app://auction/$auctionId',
         };
         await webshow.showNotification(titleText, bodyText, mapData);
-        await _storeInAppNotification('auction', titleText, bodyText, mapData);
+        await _storeInAppNotification(cacheAccount, cacheGeneration, 'auction',
+            titleText, bodyText, mapData);
         return;
       } catch (e) {
         debugPrint(
@@ -1407,7 +1411,8 @@ class PushNotificationService {
       payload: jsonEncode(payloadData),
     );
 
-    await _storeInAppNotification('auction', titleText, bodyText, payloadData);
+    await _storeInAppNotification(cacheAccount, cacheGeneration, 'auction',
+        titleText, bodyText, payloadData);
   }
 
   /// Push notification for collaborative art projects
@@ -1418,6 +1423,8 @@ class PushNotificationService {
     required String projectTitle,
     String? collaboratorName,
   }) async {
+    final cacheAccount = AccountCacheStore.owner;
+    final cacheGeneration = AccountCacheStore.generation;
     if (!_permissionGranted) return;
 
     String titleText = 'Collaboration';
@@ -1448,6 +1455,8 @@ class PushNotificationService {
         };
         await webshow.showNotification(titleText, bodyText, mapData);
         await _storeInAppNotification(
+          cacheAccount,
+          cacheGeneration,
           'collaboration',
           titleText,
           bodyText,
@@ -1501,6 +1510,8 @@ class PushNotificationService {
     );
 
     await _storeInAppNotification(
+      cacheAccount,
+      cacheGeneration,
       'collaboration',
       titleText,
       bodyText,
@@ -1518,6 +1529,8 @@ class PushNotificationService {
     String? inviterName,
     String? entityTitle,
   }) async {
+    final cacheAccount = AccountCacheStore.owner;
+    final cacheGeneration = AccountCacheStore.generation;
     if (!_permissionGranted) return;
 
     final normalizedType = entityType.trim().toLowerCase();
@@ -1551,6 +1564,8 @@ class PushNotificationService {
       try {
         await webshow.showNotification(titleText, bodyText, payloadData);
         await _storeInAppNotification(
+          cacheAccount,
+          cacheGeneration,
           'collab_invite',
           titleText,
           bodyText,
@@ -1595,6 +1610,8 @@ class PushNotificationService {
     );
 
     await _storeInAppNotification(
+      cacheAccount,
+      cacheGeneration,
       'collab_invite',
       titleText,
       bodyText,
@@ -1610,6 +1627,8 @@ class PushNotificationService {
     required String type, // 'starting_soon', 'live', 'reminder', 'ended'
     DateTime? startTime,
   }) async {
+    final cacheAccount = AccountCacheStore.owner;
+    final cacheGeneration = AccountCacheStore.generation;
     if (!_permissionGranted) return;
 
     String titleText = 'AR Event';
@@ -1640,7 +1659,8 @@ class PushNotificationService {
           'actionUrl': 'app://ar_event/$eventId',
         };
         await webshow.showNotification(titleText, bodyText, mapData);
-        await _storeInAppNotification('ar_event', titleText, bodyText, mapData);
+        await _storeInAppNotification(cacheAccount, cacheGeneration, 'ar_event',
+            titleText, bodyText, mapData);
         return;
       } catch (e) {
         debugPrint(
@@ -1688,7 +1708,8 @@ class PushNotificationService {
       payload: jsonEncode(payloadData),
     );
 
-    await _storeInAppNotification('ar_event', titleText, bodyText, payloadData);
+    await _storeInAppNotification(cacheAccount, cacheGeneration, 'ar_event',
+        titleText, bodyText, payloadData);
   }
 
   /// Push notification for challenges
@@ -1700,6 +1721,8 @@ class PushNotificationService {
     int? progress,
     int? total,
   }) async {
+    final cacheAccount = AccountCacheStore.owner;
+    final cacheGeneration = AccountCacheStore.generation;
     if (!_permissionGranted) return;
 
     String titleText = 'Challenge';
@@ -1729,6 +1752,8 @@ class PushNotificationService {
         };
         await webshow.showNotification(titleText, bodyText, mapData);
         await _storeInAppNotification(
+          cacheAccount,
+          cacheGeneration,
           'challenge',
           titleText,
           bodyText,
@@ -1783,6 +1808,8 @@ class PushNotificationService {
     );
 
     await _storeInAppNotification(
+      cacheAccount,
+      cacheGeneration,
       'challenge',
       titleText,
       bodyText,
@@ -1797,6 +1824,8 @@ class PushNotificationService {
     double? rewardAmount,
     String? poolName,
   }) async {
+    final cacheAccount = AccountCacheStore.owner;
+    final cacheGeneration = AccountCacheStore.generation;
     if (!_permissionGranted) return;
 
     String titleText = 'Staking Update';
@@ -1825,7 +1854,8 @@ class PushNotificationService {
           'actionUrl': 'app://staking',
         };
         await webshow.showNotification(titleText, bodyText, mapData);
-        await _storeInAppNotification('staking', titleText, bodyText, mapData);
+        await _storeInAppNotification(cacheAccount, cacheGeneration, 'staking',
+            titleText, bodyText, mapData);
         return;
       } catch (e) {
         debugPrint(
@@ -1872,7 +1902,8 @@ class PushNotificationService {
       payload: jsonEncode(payloadData),
     );
 
-    await _storeInAppNotification('staking', titleText, bodyText, payloadData);
+    await _storeInAppNotification(cacheAccount, cacheGeneration, 'staking',
+        titleText, bodyText, payloadData);
   }
 
   /// Dispose service
@@ -1881,51 +1912,65 @@ class PushNotificationService {
     onNotificationReceived = null;
   }
 
+  @visibleForTesting
+  Future<void> storeInAppNotificationForTesting(String title) =>
+      _storeInAppNotification(
+          AccountCacheStore.owner,
+          AccountCacheStore.generation,
+          'synthetic',
+          title,
+          'Synthetic body', <String, dynamic>{});
+
   Future<void> _storeInAppNotification(
+    String account,
+    int generation,
     String type,
     String title,
     String body,
     Map<String, dynamic> payload,
   ) async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final existing =
-          prefs.getStringList('in_app_notifications') ?? <String>[];
-      final entry = <String, dynamic>{
-        'type': type,
-        'title': title,
-        'body': body,
-        'payload': payload,
-        'timestamp': DateTime.now().toIso8601String(),
-      };
-      existing.insert(0, jsonEncode(entry));
-      if (existing.length > 100) {
-        existing.removeRange(100, existing.length);
-      }
-      await prefs.setStringList('in_app_notifications', existing);
-    } catch (e) {
-      debugPrint(
-        'PushNotificationService: failed to store in-app notification: $e',
-      );
+    if (account.isEmpty) {
+      return;
     }
+    final existing = await getInAppNotifications();
+    if (account != AccountCacheStore.owner ||
+        generation != AccountCacheStore.generation) {
+      return;
+    }
+    existing.insert(0, <String, dynamic>{
+      'type': type,
+      'title': title,
+      'body': body,
+      'payload': payload,
+      'timestamp': DateTime.now().toUtc().toIso8601String(),
+    });
+    await AccountCacheStore.write(
+        'in_app_notifications', existing.take(100).toList(),
+        account: account, generation: generation, ttl: const Duration(days: 7));
   }
 
-  /// Return in-app notifications stored locally.
-  /// Stored as a JSON-encoded list of notification objects under key 'in_app_notifications'.
+  /// Only the authenticated account's recent local notifications are visible.
   Future<List<Map<String, dynamic>>> getInAppNotifications() async {
-    final prefs = await SharedPreferences.getInstance();
-    final raw = prefs.getStringList('in_app_notifications') ?? [];
-    final List<Map<String, dynamic>> out = [];
-    for (final item in raw) {
-      try {
-        final decoded = jsonDecode(item) as Map<String, dynamic>;
-        out.add(decoded);
-      } catch (e) {
-        debugPrint(
-          'PushNotificationService.getInAppNotifications: failed to decode item: $e',
-        );
-      }
+    final account = AccountCacheStore.owner;
+    final generation = AccountCacheStore.generation;
+    final raw = await AccountCacheStore.read('in_app_notifications');
+    if (account.isEmpty ||
+        account != AccountCacheStore.owner ||
+        generation != AccountCacheStore.generation) {
+      return <Map<String, dynamic>>[];
     }
-    return out;
+    if (raw is! List) {
+      return <Map<String, dynamic>>[];
+    }
+    final cutoff = DateTime.now().subtract(const Duration(days: 7));
+    return raw
+        .whereType<Map>()
+        .map((item) => Map<String, dynamic>.from(item))
+        .where((item) {
+      final timestamp = DateTime.tryParse(item['timestamp']?.toString() ?? '');
+      return timestamp != null &&
+          timestamp.isAfter(cutoff) &&
+          !timestamp.isAfter(DateTime.now());
+    }).toList();
   }
 }

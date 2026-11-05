@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../utils/wallet_utils.dart';
+import 'account_cache_store.dart';
 
 /// The one place that tracks which account this device is signed in as, and
 /// announces when that identity changes: a session was cleared (sign-out, a
@@ -20,7 +21,7 @@ abstract final class AccountIdentity {
   static final List<VoidCallback> _listeners = <VoidCallback>[];
 
   /// Device-level records kept per account. The unscoped keys are the legacy
-  /// form, adopted once by the first account that signs in.
+  /// form; unowned legacy records are discarded without attributing them.
   static const String blockedWalletsKey = 'blocked_wallets_v1';
   static const String reportedPostsKey = 'reported_posts';
 
@@ -29,6 +30,8 @@ abstract final class AccountIdentity {
   static const List<String> _purgedKeys = <String>[
     // Artwork view history: what the previous account browsed.
     'artwork_view_history_v1',
+    blockedWalletsKey,
+    reportedPostsKey,
     // Local collectible and institution stores.
     'collectibles_v1',
     'collectible_series_v1',
@@ -44,8 +47,7 @@ abstract final class AccountIdentity {
   /// The stable id of the signed-in account, or empty for a guest.
   static String _accountKey = '';
 
-  /// The one-time adoption of the legacy unscoped records, shared by every
-  /// caller. Set by the first signed-in account; later accounts do not adopt.
+  /// Shared best-effort cleanup of legacy records with no trustworthy owner.
   static Future<void>? _legacyAdoption;
 
   @visibleForTesting
@@ -58,6 +60,7 @@ abstract final class AccountIdentity {
   /// the caller that ends or switches a session calls [notifyChanged] too.
   static void setAccountKey(String key) {
     _accountKey = key.trim();
+    AccountCacheStore.bindAccount(_accountKey);
     if (_accountKey.isNotEmpty) unawaited(adoptLegacyRecords(_accountKey));
   }
 
@@ -70,48 +73,28 @@ abstract final class AccountIdentity {
     return '$base.$safe';
   }
 
-  /// Moves the legacy unscoped block and report records to [key] and deletes
-  /// the unscoped copies. Runs once per device: the first signed-in account
-  /// adopts them, and the same future answers every later caller. On a shared
-  /// device, an account that signs in first after the upgrade inherits the
-  /// previous users' unscoped blocks and reports; this is accepted and one-time.
+  /// Discards unowned legacy block/report records. Already scoped records
+  /// remain untouched. The historical entry-point name is retained for callers;
+  /// no account is inferred from the first subsequent sign-in.
   static Future<void> adoptLegacyRecords(String key) {
-    final owner = key.trim();
-    if (owner.isEmpty) return Future<void>.value();
-    return _legacyAdoption ??= _adoptLegacyRecords(owner);
+    if (key.trim().isEmpty) return Future<void>.value();
+    return _legacyAdoption ??= _discardUnownedLegacyRecords();
   }
 
-  static Future<void> _adoptLegacyRecords(String owner) async {
+  static Future<void> _discardUnownedLegacyRecords() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-
-      final legacyBlocked = prefs.getString(blockedWalletsKey);
-      if (legacyBlocked != null) {
-        final target = scopedKey(blockedWalletsKey, accountKey: owner)!;
-        final merged = <String>{
-          ...decodeWalletList(prefs.getString(target)),
-          ...decodeWalletList(legacyBlocked),
-        };
-        await prefs.setString(target, jsonEncode(merged.toList()));
-        await prefs.remove(blockedWalletsKey);
-      }
-
-      final legacyReported = prefs.getStringList(reportedPostsKey);
-      if (legacyReported != null) {
-        final target = scopedKey(reportedPostsKey, accountKey: owner)!;
-        final merged = <String>[...?prefs.getStringList(target)];
-        for (final report in legacyReported) {
-          if (!merged.contains(report)) merged.add(report);
+      var complete = true;
+      for (final key in const [blockedWalletsKey, reportedPostsKey]) {
+        try {
+          if (!await prefs.remove(key)) complete = false;
+        } catch (_) {
+          complete = false;
         }
-        await prefs.setStringList(target, merged);
-        await prefs.remove(reportedPostsKey);
       }
-    } catch (e) {
-      // Leave the legacy records in place and let a later call retry.
+      if (!complete) _legacyAdoption = null;
+    } catch (_) {
       _legacyAdoption = null;
-      if (kDebugMode) {
-        debugPrint('AccountIdentity: legacy adoption failed: $e');
-      }
     }
   }
 
@@ -142,6 +125,7 @@ abstract final class AccountIdentity {
   /// Announces an identity change. Listeners run now; the returned future
   /// completes once the device-level account keys are purged.
   static Future<void> notifyChanged() async {
+    final cacheCleanup = AccountCacheStore.purge();
     for (final listener in List<VoidCallback>.of(_listeners)) {
       try {
         listener();
@@ -151,6 +135,7 @@ abstract final class AccountIdentity {
         }
       }
     }
+    await cacheCleanup;
     try {
       final prefs = await SharedPreferences.getInstance();
       for (final key in _purgedKeys) {
@@ -172,6 +157,7 @@ abstract final class AccountIdentity {
   @visibleForTesting
   static void resetForTesting() {
     _accountKey = '';
+    AccountCacheStore.bindAccount('');
     _legacyAdoption = null;
   }
 }
