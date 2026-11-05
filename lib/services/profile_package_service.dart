@@ -496,6 +496,64 @@ class ProfilePackageService {
     );
   }
 
+  /// Patches every cached critical package of an account known by identity
+  /// (account UUID, profile id or the cache key it was loaded under) rather
+  /// than by wallet. Walletless accounts (official institution accounts) are
+  /// cached only under such keys, so the wallet-keyed [patchUser] cannot reach
+  /// them; aliases such as `username:<handle>` hold the same package and are
+  /// patched together so none keeps serving the old state as fresh.
+  static void patchUserByIdentity(
+    String identity,
+    User Function(User current) patch,
+  ) {
+    _patchByIdentity(
+      identity,
+      (critical) => critical.copyWith(user: patch(critical.user)),
+    );
+  }
+
+  /// Identity-keyed variant of [patchStats]; see [patchUserByIdentity].
+  static void patchStatsByIdentity(String identity, Map<String, int> patch) {
+    if (patch.isEmpty) return;
+    _patchByIdentity(identity, (critical) {
+      final updatedStats = <String, int>{...critical.publicStats, ...patch};
+      return critical.copyWith(
+        publicStats: updatedStats,
+        user: critical.user.copyWith(
+          postsCount: updatedStats['posts'] ?? critical.user.postsCount,
+          followersCount:
+              updatedStats['followers'] ?? critical.user.followersCount,
+          followingCount:
+              updatedStats['following'] ?? critical.user.followingCount,
+        ),
+      );
+    });
+  }
+
+  static void _patchByIdentity(
+    String identity,
+    ProfileCriticalPackage Function(ProfileCriticalPackage current) transform,
+  ) {
+    _syncCacheScope();
+    final id = WalletUtils.canonical(identity);
+    if (id.isEmpty) return;
+    final keys = <String>[
+      for (final entry in _criticalCache.entries)
+        if (entry.key == id ||
+            WalletUtils.canonical(entry.value.user.id) == id ||
+            // A walletless profile is cached under its profile UUID while the
+            // follow mutation knows it by its account UUID (User.userId).
+            WalletUtils.canonical(entry.value.user.userId) == id)
+          entry.key,
+    ];
+    if (keys.isEmpty) return;
+    for (final key in keys) {
+      final current = _criticalCache[key];
+      if (current != null) _criticalCache[key] = transform(current);
+    }
+    unawaited(_persistCriticalCache());
+  }
+
   static void patchPosts(
     String walletAddress,
     List<CommunityPost> posts, {
@@ -596,6 +654,14 @@ class ProfilePackageService {
     if (extended != null) {
       _storeExtendedPackage(package.user.id, extended);
     }
+  }
+
+  /// Registers [alias] (for example `username:<handle>`, the key a walletless
+  /// profile is cached under) as another key for the package of [identity].
+  @visibleForTesting
+  static void aliasCriticalPackageForTesting(String alias, String identity) {
+    final critical = _criticalCache[WalletUtils.canonical(identity)];
+    if (critical != null) _criticalCache[alias] = critical;
   }
 
   static Future<PublicEntityLoadOutcome<ProfileCriticalPackage>>
