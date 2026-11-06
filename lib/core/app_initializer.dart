@@ -215,8 +215,9 @@ class _AppInitializerState extends State<AppInitializer> {
   /// email verification, a pending structured journey, an active registration
   /// or account-link guard), which is read back from preferences, bounded.
   Future<void> _openDegradedEntry(NavigatorState navigator) async {
-    if (!widget.explicitOnboarding && _openPendingPublicTarget(navigator))
+    if (!widget.explicitOnboarding && _openPendingPublicTarget(navigator)) {
       return;
+    }
     final prefs = await _safeStep<SharedPreferences>(
       'SharedPreferences.getInstance (degraded entry)',
       SharedPreferences.getInstance,
