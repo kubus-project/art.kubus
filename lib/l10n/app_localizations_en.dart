@@ -15914,8 +15914,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get walletSetupPhaseLinked => 'Wallet linked to this account.';
 
   @override
-  String get walletSetupPhaseFailed =>
-      'Wallet link status needs checking';
+  String get walletSetupPhaseFailed => 'Wallet link status needs checking';
 
   @override
   String get onboardingStageWelcome => 'Welcome';

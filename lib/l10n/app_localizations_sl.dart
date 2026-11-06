@@ -16081,8 +16081,7 @@ class AppLocalizationsSl extends AppLocalizations {
   String get walletSetupPhaseLinked => 'Denarnica je povezana s tem računom.';
 
   @override
-  String get walletSetupPhaseFailed =>
-      'Preveri stanje povezave denarnice';
+  String get walletSetupPhaseFailed => 'Preveri stanje povezave denarnice';
 
   @override
   String get onboardingStageWelcome => 'Dobrodošlica';
