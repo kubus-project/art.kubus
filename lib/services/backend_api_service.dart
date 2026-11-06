@@ -1095,26 +1095,34 @@ class BackendApiService
     await _commitAuthSession(token, expectedEpoch: expectedEpoch);
   }
 
+  /// Commits a credential pair. The epoch and the credential target advance
+  /// synchronously here, before the commit waits for the mutation lock. An older
+  /// commit still writing therefore sees it was superseded when it resumes and
+  /// throws before the newer commit runs. The bump occurs before any await.
   Future<int> _commitAuthSession(
     String token, {
     String? refreshToken,
     int? expectedEpoch,
-  }) =>
-      _withAuthSessionMutationLock(
-        () => _commitAuthSessionLocked(
-          token,
-          refreshToken: refreshToken,
-          expectedEpoch: expectedEpoch,
-        ),
-      );
-
-  Future<int> _commitAuthSessionLocked(String token,
-      {String? refreshToken, int? expectedEpoch}) async {
+  }) async {
     if (expectedEpoch != null && expectedEpoch != _authSessionEpoch) {
       throw StateError('Authentication request belongs to an ended session');
     }
     final epoch = ++_authSessionEpoch;
     _credentialTargetToken = token;
+    return _withAuthSessionMutationLock(
+      () => _commitAuthSessionLocked(
+        token,
+        epoch: epoch,
+        refreshToken: refreshToken,
+      ),
+    );
+  }
+
+  Future<int> _commitAuthSessionLocked(String token,
+      {required int epoch, String? refreshToken}) async {
+    if (epoch != _authSessionEpoch) {
+      throw StateError('Authentication session changed');
+    }
     final previousIdentity = _authIdentityOf(_authToken);
     try {
       final stored = !_hasInitializedBinding ||
