@@ -45,13 +45,20 @@ Future<void> confirmAndCloseAccount(BuildContext context) async {
   ) async {
     switch (outcome) {
       case AccountClosureAccepted():
-        // Reset while the busy dialog still covers the settings screen.
-        await SettingsService.resetApp(
-          walletProvider: walletProvider,
-          backendApi: BackendApiService(),
-          notificationProvider: notificationProvider,
-          profileProvider: profileProvider,
-        );
+        // Reset while the busy dialog still covers the settings screen. The
+        // closure is already accepted, so a failed local reset must not leave
+        // the dialog busy: navigation still happens.
+        try {
+          await SettingsService.resetApp(
+            walletProvider: walletProvider,
+            backendApi: BackendApiService(),
+            notificationProvider: notificationProvider,
+            profileProvider: profileProvider,
+          );
+        } catch (e) {
+          debugPrint(
+              'AccountClosure: local reset after acceptance failed (${e.runtimeType})');
+        }
         messenger.showKubusSnackBar(
           SnackBar(
             content: Text(l10n.settingsAccountDeletedToast),
