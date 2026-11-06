@@ -1284,15 +1284,14 @@ class _ArtKubusState extends State<ArtKubus> with WidgetsBindingObserver {
               ),
             );
           }
-          // A bare `/onboarding` has no capability scope: every in-app push
-          // supplies arguments, and a browser refresh or a typed/stale URL
-          // drops them. Showing the full welcome flow there would put a
-          // first-visit wall in front of discovery, so hand it to the
-          // initializer instead: a real pending account journey still
-          // resumes at its own step, anyone else lands in public discovery.
-          // Voluntary profile completion opens the flow directly from
-          // settings rather than by this route.
-          return const AppInitializer();
+          // A typed or refreshed URL is an explicit request. Initialize
+          // first so an interrupted account journey can still be resumed.
+          return AppInitializer(
+            explicitOnboarding: true,
+            initialUri: Uri.tryParse(
+              ModalRoute.of(context)?.settings.name ?? '/onboarding',
+            ),
+          );
         },
         '/secure-account': (context) => const SecureAccountScreen(),
         '/verify-email': (context) {
