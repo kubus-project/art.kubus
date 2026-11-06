@@ -3177,6 +3177,22 @@ class AppLocalizationsEn extends AppLocalizations {
       'Closure could not be confirmed. Check its status before trying again.';
 
   @override
+  String get settingsDeleteAccountBusy =>
+      'Deleting your account. This can take a moment.';
+
+  @override
+  String get settingsDeleteAccountPendingToast =>
+      'Account closure is being processed. You have been signed out. Its status is shown here.';
+
+  @override
+  String get settingsDeleteAccountNotStartedToast =>
+      'Account closure did not start. Nothing was deleted. You can try again.';
+
+  @override
+  String get settingsDeleteAccountRefusedToast =>
+      'The server declined the closure. Nothing was deleted and you are still signed in. You can try again.';
+
+  @override
   String get settingsAccountDeletedToast =>
       'Account closure requested. Some data may require further review or be retained.';
 
@@ -19064,6 +19080,14 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get accountClosureContinue => 'Continue to welcome';
+
+  @override
+  String get accountClosureRemoveReceipt =>
+      'Remove this receipt from this device';
+
+  @override
+  String get accountClosureRemoveReceiptHint =>
+      'While this receipt is stored here, signing in to its account is blocked. Removing it lifts that block, and this device can no longer check the closure status.';
 
   @override
   String get reportContentTitle => 'Report content';

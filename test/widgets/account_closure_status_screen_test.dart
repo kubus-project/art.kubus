@@ -19,7 +19,9 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../support/qa_font_loader.dart';
 
 final receipt = AccountClosureReceipt(
-    operationId: '00000000-0000-4000-8000-000000000001', statusToken: 'a' * 64);
+    operationId: '00000000-0000-4000-8000-000000000001',
+    statusToken: 'a' * 64,
+    accountId: 'synthetic-user');
 const proofKey = Key('closure-proof');
 
 void main() {

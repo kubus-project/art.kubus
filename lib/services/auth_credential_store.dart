@@ -51,6 +51,16 @@ class AuthCredentialStore {
   Future<String?> readClosureReceipt() => _run((_) async =>
       _web ? _closureReceiptMemory : _secure.read(key: closureReceiptKey));
 
+  /// Removes the stored receipt. Used when it is stale, invalid, refused by
+  /// the server, or belongs to an account other than the one signing in.
+  Future<void> clearClosureReceipt() => _run((_) async {
+        if (_web) {
+          _closureReceiptMemory = null;
+        } else {
+          await _secure.delete(key: closureReceiptKey);
+        }
+      });
+
   Iterable<String> get _legacyKeys => {
         ...AuthGatingService.accessTokenKeys,
         ...AuthGatingService.refreshTokenKeys,
