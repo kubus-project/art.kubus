@@ -12091,13 +12091,13 @@ abstract class AppLocalizations {
   /// No description provided for @walletHomeAccountShellTitle.
   ///
   /// In en, this message translates to:
-  /// **'Profile active, wallet not restored'**
+  /// **'Account active, no wallet connected'**
   String get walletHomeAccountShellTitle;
 
   /// No description provided for @walletHomeAccountShellDescription.
   ///
   /// In en, this message translates to:
-  /// **'Your account session is available. This device needs Wallet only for ownership and participation actions.'**
+  /// **'Your account works without a wallet. Connect one only for wallet-based ownership and participation actions.'**
   String get walletHomeAccountShellDescription;
 
   /// No description provided for @walletHomeRestoreWalletAction.
@@ -27556,7 +27556,7 @@ abstract class AppLocalizations {
   /// No description provided for @walletSetupGenericLinkError.
   ///
   /// In en, this message translates to:
-  /// **'Wallet linking failed. Try again.'**
+  /// **'We could not confirm whether this wallet was linked. Check your account wallet status before trying again.'**
   String get walletSetupGenericLinkError;
 
   /// No description provided for @walletSetupStatusLoginAccount.
@@ -27634,7 +27634,7 @@ abstract class AppLocalizations {
   /// No description provided for @walletSetupPhaseFailed.
   ///
   /// In en, this message translates to:
-  /// **'Wallet link failed. Your account was not changed.'**
+  /// **'Wallet link status needs checking'**
   String get walletSetupPhaseFailed;
 
   /// No description provided for @onboardingStageWelcome.

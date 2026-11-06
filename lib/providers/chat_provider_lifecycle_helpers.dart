@@ -346,9 +346,12 @@ void _chatProviderBindAuthContext(
 
 Future<void> _chatProviderSetCurrentWallet(
   ChatProvider provider,
-  String wallet,
-) async {
+  String wallet, {
+  bool Function()? shouldContinue,
+}) async {
   try {
+    bool isSessionCurrent() => shouldContinue?.call() ?? true;
+    if (!isSessionCurrent()) return;
     if (wallet.isEmpty) return;
     if (WalletUtils.equals(provider._currentWallet, wallet)) return;
     if ((provider._currentWallet ?? '').isNotEmpty) {
@@ -358,11 +361,23 @@ Future<void> _chatProviderSetCurrentWallet(
     // flight for the previous wallet is dropped when it resolves.
     provider._sessionGeneration += 1;
     final generation = provider._sessionGeneration;
-    bool isStale() => generation != provider._sessionGeneration;
+    bool isStale() =>
+        generation != provider._sessionGeneration || !isSessionCurrent();
+    bool abortIfStale() {
+      if (!isStale()) return false;
+      if (generation == provider._sessionGeneration && !isSessionCurrent()) {
+        provider._resetSessionState(
+          reason: 'accountLinkSessionEnded',
+          notify: false,
+        );
+      }
+      return true;
+    }
+
     provider._currentWallet = wallet;
     try {
       final meResp = await provider._api.getMyProfile();
-      if (isStale()) return;
+      if (abortIfStale()) return;
       if (meResp['success'] == true && meResp['data'] != null) {
         final me = meResp['data'] as Map<String, dynamic>;
         final canonical = ChatProvider.walletFromProfilePayload(me);
@@ -376,7 +391,7 @@ Future<void> _chatProviderSetCurrentWallet(
       debugPrint(
           'ChatProvider.setCurrentWallet: failed to resolve canonical wallet from server: $e');
     }
-    if (isStale()) return;
+    if (abortIfStale()) return;
     debugPrint(
         'ChatProvider.setCurrentWallet: wallet=${provider._currentWallet}');
     try {
@@ -385,7 +400,7 @@ Future<void> _chatProviderSetCurrentWallet(
     } catch (e) {
       debugPrint('setCurrentWallet: ensureAuthLoaded failed: $e');
     }
-    if (isStale()) return;
+    if (abortIfStale()) return;
     try {
       var ok = await provider._socket
           .connectAndSubscribe(provider._api.baseUrl, provider._currentWallet!);
@@ -395,29 +410,29 @@ Future<void> _chatProviderSetCurrentWallet(
               .issueDebugTokenForWallet(provider._currentWallet!);
           if (issued) {
             await provider._api.loadAuthToken();
-            if (isStale()) return;
+            if (abortIfStale()) return;
             ok = await provider._socket.connectAndSubscribe(
                 provider._api.baseUrl, provider._currentWallet!);
           }
         } catch (_) {}
       }
-      if (isStale()) return;
+      if (abortIfStale()) return;
       if (!ok) provider._socket.subscribeUser(provider._currentWallet!);
     } catch (e) {
       debugPrint('ChatProvider.setCurrentWallet: socket subscribe failed: $e');
-      if (isStale()) return;
+      if (abortIfStale()) return;
       try {
         provider._socket.subscribeUser(provider._currentWallet!);
       } catch (_) {}
     }
-    if (isStale()) return;
+    if (abortIfStale()) return;
     try {
       await provider.refreshConversations();
     } catch (e) {
       debugPrint(
           'ChatProvider.setCurrentWallet: refreshConversations failed: $e');
     }
-    if (isStale()) return;
+    if (abortIfStale()) return;
     provider._startSubscriptionMonitor();
     _chatProviderEvaluateConversationPolling(provider, forceRestart: true);
     provider._safeNotifyListeners(force: true);

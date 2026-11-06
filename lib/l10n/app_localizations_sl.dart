@@ -6968,11 +6968,11 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get walletHomeAccountShellTitle =>
-      'Račun je prijavljen, denarnica ni obnovljena';
+      'Račun je aktiven, denarnica ni povezana';
 
   @override
   String get walletHomeAccountShellDescription =>
-      'Seja računa je na voljo. Ta naprava potrebuje denarnico samo za dejanja lastništva in sodelovanja.';
+      'Račun deluje tudi brez denarnice. Povežite jo le za dejanja lastništva in sodelovanja, ki zahtevajo denarnico.';
 
   @override
   String get walletHomeRestoreWalletAction => 'Obnovi denarnico';
@@ -16036,7 +16036,7 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get walletSetupGenericLinkError =>
-      'Povezovanje denarnice ni uspelo. Poskusi znova.';
+      'Ni bilo mogoče potrditi, ali je denarnica povezana. Pred ponovnim poskusom preveri stanje denarnice v svojem računu.';
 
   @override
   String get walletSetupStatusLoginAccount => 'Prijavni račun';
@@ -16081,8 +16081,7 @@ class AppLocalizationsSl extends AppLocalizations {
   String get walletSetupPhaseLinked => 'Denarnica je povezana s tem računom.';
 
   @override
-  String get walletSetupPhaseFailed =>
-      'Povezovanje denarnice ni uspelo. Račun ni bil spremenjen.';
+  String get walletSetupPhaseFailed => 'Preveri stanje povezave denarnice';
 
   @override
   String get onboardingStageWelcome => 'Dobrodošlica';
