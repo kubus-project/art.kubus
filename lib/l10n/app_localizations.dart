@@ -15577,6 +15577,54 @@ abstract class AppLocalizations {
   /// **'Connect a wallet to apply'**
   String get artistStudioCtaConnectWalletToApply;
 
+  /// No description provided for @artistStudioAccountCtaApply.
+  ///
+  /// In en, this message translates to:
+  /// **'Apply for artist review'**
+  String get artistStudioAccountCtaApply;
+
+  /// No description provided for @artistStudioAccountCtaRetry.
+  ///
+  /// In en, this message translates to:
+  /// **'Try again'**
+  String get artistStudioAccountCtaRetry;
+
+  /// No description provided for @artistStudioAccountApplicationUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Artist applications are unavailable right now. Try again later.'**
+  String get artistStudioAccountApplicationUnavailable;
+
+  /// No description provided for @artistStudioAccountDetailNotApplied.
+  ///
+  /// In en, this message translates to:
+  /// **'Send your portfolio, medium and statement. A wallet is not needed to apply.'**
+  String get artistStudioAccountDetailNotApplied;
+
+  /// No description provided for @artistStudioAccountDetailPending.
+  ///
+  /// In en, this message translates to:
+  /// **'Your application is waiting for an artist review.'**
+  String get artistStudioAccountDetailPending;
+
+  /// No description provided for @artistStudioAccountDetailApproved.
+  ///
+  /// In en, this message translates to:
+  /// **'Your artist application was approved.'**
+  String get artistStudioAccountDetailApproved;
+
+  /// No description provided for @artistStudioAccountDetailRejected.
+  ///
+  /// In en, this message translates to:
+  /// **'This application was not approved. You can send a new one.'**
+  String get artistStudioAccountDetailRejected;
+
+  /// No description provided for @artistStudioAccountPortfolioInvalid.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter a valid web address, for example example.com.'**
+  String get artistStudioAccountPortfolioInvalid;
+
   /// No description provided for @artistStudioCtaApprovedByDao.
   ///
   /// In en, this message translates to:

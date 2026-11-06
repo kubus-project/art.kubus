@@ -8934,6 +8934,36 @@ class AppLocalizationsEn extends AppLocalizations {
   String get artistStudioCtaConnectWalletToApply => 'Connect a wallet to apply';
 
   @override
+  String get artistStudioAccountCtaApply => 'Apply for artist review';
+
+  @override
+  String get artistStudioAccountCtaRetry => 'Try again';
+
+  @override
+  String get artistStudioAccountApplicationUnavailable =>
+      'Artist applications are unavailable right now. Try again later.';
+
+  @override
+  String get artistStudioAccountDetailNotApplied =>
+      'Send your portfolio, medium and statement. A wallet is not needed to apply.';
+
+  @override
+  String get artistStudioAccountDetailPending =>
+      'Your application is waiting for an artist review.';
+
+  @override
+  String get artistStudioAccountDetailApproved =>
+      'Your artist application was approved.';
+
+  @override
+  String get artistStudioAccountDetailRejected =>
+      'This application was not approved. You can send a new one.';
+
+  @override
+  String get artistStudioAccountPortfolioInvalid =>
+      'Enter a valid web address, for example example.com.';
+
+  @override
   String get artistStudioCtaApprovedByDao => 'Approved by governance review';
 
   @override

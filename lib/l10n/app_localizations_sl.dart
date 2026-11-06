@@ -9003,6 +9003,36 @@ class AppLocalizationsSl extends AppLocalizations {
       'Poveži denarnico za prijavo';
 
   @override
+  String get artistStudioAccountCtaApply => 'Prijavi se na pregled umetnika';
+
+  @override
+  String get artistStudioAccountCtaRetry => 'Poskusi znova';
+
+  @override
+  String get artistStudioAccountApplicationUnavailable =>
+      'Prijave umetnikov trenutno niso na voljo. Poskusite znova pozneje.';
+
+  @override
+  String get artistStudioAccountDetailNotApplied =>
+      'Pošljite portfelj, medij in izjavo. Za prijavo denarnica ni potrebna.';
+
+  @override
+  String get artistStudioAccountDetailPending =>
+      'Vaša prijava čaka na pregled umetnika.';
+
+  @override
+  String get artistStudioAccountDetailApproved =>
+      'Vaša prijava umetnika je bila odobrena.';
+
+  @override
+  String get artistStudioAccountDetailRejected =>
+      'Ta prijava ni bila odobrena. Lahko pošljete novo.';
+
+  @override
+  String get artistStudioAccountPortfolioInvalid =>
+      'Vnesite veljaven spletni naslov, na primer primer.si.';
+
+  @override
   String get artistStudioCtaApprovedByDao => 'Odobreno v pregledu upravljanja';
 
   @override

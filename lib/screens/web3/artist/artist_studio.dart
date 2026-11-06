@@ -12,6 +12,7 @@ import '../../onboarding/web3/onboarding_data.dart';
 import 'artist_portfolio_screen.dart';
 import 'artist_analytics.dart';
 import 'artist_studio_create_screen.dart';
+import 'artist_account_application_panel.dart';
 import 'package:provider/provider.dart';
 
 import '../../../config/config.dart';
@@ -417,6 +418,14 @@ class _ArtistStudioState extends State<ArtistStudio> {
         message: message,
         tone: KubusStatusTone.negative,
       );
+    }
+
+    // A signed-in account without a wallet applies through the account
+    // endpoint instead. Wallet accounts keep the wallet-keyed review below.
+    final signedInWithoutWallet = _resolveWalletAddress(listen: true).isEmpty &&
+        context.watch<ProfileProvider>().currentUser != null;
+    if (signedInWithoutWallet) {
+      return const ArtistAccountApplicationPanel();
     }
 
     final wallet = _resolveWalletAddress();

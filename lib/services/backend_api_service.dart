@@ -15,6 +15,7 @@ import '../models/kubus_node_models.dart';
 import '../models/community_group.dart';
 import '../models/event.dart';
 import '../models/exhibition.dart';
+import '../models/artist_application.dart';
 import '../models/institution_claim.dart';
 import '../models/community_subject.dart';
 import '../models/profile_artworks_page.dart';
@@ -90,6 +91,19 @@ class PromotionPaymentPendingException implements Exception {
 
   @override
   String toString() => message;
+}
+
+/// True when a 404 body is the account artist-application "not found" answer.
+/// A non-JSON body (for example a route missing on an older backend) is not
+/// that answer, so it must not be read as "no application".
+bool _isNoArtistApplicationBody(String body) {
+  try {
+    final decoded = jsonDecode(body);
+    return decoded is Map &&
+        decoded['error'] == 'Artist application not found';
+  } catch (_) {
+    return false;
+  }
 }
 
 class BackendApiRequestException implements Exception {
@@ -9016,6 +9030,93 @@ class BackendApiService
     } catch (e) {
       AppConfig.debugPrint(
           'BackendApiService.getMyInstitutionClaims failed: $e');
+      rethrow;
+    }
+  }
+
+  /// Apply for artist review as a signed-in account. No wallet signature is
+  /// needed; the backend keys the application to the account token.
+  /// POST /api/dao/artist-applications (201 with the new application).
+  ///
+  /// Throws [BackendApiRequestException] on 400 (invalid fields), 401 (no
+  /// account), 409 (an artist role or an open application already exists).
+  Future<ArtistApplicationSummary> submitArtistApplication({
+    required String portfolioUrl,
+    required String medium,
+    required String statement,
+  }) async {
+    _throwIfIpfsFallbackUnavailable('Artist applications');
+
+    try {
+      await _ensureAuthBeforeRequest();
+      final uri = Uri.parse('$baseUrl/api/dao/artist-applications');
+      final response = await _post(
+        uri,
+        headers: _getHeaders(),
+        body: jsonEncode(<String, dynamic>{
+          'portfolioUrl': portfolioUrl.trim(),
+          'medium': medium.trim(),
+          'statement': statement.trim(),
+        }),
+        timeout: const Duration(seconds: 20),
+      );
+
+      if (!_isSuccessStatus(response.statusCode)) {
+        throw BackendApiRequestException(
+          statusCode: response.statusCode,
+          path: uri.path,
+          body: response.body,
+        );
+      }
+
+      final decoded = _decodeResponseMap(response);
+      final application = ArtistApplicationSummary.tryParse(
+        decoded?['data'] ?? decoded,
+      );
+      if (application == null) {
+        throw BackendApiRequestException(
+          statusCode: response.statusCode,
+          path: uri.path,
+          body: response.body,
+        );
+      }
+      return application;
+    } catch (e) {
+      AppConfig.debugPrint(
+          'BackendApiService.submitArtistApplication failed: $e');
+      rethrow;
+    }
+  }
+
+  /// The signed-in account's own artist application, or null when the account
+  /// has never applied. GET /api/dao/artist-applications/mine
+  ///
+  /// The backend answers 404 with `error: 'Artist application not found'` for
+  /// "no application yet"; that is a normal answer and returns null. Any other
+  /// non-success status, including a 404 from a backend that predates the
+  /// route, throws [BackendApiRequestException] so the caller can show an
+  /// "unavailable right now" state.
+  Future<ArtistApplicationSummary?> getMyArtistApplication() async {
+    try {
+      await _ensureAuthBeforeRequest();
+      final uri = Uri.parse('$baseUrl/api/dao/artist-applications/mine');
+      final response = await _get(uri, headers: _getHeaders());
+      if (response.statusCode == 404 &&
+          _isNoArtistApplicationBody(response.body)) {
+        return null;
+      }
+      if (!_isSuccessStatus(response.statusCode)) {
+        throw BackendApiRequestException(
+          statusCode: response.statusCode,
+          path: uri.path,
+          body: response.body,
+        );
+      }
+      final decoded = _decodeResponseMap(response);
+      return ArtistApplicationSummary.tryParse(decoded?['data'] ?? decoded);
+    } catch (e) {
+      AppConfig.debugPrint(
+          'BackendApiService.getMyArtistApplication failed: $e');
       rethrow;
     }
   }
