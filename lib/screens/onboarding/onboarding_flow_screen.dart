@@ -2563,18 +2563,18 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
       final wallet = (currentUser?.walletAddress ?? '').trim();
       final accountKey = (currentUser?.userId ?? currentUser?.id ?? '').trim();
       // A walletless (email/Google) account has no wallet but still has an
-      // account id. Its role is saved against that id; only an account with
-      // neither is refused, so the choice is never dropped silently.
-      if (wallet.isEmpty && accountKey.isEmpty) {
-        throw StateError('No signed-in account to save the role against');
+      // account id. Its role is saved against that id. A session with neither
+      // (a guest walking the flow) keeps the choice in the local draft only,
+      // exactly as before, and continues.
+      if (wallet.isNotEmpty || accountKey.isNotEmpty) {
+        await profileProvider
+            .setUserPersona(
+              persona,
+              persistToBackend: true,
+              throwOnBackendFailure: true,
+            )
+            .timeout(const Duration(seconds: 8));
       }
-      await profileProvider
-          .setUserPersona(
-            persona,
-            persistToBackend: true,
-            throwOnBackendFailure: true,
-          )
-          .timeout(const Duration(seconds: 8));
       if (wallet.isNotEmpty) {
         try {
           await profileProvider.loadProfile(wallet).timeout(
