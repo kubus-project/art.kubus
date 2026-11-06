@@ -12,6 +12,7 @@ import '../services/backend_api_service.dart';
 import '../services/settings_service.dart';
 import '../utils/design_tokens.dart';
 import 'glass_components.dart';
+import 'inline_loading.dart';
 import 'kubus_snackbar.dart';
 
 /// Test seam. When set, [confirmAndCloseAccount] uses this coordinator.
@@ -238,7 +239,8 @@ class _AccountClosureConfirmDialogState
                       const SizedBox(
                         width: 20,
                         height: 20,
-                        child: CircularProgressIndicator(strokeWidth: 2),
+                        child:
+                            InlineLoading(width: 20, height: 20, tileSize: 6),
                       ),
                       const SizedBox(width: KubusSpacing.md),
                       Expanded(
