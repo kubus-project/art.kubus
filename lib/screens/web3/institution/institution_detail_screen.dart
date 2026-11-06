@@ -202,6 +202,14 @@ class _InstitutionDetailScreenState extends State<InstitutionDetailScreen> {
   /// whether this account already has one. Only imported, unclaimed listings
   /// can be claimed, so nothing is asked for any other profile.
   Future<void> _refreshClaimAvailability(Institution institution) async {
+    // Each load starts without claim state, so an earlier read (possibly for
+    // another account) cannot keep the claim action hidden or shown.
+    if (mounted) {
+      setState(() {
+        _claimsAvailable = null;
+        _claimOpen = false;
+      });
+    }
     if (!institution.isImportedUnclaimed) return;
     final available = await _api.institutionClaimsAvailable();
     if (!mounted) return;
@@ -215,10 +223,18 @@ class _InstitutionDetailScreenState extends State<InstitutionDetailScreen> {
     if (!institution.isImportedUnclaimed) return;
     if ((_api.getAuthToken() ?? '').trim().isEmpty) return;
     final epoch = _claimEpoch;
+    // The read belongs to the account that was signed in when it started. A
+    // sign-out or switch while it is in flight makes the answer another
+    // account's, so it is dropped.
+    final sessionEpoch = _api.authSessionEpoch;
     try {
       final claims = await _api.getMyInstitutionClaims();
       // A request sent while this read was in flight is newer than the read.
-      if (!mounted || epoch != _claimEpoch) return;
+      if (!mounted ||
+          epoch != _claimEpoch ||
+          sessionEpoch != _api.authSessionEpoch) {
+        return;
+      }
       final id = institution.id.toLowerCase();
       final open =
           claims.any((claim) => claim.isOpen && claim.institutionId == id);

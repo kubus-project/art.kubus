@@ -99,8 +99,7 @@ class PromotionPaymentPendingException implements Exception {
 bool _isNoArtistApplicationBody(String body) {
   try {
     final decoded = jsonDecode(body);
-    return decoded is Map &&
-        decoded['error'] == 'Artist application not found';
+    return decoded is Map && decoded['error'] == 'Artist application not found';
   } catch (_) {
     return false;
   }
@@ -1105,9 +1104,13 @@ class BackendApiService
   }
 
   /// Native secure persistence; browser credentials remain in memory only.
-  Future<void> setAuthToken(String token, {int? expectedEpoch}) async {
-    await _commitAuthSession(token, expectedEpoch: expectedEpoch);
-  }
+  ///
+  /// Returns the session epoch this token was committed under. A caller that
+  /// keeps working across an await must use that value, not a later read of
+  /// [authSessionEpoch]: a sign-out in the meantime would advance the live
+  /// epoch and make the stale caller look current.
+  Future<int> setAuthToken(String token, {int? expectedEpoch}) =>
+      _commitAuthSession(token, expectedEpoch: expectedEpoch);
 
   /// Commits a credential pair. The epoch and the credential target advance
   /// synchronously here, before the commit waits for the mutation lock. An older
@@ -2086,6 +2089,16 @@ class BackendApiService
     final token = (getAuthToken() ?? '').trim();
     return token.isNotEmpty;
   }
+
+  /// As [persistAuthTokensFromResponse], but returns the session epoch the
+  /// persisted token was committed under (the epoch unchanged when the response
+  /// carries no token). Throws when [sessionEpoch] has already ended.
+  Future<int> persistAuthTokensFromResponseCommitted(
+    Map<String, dynamic> body, {
+    required int sessionEpoch,
+  }) =>
+      _backendApiPersistTokenFromResponse(this, body,
+          expectedEpoch: sessionEpoch);
 
   Map<String, dynamic> _responsePayload(Map<String, dynamic> body) {
     return _backendApiResponsePayload(body);
@@ -8958,7 +8971,8 @@ class BackendApiService
 
     try {
       await _ensureAuthBeforeRequest();
-      final uri = Uri.parse('$baseUrl/api/institutions/$institutionId/claims');
+      final uri = Uri.parse(
+          '$baseUrl/api/institutions/${Uri.encodeComponent(institutionId)}/claims');
       final title = claimantTitle?.trim() ?? '';
       final evidence = evidenceUrl?.trim() ?? '';
       final response = await _post(

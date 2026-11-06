@@ -229,13 +229,14 @@ class AccountWalletLinkService {
     // Force the original Google/email account token back before binding. A
     // wallet create/import/connect must never decide which account binds.
     try {
-      await _backendApi.setAuthToken(normalizedToken,
+      // The epoch this commit ran under, not a later read of the live epoch: a
+      // sign-out that lands before this resumes must not be adopted as current.
+      sessionEpoch = await _backendApi.setAuthToken(normalizedToken,
           expectedEpoch: sessionEpoch);
     } on StateError {
       ensureCurrent();
       rethrow;
     }
-    sessionEpoch = _backendApi.authSessionEpoch;
     final refreshToken = (originalRefreshToken ?? '').trim();
     if (refreshToken.isNotEmpty) {
       await _backendApi.setRefreshToken(refreshToken,
@@ -302,8 +303,9 @@ class AccountWalletLinkService {
       if (!isCurrent()) throw unverifiedBindOutcome(null);
       if (returnedToken.isNotEmpty) {
         try {
-          await _backendApi.persistAuthTokensFromResponse(bindPayload,
-              sessionEpoch: sessionEpoch);
+          sessionEpoch = await _backendApi
+              .persistAuthTokensFromResponseCommitted(bindPayload,
+                  sessionEpoch: sessionEpoch);
         } catch (_) {
           // A failed token commit clears the session, so this is unverified
           // whether or not the session moved on its own.
@@ -315,7 +317,11 @@ class AccountWalletLinkService {
         }
       }
     }
-    sessionEpoch = _backendApi.authSessionEpoch;
+    if (committedByTransport) {
+      // The transport committed its own token pair inside the bind call; its
+      // epoch is the only one this link has not yet captured.
+      sessionEpoch = _backendApi.authSessionEpoch;
+    }
 
     Map<String, dynamic> profileResponse;
     try {
