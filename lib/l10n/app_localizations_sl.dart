@@ -16036,7 +16036,7 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get walletSetupGenericLinkError =>
-      'Povezovanje denarnice ni uspelo. Poskusi znova.';
+      'Ni bilo mogoče potrditi, ali je denarnica povezana. Pred ponovnim poskusom preveri stanje denarnice v svojem računu.';
 
   @override
   String get walletSetupStatusLoginAccount => 'Prijavni račun';
@@ -16082,7 +16082,7 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get walletSetupPhaseFailed =>
-      'Povezovanje denarnice ni uspelo. Račun ni bil spremenjen.';
+      'Preveri stanje povezave denarnice';
 
   @override
   String get onboardingStageWelcome => 'Dobrodošlica';

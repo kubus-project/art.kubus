@@ -72,9 +72,11 @@ class AccountWalletLinkResult {
 ///    original account id and the returned wallet equals the linked wallet.
 /// 6. Only after verification commits wallet prefs and provider state.
 ///
-/// On any failure the original token is restored and no wallet prefs are
-/// written; callers stay on the WalletConnect step and surface the error
-/// inline. This service must never navigate.
+/// Before the bind request, failures leave the remote account untouched. Once
+/// the bind request is sent, a transport or verification failure can leave the
+/// remote result indeterminate; callers must ask the user to check account
+/// wallet status before retrying. Local wallet prefs/provider state are only
+/// committed after profile verification. This service must never navigate.
 class AccountWalletLinkService {
   AccountWalletLinkService({
     BackendApiService? backendApi,
@@ -214,7 +216,11 @@ class AccountWalletLinkService {
     } catch (error) {
       await _restoreOriginalToken(normalizedToken, refreshToken,
           expectedEpoch: sessionEpoch);
-      rethrow;
+      throw AccountWalletLinkVerificationException(
+        'The wallet link request could not be confirmed. It may have reached '
+        'the server. Check your account wallet status before trying again. '
+        'Request error: $error',
+      );
     }
     // The default backend transport already committed its guarded auth pair.
     // An injected transport is committed here under the original request epoch.
@@ -244,7 +250,8 @@ class AccountWalletLinkService {
       await _restoreOriginalToken(normalizedToken, refreshToken,
           expectedEpoch: sessionEpoch);
       throw AccountWalletLinkVerificationException(
-        'Could not verify the wallet link with your account: $error',
+        'We could not confirm whether the wallet was linked. Check your '
+        'account wallet status before trying again. Verification error: $error',
       );
     }
 
@@ -253,7 +260,8 @@ class AccountWalletLinkService {
           expectedEpoch: sessionEpoch);
       throw AccountWalletLinkVerificationException(
         'Could not verify the wallet link with your account '
-        '(${profileResponse['status'] ?? profileResponse['error'] ?? 'unknown error'}).',
+        '(${profileResponse['status'] ?? profileResponse['error'] ?? 'unknown error'}). '
+        'Check your account wallet status before trying again.',
       );
     }
 
@@ -274,16 +282,18 @@ class AccountWalletLinkService {
       await _restoreOriginalToken(normalizedToken, refreshToken,
           expectedEpoch: sessionEpoch);
       throw AccountWalletLinkVerificationException(
-        'Wallet link verification failed: the wallet was not linked to your '
-        'signed-in account. No changes were saved — try again.',
+        'Your profile did not confirm that this wallet is linked to the '
+        'signed-in account. The bind request may have reached the server. '
+        'Check your account wallet status before trying again.',
       );
     }
     if (!WalletUtils.equals(verifiedWallet, normalizedWallet)) {
       await _restoreOriginalToken(normalizedToken, refreshToken,
           expectedEpoch: sessionEpoch);
       throw AccountWalletLinkVerificationException(
-        'Wallet link verification failed: your account does not report the '
-        'new wallet yet. No changes were saved — try again.',
+        'Your profile has not confirmed the newly linked wallet yet. The '
+        'bind request may have reached the server. Check your account wallet '
+        'status before trying again.',
       );
     }
 

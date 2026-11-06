@@ -280,7 +280,7 @@ void main() {
 
     expect(find.text('Wallet linked to this account.'), findsNothing);
     expect(
-      find.text('Wallet link failed. Your account was not changed.'),
+      find.textContaining('may have reached the server'),
       findsOneWidget,
     );
     expect(harness.linkedWallets, isEmpty);

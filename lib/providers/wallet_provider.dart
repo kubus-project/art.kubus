@@ -2022,7 +2022,6 @@ class WalletProvider extends ChangeNotifier {
     if (sanitized.isEmpty) return;
 
     _currentWalletAddress = sanitized;
-    _resetAccountWalletLinkPhase();
     SolanaWalletConnectService.instance.updateActiveWalletAddress(sanitized);
 
     if (persist) {

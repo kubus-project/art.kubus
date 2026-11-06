@@ -15868,7 +15868,8 @@ class AppLocalizationsEn extends AppLocalizations {
       'Your account session could not be confirmed. Go back to the account step and sign in again — do not create a new account.';
 
   @override
-  String get walletSetupGenericLinkError => 'Wallet linking failed. Try again.';
+  String get walletSetupGenericLinkError =>
+      'We could not confirm whether this wallet was linked. Check your account wallet status before trying again.';
 
   @override
   String get walletSetupStatusLoginAccount => 'Login account';
@@ -15914,7 +15915,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get walletSetupPhaseFailed =>
-      'Wallet link failed. Your account was not changed.';
+      'Wallet link status needs checking';
 
   @override
   String get onboardingStageWelcome => 'Welcome';

@@ -28,6 +28,7 @@ class _RecordingWalletProvider extends WalletProvider {
 
   String? boundIdentity;
   bool readOnlyIdentityUsed = false;
+  bool useVerifiedCommitImplementation = false;
 
   @override
   Future<void> commitVerifiedAccountLinkedWalletIdentity(
@@ -36,6 +37,13 @@ class _RecordingWalletProvider extends WalletProvider {
     bool notify = true,
   }) async {
     boundIdentity = walletAddress;
+    if (useVerifiedCommitImplementation) {
+      await super.commitVerifiedAccountLinkedWalletIdentity(
+        walletAddress,
+        persist: persist,
+        notify: notify,
+      );
+    }
   }
 
   @override
@@ -54,10 +62,12 @@ class _RecordingWalletProvider extends WalletProvider {
 class _RecordingProfileProvider extends ProfileProvider {
   bool authenticatedLoadAttempted = false;
   bool autoRegisterAttempted = false;
+  Future<void> Function()? beforeAuthenticatedLoadCompletes;
 
   @override
   Future<void> loadAuthenticatedProfile() async {
     authenticatedLoadAttempted = true;
+    await beforeAuthenticatedLoadCompletes?.call();
   }
 
   @override
@@ -213,6 +223,50 @@ void main() {
             'setReadOnlyWalletIdentity(loadData: true)');
     expect(profileProvider.authenticatedLoadAttempted, isTrue);
     expect(profileProvider.autoRegisterAttempted, isFalse);
+    expect(chatProvider.lastWallet, kWallet);
+  });
+
+  testWidgets(
+      'link progress remains visible through provider commit and hydration',
+      (tester) async {
+    final walletProvider = _RecordingWalletProvider()
+      ..useVerifiedCommitImplementation = true;
+    WalletAccountLinkPhase? phaseDuringHydration;
+    final profileProvider = _RecordingProfileProvider()
+      ..beforeAuthenticatedLoadCompletes = () async {
+        await Future<void>.delayed(const Duration(milliseconds: 100));
+        phaseDuringHydration = walletProvider.accountLinkPhase;
+      };
+    final chatProvider = _RecordingChatProvider();
+    final context = await _pumpProviders(
+      tester,
+      walletProvider: walletProvider,
+      profileProvider: profileProvider,
+      chatProvider: chatProvider,
+    );
+    final service = AccountWalletLinkService(
+      bindWallet: (wallet, {signature}) async =>
+          <String, dynamic>{'success': true},
+      fetchMyProfile: () async => <String, dynamic>{
+        'success': true,
+        'data': <String, dynamic>{'userId': kUserId, 'walletAddress': kWallet},
+      },
+    );
+
+    Object? result;
+    await tester.runAsync(() async {
+      result = await service.linkWalletToCurrentAccount(
+        walletAddress: kWallet,
+        expectedUserId: kUserId,
+        originalAuthToken: kOriginalToken,
+        providers: _providersFromContext(context),
+      );
+    });
+
+    expect(result, isA<AccountWalletLinkResult>());
+    expect(phaseDuringHydration, WalletAccountLinkPhase.inProgress);
+    expect(walletProvider.accountLinkPhase, WalletAccountLinkPhase.unknown);
+    expect(profileProvider.authenticatedLoadAttempted, isTrue);
     expect(chatProvider.lastWallet, kWallet);
   });
 
@@ -486,6 +540,7 @@ void main() {
     });
 
     expect(thrown, isA<AccountWalletLinkVerificationException>());
+    expect(thrown.toString(), contains('may have reached the server'));
     expect(BackendApiService().getAuthToken(), kOriginalToken);
 
     final prefs = await SharedPreferences.getInstance();
@@ -535,7 +590,7 @@ void main() {
     expect(BackendApiService().getAuthToken(), kOriginalToken);
   });
 
-  testWidgets('bind failure restores the original token and rethrows',
+  testWidgets('bind transport failure reports an indeterminate result',
       (tester) async {
     final context = await _pumpProviders(
       tester,
@@ -565,8 +620,8 @@ void main() {
       }
     });
 
-    expect(thrown, isNotNull);
-    expect(thrown, isNot(isA<AccountWalletLinkVerificationException>()));
+    expect(thrown, isA<AccountWalletLinkVerificationException>());
+    expect(thrown.toString(), contains('may have reached the server'));
     expect(BackendApiService().getAuthToken(), kOriginalToken);
     final prefs = await SharedPreferences.getInstance();
     expect(prefs.getString('wallet_address'), isNull);
