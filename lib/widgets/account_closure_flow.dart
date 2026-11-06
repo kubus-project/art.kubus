@@ -36,9 +36,16 @@ Future<void> confirmAndCloseAccount(BuildContext context) async {
   final coordinator =
       debugAccountClosureCoordinator ?? _sharedAccountClosureCoordinator;
 
-  Future<void> applyOutcome(AccountClosureOutcome outcome) async {
+  // Outcomes that navigate do not close the dialog first. Clearing the stack
+  // removes the dialog route with the settings screen. Popping it first, then
+  // pushing, left the new route missing in testing.
+  Future<void> applyOutcome(
+    AccountClosureOutcome outcome,
+    void Function() closeDialog,
+  ) async {
     switch (outcome) {
       case AccountClosureAccepted():
+        // Reset while the busy dialog still covers the settings screen.
         await SettingsService.resetApp(
           walletProvider: walletProvider,
           backendApi: BackendApiService(),
@@ -60,6 +67,7 @@ Future<void> confirmAndCloseAccount(BuildContext context) async {
         navigator.pushNamedAndRemoveUntil('/account-closure', (_) => false);
         break;
       case AccountClosureFailed(:final reason):
+        closeDialog();
         switch (reason) {
           case AccountClosureFailure.prepareRejected:
             messenger.showKubusSnackBar(
@@ -74,6 +82,7 @@ Future<void> confirmAndCloseAccount(BuildContext context) async {
         }
         break;
       case AccountClosureAlreadyInProgress():
+        closeDialog();
         break;
     }
   }
@@ -136,7 +145,10 @@ class _AccountClosureConfirmDialog extends StatefulWidget {
   });
 
   final AccountClosureCoordinator coordinator;
-  final Future<void> Function(AccountClosureOutcome outcome) onOutcome;
+  final Future<void> Function(
+    AccountClosureOutcome outcome,
+    void Function() closeDialog,
+  ) onOutcome;
 
   @override
   State<_AccountClosureConfirmDialog> createState() =>
@@ -147,13 +159,14 @@ class _AccountClosureConfirmDialogState
     extends State<_AccountClosureConfirmDialog> {
   bool _busy = false;
 
+  void _closeDialog() {
+    if (mounted) Navigator.of(context).pop();
+  }
+
   Future<void> _confirm() async {
     setState(() => _busy = true);
     final outcome = await widget.coordinator.run();
-    // Apply first, then close this dialog if it is still open. A navigation
-    // that clears the stack removes it on its own.
-    await widget.onOutcome(outcome);
-    if (mounted) Navigator.of(context).pop();
+    await widget.onOutcome(outcome, _closeDialog);
   }
 
   @override
