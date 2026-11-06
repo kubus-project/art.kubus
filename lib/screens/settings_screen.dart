@@ -31,6 +31,7 @@ import '../services/settings_service.dart';
 import '../widgets/platform_aware_widgets.dart';
 import '../widgets/common/keyboard_inset_padding.dart';
 import '../widgets/glass_components.dart';
+import '../widgets/account_closure_flow.dart';
 import '../widgets/wallet_custody_status_panel.dart';
 import '../widgets/email_verification_status_badge.dart';
 import '../widgets/account_data_export_dialog.dart';

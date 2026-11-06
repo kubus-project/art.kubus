@@ -1124,78 +1124,8 @@ extension _DesktopSettingsScreenStatePart1 on _DesktopSettingsScreenState {
     );
   }
 
+  /// Account closure runs through the shared flow in widgets/account_closure_flow.dart.
   void _showDeleteAccountDialog() {
-    final l10n = AppLocalizations.of(context)!;
-    showKubusDialog(
-      context: context,
-      builder: (context) => KubusAlertDialog(
-        size: KubusDialogSize.compact,
-        backgroundColor: Theme.of(context).colorScheme.surface,
-        title: Text(
-          l10n.settingsDeleteAccountDialogTitle,
-          style: KubusTextStyles.sheetTitle.copyWith(
-            color: Theme.of(context).colorScheme.onSurface,
-          ),
-        ),
-        content: Text(
-          l10n.settingsDeleteAccountDialogBody,
-          style: KubusTextStyles.detailBody.copyWith(
-            color: Theme.of(context).colorScheme.onSurface,
-          ),
-        ),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: Text(l10n.commonCancel)),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Theme.of(context).colorScheme.error,
-              foregroundColor: Theme.of(context).colorScheme.onError,
-            ),
-            onPressed: () async {
-              final navigator = Navigator.of(context);
-              final messenger = ScaffoldMessenger.of(context);
-              final walletProvider =
-                  Provider.of<WalletProvider>(context, listen: false);
-              final notificationProvider =
-                  Provider.of<NotificationProvider>(context, listen: false);
-              final profileProvider =
-                  Provider.of<ProfileProvider>(context, listen: false);
-
-              // Delete the authenticated account (users.id), never just
-              // wallet-scoped data. Local state is only cleared after the
-              // backend confirms the deletion.
-              try {
-                await BackendApiService().deleteMyAccount();
-              } catch (e) {
-                debugPrint(
-                    'DesktopSettingsScreen: closure unconfirmed (${e.runtimeType})');
-                messenger.showKubusSnackBar(SnackBar(
-                    content:
-                        Text(l10n.settingsDeleteAccountBackendFailedToast)));
-                if (!mounted) return;
-                navigator.pop();
-                navigator.pushNamed('/account-closure');
-                return;
-              }
-
-              await SettingsService.resetApp(
-                walletProvider: walletProvider,
-                backendApi: BackendApiService(),
-                notificationProvider: notificationProvider,
-                profileProvider: profileProvider,
-              );
-              if (!mounted) return;
-              navigator.pop();
-              messenger.showKubusSnackBar(
-                  SnackBar(content: Text(l10n.settingsAccountDeletedToast)));
-              navigator.pushNamedAndRemoveUntil(
-                  '/account-closure', (_) => false);
-            },
-            child: Text(l10n.settingsDeleteForeverButton),
-          ),
-        ],
-      ),
-    );
+    unawaited(confirmAndCloseAccount(context));
   }
 }
