@@ -5,6 +5,7 @@ import 'package:art_kubus/providers/chat_provider.dart';
 import 'package:art_kubus/providers/profile_provider.dart';
 import 'package:art_kubus/providers/wallet_provider.dart';
 import 'package:art_kubus/services/account_wallet_link_service.dart';
+import 'package:art_kubus/services/auth_credential_store.dart';
 import 'package:art_kubus/services/backend_api_service.dart';
 import 'package:art_kubus/services/solana_wallet_service.dart';
 import 'package:art_kubus/services/wallet_session_sync_dependencies.dart';
@@ -223,6 +224,16 @@ Future<void> _expectNoAccountWalletPrefs() async {
   for (final key in _kAccountPrefKeys) {
     expect(prefs.get(key), isNull,
         reason: '$key must not hold account A wallet state');
+  }
+}
+
+/// Credential store that refuses to persist the bind response token, while
+/// accepting every other session commit (so the original session still installs).
+class _RejectsBindTokenStore extends AuthCredentialStore {
+  @override
+  Future<bool> saveSession(String access, String? refresh) {
+    if (access == 'account-a-wallet-token') return Future<bool>.value(false);
+    return super.saveSession(access, refresh);
   }
 }
 
@@ -660,8 +671,8 @@ void main() {
   });
 
   test(
-      'bind failure after an account switch is superseded, not reported as '
-      'ambiguous', () async {
+      'bind failure after an account switch surfaces the unverified outcome and '
+      'never restores account A over account B', () async {
     var bindCalls = 0;
     var profileFetches = 0;
     final walletProvider = _RecordingWalletProvider()
@@ -687,22 +698,20 @@ void main() {
       ),
     ).timeout(const Duration(seconds: 5));
 
-    expect(error, isA<AccountWalletLinkSupersededException>());
+    expect(error, isA<AccountWalletLinkVerificationException>(),
+        reason: 'the bind was sent, so the outcome is unverified, not silent');
+    expect(error.toString(), contains('may have reached the server'));
     expect(bindCalls, 1);
     expect(profileFetches, 0);
     expect(BackendApiService().getAuthToken(), 'account-b-token',
         reason: 'the original account token must not be restored over B');
     expect(walletProvider.boundIdentity, isNull);
-    expect(
-      walletProvider.accountLinkPhase,
-      isNot(WalletAccountLinkPhase.failed),
-    );
     await _expectNoAccountWalletPrefs();
   });
 
   test(
-      'profile verification error after an account switch is superseded, not '
-      'reported as unverified', () async {
+      'profile verification error after an account switch surfaces the '
+      'unverified outcome', () async {
     final walletProvider = _RecordingWalletProvider()
       ..useVerifiedCommitImplementation = true;
     final service = AccountWalletLinkService(
@@ -725,13 +734,162 @@ void main() {
       ),
     ).timeout(const Duration(seconds: 5));
 
-    expect(error, isA<AccountWalletLinkSupersededException>());
+    expect(error, isA<AccountWalletLinkVerificationException>());
+    expect(error.toString(), contains('could not confirm'));
     expect(BackendApiService().getAuthToken(), 'account-b-token');
     expect(walletProvider.boundIdentity, isNull);
-    expect(
-      walletProvider.accountLinkPhase,
-      isNot(WalletAccountLinkPhase.failed),
+    await _expectNoAccountWalletPrefs();
+  });
+
+  test(
+      'profile answered for account A after a switch is the unverified outcome, '
+      'not a silent supersede', () async {
+    var profileFetches = 0;
+    final walletProvider = _RecordingWalletProvider()
+      ..useVerifiedCommitImplementation = true;
+    final service = AccountWalletLinkService(
+      bindWallet: (wallet, {signature}) async => <String, dynamic>{
+        'success': true,
+        'data': <String, dynamic>{'token': 'account-a-wallet-token'},
+      },
+      fetchMyProfile: () async {
+        profileFetches += 1;
+        await BackendApiService().setAuthToken('account-b-token');
+        return _accountAProfileResponse();
+      },
     );
+
+    final error = await _settle(
+      service.linkWalletToCurrentAccount(
+        walletAddress: kWallet,
+        expectedUserId: kUserId,
+        originalAuthToken: kOriginalToken,
+        providers: _providersWith(walletProvider: walletProvider),
+      ),
+    ).timeout(const Duration(seconds: 5));
+
+    expect(error, isA<AccountWalletLinkVerificationException>());
+    expect(error.toString(), contains('may have reached the server'));
+    expect(profileFetches, 1);
+    expect(BackendApiService().getAuthToken(), 'account-b-token');
+    expect(walletProvider.boundIdentity, isNull);
+    await _expectNoAccountWalletPrefs();
+  });
+
+  test(
+      'failed token commit after the bind is the unverified outcome and ends '
+      'the session', () async {
+    BackendApiService().resetCredentialStoreForTesting(
+      store: _RejectsBindTokenStore(),
+    );
+    addTearDown(() => BackendApiService().resetCredentialStoreForTesting());
+    var bindCalls = 0;
+    var profileFetches = 0;
+    final walletProvider = _RecordingWalletProvider()
+      ..useVerifiedCommitImplementation = true;
+    final service = AccountWalletLinkService(
+      bindWallet: (wallet, {signature}) async {
+        bindCalls += 1;
+        return <String, dynamic>{
+          'success': true,
+          'data': <String, dynamic>{'token': 'account-a-wallet-token'},
+        };
+      },
+      fetchMyProfile: () async {
+        profileFetches += 1;
+        return _accountAProfileResponse();
+      },
+    );
+
+    final error = await _settle(
+      service.linkWalletToCurrentAccount(
+        walletAddress: kWallet,
+        expectedUserId: kUserId,
+        originalAuthToken: kOriginalToken,
+        providers: _providersWith(walletProvider: walletProvider),
+      ),
+    ).timeout(const Duration(seconds: 5));
+
+    expect(error, isA<AccountWalletLinkVerificationException>(),
+        reason: 'the bind was sent; a failed token commit is unverified');
+    expect(error.toString(), contains('may have reached the server'));
+    expect(bindCalls, 1);
+    expect(profileFetches, 0);
+    expect(BackendApiService().getAuthToken(), isNull,
+        reason: 'the failed commit ends the session');
+    await _expectNoAccountWalletPrefs();
+  });
+
+  test(
+      'switch during the wallet-ownership proof is superseded and the bind is '
+      'never sent', () async {
+    var bindCalls = 0;
+    final walletProvider = _RecordingWalletProvider()
+      ..useVerifiedCommitImplementation = true;
+    final service = AccountWalletLinkService(
+      signWalletChallenge: (wallet) async {
+        await BackendApiService().setAuthToken('account-b-token');
+        return 'proof-signature';
+      },
+      bindWallet: (wallet, {signature}) async {
+        bindCalls += 1;
+        return <String, dynamic>{
+          'success': true,
+          'data': <String, dynamic>{'token': 'account-a-wallet-token'},
+        };
+      },
+      fetchMyProfile: () async => _accountAProfileResponse(),
+    );
+
+    final error = await _settle(
+      service.linkWalletToCurrentAccount(
+        walletAddress: kWallet,
+        expectedUserId: kUserId,
+        originalAuthToken: kOriginalToken,
+        providers: _providersWith(walletProvider: walletProvider),
+      ),
+    ).timeout(const Duration(seconds: 5));
+
+    expect(error, isA<AccountWalletLinkSupersededException>(),
+        reason: 'before the bind is sent, a stale session stays silent');
+    expect(bindCalls, 0);
+    expect(BackendApiService().getAuthToken(), 'account-b-token');
+    expect(walletProvider.boundIdentity, isNull);
+    await _expectNoAccountWalletPrefs();
+  });
+
+  test(
+      'superseded rollback removes account A keys and does not restore a '
+      'pre-link value', () async {
+    SharedPreferences.setMockInitialValues(<String, Object>{});
+    final store = _DelayedWalletPrefsStore();
+    SharedPreferencesStorePlatform.instance = store;
+    final seeded = await SharedPreferences.getInstance();
+    await seeded.setString('wallet_address', 'wallet-prior');
+    store.holdWalletAddressWrite = true;
+    BackendApiService.authSessionMutationMaxWait =
+        const Duration(milliseconds: 100);
+    final walletProvider = _RecordingWalletProvider()
+      ..useVerifiedCommitImplementation = true;
+    final outcome = _settle(
+      _verifiedLinkService().linkWalletToCurrentAccount(
+        walletAddress: kWallet,
+        expectedUserId: kUserId,
+        originalAuthToken: kOriginalToken,
+        providers: _providersWith(walletProvider: walletProvider),
+      ),
+    );
+
+    await _untilHeld(store.writeStarted.future, outcome);
+    await BackendApiService()
+        .setAuthToken('account-b-token')
+        .timeout(const Duration(seconds: 5));
+    store.releaseWrite.complete();
+    final error = await outcome.timeout(const Duration(seconds: 5));
+
+    expect(error, isA<AccountWalletLinkSupersededException>());
+    expect(seeded.get('wallet_address'), isNull,
+        reason: 'the pre-link value must not be re-persisted after a switch');
     await _expectNoAccountWalletPrefs();
   });
 

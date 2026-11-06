@@ -274,6 +274,12 @@ class _OnboardingWalletConnectStepState
       if (error is AccountWalletLinkSupersededException) {
         // The account changed mid-link. The session that replaced it owns the
         // local state now: no rollback and no failure copy for this attempt.
+        // Leave the linking phase so the step is not stuck on a spinner.
+        if (mounted) {
+          setState(() {
+            _phase = OnboardingWalletLinkPhase.walletReady;
+          });
+        }
         return;
       }
       // Roll back wallet/session pollution and stay on this step. The guard

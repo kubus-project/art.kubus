@@ -1001,12 +1001,13 @@ class ProfileProvider extends foundation.ChangeNotifier {
       }
 
       // Save wallet address
-      await _loadBackendStats(walletAddress);
+      await _loadBackendStats(walletAddress, isCurrent: isCurrentLoad);
       if (!isCurrentLoad()) return;
-      try {
-        final prefs = await _ensurePrefs();
-        await prefs.setString('wallet_address', walletAddress);
-      } catch (_) {}
+      await _writeAccountPrefsIfCurrent(
+        sessionEpoch,
+        isCurrentLoad,
+        {'wallet_address': walletAddress},
+      );
       debugPrint('ProfileProvider: Wallet address saved and profile loaded');
 
       _isLoading = false;
@@ -1196,7 +1197,11 @@ class ProfileProvider extends foundation.ChangeNotifier {
       final prefs = await _ensurePrefs();
       if (sessionEpoch != _accountSessionEpoch) return false;
       if (walletAddress.isNotEmpty) {
-        await prefs.setString('wallet_address', walletAddress);
+        await _writeAccountPrefsIfCurrent(
+          sessionEpoch,
+          () => sessionEpoch == _accountSessionEpoch,
+          {'wallet_address': walletAddress},
+        );
       }
       final persistedUsername = _currentUser?.username ??
           (profileJson['username']?.toString() ?? '').trim();
