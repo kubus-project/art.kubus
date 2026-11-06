@@ -157,6 +157,9 @@ Future<void> _deleteThroughUi(WidgetTester tester, AppLocalizationsEn l10n,
 
   await tester.tap(find.widgetWithText(TextButton, l10n.settingsConfirmButton));
   await tester.pump(const Duration(milliseconds: 500));
+  // A pending outcome ends the session, and its bounded cleanup timers must
+  // finish inside the test rather than be left pending.
+  await tester.pump(const Duration(seconds: 4));
 }
 
 void main() {
@@ -221,4 +224,128 @@ void main() {
     expect(api.calls, 2, reason: 'mobile must use the shared coordinator');
     expect(find.text(_closureRouteText), findsOneWidget);
   });
+
+  testWidgets(
+      'final confirmation is a named route with a header, announces its busy '
+      'state, and a lost response ends the session at 390 and 1440 widths',
+      (tester) async {
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetDevicePixelRatio);
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    for (final size in const [Size(390, 844), Size(1440, 900)]) {
+      final gate = Completer<void>();
+      final api = _GatedClosureApi(gate);
+      debugAccountClosureCoordinator = AccountClosureCoordinator(api: api);
+      await tester.binding.setSurfaceSize(size);
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pumpWidget(_app(_confirmHost()));
+      await tester.pump();
+
+      await tester.tap(find.text(_confirmHostLabel));
+      await tester.pump(const Duration(milliseconds: 500));
+      await tester.tap(find.widgetWithText(
+          ElevatedButton, l10n.settingsDeleteForeverButton));
+      await tester.pump(const Duration(milliseconds: 500));
+
+      // Named route: the dialog is announced by its title.
+      expect(
+        find.byWidgetPredicate((w) =>
+            w is Semantics &&
+            w.properties.namesRoute == true &&
+            w.properties.label == l10n.settingsFinalConfirmationTitle),
+        findsOneWidget,
+        reason: 'final dialog must be a named route at $size',
+      );
+      // Header: the title is a heading for assistive technology.
+      expect(
+        find.byWidgetPredicate(
+            (w) => w is Semantics && w.properties.header == true),
+        findsWidgets,
+        reason: 'the title must be a heading at $size',
+      );
+      expect(find.text(l10n.settingsDeleteAccountFinalConfirmationBody),
+          findsOneWidget);
+
+      await tester
+          .tap(find.widgetWithText(TextButton, l10n.settingsConfirmButton));
+      await tester.pump(const Duration(milliseconds: 300));
+
+      // Busy: the status is a live region and both actions are disabled.
+      expect(find.text(l10n.settingsDeleteAccountBusy), findsOneWidget);
+      expect(
+        find.byWidgetPredicate(
+            (w) => w is Semantics && w.properties.liveRegion == true),
+        findsOneWidget,
+        reason: 'the busy status must be a live region at $size',
+      );
+      expect(
+        tester
+            .widget<TextButton>(
+                find.widgetWithText(TextButton, l10n.settingsConfirmButton))
+            .onPressed,
+        isNull,
+      );
+      expect(
+        tester
+            .widget<TextButton>(
+                find.widgetWithText(TextButton, l10n.commonCancel))
+            .onPressed,
+        isNull,
+      );
+      expect(tester.takeException(), isNull,
+          reason: 'no layout overflow at $size');
+
+      // A lost response: the session ends and the closure route opens.
+      BackendApiService().setAuthTokenForTesting(_syntheticSessionToken);
+      gate.complete();
+      await tester.pump(const Duration(seconds: 3));
+      await tester.pump(const Duration(seconds: 1));
+
+      expect(api.calls, 1);
+      expect(find.text(_closureRouteText), findsOneWidget,
+          reason: 'pending must open the closure status route at $size');
+      expect(BackendApiService().getAuthToken(), isNull,
+          reason: 'pending ends the local session at $size');
+      expect(find.text(_confirmHostLabel), findsNothing,
+          reason: 'no authenticated surface remains under the closure route');
+      BackendApiService().setAuthTokenForTesting(null);
+    }
+  });
 }
+
+const _confirmHostLabel = 'open-closure';
+
+/// Stands in for a signed-in session. It is never validated or sent.
+const _syntheticSessionToken = 'synthetic-session-token';
+
+/// Blocks until the test releases it, then reports a lost DELETE response.
+class _GatedClosureApi implements AccountClosureApi {
+  _GatedClosureApi(this.gate);
+
+  final Completer<void> gate;
+  int calls = 0;
+
+  @override
+  int get authSessionEpoch => 1;
+
+  @override
+  Future<int> deleteMyAccount({AccountClosureStageListener? onStage}) async {
+    calls += 1;
+    onStage?.call(AccountClosureStage.preparing, authSessionEpoch);
+    onStage?.call(AccountClosureStage.deleting, authSessionEpoch);
+    await gate.future;
+    throw TimeoutException('synthetic lost response');
+  }
+}
+
+Widget _confirmHost() => Builder(
+      builder: (context) => Scaffold(
+        body: Center(
+          child: ElevatedButton(
+            onPressed: () => confirmAndCloseAccount(context),
+            child: const Text(_confirmHostLabel),
+          ),
+        ),
+      ),
+    );

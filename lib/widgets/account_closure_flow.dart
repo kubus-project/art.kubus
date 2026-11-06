@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -68,6 +70,25 @@ Future<void> confirmAndCloseAccount(BuildContext context) async {
         navigator.pushNamedAndRemoveUntil('/account-closure', (_) => false);
         break;
       case AccountClosurePending():
+        // Conservative: the closure may have committed, so this session ends.
+        // Its receipt stays bound to the account and the status screen
+        // resolves the truth. Wallet and preferences are kept. Sign-out
+        // invalidates the token synchronously, so nothing authenticated can
+        // follow the navigation; storage cleanup finishes in the background.
+        unawaited(() async {
+          try {
+            await SettingsService.logout(
+              walletProvider: walletProvider,
+              backendApi: BackendApiService(),
+              notificationProvider: notificationProvider,
+              profileProvider: profileProvider,
+              preserveWallet: true,
+            );
+          } catch (e) {
+            debugPrint(
+                'AccountClosure: pending sign-out failed (${e.runtimeType})');
+          }
+        }());
         messenger.showKubusSnackBar(
           SnackBar(content: Text(l10n.settingsDeleteAccountPendingToast)),
         );
@@ -80,6 +101,15 @@ Future<void> confirmAndCloseAccount(BuildContext context) async {
             messenger.showKubusSnackBar(
               SnackBar(
                 content: Text(l10n.settingsDeleteAccountNotStartedToast),
+              ),
+            );
+            break;
+          case AccountClosureFailure.refused:
+            // The server declined. Say so, so the refusal is never mistaken
+            // for success or silently ignored.
+            messenger.showKubusSnackBar(
+              SnackBar(
+                content: Text(l10n.settingsDeleteAccountRefusedToast),
               ),
             );
             break;
@@ -182,56 +212,65 @@ class _AccountClosureConfirmDialogState
     final scheme = Theme.of(context).colorScheme;
     return PopScope(
       canPop: !_busy,
-      child: KubusAlertDialog(
-        size: KubusDialogSize.compact,
-        backgroundColor: scheme.surface,
-        title: Text(
-          l10n.settingsFinalConfirmationTitle,
-          style: KubusTypography.inter(
-            color: scheme.onSurface,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        content: _busy
-            ? Semantics(
-                liveRegion: true,
-                child: Row(
-                  children: [
-                    const SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    ),
-                    const SizedBox(width: KubusSpacing.md),
-                    Expanded(
-                      child: Text(
-                        l10n.settingsDeleteAccountBusy,
-                        style: KubusTypography.inter(color: scheme.onSurface),
-                      ),
-                    ),
-                  ],
-                ),
-              )
-            : Text(
-                l10n.settingsDeleteAccountFinalConfirmationBody,
-                style: KubusTypography.inter(color: scheme.onSurface),
+      child: Semantics(
+        scopesRoute: true,
+        namesRoute: true,
+        explicitChildNodes: true,
+        label: l10n.settingsFinalConfirmationTitle,
+        child: KubusAlertDialog(
+          size: KubusDialogSize.compact,
+          backgroundColor: scheme.surface,
+          title: Semantics(
+            header: true,
+            child: Text(
+              l10n.settingsFinalConfirmationTitle,
+              style: KubusTypography.inter(
+                color: scheme.onSurface,
+                fontWeight: FontWeight.bold,
               ),
-        actions: [
-          TextButton(
-            onPressed: _busy ? null : () => Navigator.of(context).pop(),
-            child: Text(
-              l10n.commonCancel,
-              style: KubusTypography.inter(color: scheme.outline),
             ),
           ),
-          TextButton(
-            onPressed: _busy ? null : _confirm,
-            child: Text(
-              l10n.settingsConfirmButton,
-              style: KubusTypography.inter(color: scheme.error),
+          content: _busy
+              ? Semantics(
+                  liveRegion: true,
+                  child: Row(
+                    children: [
+                      const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      ),
+                      const SizedBox(width: KubusSpacing.md),
+                      Expanded(
+                        child: Text(
+                          l10n.settingsDeleteAccountBusy,
+                          style: KubusTypography.inter(color: scheme.onSurface),
+                        ),
+                      ),
+                    ],
+                  ),
+                )
+              : Text(
+                  l10n.settingsDeleteAccountFinalConfirmationBody,
+                  style: KubusTypography.inter(color: scheme.onSurface),
+                ),
+          actions: [
+            TextButton(
+              onPressed: _busy ? null : () => Navigator.of(context).pop(),
+              child: Text(
+                l10n.commonCancel,
+                style: KubusTypography.inter(color: scheme.outline),
+              ),
             ),
-          ),
-        ],
+            TextButton(
+              onPressed: _busy ? null : _confirm,
+              child: Text(
+                l10n.settingsConfirmButton,
+                style: KubusTypography.inter(color: scheme.error),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

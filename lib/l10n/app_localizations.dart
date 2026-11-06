@@ -5647,7 +5647,7 @@ abstract class AppLocalizations {
   /// No description provided for @settingsDeleteAccountPendingToast.
   ///
   /// In en, this message translates to:
-  /// **'Account closure is being processed. Its status is shown here.'**
+  /// **'Account closure is being processed. You have been signed out. Its status is shown here.'**
   String get settingsDeleteAccountPendingToast;
 
   /// No description provided for @settingsDeleteAccountNotStartedToast.
@@ -5655,6 +5655,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Account closure did not start. Nothing was deleted. You can try again.'**
   String get settingsDeleteAccountNotStartedToast;
+
+  /// No description provided for @settingsDeleteAccountRefusedToast.
+  ///
+  /// In en, this message translates to:
+  /// **'The server declined the closure. Nothing was deleted and you are still signed in. You can try again.'**
+  String get settingsDeleteAccountRefusedToast;
 
   /// No description provided for @settingsAccountDeletedToast.
   ///
@@ -33044,6 +33050,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Continue to welcome'**
   String get accountClosureContinue;
+
+  /// No description provided for @accountClosureRemoveReceipt.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove this receipt from this device'**
+  String get accountClosureRemoveReceipt;
+
+  /// No description provided for @accountClosureRemoveReceiptHint.
+  ///
+  /// In en, this message translates to:
+  /// **'While this receipt is stored here, signing in to its account is blocked. Removing it lifts that block, and this device can no longer check the closure status.'**
+  String get accountClosureRemoveReceiptHint;
 
   /// No description provided for @reportContentTitle.
   ///

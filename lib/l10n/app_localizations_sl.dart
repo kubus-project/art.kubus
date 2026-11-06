@@ -3207,11 +3207,15 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get settingsDeleteAccountPendingToast =>
-      'Zaprtje računa je v obdelavi. Stanje je prikazano tukaj.';
+      'Zaprtje računa je v obdelavi. Odjavljeni ste. Stanje je prikazano tukaj.';
 
   @override
   String get settingsDeleteAccountNotStartedToast =>
       'Zaprtje računa se ni začelo. Nič ni bilo izbrisano. Lahko poskusiš znova.';
+
+  @override
+  String get settingsDeleteAccountRefusedToast =>
+      'Strežnik zaprtja računa ni sprejel. Nič ni bilo izbrisano, še vedno ste prijavljeni. Lahko poskusite znova.';
 
   @override
   String get settingsAccountDeletedToast =>
@@ -19270,6 +19274,14 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get accountClosureContinue => 'Nadaljuj na pozdravni zaslon';
+
+  @override
+  String get accountClosureRemoveReceipt =>
+      'Odstrani to potrdilo iz te naprave';
+
+  @override
+  String get accountClosureRemoveReceiptHint =>
+      'Dokler je potrdilo shranjeno tukaj, je prijava v njegov račun blokirana. Z odstranitvijo se blokada odpravi, ta naprava pa stanja zaprtja ne bo mogla več preverjati.';
 
   @override
   String get reportContentTitle => 'Prijavi vsebino';

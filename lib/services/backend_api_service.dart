@@ -1148,6 +1148,11 @@ class BackendApiService
     }
     final previousIdentity = _authIdentityOf(_authToken);
     try {
+      // Checked before any secret is written, so a refused or account-switched
+      // session never reaches storage.
+      if (_hasInitializedBinding) {
+        await _reconcileClosureReceiptFor(_accountKeyOf(token));
+      }
       final stored = !_hasInitializedBinding ||
           await _credentialStore
               .saveSession(token, refreshToken)
@@ -1214,6 +1219,12 @@ class BackendApiService
       if (token != null &&
           token.isNotEmpty &&
           AuthGatingService.isAccessTokenValid(token)) {
+        if (_hasInitializedBinding && await _isClosurePendingFor(token)) {
+          // A session whose closure is pending is never restored. Ending it
+          // here leaves the account with the status receipt only.
+          await clearAuth();
+          return;
+        }
         _authToken = token;
         _authWalletCanonical = _tryExtractWalletFromToken(token);
         AccountIdentity.setAccountKey(_accountKeyOf(token));
@@ -11096,16 +11107,76 @@ class BackendApiService
     }
   }
 
-  /// Read the separately stored, status-only account closure capability.
-  Future<AccountClosureReceipt?> loadAccountClosureReceipt() async {
-    final value = await _credentialStore.readClosureReceipt();
-    if (value == null) return null;
-    return AccountClosureReceipt.fromJson(
-        Map<String, dynamic>.from(jsonDecode(value) as Map));
+  /// The stored closure receipt. An invalid or unbound stored value is purged
+  /// rather than recovered.
+  Future<AccountClosureReceipt?> _storedClosureReceipt() async {
+    final raw = await _credentialStore.readClosureReceipt();
+    if (raw == null) return null;
+    final receipt = AccountClosureReceipt.tryDecodeStored(raw);
+    if (receipt == null) await _credentialStore.clearClosureReceipt();
+    return receipt;
   }
 
-  Future<void> saveAccountClosureReceipt(AccountClosureReceipt receipt) =>
-      _credentialStore.saveClosureReceipt(receipt.encode());
+  /// Whether a stored receipt quarantines [token]'s account.
+  Future<bool> _isClosurePendingFor(String token) async {
+    final stored = await _storedClosureReceipt();
+    final accountKey = _accountKeyOf(token);
+    return stored != null &&
+        accountKey.isNotEmpty &&
+        stored.accountId == accountKey;
+  }
+
+  /// A pending closure keeps its account out of the app: a session for that
+  /// account is refused until the receipt is removed. Any other account's
+  /// receipt is purged, so it cannot be shown after an account switch.
+  Future<void> _reconcileClosureReceiptFor(String accountKey) async {
+    final stored = await _storedClosureReceipt();
+    if (stored == null) return;
+    if (accountKey.isNotEmpty && stored.accountId == accountKey) {
+      throw StateError('Account closure is pending for this account');
+    }
+    await _credentialStore.clearClosureReceipt();
+  }
+
+  /// Read the separately stored, status-only account closure capability.
+  ///
+  /// Signed out, the receipt is returned so its status stays recoverable after
+  /// closure. While signed in, it is returned only to the account that
+  /// requested it. Another account's receipt is never recovered or displayed.
+  Future<AccountClosureReceipt?> loadAccountClosureReceipt() async {
+    final receipt = await _storedClosureReceipt();
+    if (receipt == null) return null;
+    final session = (_authToken ?? '').trim();
+    if (session.isEmpty) return receipt;
+    final current = _accountKeyOf(session);
+    return current.isNotEmpty && current == receipt.accountId ? receipt : null;
+  }
+
+  /// Stores a receipt. While signed in, it must belong to that account.
+  Future<void> saveAccountClosureReceipt(AccountClosureReceipt receipt) async {
+    final session = (_authToken ?? '').trim();
+    if (session.isNotEmpty && _accountKeyOf(session) != receipt.accountId) {
+      throw StateError('Closure receipt belongs to another account');
+    }
+    await _credentialStore.saveClosureReceipt(receipt.encode());
+  }
+
+  /// Removes the receipt from this device. This is the explicit user action
+  /// that lifts a pending-closure quarantine.
+  Future<void> clearAccountClosureReceipt() =>
+      _credentialStore.clearClosureReceipt();
+
+  /// A client error the server answered definitively, which cannot be the
+  /// result of an earlier committed attempt. 401 and 404 can mean the account
+  /// is already gone, and 408 and 409 can mean an earlier attempt is still
+  /// running. Those stay ambiguous, so they are not refusals.
+  static bool _isDefinitiveClosureRefusal(int statusCode) =>
+      statusCode >= 400 &&
+      statusCode < 500 &&
+      statusCode != 401 &&
+      statusCode != 404 &&
+      statusCode != 408 &&
+      statusCode != 409;
 
   Future<AccountClosureStatus> getAccountClosureStatus(
       AccountClosureReceipt receipt) async {
@@ -11155,6 +11226,12 @@ class BackendApiService
     }
     final closureEpoch = _authSessionEpoch;
     final closureToken = _authToken!;
+    // The receipt is bound to this account. Without an account key it could
+    // not be bound, so nothing is prepared or sent.
+    final closureAccountId = _accountKeyOf(closureToken);
+    if (closureAccountId.isEmpty) {
+      throw StateError('Account closure needs an account-scoped session');
+    }
     void requireSameSession() {
       if (_authSessionEpoch != closureEpoch || _authToken != closureToken) {
         throw StateError('Account closure session changed');
@@ -11184,8 +11261,10 @@ class BackendApiService
       }
       requireSameSession();
       final preparedBody = jsonDecode(prepared.body) as Map<String, dynamic>;
-      final receipt = AccountClosureReceipt.fromJson(
-          Map<String, dynamic>.from(preparedBody['closure'] as Map));
+      final receipt = AccountClosureReceipt.fromPrepared(
+        Map<String, dynamic>.from(preparedBody['closure'] as Map),
+        accountId: closureAccountId,
+      );
       await saveAccountClosureReceipt(receipt);
       requireSameSession();
       onStage?.call(AccountClosureStage.deleting, _authSessionEpoch);
@@ -11196,6 +11275,15 @@ class BackendApiService
         isIdempotent: true,
       );
       if (response.statusCode != 200 && response.statusCode != 204) {
+        if (_isDefinitiveClosureRefusal(response.statusCode)) {
+          // The server declined this DELETE, so the receipt describes a closure
+          // that did not happen. Discard it, or it would quarantine a live
+          // account. If it cannot be removed, keep it: quarantine is safer.
+          try {
+            await _credentialStore.clearClosureReceipt();
+          } catch (_) {}
+          onStage?.call(AccountClosureStage.refused, _authSessionEpoch);
+        }
         throw BackendApiRequestException(
           statusCode: response.statusCode,
           path: '/api/auth/me',

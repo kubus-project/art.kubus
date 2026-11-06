@@ -16,6 +16,9 @@ abstract class AccountClosureApi {
 
   /// Closes the authenticated account. Returns the session epoch left behind
   /// by the local sign-out that follows a confirmed deletion.
+  ///
+  /// Throws when the closure was not confirmed. The stage listener says how
+  /// far it got, which decides whether the outcome is known.
   Future<int> deleteMyAccount({AccountClosureStageListener? onStage});
 }
 
@@ -30,8 +33,9 @@ final class AccountClosureAccepted extends AccountClosureOutcome {
   const AccountClosureAccepted();
 }
 
-/// The closure may have committed but its confirmation was lost. The status
-/// receipt is durable, so the closure status screen resolves the real state.
+/// The closure may have committed but its confirmation was lost or is
+/// ambiguous. The bound status receipt is kept, the local session ends, and
+/// the status screen resolves the real state. DELETE is not sent again.
 final class AccountClosurePending extends AccountClosureOutcome {
   const AccountClosurePending();
 }
@@ -40,6 +44,10 @@ final class AccountClosurePending extends AccountClosureOutcome {
 enum AccountClosureFailure {
   /// The receipt was never stored and DELETE was never sent. Nothing deleted.
   prepareRejected,
+
+  /// The server definitively refused DELETE. Nothing was closed and the
+  /// receipt was discarded, so the same user may try again.
+  refused,
 
   /// The signed-in account changed while the attempt ran. The result belongs
   /// to a session that no longer exists, so it must not be applied.
@@ -70,8 +78,11 @@ final class AccountClosureAlreadyInProgress extends AccountClosureOutcome {
 ///   (`sessionChanged`, not retryable, not applied)
 /// * failed while still preparing -> [AccountClosureFailed]
 ///   (`prepareRejected`, retryable; nothing was deleted)
-/// * failed once DELETE was about to be sent -> [AccountClosurePending]
-///   (the server may have committed; status recovery decides)
+/// * the server refused DELETE (stage `refused`) -> [AccountClosureFailed]
+///   (`refused`, retryable; nothing was deleted, receipt discarded)
+/// * failed once DELETE was about to be sent (stage `deleting`), including a
+///   lost response or an ambiguous HTTP answer -> [AccountClosurePending]
+///   (the server may have committed; only status recovery decides)
 /// * succeeded with the epoch unchanged -> [AccountClosureAccepted]
 ///
 /// Wallet presence is never consulted, so walletless and wallet-linked
@@ -120,13 +131,19 @@ class AccountClosureCoordinator {
           retryable: false,
         );
       }
-      if (stage == AccountClosureStage.preparing) {
-        return const AccountClosureFailed(
-          AccountClosureFailure.prepareRejected,
-          retryable: true,
-        );
-      }
-      return const AccountClosurePending();
+      return switch (stage) {
+        AccountClosureStage.preparing => const AccountClosureFailed(
+            AccountClosureFailure.prepareRejected,
+            retryable: true,
+          ),
+        AccountClosureStage.refused => const AccountClosureFailed(
+            AccountClosureFailure.refused,
+            retryable: true,
+          ),
+        AccountClosureStage.deleting ||
+        AccountClosureStage.committed =>
+          const AccountClosurePending(),
+      };
     }
   }
 }

@@ -223,4 +223,79 @@ void main() {
           reason: 'the old account was deleted; only the result is ignored');
     });
   });
+
+  group('AccountClosureCoordinator classification', () {
+    test('a lost DELETE response after the receipt is pending, not failed',
+        () async {
+      final account = _FakeAccount(run: (self, onStage) async {
+        onStage?.call(AccountClosureStage.preparing, self.epoch);
+        onStage?.call(AccountClosureStage.deleting, self.epoch);
+        throw TimeoutException('synthetic lost response');
+      });
+
+      final outcome = await AccountClosureCoordinator(api: account).run();
+
+      expect(outcome, isA<AccountClosurePending>());
+      expect(account.calls, 1,
+          reason: 'the coordinator never re-issues DELETE');
+      expect(account.serverDeleted, isFalse);
+    });
+
+    test('an ambiguous HTTP answer after the receipt is pending, not refused',
+        () async {
+      final account = _FakeAccount(run: (self, onStage) async {
+        onStage?.call(AccountClosureStage.preparing, self.epoch);
+        onStage?.call(AccountClosureStage.deleting, self.epoch);
+        throw BackendApiRequestException(
+          statusCode: 401,
+          path: '/api/auth/me',
+        );
+      });
+
+      final outcome = await AccountClosureCoordinator(api: account).run();
+
+      expect(outcome, isA<AccountClosurePending>());
+      expect(account.calls, 1);
+    });
+
+    test(
+        'a definitive refusal is failed as refused, retryable, and the '
+        'session is not treated as closed', () async {
+      final account = _FakeAccount(run: (self, onStage) async {
+        onStage?.call(AccountClosureStage.preparing, self.epoch);
+        onStage?.call(AccountClosureStage.deleting, self.epoch);
+        onStage?.call(AccountClosureStage.refused, self.epoch);
+        throw BackendApiRequestException(
+          statusCode: 403,
+          path: '/api/auth/me',
+        );
+      });
+
+      final outcome = await AccountClosureCoordinator(api: account).run();
+
+      final failed = outcome as AccountClosureFailed;
+      expect(failed.reason, AccountClosureFailure.refused);
+      expect(failed.retryable, isTrue);
+      expect(account.serverDeleted, isFalse);
+    });
+
+    test('a refusal after an account switch is not applied', () async {
+      final account = _FakeAccount(run: (self, onStage) async {
+        onStage?.call(AccountClosureStage.preparing, self.epoch);
+        onStage?.call(AccountClosureStage.deleting, self.epoch);
+        onStage?.call(AccountClosureStage.refused, self.epoch);
+        self.epoch += 1; // a different account signs in
+        throw BackendApiRequestException(
+          statusCode: 403,
+          path: '/api/auth/me',
+        );
+      });
+
+      final outcome = await AccountClosureCoordinator(api: account).run();
+
+      final failed = outcome as AccountClosureFailed;
+      expect(failed.reason, AccountClosureFailure.sessionChanged);
+      expect(failed.retryable, isFalse);
+    });
+  });
 }
