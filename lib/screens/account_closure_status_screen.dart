@@ -85,22 +85,6 @@ class _AccountClosureStatusScreenState
     }
   }
 
-  /// The explicit user action that lifts a pending-closure quarantine.
-  Future<void> _removeReceipt() async {
-    try {
-      await _api.clearAccountClosureReceipt();
-    } catch (_) {
-      if (mounted) setState(() => _failed = true);
-      return;
-    }
-    if (!mounted) return;
-    setState(() {
-      _receipt = null;
-      _status = null;
-      _failed = false;
-    });
-  }
-
   @override
   void dispose() {
     _input.dispose();
@@ -164,10 +148,6 @@ class _AccountClosureStatusScreenState
                             _load();
                           },
                     child: Text(l10n.accountClosureRefresh)),
-                Text(l10n.accountClosureRemoveReceiptHint),
-                TextButton(
-                    onPressed: _busy ? null : _removeReceipt,
-                    child: Text(l10n.accountClosureRemoveReceipt)),
               ],
               if (_receipt == null) Text(l10n.accountClosureReceiptPrivacy),
               ...[

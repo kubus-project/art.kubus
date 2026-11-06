@@ -88,7 +88,8 @@ class _MemorySecureStorage extends FlutterSecureStorage {
 }
 
 class FailedReceiptStore extends AuthCredentialStore {
-  FailedReceiptStore() : super(web: true);
+  FailedReceiptStore()
+      : super(web: false, secureStorage: _MemorySecureStorage());
   @override
   Future<void> saveClosureReceipt(String receipt) async =>
       throw StateError('synthetic storage unavailable');
@@ -103,7 +104,9 @@ void main() {
     SharedPreferences.setMockInitialValues(<String, Object>{});
     api = BackendApiService();
     api.setAuthTokenForTesting(null);
-    api.resetCredentialStoreForTesting(store: AuthCredentialStore(web: true));
+    api.resetCredentialStoreForTesting(
+        store: AuthCredentialStore(
+            web: false, secureStorage: _MemorySecureStorage()));
   });
 
   tearDown(() {
@@ -325,8 +328,8 @@ void main() {
     late AuthCredentialStore store;
 
     setUp(() {
-      store =
-          AuthCredentialStore(web: true, secureStorage: _MemorySecureStorage());
+      store = AuthCredentialStore(
+          web: false, secureStorage: _MemorySecureStorage());
       api.resetCredentialStoreForTesting(store: store);
     });
 
@@ -350,6 +353,40 @@ void main() {
       expect(receipt?.accountId, 'synthetic-A');
     });
 
+    test(
+        'web closure fails before any request when durable secure storage is unavailable',
+        () async {
+      api.resetCredentialStoreForTesting(store: AuthCredentialStore(web: true));
+      api.setAuthTokenForTesting(_jwtFor('synthetic-A'));
+      var sent = 0;
+      api.setHttpClient(MockClient((_) async {
+        sent++;
+        return preparedReceipt();
+      }));
+      await expectLater(api.deleteMyAccount(), throwsStateError);
+      expect(sent, 0);
+    });
+
+    test('ordinary authenticated requests are blocked while DELETE is pending',
+        () async {
+      api.setAuthTokenForTesting(_jwtFor('synthetic-A'));
+      final waiting = Completer<http.Response>();
+      final sent = Completer<void>();
+      final paths = <String>[];
+      api.setHttpClient(MockClient((request) async {
+        paths.add(request.url.path);
+        if (request.url.path.endsWith('/prepare')) return preparedReceipt();
+        sent.complete();
+        return waiting.future;
+      }));
+      final closure = api.deleteMyAccount();
+      await sent.future;
+      await expectLater(api.updateMyEmailPreferences({}), throwsStateError);
+      expect(paths, ['/api/auth/account-closure/prepare', '/api/auth/me']);
+      waiting.completeError(TimeoutException('lost'));
+      await expectLater(closure, throwsA(isA<TimeoutException>()));
+    });
+
     test('signed in as another account, a stored receipt is never recovered',
         () async {
       await closeAccount('synthetic-A');
@@ -362,24 +399,23 @@ void main() {
           reason: 'the receipt stays recoverable for its own account');
     });
 
-    test(
-        'signing in as another account purges the receipt, so a later '
-        'signed-out view cannot show it', () async {
+    test('signing in as another account preserves the originating receipt',
+        () async {
       await closeAccount('synthetic-A');
 
       await api.setAuthToken(_jwtFor('synthetic-B'));
       await api.clearAuth();
 
-      expect(await api.loadAccountClosureReceipt(), isNull);
-      expect(await store.readClosureReceipt(), isNull);
+      expect((await api.loadAccountClosureReceipt())?.accountId, 'synthetic-A');
+      expect(await store.readClosureReceipt(), isNotNull);
     });
 
-    test('an unbound stored receipt is purged rather than recovered', () async {
+    test('an unbound stored receipt fails closed', () async {
       await store.saveClosureReceipt(
           '{"operationId":"$receiptId","statusToken":"$receiptToken"}');
 
-      expect(await api.loadAccountClosureReceipt(), isNull);
-      expect(await store.readClosureReceipt(), isNull);
+      await expectLater(api.loadAccountClosureReceipt(), throwsStateError);
+      expect(await store.readClosureReceipt(), isNotNull);
     });
 
     test('signed in, a foreign receipt cannot be saved', () async {
@@ -393,6 +429,22 @@ void main() {
         throwsStateError,
       );
       expect(await store.readClosureReceipt(), isNull);
+    });
+
+    test('signed in, a foreign status receipt cannot be used', () async {
+      api.setAuthTokenForTesting(_jwtFor('synthetic-B'));
+      var requests = 0;
+      api.setHttpClient(MockClient((_) async {
+        requests++;
+        return http.Response('{}', 200);
+      }));
+      await expectLater(
+          api.getAccountClosureStatus(AccountClosureReceipt(
+              operationId: receiptId,
+              statusToken: receiptToken,
+              accountId: 'synthetic-A')),
+          throwsStateError);
+      expect(requests, 0);
     });
 
     test(
@@ -417,6 +469,29 @@ void main() {
           [AccountClosureStage.preparing, AccountClosureStage.deleting]);
       expect((await api.loadAccountClosureReceipt())?.accountId, 'synthetic-A',
           reason: 'the status receipt survives so the closure can be checked');
+      await expectLater(api.deleteMyAccount(), throwsStateError);
+      expect(deletes, 1,
+          reason: 'an uncertain closure cannot send DELETE again');
+    });
+
+    test('node-not-writable response does not replay the closure DELETE',
+        () async {
+      api.setAuthTokenForTesting(_jwtFor('synthetic-A'));
+      var deletes = 0;
+      api.setHttpClient(MockClient((request) async {
+        if (request.url.path.endsWith('/prepare')) return preparedReceipt();
+        deletes++;
+        return http.Response(
+            jsonEncode({
+              'code': 'NODE_NOT_WRITABLE',
+              'preferredWriteBaseUrl': 'https://bapi.kubus.site'
+            }),
+            503);
+      }));
+      await expectLater(
+          api.deleteMyAccount(), throwsA(isA<BackendApiRequestException>()));
+      expect(deletes, 1);
+      expect((await api.loadAccountClosureReceipt())?.accountId, 'synthetic-A');
     });
 
     for (final status in [401, 404, 408, 409, 500, 503]) {
@@ -502,13 +577,12 @@ void main() {
       expect(api.getAuthToken(), isNull);
     });
 
-    test('removing the receipt on this device lifts the quarantine', () async {
+    test('removing the receipt cannot lift the quarantine', () async {
       await closeAccount('synthetic-A');
-      await api.clearAccountClosureReceipt();
-
-      await api.setAuthToken(_jwtFor('synthetic-A'));
-
-      expect(api.getAuthToken(), isNotNull);
+      await expectLater(api.clearAccountClosureReceipt(), throwsStateError);
+      await expectLater(
+          api.setAuthToken(_jwtFor('synthetic-A')), throwsStateError);
+      expect(api.getAuthToken(), isNull);
     });
   });
 }

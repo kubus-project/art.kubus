@@ -24,6 +24,17 @@ final receipt = AccountClosureReceipt(
     accountId: 'synthetic-user');
 const proofKey = Key('closure-proof');
 
+class _ReceiptStore extends AuthCredentialStore {
+  _ReceiptStore() : super(web: true);
+  String? receipt;
+  @override
+  Future<void> saveClosureReceipt(String value) async => receipt = value;
+  @override
+  Future<String?> readClosureReceipt() async => receipt;
+  @override
+  Future<void> clearClosureReceipt() async => receipt = null;
+}
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   setUpAll(QaFontLoader.ensureLoaded);
@@ -31,7 +42,7 @@ void main() {
   setUp(() {
     api = BackendApiService();
     SharedPreferences.setMockInitialValues({});
-    api.resetCredentialStoreForTesting(store: AuthCredentialStore(web: true));
+    api.resetCredentialStoreForTesting(store: _ReceiptStore());
     api.setAuthTokenForTesting(null);
     BackendApiService.disableHttpFailureDiagnosticsForTesting = true;
   });

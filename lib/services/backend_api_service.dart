@@ -1439,6 +1439,7 @@ class BackendApiService
     Duration timeout = AppConfig.requestTimeout,
     bool retriedAfterReauth = false,
     bool retriedAfterWritableRedirect = false,
+    bool allowWritableRedirect = true,
     bool allowImplicitBackendFailover = true,
     bool replaySafe = false,
     Set<String>? attemptedBackendOrigins,
@@ -1474,6 +1475,16 @@ class BackendApiService
         } catch (_) {
           // Fall through and let the request/auth-coordinator path decide.
         }
+      }
+    }
+
+    if (includeAuth) {
+      final token = (_authToken ?? '').trim();
+      if (token.isNotEmpty && await _isClosurePendingFor(token)) {
+        throw StateError('Account closure is pending for this account');
+      }
+      if (token != (_authToken ?? '').trim()) {
+        throw StateError('Authentication session changed');
       }
     }
 
@@ -1603,6 +1614,7 @@ class BackendApiService
             timeout: timeout,
             retriedAfterReauth: retriedAfterReauth,
             retriedAfterWritableRedirect: retriedAfterWritableRedirect,
+            allowWritableRedirect: allowWritableRedirect,
             allowImplicitBackendFailover: allowImplicitBackendFailover,
             attemptedBackendOrigins: attemptedOrigins,
           );
@@ -1661,11 +1673,13 @@ class BackendApiService
 
       if (_isNodeNotWritableResponse(response) &&
           method.toUpperCase() != 'GET') {
-        final redirected = _redirectNodeNotWritableRequest(
-          response,
-          uri,
-          alreadyRedirected: retriedAfterWritableRedirect,
-        );
+        final redirected = allowWritableRedirect
+            ? _redirectNodeNotWritableRequest(
+                response,
+                uri,
+                alreadyRedirected: retriedAfterWritableRedirect,
+              )
+            : null;
         if (redirected != null) {
           return _request(
             method,
@@ -1679,6 +1693,7 @@ class BackendApiService
             timeout: timeout,
             retriedAfterReauth: retriedAfterReauth,
             retriedAfterWritableRedirect: true,
+            allowWritableRedirect: allowWritableRedirect,
             allowImplicitBackendFailover: false,
             attemptedBackendOrigins: attemptedOrigins,
           );
@@ -1711,6 +1726,7 @@ class BackendApiService
             timeout: timeout,
             retriedAfterReauth: retriedAfterReauth,
             retriedAfterWritableRedirect: retriedAfterWritableRedirect,
+            allowWritableRedirect: allowWritableRedirect,
             allowImplicitBackendFailover: allowImplicitBackendFailover,
             attemptedBackendOrigins: attemptedOrigins,
           );
@@ -1866,6 +1882,7 @@ class BackendApiService
     Object? body,
     Encoding? encoding,
     bool isIdempotent = false,
+    bool allowWritableRedirect = true,
     Duration timeout = AppConfig.requestTimeout,
   }) {
     return _request(
@@ -1876,6 +1893,7 @@ class BackendApiService
       body: body,
       encoding: encoding,
       isIdempotent: isIdempotent,
+      allowWritableRedirect: allowWritableRedirect,
       timeout: timeout,
     );
   }
@@ -1909,6 +1927,15 @@ class BackendApiService
       }
     }
 
+    if (includeAuth) {
+      final token = (_authToken ?? '').trim();
+      if (token.isNotEmpty && await _isClosurePendingFor(token)) {
+        throw StateError('Account closure is pending for this account');
+      }
+      if (token != (_authToken ?? '').trim()) {
+        throw StateError('Authentication session changed');
+      }
+    }
     final request = requestFactory();
     final currentOrigin = _uriOriginKey(request.url);
     if (currentOrigin != null) {
@@ -11107,13 +11134,13 @@ class BackendApiService
     }
   }
 
-  /// The stored closure receipt. An invalid or unbound stored value is purged
-  /// rather than recovered.
+  /// An invalid or unbound receipt fails closed instead of silently removing
+  /// the only local evidence of an uncertain account closure.
   Future<AccountClosureReceipt?> _storedClosureReceipt() async {
     final raw = await _credentialStore.readClosureReceipt();
     if (raw == null) return null;
     final receipt = AccountClosureReceipt.tryDecodeStored(raw);
-    if (receipt == null) await _credentialStore.clearClosureReceipt();
+    if (receipt == null) throw StateError('Closure receipt is unavailable');
     return receipt;
   }
 
@@ -11127,15 +11154,14 @@ class BackendApiService
   }
 
   /// A pending closure keeps its account out of the app: a session for that
-  /// account is refused until the receipt is removed. Any other account's
-  /// receipt is purged, so it cannot be shown after an account switch.
+  /// account is refused while the receipt remains unresolved. Another
+  /// account can sign in without destroying the originating receipt.
   Future<void> _reconcileClosureReceiptFor(String accountKey) async {
     final stored = await _storedClosureReceipt();
     if (stored == null) return;
     if (accountKey.isNotEmpty && stored.accountId == accountKey) {
       throw StateError('Account closure is pending for this account');
     }
-    await _credentialStore.clearClosureReceipt();
   }
 
   /// Read the separately stored, status-only account closure capability.
@@ -11158,13 +11184,19 @@ class BackendApiService
     if (session.isNotEmpty && _accountKeyOf(session) != receipt.accountId) {
       throw StateError('Closure receipt belongs to another account');
     }
+    final previous = await _storedClosureReceipt();
+    if (previous != null && previous.accountId != receipt.accountId) {
+      throw StateError('Another account has an unresolved closure receipt');
+    }
     await _credentialStore.saveClosureReceipt(receipt.encode());
   }
 
-  /// Removes the receipt from this device. This is the explicit user action
-  /// that lifts a pending-closure quarantine.
-  Future<void> clearAccountClosureReceipt() =>
-      _credentialStore.clearClosureReceipt();
+  /// An uncertain closure must never regain authority by deleting its receipt.
+  Future<void> clearAccountClosureReceipt() async {
+    if (await _storedClosureReceipt() != null) {
+      throw StateError('Closure status must remain available');
+    }
+  }
 
   /// A client error the server answered definitively, which cannot be the
   /// result of an earlier committed attempt. 401 and 404 can mean the account
@@ -11180,6 +11212,10 @@ class BackendApiService
 
   Future<AccountClosureStatus> getAccountClosureStatus(
       AccountClosureReceipt receipt) async {
+    final session = (_authToken ?? '').trim();
+    if (session.isNotEmpty && _accountKeyOf(session) != receipt.accountId) {
+      throw StateError('Closure receipt belongs to another account');
+    }
     final response = await _post(
       Uri.parse('$baseUrl/api/auth/account-closure/status'),
       includeAuth: false,
@@ -11215,6 +11251,9 @@ class BackendApiService
   /// DELETE /api/auth/me
   @override
   Future<int> deleteMyAccount({AccountClosureStageListener? onStage}) async {
+    if (!_credentialStore.closureReceiptPersistenceAvailable) {
+      throw StateError('Secure closure receipt storage unavailable');
+    }
     final token = (_authToken ?? '').trim();
     if (token.isEmpty) {
       await loadAuthToken();
@@ -11237,6 +11276,11 @@ class BackendApiService
         throw StateError('Account closure session changed');
       }
     }
+
+    if (await _isClosurePendingFor(closureToken)) {
+      throw StateError('Account closure is pending for this account');
+    }
+    requireSameSession();
 
     final closureHeaders = {
       'Content-Type': 'application/json',
@@ -11272,7 +11316,8 @@ class BackendApiService
         Uri.parse('$baseUrl/api/auth/me'),
         includeAuth: false,
         headers: closureHeaders,
-        isIdempotent: true,
+        isIdempotent: false,
+        allowWritableRedirect: false,
       );
       if (response.statusCode != 200 && response.statusCode != 204) {
         if (_isDefinitiveClosureRefusal(response.statusCode)) {
