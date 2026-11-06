@@ -371,6 +371,50 @@ class BackendApiService
 
   /// Epoch of the current credential session; changes on commit and sign-out.
   int get authSessionEpoch => _authSessionEpoch;
+
+  Future<void> _authSessionMutationTail = Future<void>.value();
+
+  /// Longest time one auth-session mutation waits for the previous holder.
+  ///
+  /// Choice (no deadlock): sign-out and account switch never wait unboundedly.
+  /// The epoch is invalidated synchronously before any wait, so a stuck lease
+  /// can only no-op at its next epoch check. After this bound the queued
+  /// mutation proceeds. A platform write already in flight at that moment can
+  /// still land late; the lease rolls its own keys back when it resumes.
+  @visibleForTesting
+  static Duration authSessionMutationMaxWait = const Duration(seconds: 2);
+
+  Future<T> _withAuthSessionMutationLock<T>(
+    Future<T> Function() operation,
+  ) async {
+    final previous = _authSessionMutationTail;
+    final release = Completer<void>();
+    _authSessionMutationTail = release.future;
+    try {
+      await previous.timeout(authSessionMutationMaxWait, onTimeout: () {});
+      return await operation();
+    } finally {
+      if (!release.isCompleted) release.complete();
+    }
+  }
+
+  /// Runs a short local commit while token replacement and sign-out are
+  /// serialized behind it. Returns false when the session epoch no longer
+  /// matches [expectedEpoch] at entry or exit. Network work must finish before
+  /// calling this; exceptions from [localCommit] propagate. The lease is
+  /// always released in `finally`.
+  Future<bool> withAuthSessionLease(
+    int expectedEpoch,
+    Future<void> Function() localCommit,
+  ) {
+    if (expectedEpoch != _authSessionEpoch) return Future<bool>.value(false);
+    return _withAuthSessionMutationLock(() async {
+      if (expectedEpoch != _authSessionEpoch) return false;
+      await localCommit();
+      return expectedEpoch == _authSessionEpoch;
+    });
+  }
+
   MediaUploadOptimizer _mediaUploadOptimizer = const MediaUploadOptimizer();
 
   // Used only for diagnostic logging; the actual behavior is determined by the
@@ -471,16 +515,28 @@ class BackendApiService
   /// sessions and the connected wallet may change; marker CRUD endpoints are
   /// ownership-gated and will return 403 when the token belongs to a different
   /// wallet.
-  void setPreferredWalletAddress(String? walletAddress) {
+  void setPreferredWalletAddress(
+    String? walletAddress, {
+    bool persist = true,
+    int? expectedAuthSessionEpoch,
+  }) {
+    if (expectedAuthSessionEpoch != null &&
+        expectedAuthSessionEpoch != _authSessionEpoch) {
+      return;
+    }
     final canonical = WalletUtils.canonical(walletAddress);
     _preferredWalletCanonical = canonical.isEmpty ? null : canonical;
 
     // Best-effort persistence so cold-start auth can re-issue correctly.
     final raw = (walletAddress ?? '').trim();
-    if (raw.isEmpty) return;
+    if (!persist || raw.isEmpty) return;
     unawaited(() async {
       try {
         final prefs = await SharedPreferences.getInstance();
+        if (expectedAuthSessionEpoch != null &&
+            expectedAuthSessionEpoch != _authSessionEpoch) {
+          return;
+        }
         await prefs.setString(PreferenceKeys.walletAddress, raw);
       } catch (_) {
         // Ignore persistence failures.
@@ -1038,7 +1094,20 @@ class BackendApiService
     await _commitAuthSession(token, expectedEpoch: expectedEpoch);
   }
 
-  Future<int> _commitAuthSession(String token,
+  Future<int> _commitAuthSession(
+    String token, {
+    String? refreshToken,
+    int? expectedEpoch,
+  }) =>
+      _withAuthSessionMutationLock(
+        () => _commitAuthSessionLocked(
+          token,
+          refreshToken: refreshToken,
+          expectedEpoch: expectedEpoch,
+        ),
+      );
+
+  Future<int> _commitAuthSessionLocked(String token,
       {String? refreshToken, int? expectedEpoch}) async {
     if (expectedEpoch != null && expectedEpoch != _authSessionEpoch) {
       throw StateError('Authentication request belongs to an ended session');
@@ -1072,7 +1141,7 @@ class BackendApiService
       }
       return epoch;
     } catch (_) {
-      if (epoch == _authSessionEpoch) await clearAuth();
+      if (epoch == _authSessionEpoch) await _clearAuthLocked();
       rethrow;
     }
   }
@@ -1129,17 +1198,34 @@ class BackendApiService
   /// Local sign-out is immediate. Cleanup failures do not skip other stores or
   /// prevent socket/profile cleanup. A durable marker blocks restart restore
   /// when an OS secret could not be removed.
-  Future<void> clearAuth() async {
+  Future<void> clearAuth() {
+    // Invalidate the in-memory session and notify providers synchronously.
+    // Persistence cleanup is serialized after any short local commit lease.
+    final epoch = _invalidateAuthSession();
+    return _withAuthSessionMutationLock(() => _finishClearAuth(epoch));
+  }
+
+  Future<void> _clearAuthLocked() async {
+    final epoch = _invalidateAuthSession();
+    await _finishClearAuth(epoch);
+  }
+
+  int _invalidateAuthSession() {
     _authSessionEpoch += 1;
     _authToken = null;
     _credentialTargetToken = null;
     _authWalletCanonical = null;
     _authCoordinator?.reset();
     AccountIdentity.setAccountKey('');
-    final epoch = _authSessionEpoch;
+    AccountIdentity.notifyListenersChanged();
+    return _authSessionEpoch;
+  }
+
+  Future<void> _finishClearAuth(int epoch) async {
     final cleanup = _credentialStore.clear();
     try {
-      await AccountIdentity.notifyChanged().timeout(const Duration(seconds: 1));
+      await AccountIdentity.purgeChangedAccount()
+          .timeout(const Duration(seconds: 1));
     } catch (_) {}
     try {
       final result = await cleanup.timeout(const Duration(seconds: 3));

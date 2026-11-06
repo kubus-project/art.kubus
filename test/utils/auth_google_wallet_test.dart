@@ -80,7 +80,11 @@ class _NoopChatProvider extends ChatProvider {
   String? lastWallet;
 
   @override
-  Future<void> setCurrentWallet(String wallet) async {
+  Future<void> setCurrentWallet(
+    String wallet, {
+    bool Function()? shouldContinue,
+  }) async {
+    if (shouldContinue?.call() == false) return;
     lastWallet = wallet;
   }
 }

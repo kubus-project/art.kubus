@@ -125,7 +125,14 @@ abstract final class AccountIdentity {
   /// Announces an identity change. Listeners run now; the returned future
   /// completes once the device-level account keys are purged.
   static Future<void> notifyChanged() async {
-    final cacheCleanup = AccountCacheStore.purge();
+    notifyListenersChanged();
+    await purgeChangedAccount();
+  }
+
+  /// Invalidates providers synchronously without beginning asynchronous cache
+  /// purging. Sign-out uses this before waiting for a serialized credential
+  /// cleanup so listeners immediately drop the old identity.
+  static void notifyListenersChanged() {
     for (final listener in List<VoidCallback>.of(_listeners)) {
       try {
         listener();
@@ -135,6 +142,13 @@ abstract final class AccountIdentity {
         }
       }
     }
+  }
+
+  /// Purges device-level account data after identity listeners have been
+  /// notified. Callers can serialize this phase after any in-flight local
+  /// account commit.
+  static Future<void> purgeChangedAccount() async {
+    final cacheCleanup = AccountCacheStore.purge();
     await cacheCleanup;
     try {
       final prefs = await SharedPreferences.getInstance();

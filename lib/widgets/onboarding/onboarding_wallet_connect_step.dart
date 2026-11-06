@@ -271,6 +271,11 @@ class _OnboardingWalletConnectStepState
       });
       await widget.onWalletLinked(result.walletAddress);
     } catch (error) {
+      if (error is AccountWalletLinkSupersededException) {
+        // The account changed mid-link. The session that replaced it owns the
+        // local state now: no rollback and no failure copy for this attempt.
+        return;
+      }
       // Roll back wallet/session pollution and stay on this step. The guard
       // stays active so a refresh recovers into WalletConnect, never sign-in.
       await _restoreSnapshot(snapshot);

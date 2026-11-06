@@ -262,6 +262,10 @@ class WalletProvider extends ChangeNotifier {
     return _accountLinkGeneration;
   }
 
+  bool isAccountWalletLinkAttemptCurrent(int generation) =>
+      generation == _accountLinkGeneration &&
+      _accountLinkPhase == WalletAccountLinkPhase.inProgress;
+
   void completeAccountWalletLink(int generation) {
     if (generation != _accountLinkGeneration) return;
     _accountLinkPhase = WalletAccountLinkPhase.unknown;
@@ -1297,16 +1301,20 @@ class WalletProvider extends ChangeNotifier {
   Future<bool> isMnemonicBackupRequired({String? walletAddress}) async {
     final targetWallet = (walletAddress ?? _currentWalletAddress ?? '').trim();
     if (targetWallet.isEmpty) return false;
+    final required = await _readMnemonicBackupRequired(targetWallet);
+    if (WalletUtils.equals(targetWallet, _currentWalletAddress)) {
+      _mnemonicBackupRequiredForAuthority = required;
+    }
+    return required;
+  }
+
+  Future<bool> _readMnemonicBackupRequired(String targetWallet) async {
     final prefs = await SharedPreferences.getInstance();
     final requiredKey = _walletScopedPreferenceKey(
       prefix: PreferenceKeys.walletMnemonicBackupRequiredV1Prefix,
       walletAddress: targetWallet,
     );
-    final required = prefs.getBool(requiredKey) ?? false;
-    if (WalletUtils.equals(targetWallet, _currentWalletAddress)) {
-      _mnemonicBackupRequiredForAuthority = required;
-    }
-    return required;
+    return prefs.getBool(requiredKey) ?? false;
   }
 
   Future<String?> _resolveBackupWalletAddress({String? walletAddress}) async {
@@ -2017,11 +2025,18 @@ class WalletProvider extends ChangeNotifier {
     String walletAddress, {
     bool persist = true,
     bool notify = true,
+    bool Function()? shouldCommit,
+    bool updatePreferredWallet = true,
   }) async {
     final sanitized = walletAddress.trim();
     if (sanitized.isEmpty) return;
 
+    if (shouldCommit != null && !shouldCommit()) return;
+    final backupRequired = await _readMnemonicBackupRequired(sanitized);
+    if (shouldCommit != null && !shouldCommit()) return;
+
     _currentWalletAddress = sanitized;
+    _mnemonicBackupRequiredForAuthority = backupRequired;
     SolanaWalletConnectService.instance.updateActiveWalletAddress(sanitized);
 
     if (persist) {
@@ -2032,11 +2047,7 @@ class WalletProvider extends ChangeNotifier {
             'commitVerifiedAccountLinkedWalletIdentity: persist failed: $e');
       }
     }
-    _setPreferredWalletForIdentity(sanitized);
-
-    try {
-      await isMnemonicBackupRequired(walletAddress: sanitized);
-    } catch (_) {}
+    if (updatePreferredWallet) _setPreferredWalletForIdentity(sanitized);
 
     _sessionPhase = WalletSessionPhase.ready;
     _clearLastError();

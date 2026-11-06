@@ -744,25 +744,29 @@ class ProfileProvider extends foundation.ChangeNotifier {
       final mergedPrefs = _mergePreferencesWithLocalPersona(preferenceKey);
       _currentUser = _currentUser?.copyWith(preferences: mergedPrefs);
       await _persistPreferences(mergedPrefs, sessionEpoch: sessionEpoch);
+      if (!isCurrentLoad()) return;
       if (accountKey.isNotEmpty) {
-        try {
-          final prefs = await _ensurePrefs();
-          await prefs.setString('user_id', accountKey);
-        } catch (_) {}
+        await _writeAccountPrefsIfCurrent(
+          sessionEpoch,
+          isCurrentLoad,
+          {'user_id': accountKey},
+        );
       }
 
       final walletAddress = _currentUser?.walletAddress.trim() ?? '';
       if (walletAddress.isNotEmpty) {
         await _applyDaoReviewRoles(walletAddress, sessionEpoch: sessionEpoch);
         if (!isCurrentLoad()) return;
-        await _loadBackendStats(walletAddress);
+        await _loadBackendStats(walletAddress, isCurrent: isCurrentLoad);
         if (!isCurrentLoad()) return;
-        try {
-          final prefs = await _ensurePrefs();
-          await prefs.setString('wallet_address', walletAddress);
-        } catch (_) {}
+        await _writeAccountPrefsIfCurrent(
+          sessionEpoch,
+          isCurrentLoad,
+          {'wallet_address': walletAddress},
+        );
       }
 
+      if (!isCurrentLoad()) return;
       _isLoading = false;
       notifyListeners();
     } catch (e) {
@@ -1829,6 +1833,29 @@ class ProfileProvider extends foundation.ChangeNotifier {
   /// nothing more is written. Each write checks it right before it is issued,
   /// because every await can yield to a sign-out, and a late response must not
   /// restore the previous account's toggles.
+  /// Writes account-keyed prefs (`user_id`, `wallet_address`) only while the
+  /// load's account session is still current. The check runs inside the
+  /// auth-session lease, so a token replacement or sign-out cannot interleave
+  /// between the check and the write. A stale load writes nothing.
+  Future<void> _writeAccountPrefsIfCurrent(
+    int sessionEpoch,
+    bool Function() isCurrent,
+    Map<String, String> values,
+  ) async {
+    await BackendApiService().withAuthSessionLease(sessionEpoch, () async {
+      if (!isCurrent()) return;
+      try {
+        final prefs = await _ensurePrefs();
+        for (final entry in values.entries) {
+          if (!isCurrent()) return;
+          await prefs.setString(entry.key, entry.value);
+        }
+      } catch (_) {
+        // Preference persistence is best-effort, as before.
+      }
+    });
+  }
+
   Future<void> _persistPreferences(
     ProfilePreferences preferences, {
     required int sessionEpoch,
