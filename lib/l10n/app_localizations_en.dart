@@ -3177,6 +3177,18 @@ class AppLocalizationsEn extends AppLocalizations {
       'Closure could not be confirmed. Check its status before trying again.';
 
   @override
+  String get settingsDeleteAccountBusy =>
+      'Deleting your account. This can take a moment.';
+
+  @override
+  String get settingsDeleteAccountPendingToast =>
+      'Account closure is being processed. Its status is shown here.';
+
+  @override
+  String get settingsDeleteAccountNotStartedToast =>
+      'Account closure did not start. Nothing was deleted. You can try again.';
+
+  @override
   String get settingsAccountDeletedToast =>
       'Account closure requested. Some data may require further review or be retained.';
 

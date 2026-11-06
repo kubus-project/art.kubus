@@ -3202,6 +3202,18 @@ class AppLocalizationsSl extends AppLocalizations {
       'Zaprtja ni bilo mogoče potrditi. Pred ponovnim poskusom preverite stanje.';
 
   @override
+  String get settingsDeleteAccountBusy =>
+      'Brišemo tvoj račun. To lahko traja trenutek.';
+
+  @override
+  String get settingsDeleteAccountPendingToast =>
+      'Zaprtje računa je v obdelavi. Stanje je prikazano tukaj.';
+
+  @override
+  String get settingsDeleteAccountNotStartedToast =>
+      'Zaprtje računa se ni začelo. Nič ni bilo izbrisano. Lahko poskusiš znova.';
+
+  @override
   String get settingsAccountDeletedToast =>
       'Zaprtje računa je bilo zahtevano. Nekateri podatki lahko zahtevajo dodaten pregled ali se še hranijo.';
 

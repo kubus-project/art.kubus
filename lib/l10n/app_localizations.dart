@@ -5638,6 +5638,24 @@ abstract class AppLocalizations {
   /// **'Closure could not be confirmed. Check its status before trying again.'**
   String get settingsDeleteAccountBackendFailedToast;
 
+  /// No description provided for @settingsDeleteAccountBusy.
+  ///
+  /// In en, this message translates to:
+  /// **'Deleting your account. This can take a moment.'**
+  String get settingsDeleteAccountBusy;
+
+  /// No description provided for @settingsDeleteAccountPendingToast.
+  ///
+  /// In en, this message translates to:
+  /// **'Account closure is being processed. Its status is shown here.'**
+  String get settingsDeleteAccountPendingToast;
+
+  /// No description provided for @settingsDeleteAccountNotStartedToast.
+  ///
+  /// In en, this message translates to:
+  /// **'Account closure did not start. Nothing was deleted. You can try again.'**
+  String get settingsDeleteAccountNotStartedToast;
+
   /// No description provided for @settingsAccountDeletedToast.
   ///
   /// In en, this message translates to:
