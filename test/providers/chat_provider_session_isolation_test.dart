@@ -315,6 +315,68 @@ void main() {
     expect(provider.unreadCounts, isEmpty);
   });
 
+  test(
+      'switch from wallet account A to a walletless account clears A chat '
+      'state', () async {
+    final http = _ChatHttp();
+    BackendApiService().setHttpClient(http.client());
+    BackendApiService().setAuthTokenForTesting('tokenA');
+
+    final provider = ChatProvider();
+    provider.setCurrentWalletForTesting('walletA');
+
+    final refreshA = provider.refreshConversations();
+    await http.arrived('conversations');
+    http.complete('conversations', {
+      'success': true,
+      'data': [_conversation('convA')],
+    });
+    await refreshA;
+    final loadA = provider.loadMessages('convA');
+    await http.arrived('messages');
+    http.complete('messages', {
+      'success': true,
+      'data': [_message('m1', 'convA')],
+    });
+    await loadA;
+    expect(provider.conversations, isNotEmpty);
+    expect(provider.messages.containsKey('convA'), isTrue);
+    expect(provider.unreadCounts['convA'], 3);
+
+    // Account B signs in with its own token and no wallet.
+    BackendApiService().setAuthTokenForTesting('tokenB');
+    provider.bindAuthContext(walletAddress: null, isSignedIn: true);
+
+    expect(provider.conversations, isEmpty);
+    expect(provider.messages, isEmpty);
+    expect(provider.unreadCounts, isEmpty);
+    expect(provider.totalUnread, 0);
+  });
+
+  test('clearing the wallet on a wallet session drops its chat state',
+      () async {
+    final http = _ChatHttp();
+    BackendApiService().setHttpClient(http.client());
+    BackendApiService().setAuthTokenForTesting('tokenA');
+
+    final provider = ChatProvider();
+    provider.setCurrentWalletForTesting('walletA');
+
+    final refreshA = provider.refreshConversations();
+    await http.arrived('conversations');
+    http.complete('conversations', {
+      'success': true,
+      'data': [_conversation('convA')],
+    });
+    await refreshA;
+    expect(provider.conversations, isNotEmpty);
+
+    await provider.setCurrentWallet('');
+
+    expect(provider.conversations, isEmpty);
+    expect(provider.unreadCounts, isEmpty);
+  });
+
   test('socket message is ignored while no wallet is bound', () {
     final provider = ChatProvider();
     provider.setCurrentWalletForTesting(null);

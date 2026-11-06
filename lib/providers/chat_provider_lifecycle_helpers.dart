@@ -324,6 +324,13 @@ void _chatProviderBindAuthContext(
       return;
     }
 
+    // A signed-in identity with no wallet is a different account from whatever
+    // held the chat state before. Clear that state now, before the wallet-keyed
+    // paths below can return early and leave it in memory.
+    if (resolvedWallet.isEmpty) {
+      provider._resetSessionState(reason: 'identityWithoutWallet');
+    }
+
     if (resolvedWallet.isNotEmpty &&
         !WalletUtils.equals(resolvedWallet, provider._currentWallet)) {
       unawaited(provider.setCurrentWallet(resolvedWallet));
@@ -352,7 +359,14 @@ Future<void> _chatProviderSetCurrentWallet(
   try {
     bool isSessionCurrent() => shouldContinue?.call() ?? true;
     if (!isSessionCurrent()) return;
-    if (wallet.isEmpty) return;
+    if (wallet.isEmpty) {
+      // Leaving a wallet identity for one with no wallet: the previous wallet's
+      // chat state must not survive the change.
+      if ((provider._currentWallet ?? '').isNotEmpty) {
+        provider._resetSessionState(reason: 'walletCleared', notify: false);
+      }
+      return;
+    }
     if (WalletUtils.equals(provider._currentWallet, wallet)) return;
     if ((provider._currentWallet ?? '').isNotEmpty) {
       provider._resetSessionState(reason: 'walletChanged', notify: false);
