@@ -6,6 +6,7 @@ import 'package:art_kubus/services/telemetry/optional_analytics_consent.dart';
 import 'package:art_kubus/services/http_client_factory.dart';
 import 'package:art_kubus/services/telemetry/kubus_client_context.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -32,6 +33,8 @@ void main() {
   });
 
   setUp(() async {
+    FlutterSecureStorage.setMockInitialValues({});
+    BackendApiService().resetCredentialStoreForTesting();
     await OptionalAnalyticsConsent.instance.resetForTesting();
     SharedPreferences.setMockInitialValues(<String, Object>{
       OptionalAnalyticsConsent.prefsKey:
