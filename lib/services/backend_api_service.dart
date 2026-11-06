@@ -40,6 +40,7 @@ import 'user_action_logger.dart';
 import 'auth_gating_service.dart';
 import 'auth_credential_store.dart';
 import '../models/account_closure.dart';
+import 'account_closure_coordinator.dart';
 import 'auth_session_coordinator.dart';
 import 'http_client_factory.dart';
 import 'media_upload_optimizer.dart';
@@ -366,7 +367,11 @@ AuthSignInMethod _authSignInMethodFromStorageValue(String? value) {
 }
 
 class BackendApiService
-    implements ArtworkBackendApi, ProfileBackendApi, MarkerBackendApi {
+    implements
+        ArtworkBackendApi,
+        ProfileBackendApi,
+        MarkerBackendApi,
+        AccountClosureApi {
   static final BackendApiService _instance = BackendApiService._internal();
   factory BackendApiService() => _instance;
   BackendApiService._internal() {
@@ -384,6 +389,7 @@ class BackendApiService
   int _authSessionEpoch = 0;
 
   /// Epoch of the current credential session; changes on commit and sign-out.
+  @override
   int get authSessionEpoch => _authSessionEpoch;
 
   Future<void> _authSessionMutationTail = Future<void>.value();
@@ -11131,8 +11137,13 @@ class BackendApiService
   /// requires a valid backend token and never selects the account by wallet
   /// address. Throws when unauthenticated or when the backend rejects the
   /// request.
+  ///
+  /// [onStage] reports progress with the session epoch in effect, so the
+  /// caller can tell a failure before DELETE from one after it. Returns the
+  /// session epoch left by the local sign-out.
   /// DELETE /api/auth/me
-  Future<void> deleteMyAccount() async {
+  @override
+  Future<int> deleteMyAccount({AccountClosureStageListener? onStage}) async {
     final token = (_authToken ?? '').trim();
     if (token.isEmpty) {
       await loadAuthToken();
@@ -11154,6 +11165,7 @@ class BackendApiService
       'Content-Type': 'application/json',
       'Authorization': 'Bearer $closureToken'
     };
+    onStage?.call(AccountClosureStage.preparing, closureEpoch);
     try {
       // Obtain and verify storage of a status-only receipt before revoking login.
       // If DELETE commits but the response is lost, this capability still works.
@@ -11176,6 +11188,7 @@ class BackendApiService
           Map<String, dynamic>.from(preparedBody['closure'] as Map));
       await saveAccountClosureReceipt(receipt);
       requireSameSession();
+      onStage?.call(AccountClosureStage.deleting, _authSessionEpoch);
       final response = await _delete(
         Uri.parse('$baseUrl/api/auth/me'),
         includeAuth: false,
@@ -11190,7 +11203,13 @@ class BackendApiService
         );
       }
       requireSameSession();
-      await clearAuth();
+      // clearAuth bumps the epoch synchronously; read it before any await so
+      // the value is exactly the post-sign-out epoch of this closure.
+      final clearing = clearAuth();
+      final clearedEpoch = _authSessionEpoch;
+      onStage?.call(AccountClosureStage.committed, clearedEpoch);
+      await clearing;
+      return clearedEpoch;
     } catch (e) {
       AppConfig.debugPrint(
           'BackendApiService.deleteMyAccount failed (${e.runtimeType})');

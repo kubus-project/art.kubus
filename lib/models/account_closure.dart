@@ -29,6 +29,20 @@ enum AccountClosureState {
   completedManaged
 }
 
+/// How far a client-side account closure got. A failure before [deleting]
+/// means the server was never asked to delete. A failure at or after
+/// [deleting] may still have committed, so only status recovery can say.
+enum AccountClosureStage {
+  /// Session pinned; the status receipt is being requested and stored.
+  preparing,
+
+  /// The receipt is stored and DELETE /api/auth/me is about to be sent.
+  deleting,
+
+  /// The server confirmed deletion; only local sign-out remains.
+  committed,
+}
+
 class AccountClosureStatus {
   const AccountClosureStatus(
       {required this.state, required this.lawfulRetention});
