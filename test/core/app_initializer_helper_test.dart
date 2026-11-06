@@ -5,6 +5,14 @@ import 'package:art_kubus/core/app_initializer_helper.dart';
 import 'package:art_kubus/core/deep_link_startup_routing.dart';
 
 void main() {
+  test('explicit onboarding keeps its full URL when a journey resumes', () {
+    final uri = Uri.parse('/onboarding?entry=artist#continue');
+    expect(onboardingStartupRouteName(explicit: true, initialUri: uri),
+        '/onboarding?entry=artist#continue');
+    expect(onboardingStartupRouteName(explicit: false, initialUri: uri),
+        '/onboarding');
+    expect(onboardingStartupRouteName(explicit: true), '/onboarding');
+  });
   group('shouldOpenPublicMapBeforeOnboarding', () {
     test('opens a signed-out direct map entry before onboarding', () {
       expect(

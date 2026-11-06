@@ -90,6 +90,11 @@ class _AppInitializerState extends State<AppInitializer> {
   bool _didNavigate = false;
   String? _serverVersion;
 
+  String get _onboardingRouteName => onboardingStartupRouteName(
+        explicit: widget.explicitOnboarding,
+        initialUri: widget.initialUri,
+      );
+
   void _openExplicitOnboarding(NavigatorState navigator) {
     if (!mounted || _didNavigate) return;
     _didNavigate = true;
@@ -98,9 +103,7 @@ class _AppInitializerState extends State<AppInitializer> {
         builder: (_) => OnboardingFlowScreen(
           forceDesktop: DesktopBreakpoints.isDesktop(navigator.context),
         ),
-        settings: RouteSettings(
-          name: widget.initialUri?.toString() ?? '/onboarding',
-        ),
+        settings: RouteSettings(name: _onboardingRouteName),
       ),
     );
   }
@@ -238,7 +241,7 @@ class _AppInitializerState extends State<AppInitializer> {
                   ) ??
                   ProtectedActionRequirements.accountOnly,
             ),
-            settings: const RouteSettings(name: '/onboarding'),
+            settings: RouteSettings(name: _onboardingRouteName),
           ),
         );
         return;
@@ -914,7 +917,7 @@ class _AppInitializerState extends State<AppInitializer> {
                   requiresWalletSetup: true,
                   requirements: ProtectedActionRequirements.wallet,
                 ),
-                settings: const RouteSettings(name: '/onboarding'),
+                settings: RouteSettings(name: _onboardingRouteName),
               ),
             );
             return;
@@ -943,7 +946,7 @@ class _AppInitializerState extends State<AppInitializer> {
                 initialStepId: startupDecision.onboardingInitialStepId,
                 requirements: resumeScope,
               ),
-              settings: const RouteSettings(name: '/onboarding'),
+              settings: RouteSettings(name: _onboardingRouteName),
             ),
           );
           return;
@@ -972,7 +975,7 @@ class _AppInitializerState extends State<AppInitializer> {
                 initialStepId: pendingAuthOnboardingStepId,
                 requirements: resumeScope,
               ),
-              settings: const RouteSettings(name: '/onboarding'),
+              settings: RouteSettings(name: _onboardingRouteName),
             ),
           );
           return;
@@ -1004,7 +1007,7 @@ class _AppInitializerState extends State<AppInitializer> {
                     ? ProtectedActionRequirements.wallet
                     : resumeScope,
               ),
-              settings: const RouteSettings(name: '/onboarding'),
+              settings: RouteSettings(name: _onboardingRouteName),
             ),
           );
           return;
@@ -1026,7 +1029,7 @@ class _AppInitializerState extends State<AppInitializer> {
                 initialStepId: pendingAuthOnboardingStepId,
                 requirements: resumeScope,
               ),
-              settings: const RouteSettings(name: '/onboarding'),
+              settings: RouteSettings(name: _onboardingRouteName),
             ),
           );
           return;

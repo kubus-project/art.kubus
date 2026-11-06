@@ -28,8 +28,17 @@ async function waitForWelcome(page) {
       if (new URL(page.url()).pathname + new URL(page.url()).search + new URL(page.url()).hash !== path) {
         throw new Error(`Reload changed onboarding URL: ${page.url()}`);
       }
+      await page.goto(origin + '/');
+      await page.waitForURL((url) => url.pathname === '/map', { timeout });
+      await page.goBack();
+      await waitForWelcome(page);
+      if (new URL(page.url()).pathname + new URL(page.url()).search + new URL(page.url()).hash !== path) {
+        throw new Error(`Back changed onboarding URL: ${page.url()}`);
+      }
+      await page.goForward();
+      await page.waitForURL((url) => url.pathname === '/map', { timeout });
       await context.close();
-      console.log(`PASS explicit onboarding and reload at ${viewport.width}px`);
+      console.log(`PASS explicit onboarding, reload and Back/Forward at ${viewport.width}px`);
     }
     const context = await browser.newContext({ locale: 'en-US' });
     const page = await context.newPage();
