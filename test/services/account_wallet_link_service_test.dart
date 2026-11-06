@@ -126,6 +126,18 @@ void main() {
     SharedPreferences.setMockInitialValues(<String, Object>{});
   });
 
+  test('account change clears a stale link failure and invalidates old attempt',
+      () async {
+    final walletProvider = _RecordingWalletProvider();
+    final staleGeneration = walletProvider.beginAccountWalletLink();
+    expect(walletProvider.accountLinkPhase, WalletAccountLinkPhase.inProgress);
+
+    await walletProvider.clearAccountShell();
+    walletProvider.failAccountWalletLink(staleGeneration);
+
+    expect(walletProvider.accountLinkPhase, WalletAccountLinkPhase.unknown);
+  });
+
   testWidgets(
       'link runs bind under the original account token and commits only after '
       '/profiles/me verification', (tester) async {
@@ -191,12 +203,62 @@ void main() {
     expect(prefs.getString('user_id'), kUserId);
 
     expect(walletProvider.boundIdentity, kWallet);
+    expect(
+      walletProvider.accountLinkPhase,
+      WalletAccountLinkPhase.unknown,
+      reason: 'a verified success clears transient link presentation state',
+    );
     expect(walletProvider.readOnlyIdentityUsed, isFalse,
         reason: 'verified link must use the safe commit path, never '
             'setReadOnlyWalletIdentity(loadData: true)');
     expect(profileProvider.authenticatedLoadAttempted, isTrue);
     expect(profileProvider.autoRegisterAttempted, isFalse);
     expect(chatProvider.lastWallet, kWallet);
+  });
+
+  testWidgets(
+      'link service exposes progress and clears it after verified success',
+      (tester) async {
+    final walletProvider = _RecordingWalletProvider();
+    final context = await _pumpProviders(
+      tester,
+      walletProvider: walletProvider,
+      profileProvider: _RecordingProfileProvider(),
+      chatProvider: _RecordingChatProvider(),
+    );
+    final failedGeneration = walletProvider.beginAccountWalletLink();
+    walletProvider.failAccountWalletLink(failedGeneration);
+    expect(walletProvider.accountLinkPhase, WalletAccountLinkPhase.failed);
+    final service = AccountWalletLinkService(
+      bindWallet: (wallet, {signature}) async {
+        expect(
+          walletProvider.accountLinkPhase,
+          WalletAccountLinkPhase.inProgress,
+        );
+        return <String, dynamic>{
+          'success': true,
+          'data': <String, dynamic>{'token': 'post-bind-token'},
+        };
+      },
+      fetchMyProfile: () async => <String, dynamic>{
+        'success': true,
+        'data': <String, dynamic>{
+          'userId': kUserId,
+          'walletAddress': kWallet,
+        },
+      },
+    );
+
+    await tester.runAsync(() async {
+      await service.linkWalletToCurrentAccount(
+        walletAddress: kWallet,
+        expectedUserId: kUserId,
+        originalAuthToken: kOriginalToken,
+        providers: _providersFromContext(context),
+      );
+    });
+
+    expect(walletProvider.accountLinkPhase, WalletAccountLinkPhase.unknown);
   });
 
   testWidgets(
@@ -338,9 +400,10 @@ void main() {
   testWidgets(
       'challenge signing failure restores the original token and never binds',
       (tester) async {
+    final walletProvider = _RecordingWalletProvider();
     final context = await _pumpProviders(
       tester,
-      walletProvider: _RecordingWalletProvider(),
+      walletProvider: walletProvider,
       profileProvider: _RecordingProfileProvider(),
       chatProvider: _RecordingChatProvider(),
     );
@@ -373,6 +436,7 @@ void main() {
 
     expect(thrown, isNotNull);
     expect(bindCalls, 0);
+    expect(walletProvider.accountLinkPhase, WalletAccountLinkPhase.failed);
     expect(BackendApiService().getAuthToken(), kOriginalToken);
     final prefs = await SharedPreferences.getInstance();
     expect(prefs.getString('wallet_address'), isNull);

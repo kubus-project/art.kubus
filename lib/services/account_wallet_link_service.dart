@@ -112,6 +112,35 @@ class AccountWalletLinkService {
     String? originalRefreshToken,
     WalletSessionSyncProvidersPayload? providers,
   }) async {
+    final walletProvider = providers?.walletProvider;
+    final generation = walletProvider?.beginAccountWalletLink();
+    try {
+      final result = await _performWalletLink(
+        walletAddress: walletAddress,
+        expectedUserId: expectedUserId,
+        originalAuthToken: originalAuthToken,
+        originalRefreshToken: originalRefreshToken,
+        providers: providers,
+      );
+      if (generation != null) {
+        walletProvider?.completeAccountWalletLink(generation);
+      }
+      return result;
+    } catch (_) {
+      if (generation != null) {
+        walletProvider?.failAccountWalletLink(generation);
+      }
+      rethrow;
+    }
+  }
+
+  Future<AccountWalletLinkResult> _performWalletLink({
+    required String walletAddress,
+    required String expectedUserId,
+    required String originalAuthToken,
+    String? originalRefreshToken,
+    WalletSessionSyncProvidersPayload? providers,
+  }) async {
     var sessionEpoch = _backendApi.authSessionEpoch;
     final normalizedWallet = walletAddress.trim();
     final normalizedUserId = expectedUserId.trim();

@@ -6968,11 +6968,11 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get walletHomeAccountShellTitle =>
-      'Račun je prijavljen, denarnica ni obnovljena';
+      'Račun je aktiven, denarnica ni povezana';
 
   @override
   String get walletHomeAccountShellDescription =>
-      'Seja računa je na voljo. Ta naprava potrebuje denarnico samo za dejanja lastništva in sodelovanja.';
+      'Račun deluje tudi brez denarnice. Povežite jo le za dejanja lastništva in sodelovanja, ki zahtevajo denarnico.';
 
   @override
   String get walletHomeRestoreWalletAction => 'Obnovi denarnico';

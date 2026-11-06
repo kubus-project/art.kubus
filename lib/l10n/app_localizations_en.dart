@@ -6915,11 +6915,11 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get walletHomeAccountShellTitle =>
-      'Profile active, wallet not restored';
+      'Account active, no wallet connected';
 
   @override
   String get walletHomeAccountShellDescription =>
-      'Your account session is available. This device needs Wallet only for ownership and participation actions.';
+      'Your account works without a wallet. Connect one only for wallet-based ownership and participation actions.';
 
   @override
   String get walletHomeRestoreWalletAction => 'Restore wallet';

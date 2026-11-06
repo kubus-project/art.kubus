@@ -234,6 +234,50 @@ void main() {
         tester, 'wallet-desktop-light-en', () => const DesktopWalletScreen(),
         size: _desktop, signedIn: artist, extraProviders: [_walletProvider()]);
   });
+  qaCase('walletless account-shell mobile', (tester) async {
+    await surface(
+      tester,
+      'walletless-account-shell-mobile-en',
+      () => const WalletHome(),
+      extraProviders: [_accountShellWalletProvider()],
+    );
+  });
+  qaCase('walletless account-shell desktop', (tester) async {
+    await surface(
+      tester,
+      'walletless-account-shell-desktop-sl',
+      () => const DesktopWalletScreen(),
+      size: _desktop,
+      brightness: Brightness.dark,
+      locale: const Locale('sl'),
+      extraProviders: [_accountShellWalletProvider()],
+    );
+  });
+  qaCase('wallet link in progress mobile', (tester) async {
+    await surface(
+      tester,
+      'wallet-link-in-progress-mobile-en',
+      () => const WalletHome(),
+      extraProviders: [
+        _accountShellWalletProvider(
+          linkPhase: WalletAccountLinkPhase.inProgress,
+        ),
+      ],
+    );
+  });
+  qaCase('wallet link failed desktop', (tester) async {
+    await surface(
+      tester,
+      'wallet-link-failed-desktop-sl',
+      () => const DesktopWalletScreen(),
+      size: _desktop,
+      brightness: Brightness.dark,
+      locale: const Locale('sl'),
+      extraProviders: [
+        _accountShellWalletProvider(linkPhase: WalletAccountLinkPhase.failed),
+      ],
+    );
+  });
 
   // ------------------------------------------------------------- marketplace
   qaCase('marketplace mobile', (tester) async {
@@ -359,6 +403,24 @@ class _FixtureWallet extends WalletProvider {
   bool get hasFiatValuation => false;
 }
 
+class _AccountShellWallet extends WalletProvider {
+  _AccountShellWallet(
+      {WalletAccountLinkPhase linkPhase = WalletAccountLinkPhase.unknown})
+      : super(deferInit: true) {
+    seedAccountSessionForTesting(
+      email: 'walletless-qa@example.test',
+      backendProfile: const <String, dynamic>{},
+    );
+    setCurrentWalletAddressForTesting(null);
+    if (linkPhase != WalletAccountLinkPhase.unknown) {
+      final generation = beginAccountWalletLink();
+      if (linkPhase == WalletAccountLinkPhase.failed) {
+        failAccountWalletLink(generation);
+      }
+    }
+  }
+}
+
 Token _token(String mint, String symbol, String name, double balance) => Token(
       id: 'spl_$mint',
       name: name,
@@ -381,6 +443,13 @@ SingleChildWidget _walletProvider({double kub8 = 1234.5}) {
     ]),
   );
 }
+
+SingleChildWidget _accountShellWalletProvider({
+  WalletAccountLinkPhase linkPhase = WalletAccountLinkPhase.unknown,
+}) =>
+    ChangeNotifierProvider<WalletProvider>.value(
+      value: _AccountShellWallet(linkPhase: linkPhase),
+    );
 
 Future<(ArtworkProvider, CollectiblesProvider)> _seedMarket() async {
   final artworks = ArtworkProvider();
