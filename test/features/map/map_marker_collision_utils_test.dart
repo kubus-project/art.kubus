@@ -69,7 +69,8 @@ void main() {
       var minDistance = double.infinity;
       for (var i = 0; i < offsets.length; i++) {
         for (var j = i + 1; j < offsets.length; j++) {
-          minDistance = math.min(minDistance, _distance(offsets[i], offsets[j]));
+          minDistance =
+              math.min(minDistance, _distance(offsets[i], offsets[j]));
         }
       }
 
@@ -90,7 +91,8 @@ void main() {
     });
 
     test('increases ring radius for dense same-location groups', () {
-      final threshold = MapMarkerCollisionConfig.spiderfyAdaptiveSpacingStartCount;
+      final threshold =
+          MapMarkerCollisionConfig.spiderfyAdaptiveSpacingStartCount;
       final thresholdOffsets = buildSpiderfyOffsets(threshold);
       final denseOffsets = buildSpiderfyOffsets(52);
 

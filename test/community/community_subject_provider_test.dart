@@ -6,8 +6,10 @@ import 'package:art_kubus/services/backend_api_service.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
+import '../helpers/secure_storage_absent.dart';
 
 void main() {
+  installEmptySecureStorage();
   test('CommunitySubjectProvider batches resolve calls and caches results',
       () async {
     final api = BackendApiService();
@@ -18,8 +20,8 @@ void main() {
         if (request.url.path.endsWith('/api/community/subjects/resolve')) {
           resolveCalls++;
           final body = jsonDecode(request.body) as Map<String, dynamic>;
-          final subjects = (body['subjects'] as List)
-              .cast<Map<String, dynamic>>();
+          final subjects =
+              (body['subjects'] as List).cast<Map<String, dynamic>>();
           final data = subjects
               .map((subject) => <String, dynamic>{
                     'type': subject['type'],
@@ -52,7 +54,8 @@ void main() {
       isNotNull,
     );
     expect(
-      provider.previewFor(const CommunitySubjectRef(type: 'collection', id: 'c1')),
+      provider
+          .previewFor(const CommunitySubjectRef(type: 'collection', id: 'c1')),
       isNotNull,
     );
 

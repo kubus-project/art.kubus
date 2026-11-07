@@ -5,8 +5,10 @@ import 'package:art_kubus/services/http_client_factory.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
+import '../helpers/secure_storage_absent.dart';
 
 void main() {
+  installEmptySecureStorage();
   tearDown(() {
     BackendApiService().setAuthTokenForTesting(null);
     BackendApiService().setHttpClient(createPlatformHttpClient());

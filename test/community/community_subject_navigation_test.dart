@@ -4,7 +4,8 @@ import 'package:art_kubus/models/community_subject.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:art_kubus/screens/art/art_detail_screen.dart';
 import 'package:art_kubus/screens/desktop/art/desktop_artwork_detail_screen.dart';
-import 'package:art_kubus/screens/community/user_profile_screen.dart' as mobile_profile;
+import 'package:art_kubus/screens/community/user_profile_screen.dart'
+    as mobile_profile;
 import 'package:art_kubus/screens/desktop/community/desktop_user_profile_screen.dart'
     as desktop_profile;
 import 'package:art_kubus/utils/community_subject_navigation.dart';

@@ -41,22 +41,28 @@ void main() {
       );
 
       expect(decision.canProceed, isFalse);
-      expect(decision.type, EmbeddedOnboardingAuthDecisionType.blockedEmailMismatch);
+      expect(decision.type,
+          EmbeddedOnboardingAuthDecisionType.blockedEmailMismatch);
       expect(decision.isEmailMismatch, isTrue);
     });
 
-    test('pending email exists but signed-in email missing -> blockedMissingEmail', () {
+    test(
+        'pending email exists but signed-in email missing -> blockedMissingEmail',
+        () {
       final decision = OnboardingEmbeddedAuthService.decide(
         signedInEmail: null,
         pendingVerificationEmail: 'user@example.com',
       );
 
       expect(decision.canProceed, isFalse);
-      expect(decision.type, EmbeddedOnboardingAuthDecisionType.blockedMissingEmail);
+      expect(decision.type,
+          EmbeddedOnboardingAuthDecisionType.blockedMissingEmail);
       expect(decision.isMissingEmail, isTrue);
     });
 
-    test('pending email exists but signed-in email is empty string -> blockedMissingEmail', () {
+    test(
+        'pending email exists but signed-in email is empty string -> blockedMissingEmail',
+        () {
       final decision = OnboardingEmbeddedAuthService.decide(
         signedInEmail: '',
         pendingVerificationEmail: 'user@example.com',
@@ -66,7 +72,9 @@ void main() {
       expect(decision.isMissingEmail, isTrue);
     });
 
-    test('empty pending email and empty signed-in email -> proceed (no constraint)', () {
+    test(
+        'empty pending email and empty signed-in email -> proceed (no constraint)',
+        () {
       final decision = OnboardingEmbeddedAuthService.decide(
         signedInEmail: '',
         pendingVerificationEmail: '',
@@ -76,4 +84,3 @@ void main() {
     });
   });
 }
-

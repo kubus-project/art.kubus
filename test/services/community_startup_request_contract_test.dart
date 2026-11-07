@@ -59,7 +59,8 @@ void main() {
     _expectNoBannedStartupRequests(requests);
   });
 
-  test('inactive feed fetch happens only when tab switch requests it', () async {
+  test('inactive feed fetch happens only when tab switch requests it',
+      () async {
     final surfaces = <String?>[];
     BackendApiService().setHttpClient(MockClient((request) async {
       if (request.url.path != '/api/community/posts') {

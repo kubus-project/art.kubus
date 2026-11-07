@@ -6,6 +6,8 @@ import 'package:art_kubus/services/backend_api_service.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
+import 'helpers/secure_storage_absent.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class _TestAuthCoordinator implements AuthSessionCoordinator {
   _TestAuthCoordinator({
@@ -33,7 +35,8 @@ class _TestAuthCoordinator implements AuthSessionCoordinator {
         final result = await onPrompt(context);
         completer.complete(result);
       } catch (e) {
-        completer.complete(AuthReauthResult(AuthReauthOutcome.failed, message: e.toString()));
+        completer.complete(
+            AuthReauthResult(AuthReauthOutcome.failed, message: e.toString()));
       } finally {
         _inFlight = null;
       }
@@ -57,6 +60,12 @@ class _TestAuthCoordinator implements AuthSessionCoordinator {
 }
 
 void main() {
+  installEmptySecureStorage();
+  setUp(() {
+    SharedPreferences.setMockInitialValues(<String, Object>{});
+    BackendApiService().resetCredentialStoreForTesting();
+  });
+
   setUpAll(() {
     // These tests count MockClient requests; the fire-and-forget HTTP failure
     // reports would otherwise race the counters (singleton client).
@@ -68,13 +77,15 @@ void main() {
     api.setAuthTokenForTesting(null);
 
     final coordinator = _TestAuthCoordinator(
-      onPrompt: (_) async => const AuthReauthResult(AuthReauthOutcome.cancelled),
+      onPrompt: (_) async =>
+          const AuthReauthResult(AuthReauthOutcome.cancelled),
     );
     api.bindAuthCoordinator(coordinator);
 
     api.setHttpClient(
       MockClient((request) async {
-        return http.Response(jsonEncode({'success': false, 'error': 'Token expired'}), 401);
+        return http.Response(
+            jsonEncode({'success': false, 'error': 'Token expired'}), 401);
       }),
     );
 
@@ -88,7 +99,8 @@ void main() {
     api.setAuthTokenForTesting('expired-or-wrong-token');
 
     final coordinator = _TestAuthCoordinator(
-      onPrompt: (_) async => const AuthReauthResult(AuthReauthOutcome.cancelled),
+      onPrompt: (_) async =>
+          const AuthReauthResult(AuthReauthOutcome.cancelled),
     );
     api.bindAuthCoordinator(coordinator);
 
@@ -118,7 +130,9 @@ void main() {
 
     api.setHttpClient(
       MockClient((request) async {
-        return http.Response(jsonEncode({'success': false, 'error': 'Invalid or expired token'}), 401);
+        return http.Response(
+            jsonEncode({'success': false, 'error': 'Invalid or expired token'}),
+            401);
       }),
     );
 
@@ -140,9 +154,14 @@ void main() {
       MockClient((request) async {
         requestCount += 1;
         if (requestCount == 1) {
-          return http.Response(jsonEncode({'success': false, 'error': 'Token expired'}), 401);
+          return http.Response(
+              jsonEncode({'success': false, 'error': 'Token expired'}), 401);
         }
-        return http.Response(jsonEncode({'data': {'id': 'me'}}), 200);
+        return http.Response(
+            jsonEncode({
+              'data': {'id': 'me'}
+            }),
+            200);
       }),
     );
 
@@ -169,9 +188,14 @@ void main() {
       MockClient((request) async {
         requestCount += 1;
         if (requestCount == 1) {
-          return http.Response(jsonEncode({'success': false, 'error': 'Token expired'}), 401);
+          return http.Response(
+              jsonEncode({'success': false, 'error': 'Token expired'}), 401);
         }
-        return http.Response(jsonEncode({'data': {'id': 'conversation-1'}}), 200);
+        return http.Response(
+            jsonEncode({
+              'data': {'id': 'conversation-1'}
+            }),
+            200);
       }),
     );
 
@@ -183,7 +207,8 @@ void main() {
     );
     api.bindAuthCoordinator(coordinator);
 
-    final result = await api.createConversation(title: 'test', isGroup: false, members: const <String>[]);
+    final result = await api.createConversation(
+        title: 'test', isGroup: false, members: const <String>[]);
     expect(coordinator.promptCalls, 1);
     expect(requestCount, 2);
     expect(result['data'], isA<Map<String, dynamic>>());
@@ -213,7 +238,14 @@ void main() {
 
     api.setHttpClient(
       MockClient((request) async {
-        return http.Response(jsonEncode({'data': {'token': 'new-token', 'user': {'walletAddress': 'me'}}}), 200);
+        return http.Response(
+            jsonEncode({
+              'data': {
+                'token': 'new-token',
+                'user': {'walletAddress': 'me'}
+              }
+            }),
+            200);
       }),
     );
 

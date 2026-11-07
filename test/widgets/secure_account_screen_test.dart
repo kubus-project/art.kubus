@@ -13,6 +13,7 @@ import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../helpers/secure_storage_absent.dart';
 
 Widget _buildHarness({
   required WalletProvider walletProvider,
@@ -33,6 +34,7 @@ Widget _buildHarness({
 }
 
 void main() {
+  installEmptySecureStorage();
   TestWidgetsFlutterBinding.ensureInitialized();
 
   setUp(() {

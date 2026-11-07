@@ -170,7 +170,8 @@ void main() {
         'every username accepted by canonical edit validation produces a '
         'visible handle, and vice versa', () {
       for (final probe in probes) {
-        final accepted = ProfileEditFormUtils.validateUsername(en, probe) == null;
+        final accepted =
+            ProfileEditFormUtils.validateUsername(en, probe) == null;
         final displayed = ProfileHandle.normalize(probe) != null;
         expect(
           displayed,

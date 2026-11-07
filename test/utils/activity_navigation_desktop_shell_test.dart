@@ -15,7 +15,6 @@ class _RecordingNavigatorObserver extends NavigatorObserver {
   }
 }
 
-
 void main() {
   testWidgets(
     'ActivityNavigation.open uses DesktopShellScope when available (no fullscreen push)',

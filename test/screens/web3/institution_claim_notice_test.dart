@@ -13,6 +13,7 @@ import 'package:http/testing.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../support/product_surface_harness.dart';
+import '../../helpers/secure_storage_absent.dart';
 
 const _validAuthToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.'
     'eyJleHAiOjQ3MzM4NTYwMDAsIndhbGxldEFkZHJlc3MiOiJXYWxsZXRUZXN0MTExMTExMTExMTExMTExMTExMTExMTExMTExMSJ9.'
@@ -163,6 +164,7 @@ Future<List<String>> _pump(
 }
 
 void main() {
+  installEmptySecureStorage();
   TestWidgetsFlutterBinding.ensureInitialized();
 
   setUp(() {

@@ -51,4 +51,3 @@ void main() {
     expect(series.series.last.g, 'event');
   });
 }
-

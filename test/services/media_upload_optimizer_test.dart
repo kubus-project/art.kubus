@@ -103,7 +103,8 @@ Map<String, dynamic> _glbJson(Uint8List glb) {
     offset += 8;
     if (chunkType == 0x4e4f534a) {
       return jsonDecode(
-        utf8.decode(Uint8List.sublistView(glb, offset, offset + chunkLength))
+        utf8
+            .decode(Uint8List.sublistView(glb, offset, offset + chunkLength))
             .trimRight(),
       ) as Map<String, dynamic>;
     }

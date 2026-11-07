@@ -60,7 +60,10 @@ void main() {
     // Expire lockout and verify correct PIN resets.
     await store.write(
       PinAuthService.lockoutUntilMsKey,
-      DateTime.now().subtract(const Duration(seconds: 1)).millisecondsSinceEpoch.toString(),
+      DateTime.now()
+          .subtract(const Duration(seconds: 1))
+          .millisecondsSinceEpoch
+          .toString(),
     );
     final afterExpire = await service.verifyPin('1234');
     expect(afterExpire.outcome, PinVerifyOutcome.success);
@@ -76,7 +79,10 @@ void main() {
 
     await store.write(
       PinAuthService.lockoutUntilMsKey,
-      DateTime.now().subtract(const Duration(seconds: 1)).millisecondsSinceEpoch.toString(),
+      DateTime.now()
+          .subtract(const Duration(seconds: 1))
+          .millisecondsSinceEpoch
+          .toString(),
     );
     await service.verifyPin('0000');
     await service.verifyPin('0000');

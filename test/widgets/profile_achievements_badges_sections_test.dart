@@ -16,6 +16,7 @@ import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../helpers/secure_storage_absent.dart';
 
 Widget _localizedHarness(
   Widget child, {
@@ -36,6 +37,7 @@ Widget _localizedHarness(
 }
 
 void main() {
+  installEmptySecureStorage();
   setUp(() {
     SharedPreferences.setMockInitialValues({});
     BackendApiService().setAuthTokenForTesting(null);
