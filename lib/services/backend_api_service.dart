@@ -5762,6 +5762,27 @@ class BackendApiService
     }
   }
 
+  /// Fetches a server-verified image manifest. Older backends return 404;
+  /// callers must retain the original image URL as a fallback.
+  Future<Map<String, dynamic>?> getPublicImageVariantManifest(
+    String groupId,
+  ) async {
+    if (!RegExp(r'^[a-f0-9]{64}$').hasMatch(groupId)) return null;
+    try {
+      final response = await _get(
+        Uri.parse('$baseUrl/api/upload/derivatives/$groupId/manifest'),
+        includeAuth: false,
+        timeout: const Duration(seconds: 4),
+      );
+      if (response.statusCode != 200) return null;
+      final body = jsonDecode(response.body);
+      if (body is! Map) return null;
+      return Map<String, dynamic>.from(body);
+    } catch (_) {
+      return null;
+    }
+  }
+
   /// Get single artwork by ID
   /// GET /api/artworks/:id
   @override

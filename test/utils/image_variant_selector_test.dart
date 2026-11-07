@@ -2,6 +2,24 @@ import 'package:art_kubus/utils/image_variant_selector.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  test('recognizes only first-party derivative route shapes for cache policy',
+      () {
+    final id = 'a' * 64;
+    expect(
+        ImageVariantSelector.isRevocableDerivative(
+            '/api/upload/derivatives/$id/card'),
+        isTrue);
+    expect(
+        ImageVariantSelector.isRevocableDerivative(
+            'https://api.kubus.site/api/upload/derivatives/$id/detail'),
+        isTrue);
+    expect(ImageVariantSelector.isRevocableDerivative('/uploads/card.jpg'),
+        isFalse);
+    expect(
+        ImageVariantSelector.isRevocableDerivative(
+            '/api/upload/derivatives/$id/manifest'),
+        isFalse);
+  });
   const variants = [
     {'url': '/full.jpg', 'width': 1440, 'height': 1920},
     {'url': '/thumb.jpg', 'width': 240, 'height': 320},

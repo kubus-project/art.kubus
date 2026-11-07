@@ -480,6 +480,7 @@ class _ArtDetailScreenState extends State<ArtDetailScreen> {
     final savedItemsProvider = context.read<SavedItemsProvider>();
 
     if (existing != null) {
+      unawaited(provider.loadArtworkImageVariants(widget.artworkId));
       await savedItemsProvider.hydrateSavedStatus(
         type: SavedItemType.artwork,
         ids: [widget.artworkId],
@@ -502,6 +503,7 @@ class _ArtDetailScreenState extends State<ArtDetailScreen> {
 
     try {
       await provider.fetchArtworkIfNeeded(widget.artworkId);
+      unawaited(provider.loadArtworkImageVariants(widget.artworkId));
       await savedItemsProvider.hydrateSavedStatus(
         type: SavedItemType.artwork,
         ids: [widget.artworkId],
@@ -765,6 +767,10 @@ class _ArtDetailScreenState extends State<ArtDetailScreen> {
 
   Widget _buildGallerySection(Artwork artwork) {
     if (artwork.galleryUrls.isEmpty) return const SizedBox.shrink();
+    final artworkProvider = context.watch<ArtworkProvider>();
+    if (artworkProvider.imageVariantsPending(artwork)) {
+      return const SizedBox(height: 260, child: Center(child: InlineLoading()));
+    }
 
     final coverUrl = ArtworkMediaResolver.resolveCover(artwork: artwork);
     final urls = <String>[
@@ -781,6 +787,7 @@ class _ArtDetailScreenState extends State<ArtDetailScreen> {
     final title = artwork.title.trim();
     return ArtworkGalleryView(
       imageUrls: unique,
+      sourceImageVariants: artworkProvider.imageVariantsForArtwork(artwork.id),
       semanticLabel: title.isEmpty ? null : '$title image',
     );
   }

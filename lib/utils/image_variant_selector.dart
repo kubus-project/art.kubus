@@ -6,6 +6,14 @@ import 'dart:math' as math;
 class ImageVariantSelector {
   const ImageVariantSelector._();
 
+  static bool isRevocableDerivative(String value) {
+    final uri = Uri.tryParse(value.trim());
+    if (uri == null) return false;
+    return RegExp(
+            r'^/api/upload/derivatives/[a-f0-9]{64}/(thumbnail|card|detail)$')
+        .hasMatch(uri.path);
+  }
+
   /// Select only variants explicitly bound to [sourceUrl]. A duplicate source
   /// record is ambiguous and falls back; gallery position is never an identity.
   static String? selectForSource({

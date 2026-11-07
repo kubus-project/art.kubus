@@ -529,8 +529,13 @@ class ArtworkDraftsProvider extends ChangeNotifier {
           return null;
         }
         galleryUrls.add(url);
+        final uploadData = uploaded['data'];
+        final manifest = uploadData is Map ? uploadData['imageVariants'] : null;
+        final groupId = manifest is Map ? manifest['groupId'] : null;
         galleryMeta.add({
           'url': url,
+          if (groupId is String && RegExp(r'^[a-f0-9]{64}$').hasMatch(groupId))
+            'variantGroupId': groupId,
           if (item.width != null) 'width': item.width,
           if (item.height != null) 'height': item.height,
           if (item.mimeType != null) 'mimeType': item.mimeType,
