@@ -1,9 +1,9 @@
 import 'dart:convert';
 
 import 'package:art_kubus/l10n/app_localizations.dart';
-import 'package:art_kubus/models/dao.dart';
 import 'package:art_kubus/models/user_profile.dart';
 import 'package:art_kubus/config/config.dart';
+import 'package:art_kubus/providers/account_verification_provider.dart';
 import 'package:art_kubus/providers/collab_provider.dart';
 import 'package:art_kubus/providers/dao_provider.dart';
 import 'package:art_kubus/providers/exhibitions_provider.dart';
@@ -22,6 +22,7 @@ import 'package:http/testing.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../helpers/secure_storage_absent.dart';
+import '../support/verification_fixtures.dart';
 
 class _TestSolanaWalletService extends SolanaWalletService {
   @override
@@ -32,22 +33,6 @@ class _TestSolanaWalletService extends SolanaWalletService {
   }) async {
     return 0;
   }
-}
-
-Map<String, dynamic> _daoReviewJson({
-  required String status,
-  required String role,
-}) {
-  return <String, dynamic>{
-    'id': 'review-1',
-    'walletAddress': 'wallet-1',
-    'portfolioUrl': 'https://example.com',
-    'medium': 'painting',
-    'statement': 'statement',
-    'status': status,
-    'createdAt': DateTime.utc(2026, 4, 9).toIso8601String(),
-    'metadata': <String, dynamic>{'role': role},
-  };
 }
 
 UserProfile _buildUser({
@@ -70,7 +55,7 @@ UserProfile _buildUser({
   );
 }
 
-void _configureBackendApi({Map<String, dynamic>? reviewJson}) {
+void _configureBackendApi() {
   final api = BackendApiService();
   api.setAuthTokenForTesting('test-token');
   api.setHttpClient(
@@ -100,21 +85,6 @@ void _configureBackendApi({Map<String, dynamic>? reviewJson}) {
             jsonEncode(<String, Object?>{'data': <Object?>[]}), 200,
             headers: headers);
       }
-      if (path == '/api/dao/reviews') {
-        final payload =
-            reviewJson == null ? <Object?>[] : <Object?>[reviewJson];
-        return http.Response(
-            jsonEncode(<String, Object?>{'reviews': payload}), 200,
-            headers: headers);
-      }
-      if (path == '/api/dao/reviews/wallet-1') {
-        if (reviewJson == null) {
-          return http.Response('', 404, headers: headers);
-        }
-        return http.Response(
-            jsonEncode(<String, Object?>{'review': reviewJson}), 200,
-            headers: headers);
-      }
       if (path == '/api/public/home-rails') {
         return http.Response(
             jsonEncode(<String, Object?>{'rails': <Object?>[]}), 200,
@@ -137,12 +107,12 @@ void _configureBackendApi({Map<String, dynamic>? reviewJson}) {
 Future<void> _pumpArtistStudio(
   WidgetTester tester, {
   required UserProfile user,
-  Map<String, dynamic>? reviewJson,
+  required AccountVerificationProvider verification,
 }) async {
   SharedPreferences.setMockInitialValues(<String, Object>{
     'Artist Studio_onboarding_completed': true,
   });
-  _configureBackendApi(reviewJson: reviewJson);
+  _configureBackendApi();
   await tester.binding.setSurfaceSize(const Size(900, 2000));
   addTearDown(() => tester.binding.setSurfaceSize(null));
 
@@ -157,6 +127,9 @@ Future<void> _pumpArtistStudio(
         ChangeNotifierProvider<ThemeProvider>.value(value: themeProvider),
         ChangeNotifierProvider<ProfileProvider>.value(value: profileProvider),
         ChangeNotifierProvider<DAOProvider>.value(value: daoProvider),
+        ChangeNotifierProvider<AccountVerificationProvider>.value(
+          value: verification,
+        ),
         ChangeNotifierProvider<Web3Provider>(create: (_) => Web3Provider()),
         ChangeNotifierProvider<CollabProvider>(create: (_) => CollabProvider()),
       ],
@@ -180,12 +153,12 @@ Future<void> _pumpArtistStudio(
 Future<void> _pumpInstitutionHub(
   WidgetTester tester, {
   required UserProfile user,
-  Map<String, dynamic>? reviewJson,
+  required AccountVerificationProvider verification,
 }) async {
   SharedPreferences.setMockInitialValues(<String, Object>{
     'Institution Hub_onboarding_completed': true,
   });
-  _configureBackendApi(reviewJson: reviewJson);
+  _configureBackendApi();
   await tester.binding.setSurfaceSize(const Size(900, 2000));
   addTearDown(() => tester.binding.setSurfaceSize(null));
 
@@ -200,6 +173,9 @@ Future<void> _pumpInstitutionHub(
         ChangeNotifierProvider<ThemeProvider>.value(value: themeProvider),
         ChangeNotifierProvider<ProfileProvider>.value(value: profileProvider),
         ChangeNotifierProvider<DAOProvider>.value(value: daoProvider),
+        ChangeNotifierProvider<AccountVerificationProvider>.value(
+          value: verification,
+        ),
         ChangeNotifierProvider<Web3Provider>(create: (_) => Web3Provider()),
         ChangeNotifierProvider<CollabProvider>(create: (_) => CollabProvider()),
         ChangeNotifierProvider<NotificationProvider>(
@@ -232,18 +208,15 @@ void main() {
 
   const walletRequiredReason =
       'Connect an approved artist wallet to request profile promotion.';
-  const institutionConflictReason =
-      'Institution wallets cannot self-serve artist promotion. Use a dedicated artist wallet.';
   const approvalRequiredReason =
       'Profile promotion is available only for approved artist wallets.';
 
   test('artist promotion helper covers non-approved artist states', () {
     expect(
       resolveArtistPromotionUnavailableReason(
+        isVerifiedArtist: true,
         walletAddress: '',
-        review: null,
         walletRequiredReason: walletRequiredReason,
-        institutionConflictReason: institutionConflictReason,
         approvalRequiredReason: approvalRequiredReason,
       ),
       walletRequiredReason,
@@ -251,12 +224,9 @@ void main() {
 
     expect(
       resolveArtistPromotionUnavailableReason(
-        walletAddress: 'wallet-1',
-        review: DAOReview.fromJson(
-          _daoReviewJson(status: 'pending', role: 'artist'),
-        ),
+        isVerifiedArtist: false,
+        walletAddress: '',
         walletRequiredReason: walletRequiredReason,
-        institutionConflictReason: institutionConflictReason,
         approvalRequiredReason: approvalRequiredReason,
       ),
       approvalRequiredReason,
@@ -264,12 +234,9 @@ void main() {
 
     expect(
       resolveArtistPromotionUnavailableReason(
+        isVerifiedArtist: false,
         walletAddress: 'wallet-1',
-        review: DAOReview.fromJson(
-          _daoReviewJson(status: 'rejected', role: 'artist'),
-        ),
         walletRequiredReason: walletRequiredReason,
-        institutionConflictReason: institutionConflictReason,
         approvalRequiredReason: approvalRequiredReason,
       ),
       approvalRequiredReason,
@@ -277,26 +244,12 @@ void main() {
 
     expect(
       resolveArtistPromotionUnavailableReason(
+        isVerifiedArtist: true,
         walletAddress: 'wallet-1',
-        review: null,
         walletRequiredReason: walletRequiredReason,
-        institutionConflictReason: institutionConflictReason,
         approvalRequiredReason: approvalRequiredReason,
       ),
-      approvalRequiredReason,
-    );
-
-    expect(
-      resolveArtistPromotionUnavailableReason(
-        walletAddress: 'wallet-1',
-        review: DAOReview.fromJson(
-          _daoReviewJson(status: 'pending', role: 'institution'),
-        ),
-        walletRequiredReason: walletRequiredReason,
-        institutionConflictReason: institutionConflictReason,
-        approvalRequiredReason: approvalRequiredReason,
-      ),
-      institutionConflictReason,
+      isNull,
     );
   });
 
@@ -305,7 +258,9 @@ void main() {
     await _pumpArtistStudio(
       tester,
       user: _buildUser(isArtist: true, persona: 'creator'),
-      reviewJson: _daoReviewJson(status: 'approved', role: 'artist'),
+      verification: await readyVerificationProvider(
+        verificationState(artist: true),
+      ),
     );
 
     final context = tester.element(find.byType(ArtistStudio));
@@ -322,28 +277,40 @@ void main() {
   });
 
   testWidgets(
-      'institution-pending wallets hide artist promotion actions and show warning on guarded flow',
+      'an institution member without an artist standing sees the Studio locked, not blocked',
       (tester) async {
     await _pumpArtistStudio(
       tester,
       user: _buildUser(isInstitution: true, persona: 'institution'),
-      reviewJson: _daoReviewJson(status: 'pending', role: 'institution'),
+      verification: await readyVerificationProvider(
+        verificationState(institutionIds: ['inst-1']),
+      ),
     );
 
     final context = tester.element(find.byType(ArtistStudio));
     final l10n = AppLocalizations.of(context)!;
 
+    expect(find.text(l10n.artistStudioLockedTitle), findsOneWidget);
     expect(find.byTooltip(l10n.artistStudioPromoteTooltip), findsNothing);
     expect(find.text(l10n.artistStudioPromoteProfile), findsNothing);
+  });
 
-    final dynamic state = tester.state(find.byType(ArtistStudio));
-    await state.debugOpenProfilePromotionFlow();
-    await tester.pumpAndSettle();
-
-    expect(
-      find.text(l10n.artistPromotionConflictWithInstitutionReason),
-      findsOneWidget,
+  testWidgets(
+      'an artist who is also an institution member keeps the Studio unlocked',
+      (tester) async {
+    await _pumpArtistStudio(
+      tester,
+      user: _buildUser(isArtist: true, isInstitution: true, persona: 'creator'),
+      verification: await readyVerificationProvider(
+        verificationState(artist: true, institutionIds: ['inst-1']),
+      ),
     );
+
+    final context = tester.element(find.byType(ArtistStudio));
+    final l10n = AppLocalizations.of(context)!;
+
+    expect(find.text(l10n.artistStudioLockedTitle), findsNothing);
+    expect(find.text(l10n.artistStudioPromoteProfile), findsOneWidget);
   });
 
   testWidgets(
@@ -352,7 +319,9 @@ void main() {
     await _pumpInstitutionHub(
       tester,
       user: _buildUser(isInstitution: true, persona: 'institution'),
-      reviewJson: _daoReviewJson(status: 'approved', role: 'institution'),
+      verification: await readyVerificationProvider(
+        verificationState(institutionIds: ['inst-1']),
+      ),
     );
 
     final context = tester.element(find.byType(InstitutionHub));

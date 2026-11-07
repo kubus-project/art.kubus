@@ -10,6 +10,7 @@ import '../../../models/event.dart';
 import '../../../models/exhibition.dart';
 import '../../../providers/events_provider.dart';
 import '../../../providers/exhibitions_provider.dart';
+import '../../../providers/account_verification_provider.dart';
 import '../../../providers/institution_provider.dart';
 import '../../../services/backend_api_service.dart';
 import '../../../utils/app_color_utils.dart';
@@ -183,15 +184,11 @@ class _EventCreatorState extends State<EventCreator>
   void didChangeDependencies() {
     super.didChangeDependencies();
     if (_institutionId != null && _institutionId!.isNotEmpty) return;
-    final provider = context.read<InstitutionProvider>();
-    final selected = provider.selectedInstitution?.id;
-    if (selected != null && selected.isNotEmpty) {
-      _institutionId = selected;
-      return;
-    }
-    if (provider.institutions.isNotEmpty) {
-      _institutionId = provider.institutions.first.id;
-    }
+    // Events are created for an institution the account is a member of, never for
+    // an arbitrary listing: the default is the membership it is acting for.
+    final membership =
+        context.read<AccountVerificationProvider>().selectedMembership;
+    if (membership != null) _institutionId = membership.institutionId;
   }
 
   @override
@@ -1185,7 +1182,15 @@ class _EventCreatorState extends State<EventCreator>
       builder: (context, provider, _) {
         final l10n = AppLocalizations.of(context)!;
         final scheme = Theme.of(context).colorScheme;
-        final institutions = provider.institutions;
+        // Only institutions the account is a member of can own its events.
+        final memberIds = context
+            .watch<AccountVerificationProvider>()
+            .memberships
+            .map((membership) => membership.institutionId)
+            .toSet();
+        final institutions = provider.institutions
+            .where((institution) => memberIds.contains(institution.id))
+            .toList(growable: false);
         if (institutions.isEmpty) {
           return Container(
             padding: const EdgeInsets.all(KubusSpacing.md),
@@ -1341,11 +1346,12 @@ class _EventCreatorState extends State<EventCreator>
 
     final institutionProvider = context.read<InstitutionProvider>();
     final eventsProvider = context.read<EventsProvider>();
-    final institutions = institutionProvider.institutions;
     final institutionId = (_institutionId != null && _institutionId!.isNotEmpty)
         ? _institutionId!
-        : institutionProvider.selectedInstitution?.id ??
-            (institutions.isNotEmpty ? institutions.first.id : null);
+        : context
+            .read<AccountVerificationProvider>()
+            .selectedMembership
+            ?.institutionId;
 
     if (institutionId == null || institutionId.isEmpty) {
       ScaffoldMessenger.of(context).showKubusSnackBar(

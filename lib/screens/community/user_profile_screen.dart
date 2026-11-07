@@ -28,7 +28,6 @@ import '../../utils/profile_showcase_normalizer.dart';
 import '../../community/community_interactions.dart';
 import '../../providers/themeprovider.dart';
 import '../../providers/chat_provider.dart';
-import '../../providers/dao_provider.dart';
 import '../../providers/stats_provider.dart';
 import '../../providers/app_refresh_provider.dart';
 import '../../providers/artwork_provider.dart';
@@ -57,7 +56,6 @@ import '../events/event_detail_screen.dart';
 import '../../providers/wallet_provider.dart';
 import '../../services/socket_service.dart';
 import 'profile_screen_methods.dart';
-import '../../models/dao.dart';
 import '../../widgets/glass_components.dart';
 import '../../widgets/report_content_dialog.dart';
 import '../../services/content_report_service.dart';
@@ -514,18 +512,9 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
       );
     }
 
-    // Determine artist/institution status from User model + DAO reviews (like profile_screen.dart)
-    final daoProvider = Provider.of<DAOProvider>(context);
-    final DAOReview? daoReview = daoProvider.findReviewForWallet(user!.id);
-
-    final isArtist = user!.isArtist ||
-        (daoReview != null &&
-            daoReview.isArtistApplication &&
-            daoReview.isApproved);
-    final isInstitution = user!.isInstitution ||
-        (daoReview != null &&
-            daoReview.isInstitutionApplication &&
-            daoReview.isApproved);
+    // Role flags come only from the viewed user's own server-projected profile.
+    final isArtist = user!.isArtist;
+    final isInstitution = user!.isInstitution;
 
     final isCanonicalPublicEntry = isCanonicalPublicEntityEntry(
       context,

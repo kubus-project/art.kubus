@@ -33,9 +33,7 @@ class _TestWalletProvider extends WalletProvider {
 class _TestDaoProvider extends DAOProvider {
   _TestDaoProvider({
     ProposalStatus proposalStatus = ProposalStatus.active,
-    bool canModerateReviews = false,
-  })  : _canModerateReviews = canModerateReviews,
-        proposal = Proposal(
+  }) : proposal = Proposal(
           id: 'proposal-1',
           title: 'Public governance proposal',
           description: 'Proposal body',
@@ -44,23 +42,9 @@ class _TestDaoProvider extends DAOProvider {
           proposer: 'wallet-proposer',
           createdAt: DateTime.utc(2026, 8, 1),
           votingEndDate: DateTime.utc(2026, 9, 1),
-        ),
-        review = DAOReview(
-          id: 'review-1',
-          walletAddress: 'wallet-applicant',
-          portfolioUrl: 'https://example.com/portfolio',
-          medium: 'painting',
-          statement: 'Review statement',
-          status: 'pending',
-          createdAt: DateTime.utc(2026, 8, 1),
         );
 
   final Proposal proposal;
-  final DAOReview review;
-  final bool _canModerateReviews;
-
-  @override
-  bool get canModerateReviews => _canModerateReviews;
 
   @override
   List<Proposal> get proposals => <Proposal>[proposal];
@@ -79,9 +63,6 @@ class _TestDaoProvider extends DAOProvider {
 
   @override
   List<DAOTransaction> get transactions => const <DAOTransaction>[];
-
-  @override
-  List<DAOReview> get reviews => <DAOReview>[review];
 
   @override
   bool get isLoading => false;
@@ -189,8 +170,6 @@ void main() {
     expect(find.text(l10n.daoVoteYesButton), findsNothing);
     expect(find.text(l10n.daoVoteNoButton), findsNothing);
     expect(find.text(l10n.daoHubTabDelegation), findsNothing);
-    expect(find.text(l10n.daoModerationApproveLabel), findsNothing);
-    expect(find.text(l10n.daoModerationRejectLabel), findsNothing);
     expect(find.text(l10n.daoHubStatYourVotingPowerLabel), findsNothing);
   });
 
@@ -236,25 +215,6 @@ void main() {
     expect(find.text(l10n.daoVoteYesButton), findsNothing);
   });
 
-  testWidgets('moderation controls require signer-ready moderator authority',
-      (tester) async {
-    final profile = ProfileProvider()..setCurrentUser(_profile());
-    final wallet = _TestWalletProvider(
-      _authority(
-        account: true,
-        wallet: 'wallet-member',
-        signer: true,
-        role: 'moderator',
-      ),
-    );
-    await _pumpGovernance(tester, profile: profile, wallet: wallet);
-
-    final context = tester.element(find.byType(DesktopGovernanceHubScreen));
-    final l10n = AppLocalizations.of(context)!;
-    expect(find.text(l10n.daoModerationApproveLabel), findsOneWidget);
-    expect(find.text(l10n.daoModerationRejectLabel), findsOneWidget);
-  });
-
   testWidgets('voting-phase proposals retain signer-ready voting actions',
       (tester) async {
     final profile = ProfileProvider()..setCurrentUser(_profile());
@@ -272,24 +232,5 @@ void main() {
     final l10n = AppLocalizations.of(context)!;
     expect(find.text(l10n.daoVoteYesButton), findsOneWidget);
     expect(find.text(l10n.daoVoteNoButton), findsOneWidget);
-  });
-
-  testWidgets('server-derived reviewer authority enables moderation controls',
-      (tester) async {
-    final profile = ProfileProvider()..setCurrentUser(_profile());
-    final wallet = _TestWalletProvider(
-      _authority(account: true, wallet: 'wallet-member', signer: true),
-    );
-    await _pumpGovernance(
-      tester,
-      profile: profile,
-      wallet: wallet,
-      dao: _TestDaoProvider(canModerateReviews: true),
-    );
-
-    final context = tester.element(find.byType(DesktopGovernanceHubScreen));
-    final l10n = AppLocalizations.of(context)!;
-    expect(find.text(l10n.daoModerationApproveLabel), findsOneWidget);
-    expect(find.text(l10n.daoModerationRejectLabel), findsOneWidget);
   });
 }

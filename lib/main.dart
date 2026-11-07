@@ -55,6 +55,7 @@ import 'providers/desktop_dashboard_state_provider.dart';
 import 'providers/marker_management_provider.dart';
 import 'providers/street_art_claims_provider.dart';
 import 'providers/attendance_provider.dart';
+import 'providers/account_verification_provider.dart';
 import 'providers/attestation_provider.dart';
 import 'providers/security_gate_provider.dart';
 import 'providers/email_preferences_provider.dart';
@@ -799,20 +800,8 @@ class _AppLauncherState extends State<AppLauncher> {
                   return provider;
                 },
               ),
-              ChangeNotifierProxyProvider2<ProfileProvider, DAOProvider,
-                  InstitutionProvider>(
+              ChangeNotifierProvider<InstitutionProvider>(
                 create: (context) => InstitutionProvider(),
-                update: (
-                  context,
-                  profileProvider,
-                  daoProvider,
-                  institutionProvider,
-                ) {
-                  final provider = institutionProvider ?? InstitutionProvider();
-                  provider.bindProfileProvider(profileProvider);
-                  provider.bindDaoProvider(daoProvider);
-                  return provider;
-                },
               ),
               ListenableProxyProvider2<SolanaWalletService, WalletProvider,
                   PublicActionOutboxService>(
@@ -856,6 +845,28 @@ class _AppLauncherState extends State<AppLauncher> {
                   provider.bindAuthContext(
                     isSignedIn: walletProvider.authority.hasAccountSession,
                     walletAddress: walletProvider.currentWalletAddress,
+                  );
+                  return provider;
+                },
+              ),
+              // What the signed-in ACCOUNT may do (artist standing, institution
+              // memberships), read from the server. Bound to the account id, so a
+              // sign-out or account switch clears it before anything else reads it.
+              ChangeNotifierProxyProvider2<ProfileProvider, WalletProvider,
+                  AccountVerificationProvider>(
+                lazy: false,
+                create: (context) => AccountVerificationProvider(),
+                update: (
+                  context,
+                  profileProvider,
+                  walletProvider,
+                  verificationProvider,
+                ) {
+                  final provider =
+                      verificationProvider ?? AccountVerificationProvider();
+                  provider.bindAccount(
+                    accountId: profileProvider.currentUser?.userId,
+                    isSignedIn: walletProvider.authority.hasAccountSession,
                   );
                   return provider;
                 },

@@ -11,11 +11,10 @@ import 'package:path/path.dart' as path;
 import 'package:art_kubus/l10n/app_localizations.dart';
 import '../../../providers/app_mode_provider.dart';
 import '../../../providers/profile_provider.dart';
-import '../../../providers/dao_provider.dart';
+import '../../../providers/account_verification_provider.dart';
 import '../../../services/backend_api_service.dart';
 import '../../../models/user.dart';
 import '../../../models/user_profile.dart';
-import '../../../models/dao.dart';
 import '../../../services/event_bus.dart';
 import '../../../providers/themeprovider.dart';
 import '../../../utils/app_animations.dart';
@@ -101,12 +100,6 @@ class _ProfileEditScreenState extends State<ProfileEditScreen>
     final profileProvider =
         Provider.of<ProfileProvider>(context, listen: false);
     _profileProvider = profileProvider;
-    DAOProvider? daoProvider;
-    try {
-      daoProvider = Provider.of<DAOProvider>(context, listen: false);
-    } catch (_) {
-      daoProvider = null;
-    }
     final profile = profileProvider.currentUser;
 
     final initialUsername =
@@ -142,14 +135,13 @@ class _ProfileEditScreenState extends State<ProfileEditScreen>
     _isArtist = profile?.isArtist ?? false;
     _isInstitution = profile?.isInstitution ?? false;
 
-    final walletAddress = profile?.walletAddress ?? '';
-    if (walletAddress.isNotEmpty && daoProvider != null) {
-      final daoReview = daoProvider.findReviewForWallet(walletAddress);
-      if (daoReview != null && daoReview.isApproved) {
-        if (daoReview.isArtistApplication) _isArtist = true;
-        if (daoReview.isInstitutionApplication) _isInstitution = true;
-      }
-    }
+    // Server-confirmed account verification can also grant these roles.
+    try {
+      final verification =
+          Provider.of<AccountVerificationProvider>(context, listen: false);
+      if (verification.isArtist) _isArtist = true;
+      if (verification.hasInstitutionAccess) _isInstitution = true;
+    } catch (_) {}
 
     _profileListener = () {
       if (!mounted) return;

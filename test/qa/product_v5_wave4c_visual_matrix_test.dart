@@ -590,9 +590,6 @@ class _FixtureDao extends DAOProvider {
   List<Proposal> getActiveProposals() => _active;
 
   @override
-  List<DAOReview> get reviews => const <DAOReview>[];
-
-  @override
   List<Delegate> get delegates => const <Delegate>[];
 
   @override

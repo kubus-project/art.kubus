@@ -103,12 +103,6 @@ class _FakeProfileApi implements ProfileBackendApi {
 
   @override
   Future<bool> isFollowing(String walletAddress) async => false;
-
-  @override
-  Future<Map<String, dynamic>?> getDAOReview(
-      {required String idOrWallet}) async {
-    return null;
-  }
 }
 
 void main() {

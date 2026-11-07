@@ -26,16 +26,12 @@ class AnalyticsBlockedCopy {
         return l10n.analyticsBlockedArtistPendingTitle;
       case AnalyticsBlockedReason.artistReviewRejected:
         return l10n.analyticsBlockedArtistRejectedTitle;
-      case AnalyticsBlockedReason.artistRoleMismatch:
-        return l10n.analyticsBlockedArtistRoleMismatchTitle;
       case AnalyticsBlockedReason.artistApprovalRequired:
         return l10n.analyticsBlockedArtistApprovalRequiredTitle;
       case AnalyticsBlockedReason.institutionReviewPending:
         return l10n.analyticsBlockedInstitutionPendingTitle;
       case AnalyticsBlockedReason.institutionReviewRejected:
         return l10n.analyticsBlockedInstitutionRejectedTitle;
-      case AnalyticsBlockedReason.institutionRoleMismatch:
-        return l10n.analyticsBlockedInstitutionRoleMismatchTitle;
       case AnalyticsBlockedReason.institutionApprovalRequired:
         return l10n.analyticsBlockedInstitutionApprovalRequiredTitle;
     }
@@ -62,16 +58,12 @@ class AnalyticsBlockedCopy {
         return l10n.analyticsBlockedArtistPendingDescription;
       case AnalyticsBlockedReason.artistReviewRejected:
         return l10n.analyticsBlockedArtistRejectedDescription;
-      case AnalyticsBlockedReason.artistRoleMismatch:
-        return l10n.analyticsBlockedArtistRoleMismatchDescription;
       case AnalyticsBlockedReason.artistApprovalRequired:
         return l10n.analyticsBlockedArtistApprovalRequiredDescription;
       case AnalyticsBlockedReason.institutionReviewPending:
         return l10n.analyticsBlockedInstitutionPendingDescription;
       case AnalyticsBlockedReason.institutionReviewRejected:
         return l10n.analyticsBlockedInstitutionRejectedDescription;
-      case AnalyticsBlockedReason.institutionRoleMismatch:
-        return l10n.analyticsBlockedInstitutionRoleMismatchDescription;
       case AnalyticsBlockedReason.institutionApprovalRequired:
         return l10n.analyticsBlockedInstitutionApprovalRequiredDescription;
     }

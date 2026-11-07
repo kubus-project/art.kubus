@@ -26,9 +26,6 @@ class _FakeDao extends DAOProvider {
   List<Proposal> getActiveProposals() => active;
 
   @override
-  List<DAOReview> get reviews => const <DAOReview>[];
-
-  @override
   List<Delegate> get delegates => const <Delegate>[];
 
   @override

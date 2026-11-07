@@ -1,8 +1,8 @@
 import 'dart:convert';
 
 import 'package:art_kubus/l10n/app_localizations.dart';
-import 'package:art_kubus/models/dao.dart';
 import 'package:art_kubus/models/user_profile.dart';
+import 'package:art_kubus/providers/account_verification_provider.dart';
 import 'package:art_kubus/providers/collab_provider.dart';
 import 'package:art_kubus/providers/dao_provider.dart';
 import 'package:art_kubus/providers/exhibitions_provider.dart';
@@ -11,14 +11,11 @@ import 'package:art_kubus/providers/profile_provider.dart';
 import 'package:art_kubus/providers/themeprovider.dart';
 import 'package:art_kubus/providers/wallet_provider.dart';
 import 'package:art_kubus/providers/web3provider.dart';
-import 'package:art_kubus/screens/onboarding/web3/onboarding_data.dart';
 import 'package:art_kubus/screens/onboarding/web3/web3_onboarding.dart';
 import 'package:art_kubus/screens/web3/institution/institution_hub.dart';
 import 'package:art_kubus/services/backend_api_service.dart';
 import 'package:art_kubus/services/http_client_factory.dart';
 import 'package:art_kubus/services/solana_wallet_service.dart';
-import 'package:art_kubus/widgets/glass_components.dart';
-import 'package:art_kubus/widgets/kubus_button.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
@@ -26,10 +23,10 @@ import 'package:http/testing.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../helpers/secure_storage_absent.dart';
+import '../../support/verification_fixtures.dart';
 
-/// Public institution browsing must never open Web3 onboarding, and the DAO
-/// application must not block an email-only account before the user has
-/// chosen to submit it.
+/// Public institution browsing must never open Web3 onboarding, and an
+/// account without a wallet is a normal account.
 ///
 /// Every test starts with NO onboarding-completed flag, so the first-visit
 /// onboarding path would run if it still existed.
@@ -59,54 +56,6 @@ UserProfile _emailOnlyUser() {
 
 const _walletAddress = 'WalletHub1111111111111111111111111111111111';
 
-/// Signer-capable wallet: the active key matches the account wallet, so the
-/// wallet guard passes without a reconnect or account flow.
-class _SignerSolanaWalletService extends SolanaWalletService {
-  _SignerSolanaWalletService(this._address);
-
-  final String _address;
-
-  @override
-  String? get activePublicKey => _address;
-
-  @override
-  Future<double> getSplTokenBalance({
-    required String owner,
-    required String mint,
-    int? expectedDecimals,
-  }) async {
-    return 0;
-  }
-}
-
-/// Counts DAO submissions; the real provider would sign and POST.
-class _SubmitCountingDao extends DAOProvider {
-  _SubmitCountingDao() : super(solanaWalletService: _NoSignerWalletService());
-
-  int submitCalls = 0;
-
-  @override
-  Future<DAOReview?> submitInstitutionReview({
-    required String organization,
-    required String contact,
-    required String focus,
-    required String mission,
-    Map<String, dynamic>? metadata,
-  }) async {
-    submitCalls++;
-    return DAOReview(
-      id: 'review-submitted',
-      walletAddress: _walletAddress,
-      portfolioUrl: '',
-      medium: focus,
-      statement: mission,
-      status: 'pending',
-      createdAt: DateTime.utc(2026, 10, 1),
-      metadata: const <String, dynamic>{'role': 'institution'},
-    );
-  }
-}
-
 UserProfile _walletUser() {
   return UserProfile(
     id: 'user-wallet',
@@ -128,6 +77,7 @@ Future<List<String>> _pumpHub(
   bool embedded = false,
   WalletProvider? walletProvider,
   DAOProvider? daoProvider,
+  AccountVerificationProvider? verification,
   Map<String, Object> initialPrefs = const <String, Object>{},
   Locale? locale,
 }) async {
@@ -163,6 +113,8 @@ Future<List<String>> _pumpHub(
   }
   final dao =
       daoProvider ?? DAOProvider(solanaWalletService: _NoSignerWalletService());
+  final verificationProvider =
+      verification ?? await unavailableVerificationProvider();
 
   await tester.pumpWidget(
     MultiProvider(
@@ -170,6 +122,9 @@ Future<List<String>> _pumpHub(
         ChangeNotifierProvider<ThemeProvider>.value(value: themeProvider),
         ChangeNotifierProvider<ProfileProvider>.value(value: profileProvider),
         ChangeNotifierProvider<DAOProvider>.value(value: dao),
+        ChangeNotifierProvider<AccountVerificationProvider>.value(
+          value: verificationProvider,
+        ),
         ChangeNotifierProvider<WalletProvider>(
           create: (_) => walletProvider ?? WalletProvider(),
         ),
@@ -213,12 +168,6 @@ Future<List<String>> _pumpHub(
   return requests;
 }
 
-KubusButton _applyButton(WidgetTester tester, String label) {
-  return tester.widget<KubusButton>(
-    find.ancestor(of: find.text(label), matching: find.byType(KubusButton)),
-  );
-}
-
 void main() {
   installEmptySecureStorage();
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -245,23 +194,11 @@ void main() {
     expect(find.byType(Web3OnboardingScreen), findsNothing);
   });
 
-  // The owner's decision: the application CTA is "Apply as an institution", not
-  // "Connect wallet to apply". The form opens without a wallet; the wallet need is
-  // explained inside it, before submission.
-  for (final (locale, cta, walletTitle) in <(Locale, String, String)>[
-    (
-      const Locale('en'),
-      'Apply as an institution',
-      'A wallet signature is needed to submit',
-    ),
-    (
-      const Locale('sl'),
-      'Prijavi se kot institucija',
-      'Za oddajo je potreben podpis z denarnico',
-    ),
-  ]) {
+  // The application form is gone. An account without a wallet is a normal
+  // account, and the institution claim panel opens to it without one.
+  for (final locale in <Locale>[const Locale('en'), const Locale('sl')]) {
     testWidgets(
-        'email-only account sees "$cta", can open the form, and the wallet need is explained (${locale.languageCode})',
+        'email-only account sees the institution claim panel without a wallet (${locale.languageCode})',
         (tester) async {
       final requests = <String>[];
       await _pumpHub(
@@ -270,89 +207,20 @@ void main() {
         requests: requests,
         signedIn: true,
         locale: locale,
+        verification: await readyVerificationProvider(verificationState()),
       );
 
       final context = tester.element(find.byType(InstitutionHub));
       final l10n = AppLocalizations.of(context)!;
-      expect(l10n.institutionHubCtaApplyAsInstitution, cta);
-      expect(l10n.institutionHubApplicationWalletBannerTitle, walletTitle);
-
-      // The CTA names the action, not the wallet, and stays tappable, so
-      // browsing and filling in the application never require a wallet.
-      expect(find.text(cta), findsOneWidget);
-      expect(_applyButton(tester, cta).onPressed, isNotNull);
+      expect(find.text(l10n.verificationInstitutionClaimTitle), findsWidgets);
       expect(find.text('Connect wallet to apply'), findsNothing);
-
-      await tester.tap(find.text(cta));
-      await tester.pumpAndSettle();
-
-      final sheet = find.byType(BackdropGlassSheet);
-      expect(sheet, findsOneWidget);
-      for (final text in <String>[
-        walletTitle,
-        l10n.institutionHubApplicationWalletWhy,
-      ]) {
-        expect(
-          find.descendant(of: sheet, matching: find.text(text)),
-          findsOneWidget,
-          reason: 'the sheet explains the wallet need before submission',
-        );
-      }
       expect(
         requests.where((r) => r.startsWith('POST ')),
         isEmpty,
-        reason: 'opening the form sends nothing',
+        reason: 'opening the hub sends nothing',
       );
     });
   }
-
-  testWidgets(
-      'email-only submit goes through the wallet guard and sends no DAO review',
-      (tester) async {
-    final requests = <String>[];
-    await _pumpHub(
-      tester,
-      user: _emailOnlyUser(),
-      requests: requests,
-      signedIn: true,
-    );
-
-    final context = tester.element(find.byType(InstitutionHub));
-    final l10n = AppLocalizations.of(context)!;
-
-    await tester.tap(find.text(l10n.institutionHubCtaApplyAsInstitution));
-    await tester.pumpAndSettle();
-
-    final fields = find.descendant(
-      of: find.byType(BackdropGlassSheet),
-      matching: find.byType(TextFormField),
-    );
-    expect(fields, findsNWidgets(4));
-    await tester.enterText(fields.at(0), 'Kubus Gallery');
-    await tester.enterText(fields.at(1), 'hello@example.com');
-    await tester.enterText(fields.at(2), 'Digital art');
-    await tester.enterText(
-      fields.at(3),
-      'We host public programmes for emerging artists.',
-    );
-
-    await tester.tap(find.text(l10n.institutionHubApplicationSubmitButton));
-    for (var i = 0; i < 5; i++) {
-      await tester.pump(const Duration(milliseconds: 200));
-    }
-
-    expect(
-      requests.where((r) => r.startsWith('POST ')),
-      isEmpty,
-      reason: 'without a wallet signer the review is never submitted',
-    );
-    expect(
-      requests.any((r) => r.startsWith('route ')),
-      isTrue,
-      reason:
-          'the wallet guard opened the account flow for the email-only user',
-    );
-  });
 
   testWidgets('wallet holder sees Web3 onboarding on the first visit',
       (tester) async {
@@ -385,68 +253,5 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byType(Web3OnboardingScreen), findsOneWidget);
-  });
-
-  testWidgets(
-      'wallet-ready user passes the signer guard and submits the DAO review once',
-      (tester) async {
-    final requests = <String>[];
-    final walletProvider = WalletProvider(
-      solanaWalletService: _SignerSolanaWalletService(_walletAddress),
-      deferInit: true,
-    )
-      ..setCurrentWalletAddressForTesting(_walletAddress)
-      ..seedAccountSessionForTesting(
-        email: 'wallet@example.com',
-        backendProfile: const <String, dynamic>{},
-      );
-    final dao = _SubmitCountingDao();
-    await _pumpHub(
-      tester,
-      user: _walletUser(),
-      requests: requests,
-      signedIn: true,
-      walletProvider: walletProvider,
-      daoProvider: dao,
-      // A wallet holder who has seen the first-visit explanation must not have
-      // it covering the hub under test.
-      initialPrefs: <String, Object>{
-        '${InstitutionHubOnboardingData.featureKey}_onboarding_completed': true,
-      },
-    );
-
-    final context = tester.element(find.byType(InstitutionHub));
-    final l10n = AppLocalizations.of(context)!;
-
-    await tester.tap(find.text(l10n.institutionHubApplyForReviewAction));
-    await tester.pumpAndSettle();
-
-    final fields = find.descendant(
-      of: find.byType(BackdropGlassSheet),
-      matching: find.byType(TextFormField),
-    );
-    expect(fields, findsNWidgets(4));
-    await tester.enterText(fields.at(0), 'Kubus Gallery');
-    await tester.enterText(fields.at(1), 'hello@example.com');
-    await tester.enterText(fields.at(2), 'Digital art');
-    await tester.enterText(
-      fields.at(3),
-      'We host public programmes for emerging artists.',
-    );
-
-    await tester.tap(find.text(l10n.institutionHubApplicationSubmitButton));
-    await tester.pumpAndSettle();
-
-    expect(
-      requests.any((r) => r.startsWith('route ')),
-      isFalse,
-      reason: 'a signer-ready wallet passes the guard without account flow',
-    );
-    expect(dao.submitCalls, 1, reason: 'the DAO submit runs exactly once');
-    expect(
-      find.byType(BackdropGlassSheet),
-      findsNothing,
-      reason: 'a successful submit closes the application sheet',
-    );
   });
 }

@@ -46,12 +46,10 @@ Web3CapabilityContext contextFor({
   bool governanceEnabled = true,
   bool marketplaceEnabled = true,
   bool editionCreationEnabled = true,
-  bool daoModerationEnabled = true,
   bool entityIsListed = false,
   String? entityOwnerAddress,
   bool acquisitionSupported = false,
   bool mintingSupported = false,
-  bool daoReviewAuthority = false,
   bool treasuryMutationSupported = false,
 }) {
   return Web3CapabilityContext(
@@ -64,9 +62,7 @@ Web3CapabilityContext contextFor({
     governanceEnabled: governanceEnabled,
     marketplaceEnabled: marketplaceEnabled,
     editionCreationEnabled: editionCreationEnabled,
-    daoModerationEnabled: daoModerationEnabled,
     daoTreasuryMutationEnabled: true,
-    daoReviewAuthority: daoReviewAuthority,
     treasuryMutationSupported: treasuryMutationSupported,
     entityOwnerAddress: entityOwnerAddress,
     entityIsListed: entityIsListed,
@@ -95,7 +91,6 @@ void main() {
     expect(capabilities.canVote, isFalse);
     expect(capabilities.canCreateProposal, isFalse);
     expect(capabilities.canDelegate, isFalse);
-    expect(capabilities.canModerateDao, isFalse);
     expect(capabilities.canMutateTreasury, isFalse);
     expect(capabilities.canAcquireEdition, isFalse);
   });
@@ -177,44 +172,6 @@ void main() {
     expect(listed.canUnlistEdition, isTrue);
     expect(nonOwner.canManageEdition, isFalse);
     expect(nonOwner.canAcquireEdition, isFalse);
-  });
-
-  test('moderation requires signer, feature, and moderator role', () {
-    final ordinary = Web3CapabilityResolver.resolve(contextFor());
-    final moderator = Web3CapabilityResolver.resolve(
-      contextFor(walletAuthority: authority(accountRole: 'moderator')),
-    );
-    final disabled = Web3CapabilityResolver.resolve(
-      Web3CapabilityContext(
-        authority: authority(accountRole: 'admin'),
-        profileHydrated: true,
-        profileSignedIn: true,
-        profileIsArtist: false,
-        profileIsInstitution: false,
-        web3Enabled: true,
-        governanceEnabled: true,
-        marketplaceEnabled: true,
-        editionCreationEnabled: true,
-        daoModerationEnabled: false,
-        daoTreasuryMutationEnabled: true,
-      ),
-    );
-
-    expect(ordinary.canModerateDao, isFalse);
-    expect(moderator.canModerateDao, isTrue);
-    expect(disabled.canModerateDao, isFalse);
-  });
-
-  test('server-derived reviewer authority enables allowlisted moderators', () {
-    final capabilities = Web3CapabilityResolver.resolve(
-      contextFor(
-        daoReviewAuthority: true,
-        treasuryMutationSupported: true,
-      ),
-    );
-
-    expect(capabilities.canModerateDao, isTrue);
-    expect(capabilities.canMutateTreasury, isFalse);
   });
 
   test('feature-disabled surfaces expose no capabilities', () {

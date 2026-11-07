@@ -95,7 +95,6 @@ class AppConfig {
   static const bool enableInstitutions = true;
   static const bool enableDAO = true;
   static const bool enableDaoOnchainTreasury = true;
-  static const bool enableDaoReviewDecisions = true;
   static const bool enableWalletConnect = true;
   static const bool enableEmailAuth = true;
   static const bool enableGoogleAuth = true;
@@ -535,8 +534,6 @@ class AppConfig {
         return enableDAO;
       case 'daoOnchainTreasury':
         return enableDaoOnchainTreasury;
-      case 'daoReviewDecisions':
-        return enableDaoReviewDecisions;
       case 'walletConnect':
         return enableWalletConnect;
       case 'emailAuth':

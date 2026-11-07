@@ -4,13 +4,14 @@ import 'dart:convert';
 
 import 'package:art_kubus/config/config.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
-import 'package:art_kubus/models/dao.dart';
+import 'package:art_kubus/models/account_verification.dart';
+import 'package:art_kubus/models/artist_application.dart';
 import 'package:art_kubus/models/onboarding_completion_navigation.dart';
 import 'package:art_kubus/models/preferred_auth_method.dart';
 import 'package:art_kubus/models/protected_action_requirements.dart';
 import 'package:art_kubus/models/user_persona.dart';
 import 'package:art_kubus/providers/chat_provider.dart';
-import 'package:art_kubus/providers/dao_provider.dart';
+import 'package:art_kubus/providers/account_verification_provider.dart';
 import 'package:art_kubus/providers/profile_provider.dart';
 import 'package:art_kubus/providers/themeprovider.dart';
 import 'package:art_kubus/providers/wallet_provider.dart';
@@ -29,7 +30,8 @@ import 'package:art_kubus/services/wallet_session_sync_dependencies.dart';
 import 'package:art_kubus/services/wallet_session_sync_service.dart';
 import 'package:art_kubus/utils/design_tokens.dart';
 import 'package:art_kubus/utils/kubus_accent_gradients.dart';
-import 'package:art_kubus/utils/dao_role_verification.dart';
+import 'package:art_kubus/widgets/verification/artist_verification_panel.dart';
+import 'package:art_kubus/widgets/verification/institution_verification_panel.dart';
 import 'package:art_kubus/utils/media_url_resolver.dart';
 import 'package:art_kubus/utils/wallet_utils.dart';
 import 'package:art_kubus/utils/wallet_backup_status.dart';
@@ -69,7 +71,7 @@ enum _OnboardingStep {
   walletConnect,
   walletBackupIntro,
   walletBackup,
-  daoReview,
+  verification,
   accountPermissions,
   done,
 }
@@ -103,67 +105,44 @@ class _StepPalette {
   final Color accent;
 }
 
-class _DaoApplicationDraftRecord {
-  const _DaoApplicationDraftRecord({
-    required this.isArtist,
-    required this.isInstitution,
-    required this.title,
-    required this.contact,
+/// The artist application being typed during onboarding. It is persisted so
+/// it survives OAuth, email verification, refresh and navigation. Institution
+/// requests are sent from the claim / request sheets and need no draft.
+class _VerificationDraftRecord {
+  const _VerificationDraftRecord({
     required this.portfolioUrl,
     required this.medium,
     required this.statement,
   });
 
-  final bool isArtist;
-  final bool isInstitution;
-  final String title;
-  final String contact;
   final String portfolioUrl;
   final String medium;
   final String statement;
 
   bool get hasContent =>
-      title.isNotEmpty ||
-      contact.isNotEmpty ||
-      portfolioUrl.isNotEmpty ||
-      medium.isNotEmpty ||
-      statement.isNotEmpty;
+      portfolioUrl.isNotEmpty || medium.isNotEmpty || statement.isNotEmpty;
 
-  bool get isSubmittable {
-    if (isInstitution) {
-      return title.isNotEmpty &&
-          contact.isNotEmpty &&
-          medium.isNotEmpty &&
-          statement.isNotEmpty;
-    }
-    if (isArtist) {
-      return portfolioUrl.isNotEmpty &&
-          medium.isNotEmpty &&
-          statement.isNotEmpty;
-    }
-    return false;
-  }
-
-  bool get isEligibleRole => isArtist || isInstitution;
+  bool get isSubmittable =>
+      portfolioUrl.isNotEmpty && medium.isNotEmpty && statement.isNotEmpty;
 
   Map<String, dynamic> toJson() {
     return <String, dynamic>{
-      'isArtist': isArtist,
-      'isInstitution': isInstitution,
-      'title': title,
-      'contact': contact,
       'portfolioUrl': portfolioUrl,
       'medium': medium,
       'statement': statement,
     };
   }
 
-  factory _DaoApplicationDraftRecord.fromJson(Map<String, dynamic> json) {
-    return _DaoApplicationDraftRecord(
-      isArtist: json['isArtist'] == true,
-      isInstitution: json['isInstitution'] == true,
-      title: (json['title'] ?? '').toString().trim(),
-      contact: (json['contact'] ?? '').toString().trim(),
+  /// Older drafts also carried institution fields; those are ignored.
+  factory _VerificationDraftRecord.fromJson(Map<String, dynamic> json) {
+    if (json['isInstitution'] == true) {
+      return const _VerificationDraftRecord(
+        portfolioUrl: '',
+        medium: '',
+        statement: '',
+      );
+    }
+    return _VerificationDraftRecord(
       portfolioUrl: (json['portfolioUrl'] ?? '').toString().trim(),
       medium: (json['medium'] ?? '').toString().trim(),
       statement: (json['statement'] ?? '').toString().trim(),
@@ -225,7 +204,9 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
   static const int _flowVersion = AuthOnboardingService.onboardingFlowVersion;
   static const String _personaDraftKey = 'onboarding_persona_draft_v3';
   static const String _profileDraftKey = 'onboarding_profile_draft_v3';
-  static const String _daoDraftKey = 'onboarding_dao_application_draft_v1';
+  // Storage key kept as is so drafts written by older builds are still found.
+  static const String _verificationDraftKey =
+      'onboarding_dao_application_draft_v1';
   static const String _verificationEmailDraftKey =
       'onboarding_verification_email_v3';
   static const String _verificationPendingFlagKey =
@@ -267,9 +248,7 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
   UserPersona? _selectedPersona;
   UserPersona? _personaSelectionInFlight;
   Map<String, String> _localProfileDraft = <String, String>{};
-  _DaoApplicationDraftRecord? _daoDraft;
-  DAOReview? _daoReview;
-  bool _daoReviewLoading = false;
+  _VerificationDraftRecord? _verificationDraft;
   Uint8List? _pendingAvatarBytes;
   String? _pendingAvatarFileName;
   String? _pendingAvatarMimeType;
@@ -376,7 +355,7 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
         return _paletteFrom(KubusAccentGradients.skyCyan);
       case _OnboardingStep.walletBackup:
         return _paletteFrom(KubusAccentGradients.cyanBlue);
-      case _OnboardingStep.daoReview:
+      case _OnboardingStep.verification:
         return _paletteFrom(KubusAccentGradients.violet);
       case _OnboardingStep.accountPermissions:
         return _paletteFrom(KubusAccentGradients.emerald);
@@ -512,11 +491,14 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
     final profileProvider =
         Provider.of<ProfileProvider>(context, listen: false);
     if (!profileProvider.isSignedIn) return null;
+    // The persona is scoped to the signed-in ACCOUNT, so an account without a
+    // wallet is trusted like any other. A wallet is only compared when both
+    // sides have one, to refuse a persona carried over from another wallet.
     final providerWallet =
         (profileProvider.currentUser?.walletAddress ?? '').trim();
-    if (providerWallet.isEmpty) return null;
     final sessionWallet = _currentSessionWalletAddress();
-    if (sessionWallet.isNotEmpty &&
+    if (providerWallet.isNotEmpty &&
+        sessionWallet.isNotEmpty &&
         !WalletUtils.equals(providerWallet, sessionWallet)) {
       return null;
     }
@@ -527,21 +509,9 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
     return _selectedPersona ?? _trustedProviderPersona;
   }
 
-  bool get _requiresDaoReviewStep {
+  bool get _requiresVerificationStep {
     final persona = _effectivePersona;
     return persona == UserPersona.creator || persona == UserPersona.institution;
-  }
-
-  DaoRoleType? get _requiredDaoRoleType {
-    switch (_effectivePersona) {
-      case UserPersona.creator:
-        return DaoRoleType.artist;
-      case UserPersona.institution:
-        return DaoRoleType.institution;
-      case UserPersona.lover:
-      case null:
-        return null;
-    }
   }
 
   @override
@@ -751,22 +721,20 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
       _localProfileDraft = <String, String>{};
     }
 
-    final rawDao = (prefs.getString(_daoDraftKey) ?? '').trim();
-    _daoDraft = null;
-    if (rawDao.isNotEmpty) {
+    final rawDraft = (prefs.getString(_verificationDraftKey) ?? '').trim();
+    _verificationDraft = null;
+    if (rawDraft.isNotEmpty) {
       try {
-        final decoded = jsonDecode(rawDao);
+        final decoded = jsonDecode(rawDraft);
         if (decoded is Map<String, dynamic>) {
-          final parsed = _DaoApplicationDraftRecord.fromJson(decoded);
-          if (parsed.isEligibleRole && parsed.hasContent) {
-            _daoDraft = parsed;
+          final parsed = _VerificationDraftRecord.fromJson(decoded);
+          if (parsed.hasContent) {
+            _verificationDraft = parsed;
           }
         }
       } catch (_) {
-        _daoDraft = null;
+        _verificationDraft = null;
       }
-    } else {
-      _daoDraft = null;
     }
 
     final pendingEmail =
@@ -795,27 +763,21 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
       _pendingEmailVerification = false;
     }
 
-    _daoDraft = _normalizeDaoDraftForPersona(_selectedPersona);
+    _verificationDraft =
+        _normalizeVerificationDraftForPersona(_selectedPersona);
   }
 
-  _DaoApplicationDraftRecord? _normalizeDaoDraftForPersona(
+  /// Only an artist has a draft to keep. The portfolio defaults to the
+  /// website typed on the profile step.
+  _VerificationDraftRecord? _normalizeVerificationDraftForPersona(
       UserPersona? persona) {
-    if (persona == null || persona == UserPersona.lover) {
+    if (persona != UserPersona.creator) {
       return null;
     }
-
-    final existing = _daoDraft;
-    final profileName = (_localProfileDraft['displayName'] ?? '').trim();
+    final existing = _verificationDraft;
     final profileWebsite = (_localProfileDraft['website'] ?? '').trim();
-    final isInstitution = persona == UserPersona.institution;
-
-    return _DaoApplicationDraftRecord(
-      isArtist: !isInstitution,
-      isInstitution: isInstitution,
-      title: isInstitution ? (existing?.title ?? profileName) : '',
-      contact: isInstitution ? (existing?.contact ?? profileWebsite) : '',
-      portfolioUrl:
-          isInstitution ? '' : (existing?.portfolioUrl ?? profileWebsite),
+    return _VerificationDraftRecord(
+      portfolioUrl: existing?.portfolioUrl ?? profileWebsite,
       medium: existing?.medium ?? '',
       statement: existing?.statement ?? '',
     );
@@ -834,11 +796,11 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
     } else {
       await prefs.setString(_profileDraftKey, jsonEncode(_localProfileDraft));
     }
-    final daoDraft = _daoDraft;
-    if (daoDraft == null || !daoDraft.isEligibleRole || !daoDraft.hasContent) {
-      await prefs.remove(_daoDraftKey);
+    final draft = _verificationDraft;
+    if (draft == null || !draft.hasContent) {
+      await prefs.remove(_verificationDraftKey);
     } else {
-      await prefs.setString(_daoDraftKey, jsonEncode(daoDraft.toJson()));
+      await prefs.setString(_verificationDraftKey, jsonEncode(draft.toJson()));
     }
 
     final pendingEmail = (_pendingVerificationEmail ?? '').trim();
@@ -1192,7 +1154,7 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
           // / deferred `walletBackup` to `walletBackupIntro`, and
           // `_refreshAuthDerivedSteps` prunes any entry no longer in `_steps`.
           if (_shouldOfferWalletBackupIntro) _OnboardingStep.walletBackupIntro,
-          if (_requiresDaoReviewStep) _OnboardingStep.daoReview,
+          if (_requiresVerificationStep) _OnboardingStep.verification,
           _OnboardingStep.accountPermissions,
           _OnboardingStep.done,
         ];
@@ -1440,7 +1402,7 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
       case _OnboardingStep.walletBackup:
         return _OnboardingStage.secure;
       case _OnboardingStep.guestPermissions:
-      case _OnboardingStep.daoReview:
+      case _OnboardingStep.verification:
       case _OnboardingStep.accountPermissions:
       case _OnboardingStep.done:
         return _OnboardingStage.enter;
@@ -1718,46 +1680,45 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
     await _flushPendingAvatarUploadIfPossible();
   }
 
-  Future<void> _syncDaoReviewStateIfNeeded({bool forceRefresh = false}) async {
-    if (!_requiresDaoReviewStep || _currentStep != _OnboardingStep.daoReview) {
+  /// Re-reads the account's verification standing from the server when the
+  /// step is shown, so a request decided meanwhile is reflected immediately.
+  Future<void> _syncVerificationStateIfNeeded() async {
+    if (!_requiresVerificationStep ||
+        _currentStep != _OnboardingStep.verification) {
       return;
     }
-    if (_daoReviewLoading) return;
-
-    final profileProvider =
-        Provider.of<ProfileProvider>(context, listen: false);
-    final wallet = (profileProvider.currentUser?.walletAddress ?? '').trim();
-    if (wallet.isEmpty) return;
-
-    final daoProvider = Provider.of<DAOProvider>(context, listen: false);
-    setState(() {
-      _daoReviewLoading = true;
-    });
-    try {
-      final review = await daoProvider.loadReviewForWallet(
-        wallet,
-        forceRefresh: forceRefresh,
-      );
-      if (!mounted) return;
-      setState(() {
-        _daoReview = review;
-      });
-    } finally {
-      if (mounted) {
-        setState(() {
-          _daoReviewLoading = false;
-        });
-      } else {
-        _daoReviewLoading = false;
-      }
-    }
+    await Provider.of<AccountVerificationProvider>(context, listen: false)
+        .refresh();
   }
 
-  Future<void> _submitDaoReview() async {
+  /// Applies as an artist through the account-owned application API (the same
+  /// call for every account, with or without a wallet). Institutions use the
+  /// claim / request panel, so for them this only moves on. An application that
+  /// is already pending or approved is never sent a second time.
+  Future<void> _submitVerification() async {
     final l10n = AppLocalizations.of(context)!;
     final persona = _effectivePersona;
-    final draft = _daoDraft;
-    if (persona == null || draft == null || !draft.isSubmittable) {
+    final verification =
+        Provider.of<AccountVerificationProvider>(context, listen: false);
+
+    if (persona == UserPersona.institution) {
+      await _markCompleted(_OnboardingStep.verification);
+      return;
+    }
+
+    if (verification.isArtist ||
+        verification.artistStatus == ArtistVerificationStatus.pending) {
+      await _markCompleted(_OnboardingStep.verification);
+      return;
+    }
+
+    final draft = _verificationDraft;
+    final portfolio =
+        normalizeArtistPortfolioUrl(draft?.portfolioUrl ?? '') ?? '';
+    if (persona != UserPersona.creator ||
+        draft == null ||
+        !draft.isSubmittable ||
+        portfolio.isEmpty) {
       if (mounted) {
         ScaffoldMessenger.of(context).showKubusSnackBar(
           SnackBar(
@@ -1769,50 +1730,28 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
       return;
     }
 
-    final profileProvider =
-        Provider.of<ProfileProvider>(context, listen: false);
-    final wallet = (profileProvider.currentUser?.walletAddress ?? '').trim();
-    if (wallet.isEmpty) return;
-
-    final verification = DaoRoleVerification(
-      walletAddress: wallet,
-      review: _daoReview,
-    );
-    final requiredRole = _requiredDaoRoleType;
-    if (requiredRole != null &&
-        (verification.isApprovedFor(requiredRole) ||
-            verification.isPendingFor(requiredRole))) {
-      await _markCompleted(_OnboardingStep.daoReview);
-      return;
-    }
-
-    final daoProvider = Provider.of<DAOProvider>(context, listen: false);
-    DAOReview? submittedReview;
-    if (persona == UserPersona.institution) {
-      submittedReview = await daoProvider.submitInstitutionReview(
-        organization: draft.title,
-        contact: draft.contact,
-        focus: draft.medium,
-        mission: draft.statement,
-        metadata: <String, dynamic>{'source': 'onboarding'},
-      );
-    } else if (persona == UserPersona.creator) {
-      submittedReview = await daoProvider.submitReview(
-        portfolioUrl: draft.portfolioUrl,
+    ArtistApplicationSummary? sent;
+    try {
+      sent = await verification.submitArtistApplication(
+        portfolioUrl: portfolio,
         medium: draft.medium,
         statement: draft.statement,
-        title: (_localProfileDraft['displayName'] ?? '').trim(),
-        metadata: <String, dynamic>{'source': 'onboarding'},
-        role: 'artist',
       );
+    } on BackendApiRequestException catch (error) {
+      // 409: an application already exists. Show its real state and move on.
+      if (error.statusCode == 409) {
+        await verification.refresh();
+        if (mounted) await _markCompleted(_OnboardingStep.verification);
+        return;
+      }
+    } catch (_) {
+      sent = null;
     }
 
-    if (submittedReview == null) {
+    if (sent == null) {
       if (mounted) {
         ScaffoldMessenger.of(context).showKubusSnackBar(
-          SnackBar(
-            content: Text(l10n.onboardingFlowDaoReviewSubmitFailed),
-          ),
+          SnackBar(content: Text(l10n.verificationSubmitFailed)),
           tone: KubusSnackBarTone.error,
         );
       }
@@ -1820,11 +1759,8 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
     }
 
     if (!mounted) return;
-    setState(() {
-      _daoReview = submittedReview;
-    });
     await _persistLocalDrafts();
-    await _markCompleted(_OnboardingStep.daoReview);
+    await _markCompleted(_OnboardingStep.verification);
   }
 
   void _refreshAuthDerivedSteps() {
@@ -1833,9 +1769,8 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
 
     _isSignedIn = signedInNow;
     _steps = _buildSteps();
-    if (!_requiresDaoReviewStep) {
-      _daoReview = null;
-      _daoDraft = null;
+    if (!_requiresVerificationStep) {
+      _verificationDraft = null;
     }
     _completed.removeWhere(
       (step) => !_steps.contains(step) && step != _OnboardingStep.verifyEmail,
@@ -1896,8 +1831,8 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
       _lastSideEffectStep = _currentStep;
     }
     _startVerificationPollingIfNeeded();
-    if (_currentStep == _OnboardingStep.daoReview) {
-      unawaited(_syncDaoReviewStateIfNeeded());
+    if (_currentStep == _OnboardingStep.verification) {
+      unawaited(_syncVerificationStateIfNeeded());
     }
   }
 
@@ -2079,7 +2014,8 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
       'fieldOfWork': fieldOfWork.trim(),
       'yearsActive': yearsActive.trim(),
     };
-    _daoDraft = _normalizeDaoDraftForPersona(_effectivePersona);
+    _verificationDraft =
+        _normalizeVerificationDraftForPersona(_effectivePersona);
     await _persistLocalDrafts();
 
     if (wallet != null && wallet.trim().isNotEmpty) {
@@ -2554,8 +2490,7 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
     setState(() {
       _selectedPersona = persona;
       _personaSelectionInFlight = persona;
-      _daoDraft = _normalizeDaoDraftForPersona(persona);
-      _daoReview = null;
+      _verificationDraft = _normalizeVerificationDraftForPersona(persona);
     });
     try {
       await _persistLocalDrafts();
@@ -2603,7 +2538,7 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
       );
       setState(() {
         _selectedPersona = persona;
-        _daoDraft = _normalizeDaoDraftForPersona(persona);
+        _verificationDraft = _normalizeVerificationDraftForPersona(persona);
       });
     } finally {
       if (mounted) {
@@ -3036,9 +2971,9 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
         // safety. Kept here so a stale current-step value stays handled.
         await _handleWalletBackupStep();
         return;
-      case _OnboardingStep.daoReview:
-        if (_completed.contains(_OnboardingStep.daoReview)) {
-          await _markCompleted(_OnboardingStep.daoReview);
+      case _OnboardingStep.verification:
+        if (_completed.contains(_OnboardingStep.verification)) {
+          await _markCompleted(_OnboardingStep.verification);
         } else {
           await _deferCurrentStep();
         }
@@ -3319,24 +3254,22 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
           onRevealMnemonic: _handleWalletBackupStep,
         );
         break;
-      case _OnboardingStep.daoReview:
-        content = _DaoReviewStep(
-          title: l10n.onboardingFlowDaoReviewTitle,
+      case _OnboardingStep.verification:
+        content = _VerificationStep(
+          title: l10n.verificationOnboardingTitle,
           body: _effectivePersona == UserPersona.institution
-              ? l10n.onboardingFlowDaoReviewInstitutionBody
-              : l10n.onboardingFlowDaoReviewArtistBody,
+              ? l10n.verificationOnboardingInstitutionBody
+              : l10n.verificationOnboardingArtistBody,
           persona: _effectivePersona,
-          draft: _daoDraft,
-          review: _daoReview,
-          isLoadingReview: _daoReviewLoading,
+          draft: _verificationDraft,
           onSaveDraft: (draft) async {
-            _daoDraft = draft;
+            _verificationDraft = draft;
             await _persistLocalDrafts();
             if (mounted) {
               setState(() {});
             }
           },
-          onSubmit: _submitDaoReview,
+          onSubmit: _submitVerification,
         );
         break;
       case _OnboardingStep.accountPermissions:
@@ -3457,7 +3390,7 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
         _currentStep == _OnboardingStep.profile ||
         _currentStep == _OnboardingStep.walletConnect ||
         _currentStep == _OnboardingStep.walletBackup ||
-        _currentStep == _OnboardingStep.daoReview) {
+        _currentStep == _OnboardingStep.verification) {
       if (_currentIndex == 0) {
         return const SizedBox.shrink();
       }
@@ -3976,7 +3909,7 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
       case _OnboardingStep.profile:
       case _OnboardingStep.walletConnect:
       case _OnboardingStep.walletBackupIntro:
-      case _OnboardingStep.daoReview:
+      case _OnboardingStep.verification:
       case _OnboardingStep.accountPermissions:
         return l10n.commonContinue;
       case _OnboardingStep.walletBackup:
@@ -5287,14 +5220,12 @@ class _InlineProfileStepState extends State<_InlineProfileStep> {
   }
 }
 
-class _DaoReviewStep extends StatefulWidget {
-  const _DaoReviewStep({
+class _VerificationStep extends StatefulWidget {
+  const _VerificationStep({
     required this.title,
     required this.body,
     required this.persona,
     required this.draft,
-    required this.review,
-    required this.isLoadingReview,
     required this.onSaveDraft,
     required this.onSubmit,
   });
@@ -5302,19 +5233,15 @@ class _DaoReviewStep extends StatefulWidget {
   final String title;
   final String body;
   final UserPersona? persona;
-  final _DaoApplicationDraftRecord? draft;
-  final DAOReview? review;
-  final bool isLoadingReview;
-  final Future<void> Function(_DaoApplicationDraftRecord draft) onSaveDraft;
+  final _VerificationDraftRecord? draft;
+  final Future<void> Function(_VerificationDraftRecord draft) onSaveDraft;
   final Future<void> Function() onSubmit;
 
   @override
-  State<_DaoReviewStep> createState() => _DaoReviewStepState();
+  State<_VerificationStep> createState() => _VerificationStepState();
 }
 
-class _DaoReviewStepState extends State<_DaoReviewStep> {
-  late final TextEditingController _title;
-  late final TextEditingController _contact;
+class _VerificationStepState extends State<_VerificationStep> {
   late final TextEditingController _portfolioUrl;
   late final TextEditingController _medium;
   late final TextEditingController _statement;
@@ -5323,8 +5250,6 @@ class _DaoReviewStepState extends State<_DaoReviewStep> {
   void initState() {
     super.initState();
     final draft = widget.draft;
-    _title = TextEditingController(text: draft?.title ?? '');
-    _contact = TextEditingController(text: draft?.contact ?? '');
     _portfolioUrl = TextEditingController(text: draft?.portfolioUrl ?? '');
     _medium = TextEditingController(text: draft?.medium ?? '');
     _statement = TextEditingController(text: draft?.statement ?? '');
@@ -5332,47 +5257,49 @@ class _DaoReviewStepState extends State<_DaoReviewStep> {
 
   @override
   void dispose() {
-    _title.dispose();
-    _contact.dispose();
     _portfolioUrl.dispose();
     _medium.dispose();
     _statement.dispose();
     super.dispose();
   }
 
-  _DaoApplicationDraftRecord _currentDraft() {
-    final isInstitution = widget.persona == UserPersona.institution;
-    return _DaoApplicationDraftRecord(
-      isArtist: !isInstitution,
-      isInstitution: isInstitution,
-      title: _title.text.trim(),
-      contact: _contact.text.trim(),
-      portfolioUrl: _portfolioUrl.text.trim(),
-      medium: _medium.text.trim(),
-      statement: _statement.text.trim(),
-    );
-  }
-
   Future<void> _saveDraft() async {
-    await widget.onSaveDraft(_currentDraft());
+    await widget.onSaveDraft(
+      _VerificationDraftRecord(
+        portfolioUrl: _portfolioUrl.text.trim(),
+        medium: _medium.text.trim(),
+        statement: _statement.text.trim(),
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final scheme = Theme.of(context).colorScheme;
+    final verification = context.watch<AccountVerificationProvider>();
     final isInstitution = widget.persona == UserPersona.institution;
-    final role = isInstitution ? DaoRoleType.institution : DaoRoleType.artist;
-    final verification = DaoRoleVerification(
-      walletAddress: '',
-      review: widget.review,
-    );
-    final isSatisfied =
-        verification.isApprovedFor(role) || verification.isPendingFor(role);
-    final status = widget.review?.status.toLowerCase() ?? '';
-    final statusLabel = status.isEmpty
-        ? null
-        : l10n.onboardingFlowDaoReviewStatus(status.toUpperCase());
+    final status = verification.artistStatus;
+    final isSatisfied = isInstitution
+        ? verification.hasInstitutionAccess ||
+            verification.hasOpenInstitutionRequest
+        : verification.isArtist || status == ArtistVerificationStatus.pending;
+    final String? statusLabel = isInstitution
+        ? (verification.hasInstitutionAccess
+            ? l10n.verificationOnboardingApproved
+            : (verification.hasOpenInstitutionRequest
+                ? l10n.verificationOnboardingPending
+                : null))
+        : switch (status) {
+            ArtistVerificationStatus.approved =>
+              l10n.verificationOnboardingApproved,
+            ArtistVerificationStatus.pending =>
+              l10n.verificationOnboardingPending,
+            ArtistVerificationStatus.rejected =>
+              l10n.verificationStatusRejected,
+            ArtistVerificationStatus.revoked => l10n.verificationStatusRevoked,
+            ArtistVerificationStatus.notApplied => null,
+          };
     const fieldGap = KubusSpacing.sm;
 
     return Column(
@@ -5393,7 +5320,7 @@ class _DaoReviewStepState extends State<_DaoReviewStep> {
               ),
         ),
         const SizedBox(height: 12),
-        if (widget.isLoadingReview) ...[
+        if (verification.isLoading) ...[
           const Center(child: InlineLoading(width: 40, height: 40)),
           const SizedBox(height: 12),
         ] else if (statusLabel != null) ...[
@@ -5419,84 +5346,53 @@ class _DaoReviewStepState extends State<_DaoReviewStep> {
         ],
         Expanded(
           child: SingleChildScrollView(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                if (isInstitution) ...[
-                  TextField(
-                    controller: _title,
-                    decoration: InputDecoration(
-                      labelText: l10n.onboardingFlowDaoReviewOrganizationLabel,
-                    ),
-                    onChanged: (_) => unawaited(_saveDraft()),
-                  ),
-                  const SizedBox(height: fieldGap),
-                  TextField(
-                    controller: _contact,
-                    decoration: InputDecoration(
-                      labelText: l10n.onboardingFlowDaoReviewContactLabel,
-                    ),
-                    onChanged: (_) => unawaited(_saveDraft()),
-                  ),
-                ] else ...[
-                  TextField(
-                    controller: _portfolioUrl,
-                    keyboardType: TextInputType.url,
-                    decoration: InputDecoration(
-                      labelText: l10n.onboardingFlowDaoReviewPortfolioLabel,
-                    ),
-                    onChanged: (_) => unawaited(_saveDraft()),
-                  ),
-                ],
-                const SizedBox(height: fieldGap),
-                TextField(
-                  controller: _medium,
-                  decoration: InputDecoration(
-                    labelText: isInstitution
-                        ? l10n.onboardingFlowDaoReviewInstitutionFocusLabel
-                        : l10n.onboardingFlowDaoReviewPrimaryMediumLabel,
-                  ),
-                  onChanged: (_) => unawaited(_saveDraft()),
-                ),
-                const SizedBox(height: fieldGap),
-                TextField(
-                  controller: _statement,
-                  minLines: 3,
-                  maxLines: 5,
-                  decoration: InputDecoration(
-                    labelText: isInstitution
-                        ? l10n.onboardingFlowDaoReviewMissionLabel
-                        : l10n.onboardingFlowDaoReviewArtistStatementLabel,
-                  ),
-                  onChanged: (_) => unawaited(_saveDraft()),
-                ),
-                if ((widget.review?.reviewerNotes ?? '').trim().isNotEmpty) ...[
-                  const SizedBox(height: KubusSpacing.md),
-                  Text(
-                    l10n.onboardingFlowDaoReviewReviewerNotes,
-                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w700,
+            child: isInstitution
+                ? const InstitutionVerificationPanel()
+                : Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      TextField(
+                        controller: _portfolioUrl,
+                        keyboardType: TextInputType.url,
+                        enabled: !isSatisfied,
+                        decoration: InputDecoration(
+                          labelText:
+                              l10n.artistStudioApplicationFieldPortfolioLabel,
                         ),
-                  ),
-                  const SizedBox(height: KubusSpacing.xs),
-                  Text(
-                    widget.review!.reviewerNotes!,
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: Colors.white.withValues(alpha: 0.82),
+                        onChanged: (_) => unawaited(_saveDraft()),
+                      ),
+                      const SizedBox(height: fieldGap),
+                      TextField(
+                        controller: _medium,
+                        enabled: !isSatisfied,
+                        decoration: InputDecoration(
+                          labelText:
+                              l10n.artistStudioApplicationFieldMediumLabel,
                         ),
+                        onChanged: (_) => unawaited(_saveDraft()),
+                      ),
+                      const SizedBox(height: fieldGap),
+                      TextField(
+                        controller: _statement,
+                        enabled: !isSatisfied,
+                        minLines: 3,
+                        maxLines: 5,
+                        decoration: InputDecoration(
+                          labelText:
+                              l10n.artistStudioApplicationFieldStatementLabel,
+                        ),
+                        onChanged: (_) => unawaited(_saveDraft()),
+                      ),
+                    ],
                   ),
-                ],
-              ],
-            ),
           ),
         ),
         const SizedBox(height: KubusSpacing.sm),
         KubusButton(
-          onPressed: widget.isLoadingReview ? null : widget.onSubmit,
-          label: isSatisfied
+          onPressed: verification.isLoading ? null : widget.onSubmit,
+          label: (isSatisfied || isInstitution)
               ? l10n.commonContinue
-              : l10n.onboardingFlowDaoReviewSubmitAction,
+              : l10n.verificationArtistCtaApply,
           isFullWidth: true,
         ),
       ],

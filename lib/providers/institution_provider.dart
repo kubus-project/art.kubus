@@ -2,12 +2,9 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 import '../models/institution.dart';
-import '../providers/dao_provider.dart';
-import '../providers/profile_provider.dart';
 import '../services/account_identity.dart';
 import '../services/backend_api_service.dart';
 import '../services/institution_storage.dart';
-import '../utils/dao_role_verification.dart';
 
 class InstitutionProvider extends ChangeNotifier {
   final InstitutionStorage _storage = InstitutionStorage();
@@ -15,14 +12,9 @@ class InstitutionProvider extends ChangeNotifier {
   List<Institution> _institutions = [];
   List<Event> _events = [];
   Institution? _selectedInstitution;
-  Institution? _derivedInstitution;
   Event? _selectedEvent;
   bool _isLoading = false;
   bool _initialized = false;
-  ProfileProvider? _profileProvider;
-  DAOProvider? _daoProvider;
-  VoidCallback? _profileListener;
-  VoidCallback? _daoListener;
 
   InstitutionProvider() {
     AccountIdentity.addListener(_handleAccountIdentityChanged);
@@ -44,7 +36,6 @@ class InstitutionProvider extends ChangeNotifier {
     _institutions = [];
     _events = [];
     _selectedInstitution = null;
-    _derivedInstitution = null;
     _selectedEvent = null;
     _isLoading = false;
     notifyListeners();
@@ -60,8 +51,6 @@ class InstitutionProvider extends ChangeNotifier {
   /// hold the previous account's records when this runs.
   Future<void> _reloadPublicLists(int epoch) async {
     await _tryLoadFromBackendAndPersist(epoch);
-    if (epoch != _accountEpoch) return;
-    _syncDerivedInstitution(notify: true);
   }
 
   // Getters
@@ -87,41 +76,6 @@ class InstitutionProvider extends ChangeNotifier {
     } catch (_) {
       return null;
     }
-  }
-
-  void bindProfileProvider(ProfileProvider profileProvider) {
-    if (identical(_profileProvider, profileProvider) &&
-        _profileListener != null) {
-      return;
-    }
-
-    if (_profileProvider != null && _profileListener != null) {
-      try {
-        _profileProvider!.removeListener(_profileListener!);
-      } catch (_) {}
-    }
-
-    _profileProvider = profileProvider;
-    _profileListener = () => _syncDerivedInstitution();
-    profileProvider.addListener(_profileListener!);
-    _syncDerivedInstitution();
-  }
-
-  void bindDaoProvider(DAOProvider daoProvider) {
-    if (identical(_daoProvider, daoProvider) && _daoListener != null) {
-      return;
-    }
-
-    if (_daoProvider != null && _daoListener != null) {
-      try {
-        _daoProvider!.removeListener(_daoListener!);
-      } catch (_) {}
-    }
-
-    _daoProvider = daoProvider;
-    _daoListener = () => _syncDerivedInstitution();
-    daoProvider.addListener(_daoListener!);
-    _syncDerivedInstitution();
   }
 
   // Institution methods
@@ -155,7 +109,6 @@ class InstitutionProvider extends ChangeNotifier {
         await _tryLoadFromBackendAndPersist(epoch);
       }
       if (epoch != _accountEpoch) return;
-      _syncDerivedInstitution(notify: false);
     } catch (e) {
       if (kDebugMode) {
         debugPrint('InstitutionProvider: Error loading institution data: $e');
@@ -325,20 +278,11 @@ class InstitutionProvider extends ChangeNotifier {
     await _storage.saveEvents(_events);
   }
 
-  List<Institution> _mergedInstitutions() {
-    final institutions = List<Institution>.from(_institutions);
-    final derived = _derivedInstitution;
-    if (derived == null) return institutions;
-
-    // A backend record with the same id is authoritative; the derived entry
-    // only fills in when no backend record exists for that id.
-    final existingIndex =
-        institutions.indexWhere((item) => item.id == derived.id);
-    if (existingIndex < 0) {
-      institutions.insert(0, derived);
-    }
-    return institutions;
-  }
+  // Institutions come only from the backend (and its device cache). A listing is
+  // never fabricated from a wallet or a profile flag: authority over a listing is
+  // an institution membership, read from AccountVerificationProvider.
+  List<Institution> _mergedInstitutions() =>
+      List<Institution>.from(_institutions);
 
   Event _hydrateEventInstitution(Event event) {
     final institution = getInstitutionById(event.institutionId);
@@ -347,76 +291,6 @@ class InstitutionProvider extends ChangeNotifier {
       return event;
     }
     return event.copyWith(institution: institution);
-  }
-
-  void _syncDerivedInstitution({bool notify = true}) {
-    final previous = _derivedInstitution;
-    final next = _buildDerivedInstitution();
-    if (_institutionsEqual(previous, next)) return;
-
-    _derivedInstitution = next;
-    final selectedId = _selectedInstitution?.id;
-    if (selectedId != null && selectedId.isNotEmpty) {
-      _selectedInstitution = getInstitutionById(selectedId);
-    }
-
-    if (notify) {
-      notifyListeners();
-    }
-  }
-
-  Institution? _buildDerivedInstitution() {
-    final profile = _profileProvider?.currentUser;
-    if (profile == null) return null;
-
-    final wallet = profile.walletAddress.trim();
-    if (wallet.isEmpty) return null;
-
-    final review = _daoProvider?.findReviewForWallet(wallet);
-    final verification = DaoRoleVerification(
-      walletAddress: wallet,
-      review: review,
-    );
-    final isApprovedInstitution =
-        verification.isApprovedFor(DaoRoleType.institution);
-    final hasInstitutionProfile = profile.isInstitution;
-    if (!isApprovedInstitution && !hasInstitutionProfile) {
-      return null;
-    }
-
-    final displayName = profile.displayName.trim();
-    final username = profile.username.trim();
-    final coverImage = (profile.coverImage ?? '').trim();
-    final avatarImage = profile.avatar.trim();
-
-    return Institution(
-      id: wallet,
-      name: displayName.isNotEmpty
-          ? displayName
-          : (username.isNotEmpty ? username : 'Institution'),
-      description: profile.bio.trim(),
-      type: 'institution',
-      address: '',
-      latitude: 0,
-      longitude: 0,
-      contactEmail: '',
-      website: (profile.social['website'] ?? '').trim(),
-      coverImageUrl: coverImage.isEmpty ? null : coverImage,
-      logoUrl: avatarImage.isEmpty ? null : avatarImage,
-      stats: InstitutionStats(
-        totalVisitors: 0,
-        activeEvents: 0,
-        artworkViews: 0,
-        revenue: 0,
-        visitorGrowth: 0,
-        revenueGrowth: 0,
-      ),
-      // Verification comes only from the DAO institution approval, never from
-      // the self-editable profile.isInstitution flag.
-      isVerified: isApprovedInstitution,
-      createdAt: profile.createdAt,
-      isSelfDerivedFromWallet: true,
-    );
   }
 
   bool _institutionsEqual(Institution? a, Institution? b) {
@@ -432,7 +306,6 @@ class InstitutionProvider extends ChangeNotifier {
         a.longitude == b.longitude &&
         a.contactEmail == b.contactEmail &&
         a.website == b.website &&
-        a.isSelfDerivedFromWallet == b.isSelfDerivedFromWallet &&
         a.coverImageUrl == b.coverImageUrl &&
         a.logoUrl == b.logoUrl &&
         a.logoAttribution == b.logoAttribution &&
@@ -575,16 +448,6 @@ class InstitutionProvider extends ChangeNotifier {
   @override
   void dispose() {
     AccountIdentity.removeListener(_handleAccountIdentityChanged);
-    if (_profileProvider != null && _profileListener != null) {
-      try {
-        _profileProvider!.removeListener(_profileListener!);
-      } catch (_) {}
-    }
-    if (_daoProvider != null && _daoListener != null) {
-      try {
-        _daoProvider!.removeListener(_daoListener!);
-      } catch (_) {}
-    }
     super.dispose();
   }
 }

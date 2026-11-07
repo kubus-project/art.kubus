@@ -31,13 +31,6 @@ class _FakeProfileApi implements ProfileBackendApi {
   }
 
   @override
-  Future<Map<String, dynamic>?> getDAOReview({
-    required String idOrWallet,
-  }) async {
-    return null;
-  }
-
-  @override
   Future<Map<String, dynamic>> registerWallet({
     required String walletAddress,
     String? username,
