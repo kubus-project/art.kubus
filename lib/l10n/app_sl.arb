@@ -5220,6 +5220,8 @@
   "profileEditUsernameMinLengthError": "Uporabniško ime mora imeti vsaj 3 znake",
   "profileEditUsernameMaxLengthError": "Uporabniško ime ima lahko največ 50 znakov",
   "profileEditUsernameReservedError": "To uporabniško ime je rezervirano. Izberi drugega.",
+  "profileEditUsernameTakenError": "To uporabniško ime je že zasedeno. Izberi drugega.",
+  "profileEditUsernameInvalidError": "Uporabi 3 do 50 malih črk, številk, pik, vezajev ali podčrtajev.",
   "profileEditUsernameWalletLikeError": "To je videti kot naslov denarnice. Izberi berljivo uporabniško ime.",
   "authUsernameAlreadyTaken": "Uporabniško ime je že zasedeno",
   "profileEditDisplayNameLabel": "Prikazno ime",
