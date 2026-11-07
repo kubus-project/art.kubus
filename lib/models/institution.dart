@@ -499,12 +499,18 @@ class Institution {
     this.claimState,
   });
 
-  /// Hero imagery for an institution: the first safe of the cover, then the
-  /// logo. An unsafe cover falls through to the logo.
-  ///
-  /// Every surface (detail hero, search thumbnail) uses this one order.
+  /// The landscape cover, or null when no safe cover exists. A logo is never a
+  /// cover: a square mark stretched into a banner is forbidden, so there is no
+  /// fallback to [logoUrl] here. The detail hero renders a typographic cover
+  /// when this is null.
   String? get heroImageRef =>
-      MediaUrlResolver.firstSafeRef(<String?>[coverImageUrl, logoUrl]);
+      MediaUrlResolver.firstSafeRef(<String?>[coverImageUrl]);
+
+  /// The image for compact surfaces (search thumbnails): the first safe of the
+  /// logo, then the cover. Callers show it contained on a neutral surface, never
+  /// cropped to a cover.
+  String? get thumbnailRef =>
+      MediaUrlResolver.firstSafeRef(<String?>[logoUrl, coverImageUrl]);
 
   /// The venue kind to display, from [kind] or the legacy [type] guess.
   InstitutionKind? get institutionKind =>
