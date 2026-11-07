@@ -20,6 +20,7 @@ import '../../../utils/map_coordinate_rules.dart';
 import '../../../utils/map_navigation.dart';
 import '../../../utils/user_profile_navigation.dart';
 import '../../../widgets/avatar_widget.dart';
+import '../../../widgets/institution/institution_logo_mark.dart';
 import '../../../widgets/dashboard/kubus_dashboard_chrome.dart';
 import '../../../widgets/detail/profile_relationship_actions.dart';
 import '../../../widgets/kubus_snackbar.dart';
@@ -848,16 +849,25 @@ class _InstitutionDetailScreenState extends State<InstitutionDetailScreen> {
       coverImageUrl: coverUrl,
       coverSemanticLabel: l10n.institutionDetailCoverSemanticLabel(name),
       avatarRadius: 42,
-      avatar: AvatarWidget(
-        key: const ValueKey('institution-profile-image'),
-        wallet: '',
-        displayName: name,
-        avatarUrl: avatarUrl,
-        radius: 42,
-        fetchMissingAvatar: false,
-        enableProfileNavigation: false,
-        showStatusIndicator: false,
-      ),
+      // An approved logo keeps its proportions on a neutral surface (never a
+      // circular crop, never a verification mark). Without one, the existing
+      // initials placeholder from the institution's name is used.
+      avatar: avatarUrl != null
+          ? InstitutionLogoMark(
+              imageUrl: avatarUrl,
+              size: 84,
+              semanticLabel: l10n.institutionDetailLogoSemanticLabel(name),
+            )
+          : AvatarWidget(
+              key: const ValueKey('institution-profile-image'),
+              wallet: '',
+              displayName: name,
+              avatarUrl: null,
+              radius: 42,
+              fetchMissingAvatar: false,
+              enableProfileNavigation: false,
+              showStatusIndicator: false,
+            ),
     );
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
