@@ -251,6 +251,35 @@ void main() {
     expect(result.toMetadataFields()['clientCompressionApplied'], 'true');
   });
 
+  test('retains PNG format when resizing transparent artwork', () async {
+    final source = image_lib.Image(width: 320, height: 320, numChannels: 4);
+    for (var y = 0; y < 320; y++) {
+      for (var x = 0; x < 320; x++) {
+        source.setPixelRgba(x, y, x % 256, y % 256, 128, 100);
+      }
+    }
+    final original = Uint8List.fromList(image_lib.encodePng(source));
+    final result = await const MediaUploadOptimizer().optimize(
+      UploadCompressionRequestDto(
+        bytes: original,
+        fileName: 'cover.png',
+        fileType: 'image',
+        contentType: 'image/png',
+        policy: const UploadCompressionPolicyDto(
+          imageMinBytes: 1,
+          maxImageDimension: 64,
+        ),
+      ),
+    );
+    expect(result.applied, isTrue);
+    expect(result.contentType, 'image/png');
+    final decoded = image_lib.decodePng(result.bytes);
+    expect(decoded, isNotNull);
+    expect(decoded!.width, 64);
+    expect(decoded.height, 64);
+    expect(decoded.getPixel(0, 0).a, 100);
+  });
+
   test('preserves original bytes when image optimization cannot decode input',
       () async {
     final original = Uint8List.fromList(List<int>.filled(512, 7));
