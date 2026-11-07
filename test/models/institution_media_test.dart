@@ -66,12 +66,15 @@ void main() {
       expect(institution.logoUrl, '/uploads/logo.png');
     });
 
-    test('a logo-only institution uses the logo as its hero', () {
+    test(
+        'a logo-only institution has no hero; the logo serves compact surfaces',
+        () {
       final institution = Institution.fromJson(_institutionJson(
         logoUrl: '/uploads/logo.png',
       ));
       expect(institution.coverImageUrl, isNull);
-      expect(institution.heroImageRef, '/uploads/logo.png');
+      expect(institution.heroImageRef, isNull);
+      expect(institution.thumbnailRef, '/uploads/logo.png');
     });
 
     test('the legacy imageUrls array maps cover first, logo second', () {
@@ -169,13 +172,14 @@ void main() {
     });
   });
 
-  group('Institution hero image: cover first, then logo', () {
-    test('an unsafe cover falls through to a valid logo', () {
+  group('Institution hero image: the cover only, never the logo', () {
+    test('an unsafe cover does NOT fall through to the logo', () {
       final institution = Institution.fromJson(_institutionJson(
         coverImageUrl: 'javascript:alert(1)',
         logoUrl: '/uploads/logo.png',
       ));
-      expect(institution.heroImageRef, '/uploads/logo.png');
+      expect(institution.heroImageRef, isNull);
+      expect(institution.thumbnailRef, '/uploads/logo.png');
     });
 
     test('a valid cover still wins over the logo', () {
