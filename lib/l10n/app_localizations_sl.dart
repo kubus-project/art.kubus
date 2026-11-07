@@ -13171,6 +13171,14 @@ class AppLocalizationsSl extends AppLocalizations {
       'To uporabniško ime je rezervirano. Izberi drugega.';
 
   @override
+  String get profileEditUsernameTakenError =>
+      'To uporabniško ime je že zasedeno. Izberi drugega.';
+
+  @override
+  String get profileEditUsernameInvalidError =>
+      'Uporabi 3 do 50 malih črk, številk, pik, vezajev ali podčrtajev.';
+
+  @override
   String get profileEditUsernameWalletLikeError =>
       'To je videti kot naslov denarnice. Izberi berljivo uporabniško ime.';
 

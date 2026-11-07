@@ -16,6 +16,10 @@ String? profileEditErrorMessageForCode(
     case 'INVALID_TOKEN':
     case 'TOKEN_EXPIRED':
       return l10n.profileEditErrorSignInAgainToast;
+    case 'USERNAME_ALREADY_TAKEN':
+      return l10n.profileEditUsernameTakenError;
+    case 'USERNAME_INVALID':
+      return l10n.profileEditUsernameInvalidError;
     case 'PROFILE_OWNERSHIP_MISMATCH':
       return l10n.profileEditErrorOwnershipMismatchToast;
     case 'FILE_TOO_LARGE':
