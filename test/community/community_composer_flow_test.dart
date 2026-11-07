@@ -22,6 +22,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../support/product_surface_harness.dart';
 import '../support/product_v5_qa_fixtures.dart';
+import '../helpers/secure_storage_absent.dart';
 
 /// Mock-authenticated integration test of the real mobile Community composer.
 ///
@@ -163,6 +164,7 @@ Future<void> _settle(WidgetTester tester, [int steps = 20]) async {
 }
 
 void main() {
+  installEmptySecureStorage();
   for (final surface in ['mobile', 'inline', 'dialog', 'group']) {
     group(surface, () {
       late _Api api;

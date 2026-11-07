@@ -27,7 +27,8 @@ Future<void> _pumpUntilRoute(
 }
 
 void main() {
-  testWidgets('openArtwork passes attendanceMarkerId to mobile detail screen', (tester) async {
+  testWidgets('openArtwork passes attendanceMarkerId to mobile detail screen',
+      (tester) async {
     final observer = _TestNavigatorObserver();
     final key = GlobalKey();
 
@@ -53,7 +54,8 @@ void main() {
     expect((widget as ArtDetailScreen).attendanceMarkerId, 'marker_1');
   });
 
-  testWidgets('openArtwork passes attendanceMarkerId to desktop detail screen', (tester) async {
+  testWidgets('openArtwork passes attendanceMarkerId to desktop detail screen',
+      (tester) async {
     final observer = _TestNavigatorObserver();
     final key = GlobalKey();
 
@@ -76,7 +78,7 @@ void main() {
     final route = observer.lastRoute as MaterialPageRoute;
     final widget = route.builder(context);
     expect(widget, isA<DesktopArtworkDetailScreen>());
-    expect((widget as DesktopArtworkDetailScreen).attendanceMarkerId, 'marker_2');
+    expect(
+        (widget as DesktopArtworkDetailScreen).attendanceMarkerId, 'marker_2');
   });
 }
-

@@ -3202,6 +3202,22 @@ class AppLocalizationsSl extends AppLocalizations {
       'Zaprtja ni bilo mogoče potrditi. Pred ponovnim poskusom preverite stanje.';
 
   @override
+  String get settingsDeleteAccountBusy =>
+      'Brišemo tvoj račun. To lahko traja trenutek.';
+
+  @override
+  String get settingsDeleteAccountPendingToast =>
+      'Zaprtje računa je v obdelavi. Odjavljeni ste. Stanje je prikazano tukaj.';
+
+  @override
+  String get settingsDeleteAccountNotStartedToast =>
+      'Zaprtje računa se ni začelo. Nič ni bilo izbrisano. Lahko poskusiš znova.';
+
+  @override
+  String get settingsDeleteAccountRefusedToast =>
+      'Strežnik zaprtja računa ni sprejel. Nič ni bilo izbrisano, še vedno ste prijavljeni. Lahko poskusite znova.';
+
+  @override
   String get settingsAccountDeletedToast =>
       'Zaprtje računa je bilo zahtevano. Nekateri podatki lahko zahtevajo dodaten pregled ali se še hranijo.';
 
@@ -6968,11 +6984,11 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get walletHomeAccountShellTitle =>
-      'Račun je prijavljen, denarnica ni obnovljena';
+      'Račun je aktiven, denarnica ni povezana';
 
   @override
   String get walletHomeAccountShellDescription =>
-      'Seja računa je na voljo. Ta naprava potrebuje denarnico samo za dejanja lastništva in sodelovanja.';
+      'Račun deluje tudi brez denarnice. Povežite jo le za dejanja lastništva in sodelovanja, ki zahtevajo denarnico.';
 
   @override
   String get walletHomeRestoreWalletAction => 'Obnovi denarnico';
@@ -9001,6 +9017,36 @@ class AppLocalizationsSl extends AppLocalizations {
   @override
   String get artistStudioCtaConnectWalletToApply =>
       'Poveži denarnico za prijavo';
+
+  @override
+  String get artistStudioAccountCtaApply => 'Prijavi se na pregled umetnika';
+
+  @override
+  String get artistStudioAccountCtaRetry => 'Poskusi znova';
+
+  @override
+  String get artistStudioAccountApplicationUnavailable =>
+      'Prijave umetnikov trenutno niso na voljo. Poskusite znova pozneje.';
+
+  @override
+  String get artistStudioAccountDetailNotApplied =>
+      'Pošljite portfelj, medij in izjavo. Za prijavo denarnica ni potrebna.';
+
+  @override
+  String get artistStudioAccountDetailPending =>
+      'Vaša prijava čaka na pregled umetnika.';
+
+  @override
+  String get artistStudioAccountDetailApproved =>
+      'Vaša prijava umetnika je bila odobrena.';
+
+  @override
+  String get artistStudioAccountDetailRejected =>
+      'Ta prijava ni bila odobrena. Lahko pošljete novo.';
+
+  @override
+  String get artistStudioAccountPortfolioInvalid =>
+      'Vnesite veljaven spletni naslov, na primer primer.si.';
 
   @override
   String get artistStudioCtaApprovedByDao => 'Odobreno v pregledu upravljanja';
@@ -16036,7 +16082,7 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get walletSetupGenericLinkError =>
-      'Povezovanje denarnice ni uspelo. Poskusi znova.';
+      'Ni bilo mogoče potrditi, ali je denarnica povezana. Pred ponovnim poskusom preveri stanje denarnice v svojem računu.';
 
   @override
   String get walletSetupStatusLoginAccount => 'Prijavni račun';
@@ -16081,8 +16127,7 @@ class AppLocalizationsSl extends AppLocalizations {
   String get walletSetupPhaseLinked => 'Denarnica je povezana s tem računom.';
 
   @override
-  String get walletSetupPhaseFailed =>
-      'Povezovanje denarnice ni uspelo. Račun ni bil spremenjen.';
+  String get walletSetupPhaseFailed => 'Preveri stanje povezave denarnice';
 
   @override
   String get onboardingStageWelcome => 'Dobrodošlica';
@@ -19081,6 +19126,84 @@ class AppLocalizationsSl extends AppLocalizations {
       'Ustanove trenutno ni mogoče naložiti.';
 
   @override
+  String get institutionImportedNoticeTitle => 'Ni uradni profil';
+
+  @override
+  String get institutionImportedNoticeMessage =>
+      'Ta profil je bil sestavljen iz javnih virov na internetu (OpenStreetMap, Wikidata) in ni uraden. Ustanova ga ni preverila.';
+
+  @override
+  String get institutionClaimButton => 'Prevzemi ta profil';
+
+  @override
+  String get institutionClaimButtonSemantics => 'Prevzemi profil te ustanove';
+
+  @override
+  String get institutionClaimAuthAction => 'prevzeli ta profil';
+
+  @override
+  String get institutionClaimPendingTitle =>
+      'Zahtevek za prevzem je v obravnavi';
+
+  @override
+  String get institutionClaimPendingMessage =>
+      'Zaprosili ste za prevzem tega profila. Skrbnik pregleduje vaš zahtevek.';
+
+  @override
+  String institutionClaimSheetTitle(String name) {
+    return 'Prevzem: $name';
+  }
+
+  @override
+  String get institutionClaimSheetIntro =>
+      'Povejte nam, kako ste povezani s to ustanovo. Skrbnik pregleda vsak zahtevek, preden se profil kakor koli spremeni.';
+
+  @override
+  String get institutionClaimTitleLabel => 'Vaša vloga v ustanovi (neobvezno)';
+
+  @override
+  String get institutionClaimMessageLabel => 'Sporočilo pregledovalcu *';
+
+  @override
+  String institutionClaimMessageMinError(int min) {
+    return 'Napišite vsaj $min znakov.';
+  }
+
+  @override
+  String get institutionClaimEvidenceLabel =>
+      'Povezava, ki dokazuje vašo povezanost (neobvezno)';
+
+  @override
+  String get institutionClaimEvidenceInvalid =>
+      'Vnesite celoten spletni naslov, ki se začne s https://';
+
+  @override
+  String get institutionClaimSubmit => 'Pošlji zahtevek';
+
+  @override
+  String get institutionClaimSubmittedToast =>
+      'Zahtevek poslan. Skrbnik ga bo pregledal.';
+
+  @override
+  String get institutionClaimAlreadyOpenToast =>
+      'Za ta profil že imate odprt zahtevek.';
+
+  @override
+  String get institutionClaimUnavailableToast =>
+      'Zahtevki za prevzem še niso odprti. Poskusite znova pozneje.';
+
+  @override
+  String get institutionClaimFailedToast =>
+      'Zahtevka ni bilo mogoče poslati. Poskusite znova.';
+
+  @override
+  String get institutionClaimClosedTitle => 'Prevzem še ni odprt';
+
+  @override
+  String get institutionClaimClosedMessage =>
+      'Zahtevki za prevzem uvoženih profilov še niso odprti. Poskusite znova kmalu.';
+
+  @override
   String get institutionDetailAccountProfileAction => 'Odpri profil računa';
 
   @override
@@ -19151,6 +19274,14 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get accountClosureContinue => 'Nadaljuj na pozdravni zaslon';
+
+  @override
+  String get accountClosureRemoveReceipt =>
+      'Odstrani to potrdilo iz te naprave';
+
+  @override
+  String get accountClosureRemoveReceiptHint =>
+      'Dokler je potrdilo shranjeno tukaj, je prijava v njegov račun blokirana. Z odstranitvijo se blokada odpravi, ta naprava pa stanja zaprtja ne bo mogla več preverjati.';
 
   @override
   String get reportContentTitle => 'Prijavi vsebino';

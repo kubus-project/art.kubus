@@ -70,5 +70,4 @@ void main() {
         reason:
             'Fresh follower cache should satisfy subsequent reads without refetching.');
   });
-
 }

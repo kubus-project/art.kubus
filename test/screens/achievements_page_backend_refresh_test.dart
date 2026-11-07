@@ -10,8 +10,10 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:provider/provider.dart';
+import '../helpers/secure_storage_absent.dart';
 
 void main() {
+  installEmptySecureStorage();
   tearDown(() {
     BackendApiService().setAuthTokenForTesting(null);
     BackendApiService().setHttpClient(createPlatformHttpClient());

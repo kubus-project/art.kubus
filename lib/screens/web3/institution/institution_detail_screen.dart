@@ -20,6 +20,7 @@ import '../../../utils/map_coordinate_rules.dart';
 import '../../../utils/map_navigation.dart';
 import '../../../utils/user_profile_navigation.dart';
 import '../../../widgets/avatar_widget.dart';
+import '../../../widgets/dashboard/kubus_dashboard_chrome.dart';
 import '../../../widgets/detail/profile_relationship_actions.dart';
 import '../../../widgets/kubus_snackbar.dart';
 import '../../../widgets/profile/profile_identity_hero.dart';
@@ -27,6 +28,7 @@ import '../../../widgets/empty_state_card.dart';
 import '../../../widgets/glass_components.dart';
 import '../../../widgets/inline_loading.dart';
 import '../../events/event_detail_screen.dart';
+import 'institution_claim_sheet.dart';
 import '../../../providers/activation_prompt_provider.dart';
 
 /// Minimum touch target of the photo-credit affordance.
@@ -62,6 +64,19 @@ class _InstitutionDetailScreenState extends State<InstitutionDetailScreen> {
   /// answers; it is only ever read for a verified link with an account UUID.
   bool? _accountIsFollowing;
   bool _accountFollowInFlight = false;
+
+  /// True while the signed-in account has an undecided claim request on this
+  /// profile; the claim action is then replaced by a status notice.
+  bool _claimOpen = false;
+
+  /// Whether the backend accepts claim requests right now; null until the
+  /// probe answers. The claim action is only offered on a definite yes, so a
+  /// switched-off feature never shows a button that leads to a dead end.
+  bool? _claimsAvailable;
+
+  /// Bumped when this screen learns the claim state itself (a request was
+  /// just sent). A claim list that was requested earlier must not overwrite it.
+  int _claimEpoch = 0;
 
   /// Anchors the image credits footer; the photo-credit buttons scroll to it.
   final GlobalKey _creditsFooterKey = GlobalKey();
@@ -171,6 +186,9 @@ class _InstitutionDetailScreenState extends State<InstitutionDetailScreen> {
       if (linkedUserId != null) {
         unawaited(_refreshAccountFollowState(linkedUserId));
       }
+      if (institution != null) {
+        unawaited(_refreshClaimAvailability(institution));
+      }
     } catch (error) {
       if (!mounted) return;
       setState(() {
@@ -178,6 +196,108 @@ class _InstitutionDetailScreenState extends State<InstitutionDetailScreen> {
         _loading = false;
       });
     }
+  }
+
+  /// Learns whether claim requests are open, then (for a signed-in account)
+  /// whether this account already has one. Only imported, unclaimed listings
+  /// can be claimed, so nothing is asked for any other profile.
+  Future<void> _refreshClaimAvailability(Institution institution) async {
+    // Each load starts without claim state, so an earlier read (possibly for
+    // another account) cannot keep the claim action hidden or shown.
+    if (mounted) {
+      setState(() {
+        _claimsAvailable = null;
+        _claimOpen = false;
+      });
+    }
+    if (!institution.isImportedUnclaimed) return;
+    final available = await _api.institutionClaimsAvailable();
+    if (!mounted) return;
+    setState(() => _claimsAvailable = available);
+    if (available == true) await _refreshOwnClaimState(institution);
+  }
+
+  /// Whether the signed-in account already asked to claim [institution].
+  /// Signed-out visitors and any failure leave the claim action available.
+  Future<void> _refreshOwnClaimState(Institution institution) async {
+    if (!institution.isImportedUnclaimed) return;
+    if ((_api.getAuthToken() ?? '').trim().isEmpty) return;
+    final epoch = _claimEpoch;
+    // The read belongs to the account that was signed in when it started. A
+    // sign-out or switch while it is in flight makes the answer another
+    // account's, so it is dropped.
+    final sessionEpoch = _api.authSessionEpoch;
+    try {
+      final claims = await _api.getMyInstitutionClaims();
+      // A request sent while this read was in flight is newer than the read.
+      if (!mounted ||
+          epoch != _claimEpoch ||
+          sessionEpoch != _api.authSessionEpoch) {
+        return;
+      }
+      final id = institution.id.toLowerCase();
+      final open =
+          claims.any((claim) => claim.isOpen && claim.institutionId == id);
+      if (open != _claimOpen) setState(() => _claimOpen = open);
+    } catch (_) {
+      // The claim action stays available; the backend refuses a duplicate.
+    }
+  }
+
+  Future<void> _startClaim(Institution institution) async {
+    final l10n = AppLocalizations.of(context)!;
+    final messenger = ScaffoldMessenger.of(context);
+    final authenticated = await const ContextualAuthGate().ensureAuthenticated(
+      context,
+      actionLabel: l10n.institutionClaimAuthAction,
+      returnRoute: '/main',
+      targetLabel: institution.name,
+      sourceScreen: 'institution_detail',
+    );
+    if (!authenticated || !mounted) return;
+
+    final result =
+        await showInstitutionClaimSheet(context, institution: institution);
+    if (!mounted || result == null) return;
+    setState(() {
+      _claimEpoch++;
+      _claimOpen = true;
+    });
+    messenger.showKubusSnackBar(
+      SnackBar(
+        content: Text(result == InstitutionClaimSheetResult.submitted
+            ? l10n.institutionClaimSubmittedToast
+            : l10n.institutionClaimAlreadyOpenToast),
+        duration: const Duration(seconds: 4),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
+
+  Widget _buildClaimButton(AppLocalizations l10n, Institution institution) {
+    void claim() => unawaited(_startClaim(institution));
+    // The wrapper replaces the FAB's own semantics (a longer, clearer label),
+    // so it must carry the tap action itself or assistive technology would
+    // announce a button it cannot activate.
+    return Semantics(
+      button: true,
+      enabled: true,
+      focusable: true,
+      label: l10n.institutionClaimButtonSemantics,
+      onTap: claim,
+      excludeSemantics: true,
+      child: FloatingActionButton.extended(
+        key: const ValueKey('institution-claim-button'),
+        // Several FABs can exist in the desktop shell at once.
+        heroTag: null,
+        onPressed: claim,
+        icon: const Icon(Icons.verified_user_outlined),
+        label: Text(
+          l10n.institutionClaimButton,
+          style: KubusTypography.inter(fontWeight: FontWeight.w600),
+        ),
+      ),
+    );
   }
 
   Institution? _tryParseInstitution(Map<String, dynamic> json) {
@@ -915,6 +1035,11 @@ class _InstitutionDetailScreenState extends State<InstitutionDetailScreen> {
     final l10n = AppLocalizations.of(context)!;
     final institution = _institution;
     final name = institution?.name.trim() ?? '';
+    final imported = institution?.isImportedUnclaimed ?? false;
+    final claimsAvailable = _claimsAvailable == true;
+    final showClaim = imported && claimsAvailable && !_claimOpen;
+    final claimButton =
+        showClaim ? _buildClaimButton(l10n, institution!) : null;
 
     final body = _loading
         ? const Center(child: InlineLoading(expand: false))
@@ -932,8 +1057,42 @@ class _InstitutionDetailScreenState extends State<InstitutionDetailScreen> {
                 onAction: _loadInstitution,
               )
             : ListView(
-                padding: const EdgeInsets.all(KubusSpacing.lg),
+                // Room under the content so the floating claim button never
+                // covers the last card.
+                padding: EdgeInsets.fromLTRB(
+                  KubusSpacing.lg,
+                  KubusSpacing.lg,
+                  KubusSpacing.lg,
+                  KubusSpacing.lg + (showClaim ? 88 : 0),
+                ),
                 children: [
+                  if (imported) ...[
+                    KubusNoticeBanner(
+                      margin: EdgeInsets.zero,
+                      title: l10n.institutionImportedNoticeTitle,
+                      message: l10n.institutionImportedNoticeMessage,
+                    ),
+                    if (_claimOpen) ...[
+                      const SizedBox(height: KubusSpacing.sm),
+                      KubusNoticeBanner(
+                        margin: EdgeInsets.zero,
+                        tone: KubusStatusTone.neutral,
+                        icon: Icons.hourglass_top_outlined,
+                        title: l10n.institutionClaimPendingTitle,
+                        message: l10n.institutionClaimPendingMessage,
+                      ),
+                    ] else if (_claimsAvailable == false) ...[
+                      const SizedBox(height: KubusSpacing.sm),
+                      KubusNoticeBanner(
+                        margin: EdgeInsets.zero,
+                        tone: KubusStatusTone.neutral,
+                        icon: Icons.schedule_outlined,
+                        title: l10n.institutionClaimClosedTitle,
+                        message: l10n.institutionClaimClosedMessage,
+                      ),
+                    ],
+                    const SizedBox(height: KubusSpacing.lg),
+                  ],
                   _buildHeaderCard(
                     context,
                     institution,
@@ -948,7 +1107,17 @@ class _InstitutionDetailScreenState extends State<InstitutionDetailScreen> {
               );
 
     if (widget.embedded) {
-      return body;
+      if (claimButton == null) return body;
+      return Stack(
+        children: [
+          Positioned.fill(child: body),
+          Positioned(
+            right: KubusSpacing.lg,
+            bottom: KubusSpacing.lg,
+            child: claimButton,
+          ),
+        ],
+      );
     }
 
     return Scaffold(
@@ -959,6 +1128,7 @@ class _InstitutionDetailScreenState extends State<InstitutionDetailScreen> {
         ),
       ),
       body: body,
+      floatingActionButton: claimButton,
     );
   }
 }

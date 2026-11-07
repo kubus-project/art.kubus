@@ -24,11 +24,10 @@ void main() {
     );
 
     final l10n = AppLocalizations.of(capturedContext)!;
-    final discovery = achievement_svc
-        .AchievementService.achievementDefinitions[
-            achievement_svc.AchievementType.firstDiscovery]!;
-    final event = achievement_svc.AchievementService.achievementDefinitions[
-        achievement_svc.AchievementType.eventAttendee]!;
+    final discovery = achievement_svc.AchievementService.achievementDefinitions[
+        achievement_svc.AchievementType.firstDiscovery]!;
+    final event = achievement_svc.AchievementService
+        .achievementDefinitions[achievement_svc.AchievementType.eventAttendee]!;
 
     expect(AchievementUi.iconFor(discovery), Icons.explore_outlined);
     expect(AchievementUi.iconFor(event), Icons.verified);

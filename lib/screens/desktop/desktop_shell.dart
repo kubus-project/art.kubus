@@ -84,22 +84,9 @@ List<DesktopNavItem> resolveDesktopNavItems(
     return _DesktopShellState._guestNavItems;
   }
 
-  // Start with all signed-in items
+  // Creator and institution participation are independent. Destinations stay
+  // discoverable for every account; each workspace enforces its own access.
   var items = List<DesktopNavItem>.of(_DesktopShellState._signedInNavItems);
-
-  // If user has both badges, hide Organize (Institution Hub)
-  // If only Institution badge is active, hide Create (Artist Studio)
-  // If only Artist badge is active, hide Organize (Institution Hub)
-  if (isArtist && isInstitution) {
-    // Both badges are active - hide Organize, keep Create
-    items = items.where((item) => item.route != '/institution').toList();
-  } else if (isInstitution && !isArtist) {
-    // Only institution badge is active - hide Create
-    items = items.where((item) => item.route != '/artist-studio').toList();
-  } else if (isArtist && !isInstitution) {
-    // Only artist badge is active - hide Organize
-    items = items.where((item) => item.route != '/institution').toList();
-  }
 
   // Node follows its own rollout flag, like every other Node entry point.
   if (!AppConfig.isFeatureEnabled('availabilityNodes')) {

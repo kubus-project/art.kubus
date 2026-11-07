@@ -3177,6 +3177,22 @@ class AppLocalizationsEn extends AppLocalizations {
       'Closure could not be confirmed. Check its status before trying again.';
 
   @override
+  String get settingsDeleteAccountBusy =>
+      'Deleting your account. This can take a moment.';
+
+  @override
+  String get settingsDeleteAccountPendingToast =>
+      'Account closure is being processed. You have been signed out. Its status is shown here.';
+
+  @override
+  String get settingsDeleteAccountNotStartedToast =>
+      'Account closure did not start. Nothing was deleted. You can try again.';
+
+  @override
+  String get settingsDeleteAccountRefusedToast =>
+      'The server declined the closure. Nothing was deleted and you are still signed in. You can try again.';
+
+  @override
   String get settingsAccountDeletedToast =>
       'Account closure requested. Some data may require further review or be retained.';
 
@@ -6915,11 +6931,11 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get walletHomeAccountShellTitle =>
-      'Profile active, wallet not restored';
+      'Account active, no wallet connected';
 
   @override
   String get walletHomeAccountShellDescription =>
-      'Your account session is available. This device needs Wallet only for ownership and participation actions.';
+      'Your account works without a wallet. Connect one only for wallet-based ownership and participation actions.';
 
   @override
   String get walletHomeRestoreWalletAction => 'Restore wallet';
@@ -8932,6 +8948,36 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get artistStudioCtaConnectWalletToApply => 'Connect a wallet to apply';
+
+  @override
+  String get artistStudioAccountCtaApply => 'Apply for artist review';
+
+  @override
+  String get artistStudioAccountCtaRetry => 'Try again';
+
+  @override
+  String get artistStudioAccountApplicationUnavailable =>
+      'Artist applications are unavailable right now. Try again later.';
+
+  @override
+  String get artistStudioAccountDetailNotApplied =>
+      'Send your portfolio, medium and statement. A wallet is not needed to apply.';
+
+  @override
+  String get artistStudioAccountDetailPending =>
+      'Your application is waiting for an artist review.';
+
+  @override
+  String get artistStudioAccountDetailApproved =>
+      'Your artist application was approved.';
+
+  @override
+  String get artistStudioAccountDetailRejected =>
+      'This application was not approved. You can send a new one.';
+
+  @override
+  String get artistStudioAccountPortfolioInvalid =>
+      'Enter a valid web address, for example example.com.';
 
   @override
   String get artistStudioCtaApprovedByDao => 'Approved by governance review';
@@ -15868,7 +15914,8 @@ class AppLocalizationsEn extends AppLocalizations {
       'Your account session could not be confirmed. Go back to the account step and sign in again — do not create a new account.';
 
   @override
-  String get walletSetupGenericLinkError => 'Wallet linking failed. Try again.';
+  String get walletSetupGenericLinkError =>
+      'We could not confirm whether this wallet was linked. Check your account wallet status before trying again.';
 
   @override
   String get walletSetupStatusLoginAccount => 'Login account';
@@ -15913,8 +15960,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get walletSetupPhaseLinked => 'Wallet linked to this account.';
 
   @override
-  String get walletSetupPhaseFailed =>
-      'Wallet link failed. Your account was not changed.';
+  String get walletSetupPhaseFailed => 'Wallet link status needs checking';
 
   @override
   String get onboardingStageWelcome => 'Welcome';
@@ -18887,6 +18933,85 @@ class AppLocalizationsEn extends AppLocalizations {
       'We could not load this institution right now.';
 
   @override
+  String get institutionImportedNoticeTitle => 'Not an official profile';
+
+  @override
+  String get institutionImportedNoticeMessage =>
+      'This profile was compiled from public sources on the internet (OpenStreetMap, Wikidata) and is not official. It has not been verified by the institution.';
+
+  @override
+  String get institutionClaimButton => 'Claim this profile';
+
+  @override
+  String get institutionClaimButtonSemantics =>
+      'Claim this institution profile';
+
+  @override
+  String get institutionClaimAuthAction => 'claim this profile';
+
+  @override
+  String get institutionClaimPendingTitle => 'Claim request under review';
+
+  @override
+  String get institutionClaimPendingMessage =>
+      'You asked to claim this profile. An administrator is reviewing your request.';
+
+  @override
+  String institutionClaimSheetTitle(String name) {
+    return 'Claim $name';
+  }
+
+  @override
+  String get institutionClaimSheetIntro =>
+      'Tell us how you are connected to this institution. An administrator reviews every request before anything changes on the profile.';
+
+  @override
+  String get institutionClaimTitleLabel =>
+      'Your role at the institution (optional)';
+
+  @override
+  String get institutionClaimMessageLabel => 'Message to the reviewer *';
+
+  @override
+  String institutionClaimMessageMinError(int min) {
+    return 'Please write at least $min characters.';
+  }
+
+  @override
+  String get institutionClaimEvidenceLabel =>
+      'Link that shows your connection (optional)';
+
+  @override
+  String get institutionClaimEvidenceInvalid =>
+      'Enter a full web address starting with https://';
+
+  @override
+  String get institutionClaimSubmit => 'Send request';
+
+  @override
+  String get institutionClaimSubmittedToast =>
+      'Claim request sent. An administrator will review it.';
+
+  @override
+  String get institutionClaimAlreadyOpenToast =>
+      'You already have an open claim request for this profile.';
+
+  @override
+  String get institutionClaimUnavailableToast =>
+      'Claim requests are not open yet. Please try again later.';
+
+  @override
+  String get institutionClaimFailedToast =>
+      'Could not send the request. Please try again.';
+
+  @override
+  String get institutionClaimClosedTitle => 'Claiming is not open yet';
+
+  @override
+  String get institutionClaimClosedMessage =>
+      'Requests to claim imported profiles are not open yet. Check back soon.';
+
+  @override
   String get institutionDetailAccountProfileAction => 'Open account profile';
 
   @override
@@ -18955,6 +19080,14 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get accountClosureContinue => 'Continue to welcome';
+
+  @override
+  String get accountClosureRemoveReceipt =>
+      'Remove this receipt from this device';
+
+  @override
+  String get accountClosureRemoveReceiptHint =>
+      'While this receipt is stored here, signing in to its account is blocked. Removing it lifts that block, and this device can no longer check the closure status.';
 
   @override
   String get reportContentTitle => 'Report content';

@@ -30,6 +30,7 @@ import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../helpers/secure_storage_absent.dart';
 
 String _buildWalletToken(String walletAddress) {
   final header = base64Url
@@ -254,6 +255,7 @@ Future<void> _pumpUntil(
 }
 
 void main() {
+  installEmptySecureStorage();
   TestWidgetsFlutterBinding.ensureInitialized();
 
   setUp(() {

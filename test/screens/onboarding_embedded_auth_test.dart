@@ -10,8 +10,7 @@ void main() {
       );
 
       expect(decision.canProceed, isTrue);
-      expect(decision.type,
-          EmbeddedOnboardingAuthDecisionType.proceed);
+      expect(decision.type, EmbeddedOnboardingAuthDecisionType.proceed);
     });
 
     test('matching pending email (exact case) -> proceed', () {
@@ -60,7 +59,8 @@ void main() {
       expect(decision.normalizedPendingEmail, 'user@example.com');
     });
 
-    test('pending email exists but signed-in email is empty string -> block', () {
+    test('pending email exists but signed-in email is empty string -> block',
+        () {
       final decision = OnboardingEmbeddedAuthService.decide(
         signedInEmail: '',
         pendingVerificationEmail: 'user@example.com',
@@ -135,4 +135,3 @@ void main() {
     });
   });
 }
-

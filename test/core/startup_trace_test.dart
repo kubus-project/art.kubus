@@ -35,7 +35,8 @@ void main() {
   });
 
   test('StartupTraceMark stringifies in the [BOOT] log format', () {
-    const mark = StartupTraceMark(label: 'critical bootstrap end', elapsedMs: 1234);
+    const mark =
+        StartupTraceMark(label: 'critical bootstrap end', elapsedMs: 1234);
     expect(mark.toString(), '[BOOT] 1234ms critical bootstrap end');
   });
 }

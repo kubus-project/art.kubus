@@ -212,13 +212,13 @@ void main() {
         isNot(contains(AuthCredentialStore.closureReceiptKey)));
   });
 
-  test('browser closure receipt survives logout in memory and never persists',
+  test('browser closure receipt is never stored; saving fails closed',
       () async {
     final store = AuthCredentialStore(web: true);
-    await store.saveClosureReceipt('synthetic-private-receipt');
-    await store.clear();
-    expect(await store.readClosureReceipt(), 'synthetic-private-receipt');
-    expect(await AuthCredentialStore(web: true).readClosureReceipt(), isNull);
+    expect(store.closureReceiptPersistenceAvailable, isFalse);
+    await expectLater(store.saveClosureReceipt('synthetic-private-receipt'),
+        throwsA(isA<StateError>()));
+    expect(await store.readClosureReceipt(), isNull);
     expect(secure, isEmpty);
     expect((await SharedPreferences.getInstance()).getKeys(),
         isNot(contains(AuthCredentialStore.closureReceiptKey)));

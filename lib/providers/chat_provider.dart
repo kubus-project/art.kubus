@@ -506,6 +506,11 @@ class ChatProvider extends ChangeNotifier {
   StreamSubscription<Map<String, dynamic>>? _eventBusSub;
   StreamSubscription<Map<String, dynamic>>? _eventBusProfilesSub;
   String? _currentWallet;
+
+  /// Wallet the chat session is currently bound to (test observation only).
+  @visibleForTesting
+  String? get currentWalletForTesting => _currentWallet;
+
   String? _openConversationId;
   DateTime? _openConversationStartedAt;
   Timer? _pollTimer;
@@ -2940,8 +2945,15 @@ class ChatProvider extends ChangeNotifier {
   /// Called when the app detects the current user wallet has changed/connected.
   /// Ensures provider state (auth, socket subscription, conversations) is refreshed
   /// so UI (unread badges, conversations) updates immediately after wallet connect.
-  Future<void> setCurrentWallet(String wallet) async {
-    await _chatProviderSetCurrentWallet(this, wallet);
+  Future<void> setCurrentWallet(
+    String wallet, {
+    bool Function()? shouldContinue,
+  }) async {
+    await _chatProviderSetCurrentWallet(
+      this,
+      wallet,
+      shouldContinue: shouldContinue,
+    );
   }
 
   /// Open a conversation: subscribe to conversation room, load messages and mark read

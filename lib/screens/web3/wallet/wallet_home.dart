@@ -8,7 +8,6 @@ import '../../../config/api_keys.dart';
 import '../../../utils/design_tokens.dart';
 import '../../../providers/wallet_provider.dart';
 import '../../../providers/navigation_provider.dart';
-import '../../../widgets/app_loading.dart';
 import 'wallet_backup_protection_screen.dart';
 import '../../../models/wallet.dart';
 import 'nft_gallery.dart';
@@ -24,6 +23,7 @@ import '../../../widgets/wallet_custody_status_panel.dart';
 import '../../../widgets/wallet_transaction_card.dart';
 import '../../../widgets/attestation_badge_panel.dart';
 import '../../../utils/kubus_color_roles.dart';
+import '../../../utils/wallet_presentation_state.dart';
 import '../../../widgets/wallet/kubus_token_identity.dart';
 import '../../../widgets/wallet/kubus_wallet_shell.dart';
 import '../../../widgets/wallet/wallet_action_controller.dart';
@@ -74,9 +74,20 @@ class _WalletHomeState extends State<WalletHome> {
         final isReadOnlySession = walletProvider.isReadOnlySession;
         final canTransact = walletProvider.canTransact;
         final authority = walletProvider.authority;
+        final presentationState = WalletPresentationStateResolver.resolve(
+          authority,
+          sessionPhase: walletProvider.sessionPhase,
+          accountLinkPhase: walletProvider.accountLinkPhase,
+        );
+        final isAccountLinkFailed =
+            presentationState == WalletPresentationState.accountLinkFailed;
 
         // Show loading indicator while wallet is loading
-        if (isLoading) {
+        if (isLoading ||
+            presentationState == WalletPresentationState.unknown ||
+            presentationState == WalletPresentationState.restoring ||
+            presentationState ==
+                WalletPresentationState.accountLinkInProgress) {
           return Scaffold(
             backgroundColor: Colors.transparent,
             appBar: AppBar(
@@ -95,10 +106,18 @@ class _WalletHomeState extends State<WalletHome> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const AppLoading(),
+                  InlineLoading(
+                    width: 64,
+                    height: 64,
+                    tileSize: 5,
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
                   const SizedBox(height: 16),
                   Text(
-                    l10n.walletHomeLoadingLabel,
+                    presentationState ==
+                            WalletPresentationState.accountLinkInProgress
+                        ? l10n.walletSetupPhaseLinking
+                        : l10n.walletHomeLoadingLabel,
                     style: TextStyle(
                       color: Theme.of(
                         context,
@@ -113,9 +132,10 @@ class _WalletHomeState extends State<WalletHome> {
         }
 
         // Show empty state when there is no wallet identity on this device.
-        if (!authority.hasWalletIdentity) {
+        if (isAccountLinkFailed ||
+            !WalletPresentationStateResolver.hasWalletIdentity(authority)) {
           final isAccountShellOnly =
-              authority.state == WalletAuthorityState.accountShellOnly;
+              presentationState == WalletPresentationState.accountShellOnly;
           return Scaffold(
             backgroundColor: Colors.transparent,
             appBar: AppBar(
@@ -150,22 +170,25 @@ class _WalletHomeState extends State<WalletHome> {
                   width: double.infinity,
                   child: EmptyStateCard(
                     icon: Icons.account_balance_wallet_outlined,
-                    title: isAccountShellOnly
-                        ? l10n.walletHomeAccountShellTitle
-                        : l10n.walletHomeSignedOutTitle,
-                    description: isAccountShellOnly
-                        ? l10n.walletHomeAccountShellDescription
-                        : l10n.walletHomeSignedOutDescription,
+                    title: isAccountLinkFailed
+                        ? l10n.walletSetupPhaseFailed
+                        : isAccountShellOnly
+                            ? l10n.walletHomeAccountShellTitle
+                            : l10n.walletHomeSignedOutTitle,
+                    description: isAccountLinkFailed
+                        ? l10n.walletSetupGenericLinkError
+                        : isAccountShellOnly
+                            ? l10n.walletHomeAccountShellDescription
+                            : l10n.walletHomeSignedOutDescription,
                     showAction: true,
-                    actionLabel: isAccountShellOnly
-                        ? l10n.walletHomeRestoreWalletAction
-                        : l10n.authConnectWalletButton,
+                    actionLabel: l10n.authConnectWalletButton,
                     onAction: () {
                       final walletProvider = Provider.of<WalletProvider>(
                         context,
                         listen: false,
                       );
-                      if (!walletProvider.hasWalletIdentity) {
+                      if (isAccountLinkFailed ||
+                          !walletProvider.hasWalletIdentity) {
                         Navigator.pushReplacementNamed(
                           context,
                           '/connect-wallet',

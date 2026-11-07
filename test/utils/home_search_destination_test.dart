@@ -40,7 +40,8 @@ void main() {
     expect(profileDestination.id, 'wallet123');
   });
 
-  test('unsupported home suggestion without coordinates has no destination', () {
+  test('unsupported home suggestion without coordinates has no destination',
+      () {
     final destination = HomeSearchDestination.fromResult(
       const KubusSearchResult(
         label: 'Unsupported',

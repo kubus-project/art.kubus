@@ -10,7 +10,8 @@ void main() {
   const artworkId = '11111111-1111-4111-8111-111111111111';
   const markerId = '22222222-2222-4222-8222-222222222222';
 
-  testWidgets('share artwork to community switches to community tab and seeds draft',
+  testWidgets(
+      'share artwork to community switches to community tab and seeds draft',
       (tester) async {
     final tabs = MainTabProvider();
     final hub = CommunityHubProvider();

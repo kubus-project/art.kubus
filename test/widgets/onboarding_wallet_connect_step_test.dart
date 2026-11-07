@@ -10,6 +10,7 @@ import 'package:art_kubus/services/account_wallet_link_service.dart';
 import 'package:art_kubus/services/backend_api_service.dart';
 import 'package:art_kubus/services/onboarding_state_service.dart';
 import 'package:art_kubus/services/solana_wallet_service.dart';
+import 'package:art_kubus/services/wallet_session_sync_dependencies.dart';
 import 'package:art_kubus/widgets/onboarding/onboarding_wallet_connect_step.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -95,7 +96,11 @@ class _RecordingChatProvider extends ChatProvider {
   String? lastWallet;
 
   @override
-  Future<void> setCurrentWallet(String wallet) async {
+  Future<void> setCurrentWallet(
+    String wallet, {
+    bool Function()? shouldContinue,
+  }) async {
+    if (shouldContinue?.call() == false) return;
     lastWallet = wallet;
   }
 }
@@ -165,6 +170,21 @@ Future<void> _settle(WidgetTester tester, [int pumps = 16]) async {
     await tester
         .runAsync(() => Future<void>.delayed(const Duration(milliseconds: 1)));
     await tester.pump(const Duration(milliseconds: 300));
+  }
+}
+
+/// Link service whose transaction ends as superseded: the account changed
+/// while the bind was in flight, so no failure may be shown for it.
+class _SupersededLinkService extends AccountWalletLinkService {
+  @override
+  Future<AccountWalletLinkResult> linkWalletToCurrentAccount({
+    required String walletAddress,
+    required String expectedUserId,
+    required String originalAuthToken,
+    String? originalRefreshToken,
+    WalletSessionSyncProvidersPayload? providers,
+  }) async {
+    throw const AccountWalletLinkSupersededException();
   }
 }
 
@@ -280,7 +300,7 @@ void main() {
 
     expect(find.text('Wallet linked to this account.'), findsNothing);
     expect(
-      find.text('Wallet link failed. Your account was not changed.'),
+      find.textContaining('may have reached the server'),
       findsOneWidget,
     );
     expect(harness.linkedWallets, isEmpty);
@@ -386,6 +406,25 @@ void main() {
       find.textContaining('Your account session could not be confirmed'),
       findsOneWidget,
     );
+  });
+
+  testWidgets(
+      'superseded link leaves the linking phase without showing a failure',
+      (tester) async {
+    final harness = await _pumpStep(
+      tester,
+      linkService: _SupersededLinkService(),
+    );
+
+    await tester.tap(find.text('Create wallet'));
+    await _settle(tester);
+
+    expect(find.textContaining('Linking wallet to your account'), findsNothing,
+        reason: 'the step must not stay on the linking spinner');
+    expect(find.textContaining('account session changed'), findsNothing,
+        reason: 'a superseded link is not a failure');
+    expect(find.textContaining('could not be confirmed'), findsNothing);
+    expect(harness.linkedWallets, isEmpty);
   });
 
   testWidgets('native onboarding hides external connect without Reown',

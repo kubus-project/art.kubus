@@ -11,7 +11,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 
 void main() {
-  testWidgets('marker deep link selects map tab and enqueues marker intent', (tester) async {
+  testWidgets('marker deep link selects map tab and enqueues marker intent',
+      (tester) async {
     final tabs = MainTabProvider();
     final mapIntents = MapDeepLinkProvider();
     const target = ShareDeepLinkTarget(type: ShareEntityType.marker, id: 'm1');

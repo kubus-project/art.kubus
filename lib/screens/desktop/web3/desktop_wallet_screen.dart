@@ -22,6 +22,7 @@ import '../../web3/wallet/receive_token_screen.dart';
 import 'desktop_connect_wallet_screen.dart';
 import '../../../utils/design_tokens.dart';
 import '../../../utils/kubus_color_roles.dart';
+import '../../../utils/wallet_presentation_state.dart';
 import '../../../widgets/common/kubus_screen_header.dart';
 import '../../../widgets/wallet_custody_status_panel.dart';
 import '../../../widgets/wallet_transaction_card.dart';
@@ -128,21 +129,44 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
                     ),
 
                     // Right panel - Quick actions & recent
-                    if (isLarge)
-                      SizedBox(
-                        width: railWidth,
-                        child: DecoratedBox(
-                          decoration: BoxDecoration(
-                            color: KubusColorRoles.of(context).ground,
-                            border: Border(
-                              left: BorderSide(
-                                color: KubusColorRoles.of(context).rule,
+                    Consumer<WalletProvider>(
+                      builder: (context, walletProvider, _) {
+                        final presentationState =
+                            WalletPresentationStateResolver.resolve(
+                          walletProvider.authority,
+                          sessionPhase: walletProvider.sessionPhase,
+                          accountLinkPhase: walletProvider.accountLinkPhase,
+                        );
+                        if (!isLarge ||
+                            presentationState ==
+                                WalletPresentationState.unknown ||
+                            presentationState ==
+                                WalletPresentationState.restoring ||
+                            presentationState ==
+                                WalletPresentationState.accountLinkInProgress ||
+                            presentationState ==
+                                WalletPresentationState.accountLinkFailed ||
+                            !WalletPresentationStateResolver.hasWalletIdentity(
+                              walletProvider.authority,
+                            )) {
+                          return const SizedBox.shrink();
+                        }
+                        return SizedBox(
+                          width: railWidth,
+                          child: DecoratedBox(
+                            decoration: BoxDecoration(
+                              color: KubusColorRoles.of(context).ground,
+                              border: Border(
+                                left: BorderSide(
+                                  color: KubusColorRoles.of(context).rule,
+                                ),
                               ),
                             ),
+                            child: _buildRightPanel(themeProvider),
                           ),
-                          child: _buildRightPanel(themeProvider),
-                        ),
-                      ),
+                        );
+                      },
+                    ),
                   ],
                 ),
               );
@@ -156,7 +180,41 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
   Widget _buildMainContent(ThemeProvider themeProvider, bool isLarge) {
     return Consumer<WalletProvider>(
       builder: (context, walletProvider, _) {
-        if (!walletProvider.hasWalletIdentity) {
+        final presentationState = WalletPresentationStateResolver.resolve(
+          walletProvider.authority,
+          sessionPhase: walletProvider.sessionPhase,
+          accountLinkPhase: walletProvider.accountLinkPhase,
+        );
+        final isAccountLinkFailed =
+            presentationState == WalletPresentationState.accountLinkFailed;
+        if (walletProvider.isLoading ||
+            presentationState == WalletPresentationState.unknown ||
+            presentationState == WalletPresentationState.restoring ||
+            presentationState ==
+                WalletPresentationState.accountLinkInProgress) {
+          return Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const InlineLoading(width: 48, height: 48),
+                SizedBox(height: DetailSpacing.md),
+                Text(
+                  presentationState ==
+                          WalletPresentationState.accountLinkInProgress
+                      ? AppLocalizations.of(context)!.walletSetupPhaseLinking
+                      : AppLocalizations.of(context)!.walletHomeLoadingLabel,
+                  style: DetailTypography.body(context).copyWith(
+                    color: KubusColorRoles.of(context).foregroundMuted,
+                  ),
+                ),
+              ],
+            ),
+          );
+        }
+        if (isAccountLinkFailed ||
+            !WalletPresentationStateResolver.hasWalletIdentity(
+              walletProvider.authority,
+            )) {
           return _buildConnectWalletView(themeProvider);
         }
 
@@ -218,8 +276,15 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
     final l10n = AppLocalizations.of(context)!;
     final walletProvider = context.watch<WalletProvider>();
     final authority = walletProvider.authority;
+    final presentationState = WalletPresentationStateResolver.resolve(
+      authority,
+      sessionPhase: walletProvider.sessionPhase,
+      accountLinkPhase: walletProvider.accountLinkPhase,
+    );
+    final isAccountLinkFailed =
+        presentationState == WalletPresentationState.accountLinkFailed;
     final isAccountShellOnly =
-        authority.state == WalletAuthorityState.accountShellOnly;
+        presentationState == WalletPresentationState.accountShellOnly;
 
     final explanation = Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -234,16 +299,20 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
         ),
         SizedBox(height: DetailSpacing.lg),
         Text(
-          isAccountShellOnly
-              ? l10n.walletHomeAccountShellTitle
-              : l10n.walletHomeSignedOutTitle,
+          isAccountLinkFailed
+              ? l10n.walletSetupPhaseFailed
+              : isAccountShellOnly
+                  ? l10n.walletHomeAccountShellTitle
+                  : l10n.walletHomeSignedOutTitle,
           style: DetailTypography.sectionTitle(context),
         ),
         SizedBox(height: DetailSpacing.sm),
         Text(
-          isAccountShellOnly
-              ? l10n.walletHomeAccountShellDescription
-              : l10n.walletHomeSignedOutDescription,
+          isAccountLinkFailed
+              ? l10n.walletSetupGenericLinkError
+              : isAccountShellOnly
+                  ? l10n.walletHomeAccountShellDescription
+                  : l10n.walletHomeSignedOutDescription,
           style: DetailTypography.body(context).copyWith(height: 1.6),
         ),
       ],
@@ -257,9 +326,7 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
           onPressed: () => Navigator.of(context).pushNamed('/connect-wallet'),
           icon: Icons.add,
           isFullWidth: true,
-          label: isAccountShellOnly
-              ? l10n.walletHomeRestoreWalletAction
-              : l10n.walletHomeCreateWalletAction,
+          label: l10n.authConnectWalletButton,
         ),
         SizedBox(height: DetailSpacing.sm),
         KubusButton(

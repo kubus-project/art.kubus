@@ -25,6 +25,7 @@ import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../helpers/secure_storage_absent.dart';
 
 Widget _buildTestApp({
   required Widget child,
@@ -215,11 +216,13 @@ Future<void> _pumpUntilCondition(
 }
 
 void main() {
+  installEmptySecureStorage();
   TestWidgetsFlutterBinding.ensureInitialized();
 
   setUp(() {
     SharedPreferences.setMockInitialValues(<String, Object>{});
     BackendApiService().setAuthTokenForTesting(null);
+    BackendApiService().resetCredentialStoreForTesting();
     _installBackendMock((_) async => http.Response(
           jsonEncode(<String, dynamic>{'success': false}),
           404,

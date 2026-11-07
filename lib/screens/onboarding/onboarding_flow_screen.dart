@@ -2559,8 +2559,14 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
     });
     try {
       await _persistLocalDrafts();
-      final wallet = (profileProvider.currentUser?.walletAddress ?? '').trim();
-      if (wallet.isNotEmpty) {
+      final currentUser = profileProvider.currentUser;
+      final wallet = (currentUser?.walletAddress ?? '').trim();
+      final accountKey = (currentUser?.userId ?? currentUser?.id ?? '').trim();
+      // A walletless (email/Google) account has no wallet but still has an
+      // account id. Its role is saved against that id. A session with neither
+      // (a guest walking the flow) keeps the choice in the local draft only,
+      // exactly as before, and continues.
+      if (wallet.isNotEmpty || accountKey.isNotEmpty) {
         await profileProvider
             .setUserPersona(
               persona,
@@ -2568,6 +2574,8 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
               throwOnBackendFailure: true,
             )
             .timeout(const Duration(seconds: 8));
+      }
+      if (wallet.isNotEmpty) {
         try {
           await profileProvider.loadProfile(wallet).timeout(
                 const Duration(seconds: 6),

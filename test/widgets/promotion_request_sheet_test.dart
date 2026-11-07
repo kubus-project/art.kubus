@@ -18,6 +18,7 @@ import 'package:provider/single_child_widget.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher_platform_interface/link.dart';
 import 'package:url_launcher_platform_interface/url_launcher_platform_interface.dart';
+import '../helpers/secure_storage_absent.dart';
 
 const String kKub8Mint = ApiKeys.kub8MintAddress;
 const String kTreasuryOwner = 'F81jSXoiB15kcEERt8nxYabm5kgZ37jGbC9fmAQZMSws';
@@ -115,6 +116,7 @@ class _SheetLauncher extends StatelessWidget {
 }
 
 void main() {
+  installEmptySecureStorage();
   TestWidgetsFlutterBinding.ensureInitialized();
 
   late UrlLauncherPlatform originalLauncher;

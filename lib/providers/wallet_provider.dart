@@ -46,6 +46,13 @@ enum WalletSessionPhase {
   error,
 }
 
+/// Transient, non-sensitive progress for linking a wallet to an account.
+enum WalletAccountLinkPhase {
+  unknown,
+  inProgress,
+  failed,
+}
+
 enum WalletAuthorityState {
   signedOut,
   accountShellOnly,
@@ -210,6 +217,8 @@ class WalletProvider extends ChangeNotifier {
   bool _isBalanceVisible = true;
   String? _currentWalletAddress;
   WalletSessionPhase _sessionPhase = WalletSessionPhase.idle;
+  WalletAccountLinkPhase _accountLinkPhase = WalletAccountLinkPhase.unknown;
+  int _accountLinkGeneration = 0;
   String? _lastError;
   DerivedKeyPairResult? _cachedDerivedCandidate;
   Completer<void>? _initializeCompleter;
@@ -241,7 +250,38 @@ class WalletProvider extends ChangeNotifier {
   int get achievementsUnlocked => _achievementsUnlocked;
   double get achievementTokenTotal => _achievementTokenTotal;
   WalletSessionPhase get sessionPhase => _sessionPhase;
+  WalletAccountLinkPhase get accountLinkPhase => _accountLinkPhase;
   String? get lastError => _lastError;
+
+  /// Begins an observable link attempt without retaining credentials or
+  /// wallet data in the presentation state.
+  int beginAccountWalletLink() {
+    _accountLinkGeneration += 1;
+    _accountLinkPhase = WalletAccountLinkPhase.inProgress;
+    notifyListeners();
+    return _accountLinkGeneration;
+  }
+
+  bool isAccountWalletLinkAttemptCurrent(int generation) =>
+      generation == _accountLinkGeneration &&
+      _accountLinkPhase == WalletAccountLinkPhase.inProgress;
+
+  void completeAccountWalletLink(int generation) {
+    if (generation != _accountLinkGeneration) return;
+    _accountLinkPhase = WalletAccountLinkPhase.unknown;
+    notifyListeners();
+  }
+
+  void failAccountWalletLink(int generation) {
+    if (generation != _accountLinkGeneration) return;
+    _accountLinkPhase = WalletAccountLinkPhase.failed;
+    notifyListeners();
+  }
+
+  void _resetAccountWalletLinkPhase() {
+    _accountLinkGeneration += 1;
+    _accountLinkPhase = WalletAccountLinkPhase.unknown;
+  }
 
   WalletProvider(
       {SolanaWalletService? solanaWalletService, bool deferInit = false})
@@ -281,6 +321,7 @@ class WalletProvider extends ChangeNotifier {
     int collectionsCount = 0,
     int achievementsUnlocked = 0,
   }) {
+    _resetAccountWalletLinkPhase();
     _accountSignedIn = true;
     _accountEmail = email;
     _backendProfile = backendProfile;
@@ -1260,16 +1301,20 @@ class WalletProvider extends ChangeNotifier {
   Future<bool> isMnemonicBackupRequired({String? walletAddress}) async {
     final targetWallet = (walletAddress ?? _currentWalletAddress ?? '').trim();
     if (targetWallet.isEmpty) return false;
+    final required = await _readMnemonicBackupRequired(targetWallet);
+    if (WalletUtils.equals(targetWallet, _currentWalletAddress)) {
+      _mnemonicBackupRequiredForAuthority = required;
+    }
+    return required;
+  }
+
+  Future<bool> _readMnemonicBackupRequired(String targetWallet) async {
     final prefs = await SharedPreferences.getInstance();
     final requiredKey = _walletScopedPreferenceKey(
       prefix: PreferenceKeys.walletMnemonicBackupRequiredV1Prefix,
       walletAddress: targetWallet,
     );
-    final required = prefs.getBool(requiredKey) ?? false;
-    if (WalletUtils.equals(targetWallet, _currentWalletAddress)) {
-      _mnemonicBackupRequiredForAuthority = required;
-    }
-    return required;
+    return prefs.getBool(requiredKey) ?? false;
   }
 
   Future<String?> _resolveBackupWalletAddress({String? walletAddress}) async {
@@ -1930,6 +1975,8 @@ class WalletProvider extends ChangeNotifier {
     bool allowRefresh = true,
     bool loadWalletData = true,
   }) async {
+    _resetAccountWalletLinkPhase();
+    notifyListeners();
     final restored = await _apiService.session.restoreStoredSession(
       allowRefresh: allowRefresh,
     );
@@ -1956,6 +2003,7 @@ class WalletProvider extends ChangeNotifier {
   }
 
   void _clearAccountShellState() {
+    _resetAccountWalletLinkPhase();
     _accountSignedIn = false;
     _accountSignInMethod = AuthSignInMethod.unknown;
     _accountEmail = null;
@@ -1977,11 +2025,18 @@ class WalletProvider extends ChangeNotifier {
     String walletAddress, {
     bool persist = true,
     bool notify = true,
+    bool Function()? shouldCommit,
+    bool updatePreferredWallet = true,
   }) async {
     final sanitized = walletAddress.trim();
     if (sanitized.isEmpty) return;
 
+    if (shouldCommit != null && !shouldCommit()) return;
+    final backupRequired = await _readMnemonicBackupRequired(sanitized);
+    if (shouldCommit != null && !shouldCommit()) return;
+
     _currentWalletAddress = sanitized;
+    _mnemonicBackupRequiredForAuthority = backupRequired;
     SolanaWalletConnectService.instance.updateActiveWalletAddress(sanitized);
 
     if (persist) {
@@ -1992,11 +2047,7 @@ class WalletProvider extends ChangeNotifier {
             'commitVerifiedAccountLinkedWalletIdentity: persist failed: $e');
       }
     }
-    _setPreferredWalletForIdentity(sanitized);
-
-    try {
-      await isMnemonicBackupRequired(walletAddress: sanitized);
-    } catch (_) {}
+    if (updatePreferredWallet) _setPreferredWalletForIdentity(sanitized);
 
     _sessionPhase = WalletSessionPhase.ready;
     _clearLastError();
@@ -4219,6 +4270,8 @@ class WalletProvider extends ChangeNotifier {
 
   Future<void> disconnectWallet(
       {bool preserveAuthenticatedWallet = true}) async {
+    _resetAccountWalletLinkPhase();
+    notifyListeners();
     // The connected identity ends here. Listeners run before the first await.
     await AccountIdentity.notifyChanged();
     final fallbackWallet = preserveAuthenticatedWallet

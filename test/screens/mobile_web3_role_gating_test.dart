@@ -21,6 +21,7 @@ import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../helpers/secure_storage_absent.dart';
 
 class _TestSolanaWalletService extends SolanaWalletService {
   @override
@@ -226,6 +227,7 @@ Future<void> _pumpInstitutionHub(
 }
 
 void main() {
+  installEmptySecureStorage();
   TestWidgetsFlutterBinding.ensureInitialized();
 
   const walletRequiredReason =

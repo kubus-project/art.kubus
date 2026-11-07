@@ -33,23 +33,28 @@ class AuthCredentialStore {
   bool _revoked = false;
   final Map<String, String> _memory = {};
   // Separate from login authority: a closure status receipt must survive logout.
-  // Browser capabilities remain memory-only; users can explicitly save a copy.
-  String? _closureReceiptMemory;
+  // The current web plugin stores an exportable key alongside ciphertext in
+  // localStorage. Do not persist this bearer capability there.
   static const closureReceiptKey = 'account_closure_status_receipt_v1';
+  bool get closureReceiptPersistenceAvailable => !_web;
 
   Future<void> saveClosureReceipt(String receipt) => _run((_) async {
         if (_web) {
-          _closureReceiptMemory = receipt;
-        } else {
-          await _secure.write(key: closureReceiptKey, value: receipt);
-          if (await _secure.read(key: closureReceiptKey) != receipt) {
-            throw StateError('Closure receipt storage unavailable');
-          }
+          throw StateError('Secure closure receipt storage unavailable');
+        }
+        await _secure.write(key: closureReceiptKey, value: receipt);
+        if (await _secure.read(key: closureReceiptKey) != receipt) {
+          throw StateError('Closure receipt storage unavailable');
         }
       });
 
-  Future<String?> readClosureReceipt() => _run((_) async =>
-      _web ? _closureReceiptMemory : _secure.read(key: closureReceiptKey));
+  Future<String?> readClosureReceipt() =>
+      _run((_) async => _web ? null : _secure.read(key: closureReceiptKey));
+
+  /// Removes a receipt after a definitive server refusal of a fresh attempt.
+  Future<void> clearClosureReceipt() => _run((_) async {
+        if (!_web) await _secure.delete(key: closureReceiptKey);
+      });
 
   Iterable<String> get _legacyKeys => {
         ...AuthGatingService.accessTokenKeys,

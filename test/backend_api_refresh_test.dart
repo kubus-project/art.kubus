@@ -101,8 +101,7 @@ void main() {
     expect(BackendApiService().getAuthToken(), isNull);
   });
 
-  test(
-      'authenticated GET does not refresh or issue session for expired token',
+  test('authenticated GET does not refresh or issue session for expired token',
       () async {
     final nowSeconds = DateTime.now().millisecondsSinceEpoch ~/ 1000;
     final expiredToken = _buildJwt(expSeconds: nowSeconds - 3600);
