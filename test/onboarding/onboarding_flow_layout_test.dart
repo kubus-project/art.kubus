@@ -6,6 +6,7 @@ import 'package:art_kubus/config/config.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:art_kubus/models/user_persona.dart';
 import 'package:art_kubus/models/user_profile.dart';
+import 'package:art_kubus/providers/account_verification_provider.dart';
 import 'package:art_kubus/providers/locale_provider.dart';
 import 'package:art_kubus/providers/profile_provider.dart';
 import 'package:art_kubus/providers/themeprovider.dart';
@@ -42,6 +43,8 @@ Widget _buildTestApp({
     providers: [
       ChangeNotifierProvider<ThemeProvider>(create: (_) => ThemeProvider()),
       ChangeNotifierProvider<LocaleProvider>(create: (_) => LocaleProvider()),
+      ChangeNotifierProvider<AccountVerificationProvider>(
+          create: (_) => AccountVerificationProvider()),
       ChangeNotifierProvider<ProfileProvider>.value(
           value: resolvedProfileProvider),
       ChangeNotifierProvider<WalletProvider>(
@@ -1353,7 +1356,7 @@ void main() {
     expect(find.byType(TextField), findsNothing);
   });
 
-  testWidgets('dao review step opens inside account onboarding branch',
+  testWidgets('verification step opens inside account onboarding branch',
       (tester) async {
     await tester.binding.setSurfaceSize(const Size(390, 1700));
     addTearDown(() async => tester.binding.setSurfaceSize(null));
@@ -1373,7 +1376,7 @@ void main() {
 
     await tester.pumpWidget(
       _buildTestApp(
-        child: const OnboardingFlowScreen(initialStepId: 'daoReview'),
+        child: const OnboardingFlowScreen(initialStepId: 'verification'),
         locale: const Locale('en'),
         size: const Size(390, 1700),
         profileProvider: profileProvider,
@@ -1381,11 +1384,14 @@ void main() {
     );
     await _pumpOnboardingReady(tester);
 
-    expect(find.text('Governance review'), findsOneWidget);
+    expect(find.text('Verification'), findsOneWidget);
     expect(
         find.text(
-            'Submit your practice for community governance review before account setup is completed.'),
+            'Apply as an artist so editors can verify you. You can also do this later from the Studio.'),
         findsOneWidget);
+    // The application never asks for a wallet.
+    expect(find.textContaining('wallet', findRichText: true), findsNothing);
+    expect(find.text('Governance review'), findsNothing);
   });
 
   testWidgets('onboarding header action icons follow theme contrast rules',
