@@ -24,7 +24,6 @@ import '../../../utils/profile_showcase_normalizer.dart';
 import '../../../community/community_interactions.dart';
 import '../../../providers/themeprovider.dart';
 import '../../../providers/chat_provider.dart';
-import '../../../providers/dao_provider.dart';
 import '../../../providers/stats_provider.dart';
 import '../../../providers/app_refresh_provider.dart';
 import '../../../providers/artwork_provider.dart';
@@ -50,7 +49,6 @@ import '../../../utils/kubus_entity_semantics.dart';
 import '../../../widgets/common/kubus_entity_card.dart';
 import '../../../widgets/detail/profile_identity_block.dart';
 import '../../../widgets/detail/profile_utility_actions.dart';
-import '../../../models/dao.dart';
 import '../../../utils/app_animations.dart';
 import '../../../utils/user_profile_navigation.dart';
 import '../components/desktop_widgets.dart';
@@ -339,16 +337,8 @@ class _UserProfileScreenState extends State<UserProfileScreen>
       );
     }
 
-    final daoProvider = Provider.of<DAOProvider>(context);
-    final DAOReview? daoReview = daoProvider.findReviewForWallet(user!.id);
-    final isArtist = user!.isArtist ||
-        (daoReview != null &&
-            daoReview.isArtistApplication &&
-            daoReview.isApproved);
-    final isInstitution = user!.isInstitution ||
-        (daoReview != null &&
-            daoReview.isInstitutionApplication &&
-            daoReview.isApproved);
+    final isArtist = user!.isArtist;
+    final isInstitution = user!.isInstitution;
 
     final content = Scaffold(
       backgroundColor: Colors.transparent,
