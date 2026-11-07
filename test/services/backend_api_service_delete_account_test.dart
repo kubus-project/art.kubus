@@ -354,17 +354,24 @@ void main() {
     });
 
     test(
-        'web closure fails before any request when durable secure storage is unavailable',
+        'web closure keeps the receipt in tab memory only and a lost DELETE leaves a pending, account-bound receipt',
         () async {
       api.resetCredentialStoreForTesting(store: AuthCredentialStore(web: true));
       api.setAuthTokenForTesting(_jwtFor('synthetic-A'));
-      var sent = 0;
-      api.setHttpClient(MockClient((_) async {
-        sent++;
-        return preparedReceipt();
+      final paths = <String>[];
+      api.setHttpClient(MockClient((request) async {
+        paths.add(request.url.path);
+        if (request.url.path.endsWith('/prepare')) return preparedReceipt();
+        throw TimeoutException('response lost');
       }));
-      await expectLater(api.deleteMyAccount(), throwsStateError);
-      expect(sent, 0);
+      await expectLater(
+          api.deleteMyAccount(), throwsA(isA<TimeoutException>()));
+      expect(paths, ['/api/auth/account-closure/prepare', '/api/auth/me']);
+      final receipt = await api.loadAccountClosureReceipt();
+      expect(receipt?.accountId, 'synthetic-A');
+      // Nothing is written to persistent web storage.
+      final prefs = await SharedPreferences.getInstance();
+      expect(prefs.getKeys().where((k) => k.contains('closure')), isEmpty);
     });
 
     test('ordinary authenticated requests are blocked while DELETE is pending',
