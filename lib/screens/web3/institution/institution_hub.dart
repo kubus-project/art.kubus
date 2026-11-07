@@ -3,11 +3,9 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
-import 'package:art_kubus/widgets/glass_components.dart';
 import '../../../widgets/dashboard/kubus_dashboard_chrome.dart';
 import 'package:art_kubus/widgets/kubus_button.dart';
 import 'package:art_kubus/widgets/empty_state_card.dart';
-import 'package:art_kubus/widgets/common/kubus_screen_header.dart';
 import 'package:art_kubus/utils/design_tokens.dart';
 import 'package:art_kubus/utils/kubus_color_roles.dart';
 import '../../onboarding/web3/web3_onboarding.dart';
@@ -15,26 +13,23 @@ import '../../onboarding/web3/onboarding_data.dart';
 import 'event_creator.dart';
 import 'event_manager.dart';
 import 'institution_analytics.dart';
-import '../../../providers/dao_provider.dart';
+import '../../../providers/account_verification_provider.dart';
 import '../../../providers/collab_provider.dart';
 import '../../../providers/notification_provider.dart';
 import '../../../providers/profile_provider.dart';
 import '../../../providers/recent_activity_provider.dart';
-import '../../../providers/wallet_provider.dart';
 import '../../../providers/web3provider.dart';
 import '../../../config/config.dart';
-import '../../../models/dao.dart';
 import '../../../models/promotion.dart';
 import '../../../models/user_persona.dart';
 import '../../../utils/activity_navigation.dart';
 import '../../../utils/app_color_utils.dart';
 import '../../../utils/creator_shell_navigation.dart';
-import '../../../utils/dao_role_verification.dart';
-import '../../../utils/wallet_action_guard.dart';
 import '../../../utils/wallet_utils.dart';
 import '../../collab/invites_inbox_screen.dart';
 import '../../events/exhibition_list_screen.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
+import 'package:art_kubus/widgets/verification/institution_verification_panel.dart';
 import '../../../widgets/promotion/promotion_builder_sheet.dart';
 import '../../../widgets/notifications/kubus_notifications_sheet.dart';
 import '../../../widgets/topbar_icon.dart';
@@ -57,22 +52,11 @@ class InstitutionHub extends StatefulWidget {
 
 class _InstitutionHubState extends State<InstitutionHub> {
   int _selectedIndex = 0;
-  DAOReview? _institutionReview;
-  bool _reviewLoading = false;
-  bool _hasFetchedReviewForWallet = false;
-  String _lastReviewWallet = '';
   bool _hasSetInitialTabByPersona = false;
-  final TextEditingController _organizationController = TextEditingController();
-  final TextEditingController _contactController = TextEditingController();
-  final TextEditingController _missionController = TextEditingController();
-  final TextEditingController _focusController = TextEditingController();
-  final GlobalKey<FormState> _applicationFormKey = GlobalKey<FormState>();
 
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback(
-        (_) => _loadInstitutionReviewStatus(forceRefresh: true));
     WidgetsBinding.instance
         .addPostFrameCallback((_) => unawaited(_checkOnboarding()));
   }
@@ -80,8 +64,6 @@ class _InstitutionHubState extends State<InstitutionHub> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    final wallet = _resolveWalletAddress(listen: true);
-    final walletChanged = wallet != _lastReviewWallet;
     final persona = context.watch<ProfileProvider>().userPersona;
     if (!_hasSetInitialTabByPersona && persona != null) {
       final desiredIndex = persona == UserPersona.institution ? 1 : 0;
@@ -90,11 +72,6 @@ class _InstitutionHubState extends State<InstitutionHub> {
         widget.onTabChanged?.call(desiredIndex);
       }
       _hasSetInitialTabByPersona = true;
-    }
-
-    if (!walletChanged && _hasFetchedReviewForWallet) return;
-    if (wallet.isNotEmpty) {
-      _loadInstitutionReviewStatus(forceRefresh: true);
     }
   }
 
@@ -139,99 +116,33 @@ class _InstitutionHubState extends State<InstitutionHub> {
     );
   }
 
+  /// Promotion is a paid, wallet-keyed action, so a wallet is needed for THAT
+  /// action only. Eligibility starts from the server-confirmed membership of the
+  /// institution the account is acting for; the server decides the rest.
   String? _institutionPromotionUnavailableReason() {
     final l10n = AppLocalizations.of(context)!;
-    final wallet = _resolveWalletAddress();
-    if (wallet.isEmpty) {
-      return l10n.desktopInstitutionPromotionWalletRequiredReason;
-    }
-
-    final daoProvider = context.read<DAOProvider>();
-    final review =
-        _institutionReview ?? daoProvider.findReviewForWallet(wallet);
-    final verification = DaoRoleVerification(
-      walletAddress: wallet,
-      review: review,
-    );
-
-    if (verification.isApprovedFor(DaoRoleType.artist) ||
-        verification.isPendingFor(DaoRoleType.artist)) {
-      return l10n.desktopInstitutionPromotionArtistConflictReason;
-    }
-    if (!verification.isApprovedFor(DaoRoleType.institution)) {
+    final membership =
+        context.read<AccountVerificationProvider>().selectedMembership;
+    if (membership == null || !membership.canAdminister) {
       return l10n.desktopInstitutionPromotionRequiresApprovalReason;
     }
+    if (_resolveWalletAddress().isEmpty) {
+      return l10n.desktopInstitutionPromotionWalletRequiredReason;
+    }
     return null;
-  }
-
-  Future<void> _loadInstitutionReviewStatus({bool forceRefresh = false}) async {
-    final wallet = _resolveWalletAddress();
-    if (wallet.isEmpty || _reviewLoading) return;
-    if (!forceRefresh &&
-        _hasFetchedReviewForWallet &&
-        wallet == _lastReviewWallet) {
-      return;
-    }
-
-    final requestedWallet = wallet;
-    setState(() {
-      _reviewLoading = true;
-      _lastReviewWallet = requestedWallet;
-    });
-    try {
-      final daoProvider = context.read<DAOProvider>();
-      final review = await daoProvider.loadReviewForWallet(requestedWallet,
-          forceRefresh: forceRefresh);
-      if (!mounted || requestedWallet != _lastReviewWallet) return;
-      setState(() {
-        _institutionReview =
-            review ?? daoProvider.findReviewForWallet(requestedWallet);
-        _hasFetchedReviewForWallet = true;
-      });
-    } catch (_) {
-      if (mounted && requestedWallet == _lastReviewWallet) {
-        setState(() {
-          _hasFetchedReviewForWallet = true;
-        });
-      }
-    } finally {
-      if (mounted && requestedWallet == _lastReviewWallet) {
-        setState(() {
-          _reviewLoading = false;
-        });
-      }
-    }
-  }
-
-  @override
-  void dispose() {
-    _organizationController.dispose();
-    _contactController.dispose();
-    _missionController.dispose();
-    _focusController.dispose();
-    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    final daoProvider = context.watch<DAOProvider>();
-    final wallet = _resolveWalletAddress(listen: true);
-    final review = _institutionReview ??
-        (wallet.isNotEmpty ? daoProvider.findReviewForWallet(wallet) : null);
-    final verification = DaoRoleVerification(
-      walletAddress: wallet,
-      review: review,
-    );
-    final hasInstitutionBadge =
-        verification.isApprovedFor(DaoRoleType.institution);
-    final hasArtistBadge = verification.isApprovedFor(DaoRoleType.artist);
-    final isApprovedInstitution = hasInstitutionBadge;
-    final hasConflictingArtistReview =
-        verification.isPendingFor(DaoRoleType.artist);
-    final isCrossRoleBlocked = hasArtistBadge || hasConflictingArtistReview;
+    // Access is the account's server-confirmed institution membership. No
+    // wallet, persona or artist standing is consulted, and being an artist
+    // never blocks it.
+    final verification = context.watch<AccountVerificationProvider>();
+    final membership = verification.selectedMembership;
+    final hasInstitutionAccess = membership != null;
     final canSelfServeInstitutionPromotion =
-        isApprovedInstitution && !isCrossRoleBlocked;
+        membership != null && membership.canAdminister;
 
     final pages = <Widget>[
       const EventManager(),
@@ -329,37 +240,23 @@ class _InstitutionHubState extends State<InstitutionHub> {
                     canSelfServeInstitutionPromotion:
                         canSelfServeInstitutionPromotion,
                   ),
-                  if (widget.showVerificationCard)
-                    _buildInstitutionApplicationCard(
-                      review,
-                      isApprovedInstitution,
-                      isCrossRoleBlocked: isCrossRoleBlocked,
-                      hasArtistBadge: hasArtistBadge,
-                      hasConflictingArtistReview: hasConflictingArtistReview,
+                  if (hasInstitutionAccess) const InstitutionSelector(),
+                  if (widget.showVerificationCard && !hasInstitutionAccess)
+                    InstitutionVerificationPanel(
+                      onRequestSent: () => verification.refresh(),
                     ),
-                  if (!isCrossRoleBlocked)
-                    _buildNavigationTabs(isApprovedInstitution),
+                  _buildNavigationTabs(hasInstitutionAccess),
                 ],
               ),
             ),
           ];
         },
-        body: isCrossRoleBlocked
-            ? _buildRoleBlockedContent(
-                title: hasArtistBadge
-                    ? l10n.institutionHubArtistBadgeActiveTitle
-                    : l10n.institutionHubArtistReviewInProgressTitle,
-                description: hasArtistBadge
-                    ? l10n.institutionHubArtistBadgeActiveDescription
-                    : l10n.institutionHubArtistReviewInProgressDescription,
-                icon: Icons.palette_outlined,
-              )
-            : isApprovedInstitution
-                ? pages[_selectedIndex]
-                : _buildLockedContent(
-                    reviewPending:
-                        verification.isPendingFor(DaoRoleType.institution),
-                  ),
+        body: hasInstitutionAccess
+            ? pages[_selectedIndex]
+            : _buildLockedContent(
+                reviewPending: verification.hasOpenInstitutionRequest,
+                unavailable: verification.isUnavailable,
+              ),
       ),
     );
   }
@@ -402,119 +299,6 @@ class _InstitutionHubState extends State<InstitutionHub> {
     );
   }
 
-  Widget _buildInstitutionApplicationCard(
-    DAOReview? review,
-    bool isApprovedInstitution, {
-    required bool isCrossRoleBlocked,
-    required bool hasArtistBadge,
-    required bool hasConflictingArtistReview,
-  }) {
-    final l10n = AppLocalizations.of(context)!;
-    if (isCrossRoleBlocked) {
-      final title = hasArtistBadge
-          ? l10n.institutionHubArtistBadgeActiveTitle
-          : hasConflictingArtistReview
-              ? l10n.institutionHubArtistReviewInProgressTitle
-              : l10n.institutionHubCrossRoleConflictTitle;
-      final message = hasArtistBadge
-          ? l10n.institutionHubArtistWalletSwitchDescription
-          : hasConflictingArtistReview
-              ? l10n.institutionHubArtistReviewPendingResetDescription
-              : l10n.institutionHubArtistSubmissionConflictDescription;
-      return KubusNoticeBanner(
-        icon: Icons.palette_outlined,
-        title: title,
-        message: message,
-        tone: KubusStatusTone.negative,
-      );
-    }
-
-    final wallet = _resolveWalletAddress();
-    final status = review?.status.toLowerCase() ?? '';
-    final isPending = status == 'pending';
-    final isRejected = status == 'rejected';
-    final statusLabel = isApprovedInstitution
-        ? l10n.institutionHubDaoStatusApproved
-        : review != null
-            ? _institutionReviewStatusLabel(status, l10n)
-            : l10n.institutionHubDaoStatusNotApplied;
-    final tone = isApprovedInstitution
-        ? KubusStatusTone.positive
-        : isRejected
-            ? KubusStatusTone.negative
-            : isPending
-                ? KubusStatusTone.warning
-                : KubusStatusTone.neutral;
-    // Opening the application form needs no wallet, so email-only and guest
-    // users can read and fill it. Only submitting needs a wallet signature;
-    // that is requested by WalletActionGuard when the user submits.
-    final canApply =
-        !_reviewLoading && (!isPending && !isApprovedInstitution || isRejected);
-    final String ctaLabel;
-    if (isApprovedInstitution) {
-      ctaLabel = l10n.institutionHubCtaApprovedByDao;
-    } else if (isPending) {
-      ctaLabel = l10n.institutionHubCtaPendingDaoReview;
-    } else if (wallet.isEmpty) {
-      ctaLabel = l10n.institutionHubCtaApplyAsInstitution;
-    } else {
-      ctaLabel = l10n.institutionHubApplyForReviewAction;
-    }
-    final IconData ctaIcon = isApprovedInstitution
-        ? Icons.verified_outlined
-        : isPending
-            ? Icons.hourglass_bottom
-            : Icons.send_rounded;
-
-    String? detail;
-    if ((review?.reviewerNotes ?? '').isNotEmpty) {
-      detail = review!.reviewerNotes!;
-    } else if (review != null) {
-      detail = isPending
-          ? l10n.institutionHubDaoReviewQueueMessage
-          : isApprovedInstitution
-              ? l10n.institutionHubApprovedToolsMessage
-              : isRejected
-                  ? l10n.institutionHubRejectedResubmitMessage
-                  : null;
-    }
-    if (detail == null && wallet.isEmpty && canApply) {
-      detail = l10n.institutionHubApplicationWalletWhy;
-    }
-
-    return KubusStatusPanel(
-      title: l10n.institutionHubApplicationTitle,
-      description: l10n.institutionHubApplicationCardSubtitle,
-      statusLabel: (review != null || _reviewLoading) ? statusLabel : null,
-      tone: tone,
-      isLoading: _reviewLoading,
-      meta: review != null ? l10n.institutionHubDaoStatusSyncedLabel : null,
-      detail: detail,
-      action: KubusButton(
-        onPressed: canApply ? () => _showInstitutionApplicationModal() : null,
-        label: ctaLabel,
-        icon: ctaIcon,
-        isFullWidth: true,
-        variant: canApply
-            ? KubusButtonVariant.primary
-            : KubusButtonVariant.secondary,
-      ),
-    );
-  }
-
-  String _institutionReviewStatusLabel(String status, AppLocalizations l10n) {
-    switch (status.toLowerCase()) {
-      case 'pending':
-        return l10n.institutionHubDaoStatusPending;
-      case 'rejected':
-        return l10n.institutionHubDaoStatusRejected;
-      case 'approved':
-        return l10n.institutionHubDaoStatusApproved;
-      default:
-        return l10n.institutionHubDaoStatusInReview;
-    }
-  }
-
   Widget _buildNavigationTabs(bool enabled) {
     final l10n = AppLocalizations.of(context)!;
     final exhibitionsEnabled = AppConfig.isFeatureEnabled('exhibitions');
@@ -553,21 +337,6 @@ class _InstitutionHubState extends State<InstitutionHub> {
     if (_selectedIndex == index) return;
     setState(() => _selectedIndex = index);
     widget.onTabChanged?.call(index);
-  }
-
-  Widget _buildRoleBlockedContent({
-    required String title,
-    required String description,
-    required IconData icon,
-  }) {
-    final l10n = AppLocalizations.of(context)!;
-    return _buildStateSlot(
-      EmptyStateCard(
-        icon: icon,
-        title: title,
-        description: '$description\n\n${l10n.institutionHubSeparateWalletsTip}',
-      ),
-    );
   }
 
   /// Centers a flat state card and lets it scroll when the slot is short,
@@ -645,212 +414,28 @@ class _InstitutionHubState extends State<InstitutionHub> {
     );
   }
 
-  void _showInstitutionApplicationModal() {
-    _organizationController.clear();
-    _contactController.clear();
-    _missionController.clear();
-    _focusController.clear();
-    final scaffold = ScaffoldMessenger.of(context);
-    final needsWallet = _resolveWalletAddress().isEmpty;
-
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (sheetContext) {
-        final l10n = AppLocalizations.of(sheetContext)!;
-        final scheme = Theme.of(context).colorScheme;
-        final roles = KubusColorRoles.of(context);
-        return SingleChildScrollView(
-          child: BackdropGlassSheet(
-            padding: const EdgeInsets.all(KubusSpacing.lg),
-            showHandle: false,
-            backgroundColor:
-                scheme.surfaceContainerHighest.withValues(alpha: 0.18),
-            child: Form(
-              key: _applicationFormKey,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  KubusSheetHeader(
-                    title: l10n.institutionHubApplicationTitle,
-                    subtitle: l10n.institutionHubApplicationSubtitle,
-                    showHandle: false,
-                  ),
-                  const SizedBox(height: KubusSpacing.sm),
-                  if (needsWallet) ...[
-                    KubusNoticeBanner(
-                      icon: Icons.account_balance_wallet_outlined,
-                      title: l10n.institutionHubApplicationWalletBannerTitle,
-                      message: l10n.institutionHubApplicationWalletWhy,
-                      tone: KubusStatusTone.neutral,
-                      margin: EdgeInsets.zero,
-                    ),
-                    const SizedBox(height: KubusSpacing.md),
-                  ],
-                  TextFormField(
-                    controller: _organizationController,
-                    decoration: InputDecoration(
-                      labelText:
-                          l10n.institutionHubApplicationOrganizationLabel,
-                      border: OutlineInputBorder(),
-                    ),
-                    validator: (value) =>
-                        (value == null || value.trim().isEmpty)
-                            ? l10n.institutionHubApplicationOrganizationRequired
-                            : null,
-                  ),
-                  const SizedBox(height: KubusSpacing.md),
-                  TextFormField(
-                    controller: _contactController,
-                    decoration: InputDecoration(
-                      labelText: l10n.institutionHubApplicationContactLabel,
-                      border: OutlineInputBorder(),
-                    ),
-                    validator: (value) =>
-                        (value == null || value.trim().isEmpty)
-                            ? l10n.institutionHubApplicationContactRequired
-                            : null,
-                  ),
-                  const SizedBox(height: KubusSpacing.md),
-                  TextFormField(
-                    controller: _focusController,
-                    decoration: InputDecoration(
-                      labelText: l10n.institutionHubApplicationFocusLabel,
-                      border: OutlineInputBorder(),
-                    ),
-                    validator: (value) =>
-                        (value == null || value.trim().isEmpty)
-                            ? l10n.institutionHubApplicationFocusRequired
-                            : null,
-                  ),
-                  const SizedBox(height: KubusSpacing.md),
-                  TextFormField(
-                    controller: _missionController,
-                    maxLines: 4,
-                    decoration: InputDecoration(
-                      labelText: l10n.institutionHubApplicationMissionLabel,
-                      alignLabelWithHint: true,
-                      border: OutlineInputBorder(),
-                    ),
-                    validator: (value) =>
-                        (value == null || value.trim().length < 20)
-                            ? l10n.institutionHubApplicationMissionRequired
-                            : null,
-                  ),
-                  const SizedBox(height: KubusSpacing.lg),
-                  SizedBox(
-                    width: double.infinity,
-                    child: KubusButton(
-                      onPressed: () async {
-                        if (!_applicationFormKey.currentState!.validate()) {
-                          return;
-                        }
-                        final sheetNavigator = Navigator.of(sheetContext);
-                        final profileProvider = context.read<ProfileProvider>();
-                        final walletProvider = context.read<WalletProvider>();
-                        final web3Provider = context.read<Web3Provider>();
-                        final daoProvider = context.read<DAOProvider>();
-                        // The wallet signature is requested here, at submit,
-                        // not when the form opens. A declined or unfinished
-                        // guard keeps the form and its input on screen.
-                        final canProceed =
-                            await WalletActionGuard.ensureSignerAccess(
-                          context: context,
-                          profileProvider: profileProvider,
-                          walletProvider: walletProvider,
-                        );
-                        if (!mounted || !canProceed) {
-                          return;
-                        }
-                        final wallet =
-                            profileProvider.currentUser?.walletAddress ??
-                                web3Provider.walletAddress;
-                        if (wallet.isEmpty) {
-                          scaffold.showKubusSnackBar(
-                            SnackBar(
-                              content: Text(
-                                l10n.institutionHubApplicationWalletRequired,
-                              ),
-                            ),
-                          );
-                          return;
-                        }
-                        sheetNavigator.pop();
-                        try {
-                          final review =
-                              await daoProvider.submitInstitutionReview(
-                            organization: _organizationController.text.trim(),
-                            contact: _contactController.text.trim(),
-                            focus: _focusController.text.trim(),
-                            mission: _missionController.text.trim(),
-                          );
-                          if (!mounted) return;
-                          if (review != null) {
-                            await _loadInstitutionReviewStatus(
-                              forceRefresh: true,
-                            );
-                          }
-                          if (!mounted) return;
-                          scaffold.showKubusSnackBar(
-                            SnackBar(
-                              content: Text(
-                                review != null
-                                    ? l10n
-                                        .institutionHubApplicationSubmittedToast
-                                    : l10n
-                                        .institutionHubApplicationSubmitUnavailableToast,
-                              ),
-                              backgroundColor: review != null
-                                  ? roles.positiveAction
-                                  : roles.negativeAction,
-                            ),
-                          );
-                        } catch (e) {
-                          if (!mounted) return;
-                          scaffold.showKubusSnackBar(
-                            SnackBar(
-                              content: Text(
-                                l10n.institutionHubApplicationSubmitFailedToast(
-                                  e,
-                                ),
-                              ),
-                              backgroundColor: roles.negativeAction,
-                            ),
-                          );
-                        }
-                      },
-                      label: l10n.institutionHubApplicationSubmitButton,
-                      isFullWidth: true,
-                      backgroundColor: scheme.primary,
-                      foregroundColor: scheme.onPrimary,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _buildLockedContent({required bool reviewPending}) {
+  Widget _buildLockedContent({
+    required bool reviewPending,
+    required bool unavailable,
+  }) {
     final l10n = AppLocalizations.of(context)!;
     return _buildStateSlot(
       EmptyStateCard(
         icon: Icons.lock_outline,
-        // Names the lock, not the review status: the status panel (or the
-        // desktop rail) already says "Not applied" and why.
         title: l10n.institutionHubLockedTitle,
-        description: l10n.institutionHubLockedDescription,
-        // The application panel above owns the review CTA; without it (the
-        // desktop shell) this surface carries the action, except while a
-        // review is already pending.
+        description: unavailable
+            ? l10n.verificationUnavailable
+            : l10n.institutionHubLockedDescription,
+        // The verification panel above owns the claim / request actions; without
+        // it (the desktop shell) this surface carries the action, except while a
+        // request is already pending.
         showAction: !widget.showVerificationCard && !reviewPending,
-        actionLabel: l10n.institutionHubApplyForReviewAction,
-        onAction: _showInstitutionApplicationModal,
+        actionLabel: unavailable
+            ? l10n.verificationCtaRetry
+            : l10n.verificationInstitutionClaimTitle,
+        onAction: unavailable
+            ? () => context.read<AccountVerificationProvider>().refresh()
+            : () => showInstitutionDirectorySheet(context),
       ),
     );
   }

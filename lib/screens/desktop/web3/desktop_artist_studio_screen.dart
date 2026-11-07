@@ -4,18 +4,17 @@ import 'package:art_kubus/l10n/app_localizations.dart';
 import 'dart:async';
 import '../../../providers/themeprovider.dart';
 import '../../../providers/profile_provider.dart';
-import '../../../providers/dao_provider.dart';
+import '../../../providers/account_verification_provider.dart';
 import '../../../providers/web3provider.dart';
 import '../../../providers/collab_provider.dart';
 import '../../../providers/stats_provider.dart';
 import '../../../providers/analytics_filters_provider.dart';
 import '../../../providers/desktop_dashboard_state_provider.dart';
 import '../../../config/config.dart';
-import '../../../models/dao.dart';
+import '../../../models/account_verification.dart';
 import '../../../models/promotion.dart';
 import '../../../utils/app_animations.dart';
 import '../../../utils/app_color_utils.dart';
-import '../../../utils/dao_role_verification.dart';
 import '../../../utils/kubus_color_roles.dart';
 import '../../../utils/design_tokens.dart';
 import '../../../utils/creator_shell_navigation.dart';
@@ -46,11 +45,6 @@ class DesktopArtistStudioScreen extends StatefulWidget {
 class _DesktopArtistStudioScreenState extends State<DesktopArtistStudioScreen>
     with TickerProviderStateMixin {
   late AnimationController _animationController;
-  DAOReview? _artistReview;
-  bool _reviewLoading = false;
-  bool _hasFetchedReviewForWallet = false;
-  String _lastReviewWallet = '';
-
   String _lastStatsWallet = '';
 
   void _openArtworkWorkspace() {
@@ -73,22 +67,12 @@ class _DesktopArtistStudioScreenState extends State<DesktopArtistStudioScreen>
       vsync: this,
     );
     _animationController.forward();
-
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _loadArtistReviewStatus(forceRefresh: true);
-    });
   }
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
     final wallet = _resolveWalletAddress(listen: true);
-    final walletChanged = wallet != _lastReviewWallet;
-    if (!walletChanged && _hasFetchedReviewForWallet) return;
-
-    if (wallet.isNotEmpty) {
-      _loadArtistReviewStatus(forceRefresh: true);
-    }
 
     // StatsProvider.ensureSnapshot() notifies listeners; calling it during build
     // (e.g. from a widget build method) can trigger "setState/markNeedsBuild"
@@ -127,41 +111,6 @@ class _DesktopArtistStudioScreenState extends State<DesktopArtistStudioScreen>
       walletAddress: profileProvider.currentUser?.walletAddress,
       wallet: web3Provider.walletAddress,
     );
-  }
-
-  Future<void> _loadArtistReviewStatus({bool forceRefresh = false}) async {
-    final wallet = _resolveWalletAddress();
-    if (wallet.isEmpty || _reviewLoading) return;
-    if (!forceRefresh &&
-        _hasFetchedReviewForWallet &&
-        wallet == _lastReviewWallet) {
-      return;
-    }
-
-    final requestedWallet = wallet;
-    setState(() {
-      _reviewLoading = true;
-      _lastReviewWallet = requestedWallet;
-    });
-
-    try {
-      final daoProvider = context.read<DAOProvider>();
-      final review = await daoProvider.loadReviewForWallet(requestedWallet,
-          forceRefresh: forceRefresh);
-      if (!mounted || requestedWallet != _lastReviewWallet) return;
-
-      setState(() {
-        _artistReview =
-            review ?? daoProvider.findReviewForWallet(requestedWallet);
-        _hasFetchedReviewForWallet = true;
-        _reviewLoading = false;
-      });
-    } catch (e) {
-      if (!mounted || requestedWallet != _lastReviewWallet) return;
-      setState(() {
-        _reviewLoading = false;
-      });
-    }
   }
 
   @override
@@ -242,15 +191,9 @@ class _DesktopArtistStudioScreenState extends State<DesktopArtistStudioScreen>
     final dashboardState = context.watch<DesktopDashboardStateProvider>();
     final section = dashboardState.artistStudioSection;
 
-    final daoProvider = context.watch<DAOProvider>();
-    final wallet = _resolveWalletAddress(listen: true);
-    final review = _artistReview ??
-        (wallet.isNotEmpty ? daoProvider.findReviewForWallet(wallet) : null);
-    final verification = DaoRoleVerification(
-      walletAddress: wallet,
-      review: review,
-    );
-    final isApprovedArtist = verification.isApprovedFor(DaoRoleType.artist);
+    // The server's answer for this account, not a wallet-keyed review.
+    final isApprovedArtist =
+        context.watch<AccountVerificationProvider>().isArtist;
 
     final showExhibitions = AppConfig.isFeatureEnabled('exhibitions');
 
@@ -473,42 +416,41 @@ class _DesktopArtistStudioScreenState extends State<DesktopArtistStudioScreen>
 
   Widget _buildVerificationStatusCard(ThemeProvider themeProvider) {
     final l10n = AppLocalizations.of(context)!;
-    final wallet = _resolveWalletAddress();
-    final daoProvider = context.watch<DAOProvider>();
-    final review = _artistReview ??
-        (wallet.isNotEmpty ? daoProvider.findReviewForWallet(wallet) : null);
-    final verification = DaoRoleVerification(
-      walletAddress: wallet,
-      review: review,
-    );
-    final isApproved = verification.isApprovedFor(DaoRoleType.artist);
-    final isPending = verification.isPendingFor(DaoRoleType.artist);
-    final isRejected = verification.isRejectedFor(DaoRoleType.artist);
+    final verification = context.watch<AccountVerificationProvider>();
 
     var tone = KubusStatusTone.neutral;
     var statusText = l10n.desktopArtistStudioVerificationNotAppliedTitle;
     var statusDescription =
         l10n.desktopArtistStudioVerificationNotAppliedDescription;
 
-    if (_reviewLoading) {
+    if (verification.isLoading) {
       statusText = l10n.desktopArtistStudioVerificationLoadingTitle;
       statusDescription =
           l10n.desktopArtistStudioVerificationLoadingDescription;
-    } else if (isApproved) {
-      tone = KubusStatusTone.positive;
-      statusText = l10n.desktopArtistStudioVerificationApprovedTitle;
-      statusDescription =
-          l10n.desktopArtistStudioVerificationApprovedDescription;
-    } else if (isPending) {
-      tone = KubusStatusTone.warning;
-      statusText = l10n.desktopArtistStudioVerificationPendingTitle;
-      statusDescription =
-          l10n.desktopArtistStudioVerificationPendingDescription;
-    } else if (isRejected) {
-      tone = KubusStatusTone.negative;
-      statusText = l10n.desktopArtistStudioVerificationRejectedTitle;
-      statusDescription =
-          l10n.desktopArtistStudioVerificationRejectedDescription;
+    } else if (verification.isUnavailable) {
+      statusText = l10n.verificationStatusNotApplied;
+      statusDescription = l10n.verificationUnavailable;
+    } else {
+      switch (verification.artistStatus) {
+        case ArtistVerificationStatus.approved:
+          tone = KubusStatusTone.positive;
+          statusText = l10n.desktopArtistStudioVerificationApprovedTitle;
+          statusDescription =
+              l10n.desktopArtistStudioVerificationApprovedDescription;
+        case ArtistVerificationStatus.pending:
+          tone = KubusStatusTone.warning;
+          statusText = l10n.desktopArtistStudioVerificationPendingTitle;
+          statusDescription =
+              l10n.desktopArtistStudioVerificationPendingDescription;
+        case ArtistVerificationStatus.rejected:
+        case ArtistVerificationStatus.revoked:
+          tone = KubusStatusTone.negative;
+          statusText = l10n.desktopArtistStudioVerificationRejectedTitle;
+          statusDescription =
+              l10n.desktopArtistStudioVerificationRejectedDescription;
+        case ArtistVerificationStatus.notApplied:
+          break;
+      }
     }
 
     return KubusStatusPanel(
@@ -516,7 +458,7 @@ class _DesktopArtistStudioScreenState extends State<DesktopArtistStudioScreen>
       title: statusText,
       description: statusDescription,
       tone: tone,
-      isLoading: _reviewLoading,
+      isLoading: verification.isLoading,
       // No detail line: the real "apply" action lives in the main pane;
       // repeating its button label here read as a dead button.
     );

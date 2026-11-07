@@ -13,7 +13,6 @@ import '../models/user.dart';
 import '../services/user_service.dart';
 import '../services/profile_package_mutation_tracker.dart';
 import '../services/event_bus.dart';
-import '../models/dao.dart';
 import '../utils/usable_public_profile.dart';
 import '../utils/media_url_resolver.dart';
 import '../utils/profile_media_ref_utils.dart';
@@ -769,8 +768,6 @@ class ProfileProvider extends foundation.ChangeNotifier {
 
       final walletAddress = _currentUser?.walletAddress.trim() ?? '';
       if (walletAddress.isNotEmpty) {
-        await _applyDaoReviewRoles(walletAddress, sessionEpoch: sessionEpoch);
-        if (!isCurrentLoad()) return;
         await _loadBackendStats(walletAddress, isCurrent: isCurrentLoad);
         if (!isCurrentLoad()) return;
         await _writeAccountPrefsIfCurrent(
@@ -895,9 +892,6 @@ class ProfileProvider extends foundation.ChangeNotifier {
             );
           }
         }
-        // If profile missing role flags but DAO review approved, promote accordingly
-        await _applyDaoReviewRoles(walletAddress, sessionEpoch: sessionEpoch);
-        if (!isCurrentLoad()) return;
         // Ensure avatar URL is rasterized and absolute
         try {
           final av = _currentUser?.avatar ?? '';
@@ -979,16 +973,6 @@ class ProfileProvider extends foundation.ChangeNotifier {
                 await _apiService.getProfileByWallet(walletAddress);
             if (!isCurrentLoad()) return;
             _currentUser = UserProfile.fromJson(profileData);
-            // If profile missing artist flag but DAO review approved, promote to artist
-            try {
-              final review =
-                  await _apiService.getDAOReview(idOrWallet: walletAddress);
-              final status = review?['status']?.toString().toLowerCase();
-              if (status == 'approved' &&
-                  (_currentUser?.isArtist ?? false) == false) {
-                _currentUser = _currentUser?.copyWith(isArtist: true);
-              }
-            } catch (_) {}
           }
           try {
             final av = _currentUser?.avatar ?? '';
@@ -1798,57 +1782,6 @@ class ProfileProvider extends foundation.ChangeNotifier {
       prefs.setBool(_personaOnboardedKeyForWallet(walletAddress), true);
     } catch (_) {}
     return existing.copyWith(persona: persisted);
-  }
-
-  Future<void> _applyDaoReviewRoles(
-    String walletAddress, {
-    required int sessionEpoch,
-  }) async {
-    try {
-      final reviewPayload =
-          await _apiService.getDAOReview(idOrWallet: walletAddress);
-      if (reviewPayload == null) return;
-      final daoReview = DAOReview.fromJson(reviewPayload);
-      final previousArtist = _currentUser?.isArtist ?? false;
-      final previousInstitution = _currentUser?.isInstitution ?? false;
-      final existingPreferences =
-          _currentUser?.preferences ?? _cachedPreferencesFromPrefs();
-      var nextPreferences = existingPreferences;
-      var nextArtist = previousArtist;
-      var nextInstitution = previousInstitution;
-
-      if (daoReview.isApproved) {
-        nextArtist = daoReview.isArtistApplication;
-        nextInstitution = daoReview.isInstitutionApplication;
-        nextPreferences = existingPreferences.copyWith(
-          persona:
-              daoReview.isInstitutionApplication ? 'institution' : 'creator',
-        );
-      } else if (daoReview.isRejected) {
-        nextArtist = false;
-        nextInstitution = false;
-        nextPreferences = existingPreferences.copyWith(persona: 'lover');
-      } else {
-        return;
-      }
-
-      if (nextArtist != previousArtist ||
-          nextInstitution != previousInstitution ||
-          nextPreferences.persona != existingPreferences.persona) {
-        _currentUser = _currentUser?.copyWith(
-          isArtist: nextArtist,
-          isInstitution: nextInstitution,
-          preferences: nextPreferences,
-        );
-        await _persistPreferences(nextPreferences, sessionEpoch: sessionEpoch);
-        notifyListeners();
-        try {
-          EventBus().emitProfileUpdated(_currentUser);
-        } catch (_) {}
-      }
-    } catch (e) {
-      debugPrint('ProfileProvider._applyDaoReviewRoles failed: $e');
-    }
   }
 
   /// Writes the profile privacy and preference mirrors for [sessionEpoch], the

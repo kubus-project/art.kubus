@@ -5,7 +5,6 @@ import 'dart:ui' as ui;
 import 'package:art_kubus/models/user_profile.dart';
 import 'package:art_kubus/providers/artwork_provider.dart';
 import 'package:art_kubus/providers/collab_provider.dart';
-import 'package:art_kubus/providers/dao_provider.dart';
 import 'package:art_kubus/screens/art/artwork_edit_screen.dart';
 import 'package:art_kubus/screens/community/profile_screen.dart'
     as mobile_profile;
@@ -239,8 +238,11 @@ void main() {
             brightness: b,
             signedIn: owner,
             extraProviders: [
-              ChangeNotifierProvider<DAOProvider>(
-                  create: (_) => QaApprovedRoleDAOProvider(role)),
+              qaAccountVerification(
+                artist: role == 'artist',
+                institutionIds:
+                    role == 'institution' ? const ['inst-1'] : const [],
+              ),
             ]);
       });
     }

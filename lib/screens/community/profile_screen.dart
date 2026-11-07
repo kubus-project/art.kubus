@@ -15,7 +15,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../providers/themeprovider.dart';
 import '../../providers/web3provider.dart';
 import '../../providers/profile_provider.dart';
-import '../../providers/dao_provider.dart';
+import '../../providers/account_verification_provider.dart';
 import '../../providers/task_provider.dart';
 import '../../providers/artwork_provider.dart';
 import '../../providers/stats_provider.dart';
@@ -58,7 +58,6 @@ import '../../widgets/email_verification_status_badge.dart';
 import '../../widgets/profile/profile_account_health_section.dart';
 import '../../widgets/profile/profile_achievements_preview_section.dart';
 import '../../widgets/profile/profile_badges_verification_section.dart';
-import '../../models/dao.dart';
 import '../../config/config.dart';
 import '../../core/shell_routes.dart';
 import '../../utils/kubus_color_roles.dart';
@@ -185,31 +184,31 @@ class _ProfileScreenState extends State<ProfileScreen>
     super.dispose();
   }
 
-  bool _hasArtistRole(ProfileProvider profileProvider, DAOReview? review) {
+  bool _hasArtistRole(
+    ProfileProvider profileProvider,
+    AccountVerificationProvider verification,
+  ) {
     if (profileProvider.currentUser?.isArtist ?? false) return true;
-    if (review == null) return false;
-    return review.isArtistApplication && review.isApproved;
+    return verification.isArtist;
   }
 
-  bool _hasInstitutionRole(ProfileProvider profileProvider, DAOReview? review) {
+  bool _hasInstitutionRole(
+    ProfileProvider profileProvider,
+    AccountVerificationProvider verification,
+  ) {
     if (profileProvider.currentUser?.isInstitution ?? false) return true;
-    if (review == null) return false;
-    return review.isInstitutionApplication && review.isApproved;
+    return verification.hasInstitutionAccess;
   }
 
   @override
   Widget build(BuildContext context) {
     final themeProvider = Provider.of<ThemeProvider>(context);
     final profileProvider = Provider.of<ProfileProvider>(context);
-    final daoProvider = Provider.of<DAOProvider>(context);
+    final verification = Provider.of<AccountVerificationProvider>(context);
     final keyboardVisible = KeyboardInsetResolver.isKeyboardVisible(context);
     final bottomSafeInset = MediaQuery.of(context).padding.bottom;
-    final walletAddress = profileProvider.currentUser?.walletAddress ?? '';
-    final DAOReview? daoReview = walletAddress.isNotEmpty
-        ? daoProvider.findReviewForWallet(walletAddress)
-        : null;
-    final isArtist = _hasArtistRole(profileProvider, daoReview);
-    final isInstitution = _hasInstitutionRole(profileProvider, daoReview);
+    final isArtist = _hasArtistRole(profileProvider, verification);
+    final isInstitution = _hasInstitutionRole(profileProvider, verification);
 
     return Scaffold(
       backgroundColor: Colors.transparent,
@@ -604,7 +603,8 @@ class _ProfileScreenState extends State<ProfileScreen>
       context,
       listen: false,
     );
-    final daoProvider = Provider.of<DAOProvider>(context, listen: false);
+    final verificationProvider =
+        Provider.of<AccountVerificationProvider>(context, listen: false);
     final taskProvider = context.read<TaskProvider>();
     final wallet = await _resolveCurrentWallet();
 
@@ -626,9 +626,9 @@ class _ProfileScreenState extends State<ProfileScreen>
 
     if (wallet != null && wallet.isNotEmpty) {
       try {
-        await daoProvider.loadReviewForWallet(wallet, forceRefresh: true);
+        await verificationProvider.refresh();
       } catch (e) {
-        debugPrint('ProfileScreen: DAO review refresh failed: $e');
+        debugPrint('ProfileScreen: account verification refresh failed: $e');
       }
       try {
         await profileProvider.loadProfile(wallet);
@@ -962,15 +962,12 @@ class _ProfileScreenState extends State<ProfileScreen>
     if (wallet.isEmpty) {
       return;
     }
-    DAOReview? review;
-    try {
-      review = Provider.of<DAOProvider>(
-        context,
-        listen: false,
-      ).findReviewForWallet(wallet);
-    } catch (_) {}
-    final isArtist = _hasArtistRole(profileProvider, review);
-    final isInstitution = _hasInstitutionRole(profileProvider, review);
+    final verification = Provider.of<AccountVerificationProvider>(
+      context,
+      listen: false,
+    );
+    final isArtist = _hasArtistRole(profileProvider, verification);
+    final isInstitution = _hasInstitutionRole(profileProvider, verification);
     if (!(isArtist || isInstitution)) {
       return;
     }

@@ -578,13 +578,5 @@ extension BackendApiDomainAccess on BackendApiService {
           requiresBackendSession: true,
           requiresWalletSignature: true,
         ),
-        BackendTransportSurfaceDefinition(
-          name: 'getDAOReview',
-          domain: 'dao',
-          lifecycle: BackendTransportLifecycle.draftLocalOnly,
-          route: 'GET /api/dao/reviews/:id',
-          notes:
-              'DAO remains provisional and must not be treated as canonical signer authority.',
-        ),
       ];
 }

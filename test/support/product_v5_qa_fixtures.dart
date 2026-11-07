@@ -2,10 +2,9 @@ import 'package:art_kubus/config/api_keys.dart';
 import 'package:art_kubus/models/artwork.dart';
 import 'package:art_kubus/models/collab_invite.dart';
 import 'package:art_kubus/models/collab_member.dart';
-import 'package:art_kubus/models/dao.dart';
 import 'package:art_kubus/models/user_profile.dart';
 import 'package:art_kubus/models/wallet.dart';
-import 'package:art_kubus/providers/dao_provider.dart';
+import 'package:art_kubus/providers/account_verification_provider.dart';
 import 'package:art_kubus/providers/email_preferences_provider.dart';
 import 'package:art_kubus/providers/navigation_provider.dart';
 import 'package:art_kubus/providers/wallet_provider.dart';
@@ -17,6 +16,7 @@ import 'package:provider/provider.dart';
 import 'package:provider/single_child_widget.dart';
 
 import 'profile_fixtures.dart';
+import 'verification_fixtures.dart';
 
 /// Local fixtures shared by the Wave 5A visual matrix and the responsive
 /// sweep. No network, no production data.
@@ -26,30 +26,26 @@ SingleChildWidget qaEmailPreferences() =>
       create: (_) => EmailPreferencesProvider(),
     );
 
-/// DAO state in which the owner's [role] application (`artist` or
-/// `institution`) is already approved, the way it lands before
-/// `currentUser` synchronises its role flags.
-class QaApprovedRoleDAOProvider extends DAOProvider {
-  QaApprovedRoleDAOProvider(String role)
-      : review = DAOReview(
-          id: 'review-$role',
-          walletAddress: ProfileFixtures.wallet,
-          portfolioUrl: 'https://example.org/portfolio',
-          medium: 'Mural',
-          statement: 'Statement',
-          status: 'approved',
-          createdAt: DateTime.utc(2026, 9, 1),
-          metadata: <String, dynamic>{'role': role},
-        );
-
-  final DAOReview review;
-
-  @override
-  DAOReview? findReviewForWallet(String walletAddress) =>
-      walletAddress.trim().toLowerCase() ==
-              review.walletAddress.trim().toLowerCase()
-          ? review
-          : null;
+/// Account verification in which the signed-in account already holds the
+/// standing: [artist] unlocks the Studio, [institutionIds] unlock the Hub.
+/// The provider has read the server's answer, as it does once the app is up.
+SingleChildWidget qaAccountVerification({
+  bool artist = false,
+  List<String> institutionIds = const <String>[],
+}) {
+  return ChangeNotifierProvider<AccountVerificationProvider>(
+    create: (_) {
+      final state = verificationState(
+        accountId: ProfileFixtures.wallet,
+        artist: artist,
+        institutionIds: institutionIds,
+      );
+      final provider = AccountVerificationProvider(fetch: () async => state);
+      provider.bindAccount(accountId: state.accountId, isSignedIn: true);
+      provider.refresh();
+      return provider;
+    },
+  );
 }
 
 /// A returning user: [screenKeys] were visited (most recent last), so Home

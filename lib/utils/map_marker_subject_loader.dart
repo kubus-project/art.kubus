@@ -14,13 +14,11 @@ import '../providers/wallet_provider.dart';
 import '../config/config.dart';
 import 'wallet_utils.dart';
 
-/// The institutions offered as map marker subjects. The signed-in user's own
-/// wallet-derived institution is an event creator default only, not a subject.
+/// The institutions offered as map marker subjects: the real, backend-listed
+/// institutions. (No wallet-derived pseudo-institution exists any more.)
 @visibleForTesting
 List<Institution> markerSubjectInstitutions(List<Institution> institutions) {
-  return institutions
-      .where((institution) => !institution.isSelfDerivedFromWallet)
-      .toList(growable: false);
+  return List<Institution>.unmodifiable(institutions);
 }
 
 class MarkerSubjectData {

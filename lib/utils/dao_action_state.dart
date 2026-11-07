@@ -1,5 +1,4 @@
 class DaoActionState {
-  String? reviewActionId;
   String? voteActionId;
   bool proposalSubmitInFlight = false;
 
@@ -21,14 +20,6 @@ class DaoActionState {
 
   void endVote() {
     voteActionId = null;
-  }
-
-  void beginReview(String reviewId) {
-    reviewActionId = reviewId;
-  }
-
-  void endReview() {
-    reviewActionId = null;
   }
 
   static String proposalVoteActionId(String proposalId, bool isYes) {

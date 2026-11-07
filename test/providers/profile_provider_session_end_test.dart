@@ -10,17 +10,6 @@ import 'package:art_kubus/services/backend_api_service.dart';
 const MethodChannel _secureStorageChannel =
     MethodChannel('plugins.it_nomads.com/flutter_secure_storage');
 
-/// Privacy and preference mirrors that a profile load writes for the account.
-const List<String> _mirrorKeys = <String>[
-  'private_profile',
-  'allow_messages',
-  'show_activity_status',
-  'show_achievements',
-  'showAchievements',
-  'share_last_visited_location',
-  'show_collection',
-];
-
 Map<String, dynamic> _account() => <String, dynamic>{
       'id': 'user-person',
       'userId': 'user-person',
@@ -33,26 +22,14 @@ Map<String, dynamic> _account() => <String, dynamic>{
       'updatedAt': '2026-03-31T00:00:00.000Z',
     };
 
-/// Answers the account at once and holds the role review open, so a test can
-/// end the session while the review is still in flight.
-class _HeldReviewApi implements ProfileBackendApi {
-  final Completer<void> reviewStarted = Completer<void>();
-  final Completer<Map<String, dynamic>?> _review =
-      Completer<Map<String, dynamic>?>();
-
-  void answerReview(Map<String, dynamic>? review) => _review.complete(review);
-
+/// Answers the account at once; subclasses hold one call open so a test can end
+/// the session while it is still in flight.
+class _HeldApi implements ProfileBackendApi {
   @override
   String get baseUrl => 'https://api.kubus.site';
 
   @override
   Future<Map<String, dynamic>> getMyProfile() async => _account();
-
-  @override
-  Future<Map<String, dynamic>?> getDAOReview({required String idOrWallet}) {
-    if (!reviewStarted.isCompleted) reviewStarted.complete();
-    return _review.future;
-  }
 
   @override
   Future<Map<String, dynamic>> registerWallet({
@@ -101,7 +78,7 @@ class _HeldReviewApi implements ProfileBackendApi {
 
 /// Holds the account save open so a test can end the session while the save
 /// is still in flight.
-class _HeldSaveApi extends _HeldReviewApi {
+class _HeldSaveApi extends _HeldApi {
   final Completer<void> saveStarted = Completer<void>();
   final Completer<Map<String, dynamic>> _save =
       Completer<Map<String, dynamic>>();
@@ -129,67 +106,6 @@ void main() {
   tearDown(() {
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(_secureStorageChannel, null);
-  });
-
-  test('a load for a session that stays open keeps its privacy mirrors',
-      () async {
-    final api = _HeldReviewApi();
-    final provider = ProfileProvider(apiService: api);
-    final load = provider.loadAuthenticatedProfile();
-    await api.reviewStarted.future;
-    api.answerReview(null);
-    await load;
-
-    final prefs = await SharedPreferences.getInstance();
-    for (final key in _mirrorKeys) {
-      expect(prefs.get(key), isNotNull,
-          reason: '$key missing for a live session');
-    }
-  });
-
-  test('a role review answered after sign-out writes no privacy mirror',
-      () async {
-    final api = _HeldReviewApi();
-    final provider = ProfileProvider(apiService: api);
-    final load = provider.loadAuthenticatedProfile();
-    await api.reviewStarted.future;
-
-    // Sign-out lands while the review is in flight. SettingsService.logout
-    // removes the mirrors at that point.
-    await BackendApiService().clearAuth();
-    provider.signOut();
-    final prefs = await SharedPreferences.getInstance();
-    for (final key in _mirrorKeys) {
-      await prefs.remove(key);
-    }
-
-    api.answerReview(<String, dynamic>{
-      'id': 'review-1',
-      'walletAddress': 'WalletAddr111',
-      'status': 'approved',
-      'createdAt': '2026-03-31T00:00:00.000Z',
-    });
-    await load;
-
-    for (final key in _mirrorKeys) {
-      expect(prefs.get(key), isNull, reason: '$key written after sign-out');
-    }
-  });
-
-  test('a load superseded by a session change releases the loading flag',
-      () async {
-    final api = _HeldReviewApi();
-    final provider = ProfileProvider(apiService: api);
-    final load = provider.loadAuthenticatedProfile();
-    await api.reviewStarted.future;
-
-    // A wallet switch re-issues the token without a sign-out, so nothing else
-    // clears the spinner for this load.
-    await BackendApiService().clearAuth();
-    api.answerReview(null);
-    await load;
-
-    expect(provider.isLoading, isFalse);
   });
 
   test('a profile save that finishes after sign-out restores no account state',

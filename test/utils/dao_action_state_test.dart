@@ -41,17 +41,5 @@ void main() {
       expect(state.beginVote('proposal-1', false), isTrue);
       expect(state.voteActionId, 'proposal-1:no');
     });
-
-    test('review action id resets explicitly', () {
-      final state = DaoActionState();
-
-      state.beginReview('review-1');
-
-      expect(state.reviewActionId, 'review-1');
-
-      state.endReview();
-
-      expect(state.reviewActionId, isNull);
-    });
   });
 }

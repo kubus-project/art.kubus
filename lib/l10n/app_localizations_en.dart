@@ -1979,57 +1979,8 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get onboardingFlowDaoReviewTitle => 'Governance review';
-
-  @override
-  String get onboardingFlowDaoReviewInstitutionBody =>
-      'Submit your institution details for community governance review before account setup is completed.';
-
-  @override
-  String get onboardingFlowDaoReviewArtistBody =>
-      'Submit your practice for community governance review before account setup is completed.';
-
-  @override
   String get onboardingFlowDaoReviewCompleteFormError =>
       'Complete the review form before continuing.';
-
-  @override
-  String get onboardingFlowDaoReviewSubmitFailed =>
-      'Unable to submit the governance review right now.';
-
-  @override
-  String onboardingFlowDaoReviewStatus(Object status) {
-    return 'Current status: $status';
-  }
-
-  @override
-  String get onboardingFlowDaoReviewOrganizationLabel => 'Organization';
-
-  @override
-  String get onboardingFlowDaoReviewContactLabel => 'Contact URL or email';
-
-  @override
-  String get onboardingFlowDaoReviewPortfolioLabel => 'Portfolio URL';
-
-  @override
-  String get onboardingFlowDaoReviewInstitutionFocusLabel =>
-      'Institution focus';
-
-  @override
-  String get onboardingFlowDaoReviewPrimaryMediumLabel => 'Primary medium';
-
-  @override
-  String get onboardingFlowDaoReviewMissionLabel => 'Mission';
-
-  @override
-  String get onboardingFlowDaoReviewArtistStatementLabel => 'Artist statement';
-
-  @override
-  String get onboardingFlowDaoReviewReviewerNotes => 'Reviewer notes';
-
-  @override
-  String get onboardingFlowDaoReviewSubmitAction =>
-      'Submit for governance review';
 
   @override
   String get onboardingWelcomeTitle => 'art.kubus is an open art platform.';
@@ -4044,139 +3995,6 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get institutionHubSeparateWalletsTip =>
       'Tip: Use separate wallets for artist and institution roles to keep governance review contexts clear.';
-
-  @override
-  String get institutionHubApplyForReviewAction => 'Apply for review';
-
-  @override
-  String get institutionHubArtistBadgeActiveTitle => 'Artist badge active';
-
-  @override
-  String get institutionHubArtistBadgeActiveDescription =>
-      'Artist wallets unlock creation tooling. Institution flows need a dedicated wallet without creator approvals.';
-
-  @override
-  String get institutionHubArtistReviewInProgressTitle =>
-      'Artist review in progress';
-
-  @override
-  String get institutionHubArtistReviewInProgressDescription =>
-      'You have an active artist application. Wait for that decision or reset it before continuing as an institution.';
-
-  @override
-  String get institutionHubApplicationTitle => 'Institution application';
-
-  @override
-  String get institutionHubApplicationSubtitle =>
-      'Share your mission, programming focus, and how you plan to collaborate with the community.';
-
-  @override
-  String get institutionHubApplicationOrganizationLabel => 'Organization name';
-
-  @override
-  String get institutionHubApplicationContactLabel =>
-      'Website or contact email';
-
-  @override
-  String get institutionHubApplicationFocusLabel => 'Curation focus';
-
-  @override
-  String get institutionHubApplicationMissionLabel => 'Mission and goals';
-
-  @override
-  String get institutionHubApplicationOrganizationRequired =>
-      'Please provide your organization name.';
-
-  @override
-  String get institutionHubApplicationContactRequired =>
-      'Share a website or contact email.';
-
-  @override
-  String get institutionHubApplicationFocusRequired =>
-      'Let us know your programming focus.';
-
-  @override
-  String get institutionHubApplicationMissionRequired =>
-      'Describe your mission in at least 20 characters.';
-
-  @override
-  String get institutionHubApplicationWalletBannerTitle =>
-      'A wallet signature is needed to submit';
-
-  @override
-  String get institutionHubApplicationWalletRequired =>
-      'Connect a wallet before submitting.';
-
-  @override
-  String get institutionHubApplicationWalletWhy =>
-      'Applying is signed with your wallet, so the review stays tied to a wallet you control. Browsing institutions does not need one.';
-
-  @override
-  String get institutionHubApplicationSubmittedToast =>
-      'Application submitted for governance review.';
-
-  @override
-  String get institutionHubApplicationSubmitUnavailableToast =>
-      'Unable to submit application right now.';
-
-  @override
-  String institutionHubApplicationSubmitFailedToast(Object error) {
-    return 'Submission failed: $error';
-  }
-
-  @override
-  String get institutionHubApplicationSubmitButton => 'Submit application';
-
-  @override
-  String get institutionHubCrossRoleConflictTitle => 'Role conflict detected';
-
-  @override
-  String get institutionHubArtistWalletSwitchDescription =>
-      'Artist wallets are optimized for creation tooling. Switch to a dedicated institutional wallet before applying for curation tools.';
-
-  @override
-  String get institutionHubArtistReviewPendingResetDescription =>
-      'You currently have an artist application pending. Finish that review or request a reset prior to submitting an institution application.';
-
-  @override
-  String get institutionHubArtistSubmissionConflictDescription =>
-      'We detected an artist submission for this wallet. Clear it from settings before continuing as an institution.';
-
-  @override
-  String get institutionHubApplicationCardSubtitle =>
-      'Submit your organization for governance review and unlock institutional tooling.';
-
-  @override
-  String get institutionHubDaoStatusApproved => 'APPROVED';
-
-  @override
-  String get institutionHubDaoStatusPending => 'PENDING';
-
-  @override
-  String get institutionHubDaoStatusRejected => 'REJECTED';
-
-  @override
-  String get institutionHubDaoStatusInReview => 'IN REVIEW';
-
-  @override
-  String get institutionHubDaoStatusNotApplied => 'NOT APPLIED';
-
-  @override
-  String get institutionHubCtaApprovedByDao => 'Approved by governance review';
-
-  @override
-  String get institutionHubCtaPendingDaoReview => 'Pending governance review';
-
-  @override
-  String get institutionHubCtaApplyAsInstitution => 'Apply as an institution';
-
-  @override
-  String get institutionHubDaoStatusSyncedLabel =>
-      'Status synced from governance review';
-
-  @override
-  String get institutionHubDaoReviewQueueMessage =>
-      'Your submission is in the governance review queue.';
 
   @override
   String get institutionHubApprovedToolsMessage =>
@@ -8868,128 +8686,8 @@ class AppLocalizationsEn extends AppLocalizations {
       'Create AR markers for your artwork and share them with the world';
 
   @override
-  String get artistStudioInstitutionRoleActiveTitle =>
-      'Institution role active';
-
-  @override
-  String get artistStudioInstitutionReviewInProgressTitle =>
-      'Institution review in progress';
-
-  @override
-  String get artistStudioInstitutionRoleActiveDescription =>
-      'Institution accounts can view exhibitions and events but cannot maintain artist applications. Use a dedicated artist wallet to create artworks.';
-
-  @override
-  String get artistStudioInstitutionReviewInProgressDescription =>
-      'You have an institution application pending. Complete or withdraw it before switching to an artist review.';
-
-  @override
-  String get artistStudioCrossRoleInstitutionBadgeActiveTitle =>
-      'Institution badge active';
-
-  @override
-  String get artistStudioCrossRoleInstitutionBadgeActiveDescription =>
-      'Institution accounts unlock curation & event tooling. Use a dedicated artist wallet if you need creator utilities.';
-
-  @override
-  String get artistStudioCrossRoleInstitutionReviewInProgressTitle =>
-      'Institution review in progress';
-
-  @override
-  String get artistStudioCrossRoleInstitutionReviewInProgressDescription =>
-      'You currently have an institution application pending. Complete that process or request a review reset before applying as an artist.';
-
-  @override
-  String get artistStudioCrossRoleConflictTitle => 'Role conflict detected';
-
-  @override
-  String get artistStudioCrossRoleConflictDescription =>
-      'We detected an existing institution record for this wallet. Clear it from settings before applying as an artist.';
-
-  @override
-  String get artistStudioDaoCardTitle =>
-      'Artist application (governance review)';
-
-  @override
-  String get artistStudioDaoCardSubtitle =>
-      'Submit your practice for governance review. This is how art.kubus opens artist tools while keeping the platform community-led.';
-
-  @override
-  String get artistStudioDaoStatusApproved => 'APPROVED';
-
-  @override
-  String get artistStudioDaoStatusPending => 'PENDING';
-
-  @override
-  String get artistStudioDaoStatusRejected => 'REJECTED';
-
-  @override
-  String get artistStudioDaoStatusNotApplied => 'NOT APPLIED';
-
-  @override
-  String get artistStudioStatusSyncedFromDao =>
-      'Status synced from governance review';
-
-  @override
-  String get artistStudioReviewPendingInfo =>
-      'Your submission is in the governance review queue. We will let you know when the review is complete.';
-
-  @override
-  String get artistStudioReviewApprovedInfo =>
-      'Your practice has been approved through governance review. Studio tools are ready.';
-
-  @override
-  String get artistStudioReviewRejectedInfo =>
-      'Your last submission was rejected. You can resubmit with updates.';
-
-  @override
-  String get artistStudioConnectWalletToSubmitForDaoReview =>
-      'Connect a wallet before submitting for governance review.';
-
-  @override
-  String get artistStudioCtaConnectWalletToApply => 'Connect a wallet to apply';
-
-  @override
-  String get artistStudioAccountCtaApply => 'Apply for artist review';
-
-  @override
-  String get artistStudioAccountCtaRetry => 'Try again';
-
-  @override
-  String get artistStudioAccountApplicationUnavailable =>
-      'Artist applications are unavailable right now. Try again later.';
-
-  @override
-  String get artistStudioAccountDetailNotApplied =>
-      'Send your portfolio, medium and statement. A wallet is not needed to apply.';
-
-  @override
-  String get artistStudioAccountDetailPending =>
-      'Your application is waiting for an artist review.';
-
-  @override
-  String get artistStudioAccountDetailApproved =>
-      'Your artist application was approved.';
-
-  @override
-  String get artistStudioAccountDetailRejected =>
-      'This application was not approved. You can send a new one.';
-
-  @override
   String get artistStudioAccountPortfolioInvalid =>
       'Enter a valid web address, for example example.com.';
-
-  @override
-  String get artistStudioCtaApprovedByDao => 'Approved by governance review';
-
-  @override
-  String get artistStudioCtaPendingDaoReview => 'Pending governance review';
-
-  @override
-  String get artistStudioCtaResubmitForReview => 'Resubmit for review';
-
-  @override
-  String get artistStudioCtaApplyForDaoReview => 'Apply for governance review';
 
   @override
   String get artistPromotionRequiresWalletReason =>
@@ -9036,35 +8734,24 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get artistStudioUnlocksAfterDaoApprovalToast =>
-      'Artist Studio unlocks after governance review approval.';
-
-  @override
-  String get artistStudioSeparateWalletsTip =>
-      'Use separate wallets for artist and institution roles if you want to keep access and review paths clearly separated.';
+      'Artist Studio unlocks once your application is approved.';
 
   @override
   String get artistStudioLockedTitle => 'Artist Studio is locked';
 
   @override
   String get artistStudioLockedDescription =>
-      'Apply for governance review to unlock studio tools for publishing, showcasing, and tracking your work.';
+      'Apply as an artist to unlock tools for publishing, showcasing and tracking your work.';
 
   @override
   String get institutionHubLockedTitle => 'Institution Hub is locked';
 
   @override
   String get institutionHubLockedDescription =>
-      'Apply for governance review to unlock institution tools for events, exhibitions, and programme analytics.';
+      'Claim your institution or request a new presence to unlock tools for events, exhibitions and programme analytics.';
 
   @override
   String get artistStudioSettingsTitle => 'Studio Settings';
-
-  @override
-  String get artistStudioApplicationModalTitle => 'Artist application';
-
-  @override
-  String get artistStudioApplicationModalSubtitle =>
-      'Share a snapshot of your practice. Submissions are routed to the governance review queue.';
 
   @override
   String get artistStudioApplicationFieldPortfolioLabel =>
@@ -9089,25 +8776,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String artistStudioApplicationValidationStatementMinChars(Object min) {
     return 'Share at least $min characters about your work';
   }
-
-  @override
-  String get artistStudioApplicationWalletRequiredToast =>
-      'Connect a wallet before submitting for review.';
-
-  @override
-  String get artistStudioApplicationReviewTitle => 'Artist application';
-
-  @override
-  String get artistStudioApplicationSubmittedToast =>
-      'Application submitted to governance reviewers.';
-
-  @override
-  String get artistStudioApplicationUnableToSubmitToast =>
-      'Unable to submit application right now.';
-
-  @override
-  String get artistStudioApplicationSubmissionFailedToast =>
-      'Submission failed. Please try again.';
 
   @override
   String get artistStudioApplicationSubmitButton => 'Submit application';
@@ -9240,10 +8908,6 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get desktopInstitutionPromotionWalletRequiredReason =>
       'Connect a wallet to create promotions.';
-
-  @override
-  String get desktopInstitutionPromotionArtistConflictReason =>
-      'This wallet is verified as an artist. Use an institution wallet to promote institution content.';
 
   @override
   String get desktopInstitutionPromotionRequiresApprovalReason =>
@@ -9879,126 +9543,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get communityPostingFeatureLabel => 'Posting';
-
-  @override
-  String get daoModerationApproveLabel => 'Approve';
-
-  @override
-  String get daoModerationRejectLabel => 'Reject';
-
-  @override
-  String get daoModerationSetPendingLabel => 'Set pending';
-
-  @override
-  String daoModerationDecisionDialogTitle(Object decision) {
-    return '$decision submission?';
-  }
-
-  @override
-  String get daoModerationDecisionDialogDescription =>
-      'Provide optional reviewer notes for the applicant.';
-
-  @override
-  String get daoModerationReviewerNotesLabel => 'Reviewer notes (optional)';
-
-  @override
-  String get daoReviewStatusApproved => 'Approved';
-
-  @override
-  String get daoReviewStatusRejected => 'Rejected';
-
-  @override
-  String get daoReviewStatusPending => 'Pending';
-
-  @override
-  String get daoReviewStatusInReview => 'In review';
-
-  @override
-  String get daoModerationDisabledToast => 'Review moderation is disabled.';
-
-  @override
-  String get daoModerationWalletRequiredToast =>
-      'Connect a wallet to moderate submissions.';
-
-  @override
-  String get daoModerationSelfNotAllowedToast =>
-      'You cannot moderate your own submission.';
-
-  @override
-  String get daoModerationSubmissionApprovedToast => 'Submission approved';
-
-  @override
-  String get daoModerationSubmissionUpdatedToast => 'Submission updated';
-
-  @override
-  String get daoModerationNoChangesSavedToast => 'No changes saved';
-
-  @override
-  String get daoModerationUpdateFailedToast =>
-      'Unable to update review right now.';
-
-  @override
-  String get daoReviewDetailsVotingDisabledForApplicant =>
-      'Voting disabled for the applicant profile.';
-
-  @override
-  String get daoReviewDetailsVotingDisabledForSubmission =>
-      'Voting is disabled for this submission.';
-
-  @override
-  String get daoReviewDetailsVotingManagedByDao =>
-      'Review decisions are managed by the DAO review process.';
-
-  @override
-  String get daoReviewQueueTitle => 'Governance review queue';
-
-  @override
-  String get daoReviewVotingHandledByDaoHelper =>
-      'Voting is handled directly by the DAO; use proposals to decide.';
-
-  @override
-  String get daoReviewCannotVoteOwnSubmissionHelper =>
-      'You cannot vote on your own submission';
-
-  @override
-  String get daoReviewVotingDisabledSubmissionHelper =>
-      'Voting is disabled for this submission';
-
-  @override
-  String get daoReviewVotingOpensAfterReviewHelper =>
-      'Voting opens after review';
-
-  @override
-  String daoReviewDecisionRecordedHelper(Object status) {
-    return 'Decision recorded: $status';
-  }
-
-  @override
-  String get daoReviewMediumNotProvided => 'Medium not provided';
-
-  @override
-  String get daoReviewViewDetailsButton => 'View details';
-
-  @override
-  String get daoReviewDetailsDialogTitle => 'Review submission';
-
-  @override
-  String daoReviewDetailsPortfolioLabel(Object url) {
-    return 'Portfolio: $url';
-  }
-
-  @override
-  String daoReviewDetailsMediumLabel(Object medium) {
-    return 'Medium: $medium';
-  }
-
-  @override
-  String daoReviewDetailsStatusLabel(Object status) {
-    return 'Status: $status';
-  }
-
-  @override
-  String get daoReviewDetailsReviewerNotesLabel => 'Reviewer notes:';
 
   @override
   String get daoProposalCategoryLabel => 'Category';
@@ -16346,14 +15890,6 @@ class AppLocalizationsEn extends AppLocalizations {
       'Submit an approved artist review before using artist analytics.';
 
   @override
-  String get analyticsBlockedArtistRoleMismatchTitle =>
-      'Artist analytics unavailable';
-
-  @override
-  String get analyticsBlockedArtistRoleMismatchDescription =>
-      'Use an approved artist wallet for artist analytics.';
-
-  @override
   String get analyticsBlockedArtistApprovalRequiredTitle =>
       'Artist approval required';
 
@@ -16376,14 +15912,6 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get analyticsBlockedInstitutionRejectedDescription =>
       'Submit an approved institution review before using analytics.';
-
-  @override
-  String get analyticsBlockedInstitutionRoleMismatchTitle =>
-      'Institution analytics unavailable';
-
-  @override
-  String get analyticsBlockedInstitutionRoleMismatchDescription =>
-      'Use an approved institution wallet for institution analytics.';
 
   @override
   String get analyticsBlockedInstitutionApprovalRequiredTitle =>
@@ -19246,4 +18774,241 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get moderationRestorationUnderReview =>
       'The content has not been restored yet; restoring it is under review.';
+
+  @override
+  String get verificationArtistCardTitle => 'Artist verification';
+
+  @override
+  String get verificationArtistCardSubtitle =>
+      'Editors review every artist before they can publish original work. You do not need a wallet to apply.';
+
+  @override
+  String get verificationStatusNotApplied => 'NOT APPLIED';
+
+  @override
+  String get verificationStatusPending => 'PENDING REVIEW';
+
+  @override
+  String get verificationStatusApproved => 'VERIFIED';
+
+  @override
+  String get verificationStatusRejected => 'NOT APPROVED';
+
+  @override
+  String get verificationStatusRevoked => 'WITHDRAWN';
+
+  @override
+  String get verificationArtistDetailNotApplied =>
+      'Send your portfolio, medium and a short statement. A wallet is not needed.';
+
+  @override
+  String get verificationArtistDetailPending =>
+      'Your application is waiting for a review. We will let you know when it is decided.';
+
+  @override
+  String get verificationArtistDetailApproved =>
+      'You are a verified artist. The studio is ready.';
+
+  @override
+  String get verificationArtistDetailRejected =>
+      'This application was not approved. You can send a new one.';
+
+  @override
+  String get verificationArtistDetailRevoked =>
+      'Artist verification was withdrawn. You can apply again.';
+
+  @override
+  String get verificationArtistCtaApply => 'Apply as an artist';
+
+  @override
+  String get verificationArtistCtaPending => 'Verification pending';
+
+  @override
+  String get verificationArtistCtaApproved => 'Verified artist';
+
+  @override
+  String get verificationArtistCtaReapply => 'Apply again';
+
+  @override
+  String get verificationCtaRetry => 'Try again';
+
+  @override
+  String get verificationUnavailable =>
+      'Verification status is unavailable right now. Try again later.';
+
+  @override
+  String get verificationArtistFormTitle => 'Apply as an artist';
+
+  @override
+  String get verificationArtistFormSubtitle =>
+      'Share a snapshot of your practice. Editors review every application.';
+
+  @override
+  String get verificationArtistSubmitted => 'Application submitted for review.';
+
+  @override
+  String get verificationSubmitFailed => 'Submission failed. Please try again.';
+
+  @override
+  String get verificationInstitutionCardTitle => 'Institution access';
+
+  @override
+  String get verificationInstitutionCardSubtitle =>
+      'Editors review institutions before they can manage a presence on art.kubus. You do not need a wallet.';
+
+  @override
+  String get verificationInstitutionClaimTitle => 'Claim an existing profile';
+
+  @override
+  String get verificationInstitutionClaimBody =>
+      'Find your institution, then send evidence. An editor reviews it before you get access.';
+
+  @override
+  String get verificationInstitutionRequestTitle =>
+      'Request a new institutional presence';
+
+  @override
+  String get verificationInstitutionRequestBody =>
+      'Cannot find your institution? Tell us about it. Nothing is published until an editor approves.';
+
+  @override
+  String get verificationInstitutionSearchHint => 'Search institutions by name';
+
+  @override
+  String get verificationInstitutionSearchEmpty =>
+      'No listing found. You can request a new presence.';
+
+  @override
+  String get verificationInstitutionClaimAction => 'Claim this profile';
+
+  @override
+  String get verificationInstitutionActingFor => 'Acting for';
+
+  @override
+  String get verificationInstitutionRoleOwner => 'Owner';
+
+  @override
+  String get verificationInstitutionRoleAdmin => 'Admin';
+
+  @override
+  String get verificationInstitutionRoleEditor => 'Editor';
+
+  @override
+  String get verificationInstitutionRoleViewer => 'Viewer';
+
+  @override
+  String get verificationInstitutionLegacyNotice =>
+      'Your account had an institution role before memberships existed. Claim or request your institution to manage it.';
+
+  @override
+  String get verificationInstitutionRequestsTitle => 'Your requests';
+
+  @override
+  String get verificationRequestStatusSubmitted => 'Pending review';
+
+  @override
+  String get verificationRequestStatusUnderReview => 'Under review';
+
+  @override
+  String get verificationRequestStatusApproved => 'Approved';
+
+  @override
+  String get verificationRequestStatusRejected => 'Not approved';
+
+  @override
+  String get verificationRequestStatusWithdrawn => 'Withdrawn';
+
+  @override
+  String get verificationRequestStatusRevoked => 'Access withdrawn';
+
+  @override
+  String get verificationRequestWithdraw => 'Withdraw request';
+
+  @override
+  String get verificationRequestKindClaim => 'Claim';
+
+  @override
+  String get verificationRequestKindPresence => 'New presence';
+
+  @override
+  String get verificationPresenceFieldName => 'Institution name';
+
+  @override
+  String get verificationPresenceFieldKind => 'Type';
+
+  @override
+  String get verificationPresenceFieldWebsite => 'Website';
+
+  @override
+  String get verificationPresenceFieldLocation => 'City or location';
+
+  @override
+  String get verificationPresenceFieldRole => 'Your role at the institution';
+
+  @override
+  String get verificationPresenceFieldMessage =>
+      'What should the editors know?';
+
+  @override
+  String get verificationPresenceFieldEvidence => 'Link to evidence (optional)';
+
+  @override
+  String get verificationPresenceValidationName =>
+      'Enter the institution name.';
+
+  @override
+  String get verificationPresenceValidationContact =>
+      'Add a website or a link to evidence.';
+
+  @override
+  String get verificationPresenceValidationMessage =>
+      'Write at least 20 characters.';
+
+  @override
+  String get verificationPresenceSubmit => 'Send request';
+
+  @override
+  String get verificationPresenceSubmitted =>
+      'Request sent. An editor will review it.';
+
+  @override
+  String get verificationPresenceDuplicateTitle =>
+      'These listings already exist';
+
+  @override
+  String get verificationPresenceDuplicateBody =>
+      'If one of them is your institution, claim it instead.';
+
+  @override
+  String get verificationPresenceDuplicateContinue =>
+      'None of these, send my request';
+
+  @override
+  String get verificationPresenceTooMany =>
+      'You have too many open requests. Withdraw one first.';
+
+  @override
+  String get verificationClaimSent => 'Claim sent. An editor will review it.';
+
+  @override
+  String get verificationOnboardingTitle => 'Verification';
+
+  @override
+  String get verificationOnboardingArtistBody =>
+      'Apply as an artist so editors can verify you. You can also do this later from the Studio.';
+
+  @override
+  String get verificationOnboardingInstitutionBody =>
+      'Claim the profile of your institution or request a new presence. You can also do this later from the Hub.';
+
+  @override
+  String get verificationOnboardingPending =>
+      'Your request is with the editors. You can continue.';
+
+  @override
+  String get verificationOnboardingApproved =>
+      'You are verified. You can continue.';
+
+  @override
+  String get verificationInstitutionAlreadyManaged => 'Already managed';
 }

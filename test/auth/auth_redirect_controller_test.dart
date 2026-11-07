@@ -295,7 +295,7 @@ void main() {
       requiresWalletBackup: false,
       walletAddress: 'wallet-creator',
       userId: 'creator-1',
-      heuristicNextStepId: 'daoReview',
+      heuristicNextStepId: 'verification',
       persona: 'creator',
       origin: AuthOrigin.wallet,
     );
@@ -322,7 +322,7 @@ void main() {
       requiresWalletBackup: false,
       walletAddress: 'wallet-institution',
       userId: 'institution-1',
-      heuristicNextStepId: 'daoReview',
+      heuristicNextStepId: 'verification',
       persona: 'institution',
       origin: AuthOrigin.wallet,
     );
@@ -380,7 +380,7 @@ void main() {
       requiresWalletBackup: false,
       walletAddress: wallet,
       userId: 'user-pending',
-      heuristicNextStepId: 'daoReview',
+      heuristicNextStepId: 'verification',
       persona: 'creator',
       origin: AuthOrigin.wallet,
     );
@@ -410,7 +410,7 @@ void main() {
       requiresWalletBackup: false,
       walletAddress: 'wallet-b',
       userId: 'user-b',
-      heuristicNextStepId: 'daoReview',
+      heuristicNextStepId: 'verification',
       persona: 'creator',
       origin: AuthOrigin.wallet,
     );
@@ -430,7 +430,7 @@ void main() {
       hasHydratedProfile: true,
       hasUsableProfile: true,
       requiresWalletBackup: false,
-      heuristicNextStepId: 'daoReview',
+      heuristicNextStepId: 'verification',
       persona: 'creator',
       origin: AuthOrigin.wallet,
     );

@@ -5,6 +5,13 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
+  test('a step id saved before the verification rename still resolves', () {
+    expect(AuthOnboardingService.normalizeStepId('daoReview'), 'verification');
+    expect(AuthOnboardingService.isAccountStepId('daoReview'), isTrue);
+    expect(
+        AuthOnboardingService.normalizeStepId('verification'), 'verification');
+  });
+
   TestWidgetsFlutterBinding.ensureInitialized();
   const testScope = 'wallet:test-wallet-1';
 
@@ -48,7 +55,8 @@ void main() {
     expect(state.nextStepId, 'role');
   });
 
-  test('resumes creator onboarding at dao review after role and profile',
+  test(
+      'resumes creator onboarding at the verification step after role and profile',
       () async {
     final prefs = await seedProgress(
       completedSteps: <String>{'account', 'role', 'profile'},
@@ -65,7 +73,7 @@ void main() {
     );
 
     expect(state.requiresStructuredOnboarding, isTrue);
-    expect(state.nextStepId, 'daoReview');
+    expect(state.nextStepId, 'verification');
   });
 
   test('resumes lover onboarding at account permissions after profile',
@@ -233,7 +241,7 @@ void main() {
       hasAuthenticatedSession: true,
       hasHydratedProfile: true,
       requiresWalletBackup: false,
-      heuristicNextStepId: 'daoReview',
+      heuristicNextStepId: 'verification',
       persona: 'creator',
       flowScopeKey: testScope,
       payload: const <String, dynamic>{},
@@ -278,10 +286,10 @@ void main() {
     );
 
     expect(state.requiresStructuredOnboarding, isTrue);
-    expect(state.nextStepId, 'daoReview');
+    expect(state.nextStepId, 'verification');
   });
 
-  test('pending dao review scope still resumes dao review', () async {
+  test('pending verification scope still resumes verification', () async {
     final prefs = await seedProgress(
       completedSteps: <String>{'account', 'role', 'profile'},
     );
@@ -291,14 +299,14 @@ void main() {
       hasAuthenticatedSession: true,
       hasHydratedProfile: true,
       requiresWalletBackup: false,
-      heuristicNextStepId: 'daoReview',
+      heuristicNextStepId: 'verification',
       persona: 'institution',
       flowScopeKey: testScope,
       payload: const <String, dynamic>{},
     );
 
     expect(state.requiresStructuredOnboarding, isTrue);
-    expect(state.nextStepId, 'daoReview');
+    expect(state.nextStepId, 'verification');
   });
 
   test('maps public walletSetup/walletSecurity ids onto internal steps',

@@ -48,12 +48,6 @@ class _PrivacyProfileApi implements ProfileBackendApi {
   Future<void> followUser(String walletAddress) async {}
 
   @override
-  Future<Map<String, dynamic>?> getDAOReview({
-    required String idOrWallet,
-  }) async =>
-      null;
-
-  @override
   Future<Map<String, dynamic>> getMyProfile() async => <String, dynamic>{
         'success': false,
         'status': 404,

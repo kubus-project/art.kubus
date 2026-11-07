@@ -5,7 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../../support/profile_fixtures.dart';
-import '../../support/product_v5_qa_fixtures.dart';
+import '../../support/verification_fixtures.dart';
 import '../../support/profile_screen_harness.dart';
 
 Future<ProfileCoverField> _pumpOwnerCover(
@@ -21,8 +21,16 @@ Future<ProfileCoverField> _pumpOwnerCover(
       isArtist: userIsArtist,
       isInstitution: userIsInstitution,
     ),
-    daoProvider:
-        approvedRole == null ? null : QaApprovedRoleDAOProvider(approvedRole),
+    accountVerification: approvedRole == null
+        ? null
+        : await readyVerificationProvider(
+            verificationState(
+              accountId: ProfileFixtures.wallet,
+              artist: approvedRole == 'artist',
+              institutionIds:
+                  approvedRole == 'institution' ? const ['inst-1'] : const [],
+            ),
+          ),
   );
   await tester.pump(const Duration(milliseconds: 600));
   final finder = find.byType(ProfileCoverField);
