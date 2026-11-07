@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../utils/design_tokens.dart';
+import '../utils/image_variant_selector.dart';
 import 'disk_cached_artwork_image.dart';
 
 class ArtworkGalleryView extends StatefulWidget {
@@ -10,11 +11,15 @@ class ArtworkGalleryView extends StatefulWidget {
   final double height;
   final String? semanticLabel;
 
+  /// Explicit source-bound variants; absent for historical artwork URLs.
+  final List<Map<String, dynamic>> sourceImageVariants;
+
   const ArtworkGalleryView({
     super.key,
     required this.imageUrls,
     this.height = 260,
     this.semanticLabel,
+    this.sourceImageVariants = const [],
   });
 
   @override
@@ -25,6 +30,7 @@ class _ArtworkGalleryViewState extends State<ArtworkGalleryView>
     with AutomaticKeepAliveClientMixin {
   late final PageController _pageController;
   int _index = 0;
+  double _renderWidth = 0;
 
   @override
   bool get wantKeepAlive => true;
@@ -57,19 +63,23 @@ class _ArtworkGalleryViewState extends State<ArtworkGalleryView>
   }
 
   void _prefetchAround(int index) {
+    if (!mounted) return;
     final urls = widget.imageUrls
         .map((u) => u.trim())
         .where((u) => u.isNotEmpty)
         .toList(growable: false);
     if (urls.isEmpty) return;
 
-    final candidates = <int>{
-      index.clamp(0, urls.length - 1),
-      (index - 1).clamp(0, urls.length - 1),
-      (index + 1).clamp(0, urls.length - 1),
-    };
-    for (final i in candidates) {
-      unawaited(prefetchDiskCachedArtworkImage(urls[i]).catchError((_) {}));
+    final candidates = ImageVariantSelector.galleryNeighborPreviews(
+      sources: urls,
+      index: index,
+      records: widget.sourceImageVariants,
+      logicalWidth: _renderWidth,
+      logicalHeight: widget.height,
+      devicePixelRatio: MediaQuery.devicePixelRatioOf(context),
+    );
+    for (final variant in candidates) {
+      unawaited(prefetchDiskCachedArtworkImage(variant).catchError((_) {}));
     }
   }
 
@@ -97,7 +107,10 @@ class _ArtworkGalleryViewState extends State<ArtworkGalleryView>
   }
 
   void _openLightbox(int initialIndex) {
-    final urls = widget.imageUrls;
+    final urls = widget.imageUrls
+        .map((u) => u.trim())
+        .where((u) => u.isNotEmpty)
+        .toList();
     if (urls.isEmpty) return;
 
     final scheme = Theme.of(context).colorScheme;
@@ -108,6 +121,7 @@ class _ArtworkGalleryViewState extends State<ArtworkGalleryView>
         urls: urls,
         initialIndex: initialIndex,
         semanticLabel: _semanticSubject,
+        sourceImageVariants: widget.sourceImageVariants,
       ),
     );
   }
@@ -136,12 +150,28 @@ class _ArtworkGalleryViewState extends State<ArtworkGalleryView>
               child: SizedBox(
                 height: height,
                 width: double.infinity,
-                child: _DiskCachedArtworkImage(
-                  url: url,
-                  fit: BoxFit.cover,
-                  showProgress: true,
-                  errorIconColor: scheme.outline.withValues(alpha: 0.8),
-                  excludeFromSemantics: true,
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    if (constraints.maxWidth.isFinite &&
+                        constraints.maxWidth > 0) {
+                      _renderWidth = constraints.maxWidth;
+                    }
+                    final selected = ImageVariantSelector.selectForSource(
+                      records: widget.sourceImageVariants,
+                      sourceUrl: url.trim(),
+                      fallbackUrl: url,
+                      logicalWidth: constraints.maxWidth,
+                      logicalHeight: height,
+                      devicePixelRatio: MediaQuery.devicePixelRatioOf(context),
+                    );
+                    return _DiskCachedArtworkImage(
+                      url: selected ?? url,
+                      fit: BoxFit.cover,
+                      showProgress: true,
+                      errorIconColor: scheme.outline.withValues(alpha: 0.8),
+                      excludeFromSemantics: true,
+                    );
+                  },
                 ),
               ),
             ),
@@ -155,7 +185,8 @@ class _ArtworkGalleryViewState extends State<ArtworkGalleryView>
   Widget build(BuildContext context) {
     super.build(context); // Required by AutomaticKeepAliveClientMixin
     final urls = widget.imageUrls
-        .where((u) => u.trim().isNotEmpty)
+        .map((u) => u.trim())
+        .where((u) => u.isNotEmpty)
         .toList(growable: false);
     if (urls.isEmpty) return const SizedBox.shrink();
 
@@ -202,10 +233,9 @@ class _ArtworkGalleryViewState extends State<ArtworkGalleryView>
                       shape: BoxShape.circle,
                       color: idx == _index
                           ? Theme.of(context).colorScheme.primary
-                          : Theme.of(context)
-                              .colorScheme
-                              .outline
-                              .withValues(alpha: 0.35),
+                          : Theme.of(
+                              context,
+                            ).colorScheme.outline.withValues(alpha: 0.35),
                     ),
                   ),
                 ),
@@ -238,7 +268,15 @@ class _ArtworkGalleryViewState extends State<ArtworkGalleryView>
               separatorBuilder: (_, __) =>
                   const SizedBox(width: KubusSpacing.sm),
               itemBuilder: (context, idx) {
-                final url = urls[idx];
+                final url = ImageVariantSelector.selectForSource(
+                      records: widget.sourceImageVariants,
+                      sourceUrl: urls[idx],
+                      fallbackUrl: urls[idx],
+                      logicalWidth: 64,
+                      logicalHeight: 64,
+                      devicePixelRatio: MediaQuery.devicePixelRatioOf(context),
+                    ) ??
+                    urls[idx];
                 final selected = idx == _index;
                 void select() => _selectImage(idx);
                 return Semantics(
@@ -272,10 +310,9 @@ class _ArtworkGalleryViewState extends State<ArtworkGalleryView>
                               url: url,
                               fit: BoxFit.cover,
                               showProgress: false,
-                              errorIconColor: Theme.of(context)
-                                  .colorScheme
-                                  .outline
-                                  .withValues(alpha: 0.6),
+                              errorIconColor: Theme.of(
+                                context,
+                              ).colorScheme.outline.withValues(alpha: 0.6),
                               excludeFromSemantics: true,
                             ),
                           ),
@@ -297,11 +334,13 @@ class _ArtworkLightboxDialog extends StatefulWidget {
   final List<String> urls;
   final int initialIndex;
   final String semanticLabel;
+  final List<Map<String, dynamic>> sourceImageVariants;
 
   const _ArtworkLightboxDialog({
     required this.urls,
     required this.initialIndex,
     required this.semanticLabel,
+    required this.sourceImageVariants,
   });
 
   @override
@@ -316,32 +355,13 @@ class _ArtworkLightboxDialogState extends State<_ArtworkLightboxDialog> {
   void initState() {
     super.initState();
     _index = widget.initialIndex.clamp(0, widget.urls.length - 1);
-    _controller = PageController(
-      initialPage: _index,
-    );
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _prefetchAround(_index);
-    });
+    _controller = PageController(initialPage: _index);
   }
 
   @override
   void dispose() {
     _controller.dispose();
     super.dispose();
-  }
-
-  void _prefetchAround(int index) {
-    final urls =
-        widget.urls.map((u) => u.trim()).where((u) => u.isNotEmpty).toList();
-    if (urls.isEmpty) return;
-    final candidates = <int>{
-      index.clamp(0, urls.length - 1),
-      (index - 1).clamp(0, urls.length - 1),
-      (index + 1).clamp(0, urls.length - 1),
-    };
-    for (final i in candidates) {
-      unawaited(prefetchDiskCachedArtworkImage(urls[i]).catchError((_) {}));
-    }
   }
 
   String _imageSemanticLabel(int index, int total) {
@@ -369,10 +389,18 @@ class _ArtworkLightboxDialogState extends State<_ArtworkLightboxDialog> {
               itemCount: urls.length,
               onPageChanged: (idx) {
                 setState(() => _index = idx);
-                _prefetchAround(idx);
               },
               itemBuilder: (context, idx) {
-                final url = urls[idx];
+                final size = MediaQuery.sizeOf(context);
+                final url = ImageVariantSelector.selectForSource(
+                      records: widget.sourceImageVariants,
+                      sourceUrl: urls[idx],
+                      fallbackUrl: urls[idx],
+                      logicalWidth: size.width,
+                      logicalHeight: size.height,
+                      devicePixelRatio: MediaQuery.devicePixelRatioOf(context),
+                    ) ??
+                    urls[idx];
                 return Semantics(
                   image: true,
                   label: _imageSemanticLabel(idx, urls.length),
