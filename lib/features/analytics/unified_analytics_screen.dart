@@ -8,7 +8,7 @@ import '../../l10n/app_localizations.dart';
 import '../../models/stats/stats_models.dart';
 import '../../providers/analytics_filters_provider.dart';
 import '../../providers/config_provider.dart';
-import '../../providers/dao_provider.dart';
+import '../../providers/account_verification_provider.dart';
 import '../../providers/profile_provider.dart';
 import '../../providers/stats_provider.dart';
 import '../../providers/web3provider.dart';
@@ -144,8 +144,6 @@ class UnifiedAnalyticsScreen extends StatefulWidget {
 
 class _UnifiedAnalyticsScreenState extends State<UnifiedAnalyticsScreen> {
   late AnalyticsPresetKind _activePresetKind;
-  String _lastReviewWallet = '';
-  bool _reviewRequestScheduled = false;
   String? _seededInitialMetricKey;
 
   @override
@@ -165,7 +163,6 @@ class _UnifiedAnalyticsScreenState extends State<UnifiedAnalyticsScreen> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    _scheduleRoleReviewLoad();
   }
 
   void _handleBack() {
@@ -199,21 +196,20 @@ class _UnifiedAnalyticsScreenState extends State<UnifiedAnalyticsScreen> {
     final filtersProvider = context.watch<AnalyticsFiltersProvider>();
     final profileProvider = context.watch<ProfileProvider>();
     final web3Provider = context.watch<Web3Provider>();
-    final daoProvider = context.watch<DAOProvider>();
+    final verification = context.watch<AccountVerificationProvider>();
 
     final viewerWallet = _resolveViewerWallet(profileProvider, web3Provider);
     final subjectId = _resolveSubjectId(preset, viewerWallet);
     final currentProfile = profileProvider.currentUser;
     final isOwner = WalletUtils.equals(viewerWallet, subjectId);
-    final review =
-        subjectId.isEmpty ? null : daoProvider.findReviewForWallet(subjectId);
     final capabilities = AnalyticsCapabilityResolver.resolve(
       preset: preset,
       viewer: AnalyticsViewerContext(
         viewerWallet: viewerWallet,
         subjectId: subjectId,
         persona: profileProvider.userPersona,
-        daoReview: review,
+        artistStatus: verification.artistStatus,
+        institutionAccess: verification.institutionAccess,
         profileIsArtist: isOwner && (currentProfile?.isArtist ?? false),
         profileIsInstitution:
             isOwner && (currentProfile?.isInstitution ?? false),
@@ -449,7 +445,6 @@ class _UnifiedAnalyticsScreenState extends State<UnifiedAnalyticsScreen> {
           activePreset: preset,
           onPresetSelected: (kind) {
             setState(() => _activePresetKind = kind);
-            _scheduleRoleReviewLoad();
           },
           canExport: capabilities.canExport,
           onBack: widget.embedded ? null : _handleBack,
@@ -619,29 +614,6 @@ class _UnifiedAnalyticsScreenState extends State<UnifiedAnalyticsScreen> {
     final explicit = widget.entityId?.trim() ?? '';
     if (explicit.isNotEmpty) return explicit;
     return viewerWallet.trim();
-  }
-
-  void _scheduleRoleReviewLoad() {
-    if (_reviewRequestScheduled) return;
-    final preset = AnalyticsPresets.byKind(_activePresetKind);
-    if (preset.roleRequirement != AnalyticsRoleRequirement.artist &&
-        preset.roleRequirement != AnalyticsRoleRequirement.institution) {
-      return;
-    }
-    final profileProvider = context.read<ProfileProvider>();
-    final web3Provider = context.read<Web3Provider>();
-    final wallet = _resolveSubjectId(
-      preset,
-      _resolveViewerWallet(profileProvider, web3Provider),
-    );
-    if (wallet.isEmpty || wallet == _lastReviewWallet) return;
-    _reviewRequestScheduled = true;
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      _reviewRequestScheduled = false;
-      _lastReviewWallet = wallet;
-      unawaited(context.read<DAOProvider>().loadReviewForWallet(wallet));
-    });
   }
 
   List<AnalyticsOverviewCardData> _overviewCards({

@@ -5,7 +5,6 @@ import '../models/dao.dart';
 import '../services/backend_api_service.dart';
 import '../services/dao_signed_envelope_service.dart';
 import '../services/telemetry/telemetry_uuid.dart';
-import '../utils/wallet_utils.dart';
 import '../services/solana_wallet_service.dart';
 import 'wallet_provider.dart';
 
@@ -16,11 +15,9 @@ class DAOProvider extends ChangeNotifier {
   List<Vote> _votes = [];
   List<Delegate> _delegates = [];
   List<DAOTransaction> _transactions = [];
-  List<DAOReview> _reviews = [];
   bool _isLoading = false;
   Object? _loadError;
   double? _treasuryOnChainBalance;
-  bool _canModerateReviews = false;
   WalletProvider? _walletProvider;
 
   DAOProvider({
@@ -71,17 +68,11 @@ class DAOProvider extends ChangeNotifier {
     return List.unmodifiable(_transactions);
   }
 
-  List<DAOReview> get reviews {
-    _scheduleInitialLoad();
-    return List.unmodifiable(_reviews);
-  }
-
   bool get isLoading => _isLoading;
 
   /// The last load failure, or null. Screens use it to tell a network
   /// failure apart from "no proposals" (the lists are emptied on failure).
   Object? get loadError => _loadError;
-  bool get canModerateReviews => _canModerateReviews;
 
   double? get treasuryOnChainBalance {
     _scheduleInitialLoad();
@@ -121,23 +112,6 @@ class DAOProvider extends ChangeNotifier {
 
       final txJson = await api.getDAOTransactions();
       _transactions = txJson.map((e) => DAOTransaction.fromJson(e)).toList();
-
-      try {
-        _canModerateReviews = await api.getDAOReviewModerationAuthority();
-        final reviewsJson = await api.getDAOReviews();
-        final parsedReviews = <DAOReview>[];
-        for (final reviewJson in reviewsJson) {
-          try {
-            parsedReviews.add(DAOReview.fromJson(reviewJson));
-          } catch (e) {
-            debugPrint('DAOProvider: skipping malformed review payload: $e');
-          }
-        }
-        _reviews = parsedReviews;
-      } catch (e) {
-        _canModerateReviews = false;
-        debugPrint('DAOProvider: unable to load reviews (soft-fail): $e');
-      }
     } catch (e) {
       debugPrint('DAOProvider _loadFromBackend error: $e');
       _loadError = e;
@@ -145,8 +119,6 @@ class DAOProvider extends ChangeNotifier {
       _votes = [];
       _delegates = [];
       _transactions = [];
-      _reviews = [];
-      _canModerateReviews = false;
       _treasuryOnChainBalance = null;
     }
   }
@@ -204,22 +176,6 @@ class DAOProvider extends ChangeNotifier {
       throw StateError('No active wallet signer is available.');
     }
     return wallet;
-  }
-
-  String _normalizePortfolioUrl(String rawValue) {
-    final trimmed = rawValue.trim();
-    if (trimmed.isEmpty) return '';
-
-    final hasScheme = RegExp(r'^[a-zA-Z][a-zA-Z0-9+.-]*:').hasMatch(trimmed);
-    final withScheme = hasScheme
-        ? trimmed
-        : (trimmed.startsWith('//') ? 'https:$trimmed' : 'https://$trimmed');
-    final parsed = Uri.tryParse(withScheme);
-    if (parsed == null) return trimmed;
-
-    final scheme = parsed.scheme.toLowerCase();
-    if (scheme != 'http' && scheme != 'https') return trimmed;
-    return parsed.toString();
   }
 
   Future<void> _ensureBackendSessionForAction(
@@ -328,167 +284,6 @@ class DAOProvider extends ChangeNotifier {
       rethrow;
     }
     throw StateError('DAO proposal creation did not return a proposal.');
-  }
-
-  Future<DAOReview?> submitReview({
-    required String portfolioUrl,
-    required String medium,
-    required String statement,
-    String? title,
-    Map<String, dynamic>? metadata,
-    String role = 'artist',
-  }) async {
-    try {
-      // Review applications are signed locally, but they are not token-governance actions.
-      final api = BackendApiService();
-      final metadataPayload = <String, dynamic>{
-        ...?metadata,
-      };
-      metadataPayload.putIfAbsent('role', () => role);
-      final normalizedPortfolioUrl = _normalizePortfolioUrl(portfolioUrl);
-      final signedEnvelope = await _signEnvelope(
-        actionType: DAOSignedActionType.reviewSubmit,
-        referenceCid: metadataPayload['contentCid']?.toString(),
-        references: <String, dynamic>{
-          'reviewDomain': 'application',
-          if (metadataPayload['contentCid'] != null)
-            'contentCid': metadataPayload['contentCid'].toString(),
-        },
-        payload: {
-          'portfolioUrl': normalizedPortfolioUrl,
-          'medium': medium,
-          'statement': statement,
-          if (title != null && title.isNotEmpty) 'title': title,
-          'metadata': metadataPayload,
-        },
-      );
-      await _ensureBackendSessionForAction(signedEnvelope);
-      final walletAddress = signedEnvelope.walletAddress;
-      final payload = await api.submitDAOReview(
-        envelope: signedEnvelope.toJson(),
-      );
-      if (payload != null) {
-        final review = DAOReview.fromJson(payload);
-        _reviews.removeWhere((r) =>
-            WalletUtils.equals(r.walletAddress, walletAddress) ||
-            r.id == review.id);
-        _reviews.insert(0, review);
-        // Pull a fresh copy from backend to ensure persisted state (and any reviewer updates)
-        final refreshed =
-            await loadReviewForWallet(walletAddress, forceRefresh: true);
-        notifyListeners();
-        return refreshed ?? review;
-      }
-    } catch (e) {
-      debugPrint('DAOProvider submitReview error: $e');
-    }
-    return null;
-  }
-
-  Future<DAOReview?> submitInstitutionReview({
-    required String organization,
-    required String contact,
-    required String focus,
-    required String mission,
-    Map<String, dynamic>? metadata,
-  }) {
-    final mergedMeta = {
-      'role': 'institution',
-      'organization': organization,
-      'contact': contact,
-      'focus': focus,
-      ...?metadata,
-    };
-    return submitReview(
-      portfolioUrl: contact,
-      medium: focus,
-      statement: mission,
-      title: organization,
-      metadata: mergedMeta,
-      role: 'institution',
-    );
-  }
-
-  Future<DAOReview?> decideReview({
-    required String idOrWallet,
-    required String status,
-    String? reviewerNotes,
-  }) async {
-    try {
-      // Review decisions use a separate signed review-admin authority flow.
-      final api = BackendApiService();
-      final signedEnvelope = await _signEnvelope(
-        actionType: DAOSignedActionType.reviewDecision,
-        referenceId: idOrWallet,
-        references: <String, dynamic>{
-          'reviewId': idOrWallet,
-          'domain': 'review_admin',
-        },
-        payload: {
-          'reviewId': idOrWallet,
-          'status': status,
-          if (reviewerNotes != null && reviewerNotes.isNotEmpty)
-            'reviewerNotes': reviewerNotes,
-        },
-      );
-      await _ensureBackendSessionForAction(signedEnvelope);
-      final payload = await api.decideDAOReview(
-        idOrWallet: idOrWallet,
-        envelope: signedEnvelope.toJson(),
-      );
-      if (payload != null) {
-        final review = DAOReview.fromJson(payload);
-        _reviews.removeWhere((r) =>
-            r.id == review.id ||
-            WalletUtils.equals(r.walletAddress, review.walletAddress));
-        _reviews.insert(0, review);
-        notifyListeners();
-        return review;
-      }
-    } catch (e) {
-      debugPrint('DAOProvider.decideReview error: $e');
-      rethrow;
-    }
-    return null;
-  }
-
-  DAOReview? findReviewForWallet(String walletAddress) {
-    if (walletAddress.isEmpty) return null;
-    final normalized = walletAddress.trim().toLowerCase();
-    try {
-      return _reviews.firstWhere(
-        (r) => r.walletAddress.trim().toLowerCase() == normalized,
-      );
-    } catch (_) {
-      return null;
-    }
-  }
-
-  Future<DAOReview?> loadReviewForWallet(String walletAddress,
-      {bool forceRefresh = false}) async {
-    final normalized = walletAddress.trim();
-    if (normalized.isEmpty) return null;
-    if (!forceRefresh) {
-      final existing = findReviewForWallet(normalized);
-      if (existing != null) return existing;
-    }
-    try {
-      final api = BackendApiService();
-      final payload = await api.getDAOReview(idOrWallet: normalized);
-      if (payload != null) {
-        final review = DAOReview.fromJson(payload);
-        _reviews.removeWhere((r) =>
-            r.id == review.id ||
-            r.walletAddress.trim().toLowerCase() ==
-                review.walletAddress.trim().toLowerCase());
-        _reviews.insert(0, review);
-        notifyListeners();
-        return review;
-      }
-    } catch (e) {
-      debugPrint('DAOProvider.loadReviewForWallet error: $e');
-    }
-    return findReviewForWallet(normalized);
   }
 
   Future<void> castVote({

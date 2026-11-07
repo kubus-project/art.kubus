@@ -1,5 +1,6 @@
 import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:art_kubus/models/user_profile.dart';
+import 'package:art_kubus/providers/account_verification_provider.dart';
 import 'package:art_kubus/providers/app_mode_provider.dart';
 import 'package:art_kubus/providers/app_refresh_provider.dart';
 import 'package:art_kubus/providers/artwork_provider.dart';
@@ -99,6 +100,10 @@ Future<List<String>> pumpProductSurface(
         ChangeNotifierProvider<PendingActionProvider>(
             create: (_) => PendingActionProvider()),
         ChangeNotifierProvider<DAOProvider>(create: (_) => DAOProvider()),
+        // Signed out by default, as in the app before an account is read; tests
+        // that need a standing override it through extraProviders.
+        ChangeNotifierProvider<AccountVerificationProvider>(
+            create: (_) => AccountVerificationProvider()),
         ChangeNotifierProvider<StatsProvider>(create: (_) => StatsProvider()),
         ChangeNotifierProvider<ChatProvider>(create: (_) => ChatProvider()),
         ChangeNotifierProvider<WalletProvider>(create: (_) => WalletProvider()),

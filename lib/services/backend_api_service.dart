@@ -16,6 +16,7 @@ import '../models/kubus_node_models.dart';
 import '../models/community_group.dart';
 import '../models/event.dart';
 import '../models/exhibition.dart';
+import '../models/account_verification.dart';
 import '../models/artist_application.dart';
 import '../models/institution_claim.dart';
 import '../models/community_subject.dart';
@@ -304,8 +305,6 @@ abstract class ProfileBackendApi {
   Future<void> followUser(String walletAddress);
   Future<void> unfollowUser(String walletAddress);
   Future<bool> isFollowing(String walletAddress);
-
-  Future<Map<String, dynamic>?> getDAOReview({required String idOrWallet});
 }
 
 /// Minimal contract for marker endpoints used by providers.
@@ -8873,54 +8872,27 @@ class BackendApiService
 
   /// Submit a DAO review/application
   /// POST /api/dao/reviews
-  Future<Map<String, dynamic>?> submitDAOReview({
-    required Map<String, dynamic> envelope,
-  }) =>
-      _backendApiSubmitDAOReview(this, envelope: envelope);
-
-  /// List DAO reviews
-  /// GET /api/dao/reviews
-  Future<List<Map<String, dynamic>>> getDAOReviews({
-    int limit = 50,
-    int offset = 0,
-  }) =>
-      _backendApiGetDAOReviews(this, limit: limit, offset: offset);
-
-  /// Return server-derived DAO review decision authority for the current
-  /// authenticated principal, including explicit reviewer allowlists.
-  Future<bool> getDAOReviewModerationAuthority() =>
-      _backendApiGetDAOReviewModerationAuthority(this);
-
-  /// Get a single DAO review by id or wallet address
-  /// GET /api/dao/reviews/:id
-  @override
-  Future<Map<String, dynamic>?> getDAOReview({required String idOrWallet}) =>
-      _backendApiGetDAOReview(this, idOrWallet: idOrWallet);
-
-  /// Decide on a DAO review (approve/reject/pending)
-  /// POST /api/dao/reviews/:id/decision
-  Future<Map<String, dynamic>?> decideDAOReview({
-    required String idOrWallet,
-    required Map<String, dynamic> envelope,
-  }) =>
-      _backendApiDecideDAOReview(
-        this,
-        idOrWallet: idOrWallet,
-        envelope: envelope,
-      );
-
   // ==================== Institution & Events (Provisional) ====================
 
   /// List institutions
   /// GET /api/institutions
+  ///
+  /// [search] filters public listings by name (the backend escapes wildcards
+  /// and bounds the length).
   Future<List<Map<String, dynamic>>> listInstitutions({
     int limit = 50,
     int offset = 0,
+    String? search,
   }) async {
     try {
+      final term = search?.trim() ?? '';
       final uri = Uri.parse(
         '$baseUrl/api/institutions',
-      ).replace(queryParameters: {'limit': '$limit', 'offset': '$offset'});
+      ).replace(queryParameters: {
+        'limit': '$limit',
+        'offset': '$offset',
+        if (term.isNotEmpty) 'search': term,
+      });
       final response = await _get(
         uri,
         includeAuth: false,
@@ -9178,6 +9150,150 @@ class BackendApiService
     } catch (e) {
       AppConfig.debugPrint(
           'BackendApiService.getMyArtistApplication failed: $e');
+      rethrow;
+    }
+  }
+
+  /// Everything the server says the signed-in account may do: artist
+  /// standing, institution memberships with their permissions, open claims
+  /// and presence requests. GET /api/verification/me
+  ///
+  /// This is the only source the app uses to unlock the Artist Studio or the
+  /// Institution Hub. Throws [BackendApiRequestException] on any non-success
+  /// status so callers can show an "unavailable right now" state instead of
+  /// guessing.
+  Future<AccountVerificationState> getAccountVerification() async {
+    try {
+      await _ensureAuthBeforeRequest();
+      final uri = Uri.parse('$baseUrl/api/verification/me');
+      final response = await _get(uri, headers: _getHeaders());
+      if (!_isSuccessStatus(response.statusCode)) {
+        throw BackendApiRequestException(
+          statusCode: response.statusCode,
+          path: uri.path,
+          body: response.body,
+        );
+      }
+      final decoded = _decodeResponseMap(response);
+      final state = AccountVerificationState.tryParse(
+        decoded?['data'] ?? decoded,
+      );
+      if (state == null) {
+        throw BackendApiRequestException(
+          statusCode: response.statusCode,
+          path: uri.path,
+          body: response.body,
+        );
+      }
+      return state;
+    } catch (e) {
+      AppConfig.debugPrint(
+          'BackendApiService.getAccountVerification failed: $e');
+      rethrow;
+    }
+  }
+
+  /// Ask for a NEW institutional presence when no listing exists to claim.
+  /// POST /api/institutions/presence-requests (201). Nothing exists until an
+  /// administrator approves; approval makes the requester the owner.
+  ///
+  /// A 409 with `error: possible_duplicate` carries `candidates` (existing
+  /// public listings). Resend with [confirmNotDuplicate] once the person has
+  /// looked at them and still needs a new presence.
+  Future<InstitutionPresenceRequestSummary> submitInstitutionPresenceRequest({
+    required String name,
+    required String kind,
+    required String message,
+    String? website,
+    String? location,
+    String? requesterTitle,
+    String? contactEmail,
+    String? evidenceUrl,
+    bool confirmNotDuplicate = false,
+  }) async {
+    _throwIfIpfsFallbackUnavailable('Institution applications');
+
+    try {
+      await _ensureAuthBeforeRequest();
+      final uri = Uri.parse('$baseUrl/api/institutions/presence-requests');
+      String? clean(String? value) {
+        final trimmed = value?.trim() ?? '';
+        return trimmed.isEmpty ? null : trimmed;
+      }
+
+      final evidence = clean(evidenceUrl);
+      final response = await _post(
+        uri,
+        headers: _getHeaders(),
+        body: jsonEncode(<String, dynamic>{
+          'name': name.trim(),
+          'kind': kind,
+          'message': message.trim(),
+          if (clean(website) != null) 'website': clean(website),
+          if (clean(location) != null) 'location': clean(location),
+          if (clean(requesterTitle) != null)
+            'requesterTitle': clean(requesterTitle),
+          if (clean(contactEmail) != null) 'contactEmail': clean(contactEmail),
+          if (evidence != null)
+            'evidence': <Map<String, String>>[
+              <String, String>{'type': 'document_url', 'value': evidence},
+            ],
+          if (confirmNotDuplicate) 'confirmNotDuplicate': true,
+        }),
+        timeout: const Duration(seconds: 20),
+      );
+
+      if (!_isSuccessStatus(response.statusCode)) {
+        throw BackendApiRequestException(
+          statusCode: response.statusCode,
+          path: uri.path,
+          body: response.body,
+        );
+      }
+
+      final decoded = _decodeResponseMap(response);
+      final data = decoded?['data'];
+      final request = InstitutionPresenceRequestSummary.tryParse(
+        data is Map ? data['request'] : null,
+      );
+      if (request == null) {
+        throw BackendApiRequestException(
+          statusCode: response.statusCode,
+          path: uri.path,
+          body: response.body,
+        );
+      }
+      return request;
+    } catch (e) {
+      AppConfig.debugPrint(
+          'BackendApiService.submitInstitutionPresenceRequest failed: $e');
+      rethrow;
+    }
+  }
+
+  /// Withdraw the signed-in account's own open presence request.
+  /// POST /api/institutions/presence-requests/:id/withdraw
+  Future<void> withdrawInstitutionPresenceRequest(String requestId) async {
+    try {
+      await _ensureAuthBeforeRequest();
+      final uri = Uri.parse(
+          '$baseUrl/api/institutions/presence-requests/${Uri.encodeComponent(requestId)}/withdraw');
+      final response = await _post(
+        uri,
+        headers: _getHeaders(),
+        body: jsonEncode(<String, dynamic>{}),
+        timeout: const Duration(seconds: 20),
+      );
+      if (!_isSuccessStatus(response.statusCode)) {
+        throw BackendApiRequestException(
+          statusCode: response.statusCode,
+          path: uri.path,
+          body: response.body,
+        );
+      }
+    } catch (e) {
+      AppConfig.debugPrint(
+          'BackendApiService.withdrawInstitutionPresenceRequest failed: $e');
       rethrow;
     }
   }

@@ -14,9 +14,7 @@ class Web3CapabilityContext {
     required this.governanceEnabled,
     required this.marketplaceEnabled,
     required this.editionCreationEnabled,
-    required this.daoModerationEnabled,
     required this.daoTreasuryMutationEnabled,
-    this.daoReviewAuthority = false,
     this.entityOwnerAddress,
     this.entityIsListed = false,
     this.proposalAllowsVoting = true,
@@ -36,7 +34,6 @@ class Web3CapabilityContext {
     bool mintingSupported = false,
     bool listingSupported = true,
     bool treasuryMutationSupported = false,
-    bool daoReviewAuthority = false,
   }) {
     return Web3CapabilityContext(
       authority: walletProvider.authority,
@@ -48,10 +45,8 @@ class Web3CapabilityContext {
       governanceEnabled: AppConfig.isFeatureEnabled('dao'),
       marketplaceEnabled: AppConfig.isFeatureEnabled('marketplace'),
       editionCreationEnabled: AppConfig.isFeatureEnabled('nftMinting'),
-      daoModerationEnabled: AppConfig.isFeatureEnabled('daoReviewDecisions'),
       daoTreasuryMutationEnabled:
           AppConfig.isFeatureEnabled('daoOnchainTreasury'),
-      daoReviewAuthority: daoReviewAuthority,
       entityOwnerAddress: entityOwnerAddress,
       entityIsListed: entityIsListed,
       proposalAllowsVoting: proposalAllowsVoting,
@@ -71,9 +66,7 @@ class Web3CapabilityContext {
   final bool governanceEnabled;
   final bool marketplaceEnabled;
   final bool editionCreationEnabled;
-  final bool daoModerationEnabled;
   final bool daoTreasuryMutationEnabled;
-  final bool daoReviewAuthority;
   final String? entityOwnerAddress;
   final bool entityIsListed;
   final bool proposalAllowsVoting;
@@ -95,7 +88,6 @@ class Web3Capabilities {
     required this.canVote,
     required this.canCreateProposal,
     required this.canDelegate,
-    required this.canModerateDao,
     required this.canMutateTreasury,
     required this.canViewDigitalEditions,
     required this.canCreateEdition,
@@ -117,7 +109,6 @@ class Web3Capabilities {
   final bool canVote;
   final bool canCreateProposal;
   final bool canDelegate;
-  final bool canModerateDao;
   final bool canMutateTreasury;
 
   final bool canViewDigitalEditions;
@@ -151,7 +142,6 @@ class Web3CapabilityResolver {
     final accountRole = authority.accountRole.trim().toLowerCase();
     final hasDaoModeratorRole =
         accountRole == 'admin' || accountRole == 'moderator';
-    final canReviewDao = hasDaoModeratorRole || context.daoReviewAuthority;
     final isEditionCreator =
         context.profileIsArtist || context.profileIsInstitution;
     final ownsEntity = hasWalletIdentity &&
@@ -179,9 +169,6 @@ class Web3CapabilityResolver {
       canVote: canParticipateInGovernance && context.proposalAllowsVoting,
       canCreateProposal: canParticipateInGovernance,
       canDelegate: canParticipateInGovernance,
-      canModerateDao: canParticipateInGovernance &&
-          context.daoModerationEnabled &&
-          canReviewDao,
       canMutateTreasury: canParticipateInGovernance &&
           context.daoTreasuryMutationEnabled &&
           context.treasuryMutationSupported &&

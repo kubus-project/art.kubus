@@ -1,105 +1,71 @@
+import 'package:art_kubus/models/institution.dart';
 import 'package:art_kubus/models/user_profile.dart';
-import 'package:art_kubus/providers/artwork_provider.dart';
-import 'package:art_kubus/providers/dao_provider.dart';
-import 'package:art_kubus/providers/exhibitions_provider.dart';
 import 'package:art_kubus/providers/institution_provider.dart';
 import 'package:art_kubus/providers/profile_provider.dart';
-import 'package:art_kubus/providers/wallet_provider.dart';
 import 'package:art_kubus/utils/map_marker_subject_loader.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-const _institutionWallet = 'LoaderSelfDerivedWallet1111111111111111111';
+const _institutionWallet = 'LoaderInstitutionWallet11111111111111111111';
 
-UserProfile _institutionAccount() {
-  return UserProfile(
-    id: 'loader-self-derived',
-    walletAddress: _institutionWallet,
-    username: 'loader_gallery',
-    displayName: 'Loader Gallery',
-    bio: '',
-    avatar: '',
-    isInstitution: true,
-    createdAt: DateTime.utc(2026, 1, 1),
-    updatedAt: DateTime.utc(2026, 1, 1),
-  );
-}
+Institution _institution(String id) => Institution(
+      id: id,
+      name: 'Gallery $id',
+      description: '',
+      type: 'gallery',
+      address: 'Ljubljana',
+      latitude: 46.05,
+      longitude: 14.5,
+      contactEmail: '',
+      website: '',
+      stats: InstitutionStats(
+        totalVisitors: 0,
+        activeEvents: 0,
+        artworkViews: 0,
+        revenue: 0,
+        visitorGrowth: 0,
+        revenueGrowth: 0,
+      ),
+      createdAt: DateTime.utc(2026, 1, 1),
+    );
 
 void main() {
   setUp(() {
     SharedPreferences.setMockInitialValues(<String, Object>{});
   });
 
-  testWidgets(
-      'both marker subject call sites exclude the self-derived institution and keep directory entries',
-      (tester) async {
-    final profiles = ProfileProvider()..setCurrentUser(_institutionAccount());
-    final institutions = InstitutionProvider()..bindProfileProvider(profiles);
-    final artworks = ArtworkProvider();
-    final dao = DAOProvider();
-    final exhibitions = ExhibitionsProvider();
-    final wallet = WalletProvider();
+  test('marker subjects are the listed institutions, unchanged', () {
+    final listed = [_institution('inst-1'), _institution('inst-2')];
+    expect(markerSubjectInstitutions(listed).map((i) => i.id),
+        ['inst-1', 'inst-2']);
+  });
 
-    late BuildContext captured;
-    await tester.pumpWidget(MultiProvider(
-      providers: [
-        ChangeNotifierProvider<ProfileProvider>.value(value: profiles),
-        ChangeNotifierProvider<InstitutionProvider>.value(value: institutions),
-        ChangeNotifierProvider<ArtworkProvider>.value(value: artworks),
-        ChangeNotifierProvider<DAOProvider>.value(value: dao),
-        ChangeNotifierProvider<ExhibitionsProvider>.value(value: exhibitions),
-        ChangeNotifierProvider<WalletProvider>.value(value: wallet),
-      ],
-      child: MaterialApp(
-        home: Builder(
-          builder: (context) {
-            captured = context;
-            return const SizedBox.shrink();
-          },
+  test(
+      'a signed-in account flagged as an institution never gets a listing made from its wallet',
+      () async {
+    final profiles = ProfileProvider()
+      ..setCurrentUser(
+        UserProfile(
+          id: 'loader-account',
+          walletAddress: _institutionWallet,
+          username: 'loader_gallery',
+          displayName: 'Loader Gallery',
+          bio: '',
+          avatar: '',
+          isInstitution: true,
+          createdAt: DateTime.utc(2026, 1, 1),
+          updatedAt: DateTime.utc(2026, 1, 1),
         ),
-      ),
-    ));
+      );
+    final institutions = InstitutionProvider();
+    await institutions.initialize(seedMockIfEmpty: true);
 
-    // Seed directory entries (no backend: the initialize call falls back to
-    // the local mock seed), then confirm the derived entry is present.
-    await tester.runAsync(() => institutions.initialize(seedMockIfEmpty: true));
-    final derived = institutions.getInstitutionById(_institutionWallet);
-    expect(derived, isNotNull);
-    expect(derived!.isSelfDerivedFromWallet, isTrue);
-    final directoryIds = institutions.institutions
-        .where((i) => !i.isSelfDerivedFromWallet)
-        .map((i) => i.id)
-        .toList();
-    expect(directoryIds, isNotEmpty);
-
-    // Call site 1: snapshot().
-    final snapshot = MarkerSubjectLoader(captured).snapshot();
+    expect(profiles.currentUser?.isInstitution, isTrue);
     expect(
-      snapshot.institutions.any((i) => i.id == _institutionWallet),
+      institutions.institutions.any((i) => i.id == _institutionWallet),
       isFalse,
-      reason: 'snapshot must not offer the self-derived institution',
+      reason: 'authority over an institution is a membership, not a wallet',
     );
-    expect(snapshot.institutions.map((i) => i.id), directoryIds);
-
-    // Call site 2: refresh(). Network-bound fetches fail fast under
-    // flutter_test's HTTP override and are handled inside the providers.
-    final refreshed = await tester
-        .runAsync(() => MarkerSubjectLoader(captured).refresh(force: true));
-    expect(refreshed, isNotNull);
-    expect(refreshed!.wasRefreshed, isTrue);
-    expect(
-      refreshed.institutions.any((i) => i.id == _institutionWallet),
-      isFalse,
-      reason: 'refresh must not offer the self-derived institution',
-    );
-    expect(refreshed.institutions.map((i) => i.id), directoryIds);
-
-    // Drain the real providers' startup timers (auth retry backoff) inside the
-    // fake clock so the binding does not fail on pending timers.
-    for (var i = 0; i < 5; i++) {
-      await tester.pump(const Duration(seconds: 2));
-    }
+    expect(institutions.getInstitutionById(_institutionWallet), isNull);
   });
 }

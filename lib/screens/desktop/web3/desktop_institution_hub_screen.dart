@@ -6,19 +6,17 @@ import '../../../providers/themeprovider.dart';
 import '../../../utils/kubus_color_roles.dart';
 import '../../../utils/design_tokens.dart';
 import '../../../providers/profile_provider.dart';
-import '../../../providers/dao_provider.dart';
+import '../../../providers/account_verification_provider.dart';
 import '../../../providers/web3provider.dart';
 import '../../../providers/collab_provider.dart';
 import '../../../providers/stats_provider.dart';
 import '../../../providers/analytics_filters_provider.dart';
 import '../../../providers/desktop_dashboard_state_provider.dart';
 import '../../../config/config.dart';
-import '../../../models/dao.dart';
 import '../../../models/promotion.dart';
 import '../../../models/user_persona.dart';
 import '../../../utils/app_animations.dart';
 import '../../../utils/app_color_utils.dart';
-import '../../../utils/dao_role_verification.dart';
 import '../../../utils/creator_shell_navigation.dart';
 import '../../../utils/wallet_utils.dart';
 import '../desktop_shell.dart';
@@ -48,10 +46,6 @@ class DesktopInstitutionHubScreen extends StatefulWidget {
 class _DesktopInstitutionHubScreenState
     extends State<DesktopInstitutionHubScreen> with TickerProviderStateMixin {
   late AnimationController _animationController;
-  DAOReview? _institutionReview;
-  bool _reviewLoading = false;
-  bool _hasFetchedReviewForWallet = false;
-  String _lastReviewWallet = '';
   String _lastStatsWallet = '';
 
   void _openEventWorkspace() {
@@ -70,22 +64,12 @@ class _DesktopInstitutionHubScreenState
       vsync: this,
     );
     _animationController.forward();
-
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _loadInstitutionReviewStatus(forceRefresh: true);
-    });
   }
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
     final wallet = _resolveWalletAddress(listen: true);
-    final walletChanged = wallet != _lastReviewWallet;
-    if (!walletChanged && _hasFetchedReviewForWallet) return;
-
-    if (wallet.isNotEmpty) {
-      _loadInstitutionReviewStatus(forceRefresh: true);
-    }
 
     final statsWalletChanged = wallet != _lastStatsWallet;
     if (wallet.isEmpty) {
@@ -125,66 +109,20 @@ class _DesktopInstitutionHubScreenState
     );
   }
 
+  /// Promotion is a paid, wallet-keyed action, so a wallet is needed for THAT
+  /// action only. Eligibility starts from the server-confirmed membership of the
+  /// institution the account is acting for.
   String? _institutionPromotionUnavailableReason() {
     final l10n = AppLocalizations.of(context)!;
-    final wallet = _resolveWalletAddress();
-    if (wallet.isEmpty) {
-      return l10n.desktopInstitutionPromotionWalletRequiredReason;
-    }
-
-    final daoProvider = context.read<DAOProvider>();
-    final review =
-        _institutionReview ?? daoProvider.findReviewForWallet(wallet);
-    final verification = DaoRoleVerification(
-      walletAddress: wallet,
-      review: review,
-    );
-
-    if (verification.isApprovedFor(DaoRoleType.artist) ||
-        verification.isPendingFor(DaoRoleType.artist)) {
-      return l10n.desktopInstitutionPromotionArtistConflictReason;
-    }
-    if (!verification.isApprovedFor(DaoRoleType.institution)) {
+    final membership =
+        context.read<AccountVerificationProvider>().selectedMembership;
+    if (membership == null || !membership.canAdminister) {
       return l10n.desktopInstitutionPromotionRequiresApprovalReason;
     }
+    if (_resolveWalletAddress().isEmpty) {
+      return l10n.desktopInstitutionPromotionWalletRequiredReason;
+    }
     return null;
-  }
-
-  Future<void> _loadInstitutionReviewStatus({bool forceRefresh = false}) async {
-    final wallet = _resolveWalletAddress();
-    if (wallet.isEmpty || _reviewLoading) return;
-    if (!forceRefresh &&
-        _hasFetchedReviewForWallet &&
-        wallet == _lastReviewWallet) {
-      return;
-    }
-
-    final requestedWallet = wallet;
-    setState(() {
-      _reviewLoading = true;
-      _lastReviewWallet = requestedWallet;
-    });
-
-    try {
-      final daoProvider = context.read<DAOProvider>();
-      final review = await daoProvider.loadReviewForWallet(
-        requestedWallet,
-        forceRefresh: forceRefresh,
-      );
-      if (!mounted || requestedWallet != _lastReviewWallet) return;
-
-      setState(() {
-        _institutionReview =
-            review ?? daoProvider.findReviewForWallet(requestedWallet);
-        _hasFetchedReviewForWallet = true;
-        _reviewLoading = false;
-      });
-    } catch (e) {
-      if (!mounted || requestedWallet != _lastReviewWallet) return;
-      setState(() {
-        _reviewLoading = false;
-      });
-    }
   }
 
   @override
@@ -269,23 +207,13 @@ class _DesktopInstitutionHubScreenState
     final section = dashboardState.institutionSection;
     final showExhibitions = AppConfig.isFeatureEnabled('exhibitions');
 
-    final daoProvider = context.watch<DAOProvider>();
-    final wallet = _resolveWalletAddress(listen: true);
-    final review = _institutionReview ??
-        (wallet.isNotEmpty ? daoProvider.findReviewForWallet(wallet) : null);
-    final verification = DaoRoleVerification(
-      walletAddress: wallet,
-      review: review,
-    );
-    final isApprovedInstitution = verification.isApprovedFor(
-      DaoRoleType.institution,
-    );
-    final hasArtistBadge = verification.isApprovedFor(DaoRoleType.artist);
-    final hasConflictingArtistReview = verification.isPendingFor(
-      DaoRoleType.artist,
-    );
+    // Access is the account's server-confirmed institution membership: no
+    // wallet, persona or artist standing is consulted.
+    final verification = context.watch<AccountVerificationProvider>();
+    final membership = verification.selectedMembership;
+    final isApprovedInstitution = membership != null;
     final canSelfServeInstitutionPromotion =
-        isApprovedInstitution && !hasArtistBadge && !hasConflictingArtistReview;
+        membership != null && membership.canAdminister;
 
     final programme = <Widget>[
       if (section == DesktopInstitutionSection.create &&
@@ -511,41 +439,33 @@ class _DesktopInstitutionHubScreenState
 
   Widget _buildVerificationStatusCard(ThemeProvider themeProvider) {
     final l10n = AppLocalizations.of(context)!;
-    final wallet = _resolveWalletAddress();
-    final daoProvider = context.watch<DAOProvider>();
-    final review = _institutionReview ??
-        (wallet.isNotEmpty ? daoProvider.findReviewForWallet(wallet) : null);
-    final verification = DaoRoleVerification(
-      walletAddress: wallet,
-      review: review,
-    );
-    final isApproved = verification.isApprovedFor(DaoRoleType.institution);
-    final isPending = verification.isPendingFor(DaoRoleType.institution);
-    final isRejected = verification.isRejectedFor(DaoRoleType.institution);
+    final verification = context.watch<AccountVerificationProvider>();
+    final isApproved = verification.hasInstitutionAccess;
+    final isPending = !isApproved && verification.hasOpenInstitutionRequest;
 
     var tone = KubusStatusTone.neutral;
     var statusText = l10n.desktopInstitutionVerificationNotAppliedTitle;
     var statusDescription =
         l10n.desktopInstitutionVerificationNotAppliedDescription;
 
-    if (_reviewLoading) {
+    if (verification.isLoading) {
       statusText = l10n.desktopArtistStudioVerificationLoadingTitle;
       statusDescription =
           l10n.desktopArtistStudioVerificationLoadingDescription;
+    } else if (verification.isUnavailable) {
+      statusDescription = l10n.verificationUnavailable;
     } else if (isApproved) {
       tone = KubusStatusTone.positive;
-      statusText = l10n.profileEditVerifiedInstitutionTitle;
+      statusText =
+          verification.selectedMembership?.institutionName.isNotEmpty == true
+              ? verification.selectedMembership!.institutionName
+              : l10n.profileEditVerifiedInstitutionTitle;
       statusDescription =
           l10n.desktopInstitutionVerificationApprovedDescription;
     } else if (isPending) {
       tone = KubusStatusTone.warning;
       statusText = l10n.desktopArtistStudioVerificationPendingTitle;
       statusDescription = l10n.desktopInstitutionVerificationPendingDescription;
-    } else if (isRejected) {
-      tone = KubusStatusTone.negative;
-      statusText = l10n.desktopArtistStudioVerificationRejectedTitle;
-      statusDescription =
-          l10n.desktopArtistStudioVerificationRejectedDescription;
     }
 
     return KubusStatusPanel(
@@ -553,10 +473,7 @@ class _DesktopInstitutionHubScreenState
       title: statusText,
       description: statusDescription,
       tone: tone,
-      isLoading: _reviewLoading,
-      detail: (!isApproved && !isPending && wallet.isNotEmpty)
-          ? l10n.desktopInstitutionVerificationApplyHint
-          : null,
+      isLoading: verification.isLoading,
     );
   }
 

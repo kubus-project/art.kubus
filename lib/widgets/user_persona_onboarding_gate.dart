@@ -3,9 +3,8 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import '../models/dao.dart';
 import '../models/user_persona.dart';
-import '../providers/dao_provider.dart';
+import '../providers/account_verification_provider.dart';
 import '../providers/profile_provider.dart';
 
 /// Quietly reconciles the persona of established accounts. It never shows UI.
@@ -16,9 +15,10 @@ import '../providers/profile_provider.dart';
 /// scope in `OnboardingFlowScreen`) or by the user choosing to complete their
 /// profile from settings.
 ///
-/// What remains here is the silent half of the old behaviour: older accounts
-/// may carry their artist/institution role only as an approved DAO review, not
-/// on the profile flags, so the matching persona is persisted without asking.
+/// What remains here is the silent half of the old behaviour: an account that is
+/// already a verified artist, or a member of an institution, has the matching
+/// persona saved without asking. The persona is only a preference; the standing
+/// itself is the server's answer for the account.
 class UserPersonaOnboardingGate extends StatefulWidget {
   final Widget child;
 
@@ -35,43 +35,44 @@ class _UserPersonaOnboardingGateState extends State<UserPersonaOnboardingGate> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    unawaited(_inferPersonaFromApprovedReview());
+    unawaited(_inferPersonaFromVerification());
   }
 
   @override
   void didUpdateWidget(covariant UserPersonaOnboardingGate oldWidget) {
     super.didUpdateWidget(oldWidget);
-    unawaited(_inferPersonaFromApprovedReview());
+    unawaited(_inferPersonaFromVerification());
   }
 
-  Future<void> _inferPersonaFromApprovedReview() async {
+  Future<void> _inferPersonaFromVerification() async {
     if (_isChecking) return;
     _isChecking = true;
 
     try {
       final profile = context.read<ProfileProvider>();
-      final wallet = profile.currentUser?.walletAddress;
-      if (wallet == null || wallet.isEmpty) return;
+      if (!profile.isSignedIn) return;
       if (!profile.needsPersonaOnboarding) return;
 
-      DAOProvider? daoProvider;
+      AccountVerificationProvider? verification;
       try {
-        daoProvider = context.read<DAOProvider>();
+        // Listening, so the persona follows the standing once it is read.
+        verification = Provider.of<AccountVerificationProvider>(context);
       } catch (_) {
-        daoProvider = null; // Not registered in some embeddings/tests.
+        verification = null; // Not registered in some embeddings/tests.
       }
-      final review = daoProvider?.findReviewForWallet(wallet);
-      if (review == null || !review.isApproved) return;
+      if (verification == null || !verification.isReady) return;
 
-      final inferred = review.isInstitutionApplication
-          ? UserPersona.institution
-          : review.isArtistApplication
-              ? UserPersona.creator
+      final UserPersona? inferred = verification.isArtist
+          ? UserPersona.creator
+          : verification.hasInstitutionAccess
+              ? UserPersona.institution
               : null;
       if (inferred == null) return;
 
       unawaited(profile.setUserPersona(inferred));
-      unawaited(profile.markPersonaOnboardingSeen(walletAddress: wallet));
+      unawaited(profile.markPersonaOnboardingSeen(
+        walletAddress: profile.currentUser?.walletAddress,
+      ));
     } finally {
       _isChecking = false;
     }

@@ -1988,57 +1988,8 @@ class AppLocalizationsSl extends AppLocalizations {
   }
 
   @override
-  String get onboardingFlowDaoReviewTitle => 'Pregled upravljanja';
-
-  @override
-  String get onboardingFlowDaoReviewInstitutionBody =>
-      'Oddaj podatke institucije za pregled skupnostnega upravljanja pred zaključkom nastavitve računa.';
-
-  @override
-  String get onboardingFlowDaoReviewArtistBody =>
-      'Oddaj opis svoje prakse za pregled skupnostnega upravljanja pred zaključkom nastavitve računa.';
-
-  @override
   String get onboardingFlowDaoReviewCompleteFormError =>
       'Pred nadaljevanjem izpolni obrazec pregleda.';
-
-  @override
-  String get onboardingFlowDaoReviewSubmitFailed =>
-      'Oddaja v pregled upravljanja trenutno ni uspela.';
-
-  @override
-  String onboardingFlowDaoReviewStatus(Object status) {
-    return 'Trenutno stanje: $status';
-  }
-
-  @override
-  String get onboardingFlowDaoReviewOrganizationLabel => 'Organizacija';
-
-  @override
-  String get onboardingFlowDaoReviewContactLabel => 'Kontaktni URL ali e-pošta';
-
-  @override
-  String get onboardingFlowDaoReviewPortfolioLabel => 'URL portfelja';
-
-  @override
-  String get onboardingFlowDaoReviewInstitutionFocusLabel =>
-      'Področje institucije';
-
-  @override
-  String get onboardingFlowDaoReviewPrimaryMediumLabel => 'Primarni medij';
-
-  @override
-  String get onboardingFlowDaoReviewMissionLabel => 'Poslanstvo';
-
-  @override
-  String get onboardingFlowDaoReviewArtistStatementLabel => 'Izjava umetnika';
-
-  @override
-  String get onboardingFlowDaoReviewReviewerNotes => 'Opombe pregledovalca';
-
-  @override
-  String get onboardingFlowDaoReviewSubmitAction =>
-      'Oddaj za pregled upravljanja';
 
   @override
   String get onboardingWelcomeTitle =>
@@ -4075,142 +4026,6 @@ class AppLocalizationsSl extends AppLocalizations {
   @override
   String get institutionHubSeparateWalletsTip =>
       'Namig: Uporabi ločeni denarnici za vlogi ustvarjalca in institucije, da konteksti pregleda upravljanja ostanejo jasni.';
-
-  @override
-  String get institutionHubApplyForReviewAction => 'Oddaj prijavo za pregled';
-
-  @override
-  String get institutionHubArtistBadgeActiveTitle =>
-      'Umetniška značka je aktivna';
-
-  @override
-  String get institutionHubArtistBadgeActiveDescription =>
-      'Umetniške denarnice odklenejo ustvarjalna orodja. Institucijski poteki potrebujejo namensko denarnico brez ustvarjalskih odobritev.';
-
-  @override
-  String get institutionHubArtistReviewInProgressTitle =>
-      'Pregled umetnika je v teku';
-
-  @override
-  String get institutionHubArtistReviewInProgressDescription =>
-      'Imaš aktivno umetniško prijavo. Počakaj na odločitev ali jo ponastavi, preden nadaljuješ kot institucija.';
-
-  @override
-  String get institutionHubApplicationTitle => 'Prijava institucije';
-
-  @override
-  String get institutionHubApplicationSubtitle =>
-      'Deli svoje poslanstvo, programski fokus in način sodelovanja s skupnostjo.';
-
-  @override
-  String get institutionHubApplicationOrganizationLabel => 'Ime organizacije';
-
-  @override
-  String get institutionHubApplicationContactLabel =>
-      'Spletna stran ali kontaktni e-poštni naslov';
-
-  @override
-  String get institutionHubApplicationFocusLabel => 'Kuratorski fokus';
-
-  @override
-  String get institutionHubApplicationMissionLabel => 'Poslanstvo in cilji';
-
-  @override
-  String get institutionHubApplicationOrganizationRequired =>
-      'Vnesi ime organizacije.';
-
-  @override
-  String get institutionHubApplicationContactRequired =>
-      'Deli spletno stran ali kontaktni e-poštni naslov.';
-
-  @override
-  String get institutionHubApplicationFocusRequired =>
-      'Opiši programski fokus.';
-
-  @override
-  String get institutionHubApplicationMissionRequired =>
-      'Opiši poslanstvo z vsaj 20 znaki.';
-
-  @override
-  String get institutionHubApplicationWalletBannerTitle =>
-      'Za oddajo je potreben podpis z denarnico';
-
-  @override
-  String get institutionHubApplicationWalletRequired =>
-      'Pred oddajo poveži denarnico.';
-
-  @override
-  String get institutionHubApplicationWalletWhy =>
-      'Prijava se podpiše z vašo denarnico, zato pregled ostane vezan na denarnico, ki jo nadzorujete. Za brskanje po institucijah denarnica ni potrebna.';
-
-  @override
-  String get institutionHubApplicationSubmittedToast =>
-      'Prijava je oddana v pregled upravljanja.';
-
-  @override
-  String get institutionHubApplicationSubmitUnavailableToast =>
-      'Prijave trenutno ni mogoče oddati.';
-
-  @override
-  String institutionHubApplicationSubmitFailedToast(Object error) {
-    return 'Oddaja ni uspela: $error';
-  }
-
-  @override
-  String get institutionHubApplicationSubmitButton => 'Oddaj prijavo';
-
-  @override
-  String get institutionHubCrossRoleConflictTitle => 'Zaznan je konflikt vlog';
-
-  @override
-  String get institutionHubArtistWalletSwitchDescription =>
-      'Umetniške denarnice so namenjene ustvarjalnim orodjem. Pred prijavo za kuratorska orodja preklopi na namensko institucijsko denarnico.';
-
-  @override
-  String get institutionHubArtistReviewPendingResetDescription =>
-      'Trenutno imaš umetniško prijavo v pregledu. Dokončaj pregled ali zaprosi za ponastavitev, preden oddaš prijavo za institucijo.';
-
-  @override
-  String get institutionHubArtistSubmissionConflictDescription =>
-      'Za to denarnico je zaznana umetniška prijava. Počisti jo v nastavitvah, preden nadaljuješ kot institucija.';
-
-  @override
-  String get institutionHubApplicationCardSubtitle =>
-      'Oddaj organizacijo v pregled upravljanja in odkleni institucijska orodja.';
-
-  @override
-  String get institutionHubDaoStatusApproved => 'ODOBRENO';
-
-  @override
-  String get institutionHubDaoStatusPending => 'ČAKA';
-
-  @override
-  String get institutionHubDaoStatusRejected => 'ZAVRNJENO';
-
-  @override
-  String get institutionHubDaoStatusInReview => 'V PREGLEDU';
-
-  @override
-  String get institutionHubDaoStatusNotApplied => 'NI PRIJAVLJENO';
-
-  @override
-  String get institutionHubCtaApprovedByDao =>
-      'Odobreno v pregledu upravljanja';
-
-  @override
-  String get institutionHubCtaPendingDaoReview => 'Čaka na pregled upravljanja';
-
-  @override
-  String get institutionHubCtaApplyAsInstitution =>
-      'Prijavi se kot institucija';
-
-  @override
-  String get institutionHubDaoStatusSyncedLabel =>
-      'Stanje sinhronizirano iz pregleda upravljanja';
-
-  @override
-  String get institutionHubDaoReviewQueueMessage =>
-      'Tvoja prijava čaka v vrsti za pregled upravljanja.';
 
   @override
   String get institutionHubApprovedToolsMessage =>
@@ -8936,130 +8751,8 @@ class AppLocalizationsSl extends AppLocalizations {
       'Ustvari AR označevalce za svojo umetnino in jih deli s svetom';
 
   @override
-  String get artistStudioInstitutionRoleActiveTitle =>
-      'Aktivna vloga institucije';
-
-  @override
-  String get artistStudioInstitutionReviewInProgressTitle =>
-      'Pregled institucije v teku';
-
-  @override
-  String get artistStudioInstitutionRoleActiveDescription =>
-      'Institucijski računi lahko vidijo razstave in dogodke, vendar ne morejo vzdrževati umetniških prijav. Za ustvarjanje umetnin uporabi ločeno umetniško denarnico.';
-
-  @override
-  String get artistStudioInstitutionReviewInProgressDescription =>
-      'Imaš odprto prijavo za institucijo. Pred preklopom na umetniški pregled jo zaključi ali umakni.';
-
-  @override
-  String get artistStudioCrossRoleInstitutionBadgeActiveTitle =>
-      'Značka institucije je aktivna';
-
-  @override
-  String get artistStudioCrossRoleInstitutionBadgeActiveDescription =>
-      'Institucijski računi odklenejo kuratorstvo in orodja za dogodke. Če potrebuješ ustvarjalna orodja, uporabi ločeno umetniško denarnico.';
-
-  @override
-  String get artistStudioCrossRoleInstitutionReviewInProgressTitle =>
-      'Pregled institucije v teku';
-
-  @override
-  String get artistStudioCrossRoleInstitutionReviewInProgressDescription =>
-      'Trenutno imaš odprto prijavo za institucijo. Pred prijavo kot umetnik dokončaj postopek ali zahtevaj ponastavitev pregleda.';
-
-  @override
-  String get artistStudioCrossRoleConflictTitle => 'Zaznan konflikt vlog';
-
-  @override
-  String get artistStudioCrossRoleConflictDescription =>
-      'Za to denarnico smo zaznali obstoječi institucijski zapis. Pred prijavo kot umetnik ga počisti v nastavitvah.';
-
-  @override
-  String get artistStudioDaoCardTitle =>
-      'Prijava ustvarjalca (pregled upravljanja)';
-
-  @override
-  String get artistStudioDaoCardSubtitle =>
-      'Svojo prakso oddaj v pregled upravljanja. Tako art.kubus odpira umetniška orodja in ohranja platformo vodeno s skupnostjo.';
-
-  @override
-  String get artistStudioDaoStatusApproved => 'ODOBRENO';
-
-  @override
-  String get artistStudioDaoStatusPending => 'V OBRAVNAVI';
-
-  @override
-  String get artistStudioDaoStatusRejected => 'ZAVRNJENO';
-
-  @override
-  String get artistStudioDaoStatusNotApplied => 'NI PRIJAVE';
-
-  @override
-  String get artistStudioStatusSyncedFromDao =>
-      'Stanje sinhronizirano iz pregleda upravljanja';
-
-  @override
-  String get artistStudioReviewPendingInfo =>
-      'Tvoja prijava čaka v vrsti za pregled upravljanja. Obvestili te bomo, ko bo pregled končan.';
-
-  @override
-  String get artistStudioReviewApprovedInfo =>
-      'Tvoja praksa je bila odobrena v pregledu upravljanja. Orodja studia so pripravljena.';
-
-  @override
-  String get artistStudioReviewRejectedInfo =>
-      'Tvoja zadnja prijava je bila zavrnjena. Lahko jo znova oddaš z dopolnitvami.';
-
-  @override
-  String get artistStudioConnectWalletToSubmitForDaoReview =>
-      'Pred oddajo v pregled upravljanja poveži denarnico.';
-
-  @override
-  String get artistStudioCtaConnectWalletToApply =>
-      'Poveži denarnico za prijavo';
-
-  @override
-  String get artistStudioAccountCtaApply => 'Prijavi se na pregled umetnika';
-
-  @override
-  String get artistStudioAccountCtaRetry => 'Poskusi znova';
-
-  @override
-  String get artistStudioAccountApplicationUnavailable =>
-      'Prijave umetnikov trenutno niso na voljo. Poskusite znova pozneje.';
-
-  @override
-  String get artistStudioAccountDetailNotApplied =>
-      'Pošljite portfelj, medij in izjavo. Za prijavo denarnica ni potrebna.';
-
-  @override
-  String get artistStudioAccountDetailPending =>
-      'Vaša prijava čaka na pregled umetnika.';
-
-  @override
-  String get artistStudioAccountDetailApproved =>
-      'Vaša prijava umetnika je bila odobrena.';
-
-  @override
-  String get artistStudioAccountDetailRejected =>
-      'Ta prijava ni bila odobrena. Lahko pošljete novo.';
-
-  @override
   String get artistStudioAccountPortfolioInvalid =>
       'Vnesite veljaven spletni naslov, na primer primer.si.';
-
-  @override
-  String get artistStudioCtaApprovedByDao => 'Odobreno v pregledu upravljanja';
-
-  @override
-  String get artistStudioCtaPendingDaoReview => 'Čaka na pregled upravljanja';
-
-  @override
-  String get artistStudioCtaResubmitForReview => 'Ponovno oddaj v pregled';
-
-  @override
-  String get artistStudioCtaApplyForDaoReview =>
-      'Prijavi se v pregled upravljanja';
 
   @override
   String get artistPromotionRequiresWalletReason =>
@@ -9106,18 +8799,14 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get artistStudioUnlocksAfterDaoApprovalToast =>
-      'Artist Studio se odklene po odobritvi v pregledu upravljanja.';
-
-  @override
-  String get artistStudioSeparateWalletsTip =>
-      'Ločeni denarnici za umetniško in institucijsko vlogo ti pomagata ohraniti jasen dostop in ločene poti pregleda.';
+      'Studio za umetnike se odklene, ko je vaša prijava odobrena.';
 
   @override
   String get artistStudioLockedTitle => 'Umetniški studio je zaklenjen';
 
   @override
   String get artistStudioLockedDescription =>
-      'Prijavi se v pregled upravljanja, da odkleneš studijska orodja za objavljanje, predstavitev in spremljanje svojega dela.';
+      'Prijavi se kot umetnik in odkleni orodja za objavljanje, predstavljanje in spremljanje svojega dela.';
 
   @override
   String get institutionHubLockedTitle =>
@@ -9125,17 +8814,10 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get institutionHubLockedDescription =>
-      'Prijavi se v pregled upravljanja, da odkleneš orodja institucije za dogodke, razstave in analitiko programa.';
+      'Prevzemi svojo institucijo ali zahtevaj novo prisotnost in odkleni orodja za dogodke, razstave in analitiko programa.';
 
   @override
   String get artistStudioSettingsTitle => 'Nastavitve studia';
-
-  @override
-  String get artistStudioApplicationModalTitle => 'Umetniška prijava';
-
-  @override
-  String get artistStudioApplicationModalSubtitle =>
-      'Deli kratek pregled svoje prakse. Prijave so usmerjene v vrsto za pregled upravljanja.';
 
   @override
   String get artistStudioApplicationFieldPortfolioLabel =>
@@ -9160,25 +8842,6 @@ class AppLocalizationsSl extends AppLocalizations {
   String artistStudioApplicationValidationStatementMinChars(Object min) {
     return 'Deli vsaj $min znakov o svojem delu';
   }
-
-  @override
-  String get artistStudioApplicationWalletRequiredToast =>
-      'Pred oddajo v pregled poveži denarnico.';
-
-  @override
-  String get artistStudioApplicationReviewTitle => 'Umetniška prijava';
-
-  @override
-  String get artistStudioApplicationSubmittedToast =>
-      'Prijava je oddana pregledovalcem upravljanja.';
-
-  @override
-  String get artistStudioApplicationUnableToSubmitToast =>
-      'Trenutno ni mogoče oddati prijave.';
-
-  @override
-  String get artistStudioApplicationSubmissionFailedToast =>
-      'Oddaja ni uspela. Poskusi znova.';
 
   @override
   String get artistStudioApplicationSubmitButton => 'Oddaj prijavo';
@@ -9313,10 +8976,6 @@ class AppLocalizationsSl extends AppLocalizations {
   @override
   String get desktopInstitutionPromotionWalletRequiredReason =>
       'Za ustvarjanje promocij poveži denarnico.';
-
-  @override
-  String get desktopInstitutionPromotionArtistConflictReason =>
-      'Ta denarnica je preverjena kot umetniška. Za promocijo vsebin institucije uporabi institucijsko denarnico.';
 
   @override
   String get desktopInstitutionPromotionRequiresApprovalReason =>
@@ -9958,128 +9617,6 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get communityPostingFeatureLabel => 'Objavljanje';
-
-  @override
-  String get daoModerationApproveLabel => 'Odobri';
-
-  @override
-  String get daoModerationRejectLabel => 'Zavrni';
-
-  @override
-  String get daoModerationSetPendingLabel => 'Nastavi kot čakajoče';
-
-  @override
-  String daoModerationDecisionDialogTitle(Object decision) {
-    return '$decision prijavo?';
-  }
-
-  @override
-  String get daoModerationDecisionDialogDescription =>
-      'Po želji dodaj opombe pregledovalca za prijavitelja.';
-
-  @override
-  String get daoModerationReviewerNotesLabel =>
-      'Opombe pregledovalca (neobvezno)';
-
-  @override
-  String get daoReviewStatusApproved => 'Odobreno';
-
-  @override
-  String get daoReviewStatusRejected => 'Zavrnjeno';
-
-  @override
-  String get daoReviewStatusPending => 'Čaka';
-
-  @override
-  String get daoReviewStatusInReview => 'V pregledu';
-
-  @override
-  String get daoModerationDisabledToast =>
-      'Moderacija pregledov je onemogočena.';
-
-  @override
-  String get daoModerationWalletRequiredToast =>
-      'Za moderiranje prijav poveži denarnico.';
-
-  @override
-  String get daoModerationSelfNotAllowedToast =>
-      'Svoje prijave ne moreš moderirati.';
-
-  @override
-  String get daoModerationSubmissionApprovedToast => 'Prijava odobrena';
-
-  @override
-  String get daoModerationSubmissionUpdatedToast => 'Prijava posodobljena';
-
-  @override
-  String get daoModerationNoChangesSavedToast => 'Spremembe niso shranjene';
-
-  @override
-  String get daoModerationUpdateFailedToast =>
-      'Pregleda trenutno ni mogoče posodobiti.';
-
-  @override
-  String get daoReviewDetailsVotingDisabledForApplicant =>
-      'Glasovanje za profil prijavitelja je onemogočeno.';
-
-  @override
-  String get daoReviewDetailsVotingDisabledForSubmission =>
-      'Glasovanje za to prijavo je onemogočeno.';
-
-  @override
-  String get daoReviewDetailsVotingManagedByDao =>
-      'Odločitve o pregledu upravlja DAO postopek.';
-
-  @override
-  String get daoReviewQueueTitle => 'Čakalna vrsta pregleda upravljanja';
-
-  @override
-  String get daoReviewVotingHandledByDaoHelper =>
-      'Glasovanje poteka neposredno prek DAO; za odločanje uporabi predloge.';
-
-  @override
-  String get daoReviewCannotVoteOwnSubmissionHelper =>
-      'O svoji prijavi ne moreš glasovati';
-
-  @override
-  String get daoReviewVotingDisabledSubmissionHelper =>
-      'Glasovanje za to prijavo je onemogočeno';
-
-  @override
-  String get daoReviewVotingOpensAfterReviewHelper =>
-      'Glasovanje se odpre po pregledu';
-
-  @override
-  String daoReviewDecisionRecordedHelper(Object status) {
-    return 'Odločitev zabeležena: $status';
-  }
-
-  @override
-  String get daoReviewMediumNotProvided => 'Medij ni naveden';
-
-  @override
-  String get daoReviewViewDetailsButton => 'Ogled podrobnosti';
-
-  @override
-  String get daoReviewDetailsDialogTitle => 'Pregled prijave';
-
-  @override
-  String daoReviewDetailsPortfolioLabel(Object url) {
-    return 'Portfelj: $url';
-  }
-
-  @override
-  String daoReviewDetailsMediumLabel(Object medium) {
-    return 'Medij: $medium';
-  }
-
-  @override
-  String daoReviewDetailsStatusLabel(Object status) {
-    return 'Status: $status';
-  }
-
-  @override
-  String get daoReviewDetailsReviewerNotesLabel => 'Opombe pregledovalca:';
 
   @override
   String get daoProposalCategoryLabel => 'Kategorija';
@@ -16515,14 +16052,6 @@ class AppLocalizationsSl extends AppLocalizations {
       'Za uporabo analitike umetnika je potrebna odobrena umetniška vloga.';
 
   @override
-  String get analyticsBlockedArtistRoleMismatchTitle =>
-      'Analitika umetnika ni na voljo';
-
-  @override
-  String get analyticsBlockedArtistRoleMismatchDescription =>
-      'Za analitiko umetnika uporabi odobreno umetniško denarnico.';
-
-  @override
   String get analyticsBlockedArtistApprovalRequiredTitle =>
       'Potrebna je odobritev umetnika';
 
@@ -16545,14 +16074,6 @@ class AppLocalizationsSl extends AppLocalizations {
   @override
   String get analyticsBlockedInstitutionRejectedDescription =>
       'Za uporabo analitike je potrebna odobrena vloga institucije.';
-
-  @override
-  String get analyticsBlockedInstitutionRoleMismatchTitle =>
-      'Analitika institucije ni na voljo';
-
-  @override
-  String get analyticsBlockedInstitutionRoleMismatchDescription =>
-      'Za analitiko institucije uporabi odobreno denarnico institucije.';
 
   @override
   String get analyticsBlockedInstitutionApprovalRequiredTitle =>
@@ -19441,4 +18962,239 @@ class AppLocalizationsSl extends AppLocalizations {
   @override
   String get moderationRestorationUnderReview =>
       'Vsebina še ni obnovljena; obnova se pregleduje.';
+
+  @override
+  String get verificationArtistCardTitle => 'Preverjanje umetnikov';
+
+  @override
+  String get verificationArtistCardSubtitle =>
+      'Uredniki pregledajo vsakega umetnika, preden lahko objavlja izvirna dela. Za prijavo denarnica ni potrebna.';
+
+  @override
+  String get verificationStatusNotApplied => 'NI PRIJAVE';
+
+  @override
+  String get verificationStatusPending => 'ČAKA NA PREGLED';
+
+  @override
+  String get verificationStatusApproved => 'PREVERJENO';
+
+  @override
+  String get verificationStatusRejected => 'NI ODOBRENO';
+
+  @override
+  String get verificationStatusRevoked => 'UMAKNJENO';
+
+  @override
+  String get verificationArtistDetailNotApplied =>
+      'Pošlji portfolio, medij in kratko izjavo. Denarnica ni potrebna.';
+
+  @override
+  String get verificationArtistDetailPending =>
+      'Tvoja prijava čaka na pregled. Obvestili te bomo, ko bo odločeno.';
+
+  @override
+  String get verificationArtistDetailApproved =>
+      'Si preverjen umetnik. Studio je pripravljen.';
+
+  @override
+  String get verificationArtistDetailRejected =>
+      'Ta prijava ni bila odobrena. Lahko pošlješ novo.';
+
+  @override
+  String get verificationArtistDetailRevoked =>
+      'Preverjanje umetnika je bilo umaknjeno. Lahko se znova prijaviš.';
+
+  @override
+  String get verificationArtistCtaApply => 'Prijavi se kot umetnik';
+
+  @override
+  String get verificationArtistCtaPending => 'Preverjanje poteka';
+
+  @override
+  String get verificationArtistCtaApproved => 'Preverjen umetnik';
+
+  @override
+  String get verificationArtistCtaReapply => 'Prijavi se znova';
+
+  @override
+  String get verificationCtaRetry => 'Poskusi znova';
+
+  @override
+  String get verificationUnavailable =>
+      'Stanje preverjanja trenutno ni na voljo. Poskusi pozneje.';
+
+  @override
+  String get verificationArtistFormTitle => 'Prijava kot umetnik';
+
+  @override
+  String get verificationArtistFormSubtitle =>
+      'Deli utrinek svoje prakse. Uredniki pregledajo vsako prijavo.';
+
+  @override
+  String get verificationArtistSubmitted => 'Prijava je poslana v pregled.';
+
+  @override
+  String get verificationSubmitFailed => 'Pošiljanje ni uspelo. Poskusi znova.';
+
+  @override
+  String get verificationInstitutionCardTitle => 'Dostop za institucije';
+
+  @override
+  String get verificationInstitutionCardSubtitle =>
+      'Uredniki pregledajo institucije, preden lahko upravljajo svojo prisotnost na art.kubus. Denarnica ni potrebna.';
+
+  @override
+  String get verificationInstitutionClaimTitle => 'Prevzemi obstoječ profil';
+
+  @override
+  String get verificationInstitutionClaimBody =>
+      'Poišči svojo institucijo in pošlji dokazila. Urednik jih pregleda, preden dobiš dostop.';
+
+  @override
+  String get verificationInstitutionRequestTitle =>
+      'Zahtevaj novo prisotnost institucije';
+
+  @override
+  String get verificationInstitutionRequestBody =>
+      'Ne najdeš svoje institucije? Povej nam o njej. Nič ni objavljeno, dokler urednik ne odobri.';
+
+  @override
+  String get verificationInstitutionSearchHint => 'Poišči institucijo po imenu';
+
+  @override
+  String get verificationInstitutionSearchEmpty =>
+      'Ni zadetkov. Lahko zahtevaš novo prisotnost.';
+
+  @override
+  String get verificationInstitutionClaimAction => 'Prevzemi ta profil';
+
+  @override
+  String get verificationInstitutionActingFor => 'Deluješ za';
+
+  @override
+  String get verificationInstitutionRoleOwner => 'Lastnik';
+
+  @override
+  String get verificationInstitutionRoleAdmin => 'Skrbnik';
+
+  @override
+  String get verificationInstitutionRoleEditor => 'Urednik';
+
+  @override
+  String get verificationInstitutionRoleViewer => 'Bralec';
+
+  @override
+  String get verificationInstitutionLegacyNotice =>
+      'Tvoj račun je imel vlogo institucije, preden so obstajala članstva. Prevzemi ali zahtevaj svojo institucijo, da jo upravljaš.';
+
+  @override
+  String get verificationInstitutionRequestsTitle => 'Tvoje zahteve';
+
+  @override
+  String get verificationRequestStatusSubmitted => 'Čaka na pregled';
+
+  @override
+  String get verificationRequestStatusUnderReview => 'V pregledu';
+
+  @override
+  String get verificationRequestStatusApproved => 'Odobreno';
+
+  @override
+  String get verificationRequestStatusRejected => 'Ni odobreno';
+
+  @override
+  String get verificationRequestStatusWithdrawn => 'Umaknjeno';
+
+  @override
+  String get verificationRequestStatusRevoked => 'Dostop umaknjen';
+
+  @override
+  String get verificationRequestWithdraw => 'Umakni zahtevo';
+
+  @override
+  String get verificationRequestKindClaim => 'Prevzem';
+
+  @override
+  String get verificationRequestKindPresence => 'Nova prisotnost';
+
+  @override
+  String get verificationPresenceFieldName => 'Ime institucije';
+
+  @override
+  String get verificationPresenceFieldKind => 'Vrsta';
+
+  @override
+  String get verificationPresenceFieldWebsite => 'Spletna stran';
+
+  @override
+  String get verificationPresenceFieldLocation => 'Kraj';
+
+  @override
+  String get verificationPresenceFieldRole => 'Tvoja vloga v instituciji';
+
+  @override
+  String get verificationPresenceFieldMessage => 'Kaj naj vedo uredniki?';
+
+  @override
+  String get verificationPresenceFieldEvidence =>
+      'Povezava do dokazila (neobvezno)';
+
+  @override
+  String get verificationPresenceValidationName => 'Vnesi ime institucije.';
+
+  @override
+  String get verificationPresenceValidationContact =>
+      'Dodaj spletno stran ali povezavo do dokazila.';
+
+  @override
+  String get verificationPresenceValidationMessage => 'Napiši vsaj 20 znakov.';
+
+  @override
+  String get verificationPresenceSubmit => 'Pošlji zahtevo';
+
+  @override
+  String get verificationPresenceSubmitted =>
+      'Zahteva je poslana. Urednik jo bo pregledal.';
+
+  @override
+  String get verificationPresenceDuplicateTitle => 'Ti profili že obstajajo';
+
+  @override
+  String get verificationPresenceDuplicateBody =>
+      'Če je ena od njih tvoja institucija, jo raje prevzemi.';
+
+  @override
+  String get verificationPresenceDuplicateContinue =>
+      'Nobena od teh, pošlji mojo zahtevo';
+
+  @override
+  String get verificationPresenceTooMany =>
+      'Imaš preveč odprtih zahtev. Najprej eno umakni.';
+
+  @override
+  String get verificationClaimSent =>
+      'Zahtevek za prevzem je poslan. Urednik ga bo pregledal.';
+
+  @override
+  String get verificationOnboardingTitle => 'Preverjanje';
+
+  @override
+  String get verificationOnboardingArtistBody =>
+      'Prijavi se kot umetnik, da te uredniki preverijo. To lahko storiš tudi pozneje v studiu.';
+
+  @override
+  String get verificationOnboardingInstitutionBody =>
+      'Prevzemi profil svoje institucije ali zahtevaj novo prisotnost. To lahko storiš tudi pozneje v središču.';
+
+  @override
+  String get verificationOnboardingPending =>
+      'Tvoja zahteva je pri urednikih. Lahko nadaljuješ.';
+
+  @override
+  String get verificationOnboardingApproved =>
+      'Preverjen si. Lahko nadaljuješ.';
+
+  @override
+  String get verificationInstitutionAlreadyManaged => 'Že upravljan profil';
 }

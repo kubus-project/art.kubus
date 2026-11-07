@@ -64,11 +64,6 @@ class _SessionProfileApi implements ProfileBackendApi {
 
   @override
   Future<bool> isFollowing(String walletAddress) async => false;
-
-  @override
-  Future<Map<String, dynamic>?> getDAOReview(
-          {required String idOrWallet}) async =>
-      null;
 }
 
 Map<String, dynamic> _emailAccount({

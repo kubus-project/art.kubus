@@ -9,6 +9,7 @@ class InstitutionClaimSummary {
     required this.institutionId,
     required this.status,
     required this.kind,
+    this.institutionName,
   });
 
   final String id;
@@ -19,6 +20,9 @@ class InstitutionClaimSummary {
 
   /// `claim`, `transfer` or `dispute`.
   final String kind;
+
+  /// The institution's name as the server reports it, when it does.
+  final String? institutionName;
 
   /// A request an administrator has not decided yet. The backend allows one
   /// open request per claimant and institution.
@@ -33,7 +37,10 @@ class InstitutionClaimSummary {
       return null;
     }
     final kind = value['kind'];
+    final name = value['institutionName'];
     return InstitutionClaimSummary(
+      institutionName:
+          name is String && name.trim().isNotEmpty ? name.trim() : null,
       id: id,
       institutionId: institutionId.toLowerCase(),
       status: status.trim().toLowerCase(),

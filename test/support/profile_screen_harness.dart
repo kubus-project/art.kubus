@@ -3,6 +3,7 @@ import 'package:art_kubus/community/community_interactions.dart';
 import 'package:art_kubus/models/profile_package.dart';
 import 'package:art_kubus/models/user.dart';
 import 'package:art_kubus/models/user_profile.dart';
+import 'package:art_kubus/providers/account_verification_provider.dart';
 import 'package:art_kubus/providers/app_refresh_provider.dart';
 import 'package:art_kubus/providers/artwork_provider.dart';
 import 'package:art_kubus/providers/attestation_provider.dart';
@@ -93,7 +94,7 @@ Future<void> pumpProfileSurface(
 
   /// Injected DAO state (for example an approved role review); a fresh
   /// [DAOProvider] otherwise.
-  DAOProvider? daoProvider,
+  AccountVerificationProvider? accountVerification,
 
   /// Paint the theme ground under the screen, as the app shell does, so a
   /// screenshot of a transparent screen is not composited on white.
@@ -137,10 +138,13 @@ Future<void> pumpProfileSurface(
       providers: [
         ChangeNotifierProvider<ThemeProvider>.value(value: themeProvider),
         ChangeNotifierProvider<ProfileProvider>.value(value: profileProvider),
-        if (daoProvider != null)
-          ChangeNotifierProvider<DAOProvider>.value(value: daoProvider)
+        if (accountVerification != null)
+          ChangeNotifierProvider<AccountVerificationProvider>.value(
+              value: accountVerification)
         else
-          ChangeNotifierProvider<DAOProvider>(create: (_) => DAOProvider()),
+          ChangeNotifierProvider<AccountVerificationProvider>(
+              create: (_) => AccountVerificationProvider()),
+        ChangeNotifierProvider<DAOProvider>(create: (_) => DAOProvider()),
         ChangeNotifierProvider<StatsProvider>(create: (_) => StatsProvider()),
         ChangeNotifierProvider<ChatProvider>(create: (_) => ChatProvider()),
         ChangeNotifierProvider<WalletProvider>(create: (_) => WalletProvider()),

@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../config/config.dart';
 import '../../l10n/app_localizations.dart';
-import '../../models/dao.dart';
+import '../../models/account_verification.dart';
 import '../../models/user_persona.dart';
-import '../../providers/dao_provider.dart';
+import '../../providers/account_verification_provider.dart';
 import '../../providers/profile_provider.dart';
 import '../../providers/wallet_provider.dart';
 import '../../screens/desktop/desktop_shell.dart';
@@ -13,47 +13,43 @@ import '../../screens/web3/artist/artist_studio.dart';
 import '../../screens/web3/institution/institution_hub.dart';
 import '../../services/contextual_auth_gate.dart';
 import '../../utils/creator_shell_navigation.dart';
-import '../../utils/dao_role_verification.dart';
 import '../../utils/design_tokens.dart';
 import '../../utils/kubus_color_roles.dart';
-import '../../utils/wallet_utils.dart';
 import '../common/kubus_action_tile.dart';
 
 enum ContributionCardAction { join, document, artwork, exhibition, application }
 
+/// What the contribution card offers. Authority is the server-confirmed
+/// standing of the signed-in ACCOUNT (artist verification, institution
+/// membership): never a persona, a wallet or a wallet-keyed review. Roles are
+/// additive, so an approved artist who also belongs to an institution is
+/// offered the artwork action first.
 ContributionCardAction? resolveContributionCardAction({
   required bool signedIn,
-  required String walletAddress,
+  required ArtistVerificationStatus artistStatus,
+  required InstitutionAccessStatus institutionAccess,
+  required bool hasWallet,
   required UserPersona? persona,
-  required DAOReview? review,
   required bool streetArtEnabled,
   required bool exhibitionsEnabled,
 }) {
   if (!signedIn) {
     return ContributionCardAction.join;
   }
-  // A persona is a preference, never publishing authority.
-  final matched =
-      review != null && WalletUtils.equals(walletAddress, review.walletAddress)
-          ? review
-          : null;
-  final verification =
-      DaoRoleVerification(walletAddress: walletAddress, review: matched);
-  if (!verification.hasWallet) {
-    return null;
-  }
-  if (verification.isPendingFor(DaoRoleType.artist) ||
-      verification.isPendingFor(DaoRoleType.institution)) {
-    return ContributionCardAction.application;
-  }
-  if (verification.isApprovedFor(DaoRoleType.artist)) {
+  if (artistStatus == ArtistVerificationStatus.approved) {
     return ContributionCardAction.artwork;
   }
   if (exhibitionsEnabled &&
-      verification.isApprovedFor(DaoRoleType.institution)) {
+      institutionAccess == InstitutionAccessStatus.member) {
     return ContributionCardAction.exhibition;
   }
-  if (persona == UserPersona.lover && streetArtEnabled) {
+  if (artistStatus == ArtistVerificationStatus.pending ||
+      institutionAccess == InstitutionAccessStatus.requestPending) {
+    return ContributionCardAction.application;
+  }
+  // A persona is a preference, never publishing authority. Documenting street
+  // art is the one action here that still needs a linked wallet.
+  if (persona == UserPersona.lover && streetArtEnabled && hasWallet) {
     return ContributionCardAction.document;
   }
   return null;
@@ -88,18 +84,15 @@ class _ContextualContributionCardState
 
   ContributionCardAction? _action(BuildContext context) {
     final profile = context.read<ProfileProvider>();
-    final wallet = context.read<WalletProvider>().currentWalletAddress ?? '';
-    final dao = context.read<DAOProvider>();
-    if (profile.isSignedIn && wallet.isNotEmpty) {
-      // Use the provider's existing deferred hydration, never a widget-owned
-      // role request or persona-derived authority.
-      dao.reviews;
-    }
+    final verification = context.read<AccountVerificationProvider>();
     return resolveContributionCardAction(
       signedIn: profile.isSignedIn,
-      walletAddress: wallet,
+      artistStatus: verification.artistStatus,
+      institutionAccess: verification.institutionAccess,
+      hasWallet: (context.read<WalletProvider>().currentWalletAddress ?? '')
+          .trim()
+          .isNotEmpty,
       persona: profile.userPersona,
-      review: dao.findReviewForWallet(wallet),
       streetArtEnabled: AppConfig.isFeatureEnabled('streetArtMarkers'),
       exhibitionsEnabled: AppConfig.isFeatureEnabled('exhibitions'),
     );
@@ -157,14 +150,16 @@ class _ContextualContributionCardState
             builder: (_) => const MarkerEditorScreen(marker: null, isNew: true),
           ));
         case ContributionCardAction.application:
-          final wallet =
-              context.read<WalletProvider>().currentWalletAddress ?? '';
-          final review =
-              context.read<DAOProvider>().findReviewForWallet(wallet);
+          // Open the surface whose request is waiting; an artist application
+          // wins when both are, since it is the more common one.
+          final verification = context.read<AccountVerificationProvider>();
           final shell = DesktopShellScope.of(context);
-          final Widget screen = review?.isInstitutionApplication == true
-              ? InstitutionHub(embedded: shell != null)
-              : ArtistStudio(embedded: shell != null);
+          final Widget screen =
+              verification.artistStatus != ArtistVerificationStatus.pending &&
+                      verification.institutionAccess ==
+                          InstitutionAccessStatus.requestPending
+                  ? InstitutionHub(embedded: shell != null)
+                  : ArtistStudio(embedded: shell != null);
           if (shell != null) {
             shell.pushScreen(screen);
           } else {
@@ -183,8 +178,7 @@ class _ContextualContributionCardState
   @override
   Widget build(BuildContext context) {
     context.watch<ProfileProvider>();
-    context.watch<WalletProvider>();
-    context.watch<DAOProvider>();
+    context.watch<AccountVerificationProvider>();
     final action = _action(context);
     if (_resumeContribution &&
         action != null &&

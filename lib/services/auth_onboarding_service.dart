@@ -25,7 +25,7 @@ class AuthOnboardingService {
     'walletConnect',
     'walletBackupIntro',
     'walletBackup',
-    'daoReview',
+    'verification',
     'accountPermissions',
     'done',
   ];
@@ -38,7 +38,7 @@ class AuthOnboardingService {
     'walletConnect',
     'walletBackupIntro',
     'walletBackup',
-    'daoReview',
+    'verification',
     'accountPermissions',
     'done',
   };
@@ -65,6 +65,8 @@ class AuthOnboardingService {
     // walletSecurity ("Secure your wallet") -> walletBackupIntro
     if (normalized == 'walletSetup') return 'walletConnect';
     if (normalized == 'walletSecurity') return 'walletBackupIntro';
+    // Progress saved before the wallet-keyed review was replaced.
+    if (normalized == 'daoReview') return 'verification';
     return normalized;
   }
 
@@ -164,9 +166,9 @@ class AuthOnboardingService {
       );
     }
 
-    final requiresDaoReview = allowRoleSpecificOnboarding &&
-        (completedSteps.contains('daoReview') ||
-            deferredSteps.contains('daoReview') ||
+    final requiresVerification = allowRoleSpecificOnboarding &&
+        (completedSteps.contains('verification') ||
+            deferredSteps.contains('verification') ||
             normalizedPersona == 'creator' ||
             normalizedPersona == 'institution');
     final requiresVerifyEmail = completedSteps.contains('verifyEmail') ||
@@ -178,7 +180,7 @@ class AuthOnboardingService {
         requiresVerifyEmail: requiresVerifyEmail,
         requiresWalletSetup: requiresWalletSetup,
         requiresWalletBackup: requiresWalletBackupStep,
-        requiresDaoReview: requiresDaoReview,
+        requiresVerification: requiresVerification,
         completedSteps: completedSteps,
       );
       return StructuredOnboardingResumeState(
@@ -199,7 +201,7 @@ class AuthOnboardingService {
           ? 'walletConnect'
           : (requiresWalletBackupStep
               ? 'walletBackupIntro'
-              : (requiresDaoReview ? 'daoReview' : 'accountPermissions'));
+              : (requiresVerification ? 'verification' : 'accountPermissions'));
       return StructuredOnboardingResumeState(
         requiresStructuredOnboarding: true,
         nextStepId: nextStepId,
@@ -261,7 +263,7 @@ class AuthOnboardingService {
     required bool requiresVerifyEmail,
     required bool requiresWalletSetup,
     required bool requiresWalletBackup,
-    required bool requiresDaoReview,
+    required bool requiresVerification,
     required Set<String> completedSteps,
   }) {
     final orderedSteps = <String>[
@@ -275,7 +277,7 @@ class AuthOnboardingService {
       // emitted as a resume target — older saved progress migrates onto
       // `walletBackupIntro` above.
       if (requiresWalletBackup) 'walletBackupIntro',
-      if (requiresDaoReview) 'daoReview',
+      if (requiresVerification) 'verification',
       'accountPermissions',
       'done',
     ];

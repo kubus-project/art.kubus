@@ -1,7 +1,7 @@
 import 'package:art_kubus/features/analytics/analytics_capability_resolver.dart';
 import 'package:art_kubus/features/analytics/analytics_entity_registry.dart';
 import 'package:art_kubus/features/analytics/analytics_presets.dart';
-import 'package:art_kubus/models/dao.dart';
+import 'package:art_kubus/models/account_verification.dart';
 import 'package:art_kubus/models/user_persona.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -10,7 +10,8 @@ void main() {
     String viewerWallet = 'wallet_owner',
     String subjectId = 'wallet_owner',
     UserPersona? persona,
-    DAOReview? daoReview,
+    ArtistVerificationStatus artistStatus = ArtistVerificationStatus.notApplied,
+    InstitutionAccessStatus institutionAccess = InstitutionAccessStatus.none,
     bool profileIsArtist = false,
     bool profileIsInstitution = false,
     bool isAdmin = false,
@@ -21,28 +22,13 @@ void main() {
       viewerWallet: viewerWallet,
       subjectId: subjectId,
       persona: persona,
-      daoReview: daoReview,
+      artistStatus: artistStatus,
+      institutionAccess: institutionAccess,
       profileIsArtist: profileIsArtist,
       profileIsInstitution: profileIsInstitution,
       isAdmin: isAdmin,
       analyticsBuildAvailable: analyticsBuildAvailable,
       analyticsPreferenceEnabled: analyticsPreferenceEnabled,
-    );
-  }
-
-  DAOReview review({
-    String status = 'approved',
-    String role = 'artist',
-  }) {
-    return DAOReview(
-      id: 'review_1',
-      walletAddress: 'wallet_owner',
-      portfolioUrl: 'https://example.test',
-      medium: 'mixed',
-      statement: 'review',
-      status: status,
-      createdAt: DateTime.utc(2025, 1, 1),
-      metadata: <String, dynamic>{'role': role},
     );
   }
 
@@ -124,7 +110,7 @@ void main() {
       preset: AnalyticsPresets.artist,
       viewer: viewer(
         persona: UserPersona.creator,
-        daoReview: review(status: 'pending', role: 'artist'),
+        artistStatus: ArtistVerificationStatus.pending,
       ),
     );
 
@@ -138,7 +124,7 @@ void main() {
       preset: AnalyticsPresets.artist,
       viewer: viewer(
         persona: UserPersona.creator,
-        daoReview: review(role: 'artist'),
+        artistStatus: ArtistVerificationStatus.approved,
       ),
     );
 
@@ -146,20 +132,37 @@ void main() {
     expect(approved.canViewPrivate, isTrue);
   });
 
-  test('institution analytics reject incompatible artist persona', () {
-    final capabilities = AnalyticsCapabilityResolver.resolve(
+  test('institution analytics follow membership, not an artist persona', () {
+    // Roles are additive: an artist can also be a member of an institution.
+    final member = AnalyticsCapabilityResolver.resolve(
       preset: AnalyticsPresets.institution,
       viewer: viewer(
         persona: UserPersona.creator,
         profileIsArtist: true,
+        artistStatus: ArtistVerificationStatus.approved,
+        institutionAccess: InstitutionAccessStatus.member,
       ),
     );
+    expect(member.canView, isTrue);
 
-    expect(capabilities.canView, isFalse);
-    expect(
-      capabilities.blockedReason,
-      AnalyticsBlockedReason.institutionRoleMismatch,
+    final pending = AnalyticsCapabilityResolver.resolve(
+      preset: AnalyticsPresets.institution,
+      viewer: viewer(
+        institutionAccess: InstitutionAccessStatus.requestPending,
+      ),
     );
+    expect(pending.canView, isFalse);
+    expect(
+        pending.blockedReason, AnalyticsBlockedReason.institutionReviewPending);
+
+    // An artist persona or profile flag alone grants nothing.
+    final none = AnalyticsCapabilityResolver.resolve(
+      preset: AnalyticsPresets.institution,
+      viewer: viewer(persona: UserPersona.institution),
+    );
+    expect(none.canView, isFalse);
+    expect(
+        none.blockedReason, AnalyticsBlockedReason.institutionApprovalRequired);
   });
 
   test('platform analytics require admin context', () {

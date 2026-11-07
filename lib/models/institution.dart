@@ -471,7 +471,6 @@ class Institution {
   /// True only for the synthetic entry the provider builds from the signed-in
   /// user's own wallet. It is the user's own identity, so it is a default
   /// (event creator) but must not appear in search or map subject lists.
-  final bool isSelfDerivedFromWallet;
 
   Institution({
     required this.id,
@@ -494,7 +493,6 @@ class Institution {
     this.isVerified = false,
     this.verifiedAccountProfile,
     required this.createdAt,
-    this.isSelfDerivedFromWallet = false,
     this.listingOrigin,
     this.claimState,
   });
@@ -518,12 +516,9 @@ class Institution {
 
   /// True for a profile compiled from public sources that no institution has
   /// claimed: it is unofficial and unverified, and anyone may ask to claim it.
-  /// Never true for a verified listing or the signed-in user's own entry.
+  /// Never true for a verified listing.
   bool get isImportedUnclaimed =>
-      !isVerified &&
-      !isSelfDerivedFromWallet &&
-      listingOrigin == 'imported' &&
-      claimState == 'unclaimed';
+      !isVerified && listingOrigin == 'imported' && claimState == 'unclaimed';
 
   factory Institution.fromJson(Map<String, dynamic> json) {
     final boundary = _InstitutionImageBoundary.read(json);
@@ -618,7 +613,6 @@ class Institution {
     bool? isVerified,
     VerifiedInstitutionAccountProfile? verifiedAccountProfile,
     DateTime? createdAt,
-    bool? isSelfDerivedFromWallet,
     String? listingOrigin,
     String? claimState,
   }) {
@@ -644,8 +638,6 @@ class Institution {
       verifiedAccountProfile:
           verifiedAccountProfile ?? this.verifiedAccountProfile,
       createdAt: createdAt ?? this.createdAt,
-      isSelfDerivedFromWallet:
-          isSelfDerivedFromWallet ?? this.isSelfDerivedFromWallet,
       listingOrigin: listingOrigin ?? this.listingOrigin,
       claimState: claimState ?? this.claimState,
     );

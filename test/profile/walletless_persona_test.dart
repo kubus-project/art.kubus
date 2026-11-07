@@ -66,12 +66,6 @@ class _RecordingProfileApi implements ProfileBackendApi {
 
   @override
   Future<bool> isFollowing(String walletAddress) async => false;
-
-  @override
-  Future<Map<String, dynamic>?> getDAOReview({
-    required String idOrWallet,
-  }) async =>
-      null;
 }
 
 UserProfile _walletlessAccount() => UserProfile.fromJson(<String, dynamic>{

@@ -19,7 +19,7 @@ class ArtistApplicationSummary {
   final String medium;
   final String statement;
 
-  /// One of `pending`, `approved`, `rejected`.
+  /// One of `pending`, `approved`, `rejected`, `revoked`.
   final String status;
   final String? reviewerNotes;
   final DateTime? createdAt;
@@ -28,6 +28,7 @@ class ArtistApplicationSummary {
   bool get isPending => status == 'pending';
   bool get isApproved => status == 'approved';
   bool get isRejected => status == 'rejected';
+  bool get isRevoked => status == 'revoked';
 
   /// Parses one application map. Returns null when there is no usable id, so
   /// a malformed body is treated as "no application" rather than a crash.

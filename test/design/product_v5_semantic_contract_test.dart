@@ -262,8 +262,9 @@ void main() {
         const ArtistStudio(),
         size: const Size(390, 1300),
         signedIn: qaOwner(isArtist: true),
+        extraProviders: [qaAccountVerification()],
       );
-      expect(textCount(tester, l10n.artistStudioCtaApplyForDaoReview), 1);
+      expect(textCount(tester, l10n.verificationArtistCtaApply), 1);
       expect(find.text(l10n.artistStudioLockedTitle), findsOneWidget);
       await drain(tester);
     });
@@ -276,8 +277,9 @@ void main() {
         const InstitutionHub(),
         size: const Size(390, 1300),
         signedIn: qaOwner(isInstitution: true),
+        extraProviders: [qaAccountVerification()],
       );
-      expect(textCount(tester, l10n.institutionHubApplyForReviewAction), 1);
+      expect(textCount(tester, l10n.verificationInstitutionClaimTitle), 1);
       expect(find.text(l10n.institutionHubLockedTitle), findsOneWidget);
       // The page title is said by the dashboard header, not again by the bar.
       expect(textCount(tester, l10n.navigationScreenInstitutionHub), 1);

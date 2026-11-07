@@ -3513,95 +3513,11 @@ abstract class AppLocalizations {
   /// **'Passkey \"{passkeyName}\" added.'**
   String onboardingFlowWalletBackupPasskeyAdded(Object passkeyName);
 
-  /// No description provided for @onboardingFlowDaoReviewTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Governance review'**
-  String get onboardingFlowDaoReviewTitle;
-
-  /// No description provided for @onboardingFlowDaoReviewInstitutionBody.
-  ///
-  /// In en, this message translates to:
-  /// **'Submit your institution details for community governance review before account setup is completed.'**
-  String get onboardingFlowDaoReviewInstitutionBody;
-
-  /// No description provided for @onboardingFlowDaoReviewArtistBody.
-  ///
-  /// In en, this message translates to:
-  /// **'Submit your practice for community governance review before account setup is completed.'**
-  String get onboardingFlowDaoReviewArtistBody;
-
   /// No description provided for @onboardingFlowDaoReviewCompleteFormError.
   ///
   /// In en, this message translates to:
   /// **'Complete the review form before continuing.'**
   String get onboardingFlowDaoReviewCompleteFormError;
-
-  /// No description provided for @onboardingFlowDaoReviewSubmitFailed.
-  ///
-  /// In en, this message translates to:
-  /// **'Unable to submit the governance review right now.'**
-  String get onboardingFlowDaoReviewSubmitFailed;
-
-  /// No description provided for @onboardingFlowDaoReviewStatus.
-  ///
-  /// In en, this message translates to:
-  /// **'Current status: {status}'**
-  String onboardingFlowDaoReviewStatus(Object status);
-
-  /// No description provided for @onboardingFlowDaoReviewOrganizationLabel.
-  ///
-  /// In en, this message translates to:
-  /// **'Organization'**
-  String get onboardingFlowDaoReviewOrganizationLabel;
-
-  /// No description provided for @onboardingFlowDaoReviewContactLabel.
-  ///
-  /// In en, this message translates to:
-  /// **'Contact URL or email'**
-  String get onboardingFlowDaoReviewContactLabel;
-
-  /// No description provided for @onboardingFlowDaoReviewPortfolioLabel.
-  ///
-  /// In en, this message translates to:
-  /// **'Portfolio URL'**
-  String get onboardingFlowDaoReviewPortfolioLabel;
-
-  /// No description provided for @onboardingFlowDaoReviewInstitutionFocusLabel.
-  ///
-  /// In en, this message translates to:
-  /// **'Institution focus'**
-  String get onboardingFlowDaoReviewInstitutionFocusLabel;
-
-  /// No description provided for @onboardingFlowDaoReviewPrimaryMediumLabel.
-  ///
-  /// In en, this message translates to:
-  /// **'Primary medium'**
-  String get onboardingFlowDaoReviewPrimaryMediumLabel;
-
-  /// No description provided for @onboardingFlowDaoReviewMissionLabel.
-  ///
-  /// In en, this message translates to:
-  /// **'Mission'**
-  String get onboardingFlowDaoReviewMissionLabel;
-
-  /// No description provided for @onboardingFlowDaoReviewArtistStatementLabel.
-  ///
-  /// In en, this message translates to:
-  /// **'Artist statement'**
-  String get onboardingFlowDaoReviewArtistStatementLabel;
-
-  /// No description provided for @onboardingFlowDaoReviewReviewerNotes.
-  ///
-  /// In en, this message translates to:
-  /// **'Reviewer notes'**
-  String get onboardingFlowDaoReviewReviewerNotes;
-
-  /// No description provided for @onboardingFlowDaoReviewSubmitAction.
-  ///
-  /// In en, this message translates to:
-  /// **'Submit for governance review'**
-  String get onboardingFlowDaoReviewSubmitAction;
 
   /// No description provided for @onboardingWelcomeTitle.
   ///
@@ -7185,228 +7101,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Tip: Use separate wallets for artist and institution roles to keep governance review contexts clear.'**
   String get institutionHubSeparateWalletsTip;
-
-  /// Primary call-to-action label in Institution Hub locked state to start DAO review application.
-  ///
-  /// In en, this message translates to:
-  /// **'Apply for review'**
-  String get institutionHubApplyForReviewAction;
-
-  /// No description provided for @institutionHubArtistBadgeActiveTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Artist badge active'**
-  String get institutionHubArtistBadgeActiveTitle;
-
-  /// No description provided for @institutionHubArtistBadgeActiveDescription.
-  ///
-  /// In en, this message translates to:
-  /// **'Artist wallets unlock creation tooling. Institution flows need a dedicated wallet without creator approvals.'**
-  String get institutionHubArtistBadgeActiveDescription;
-
-  /// No description provided for @institutionHubArtistReviewInProgressTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Artist review in progress'**
-  String get institutionHubArtistReviewInProgressTitle;
-
-  /// No description provided for @institutionHubArtistReviewInProgressDescription.
-  ///
-  /// In en, this message translates to:
-  /// **'You have an active artist application. Wait for that decision or reset it before continuing as an institution.'**
-  String get institutionHubArtistReviewInProgressDescription;
-
-  /// No description provided for @institutionHubApplicationTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Institution application'**
-  String get institutionHubApplicationTitle;
-
-  /// No description provided for @institutionHubApplicationSubtitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Share your mission, programming focus, and how you plan to collaborate with the community.'**
-  String get institutionHubApplicationSubtitle;
-
-  /// No description provided for @institutionHubApplicationOrganizationLabel.
-  ///
-  /// In en, this message translates to:
-  /// **'Organization name'**
-  String get institutionHubApplicationOrganizationLabel;
-
-  /// No description provided for @institutionHubApplicationContactLabel.
-  ///
-  /// In en, this message translates to:
-  /// **'Website or contact email'**
-  String get institutionHubApplicationContactLabel;
-
-  /// No description provided for @institutionHubApplicationFocusLabel.
-  ///
-  /// In en, this message translates to:
-  /// **'Curation focus'**
-  String get institutionHubApplicationFocusLabel;
-
-  /// No description provided for @institutionHubApplicationMissionLabel.
-  ///
-  /// In en, this message translates to:
-  /// **'Mission and goals'**
-  String get institutionHubApplicationMissionLabel;
-
-  /// No description provided for @institutionHubApplicationOrganizationRequired.
-  ///
-  /// In en, this message translates to:
-  /// **'Please provide your organization name.'**
-  String get institutionHubApplicationOrganizationRequired;
-
-  /// No description provided for @institutionHubApplicationContactRequired.
-  ///
-  /// In en, this message translates to:
-  /// **'Share a website or contact email.'**
-  String get institutionHubApplicationContactRequired;
-
-  /// No description provided for @institutionHubApplicationFocusRequired.
-  ///
-  /// In en, this message translates to:
-  /// **'Let us know your programming focus.'**
-  String get institutionHubApplicationFocusRequired;
-
-  /// No description provided for @institutionHubApplicationMissionRequired.
-  ///
-  /// In en, this message translates to:
-  /// **'Describe your mission in at least 20 characters.'**
-  String get institutionHubApplicationMissionRequired;
-
-  /// No description provided for @institutionHubApplicationWalletBannerTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'A wallet signature is needed to submit'**
-  String get institutionHubApplicationWalletBannerTitle;
-
-  /// No description provided for @institutionHubApplicationWalletRequired.
-  ///
-  /// In en, this message translates to:
-  /// **'Connect a wallet before submitting.'**
-  String get institutionHubApplicationWalletRequired;
-
-  /// No description provided for @institutionHubApplicationWalletWhy.
-  ///
-  /// In en, this message translates to:
-  /// **'Applying is signed with your wallet, so the review stays tied to a wallet you control. Browsing institutions does not need one.'**
-  String get institutionHubApplicationWalletWhy;
-
-  /// No description provided for @institutionHubApplicationSubmittedToast.
-  ///
-  /// In en, this message translates to:
-  /// **'Application submitted for governance review.'**
-  String get institutionHubApplicationSubmittedToast;
-
-  /// No description provided for @institutionHubApplicationSubmitUnavailableToast.
-  ///
-  /// In en, this message translates to:
-  /// **'Unable to submit application right now.'**
-  String get institutionHubApplicationSubmitUnavailableToast;
-
-  /// No description provided for @institutionHubApplicationSubmitFailedToast.
-  ///
-  /// In en, this message translates to:
-  /// **'Submission failed: {error}'**
-  String institutionHubApplicationSubmitFailedToast(Object error);
-
-  /// No description provided for @institutionHubApplicationSubmitButton.
-  ///
-  /// In en, this message translates to:
-  /// **'Submit application'**
-  String get institutionHubApplicationSubmitButton;
-
-  /// No description provided for @institutionHubCrossRoleConflictTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Role conflict detected'**
-  String get institutionHubCrossRoleConflictTitle;
-
-  /// No description provided for @institutionHubArtistWalletSwitchDescription.
-  ///
-  /// In en, this message translates to:
-  /// **'Artist wallets are optimized for creation tooling. Switch to a dedicated institutional wallet before applying for curation tools.'**
-  String get institutionHubArtistWalletSwitchDescription;
-
-  /// No description provided for @institutionHubArtistReviewPendingResetDescription.
-  ///
-  /// In en, this message translates to:
-  /// **'You currently have an artist application pending. Finish that review or request a reset prior to submitting an institution application.'**
-  String get institutionHubArtistReviewPendingResetDescription;
-
-  /// No description provided for @institutionHubArtistSubmissionConflictDescription.
-  ///
-  /// In en, this message translates to:
-  /// **'We detected an artist submission for this wallet. Clear it from settings before continuing as an institution.'**
-  String get institutionHubArtistSubmissionConflictDescription;
-
-  /// No description provided for @institutionHubApplicationCardSubtitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Submit your organization for governance review and unlock institutional tooling.'**
-  String get institutionHubApplicationCardSubtitle;
-
-  /// No description provided for @institutionHubDaoStatusApproved.
-  ///
-  /// In en, this message translates to:
-  /// **'APPROVED'**
-  String get institutionHubDaoStatusApproved;
-
-  /// No description provided for @institutionHubDaoStatusPending.
-  ///
-  /// In en, this message translates to:
-  /// **'PENDING'**
-  String get institutionHubDaoStatusPending;
-
-  /// No description provided for @institutionHubDaoStatusRejected.
-  ///
-  /// In en, this message translates to:
-  /// **'REJECTED'**
-  String get institutionHubDaoStatusRejected;
-
-  /// No description provided for @institutionHubDaoStatusInReview.
-  ///
-  /// In en, this message translates to:
-  /// **'IN REVIEW'**
-  String get institutionHubDaoStatusInReview;
-
-  /// No description provided for @institutionHubDaoStatusNotApplied.
-  ///
-  /// In en, this message translates to:
-  /// **'NOT APPLIED'**
-  String get institutionHubDaoStatusNotApplied;
-
-  /// No description provided for @institutionHubCtaApprovedByDao.
-  ///
-  /// In en, this message translates to:
-  /// **'Approved by governance review'**
-  String get institutionHubCtaApprovedByDao;
-
-  /// No description provided for @institutionHubCtaPendingDaoReview.
-  ///
-  /// In en, this message translates to:
-  /// **'Pending governance review'**
-  String get institutionHubCtaPendingDaoReview;
-
-  /// No description provided for @institutionHubCtaApplyAsInstitution.
-  ///
-  /// In en, this message translates to:
-  /// **'Apply as an institution'**
-  String get institutionHubCtaApplyAsInstitution;
-
-  /// No description provided for @institutionHubDaoStatusSyncedLabel.
-  ///
-  /// In en, this message translates to:
-  /// **'Status synced from governance review'**
-  String get institutionHubDaoStatusSyncedLabel;
-
-  /// No description provided for @institutionHubDaoReviewQueueMessage.
-  ///
-  /// In en, this message translates to:
-  /// **'Your submission is in the governance review queue.'**
-  String get institutionHubDaoReviewQueueMessage;
 
   /// No description provided for @institutionHubApprovedToolsMessage.
   ///
@@ -15469,209 +15163,11 @@ abstract class AppLocalizations {
   /// **'Create AR markers for your artwork and share them with the world'**
   String get artistStudioHeaderSubtitle;
 
-  /// No description provided for @artistStudioInstitutionRoleActiveTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Institution role active'**
-  String get artistStudioInstitutionRoleActiveTitle;
-
-  /// No description provided for @artistStudioInstitutionReviewInProgressTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Institution review in progress'**
-  String get artistStudioInstitutionReviewInProgressTitle;
-
-  /// No description provided for @artistStudioInstitutionRoleActiveDescription.
-  ///
-  /// In en, this message translates to:
-  /// **'Institution accounts can view exhibitions and events but cannot maintain artist applications. Use a dedicated artist wallet to create artworks.'**
-  String get artistStudioInstitutionRoleActiveDescription;
-
-  /// No description provided for @artistStudioInstitutionReviewInProgressDescription.
-  ///
-  /// In en, this message translates to:
-  /// **'You have an institution application pending. Complete or withdraw it before switching to an artist review.'**
-  String get artistStudioInstitutionReviewInProgressDescription;
-
-  /// No description provided for @artistStudioCrossRoleInstitutionBadgeActiveTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Institution badge active'**
-  String get artistStudioCrossRoleInstitutionBadgeActiveTitle;
-
-  /// No description provided for @artistStudioCrossRoleInstitutionBadgeActiveDescription.
-  ///
-  /// In en, this message translates to:
-  /// **'Institution accounts unlock curation & event tooling. Use a dedicated artist wallet if you need creator utilities.'**
-  String get artistStudioCrossRoleInstitutionBadgeActiveDescription;
-
-  /// No description provided for @artistStudioCrossRoleInstitutionReviewInProgressTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Institution review in progress'**
-  String get artistStudioCrossRoleInstitutionReviewInProgressTitle;
-
-  /// No description provided for @artistStudioCrossRoleInstitutionReviewInProgressDescription.
-  ///
-  /// In en, this message translates to:
-  /// **'You currently have an institution application pending. Complete that process or request a review reset before applying as an artist.'**
-  String get artistStudioCrossRoleInstitutionReviewInProgressDescription;
-
-  /// No description provided for @artistStudioCrossRoleConflictTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Role conflict detected'**
-  String get artistStudioCrossRoleConflictTitle;
-
-  /// No description provided for @artistStudioCrossRoleConflictDescription.
-  ///
-  /// In en, this message translates to:
-  /// **'We detected an existing institution record for this wallet. Clear it from settings before applying as an artist.'**
-  String get artistStudioCrossRoleConflictDescription;
-
-  /// No description provided for @artistStudioDaoCardTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Artist application (governance review)'**
-  String get artistStudioDaoCardTitle;
-
-  /// No description provided for @artistStudioDaoCardSubtitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Submit your practice for governance review. This is how art.kubus opens artist tools while keeping the platform community-led.'**
-  String get artistStudioDaoCardSubtitle;
-
-  /// No description provided for @artistStudioDaoStatusApproved.
-  ///
-  /// In en, this message translates to:
-  /// **'APPROVED'**
-  String get artistStudioDaoStatusApproved;
-
-  /// No description provided for @artistStudioDaoStatusPending.
-  ///
-  /// In en, this message translates to:
-  /// **'PENDING'**
-  String get artistStudioDaoStatusPending;
-
-  /// No description provided for @artistStudioDaoStatusRejected.
-  ///
-  /// In en, this message translates to:
-  /// **'REJECTED'**
-  String get artistStudioDaoStatusRejected;
-
-  /// No description provided for @artistStudioDaoStatusNotApplied.
-  ///
-  /// In en, this message translates to:
-  /// **'NOT APPLIED'**
-  String get artistStudioDaoStatusNotApplied;
-
-  /// No description provided for @artistStudioStatusSyncedFromDao.
-  ///
-  /// In en, this message translates to:
-  /// **'Status synced from governance review'**
-  String get artistStudioStatusSyncedFromDao;
-
-  /// No description provided for @artistStudioReviewPendingInfo.
-  ///
-  /// In en, this message translates to:
-  /// **'Your submission is in the governance review queue. We will let you know when the review is complete.'**
-  String get artistStudioReviewPendingInfo;
-
-  /// No description provided for @artistStudioReviewApprovedInfo.
-  ///
-  /// In en, this message translates to:
-  /// **'Your practice has been approved through governance review. Studio tools are ready.'**
-  String get artistStudioReviewApprovedInfo;
-
-  /// No description provided for @artistStudioReviewRejectedInfo.
-  ///
-  /// In en, this message translates to:
-  /// **'Your last submission was rejected. You can resubmit with updates.'**
-  String get artistStudioReviewRejectedInfo;
-
-  /// No description provided for @artistStudioConnectWalletToSubmitForDaoReview.
-  ///
-  /// In en, this message translates to:
-  /// **'Connect a wallet before submitting for governance review.'**
-  String get artistStudioConnectWalletToSubmitForDaoReview;
-
-  /// No description provided for @artistStudioCtaConnectWalletToApply.
-  ///
-  /// In en, this message translates to:
-  /// **'Connect a wallet to apply'**
-  String get artistStudioCtaConnectWalletToApply;
-
-  /// No description provided for @artistStudioAccountCtaApply.
-  ///
-  /// In en, this message translates to:
-  /// **'Apply for artist review'**
-  String get artistStudioAccountCtaApply;
-
-  /// No description provided for @artistStudioAccountCtaRetry.
-  ///
-  /// In en, this message translates to:
-  /// **'Try again'**
-  String get artistStudioAccountCtaRetry;
-
-  /// No description provided for @artistStudioAccountApplicationUnavailable.
-  ///
-  /// In en, this message translates to:
-  /// **'Artist applications are unavailable right now. Try again later.'**
-  String get artistStudioAccountApplicationUnavailable;
-
-  /// No description provided for @artistStudioAccountDetailNotApplied.
-  ///
-  /// In en, this message translates to:
-  /// **'Send your portfolio, medium and statement. A wallet is not needed to apply.'**
-  String get artistStudioAccountDetailNotApplied;
-
-  /// No description provided for @artistStudioAccountDetailPending.
-  ///
-  /// In en, this message translates to:
-  /// **'Your application is waiting for an artist review.'**
-  String get artistStudioAccountDetailPending;
-
-  /// No description provided for @artistStudioAccountDetailApproved.
-  ///
-  /// In en, this message translates to:
-  /// **'Your artist application was approved.'**
-  String get artistStudioAccountDetailApproved;
-
-  /// No description provided for @artistStudioAccountDetailRejected.
-  ///
-  /// In en, this message translates to:
-  /// **'This application was not approved. You can send a new one.'**
-  String get artistStudioAccountDetailRejected;
-
   /// No description provided for @artistStudioAccountPortfolioInvalid.
   ///
   /// In en, this message translates to:
   /// **'Enter a valid web address, for example example.com.'**
   String get artistStudioAccountPortfolioInvalid;
-
-  /// No description provided for @artistStudioCtaApprovedByDao.
-  ///
-  /// In en, this message translates to:
-  /// **'Approved by governance review'**
-  String get artistStudioCtaApprovedByDao;
-
-  /// No description provided for @artistStudioCtaPendingDaoReview.
-  ///
-  /// In en, this message translates to:
-  /// **'Pending governance review'**
-  String get artistStudioCtaPendingDaoReview;
-
-  /// No description provided for @artistStudioCtaResubmitForReview.
-  ///
-  /// In en, this message translates to:
-  /// **'Resubmit for review'**
-  String get artistStudioCtaResubmitForReview;
-
-  /// No description provided for @artistStudioCtaApplyForDaoReview.
-  ///
-  /// In en, this message translates to:
-  /// **'Apply for governance review'**
-  String get artistStudioCtaApplyForDaoReview;
 
   /// No description provided for @artistPromotionRequiresWalletReason.
   ///
@@ -15754,14 +15250,8 @@ abstract class AppLocalizations {
   /// No description provided for @artistStudioUnlocksAfterDaoApprovalToast.
   ///
   /// In en, this message translates to:
-  /// **'Artist Studio unlocks after governance review approval.'**
+  /// **'Artist Studio unlocks once your application is approved.'**
   String get artistStudioUnlocksAfterDaoApprovalToast;
-
-  /// No description provided for @artistStudioSeparateWalletsTip.
-  ///
-  /// In en, this message translates to:
-  /// **'Use separate wallets for artist and institution roles if you want to keep access and review paths clearly separated.'**
-  String get artistStudioSeparateWalletsTip;
 
   /// No description provided for @artistStudioLockedTitle.
   ///
@@ -15772,7 +15262,7 @@ abstract class AppLocalizations {
   /// No description provided for @artistStudioLockedDescription.
   ///
   /// In en, this message translates to:
-  /// **'Apply for governance review to unlock studio tools for publishing, showcasing, and tracking your work.'**
+  /// **'Apply as an artist to unlock tools for publishing, showcasing and tracking your work.'**
   String get artistStudioLockedDescription;
 
   /// No description provided for @institutionHubLockedTitle.
@@ -15784,7 +15274,7 @@ abstract class AppLocalizations {
   /// No description provided for @institutionHubLockedDescription.
   ///
   /// In en, this message translates to:
-  /// **'Apply for governance review to unlock institution tools for events, exhibitions, and programme analytics.'**
+  /// **'Claim your institution or request a new presence to unlock tools for events, exhibitions and programme analytics.'**
   String get institutionHubLockedDescription;
 
   /// No description provided for @artistStudioSettingsTitle.
@@ -15792,18 +15282,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Studio Settings'**
   String get artistStudioSettingsTitle;
-
-  /// No description provided for @artistStudioApplicationModalTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Artist application'**
-  String get artistStudioApplicationModalTitle;
-
-  /// No description provided for @artistStudioApplicationModalSubtitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Share a snapshot of your practice. Submissions are routed to the governance review queue.'**
-  String get artistStudioApplicationModalSubtitle;
 
   /// No description provided for @artistStudioApplicationFieldPortfolioLabel.
   ///
@@ -15840,36 +15318,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Share at least {min} characters about your work'**
   String artistStudioApplicationValidationStatementMinChars(Object min);
-
-  /// No description provided for @artistStudioApplicationWalletRequiredToast.
-  ///
-  /// In en, this message translates to:
-  /// **'Connect a wallet before submitting for review.'**
-  String get artistStudioApplicationWalletRequiredToast;
-
-  /// No description provided for @artistStudioApplicationReviewTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Artist application'**
-  String get artistStudioApplicationReviewTitle;
-
-  /// No description provided for @artistStudioApplicationSubmittedToast.
-  ///
-  /// In en, this message translates to:
-  /// **'Application submitted to governance reviewers.'**
-  String get artistStudioApplicationSubmittedToast;
-
-  /// No description provided for @artistStudioApplicationUnableToSubmitToast.
-  ///
-  /// In en, this message translates to:
-  /// **'Unable to submit application right now.'**
-  String get artistStudioApplicationUnableToSubmitToast;
-
-  /// No description provided for @artistStudioApplicationSubmissionFailedToast.
-  ///
-  /// In en, this message translates to:
-  /// **'Submission failed. Please try again.'**
-  String get artistStudioApplicationSubmissionFailedToast;
 
   /// No description provided for @artistStudioApplicationSubmitButton.
   ///
@@ -16098,12 +15546,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Connect a wallet to create promotions.'**
   String get desktopInstitutionPromotionWalletRequiredReason;
-
-  /// No description provided for @desktopInstitutionPromotionArtistConflictReason.
-  ///
-  /// In en, this message translates to:
-  /// **'This wallet is verified as an artist. Use an institution wallet to promote institution content.'**
-  String get desktopInstitutionPromotionArtistConflictReason;
 
   /// No description provided for @desktopInstitutionPromotionRequiresApprovalReason.
   ///
@@ -17233,204 +16675,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Posting'**
   String get communityPostingFeatureLabel;
-
-  /// No description provided for @daoModerationApproveLabel.
-  ///
-  /// In en, this message translates to:
-  /// **'Approve'**
-  String get daoModerationApproveLabel;
-
-  /// No description provided for @daoModerationRejectLabel.
-  ///
-  /// In en, this message translates to:
-  /// **'Reject'**
-  String get daoModerationRejectLabel;
-
-  /// No description provided for @daoModerationSetPendingLabel.
-  ///
-  /// In en, this message translates to:
-  /// **'Set pending'**
-  String get daoModerationSetPendingLabel;
-
-  /// No description provided for @daoModerationDecisionDialogTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'{decision} submission?'**
-  String daoModerationDecisionDialogTitle(Object decision);
-
-  /// No description provided for @daoModerationDecisionDialogDescription.
-  ///
-  /// In en, this message translates to:
-  /// **'Provide optional reviewer notes for the applicant.'**
-  String get daoModerationDecisionDialogDescription;
-
-  /// No description provided for @daoModerationReviewerNotesLabel.
-  ///
-  /// In en, this message translates to:
-  /// **'Reviewer notes (optional)'**
-  String get daoModerationReviewerNotesLabel;
-
-  /// No description provided for @daoReviewStatusApproved.
-  ///
-  /// In en, this message translates to:
-  /// **'Approved'**
-  String get daoReviewStatusApproved;
-
-  /// No description provided for @daoReviewStatusRejected.
-  ///
-  /// In en, this message translates to:
-  /// **'Rejected'**
-  String get daoReviewStatusRejected;
-
-  /// No description provided for @daoReviewStatusPending.
-  ///
-  /// In en, this message translates to:
-  /// **'Pending'**
-  String get daoReviewStatusPending;
-
-  /// No description provided for @daoReviewStatusInReview.
-  ///
-  /// In en, this message translates to:
-  /// **'In review'**
-  String get daoReviewStatusInReview;
-
-  /// No description provided for @daoModerationDisabledToast.
-  ///
-  /// In en, this message translates to:
-  /// **'Review moderation is disabled.'**
-  String get daoModerationDisabledToast;
-
-  /// No description provided for @daoModerationWalletRequiredToast.
-  ///
-  /// In en, this message translates to:
-  /// **'Connect a wallet to moderate submissions.'**
-  String get daoModerationWalletRequiredToast;
-
-  /// No description provided for @daoModerationSelfNotAllowedToast.
-  ///
-  /// In en, this message translates to:
-  /// **'You cannot moderate your own submission.'**
-  String get daoModerationSelfNotAllowedToast;
-
-  /// No description provided for @daoModerationSubmissionApprovedToast.
-  ///
-  /// In en, this message translates to:
-  /// **'Submission approved'**
-  String get daoModerationSubmissionApprovedToast;
-
-  /// No description provided for @daoModerationSubmissionUpdatedToast.
-  ///
-  /// In en, this message translates to:
-  /// **'Submission updated'**
-  String get daoModerationSubmissionUpdatedToast;
-
-  /// No description provided for @daoModerationNoChangesSavedToast.
-  ///
-  /// In en, this message translates to:
-  /// **'No changes saved'**
-  String get daoModerationNoChangesSavedToast;
-
-  /// No description provided for @daoModerationUpdateFailedToast.
-  ///
-  /// In en, this message translates to:
-  /// **'Unable to update review right now.'**
-  String get daoModerationUpdateFailedToast;
-
-  /// No description provided for @daoReviewDetailsVotingDisabledForApplicant.
-  ///
-  /// In en, this message translates to:
-  /// **'Voting disabled for the applicant profile.'**
-  String get daoReviewDetailsVotingDisabledForApplicant;
-
-  /// No description provided for @daoReviewDetailsVotingDisabledForSubmission.
-  ///
-  /// In en, this message translates to:
-  /// **'Voting is disabled for this submission.'**
-  String get daoReviewDetailsVotingDisabledForSubmission;
-
-  /// No description provided for @daoReviewDetailsVotingManagedByDao.
-  ///
-  /// In en, this message translates to:
-  /// **'Review decisions are managed by the DAO review process.'**
-  String get daoReviewDetailsVotingManagedByDao;
-
-  /// No description provided for @daoReviewQueueTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Governance review queue'**
-  String get daoReviewQueueTitle;
-
-  /// No description provided for @daoReviewVotingHandledByDaoHelper.
-  ///
-  /// In en, this message translates to:
-  /// **'Voting is handled directly by the DAO; use proposals to decide.'**
-  String get daoReviewVotingHandledByDaoHelper;
-
-  /// No description provided for @daoReviewCannotVoteOwnSubmissionHelper.
-  ///
-  /// In en, this message translates to:
-  /// **'You cannot vote on your own submission'**
-  String get daoReviewCannotVoteOwnSubmissionHelper;
-
-  /// No description provided for @daoReviewVotingDisabledSubmissionHelper.
-  ///
-  /// In en, this message translates to:
-  /// **'Voting is disabled for this submission'**
-  String get daoReviewVotingDisabledSubmissionHelper;
-
-  /// No description provided for @daoReviewVotingOpensAfterReviewHelper.
-  ///
-  /// In en, this message translates to:
-  /// **'Voting opens after review'**
-  String get daoReviewVotingOpensAfterReviewHelper;
-
-  /// No description provided for @daoReviewDecisionRecordedHelper.
-  ///
-  /// In en, this message translates to:
-  /// **'Decision recorded: {status}'**
-  String daoReviewDecisionRecordedHelper(Object status);
-
-  /// No description provided for @daoReviewMediumNotProvided.
-  ///
-  /// In en, this message translates to:
-  /// **'Medium not provided'**
-  String get daoReviewMediumNotProvided;
-
-  /// No description provided for @daoReviewViewDetailsButton.
-  ///
-  /// In en, this message translates to:
-  /// **'View details'**
-  String get daoReviewViewDetailsButton;
-
-  /// No description provided for @daoReviewDetailsDialogTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Review submission'**
-  String get daoReviewDetailsDialogTitle;
-
-  /// No description provided for @daoReviewDetailsPortfolioLabel.
-  ///
-  /// In en, this message translates to:
-  /// **'Portfolio: {url}'**
-  String daoReviewDetailsPortfolioLabel(Object url);
-
-  /// No description provided for @daoReviewDetailsMediumLabel.
-  ///
-  /// In en, this message translates to:
-  /// **'Medium: {medium}'**
-  String daoReviewDetailsMediumLabel(Object medium);
-
-  /// No description provided for @daoReviewDetailsStatusLabel.
-  ///
-  /// In en, this message translates to:
-  /// **'Status: {status}'**
-  String daoReviewDetailsStatusLabel(Object status);
-
-  /// No description provided for @daoReviewDetailsReviewerNotesLabel.
-  ///
-  /// In en, this message translates to:
-  /// **'Reviewer notes:'**
-  String get daoReviewDetailsReviewerNotesLabel;
 
   /// No description provided for @daoProposalCategoryLabel.
   ///
@@ -28381,18 +27625,6 @@ abstract class AppLocalizations {
   /// **'Submit an approved artist review before using artist analytics.'**
   String get analyticsBlockedArtistRejectedDescription;
 
-  /// No description provided for @analyticsBlockedArtistRoleMismatchTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Artist analytics unavailable'**
-  String get analyticsBlockedArtistRoleMismatchTitle;
-
-  /// No description provided for @analyticsBlockedArtistRoleMismatchDescription.
-  ///
-  /// In en, this message translates to:
-  /// **'Use an approved artist wallet for artist analytics.'**
-  String get analyticsBlockedArtistRoleMismatchDescription;
-
   /// No description provided for @analyticsBlockedArtistApprovalRequiredTitle.
   ///
   /// In en, this message translates to:
@@ -28428,18 +27660,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Submit an approved institution review before using analytics.'**
   String get analyticsBlockedInstitutionRejectedDescription;
-
-  /// No description provided for @analyticsBlockedInstitutionRoleMismatchTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Institution analytics unavailable'**
-  String get analyticsBlockedInstitutionRoleMismatchTitle;
-
-  /// No description provided for @analyticsBlockedInstitutionRoleMismatchDescription.
-  ///
-  /// In en, this message translates to:
-  /// **'Use an approved institution wallet for institution analytics.'**
-  String get analyticsBlockedInstitutionRoleMismatchDescription;
 
   /// No description provided for @analyticsBlockedInstitutionApprovalRequiredTitle.
   ///
@@ -33362,6 +32582,426 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'The content has not been restored yet; restoring it is under review.'**
   String get moderationRestorationUnderReview;
+
+  /// No description provided for @verificationArtistCardTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Artist verification'**
+  String get verificationArtistCardTitle;
+
+  /// No description provided for @verificationArtistCardSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Editors review every artist before they can publish original work. You do not need a wallet to apply.'**
+  String get verificationArtistCardSubtitle;
+
+  /// No description provided for @verificationStatusNotApplied.
+  ///
+  /// In en, this message translates to:
+  /// **'NOT APPLIED'**
+  String get verificationStatusNotApplied;
+
+  /// No description provided for @verificationStatusPending.
+  ///
+  /// In en, this message translates to:
+  /// **'PENDING REVIEW'**
+  String get verificationStatusPending;
+
+  /// No description provided for @verificationStatusApproved.
+  ///
+  /// In en, this message translates to:
+  /// **'VERIFIED'**
+  String get verificationStatusApproved;
+
+  /// No description provided for @verificationStatusRejected.
+  ///
+  /// In en, this message translates to:
+  /// **'NOT APPROVED'**
+  String get verificationStatusRejected;
+
+  /// No description provided for @verificationStatusRevoked.
+  ///
+  /// In en, this message translates to:
+  /// **'WITHDRAWN'**
+  String get verificationStatusRevoked;
+
+  /// No description provided for @verificationArtistDetailNotApplied.
+  ///
+  /// In en, this message translates to:
+  /// **'Send your portfolio, medium and a short statement. A wallet is not needed.'**
+  String get verificationArtistDetailNotApplied;
+
+  /// No description provided for @verificationArtistDetailPending.
+  ///
+  /// In en, this message translates to:
+  /// **'Your application is waiting for a review. We will let you know when it is decided.'**
+  String get verificationArtistDetailPending;
+
+  /// No description provided for @verificationArtistDetailApproved.
+  ///
+  /// In en, this message translates to:
+  /// **'You are a verified artist. The studio is ready.'**
+  String get verificationArtistDetailApproved;
+
+  /// No description provided for @verificationArtistDetailRejected.
+  ///
+  /// In en, this message translates to:
+  /// **'This application was not approved. You can send a new one.'**
+  String get verificationArtistDetailRejected;
+
+  /// No description provided for @verificationArtistDetailRevoked.
+  ///
+  /// In en, this message translates to:
+  /// **'Artist verification was withdrawn. You can apply again.'**
+  String get verificationArtistDetailRevoked;
+
+  /// No description provided for @verificationArtistCtaApply.
+  ///
+  /// In en, this message translates to:
+  /// **'Apply as an artist'**
+  String get verificationArtistCtaApply;
+
+  /// No description provided for @verificationArtistCtaPending.
+  ///
+  /// In en, this message translates to:
+  /// **'Verification pending'**
+  String get verificationArtistCtaPending;
+
+  /// No description provided for @verificationArtistCtaApproved.
+  ///
+  /// In en, this message translates to:
+  /// **'Verified artist'**
+  String get verificationArtistCtaApproved;
+
+  /// No description provided for @verificationArtistCtaReapply.
+  ///
+  /// In en, this message translates to:
+  /// **'Apply again'**
+  String get verificationArtistCtaReapply;
+
+  /// No description provided for @verificationCtaRetry.
+  ///
+  /// In en, this message translates to:
+  /// **'Try again'**
+  String get verificationCtaRetry;
+
+  /// No description provided for @verificationUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Verification status is unavailable right now. Try again later.'**
+  String get verificationUnavailable;
+
+  /// No description provided for @verificationArtistFormTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Apply as an artist'**
+  String get verificationArtistFormTitle;
+
+  /// No description provided for @verificationArtistFormSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Share a snapshot of your practice. Editors review every application.'**
+  String get verificationArtistFormSubtitle;
+
+  /// No description provided for @verificationArtistSubmitted.
+  ///
+  /// In en, this message translates to:
+  /// **'Application submitted for review.'**
+  String get verificationArtistSubmitted;
+
+  /// No description provided for @verificationSubmitFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Submission failed. Please try again.'**
+  String get verificationSubmitFailed;
+
+  /// No description provided for @verificationInstitutionCardTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Institution access'**
+  String get verificationInstitutionCardTitle;
+
+  /// No description provided for @verificationInstitutionCardSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Editors review institutions before they can manage a presence on art.kubus. You do not need a wallet.'**
+  String get verificationInstitutionCardSubtitle;
+
+  /// No description provided for @verificationInstitutionClaimTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Claim an existing profile'**
+  String get verificationInstitutionClaimTitle;
+
+  /// No description provided for @verificationInstitutionClaimBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Find your institution, then send evidence. An editor reviews it before you get access.'**
+  String get verificationInstitutionClaimBody;
+
+  /// No description provided for @verificationInstitutionRequestTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Request a new institutional presence'**
+  String get verificationInstitutionRequestTitle;
+
+  /// No description provided for @verificationInstitutionRequestBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Cannot find your institution? Tell us about it. Nothing is published until an editor approves.'**
+  String get verificationInstitutionRequestBody;
+
+  /// No description provided for @verificationInstitutionSearchHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Search institutions by name'**
+  String get verificationInstitutionSearchHint;
+
+  /// No description provided for @verificationInstitutionSearchEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No listing found. You can request a new presence.'**
+  String get verificationInstitutionSearchEmpty;
+
+  /// No description provided for @verificationInstitutionClaimAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Claim this profile'**
+  String get verificationInstitutionClaimAction;
+
+  /// No description provided for @verificationInstitutionActingFor.
+  ///
+  /// In en, this message translates to:
+  /// **'Acting for'**
+  String get verificationInstitutionActingFor;
+
+  /// No description provided for @verificationInstitutionRoleOwner.
+  ///
+  /// In en, this message translates to:
+  /// **'Owner'**
+  String get verificationInstitutionRoleOwner;
+
+  /// No description provided for @verificationInstitutionRoleAdmin.
+  ///
+  /// In en, this message translates to:
+  /// **'Admin'**
+  String get verificationInstitutionRoleAdmin;
+
+  /// No description provided for @verificationInstitutionRoleEditor.
+  ///
+  /// In en, this message translates to:
+  /// **'Editor'**
+  String get verificationInstitutionRoleEditor;
+
+  /// No description provided for @verificationInstitutionRoleViewer.
+  ///
+  /// In en, this message translates to:
+  /// **'Viewer'**
+  String get verificationInstitutionRoleViewer;
+
+  /// No description provided for @verificationInstitutionLegacyNotice.
+  ///
+  /// In en, this message translates to:
+  /// **'Your account had an institution role before memberships existed. Claim or request your institution to manage it.'**
+  String get verificationInstitutionLegacyNotice;
+
+  /// No description provided for @verificationInstitutionRequestsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Your requests'**
+  String get verificationInstitutionRequestsTitle;
+
+  /// No description provided for @verificationRequestStatusSubmitted.
+  ///
+  /// In en, this message translates to:
+  /// **'Pending review'**
+  String get verificationRequestStatusSubmitted;
+
+  /// No description provided for @verificationRequestStatusUnderReview.
+  ///
+  /// In en, this message translates to:
+  /// **'Under review'**
+  String get verificationRequestStatusUnderReview;
+
+  /// No description provided for @verificationRequestStatusApproved.
+  ///
+  /// In en, this message translates to:
+  /// **'Approved'**
+  String get verificationRequestStatusApproved;
+
+  /// No description provided for @verificationRequestStatusRejected.
+  ///
+  /// In en, this message translates to:
+  /// **'Not approved'**
+  String get verificationRequestStatusRejected;
+
+  /// No description provided for @verificationRequestStatusWithdrawn.
+  ///
+  /// In en, this message translates to:
+  /// **'Withdrawn'**
+  String get verificationRequestStatusWithdrawn;
+
+  /// No description provided for @verificationRequestStatusRevoked.
+  ///
+  /// In en, this message translates to:
+  /// **'Access withdrawn'**
+  String get verificationRequestStatusRevoked;
+
+  /// No description provided for @verificationRequestWithdraw.
+  ///
+  /// In en, this message translates to:
+  /// **'Withdraw request'**
+  String get verificationRequestWithdraw;
+
+  /// No description provided for @verificationRequestKindClaim.
+  ///
+  /// In en, this message translates to:
+  /// **'Claim'**
+  String get verificationRequestKindClaim;
+
+  /// No description provided for @verificationRequestKindPresence.
+  ///
+  /// In en, this message translates to:
+  /// **'New presence'**
+  String get verificationRequestKindPresence;
+
+  /// No description provided for @verificationPresenceFieldName.
+  ///
+  /// In en, this message translates to:
+  /// **'Institution name'**
+  String get verificationPresenceFieldName;
+
+  /// No description provided for @verificationPresenceFieldKind.
+  ///
+  /// In en, this message translates to:
+  /// **'Type'**
+  String get verificationPresenceFieldKind;
+
+  /// No description provided for @verificationPresenceFieldWebsite.
+  ///
+  /// In en, this message translates to:
+  /// **'Website'**
+  String get verificationPresenceFieldWebsite;
+
+  /// No description provided for @verificationPresenceFieldLocation.
+  ///
+  /// In en, this message translates to:
+  /// **'City or location'**
+  String get verificationPresenceFieldLocation;
+
+  /// No description provided for @verificationPresenceFieldRole.
+  ///
+  /// In en, this message translates to:
+  /// **'Your role at the institution'**
+  String get verificationPresenceFieldRole;
+
+  /// No description provided for @verificationPresenceFieldMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'What should the editors know?'**
+  String get verificationPresenceFieldMessage;
+
+  /// No description provided for @verificationPresenceFieldEvidence.
+  ///
+  /// In en, this message translates to:
+  /// **'Link to evidence (optional)'**
+  String get verificationPresenceFieldEvidence;
+
+  /// No description provided for @verificationPresenceValidationName.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter the institution name.'**
+  String get verificationPresenceValidationName;
+
+  /// No description provided for @verificationPresenceValidationContact.
+  ///
+  /// In en, this message translates to:
+  /// **'Add a website or a link to evidence.'**
+  String get verificationPresenceValidationContact;
+
+  /// No description provided for @verificationPresenceValidationMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Write at least 20 characters.'**
+  String get verificationPresenceValidationMessage;
+
+  /// No description provided for @verificationPresenceSubmit.
+  ///
+  /// In en, this message translates to:
+  /// **'Send request'**
+  String get verificationPresenceSubmit;
+
+  /// No description provided for @verificationPresenceSubmitted.
+  ///
+  /// In en, this message translates to:
+  /// **'Request sent. An editor will review it.'**
+  String get verificationPresenceSubmitted;
+
+  /// No description provided for @verificationPresenceDuplicateTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'These listings already exist'**
+  String get verificationPresenceDuplicateTitle;
+
+  /// No description provided for @verificationPresenceDuplicateBody.
+  ///
+  /// In en, this message translates to:
+  /// **'If one of them is your institution, claim it instead.'**
+  String get verificationPresenceDuplicateBody;
+
+  /// No description provided for @verificationPresenceDuplicateContinue.
+  ///
+  /// In en, this message translates to:
+  /// **'None of these, send my request'**
+  String get verificationPresenceDuplicateContinue;
+
+  /// No description provided for @verificationPresenceTooMany.
+  ///
+  /// In en, this message translates to:
+  /// **'You have too many open requests. Withdraw one first.'**
+  String get verificationPresenceTooMany;
+
+  /// No description provided for @verificationClaimSent.
+  ///
+  /// In en, this message translates to:
+  /// **'Claim sent. An editor will review it.'**
+  String get verificationClaimSent;
+
+  /// No description provided for @verificationOnboardingTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Verification'**
+  String get verificationOnboardingTitle;
+
+  /// No description provided for @verificationOnboardingArtistBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Apply as an artist so editors can verify you. You can also do this later from the Studio.'**
+  String get verificationOnboardingArtistBody;
+
+  /// No description provided for @verificationOnboardingInstitutionBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Claim the profile of your institution or request a new presence. You can also do this later from the Hub.'**
+  String get verificationOnboardingInstitutionBody;
+
+  /// No description provided for @verificationOnboardingPending.
+  ///
+  /// In en, this message translates to:
+  /// **'Your request is with the editors. You can continue.'**
+  String get verificationOnboardingPending;
+
+  /// No description provided for @verificationOnboardingApproved.
+  ///
+  /// In en, this message translates to:
+  /// **'You are verified. You can continue.'**
+  String get verificationOnboardingApproved;
+
+  /// No description provided for @verificationInstitutionAlreadyManaged.
+  ///
+  /// In en, this message translates to:
+  /// **'Already managed'**
+  String get verificationInstitutionAlreadyManaged;
 }
 
 class _AppLocalizationsDelegate
