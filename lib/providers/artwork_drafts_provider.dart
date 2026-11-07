@@ -532,14 +532,31 @@ class ArtworkDraftsProvider extends ChangeNotifier {
         final uploadData = uploaded['data'];
         final manifest = uploadData is Map ? uploadData['imageVariants'] : null;
         final groupId = manifest is Map ? manifest['groupId'] : null;
+        final stored = uploadData is Map ? uploadData['imageMetadata'] : null;
+        final storedWidth = stored is Map ? stored['width'] : null;
+        final storedHeight = stored is Map ? stored['height'] : null;
+        final storedBytes = stored is Map ? stored['bytes'] : null;
+        final storedMime = stored is Map ? stored['mimetype'] : null;
         galleryMeta.add({
           'url': url,
           if (groupId is String && RegExp(r'^[a-f0-9]{64}$').hasMatch(groupId))
             'variantGroupId': groupId,
-          if (item.width != null) 'width': item.width,
-          if (item.height != null) 'height': item.height,
-          if (item.mimeType != null) 'mimeType': item.mimeType,
-          if (item.sizeBytes != null) 'sizeBytes': item.sizeBytes,
+          if (storedWidth is int && storedWidth > 0)
+            'width': storedWidth
+          else if (item.width != null)
+            'width': item.width,
+          if (storedHeight is int && storedHeight > 0)
+            'height': storedHeight
+          else if (item.height != null)
+            'height': item.height,
+          if (storedMime is String && storedMime.startsWith('image/'))
+            'mimeType': storedMime
+          else if (item.mimeType != null)
+            'mimeType': item.mimeType,
+          if (storedBytes is int && storedBytes > 0)
+            'sizeBytes': storedBytes
+          else if (item.sizeBytes != null)
+            'sizeBytes': item.sizeBytes,
           'fileName': item.fileName,
           'order': i,
         });

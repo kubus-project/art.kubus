@@ -118,6 +118,13 @@ void main() {
               'imageVariants': {
                 'groupId': uploads == 2 ? groupId : 'invalid',
               },
+              if (uploads == 2)
+                'imageMetadata': {
+                  'width': 768,
+                  'height': 512,
+                  'bytes': 12345,
+                  'mimetype': 'image/jpeg',
+                },
             },
           }),
           200,
@@ -136,7 +143,13 @@ void main() {
     provider.updateBasics(draftId: id, title: 'Title', description: 'Details');
     provider.setCover(draftId: id, bytes: _png1x1(), fileName: 'cover.png');
     provider.addGalleryItems(id, [
-      ArtworkDraftGalleryItem(bytes: _png1x1(), fileName: 'first.png'),
+      ArtworkDraftGalleryItem(
+          bytes: _png1x1(),
+          fileName: 'first.png',
+          width: 4000,
+          height: 3000,
+          sizeBytes: 99999,
+          mimeType: 'image/png'),
       ArtworkDraftGalleryItem(bytes: _png1x1(), fileName: 'second.png'),
     ]);
     await provider.submitDraft(draftId: id, walletAddress: _wallet, l10n: l10n);
@@ -145,6 +158,10 @@ void main() {
     expect(metadata, hasLength(2));
     expect(metadata[0]['url'], urls[0]);
     expect(metadata[0]['variantGroupId'], groupId);
+    expect(metadata[0]['width'], 768);
+    expect(metadata[0]['height'], 512);
+    expect(metadata[0]['sizeBytes'], 12345);
+    expect(metadata[0]['mimeType'], 'image/jpeg');
     expect(metadata[1]['url'], urls[1]);
     expect(metadata[1].containsKey('variantGroupId'), isFalse);
   });
