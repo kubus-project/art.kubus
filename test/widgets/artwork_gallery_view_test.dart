@@ -9,10 +9,12 @@ const _urls = <String>[
   'https://example.invalid/art-3.png',
 ];
 
-Widget _wrapGallery({required Widget child, required double width}) {
+Widget _wrapGallery(
+    {required Widget child, required double width, double pixelRatio = 1}) {
   return MaterialApp(
     home: MediaQuery(
-      data: MediaQueryData(size: Size(width, 800)),
+      data:
+          MediaQueryData(size: Size(width, 800), devicePixelRatio: pixelRatio),
       child: Scaffold(
         body: Center(
           child: SizedBox(width: width, child: child),
@@ -27,6 +29,41 @@ bool _semanticsFlagIsTrue(Object value) {
 }
 
 void main() {
+  testWidgets('mobile artwork preview fits the image and selects for density',
+      (tester) async {
+    await tester.pumpWidget(_wrapGallery(
+      width: 390,
+      pixelRatio: 2,
+      child: ArtworkGalleryView(
+        imageUrls: [_urls[0]],
+        height: 180,
+        sourceImageVariants: [
+          {
+            'sourceUrl': _urls[0],
+            'variants': [
+              {
+                'url': 'https://example.invalid/card',
+                'width': 768,
+                'height': 576
+              },
+              {
+                'url': 'https://example.invalid/detail',
+                'width': 1280,
+                'height': 960
+              },
+              {'url': _urls[0], 'width': 1920, 'height': 1440},
+            ],
+          },
+        ],
+      ),
+    ));
+    final image = tester.widget<DiskCachedArtworkImage>(
+      find.byType(DiskCachedArtworkImage).first,
+    );
+    expect(image.url, 'https://example.invalid/detail');
+    expect(image.fit, BoxFit.contain);
+  });
+
   testWidgets(
     'gallery uses source-bound variants after filtering and reorder',
     (tester) async {

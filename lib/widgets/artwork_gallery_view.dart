@@ -166,7 +166,7 @@ class _ArtworkGalleryViewState extends State<ArtworkGalleryView>
                     );
                     return _DiskCachedArtworkImage(
                       url: selected ?? url,
-                      fit: BoxFit.cover,
+                      fit: BoxFit.contain,
                       showProgress: true,
                       errorIconColor: scheme.outline.withValues(alpha: 0.8),
                       excludeFromSemantics: true,
