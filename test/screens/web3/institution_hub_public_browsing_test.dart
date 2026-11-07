@@ -25,6 +25,7 @@ import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../../helpers/secure_storage_absent.dart';
 
 /// Public institution browsing must never open Web3 onboarding, and the DAO
 /// application must not block an email-only account before the user has
@@ -219,6 +220,7 @@ KubusButton _applyButton(WidgetTester tester, String label) {
 }
 
 void main() {
+  installEmptySecureStorage();
   TestWidgetsFlutterBinding.ensureInitialized();
 
   testWidgets('guest opens the institution hub without Web3 onboarding',

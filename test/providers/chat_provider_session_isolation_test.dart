@@ -8,6 +8,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:art_kubus/providers/chat_provider.dart';
 import 'package:art_kubus/services/backend_api_service.dart';
+import '../helpers/secure_storage_absent.dart';
 
 /// Serves chat endpoints from the test. Held requests are queued per endpoint
 /// and resolved oldest-first, so a test can answer account A's request after
@@ -100,6 +101,7 @@ Map<String, dynamic> _message(String id, String conversationId) => {
     };
 
 void main() {
+  installEmptySecureStorage();
   TestWidgetsFlutterBinding.ensureInitialized();
 
   setUp(() {
