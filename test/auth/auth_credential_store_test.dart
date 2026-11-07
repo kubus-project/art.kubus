@@ -182,6 +182,23 @@ void main() {
     expect(await web.readAccess(), isNull);
   });
 
+  test('web closure receipt lives in tab memory only and survives logout',
+      () async {
+    final web = AuthCredentialStore(web: true);
+    expect(web.closureReceiptPersistenceAvailable, isTrue);
+    await web.saveClosureReceipt('synthetic-receipt');
+    expect(await web.readClosureReceipt(), 'synthetic-receipt');
+    await web.clear();
+    expect(await web.readClosureReceipt(), 'synthetic-receipt');
+    expect(secure, isEmpty);
+    final prefs = await SharedPreferences.getInstance();
+    expect(prefs.getKeys().any((k) => k.contains('closure')), isFalse);
+    // A reload (new store) has no receipt: the server stays authoritative.
+    expect(await AuthCredentialStore(web: true).readClosureReceipt(), isNull);
+    await web.clearClosureReceipt();
+    expect(await web.readClosureReceipt(), isNull);
+  });
+
   test(
       'preference read exception and corrupt marker cannot restore credentials',
       () async {
@@ -212,13 +229,12 @@ void main() {
         isNot(contains(AuthCredentialStore.closureReceiptKey)));
   });
 
-  test('browser closure receipt is never stored; saving fails closed',
+  test('browser closure receipt is held in tab memory and never persisted',
       () async {
     final store = AuthCredentialStore(web: true);
-    expect(store.closureReceiptPersistenceAvailable, isFalse);
-    await expectLater(store.saveClosureReceipt('synthetic-private-receipt'),
-        throwsA(isA<StateError>()));
-    expect(await store.readClosureReceipt(), isNull);
+    expect(store.closureReceiptPersistenceAvailable, isTrue);
+    await store.saveClosureReceipt('synthetic-private-receipt');
+    expect(await store.readClosureReceipt(), 'synthetic-private-receipt');
     expect(secure, isEmpty);
     expect((await SharedPreferences.getInstance()).getKeys(),
         isNot(contains(AuthCredentialStore.closureReceiptKey)));
