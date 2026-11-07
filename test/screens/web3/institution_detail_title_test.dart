@@ -161,12 +161,13 @@ void main() {
       matching: find.byType(KubusCachedImage),
     ));
     // The avatar mounts the logo as a plain network image.
-    final profile = tester.widget<Image>(find.descendant(
+    final profile = tester.widget<KubusCachedImage>(find.descendant(
       of: find.byKey(const ValueKey('institution-profile-image')),
-      matching: find.byType(Image),
+      matching: find.byType(KubusCachedImage),
     ));
+    expect(profile.fit, BoxFit.contain);
     expect(cover.imageUrl, 'https://example.com/cover.jpg');
-    expect((profile.image as NetworkImage).url, 'https://example.com/logo.jpg');
+    expect(profile.imageUrl, 'https://example.com/logo.jpg');
     expect(find.text('example.com'), findsOneWidget);
     expect(find.text('Painting'), findsOneWidget);
   });
@@ -205,11 +206,12 @@ void main() {
       find.descendant(of: hero, matching: find.byType(KubusCachedImage)),
       findsNothing,
     );
-    final avatar = tester.widget<Image>(find.descendant(
+    final avatar = tester.widget<KubusCachedImage>(find.descendant(
       of: find.byKey(const ValueKey('institution-profile-image')),
-      matching: find.byType(Image),
+      matching: find.byType(KubusCachedImage),
     ));
-    expect((avatar.image as NetworkImage).url, 'https://example.com/logo.jpg');
+    expect(avatar.fit, BoxFit.contain);
+    expect(avatar.imageUrl, 'https://example.com/logo.jpg');
   });
 
   testWidgets('open on map passes the institution identity and coordinates',

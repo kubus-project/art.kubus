@@ -8,6 +8,7 @@ import 'package:art_kubus/widgets/profile/profile_cover_field.dart';
 import 'package:art_kubus/widgets/profile/profile_identity_hero.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:art_kubus/widgets/common/kubus_cached_image.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -242,12 +243,12 @@ void main() {
           ProfileIdentityHero.plateOverlap,
     );
     expect(avatar.top, lessThan(cover.bottom));
-    // The avatar mounts its logo as a plain network image, cropped to cover.
-    final image = tester.widget<Image>(find.descendant(
+    // The logo keeps its proportions: contained on a neutral surface, never cropped.
+    final image = tester.widget<KubusCachedImage>(find.descendant(
       of: find.byKey(_avatarKey),
-      matching: find.byType(Image),
+      matching: find.byType(KubusCachedImage),
     ));
-    expect(image.fit, BoxFit.cover);
+    expect(image.fit, BoxFit.contain);
   });
 
   testWidgets('a logo identical to the cover is not repeated as an avatar',
