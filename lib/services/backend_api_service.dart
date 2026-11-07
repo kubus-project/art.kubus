@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:flutter/services.dart' show MissingPluginException;
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
@@ -699,6 +700,8 @@ class BackendApiService
   void resetCredentialStoreForTesting({AuthCredentialStore? store}) {
     _credentialStore = store ?? AuthCredentialStore();
     _authInitFuture = null;
+    _closureReceiptLoaded = false;
+    _closureReceiptRaw = null;
   }
 
   @visibleForTesting
@@ -11136,8 +11139,24 @@ class BackendApiService
 
   /// An invalid or unbound receipt fails closed instead of silently removing
   /// the only local evidence of an uncertain account closure.
+  // The receipt is read once and then served from memory: every authenticated
+  // request consults it, and a platform round trip per request is neither
+  // cheap nor needed. Every write path below updates or invalidates it.
+  String? _closureReceiptRaw;
+  bool _closureReceiptLoaded = false;
+
   Future<AccountClosureReceipt?> _storedClosureReceipt() async {
-    final raw = await _credentialStore.readClosureReceipt();
+    if (!_closureReceiptLoaded) {
+      try {
+        _closureReceiptRaw = await _credentialStore.readClosureReceipt();
+        _closureReceiptLoaded = true;
+      } on MissingPluginException {
+        // No secure-storage plugin on this platform: no receipt can have been
+        // stored (saving requires the same plugin), so there is none to honour.
+        return null;
+      }
+    }
+    final raw = _closureReceiptRaw;
     if (raw == null) return null;
     final receipt = AccountClosureReceipt.tryDecodeStored(raw);
     if (receipt == null) throw StateError('Closure receipt is unavailable');
@@ -11188,7 +11207,10 @@ class BackendApiService
     if (previous != null && previous.accountId != receipt.accountId) {
       throw StateError('Another account has an unresolved closure receipt');
     }
+    _closureReceiptLoaded = false;
     await _credentialStore.saveClosureReceipt(receipt.encode());
+    _closureReceiptRaw = receipt.encode();
+    _closureReceiptLoaded = true;
   }
 
   /// An uncertain closure must never regain authority by deleting its receipt.
@@ -11325,6 +11347,7 @@ class BackendApiService
           // that did not happen. Discard it, or it would quarantine a live
           // account. If it cannot be removed, keep it: quarantine is safer.
           try {
+            _closureReceiptLoaded = false;
             await _credentialStore.clearClosureReceipt();
           } catch (_) {}
           onStage?.call(AccountClosureStage.refused, _authSessionEpoch);
