@@ -55,4 +55,81 @@ void main() {
     ];
     expect(select(200, 200, 2, input: input), 'ipfs://cid/file');
   });
+
+  test(
+    'binds only by explicit source identity, regardless of record order',
+    () {
+      final records = [
+        {
+          'sourceUrl': '/two.jpg',
+          'variants': [
+            {'url': '/two-small.jpg', 'width': 320, 'height': 240},
+          ],
+        },
+        {
+          'sourceUrl': '/one.jpg',
+          'variants': [
+            {'url': '/one-small.jpg', 'width': 320, 'height': 240},
+          ],
+        },
+      ];
+      String? forSource(String source, Iterable<dynamic> input) =>
+          ImageVariantSelector.selectForSource(
+            records: input,
+            sourceUrl: source,
+            fallbackUrl: source,
+            logicalWidth: 100,
+            logicalHeight: 100,
+            devicePixelRatio: 2,
+          );
+      expect(forSource('/one.jpg', records), '/one-small.jpg');
+      expect(forSource('/missing.jpg', records), '/missing.jpg');
+      expect(forSource('/one.jpg', [...records, records.last]), '/one.jpg');
+    },
+  );
+
+  test('prefetches only bounded identity-matched neighbors', () {
+    final records = [
+      {
+        'sourceUrl': '/a',
+        'variants': [
+          {'url': '/a-small', 'width': 320, 'height': 240},
+        ],
+      },
+      {
+        'sourceUrl': '/b',
+        'variants': [
+          {'url': '/b-full', 'width': 1920, 'height': 1440},
+        ],
+      },
+      {
+        'sourceUrl': '/c',
+        'variants': [
+          {'url': '/c-small', 'width': 768, 'height': 576},
+        ],
+      },
+    ];
+    expect(
+      ImageVariantSelector.galleryNeighborPreviews(
+        sources: ['/c', '/b', '/a'],
+        index: 1,
+        records: records,
+        logicalWidth: 300,
+        logicalHeight: 200,
+        devicePixelRatio: 2,
+      ),
+      ['/c-small', '/a-small'],
+    );
+    expect(
+      ImageVariantSelector.galleryNeighborPreviews(
+        sources: ['/a', '/b'],
+        index: 0,
+        records: records,
+        logicalWidth: 300,
+        logicalHeight: 200,
+        devicePixelRatio: 2,
+      ),
+      isEmpty,
+    );
+  });
 }

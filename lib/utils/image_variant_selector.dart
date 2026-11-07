@@ -6,6 +6,84 @@ import 'dart:math' as math;
 class ImageVariantSelector {
   const ImageVariantSelector._();
 
+  /// Select only variants explicitly bound to [sourceUrl]. A duplicate source
+  /// record is ambiguous and falls back; gallery position is never an identity.
+  static String? selectForSource({
+    required Iterable<dynamic>? records,
+    required String sourceUrl,
+    required String? fallbackUrl,
+    required double logicalWidth,
+    required double logicalHeight,
+    required double devicePixelRatio,
+    int? maxVariantEdge,
+  }) {
+    final source = sourceUrl.trim();
+    if (source.isEmpty) return _url(fallbackUrl);
+    Map? match;
+    for (final record in records ?? const []) {
+      if (record is! Map || _url(record['sourceUrl']) != source) continue;
+      if (match != null) return _url(fallbackUrl);
+      match = record;
+    }
+    final raw = match?['variants'];
+    if (raw is! Iterable) return _url(fallbackUrl);
+    final variants = maxVariantEdge == null
+        ? raw
+        : raw.where((item) {
+            if (item is! Map) return false;
+            final width = _dimension(item['width']);
+            final height = _dimension(item['height']);
+            return width != null &&
+                height != null &&
+                math.max(width, height) <= maxVariantEdge;
+          });
+    return select(
+      variants: variants,
+      fallbackUrl: fallbackUrl,
+      logicalWidth: logicalWidth,
+      logicalHeight: logicalHeight,
+      devicePixelRatio: devicePixelRatio,
+    );
+  }
+
+  /// Only explicit, bounded neighbor variants may be prefetched. Never fetch
+  /// the current image twice or prefetch an unbounded legacy original.
+  static List<String> galleryNeighborPreviews({
+    required List<String> sources,
+    required int index,
+    required Iterable<dynamic>? records,
+    required double logicalWidth,
+    required double logicalHeight,
+    required double devicePixelRatio,
+  }) {
+    final results = <String>{};
+    for (final neighbor in [index - 1, index + 1]) {
+      if (neighbor < 0 || neighbor >= sources.length) continue;
+      final source = sources[neighbor].trim();
+      final selected = selectForSource(
+        records: records,
+        sourceUrl: source,
+        fallbackUrl: null,
+        logicalWidth: logicalWidth,
+        logicalHeight: logicalHeight,
+        devicePixelRatio: devicePixelRatio,
+        maxVariantEdge: 1280,
+      );
+      final displayed = selectForSource(
+        records: records,
+        sourceUrl: source,
+        fallbackUrl: null,
+        logicalWidth: logicalWidth,
+        logicalHeight: logicalHeight,
+        devicePixelRatio: devicePixelRatio,
+      );
+      if (selected != null && selected != source && selected == displayed) {
+        results.add(selected);
+      }
+    }
+    return results.toList(growable: false);
+  }
+
   /// [variants] entries have `url`, `width`, and `height` fields. The target
   /// is the longest rendered logical edge multiplied by device pixel ratio.
   /// Invalid entries are ignored. If no variant is large enough, the largest
