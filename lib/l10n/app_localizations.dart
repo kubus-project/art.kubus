@@ -22751,6 +22751,18 @@ abstract class AppLocalizations {
   /// **'That username is reserved. Please pick a different one.'**
   String get profileEditUsernameReservedError;
 
+  /// No description provided for @profileEditUsernameTakenError.
+  ///
+  /// In en, this message translates to:
+  /// **'That username is already taken. Please pick a different one.'**
+  String get profileEditUsernameTakenError;
+
+  /// No description provided for @profileEditUsernameInvalidError.
+  ///
+  /// In en, this message translates to:
+  /// **'Use 3 to 50 lowercase letters, digits, dots, dashes or underscores.'**
+  String get profileEditUsernameInvalidError;
+
   /// No description provided for @profileEditUsernameWalletLikeError.
   ///
   /// In en, this message translates to:

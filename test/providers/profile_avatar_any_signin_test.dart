@@ -227,6 +227,27 @@ void main() {
     );
   });
 
+  test('a taken or malformed username gets its own message on save', () {
+    final l10n = lookupAppLocalizations(const Locale('en'));
+
+    expect(
+      profileEditSaveErrorMessage(
+        l10n,
+        const ProfileRequestFailure(
+            errorCode: 'USERNAME_ALREADY_TAKEN', statusCode: 409),
+      ),
+      l10n.profileEditUsernameTakenError,
+    );
+    expect(
+      profileEditSaveErrorMessage(
+        l10n,
+        const ProfileRequestFailure(
+            errorCode: 'USERNAME_INVALID', statusCode: 400),
+      ),
+      l10n.profileEditUsernameInvalidError,
+    );
+  });
+
   test('an upload without a returned URL throws instead of returning empty',
       () async {
     final api = _EmailSessionApi()..uploadResponse = <String, dynamic>{};

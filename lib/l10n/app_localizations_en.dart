@@ -13038,6 +13038,14 @@ class AppLocalizationsEn extends AppLocalizations {
       'That username is reserved. Please pick a different one.';
 
   @override
+  String get profileEditUsernameTakenError =>
+      'That username is already taken. Please pick a different one.';
+
+  @override
+  String get profileEditUsernameInvalidError =>
+      'Use 3 to 50 lowercase letters, digits, dots, dashes or underscores.';
+
+  @override
   String get profileEditUsernameWalletLikeError =>
       'That looks like a wallet address. Please pick a readable username.';
 
