@@ -14,13 +14,14 @@ void main() {
     double height,
     double dpr, {
     Iterable<dynamic>? input = variants,
-  }) => ImageVariantSelector.select(
-    variants: input,
-    fallbackUrl: '/legacy.jpg',
-    logicalWidth: width,
-    logicalHeight: height,
-    devicePixelRatio: dpr,
-  );
+  }) =>
+      ImageVariantSelector.select(
+        variants: input,
+        fallbackUrl: '/legacy.jpg',
+        logicalWidth: width,
+        logicalHeight: height,
+        devicePixelRatio: dpr,
+      );
 
   test('uses the smallest sufficient longest edge for the physical size', () {
     expect(select(100, 100, 2), '/thumb.jpg');
