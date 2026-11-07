@@ -9,6 +9,7 @@ import '../../widgets/app_loading.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../utils/design_tokens.dart';
+import '../../utils/profile_data_key.dart';
 import '../../utils/kubus_brand_colors.dart';
 import '../../utils/keyboard_inset_resolver.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -958,7 +959,9 @@ class _ProfileScreenState extends State<ProfileScreen>
       context,
       listen: false,
     );
-    final wallet = profileProvider.currentUser?.walletAddress ?? '';
+    // Wallet when the account has one; otherwise its profile/account id, so a
+    // walletless artist still loads authored artworks and collections.
+    final wallet = profileArtistDataKey(profileProvider.currentUser);
     if (wallet.isEmpty) {
       return;
     }

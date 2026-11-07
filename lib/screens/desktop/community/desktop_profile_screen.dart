@@ -3,6 +3,7 @@ import '../../../widgets/common/kubus_screen_header.dart';
 import 'package:flutter/material.dart';
 import '../../../widgets/profile/profile_identity_hero.dart';
 import '../../../widgets/profile/profile_owner_identity.dart';
+import '../../../utils/profile_data_key.dart';
 import '../../../widgets/inline_loading.dart';
 import 'package:provider/provider.dart';
 import '../../../l10n/app_localizations.dart';
@@ -1713,7 +1714,8 @@ class _ProfileScreenState extends State<ProfileScreen>
   Future<void> _maybeLoadArtistData({bool force = false}) async {
     final profileProvider =
         Provider.of<ProfileProvider>(context, listen: false);
-    final wallet = profileProvider.currentUser?.walletAddress ?? '';
+    // Wallet when the account has one; otherwise its profile/account id.
+    final wallet = profileArtistDataKey(profileProvider.currentUser);
     if (wallet.isEmpty) return;
 
     DAOReview? review;
