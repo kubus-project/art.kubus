@@ -95,8 +95,7 @@ void main() {
     expect(response['message'], contains('If an account exists'));
   });
 
-  test(
-      'resendEmailVerificationForCurrentAccount attaches Authorization header',
+  test('resendEmailVerificationForCurrentAccount attaches Authorization header',
       () async {
     final api = BackendApiService();
     api.setAuthTokenForTesting('cached-token');

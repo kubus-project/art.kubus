@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../config/config.dart';
@@ -30,6 +28,19 @@ class AccountWalletLinkVerificationException implements Exception {
 
   @override
   String toString() => message;
+}
+
+/// Raised when the originating account or session generation ended while the
+/// link was in progress.
+///
+/// This is not a link failure. Nothing is written or restored for the
+/// originating account after it is raised, and UI must not show failure copy
+/// for it: the account the user is now in owns the state.
+class AccountWalletLinkSupersededException implements Exception {
+  const AccountWalletLinkSupersededException();
+
+  @override
+  String toString() => 'The account session changed during the wallet link.';
 }
 
 /// Verified outcome of a wallet -> existing-account link transaction.
@@ -66,15 +77,23 @@ class AccountWalletLinkResult {
 ///    and signs it with the active signer. The backend rejects any
 ///    `/api/auth/bind-wallet` from a non-wallet-signed (Google/email) session
 ///    that does not carry this challenge signature.
-/// 3. POSTs `/api/auth/bind-wallet` with the signature under that token.
+/// 3. POSTs `/api/auth/bind-wallet` with the signature under that token, once.
 /// 4. Persists the bind response token.
 /// 5. GETs `/api/profiles/me` and verifies the returned `userId` equals the
 ///    original account id and the returned wallet equals the linked wallet.
-/// 6. Only after verification commits wallet prefs and provider state.
+/// 6. Only after verification commits local state: profile and chat hydration
+///    (network, outside the auth-session lease), then the account-scoped prefs
+///    and provider identity under [BackendApiService.withAuthSessionLease].
 ///
-/// On any failure the original token is restored and no wallet prefs are
-/// written; callers stay on the WalletConnect step and surface the error
-/// inline. This service must never navigate.
+/// Every stage after an await re-checks that the originating account and
+/// session generation are still current before it writes or notifies. A stale
+/// stage raises [AccountWalletLinkSupersededException] instead of a failure.
+///
+/// Before the bind request, failures leave the remote account untouched. Once
+/// the bind request is sent, a transport or verification failure can leave the
+/// remote result indeterminate; callers must ask the user to check account
+/// wallet status before retrying. The bind is never retried automatically.
+/// This service must never navigate.
 class AccountWalletLinkService {
   AccountWalletLinkService({
     BackendApiService? backendApi,
@@ -105,6 +124,16 @@ class AccountWalletLinkService {
   /// the proof step gets a much longer budget than the bind call itself.
   static const Duration _challengeSignTimeout = Duration(minutes: 2);
 
+  /// Account-scoped preference keys written by the verified commit. They are
+  /// written and rolled back only inside the auth-session lease.
+  static const List<String> _accountPrefKeys = <String>[
+    'wallet_address',
+    'walletAddress',
+    'wallet',
+    'has_wallet',
+    'user_id',
+  ];
+
   Future<AccountWalletLinkResult> linkWalletToCurrentAccount({
     required String walletAddress,
     required String expectedUserId,
@@ -112,7 +141,43 @@ class AccountWalletLinkService {
     String? originalRefreshToken,
     WalletSessionSyncProvidersPayload? providers,
   }) async {
-    var sessionEpoch = _backendApi.authSessionEpoch;
+    final walletProvider = providers?.walletProvider;
+    final generation = walletProvider?.beginAccountWalletLink();
+    try {
+      final result = await _performWalletLink(
+        walletAddress: walletAddress,
+        expectedUserId: expectedUserId,
+        originalAuthToken: originalAuthToken,
+        originalRefreshToken: originalRefreshToken,
+        providers: providers,
+        linkGeneration: generation,
+      );
+      if (generation != null) {
+        walletProvider?.completeAccountWalletLink(generation);
+      }
+      return result;
+    } on AccountWalletLinkSupersededException {
+      // The account moved on. The link phase is cleared, never marked failed.
+      if (generation != null) {
+        walletProvider?.completeAccountWalletLink(generation);
+      }
+      rethrow;
+    } catch (_) {
+      if (generation != null) {
+        walletProvider?.failAccountWalletLink(generation);
+      }
+      rethrow;
+    }
+  }
+
+  Future<AccountWalletLinkResult> _performWalletLink({
+    required String walletAddress,
+    required String expectedUserId,
+    required String originalAuthToken,
+    String? originalRefreshToken,
+    WalletSessionSyncProvidersPayload? providers,
+    required int? linkGeneration,
+  }) async {
     final normalizedWallet = walletAddress.trim();
     final normalizedUserId = expectedUserId.trim();
     final normalizedToken = originalAuthToken.trim();
@@ -135,15 +200,48 @@ class AccountWalletLinkService {
       );
     }
 
+    final walletProvider = providers?.walletProvider;
+    // The link belongs to one account session generation. Every token commit
+    // advances the epoch, so it is re-captured after each commit this link makes.
+    var sessionEpoch = _backendApi.authSessionEpoch;
+    bool isCurrent() {
+      if (sessionEpoch != _backendApi.authSessionEpoch) return false;
+      if (linkGeneration == null || walletProvider == null) return true;
+      return walletProvider.isAccountWalletLinkAttemptCurrent(linkGeneration);
+    }
+
+    void ensureCurrent() {
+      if (!isCurrent()) throw const AccountWalletLinkSupersededException();
+    }
+
+    // Once the bind request is issued, the remote outcome is unknown to this
+    // session. A session that ends before a verdict must surface that unverified
+    // outcome, never a silent superseded result. Pre-bind stages stay silent.
+    AccountWalletLinkVerificationException unverifiedBindOutcome(
+        String? detail) {
+      return AccountWalletLinkVerificationException(
+        'The wallet link request could not be confirmed. It may have reached '
+        'the server. Check your account wallet status before trying again.'
+        '${detail == null ? '' : ' Request error: $detail'}',
+      );
+    }
+
     // Force the original Google/email account token back before binding. A
     // wallet create/import/connect must never decide which account binds.
-    await _backendApi.setAuthToken(normalizedToken,
-        expectedEpoch: sessionEpoch);
-    sessionEpoch = _backendApi.authSessionEpoch;
+    try {
+      // The epoch this commit ran under, not a later read of the live epoch: a
+      // sign-out that lands before this resumes must not be adopted as current.
+      sessionEpoch = await _backendApi.setAuthToken(normalizedToken,
+          expectedEpoch: sessionEpoch);
+    } on StateError {
+      ensureCurrent();
+      rethrow;
+    }
     final refreshToken = (originalRefreshToken ?? '').trim();
     if (refreshToken.isNotEmpty) {
       await _backendApi.setRefreshToken(refreshToken,
           forAccessToken: normalizedToken);
+      ensureCurrent();
     }
 
     // Prove wallet ownership before binding. The backend requires a signed
@@ -156,20 +254,22 @@ class AccountWalletLinkService {
         walletProofSignature = await (_signWalletChallengeOverride != null
                 ? _signWalletChallengeOverride(normalizedWallet)
                 : _signChallengeWithActiveSigner(
-                    providers?.walletProvider,
+                    walletProvider,
                     normalizedWallet,
                   ))
             .timeout(_challengeSignTimeout);
-      } catch (error) {
+      } catch (_) {
+        ensureCurrent();
         await _restoreOriginalToken(normalizedToken, refreshToken,
             expectedEpoch: sessionEpoch);
         rethrow;
       }
+      ensureCurrent();
     }
 
-    if (sessionEpoch != _backendApi.authSessionEpoch) {
-      throw StateError('Account session ended');
-    }
+    // Single bind attempt. Any failure after this point is ambiguous: the
+    // server may already have linked the wallet, so the copy below asks the user
+    // to check status and no retry happens here.
     Map<String, dynamic> bindPayload;
     try {
       bindPayload = await (_bindWalletOverride != null
@@ -183,27 +283,45 @@ class AccountWalletLinkService {
                 ))
           .timeout(_bindTimeout);
     } catch (error) {
-      await _restoreOriginalToken(normalizedToken, refreshToken,
-          expectedEpoch: sessionEpoch);
-      rethrow;
+      if (isCurrent()) {
+        await _restoreOriginalToken(normalizedToken, refreshToken,
+            expectedEpoch: sessionEpoch);
+      }
+      throw unverifiedBindOutcome('$error');
     }
-    // The default backend transport already committed its guarded auth pair.
-    // An injected transport is committed here under the original request epoch.
+
     final payload =
         bindPayload['data'] is Map ? bindPayload['data'] as Map : bindPayload;
     final returnedToken =
         (payload['token'] ?? bindPayload['token'] ?? '').toString();
-    if (sessionEpoch != _backendApi.authSessionEpoch &&
-        (returnedToken.isEmpty ||
-            returnedToken != _backendApi.getAuthToken())) {
-      throw StateError('Account session ended');
+    // The default transport commits its own guarded token pair, which advances
+    // the epoch. Only a token that the current session already holds is
+    // accepted as that commit. Otherwise the epoch must be unchanged.
+    final committedByTransport =
+        returnedToken.isNotEmpty && returnedToken == _backendApi.getAuthToken();
+    if (!committedByTransport) {
+      if (!isCurrent()) throw unverifiedBindOutcome(null);
+      if (returnedToken.isNotEmpty) {
+        try {
+          sessionEpoch = await _backendApi
+              .persistAuthTokensFromResponseCommitted(bindPayload,
+                  sessionEpoch: sessionEpoch);
+        } catch (_) {
+          // A failed token commit clears the session, so this is unverified
+          // whether or not the session moved on its own.
+          if (isCurrent()) {
+            await _restoreOriginalToken(normalizedToken, refreshToken,
+                expectedEpoch: sessionEpoch);
+          }
+          throw unverifiedBindOutcome(null);
+        }
+      }
     }
-    if (returnedToken.isNotEmpty &&
-        returnedToken != _backendApi.getAuthToken()) {
-      await _backendApi.persistAuthTokensFromResponse(bindPayload,
-          sessionEpoch: sessionEpoch);
+    if (committedByTransport) {
+      // The transport committed its own token pair inside the bind call; its
+      // epoch is the only one this link has not yet captured.
+      sessionEpoch = _backendApi.authSessionEpoch;
     }
-    sessionEpoch = _backendApi.authSessionEpoch;
 
     Map<String, dynamic> profileResponse;
     try {
@@ -212,19 +330,26 @@ class AccountWalletLinkService {
               : _backendApi.getMyProfile())
           .timeout(_verifyTimeout);
     } catch (error) {
-      await _restoreOriginalToken(normalizedToken, refreshToken,
-          expectedEpoch: sessionEpoch);
+      if (isCurrent()) {
+        await _restoreOriginalToken(normalizedToken, refreshToken,
+            expectedEpoch: sessionEpoch);
+      }
       throw AccountWalletLinkVerificationException(
-        'Could not verify the wallet link with your account: $error',
+        'We could not confirm whether the wallet was linked. Check your '
+        'account wallet status before trying again. Verification error: $error',
       );
     }
+    // A stale profile answers for another account. The bind was already sent,
+    // so this is the unverified outcome, not a silent supersede.
+    if (!isCurrent()) throw unverifiedBindOutcome(null);
 
     if (profileResponse['success'] == false) {
       await _restoreOriginalToken(normalizedToken, refreshToken,
           expectedEpoch: sessionEpoch);
       throw AccountWalletLinkVerificationException(
         'Could not verify the wallet link with your account '
-        '(${profileResponse['status'] ?? profileResponse['error'] ?? 'unknown error'}).',
+        '(${profileResponse['status'] ?? profileResponse['error'] ?? 'unknown error'}). '
+        'Check your account wallet status before trying again.',
       );
     }
 
@@ -245,27 +370,28 @@ class AccountWalletLinkService {
       await _restoreOriginalToken(normalizedToken, refreshToken,
           expectedEpoch: sessionEpoch);
       throw AccountWalletLinkVerificationException(
-        'Wallet link verification failed: the wallet was not linked to your '
-        'signed-in account. No changes were saved — try again.',
+        'Your profile did not confirm that this wallet is linked to the '
+        'signed-in account. The bind request may have reached the server. '
+        'Check your account wallet status before trying again.',
       );
     }
     if (!WalletUtils.equals(verifiedWallet, normalizedWallet)) {
       await _restoreOriginalToken(normalizedToken, refreshToken,
           expectedEpoch: sessionEpoch);
       throw AccountWalletLinkVerificationException(
-        'Wallet link verification failed: your account does not report the '
-        'new wallet yet. No changes were saved — try again.',
+        'Your profile has not confirmed the newly linked wallet yet. The '
+        'bind request may have reached the server. Check your account wallet '
+        'status before trying again.',
       );
     }
 
-    if (sessionEpoch != _backendApi.authSessionEpoch) {
-      throw StateError('Account session ended');
-    }
-    // Verified: the original account owns the wallet. Commit local state.
+    // Verified: the originating account owns the wallet. Commit local state.
     await _commitVerifiedLink(
       walletAddress: normalizedWallet,
       userId: verifiedUserId,
-      walletProvider: providers?.walletProvider,
+      expectedSessionEpoch: sessionEpoch,
+      isCurrent: isCurrent,
+      walletProvider: walletProvider,
       profileProvider: providers?.profileProvider,
       chatProvider: providers?.chatProvider,
     );
@@ -314,52 +440,139 @@ class AccountWalletLinkService {
     }
   }
 
+  /// Commits a verified link.
+  ///
+  /// Network hydration (profile, chat) runs first and outside the lease, so a
+  /// slow request never holds logout or account switch. The account-scoped
+  /// prefs and the provider identity then commit under the lease. A stale stage
+  /// throws [AccountWalletLinkSupersededException] and rolls back its own writes.
   Future<void> _commitVerifiedLink({
     required String walletAddress,
     required String userId,
+    required int expectedSessionEpoch,
+    required bool Function() isCurrent,
     WalletProvider? walletProvider,
     ProfileProvider? profileProvider,
     ChatProvider? chatProvider,
   }) async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString('wallet_address', walletAddress);
-      await prefs.setString('walletAddress', walletAddress);
-      await prefs.setString('wallet', walletAddress);
-      await prefs.setBool('has_wallet', true);
-      await prefs.setString('user_id', userId);
-    } catch (e) {
-      AppConfig.debugPrint('AccountWalletLinkService: prefs commit failed: $e');
+    void ensureCurrent() {
+      if (!isCurrent()) throw const AccountWalletLinkSupersededException();
     }
 
-    _backendApi.setPreferredWalletAddress(walletAddress);
-
-    if (walletProvider != null) {
-      // After a verified bind only the safe commit path may run: it never
-      // loads wallet data, never syncs backend data, and never touches the
-      // account auth token (setReadOnlyWalletIdentity(loadData: true) is
-      // prohibited here — its data sync can bootstrap a second account).
-      await _runNonFatal(
-        'wallet identity commit',
-        () => walletProvider.commitVerifiedAccountLinkedWalletIdentity(
-          walletAddress,
-        ),
-      );
-    }
-
+    ensureCurrent();
     if (profileProvider != null) {
       await _runNonFatal(
         'authenticated profile refresh',
         () =>
             profileProvider.loadAuthenticatedProfile().timeout(_verifyTimeout),
       );
+      ensureCurrent();
     }
 
     if (chatProvider != null) {
       await _runNonFatal(
         'chat wallet commit',
-        () => chatProvider.setCurrentWallet(walletAddress),
+        () => chatProvider.setCurrentWallet(
+          walletAddress,
+          shouldContinue: isCurrent,
+        ),
       );
+      ensureCurrent();
+    }
+
+    final committed = await _backendApi.withAuthSessionLease(
+      expectedSessionEpoch,
+      () async {
+        ensureCurrent();
+        final prefs = await SharedPreferences.getInstance();
+        ensureCurrent();
+        final values = <String, Object>{
+          'wallet_address': walletAddress,
+          'walletAddress': walletAddress,
+          'wallet': walletAddress,
+          'has_wallet': true,
+          'user_id': userId,
+        };
+        final written = <String>[];
+        try {
+          try {
+            for (final key in _accountPrefKeys) {
+              ensureCurrent();
+              await _writePrefValue(prefs, key, values[key]);
+              written.add(key);
+            }
+          } on AccountWalletLinkSupersededException {
+            rethrow;
+          } catch (error) {
+            AppConfig.debugPrint(
+                'AccountWalletLinkService: prefs commit failed: $error');
+          }
+
+          ensureCurrent();
+          if (walletProvider != null) {
+            // Identity only: never loads wallet data, never syncs backend data,
+            // and never touches the account token (see the provider contract).
+            await _runNonFatal(
+              'wallet identity commit',
+              () => walletProvider.commitVerifiedAccountLinkedWalletIdentity(
+                walletAddress,
+                persist: false,
+                shouldCommit: isCurrent,
+                updatePreferredWallet: false,
+              ),
+            );
+            ensureCurrent();
+          }
+
+          _backendApi.setPreferredWalletAddress(
+            walletAddress,
+            persist: false,
+            expectedAuthSessionEpoch: expectedSessionEpoch,
+          );
+        } on AccountWalletLinkSupersededException {
+          await _removeOwnedPrefValues(prefs, written, values);
+          rethrow;
+        }
+      },
+    );
+    if (!committed) throw const AccountWalletLinkSupersededException();
+  }
+
+  Future<void> _writePrefValue(
+    SharedPreferences prefs,
+    String key,
+    Object? value,
+  ) async {
+    if (value == null) {
+      await prefs.remove(key);
+    } else if (value is String) {
+      await prefs.setString(key, value);
+    } else if (value is bool) {
+      await prefs.setBool(key, value);
+    } else if (value is List<String>) {
+      await prefs.setStringList(key, value);
+    } else {
+      throw StateError('Unsupported preference value for $key');
+    }
+  }
+
+  /// Removes the keys this superseded commit wrote, but only while they still
+  /// hold this commit's values. Pre-link values are deliberately not restored:
+  /// after a switch or logout they would be re-persisted under the wrong
+  /// session. A key another writer has since replaced is not touched.
+  Future<void> _removeOwnedPrefValues(
+    SharedPreferences prefs,
+    List<String> written,
+    Map<String, Object> values,
+  ) async {
+    for (final key in written.reversed) {
+      try {
+        if (prefs.get(key) != values[key]) continue;
+        await prefs.remove(key);
+      } catch (error) {
+        AppConfig.debugPrint(
+            'AccountWalletLinkService: prefs rollback failed: $error');
+      }
     }
   }
 

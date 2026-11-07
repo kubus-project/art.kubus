@@ -14,6 +14,7 @@ import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:art_kubus/providers/portfolio_provider.dart';
+import '../helpers/secure_storage_absent.dart';
 
 Artwork _buildArtwork({
   required String id,
@@ -178,6 +179,7 @@ int _galleryColumns(WidgetTester tester) {
 }
 
 void main() {
+  installEmptySecureStorage();
   TestWidgetsFlutterBinding.ensureInitialized();
 
   setUp(() {

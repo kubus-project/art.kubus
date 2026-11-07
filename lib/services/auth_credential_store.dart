@@ -33,23 +33,38 @@ class AuthCredentialStore {
   bool _revoked = false;
   final Map<String, String> _memory = {};
   // Separate from login authority: a closure status receipt must survive logout.
-  // Browser capabilities remain memory-only; users can explicitly save a copy.
-  String? _closureReceiptMemory;
+  // Native: OS-backed secure storage. Browser: TAB MEMORY ONLY. The current web
+  // plugin stores an exportable key alongside ciphertext in localStorage, so the
+  // bearer capability is never persisted there (nor in any other web storage).
+  // A reload loses the receipt; the server stays authoritative: a committed
+  // closure removes the account (sign-in then fails), an uncommitted one leaves
+  // the account intact and the user can simply try again.
   static const closureReceiptKey = 'account_closure_status_receipt_v1';
+  String? _webClosureReceipt;
+  bool get closureReceiptPersistenceAvailable => true;
 
   Future<void> saveClosureReceipt(String receipt) => _run((_) async {
         if (_web) {
-          _closureReceiptMemory = receipt;
-        } else {
-          await _secure.write(key: closureReceiptKey, value: receipt);
-          if (await _secure.read(key: closureReceiptKey) != receipt) {
-            throw StateError('Closure receipt storage unavailable');
-          }
+          _webClosureReceipt = receipt;
+          return;
+        }
+        await _secure.write(key: closureReceiptKey, value: receipt);
+        if (await _secure.read(key: closureReceiptKey) != receipt) {
+          throw StateError('Closure receipt storage unavailable');
         }
       });
 
   Future<String?> readClosureReceipt() => _run((_) async =>
-      _web ? _closureReceiptMemory : _secure.read(key: closureReceiptKey));
+      _web ? _webClosureReceipt : _secure.read(key: closureReceiptKey));
+
+  /// Removes a receipt after a definitive server refusal of a fresh attempt.
+  Future<void> clearClosureReceipt() => _run((_) async {
+        if (_web) {
+          _webClosureReceipt = null;
+        } else {
+          await _secure.delete(key: closureReceiptKey);
+        }
+      });
 
   Iterable<String> get _legacyKeys => {
         ...AuthGatingService.accessTokenKeys,

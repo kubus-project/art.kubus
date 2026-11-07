@@ -34,4 +34,3 @@ void main() {
     expect(bad.outcome, PinVerifyOutcome.incorrect);
   });
 }
-

@@ -5638,6 +5638,30 @@ abstract class AppLocalizations {
   /// **'Closure could not be confirmed. Check its status before trying again.'**
   String get settingsDeleteAccountBackendFailedToast;
 
+  /// No description provided for @settingsDeleteAccountBusy.
+  ///
+  /// In en, this message translates to:
+  /// **'Deleting your account. This can take a moment.'**
+  String get settingsDeleteAccountBusy;
+
+  /// No description provided for @settingsDeleteAccountPendingToast.
+  ///
+  /// In en, this message translates to:
+  /// **'Account closure is being processed. You have been signed out. Its status is shown here.'**
+  String get settingsDeleteAccountPendingToast;
+
+  /// No description provided for @settingsDeleteAccountNotStartedToast.
+  ///
+  /// In en, this message translates to:
+  /// **'Account closure did not start. Nothing was deleted. You can try again.'**
+  String get settingsDeleteAccountNotStartedToast;
+
+  /// No description provided for @settingsDeleteAccountRefusedToast.
+  ///
+  /// In en, this message translates to:
+  /// **'The server declined the closure. Nothing was deleted and you are still signed in. You can try again.'**
+  String get settingsDeleteAccountRefusedToast;
+
   /// No description provided for @settingsAccountDeletedToast.
   ///
   /// In en, this message translates to:
@@ -12091,13 +12115,13 @@ abstract class AppLocalizations {
   /// No description provided for @walletHomeAccountShellTitle.
   ///
   /// In en, this message translates to:
-  /// **'Profile active, wallet not restored'**
+  /// **'Account active, no wallet connected'**
   String get walletHomeAccountShellTitle;
 
   /// No description provided for @walletHomeAccountShellDescription.
   ///
   /// In en, this message translates to:
-  /// **'Your account session is available. This device needs Wallet only for ownership and participation actions.'**
+  /// **'Your account works without a wallet. Connect one only for wallet-based ownership and participation actions.'**
   String get walletHomeAccountShellDescription;
 
   /// No description provided for @walletHomeRestoreWalletAction.
@@ -15576,6 +15600,54 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Connect a wallet to apply'**
   String get artistStudioCtaConnectWalletToApply;
+
+  /// No description provided for @artistStudioAccountCtaApply.
+  ///
+  /// In en, this message translates to:
+  /// **'Apply for artist review'**
+  String get artistStudioAccountCtaApply;
+
+  /// No description provided for @artistStudioAccountCtaRetry.
+  ///
+  /// In en, this message translates to:
+  /// **'Try again'**
+  String get artistStudioAccountCtaRetry;
+
+  /// No description provided for @artistStudioAccountApplicationUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Artist applications are unavailable right now. Try again later.'**
+  String get artistStudioAccountApplicationUnavailable;
+
+  /// No description provided for @artistStudioAccountDetailNotApplied.
+  ///
+  /// In en, this message translates to:
+  /// **'Send your portfolio, medium and statement. A wallet is not needed to apply.'**
+  String get artistStudioAccountDetailNotApplied;
+
+  /// No description provided for @artistStudioAccountDetailPending.
+  ///
+  /// In en, this message translates to:
+  /// **'Your application is waiting for an artist review.'**
+  String get artistStudioAccountDetailPending;
+
+  /// No description provided for @artistStudioAccountDetailApproved.
+  ///
+  /// In en, this message translates to:
+  /// **'Your artist application was approved.'**
+  String get artistStudioAccountDetailApproved;
+
+  /// No description provided for @artistStudioAccountDetailRejected.
+  ///
+  /// In en, this message translates to:
+  /// **'This application was not approved. You can send a new one.'**
+  String get artistStudioAccountDetailRejected;
+
+  /// No description provided for @artistStudioAccountPortfolioInvalid.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter a valid web address, for example example.com.'**
+  String get artistStudioAccountPortfolioInvalid;
 
   /// No description provided for @artistStudioCtaApprovedByDao.
   ///
@@ -27556,7 +27628,7 @@ abstract class AppLocalizations {
   /// No description provided for @walletSetupGenericLinkError.
   ///
   /// In en, this message translates to:
-  /// **'Wallet linking failed. Try again.'**
+  /// **'We could not confirm whether this wallet was linked. Check your account wallet status before trying again.'**
   String get walletSetupGenericLinkError;
 
   /// No description provided for @walletSetupStatusLoginAccount.
@@ -27634,7 +27706,7 @@ abstract class AppLocalizations {
   /// No description provided for @walletSetupPhaseFailed.
   ///
   /// In en, this message translates to:
-  /// **'Wallet link failed. Your account was not changed.'**
+  /// **'Wallet link status needs checking'**
   String get walletSetupPhaseFailed;
 
   /// No description provided for @onboardingStageWelcome.
@@ -32727,6 +32799,132 @@ abstract class AppLocalizations {
   /// **'We could not load this institution right now.'**
   String get institutionDetailLoadErrorDescription;
 
+  /// No description provided for @institutionImportedNoticeTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Not an official profile'**
+  String get institutionImportedNoticeTitle;
+
+  /// No description provided for @institutionImportedNoticeMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'This profile was compiled from public sources on the internet (OpenStreetMap, Wikidata) and is not official. It has not been verified by the institution.'**
+  String get institutionImportedNoticeMessage;
+
+  /// No description provided for @institutionClaimButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Claim this profile'**
+  String get institutionClaimButton;
+
+  /// No description provided for @institutionClaimButtonSemantics.
+  ///
+  /// In en, this message translates to:
+  /// **'Claim this institution profile'**
+  String get institutionClaimButtonSemantics;
+
+  /// No description provided for @institutionClaimAuthAction.
+  ///
+  /// In en, this message translates to:
+  /// **'claim this profile'**
+  String get institutionClaimAuthAction;
+
+  /// No description provided for @institutionClaimPendingTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Claim request under review'**
+  String get institutionClaimPendingTitle;
+
+  /// No description provided for @institutionClaimPendingMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'You asked to claim this profile. An administrator is reviewing your request.'**
+  String get institutionClaimPendingMessage;
+
+  /// No description provided for @institutionClaimSheetTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Claim {name}'**
+  String institutionClaimSheetTitle(String name);
+
+  /// No description provided for @institutionClaimSheetIntro.
+  ///
+  /// In en, this message translates to:
+  /// **'Tell us how you are connected to this institution. An administrator reviews every request before anything changes on the profile.'**
+  String get institutionClaimSheetIntro;
+
+  /// No description provided for @institutionClaimTitleLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Your role at the institution (optional)'**
+  String get institutionClaimTitleLabel;
+
+  /// No description provided for @institutionClaimMessageLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Message to the reviewer *'**
+  String get institutionClaimMessageLabel;
+
+  /// No description provided for @institutionClaimMessageMinError.
+  ///
+  /// In en, this message translates to:
+  /// **'Please write at least {min} characters.'**
+  String institutionClaimMessageMinError(int min);
+
+  /// No description provided for @institutionClaimEvidenceLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Link that shows your connection (optional)'**
+  String get institutionClaimEvidenceLabel;
+
+  /// No description provided for @institutionClaimEvidenceInvalid.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter a full web address starting with https://'**
+  String get institutionClaimEvidenceInvalid;
+
+  /// No description provided for @institutionClaimSubmit.
+  ///
+  /// In en, this message translates to:
+  /// **'Send request'**
+  String get institutionClaimSubmit;
+
+  /// No description provided for @institutionClaimSubmittedToast.
+  ///
+  /// In en, this message translates to:
+  /// **'Claim request sent. An administrator will review it.'**
+  String get institutionClaimSubmittedToast;
+
+  /// No description provided for @institutionClaimAlreadyOpenToast.
+  ///
+  /// In en, this message translates to:
+  /// **'You already have an open claim request for this profile.'**
+  String get institutionClaimAlreadyOpenToast;
+
+  /// No description provided for @institutionClaimUnavailableToast.
+  ///
+  /// In en, this message translates to:
+  /// **'Claim requests are not open yet. Please try again later.'**
+  String get institutionClaimUnavailableToast;
+
+  /// No description provided for @institutionClaimFailedToast.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not send the request. Please try again.'**
+  String get institutionClaimFailedToast;
+
+  /// No description provided for @institutionClaimClosedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Claiming is not open yet'**
+  String get institutionClaimClosedTitle;
+
+  /// No description provided for @institutionClaimClosedMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Requests to claim imported profiles are not open yet. Check back soon.'**
+  String get institutionClaimClosedMessage;
+
   /// No description provided for @institutionDetailAccountProfileAction.
   ///
   /// In en, this message translates to:
@@ -32852,6 +33050,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Continue to welcome'**
   String get accountClosureContinue;
+
+  /// No description provided for @accountClosureRemoveReceipt.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove this receipt from this device'**
+  String get accountClosureRemoveReceipt;
+
+  /// No description provided for @accountClosureRemoveReceiptHint.
+  ///
+  /// In en, this message translates to:
+  /// **'While this receipt is stored here, signing in to its account is blocked. Removing it lifts that block, and this device can no longer check the closure status.'**
+  String get accountClosureRemoveReceiptHint;
 
   /// No description provided for @reportContentTitle.
   ///

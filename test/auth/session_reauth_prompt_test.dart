@@ -23,7 +23,8 @@ void main() {
                       showBiometrics: true,
                       showPin: false,
                       onBiometric: () async => BiometricAuthOutcome.success,
-                      onVerifyPin: (_) async => const PinVerifyResult(PinVerifyOutcome.notSet),
+                      onVerifyPin: (_) async =>
+                          const PinVerifyResult(PinVerifyOutcome.notSet),
                       getPinLockoutSeconds: () async => 0,
                       biometricButtonLabel: 'Biometric',
                       pinLabel: 'PIN',
@@ -54,7 +55,8 @@ void main() {
     expect(result, SessionReauthDecision.verified);
   });
 
-  testWidgets('PIN success returns verified when biometrics unavailable', (tester) async {
+  testWidgets('PIN success returns verified when biometrics unavailable',
+      (tester) async {
     SessionReauthDecision? result;
 
     await tester.pumpWidget(
@@ -71,8 +73,10 @@ void main() {
                       message: 'Verify to continue',
                       showBiometrics: false,
                       showPin: true,
-                      onBiometric: () async => BiometricAuthOutcome.notAvailable,
-                      onVerifyPin: (_) async => const PinVerifyResult(PinVerifyOutcome.success),
+                      onBiometric: () async =>
+                          BiometricAuthOutcome.notAvailable,
+                      onVerifyPin: (_) async =>
+                          const PinVerifyResult(PinVerifyOutcome.success),
                       getPinLockoutSeconds: () async => 0,
                       biometricButtonLabel: 'Biometric',
                       pinLabel: 'PIN',

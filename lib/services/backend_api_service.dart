@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:flutter/services.dart' show MissingPluginException;
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
@@ -15,6 +16,8 @@ import '../models/kubus_node_models.dart';
 import '../models/community_group.dart';
 import '../models/event.dart';
 import '../models/exhibition.dart';
+import '../models/artist_application.dart';
+import '../models/institution_claim.dart';
 import '../models/community_subject.dart';
 import '../models/profile_artworks_page.dart';
 import '../models/profile_identity_data.dart';
@@ -38,6 +41,7 @@ import 'user_action_logger.dart';
 import 'auth_gating_service.dart';
 import 'auth_credential_store.dart';
 import '../models/account_closure.dart';
+import 'account_closure_coordinator.dart';
 import 'auth_session_coordinator.dart';
 import 'http_client_factory.dart';
 import 'media_upload_optimizer.dart';
@@ -89,6 +93,18 @@ class PromotionPaymentPendingException implements Exception {
 
   @override
   String toString() => message;
+}
+
+/// True when a 404 body is the account artist-application "not found" answer.
+/// A non-JSON body (for example a route missing on an older backend) is not
+/// that answer, so it must not be read as "no application".
+bool _isNoArtistApplicationBody(String body) {
+  try {
+    final decoded = jsonDecode(body);
+    return decoded is Map && decoded['error'] == 'Artist application not found';
+  } catch (_) {
+    return false;
+  }
 }
 
 class BackendApiRequestException implements Exception {
@@ -352,7 +368,11 @@ AuthSignInMethod _authSignInMethodFromStorageValue(String? value) {
 }
 
 class BackendApiService
-    implements ArtworkBackendApi, ProfileBackendApi, MarkerBackendApi {
+    implements
+        ArtworkBackendApi,
+        ProfileBackendApi,
+        MarkerBackendApi,
+        AccountClosureApi {
   static final BackendApiService _instance = BackendApiService._internal();
   factory BackendApiService() => _instance;
   BackendApiService._internal() {
@@ -370,7 +390,52 @@ class BackendApiService
   int _authSessionEpoch = 0;
 
   /// Epoch of the current credential session; changes on commit and sign-out.
+  @override
   int get authSessionEpoch => _authSessionEpoch;
+
+  Future<void> _authSessionMutationTail = Future<void>.value();
+
+  /// Longest time one auth-session mutation waits for the previous holder.
+  ///
+  /// Choice (no deadlock): sign-out and account switch never wait unboundedly.
+  /// The epoch is invalidated synchronously before any wait, so a stuck lease
+  /// can only no-op at its next epoch check. After this bound the queued
+  /// mutation proceeds. A platform write already in flight at that moment can
+  /// still land late; the lease rolls its own keys back when it resumes.
+  @visibleForTesting
+  static Duration authSessionMutationMaxWait = const Duration(seconds: 2);
+
+  Future<T> _withAuthSessionMutationLock<T>(
+    Future<T> Function() operation,
+  ) async {
+    final previous = _authSessionMutationTail;
+    final release = Completer<void>();
+    _authSessionMutationTail = release.future;
+    try {
+      await previous.timeout(authSessionMutationMaxWait, onTimeout: () {});
+      return await operation();
+    } finally {
+      if (!release.isCompleted) release.complete();
+    }
+  }
+
+  /// Runs a short local commit while token replacement and sign-out are
+  /// serialized behind it. Returns false when the session epoch no longer
+  /// matches [expectedEpoch] at entry or exit. Network work must finish before
+  /// calling this; exceptions from [localCommit] propagate. The lease is
+  /// always released in `finally`.
+  Future<bool> withAuthSessionLease(
+    int expectedEpoch,
+    Future<void> Function() localCommit,
+  ) {
+    if (expectedEpoch != _authSessionEpoch) return Future<bool>.value(false);
+    return _withAuthSessionMutationLock(() async {
+      if (expectedEpoch != _authSessionEpoch) return false;
+      await localCommit();
+      return expectedEpoch == _authSessionEpoch;
+    });
+  }
+
   MediaUploadOptimizer _mediaUploadOptimizer = const MediaUploadOptimizer();
 
   // Used only for diagnostic logging; the actual behavior is determined by the
@@ -471,16 +536,28 @@ class BackendApiService
   /// sessions and the connected wallet may change; marker CRUD endpoints are
   /// ownership-gated and will return 403 when the token belongs to a different
   /// wallet.
-  void setPreferredWalletAddress(String? walletAddress) {
+  void setPreferredWalletAddress(
+    String? walletAddress, {
+    bool persist = true,
+    int? expectedAuthSessionEpoch,
+  }) {
+    if (expectedAuthSessionEpoch != null &&
+        expectedAuthSessionEpoch != _authSessionEpoch) {
+      return;
+    }
     final canonical = WalletUtils.canonical(walletAddress);
     _preferredWalletCanonical = canonical.isEmpty ? null : canonical;
 
     // Best-effort persistence so cold-start auth can re-issue correctly.
     final raw = (walletAddress ?? '').trim();
-    if (raw.isEmpty) return;
+    if (!persist || raw.isEmpty) return;
     unawaited(() async {
       try {
         final prefs = await SharedPreferences.getInstance();
+        if (expectedAuthSessionEpoch != null &&
+            expectedAuthSessionEpoch != _authSessionEpoch) {
+          return;
+        }
         await prefs.setString(PreferenceKeys.walletAddress, raw);
       } catch (_) {
         // Ignore persistence failures.
@@ -623,6 +700,8 @@ class BackendApiService
   void resetCredentialStoreForTesting({AuthCredentialStore? store}) {
     _credentialStore = store ?? AuthCredentialStore();
     _authInitFuture = null;
+    _closureReceiptLoaded = false;
+    _closureReceiptRaw = null;
   }
 
   @visibleForTesting
@@ -1034,19 +1113,49 @@ class BackendApiService
   }
 
   /// Native secure persistence; browser credentials remain in memory only.
-  Future<void> setAuthToken(String token, {int? expectedEpoch}) async {
-    await _commitAuthSession(token, expectedEpoch: expectedEpoch);
-  }
+  ///
+  /// Returns the session epoch this token was committed under. A caller that
+  /// keeps working across an await must use that value, not a later read of
+  /// [authSessionEpoch]: a sign-out in the meantime would advance the live
+  /// epoch and make the stale caller look current.
+  Future<int> setAuthToken(String token, {int? expectedEpoch}) =>
+      _commitAuthSession(token, expectedEpoch: expectedEpoch);
 
-  Future<int> _commitAuthSession(String token,
-      {String? refreshToken, int? expectedEpoch}) async {
+  /// Commits a credential pair. The epoch and the credential target advance
+  /// synchronously here, before the commit waits for the mutation lock. An older
+  /// commit still writing therefore sees it was superseded when it resumes and
+  /// throws before the newer commit runs. The bump occurs before any await.
+  Future<int> _commitAuthSession(
+    String token, {
+    String? refreshToken,
+    int? expectedEpoch,
+  }) async {
     if (expectedEpoch != null && expectedEpoch != _authSessionEpoch) {
       throw StateError('Authentication request belongs to an ended session');
     }
     final epoch = ++_authSessionEpoch;
     _credentialTargetToken = token;
+    return _withAuthSessionMutationLock(
+      () => _commitAuthSessionLocked(
+        token,
+        epoch: epoch,
+        refreshToken: refreshToken,
+      ),
+    );
+  }
+
+  Future<int> _commitAuthSessionLocked(String token,
+      {required int epoch, String? refreshToken}) async {
+    if (epoch != _authSessionEpoch) {
+      throw StateError('Authentication session changed');
+    }
     final previousIdentity = _authIdentityOf(_authToken);
     try {
+      // Checked before any secret is written, so a refused or account-switched
+      // session never reaches storage.
+      if (_hasInitializedBinding) {
+        await _reconcileClosureReceiptFor(_accountKeyOf(token));
+      }
       final stored = !_hasInitializedBinding ||
           await _credentialStore
               .saveSession(token, refreshToken)
@@ -1072,7 +1181,7 @@ class BackendApiService
       }
       return epoch;
     } catch (_) {
-      if (epoch == _authSessionEpoch) await clearAuth();
+      if (epoch == _authSessionEpoch) await _clearAuthLocked();
       rethrow;
     }
   }
@@ -1113,6 +1222,12 @@ class BackendApiService
       if (token != null &&
           token.isNotEmpty &&
           AuthGatingService.isAccessTokenValid(token)) {
+        if (_hasInitializedBinding && await _isClosurePendingFor(token)) {
+          // A session whose closure is pending is never restored. Ending it
+          // here leaves the account with the status receipt only.
+          await clearAuth();
+          return;
+        }
         _authToken = token;
         _authWalletCanonical = _tryExtractWalletFromToken(token);
         AccountIdentity.setAccountKey(_accountKeyOf(token));
@@ -1129,17 +1244,34 @@ class BackendApiService
   /// Local sign-out is immediate. Cleanup failures do not skip other stores or
   /// prevent socket/profile cleanup. A durable marker blocks restart restore
   /// when an OS secret could not be removed.
-  Future<void> clearAuth() async {
+  Future<void> clearAuth() {
+    // Invalidate the in-memory session and notify providers synchronously.
+    // Persistence cleanup is serialized after any short local commit lease.
+    final epoch = _invalidateAuthSession();
+    return _withAuthSessionMutationLock(() => _finishClearAuth(epoch));
+  }
+
+  Future<void> _clearAuthLocked() async {
+    final epoch = _invalidateAuthSession();
+    await _finishClearAuth(epoch);
+  }
+
+  int _invalidateAuthSession() {
     _authSessionEpoch += 1;
     _authToken = null;
     _credentialTargetToken = null;
     _authWalletCanonical = null;
     _authCoordinator?.reset();
     AccountIdentity.setAccountKey('');
-    final epoch = _authSessionEpoch;
+    AccountIdentity.notifyListenersChanged();
+    return _authSessionEpoch;
+  }
+
+  Future<void> _finishClearAuth(int epoch) async {
     final cleanup = _credentialStore.clear();
     try {
-      await AccountIdentity.notifyChanged().timeout(const Duration(seconds: 1));
+      await AccountIdentity.purgeChangedAccount()
+          .timeout(const Duration(seconds: 1));
     } catch (_) {}
     try {
       final result = await cleanup.timeout(const Duration(seconds: 3));
@@ -1310,6 +1442,7 @@ class BackendApiService
     Duration timeout = AppConfig.requestTimeout,
     bool retriedAfterReauth = false,
     bool retriedAfterWritableRedirect = false,
+    bool allowWritableRedirect = true,
     bool allowImplicitBackendFailover = true,
     bool replaySafe = false,
     Set<String>? attemptedBackendOrigins,
@@ -1345,6 +1478,16 @@ class BackendApiService
         } catch (_) {
           // Fall through and let the request/auth-coordinator path decide.
         }
+      }
+    }
+
+    if (includeAuth) {
+      final token = (_authToken ?? '').trim();
+      if (token.isNotEmpty && await _isClosurePendingFor(token)) {
+        throw StateError('Account closure is pending for this account');
+      }
+      if (token != (_authToken ?? '').trim()) {
+        throw StateError('Authentication session changed');
       }
     }
 
@@ -1474,6 +1617,7 @@ class BackendApiService
             timeout: timeout,
             retriedAfterReauth: retriedAfterReauth,
             retriedAfterWritableRedirect: retriedAfterWritableRedirect,
+            allowWritableRedirect: allowWritableRedirect,
             allowImplicitBackendFailover: allowImplicitBackendFailover,
             attemptedBackendOrigins: attemptedOrigins,
           );
@@ -1532,11 +1676,13 @@ class BackendApiService
 
       if (_isNodeNotWritableResponse(response) &&
           method.toUpperCase() != 'GET') {
-        final redirected = _redirectNodeNotWritableRequest(
-          response,
-          uri,
-          alreadyRedirected: retriedAfterWritableRedirect,
-        );
+        final redirected = allowWritableRedirect
+            ? _redirectNodeNotWritableRequest(
+                response,
+                uri,
+                alreadyRedirected: retriedAfterWritableRedirect,
+              )
+            : null;
         if (redirected != null) {
           return _request(
             method,
@@ -1550,6 +1696,7 @@ class BackendApiService
             timeout: timeout,
             retriedAfterReauth: retriedAfterReauth,
             retriedAfterWritableRedirect: true,
+            allowWritableRedirect: allowWritableRedirect,
             allowImplicitBackendFailover: false,
             attemptedBackendOrigins: attemptedOrigins,
           );
@@ -1582,6 +1729,7 @@ class BackendApiService
             timeout: timeout,
             retriedAfterReauth: retriedAfterReauth,
             retriedAfterWritableRedirect: retriedAfterWritableRedirect,
+            allowWritableRedirect: allowWritableRedirect,
             allowImplicitBackendFailover: allowImplicitBackendFailover,
             attemptedBackendOrigins: attemptedOrigins,
           );
@@ -1737,6 +1885,7 @@ class BackendApiService
     Object? body,
     Encoding? encoding,
     bool isIdempotent = false,
+    bool allowWritableRedirect = true,
     Duration timeout = AppConfig.requestTimeout,
   }) {
     return _request(
@@ -1747,6 +1896,7 @@ class BackendApiService
       body: body,
       encoding: encoding,
       isIdempotent: isIdempotent,
+      allowWritableRedirect: allowWritableRedirect,
       timeout: timeout,
     );
   }
@@ -1780,6 +1930,15 @@ class BackendApiService
       }
     }
 
+    if (includeAuth) {
+      final token = (_authToken ?? '').trim();
+      if (token.isNotEmpty && await _isClosurePendingFor(token)) {
+        throw StateError('Account closure is pending for this account');
+      }
+      if (token != (_authToken ?? '').trim()) {
+        throw StateError('Authentication session changed');
+      }
+    }
     final request = requestFactory();
     final currentOrigin = _uriOriginKey(request.url);
     if (currentOrigin != null) {
@@ -1977,6 +2136,16 @@ class BackendApiService
     final token = (getAuthToken() ?? '').trim();
     return token.isNotEmpty;
   }
+
+  /// As [persistAuthTokensFromResponse], but returns the session epoch the
+  /// persisted token was committed under (the epoch unchanged when the response
+  /// carries no token). Throws when [sessionEpoch] has already ended.
+  Future<int> persistAuthTokensFromResponseCommitted(
+    Map<String, dynamic> body, {
+    required int sessionEpoch,
+  }) =>
+      _backendApiPersistTokenFromResponse(this, body,
+          expectedEpoch: sessionEpoch);
 
   Map<String, dynamic> _responsePayload(Map<String, dynamic> body) {
     return _backendApiResponsePayload(body);
@@ -8801,6 +8970,218 @@ class BackendApiService
     }
   }
 
+  /// Whether this backend currently accepts institution claim requests.
+  ///
+  /// The backend switches claims on with `FEATURE_ENABLE_INSTITUTION_CLAIMS`
+  /// and applies that gate before it asks who the caller is, so an anonymous
+  /// `GET /api/institutions/claims/mine` answers 503 while claims are off and
+  /// 401 while they are on. The app reads that instead of a build-time guess,
+  /// so the claim action appears the moment an operator enables the feature.
+  ///
+  /// Returns true for a definite "on" (200/401/403), false for a definite
+  /// "off" (503, or 404 on a backend that predates the feature) and null when
+  /// the answer is unknown (network failure, gateway error). Callers offer the
+  /// claim action only on true and say nothing on null, so an outage is never
+  /// reported as "claims are closed" and nothing is advertised on a guess.
+  Future<bool?> institutionClaimsAvailable() async {
+    try {
+      final response = await _get(
+        Uri.parse('$baseUrl/api/institutions/claims/mine'),
+        includeAuth: false,
+        headers: _getHeaders(includeAuth: false),
+        timeout: const Duration(seconds: 8),
+      );
+      final code = response.statusCode;
+      if (code == 200 || code == 401 || code == 403) return true;
+      if (code == 503 || code == 404) return false;
+      return null;
+    } catch (e) {
+      AppConfig.debugPrint(
+          'BackendApiService.institutionClaimsAvailable failed: $e');
+      return null;
+    }
+  }
+
+  /// Ask to claim an imported institution profile.
+  /// POST /api/institutions/:id/claims (signed-in account; the backend allows
+  /// one open request per account and institution and answers 409 otherwise).
+  ///
+  /// [message] reaches the reviewing administrator. [evidenceUrl], when given,
+  /// is sent as a `document_url` evidence item that the reviewer checks.
+  Future<InstitutionClaimSummary> submitInstitutionClaim({
+    required String institutionId,
+    required String message,
+    String? claimantTitle,
+    String? evidenceUrl,
+  }) async {
+    _throwIfIpfsFallbackUnavailable('Institution claims');
+
+    try {
+      await _ensureAuthBeforeRequest();
+      final uri = Uri.parse(
+          '$baseUrl/api/institutions/${Uri.encodeComponent(institutionId)}/claims');
+      final title = claimantTitle?.trim() ?? '';
+      final evidence = evidenceUrl?.trim() ?? '';
+      final response = await _post(
+        uri,
+        headers: _getHeaders(),
+        body: jsonEncode(<String, dynamic>{
+          'kind': 'claim',
+          'requestedRole': 'owner',
+          if (title.isNotEmpty) 'claimantTitle': title,
+          'message': message.trim(),
+          if (evidence.isNotEmpty)
+            'evidence': <Map<String, String>>[
+              <String, String>{'type': 'document_url', 'value': evidence},
+            ],
+        }),
+        timeout: const Duration(seconds: 20),
+      );
+
+      if (!_isSuccessStatus(response.statusCode)) {
+        throw BackendApiRequestException(
+          statusCode: response.statusCode,
+          path: uri.path,
+          body: response.body,
+        );
+      }
+
+      final decoded = _decodeResponseMap(response);
+      final data = decoded?['data'];
+      final claim = InstitutionClaimSummary.tryParse(
+        data is Map ? (data['claim'] ?? data) : decoded?['claim'],
+      );
+      if (claim == null) {
+        throw BackendApiRequestException(
+          statusCode: response.statusCode,
+          path: uri.path,
+          body: response.body,
+        );
+      }
+      return claim;
+    } catch (e) {
+      AppConfig.debugPrint(
+          'BackendApiService.submitInstitutionClaim failed: $e');
+      rethrow;
+    }
+  }
+
+  /// The signed-in account's own claim requests (newest first).
+  /// GET /api/institutions/claims/mine
+  Future<List<InstitutionClaimSummary>> getMyInstitutionClaims() async {
+    try {
+      await _ensureAuthBeforeRequest();
+      final uri = Uri.parse('$baseUrl/api/institutions/claims/mine');
+      final response = await _get(uri, headers: _getHeaders());
+      if (!_isSuccessStatus(response.statusCode)) {
+        throw BackendApiRequestException(
+          statusCode: response.statusCode,
+          path: uri.path,
+          body: response.body,
+        );
+      }
+      final decoded = _decodeResponseMap(response);
+      final data = decoded?['data'];
+      final raw = data is Map ? data['claims'] : decoded?['claims'];
+      if (raw is! List) return const <InstitutionClaimSummary>[];
+      return raw
+          .map(InstitutionClaimSummary.tryParse)
+          .whereType<InstitutionClaimSummary>()
+          .toList(growable: false);
+    } catch (e) {
+      AppConfig.debugPrint(
+          'BackendApiService.getMyInstitutionClaims failed: $e');
+      rethrow;
+    }
+  }
+
+  /// Apply for artist review as a signed-in account. No wallet signature is
+  /// needed; the backend keys the application to the account token.
+  /// POST /api/dao/artist-applications (201 with the new application).
+  ///
+  /// Throws [BackendApiRequestException] on 400 (invalid fields), 401 (no
+  /// account), 409 (an artist role or an open application already exists).
+  Future<ArtistApplicationSummary> submitArtistApplication({
+    required String portfolioUrl,
+    required String medium,
+    required String statement,
+  }) async {
+    _throwIfIpfsFallbackUnavailable('Artist applications');
+
+    try {
+      await _ensureAuthBeforeRequest();
+      final uri = Uri.parse('$baseUrl/api/dao/artist-applications');
+      final response = await _post(
+        uri,
+        headers: _getHeaders(),
+        body: jsonEncode(<String, dynamic>{
+          'portfolioUrl': portfolioUrl.trim(),
+          'medium': medium.trim(),
+          'statement': statement.trim(),
+        }),
+        timeout: const Duration(seconds: 20),
+      );
+
+      if (!_isSuccessStatus(response.statusCode)) {
+        throw BackendApiRequestException(
+          statusCode: response.statusCode,
+          path: uri.path,
+          body: response.body,
+        );
+      }
+
+      final decoded = _decodeResponseMap(response);
+      final application = ArtistApplicationSummary.tryParse(
+        decoded?['data'] ?? decoded,
+      );
+      if (application == null) {
+        throw BackendApiRequestException(
+          statusCode: response.statusCode,
+          path: uri.path,
+          body: response.body,
+        );
+      }
+      return application;
+    } catch (e) {
+      AppConfig.debugPrint(
+          'BackendApiService.submitArtistApplication failed: $e');
+      rethrow;
+    }
+  }
+
+  /// The signed-in account's own artist application, or null when the account
+  /// has never applied. GET /api/dao/artist-applications/mine
+  ///
+  /// The backend answers 404 with `error: 'Artist application not found'` for
+  /// "no application yet"; that is a normal answer and returns null. Any other
+  /// non-success status, including a 404 from a backend that predates the
+  /// route, throws [BackendApiRequestException] so the caller can show an
+  /// "unavailable right now" state.
+  Future<ArtistApplicationSummary?> getMyArtistApplication() async {
+    try {
+      await _ensureAuthBeforeRequest();
+      final uri = Uri.parse('$baseUrl/api/dao/artist-applications/mine');
+      final response = await _get(uri, headers: _getHeaders());
+      if (response.statusCode == 404 &&
+          _isNoArtistApplicationBody(response.body)) {
+        return null;
+      }
+      if (!_isSuccessStatus(response.statusCode)) {
+        throw BackendApiRequestException(
+          statusCode: response.statusCode,
+          path: uri.path,
+          body: response.body,
+        );
+      }
+      final decoded = _decodeResponseMap(response);
+      return ArtistApplicationSummary.tryParse(decoded?['data'] ?? decoded);
+    } catch (e) {
+      AppConfig.debugPrint(
+          'BackendApiService.getMyArtistApplication failed: $e');
+      rethrow;
+    }
+  }
+
   /// List events
   ///
   /// - Primary backend: GET /api/events
@@ -10756,19 +11137,107 @@ class BackendApiService
     }
   }
 
-  /// Read the separately stored, status-only account closure capability.
-  Future<AccountClosureReceipt?> loadAccountClosureReceipt() async {
-    final value = await _credentialStore.readClosureReceipt();
-    if (value == null) return null;
-    return AccountClosureReceipt.fromJson(
-        Map<String, dynamic>.from(jsonDecode(value) as Map));
+  /// An invalid or unbound receipt fails closed instead of silently removing
+  /// the only local evidence of an uncertain account closure.
+  // The receipt is read once and then served from memory: every authenticated
+  // request consults it, and a platform round trip per request is neither
+  // cheap nor needed. Every write path below updates or invalidates it.
+  String? _closureReceiptRaw;
+  bool _closureReceiptLoaded = false;
+
+  Future<AccountClosureReceipt?> _storedClosureReceipt() async {
+    if (!_closureReceiptLoaded) {
+      try {
+        _closureReceiptRaw = await _credentialStore.readClosureReceipt();
+        _closureReceiptLoaded = true;
+      } on MissingPluginException {
+        // No secure-storage plugin on this platform: no receipt can have been
+        // stored (saving requires the same plugin), so there is none to honour.
+        return null;
+      }
+    }
+    final raw = _closureReceiptRaw;
+    if (raw == null) return null;
+    final receipt = AccountClosureReceipt.tryDecodeStored(raw);
+    if (receipt == null) throw StateError('Closure receipt is unavailable');
+    return receipt;
   }
 
-  Future<void> saveAccountClosureReceipt(AccountClosureReceipt receipt) =>
-      _credentialStore.saveClosureReceipt(receipt.encode());
+  /// Whether a stored receipt quarantines [token]'s account.
+  Future<bool> _isClosurePendingFor(String token) async {
+    final stored = await _storedClosureReceipt();
+    final accountKey = _accountKeyOf(token);
+    return stored != null &&
+        accountKey.isNotEmpty &&
+        stored.accountId == accountKey;
+  }
+
+  /// A pending closure keeps its account out of the app: a session for that
+  /// account is refused while the receipt remains unresolved. Another
+  /// account can sign in without destroying the originating receipt.
+  Future<void> _reconcileClosureReceiptFor(String accountKey) async {
+    final stored = await _storedClosureReceipt();
+    if (stored == null) return;
+    if (accountKey.isNotEmpty && stored.accountId == accountKey) {
+      throw StateError('Account closure is pending for this account');
+    }
+  }
+
+  /// Read the separately stored, status-only account closure capability.
+  ///
+  /// Signed out, the receipt is returned so its status stays recoverable after
+  /// closure. While signed in, it is returned only to the account that
+  /// requested it. Another account's receipt is never recovered or displayed.
+  Future<AccountClosureReceipt?> loadAccountClosureReceipt() async {
+    final receipt = await _storedClosureReceipt();
+    if (receipt == null) return null;
+    final session = (_authToken ?? '').trim();
+    if (session.isEmpty) return receipt;
+    final current = _accountKeyOf(session);
+    return current.isNotEmpty && current == receipt.accountId ? receipt : null;
+  }
+
+  /// Stores a receipt. While signed in, it must belong to that account.
+  Future<void> saveAccountClosureReceipt(AccountClosureReceipt receipt) async {
+    final session = (_authToken ?? '').trim();
+    if (session.isNotEmpty && _accountKeyOf(session) != receipt.accountId) {
+      throw StateError('Closure receipt belongs to another account');
+    }
+    final previous = await _storedClosureReceipt();
+    if (previous != null && previous.accountId != receipt.accountId) {
+      throw StateError('Another account has an unresolved closure receipt');
+    }
+    _closureReceiptLoaded = false;
+    await _credentialStore.saveClosureReceipt(receipt.encode());
+    _closureReceiptRaw = receipt.encode();
+    _closureReceiptLoaded = true;
+  }
+
+  /// An uncertain closure must never regain authority by deleting its receipt.
+  Future<void> clearAccountClosureReceipt() async {
+    if (await _storedClosureReceipt() != null) {
+      throw StateError('Closure status must remain available');
+    }
+  }
+
+  /// A client error the server answered definitively, which cannot be the
+  /// result of an earlier committed attempt. 401 and 404 can mean the account
+  /// is already gone, and 408 and 409 can mean an earlier attempt is still
+  /// running. Those stay ambiguous, so they are not refusals.
+  static bool _isDefinitiveClosureRefusal(int statusCode) =>
+      statusCode >= 400 &&
+      statusCode < 500 &&
+      statusCode != 401 &&
+      statusCode != 404 &&
+      statusCode != 408 &&
+      statusCode != 409;
 
   Future<AccountClosureStatus> getAccountClosureStatus(
       AccountClosureReceipt receipt) async {
+    final session = (_authToken ?? '').trim();
+    if (session.isNotEmpty && _accountKeyOf(session) != receipt.accountId) {
+      throw StateError('Closure receipt belongs to another account');
+    }
     final response = await _post(
       Uri.parse('$baseUrl/api/auth/account-closure/status'),
       includeAuth: false,
@@ -10797,8 +11266,16 @@ class BackendApiService
   /// requires a valid backend token and never selects the account by wallet
   /// address. Throws when unauthenticated or when the backend rejects the
   /// request.
+  ///
+  /// [onStage] reports progress with the session epoch in effect, so the
+  /// caller can tell a failure before DELETE from one after it. Returns the
+  /// session epoch left by the local sign-out.
   /// DELETE /api/auth/me
-  Future<void> deleteMyAccount() async {
+  @override
+  Future<int> deleteMyAccount({AccountClosureStageListener? onStage}) async {
+    if (!_credentialStore.closureReceiptPersistenceAvailable) {
+      throw StateError('Secure closure receipt storage unavailable');
+    }
     final token = (_authToken ?? '').trim();
     if (token.isEmpty) {
       await loadAuthToken();
@@ -10810,16 +11287,28 @@ class BackendApiService
     }
     final closureEpoch = _authSessionEpoch;
     final closureToken = _authToken!;
+    // The receipt is bound to this account. Without an account key it could
+    // not be bound, so nothing is prepared or sent.
+    final closureAccountId = _accountKeyOf(closureToken);
+    if (closureAccountId.isEmpty) {
+      throw StateError('Account closure needs an account-scoped session');
+    }
     void requireSameSession() {
       if (_authSessionEpoch != closureEpoch || _authToken != closureToken) {
         throw StateError('Account closure session changed');
       }
     }
 
+    if (await _isClosurePendingFor(closureToken)) {
+      throw StateError('Account closure is pending for this account');
+    }
+    requireSameSession();
+
     final closureHeaders = {
       'Content-Type': 'application/json',
       'Authorization': 'Bearer $closureToken'
     };
+    onStage?.call(AccountClosureStage.preparing, closureEpoch);
     try {
       // Obtain and verify storage of a status-only receipt before revoking login.
       // If DELETE commits but the response is lost, this capability still works.
@@ -10838,17 +11327,31 @@ class BackendApiService
       }
       requireSameSession();
       final preparedBody = jsonDecode(prepared.body) as Map<String, dynamic>;
-      final receipt = AccountClosureReceipt.fromJson(
-          Map<String, dynamic>.from(preparedBody['closure'] as Map));
+      final receipt = AccountClosureReceipt.fromPrepared(
+        Map<String, dynamic>.from(preparedBody['closure'] as Map),
+        accountId: closureAccountId,
+      );
       await saveAccountClosureReceipt(receipt);
       requireSameSession();
+      onStage?.call(AccountClosureStage.deleting, _authSessionEpoch);
       final response = await _delete(
         Uri.parse('$baseUrl/api/auth/me'),
         includeAuth: false,
         headers: closureHeaders,
-        isIdempotent: true,
+        isIdempotent: false,
+        allowWritableRedirect: false,
       );
       if (response.statusCode != 200 && response.statusCode != 204) {
+        if (_isDefinitiveClosureRefusal(response.statusCode)) {
+          // The server declined this DELETE, so the receipt describes a closure
+          // that did not happen. Discard it, or it would quarantine a live
+          // account. If it cannot be removed, keep it: quarantine is safer.
+          try {
+            _closureReceiptLoaded = false;
+            await _credentialStore.clearClosureReceipt();
+          } catch (_) {}
+          onStage?.call(AccountClosureStage.refused, _authSessionEpoch);
+        }
         throw BackendApiRequestException(
           statusCode: response.statusCode,
           path: '/api/auth/me',
@@ -10856,7 +11359,13 @@ class BackendApiService
         );
       }
       requireSameSession();
-      await clearAuth();
+      // clearAuth bumps the epoch synchronously; read it before any await so
+      // the value is exactly the post-sign-out epoch of this closure.
+      final clearing = clearAuth();
+      final clearedEpoch = _authSessionEpoch;
+      onStage?.call(AccountClosureStage.committed, clearedEpoch);
+      await clearing;
+      return clearedEpoch;
     } catch (e) {
       AppConfig.debugPrint(
           'BackendApiService.deleteMyAccount failed (${e.runtimeType})');

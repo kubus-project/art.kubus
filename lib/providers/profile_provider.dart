@@ -423,6 +423,16 @@ class ProfileProvider extends foundation.ChangeNotifier {
     return null;
   }
 
+  /// Account-scoped key for the locally mirrored persona. Wallet accounts keep
+  /// the wallet key they always had; walletless (email/Google) accounts are keyed
+  /// by their account id so a chosen role is retained the same way.
+  String? get _personaStorageKey {
+    final wallet = _currentWalletAddress;
+    if (wallet != null && wallet.isNotEmpty) return wallet;
+    final accountKey = (_currentUser?.userId ?? _currentUser?.id ?? '').trim();
+    return accountKey.isEmpty ? null : accountKey;
+  }
+
   String _personaKeyForWallet(String walletAddress) =>
       '${PreferenceKeys.userPersona}_$walletAddress';
   String _personaOnboardedKeyForWallet(String walletAddress) =>
@@ -438,11 +448,11 @@ class ProfileProvider extends foundation.ChangeNotifier {
     final parsed = UserPersonaX.tryParse(raw);
     if (parsed != null) return parsed;
 
-    final wallet = _currentWalletAddress;
-    if (wallet == null) return null;
+    final storageKey = _personaStorageKey;
+    if (storageKey == null) return null;
     final prefs = _prefs;
     if (prefs == null) return null;
-    final persisted = prefs.getString(_personaKeyForWallet(wallet));
+    final persisted = prefs.getString(_personaKeyForWallet(storageKey));
     final persistedPersona = UserPersonaX.tryParse(persisted);
     if (persistedPersona != null) return persistedPersona;
 
@@ -555,15 +565,19 @@ class ProfileProvider extends foundation.ChangeNotifier {
     bool throwOnBackendFailure = false,
   }) async {
     final sessionEpoch = _accountSessionEpoch;
-    final wallet = _currentWalletAddress;
-    if (wallet == null || wallet.isEmpty) return;
+    // A walletless account is keyed by its account id instead of a wallet, so
+    // the role it chose is kept rather than dropped. Only an account with no
+    // identity at all has nothing to key the choice by.
+    final storageKey = _personaStorageKey;
+    if (storageKey == null || storageKey.isEmpty) return;
+    final wallet = _currentWalletAddress ?? '';
 
     final nextValue = persona.storageValue;
     try {
       final prefs = await _ensurePrefs();
       if (sessionEpoch != _accountSessionEpoch) return;
-      await prefs.setString(_personaKeyForWallet(wallet), nextValue);
-      await prefs.setBool(_personaOnboardedKeyForWallet(wallet), true);
+      await prefs.setString(_personaKeyForWallet(storageKey), nextValue);
+      await prefs.setBool(_personaOnboardedKeyForWallet(storageKey), true);
     } catch (_) {}
     // The rest writes the account; a session that ended while the prefs
     // loaded keeps none of it.
@@ -744,25 +758,29 @@ class ProfileProvider extends foundation.ChangeNotifier {
       final mergedPrefs = _mergePreferencesWithLocalPersona(preferenceKey);
       _currentUser = _currentUser?.copyWith(preferences: mergedPrefs);
       await _persistPreferences(mergedPrefs, sessionEpoch: sessionEpoch);
+      if (!isCurrentLoad()) return;
       if (accountKey.isNotEmpty) {
-        try {
-          final prefs = await _ensurePrefs();
-          await prefs.setString('user_id', accountKey);
-        } catch (_) {}
+        await _writeAccountPrefsIfCurrent(
+          sessionEpoch,
+          isCurrentLoad,
+          {'user_id': accountKey},
+        );
       }
 
       final walletAddress = _currentUser?.walletAddress.trim() ?? '';
       if (walletAddress.isNotEmpty) {
         await _applyDaoReviewRoles(walletAddress, sessionEpoch: sessionEpoch);
         if (!isCurrentLoad()) return;
-        await _loadBackendStats(walletAddress);
+        await _loadBackendStats(walletAddress, isCurrent: isCurrentLoad);
         if (!isCurrentLoad()) return;
-        try {
-          final prefs = await _ensurePrefs();
-          await prefs.setString('wallet_address', walletAddress);
-        } catch (_) {}
+        await _writeAccountPrefsIfCurrent(
+          sessionEpoch,
+          isCurrentLoad,
+          {'wallet_address': walletAddress},
+        );
       }
 
+      if (!isCurrentLoad()) return;
       _isLoading = false;
       notifyListeners();
     } catch (e) {
@@ -997,12 +1015,13 @@ class ProfileProvider extends foundation.ChangeNotifier {
       }
 
       // Save wallet address
-      await _loadBackendStats(walletAddress);
+      await _loadBackendStats(walletAddress, isCurrent: isCurrentLoad);
       if (!isCurrentLoad()) return;
-      try {
-        final prefs = await _ensurePrefs();
-        await prefs.setString('wallet_address', walletAddress);
-      } catch (_) {}
+      await _writeAccountPrefsIfCurrent(
+        sessionEpoch,
+        isCurrentLoad,
+        {'wallet_address': walletAddress},
+      );
       debugPrint('ProfileProvider: Wallet address saved and profile loaded');
 
       _isLoading = false;
@@ -1183,7 +1202,11 @@ class ProfileProvider extends foundation.ChangeNotifier {
 
       // Persist preferences (including persona) locally for offline continuity.
       try {
-        final mergedPrefs = _mergePreferencesWithLocalPersona(walletAddress);
+        final mergedPrefs = _mergePreferencesWithLocalPersona(
+          walletAddress.trim().isNotEmpty
+              ? walletAddress
+              : (_personaStorageKey ?? ''),
+        );
         _currentUser = _currentUser?.copyWith(preferences: mergedPrefs);
         await _persistPreferences(mergedPrefs, sessionEpoch: sessionEpoch);
       } catch (_) {}
@@ -1192,7 +1215,11 @@ class ProfileProvider extends foundation.ChangeNotifier {
       final prefs = await _ensurePrefs();
       if (sessionEpoch != _accountSessionEpoch) return false;
       if (walletAddress.isNotEmpty) {
-        await prefs.setString('wallet_address', walletAddress);
+        await _writeAccountPrefsIfCurrent(
+          sessionEpoch,
+          () => sessionEpoch == _accountSessionEpoch,
+          {'wallet_address': walletAddress},
+        );
       }
       final persistedUsername = _currentUser?.username ??
           (profileJson['username']?.toString() ?? '').trim();
@@ -1829,6 +1856,29 @@ class ProfileProvider extends foundation.ChangeNotifier {
   /// nothing more is written. Each write checks it right before it is issued,
   /// because every await can yield to a sign-out, and a late response must not
   /// restore the previous account's toggles.
+  /// Writes account-keyed prefs (`user_id`, `wallet_address`) only while the
+  /// load's account session is still current. The check runs inside the
+  /// auth-session lease, so a token replacement or sign-out cannot interleave
+  /// between the check and the write. A stale load writes nothing.
+  Future<void> _writeAccountPrefsIfCurrent(
+    int sessionEpoch,
+    bool Function() isCurrent,
+    Map<String, String> values,
+  ) async {
+    await BackendApiService().withAuthSessionLease(sessionEpoch, () async {
+      if (!isCurrent()) return;
+      try {
+        final prefs = await _ensurePrefs();
+        for (final entry in values.entries) {
+          if (!isCurrent()) return;
+          await prefs.setString(entry.key, entry.value);
+        }
+      } catch (_) {
+        // Preference persistence is best-effort, as before.
+      }
+    });
+  }
+
   Future<void> _persistPreferences(
     ProfilePreferences preferences, {
     required int sessionEpoch,
@@ -1855,13 +1905,14 @@ class ProfileProvider extends foundation.ChangeNotifier {
           'share_last_visited_location', preferences.shareLastVisitedLocation);
       await setBool('show_collection', preferences.showCollection);
       await setBool('allow_messages', preferences.allowMessages);
-      final wallet = _currentWalletAddress;
       final persona = (preferences.persona ?? '').trim();
+      final personaKey = _personaStorageKey;
+      if (personaKey != null && persona.isNotEmpty) {
+        await setString(_personaKeyForWallet(personaKey), persona);
+        await setBool(_personaOnboardedKeyForWallet(personaKey), true);
+      }
+      final wallet = _currentWalletAddress;
       if (wallet != null && wallet.isNotEmpty) {
-        if (persona.isNotEmpty) {
-          await setString(_personaKeyForWallet(wallet), persona);
-          await setBool(_personaOnboardedKeyForWallet(wallet), true);
-        }
         await setBool(
           _notificationPreferenceKeyForWallet(wallet, 'enabled'),
           preferences.notificationPreferences.enabled,

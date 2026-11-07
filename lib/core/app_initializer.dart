@@ -67,10 +67,16 @@ ColdStartEntry resolveDegradedPublicDiscoveryEntry({
 }
 
 class AppInitializer extends StatefulWidget {
-  const AppInitializer({super.key, this.preferredShellRoute, this.initialUri});
+  const AppInitializer({
+    super.key,
+    this.preferredShellRoute,
+    this.initialUri,
+    this.explicitOnboarding = false,
+  });
 
   final String? preferredShellRoute;
   final Uri? initialUri;
+  final bool explicitOnboarding;
 
   @override
   State<AppInitializer> createState() => _AppInitializerState();
@@ -83,6 +89,24 @@ class _AppInitializerState extends State<AppInitializer> {
   Timer? _startupWatchdog;
   bool _didNavigate = false;
   String? _serverVersion;
+
+  String get _onboardingRouteName => onboardingStartupRouteName(
+        explicit: widget.explicitOnboarding,
+        initialUri: widget.initialUri,
+      );
+
+  void _openExplicitOnboarding(NavigatorState navigator) {
+    if (!mounted || _didNavigate) return;
+    _didNavigate = true;
+    navigator.pushReplacement(
+      MaterialPageRoute<void>(
+        builder: (_) => OnboardingFlowScreen(
+          forceDesktop: DesktopBreakpoints.isDesktop(navigator.context),
+        ),
+        settings: RouteSettings(name: _onboardingRouteName),
+      ),
+    );
+  }
 
   void _replaceWithShell(NavigatorState navigator, String route) {
     final launchUri = widget.initialUri ?? (kIsWeb ? Uri.base : null);
@@ -194,7 +218,9 @@ class _AppInitializerState extends State<AppInitializer> {
   /// email verification, a pending structured journey, an active registration
   /// or account-link guard), which is read back from preferences, bounded.
   Future<void> _openDegradedEntry(NavigatorState navigator) async {
-    if (_openPendingPublicTarget(navigator)) return;
+    if (!widget.explicitOnboarding && _openPendingPublicTarget(navigator)) {
+      return;
+    }
     final prefs = await _safeStep<SharedPreferences>(
       'SharedPreferences.getInstance (degraded entry)',
       SharedPreferences.getInstance,
@@ -215,11 +241,15 @@ class _AppInitializerState extends State<AppInitializer> {
                   ) ??
                   ProtectedActionRequirements.accountOnly,
             ),
-            settings: const RouteSettings(name: '/onboarding'),
+            settings: RouteSettings(name: _onboardingRouteName),
           ),
         );
         return;
       }
+    }
+    if (widget.explicitOnboarding) {
+      _openExplicitOnboarding(navigator);
+      return;
     }
     await _openPublicDiscovery(
       navigator,
@@ -716,7 +746,7 @@ class _AppInitializerState extends State<AppInitializer> {
       // NOTE: We intentionally do NOT consume the pending target here because
       // AppInitializer's navigator context does not have DesktopShellScope.
       final pendingDeepLink = _pendingShareTarget;
-      if (pendingDeepLink != null) {
+      if (pendingDeepLink != null && !widget.explicitOnboarding) {
         // A public deep link opens its target and stays public: the visitor
         // can go back, change tab, search and open another entity without any
         // onboarding replacing the app. Only an account journey they already
@@ -887,7 +917,7 @@ class _AppInitializerState extends State<AppInitializer> {
                   requiresWalletSetup: true,
                   requirements: ProtectedActionRequirements.wallet,
                 ),
-                settings: const RouteSettings(name: '/onboarding'),
+                settings: RouteSettings(name: _onboardingRouteName),
               ),
             );
             return;
@@ -916,7 +946,7 @@ class _AppInitializerState extends State<AppInitializer> {
                 initialStepId: startupDecision.onboardingInitialStepId,
                 requirements: resumeScope,
               ),
-              settings: const RouteSettings(name: '/onboarding'),
+              settings: RouteSettings(name: _onboardingRouteName),
             ),
           );
           return;
@@ -945,7 +975,7 @@ class _AppInitializerState extends State<AppInitializer> {
                 initialStepId: pendingAuthOnboardingStepId,
                 requirements: resumeScope,
               ),
-              settings: const RouteSettings(name: '/onboarding'),
+              settings: RouteSettings(name: _onboardingRouteName),
             ),
           );
           return;
@@ -977,7 +1007,7 @@ class _AppInitializerState extends State<AppInitializer> {
                     ? ProtectedActionRequirements.wallet
                     : resumeScope,
               ),
-              settings: const RouteSettings(name: '/onboarding'),
+              settings: RouteSettings(name: _onboardingRouteName),
             ),
           );
           return;
@@ -999,11 +1029,16 @@ class _AppInitializerState extends State<AppInitializer> {
                 initialStepId: pendingAuthOnboardingStepId,
                 requirements: resumeScope,
               ),
-              settings: const RouteSettings(name: '/onboarding'),
+              settings: RouteSettings(name: _onboardingRouteName),
             ),
           );
           return;
         }
+      }
+
+      if (widget.explicitOnboarding) {
+        _openExplicitOnboarding(navigator);
+        return;
       }
 
       // No explicit intent and no account journey to recover: this is an

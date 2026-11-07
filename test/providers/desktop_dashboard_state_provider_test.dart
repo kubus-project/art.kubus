@@ -8,39 +8,55 @@ void main() {
     expect(provider.institutionSection, DesktopInstitutionSection.events);
   });
 
-  test('DesktopDashboardStateProvider maps artist studio tabs with exhibitions enabled', () {
+  test(
+      'DesktopDashboardStateProvider maps artist studio tabs with exhibitions enabled',
+      () {
     final provider = DesktopDashboardStateProvider();
-    provider.updateArtistStudioSectionFromTabIndex(tabIndex: 0, exhibitionsEnabled: true);
+    provider.updateArtistStudioSectionFromTabIndex(
+        tabIndex: 0, exhibitionsEnabled: true);
     expect(provider.artistStudioSection, DesktopArtistStudioSection.gallery);
 
-    provider.updateArtistStudioSectionFromTabIndex(tabIndex: 1, exhibitionsEnabled: true);
+    provider.updateArtistStudioSectionFromTabIndex(
+        tabIndex: 1, exhibitionsEnabled: true);
     expect(provider.artistStudioSection, DesktopArtistStudioSection.create);
 
-    provider.updateArtistStudioSectionFromTabIndex(tabIndex: 2, exhibitionsEnabled: true);
-    expect(provider.artistStudioSection, DesktopArtistStudioSection.exhibitions);
+    provider.updateArtistStudioSectionFromTabIndex(
+        tabIndex: 2, exhibitionsEnabled: true);
+    expect(
+        provider.artistStudioSection, DesktopArtistStudioSection.exhibitions);
 
-    provider.updateArtistStudioSectionFromTabIndex(tabIndex: 3, exhibitionsEnabled: true);
+    provider.updateArtistStudioSectionFromTabIndex(
+        tabIndex: 3, exhibitionsEnabled: true);
     expect(provider.artistStudioSection, DesktopArtistStudioSection.analytics);
   });
 
-  test('DesktopDashboardStateProvider maps artist studio tabs without exhibitions', () {
+  test(
+      'DesktopDashboardStateProvider maps artist studio tabs without exhibitions',
+      () {
     final provider = DesktopDashboardStateProvider();
-    provider.updateArtistStudioSectionFromTabIndex(tabIndex: 2, exhibitionsEnabled: false);
+    provider.updateArtistStudioSectionFromTabIndex(
+        tabIndex: 2, exhibitionsEnabled: false);
     expect(provider.artistStudioSection, DesktopArtistStudioSection.analytics);
   });
 
-  test('DesktopDashboardStateProvider maps institution tabs with exhibitions enabled', () {
+  test(
+      'DesktopDashboardStateProvider maps institution tabs with exhibitions enabled',
+      () {
     final provider = DesktopDashboardStateProvider();
-    provider.updateInstitutionSectionFromTabIndex(tabIndex: 0, exhibitionsEnabled: true);
+    provider.updateInstitutionSectionFromTabIndex(
+        tabIndex: 0, exhibitionsEnabled: true);
     expect(provider.institutionSection, DesktopInstitutionSection.events);
 
-    provider.updateInstitutionSectionFromTabIndex(tabIndex: 1, exhibitionsEnabled: true);
+    provider.updateInstitutionSectionFromTabIndex(
+        tabIndex: 1, exhibitionsEnabled: true);
     expect(provider.institutionSection, DesktopInstitutionSection.exhibitions);
 
-    provider.updateInstitutionSectionFromTabIndex(tabIndex: 2, exhibitionsEnabled: true);
+    provider.updateInstitutionSectionFromTabIndex(
+        tabIndex: 2, exhibitionsEnabled: true);
     expect(provider.institutionSection, DesktopInstitutionSection.create);
 
-    provider.updateInstitutionSectionFromTabIndex(tabIndex: 3, exhibitionsEnabled: true);
+    provider.updateInstitutionSectionFromTabIndex(
+        tabIndex: 3, exhibitionsEnabled: true);
     expect(provider.institutionSection, DesktopInstitutionSection.analytics);
   });
 
@@ -51,9 +67,9 @@ void main() {
     var notifications = 0;
     provider.addListener(() => notifications += 1);
 
-    provider.updateArtistStudioSectionFromTabIndex(tabIndex: 99, exhibitionsEnabled: true);
+    provider.updateArtistStudioSectionFromTabIndex(
+        tabIndex: 99, exhibitionsEnabled: true);
     expect(provider.artistStudioSection, DesktopArtistStudioSection.create);
     expect(notifications, 0);
   });
 }
-

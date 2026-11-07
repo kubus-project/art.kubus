@@ -460,6 +460,14 @@ class Institution {
   final VerifiedInstitutionAccountProfile? verifiedAccountProfile;
   final DateTime createdAt;
 
+  /// Where the listing came from (`imported`, ...), lower-cased. Null for
+  /// payloads that predate the field.
+  final String? listingOrigin;
+
+  /// Claim state of the listing (`unclaimed`, `claimed`, `disputed`, ...),
+  /// lower-cased. Null for payloads that predate the field.
+  final String? claimState;
+
   /// True only for the synthetic entry the provider builds from the signed-in
   /// user's own wallet. It is the user's own identity, so it is a default
   /// (event creator) but must not appear in search or map subject lists.
@@ -487,18 +495,35 @@ class Institution {
     this.verifiedAccountProfile,
     required this.createdAt,
     this.isSelfDerivedFromWallet = false,
+    this.listingOrigin,
+    this.claimState,
   });
 
-  /// Hero imagery for an institution: the first safe of the cover, then the
-  /// logo. An unsafe cover falls through to the logo.
-  ///
-  /// Every surface (detail hero, search thumbnail) uses this one order.
+  /// The landscape cover, or null when no safe cover exists. A logo is never a
+  /// cover: a square mark stretched into a banner is forbidden, so there is no
+  /// fallback to [logoUrl] here. The detail hero renders a typographic cover
+  /// when this is null.
   String? get heroImageRef =>
-      MediaUrlResolver.firstSafeRef(<String?>[coverImageUrl, logoUrl]);
+      MediaUrlResolver.firstSafeRef(<String?>[coverImageUrl]);
+
+  /// The image for compact surfaces (search thumbnails): the first safe of the
+  /// logo, then the cover. Callers show it contained on a neutral surface, never
+  /// cropped to a cover.
+  String? get thumbnailRef =>
+      MediaUrlResolver.firstSafeRef(<String?>[logoUrl, coverImageUrl]);
 
   /// The venue kind to display, from [kind] or the legacy [type] guess.
   InstitutionKind? get institutionKind =>
       InstitutionKind.resolve(kind: kind, type: type);
+
+  /// True for a profile compiled from public sources that no institution has
+  /// claimed: it is unofficial and unverified, and anyone may ask to claim it.
+  /// Never true for a verified listing or the signed-in user's own entry.
+  bool get isImportedUnclaimed =>
+      !isVerified &&
+      !isSelfDerivedFromWallet &&
+      listingOrigin == 'imported' &&
+      claimState == 'unclaimed';
 
   factory Institution.fromJson(Map<String, dynamic> json) {
     final boundary = _InstitutionImageBoundary.read(json);
@@ -537,6 +562,9 @@ class Institution {
           ? null
           : _tryParseVerifiedAccountProfile(json['verifiedAccountProfile']),
       createdAt: DateTime.parse(json['createdAt']),
+      listingOrigin:
+          _nullableTrimmedString(json['listingOrigin'])?.toLowerCase(),
+      claimState: _nullableTrimmedString(json['claimState'])?.toLowerCase(),
     );
   }
 
@@ -564,6 +592,8 @@ class Institution {
       if (verifiedAccountProfile != null)
         'verifiedAccountProfile': verifiedAccountProfile!.toJson(),
       'createdAt': createdAt.toIso8601String(),
+      if (listingOrigin != null) 'listingOrigin': listingOrigin,
+      if (claimState != null) 'claimState': claimState,
     };
   }
 
@@ -589,6 +619,8 @@ class Institution {
     VerifiedInstitutionAccountProfile? verifiedAccountProfile,
     DateTime? createdAt,
     bool? isSelfDerivedFromWallet,
+    String? listingOrigin,
+    String? claimState,
   }) {
     return Institution(
       id: id ?? this.id,
@@ -614,6 +646,8 @@ class Institution {
       createdAt: createdAt ?? this.createdAt,
       isSelfDerivedFromWallet:
           isSelfDerivedFromWallet ?? this.isSelfDerivedFromWallet,
+      listingOrigin: listingOrigin ?? this.listingOrigin,
+      claimState: claimState ?? this.claimState,
     );
   }
 

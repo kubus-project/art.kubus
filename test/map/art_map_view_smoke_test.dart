@@ -21,7 +21,7 @@ void main() {
       ),
     );
 
-    expect(find.byKey(const Key('art_map_view_test_placeholder')), findsOneWidget);
+    expect(
+        find.byKey(const Key('art_map_view_test_placeholder')), findsOneWidget);
   });
 }
-

@@ -216,8 +216,8 @@ class SearchService {
               'address': institution.address,
               'subjectType': 'institution',
               'subjectId': institution.id,
-              if (institution.heroImageRef != null)
-                'imageUrl': institution.heroImageRef,
+              if (institution.thumbnailRef != null)
+                'imageUrl': institution.thumbnailRef,
             },
           ),
         )

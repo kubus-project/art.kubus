@@ -41,6 +41,13 @@ class _WalletWithIdentity extends WalletProvider {
   @override
   String? get currentWalletAddress => address;
 
+  // The fixture is a restored, linked wallet. Without this, the session phase
+  // defaults to idle, which the presentation resolver (#400) correctly maps to
+  // "unknown", so the desktop screen shows its loading branch instead of the
+  // wallet this test is about.
+  @override
+  WalletSessionPhase get sessionPhase => WalletSessionPhase.ready;
+
   @override
   bool get hasWalletIdentity => true;
 

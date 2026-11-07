@@ -4,6 +4,10 @@ import '../services/onboarding_state_service.dart';
 
 enum StartupRouteType { onboarding, none }
 
+/// Preserve the complete explicit address when an interrupted journey resumes.
+String onboardingStartupRouteName({required bool explicit, Uri? initialUri}) =>
+    explicit ? initialUri?.toString() ?? '/onboarding' : '/onboarding';
+
 class StartupDecision {
   final StartupRouteType route;
   final String? onboardingInitialStepId;

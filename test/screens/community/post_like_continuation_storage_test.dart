@@ -19,6 +19,7 @@ import 'package:provider/single_child_widget.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../support/product_surface_harness.dart';
+import '../../helpers/secure_storage_absent.dart';
 
 /// The backend the browser run talked to: the post, its interaction state, the
 /// like endpoint and analytics. [failAfterInsert] answers the like with a server
@@ -206,6 +207,7 @@ Future<String?> _storedSlot() async {
 }
 
 void main() {
+  installEmptySecureStorage();
   TestWidgetsFlutterBinding.ensureInitialized();
 
   setUp(() {

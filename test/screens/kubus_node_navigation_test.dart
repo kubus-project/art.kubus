@@ -193,6 +193,24 @@ void main() {
       }
     });
 
+    test('creator and institution destinations remain independently visible',
+        () {
+      for (final roles in const [
+        (false, false),
+        (true, false),
+        (false, true),
+        (true, true),
+      ]) {
+        final routes = resolveDesktopNavItems(
+          true,
+          isArtist: roles.$1,
+          isInstitution: roles.$2,
+        ).map((item) => item.route).toSet();
+        expect(routes, containsAll(['/artist-studio', '/institution']),
+            reason: 'roles $roles');
+      }
+    });
+
     test('a guest is not offered Node', () {
       expect(
         keys(resolveDesktopNavItems(
