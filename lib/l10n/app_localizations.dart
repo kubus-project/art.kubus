@@ -2187,6 +2187,12 @@ abstract class AppLocalizations {
   /// **'Securing wallet'**
   String get postAuthSecuringWallet;
 
+  /// No description provided for @postAuthSecuringAccount.
+  ///
+  /// In en, this message translates to:
+  /// **'Securing account'**
+  String get postAuthSecuringAccount;
+
   /// No description provided for @postAuthLoadingProfile.
   ///
   /// In en, this message translates to:
@@ -2222,6 +2228,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Verifying wallet access and device security.'**
   String get postAuthSecuringWalletBody;
+
+  /// No description provided for @postAuthSecuringAccountBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Checking your session and account access.'**
+  String get postAuthSecuringAccountBody;
 
   /// No description provided for @postAuthLoadingProfileBody.
   ///
