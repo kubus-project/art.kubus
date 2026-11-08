@@ -19026,4 +19026,23 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get verificationInstitutionAlreadyManaged => 'Already managed';
+
+  @override
+  String artworkAuthorOpenProfile(String name) {
+    return 'Open profile of $name';
+  }
+
+  @override
+  String get artworkAuthoredBySelfLabel => 'I am the creator';
+
+  @override
+  String get artworkAuthoredBySelfHelper =>
+      'The artist name is set to your profile name and the artwork is attributed to your profile.';
+
+  @override
+  String get artworkAuthoredBySelfUnavailable =>
+      'Sign in and add a display name to your profile to attribute this artwork to yourself.';
+
+  @override
+  String get artworkAuthoredBySelfFieldHelper => 'Set from your profile name.';
 }

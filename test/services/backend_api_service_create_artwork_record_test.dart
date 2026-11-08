@@ -103,6 +103,49 @@ void main() {
     expect(artwork.imageLicense, 'CC BY-SA 4.0');
   });
 
+  test('createArtworkRecord sends authoredBySelf only when asked', () async {
+    final bodies = <Map<String, dynamic>>[];
+    BackendApiService().setHttpClient(
+      MockClient((request) async {
+        bodies.add(jsonDecode(request.body) as Map<String, dynamic>);
+        return http.Response(
+          jsonEncode(<String, Object?>{
+            'success': true,
+            'data': <String, Object?>{
+              'id': 'art-created-2',
+              'title': 'Created',
+              'authorProfile': <String, Object?>{
+                'profileId': '8c03b35a-a4d6-4c08-95fc-503c879fbc45',
+                'username': 'damjan_stevovic',
+                'displayName': 'Damjan Stevovic',
+              },
+            },
+          }),
+          201,
+          headers: const <String, String>{'content-type': 'application/json'},
+        );
+      }),
+    );
+
+    final created = await BackendApiService().createArtworkRecord(
+      title: 'Created',
+      description: 'Created description',
+      imageUrl: '/uploads/artworks/cover.png',
+      walletAddress: _wallet,
+      authoredBySelf: true,
+    );
+    await BackendApiService().createArtworkRecord(
+      title: 'Created',
+      description: 'Created description',
+      imageUrl: '/uploads/artworks/cover.png',
+      walletAddress: _wallet,
+    );
+
+    expect(bodies[0]['authoredBySelf'], isTrue);
+    expect(bodies[1].containsKey('authoredBySelf'), isFalse);
+    expect(created!.authorProfile!.username, 'damjan_stevovic');
+  });
+
   test('createArtworkRecord throws BackendApiRequestException on non-2xx',
       () async {
     await expectCreateThrows(

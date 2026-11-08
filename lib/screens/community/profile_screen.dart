@@ -9,6 +9,7 @@ import '../../widgets/app_loading.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../utils/design_tokens.dart';
+import '../../utils/profile_data_key.dart';
 import '../../utils/kubus_brand_colors.dart';
 import '../../utils/keyboard_inset_resolver.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -958,7 +959,10 @@ class _ProfileScreenState extends State<ProfileScreen>
       context,
       listen: false,
     );
-    final wallet = profileProvider.currentUser?.walletAddress ?? '';
+    // Profile/account id first (wallet only as a legacy fallback), so a
+    // walletless artist still loads authored artworks and collections.
+    final wallet = profileArtistDataKey(profileProvider.currentUser);
+    final eventsKey = profileEventsMatchKey(profileProvider.currentUser);
     if (wallet.isEmpty) {
       return;
     }
@@ -978,11 +982,12 @@ class _ProfileScreenState extends State<ProfileScreen>
       return;
     }
     _artistDataRequested = true;
-    await _loadArtistData(wallet, force: force);
+    await _loadArtistData(wallet, eventsKey: eventsKey, force: force);
   }
 
   Future<void> _loadArtistData(
     String walletAddress, {
+    required String eventsKey,
     bool force = false,
   }) async {
     if (!mounted) return;
@@ -1007,7 +1012,7 @@ class _ProfileScreenState extends State<ProfileScreen>
       );
       final eventsResponse = await api.listEvents(limit: 100);
       final filteredEvents = eventsResponse
-          .where((event) => profileEventBelongsToWallet(event, walletAddress))
+          .where((event) => profileEventBelongsToWallet(event, eventsKey))
           .take(6)
           .map((e) => Map<String, dynamic>.from(e))
           .toList();

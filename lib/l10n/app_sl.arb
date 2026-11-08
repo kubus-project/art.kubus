@@ -8041,5 +8041,10 @@
   "verificationOnboardingInstitutionBody": "Prevzemi profil svoje institucije ali zahtevaj novo prisotnost. To lahko storiš tudi pozneje v središču.",
   "verificationOnboardingPending": "Tvoja zahteva je pri urednikih. Lahko nadaljuješ.",
   "verificationOnboardingApproved": "Preverjen si. Lahko nadaljuješ.",
-  "verificationInstitutionAlreadyManaged": "Že upravljan profil"
+  "verificationInstitutionAlreadyManaged": "Že upravljan profil",
+  "artworkAuthorOpenProfile": "Odpri profil: {name}",
+  "artworkAuthoredBySelfLabel": "Sem ustvarjalec",
+  "artworkAuthoredBySelfHelper": "Ime umetnika se nastavi na ime tvojega profila, delo pa se pripiše tvojemu profilu.",
+  "artworkAuthoredBySelfUnavailable": "Prijavi se in dodaj prikazno ime v svoj profil, da lahko delo pripišeš sebi.",
+  "artworkAuthoredBySelfFieldHelper": "Nastavljeno iz imena tvojega profila."
 }

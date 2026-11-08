@@ -302,6 +302,9 @@ class BackendPublicObjectTransport {
           (payload['walletAddress'] ?? payload['wallet_address'] ?? '')
               .toString(),
       artistName: payload['artistName']?.toString(),
+      authoredBySelf: payload['authoredBySelf'] is bool
+          ? payload['authoredBySelf'] as bool
+          : null,
       imageAuthor:
           (payload['imageAuthor'] ?? payload['image_author'])?.toString(),
       imageLicense:
