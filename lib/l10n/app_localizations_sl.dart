@@ -1197,6 +1197,9 @@ class AppLocalizationsSl extends AppLocalizations {
   String get postAuthSecuringWallet => 'Varovanje denarnice';
 
   @override
+  String get postAuthSecuringAccount => 'Varovanje računa';
+
+  @override
   String get postAuthLoadingProfile => 'Nalaganje profila';
 
   @override
@@ -1215,6 +1218,10 @@ class AppLocalizationsSl extends AppLocalizations {
   @override
   String get postAuthSecuringWalletBody =>
       'Preverjamo dostop do denarnice in varnost naprave.';
+
+  @override
+  String get postAuthSecuringAccountBody =>
+      'Preverjamo tvojo sejo in dostop do računa.';
 
   @override
   String get postAuthLoadingProfileBody =>

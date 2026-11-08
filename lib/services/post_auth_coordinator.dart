@@ -29,6 +29,8 @@ import '../utils/wallet_utils.dart';
 enum PostAuthStage {
   preparingSession,
   securingWallet,
+  // Accounts without a wallet are secured as an account; wallet wording never appears for them.
+  securingAccount,
   loadingProfile,
   syncingSavedItems,
   checkingOnboarding,
@@ -180,7 +182,9 @@ class PostAuthCoordinator {
         }
       }
 
-      setStage(PostAuthStage.securingWallet);
+      setStage(accountAuthWithoutWallet
+          ? PostAuthStage.securingAccount
+          : PostAuthStage.securingWallet);
       if (!modalReauth && !isGoogleOnboarding) {
         // Ensure wallet is provisioned from the auth payload before session sync
         String? provisionedWallet = normalizedWallet;
