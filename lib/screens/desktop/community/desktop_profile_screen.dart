@@ -1812,12 +1812,18 @@ class _ProfileScreenState extends State<ProfileScreen>
         Provider.of<ProfileProvider>(context, listen: false);
     final web3Provider = Provider.of<Web3Provider>(context, listen: false);
     final wallet = web3Provider.walletAddress.trim();
-    if (!web3Provider.hasWalletIdentity || wallet.isEmpty) {
+    final hasWallet = web3Provider.hasWalletIdentity && wallet.isNotEmpty;
+    // A wallet is optional: an email/Google account reloads by its session.
+    if (!hasWallet && !profileProvider.isSignedIn) {
       return;
     }
 
     try {
-      await profileProvider.loadProfile(wallet);
+      if (hasWallet) {
+        await profileProvider.loadProfile(wallet);
+      } else {
+        await profileProvider.loadAuthenticatedProfile();
+      }
     } catch (e) {
       debugPrint(
           'DesktopProfileScreen._refreshProfileAfterEdit loadProfile failed: $e');

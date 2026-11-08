@@ -531,9 +531,12 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
 
     var succeeded = false;
     try {
-      final wallet = profileProvider.currentUser?.walletAddress ?? '';
+      // Any signed-in account may change its cover (wallet or email/Google):
+      // the backend takes the owner from the session, so the wallet is
+      // optional, exactly as for the avatar.
+      final wallet = profileProvider.currentUser?.walletAddress.trim() ?? '';
 
-      if (wallet.isEmpty) {
+      if (profileProvider.currentUser == null) {
         messenger.showKubusSnackBar(
           SnackBar(
             content: Text(l10n.profileEditNoWalletUploadCoverToast),
@@ -584,7 +587,10 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
         _localCoverBytes = null;
         _coverChanged = false;
       });
-      unawaited(profileProvider.loadProfile(wallet));
+      // Email/Google sessions have no wallet: reload the authenticated account.
+      unawaited(wallet.isEmpty
+          ? profileProvider.loadAuthenticatedProfile().catchError((_) {})
+          : profileProvider.loadProfile(wallet));
       messenger.showKubusSnackBar(
         SnackBar(
           content: Text(l10n.profileEditCoverUploadedSavedToast),
