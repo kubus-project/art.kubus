@@ -189,4 +189,23 @@ void main() {
       expect(snapshotCollectionOwnedBy(byUser, ''), isFalse);
     });
   });
+
+  group('ownerAuthoredWorksCount', () {
+    test('the account-keyed server total wins, even above the page size', () {
+      expect(ownerAuthoredWorksCount(serverTotal: 37, loadedCount: 6), 37);
+      expect(ownerAuthoredWorksCount(serverTotal: 0, loadedCount: 0), 0);
+    });
+
+    test('without a total a complete loaded list is the count', () {
+      expect(ownerAuthoredWorksCount(serverTotal: null, loadedCount: 2), 2);
+    });
+
+    test('a page-capped list is never presented as the count', () {
+      expect(
+          ownerAuthoredWorksCount(serverTotal: null, loadedCount: 6), isNull);
+      expect(
+          ownerAuthoredWorksCount(serverTotal: null, loadedCount: 0), isNull);
+      expect(ownerAuthoredWorksCount(serverTotal: -1, loadedCount: 0), isNull);
+    });
+  });
 }

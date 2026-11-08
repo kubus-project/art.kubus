@@ -82,6 +82,7 @@ class _ProfileScreenState extends State<ProfileScreen>
   bool _artistDataLoading = false;
   bool _artistDataLoaded = false;
   List<Map<String, dynamic>> _artistArtworks = [];
+  int? _artistAuthoredTotal;
   List<Map<String, dynamic>> _artistDocumentedArtworks = [];
   List<Map<String, dynamic>> _artistCollections = [];
   List<Map<String, dynamic>> _artistEvents = [];
@@ -870,9 +871,10 @@ class _ProfileScreenState extends State<ProfileScreen>
         ),
         DesktopStatCard(
           label: l10n.userProfileArtworksTitle,
-          // Counters are wallet-keyed; a walletless account counts its loaded authored works.
-          value: (wallet ?? '').isEmpty && _artistArtworks.isNotEmpty
-              ? '${_artistArtworks.length}'
+          // Counters are wallet-keyed; a walletless account uses the
+          // account-keyed total of its authored works.
+          value: _walletlessAuthoredCount(wallet) != null
+              ? '${_walletlessAuthoredCount(wallet)}'
               : profileProvider.formattedArtworksCount,
           icon: Icons.palette_outlined,
           color: _profileStatAccentForIcon(Icons.palette_outlined),
@@ -1327,6 +1329,7 @@ class _ProfileScreenState extends State<ProfileScreen>
             privateCounters['artworksDiscovered'] ?? stats?.artworksDiscovered;
         final createdValue = authorshipCounters['authoredArtworks'] ??
             publicCounters['artworks'] ??
+            _walletlessAuthoredCount(wallet) ??
             stats?.artworksCreated;
         final nftsOwnedValue = publicCounters['nftsMinted'] ?? stats?.nftsOwned;
         final publicStreetArtAddedValue =
@@ -1713,6 +1716,17 @@ class _ProfileScreenState extends State<ProfileScreen>
     }
   }
 
+  /// Authored-works count for an account without a wallet (no wallet-keyed
+  /// stats snapshot exists), or null when the account has a wallet or the
+  /// count is not known yet.
+  int? _walletlessAuthoredCount(String? wallet) {
+    if ((wallet ?? '').trim().isNotEmpty) return null;
+    return ownerAuthoredWorksCount(
+      serverTotal: _artistAuthoredTotal,
+      loadedCount: _artistArtworks.length,
+    );
+  }
+
   Future<void> _maybeLoadArtistData({bool force = false}) async {
     final profileProvider =
         Provider.of<ProfileProvider>(context, listen: false);
@@ -1767,6 +1781,7 @@ class _ProfileScreenState extends State<ProfileScreen>
       if (!mounted) return;
       setState(() {
         _artistArtworks = sections.authored;
+        _artistAuthoredTotal = sections.authoredTotal;
         _artistDocumentedArtworks = sections.documented;
         _artistCollections = collections;
         _artistEvents = filteredEvents;

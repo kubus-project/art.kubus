@@ -41,6 +41,25 @@ String profileEventsMatchKey(UserProfile? profile) {
   return profileArtistDataKey(profile);
 }
 
+/// Number of authored works of the signed-in owner when no wallet-keyed stats
+/// snapshot exists (a walletless account).
+///
+/// The canonical figure is the `total` of
+/// `GET /api/profiles/:id/artworks?relationship=authored`, the same set and
+/// visibility the wallet-keyed `authoredArtworks` counter reports. Older
+/// backends do not honour `relationship` and send no total; then the loaded
+/// list is the count only when it is complete (shorter than the page that was
+/// requested), never a page-capped length. Null means unknown.
+int? ownerAuthoredWorksCount({
+  required int? serverTotal,
+  required int loadedCount,
+  int loadLimit = 6,
+}) {
+  if (serverTotal != null && serverTotal >= 0) return serverTotal;
+  if (loadedCount > 0 && loadedCount < loadLimit) return loadedCount;
+  return null;
+}
+
 /// The profile's own wallet, as the legacy collections fallback of
 /// [profileArtistDataKey]: only when the key is an id (collections made before
 /// accounts owned them carry the wallet, not `owner_id`). Empty for a

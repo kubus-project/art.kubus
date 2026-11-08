@@ -85,6 +85,7 @@ class _ProfileScreenState extends State<ProfileScreen>
   bool _artistDataLoading = false;
   bool _artistDataLoaded = false;
   List<Map<String, dynamic>> _artistArtworks = [];
+  int? _artistAuthoredTotal;
   List<Map<String, dynamic>> _documentedArtworks = [];
   List<Map<String, dynamic>> _artistCollections = [];
   List<Map<String, dynamic>> _artistEvents = [];
@@ -490,6 +491,17 @@ class _ProfileScreenState extends State<ProfileScreen>
     );
   }
 
+  /// Authored-works count for an account without a wallet (no wallet-keyed
+  /// stats snapshot exists), or null when the account has a wallet or the
+  /// count is not known yet.
+  int? _walletlessAuthoredCount(String? wallet) {
+    if ((wallet ?? '').trim().isNotEmpty) return null;
+    return ownerAuthoredWorksCount(
+      serverTotal: _artistAuthoredTotal,
+      loadedCount: _artistArtworks.length,
+    );
+  }
+
   Widget _buildStatsSection() {
     return SliverToBoxAdapter(
       child: LayoutBuilder(
@@ -543,7 +555,10 @@ class _ProfileScreenState extends State<ProfileScreen>
                 ),
                 _buildStatCard(
                   AppLocalizations.of(context)!.userProfileArtworksTitle,
-                  profileProvider.formattedArtworksCount,
+                  // The wallet-keyed counter is 0 for a walletless account:
+                  // use the account-keyed total of its authored works.
+                  _walletlessAuthoredCount(walletAddress)?.toString() ??
+                      profileProvider.formattedArtworksCount,
                   Icons.palette,
                   isSmallScreen: isSmallScreen,
                   onTap: () => ProfileScreenMethods.showArtworks(
@@ -1002,6 +1017,7 @@ class _ProfileScreenState extends State<ProfileScreen>
       _artistDataLoading = true;
       if (force) {
         _artistArtworks = [];
+        _artistAuthoredTotal = null;
         _documentedArtworks = [];
         _artistCollections = [];
         _artistEvents = [];
@@ -1028,6 +1044,7 @@ class _ProfileScreenState extends State<ProfileScreen>
       if (!mounted) return;
       setState(() {
         _artistArtworks = sections.authored;
+        _artistAuthoredTotal = sections.authoredTotal;
         _documentedArtworks = sections.documented;
         _artistCollections = collections;
         _artistEvents = filteredEvents;
@@ -1444,11 +1461,9 @@ class _ProfileScreenState extends State<ProfileScreen>
           final discoveriesValue = privateCounters['artworksDiscovered'] ??
               stats?.artworksDiscovered;
           // Stat snapshots are keyed by wallet. A walletless account has no
-          // snapshot, so its authored works (already loaded below) are the count.
-          final walletlessAuthoredCount =
-              wallet.isEmpty && _artistArtworks.isNotEmpty
-                  ? _artistArtworks.length
-                  : null;
+          // snapshot, so the account-keyed total of its authored works is the
+          // count (see ownerAuthoredWorksCount).
+          final walletlessAuthoredCount = _walletlessAuthoredCount(wallet);
           final createdValue = authorshipCounters['authoredArtworks'] ??
               publicCounters['artworks'] ??
               walletlessAuthoredCount ??
