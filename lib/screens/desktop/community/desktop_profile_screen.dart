@@ -814,16 +814,16 @@ class _ProfileScreenState extends State<ProfileScreen>
                 color: roles.foregroundSubtle,
               ),
             ),
-            Text(
-              web3Provider.hasWalletIdentity
-                  ? web3Provider.formatAddress(web3Provider.walletAddress)
-                  : l10n.profileConnectWalletToSeeProfileLabel,
-              style: KubusTextStyles.detailCaption.copyWith(
-                fontFamily:
-                    web3Provider.hasWalletIdentity ? 'RobotoMono' : null,
-                color: roles.foregroundSubtle,
+            // A wallet is optional: an account without one shows nothing here
+            // instead of a prompt to connect one.
+            if (web3Provider.hasWalletIdentity)
+              Text(
+                web3Provider.formatAddress(web3Provider.walletAddress),
+                style: KubusTextStyles.detailCaption.copyWith(
+                  fontFamily: 'RobotoMono',
+                  color: roles.foregroundSubtle,
+                ),
               ),
-            ),
           ],
         ),
       ],
@@ -870,7 +870,10 @@ class _ProfileScreenState extends State<ProfileScreen>
         ),
         DesktopStatCard(
           label: l10n.userProfileArtworksTitle,
-          value: profileProvider.formattedArtworksCount,
+          // Counters are wallet-keyed; a walletless account counts its loaded authored works.
+          value: (wallet ?? '').isEmpty && _artistArtworks.isNotEmpty
+              ? '${_artistArtworks.length}'
+              : profileProvider.formattedArtworksCount,
           icon: Icons.palette_outlined,
           color: _profileStatAccentForIcon(Icons.palette_outlined),
           onTap: () =>
