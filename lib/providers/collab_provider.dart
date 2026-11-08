@@ -6,6 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/collab_invite.dart';
 import '../models/collab_member.dart';
+import '../models/user_profile.dart';
 import '../config/config.dart';
 import '../providers/app_refresh_provider.dart';
 import '../providers/profile_provider.dart';
@@ -13,6 +14,7 @@ import '../services/backend_api_service.dart' show BackendApiRequestException;
 import '../services/collab_api.dart';
 import '../services/push_notification_service.dart';
 import '../services/socket_service.dart';
+import '../utils/profile_data_key.dart' show isSyntheticProfileId;
 import '../utils/wallet_utils.dart';
 
 class CollabProvider extends ChangeNotifier {
@@ -258,15 +260,33 @@ class CollabProvider extends ChangeNotifier {
     }
   }
 
+  /// Account identity of a walletless profile: the account id, then the
+  /// profile id (locally invented `profile_...` ids are not identities).
+  static String _accountIdentity(UserProfile? user) {
+    if (user == null) return '';
+    for (final candidate in <String?>[user.userId, user.id]) {
+      final value = (candidate ?? '').trim();
+      if (value.isNotEmpty && !isSyntheticProfileId(value)) return value;
+    }
+    return '';
+  }
+
   void _syncAuthState() {
     if (!AppConfig.isFeatureEnabled('collabInvites')) return;
 
     final profile = _profileProvider;
     final signedIn = profile?.isSignedIn == true;
-    final wallet = (profile?.currentUser?.walletAddress ?? '').trim();
+    // Invites are addressed to the account (collaboration members are account
+    // ids), so a walletless artist has an inbox too. The session identity is
+    // the wallet when there is one, otherwise the account/profile id; only the
+    // wallet can match a realtime socket subscription, so without one the feed
+    // is polled.
+    final user = profile?.currentUser;
+    final wallet = (user?.walletAddress ?? '').trim();
+    final identity = wallet.isNotEmpty ? wallet : _accountIdentity(user);
     final token = (_api.getAuthToken() ?? '').trim();
 
-    if (!signedIn || wallet.isEmpty || token.isEmpty) {
+    if (!signedIn || identity.isEmpty || token.isEmpty) {
       if (_lastAuthWallet.isNotEmpty ||
           _invitesInbox.isNotEmpty ||
           _membersByEntityKey.isNotEmpty ||
@@ -283,10 +303,10 @@ class CollabProvider extends ChangeNotifier {
 
     _bindSocketOnce();
 
-    if (_lastAuthWallet != wallet) {
+    if (_lastAuthWallet != identity) {
       _resetSessionState();
       _evaluateInvitePollingState();
-      _lastAuthWallet = wallet;
+      _lastAuthWallet = identity;
       // Schedule notifyListeners in microtask to avoid synchronous notification.
       Future.microtask(notifyListeners);
       unawaited(initialize(refresh: true));
