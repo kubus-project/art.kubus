@@ -325,9 +325,15 @@ class _ConnectWalletState extends State<ConnectWallet>
     _closeConnectedWalletFlow();
   }
 
+  /// Every sub-step (import, create, external wallet) hangs directly off the
+  /// options screen, so Back goes UP to the options and never sideways to a
+  /// sibling step. `_currentStep--` used to land on the neighbouring index
+  /// (create -> import), which looked like the screens cycling.
+  void _backToOptions() => setState(() => _currentStep = 0);
+
   void _handlePrimaryBackOrClose() {
     if (_currentStep > 0) {
-      setState(() => _currentStep--);
+      _backToOptions();
       return;
     }
     if (widget.onRequestClose != null) {
@@ -723,7 +729,7 @@ class _ConnectWalletState extends State<ConnectWallet>
             ? IconButton(
                 icon: Icon(Icons.arrow_back,
                     color: Theme.of(context).colorScheme.onSurface),
-                onPressed: () => setState(() => _currentStep--),
+                onPressed: _backToOptions,
               )
             : IconButton(
                 icon: Icon(Icons.arrow_back,
