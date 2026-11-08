@@ -6150,6 +6150,9 @@ class BackendApiService
     required String walletAddress,
     String? imageCid,
     String? artistName,
+    // Self-declared authorship of the acting account. A bare flag: the
+    // backend resolves the account from the session, no id is ever sent.
+    bool? authoredBySelf,
     String? imageAuthor,
     String? imageLicense,
     String? imageAttribution,
@@ -6193,6 +6196,7 @@ class BackendApiService
         'walletAddress': walletAddress,
         if (artistName != null && artistName.isNotEmpty)
           'artistName': artistName,
+        if (authoredBySelf != null) 'authoredBySelf': authoredBySelf,
         if (imageAuthor != null && imageAuthor.trim().isNotEmpty)
           'imageAuthor': imageAuthor.trim(),
         if (imageLicense != null && imageLicense.trim().isNotEmpty)

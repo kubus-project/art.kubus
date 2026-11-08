@@ -19210,4 +19210,19 @@ class AppLocalizationsSl extends AppLocalizations {
   String artworkAuthorOpenProfile(String name) {
     return 'Odpri profil: $name';
   }
+
+  @override
+  String get artworkAuthoredBySelfLabel => 'Sem ustvarjalec';
+
+  @override
+  String get artworkAuthoredBySelfHelper =>
+      'Ime umetnika se nastavi na ime tvojega profila, delo pa se pripiše tvojemu profilu.';
+
+  @override
+  String get artworkAuthoredBySelfUnavailable =>
+      'Prijavi se in dodaj prikazno ime v svoj profil, da lahko delo pripišeš sebi.';
+
+  @override
+  String get artworkAuthoredBySelfFieldHelper =>
+      'Nastavljeno iz imena tvojega profila.';
 }

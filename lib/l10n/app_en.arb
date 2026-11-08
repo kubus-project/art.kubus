@@ -8108,5 +8108,9 @@
     "placeholders": {
       "name": {"type": "String"}
     }
-  }
+  },
+  "artworkAuthoredBySelfLabel": "I am the creator",
+  "artworkAuthoredBySelfHelper": "The artist name is set to your profile name and the artwork is attributed to your profile.",
+  "artworkAuthoredBySelfUnavailable": "Sign in and add a display name to your profile to attribute this artwork to yourself.",
+  "artworkAuthoredBySelfFieldHelper": "Set from your profile name."
 }

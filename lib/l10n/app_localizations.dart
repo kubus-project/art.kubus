@@ -33020,6 +33020,30 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Open profile of {name}'**
   String artworkAuthorOpenProfile(String name);
+
+  /// No description provided for @artworkAuthoredBySelfLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'I am the creator'**
+  String get artworkAuthoredBySelfLabel;
+
+  /// No description provided for @artworkAuthoredBySelfHelper.
+  ///
+  /// In en, this message translates to:
+  /// **'The artist name is set to your profile name and the artwork is attributed to your profile.'**
+  String get artworkAuthoredBySelfHelper;
+
+  /// No description provided for @artworkAuthoredBySelfUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign in and add a display name to your profile to attribute this artwork to yourself.'**
+  String get artworkAuthoredBySelfUnavailable;
+
+  /// No description provided for @artworkAuthoredBySelfFieldHelper.
+  ///
+  /// In en, this message translates to:
+  /// **'Set from your profile name.'**
+  String get artworkAuthoredBySelfFieldHelper;
 }
 
 class _AppLocalizationsDelegate

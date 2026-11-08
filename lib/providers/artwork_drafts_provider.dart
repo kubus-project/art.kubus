@@ -73,6 +73,10 @@ class ArtworkDraftState {
   /// never prefilled from the signed-in account: authorship is an explicit
   /// statement, and blank means unattributed.
   String artistName = '';
+
+  /// "I am the creator": the signed-in account declares itself the author.
+  /// Only this flag is sent, never an account id.
+  bool authoredBySelf = false;
   String description = '';
   String category = 'Digital Art';
   String tagsCsv = '';
@@ -167,6 +171,7 @@ class ArtworkDraftsProvider extends ChangeNotifier {
     required String draftId,
     String? title,
     String? artistName,
+    bool? authoredBySelf,
     String? description,
     String? category,
     String? tagsCsv,
@@ -176,6 +181,7 @@ class ArtworkDraftsProvider extends ChangeNotifier {
     if (draft == null) return;
     if (title != null) draft.title = title;
     if (artistName != null) draft.artistName = artistName;
+    if (authoredBySelf != null) draft.authoredBySelf = authoredBySelf;
     if (description != null) draft.description = description;
     if (category != null) draft.category = category;
     if (tagsCsv != null) draft.tagsCsv = tagsCsv;
@@ -647,6 +653,7 @@ class ArtworkDraftsProvider extends ChangeNotifier {
         imageUrl: coverUrl,
         walletAddress: wallet,
         artistName: artistName.isEmpty ? null : artistName,
+        authoredBySelf: draft.authoredBySelf ? true : null,
         category: draft.category,
         tags: _parseTagsCsv(draft.tagsCsv),
         galleryUrls: galleryUrls,
