@@ -6218,7 +6218,9 @@ class BackendApiService
         'description': description,
         'imageUrl': imageUrl,
         if (imageCid != null) 'imageCid': imageCid,
-        'walletAddress': walletAddress,
+        // A walletless account publishes under its session: the backend takes
+        // the owner from the token and never needs a wallet in the body.
+        if (walletAddress.trim().isNotEmpty) 'walletAddress': walletAddress,
         if (artistName != null && artistName.isNotEmpty)
           'artistName': artistName,
         if (authoredBySelf != null) 'authoredBySelf': authoredBySelf,
