@@ -1713,8 +1713,9 @@ class _ProfileScreenState extends State<ProfileScreen>
   Future<void> _maybeLoadArtistData({bool force = false}) async {
     final profileProvider =
         Provider.of<ProfileProvider>(context, listen: false);
-    // Wallet when the account has one; otherwise its profile/account id.
+    // Profile/account id first; wallet only as a legacy fallback.
     final wallet = profileArtistDataKey(profileProvider.currentUser);
+    final eventsKey = profileEventsMatchKey(profileProvider.currentUser);
     if (wallet.isEmpty) return;
 
     final verification =
@@ -1726,11 +1727,11 @@ class _ProfileScreenState extends State<ProfileScreen>
     if (_artistDataRequested && !force) return;
 
     _artistDataRequested = true;
-    await _loadArtistData(wallet, force: force);
+    await _loadArtistData(wallet, eventsKey: eventsKey, force: force);
   }
 
   Future<void> _loadArtistData(String walletAddress,
-      {bool force = false}) async {
+      {required String eventsKey, bool force = false}) async {
     if (!mounted) return;
     setState(() => _artistDataLoading = true);
 
@@ -1744,7 +1745,7 @@ class _ProfileScreenState extends State<ProfileScreen>
           await api.getCollections(walletAddress: walletAddress, limit: 6);
       final eventsResponse = await api.listEvents(limit: 100);
       final filteredEvents = eventsResponse
-          .where((event) => profileEventBelongsToWallet(event, walletAddress))
+          .where((event) => profileEventBelongsToWallet(event, eventsKey))
           .take(6)
           .map((e) => Map<String, dynamic>.from(e))
           .toList();
