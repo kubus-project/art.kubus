@@ -471,16 +471,16 @@ class _ProfileScreenState extends State<ProfileScreen>
                     color: roles.foregroundSubtle,
                   ),
                 ),
-                Text(
-                  web3Provider.hasWalletIdentity
-                      ? web3Provider.formatAddress(web3Provider.walletAddress)
-                      : l10n.profileConnectWalletToSeeProfileLabel,
-                  style: KubusTextStyles.detailCaption.copyWith(
-                    fontFamily:
-                        web3Provider.hasWalletIdentity ? 'RobotoMono' : null,
-                    color: roles.foregroundSubtle,
+                // A wallet is optional: an account without one shows nothing here
+                // instead of a prompt to connect one.
+                if (web3Provider.hasWalletIdentity)
+                  Text(
+                    web3Provider.formatAddress(web3Provider.walletAddress),
+                    style: KubusTextStyles.detailCaption.copyWith(
+                      fontFamily: 'RobotoMono',
+                      color: roles.foregroundSubtle,
+                    ),
                   ),
-                ),
               ],
             ),
           ],
@@ -1430,8 +1430,15 @@ class _ProfileScreenState extends State<ProfileScreen>
 
           final discoveriesValue = privateCounters['artworksDiscovered'] ??
               stats?.artworksDiscovered;
+          // Stat snapshots are keyed by wallet. A walletless account has no
+          // snapshot, so its authored works (already loaded below) are the count.
+          final walletlessAuthoredCount =
+              wallet.isEmpty && _artistArtworks.isNotEmpty
+                  ? _artistArtworks.length
+                  : null;
           final createdValue = authorshipCounters['authoredArtworks'] ??
               publicCounters['artworks'] ??
+              walletlessAuthoredCount ??
               stats?.artworksCreated;
           final nftsOwnedValue =
               publicCounters['nftsMinted'] ?? stats?.nftsOwned;
