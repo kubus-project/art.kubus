@@ -12444,6 +12444,9 @@ Artwork parseArtworkFromBackendJson(Map<String, dynamic> json) {
     walletAddress: walletAddress,
     title: title,
     artist: artist,
+    authorProfile: ArtworkAuthorProfile.tryParse(
+      json['authorProfile'] ?? json['author_profile'],
+    ),
     description: stringVal(json['description'] ?? json['summary'] ?? '', ''),
     imageUrl: normalizedImageUrl,
     galleryUrls: galleryUrls,
