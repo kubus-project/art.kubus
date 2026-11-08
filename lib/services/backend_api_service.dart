@@ -366,6 +366,17 @@ AuthSignInMethod _authSignInMethodFromStorageValue(String? value) {
   }
 }
 
+final RegExp _accountIdPattern = RegExp(
+  r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$',
+);
+
+/// Query key the collections list expects for a profile owner identifier:
+/// `ownerId` for a profile/account id (walletless artist), `walletAddress`
+/// otherwise.
+@visibleForTesting
+String collectionsOwnerQueryKey(String identifier) =>
+    _accountIdPattern.hasMatch(identifier.trim()) ? 'ownerId' : 'walletAddress';
+
 class BackendApiService
     implements
         ArtworkBackendApi,
@@ -10834,7 +10845,10 @@ class BackendApiService
       };
 
       if (requestedWallet.isNotEmpty) {
-        queryParams['walletAddress'] = requestedWallet;
+        // A walletless artist is addressed by profile or account id (a UUID);
+        // a wallet address is never UUID-shaped.
+        queryParams[collectionsOwnerQueryKey(requestedWallet)] =
+            requestedWallet;
       }
 
       return await _performPublicRead<List<Map<String, dynamic>>>(
