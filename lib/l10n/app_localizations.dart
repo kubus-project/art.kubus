@@ -33014,6 +33014,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Already managed'**
   String get verificationInstitutionAlreadyManaged;
+
+  /// Accessibility label for the tappable author line on an artwork detail screen; opens the author's public profile.
+  ///
+  /// In en, this message translates to:
+  /// **'Open profile of {name}'**
+  String artworkAuthorOpenProfile(String name);
 }
 
 class _AppLocalizationsDelegate

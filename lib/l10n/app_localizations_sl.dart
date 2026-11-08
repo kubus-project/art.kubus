@@ -19205,4 +19205,9 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get verificationInstitutionAlreadyManaged => 'Že upravljan profil';
+
+  @override
+  String artworkAuthorOpenProfile(String name) {
+    return 'Odpri profil: $name';
+  }
 }

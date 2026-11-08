@@ -8101,5 +8101,12 @@
   "verificationOnboardingInstitutionBody": "Claim the profile of your institution or request a new presence. You can also do this later from the Hub.",
   "verificationOnboardingPending": "Your request is with the editors. You can continue.",
   "verificationOnboardingApproved": "You are verified. You can continue.",
-  "verificationInstitutionAlreadyManaged": "Already managed"
+  "verificationInstitutionAlreadyManaged": "Already managed",
+  "artworkAuthorOpenProfile": "Open profile of {name}",
+  "@artworkAuthorOpenProfile": {
+    "description": "Accessibility label for the tappable author line on an artwork detail screen; opens the author's public profile.",
+    "placeholders": {
+      "name": {"type": "String"}
+    }
+  }
 }

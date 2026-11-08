@@ -19019,4 +19019,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get verificationInstitutionAlreadyManaged => 'Already managed';
+
+  @override
+  String artworkAuthorOpenProfile(String name) {
+    return 'Open profile of $name';
+  }
 }
