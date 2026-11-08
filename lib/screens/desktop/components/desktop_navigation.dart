@@ -61,6 +61,10 @@ class DesktopNavItem {
   final int badgeCount;
   final KubusLabsFeature? labsFeature;
 
+  /// A signed-out visitor sees this destination but must sign in to enter it.
+  /// The rail shows a lock and the shell opens the sign-in gate on tap.
+  final bool requiresSignIn;
+
   const DesktopNavItem({
     required this.icon,
     required this.activeIcon,
@@ -68,7 +72,18 @@ class DesktopNavItem {
     required this.route,
     this.badgeCount = 0,
     this.labsFeature,
+    this.requiresSignIn = false,
   });
+
+  DesktopNavItem withSignInRequired() => DesktopNavItem(
+        icon: icon,
+        activeIcon: activeIcon,
+        labelKey: labelKey,
+        route: route,
+        badgeCount: badgeCount,
+        labsFeature: labsFeature,
+        requiresSignIn: true,
+      );
 }
 
 /// Desktop primary navigation rail
@@ -373,6 +388,19 @@ class _DesktopNavigationState extends State<DesktopNavigation>
                                       size: KubusChromeMetrics.navIcon,
                                     ),
                                   ),
+                                  if (!widget.isExpanded && item.requiresSignIn)
+                                    Positioned(
+                                      bottom: -KubusSpacing.xs,
+                                      right: -6,
+                                      child: Icon(
+                                        Icons.lock_outline,
+                                        size: 11,
+                                        color: Theme.of(context)
+                                            .colorScheme
+                                            .onSurface
+                                            .withValues(alpha: 0.6),
+                                      ),
+                                    ),
                                   if (showCompactLabs && labsFeature != null)
                                     Positioned(
                                       top: -KubusSpacing.xs,
@@ -408,6 +436,17 @@ class _DesktopNavigationState extends State<DesktopNavigation>
                                   ),
                                 ),
                               ),
+                              if (item.requiresSignIn) ...[
+                                const SizedBox(width: KubusSpacing.xs),
+                                Icon(
+                                  Icons.lock_outline,
+                                  size: 14,
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .onSurface
+                                      .withValues(alpha: 0.55),
+                                ),
+                              ],
                               if (showInlineLabs && labsFeature != null) ...[
                                 const SizedBox(width: KubusSpacing.xs),
                                 KubusLabsAdornment.inlinePill(

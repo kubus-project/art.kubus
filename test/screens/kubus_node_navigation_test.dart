@@ -211,15 +211,40 @@ void main() {
       }
     });
 
-    test('a guest is not offered Node', () {
-      expect(
-        keys(resolveDesktopNavItems(
-          false,
-          isArtist: false,
-          isInstitution: false,
-        )),
-        isNot(contains(DesktopNavLabelKey.node)),
+    test(
+        'a guest sees every destination; only Home, Explore and Connect are open',
+        () {
+      final guest = resolveDesktopNavItems(
+        false,
+        isArtist: false,
+        isInstitution: false,
       );
+      final signedIn = resolveDesktopNavItems(
+        true,
+        isArtist: false,
+        isInstitution: false,
+      );
+      // Same destinations in the same order: nothing is hidden from a visitor.
+      expect(guest.map((i) => i.route).toList(),
+          signedIn.map((i) => i.route).toList());
+      for (final item in guest) {
+        final open =
+            const {'/home', '/explore', '/community'}.contains(item.route);
+        expect(item.requiresSignIn, !open, reason: item.route);
+      }
+      expect(
+        guest.where((i) => i.requiresSignIn).map((i) => i.labelKey).toList(),
+        containsAll([
+          DesktopNavLabelKey.create,
+          DesktopNavLabelKey.organize,
+          DesktopNavLabelKey.govern,
+          DesktopNavLabelKey.node,
+        ]),
+      );
+      // The wallet-only "Infrastructure" entry is no longer the guest's only extra.
+      expect(guest.map((i) => i.labelKey),
+          isNot(contains(DesktopNavLabelKey.web3)));
+      expect(signedIn.any((i) => i.requiresSignIn), isFalse);
     });
   });
 
