@@ -153,4 +153,40 @@ void main() {
       'walletAddress',
     );
   });
+
+  group('synthetic profile ids and the snapshot fallback', () {
+    test('a locally generated profile id never wins over the real wallet', () {
+      final cached = _profile(id: 'profile_e10d1421', wallet: 'WalletAbc123');
+      expect(isSyntheticProfileId(cached.id), isTrue);
+      expect(profileArtistDataKey(cached), 'WalletAbc123');
+      final fallback =
+          _profile(id: 'profile_fallback_WalletA', wallet: 'WalletAbc123');
+      expect(profileArtistDataKey(fallback), 'WalletAbc123');
+    });
+
+    test('a synthetic profile id falls through to the account id', () {
+      final cached = _profile(id: 'profile_e10d1421', userId: _userId);
+      expect(profileArtistDataKey(cached), _userId);
+    });
+
+    test('backend uuids are not synthetic', () {
+      expect(isSyntheticProfileId(_profileId), isFalse);
+      expect(isSyntheticProfileId(null), isFalse);
+    });
+
+    test(
+        'snapshot collections are matched by owner id, case-insensitively, never by wallet fields',
+        () {
+      final byProfile = <String, dynamic>{
+        'ownerProfileId': _profileId.toUpperCase()
+      };
+      final byUser = <String, dynamic>{'owner_id': _userId};
+      final wallet = <String, dynamic>{'walletAddress': _profileId};
+      expect(snapshotCollectionOwnedBy(byProfile, _profileId), isTrue);
+      expect(snapshotCollectionOwnedBy(byUser, _userId), isTrue);
+      expect(snapshotCollectionOwnedBy(byUser, _profileId), isFalse);
+      expect(snapshotCollectionOwnedBy(wallet, _profileId), isFalse);
+      expect(snapshotCollectionOwnedBy(byUser, ''), isFalse);
+    });
+  });
 }

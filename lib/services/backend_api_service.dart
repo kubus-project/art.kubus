@@ -377,6 +377,31 @@ final RegExp _accountIdPattern = RegExp(
 String collectionsOwnerQueryKey(String identifier) =>
     _accountIdPattern.hasMatch(identifier.trim()) ? 'ownerId' : 'walletAddress';
 
+/// Whether a snapshot collection entry belongs to the profile/account [ownerId].
+/// Mirrors the live `ownerId` filter: profile id or account id, case-insensitive
+/// because UUIDs are, never compared as wallets.
+@visibleForTesting
+bool snapshotCollectionOwnedBy(Map<String, dynamic> entry, String ownerId) {
+  final wanted = ownerId.trim().toLowerCase();
+  if (wanted.isEmpty) return false;
+  for (final key in const <String>[
+    'ownerId',
+    'owner_id',
+    'ownerProfileId',
+    'owner_profile_id',
+    'ownerUserId',
+    'owner_user_id',
+    'profileId',
+    'profile_id',
+    'userId',
+    'user_id',
+  ]) {
+    final value = entry[key]?.toString().trim().toLowerCase() ?? '';
+    if (value.isNotEmpty && value == wanted) return true;
+  }
+  return false;
+}
+
 class BackendApiService
     implements
         ArtworkBackendApi,
@@ -10884,7 +10909,15 @@ class BackendApiService
           }
 
           var collections = await _loadSnapshotDatasetMaps('collections');
-          if (snapshotWalletFilter.isNotEmpty) {
+          if (snapshotWalletFilter.isNotEmpty &&
+              collectionsOwnerQueryKey(snapshotWalletFilter) == 'ownerId') {
+            // A profile/account id is never a wallet: compare it with the
+            // snapshot's owner id fields, exactly as the live query does.
+            collections = collections
+                .where((entry) =>
+                    snapshotCollectionOwnedBy(entry, snapshotWalletFilter))
+                .toList(growable: false);
+          } else if (snapshotWalletFilter.isNotEmpty) {
             final canonicalRequested = WalletUtils.canonical(
               snapshotWalletFilter,
             );

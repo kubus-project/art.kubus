@@ -2,7 +2,15 @@ import '../models/user_profile.dart';
 
 String _trimmed(String? value) => value?.trim() ?? '';
 
-/// Identifier used to load a profile's artist data (authored artworks and
+/// Ids the app invents locally while the authoritative profile is unavailable
+/// (`profile_<user id>`, `profile_fallback_<wallet prefix>`). They are not
+/// backend ids and must never be sent as a profile/account id.
+bool isSyntheticProfileId(String? value) =>
+    _trimmed(value).startsWith('profile_');
+
+/// Identifier used to load a profile's artist data (locally generated
+/// `profile_...` ids are skipped, so a cached placeholder profile falls back to
+/// its real wallet) (authored artworks and
 /// collections). Profile id first, then account id: the backend resolves both
 /// on `GET /api/profiles/:id/artworks` and `GET /api/collections?ownerId=`,
 /// so a walletless artist and a wallet artist load through the same path. The
@@ -18,7 +26,7 @@ String profileArtistDataKey(UserProfile? profile) {
     profile.publicActorId,
   ]) {
     final value = _trimmed(candidate);
-    if (value.isNotEmpty) return value;
+    if (value.isNotEmpty && !isSyntheticProfileId(value)) return value;
   }
   return '';
 }
