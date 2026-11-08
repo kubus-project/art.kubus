@@ -1197,6 +1197,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get postAuthSecuringWallet => 'Securing wallet';
 
   @override
+  String get postAuthSecuringAccount => 'Securing account';
+
+  @override
   String get postAuthLoadingProfile => 'Loading profile';
 
   @override
@@ -1215,6 +1218,10 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get postAuthSecuringWalletBody =>
       'Verifying wallet access and device security.';
+
+  @override
+  String get postAuthSecuringAccountBody =>
+      'Checking your session and account access.';
 
   @override
   String get postAuthLoadingProfileBody =>

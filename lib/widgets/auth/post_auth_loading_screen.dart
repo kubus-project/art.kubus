@@ -255,6 +255,8 @@ class PostAuthLoadingContent extends StatelessWidget {
         return l10n.postAuthPreparingSession;
       case PostAuthStage.securingWallet:
         return l10n.postAuthSecuringWallet;
+      case PostAuthStage.securingAccount:
+        return l10n.postAuthSecuringAccount;
       case PostAuthStage.loadingProfile:
         return l10n.postAuthLoadingProfile;
       case PostAuthStage.syncingSavedItems:
@@ -274,6 +276,8 @@ class PostAuthLoadingContent extends StatelessWidget {
         return l10n.postAuthPreparingSessionBody;
       case PostAuthStage.securingWallet:
         return l10n.postAuthSecuringWalletBody;
+      case PostAuthStage.securingAccount:
+        return l10n.postAuthSecuringAccountBody;
       case PostAuthStage.loadingProfile:
         return l10n.postAuthLoadingProfileBody;
       case PostAuthStage.syncingSavedItems:
@@ -416,7 +420,13 @@ class _StageList extends StatelessWidget {
         stage: PostAuthStage.preparingSession,
         label: l10n.postAuthPreparingSession
       ),
-      (stage: PostAuthStage.securingWallet, label: l10n.postAuthSecuringWallet),
+      // The security row names the wallet only while a wallet is actually being secured.
+      (
+        stage: PostAuthStage.securingWallet,
+        label: activeStage == PostAuthStage.securingWallet
+            ? l10n.postAuthSecuringWallet
+            : l10n.postAuthSecuringAccount
+      ),
       (stage: PostAuthStage.loadingProfile, label: l10n.postAuthLoadingProfile),
       (
         stage: PostAuthStage.syncingSavedItems,

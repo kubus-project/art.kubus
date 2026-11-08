@@ -80,13 +80,19 @@ List<DesktopNavItem> resolveDesktopNavItems(
   required bool isArtist,
   required bool isInstitution,
 }) {
-  if (!isSignedIn) {
-    return _DesktopShellState._guestNavItems;
-  }
-
   // Creator and institution participation are independent. Destinations stay
   // discoverable for every account; each workspace enforces its own access.
   var items = List<DesktopNavItem>.of(_DesktopShellState._signedInNavItems);
+
+  // A signed-out visitor sees the same destinations. Home, Explore and Connect
+  // are open; every gated one carries a lock and opens the sign-in gate.
+  if (!isSignedIn) {
+    items = items
+        .map((item) => _DesktopShellState._guestOpenRoutes.contains(item.route)
+            ? item
+            : item.withSignInRequired())
+        .toList();
+  }
 
   // Node follows its own rollout flag, like every other Node entry point.
   if (!AppConfig.isFeatureEnabled('availabilityNodes')) {
@@ -232,32 +238,12 @@ class _DesktopShellState extends State<DesktopShell>
   /// In-shell route for the kubus Node dashboard.
   static const String _nodeRoute = '/kubus-node';
 
-  static const List<DesktopNavItem> _guestNavItems = [
-    DesktopNavItem(
-      icon: Icons.home_outlined,
-      activeIcon: Icons.home,
-      labelKey: DesktopNavLabelKey.home,
-      route: '/home',
-    ),
-    DesktopNavItem(
-      icon: Icons.explore_outlined,
-      activeIcon: Icons.explore,
-      labelKey: DesktopNavLabelKey.explore,
-      route: '/explore',
-    ),
-    DesktopNavItem(
-      icon: Icons.people_outline,
-      activeIcon: Icons.people,
-      labelKey: DesktopNavLabelKey.connect,
-      route: '/community',
-    ),
-    DesktopNavItem(
-      icon: Icons.hub_outlined,
-      activeIcon: Icons.hub,
-      labelKey: DesktopNavLabelKey.web3,
-      route: _web3EntryRoute,
-    ),
-  ];
+  /// Destinations a signed-out visitor can enter without an account.
+  static const Set<String> _guestOpenRoutes = {
+    '/home',
+    '/explore',
+    '/community'
+  };
 
   @override
   void initState() {
@@ -468,6 +454,10 @@ class _DesktopShellState extends State<DesktopShell>
 
     if (!isSignedIn && item.route == _web3EntryRoute) {
       unawaited(_activateWeb3Capability());
+      return;
+    }
+    if (!isSignedIn && item.requiresSignIn) {
+      unawaited(_promptSignInFor(item));
       return;
     }
 
@@ -1204,6 +1194,29 @@ class _DesktopShellState extends State<DesktopShell>
   /// is intentionally no longer part of this path — it never owned auth or
   /// wallet acquisition and dropping it here removes the double-flow, not an
   /// unrelated feature.
+  /// Opens the account gate for a locked destination and returns to it after
+  /// sign-in. Account only: a wallet is never required just to enter.
+  Future<void> _promptSignInFor(DesktopNavItem item) async {
+    if (!mounted) return;
+    final l10n = AppLocalizations.of(context)!;
+    await const ContextualAuthGate().ensureAuthenticated(
+      context,
+      actionLabel: l10n.commonSignIn,
+      returnRoute: item.route,
+      sourceScreen: 'desktop_shell_guest_rail',
+    );
+    if (!mounted) return;
+    // The gate resolves once its account journey has closed, and onboarding
+    // returns to the tab the visitor left. Land on the destination they asked
+    // for, but only if the journey actually produced a session: dismissing it
+    // must leave them where they were.
+    if (shouldContinueToLockedDestination(
+      hasAuthSession: BackendApiService().hasAuthSession,
+    )) {
+      _navigateToRoute(item.route);
+    }
+  }
+
   Future<void> _activateWeb3Capability() async {
     if (!mounted) return;
     final l10n = AppLocalizations.of(context)!;
@@ -1216,3 +1229,10 @@ class _DesktopShellState extends State<DesktopShell>
     );
   }
 }
+
+/// Whether a guest who tapped a locked rail item should be taken to it once the
+/// account gate has closed. Only an established session continues; a dismissed
+/// or abandoned journey does not.
+@visibleForTesting
+bool shouldContinueToLockedDestination({required bool hasAuthSession}) =>
+    hasAuthSession;
