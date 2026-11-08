@@ -105,8 +105,9 @@ void main() {
     // Submits a minimal draft and returns the JSON body sent to POST
     // /api/artworks, so the request is what is asserted, not a mock.
     Future<Map<String, dynamic>> submitWith(
-      void Function(ArtworkDraftsProvider provider, String draftId) arrange,
-    ) async {
+      void Function(ArtworkDraftsProvider provider, String draftId) arrange, {
+      String wallet = _wallet,
+    }) async {
       final l10n = await AppLocalizations.delegate.load(const Locale('en'));
       Map<String, dynamic>? sent;
       BackendApiService().setHttpClient(
@@ -156,12 +157,27 @@ void main() {
       arrange(provider, draftId);
       await provider.submitDraft(
         draftId: draftId,
-        walletAddress: _wallet,
+        walletAddress: wallet,
         l10n: l10n,
       );
       expect(sent, isNotNull, reason: 'the create request must be sent');
       return sent!;
     }
+
+    test('a walletless account publishes under its session, no wallet field',
+        () async {
+      final body = await submitWith(
+        (p, id) => p.updateBasics(
+          draftId: id,
+          artistName: 'Damjan Stevovic',
+          authoredBySelf: true,
+        ),
+        wallet: '',
+      );
+      expect(body['title'], 'Draft title');
+      expect(body['authoredBySelf'], isTrue);
+      expect(body.containsKey('walletAddress'), isFalse);
+    });
 
     test('an explicit artist is sent', () async {
       final body = await submitWith((p, id) =>

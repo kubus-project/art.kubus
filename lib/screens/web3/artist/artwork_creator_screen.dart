@@ -572,8 +572,11 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
 
     if (!_validateLocation(drafts: drafts, draft: draft)) return;
 
+    // A wallet is optional: any signed-in account publishes under its session
+    // (the backend checks the creator capability). Only a guest is stopped.
     final wallet = _resolveWalletAddress(context);
-    if (wallet.isEmpty) {
+    final profileProvider = context.read<ProfileProvider>();
+    if (wallet.isEmpty && !profileProvider.isSignedIn) {
       messenger.showKubusSnackBar(
         SnackBar(content: Text(l10n.communityCommentAuthRequiredToast)),
       );
@@ -581,7 +584,6 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
     }
 
     // A stale tick (signed out or name removed since) must not be sent.
-    final profileProvider = context.read<ProfileProvider>();
     if (draft.authoredBySelf &&
         AuthoredBySelf.displayNameFor(
               profileProvider.currentUser,

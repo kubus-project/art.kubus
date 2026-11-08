@@ -459,8 +459,10 @@ class ArtworkDraftsProvider extends ChangeNotifier {
     if (draft == null) return null;
     if (draft.isSubmitting) return null;
 
+    // An empty wallet is a walletless account publishing under its session:
+    // the backend takes the owner from the token. The caller decides whether
+    // a session exists (a guest never reaches this point).
     final wallet = walletAddress.trim();
-    if (wallet.isEmpty) return null;
 
     draft.isSubmitting = true;
     draft.submitError = null;
