@@ -1205,6 +1205,16 @@ class _DesktopShellState extends State<DesktopShell>
       returnRoute: item.route,
       sourceScreen: 'desktop_shell_guest_rail',
     );
+    if (!mounted) return;
+    // The gate resolves once its account journey has closed, and onboarding
+    // returns to the tab the visitor left. Land on the destination they asked
+    // for, but only if the journey actually produced a session: dismissing it
+    // must leave them where they were.
+    if (shouldContinueToLockedDestination(
+      hasAuthSession: BackendApiService().hasAuthSession,
+    )) {
+      _navigateToRoute(item.route);
+    }
   }
 
   Future<void> _activateWeb3Capability() async {
@@ -1219,3 +1229,10 @@ class _DesktopShellState extends State<DesktopShell>
     );
   }
 }
+
+/// Whether a guest who tapped a locked rail item should be taken to it once the
+/// account gate has closed. Only an established session continues; a dismissed
+/// or abandoned journey does not.
+@visibleForTesting
+bool shouldContinueToLockedDestination({required bool hasAuthSession}) =>
+    hasAuthSession;
