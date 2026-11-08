@@ -374,11 +374,13 @@ class BackendPublicObjectTransport {
     String? walletAddress,
     int page = 1,
     int limit = 20,
+    String? legacyWalletAddress,
   }) {
     return _service.getCollections(
       walletAddress: walletAddress,
       page: page,
       limit: limit,
+      legacyWalletAddress: legacyWalletAddress,
     );
   }
 

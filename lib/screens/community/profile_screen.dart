@@ -963,6 +963,7 @@ class _ProfileScreenState extends State<ProfileScreen>
     // walletless artist still loads authored artworks and collections.
     final wallet = profileArtistDataKey(profileProvider.currentUser);
     final eventsKey = profileEventsMatchKey(profileProvider.currentUser);
+    final legacyWallet = profileLegacyWalletKey(profileProvider.currentUser);
     if (wallet.isEmpty) {
       return;
     }
@@ -982,12 +983,18 @@ class _ProfileScreenState extends State<ProfileScreen>
       return;
     }
     _artistDataRequested = true;
-    await _loadArtistData(wallet, eventsKey: eventsKey, force: force);
+    await _loadArtistData(
+      wallet,
+      eventsKey: eventsKey,
+      legacyWallet: legacyWallet,
+      force: force,
+    );
   }
 
   Future<void> _loadArtistData(
     String walletAddress, {
     required String eventsKey,
+    String legacyWallet = '',
     bool force = false,
   }) async {
     if (!mounted) return;
@@ -1008,6 +1015,7 @@ class _ProfileScreenState extends State<ProfileScreen>
       );
       final collections = await api.getCollections(
         walletAddress: walletAddress,
+        legacyWalletAddress: legacyWallet,
         limit: 6,
       );
       final eventsResponse = await api.listEvents(limit: 100);

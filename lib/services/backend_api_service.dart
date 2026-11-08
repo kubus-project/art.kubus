@@ -402,6 +402,28 @@ bool snapshotCollectionOwnedBy(Map<String, dynamic> entry, String ownerId) {
   return false;
 }
 
+/// Merges collection lists (owner-id lookup first, legacy wallet lookup
+/// second), keeping the first occurrence of each collection id. Entries
+/// without an id are kept as they come.
+@visibleForTesting
+List<Map<String, dynamic>> mergeCollectionLists(
+  List<Map<String, dynamic>> primary,
+  List<Map<String, dynamic>> secondary, {
+  required int limit,
+}) {
+  final seen = <String>{};
+  final merged = <Map<String, dynamic>>[];
+  for (final entry in [...primary, ...secondary]) {
+    final id = (entry['id'] ?? '').toString().trim().toLowerCase();
+    if (id.isNotEmpty && !seen.add(id)) continue;
+    merged.add(entry);
+  }
+  if (limit > 0 && merged.length > limit) {
+    return merged.sublist(0, limit);
+  }
+  return merged;
+}
+
 class BackendApiService
     implements
         ArtworkBackendApi,
@@ -10849,7 +10871,42 @@ class BackendApiService
 
   /// Get user's collections
   /// GET /api/collections?walletAddress=xxx
+  ///
+  /// [walletAddress] is the owner key: a profile/account id (`ownerId`) or a
+  /// wallet. Collections created before the account became their owner have no
+  /// `owner_id` (the backend never guessed legacy ownership), so an id lookup
+  /// alone would hide them from a wallet artist. [legacyWalletAddress] is that
+  /// same profile's own wallet: when the key is an id, the wallet lookup is
+  /// merged in (deduplicated by collection id). It is never taken from anyone
+  /// else, and a walletless profile simply has none.
   Future<List<Map<String, dynamic>>> getCollections({
+    String? walletAddress,
+    int page = 1,
+    int limit = 20,
+    String? legacyWalletAddress,
+  }) async {
+    final primary = await _getCollectionsByKey(
+      walletAddress: walletAddress,
+      page: page,
+      limit: limit,
+    );
+    final key = (walletAddress ?? '').trim();
+    final legacy = (legacyWalletAddress ?? '').trim();
+    if (key.isEmpty ||
+        legacy.isEmpty ||
+        collectionsOwnerQueryKey(key) != 'ownerId' ||
+        collectionsOwnerQueryKey(legacy) != 'walletAddress') {
+      return primary;
+    }
+    final legacyRows = await _getCollectionsByKey(
+      walletAddress: legacy,
+      page: page,
+      limit: limit,
+    );
+    return mergeCollectionLists(primary, legacyRows, limit: limit);
+  }
+
+  Future<List<Map<String, dynamic>>> _getCollectionsByKey({
     String? walletAddress,
     int page = 1,
     int limit = 20,

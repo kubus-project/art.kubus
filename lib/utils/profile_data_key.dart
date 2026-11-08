@@ -40,3 +40,14 @@ String profileEventsMatchKey(UserProfile? profile) {
   if (wallet.isNotEmpty) return wallet;
   return profileArtistDataKey(profile);
 }
+
+/// The profile's own wallet, as the legacy collections fallback of
+/// [profileArtistDataKey]: only when the key is an id (collections made before
+/// accounts owned them carry the wallet, not `owner_id`). Empty for a
+/// walletless profile and for a wallet-keyed one, which needs no fallback.
+String profileLegacyWalletKey(UserProfile? profile) {
+  final key = profileArtistDataKey(profile);
+  final wallet = _trimmed(profile?.walletAddress);
+  if (key.isEmpty || wallet.isEmpty || key == wallet) return '';
+  return wallet;
+}

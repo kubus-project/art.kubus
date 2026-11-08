@@ -1719,6 +1719,7 @@ class _ProfileScreenState extends State<ProfileScreen>
     // Profile/account id first; wallet only as a legacy fallback.
     final wallet = profileArtistDataKey(profileProvider.currentUser);
     final eventsKey = profileEventsMatchKey(profileProvider.currentUser);
+    final legacyWallet = profileLegacyWalletKey(profileProvider.currentUser);
     if (wallet.isEmpty) return;
 
     final verification =
@@ -1730,11 +1731,18 @@ class _ProfileScreenState extends State<ProfileScreen>
     if (_artistDataRequested && !force) return;
 
     _artistDataRequested = true;
-    await _loadArtistData(wallet, eventsKey: eventsKey, force: force);
+    await _loadArtistData(
+      wallet,
+      eventsKey: eventsKey,
+      legacyWallet: legacyWallet,
+      force: force,
+    );
   }
 
   Future<void> _loadArtistData(String walletAddress,
-      {required String eventsKey, bool force = false}) async {
+      {required String eventsKey,
+      String legacyWallet = '',
+      bool force = false}) async {
     if (!mounted) return;
     setState(() => _artistDataLoading = true);
 
@@ -1744,8 +1752,11 @@ class _ProfileScreenState extends State<ProfileScreen>
         walletAddress,
         limit: 6,
       );
-      final collections =
-          await api.getCollections(walletAddress: walletAddress, limit: 6);
+      final collections = await api.getCollections(
+        walletAddress: walletAddress,
+        legacyWalletAddress: legacyWallet,
+        limit: 6,
+      );
       final eventsResponse = await api.listEvents(limit: 100);
       final filteredEvents = eventsResponse
           .where((event) => profileEventBelongsToWallet(event, eventsKey))
