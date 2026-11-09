@@ -8101,5 +8101,10 @@
   "verificationOnboardingInstitutionBody": "Claim the profile of your institution or request a new presence. You can also do this later from the Hub.",
   "verificationOnboardingPending": "Your request is with the editors. You can continue.",
   "verificationOnboardingApproved": "You are verified. You can continue.",
-  "verificationInstitutionAlreadyManaged": "Already managed"
+  "verificationInstitutionAlreadyManaged": "Already managed",
+  "analyticsConsentPromptTitle": "Allow optional analytics?",
+  "analyticsConsentPromptBody": "May we record how this app is used, such as the screens you open and steps like signing up, to improve it? Nothing is collected unless you accept. You can change this at any time in Settings.",
+  "analyticsConsentPromptAccept": "Accept",
+  "analyticsConsentPromptDecline": "Decline",
+  "analyticsConsentPromptSemanticsLabel": "Optional analytics choice"
 }

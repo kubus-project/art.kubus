@@ -280,9 +280,42 @@ class GuestSessionService {
   static Future<void> waitForLaunchAttributionCapture() =>
       _captureFuture ?? Future<void>.value();
 
+  /// Campaign attribution for a visitor who grants analytics after landing.
+  ///
+  /// The launch capture ran without consent and discarded the campaign
+  /// parameters, as it must. At the moment of the grant, the parameters that
+  /// are still in the current address (web) are read as a new observation, with
+  /// the current path as the entry route, exactly as the website collector does
+  /// at Accept. Nothing held from before the grant is used: if routing has
+  /// already removed them from the address, nothing is attributed. Native apps
+  /// have no current address, so a native visitor who accepts after a campaign
+  /// deep link is not attributed (only a returning visitor who had consented).
+  static Future<void> captureAttributionAtConsent({
+    Uri? current,
+    SharedPreferences? prefs,
+  }) async {
+    if (!OptionalAnalyticsConsent.instance.granted) return;
+    final Uri? uri;
+    try {
+      uri = current ?? (kIsWeb ? Uri.base : null);
+    } catch (_) {
+      return;
+    }
+    if (uri == null) return;
+    final params = <String, String>{
+      for (final entry in uri.queryParameters.entries)
+        if (utmKeys.contains(entry.key) && entry.value.trim().isNotEmpty)
+          entry.key: entry.value,
+    };
+    if (params.isEmpty) return;
+    await _captureFromParams(params,
+        prefs: prefs, entryRouteOverride: normalizeEntryRoute(uri.path));
+  }
+
   static Future<void> _captureFromParams(
     Map<String, String> params, {
     SharedPreferences? prefs,
+    String? entryRouteOverride,
   }) async {
     final p = prefs ?? await SharedPreferences.getInstance();
 
@@ -373,7 +406,7 @@ class GuestSessionService {
     // A later campaign URL is allowed to replace the stored UTM values, so its
     // landing route must replace the old route too. A navigation without UTMs
     // remains unable to overwrite the original landing surface.
-    final entryRoute = _entryRouteSnapshot;
+    final entryRoute = entryRouteOverride ?? _entryRouteSnapshot;
     if (entryRoute != null &&
         entryRoute.isNotEmpty &&
         (hasLaunchAttribution || (p.getString(entryRouteKey) ?? '').isEmpty)) {
