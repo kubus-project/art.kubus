@@ -2801,6 +2801,23 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsAnalyticsTileTitle => 'Analytics';
 
   @override
+  String get analyticsConsentPromptTitle => 'Allow optional analytics?';
+
+  @override
+  String get analyticsConsentPromptBody =>
+      'May we record how this app is used, such as the screens you open and steps like signing up, to improve it? Nothing is collected unless you accept. You can change this at any time in Settings.';
+
+  @override
+  String get analyticsConsentPromptAccept => 'Accept';
+
+  @override
+  String get analyticsConsentPromptDecline => 'Decline';
+
+  @override
+  String get analyticsConsentPromptSemanticsLabel =>
+      'Optional analytics choice';
+
+  @override
   String get settingsAnalyticsTileSubtitle => 'Help improve the app';
 
   @override

@@ -14,6 +14,7 @@ import '../account_identity.dart';
 import 'contribution_type.dart';
 import 'kubus_client_context.dart';
 import 'telemetry_config.dart';
+import 'browser_privacy_signal.dart';
 import 'optional_analytics_consent.dart';
 import 'telemetry_event.dart';
 import 'telemetry_event_queue.dart';
@@ -51,6 +52,14 @@ class TelemetryService {
 
   String _screenName = 'unknown';
   String? _screenRoute;
+
+  // The screen on display, kept in memory only and never stored or sent while
+  // optional analytics is off. It lets a grant made on this screen start the
+  // consented session from the current state (see
+  // [_startConsentedSessionFromCurrentState]) instead of waiting for the next
+  // navigation; nothing observed before the grant is replayed.
+  String? _displayedScreenName;
+  String? _displayedScreenRoute;
   DateTime? _screenEnteredAtUtc;
 
   Timer? _flushTimer;
@@ -140,6 +149,7 @@ class TelemetryService {
     await _privacyCleanup;
     // From this permission snapshot through context activation there is no await.
     _enabled = !_privacyBlocked &&
+        !browserPrivacySignal() &&
         (_enabledByBuildFlagOverride ??
             AppTelemetryConfig.enabledByBuildFlag) &&
         consent.granted;
@@ -212,10 +222,20 @@ class TelemetryService {
     setAnalyticsPreferenceEnabled(OptionalAnalyticsConsent.instance.granted);
   }
 
+  /// Whether optional analytics could be collected at all on this device: the
+  /// build enables it and no browser privacy signal (DNT/GPC) or failed privacy
+  /// cleanup blocks it. The consent prompt is shown only when this is true, so
+  /// a visitor is never asked a question whose answer cannot take effect.
+  bool get optionalCollectionPossible =>
+      !_privacyBlocked &&
+      !browserPrivacySignal() &&
+      (_enabledByBuildFlagOverride ?? AppTelemetryConfig.enabledByBuildFlag);
+
   void setAnalyticsPreferenceEnabled(bool enabled) {
     final next = enabled &&
         OptionalAnalyticsConsent.instance.granted &&
-        !_privacyBlocked;
+        !_privacyBlocked &&
+        !browserPrivacySignal();
     final previous = _enabled;
     _enabled = _initialized &&
         (_enabledByBuildFlagOverride ??
@@ -243,9 +263,45 @@ class TelemetryService {
         _sessionId = TelemetryUuid.v4();
         _sessionStartUtc = DateTime.now().toUtc();
         _refreshActorOnEnable();
+        unawaited(_startConsentedSessionFromCurrentState());
       }
       _syncClientContext();
     }
+  }
+
+  /// A grant made after launch (the consent prompt or Settings) starts a new
+  /// consented session from the current state: the campaign parameters still
+  /// in the current address (web), the app entry, and the screen on display.
+  ///
+  /// Before 2026-11-05 analytics was on by default, so every launch sent its
+  /// entry and screens. Since it became an explicit choice, a visitor who
+  /// accepts after landing produced nothing until the next navigation and no
+  /// campaign attribution at all: the launch capture had already run, without
+  /// consent, and discarded it. Nothing observed before the grant is replayed;
+  /// a withdrawal or account change (new privacy epoch) stops this midway.
+  Future<void> _startConsentedSessionFromCurrentState() async {
+    final epoch = _privacyEpoch;
+    bool stillCurrent() => epoch == _privacyEpoch && _enabled;
+    try {
+      await _privacyCleanup;
+    } catch (_) {}
+    if (!stillCurrent()) return;
+    try {
+      await GuestSessionService.captureAttributionAtConsent();
+    } catch (_) {
+      // Attribution never blocks measurement.
+    }
+    if (!stillCurrent()) return;
+    await refreshEntryAttribution();
+    if (!stillCurrent()) return;
+    await trackAppEntry();
+    final displayedName = _displayedScreenName;
+    if (!stillCurrent() || displayedName == null) return;
+    _screenName = 'unknown';
+    _screenRoute = null;
+    _screenEnteredAtUtc = null;
+    await _setActiveScreenAsync(
+        screenName: displayedName, screenRoute: _displayedScreenRoute);
   }
 
   Future<void> _clearOptionalData() async {
@@ -371,14 +427,15 @@ class TelemetryService {
     String? screenRoute,
   }) async {
     await ensureInitialized();
-    if (!_enabled) return;
-
-    _rotateSessionIfNeeded();
-
     final normalizedName =
         screenName.trim().isEmpty ? 'unknown' : screenName.trim();
     final normalizedRoute = (screenRoute ?? '').trim();
     final routeOrNull = normalizedRoute.isEmpty ? null : normalizedRoute;
+    _displayedScreenName = normalizedName;
+    _displayedScreenRoute = routeOrNull;
+    if (!_enabled) return;
+
+    _rotateSessionIfNeeded();
 
     if (_screenName == normalizedName &&
         (_screenRoute ?? '') == (routeOrNull ?? '')) {
