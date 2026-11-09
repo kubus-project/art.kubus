@@ -1,4 +1,5 @@
 import 'package:art_kubus/services/guest_session_service.dart';
+import 'package:flutter/material.dart';
 import 'package:art_kubus/services/telemetry/optional_analytics_consent.dart';
 import 'package:art_kubus/services/telemetry/telemetry_config.dart';
 import 'package:art_kubus/services/telemetry/telemetry_event.dart';
@@ -71,14 +72,37 @@ void main() {
 
     final events = await queued(queue);
     final types = events.map((e) => e.eventType).toList();
-    expect(types.where((t) => t == AppTelemetryEventTypes.appEntry),
-        hasLength(1));
+    expect(
+        types.where((t) => t == AppTelemetryEventTypes.appEntry), hasLength(1));
     final views =
         events.where((e) => e.eventType == AppTelemetryEventTypes.screenView);
     expect(views, hasLength(1));
     expect(views.single.metadata['screen_name'], 'Explore');
     // One consented session, created after the grant.
     expect(events.map((e) => e.sessionId).toSet(), hasLength(1));
+  });
+
+  test(
+      'a route reached before the choice (web /register landing) is the screen '
+      'the grant starts from: screen_view and signup_view', () async {
+    final (svc, queue) = await service();
+    svc.notifyRoute(MaterialPageRoute<void>(
+      settings: const RouteSettings(
+          name: '/register?utm_source=instagram&utm_campaign=nov-launch'),
+      builder: (_) => const SizedBox.shrink(),
+    ));
+    await settle();
+    expect(await queue.count(), 0);
+    await consent.setGranted(true);
+    await settle();
+    final types = (await queued(queue)).map((e) => e.eventType).toList();
+    expect(types, contains(AppTelemetryEventTypes.appEntry));
+    expect(types, contains(AppTelemetryEventTypes.screenView));
+    expect(types, contains(AppTelemetryEventTypes.signUpView));
+    final view = (await queued(queue))
+        .firstWhere((e) => e.eventType == AppTelemetryEventTypes.screenView);
+    // path only: the query is never a screen dimension
+    expect(view.metadata['screen_route'], '/register');
   });
 
   test('a later navigation is ordinary measurement; the entry is not repeated',
@@ -93,8 +117,8 @@ void main() {
     await svc.trackAppEntry();
     await settle();
     final types = (await queued(queue)).map((e) => e.eventType).toList();
-    expect(types.where((t) => t == AppTelemetryEventTypes.appEntry),
-        hasLength(1));
+    expect(
+        types.where((t) => t == AppTelemetryEventTypes.appEntry), hasLength(1));
     expect(types.where((t) => t == AppTelemetryEventTypes.screenView),
         hasLength(2));
   });
@@ -116,7 +140,8 @@ void main() {
     expect(await queue.count(), 0);
   });
 
-  test('a returning visitor who had consented is measured from launch as before',
+  test(
+      'a returning visitor who had consented is measured from launch as before',
       () async {
     SharedPreferences.setMockInitialValues({
       OptionalAnalyticsConsent.prefsKey:
@@ -126,8 +151,8 @@ void main() {
     await svc.trackAppEntry();
     await settle();
     final types = (await queued(queue)).map((e) => e.eventType).toList();
-    expect(types.where((t) => t == AppTelemetryEventTypes.appEntry),
-        hasLength(1));
+    expect(
+        types.where((t) => t == AppTelemetryEventTypes.appEntry), hasLength(1));
   });
 
   group('campaign attribution at the moment of consent', () {
@@ -161,8 +186,8 @@ void main() {
       await svc.refreshEntryAttribution();
       svc.setActiveScreen(screenName: 'Register', screenRoute: '/register');
       await settle();
-      final view = (await queued(queue)).lastWhere(
-          (e) => e.eventType == AppTelemetryEventTypes.screenView);
+      final view = (await queued(queue))
+          .lastWhere((e) => e.eventType == AppTelemetryEventTypes.screenView);
       expect(view.metadata['utm_campaign'], 'nov-launch');
       expect(view.metadata['entry_route'], '/register');
     });
@@ -206,8 +231,10 @@ void main() {
   });
 
   test('keys used here are the stored attribution contract', () {
-    expect(GuestSessionService.utmKeys,
-        containsAll(['utm_source', 'utm_medium', 'utm_campaign', 'utm_content']));
+    expect(
+        GuestSessionService.utmKeys,
+        containsAll(
+            ['utm_source', 'utm_medium', 'utm_campaign', 'utm_content']));
     expect(AppTelemetryConfig.sessionIdPrefsKey, isNotEmpty);
   });
 }

@@ -393,7 +393,11 @@ class TelemetryService {
 
   Future<void> _handleRoute(PageRoute<dynamic> route) async {
     await ensureInitialized();
-    if (!_enabled) return;
+    // No early return while optional analytics is off: setActiveScreen sends
+    // nothing then, it only remembers the screen on display (in memory) so a
+    // grant made on it starts from it. Returning here lost exactly the landing
+    // that matters most: a campaign visitor who accepts on /register never
+    // produced signup_view (found by the 2026-11-09 app E2E, scenario C).
 
     final rawRouteName = (route.settings.name ?? '').trim();
 
