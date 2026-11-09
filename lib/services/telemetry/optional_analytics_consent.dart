@@ -52,6 +52,14 @@ class OptionalAnalyticsConsent extends ChangeNotifier {
   /// from "visitor who consented after landing".
   String? get firstResolvedRevision => _firstResolvedRevision;
 
+  /// True when the durable choice has been read and there is none: no valid
+  /// receipt for the current family consent context, Accept or Decline. This
+  /// is when the visitor is asked. A recorded Decline is a choice and is never
+  /// asked again; a failed write leaves no receipt, so the question stays (it
+  /// is never answered by a grant); corrupt or legacy preferences (including a
+  /// legacy `enableAnalytics=true`) are no receipt and therefore no consent.
+  bool get needsChoice => _resolved && _revision == null;
+
   void _markResolved(String? revision) {
     if (_resolved) return;
     _resolved = true;

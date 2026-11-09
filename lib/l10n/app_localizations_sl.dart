@@ -19205,4 +19205,20 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get verificationInstitutionAlreadyManaged => 'Že upravljan profil';
+
+  @override
+  String get analyticsConsentPromptTitle => 'Dovolite izbirno analitiko?';
+
+  @override
+  String get analyticsConsentPromptBody =>
+      'Ali smemo beležiti, kako uporabljate aplikacijo, na primer katere zaslone odprete in korake, kot je registracija, da jo izboljšamo? Brez vašega soglasja ne zbiramo ničesar. Izbiro lahko kadar koli spremenite v nastavitvah.';
+
+  @override
+  String get analyticsConsentPromptAccept => 'Sprejmi';
+
+  @override
+  String get analyticsConsentPromptDecline => 'Zavrni';
+
+  @override
+  String get analyticsConsentPromptSemanticsLabel => 'Izbira izbirne analitike';
 }

@@ -290,37 +290,42 @@ class SharedSettingsToggleRow extends StatelessWidget {
     final resolvedSubtitleStyle = subtitleStyle ??
         KubusTextStyles.sectionSubtitle.copyWith(color: roles.foregroundMuted);
 
-    return Padding(
-      padding: padding,
-      child: Row(
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(title, style: resolvedTitleStyle),
-                Text(subtitle, style: resolvedSubtitleStyle),
-              ],
+    // One semantics node: the switch is announced with its title and subtitle
+    // ("Analytics, Help improve the app, switch, off"). Without this every
+    // settings switch was a nameless "switch" to screen readers.
+    return MergeSemantics(
+      child: Padding(
+        padding: padding,
+        child: Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(title, style: resolvedTitleStyle),
+                  Text(subtitle, style: resolvedSubtitleStyle),
+                ],
+              ),
             ),
-          ),
-          SizedBox(width: spacing),
-          // Adaptive: platform-native toggle on iOS/macOS, Material elsewhere.
-          Switch.adaptive(
-            key: switchKey,
-            value: effectiveValue,
-            onChanged: interactive ? onChanged : null,
-            activeTrackColor: roles.active,
-            activeThumbColor: roles.onActive,
-            inactiveTrackColor: roles.surfaceRaised,
-            inactiveThumbColor: roles.foregroundMuted,
-            trackOutlineColor: WidgetStateProperty.resolveWith(
-              (states) => states.contains(WidgetState.selected)
-                  ? roles.active
-                  : roles.ruleStrong,
+            SizedBox(width: spacing),
+            // Adaptive: platform-native toggle on iOS/macOS, Material elsewhere.
+            Switch.adaptive(
+              key: switchKey,
+              value: effectiveValue,
+              onChanged: interactive ? onChanged : null,
+              activeTrackColor: roles.active,
+              activeThumbColor: roles.onActive,
+              inactiveTrackColor: roles.surfaceRaised,
+              inactiveThumbColor: roles.foregroundMuted,
+              trackOutlineColor: WidgetStateProperty.resolveWith(
+                (states) => states.contains(WidgetState.selected)
+                    ? roles.active
+                    : roles.ruleStrong,
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
