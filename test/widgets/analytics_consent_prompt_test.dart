@@ -119,7 +119,8 @@ void main() {
     expect(find.text('Zavrni'), findsOneWidget);
   });
 
-  testWidgets('Decline is recorded, nothing is granted, and it is not asked again',
+  testWidgets(
+      'Decline is recorded, nothing is granted, and it is not asked again',
       (tester) async {
     await pumpHost(tester);
     await tapAndSettle(tester, _decline);
