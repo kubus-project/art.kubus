@@ -297,6 +297,13 @@ class TelemetryService {
     await trackAppEntry();
     final displayedName = _displayedScreenName;
     if (!stillCurrent() || displayedName == null) return;
+    // A navigation during this sequence has already emitted the screen on
+    // display (as ordinary consented measurement): do not emit it twice.
+    if (_screenEnteredAtUtc != null &&
+        _screenName == displayedName &&
+        (_screenRoute ?? '') == (_displayedScreenRoute ?? '')) {
+      return;
+    }
     _screenName = 'unknown';
     _screenRoute = null;
     _screenEnteredAtUtc = null;

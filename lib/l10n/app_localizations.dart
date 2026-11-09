@@ -4966,36 +4966,6 @@ abstract class AppLocalizations {
   /// **'Analytics'**
   String get settingsAnalyticsTileTitle;
 
-  /// No description provided for @analyticsConsentPromptTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Allow optional analytics?'**
-  String get analyticsConsentPromptTitle;
-
-  /// No description provided for @analyticsConsentPromptBody.
-  ///
-  /// In en, this message translates to:
-  /// **'May we record how this app is used, such as the screens you open and steps like signing up, to improve it? Nothing is collected unless you accept. You can change this at any time in Settings.'**
-  String get analyticsConsentPromptBody;
-
-  /// No description provided for @analyticsConsentPromptAccept.
-  ///
-  /// In en, this message translates to:
-  /// **'Accept'**
-  String get analyticsConsentPromptAccept;
-
-  /// No description provided for @analyticsConsentPromptDecline.
-  ///
-  /// In en, this message translates to:
-  /// **'Decline'**
-  String get analyticsConsentPromptDecline;
-
-  /// No description provided for @analyticsConsentPromptSemanticsLabel.
-  ///
-  /// In en, this message translates to:
-  /// **'Optional analytics choice'**
-  String get analyticsConsentPromptSemanticsLabel;
-
   /// No description provided for @settingsAnalyticsTileSubtitle.
   ///
   /// In en, this message translates to:
@@ -33044,6 +33014,36 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Already managed'**
   String get verificationInstitutionAlreadyManaged;
+
+  /// No description provided for @analyticsConsentPromptTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Allow optional analytics?'**
+  String get analyticsConsentPromptTitle;
+
+  /// No description provided for @analyticsConsentPromptBody.
+  ///
+  /// In en, this message translates to:
+  /// **'May we record how this app is used, such as the screens you open and steps like signing up, to improve it? Nothing is collected unless you accept. You can change this at any time in Settings.'**
+  String get analyticsConsentPromptBody;
+
+  /// No description provided for @analyticsConsentPromptAccept.
+  ///
+  /// In en, this message translates to:
+  /// **'Accept'**
+  String get analyticsConsentPromptAccept;
+
+  /// No description provided for @analyticsConsentPromptDecline.
+  ///
+  /// In en, this message translates to:
+  /// **'Decline'**
+  String get analyticsConsentPromptDecline;
+
+  /// No description provided for @analyticsConsentPromptSemanticsLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Optional analytics choice'**
+  String get analyticsConsentPromptSemanticsLabel;
 }
 
 class _AppLocalizationsDelegate
