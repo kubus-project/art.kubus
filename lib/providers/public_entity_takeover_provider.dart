@@ -113,7 +113,11 @@ class PublicEntityTakeoverProvider extends ChangeNotifier {
     return label.trim();
   }
 
-  void seed({required Uri initialUri, required ShareDeepLinkTarget target}) {
+  void seed({
+    required Uri initialUri,
+    required ShareDeepLinkTarget target,
+    Uri? entryUri,
+  }) {
     if (!AppConfig.isFeatureEnabled('publicFlutterTakeover')) {
       return;
     }
@@ -128,7 +132,7 @@ class PublicEntityTakeoverProvider extends ChangeNotifier {
     final startupBrowserRoute =
         PublicEntryNavigation.instance.takeStartupBrowserRouteFor(expectedPath);
     final browserUri = startupBrowserRoute == null
-        ? initialUri
+        ? (entryUri ?? initialUri)
         : Uri.parse(startupBrowserRoute);
 
     final next = PublicEntityTakeoverTarget(

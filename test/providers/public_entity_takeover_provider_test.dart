@@ -9,6 +9,24 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 
 void main() {
+  test('a normalized share entry retains its original browser route', () {
+    final navigation = PublicEntryNavigation.instance;
+    navigation.resetForTest();
+    final provider = PublicEntityTakeoverProvider();
+    provider.seed(
+      initialUri: Uri.parse('/en/artworks/art-42?lang=en#details'),
+      entryUri: Uri.parse('/a/art-42?lang=en#details'),
+      target: const ShareDeepLinkTarget(
+        type: ShareEntityType.artwork,
+        id: 'art-42',
+        localeCode: 'en',
+      ),
+    );
+    expect(provider.target?.path, '/en/artworks/art-42');
+    expect(navigation.pendingEntryUrl, '/a/art-42?lang=en#details');
+    navigation.resetForTest();
+  });
+
   test('keeps the frozen startup fragment and consumes it only once', () {
     final navigation = PublicEntryNavigation.instance;
     navigation.resetForTest();

@@ -83,7 +83,11 @@ class _DeepLinkBootstrapScreenState extends State<DeepLinkBootstrapScreen> {
           : ShellRoutes.main,
     );
     final takeover = context.read<PublicEntityTakeoverProvider>();
-    takeover.seed(initialUri: canonicalUri, target: normalizedTarget);
+    takeover.seed(
+      initialUri: canonicalUri,
+      target: normalizedTarget,
+      entryUri: widget.initialUri,
+    );
     final bootstrap = takeover.validateBootstrap(
       raw: readPublicEntityBootstrap(),
       initialUri: widget.initialUri,
