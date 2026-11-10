@@ -220,6 +220,7 @@ class PublicEntryNavigation extends ChangeNotifier with WidgetsBindingObserver {
     if (claim == null) return null;
     final entry = _entry;
     if (entry != null && entry.matches(claim.type, claim.entityId)) {
+      final firstClaim = !_entryWasClaimed;
       _entryWasClaimed = true;
       final original = Uri.tryParse(entry.browserRoute);
       final localized = Uri.tryParse(claim.defaultUrl);
@@ -228,6 +229,9 @@ class PublicEntryNavigation extends ChangeNotifier with WidgetsBindingObserver {
           original.path == localized.path) {
         return entry.browserRoute;
       }
+      // Canonicalizing a share URL is not a new visit. Keep the incoming
+      // browser entry instead of inserting a second history step.
+      if (firstClaim) _replaceNextAddress = true;
       return localized
           .replace(
             query: original.hasQuery ? original.query : null,

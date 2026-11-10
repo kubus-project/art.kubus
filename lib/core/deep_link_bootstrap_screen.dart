@@ -12,7 +12,10 @@ import '../providers/collections_provider.dart';
 import '../providers/public_entity_takeover_provider.dart';
 import '../services/public_entity_takeover_bridge.dart';
 import '../services/share/share_deep_link_parser.dart';
+import '../services/share/share_types.dart';
 import 'app_initializer.dart';
+import 'public_entry_navigation.dart';
+import 'shell_routes.dart';
 import 'startup_trace.dart';
 
 /// Artwork API identity behind a validated public presentation. A collectible's
@@ -57,6 +60,17 @@ class _DeepLinkBootstrapScreenState extends State<DeepLinkBootstrapScreen> {
       );
     }
     context.read<DeepLinkProvider>().setPending(widget.target);
+    // Short share links need the same startup history protection as canonical
+    // URLs. Otherwise the transient shell replaces the entry before the
+    // entity paints, leaving /main underneath the profile in browser history.
+    PublicEntryNavigation.instance.setEntry(
+      type: widget.target.type,
+      entityId: widget.target.id,
+      browserRoute: widget.initialUri.toString(),
+      shellRoute: widget.target.type == ShareEntityType.marker
+          ? ShellRoutes.map
+          : ShellRoutes.main,
+    );
     final takeover = context.read<PublicEntityTakeoverProvider>();
     takeover.seed(initialUri: widget.initialUri, target: widget.target);
     final bootstrap = takeover.validateBootstrap(
