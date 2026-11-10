@@ -301,17 +301,17 @@ class _UserProfileScreenState extends State<UserProfileScreen>
     final isLarge = !isCommunityOverlay && screenWidth >= 1200;
 
     if (isLoading) {
-      return Scaffold(
+      return _holdProfileUrl(Scaffold(
         backgroundColor: Colors.transparent,
         body: const Center(child: AppLoading()),
-      );
+      ));
     }
 
     if (user == null) {
       if (_profileController.criticalLoadFailedTransiently) {
         // The lookup failed; the profile may exist. Offer a retry instead of
         // reporting it as not found (same copy as UnavailableEntityScaffold).
-        return Scaffold(
+        return _holdProfileUrl(Scaffold(
           backgroundColor: Colors.transparent,
           body: Center(
             child: EmptyStateCard(
@@ -323,9 +323,9 @@ class _UserProfileScreenState extends State<UserProfileScreen>
               onAction: _retryCriticalLoad,
             ),
           ),
-        );
+        ));
       }
-      return Scaffold(
+      return _holdProfileUrl(Scaffold(
         backgroundColor: Colors.transparent,
         body: Center(
           child: EmptyStateCard(
@@ -334,7 +334,7 @@ class _UserProfileScreenState extends State<UserProfileScreen>
             description: l10n.userProfileNotFoundDescription,
           ),
         ),
-      );
+      ));
     }
 
     final isArtist = user!.isArtist;
@@ -468,6 +468,13 @@ class _UserProfileScreenState extends State<UserProfileScreen>
       child: content,
     );
   }
+
+  Widget _holdProfileUrl(Widget child) => PublicEntityTakeoverReady(
+        type: ShareEntityType.profile,
+        entityId: widget.userId,
+        signalReady: false,
+        child: child,
+      );
 
   /// What one [ProfileSection] contributes to the content column(s); empty when
   /// the section does not apply to this profile or surface. Identity and the
