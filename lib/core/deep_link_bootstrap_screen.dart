@@ -59,7 +59,18 @@ class _DeepLinkBootstrapScreenState extends State<DeepLinkBootstrapScreen> {
         'DeepLinkBootstrapScreen: seeding pending target: ${widget.target.type} id=${widget.target.id}',
       );
     }
-    context.read<DeepLinkProvider>().setPending(widget.target);
+    final languageCode = widget.target.localeCode ??
+        (Localizations.maybeLocaleOf(context)?.languageCode == 'sl'
+            ? 'sl'
+            : 'en');
+    final normalizedTarget = widget.target.copyWith(localeCode: languageCode);
+    final canonicalPath = PublicEntityTakeoverProvider.localizedCanonicalPath(
+      widget.target.type,
+      widget.target.id,
+      languageCode,
+    );
+    final canonicalUri = widget.initialUri.replace(path: canonicalPath);
+    context.read<DeepLinkProvider>().setPending(normalizedTarget);
     // Short share links need the same startup history protection as canonical
     // URLs. Otherwise the transient shell replaces the entry before the
     // entity paints, leaving /main underneath the profile in browser history.
@@ -72,7 +83,7 @@ class _DeepLinkBootstrapScreenState extends State<DeepLinkBootstrapScreen> {
           : ShellRoutes.main,
     );
     final takeover = context.read<PublicEntityTakeoverProvider>();
-    takeover.seed(initialUri: widget.initialUri, target: widget.target);
+    takeover.seed(initialUri: canonicalUri, target: normalizedTarget);
     final bootstrap = takeover.validateBootstrap(
       raw: readPublicEntityBootstrap(),
       initialUri: widget.initialUri,
