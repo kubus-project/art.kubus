@@ -56,8 +56,8 @@ class _ArtworkCreatorBylineState extends State<ArtworkCreatorByline> {
               ?.toString();
         } else {
           // UserProfile model is not imported here; best-effort extraction.
-          wallet =
-              (payload?.walletAddress ?? payload?.wallet_address)?.toString();
+          wallet = (payload?.walletAddress ?? payload?.wallet_address)
+              ?.toString();
         }
       } catch (_) {
         wallet = null;
@@ -66,7 +66,8 @@ class _ArtworkCreatorBylineState extends State<ArtworkCreatorByline> {
       final normalized = (wallet ?? '').trim();
       if (normalized.isEmpty) return;
       if (_creators.any(
-          (c) => (c.userId ?? '').toLowerCase() == normalized.toLowerCase())) {
+        (c) => (c.userId ?? '').toLowerCase() == normalized.toLowerCase(),
+      )) {
         _resolveCreatorNames(forceRefresh: true);
       }
     });
@@ -77,6 +78,7 @@ class _ArtworkCreatorBylineState extends State<ArtworkCreatorByline> {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.artwork.id != widget.artwork.id ||
         oldWidget.artwork.artist != widget.artwork.artist ||
+        oldWidget.artwork.authorProfile != widget.artwork.authorProfile ||
         oldWidget.artwork.metadata != widget.artwork.metadata) {
       _refreshCreators();
     }
@@ -103,8 +105,11 @@ class _ArtworkCreatorBylineState extends State<ArtworkCreatorByline> {
 
     final futures = ids.map((id) async {
       try {
-        final User? user = await UserService.getUserById(id,
-            forceRefresh: forceRefresh, includeAchievements: false);
+        final User? user = await UserService.getUserById(
+          id,
+          forceRefresh: forceRefresh,
+          includeAchievements: false,
+        );
         final name = (user?.name ?? '').trim();
         final username = (user?.username ?? '').trim();
         if (name.isNotEmpty || username.isNotEmpty) {
@@ -148,8 +153,9 @@ class _ArtworkCreatorBylineState extends State<ArtworkCreatorByline> {
       // Example: EN "by {artist}" -> ["by ", ""]
       // Some locales might place the placeholder elsewhere.
       final marker = '\u{FFFF}';
-      final template =
-          (l10n != null) ? l10n.commonByArtist(marker) : 'by $marker';
+      final template = (l10n != null)
+          ? l10n.commonByArtist(marker)
+          : 'by $marker';
       final parts = template.split(marker);
       prefix = parts.isNotEmpty ? parts.first : '';
       suffix = parts.length > 1 ? parts.sublist(1).join(marker) : '';
@@ -157,8 +163,9 @@ class _ArtworkCreatorBylineState extends State<ArtworkCreatorByline> {
 
     final linkStyle = baseStyle.copyWith(
       color: colorScheme.primary,
-      decoration:
-          widget.linkToProfile ? TextDecoration.underline : TextDecoration.none,
+      decoration: widget.linkToProfile
+          ? TextDecoration.underline
+          : TextDecoration.none,
       decorationColor: colorScheme.primary,
     );
 
@@ -178,12 +185,14 @@ class _ArtworkCreatorBylineState extends State<ArtworkCreatorByline> {
           ? _resolvedIdentityByUserId[userId]
           : null;
       // A platform profile must never replace a recorded authorship label.
-      final primaryLabel = (creator.hasRecordedLabel
-              ? creator.label
-              : (resolved?.name ?? creator.label))
-          .trim();
+      final primaryLabel =
+          (creator.hasRecordedLabel
+                  ? creator.label
+                  : (resolved?.name ?? creator.label))
+              .trim();
       final rawUsername = (resolved?.username ?? creator.username);
-      final username = (widget.showUsername &&
+      final username =
+          (widget.showUsername &&
               rawUsername != null &&
               rawUsername.trim().isNotEmpty)
           ? rawUsername.trim()
@@ -260,11 +269,13 @@ List<_CreatorRef> _extractCreators(Artwork artwork) {
 
     final display =
         (safeLabel.isNotEmpty && !WalletUtils.looksLikeWallet(safeLabel))
-            ? safeLabel
-            : (_compactWallet(WalletUtils.looksLikeWallet(safeUserId)
+        ? safeLabel
+        : (_compactWallet(
+                WalletUtils.looksLikeWallet(safeUserId)
                     ? safeUserId
-                    : safeLabel) ??
-                'Unknown artist');
+                    : safeLabel,
+              ) ??
+              'Unknown artist');
 
     creators.add(
       _CreatorRef(
@@ -291,7 +302,8 @@ List<_CreatorRef> _extractCreators(Artwork artwork) {
         );
       } else if (entry is Map) {
         final map = entry.cast<dynamic, dynamic>();
-        final userId = map['userId'] ??
+        final userId =
+            map['userId'] ??
             map['user_id'] ??
             map['id'] ??
             map['walletAddress'] ??
@@ -299,7 +311,8 @@ List<_CreatorRef> _extractCreators(Artwork artwork) {
             map['wallet'] ??
             map['publicActorId'] ??
             map['public_actor_id'];
-        final label = map['displayName'] ??
+        final label =
+            map['displayName'] ??
             map['display_name'] ??
             map['username'] ??
             map['artistName'] ??
@@ -307,9 +320,10 @@ List<_CreatorRef> _extractCreators(Artwork artwork) {
             map['name'];
         final username = map['username'];
         add(
-            userId: userId?.toString(),
-            label: label?.toString(),
-            username: username?.toString());
+          userId: userId?.toString(),
+          label: label?.toString(),
+          username: username?.toString(),
+        );
       }
     }
   }
@@ -325,11 +339,18 @@ List<_CreatorRef> _extractCreators(Artwork artwork) {
   // Generic wallet/creator ownership identifies the contributor, not the
   // cultural author. Link only an explicitly recorded artist identity.
   if (creators.isEmpty) {
-    final artistProfile = (meta?['artistUserId'] ??
-            meta?['artist_user_id'] ??
-            meta?['artistWallet'] ??
-            meta?['artistWalletAddress'])
-        ?.toString();
+    // A single explicit attribution may identify the recorded artist. Never
+    // assign that one profile to an ambiguous multi-artist byline.
+    final explicitAuthor = bylineLabels.length <= 1
+        ? artwork.authorProfile
+        : null;
+    final artistProfile =
+        (explicitAuthor?.profileId ??
+                meta?['artistUserId'] ??
+                meta?['artist_user_id'] ??
+                meta?['artistWallet'] ??
+                meta?['artistWalletAddress'])
+            ?.toString();
 
     final rawArtistName = meta?['artistName'] ?? meta?['artist_name'];
     final artistName = rawArtistName?.toString().trim();
@@ -338,7 +359,11 @@ List<_CreatorRef> _extractCreators(Artwork artwork) {
         : (artistName != null && artistName.isNotEmpty ? artistName : '');
     final label = _isRecordedArtist(labelCandidate) ? labelCandidate : '';
 
-    add(userId: artistProfile, label: label);
+    add(
+      userId: artistProfile,
+      label: label,
+      username: explicitAuthor?.username,
+    );
   }
 
   if (bylineLabels.isNotEmpty) {
@@ -375,10 +400,9 @@ List<_CreatorRef> _extractCreators(Artwork artwork) {
 void _addBylineLabel(List<_CreatorRef> creators, String label) {
   final safeLabel = _normalizeBylineLabel(label);
   if (safeLabel == null) return;
-  creators.add(_CreatorRef(
-    label: safeLabel,
-    hasRecordedLabel: _isRecordedArtist(label),
-  ));
+  creators.add(
+    _CreatorRef(label: safeLabel, hasRecordedLabel: _isRecordedArtist(label)),
+  );
 }
 
 String? _normalizeBylineLabel(String label) {
@@ -395,7 +419,8 @@ bool _isRecordedArtist(String label) =>
 
 List<String> _extractCreatorBylineLabels(Map<String, dynamic>? meta) {
   if (meta == null || meta.isEmpty) return const <String>[];
-  final raw = meta['artist_name_byline'] ??
+  final raw =
+      meta['artist_name_byline'] ??
       meta['artistNameByline'] ??
       meta['artist_byline'] ??
       meta['artistByline'];
