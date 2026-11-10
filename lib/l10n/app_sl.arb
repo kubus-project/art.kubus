@@ -8046,5 +8046,10 @@
   "artworkAuthoredBySelfLabel": "Sem ustvarjalec",
   "artworkAuthoredBySelfHelper": "Ime umetnika se nastavi na ime tvojega profila, delo pa se pripiše tvojemu profilu.",
   "artworkAuthoredBySelfUnavailable": "Prijavi se in dodaj prikazno ime v svoj profil, da lahko delo pripišeš sebi.",
-  "artworkAuthoredBySelfFieldHelper": "Nastavljeno iz imena tvojega profila."
+  "artworkAuthoredBySelfFieldHelper": "Nastavljeno iz imena tvojega profila.",
+  "analyticsConsentPromptTitle": "Dovolite izbirno analitiko?",
+  "analyticsConsentPromptBody": "Ali smemo beležiti, kako uporabljate aplikacijo, na primer katere zaslone odprete in korake, kot je registracija, da jo izboljšamo? Brez vašega soglasja ne zbiramo ničesar. Izbiro lahko kadar koli spremenite v nastavitvah.",
+  "analyticsConsentPromptAccept": "Sprejmi",
+  "analyticsConsentPromptDecline": "Zavrni",
+  "analyticsConsentPromptSemanticsLabel": "Izbira izbirne analitike"
 }

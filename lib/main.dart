@@ -126,6 +126,7 @@ import 'services/webgl_context_helper.dart';
 
 import 'widgets/glass_components.dart';
 import 'widgets/security_gate_overlay.dart';
+import 'widgets/analytics_consent_prompt.dart';
 import 'widgets/auth/pending_action_continuation.dart';
 
 import 'screens/collab/invites_inbox_screen.dart';
@@ -1797,12 +1798,16 @@ class _ArtKubusState extends State<ArtKubus> with WidgetsBindingObserver {
             ),
             child: KubusProductBackground(
               child: SecurityGateOverlay(
-                // Mounted above the navigator so a restored pending action
-                // can be confirmed on whichever entity the visitor was
-                // returned to, on mobile and desktop alike.
-                child: PendingActionContinuationHost(
-                  navigatorKey: appNavigatorKey,
-                  child: child ?? const SizedBox.shrink(),
+                // The optional analytics choice, asked once on every route and
+                // platform until it is recorded; below the security gate.
+                child: AnalyticsConsentHost(
+                  // Mounted above the navigator so a restored pending action
+                  // can be confirmed on whichever entity the visitor was
+                  // returned to, on mobile and desktop alike.
+                  child: PendingActionContinuationHost(
+                    navigatorKey: appNavigatorKey,
+                    child: child ?? const SizedBox.shrink(),
+                  ),
                 ),
               ),
             ),
