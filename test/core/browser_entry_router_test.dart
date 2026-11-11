@@ -26,6 +26,84 @@ void main() {
     }
   });
 
+  test('history stores desktop shell independently from the previous URL',
+      () async {
+    final uri = Uri.parse('/en/artworks/a1');
+    final shell = BrowserEntryRoute.fromUri(uri, historyState: {
+      'desktopShell': true,
+      'historyBack': '/en/profiles/p1',
+    });
+    final restored = await parser
+        .parseRouteInformation(parser.restoreRouteInformation(shell));
+    expect(restored.desktopShell, isTrue);
+    final standalone = BrowserEntryRoute.fromUri(uri, historyState: {
+      'historyBack': '/en/profiles/p1',
+    });
+    expect(standalone.desktopShell, isFalse);
+    expect(standalone, isNot(shell));
+  });
+
+  testWidgets(
+      'same URL with a different desktop presentation restores the route',
+      (tester) async {
+    final uri = Uri.parse('/en/artworks/a1');
+    final first = BrowserEntryRoute.fromUri(uri);
+    final restored = <String>[];
+    final delegate = _restoringDelegate(first, restored);
+    await _pumpDelegate(tester, delegate);
+    await delegate.setNewRoutePath(
+        BrowserEntryRoute.fromUri(uri, historyState: {'desktopShell': true}));
+    expect(restored, [uri.toString()]);
+    expect(delegate.currentConfiguration.desktopShell, isTrue);
+    await tester.pump(const Duration(seconds: 1));
+  });
+
+  testWidgets('shell Back fallback records the visible desktop presentation',
+      (tester) async {
+    final initial = BrowserEntryRoute.fromUri(Uri.parse('/en/profiles/p1'));
+    final delegate = _restoringDelegate(initial, <String>[]);
+    await _pumpDelegate(tester, delegate);
+    delegate.reportVisibleBack(Uri.parse('/en/artworks/a1'),
+        desktopShell: true);
+    expect(delegate.currentConfiguration.desktopShell, isTrue);
+    expect(
+        delegate.currentConfiguration.toHistoryState()['desktopShell'], isTrue);
+  });
+
+  testWidgets('expected browser Back restores when stored presentation differs',
+      (tester) async {
+    final artwork = Uri.parse('/en/artworks/a1');
+    final profile = Uri.parse('/en/profiles/p1');
+    final history = BrowserHistoryMirror()..restore(profile, below: artwork);
+    var steps = 0;
+    final restored = <String>[];
+    final delegate = _restoringDelegate(
+        BrowserEntryRoute.fromUri(profile), restored,
+        history: history, stepBrowserBack: () => steps++);
+    await _pumpDelegate(tester, delegate);
+    delegate.reportVisibleBack(artwork, desktopShell: true);
+    expect(steps, 1);
+    await delegate.setNewRoutePath(
+        BrowserEntryRoute.fromUri(artwork, historyState: {'historyIndex': 0}));
+    expect(restored, [artwork.toString()]);
+    expect(delegate.currentConfiguration.desktopShell, isFalse);
+    await tester.pump(const Duration(seconds: 1));
+  });
+
+  testWidgets(
+      'same-entity URL correction preserves shell but a different entity does not',
+      (tester) async {
+    final initial = BrowserEntryRoute.fromUri(Uri.parse('/en/artworks/a1'),
+        historyState: {'desktopShell': true});
+    final delegate = _restoringDelegate(initial, <String>[]);
+    await _pumpDelegate(tester, delegate);
+    delegate.reportVisibleUri(Uri.parse('/sl/umetnine/a1?lang=sl'),
+        replace: true);
+    expect(delegate.currentConfiguration.desktopShell, isTrue);
+    delegate.reportVisibleUri(Uri.parse('/sl/umetnine/a2'), replace: true);
+    expect(delegate.currentConfiguration.desktopShell, isFalse);
+  });
+
   test('marker config keeps map shell and selected marker separate', () async {
     const url = '/sl/zemljevid/marker-1?source=qa#map';
     final initial = BrowserEntryRoute.fromUri(Uri.parse(url));

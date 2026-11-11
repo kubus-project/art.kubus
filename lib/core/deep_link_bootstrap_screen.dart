@@ -34,10 +34,12 @@ class DeepLinkBootstrapScreen extends StatefulWidget {
     super.key,
     required this.target,
     required this.initialUri,
+    this.restoreDesktopShell = false,
   });
 
   final ShareDeepLinkTarget target;
   final Uri initialUri;
+  final bool restoreDesktopShell;
 
   @override
   State<DeepLinkBootstrapScreen> createState() =>
@@ -87,6 +89,7 @@ class _DeepLinkBootstrapScreenState extends State<DeepLinkBootstrapScreen> {
       initialUri: canonicalUri,
       target: normalizedTarget,
       entryUri: widget.initialUri,
+      restoreDesktopShell: widget.restoreDesktopShell,
     );
     final bootstrap = takeover.validateBootstrap(
       raw: readPublicEntityBootstrap(),

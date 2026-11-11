@@ -29,6 +29,8 @@ class PublicEntityTakeoverTarget {
 
 class PublicEntityTakeoverProvider extends ChangeNotifier {
   PublicEntityTakeoverTarget? _target;
+  bool _restoreDesktopShell = false;
+  bool get restoreDesktopShell => _restoreDesktopShell;
   Map<String, dynamic>? _bootstrap;
   bool _readyDispatched = false;
   bool _failureDispatched = false;
@@ -117,7 +119,9 @@ class PublicEntityTakeoverProvider extends ChangeNotifier {
     required Uri initialUri,
     required ShareDeepLinkTarget target,
     Uri? entryUri,
+    bool restoreDesktopShell = false,
   }) {
+    _restoreDesktopShell = restoreDesktopShell;
     if (!AppConfig.isFeatureEnabled('publicFlutterTakeover')) {
       return;
     }

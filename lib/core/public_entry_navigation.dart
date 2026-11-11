@@ -7,7 +7,7 @@ import '../services/share/share_types.dart';
 
 /// Direction of navigation that happens in the desktop shell instead of the
 /// root Navigator, so the URL observer cannot infer it from NavigatorObserver.
-enum ShellRouteNavigation { forward, back }
+enum ShellRouteNavigation { forward, canonicalForward, back }
 
 /// Keeps browser history coherent for app-native public entry
 /// (docs/APP_NATIVE_PUBLIC_ENTRY.md).
