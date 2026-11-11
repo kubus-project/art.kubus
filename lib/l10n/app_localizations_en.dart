@@ -11138,16 +11138,16 @@ class AppLocalizationsEn extends AppLocalizations {
       'Trending artworks will appear here';
 
   @override
-  String get desktopHomeTopCreatorsTitle => 'Top Creators';
+  String get desktopHomeTopCreatorsTitle => 'Top Artists';
 
   @override
-  String get desktopHomeTopCreatorsLoadFailed => 'Unable to load creators.';
+  String get desktopHomeTopCreatorsLoadFailed => 'Unable to load artists.';
 
   @override
-  String get desktopHomeTopCreatorsEmpty => 'Top creators will appear here';
+  String get desktopHomeTopCreatorsEmpty => 'Top artists will appear here';
 
   @override
-  String get desktopHomeCreatorFallbackName => 'Creator';
+  String get desktopHomeCreatorFallbackName => 'Artist';
 
   @override
   String get homeRailsUnavailableTitle => 'Home rails unavailable';

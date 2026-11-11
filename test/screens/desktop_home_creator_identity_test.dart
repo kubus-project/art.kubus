@@ -1,53 +1,59 @@
-import 'package:art_kubus/models/artwork.dart';
-import 'package:art_kubus/models/profile_identity_data.dart';
 import 'package:art_kubus/screens/desktop/desktop_home_screen.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:latlong2/latlong.dart';
 
 void main() {
-  Artwork artwork({String? wallet, String artist = ''}) => Artwork(
-        id: 'public-artwork',
-        title: 'Public artwork',
-        artist: artist,
-        walletAddress: wallet,
-        description: '',
-        position: const LatLng(0, 0),
-        rewards: 0,
-        createdAt: DateTime.utc(2026),
-      );
-
-  ProfileIdentityData identityFor(Artwork artwork) {
-    final rows = buildDesktopTopCreatorSummaries(
-      communityPosts: const [],
-      artworks: [artwork],
-      resolvedIdentities: const {},
-      fallbackLabel: 'Creator',
-    );
-    return ProfileIdentityData.fromIdentityPayload(
-      {'author': rows.single},
-      fallbackLabel: 'Creator',
-    );
-  }
-
-  test('fallback creator remains display-only through summary projection', () {
-    final identity = identityFor(artwork());
-    expect(identity.label, 'Creator');
-    expect(identity.navigationIdentifier, isNull);
-    expect(identity.canOpenProfile, isFalse);
+  test('directory profiles are unique by id and keep the supplied ranking', () {
+    final rows = selectDesktopTopArtists([
+      {
+        'id': 'admin',
+        'isArtist': true,
+        'displayName': 'Same Name',
+        'username': 'first'
+      },
+      {
+        'id': 'dao',
+        'isArtist': true,
+        'displayName': 'Same Name',
+        'username': 'second'
+      },
+      {'id': 'admin', 'isArtist': true, 'displayName': 'Duplicate'},
+      {'id': 'uploader', 'isArtist': false, 'isVerified': true},
+      {'id': '', 'isArtist': true},
+      {'id': 'wallet', 'isArtist': true, 'walletAddress': 'wallet'},
+    ]);
+    expect(rows.map((row) => row['id']), ['admin', 'dao', 'wallet']);
+    final first = desktopArtistIdentity(rows.first, fallbackLabel: 'Artist');
+    expect(first.label, 'Same Name');
+    expect(first.handle, '@first');
+    expect(first.navigationIdentifier, 'admin');
+    expect(first.isArtist, isTrue);
+    expect(first.isVerified, isFalse);
+    expect(
+        desktopArtistIdentity(rows[1], fallbackLabel: 'Artist')
+            .navigationIdentifier,
+        'dao');
   });
 
-  test('named creator without wallet remains display-only', () {
-    final identity = identityFor(artwork(artist: 'Mina Artist'));
-    expect(identity.label, 'Mina Artist');
-    expect(identity.canOpenProfile, isFalse);
+  test('profile identity falls back to real handle then neutral label', () {
+    final handle = desktopArtistIdentity(
+        {'id': 'a', 'username': 'real_handle', 'avatar': '/avatar.png'},
+        fallbackLabel: 'Artist');
+    expect(handle.label, 'real_handle');
+    expect(handle.handle, '@real_handle');
+    expect(handle.avatarUrl, '/avatar.png');
+    final unnamed = desktopArtistIdentity({'id': 'b', 'isVerified': true},
+        fallbackLabel: 'Artist');
+    expect(unnamed.label, 'Artist');
+    expect(unnamed.handle, isNull);
+    expect(unnamed.navigationIdentifier, 'b');
+    expect(unnamed.isVerified, isTrue);
   });
 
-  test('real creator wallet remains usable for profile lookup', () {
-    const wallet = '0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
-    final identity =
-        identityFor(artwork(wallet: wallet, artist: 'Mina Artist'));
-    expect(identity.label, 'Mina Artist');
-    expect(identity.navigationIdentifier, wallet);
-    expect(identity.canOpenProfile, isTrue);
+  test('empty directory stays empty and output is limited to five profiles',
+      () {
+    expect(selectDesktopTopArtists([]), isEmpty);
+    final rows = List.generate(
+        6, (index) => <String, dynamic>{'id': '$index', 'isArtist': true});
+    expect(selectDesktopTopArtists(rows).length, 5);
   });
 }

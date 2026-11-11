@@ -11242,18 +11242,18 @@ class AppLocalizationsSl extends AppLocalizations {
       'Priljubljena dela se bodo prikazala tukaj';
 
   @override
-  String get desktopHomeTopCreatorsTitle => 'Naj ustvarjalci';
+  String get desktopHomeTopCreatorsTitle => 'Izpostavljeni umetniki';
 
   @override
   String get desktopHomeTopCreatorsLoadFailed =>
-      'Ustvarjalcev ni mogoče naložiti.';
+      'Umetnikov ni mogoče naložiti.';
 
   @override
   String get desktopHomeTopCreatorsEmpty =>
-      'Naj ustvarjalci se bodo prikazali tukaj';
+      'Izpostavljeni umetniki se bodo prikazali tukaj';
 
   @override
-  String get desktopHomeCreatorFallbackName => 'Ustvarjalec';
+  String get desktopHomeCreatorFallbackName => 'Umetnik';
 
   @override
   String get homeRailsUnavailableTitle => 'Domače tirnice niso na voljo';
