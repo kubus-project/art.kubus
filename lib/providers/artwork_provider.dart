@@ -14,6 +14,7 @@ import '../services/backend_api_service.dart';
 import '../services/profile_package_mutation_tracker.dart';
 import '../services/user_action_logger.dart';
 import '../utils/wallet_utils.dart';
+import '../utils/media_url_resolver.dart';
 import 'saved_items_provider.dart';
 
 class ArtworkProvider extends ChangeNotifier {
@@ -31,6 +32,10 @@ class ArtworkProvider extends ChangeNotifier {
   SavedItemsProvider? _savedItemsProvider;
   final ArtworkBackendApi _backendApi;
   final BackendApiService? _spatialApi;
+  final Future<Map<String, dynamic>?> Function(String)? _imageVariantLoader;
+  final Map<String, List<Map<String, dynamic>>> _imageVariants = {};
+  final Map<String, String> _imageVariantSignatures = {};
+  final Map<String, Future<void>> _imageVariantLoads = {};
   final Map<String, ArtworkSpatialHistory> _spatialHistory = {};
   final Map<String, Future<ArtworkSpatialHistory>> _spatialHistoryLoads = {};
   final Map<String, String> _spatialHistoryErrors = {};
@@ -52,20 +57,132 @@ class ArtworkProvider extends ChangeNotifier {
   final List<ViewHistoryEntry> _viewHistory = <ViewHistoryEntry>[];
   bool _historyLoaded = false;
 
-  ArtworkProvider({ArtworkBackendApi? backendApi})
-      : _backendApi = backendApi ?? BackendApiService(),
+  ArtworkProvider({
+    ArtworkBackendApi? backendApi,
+    Future<Map<String, dynamic>?> Function(String)? imageVariantLoader,
+  })  : _backendApi = backendApi ?? BackendApiService(),
         _spatialApi = backendApi == null
             ? BackendApiService()
-            : (backendApi is BackendApiService ? backendApi : null) {
+            : (backendApi is BackendApiService ? backendApi : null),
+        _imageVariantLoader = imageVariantLoader ??
+            (backendApi == null
+                ? BackendApiService().getPublicImageVariantManifest
+                : backendApi is BackendApiService
+                    ? backendApi.getPublicImageVariantManifest
+                    : null) {
     // Every identity change (sign-out, wallet mismatch, disconnect, another
     // account's token) drops this provider's account-scoped state.
     AccountIdentity.addListener(_handleAccountIdentityChanged);
+  }
+
+  List<Map<String, String>> _variantRequests(Artwork artwork) {
+    final gallery = artwork.galleryUrls
+        .map(MediaUrlResolver.resolveDisplayUrl)
+        .whereType<String>()
+        .toSet();
+    final requests = <Map<String, String>>[];
+    for (final entry in artwork.galleryMeta.take(10)) {
+      final group = entry['variantGroupId'];
+      final source =
+          MediaUrlResolver.resolveDisplayUrl(entry['url']?.toString());
+      if (group is String &&
+          RegExp(r'^[a-f0-9]{64}$').hasMatch(group) &&
+          source != null &&
+          gallery.contains(source)) {
+        requests.add({'groupId': group, 'sourceUrl': source});
+      }
+    }
+    return requests;
+  }
+
+  List<Map<String, dynamic>> imageVariantsForArtwork(String artworkId) =>
+      _imageVariants[artworkId] ?? const [];
+
+  bool imageVariantsPending(Artwork artwork) {
+    final requests = _variantRequests(artwork);
+    return _imageVariantLoader != null &&
+        requests.isNotEmpty &&
+        _imageVariantSignatures[artwork.id] != jsonEncode(requests);
+  }
+
+  Future<void> loadArtworkImageVariants(String artworkId) {
+    final existing = _imageVariantLoads[artworkId];
+    if (existing != null) return existing;
+    final artwork = getArtworkById(artworkId);
+    final loader = _imageVariantLoader;
+    if (artwork == null || loader == null) return Future<void>.value();
+    final requests = _variantRequests(artwork);
+    final signature = jsonEncode(requests);
+    if (_imageVariantSignatures[artworkId] == signature) {
+      return Future<void>.value();
+    }
+    final epoch = _accountEpoch;
+    final future = () async {
+      final results = await Future.wait(requests.map((entry) async {
+        try {
+          final group = entry['groupId']!;
+          final source = entry['sourceUrl']!;
+          final manifest = await Future.any<Map<String, dynamic>?>([
+            loader(group),
+            Future<Map<String, dynamic>?>.delayed(
+              const Duration(seconds: 5),
+              () => null,
+            ),
+          ]);
+          final verifiedSource = MediaUrlResolver.resolveDisplayUrl(
+              manifest?['sourceUrl']?.toString());
+          if (manifest?['groupId'] != group ||
+              verifiedSource != source ||
+              manifest?['variants'] is! List) {
+            return null;
+          }
+          final safe = <Map<String, dynamic>>[];
+          for (final item in manifest!['variants'] as List) {
+            if (item is! Map || item['url'] is! String) continue;
+            final url = item['url'] as String;
+            final isDerivative = RegExp(
+                    '^/api/upload/derivatives/$group/(thumbnail|card|detail)\$')
+                .hasMatch(url);
+            if (!isDerivative && url != manifest['sourceUrl']) {
+              continue;
+            }
+            safe.add(Map<String, dynamic>.from(item));
+          }
+          return <String, dynamic>{'sourceUrl': source, 'variants': safe};
+        } catch (_) {
+          return null;
+        }
+      }));
+      final current = getArtworkById(artworkId);
+      if (epoch != _accountEpoch ||
+          current == null ||
+          jsonEncode(_variantRequests(current)) != signature) {
+        return;
+      }
+      _imageVariants[artworkId] =
+          results.whereType<Map<String, dynamic>>().toList(growable: false);
+      _imageVariantSignatures[artworkId] = signature;
+      notifyListeners();
+    }();
+    _imageVariantLoads[artworkId] = future;
+    return future.whenComplete(() {
+      if (identical(_imageVariantLoads[artworkId], future)) {
+        _imageVariantLoads.remove(artworkId);
+        final current = getArtworkById(artworkId);
+        if (epoch == _accountEpoch &&
+            current != null &&
+            imageVariantsPending(current)) {
+          unawaited(loadArtworkImageVariants(artworkId));
+        }
+      }
+    });
   }
 
   void _handleAccountIdentityChanged() => clearAccountScopedState();
 
   @override
   void dispose() {
+    _accountEpoch += 1;
     AccountIdentity.removeListener(_handleAccountIdentityChanged);
     super.dispose();
   }
@@ -155,6 +272,9 @@ class ArtworkProvider extends ChangeNotifier {
   /// still in flight for the ending session are discarded when they land.
   void clearAccountScopedState() {
     _accountEpoch += 1;
+    _imageVariants.clear();
+    _imageVariantSignatures.clear();
+    _imageVariantLoads.clear();
 
     final ownedWallets = <String>{
       ..._walletsWithPrivateArtworks,

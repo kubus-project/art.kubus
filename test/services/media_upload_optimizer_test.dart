@@ -3,7 +3,30 @@ import 'dart:typed_data';
 
 import 'package:art_kubus/services/media_upload_optimizer.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter_image_compress/flutter_image_compress.dart';
 import 'package:image/image.dart' as image_lib;
+
+class _MismatchedEncoder extends UnsupportedFlutterImageCompress {
+  _MismatchedEncoder(this.result);
+  final Uint8List result;
+  int calls = 0;
+
+  @override
+  Future<Uint8List> compressWithList(
+    Uint8List image, {
+    int minWidth = 1920,
+    int minHeight = 1080,
+    int quality = 95,
+    int rotate = 0,
+    int inSampleSize = 1,
+    bool autoCorrectionAngle = true,
+    CompressFormat format = CompressFormat.jpeg,
+    bool keepExif = false,
+  }) async {
+    calls++;
+    return result;
+  }
+}
 
 Uint8List _jpegFixture({int width = 1200, int height = 900}) {
   final image = image_lib.Image(width: width, height: height);
@@ -151,6 +174,61 @@ Uint8List _buildGlb(Map<String, dynamic> json, Uint8List bin) {
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
+  test('preserves animated WebP bytes even with a misleading extension',
+      () async {
+    final original = base64Decode(
+        'UklGRpQAAABXRUJQVlA4WAoAAAACAAAABwAABwAAQU5JTQYAAAD/////AABBTk1GMAAAAAAAAAAAAAcAAAcAAGQAAAJWUDggGAAAADABAJ0BKggACAABQCYlpAADcAD++kOAAEFOTUYwAAAAAAAAAAAABwAABwAAyAAAAFZQOCAYAAAANAEAnQEqCAAIAAAAJiWkAANwAP7xsAAA');
+    final result = await const MediaUploadOptimizer().optimize(
+      UploadCompressionRequestDto(
+        bytes: original,
+        fileName: 'misleading.jpg',
+        fileType: 'image',
+        contentType: 'image/jpeg',
+        policy: const UploadCompressionPolicyDto(imageMinBytes: 1),
+      ),
+    );
+    expect(result.applied, isFalse);
+    expect(result.skippedReason, 'animated_image_exempt');
+    expect(result.bytes, orderedEquals(original));
+  });
+
+  test('leaves malformed WebP intact for server validation', () async {
+    final original = base64Decode('UklGRpQAAABXRUJQVlA4WAoAAAACAAAA');
+    final result = await const MediaUploadOptimizer().optimize(
+      UploadCompressionRequestDto(
+        bytes: original,
+        fileName: 'broken.webp',
+        fileType: 'image',
+        contentType: 'image/webp',
+        policy: const UploadCompressionPolicyDto(imageMinBytes: 1),
+      ),
+    );
+    expect(result.applied, isFalse);
+    expect(result.bytes, orderedEquals(original));
+  });
+
+  test('rejects an encoder output that does not match the WebP declaration',
+      () async {
+    final original = base64Decode(
+        'UklGRkwAAABXRUJQVlA4IEAAAACwAwCdASooACgAPm02mEkkIyKhI4gAgA2JZwB2APwAADmo9UoIAAD+7kMf//kFywuuRr//7B384D84D+igAAAA');
+    final fake = _MismatchedEncoder(_pngFixture(width: 1, height: 1));
+    final previous = FlutterImageCompressPlatform.instance;
+    FlutterImageCompressPlatform.instance = fake;
+    addTearDown(() => FlutterImageCompressPlatform.instance = previous);
+    final result = await const MediaUploadOptimizer().optimize(
+      UploadCompressionRequestDto(
+        bytes: original,
+        fileName: 'cover.webp',
+        fileType: 'image',
+        contentType: 'image/webp',
+        policy: const UploadCompressionPolicyDto(imageMinBytes: 1),
+      ),
+    );
+    expect(fake.calls, 1);
+    expect(result.applied, isFalse);
+    expect(result.bytes, orderedEquals(original));
+  });
+
   test('compresses oversized JPEG images and keeps smaller output', () async {
     final original = _jpegFixture();
     final result = await const MediaUploadOptimizer().optimize(
@@ -171,6 +249,35 @@ void main() {
     expect(result.kind, UploadCompressionKind.image);
     expect(result.bytes.length, lessThan(original.length));
     expect(result.toMetadataFields()['clientCompressionApplied'], 'true');
+  });
+
+  test('retains PNG format when resizing transparent artwork', () async {
+    final source = image_lib.Image(width: 320, height: 320, numChannels: 4);
+    for (var y = 0; y < 320; y++) {
+      for (var x = 0; x < 320; x++) {
+        source.setPixelRgba(x, y, x % 256, y % 256, 128, 100);
+      }
+    }
+    final original = Uint8List.fromList(image_lib.encodePng(source));
+    final result = await const MediaUploadOptimizer().optimize(
+      UploadCompressionRequestDto(
+        bytes: original,
+        fileName: 'cover.png',
+        fileType: 'image',
+        contentType: 'image/png',
+        policy: const UploadCompressionPolicyDto(
+          imageMinBytes: 1,
+          maxImageDimension: 64,
+        ),
+      ),
+    );
+    expect(result.applied, isTrue);
+    expect(result.contentType, 'image/png');
+    final decoded = image_lib.decodePng(result.bytes);
+    expect(decoded, isNotNull);
+    expect(decoded!.width, 64);
+    expect(decoded.height, 64);
+    expect(decoded.getPixel(0, 0).a, 100);
   });
 
   test('preserves original bytes when image optimization cannot decode input',
