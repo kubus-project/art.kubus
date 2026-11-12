@@ -331,16 +331,23 @@ List<_CreatorRef> _extractCreators(Artwork artwork) {
   // Generic wallet/creator ownership identifies the contributor, not the
   // cultural author. Link only an explicitly recorded artist identity.
   if (creators.isEmpty) {
-    // A single explicit attribution may identify the recorded artist. Never
-    // assign that one profile to an ambiguous multi-artist byline.
-    final explicitAuthor =
-        bylineLabels.length <= 1 ? artwork.authorProfile : null;
-    final artistProfile = (explicitAuthor?.profileId ??
-            meta?['artistUserId'] ??
-            meta?['artist_user_id'] ??
-            meta?['artistWallet'] ??
-            meta?['artistWalletAddress'])
-        ?.toString();
+    // A single explicit attribution (authorProfile or a metadata artist id)
+    // may identify the recorded artist only when there is at most one
+    // recorded credit. With several byline labels, one profile would be
+    // attached to the first label by position, without an individual
+    // association, so the credits stay text only. Per-artist links come
+    // from the `artists`/`creators` lists above, where each entry carries
+    // its own identity.
+    final singleCredit = bylineLabels.length <= 1;
+    final explicitAuthor = singleCredit ? artwork.authorProfile : null;
+    final artistProfile = singleCredit
+        ? (explicitAuthor?.profileId ??
+                meta?['artistUserId'] ??
+                meta?['artist_user_id'] ??
+                meta?['artistWallet'] ??
+                meta?['artistWalletAddress'])
+            ?.toString()
+        : null;
 
     final rawArtistName = meta?['artistName'] ?? meta?['artist_name'];
     final artistName = rawArtistName?.toString().trim();

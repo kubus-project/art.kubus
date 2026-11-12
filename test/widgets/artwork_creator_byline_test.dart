@@ -100,6 +100,58 @@ void main() {
     },
   );
   testWidgets(
+    'a single metadata artist identity is not assigned to a multi-artist byline',
+    (tester) async {
+      for (final identity in <Map<String, dynamic>>[
+        {'artistUserId': '11111111-1111-4111-8111-111111111111'},
+        {'artist_user_id': '11111111-1111-4111-8111-111111111111'},
+        {'artistWallet': 'HcHchGrD9ECWJ7nJaovpEohpdAUfpJPqAFv4z1g6KuMb'},
+        {'artistWalletAddress': 'HcHchGrD9ECWJ7nJaovpEohpdAUfpJPqAFv4z1g6KuMb'},
+      ]) {
+        await tester.pumpWidget(
+          harness(
+            record('Unknown', {
+              'artist_name_byline': ['Artist A', 'Artist B'],
+              ...identity,
+            }),
+          ),
+        );
+        await tester.pumpAndSettle();
+        expect(
+          find.textContaining('Artist A', findRichText: true),
+          findsOneWidget,
+          reason: '$identity',
+        );
+        expect(
+          find.textContaining('Artist B', findRichText: true),
+          findsOneWidget,
+          reason: '$identity',
+        );
+        expect(find.byType(InkWell), findsNothing, reason: '$identity');
+        await tester.pumpWidget(const SizedBox.shrink());
+      }
+    },
+  );
+  testWidgets(
+    'a metadata artist identity still links a single recorded byline',
+    (tester) async {
+      await tester.pumpWidget(
+        harness(
+          record('Unknown', {
+            'artist_name_byline': ['Artist A'],
+            'artistUserId': '11111111-1111-4111-8111-111111111111',
+          }),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(
+        find.textContaining('Artist A', findRichText: true),
+        findsOneWidget,
+      );
+      expect(find.byType(InkWell), findsOneWidget);
+    },
+  );
+  testWidgets(
     'generic hydrated wallet lists do not identify cultural authors',
     (tester) async {
       final artwork = parseArtworkFromBackendJson({
