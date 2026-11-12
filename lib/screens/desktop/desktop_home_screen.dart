@@ -1911,6 +1911,8 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
           margin: const EdgeInsets.only(bottom: DetailSpacing.sm),
           borderRadius: BorderRadius.circular(DetailRadius.md),
           child: ProfileIdentitySummary(
+            // display-only identity: the enclosing DesktopCard and Semantics
+            // open the canonical profile, so the summary has no tap of its own.
             identity: identity,
             layout: ProfileIdentityLayout.row,
             avatarRadius: 20,
