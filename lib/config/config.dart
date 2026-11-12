@@ -685,11 +685,11 @@ class AppInfo {
   );
   static const int buildNumber = int.fromEnvironment(
     'KUBUS_BUILD_NUMBER',
-    defaultValue: 26110901,
+    defaultValue: 26111201,
   );
   static const String buildDate = String.fromEnvironment(
     'KUBUS_BUILD_DATE',
-    defaultValue: '2026-11-09',
+    defaultValue: '2026-11-12',
   );
 
   /// Get full version string
