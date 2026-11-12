@@ -44,6 +44,8 @@ void main() {
   MapMarkerFormResult form({
     String? imageAuthor = 'Photographer',
     String? imageLicense = 'CC BY 4.0',
+    String? artistName,
+    bool authoredBySelf = false,
   }) {
     return MapMarkerFormResult(
       title: 'Street art',
@@ -58,10 +60,15 @@ void main() {
       coverImageFileType: 'image/jpeg',
       imageAuthor: imageAuthor,
       imageLicense: imageLicense,
+      artistName: artistName,
+      authoredBySelf: authoredBySelf,
     );
   }
 
-  KubusStreetArtArtworkCreator artworkCreator(Artwork createdArtwork) {
+  KubusStreetArtArtworkCreator artworkCreator(
+    Artwork createdArtwork, {
+    void Function(String? artistName, bool authoredBySelf)? onRequest,
+  }) {
     return ({
       required String title,
       required String description,
@@ -73,7 +80,9 @@ void main() {
       required String? artistName,
       required String imageAuthor,
       required String imageLicense,
+      required bool authoredBySelf,
     }) async {
+      onRequest?.call(artistName, authoredBySelf);
       expect(coverImageUrl, 'https://cdn.example/cover.jpg');
       expect(walletAddress, 'wallet-1');
       expect(position, snappedPosition);
@@ -256,4 +265,77 @@ void main() {
       expect(persistenceCalls, 0);
     },
   );
+  Future<KubusMapMarkerCreationOutcome> createWith({
+    required MapMarkerFormResult form,
+    required KubusStreetArtArtworkCreator creator,
+    String? walletAddress = 'wallet-1',
+  }) {
+    final coordinator = KubusMapMarkerCreationCoordinator(
+      coverUploader: coverUploader(),
+      artworkCreator: creator,
+      artworkRollback: (
+        Artwork? artwork, {
+        required bool markerPersistenceAttempted,
+      }) async {},
+      markerPersister: ({
+        required LatLng location,
+        required String title,
+        required String description,
+        required ArtMarkerType type,
+        required String category,
+        required String? artworkId,
+        required Map<String, dynamic>? metadata,
+        required List<String> tags,
+        required bool isPublic,
+        required double scale,
+        required String? modelCID,
+        required String? modelURL,
+      }) async =>
+          marker(),
+    );
+    return coordinator.createMarker(
+      position: snappedPosition,
+      currentZoom: 16,
+      form: form,
+      walletAddress: walletAddress,
+      messages: messages,
+      ingestMarker: (_) {},
+      upsertArtwork: (_) {},
+      linkExhibitionMarkers: (_, __) async {},
+      linkExhibitionArtworks: (_, __) async {},
+      snapToVisibleGrid: (_, __) => snappedPosition,
+    );
+  }
+
+  test('the creator declaration reaches the street-art artwork request',
+      () async {
+    String? seenArtist;
+    bool? seenFlag;
+    final outcome = await createWith(
+      form: form(artistName: 'Damjan Stevovic', authoredBySelf: true),
+      creator: artworkCreator(
+        artwork(),
+        onRequest: (artist, flag) {
+          seenArtist = artist;
+          seenFlag = flag;
+        },
+      ),
+    );
+    expect(outcome.succeeded, isTrue);
+    expect(seenFlag, isTrue);
+    expect(seenArtist, 'Damjan Stevovic');
+  });
+
+  test('without the declaration the request carries no authorship', () async {
+    bool? seenFlag;
+    final outcome = await createWith(
+      form: form(artistName: 'Someone else'),
+      creator: artworkCreator(
+        artwork(),
+        onRequest: (_, flag) => seenFlag = flag,
+      ),
+    );
+    expect(outcome.succeeded, isTrue);
+    expect(seenFlag, isFalse);
+  });
 }

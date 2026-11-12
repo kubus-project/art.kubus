@@ -16,6 +16,8 @@ import '../../services/share/share_types.dart';
 import '../../services/contextual_auth_gate.dart';
 import '../../utils/creator_shell_navigation.dart';
 import '../../utils/artwork_navigation.dart';
+import '../../utils/artwork_authorship.dart';
+import '../../utils/user_profile_navigation.dart';
 import '../../screens/desktop/desktop_shell_scope.dart';
 import '../../utils/media_url_resolver.dart';
 import '../../widgets/common/kubus_cached_image.dart';
@@ -640,11 +642,17 @@ class _ArtworkRow extends StatelessWidget {
             ),
             const SizedBox(width: DetailSpacing.md),
             Expanded(
-              child: Text(
-                title,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: DetailTypography.cardTitle(context),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: DetailTypography.cardTitle(context),
+                  ),
+                  CollectionArtworkCredit(artwork: artwork),
+                ],
               ),
             ),
             Icon(
@@ -653,6 +661,40 @@ class _ArtworkRow extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// Shows the artwork's recorded credit, linking only its explicit attribution.
+class CollectionArtworkCredit extends StatelessWidget {
+  const CollectionArtworkCredit({super.key, required this.artwork});
+
+  final CollectionArtworkRecord artwork;
+
+  @override
+  Widget build(BuildContext context) {
+    final credit = artwork.artistName?.trim();
+    if (!isRecordedArtistName(credit)) return const SizedBox.shrink();
+    final author = artwork.authorProfile;
+    final style = DetailTypography.caption(context);
+    if (author == null) return Text(credit!, style: style);
+    final label =
+        AppLocalizations.of(context)!.artworkAuthorOpenProfile(credit!);
+    void open() => UserProfileNavigation.open(context,
+        userId: author.profileId,
+        username: author.username.isEmpty ? null : author.username);
+    return Semantics(
+      button: true,
+      label: label,
+      excludeSemantics: true,
+      onTap: open,
+      child: InkWell(
+        onTap: open,
+        child: Text(credit,
+            style: style.copyWith(
+                color: Theme.of(context).colorScheme.primary,
+                decoration: TextDecoration.underline)),
       ),
     );
   }

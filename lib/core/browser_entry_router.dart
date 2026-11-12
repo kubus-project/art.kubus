@@ -32,6 +32,7 @@ class BrowserEntryRoute {
     this.zoom,
     this.historyIndex,
     this.historyBack,
+    this.desktopShell = false,
   });
 
   factory BrowserEntryRoute.fromUri(
@@ -64,6 +65,7 @@ class BrowserEntryRoute {
       zoom: intent?.zoom,
       historyIndex: _stateInt(entryState, 'historyIndex'),
       historyBack: _stateUri(entryState, 'historyBack'),
+      desktopShell: entryState is Map && entryState['desktopShell'] == true,
     );
   }
 
@@ -85,10 +87,14 @@ class BrowserEntryRoute {
   /// reloaded page which entry an in-app Back should step to. Not identity.
   final Uri? historyBack;
 
+  /// Whether this entry was presented as a regular desktop shell sub-screen.
+  final bool desktopShell;
+
   Map<String, Object?> toHistoryState() => <String, Object?>{
         'version': 1,
         'visibleUri': visibleUri.toString(),
         'shellRoute': shellRoute,
+        if (desktopShell) 'desktopShell': true,
         if (entityType != null) 'entityType': entityType,
         if (entityId != null) 'entityId': entityId,
         if (markerId != null) 'markerId': markerId,
@@ -102,8 +108,10 @@ class BrowserEntryRoute {
         state: toHistoryState(),
       );
 
-  BrowserEntryRoute withVisibleUri(Uri uri) => BrowserEntryRoute.fromUri(
+  BrowserEntryRoute withVisibleUri(Uri uri, {bool desktopShell = false}) =>
+      BrowserEntryRoute.fromUri(
         uri,
+        historyState: {'desktopShell': desktopShell},
         fallbackShellRoute: shellRoute,
       );
 
@@ -158,7 +166,8 @@ class BrowserEntryRoute {
       markerId == other.markerId &&
       latitude == other.latitude &&
       longitude == other.longitude &&
-      zoom == other.zoom;
+      zoom == other.zoom &&
+      desktopShell == other.desktopShell;
 
   @override
   int get hashCode => Object.hash(
@@ -170,6 +179,7 @@ class BrowserEntryRoute {
         latitude,
         longitude,
         zoom,
+        desktopShell,
       );
 }
 
@@ -408,6 +418,7 @@ class BrowserEntryRouterDelegate extends RouterDelegate<BrowserEntryRoute>
   /// replayed if the traversal that deferred the restore lands back on the page
   /// on screen, so an in-app change made meanwhile is not lost from the address.
   Uri? _droppedVisibleUri;
+  bool _droppedDesktopShell = false;
 
   @override
   BrowserEntryRoute get currentConfiguration => _configuration;
@@ -420,17 +431,26 @@ class BrowserEntryRouterDelegate extends RouterDelegate<BrowserEntryRoute>
   ///
   /// [replace] rewrites the current browser entry instead of adding one, for
   /// corrections the visitor did not navigate to.
-  void reportVisibleUri(Uri uri, {bool replace = false}) {
+  void reportVisibleUri(Uri uri,
+      {bool replace = false, bool desktopShell = false}) {
     if (_restoringRoute) return;
     if (_deferredRestore != null) {
       // While a traversal waits out the cooldown, the address already names the
       // page the browser moved to. A report from the page still starting up
       // would overwrite that entry and the deferred restore would re-push it.
       _droppedVisibleUri = uri;
+      _droppedDesktopShell = desktopShell;
       return;
     }
     _expectedBackUri = null;
-    final next = _configuration.withVisibleUri(uri);
+    var next = _configuration.withVisibleUri(uri, desktopShell: desktopShell);
+    if (replace &&
+        _configuration.desktopShell &&
+        next.entityType != null &&
+        next.entityType == _configuration.entityType &&
+        next.entityId == _configuration.entityId) {
+      next = _configuration.withVisibleUri(uri, desktopShell: true);
+    }
     _shownRoute = next;
     if (next == _configuration) return;
     _configuration = next;
@@ -446,15 +466,16 @@ class BrowserEntryRouterDelegate extends RouterDelegate<BrowserEntryRoute>
   /// browser entry below is that page, step the browser back to it so the
   /// history stays [.., Home] rather than gaining a second Home; otherwise it is
   /// an ordinary visible-address change.
-  void reportVisibleBack(Uri uri) {
+  void reportVisibleBack(Uri uri, {bool desktopShell = false}) {
     // Same window as reportVisibleUri: the browser already names the page a
     // deferred restore will show, so this visible change must not reach it.
     if (_restoringRoute) return;
     if (_deferredRestore != null) {
       _droppedVisibleUri = uri;
+      _droppedDesktopShell = desktopShell;
       return;
     }
-    final next = _configuration.withVisibleUri(uri);
+    final next = _configuration.withVisibleUri(uri, desktopShell: desktopShell);
     if (next == _configuration) return;
     final mirror = history;
     final step = stepBrowserBack;
@@ -468,7 +489,7 @@ class BrowserEntryRouterDelegate extends RouterDelegate<BrowserEntryRoute>
       final replace = mirror != null &&
           mirror.takeRestoredBelow() &&
           uri.path == _configuration.shellRoute;
-      reportVisibleUri(uri, replace: replace);
+      reportVisibleUri(uri, replace: replace, desktopShell: desktopShell);
       return;
     }
     _shownRoute = next;
@@ -508,7 +529,9 @@ class BrowserEntryRouterDelegate extends RouterDelegate<BrowserEntryRoute>
     final sameScreen = _sameScreen(configuration, _shownRoute);
     _configuration = configuration;
     final navigator = navigatorKey.currentState;
-    if (arrivedByInAppBack || sameScreen) {
+    if (sameScreen ||
+        (arrivedByInAppBack &&
+            configuration.desktopShell == _shownRoute.desktopShell)) {
       // Browser hash-only navigation, or the browser returned to the page on
       // screen. The Navigator already shows it, so a restore still waiting out
       // the cooldown is stale. A visible change reported while that restore was
@@ -516,8 +539,12 @@ class BrowserEntryRouterDelegate extends RouterDelegate<BrowserEntryRoute>
       final pending = _deferredRestore != null;
       _deferredRestore = null;
       final dropped = _droppedVisibleUri;
+      final droppedDesktopShell = _droppedDesktopShell;
       _droppedVisibleUri = null;
-      if (pending && dropped != null) reportVisibleUri(dropped);
+      _droppedDesktopShell = false;
+      if (pending && dropped != null) {
+        reportVisibleUri(dropped, desktopShell: droppedDesktopShell);
+      }
     } else if (navigator != null) {
       if (_restoreCooldownTimer != null) {
         _deferredRestore = configuration;
@@ -540,7 +567,8 @@ class BrowserEntryRouterDelegate extends RouterDelegate<BrowserEntryRoute>
       a.markerId == b.markerId &&
       a.latitude == b.latitude &&
       a.longitude == b.longitude &&
-      a.zoom == b.zoom;
+      a.zoom == b.zoom &&
+      a.desktopShell == b.desktopShell;
 
   void _runRestore(BrowserEntryRoute configuration, NavigatorState navigator) {
     _restoringRoute = true;

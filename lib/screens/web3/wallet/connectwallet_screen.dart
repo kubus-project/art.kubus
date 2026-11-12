@@ -325,9 +325,15 @@ class _ConnectWalletState extends State<ConnectWallet>
     _closeConnectedWalletFlow();
   }
 
+  /// Every sub-step (import, create, external wallet) hangs directly off the
+  /// options screen, so Back goes UP to the options and never sideways to a
+  /// sibling step. `_currentStep--` used to land on the neighbouring index
+  /// (create -> import), which looked like the screens cycling.
+  void _backToOptions() => setState(() => _currentStep = 0);
+
   void _handlePrimaryBackOrClose() {
     if (_currentStep > 0) {
-      setState(() => _currentStep--);
+      _backToOptions();
       return;
     }
     if (widget.onRequestClose != null) {
@@ -664,7 +670,7 @@ class _ConnectWalletState extends State<ConnectWallet>
                     ),
                     Expanded(
                       child: Text(
-                        _getStepTitle(l10n),
+                        l10n.connectWalletChooseTitle,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: KubusTypography.textTheme.titleMedium?.copyWith(
@@ -684,13 +690,8 @@ class _ConnectWalletState extends State<ConnectWallet>
               const Divider(height: 1),
               Expanded(
                 child: DecoratedBox(
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: _backgroundPaletteForStep(context),
-                    ),
-                  ),
+                  // Neutral surface: no per-step gradient on the embedded/desktop flow.
+                  decoration: const BoxDecoration(),
                   child: SizedBox.expand(
                     child: Builder(
                       builder: (context) {
@@ -723,7 +724,7 @@ class _ConnectWalletState extends State<ConnectWallet>
             ? IconButton(
                 icon: Icon(Icons.arrow_back,
                     color: Theme.of(context).colorScheme.onSurface),
-                onPressed: () => setState(() => _currentStep--),
+                onPressed: _backToOptions,
               )
             : IconButton(
                 icon: Icon(Icons.arrow_back,
@@ -1597,42 +1598,44 @@ class _ConnectWalletState extends State<ConnectWallet>
                       ? (isSmallScreen ? KubusSpacing.xs : KubusSpacing.sm)
                       : (isSmallScreen ? KubusSpacing.md : KubusSpacing.xl),
                 ),
-                LiquidGlassPanel(
-                  padding: EdgeInsets.all(
-                    isSmallScreen
-                        ? KubusSpacing.md - KubusSpacing.xxs
-                        : KubusSpacing.md,
-                  ),
-                  borderRadius: BorderRadius.circular(KubusRadius.lg),
-                  child: Column(
-                    children: [
-                      KubusHeroIcon(Icons.account_balance_wallet_outlined),
-                      const SizedBox(
-                          height: KubusSpacing.sm + KubusSpacing.xxs),
-                      Text(
-                        l10n.connectWalletChooseTitle,
-                        style: KubusTypography.inter(
-                          fontSize: widget.embedded
-                              ? KubusHeaderMetrics.sectionTitle
-                              : KubusHeaderMetrics.screenTitle,
-                          fontWeight: FontWeight.w800,
-                          color: colorScheme.onSurface,
+                if (!widget.embedded)
+                  LiquidGlassPanel(
+                    padding: EdgeInsets.all(
+                      isSmallScreen
+                          ? KubusSpacing.md - KubusSpacing.xxs
+                          : KubusSpacing.md,
+                    ),
+                    borderRadius: BorderRadius.circular(KubusRadius.lg),
+                    child: Column(
+                      children: [
+                        KubusHeroIcon(Icons.account_balance_wallet_outlined),
+                        const SizedBox(
+                            height: KubusSpacing.sm + KubusSpacing.xxs),
+                        Text(
+                          l10n.connectWalletChooseTitle,
+                          style: KubusTypography.inter(
+                            fontSize: widget.embedded
+                                ? KubusHeaderMetrics.sectionTitle
+                                : KubusHeaderMetrics.screenTitle,
+                            fontWeight: FontWeight.w800,
+                            color: colorScheme.onSurface,
+                          ),
+                          textAlign: TextAlign.center,
                         ),
-                        textAlign: TextAlign.center,
-                      ),
-                      const SizedBox(height: KubusSpacing.sm),
-                      Text(
-                        l10n.connectWalletChooseDescription,
-                        style: KubusTypography.inter(
-                          fontSize: KubusHeaderMetrics.sectionSubtitle,
-                          color: colorScheme.onSurface.withValues(alpha: 0.85),
-                          height: 1.4,
+                        const SizedBox(height: KubusSpacing.sm),
+                        Text(
+                          l10n.connectWalletChooseDescription,
+                          style: KubusTypography.inter(
+                            fontSize: KubusHeaderMetrics.sectionSubtitle,
+                            color:
+                                colorScheme.onSurface.withValues(alpha: 0.85),
+                            height: 1.4,
+                          ),
+                          textAlign: TextAlign.center,
                         ),
-                        textAlign: TextAlign.center,
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
-                ),
                 SizedBox(
                   height: widget.embedded
                       ? KubusSpacing.sm

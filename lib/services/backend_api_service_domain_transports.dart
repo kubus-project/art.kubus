@@ -302,6 +302,9 @@ class BackendPublicObjectTransport {
           (payload['walletAddress'] ?? payload['wallet_address'] ?? '')
               .toString(),
       artistName: payload['artistName']?.toString(),
+      authoredBySelf: payload['authoredBySelf'] is bool
+          ? payload['authoredBySelf'] as bool
+          : null,
       imageAuthor:
           (payload['imageAuthor'] ?? payload['image_author'])?.toString(),
       imageLicense:
@@ -371,11 +374,13 @@ class BackendPublicObjectTransport {
     String? walletAddress,
     int page = 1,
     int limit = 20,
+    String? legacyWalletAddress,
   }) {
     return _service.getCollections(
       walletAddress: walletAddress,
       page: page,
       limit: limit,
+      legacyWalletAddress: legacyWalletAddress,
     );
   }
 

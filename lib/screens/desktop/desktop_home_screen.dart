@@ -119,9 +119,9 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
   late FocusNode _primarySearchFocusNode;
   late FocusNode _floatingSearchFocusNode;
   bool _isResolvingLocation = false;
-  List<CommunityPost> _popularCommunityPosts = const [];
-  bool _popularCommunityLoading = false;
-  bool _popularCommunityFetchFailed = false;
+  List<Map<String, dynamic>> _topArtists = const [];
+  bool _topArtistsLoading = false;
+  bool _topArtistsFetchFailed = false;
   bool _artFeedLoadQueued = false;
   bool _platformStatsPrefetchQueued = false;
   String _lastDiscoveredStatsWallet = '';
@@ -165,6 +165,7 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
           Provider.of<NavigationProvider>(context, listen: false);
       navigationProvider.initialize();
       _refreshHomeRails();
+      unawaited(_loadTopArtists());
       _loadInitialData();
     });
   }
@@ -432,47 +433,29 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
         refresh: true,
       );
     }
-
-    await _loadPopularCommunityPosts();
   }
 
-  Future<void> _loadPopularCommunityPosts({bool force = false}) async {
-    if (_popularCommunityLoading) return;
-    if (!force && _popularCommunityPosts.isNotEmpty) return;
-
-    // This method can be awaited from other long async chains.
-    // Guard before touching context to avoid "State no longer has a context"
-    // crashes when the widget is disposed mid-flight (common on web routing).
-    if (!mounted) return;
-
+  Future<void> _loadTopArtists() async {
+    if (!mounted || _topArtistsLoading) return;
     setState(() {
-      _popularCommunityLoading = true;
-      _popularCommunityFetchFailed = false;
+      _topArtistsLoading = true;
+      _topArtistsFetchFailed = false;
     });
-
     try {
-      final posts =
-          await _backendApi.getCommunityPosts(limit: 24, sort: 'popularity');
+      final profiles = await _backendApi.listArtists(limit: 50);
       if (!mounted) return;
-      setState(() {
-        _popularCommunityPosts = posts;
-        _popularCommunityFetchFailed = false;
-      });
-    } catch (e) {
+      setState(() => _topArtists = selectDesktopTopArtists(profiles));
+    } catch (error) {
       if (kDebugMode) {
-        debugPrint(
-            'DesktopHomeScreen: failed to load popular community posts: $e');
+        debugPrint('DesktopHomeScreen: artist directory failed: $error');
       }
       if (!mounted) return;
       setState(() {
-        _popularCommunityFetchFailed = true;
+        _topArtists = const [];
+        _topArtistsFetchFailed = true;
       });
     } finally {
-      if (mounted) {
-        setState(() {
-          _popularCommunityLoading = false;
-        });
-      }
+      if (mounted) setState(() => _topArtistsLoading = false);
     }
   }
 
@@ -487,13 +470,12 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
   }
 
   void _refreshTopCreators() {
-    unawaited(_loadPopularCommunityPosts(force: true));
+    unawaited(_loadTopArtists());
   }
 
   void _refreshPlatformStats() {
     final communityProvider = context.read<CommunityHubProvider>();
     unawaited(communityProvider.loadGroups(refresh: true));
-    unawaited(_loadPopularCommunityPosts(force: true));
 
     final statsProvider = context.read<StatsProvider>();
     unawaited(statsProvider.ensureSnapshot(
@@ -1844,151 +1826,99 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
   }
 
   Widget _buildTopCreatorsSection(ThemeProvider themeProvider) {
-    return Consumer<ArtworkProvider>(
-      builder: (context, artworkProvider, _) {
-        final l10n = AppLocalizations.of(context)!;
-        final communityPosts = _popularCommunityPosts;
-
-        final creators =
-            _buildTopCreatorSummaries(communityPosts, artworkProvider);
-        _scheduleCreatorIdentityResolution(
-          creators.map((c) {
-            final raw = c['wallet'] ?? c['id'];
-            return raw?.toString();
-          }),
-        );
-        final isLoading = _popularCommunityLoading &&
-            _popularCommunityPosts.isEmpty &&
-            creators.isEmpty;
-        final hasError = _popularCommunityFetchFailed &&
-            _popularCommunityPosts.isEmpty &&
-            creators.isEmpty;
-
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildSidebarSectionHeader(
-              title: l10n.desktopHomeTopCreatorsTitle,
-              isLoading: _popularCommunityLoading,
-              onRefresh: _refreshTopCreators,
-              onTitleTap: () => _navigateToTab(2),
-            ),
-            const SizedBox(height: DetailSpacing.md),
-            if (isLoading)
-              Center(
-                child: InlineLoading(
-                    tileSize: 4, color: themeProvider.accentColor),
-              )
-            else if (hasError)
-              DesktopCard(
-                onTap: _refreshTopCreators,
-                child: Row(
-                  children: [
-                    Icon(
-                      Icons.error_outline,
-                      color: Theme.of(context).colorScheme.error,
-                    ),
-                    const SizedBox(width: DetailSpacing.md),
-                    Expanded(
-                      child: Text(
-                        l10n.desktopHomeTopCreatorsLoadFailed,
-                        style: DetailTypography.body(context),
-                      ),
-                    ),
-                  ],
+    final l10n = AppLocalizations.of(context)!;
+    final creators = _topArtists;
+    final isLoading = _topArtistsLoading && creators.isEmpty;
+    final hasError = _topArtistsFetchFailed && creators.isEmpty;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildSidebarSectionHeader(
+          title: l10n.desktopHomeTopCreatorsTitle,
+          isLoading: _topArtistsLoading,
+          onRefresh: _refreshTopCreators,
+        ),
+        const SizedBox(height: DetailSpacing.md),
+        if (isLoading)
+          Center(
+            child: InlineLoading(tileSize: 4, color: themeProvider.accentColor),
+          )
+        else if (hasError)
+          DesktopCard(
+            onTap: _refreshTopCreators,
+            child: Row(
+              children: [
+                Icon(
+                  Icons.error_outline,
+                  color: Theme.of(context).colorScheme.error,
                 ),
-              )
-            else if (creators.isEmpty)
-              DesktopCard(
-                child: Row(
-                  children: [
-                    Icon(
-                      Icons.people_outline,
+                const SizedBox(width: DetailSpacing.md),
+                Expanded(
+                  child: Text(
+                    l10n.desktopHomeTopCreatorsLoadFailed,
+                    style: DetailTypography.body(context),
+                  ),
+                ),
+              ],
+            ),
+          )
+        else if (creators.isEmpty)
+          DesktopCard(
+            child: Row(
+              children: [
+                Icon(
+                  Icons.people_outline,
+                  color: Theme.of(context)
+                      .colorScheme
+                      .onSurface
+                      .withValues(alpha: 0.5),
+                ),
+                const SizedBox(width: DetailSpacing.md),
+                Expanded(
+                  child: Text(
+                    l10n.desktopHomeTopCreatorsEmpty,
+                    style: DetailTypography.body(context).copyWith(
                       color: Theme.of(context)
                           .colorScheme
                           .onSurface
-                          .withValues(alpha: 0.5),
+                          .withValues(alpha: 0.7),
                     ),
-                    const SizedBox(width: DetailSpacing.md),
-                    Expanded(
-                      child: Text(
-                        l10n.desktopHomeTopCreatorsEmpty,
-                        style: DetailTypography.body(context).copyWith(
-                          color: Theme.of(context)
-                              .colorScheme
-                              .onSurface
-                              .withValues(alpha: 0.7),
-                        ),
-                      ),
-                    ),
-                  ],
+                  ),
                 ),
-              )
-            else
-              ...creators.map((creator) => _buildCreatorItem(creator)),
-          ],
-        );
-      },
+              ],
+            ),
+          )
+        else
+          ...creators.map((creator) => _buildCreatorItem(creator)),
+      ],
     );
   }
 
   Widget _buildCreatorItem(Map<String, dynamic> creator) {
     final l10n = AppLocalizations.of(context)!;
-    final userId = (creator['id'] ?? creator['wallet'] ?? '').toString();
-    final wallet = (creator['wallet'] ?? '').toString().isNotEmpty
-        ? creator['wallet'].toString()
-        : userId;
-    final avatarUrl = creator['avatar'] ?? creator['avatarUrl'];
-
-    final canonicalWallet = WalletUtils.canonical(wallet);
-    final resolved = canonicalWallet.isNotEmpty
-        ? _resolvedCreatorIdentityByWallet[canonicalWallet]
-        : null;
-
-    final identity = ProfileIdentityData.fromIdentityPayload(
-      {
-        'author': {
-          'id': userId,
-          'walletAddress': wallet,
-          'displayName': resolved?.displayName ?? creator['name']?.toString(),
-          'username': resolved?.username ?? creator['username']?.toString(),
-          'avatarUrl': avatarUrl?.toString(),
-        },
-      },
-      fallbackLabel: l10n.desktopHomeCreatorFallbackName,
-    );
-
-    _scheduleCreatorIdentityResolution([canonicalWallet]);
-    return DesktopCard(
-      onTap: identity.canOpenProfile
-          ? () => openProfileIdentity(context, identity)
-          : null,
-      padding: const EdgeInsets.all(DetailSpacing.sm + 2),
-      margin: const EdgeInsets.only(bottom: DetailSpacing.sm),
-      borderRadius: BorderRadius.circular(DetailRadius.md),
-      child: ProfileIdentitySummary(
-        identity: identity,
-        layout: ProfileIdentityLayout.row,
-        avatarRadius: 20,
-        allowFabricatedFallback: true,
-        onTap: identity.canOpenProfile
-            ? () => openProfileIdentity(context, identity)
-            : null,
-        titleStyle: KubusTextStyles.detailCardTitle,
-        subtitleStyle: KubusTextStyles.navMetaLabel,
-        trailing: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-          decoration: BoxDecoration(
-            color:
-                Theme.of(context).colorScheme.secondary.withValues(alpha: 0.12),
-            borderRadius: BorderRadius.circular(DetailRadius.md),
-          ),
-          child: Text(
-            l10n.desktopHomePostsCount(creator['postCount'] as int? ?? 0),
-            style: KubusTextStyles.navMetaLabel.copyWith(
-              fontWeight: FontWeight.w600,
-              color: Theme.of(context).colorScheme.secondary,
-            ),
+    final identity = desktopArtistIdentity(creator,
+        fallbackLabel: l10n.desktopHomeCreatorFallbackName);
+    void openArtist() => openProfileIdentity(context, identity);
+    return Semantics(
+      container: true,
+      button: true,
+      label: [identity.label, identity.handle].whereType<String>().join(' '),
+      onTap: openArtist,
+      child: ExcludeSemantics(
+        child: DesktopCard(
+          onTap: openArtist,
+          padding: const EdgeInsets.all(DetailSpacing.sm + 2),
+          margin: const EdgeInsets.only(bottom: DetailSpacing.sm),
+          borderRadius: BorderRadius.circular(DetailRadius.md),
+          child: ProfileIdentitySummary(
+            // display-only identity: the enclosing DesktopCard and Semantics
+            // open the canonical profile, so the summary has no tap of its own.
+            identity: identity,
+            layout: ProfileIdentityLayout.row,
+            avatarRadius: 20,
+            allowFabricatedFallback: false,
+            titleStyle: KubusTextStyles.detailCardTitle,
+            subtitleStyle: KubusTextStyles.navMetaLabel,
           ),
         ),
       ),
@@ -2618,84 +2548,43 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
             post.viewCount * 0.5) *
         recencyBoost;
   }
-
-  List<Map<String, dynamic>> _buildTopCreatorSummaries(
-      List<CommunityPost> communityPosts, ArtworkProvider artworkProvider) {
-    return buildDesktopTopCreatorSummaries(
-      communityPosts: communityPosts,
-      artworks: artworkProvider.artworks,
-      resolvedIdentities: _resolvedCreatorIdentityByWallet,
-      fallbackLabel:
-          AppLocalizations.of(context)!.desktopHomeCreatorFallbackName,
-    );
-  }
 }
 
-/// Aggregate display labels without turning fallback labels into profile IDs.
-List<Map<String, dynamic>> buildDesktopTopCreatorSummaries({
-  required List<CommunityPost> communityPosts,
-  required List<Artwork> artworks,
-  required Map<String, ({String displayName, String? username})>
-      resolvedIdentities,
-  required String fallbackLabel,
-}) {
-  final creatorsMap = <String, _CreatorStats>{};
-  final posts = communityPosts.take(50);
+/// The directory has already applied public-artist eligibility. Preserve its
+/// ranking, deduplicate only by stable profile ID, and never infer from artwork.
+@visibleForTesting
+List<Map<String, dynamic>> selectDesktopTopArtists(
+    List<Map<String, dynamic>> profiles) {
+  final seen = <String>{};
+  return profiles
+      .where((profile) {
+        final id = (profile['id'] ?? '').toString().trim();
+        return profile['isArtist'] == true && id.isNotEmpty && seen.add(id);
+      })
+      .take(5)
+      .toList(growable: false);
+}
 
-  for (final post in posts) {
-    final key = post.authorWallet ?? post.authorId;
-    if (key.isEmpty) continue;
-    final stats = creatorsMap.putIfAbsent(
-      key,
-      () => _CreatorStats(
-        id: post.authorId,
-        wallet: post.authorWallet,
-        name: post.authorName,
-        avatar: post.authorAvatar,
-        username: post.authorUsername,
-      ),
-    );
-    stats.postCount += 1;
-    stats.likeCount += post.likeCount;
-    stats.shareCount += post.shareCount;
-  }
-
-  // Fallback when no community posts: derive creators from artworks
-  if (creatorsMap.isEmpty) {
-    for (final art in artworks) {
-      final walletFromField = WalletUtils.canonical(art.walletAddress);
-      final wallet = walletFromField.isNotEmpty
-          ? walletFromField
-          : (WalletUtils.looksLikeWallet(art.artist)
-              ? WalletUtils.canonical(art.artist)
-              : '');
-      final resolved = wallet.isNotEmpty ? resolvedIdentities[wallet] : null;
-      final formatted = CreatorDisplayFormat.format(
-        fallbackLabel: fallbackLabel,
-        displayName: resolved?.displayName ?? art.artist,
-        username: resolved?.username,
-        wallet: wallet,
-      );
-
-      final key = wallet.isNotEmpty ? wallet : formatted.primary;
-      final stats = creatorsMap.putIfAbsent(
-        key,
-        () => _CreatorStats(
-          id: wallet,
-          wallet: wallet.isEmpty ? null : wallet,
-          name: formatted.primary,
-          username: resolved?.username,
-        ),
-      );
-      stats.postCount += 1;
-      stats.likeCount += art.likesCount;
-      stats.shareCount += art.viewsCount;
-    }
-  }
-
-  final creators = creatorsMap.values.toList()
-    ..sort((a, b) => b.score.compareTo(a.score));
-  return creators.take(5).map((c) => c.toMap()).toList();
+@visibleForTesting
+ProfileIdentityData desktopArtistIdentity(Map<String, dynamic> profile,
+    {required String fallbackLabel}) {
+  final id = (profile['id'] ?? '').toString().trim();
+  final displayName = (profile['displayName'] ?? '').toString().trim();
+  final username =
+      CreatorDisplayFormat.normalizeUsername(profile['username']?.toString());
+  final avatar = (profile['avatar'] ?? '').toString().trim();
+  return ProfileIdentityData(
+    label: displayName.isNotEmpty
+        ? displayName
+        : (username?.isNotEmpty == true ? username! : fallbackLabel),
+    userId: id,
+    walletSeed: '',
+    username: username,
+    handle: username?.isNotEmpty == true ? '@$username' : null,
+    avatarUrl: avatar.isEmpty ? null : avatar,
+    isArtist: true,
+    isVerified: profile['isVerified'] == true,
+  );
 }
 
 class _TrendingArtEntry {
@@ -2741,39 +2630,5 @@ class _TrendingArtEntry {
       creatorWallet: creatorWallet ?? this.creatorWallet,
       imageUrl: imageUrl ?? this.imageUrl,
     );
-  }
-}
-
-class _CreatorStats {
-  final String id;
-  final String? wallet;
-  final String name;
-  final String? avatar;
-  final String? username;
-  int postCount;
-  int likeCount;
-  int shareCount;
-
-  _CreatorStats({
-    required this.id,
-    this.wallet,
-    required this.name,
-    this.avatar,
-    this.username,
-  })  : postCount = 0,
-        likeCount = 0,
-        shareCount = 0;
-
-  int get score => postCount * 2 + likeCount + shareCount;
-
-  Map<String, dynamic> toMap() {
-    return {
-      'id': id,
-      'wallet': wallet,
-      'name': name,
-      'avatar': avatar,
-      'username': username,
-      'postCount': postCount,
-    };
   }
 }

@@ -288,6 +288,7 @@ class KubusMapMarkerCreationHelpers {
     required String? artistName,
     required String imageAuthor,
     required String imageLicense,
+    bool authoredBySelf = false,
   }) async {
     final normalizedCategory =
         category.trim().isEmpty ? 'Street Art' : category.trim();
@@ -298,6 +299,8 @@ class KubusMapMarkerCreationHelpers {
       imageUrl: coverImageUrl,
       walletAddress: walletAddress,
       artistName: artistName,
+      // Self-declared authorship of the acting account, sent only when ticked.
+      authoredBySelf: authoredBySelf ? true : null,
       imageAuthor: imageAuthor,
       imageLicense: imageLicense,
       imageAttribution: attribution,

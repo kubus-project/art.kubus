@@ -366,6 +366,64 @@ AuthSignInMethod _authSignInMethodFromStorageValue(String? value) {
   }
 }
 
+final RegExp _accountIdPattern = RegExp(
+  r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$',
+);
+
+/// Query key the collections list expects for a profile owner identifier:
+/// `ownerId` for a profile/account id (walletless artist), `walletAddress`
+/// otherwise.
+@visibleForTesting
+String collectionsOwnerQueryKey(String identifier) =>
+    _accountIdPattern.hasMatch(identifier.trim()) ? 'ownerId' : 'walletAddress';
+
+/// Whether a snapshot collection entry belongs to the profile/account [ownerId].
+/// Mirrors the live `ownerId` filter: profile id or account id, case-insensitive
+/// because UUIDs are, never compared as wallets.
+@visibleForTesting
+bool snapshotCollectionOwnedBy(Map<String, dynamic> entry, String ownerId) {
+  final wanted = ownerId.trim().toLowerCase();
+  if (wanted.isEmpty) return false;
+  for (final key in const <String>[
+    'ownerId',
+    'owner_id',
+    'ownerProfileId',
+    'owner_profile_id',
+    'ownerUserId',
+    'owner_user_id',
+    'profileId',
+    'profile_id',
+    'userId',
+    'user_id',
+  ]) {
+    final value = entry[key]?.toString().trim().toLowerCase() ?? '';
+    if (value.isNotEmpty && value == wanted) return true;
+  }
+  return false;
+}
+
+/// Merges collection lists (owner-id lookup first, legacy wallet lookup
+/// second), keeping the first occurrence of each collection id. Entries
+/// without an id are kept as they come.
+@visibleForTesting
+List<Map<String, dynamic>> mergeCollectionLists(
+  List<Map<String, dynamic>> primary,
+  List<Map<String, dynamic>> secondary, {
+  required int limit,
+}) {
+  final seen = <String>{};
+  final merged = <Map<String, dynamic>>[];
+  for (final entry in [...primary, ...secondary]) {
+    final id = (entry['id'] ?? '').toString().trim().toLowerCase();
+    if (id.isNotEmpty && !seen.add(id)) continue;
+    merged.add(entry);
+  }
+  if (limit > 0 && merged.length > limit) {
+    return merged.sublist(0, limit);
+  }
+  return merged;
+}
+
 class BackendApiService
     implements
         ArtworkBackendApi,
@@ -6139,6 +6197,9 @@ class BackendApiService
     required String walletAddress,
     String? imageCid,
     String? artistName,
+    // Self-declared authorship of the acting account. A bare flag: the
+    // backend resolves the account from the session, no id is ever sent.
+    bool? authoredBySelf,
     String? imageAuthor,
     String? imageLicense,
     String? imageAttribution,
@@ -6179,9 +6240,12 @@ class BackendApiService
         'description': description,
         'imageUrl': imageUrl,
         if (imageCid != null) 'imageCid': imageCid,
-        'walletAddress': walletAddress,
+        // A walletless account publishes under its session: the backend takes
+        // the owner from the token and never needs a wallet in the body.
+        if (walletAddress.trim().isNotEmpty) 'walletAddress': walletAddress,
         if (artistName != null && artistName.isNotEmpty)
           'artistName': artistName,
+        if (authoredBySelf != null) 'authoredBySelf': authoredBySelf,
         if (imageAuthor != null && imageAuthor.trim().isNotEmpty)
           'imageAuthor': imageAuthor.trim(),
         if (imageLicense != null && imageLicense.trim().isNotEmpty)
@@ -10807,7 +10871,42 @@ class BackendApiService
 
   /// Get user's collections
   /// GET /api/collections?walletAddress=xxx
+  ///
+  /// [walletAddress] is the owner key: a profile/account id (`ownerId`) or a
+  /// wallet. Collections created before the account became their owner have no
+  /// `owner_id` (the backend never guessed legacy ownership), so an id lookup
+  /// alone would hide them from a wallet artist. [legacyWalletAddress] is that
+  /// same profile's own wallet: when the key is an id, the wallet lookup is
+  /// merged in (deduplicated by collection id). It is never taken from anyone
+  /// else, and a walletless profile simply has none.
   Future<List<Map<String, dynamic>>> getCollections({
+    String? walletAddress,
+    int page = 1,
+    int limit = 20,
+    String? legacyWalletAddress,
+  }) async {
+    final primary = await _getCollectionsByKey(
+      walletAddress: walletAddress,
+      page: page,
+      limit: limit,
+    );
+    final key = (walletAddress ?? '').trim();
+    final legacy = (legacyWalletAddress ?? '').trim();
+    if (key.isEmpty ||
+        legacy.isEmpty ||
+        collectionsOwnerQueryKey(key) != 'ownerId' ||
+        collectionsOwnerQueryKey(legacy) != 'walletAddress') {
+      return primary;
+    }
+    final legacyRows = await _getCollectionsByKey(
+      walletAddress: legacy,
+      page: page,
+      limit: limit,
+    );
+    return mergeCollectionLists(primary, legacyRows, limit: limit);
+  }
+
+  Future<List<Map<String, dynamic>>> _getCollectionsByKey({
     String? walletAddress,
     int page = 1,
     int limit = 20,
@@ -10834,7 +10933,10 @@ class BackendApiService
       };
 
       if (requestedWallet.isNotEmpty) {
-        queryParams['walletAddress'] = requestedWallet;
+        // A walletless artist is addressed by profile or account id (a UUID);
+        // a wallet address is never UUID-shaped.
+        queryParams[collectionsOwnerQueryKey(requestedWallet)] =
+            requestedWallet;
       }
 
       return await _performPublicRead<List<Map<String, dynamic>>>(
@@ -10866,7 +10968,15 @@ class BackendApiService
           }
 
           var collections = await _loadSnapshotDatasetMaps('collections');
-          if (snapshotWalletFilter.isNotEmpty) {
+          if (snapshotWalletFilter.isNotEmpty &&
+              collectionsOwnerQueryKey(snapshotWalletFilter) == 'ownerId') {
+            // A profile/account id is never a wallet: compare it with the
+            // snapshot's owner id fields, exactly as the live query does.
+            collections = collections
+                .where((entry) =>
+                    snapshotCollectionOwnedBy(entry, snapshotWalletFilter))
+                .toList(growable: false);
+          } else if (snapshotWalletFilter.isNotEmpty) {
             final canonicalRequested = WalletUtils.canonical(
               snapshotWalletFilter,
             );
@@ -12430,6 +12540,9 @@ Artwork parseArtworkFromBackendJson(Map<String, dynamic> json) {
     walletAddress: walletAddress,
     title: title,
     artist: artist,
+    authorProfile: ArtworkAuthorProfile.tryParse(
+      json['authorProfile'] ?? json['author_profile'],
+    ),
     description: stringVal(json['description'] ?? json['summary'] ?? '', ''),
     imageUrl: normalizedImageUrl,
     galleryUrls: galleryUrls,

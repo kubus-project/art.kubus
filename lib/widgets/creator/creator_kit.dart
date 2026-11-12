@@ -579,6 +579,9 @@ class CreatorTextField extends StatelessWidget {
   final String? Function(String?)? validator;
   final ValueChanged<String>? onChanged;
   final bool enabled;
+
+  /// Shows the value and keeps it focusable and selectable, but not editable.
+  final bool readOnly;
   final Color? accentColor;
   final String? helperText;
   final Widget? prefixIcon;
@@ -598,6 +601,7 @@ class CreatorTextField extends StatelessWidget {
     this.validator,
     this.onChanged,
     this.enabled = true,
+    this.readOnly = false,
     this.accentColor,
     this.helperText,
     this.prefixIcon,
@@ -623,6 +627,7 @@ class CreatorTextField extends StatelessWidget {
         validator: validator,
         onChanged: onChanged,
         enabled: enabled,
+        readOnly: readOnly,
         style: kubusFieldTextStyle(context, enabled: enabled),
         cursorColor: roles.focus,
         decoration: kubusFieldDecoration(

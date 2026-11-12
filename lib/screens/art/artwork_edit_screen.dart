@@ -19,9 +19,11 @@ import '../../services/profile_package_mutation_tracker.dart';
 import '../../services/share/share_service.dart';
 import '../../services/share/share_types.dart';
 import '../../utils/artwork_authorship.dart';
+import '../../utils/authored_by_self.dart';
 import '../../utils/artwork_media_resolver.dart';
 import '../../utils/artwork_navigation.dart';
 import '../../utils/wallet_utils.dart';
+import '../../widgets/authored_by_self_toggle.dart';
 import '../../widgets/creator/creator_kit.dart';
 import '../../widgets/collaboration_panel.dart';
 import '../../widgets/common/subject_options_sheet.dart';
@@ -118,6 +120,16 @@ class _ArtworkEditScreenState extends State<ArtworkEditScreen> {
 
   bool _isSaving = false;
   bool _arEnabled = false;
+
+  /// "I am the creator": the box as the form opened (from the artwork's
+  /// attributed author) and as it stands now.
+  bool _initialAuthoredBySelf = false;
+  bool _authoredBySelf = false;
+
+  /// The artist field as the form opened. The artwork's credit is written only
+  /// when the field differs from this, i.e. after an explicit edit or toggle,
+  /// never because the form was seeded.
+  String _seededArtistText = '';
   final Set<String> _deleteDialogOpenArtworkIds = <String>{};
   final Set<String> _deleteInFlightArtworkIds = <String>{};
 
@@ -549,8 +561,32 @@ class _ArtworkEditScreenState extends State<ArtworkEditScreen> {
     _arScaleController.text = artwork.arScale?.toString() ?? '';
 
     _arEnabled = artwork.arEnabled;
+
+    final profileProvider = context.read<ProfileProvider>();
+    final selfName = AuthoredBySelf.displayNameFor(
+      profileProvider.currentUser,
+      isSignedIn: profileProvider.isSignedIn,
+    );
+    if (selfName != null &&
+        AuthoredBySelf.isAttributedTo(artwork, profileProvider.currentUser)) {
+      _initialAuthoredBySelf = true;
+      _authoredBySelf = true;
+      // Keep the recorded cultural credit (it may be a pseudonym or the name
+      // at the time of attribution). The profile name only stands in when
+      // nothing is recorded, as the public author line does.
+      _artistController.text = artwork.recordedArtist ?? selfName;
+    }
+    _seededArtistText = _artistController.text;
     _seeded = true;
     setState(() {});
+  }
+
+  void _setAuthoredBySelf(bool next, String? selfName) {
+    if (next && selfName == null) return;
+    setState(() {
+      _authoredBySelf = next;
+      if (next) _artistController.text = selfName!;
+    });
   }
 
   Future<void> _pickCover() async {
@@ -663,8 +699,23 @@ class _ArtworkEditScreenState extends State<ArtworkEditScreen> {
     if (title != artwork.title) updates['title'] = title;
     // Authorship is explicit: a blank field clears it (unattributed) and is
     // never replaced with the current account.
-    final artistName = artistNameUpdateFor(artwork, _artistController.text);
+    // An untouched field (still as seeded) never rewrites the recorded credit.
+    final artistName = _artistController.text.trim() == _seededArtistText.trim()
+        ? null
+        : artistNameUpdateFor(artwork, _artistController.text);
     if (artistName != null) updates['artistName'] = artistName;
+    // Only the signed-in account's own declaration is ever sent, as a bare
+    // flag: the backend resolves the account from the session.
+    final selfAllowed = AuthoredBySelf.displayNameFor(
+          profileProvider.currentUser,
+          isSignedIn: profileProvider.isSignedIn,
+        ) !=
+        null;
+    final selfFlag = AuthoredBySelf.updateFlagFor(
+      initial: _initialAuthoredBySelf,
+      current: _authoredBySelf && selfAllowed,
+    );
+    if (selfFlag != null) updates['authoredBySelf'] = selfFlag;
     if (description != artwork.description) {
       updates['description'] = description;
     }
@@ -884,6 +935,12 @@ class _ArtworkEditScreenState extends State<ArtworkEditScreen> {
     final scheme = Theme.of(context).colorScheme;
 
     final provider = context.watch<ArtworkProvider>();
+    final profileProvider = context.watch<ProfileProvider>();
+    final selfName = AuthoredBySelf.displayNameFor(
+      profileProvider.currentUser,
+      isSignedIn: profileProvider.isSignedIn,
+    );
+    final authoredBySelf = _authoredBySelf && selfName != null;
     if (AppConfig.isFeatureEnabled('collabInvites')) {
       context.watch<CollabProvider>();
     }
@@ -977,13 +1034,22 @@ class _ArtworkEditScreenState extends State<ArtworkEditScreen> {
               TextField(
                 controller: _artistController,
                 enabled: !_isSaving,
+                readOnly: authoredBySelf,
                 textCapitalization: TextCapitalization.words,
                 maxLength: 255,
                 decoration: InputDecoration(
                   labelText: l10n.artworkEditArtistLabel,
-                  helperText: l10n.artworkEditArtistHelper,
+                  helperText: authoredBySelf
+                      ? l10n.artworkAuthoredBySelfFieldHelper
+                      : l10n.artworkEditArtistHelper,
                   helperMaxLines: 3,
                 ),
+              ),
+              AuthoredBySelfToggle(
+                value: authoredBySelf,
+                profileName: selfName,
+                enabled: !_isSaving,
+                onChanged: (next) => _setAuthoredBySelf(next, selfName),
               ),
               const SizedBox(height: DetailSpacing.md),
               TextField(

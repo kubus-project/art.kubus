@@ -2187,6 +2187,12 @@ abstract class AppLocalizations {
   /// **'Securing wallet'**
   String get postAuthSecuringWallet;
 
+  /// No description provided for @postAuthSecuringAccount.
+  ///
+  /// In en, this message translates to:
+  /// **'Securing account'**
+  String get postAuthSecuringAccount;
+
   /// No description provided for @postAuthLoadingProfile.
   ///
   /// In en, this message translates to:
@@ -2222,6 +2228,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Verifying wallet access and device security.'**
   String get postAuthSecuringWalletBody;
+
+  /// No description provided for @postAuthSecuringAccountBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Checking your session and account access.'**
+  String get postAuthSecuringAccountBody;
 
   /// No description provided for @postAuthLoadingProfileBody.
   ///
@@ -19434,25 +19446,25 @@ abstract class AppLocalizations {
   /// No description provided for @desktopHomeTopCreatorsTitle.
   ///
   /// In en, this message translates to:
-  /// **'Top Creators'**
+  /// **'Top Artists'**
   String get desktopHomeTopCreatorsTitle;
 
   /// No description provided for @desktopHomeTopCreatorsLoadFailed.
   ///
   /// In en, this message translates to:
-  /// **'Unable to load creators.'**
+  /// **'Unable to load artists.'**
   String get desktopHomeTopCreatorsLoadFailed;
 
   /// No description provided for @desktopHomeTopCreatorsEmpty.
   ///
   /// In en, this message translates to:
-  /// **'Top creators will appear here'**
+  /// **'Top artists will appear here'**
   String get desktopHomeTopCreatorsEmpty;
 
   /// No description provided for @desktopHomeCreatorFallbackName.
   ///
   /// In en, this message translates to:
-  /// **'Creator'**
+  /// **'Artist'**
   String get desktopHomeCreatorFallbackName;
 
   /// No description provided for @homeRailsUnavailableTitle.
@@ -33014,6 +33026,36 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Already managed'**
   String get verificationInstitutionAlreadyManaged;
+
+  /// Accessibility label for the tappable author line on an artwork detail screen; opens the author's public profile.
+  ///
+  /// In en, this message translates to:
+  /// **'Open profile of {name}'**
+  String artworkAuthorOpenProfile(String name);
+
+  /// No description provided for @artworkAuthoredBySelfLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'I am the creator'**
+  String get artworkAuthoredBySelfLabel;
+
+  /// No description provided for @artworkAuthoredBySelfHelper.
+  ///
+  /// In en, this message translates to:
+  /// **'The artist name is set to your profile name and the artwork is attributed to your profile.'**
+  String get artworkAuthoredBySelfHelper;
+
+  /// No description provided for @artworkAuthoredBySelfUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign in and add a display name to your profile to attribute this artwork to yourself.'**
+  String get artworkAuthoredBySelfUnavailable;
+
+  /// No description provided for @artworkAuthoredBySelfFieldHelper.
+  ///
+  /// In en, this message translates to:
+  /// **'Set from your profile name.'**
+  String get artworkAuthoredBySelfFieldHelper;
 
   /// No description provided for @analyticsConsentPromptTitle.
   ///

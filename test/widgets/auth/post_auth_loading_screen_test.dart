@@ -73,6 +73,36 @@ class _BlockingPostAuthCoordinator extends PostAuthCoordinator {
   }
 }
 
+class _StagedBlockingPostAuthCoordinator extends PostAuthCoordinator {
+  const _StagedBlockingPostAuthCoordinator(this.completer, this.stage);
+
+  final Completer<PostAuthResult> completer;
+  final PostAuthStage stage;
+
+  @override
+  Future<PostAuthResult> complete({
+    required BuildContext context,
+    required AuthOrigin origin,
+    required Map<String, dynamic> payload,
+    String? redirectRoute,
+    Object? redirectArguments,
+    String? walletAddress,
+    Object? userId,
+    bool embedded = false,
+    bool modalReauth = false,
+    bool requiresWalletBackup = false,
+    bool requiresWalletSetup = false,
+    ProtectedActionRequirements requirements =
+        ProtectedActionRequirements.accountOnly,
+    Future<void> Function()? onBeforeSavedItemsSync,
+    required ValueChanged<PostAuthStage> onStageChanged,
+  }) async {
+    onStageChanged(PostAuthStage.preparingSession);
+    onStageChanged(stage);
+    return completer.future;
+  }
+}
+
 class _RecordingNavigatorObserver extends NavigatorObserver {
   int pushCount = 0;
   int replacementCount = 0;
@@ -420,5 +450,55 @@ void main() {
 
     // No alert dialog should appear
     expect(find.byType(AlertDialog), findsNothing);
+  });
+
+  testWidgets('an account without a wallet never sees wallet wording', (
+    tester,
+  ) async {
+    final completer = Completer<PostAuthResult>();
+    await tester.pumpWidget(
+      _buildApp(
+        PostAuthLoadingScreen(
+          payload: const <String, dynamic>{},
+          origin: AuthOrigin.emailPassword,
+          coordinator: _StagedBlockingPostAuthCoordinator(
+            completer,
+            PostAuthStage.securingAccount,
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 50));
+
+    expect(find.text('Securing account'), findsWidgets);
+    expect(find.text('Securing wallet'), findsNothing);
+    expect(find.textContaining('wallet'), findsNothing);
+    completer.complete(const PostAuthResult(completed: false));
+    await tester.pump();
+  });
+
+  testWidgets('a wallet sign-in still says it is securing the wallet', (
+    tester,
+  ) async {
+    final completer = Completer<PostAuthResult>();
+    await tester.pumpWidget(
+      _buildApp(
+        PostAuthLoadingScreen(
+          payload: const <String, dynamic>{},
+          origin: AuthOrigin.wallet,
+          coordinator: _StagedBlockingPostAuthCoordinator(
+            completer,
+            PostAuthStage.securingWallet,
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 50));
+
+    expect(find.text('Securing wallet'), findsWidgets);
+    completer.complete(const PostAuthResult(completed: false));
+    await tester.pump();
   });
 }

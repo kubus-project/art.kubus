@@ -105,8 +105,9 @@ void main() {
     // Submits a minimal draft and returns the JSON body sent to POST
     // /api/artworks, so the request is what is asserted, not a mock.
     Future<Map<String, dynamic>> submitWith(
-      void Function(ArtworkDraftsProvider provider, String draftId) arrange,
-    ) async {
+      void Function(ArtworkDraftsProvider provider, String draftId) arrange, {
+      String wallet = _wallet,
+    }) async {
       final l10n = await AppLocalizations.delegate.load(const Locale('en'));
       Map<String, dynamic>? sent;
       BackendApiService().setHttpClient(
@@ -156,12 +157,27 @@ void main() {
       arrange(provider, draftId);
       await provider.submitDraft(
         draftId: draftId,
-        walletAddress: _wallet,
+        walletAddress: wallet,
         l10n: l10n,
       );
       expect(sent, isNotNull, reason: 'the create request must be sent');
       return sent!;
     }
+
+    test('a walletless account publishes under its session, no wallet field',
+        () async {
+      final body = await submitWith(
+        (p, id) => p.updateBasics(
+          draftId: id,
+          artistName: 'Damjan Stevovic',
+          authoredBySelf: true,
+        ),
+        wallet: '',
+      );
+      expect(body['title'], 'Draft title');
+      expect(body['authoredBySelf'], isTrue);
+      expect(body.containsKey('walletAddress'), isFalse);
+    });
 
     test('an explicit artist is sent', () async {
       final body = await submitWith((p, id) =>
@@ -185,6 +201,28 @@ void main() {
         // The uploader is a separate role and is never offered as the artist.
         expect(jsonEncode(body), isNot(contains('Uploader Person')));
       }
+    });
+
+    test('I am the creator sends the bare flag and never an account id',
+        () async {
+      final body = await submitWith((p, id) => p.updateBasics(
+            draftId: id,
+            artistName: 'Uploader Person',
+            authoredBySelf: true,
+          ));
+      expect(body['authoredBySelf'], isTrue);
+      expect(body['artistName'], 'Uploader Person');
+      for (final key in body.keys) {
+        expect(key.toLowerCase(), isNot(contains('authorprofile')));
+        expect(key.toLowerCase(), isNot(contains('userid')));
+        expect(key.toLowerCase(), isNot(contains('profileid')));
+      }
+    });
+
+    test('an unticked draft sends no authoredBySelf entry', () async {
+      final body = await submitWith((p, id) =>
+          p.updateBasics(draftId: id, artistName: 'Recorded Artist'));
+      expect(body.containsKey('authoredBySelf'), isFalse);
     });
 
     test('uploader and artist stay separate roles', () async {

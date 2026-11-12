@@ -9,6 +9,7 @@ import '../../../models/art_marker.dart';
 import '../../../models/artwork.dart';
 import '../../../models/map_marker_subject.dart';
 import '../../../utils/design_tokens.dart';
+import '../../authored_by_self_toggle.dart';
 import '../../creator/creator_kit.dart';
 
 class KubusMarkerFormHeader extends StatelessWidget {
@@ -90,6 +91,9 @@ class KubusMarkerFormBody extends StatelessWidget {
     required this.subjectSelectionRequired,
     required this.showOptionalArAsset,
     required this.isStreetArtSelection,
+    this.authoredBySelf = false,
+    this.authoredBySelfName,
+    this.onAuthoredBySelfChanged,
     required this.onSubjectTypeChanged,
     required this.onSubjectChanged,
     required this.onArAssetChanged,
@@ -126,6 +130,12 @@ class KubusMarkerFormBody extends StatelessWidget {
   final bool subjectSelectionRequired;
   final bool showOptionalArAsset;
   final bool isStreetArtSelection;
+
+  /// "I am the creator" state of the street-art form. [authoredBySelfName] is
+  /// the signed-in profile's display name; null disables the checkbox.
+  final bool authoredBySelf;
+  final String? authoredBySelfName;
+  final ValueChanged<bool>? onAuthoredBySelfChanged;
   final ValueChanged<MarkerSubjectType> onSubjectTypeChanged;
   final ValueChanged<MarkerSubjectOption> onSubjectChanged;
   final ValueChanged<Artwork?> onArAssetChanged;
@@ -234,7 +244,17 @@ class KubusMarkerFormBody extends StatelessWidget {
                 controller: artistNameController,
                 labelText: l10n.mapMarkerDialogArtistNameLabel,
                 hintText: l10n.mapMarkerDialogArtistNameHint,
+                readOnly: authoredBySelf,
+                helperText: authoredBySelf
+                    ? l10n.artworkAuthoredBySelfFieldHelper
+                    : null,
               ),
+              if (onAuthoredBySelfChanged != null)
+                AuthoredBySelfToggle(
+                  value: authoredBySelf,
+                  profileName: authoredBySelfName,
+                  onChanged: onAuthoredBySelfChanged!,
+                ),
               const SizedBox(height: KubusSpacing.sm),
               KubusMarkerFormTextField(
                 controller: imageAuthorController,
@@ -712,6 +732,8 @@ class KubusMarkerFormTextField extends StatelessWidget {
     this.maxLines = 1,
     this.keyboardType,
     this.validator,
+    this.readOnly = false,
+    this.helperText,
   });
 
   final TextEditingController controller;
@@ -720,6 +742,8 @@ class KubusMarkerFormTextField extends StatelessWidget {
   final int maxLines;
   final TextInputType? keyboardType;
   final String? Function(String?)? validator;
+  final bool readOnly;
+  final String? helperText;
 
   @override
   Widget build(BuildContext context) {
@@ -730,6 +754,8 @@ class KubusMarkerFormTextField extends StatelessWidget {
       maxLines: maxLines,
       keyboardType: keyboardType,
       validator: validator,
+      readOnly: readOnly,
+      helperText: helperText,
     );
   }
 }

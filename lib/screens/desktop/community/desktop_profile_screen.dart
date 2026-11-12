@@ -3,6 +3,7 @@ import '../../../widgets/common/kubus_screen_header.dart';
 import 'package:flutter/material.dart';
 import '../../../widgets/profile/profile_identity_hero.dart';
 import '../../../widgets/profile/profile_owner_identity.dart';
+import '../../../utils/profile_data_key.dart';
 import '../../../widgets/inline_loading.dart';
 import 'package:provider/provider.dart';
 import '../../../l10n/app_localizations.dart';
@@ -81,6 +82,7 @@ class _ProfileScreenState extends State<ProfileScreen>
   bool _artistDataLoading = false;
   bool _artistDataLoaded = false;
   List<Map<String, dynamic>> _artistArtworks = [];
+  int? _artistAuthoredTotal;
   List<Map<String, dynamic>> _artistDocumentedArtworks = [];
   List<Map<String, dynamic>> _artistCollections = [];
   List<Map<String, dynamic>> _artistEvents = [];
@@ -813,16 +815,16 @@ class _ProfileScreenState extends State<ProfileScreen>
                 color: roles.foregroundSubtle,
               ),
             ),
-            Text(
-              web3Provider.hasWalletIdentity
-                  ? web3Provider.formatAddress(web3Provider.walletAddress)
-                  : l10n.profileConnectWalletToSeeProfileLabel,
-              style: KubusTextStyles.detailCaption.copyWith(
-                fontFamily:
-                    web3Provider.hasWalletIdentity ? 'RobotoMono' : null,
-                color: roles.foregroundSubtle,
+            // A wallet is optional: an account without one shows nothing here
+            // instead of a prompt to connect one.
+            if (web3Provider.hasWalletIdentity)
+              Text(
+                web3Provider.formatAddress(web3Provider.walletAddress),
+                style: KubusTextStyles.detailCaption.copyWith(
+                  fontFamily: 'RobotoMono',
+                  color: roles.foregroundSubtle,
+                ),
               ),
-            ),
           ],
         ),
       ],
@@ -869,7 +871,11 @@ class _ProfileScreenState extends State<ProfileScreen>
         ),
         DesktopStatCard(
           label: l10n.userProfileArtworksTitle,
-          value: profileProvider.formattedArtworksCount,
+          // Counters are wallet-keyed; a walletless account uses the
+          // account-keyed total of its authored works.
+          value: _walletlessAuthoredCount(wallet) != null
+              ? '${_walletlessAuthoredCount(wallet)}'
+              : profileProvider.formattedArtworksCount,
           icon: Icons.palette_outlined,
           color: _profileStatAccentForIcon(Icons.palette_outlined),
           onTap: () =>
@@ -1323,6 +1329,7 @@ class _ProfileScreenState extends State<ProfileScreen>
             privateCounters['artworksDiscovered'] ?? stats?.artworksDiscovered;
         final createdValue = authorshipCounters['authoredArtworks'] ??
             publicCounters['artworks'] ??
+            _walletlessAuthoredCount(wallet) ??
             stats?.artworksCreated;
         final nftsOwnedValue = publicCounters['nftsMinted'] ?? stats?.nftsOwned;
         final publicStreetArtAddedValue =
@@ -1709,10 +1716,24 @@ class _ProfileScreenState extends State<ProfileScreen>
     }
   }
 
+  /// Authored-works count for an account without a wallet (no wallet-keyed
+  /// stats snapshot exists), or null when the account has a wallet or the
+  /// count is not known yet.
+  int? _walletlessAuthoredCount(String? wallet) {
+    if ((wallet ?? '').trim().isNotEmpty) return null;
+    return ownerAuthoredWorksCount(
+      serverTotal: _artistAuthoredTotal,
+      loadedCount: _artistArtworks.length,
+    );
+  }
+
   Future<void> _maybeLoadArtistData({bool force = false}) async {
     final profileProvider =
         Provider.of<ProfileProvider>(context, listen: false);
-    final wallet = profileProvider.currentUser?.walletAddress ?? '';
+    // Profile/account id first; wallet only as a legacy fallback.
+    final wallet = profileArtistDataKey(profileProvider.currentUser);
+    final eventsKey = profileEventsMatchKey(profileProvider.currentUser);
+    final legacyWallet = profileLegacyWalletKey(profileProvider.currentUser);
     if (wallet.isEmpty) return;
 
     final verification =
@@ -1724,11 +1745,18 @@ class _ProfileScreenState extends State<ProfileScreen>
     if (_artistDataRequested && !force) return;
 
     _artistDataRequested = true;
-    await _loadArtistData(wallet, force: force);
+    await _loadArtistData(
+      wallet,
+      eventsKey: eventsKey,
+      legacyWallet: legacyWallet,
+      force: force,
+    );
   }
 
   Future<void> _loadArtistData(String walletAddress,
-      {bool force = false}) async {
+      {required String eventsKey,
+      String legacyWallet = '',
+      bool force = false}) async {
     if (!mounted) return;
     setState(() => _artistDataLoading = true);
 
@@ -1738,11 +1766,14 @@ class _ProfileScreenState extends State<ProfileScreen>
         walletAddress,
         limit: 6,
       );
-      final collections =
-          await api.getCollections(walletAddress: walletAddress, limit: 6);
+      final collections = await api.getCollections(
+        walletAddress: walletAddress,
+        legacyWalletAddress: legacyWallet,
+        limit: 6,
+      );
       final eventsResponse = await api.listEvents(limit: 100);
       final filteredEvents = eventsResponse
-          .where((event) => profileEventBelongsToWallet(event, walletAddress))
+          .where((event) => profileEventBelongsToWallet(event, eventsKey))
           .take(6)
           .map((e) => Map<String, dynamic>.from(e))
           .toList();
@@ -1750,6 +1781,7 @@ class _ProfileScreenState extends State<ProfileScreen>
       if (!mounted) return;
       setState(() {
         _artistArtworks = sections.authored;
+        _artistAuthoredTotal = sections.authoredTotal;
         _artistDocumentedArtworks = sections.documented;
         _artistCollections = collections;
         _artistEvents = filteredEvents;
@@ -1780,12 +1812,18 @@ class _ProfileScreenState extends State<ProfileScreen>
         Provider.of<ProfileProvider>(context, listen: false);
     final web3Provider = Provider.of<Web3Provider>(context, listen: false);
     final wallet = web3Provider.walletAddress.trim();
-    if (!web3Provider.hasWalletIdentity || wallet.isEmpty) {
+    final hasWallet = web3Provider.hasWalletIdentity && wallet.isNotEmpty;
+    // A wallet is optional: an email/Google account reloads by its session.
+    if (!hasWallet && !profileProvider.isSignedIn) {
       return;
     }
 
     try {
-      await profileProvider.loadProfile(wallet);
+      if (hasWallet) {
+        await profileProvider.loadProfile(wallet);
+      } else {
+        await profileProvider.loadAuthenticatedProfile();
+      }
     } catch (e) {
       debugPrint(
           'DesktopProfileScreen._refreshProfileAfterEdit loadProfile failed: $e');

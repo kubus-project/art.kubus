@@ -469,7 +469,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     final l10n = AppLocalizations.of(context)!;
 
     if (isLoading) {
-      return Scaffold(
+      return _holdProfileUrl(Scaffold(
         appBar: AppBar(
           flexibleSpace: const KubusGlassAppBarBackdrop(
             showBottomDivider: true,
@@ -480,14 +480,14 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
           ),
         ),
         body: const AppLoading(),
-      );
+      ));
     }
 
     if (user == null) {
       if (_profileController.criticalLoadFailedTransiently) {
         // The lookup failed; the profile may exist. Offer a retry instead of
         // reporting it as not found.
-        return UnavailableEntityScaffold(
+        return _holdProfileUrl(UnavailableEntityScaffold(
           entityLabel: l10n.userProfileTitle,
           reason: UnavailableEntityReason.loadFailed,
           onRetry: _retryCriticalLoad,
@@ -496,9 +496,9 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
             type: 'profile',
             id: widget.userId,
           ),
-        );
+        ));
       }
-      return Scaffold(
+      return _holdProfileUrl(Scaffold(
         appBar: AppBar(
           flexibleSpace: const KubusGlassAppBarBackdrop(
             showBottomDivider: true,
@@ -509,7 +509,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
           ),
         ),
         body: Center(child: Text(l10n.userProfileNotFound)),
-      );
+      ));
     }
 
     // Role flags come only from the viewed user's own server-projected profile.
@@ -616,6 +616,13 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
       child: content,
     );
   }
+
+  Widget _holdProfileUrl(Widget child) => PublicEntityTakeoverReady(
+        type: ShareEntityType.profile,
+        entityId: widget.userId,
+        signalReady: false,
+        child: child,
+      );
 
   Future<void> _showMoreOptions() async {
     final l10n = AppLocalizations.of(context)!;

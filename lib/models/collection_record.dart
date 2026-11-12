@@ -1,3 +1,5 @@
+import 'artwork.dart';
+
 DateTime? _parseDateTime(dynamic value) {
   if (value == null) return null;
   if (value is DateTime) return value;
@@ -37,6 +39,7 @@ class CollectionArtworkRecord {
   final String? imageUrl;
   final String? imageCid;
   final String? artistName;
+  final ArtworkAuthorProfile? authorProfile;
   final List<String> tags;
   final DateTime? addedAt;
   final String? notes;
@@ -48,6 +51,7 @@ class CollectionArtworkRecord {
     this.imageUrl,
     this.imageCid,
     this.artistName,
+    this.authorProfile,
     this.tags = const <String>[],
     this.addedAt,
     this.notes,
@@ -118,7 +122,14 @@ class CollectionArtworkRecord {
       description: map['description']?.toString(),
       imageUrl: resolvedImageUrl,
       imageCid: resolvedImageCid,
-      artistName: map['artistName']?.toString(),
+      artistName: pickFrom(map, ['artistName', 'artist_name']) ??
+          (nestedArtwork == null
+              ? null
+              : pickFrom(nestedArtwork, ['artistName', 'artist_name'])),
+      authorProfile: ArtworkAuthorProfile.tryParse(map['authorProfile'] ??
+          map['author_profile'] ??
+          nestedArtwork?['authorProfile'] ??
+          nestedArtwork?['author_profile']),
       tags: tags,
       addedAt: _parseDateTime(map['addedAt'] ?? map['added_at']),
       notes: map['notes']?.toString(),

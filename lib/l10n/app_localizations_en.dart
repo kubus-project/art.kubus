@@ -1197,6 +1197,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get postAuthSecuringWallet => 'Securing wallet';
 
   @override
+  String get postAuthSecuringAccount => 'Securing account';
+
+  @override
   String get postAuthLoadingProfile => 'Loading profile';
 
   @override
@@ -1215,6 +1218,10 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get postAuthSecuringWalletBody =>
       'Verifying wallet access and device security.';
+
+  @override
+  String get postAuthSecuringAccountBody =>
+      'Checking your session and account access.';
 
   @override
   String get postAuthLoadingProfileBody =>
@@ -11131,16 +11138,16 @@ class AppLocalizationsEn extends AppLocalizations {
       'Trending artworks will appear here';
 
   @override
-  String get desktopHomeTopCreatorsTitle => 'Top Creators';
+  String get desktopHomeTopCreatorsTitle => 'Top Artists';
 
   @override
-  String get desktopHomeTopCreatorsLoadFailed => 'Unable to load creators.';
+  String get desktopHomeTopCreatorsLoadFailed => 'Unable to load artists.';
 
   @override
-  String get desktopHomeTopCreatorsEmpty => 'Top creators will appear here';
+  String get desktopHomeTopCreatorsEmpty => 'Top artists will appear here';
 
   @override
-  String get desktopHomeCreatorFallbackName => 'Creator';
+  String get desktopHomeCreatorFallbackName => 'Artist';
 
   @override
   String get homeRailsUnavailableTitle => 'Home rails unavailable';
@@ -19019,6 +19026,25 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get verificationInstitutionAlreadyManaged => 'Already managed';
+
+  @override
+  String artworkAuthorOpenProfile(String name) {
+    return 'Open profile of $name';
+  }
+
+  @override
+  String get artworkAuthoredBySelfLabel => 'I am the creator';
+
+  @override
+  String get artworkAuthoredBySelfHelper =>
+      'The artist name is set to your profile name and the artwork is attributed to your profile.';
+
+  @override
+  String get artworkAuthoredBySelfUnavailable =>
+      'Sign in and add a display name to your profile to attribute this artwork to yourself.';
+
+  @override
+  String get artworkAuthoredBySelfFieldHelper => 'Set from your profile name.';
 
   @override
   String get analyticsConsentPromptTitle => 'Allow optional analytics?';

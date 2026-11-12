@@ -122,6 +122,8 @@ class _ProfileEditTestProvider extends ProfileProvider {
   ProfileRequestFailure? avatarUploadFailure;
   final List<String> avatarUploadWallets = <String>[];
   Object? coverUploadError;
+  final List<String> coverUploadWallets = <String>[];
+  int loadAuthenticatedProfileCalls = 0;
   bool saveShouldTimeout = false;
   String? lastError;
   String? savedAvatar;
@@ -155,6 +157,7 @@ class _ProfileEditTestProvider extends ProfileProvider {
     required String fileName,
     required String walletAddress,
   }) async {
+    coverUploadWallets.add(walletAddress);
     final error = coverUploadError;
     if (error != null) {
       if (error is TimeoutException) throw error;
@@ -221,6 +224,11 @@ class _ProfileEditTestProvider extends ProfileProvider {
     bool allowWalletAutoRegister = false,
   }) async {
     loadProfileCalls += 1;
+  }
+
+  @override
+  Future<void> loadAuthenticatedProfile() async {
+    loadAuthenticatedProfileCalls += 1;
   }
 }
 
@@ -537,12 +545,53 @@ void main() {
         provider.currentUser?.avatar, '/uploads/profiles/avatars/current.png');
   });
 
-  testWidgets('missing wallet cover upload resets spinner and preview',
+  for (final (name, pump, stateOf) in <(
+    String,
+    Widget,
+    Finder,
+  )>[
+    (
+      'mobile',
+      const mobile.ProfileEditScreen(),
+      find.byType(mobile.ProfileEditScreen)
+    ),
+    (
+      'desktop',
+      const desktop.ProfileEditScreen(),
+      find.byType(desktop.ProfileEditScreen)
+    ),
+  ]) {
+    testWidgets('$name: a walletless session uploads and saves its cover',
+        (tester) async {
+      final provider = _ProfileEditTestProvider();
+      provider.setCurrentUser(
+        _ProfileEditTestProvider._initialProfile.copyWith(walletAddress: ''),
+      );
+      await _pumpEditScreen(tester, provider, pump);
+
+      final state = tester.state(stateOf) as dynamic;
+      await state.debugUploadCoverBytesForTesting(
+        bytes: Uint8List.fromList(<int>[1, 2, 3]),
+        fileName: 'email-cover.png',
+      );
+      await tester.pump();
+
+      expect(provider.coverUploadWallets, <String>['']);
+      expect(provider.savedCover, '/uploads/profiles/cover/email-cover.png');
+      // No wallet to reload by: the authenticated account is reloaded.
+      expect(provider.loadProfileCalls, 0);
+      expect(provider.loadAuthenticatedProfileCalls, 1);
+      expect(state.debugIsUploadingCover, isFalse);
+      expect(state.debugCoverChanged, isFalse);
+      expect(state.debugHasLocalCoverBytes, isFalse);
+      expect(find.textContaining('Sign in first'), findsNothing);
+    });
+  }
+
+  testWidgets('a guest cover upload resets spinner and preview',
       (tester) async {
-    final provider = _ProfileEditTestProvider();
-    provider.setCurrentUser(
-      _ProfileEditTestProvider._initialProfile.copyWith(walletAddress: ''),
-    );
+    // No current user: nobody is signed in.
+    final provider = ProfileProvider(apiService: _FakeProfileApi());
     await _pumpEditScreen(tester, provider, const mobile.ProfileEditScreen());
 
     final state =

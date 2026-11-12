@@ -1022,6 +1022,8 @@ class _ArtKubusState extends State<ArtKubus> with WidgetsBindingObserver {
   late final UrlCoherenceObserver _urlCoherenceObserver = UrlCoherenceObserver(
     report: _reportVisibleBrowserUrl,
     reportBack: _reportVisibleBrowserBack,
+    reportShellForward: _reportVisibleBrowserShellUrl,
+    reportShellBack: _reportVisibleBrowserShellBack,
     reportReplace: _reportVisibleBrowserReplace,
   );
   // The shared instance is what entity screens register their titles with.
@@ -1076,6 +1078,22 @@ class _ArtKubusState extends State<ArtKubus> with WidgetsBindingObserver {
     if (uri != null) router.reportVisibleUri(uri);
   }
 
+  void _reportVisibleBrowserShellUrl(String url) {
+    if (!kIsWeb) return;
+    final router = _webRouterDelegate;
+    if (router.isRestoringRoute) return;
+    final uri = Uri.tryParse(url);
+    if (uri != null) router.reportVisibleUri(uri, desktopShell: true);
+  }
+
+  void _reportVisibleBrowserShellBack(String url) {
+    if (!kIsWeb) return;
+    final router = _webRouterDelegate;
+    if (router.isRestoringRoute) return;
+    final uri = Uri.tryParse(url);
+    if (uri != null) router.reportVisibleBack(uri, desktopShell: true);
+  }
+
   void _reportVisibleBrowserBack(String url) {
     if (!kIsWeb) return;
     final router = _webRouterDelegate;
@@ -1097,7 +1115,10 @@ class _ArtKubusState extends State<ArtKubus> with WidgetsBindingObserver {
     NavigatorState navigator,
   ) {
     final route = _buildAppRoute(
-      RouteSettings(name: configuration.visibleUri.toString()),
+      RouteSettings(
+        name: configuration.visibleUri.toString(),
+        arguments: {'restoreDesktopShell': configuration.desktopShell},
+      ),
     );
     navigator.pushAndRemoveUntil(route, (_) => false);
   }
@@ -1496,8 +1517,12 @@ class _ArtKubusState extends State<ArtKubus> with WidgetsBindingObserver {
     final target = const ShareDeepLinkParser().parse(uri);
     if (target != null) {
       return MaterialPageRoute(
-        builder: (_) =>
-            DeepLinkBootstrapScreen(target: target, initialUri: uri),
+        builder: (_) => DeepLinkBootstrapScreen(
+          target: target,
+          initialUri: uri,
+          restoreDesktopShell: settings.arguments is Map &&
+              (settings.arguments as Map)['restoreDesktopShell'] == true,
+        ),
         settings: settings,
       );
     }
@@ -1554,7 +1579,14 @@ class _ArtKubusState extends State<ArtKubus> with WidgetsBindingObserver {
       ];
     }
 
-    return <Route<dynamic>>[_buildAppRoute(RouteSettings(name: normalized))];
+    return <Route<dynamic>>[
+      _buildAppRoute(RouteSettings(
+        name: normalized,
+        arguments: kIsWeb && _webInitialRoute.desktopShell
+            ? {'restoreDesktopShell': true}
+            : null,
+      )),
+    ];
   }
 
   @override

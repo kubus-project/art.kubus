@@ -114,4 +114,60 @@ void main() {
     final field = tester.widget<TextFormField>(artistField('Artist / author'));
     expect(field.controller?.text, '  Francesco Robba');
   });
+
+  group('I am the creator', () {
+    Finder toggle() => find.text('I am the creator');
+
+    testWidgets(
+        'ticking locks the field to the profile name and flags the draft',
+        (tester) async {
+      final (provider, id) = await pump(tester, locale: const Locale('en'));
+      await tester.ensureVisible(toggle());
+      await tester.tap(toggle());
+      await tester.pump();
+
+      final draft = provider.getDraft(id)!;
+      expect(draft.authoredBySelf, isTrue);
+      expect(draft.artistName, 'Uploader Person');
+      final field =
+          tester.widget<TextFormField>(artistField('Artist / author'));
+      expect(field.controller?.text, 'Uploader Person');
+      expect(
+          tester
+              .widget<EditableText>(find.descendant(
+                of: find.byType(TextFormField).at(1),
+                matching: find.byType(EditableText),
+              ))
+              .readOnly,
+          isTrue);
+      expect(tester.widget<Checkbox>(find.byType(Checkbox)).value, isTrue);
+    });
+
+    testWidgets('unticking releases the field again', (tester) async {
+      final (provider, id) = await pump(tester, locale: const Locale('en'));
+      await tester.ensureVisible(toggle());
+      await tester.tap(toggle());
+      await tester.pump();
+      expect(provider.getDraft(id)!.authoredBySelf, isTrue);
+      await tester.ensureVisible(toggle());
+      await tester.pump();
+      await tester.tap(toggle());
+      await tester.pump();
+
+      expect(provider.getDraft(id)!.authoredBySelf, isFalse);
+      expect(
+          tester
+              .widget<EditableText>(find.descendant(
+                of: find.byType(TextFormField).at(1),
+                matching: find.byType(EditableText),
+              ))
+              .readOnly,
+          isFalse);
+    });
+
+    testWidgets('the label and helper are localized', (tester) async {
+      await pump(tester, locale: const Locale('sl'));
+      expect(find.text('Sem ustvarjalec'), findsOneWidget);
+    });
+  });
 }

@@ -80,11 +80,85 @@ extension ArtworkArStatusApi on ArtworkArStatus {
   }
 }
 
+/// The public profile an artwork is explicitly attributed to as its author.
+///
+/// This is neither the uploader (`creator_id`) nor the free-text artist name:
+/// the backend only emits it when an explicit, non-rejected author attribution
+/// exists for an active, public profile. It is never derived from a wallet.
+class ArtworkAuthorProfile {
+  const ArtworkAuthorProfile({
+    required this.profileId,
+    required this.username,
+    required this.displayName,
+  });
+
+  final String profileId;
+  final String username;
+  final String displayName;
+
+  /// Tolerant parse: anything that is not a map with a usable profile id and
+  /// at least one visible name yields null (no link, text-only byline).
+  static ArtworkAuthorProfile? tryParse(Object? raw) {
+    if (raw is! Map) return null;
+    String read(List<String> keys) {
+      for (final key in keys) {
+        final value = raw[key];
+        if (value == null || value is Map || value is List) continue;
+        final text = value.toString().trim();
+        if (text.isNotEmpty) return text;
+      }
+      return '';
+    }
+
+    final profileId = read(const ['profileId', 'profile_id', 'id']);
+    final username = read(const ['username']);
+    final displayName = read(const ['displayName', 'display_name']);
+    if (profileId.isEmpty) return null;
+    if (username.isEmpty && displayName.isEmpty) return null;
+    return ArtworkAuthorProfile(
+      profileId: profileId,
+      username: username,
+      displayName: displayName,
+    );
+  }
+
+  Map<String, dynamic> toMap() => <String, dynamic>{
+        'profileId': profileId,
+        'username': username,
+        'displayName': displayName,
+      };
+
+  ArtworkAuthorProfile copyWith({
+    String? profileId,
+    String? username,
+    String? displayName,
+  }) {
+    return ArtworkAuthorProfile(
+      profileId: profileId ?? this.profileId,
+      username: username ?? this.username,
+      displayName: displayName ?? this.displayName,
+    );
+  }
+
+  @override
+  bool operator ==(Object other) =>
+      other is ArtworkAuthorProfile &&
+      other.profileId == profileId &&
+      other.username == username &&
+      other.displayName == displayName;
+
+  @override
+  int get hashCode => Object.hash(profileId, username, displayName);
+}
+
 class Artwork {
   final String id;
   final String? walletAddress;
   final String title;
   final String artist;
+
+  /// Explicit attributed author profile, when the backend provides one.
+  final ArtworkAuthorProfile? authorProfile;
   final String description;
   final String? imageUrl;
   final List<String> galleryUrls;
@@ -176,6 +250,7 @@ class Artwork {
     this.walletAddress,
     required this.title,
     required this.artist,
+    this.authorProfile,
     required this.description,
     this.imageUrl,
     this.galleryUrls = const [],
@@ -262,6 +337,7 @@ class Artwork {
       'walletAddress': walletAddress,
       'title': title,
       'artist': artist,
+      if (authorProfile != null) 'authorProfile': authorProfile!.toMap(),
       'description': description,
       'imageUrl': imageUrl,
       'galleryUrls': galleryUrls,
@@ -331,6 +407,7 @@ class Artwork {
           map['walletAddress']?.toString() ?? map['wallet_address']?.toString(),
       title: map['title'] ?? '',
       artist: map['artist'] ?? '',
+      authorProfile: ArtworkAuthorProfile.tryParse(map['authorProfile']),
       description: map['description'] ?? '',
       imageUrl: map['imageUrl'],
       position: LatLng(
@@ -436,6 +513,7 @@ class Artwork {
     String? walletAddress,
     String? title,
     String? artist,
+    ArtworkAuthorProfile? authorProfile,
     String? description,
     String? imageUrl,
     List<String>? galleryUrls,
@@ -494,12 +572,15 @@ class Artwork {
     bool clearArScale = false,
     bool clearDiscoveredAt = false,
     bool clearDiscoveryUserId = false,
+    bool clearAuthorProfile = false,
   }) {
     return Artwork(
       id: id ?? this.id,
       walletAddress: walletAddress ?? this.walletAddress,
       title: title ?? this.title,
       artist: artist ?? this.artist,
+      authorProfile:
+          clearAuthorProfile ? null : (authorProfile ?? this.authorProfile),
       description: description ?? this.description,
       imageUrl: imageUrl ?? this.imageUrl,
       galleryUrls: galleryUrls ?? this.galleryUrls,

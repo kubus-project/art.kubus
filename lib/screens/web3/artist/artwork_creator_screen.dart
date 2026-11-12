@@ -22,11 +22,13 @@ import '../../../providers/tile_providers.dart';
 import '../../../providers/web3provider.dart';
 import '../../../models/collectible.dart';
 import '../../../services/nft_minting_service.dart';
+import '../../../utils/authored_by_self.dart';
 import '../../../utils/design_tokens.dart';
 import '../../../utils/kubus_color_roles.dart';
 import '../../../utils/maplibre_style_utils.dart';
 import '../../../utils/wallet_utils.dart';
 import '../../../widgets/art_map_view.dart';
+import '../../../widgets/authored_by_self_toggle.dart';
 import '../../../widgets/draft_collaboration_invite_panel.dart';
 import '../../../widgets/inline_loading.dart';
 import '../../../widgets/creator/creator_kit.dart';
@@ -570,12 +572,25 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
 
     if (!_validateLocation(drafts: drafts, draft: draft)) return;
 
+    // A wallet is optional: any signed-in account publishes under its session
+    // (the backend checks the creator capability). Only a guest is stopped.
     final wallet = _resolveWalletAddress(context);
-    if (wallet.isEmpty) {
+    final profileProvider = context.read<ProfileProvider>();
+    if (wallet.isEmpty && !profileProvider.isSignedIn) {
       messenger.showKubusSnackBar(
         SnackBar(content: Text(l10n.communityCommentAuthRequiredToast)),
       );
       return;
+    }
+
+    // A stale tick (signed out or name removed since) must not be sent.
+    if (draft.authoredBySelf &&
+        AuthoredBySelf.displayNameFor(
+              profileProvider.currentUser,
+              isSignedIn: profileProvider.isSignedIn,
+            ) ==
+            null) {
+      drafts.updateBasics(draftId: widget.draftId, authoredBySelf: false);
     }
 
     final created = await drafts.submitDraft(
@@ -762,6 +777,12 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
     required ArtworkDraftState draft,
     required Color accent,
   }) {
+    final profileProvider = context.watch<ProfileProvider>();
+    final selfName = AuthoredBySelf.displayNameFor(
+      profileProvider.currentUser,
+      isSignedIn: profileProvider.isSignedIn,
+    );
+    final selfActive = draft.authoredBySelf && selfName != null;
     return CreatorSection(
       title: 'Basics',
       children: [
@@ -779,13 +800,29 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
         // The author of the work: optional, never prefilled from the account.
         CreatorTextField(
           label: AppLocalizations.of(context)!.artworkEditArtistLabel,
-          helperText: AppLocalizations.of(context)!.artworkDraftArtistHelper,
+          helperText: selfActive
+              ? AppLocalizations.of(context)!.artworkAuthoredBySelfFieldHelper
+              : AppLocalizations.of(context)!.artworkDraftArtistHelper,
           accentColor: accent,
           controller: _artistController,
           maxLength: 255,
+          readOnly: selfActive,
           textInputAction: TextInputAction.next,
           onChanged: (v) =>
               drafts.updateBasics(draftId: widget.draftId, artistName: v),
+        ),
+        AuthoredBySelfToggle(
+          value: selfActive,
+          profileName: selfName,
+          onChanged: (next) {
+            if (next && selfName == null) return;
+            if (next) _artistController.text = selfName!;
+            drafts.updateBasics(
+              draftId: widget.draftId,
+              authoredBySelf: next,
+              artistName: next ? selfName : null,
+            );
+          },
         ),
         const CreatorFieldSpacing(),
         CreatorTextField(
