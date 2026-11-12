@@ -1075,7 +1075,11 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
           ] else if (isInstitution)
             _buildInstitutionHighlights(l10n)
           else if (_hasPublicWork)
-            _buildArtistHighlightsGrid(l10n, showHeader: false),
+            _buildArtistHighlightsGrid(
+              l10n,
+              showHeader: false,
+              contentOnly: true,
+            ),
         ];
       case ProfileSection.publicArt:
         // The canonical hero already carries the added-public-art count.
@@ -1376,10 +1380,45 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
       _documentedArtworks.isNotEmpty ||
       _artistCollections.isNotEmpty;
 
+  /// The works and collections highlights. A non-artist profile
+  /// ([contentOnly]) gets only the bands that have content, never an empty
+  /// Artworks or Collections band.
   Widget _buildArtistHighlightsGrid(
     AppLocalizations l10n, {
     bool showHeader = true,
+    bool contentOnly = false,
   }) {
+    const gap = SizedBox(height: KubusSpacing.lg - KubusSpacing.xs);
+    final bands = <Widget>[
+      if (!contentOnly || _artistArtworks.isNotEmpty)
+        _buildShowcaseSection(
+          l10n: l10n,
+          title: l10n.userProfileArtworksTitle,
+          items: _artistArtworks,
+          emptyLabel: l10n.userProfileNoArtworksYetLabel(user!.name),
+          emptyIcon: Icons.image_outlined,
+          builder: _buildArtworkCard,
+        ),
+      if (_documentedArtworks.isNotEmpty)
+        _buildShowcaseSection(
+          l10n: l10n,
+          title: l10n.profilePublicArtAddedTitle,
+          subtitle: l10n.profilePublicArtAddedSubtitle,
+          items: _documentedArtworks,
+          emptyLabel: l10n.profilePublicArtAddedSubtitle,
+          emptyIcon: Icons.image_outlined,
+          builder: _buildArtworkCard,
+        ),
+      if (!contentOnly || _artistCollections.isNotEmpty)
+        _buildShowcaseSection(
+          l10n: l10n,
+          title: l10n.userProfileCollectionsTitle,
+          items: _artistCollections,
+          emptyLabel: l10n.userProfileNoCollectionsYetLabel(user!.name),
+          emptyIcon: Icons.collections_outlined,
+          builder: _buildCollectionCard,
+        ),
+    ];
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -1391,35 +1430,10 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
           ),
           const SizedBox(height: KubusSpacing.lg - KubusSpacing.xs),
         ],
-        _buildShowcaseSection(
-          l10n: l10n,
-          title: l10n.userProfileArtworksTitle,
-          items: _artistArtworks,
-          emptyLabel: l10n.userProfileNoArtworksYetLabel(user!.name),
-          emptyIcon: Icons.image_outlined,
-          builder: _buildArtworkCard,
-        ),
-        if (_documentedArtworks.isNotEmpty) ...[
-          const SizedBox(height: KubusSpacing.lg - KubusSpacing.xs),
-          _buildShowcaseSection(
-            l10n: l10n,
-            title: l10n.profilePublicArtAddedTitle,
-            subtitle: l10n.profilePublicArtAddedSubtitle,
-            items: _documentedArtworks,
-            emptyLabel: l10n.profilePublicArtAddedSubtitle,
-            emptyIcon: Icons.image_outlined,
-            builder: _buildArtworkCard,
-          ),
+        for (var i = 0; i < bands.length; i++) ...[
+          if (i > 0) gap,
+          bands[i],
         ],
-        const SizedBox(height: KubusSpacing.lg - KubusSpacing.xs),
-        _buildShowcaseSection(
-          l10n: l10n,
-          title: l10n.userProfileCollectionsTitle,
-          items: _artistCollections,
-          emptyLabel: l10n.userProfileNoCollectionsYetLabel(user!.name),
-          emptyIcon: Icons.collections_outlined,
-          builder: _buildCollectionCard,
-        ),
       ],
     );
   }

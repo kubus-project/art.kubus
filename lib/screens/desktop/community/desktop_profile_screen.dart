@@ -279,22 +279,30 @@ class _ProfileScreenState extends State<ProfileScreen>
     const gap = SizedBox(height: DetailSpacing.lg);
     switch (section) {
       case ProfileSection.work:
-        // Only the parts that apply to the role.
-        return [
-          if (isArtist) ...[
-            _buildArtistPortfolioSection(themeProvider),
-            if (_artistDocumentedArtworks.isNotEmpty) ...[
-              gap,
-              _buildArtistDocumentedSection(),
-            ],
-            gap,
-            _buildArtistCollectionsSection(themeProvider),
-            gap,
-            _buildArtistEventsSection(themeProvider),
-          ] else if (isInstitution) ...[
+        // Events are the role's. Authored works and public collections are
+        // public content: a non-artist owner sees the bands that have content,
+        // as a visitor does.
+        if (isInstitution && !isArtist) {
+          return [
             _buildInstitutionEventsSection(themeProvider),
             gap,
             _buildInstitutionCollectionsSection(themeProvider),
+          ];
+        }
+        final contentOnly = !isArtist;
+        final bands = <Widget>[
+          if (!contentOnly || _artistArtworks.isNotEmpty)
+            _buildArtistPortfolioSection(themeProvider),
+          if (_artistDocumentedArtworks.isNotEmpty)
+            _buildArtistDocumentedSection(),
+          if (!contentOnly || _artistCollections.isNotEmpty)
+            _buildArtistCollectionsSection(themeProvider),
+          if (isArtist) _buildArtistEventsSection(themeProvider),
+        ];
+        return [
+          for (var i = 0; i < bands.length; i++) ...[
+            if (i > 0) gap,
+            bands[i],
           ],
         ];
       case ProfileSection.activity:
@@ -1740,7 +1748,6 @@ class _ProfileScreenState extends State<ProfileScreen>
         Provider.of<AccountVerificationProvider>(context, listen: false);
     final isArtist = _hasArtistRole(profileProvider, verification);
     final isInstitution = _hasInstitutionRole(profileProvider, verification);
-    if (!(isArtist || isInstitution)) return;
     if (_artistDataLoading && !force) return;
     if (_artistDataRequested && !force) return;
 
@@ -1750,13 +1757,16 @@ class _ProfileScreenState extends State<ProfileScreen>
       eventsKey: eventsKey,
       legacyWallet: legacyWallet,
       force: force,
+      // Events are a creator surface; works and collections are public.
+      loadEvents: isArtist || isInstitution,
     );
   }
 
   Future<void> _loadArtistData(String walletAddress,
       {required String eventsKey,
       String legacyWallet = '',
-      bool force = false}) async {
+      bool force = false,
+      bool loadEvents = true}) async {
     if (!mounted) return;
     setState(() => _artistDataLoading = true);
 
@@ -1771,7 +1781,8 @@ class _ProfileScreenState extends State<ProfileScreen>
         legacyWalletAddress: legacyWallet,
         limit: 6,
       );
-      final eventsResponse = await api.listEvents(limit: 100);
+      final eventsResponse =
+          loadEvents ? await api.listEvents(limit: 100) : const [];
       final filteredEvents = eventsResponse
           .where((event) => profileEventBelongsToWallet(event, eventsKey))
           .take(6)

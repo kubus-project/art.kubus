@@ -108,4 +108,41 @@ void main() {
     expect(find.text(l10n.settingsRoleArtistTitle), findsWidgets);
     expect(find.text('Lala Pilot Work'), findsWidgets);
   });
+
+  testWidgets(
+      'mobile profile without the artist role and with only a collection '
+      'shows no empty Artworks band', (tester) async {
+    await pumpProfileSurface(
+      tester,
+      surface: ProfileSurface.mobilePublic,
+      user: ProfileFixtures.user(),
+      artistCollections: _collections,
+      size: const Size(390, 9000),
+    );
+    final l10n = l10nOf(tester);
+
+    expect(find.text('Head of Flowers'), findsWidgets);
+    expect(
+      find.text(l10n.userProfileNoItemsTitle(l10n.userProfileArtworksTitle)),
+      findsNothing,
+    );
+  });
+
+  testWidgets(
+      'desktop profile without the artist role and with only a collection '
+      'shows no empty portfolio band', (tester) async {
+    await pumpProfileSurface(
+      tester,
+      surface: ProfileSurface.desktopPublic,
+      canonicalPublicEntry: true,
+      user: ProfileFixtures.user(),
+      artistCollections: _collections,
+      size: const Size(1440, 9000),
+    );
+    final l10n = l10nOf(tester);
+
+    expect(find.text('Head of Flowers'), findsWidgets);
+    expect(find.text(l10n.userProfileNoCreatorContentTitle), findsNothing);
+    expect(find.text(l10n.userProfileArtistPortfolioTitle), findsNothing);
+  });
 }

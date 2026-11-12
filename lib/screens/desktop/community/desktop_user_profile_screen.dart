@@ -490,23 +490,29 @@ class _UserProfileScreenState extends State<UserProfileScreen>
     switch (section) {
       case ProfileSection.work:
         // Authored works and public collections are public content, not an
-        // artist privilege, so any profile that has some shows them. The
-        // artist title and the institution programme stay on their roles.
-        return [
-          if (isArtist || (!isInstitution && _hasPublicWork)) ...[
+        // artist privilege. The artist title and the institution programme
+        // stay on their roles; a non-artist sees only the bands with content.
+        if (isInstitution && !isArtist) {
+          return [_buildInstitutionHighlightsSection(themeProvider, l10n)];
+        }
+        final contentOnly = !isArtist;
+        final bands = <Widget>[
+          if (!contentOnly || _artistArtworks.isNotEmpty)
             _buildArtistPortfolioSection(
               themeProvider,
               l10n,
               isArtist: isArtist,
             ),
-            if (_documentedArtworks.isNotEmpty) ...[
-              const SizedBox(height: KubusSpacing.md),
-              _buildArtistDocumentedSection(l10n),
-            ],
-            const SizedBox(height: KubusSpacing.md),
+          if (_documentedArtworks.isNotEmpty)
+            _buildArtistDocumentedSection(l10n),
+          if (!contentOnly || _artistCollections.isNotEmpty)
             _buildArtistCollectionsSection(themeProvider, l10n),
-          ] else if (isInstitution)
-            _buildInstitutionHighlightsSection(themeProvider, l10n),
+        ];
+        return [
+          for (var i = 0; i < bands.length; i++) ...[
+            if (i > 0) const SizedBox(height: KubusSpacing.md),
+            bands[i],
+          ],
         ];
       case ProfileSection.publicArt:
         // The canonical artist hero already carries the added-art count.
@@ -1342,12 +1348,6 @@ class _UserProfileScreenState extends State<UserProfileScreen>
       ),
     );
   }
-
-  /// Whether the profile has any public authored work or collection to show.
-  bool get _hasPublicWork =>
-      _artistArtworks.isNotEmpty ||
-      _documentedArtworks.isNotEmpty ||
-      _artistCollections.isNotEmpty;
 
   Widget _buildArtistPortfolioSection(
     ThemeProvider themeProvider,
