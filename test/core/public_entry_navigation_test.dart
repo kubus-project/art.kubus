@@ -11,6 +11,32 @@ void main() {
   setUp(navigation.resetForTest);
   tearDown(navigation.resetForTest);
 
+  testWidgets('a short public entry canonicalizes by replacing its entry',
+      (tester) async {
+    navigation.setEntry(
+      type: ShareEntityType.artwork,
+      entityId: 'a1',
+      browserRoute: '/a/a1?lang=en#detail',
+      shellRoute: '/main',
+    );
+    expect(navigation.pendingEntryUrl, '/a/a1?lang=en#detail');
+    late BuildContext entryContext;
+    await tester.pumpWidget(MaterialApp(home: Builder(builder: (context) {
+      entryContext = context;
+      return const SizedBox();
+    })));
+    final claim = navigation.claim(
+      entryContext,
+      type: ShareEntityType.artwork,
+      entityId: 'a1',
+      localizedPath: (_) => '/en/artworks/a1',
+    );
+    expect(navigation.visibleEntityUrl, '/en/artworks/a1?lang=en#detail');
+    expect(navigation.takeReplaceNextAddress(), isTrue);
+    expect(navigation.takeReplaceNextAddress(), isFalse);
+    navigation.release(claim);
+  });
+
   testWidgets('the canonical entry owns one exit and preserves its full URL',
       (tester) async {
     const entryUrl = '/en/artworks/a1?utm_source=qa#gallery';

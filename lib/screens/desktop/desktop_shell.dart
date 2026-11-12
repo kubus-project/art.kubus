@@ -296,8 +296,12 @@ class _DesktopShellState extends State<DesktopShell>
         _closeFunctionsPanel();
       }
     }
+    final canonicalWithoutRail = _dispatchingInitialCanonicalEntry &&
+        !context.read<PublicEntityTakeoverProvider>().restoreDesktopShell;
     PublicEntryNavigation.instance.recordShellRouteNavigation(
-      ShellRouteNavigation.forward,
+      canonicalWithoutRail
+          ? ShellRouteNavigation.canonicalForward
+          : ShellRouteNavigation.forward,
     );
     setState(() {
       _screenStack.add(screen);
@@ -728,7 +732,8 @@ class _DesktopShellState extends State<DesktopShell>
     final isSettingsSelected =
         _screenStack.isNotEmpty && _screenStack.last is DesktopSettingsScreen;
     final isCollabInvitesSelected = _isInvitesScreenActive();
-    final isCanonicalPublicEntry = _canonicalPublicEntryTarget != null;
+    final isCanonicalPublicEntry = _canonicalPublicEntryTarget != null &&
+        !context.read<PublicEntityTakeoverProvider>().restoreDesktopShell;
 
     final isCompact = DesktopBreakpoints.isCompact(context);
     final isLarge = DesktopBreakpoints.isLarge(context);

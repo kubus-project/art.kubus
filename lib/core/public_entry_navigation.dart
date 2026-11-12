@@ -7,7 +7,7 @@ import '../services/share/share_types.dart';
 
 /// Direction of navigation that happens in the desktop shell instead of the
 /// root Navigator, so the URL observer cannot infer it from NavigatorObserver.
-enum ShellRouteNavigation { forward, back }
+enum ShellRouteNavigation { forward, canonicalForward, back }
 
 /// Keeps browser history coherent for app-native public entry
 /// (docs/APP_NATIVE_PUBLIC_ENTRY.md).
@@ -220,6 +220,7 @@ class PublicEntryNavigation extends ChangeNotifier with WidgetsBindingObserver {
     if (claim == null) return null;
     final entry = _entry;
     if (entry != null && entry.matches(claim.type, claim.entityId)) {
+      final firstClaim = !_entryWasClaimed;
       _entryWasClaimed = true;
       final original = Uri.tryParse(entry.browserRoute);
       final localized = Uri.tryParse(claim.defaultUrl);
@@ -228,6 +229,9 @@ class PublicEntryNavigation extends ChangeNotifier with WidgetsBindingObserver {
           original.path == localized.path) {
         return entry.browserRoute;
       }
+      // Canonicalizing a share URL is not a new visit. Keep the incoming
+      // browser entry instead of inserting a second history step.
+      if (firstClaim) _replaceNextAddress = true;
       return localized
           .replace(
             query: original.hasQuery ? original.query : null,

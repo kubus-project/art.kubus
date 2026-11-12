@@ -19446,25 +19446,25 @@ abstract class AppLocalizations {
   /// No description provided for @desktopHomeTopCreatorsTitle.
   ///
   /// In en, this message translates to:
-  /// **'Top Creators'**
+  /// **'Top Artists'**
   String get desktopHomeTopCreatorsTitle;
 
   /// No description provided for @desktopHomeTopCreatorsLoadFailed.
   ///
   /// In en, this message translates to:
-  /// **'Unable to load creators.'**
+  /// **'Unable to load artists.'**
   String get desktopHomeTopCreatorsLoadFailed;
 
   /// No description provided for @desktopHomeTopCreatorsEmpty.
   ///
   /// In en, this message translates to:
-  /// **'Top creators will appear here'**
+  /// **'Top artists will appear here'**
   String get desktopHomeTopCreatorsEmpty;
 
   /// No description provided for @desktopHomeCreatorFallbackName.
   ///
   /// In en, this message translates to:
-  /// **'Creator'**
+  /// **'Artist'**
   String get desktopHomeCreatorFallbackName;
 
   /// No description provided for @homeRailsUnavailableTitle.

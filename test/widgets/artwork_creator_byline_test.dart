@@ -28,41 +28,148 @@ void main() {
         home: Scaffold(body: ArtworkCreatorByline(artwork: artwork)),
       );
   testWidgets(
-      'an explicitly linked artist account makes the recorded byline interactive',
-      (tester) async {
-    final semantics = tester.ensureSemantics();
-    await tester.pumpWidget(harness(record('Recorded cultural artist', {
-      'artistUserId': '11111111-1111-4111-8111-111111111111',
-      'ownerUserId': '22222222-2222-4222-8222-222222222222',
-    })));
-    await tester.pumpAndSettle();
-    expect(find.text('Recorded cultural artist'), findsOneWidget);
-    expect(find.byType(InkWell), findsOneWidget);
-    expect(
-      tester
-          .getSemantics(find.text('Recorded cultural artist'))
-          .flagsCollection
-          .isButton,
-      isTrue,
-    );
-    semantics.dispose();
-  });
-  testWidgets('generic hydrated wallet lists do not identify cultural authors',
-      (tester) async {
+    'an explicitly linked artist account makes the recorded byline interactive',
+    (tester) async {
+      final semantics = tester.ensureSemantics();
+      await tester.pumpWidget(
+        harness(
+          record('Recorded cultural artist', {
+            'artistUserId': '11111111-1111-4111-8111-111111111111',
+            'ownerUserId': '22222222-2222-4222-8222-222222222222',
+          }),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('Recorded cultural artist'), findsOneWidget);
+      expect(find.byType(InkWell), findsOneWidget);
+      expect(
+        tester
+            .getSemantics(find.text('Recorded cultural artist'))
+            .flagsCollection
+            .isButton,
+        isTrue,
+      );
+      semantics.dispose();
+    },
+  );
+  testWidgets('authorProfile links the recorded credit in shared bylines', (
+    tester,
+  ) async {
     final artwork = parseArtworkFromBackendJson({
       'id': 'public-record',
       'title': 'Public work',
-      'artistName': 'Unknown',
-      'walletAddresses': ['HcHchGrD9ECWJ7nJaovpEohpdAUfpJPqAFv4z1g6KuMb'],
+      'artistName': 'turrdl',
+      'authorProfile': {
+        'profileId': '8c03b35a-a4d6-4c08-95fc-503c879fbc45',
+        'username': 'damjan_stevovic',
+        'displayName': 'Damjan Stevovic',
+      },
     });
     await tester.pumpWidget(harness(artwork));
     await tester.pumpAndSettle();
-    expect(find.text('Unknown artist'), findsOneWidget);
-    expect(find.byType(InkWell), findsNothing);
+    expect(find.text('turrdl'), findsOneWidget);
+    expect(find.byType(InkWell), findsOneWidget);
+    expect(find.text('Damjan Stevovic'), findsNothing);
   });
 
-  testWidgets('explicit wallet-only artist resolves its profile name',
-      (tester) async {
+  testWidgets(
+    'a singular authorProfile is not assigned to a multi-artist byline',
+    (tester) async {
+      final artwork = parseArtworkFromBackendJson({
+        'id': 'public-record',
+        'title': 'Public work',
+        'artistName': 'Unknown',
+        'artist_name_byline': ['Artist A', 'Artist B'],
+        'authorProfile': {
+          'profileId': '8c03b35a-a4d6-4c08-95fc-503c879fbc45',
+          'username': 'damjan_stevovic',
+          'displayName': 'Damjan Stevovic',
+        },
+      });
+      await tester.pumpWidget(harness(artwork));
+      await tester.pumpAndSettle();
+      expect(
+        find.textContaining('Artist A', findRichText: true),
+        findsOneWidget,
+      );
+      expect(
+        find.textContaining('Artist B', findRichText: true),
+        findsOneWidget,
+      );
+      expect(find.byType(InkWell), findsNothing);
+    },
+  );
+  testWidgets(
+    'a single metadata artist identity is not assigned to a multi-artist byline',
+    (tester) async {
+      for (final identity in <Map<String, dynamic>>[
+        {'artistUserId': '11111111-1111-4111-8111-111111111111'},
+        {'artist_user_id': '11111111-1111-4111-8111-111111111111'},
+        {'artistWallet': 'HcHchGrD9ECWJ7nJaovpEohpdAUfpJPqAFv4z1g6KuMb'},
+        {'artistWalletAddress': 'HcHchGrD9ECWJ7nJaovpEohpdAUfpJPqAFv4z1g6KuMb'},
+      ]) {
+        await tester.pumpWidget(
+          harness(
+            record('Unknown', {
+              'artist_name_byline': ['Artist A', 'Artist B'],
+              ...identity,
+            }),
+          ),
+        );
+        await tester.pumpAndSettle();
+        expect(
+          find.textContaining('Artist A', findRichText: true),
+          findsOneWidget,
+          reason: '$identity',
+        );
+        expect(
+          find.textContaining('Artist B', findRichText: true),
+          findsOneWidget,
+          reason: '$identity',
+        );
+        expect(find.byType(InkWell), findsNothing, reason: '$identity');
+        await tester.pumpWidget(const SizedBox.shrink());
+      }
+    },
+  );
+  testWidgets(
+    'a metadata artist identity still links a single recorded byline',
+    (tester) async {
+      await tester.pumpWidget(
+        harness(
+          record('Unknown', {
+            'artist_name_byline': ['Artist A'],
+            'artistUserId': '11111111-1111-4111-8111-111111111111',
+          }),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(
+        find.textContaining('Artist A', findRichText: true),
+        findsOneWidget,
+      );
+      expect(find.byType(InkWell), findsOneWidget);
+    },
+  );
+  testWidgets(
+    'generic hydrated wallet lists do not identify cultural authors',
+    (tester) async {
+      final artwork = parseArtworkFromBackendJson({
+        'id': 'public-record',
+        'title': 'Public work',
+        'artistName': 'Unknown',
+        'walletAddresses': ['HcHchGrD9ECWJ7nJaovpEohpdAUfpJPqAFv4z1g6KuMb'],
+      });
+      await tester.pumpWidget(harness(artwork));
+      await tester.pumpAndSettle();
+      expect(find.text('Unknown artist'), findsOneWidget);
+      expect(find.byType(InkWell), findsNothing);
+    },
+  );
+
+  testWidgets('explicit wallet-only artist resolves its profile name', (
+    tester,
+  ) async {
     const wallet = 'HcHchGrD9ECWJ7nJaovpEohpdAUfpJPqAFv4z1g6KuMb';
     UserService.setUsersInCacheAuthoritative([
       const User(
@@ -76,20 +183,27 @@ void main() {
         isFollowing: false,
         isVerified: false,
         joinedDate: '',
-      )
+      ),
     ]);
-    await tester.pumpWidget(harness(record('Unknown', {
-      'artists': [wallet]
-    })));
+    await tester.pumpWidget(
+      harness(
+        record('Unknown', {
+          'artists': [wallet],
+        }),
+      ),
+    );
     await tester.pumpAndSettle();
-    expect(find.textContaining('Recorded profile artist', findRichText: true),
-        findsOneWidget);
+    expect(
+      find.textContaining('Recorded profile artist', findRichText: true),
+      findsOneWidget,
+    );
     expect(find.textContaining('HcHchG...', findRichText: true), findsNothing);
     await tester.pumpWidget(const SizedBox.shrink());
     await UserService.clearCache();
   });
-  testWidgets('hydrated artist bylines retain recorded multiple authors',
-      (tester) async {
+  testWidgets('hydrated artist bylines retain recorded multiple authors', (
+    tester,
+  ) async {
     final artwork = parseArtworkFromBackendJson({
       'id': 'public-record',
       'title': 'Public work',
@@ -99,34 +213,52 @@ void main() {
     });
     await tester.pumpWidget(harness(artwork));
     await tester.pumpAndSettle();
-    expect(find.textContaining('Recorded artist A', findRichText: true),
-        findsOneWidget);
-    expect(find.textContaining('Recorded artist B', findRichText: true),
-        findsOneWidget);
-    expect(find.textContaining('Platform uploader', findRichText: true),
-        findsNothing);
+    expect(
+      find.textContaining('Recorded artist A', findRichText: true),
+      findsOneWidget,
+    );
+    expect(
+      find.textContaining('Recorded artist B', findRichText: true),
+      findsOneWidget,
+    );
+    expect(
+      find.textContaining('Platform uploader', findRichText: true),
+      findsNothing,
+    );
   });
-  testWidgets('uploader wallet and contributor are not unknown authorship',
-      (tester) async {
-    await tester.pumpWidget(harness(record('Unknown', {
-      'walletAddress': 'HcHchGrD9ECWJ7nJaovpEohpdAUfpJPqAFv4z1g6KuMb',
-      'contributors': [
-        {'name': 'Platform uploader'}
-      ],
-    })));
+  testWidgets('uploader wallet and contributor are not unknown authorship', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      harness(
+        record('Unknown', {
+          'walletAddress': 'HcHchGrD9ECWJ7nJaovpEohpdAUfpJPqAFv4z1g6KuMb',
+          'contributors': [
+            {'name': 'Platform uploader'},
+          ],
+        }),
+      ),
+    );
     await tester.pumpAndSettle();
     expect(find.text('Unknown artist'), findsOneWidget);
     expect(find.textContaining('Platform uploader'), findsNothing);
     expect(find.byType(InkWell), findsNothing);
   });
-  testWidgets('recorded artist remains the author without linking uploader',
-      (tester) async {
-    await tester.pumpWidget(harness(record('Recorded artist', {
-      'walletAddress': 'HcHchGrD9ECWJ7nJaovpEohpdAUfpJPqAFv4z1g6KuMb',
-    })));
+  testWidgets('recorded artist remains the author without linking uploader', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      harness(
+        record('Recorded artist', {
+          'walletAddress': 'HcHchGrD9ECWJ7nJaovpEohpdAUfpJPqAFv4z1g6KuMb',
+        }),
+      ),
+    );
     await tester.pumpAndSettle();
-    expect(find.textContaining('Recorded artist', findRichText: true),
-        findsOneWidget);
+    expect(
+      find.textContaining('Recorded artist', findRichText: true),
+      findsOneWidget,
+    );
     expect(find.byType(InkWell), findsNothing);
   });
 }

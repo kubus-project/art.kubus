@@ -4,6 +4,7 @@ import 'package:art_kubus/l10n/app_localizations.dart';
 
 import '../models/artwork.dart';
 import '../utils/design_tokens.dart';
+import '../utils/artwork_authorship.dart';
 import '../utils/profile_handle.dart';
 import '../utils/user_profile_navigation.dart';
 import 'artwork_creator_byline.dart';
@@ -52,8 +53,23 @@ class ArtworkAuthorLine extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final author = artwork.authorProfile;
-    if (author != null) {
-      final name = author.displayName.trim();
+    final meta = artwork.metadata;
+    final byline = meta?['artist_name_byline'] ??
+        meta?['artistNameByline'] ??
+        meta?['artist_byline'] ??
+        meta?['artistByline'];
+    final multipleCredits = byline is List
+        ? byline.where((item) => item.toString().trim().isNotEmpty).length > 1
+        : byline is String &&
+            byline
+                    .split(RegExp(r'\s*[,;/|]\s*'))
+                    .where((item) => item.trim().isNotEmpty)
+                    .length >
+                1;
+    if (author != null && !multipleCredits) {
+      // A profile association identifies the author; it does not replace the
+      // artwork's recorded cultural credit with the account display name.
+      final name = artwork.recordedArtist ?? author.displayName.trim();
       final handle = ProfileHandle.normalize(author.username);
       if (name.isNotEmpty || handle != null) {
         return _AuthorProfileLink(
@@ -71,7 +87,7 @@ class ArtworkAuthorLine extends StatelessWidget {
       artwork: artwork,
       style: style,
       maxLines: maxLines,
-      linkToProfile: false,
+      linkToProfile: multipleCredits,
     );
   }
 }
@@ -103,9 +119,7 @@ class _AuthorProfileLink extends StatelessWidget {
       decoration: TextDecoration.underline,
       decorationColor: scheme.primary,
     );
-    final handleStyle = baseStyle.copyWith(
-      color: scheme.onSurfaceVariant,
-    );
+    final handleStyle = baseStyle.copyWith(color: scheme.onSurfaceVariant);
     final spoken = <String>[
       if (name.isNotEmpty) name,
       if (handle != null) handle!,

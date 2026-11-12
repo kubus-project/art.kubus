@@ -57,45 +57,51 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   setUp(() => SharedPreferences.setMockInitialValues({}));
 
-  testWidgets('with an author profile the line shows name and handle',
-      (tester) async {
+  testWidgets('with an author profile the line preserves cultural credit', (
+    tester,
+  ) async {
     await tester.pumpWidget(_harness(_artwork(author: _author)));
     await tester.pumpAndSettle();
     expect(
-      find.textContaining('Damjan Stevovic @damjan_stevovic',
-          findRichText: true),
+      find.textContaining(
+        'Free Text Artist @damjan_stevovic',
+        findRichText: true,
+      ),
       findsOneWidget,
     );
-    // The free-text artist name is a different concept and is not shown here.
-    expect(find.textContaining('Free Text Artist', findRichText: true),
-        findsNothing);
     expect(find.byType(InkWell), findsOneWidget);
   });
 
-  testWidgets('tapping opens the profile by the attributed profile id',
-      (tester) async {
+  testWidgets('tapping opens the profile by the attributed profile id', (
+    tester,
+  ) async {
     final opened = <(String, String?)>[];
-    await tester.pumpWidget(_harness(
-      _artwork(author: _author),
-      openProfile: (context, {required profileId, username}) async {
-        opened.add((profileId, username));
-      },
-    ));
+    await tester.pumpWidget(
+      _harness(
+        _artwork(author: _author),
+        openProfile: (context, {required profileId, username}) async {
+          opened.add((profileId, username));
+        },
+      ),
+    );
     await tester.pumpAndSettle();
     await tester.tap(find.byType(InkWell));
     await tester.pump();
     expect(opened, [(_profileId, 'damjan_stevovic')]);
   });
 
-  testWidgets('keyboard focus and Enter / Space activate the link',
-      (tester) async {
+  testWidgets('keyboard focus and Enter / Space activate the link', (
+    tester,
+  ) async {
     var opens = 0;
-    await tester.pumpWidget(_harness(
-      _artwork(author: _author),
-      openProfile: (context, {required profileId, username}) async {
-        opens++;
-      },
-    ));
+    await tester.pumpWidget(
+      _harness(
+        _artwork(author: _author),
+        openProfile: (context, {required profileId, username}) async {
+          opens++;
+        },
+      ),
+    );
     await tester.pumpAndSettle();
     await tester.sendKeyEvent(LogicalKeyboardKey.tab);
     await tester.pump();
@@ -126,13 +132,14 @@ void main() {
     expect(size.width, greaterThanOrEqualTo(44));
   });
 
-  testWidgets('semantics announce a button that names the profile',
-      (tester) async {
+  testWidgets('semantics announce a button that names the profile', (
+    tester,
+  ) async {
     final semantics = tester.ensureSemantics();
     await tester.pumpWidget(_harness(_artwork(author: _author)));
     await tester.pumpAndSettle();
     final node = tester.getSemantics(find.byType(InkWell));
-    expect(node.label, 'Open profile of Damjan Stevovic @damjan_stevovic');
+    expect(node.label, 'Open profile of Free Text Artist @damjan_stevovic');
     expect(node.flagsCollection.isButton, isTrue);
     semantics.dispose();
   });
@@ -144,44 +151,79 @@ void main() {
     );
     await tester.pumpAndSettle();
     final node = tester.getSemantics(find.byType(InkWell));
-    expect(node.label, 'Odpri profil: Damjan Stevovic @damjan_stevovic');
+    expect(node.label, 'Odpri profil: Free Text Artist @damjan_stevovic');
     semantics.dispose();
   });
 
-  testWidgets('a missing handle still renders the display name',
-      (tester) async {
-    await tester.pumpWidget(_harness(_artwork(
-      author: const ArtworkAuthorProfile(
-        profileId: _profileId,
-        username: '',
-        displayName: 'Only Name',
+  testWidgets('a missing handle still renders the display name', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      _harness(
+        _artwork(
+          artist: 'Unknown',
+          author: const ArtworkAuthorProfile(
+            profileId: _profileId,
+            username: '',
+            displayName: 'Only Name',
+          ),
+        ),
       ),
-    )));
+    );
     await tester.pumpAndSettle();
     expect(
-        find.textContaining('Only Name', findRichText: true), findsOneWidget);
+      find.textContaining('Only Name', findRichText: true),
+      findsOneWidget,
+    );
     expect(find.textContaining('@', findRichText: true), findsNothing);
   });
 
-  testWidgets('without an author profile the artist line is text only',
-      (tester) async {
+  testWidgets('without an author profile the artist line is text only', (
+    tester,
+  ) async {
     await tester.pumpWidget(_harness(_artwork()));
     await tester.pumpAndSettle();
-    expect(find.textContaining('Free Text Artist', findRichText: true),
-        findsOneWidget);
+    expect(
+      find.textContaining('Free Text Artist', findRichText: true),
+      findsOneWidget,
+    );
     expect(find.byType(InkWell), findsNothing);
   });
 
-  testWidgets('uploader and artist metadata never produce a link',
+  testWidgets('a single profile is not assigned to a multi-artist credit',
       (tester) async {
-    await tester.pumpWidget(_harness(_artwork(metadata: {
-      'walletAddress': 'HcHchGrD9ECWJ7nJaovpEohpdAUfpJPqAFv4z1g6KuMb',
-      'creatorId': _profileId,
-      'artistUserId': '11111111-1111-4111-8111-111111111111',
-    })));
+    await tester.pumpWidget(_harness(_artwork(
+      artist: 'Unknown',
+      author: _author,
+      metadata: {
+        'artist_name_byline': ['Artist A', 'Artist B']
+      },
+    )));
     await tester.pumpAndSettle();
-    expect(find.textContaining('Free Text Artist', findRichText: true),
-        findsOneWidget);
+    expect(find.textContaining('Artist A', findRichText: true), findsOneWidget);
+    expect(find.textContaining('Artist B', findRichText: true), findsOneWidget);
+    expect(find.byType(InkWell), findsNothing);
+  });
+
+  testWidgets('uploader and artist metadata never produce a link', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      _harness(
+        _artwork(
+          metadata: {
+            'walletAddress': 'HcHchGrD9ECWJ7nJaovpEohpdAUfpJPqAFv4z1g6KuMb',
+            'creatorId': _profileId,
+            'artistUserId': '11111111-1111-4111-8111-111111111111',
+          },
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(
+      find.textContaining('Free Text Artist', findRichText: true),
+      findsOneWidget,
+    );
     expect(find.byType(InkWell), findsNothing);
   });
 

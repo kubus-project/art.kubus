@@ -31,12 +31,16 @@ class UrlCoherenceObserver extends NavigatorObserver {
     bool? enabled,
     void Function(String url)? report,
     void Function(String url)? reportBack,
+    void Function(String url)? reportShellForward,
+    void Function(String url)? reportShellBack,
     void Function(String url)? reportReplace,
     PublicEntryNavigation? entityUrls,
     String? Function()? currentBrowserUrl,
   })  : _enabled = enabled ?? kIsWeb,
         _report = report ?? _reportToEngine,
         _reportBack = reportBack,
+        _reportShellForward = reportShellForward,
+        _reportShellBack = reportShellBack,
         _reportReplace = reportReplace,
         _entityUrls = entityUrls ?? PublicEntryNavigation.instance,
         _currentBrowserUrl =
@@ -50,6 +54,8 @@ class UrlCoherenceObserver extends NavigatorObserver {
   /// Reports an address that became visible without a page push, which is the
   /// visitor going Back in the app. Falls back to [_report] when not given.
   final void Function(String url)? _reportBack;
+  final void Function(String url)? _reportShellForward;
+  final void Function(String url)? _reportShellBack;
 
   /// Reports a correction nobody navigated to (an unresolvable entry dropped):
   /// it must replace the current history entry. Falls back to [_report].
@@ -193,11 +199,15 @@ class UrlCoherenceObserver extends NavigatorObserver {
     }
     final shellNavigation = _pendingShellNavigation;
     if (shellNavigation == ShellRouteNavigation.forward) {
+      (_reportShellForward ?? _report)(desired);
+      return;
+    }
+    if (shellNavigation == ShellRouteNavigation.canonicalForward) {
       _report(desired);
       return;
     }
     if (shellNavigation == ShellRouteNavigation.back) {
-      (_reportBack ?? _report)(desired);
+      (_reportShellBack ?? _reportBack ?? _report)(desired);
       return;
     }
     // A change that no page push caused is the visitor going back (a pop, or an
