@@ -125,6 +125,11 @@ class _ArtworkEditScreenState extends State<ArtworkEditScreen> {
   /// attributed author) and as it stands now.
   bool _initialAuthoredBySelf = false;
   bool _authoredBySelf = false;
+
+  /// The artist field as the form opened. The artwork's credit is written only
+  /// when the field differs from this, i.e. after an explicit edit or toggle,
+  /// never because the form was seeded.
+  String _seededArtistText = '';
   final Set<String> _deleteDialogOpenArtworkIds = <String>{};
   final Set<String> _deleteInFlightArtworkIds = <String>{};
 
@@ -566,8 +571,12 @@ class _ArtworkEditScreenState extends State<ArtworkEditScreen> {
         AuthoredBySelf.isAttributedTo(artwork, profileProvider.currentUser)) {
       _initialAuthoredBySelf = true;
       _authoredBySelf = true;
-      _artistController.text = selfName;
+      // Keep the recorded cultural credit (it may be a pseudonym or the name
+      // at the time of attribution). The profile name only stands in when
+      // nothing is recorded, as the public author line does.
+      _artistController.text = artwork.recordedArtist ?? selfName;
     }
+    _seededArtistText = _artistController.text;
     _seeded = true;
     setState(() {});
   }
@@ -690,7 +699,10 @@ class _ArtworkEditScreenState extends State<ArtworkEditScreen> {
     if (title != artwork.title) updates['title'] = title;
     // Authorship is explicit: a blank field clears it (unattributed) and is
     // never replaced with the current account.
-    final artistName = artistNameUpdateFor(artwork, _artistController.text);
+    // An untouched field (still as seeded) never rewrites the recorded credit.
+    final artistName = _artistController.text.trim() == _seededArtistText.trim()
+        ? null
+        : artistNameUpdateFor(artwork, _artistController.text);
     if (artistName != null) updates['artistName'] = artistName;
     // Only the signed-in account's own declaration is ever sent, as a bare
     // flag: the backend resolves the account from the session.
