@@ -489,9 +489,16 @@ class _UserProfileScreenState extends State<UserProfileScreen>
   }) {
     switch (section) {
       case ProfileSection.work:
+        // Authored works and public collections are public content, not an
+        // artist privilege, so any profile that has some shows them. The
+        // artist title and the institution programme stay on their roles.
         return [
-          if (isArtist) ...[
-            _buildArtistPortfolioSection(themeProvider, l10n),
+          if (isArtist || (!isInstitution && _hasPublicWork)) ...[
+            _buildArtistPortfolioSection(
+              themeProvider,
+              l10n,
+              isArtist: isArtist,
+            ),
             if (_documentedArtworks.isNotEmpty) ...[
               const SizedBox(height: KubusSpacing.md),
               _buildArtistDocumentedSection(l10n),
@@ -1336,15 +1343,24 @@ class _UserProfileScreenState extends State<UserProfileScreen>
     );
   }
 
+  /// Whether the profile has any public authored work or collection to show.
+  bool get _hasPublicWork =>
+      _artistArtworks.isNotEmpty ||
+      _documentedArtworks.isNotEmpty ||
+      _artistCollections.isNotEmpty;
+
   Widget _buildArtistPortfolioSection(
     ThemeProvider themeProvider,
-    AppLocalizations l10n,
-  ) {
+    AppLocalizations l10n, {
+    required bool isArtist,
+  }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         DesktopSectionHeader(
-          title: l10n.userProfileArtistPortfolioTitle,
+          title: isArtist
+              ? l10n.userProfileArtistPortfolioTitle
+              : l10n.userProfileArtworksTitle,
           subtitle: l10n.userProfileArtistPortfolioDesktopSubtitle,
         ),
         const SizedBox(height: KubusSpacing.md),

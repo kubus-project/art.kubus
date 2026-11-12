@@ -151,12 +151,17 @@ class ProfileFixtures {
   }
 
   /// Resolved extended package so screens leave their loading state without
-  /// ever touching the network. Empty posts by default.
+  /// ever touching the network. Empty posts, works and collections by default.
   static ProfileExtendedPackage extended({
     List<CommunityPost> initialPosts = const <CommunityPost>[],
+    List<Map<String, dynamic>> artistArtworks = const <Map<String, dynamic>>[],
+    List<Map<String, dynamic>> artistCollections =
+        const <Map<String, dynamic>>[],
   }) {
     return ProfileExtendedPackage(
       initialPosts: initialPosts,
+      artistArtworks: artistArtworks,
+      artistCollections: artistCollections,
       fetchedAt: fetchedAt,
     );
   }

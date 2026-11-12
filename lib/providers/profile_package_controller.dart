@@ -364,7 +364,16 @@ class ProfilePackageController extends ChangeNotifier {
 
   void applyExtended(ProfileExtendedPackage extended) {
     final critical = _package?.critical;
-    if (critical == null) return;
+    if (critical == null) {
+      // A failed critical load leaves nothing to attach the extended data to.
+      // Clear the loading flags here, or the artwork, collection and post
+      // sections spin forever.
+      _isLoadingExtended = false;
+      _artistDataLoading = false;
+      _postsLoading = false;
+      _notifyListenersSafe();
+      return;
+    }
     _package = ProfilePackage.fromParts(
       critical: critical,
       extended: extended,
