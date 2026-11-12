@@ -173,7 +173,57 @@ void main() {
     expect(tester.widget<Checkbox>(_checkbox).value, isTrue);
     final field = _artistTextField(tester);
     expect(field.readOnly, isTrue);
-    expect(field.controller!.text, 'Damjan Stevovic');
+    // The recorded cultural credit is shown as recorded, never replaced by the
+    // profile's current display name.
+    expect(field.controller!.text, 'Someone');
+  });
+
+  _editorTest(
+      'a recorded pseudonym survives an unrelated save of a self-attributed '
+      'artwork', (tester) async {
+    final api = await _open(
+      tester,
+      artwork: _artwork(authorProfileId: _profileId, artist: 'turrdl'),
+      profile: _signedInProfile(),
+    );
+    expect(tester.widget<Checkbox>(_checkbox).value, isTrue);
+    expect(_artistTextField(tester).controller!.text, 'turrdl');
+    await tester.enterText(
+      find.widgetWithText(TextField, 'Original title'),
+      'New title',
+    );
+    await tester.pump();
+    await tester.ensureVisible(_saveButton);
+    await tester.tap(_saveButton);
+    await _settle(tester);
+
+    expect(api.putBodies, hasLength(1));
+    final body = api.putBodies.single;
+    expect(body['title'], 'New title');
+    expect(body.containsKey('artistName'), isFalse);
+    expect(body.containsKey('authoredBySelf'), isFalse);
+  });
+
+  _editorTest(
+      'a self-attributed artwork without a recorded name shows the profile '
+      'name but does not write it on an unrelated save', (tester) async {
+    final api = await _open(
+      tester,
+      artwork: _artwork(authorProfileId: _profileId, artist: ''),
+      profile: _signedInProfile(),
+    );
+    expect(_artistTextField(tester).controller!.text, 'Damjan Stevovic');
+    await tester.enterText(
+      find.widgetWithText(TextField, 'Original title'),
+      'New title',
+    );
+    await tester.pump();
+    await tester.ensureVisible(_saveButton);
+    await tester.tap(_saveButton);
+    await _settle(tester);
+
+    expect(api.putBodies, hasLength(1));
+    expect(api.putBodies.single.containsKey('artistName'), isFalse);
   });
 
   _editorTest('an artwork attributed to someone else opens unticked',

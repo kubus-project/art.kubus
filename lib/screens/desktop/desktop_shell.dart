@@ -16,6 +16,7 @@ import '../../providers/presence_provider.dart';
 import '../../providers/profile_provider.dart';
 import '../../providers/recent_activity_provider.dart';
 import '../../providers/deep_link_provider.dart';
+import '../../providers/deferred_onboarding_provider.dart';
 import '../../providers/public_entity_takeover_provider.dart';
 import '../../config/config.dart';
 import '../../utils/activity_navigation.dart';
@@ -1211,14 +1212,31 @@ class _DesktopShellState extends State<DesktopShell>
       sourceScreen: 'desktop_shell_guest_rail',
     );
     if (!mounted) return;
-    // The gate resolves once its account journey has closed, and onboarding
-    // returns to the tab the visitor left. Land on the destination they asked
-    // for, but only if the journey actually produced a session: dismissing it
-    // must leave them where they were.
+    // A resumed deferred onboarding journey is pushed without blocking the
+    // gate, which then returns before the visitor has signed in. Wait for that
+    // journey to close before deciding.
+    final resumedJourney = _resumedOnboardingJourney();
+    if (resumedJourney != null) {
+      await resumedJourney;
+      if (!mounted) return;
+    }
+    // The account journey has closed, and onboarding returns to the tab the
+    // visitor left. Land on the destination they asked for, but only if the
+    // journey actually produced a session: dismissing it must leave them where
+    // they were.
     if (shouldContinueToLockedDestination(
       hasAuthSession: BackendApiService().hasAuthSession,
     )) {
       _navigateToRoute(item.route);
+    }
+  }
+
+  Future<void>? _resumedOnboardingJourney() {
+    try {
+      return context.read<DeferredOnboardingProvider>().resumedJourney;
+    } catch (_) {
+      // The provider is optional outside the application tree.
+      return null;
     }
   }
 

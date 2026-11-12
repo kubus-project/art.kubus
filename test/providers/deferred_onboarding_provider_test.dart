@@ -64,6 +64,65 @@ void main() {
       expect(provider.requirements, ProtectedActionRequirements.accountOnly);
     });
 
+    testWidgets(
+        'a resumed journey exposes a future that completes when it closes, '
+        'so a locked destination can continue after sign-in', (tester) async {
+      final provider = DeferredOnboardingProvider(
+        onboardingBuilder: ({
+          required bool forceDesktop,
+          required String initialStepId,
+          required String completionRoute,
+          required Object? completionArguments,
+          required ProtectedActionRequirements requirements,
+          required bool requiresWalletSetup,
+          required completionNavigation,
+        }) =>
+            Builder(
+          builder: (context) => Scaffold(
+            body: TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('finish onboarding'),
+            ),
+          ),
+        ),
+      )..enableForProtectedAction();
+      expect(provider.resumedJourney, isNull);
+
+      var shown = false;
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Builder(
+            builder: (context) => Scaffold(
+              body: TextButton(
+                onPressed: () {
+                  shown = provider.maybeShowOnboardingForProtectedAction(
+                    context,
+                    returnRoute: '/community',
+                  );
+                },
+                child: const Text('locked destination'),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.tap(find.text('locked destination'));
+      await tester.pumpAndSettle();
+
+      expect(shown, isTrue);
+      final journey = provider.resumedJourney;
+      expect(journey, isNotNull);
+      var closed = false;
+      journey!.then((_) => closed = true);
+      await tester.pump();
+      expect(closed, isFalse, reason: 'the journey is still open');
+
+      await tester.tap(find.text('finish onboarding'));
+      await tester.pumpAndSettle();
+      expect(closed, isTrue);
+      expect(provider.resumedJourney, isNull);
+    });
+
     testWidgets('an idle provider never navigates on ordinary use',
         (tester) async {
       final provider = DeferredOnboardingProvider();

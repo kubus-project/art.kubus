@@ -57,8 +57,15 @@ class DeferredOnboardingProvider extends ChangeNotifier {
   String? _completionRoute;
   ProtectedActionRequirements _requirements =
       ProtectedActionRequirements.accountOnly;
+  Future<void>? _resumedJourney;
 
   bool get enabledForSession => _enabledForSession;
+
+  /// The onboarding journey [maybeShowOnboardingForProtectedAction] opened,
+  /// completing when it closes; null when none is open. A caller that wants to
+  /// continue after sign-in (a locked destination) awaits it, because the
+  /// journey is pushed without blocking the auth gate.
+  Future<void>? get resumedJourney => _resumedJourney;
   String? get initialStepId => _initialStepId;
   String? get completionRoute => _completionRoute;
   ProtectedActionRequirements get requirements => _requirements;
@@ -127,7 +134,7 @@ class DeferredOnboardingProvider extends ChangeNotifier {
     _presentedThisSession = true;
     reset(keepPresentedFlag: true);
 
-    navigator.push(
+    final journey = navigator.push(
       MaterialPageRoute(
         builder: (_) => _onboardingBuilder(
           forceDesktop: isDesktop,
@@ -141,6 +148,11 @@ class DeferredOnboardingProvider extends ChangeNotifier {
         settings: const RouteSettings(name: '/onboarding'),
       ),
     );
+    final closed = journey.then<void>((_) {}, onError: (_) {});
+    _resumedJourney = closed;
+    closed.whenComplete(() {
+      if (identical(_resumedJourney, closed)) _resumedJourney = null;
+    });
     return true;
   }
 
