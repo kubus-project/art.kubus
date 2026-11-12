@@ -99,6 +99,10 @@ Future<void> pumpProfileSurface(
   /// Paint the theme ground under the screen, as the app shell does, so a
   /// screenshot of a transparent screen is not composited on white.
   bool paintGround = false,
+
+  /// Make the signed-in owner an account without a wallet: the profile keeps
+  /// its id (pass a profile UUID as the fixture user id) and an empty wallet.
+  bool ownerWalletless = false,
 }) async {
   final resolvedUser = user ?? ProfileFixtures.user();
 
@@ -122,7 +126,9 @@ Future<void> pumpProfileSurface(
       surface == ProfileSurface.desktopOwner ||
       surface == ProfileSurface.desktopOwnerInShell ||
       viewerIsSubject) {
-    profileProvider.setCurrentUser(_ownerProfileFrom(resolvedUser));
+    profileProvider.setCurrentUser(
+      _ownerProfileFrom(resolvedUser, walletless: ownerWalletless),
+    );
   }
 
   final child = _surfaceWidget(
@@ -329,11 +335,11 @@ Widget _surfaceWidget(
   }
 }
 
-UserProfile _ownerProfileFrom(User user) {
+UserProfile _ownerProfileFrom(User user, {bool walletless = false}) {
   return UserProfile(
     id: user.id,
     userId: user.id,
-    walletAddress: user.id,
+    walletAddress: walletless ? '' : user.id,
     username: user.username,
     displayName: user.name,
     bio: user.bio,

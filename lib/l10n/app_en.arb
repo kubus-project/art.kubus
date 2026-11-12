@@ -518,12 +518,14 @@
   "authSignedInProfileRefreshSoon": "Signed in. Your profile will refresh shortly.",
   "postAuthPreparingSession": "Preparing session",
   "postAuthSecuringWallet": "Securing wallet",
+  "postAuthSecuringAccount": "Securing account",
   "postAuthLoadingProfile": "Loading profile",
   "postAuthSyncingSavedItems": "Syncing saved items",
   "postAuthCheckingOnboarding": "Checking onboarding",
   "postAuthOpeningWorkspace": "Opening workspace",
   "postAuthPreparingSessionBody": "Finalizing your sign-in and preparing the workspace.",
   "postAuthSecuringWalletBody": "Verifying wallet access and device security.",
+  "postAuthSecuringAccountBody": "Checking your session and account access.",
   "postAuthLoadingProfileBody": "Loading your account profile and preferences.",
   "postAuthSyncingSavedItemsBody": "Refreshing bookmarks and saved state from the backend.",
   "postAuthCheckingOnboardingBody": "Checking whether anything still needs your attention.",
@@ -8102,6 +8104,17 @@
   "verificationOnboardingPending": "Your request is with the editors. You can continue.",
   "verificationOnboardingApproved": "You are verified. You can continue.",
   "verificationInstitutionAlreadyManaged": "Already managed",
+  "artworkAuthorOpenProfile": "Open profile of {name}",
+  "@artworkAuthorOpenProfile": {
+    "description": "Accessibility label for the tappable author line on an artwork detail screen; opens the author's public profile.",
+    "placeholders": {
+      "name": {"type": "String"}
+    }
+  },
+  "artworkAuthoredBySelfLabel": "I am the creator",
+  "artworkAuthoredBySelfHelper": "The artist name is set to your profile name and the artwork is attributed to your profile.",
+  "artworkAuthoredBySelfUnavailable": "Sign in and add a display name to your profile to attribute this artwork to yourself.",
+  "artworkAuthoredBySelfFieldHelper": "Set from your profile name.",
   "analyticsConsentPromptTitle": "Allow optional analytics?",
   "analyticsConsentPromptBody": "May we record how this app is used, such as the screens you open and steps like signing up, to improve it? Nothing is collected unless you accept. You can change this at any time in Settings.",
   "analyticsConsentPromptAccept": "Accept",

@@ -5,11 +5,14 @@ import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:art_kubus/utils/design_tokens.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:latlong2/latlong.dart';
+import 'package:provider/provider.dart';
 
 import '../../../models/art_marker.dart';
 import '../../../models/artwork.dart';
 import '../../../models/map_marker_subject.dart';
 import '../../../config/config.dart';
+import '../../../providers/profile_provider.dart';
+import '../../../utils/authored_by_self.dart';
 import '../../../utils/marker_subject_utils.dart';
 import '../../../utils/map_marker_subject_loader.dart';
 import '../../map_marker_dialog.dart';
@@ -84,6 +87,7 @@ class _KubusMarkerFormContentState extends State<KubusMarkerFormContent> {
   late final TextEditingController _latController;
   late final TextEditingController _lngController;
   final _formKey = GlobalKey<FormState>();
+  bool _authoredBySelf = false;
 
   bool _refreshScheduled = false;
   bool _refreshing = false;
@@ -359,10 +363,8 @@ class _KubusMarkerFormContentState extends State<KubusMarkerFormContent> {
                     widget.onUseMapCenter!();
                     final center = widget.mapCenter!;
                     setState(() {
-                      _latController.text =
-                          center.latitude.toStringAsFixed(6);
-                      _lngController.text =
-                          center.longitude.toStringAsFixed(6);
+                      _latController.text = center.latitude.toStringAsFixed(6);
+                      _lngController.text = center.longitude.toStringAsFixed(6);
                     });
                   }
                 : null,
@@ -379,6 +381,9 @@ class _KubusMarkerFormContentState extends State<KubusMarkerFormContent> {
             ),
             showOptionalArAsset: _showOptionalArAsset(_selectedSubjectType),
             isStreetArtSelection: _isStreetArtSelection(),
+            authoredBySelf: _authoredBySelf && _selfName != null,
+            authoredBySelfName: _selfName,
+            onAuthoredBySelfChanged: _setAuthoredBySelf,
             onSubjectTypeChanged: _applySubjectType,
             onSubjectChanged: (value) {
               setState(() {
@@ -399,8 +404,7 @@ class _KubusMarkerFormContentState extends State<KubusMarkerFormContent> {
             onMarkerTypeChanged: (value) =>
                 setState(() => _selectedMarkerType = value),
             onPublicChanged: (value) => setState(() => _isPublic = value),
-            onCommunityChanged: (value) =>
-                setState(() => _isCommunity = value),
+            onCommunityChanged: (value) => setState(() => _isCommunity = value),
             onPickCover: _pickCoverImage,
             onRemoveCover: _removeCoverImage,
             coverImageBytes: _coverImageBytes,
@@ -413,6 +417,25 @@ class _KubusMarkerFormContentState extends State<KubusMarkerFormContent> {
         ),
       ],
     );
+  }
+
+  /// Display name of the signed-in profile, or null for a guest or a profile
+  /// without one (the checkbox is then disabled).
+  String? get _selfName {
+    final profile = Provider.of<ProfileProvider?>(context, listen: false);
+    return AuthoredBySelf.displayNameFor(
+      profile?.currentUser,
+      isSignedIn: profile?.isSignedIn ?? false,
+    );
+  }
+
+  void _setAuthoredBySelf(bool next) {
+    final name = _selfName;
+    if (next && name == null) return;
+    setState(() {
+      _authoredBySelf = next;
+      if (next) _artistNameController.text = name!;
+    });
   }
 
   void _submit() {
@@ -443,6 +466,12 @@ class _KubusMarkerFormContentState extends State<KubusMarkerFormContent> {
       }
     }
 
+    // A stale tick (signed out or name removed since) is never sent, and only
+    // the street-art form carries the declaration.
+    final selfName = _selfName;
+    final authoredBySelf =
+        _authoredBySelf && selfName != null && _isStreetArtSelection();
+
     widget.onSubmit(
       MapMarkerFormResult(
         title: _titleController.text.trim(),
@@ -458,9 +487,12 @@ class _KubusMarkerFormContentState extends State<KubusMarkerFormContent> {
         coverImageBytes: _coverImageBytes,
         coverImageFileName: _coverImageFileName,
         coverImageFileType: _coverImageFileType,
-        artistName: _artistNameController.text.trim().isNotEmpty
-            ? _artistNameController.text.trim()
-            : null,
+        artistName: authoredBySelf
+            ? selfName
+            : _artistNameController.text.trim().isNotEmpty
+                ? _artistNameController.text.trim()
+                : null,
+        authoredBySelf: authoredBySelf,
         imageAuthor: _imageAuthorController.text.trim().isNotEmpty
             ? _imageAuthorController.text.trim()
             : null,
@@ -470,5 +502,4 @@ class _KubusMarkerFormContentState extends State<KubusMarkerFormContent> {
       ),
     );
   }
-
 }

@@ -1197,6 +1197,9 @@ class AppLocalizationsSl extends AppLocalizations {
   String get postAuthSecuringWallet => 'Varovanje denarnice';
 
   @override
+  String get postAuthSecuringAccount => 'Varovanje računa';
+
+  @override
   String get postAuthLoadingProfile => 'Nalaganje profila';
 
   @override
@@ -1215,6 +1218,10 @@ class AppLocalizationsSl extends AppLocalizations {
   @override
   String get postAuthSecuringWalletBody =>
       'Preverjamo dostop do denarnice in varnost naprave.';
+
+  @override
+  String get postAuthSecuringAccountBody =>
+      'Preverjamo tvojo sejo in dostop do računa.';
 
   @override
   String get postAuthLoadingProfileBody =>
@@ -19205,6 +19212,26 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get verificationInstitutionAlreadyManaged => 'Že upravljan profil';
+
+  @override
+  String artworkAuthorOpenProfile(String name) {
+    return 'Odpri profil: $name';
+  }
+
+  @override
+  String get artworkAuthoredBySelfLabel => 'Sem ustvarjalec';
+
+  @override
+  String get artworkAuthoredBySelfHelper =>
+      'Ime umetnika se nastavi na ime tvojega profila, delo pa se pripiše tvojemu profilu.';
+
+  @override
+  String get artworkAuthoredBySelfUnavailable =>
+      'Prijavi se in dodaj prikazno ime v svoj profil, da lahko delo pripišeš sebi.';
+
+  @override
+  String get artworkAuthoredBySelfFieldHelper =>
+      'Nastavljeno iz imena tvojega profila.';
 
   @override
   String get analyticsConsentPromptTitle => 'Dovolite izbirno analitiko?';

@@ -54,4 +54,55 @@ void main() {
       expect(find.byType(ConnectWallet), findsOneWidget);
     });
   }
+
+  testWidgets(
+      'Back from a sub-step returns to the options and never to a sibling step',
+      (tester) async {
+    await tester.binding.setSurfaceSize(const Size(1280, 1024));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    await tester.pumpWidget(_harness());
+    await tester.pumpAndSettle();
+    expect(find.text('Create a new wallet'), findsWidgets);
+
+    // Create -> Back used to land on the neighbouring "Import wallet" step.
+    await tester.tap(find.text('Create a new wallet').first);
+    await tester.pumpAndSettle();
+    await tester.tap(find.byIcon(Icons.arrow_back).first);
+    await tester.pumpAndSettle();
+    expect(find.text('Import wallet'), findsNothing);
+    expect(find.text('Link existing wallet'), findsWidgets);
+    expect(find.text('Create a new wallet'), findsWidgets);
+
+    // Import -> Back returns to the options as well.
+    await tester.tap(find.text('Link existing wallet').first);
+    await tester.pumpAndSettle();
+    await tester.tap(find.byIcon(Icons.arrow_back).first);
+    await tester.pumpAndSettle();
+    expect(find.text('Link existing wallet'), findsWidgets);
+    expect(find.text('Create a new wallet'), findsWidgets);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets(
+      'desktop flow: one calm header, no repeated title, no per-step title mismatch',
+      (tester) async {
+    await tester.binding.setSurfaceSize(const Size(1280, 1024));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    await tester.pumpWidget(_harness());
+    await tester.pumpAndSettle();
+
+    // The options step used to say "Connect wallet" three times (column, header, hero card).
+    expect(find.text('Connect wallet'), findsOneWidget);
+    expect(find.text('Secure your wallet'), findsNothing);
+
+    // A sub-step keeps the same header; its own title is only in the body.
+    await tester.tap(find.text('Link existing wallet').first);
+    await tester.pumpAndSettle();
+    expect(find.text('Connect wallet'), findsOneWidget);
+    expect(find.text('Import wallet'), findsWidgets);
+    expect(find.text('Secure your wallet'), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
 }

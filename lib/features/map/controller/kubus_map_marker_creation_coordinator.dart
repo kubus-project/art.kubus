@@ -31,6 +31,7 @@ typedef KubusStreetArtArtworkCreator = Future<Artwork> Function({
   required String? artistName,
   required String imageAuthor,
   required String imageLicense,
+  required bool authoredBySelf,
 });
 
 typedef KubusStreetArtArtworkRollback = Future<void> Function(
@@ -214,6 +215,7 @@ class KubusMapMarkerCreationCoordinator {
           artistName: form.artistName,
           imageAuthor: normalizedAuthor,
           imageLicense: normalizedLicense,
+          authoredBySelf: form.authoredBySelf,
         );
         linkedArtwork = createdStreetArtArtwork;
       }

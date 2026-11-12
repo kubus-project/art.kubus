@@ -32,6 +32,11 @@ class MapMarkerFormResult {
   final String? imageAuthor;
   final String? imageLicense;
 
+  /// The signed-in account declared itself the creator of the street-art work.
+  /// A bare flag: the backend resolves the account from the session, and
+  /// [artistName] then carries the account's own display name.
+  final bool authoredBySelf;
+
   const MapMarkerFormResult({
     required this.title,
     required this.description,
@@ -49,6 +54,7 @@ class MapMarkerFormResult {
     this.artistName,
     this.imageAuthor,
     this.imageLicense,
+    this.authoredBySelf = false,
   });
 }
 

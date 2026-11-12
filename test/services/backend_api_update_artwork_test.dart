@@ -86,6 +86,32 @@ void main() {
       expect(requests.where((r) => r.method == 'PUT'), hasLength(1));
     });
 
+    test('authoredBySelf travels in the PUT body and the author comes back',
+        () async {
+      backend((r) => r.method == 'PUT'
+          ? json(200, {
+              'success': true,
+              'data': {
+                'artwork': {
+                  ...artworkJson('Original title'),
+                  'authorProfile': {
+                    'profileId': '8c03b35a-a4d6-4c08-95fc-503c879fbc45',
+                    'username': 'damjan_stevovic',
+                    'displayName': 'Damjan Stevovic',
+                  },
+                },
+              },
+            })
+          : json(500, {}));
+
+      final updated =
+          await BackendApiService().updateArtwork(id, {'authoredBySelf': true});
+
+      final body = jsonDecode(requests.single.body) as Map<String, dynamic>;
+      expect(body, {'authoredBySelf': true});
+      expect(updated?.authorProfile?.displayName, 'Damjan Stevovic');
+    });
+
     test('200 acknowledgement without an artwork, read-back failing, is null',
         () async {
       backend((r) =>

@@ -9,7 +9,7 @@ import 'package:flutter/material.dart';
 import '../../widgets/common/kubus_cached_image.dart';
 import '../../widgets/inline_loading.dart';
 import '../../widgets/identity/kubus_identity_avatar.dart';
-import '../../widgets/artwork_creator_byline.dart';
+import '../../widgets/artwork_author_line.dart';
 import '../../widgets/artwork_gallery_view.dart';
 import '../../widgets/detail/detail_shell_components.dart';
 import '../../widgets/detail/artwork_provenance_section.dart';
@@ -600,7 +600,7 @@ class _ArtDetailScreenState extends State<ArtDetailScreen> {
           ),
         ),
         const SizedBox(height: DetailSpacing.sm),
-        ArtworkCreatorByline(
+        ArtworkAuthorLine(
           artwork: artwork,
           style: DetailTypography.caption(context),
         ),

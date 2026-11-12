@@ -9,6 +9,7 @@ import '../../widgets/app_loading.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../utils/design_tokens.dart';
+import '../../utils/profile_data_key.dart';
 import '../../utils/kubus_brand_colors.dart';
 import '../../utils/keyboard_inset_resolver.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -84,6 +85,7 @@ class _ProfileScreenState extends State<ProfileScreen>
   bool _artistDataLoading = false;
   bool _artistDataLoaded = false;
   List<Map<String, dynamic>> _artistArtworks = [];
+  int? _artistAuthoredTotal;
   List<Map<String, dynamic>> _documentedArtworks = [];
   List<Map<String, dynamic>> _artistCollections = [];
   List<Map<String, dynamic>> _artistEvents = [];
@@ -471,21 +473,32 @@ class _ProfileScreenState extends State<ProfileScreen>
                     color: roles.foregroundSubtle,
                   ),
                 ),
-                Text(
-                  web3Provider.hasWalletIdentity
-                      ? web3Provider.formatAddress(web3Provider.walletAddress)
-                      : l10n.profileConnectWalletToSeeProfileLabel,
-                  style: KubusTextStyles.detailCaption.copyWith(
-                    fontFamily:
-                        web3Provider.hasWalletIdentity ? 'RobotoMono' : null,
-                    color: roles.foregroundSubtle,
+                // A wallet is optional: an account without one shows nothing here
+                // instead of a prompt to connect one.
+                if (web3Provider.hasWalletIdentity)
+                  Text(
+                    web3Provider.formatAddress(web3Provider.walletAddress),
+                    style: KubusTextStyles.detailCaption.copyWith(
+                      fontFamily: 'RobotoMono',
+                      color: roles.foregroundSubtle,
+                    ),
                   ),
-                ),
               ],
             ),
           ],
         ),
       ),
+    );
+  }
+
+  /// Authored-works count for an account without a wallet (no wallet-keyed
+  /// stats snapshot exists), or null when the account has a wallet or the
+  /// count is not known yet.
+  int? _walletlessAuthoredCount(String? wallet) {
+    if ((wallet ?? '').trim().isNotEmpty) return null;
+    return ownerAuthoredWorksCount(
+      serverTotal: _artistAuthoredTotal,
+      loadedCount: _artistArtworks.length,
     );
   }
 
@@ -542,7 +555,10 @@ class _ProfileScreenState extends State<ProfileScreen>
                 ),
                 _buildStatCard(
                   AppLocalizations.of(context)!.userProfileArtworksTitle,
-                  profileProvider.formattedArtworksCount,
+                  // The wallet-keyed counter is 0 for a walletless account:
+                  // use the account-keyed total of its authored works.
+                  _walletlessAuthoredCount(walletAddress)?.toString() ??
+                      profileProvider.formattedArtworksCount,
                   Icons.palette,
                   isSmallScreen: isSmallScreen,
                   onTap: () => ProfileScreenMethods.showArtworks(
@@ -958,7 +974,11 @@ class _ProfileScreenState extends State<ProfileScreen>
       context,
       listen: false,
     );
-    final wallet = profileProvider.currentUser?.walletAddress ?? '';
+    // Profile/account id first (wallet only as a legacy fallback), so a
+    // walletless artist still loads authored artworks and collections.
+    final wallet = profileArtistDataKey(profileProvider.currentUser);
+    final eventsKey = profileEventsMatchKey(profileProvider.currentUser);
+    final legacyWallet = profileLegacyWalletKey(profileProvider.currentUser);
     if (wallet.isEmpty) {
       return;
     }
@@ -978,11 +998,18 @@ class _ProfileScreenState extends State<ProfileScreen>
       return;
     }
     _artistDataRequested = true;
-    await _loadArtistData(wallet, force: force);
+    await _loadArtistData(
+      wallet,
+      eventsKey: eventsKey,
+      legacyWallet: legacyWallet,
+      force: force,
+    );
   }
 
   Future<void> _loadArtistData(
     String walletAddress, {
+    required String eventsKey,
+    String legacyWallet = '',
     bool force = false,
   }) async {
     if (!mounted) return;
@@ -990,6 +1017,7 @@ class _ProfileScreenState extends State<ProfileScreen>
       _artistDataLoading = true;
       if (force) {
         _artistArtworks = [];
+        _artistAuthoredTotal = null;
         _documentedArtworks = [];
         _artistCollections = [];
         _artistEvents = [];
@@ -1003,11 +1031,12 @@ class _ProfileScreenState extends State<ProfileScreen>
       );
       final collections = await api.getCollections(
         walletAddress: walletAddress,
+        legacyWalletAddress: legacyWallet,
         limit: 6,
       );
       final eventsResponse = await api.listEvents(limit: 100);
       final filteredEvents = eventsResponse
-          .where((event) => profileEventBelongsToWallet(event, walletAddress))
+          .where((event) => profileEventBelongsToWallet(event, eventsKey))
           .take(6)
           .map((e) => Map<String, dynamic>.from(e))
           .toList();
@@ -1015,6 +1044,7 @@ class _ProfileScreenState extends State<ProfileScreen>
       if (!mounted) return;
       setState(() {
         _artistArtworks = sections.authored;
+        _artistAuthoredTotal = sections.authoredTotal;
         _documentedArtworks = sections.documented;
         _artistCollections = collections;
         _artistEvents = filteredEvents;
@@ -1430,8 +1460,13 @@ class _ProfileScreenState extends State<ProfileScreen>
 
           final discoveriesValue = privateCounters['artworksDiscovered'] ??
               stats?.artworksDiscovered;
+          // Stat snapshots are keyed by wallet. A walletless account has no
+          // snapshot, so the account-keyed total of its authored works is the
+          // count (see ownerAuthoredWorksCount).
+          final walletlessAuthoredCount = _walletlessAuthoredCount(wallet);
           final createdValue = authorshipCounters['authoredArtworks'] ??
               publicCounters['artworks'] ??
+              walletlessAuthoredCount ??
               stats?.artworksCreated;
           final nftsOwnedValue =
               publicCounters['nftsMinted'] ?? stats?.nftsOwned;

@@ -30,7 +30,7 @@ import '../../../utils/design_tokens.dart';
 import '../../../utils/kubus_color_roles.dart';
 import '../../../utils/wallet_utils.dart';
 import '../../../widgets/artwork_gallery_view.dart';
-import '../../../widgets/artwork_creator_byline.dart';
+import '../../../widgets/artwork_author_line.dart';
 import '../../../widgets/inline_loading.dart';
 import '../../../widgets/detail/detail_shell_components.dart';
 import '../../../widgets/detail/artwork_provenance_section.dart';
@@ -732,7 +732,7 @@ class _DesktopArtworkDetailScreenState
             ),
           ),
           const SizedBox(height: DetailSpacing.sm),
-          ArtworkCreatorByline(
+          ArtworkAuthorLine(
             artwork: artwork,
             style: DetailTypography.caption(context),
             maxLines: 2,
