@@ -13,20 +13,20 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   setUp(() => SharedPreferences.setMockInitialValues({}));
   Artwork record(String artist, Map<String, dynamic> metadata) => Artwork(
-    id: 'public-record',
-    title: 'Public work',
-    artist: artist,
-    description: '',
-    position: const LatLng(46, 14),
-    rewards: 0,
-    createdAt: DateTime(2026),
-    metadata: metadata,
-  );
+        id: 'public-record',
+        title: 'Public work',
+        artist: artist,
+        description: '',
+        position: const LatLng(46, 14),
+        rewards: 0,
+        createdAt: DateTime(2026),
+        metadata: metadata,
+      );
   Widget harness(Artwork artwork) => MaterialApp(
-    localizationsDelegates: AppLocalizations.localizationsDelegates,
-    supportedLocales: AppLocalizations.supportedLocales,
-    home: Scaffold(body: ArtworkCreatorByline(artwork: artwork)),
-  );
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: Scaffold(body: ArtworkCreatorByline(artwork: artwork)),
+      );
   testWidgets(
     'an explicitly linked artist account makes the recorded byline interactive',
     (tester) async {
