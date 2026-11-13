@@ -88,6 +88,13 @@ Future<void> pumpProfileSurface(
   /// renders (it is hidden when empty).
   bool withAchievements = false,
 
+  /// Artworks the viewed profile authored, injected through the extended
+  /// package seam. Empty by default.
+  List<Map<String, dynamic>> artistArtworks = const <Map<String, dynamic>>[],
+
+  /// Public collections of the viewed profile, injected the same way.
+  List<Map<String, dynamic>> artistCollections = const <Map<String, dynamic>>[],
+
   /// Posts by the viewed profile, injected through the screens' existing
   /// extended-package seam. Empty by default.
   List<CommunityPost> posts = const <CommunityPost>[],
@@ -137,6 +144,8 @@ Future<void> pumpProfileSurface(
     canonicalPublicEntry: canonicalPublicEntry,
     withAchievements: withAchievements,
     posts: posts,
+    artistArtworks: artistArtworks,
+    artistCollections: artistCollections,
   );
 
   await tester.pumpWidget(
@@ -236,13 +245,19 @@ Widget _surfaceWidget(
   bool canonicalPublicEntry = false,
   bool withAchievements = false,
   List<CommunityPost> posts = const <CommunityPost>[],
+  List<Map<String, dynamic>> artistArtworks = const <Map<String, dynamic>>[],
+  List<Map<String, dynamic>> artistCollections = const <Map<String, dynamic>>[],
 }) {
   final critical = ProfileFixtures.critical(
     user: user,
     withAchievements: withAchievements,
   );
   final extended = Future<ProfileExtendedPackage?>.value(
-    ProfileFixtures.extended(initialPosts: posts),
+    ProfileFixtures.extended(
+      initialPosts: posts,
+      artistArtworks: artistArtworks,
+      artistCollections: artistCollections,
+    ),
   );
 
   switch (surface) {
