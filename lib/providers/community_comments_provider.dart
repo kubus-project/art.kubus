@@ -3,12 +3,15 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 
 import '../community/community_interactions.dart' show Comment;
+import '../services/account_identity.dart';
 import '../services/backend_api_service.dart';
 import 'wallet_provider.dart';
 
 class CommunityCommentsProvider extends ChangeNotifier {
   CommunityCommentsProvider({BackendApiService? api})
-      : _api = api ?? BackendApiService();
+      : _api = api ?? BackendApiService() {
+    AccountIdentity.addListener(_handleAccountIdentityChanged);
+  }
 
   final BackendApiService _api;
   WalletProvider? _walletProvider;
@@ -50,6 +53,7 @@ class CommunityCommentsProvider extends ChangeNotifier {
   void dispose() {
     _walletDebounce?.cancel();
     _walletProvider?.removeListener(_handleWalletMaybeChanged);
+    AccountIdentity.removeListener(_handleAccountIdentityChanged);
     super.dispose();
   }
 
@@ -82,8 +86,10 @@ class CommunityCommentsProvider extends ChangeNotifier {
       if (requestEpoch != _authEpoch) return;
       _errorByPostId[postId] = e.toString();
     } finally {
-      _loadingByPostId[postId] = false;
-      notifyListeners();
+      if (requestEpoch == _authEpoch) {
+        _loadingByPostId[postId] = false;
+        notifyListeners();
+      }
     }
   }
 
@@ -158,11 +164,22 @@ class CommunityCommentsProvider extends ChangeNotifier {
           _normalizedWallet(_walletProvider?.currentWalletAddress);
       if (nextWallet == _boundWallet) return;
       _boundWallet = nextWallet;
-      _authEpoch += 1;
-      _commentsByPostId.clear();
-      _errorByPostId.clear();
-      notifyListeners();
+      _clearAccountState();
     });
+  }
+
+  void _handleAccountIdentityChanged() {
+    _walletDebounce?.cancel();
+    _boundWallet = _normalizedWallet(_walletProvider?.currentWalletAddress);
+    _clearAccountState();
+  }
+
+  void _clearAccountState() {
+    _authEpoch += 1;
+    _commentsByPostId.clear();
+    _loadingByPostId.clear();
+    _errorByPostId.clear();
+    notifyListeners();
   }
 
   String? _normalizedWallet(String? wallet) {

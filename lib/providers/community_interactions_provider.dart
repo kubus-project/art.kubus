@@ -294,6 +294,7 @@ class CommunityInteractionsProvider extends ChangeNotifier {
   }
 
   Future<void> togglePostLike(CommunityPost post) async {
+    final requestEpoch = _authEpoch;
     final previousLiked = post.isLiked;
     final previousCount = post.likeCount;
 
@@ -307,6 +308,11 @@ class CommunityInteractionsProvider extends ChangeNotifier {
       final updatedCount = post.isLiked
           ? await _api.likePost(post.id)
           : await _api.unlikePost(post.id);
+      if (requestEpoch != _authEpoch) {
+        post.isLiked = previousLiked;
+        post.likeCount = previousCount;
+        return;
+      }
       if (updatedCount != null && post.likeCount != updatedCount) {
         post.likeCount = updatedCount;
       }
@@ -318,6 +324,7 @@ class CommunityInteractionsProvider extends ChangeNotifier {
     } catch (e) {
       post.isLiked = previousLiked;
       post.likeCount = previousCount;
+      if (requestEpoch != _authEpoch) return;
       applyServerPostState(post);
       notifyListeners();
       rethrow;

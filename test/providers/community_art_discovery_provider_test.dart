@@ -6,6 +6,7 @@ import 'package:art_kubus/models/artwork.dart';
 import 'package:art_kubus/models/exhibition.dart';
 import 'package:art_kubus/models/profile_identity_data.dart';
 import 'package:art_kubus/providers/community_art_discovery_provider.dart';
+import 'package:art_kubus/services/account_identity.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:latlong2/latlong.dart';
 
@@ -109,6 +110,60 @@ class _Rig {
 }
 
 void main() {
+  tearDown(AccountIdentity.resetForTesting);
+
+  test('walletless account change clears and invalidates discovery feed',
+      () async {
+    AccountIdentity.setAccountKey('account-A');
+    final provider = CommunityArtDiscoveryProvider();
+    addTearDown(provider.dispose);
+    await provider.refresh(_Rig(publicPosts: 2).sources);
+    expect(provider.allItems, isNotEmpty);
+
+    final started = Completer<void>();
+    final stalePosts = Completer<List<CommunityPost>>();
+    final base = _Rig().sources;
+    final sources = ArtDiscoverySources(
+      artFeed: base.artFeed,
+      publicPosts: ({int limit = 30}) {
+        if (!started.isCompleted) started.complete();
+        return stalePosts.future;
+      },
+      artworks: base.artworks,
+      exhibitions: base.exhibitions,
+      signals: base.signals,
+      selectedArea: base.selectedArea,
+      mapCenter: base.mapCenter,
+      deviceLocation: base.deviceLocation,
+      savedLocation: base.savedLocation,
+      saveLocation: base.saveLocation,
+      now: base.now,
+    );
+    final pending = provider.refresh(sources);
+    await started.future;
+    AccountIdentity.setAccountKey('account-B');
+    AccountIdentity.notifyListenersChanged();
+
+    expect(provider.allItems, isEmpty);
+    expect(provider.loaded, isFalse);
+    stalePosts.complete([_post('stale-A')]);
+    await pending;
+    expect(provider.allItems, isEmpty);
+    expect(provider.loaded, isFalse);
+  });
+
+  test('same-account token refresh preserves discovery feed', () async {
+    AccountIdentity.setAccountKey('account-A');
+    final provider = CommunityArtDiscoveryProvider();
+    addTearDown(provider.dispose);
+    await provider.refresh(_Rig(publicPosts: 2).sources);
+    final before = provider.allItems.map((item) => item.key).toList();
+
+    AccountIdentity.setAccountKey('account-A');
+
+    expect(provider.allItems.map((item) => item.key), before);
+  });
+
   test('a dense neighbourhood stays at the first radius', () async {
     final rig = _Rig(map: _mapLocation, artFeedByRadius: {3: 8});
     final provider = CommunityArtDiscoveryProvider();

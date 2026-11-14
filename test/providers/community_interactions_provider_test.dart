@@ -172,6 +172,17 @@ class _GatedInteractionApi extends _FakeBackendApiService {
   }
 }
 
+class _GatedLikeMutationApi extends _FakeBackendApiService {
+  final Completer<void> started = Completer<void>();
+  final Completer<int?> result = Completer<int?>();
+
+  @override
+  Future<int?> likePost(String postId) {
+    if (!started.isCompleted) started.complete();
+    return result.future;
+  }
+}
+
 void main() {
   tearDown(AccountIdentity.resetForTesting);
 
@@ -206,6 +217,43 @@ void main() {
     AccountIdentity.setAccountKey('account-A');
 
     expect(provider.cachedPostState(post.id), isNotNull);
+  });
+
+  test('late post-like success from A cannot repopulate B interaction state',
+      () async {
+    AccountIdentity.setAccountKey('account-A');
+    final api = _GatedLikeMutationApi();
+    final provider = CommunityInteractionsProvider(api: api);
+    addTearDown(provider.dispose);
+    final post = _post(id: 'post-A', isLiked: false);
+
+    final pending = provider.togglePostLike(post);
+    await api.started.future;
+    AccountIdentity.setAccountKey('account-B');
+    AccountIdentity.notifyListenersChanged();
+    expect(provider.cachedPostState(post.id), isNull);
+
+    api.result.complete(8);
+    await pending;
+    expect(provider.cachedPostState(post.id), isNull);
+  });
+
+  test('late post-like error from A cannot restore A interaction state',
+      () async {
+    AccountIdentity.setAccountKey('account-A');
+    final api = _GatedLikeMutationApi();
+    final provider = CommunityInteractionsProvider(api: api);
+    addTearDown(provider.dispose);
+    final post = _post(id: 'post-A', isLiked: false);
+
+    final pending = provider.togglePostLike(post);
+    await api.started.future;
+    AccountIdentity.setAccountKey('account-B');
+    AccountIdentity.notifyListenersChanged();
+
+    api.result.completeError(StateError('synthetic A failure'));
+    await expectLater(pending, completes);
+    expect(provider.cachedPostState(post.id), isNull);
   });
 
   test('a read that was in flight does not undo a newer confirmed like',
