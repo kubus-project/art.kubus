@@ -57,6 +57,7 @@ class SavedItemsProvider extends ChangeNotifier {
   @override
   void dispose() {
     AccountIdentity.removeListener(_handleAccountIdentityChanged);
+    _repository.dispose();
     super.dispose();
   }
 
