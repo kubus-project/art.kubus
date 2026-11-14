@@ -1461,12 +1461,14 @@ class ChatProvider extends ChangeNotifier {
 
   void bindAuthContext({
     ProfileProvider? profileProvider,
+    String? accountId,
     String? walletAddress,
     bool? isSignedIn,
   }) {
     _chatProviderBindAuthContext(
       this,
       profileProvider: profileProvider,
+      accountId: accountId,
       walletAddress: walletAddress,
       isSignedIn: isSignedIn,
     );

@@ -301,6 +301,7 @@ void _chatProviderBindToRefresh(
 void _chatProviderBindAuthContext(
   ChatProvider provider, {
   ProfileProvider? profileProvider,
+  String? accountId,
   String? walletAddress,
   bool? isSignedIn,
 }) {
@@ -310,9 +311,14 @@ void _chatProviderBindAuthContext(
     final wallet = WalletUtils.normalize(walletAddress);
     final resolvedWallet = profileWallet.isNotEmpty ? profileWallet : wallet;
     final signedIn = isSignedIn ?? (profileProvider?.isSignedIn ?? false);
+    final resolvedAccountId = (accountId ??
+            profileProvider?.currentUser?.userId ??
+            profileProvider?.currentUser?.id ??
+            '')
+        .trim();
     final token = (provider._api.getAuthToken() ?? '').trim();
     final signature =
-        '${token.isNotEmpty}:${resolvedWallet.toLowerCase()}:${signedIn.toString()}';
+        '${token.isNotEmpty}:$resolvedAccountId:${resolvedWallet.toLowerCase()}:${signedIn.toString()}';
 
     if (signature == provider._lastAuthSignature) return;
     provider._lastAuthSignature = signature;
