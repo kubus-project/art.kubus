@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 
 import '../community/community_interactions.dart';
 import '../models/community_subject.dart';
+import '../services/account_identity.dart';
 import '../services/backend_api_service.dart';
 import '../services/profile_package_mutation_tracker.dart';
 import 'wallet_provider.dart';
@@ -12,7 +13,9 @@ typedef CommunityPostNormalizer = CommunityPost Function(CommunityPost post);
 
 class CommunityInteractionsProvider extends ChangeNotifier {
   CommunityInteractionsProvider({BackendApiService? api})
-      : _api = api ?? BackendApiService();
+      : _api = api ?? BackendApiService() {
+    AccountIdentity.addListener(_handleAccountIdentityChanged);
+  }
 
   static const Duration _interactionStateTtl = Duration(minutes: 2);
   static const Duration _likeListTtl = Duration(minutes: 2);
@@ -66,6 +69,7 @@ class CommunityInteractionsProvider extends ChangeNotifier {
     _postStateReconcileTimer?.cancel();
     _walletDebounce?.cancel();
     _walletProvider?.removeListener(_handleWalletMaybeChanged);
+    AccountIdentity.removeListener(_handleAccountIdentityChanged);
     super.dispose();
   }
 
@@ -375,14 +379,13 @@ class CommunityInteractionsProvider extends ChangeNotifier {
 
     final requestEpoch = _authEpoch;
     final future = _api.getPostLikes(postId).then((users) {
-      if (requestEpoch == _authEpoch) {
-        _postLikeUsers[postId] = users;
-        _postLikeFetchedAt[postId] = DateTime.now();
-        notifyListeners();
-      }
+      if (requestEpoch != _authEpoch) return const <CommunityLikeUser>[];
+      _postLikeUsers[postId] = users;
+      _postLikeFetchedAt[postId] = DateTime.now();
+      notifyListeners();
       return users;
     }).whenComplete(() {
-      _postLikeFutures.remove(postId);
+      if (requestEpoch == _authEpoch) _postLikeFutures.remove(postId);
     });
     _postLikeFutures[postId] = future;
     return future;
@@ -411,14 +414,13 @@ class CommunityInteractionsProvider extends ChangeNotifier {
 
     final requestEpoch = _authEpoch;
     final future = _api.getCommentLikes(commentId).then((users) {
-      if (requestEpoch == _authEpoch) {
-        _commentLikeUsers[commentId] = users;
-        _commentLikeFetchedAt[commentId] = DateTime.now();
-        notifyListeners();
-      }
+      if (requestEpoch != _authEpoch) return const <CommunityLikeUser>[];
+      _commentLikeUsers[commentId] = users;
+      _commentLikeFetchedAt[commentId] = DateTime.now();
+      notifyListeners();
       return users;
     }).whenComplete(() {
-      _commentLikeFutures.remove(commentId);
+      if (requestEpoch == _authEpoch) _commentLikeFutures.remove(commentId);
     });
     _commentLikeFutures[commentId] = future;
     return future;
@@ -431,10 +433,21 @@ class CommunityInteractionsProvider extends ChangeNotifier {
           _normalizedWallet(_walletProvider?.currentWalletAddress);
       if (nextWallet == _boundWallet) return;
       _boundWallet = nextWallet;
-      _authEpoch += 1;
-      _clearHydratedInteractionState();
-      notifyListeners();
+      _invalidateAccountState();
     });
+  }
+
+  void _handleAccountIdentityChanged() {
+    _walletDebounce?.cancel();
+    _walletDebounce = null;
+    _boundWallet = _normalizedWallet(_walletProvider?.currentWalletAddress);
+    _invalidateAccountState();
+  }
+
+  void _invalidateAccountState() {
+    _authEpoch += 1;
+    _clearHydratedInteractionState();
+    notifyListeners();
   }
 
   void _clearHydratedInteractionState() {
@@ -443,6 +456,8 @@ class CommunityInteractionsProvider extends ChangeNotifier {
     _postStates.clear();
     _postStateFetchedAt.clear();
     _postStateInflight.clear();
+    _postStateWriteSeq.clear();
+    _stateSeq = 0;
     _postLikeFutures.clear();
     _postLikeUsers.clear();
     _postLikeFetchedAt.clear();
