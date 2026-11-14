@@ -317,11 +317,18 @@ void _chatProviderBindAuthContext(
             '')
         .trim();
     final token = (provider._api.getAuthToken() ?? '').trim();
+    final previousSignature = provider._lastAuthSignature;
+    final accountChanged = previousSignature.isNotEmpty &&
+        resolvedAccountId.isNotEmpty &&
+        provider._lastAuthAccountId != resolvedAccountId;
     final signature =
-        '${token.isNotEmpty}:$resolvedAccountId:${resolvedWallet.toLowerCase()}:${signedIn.toString()}';
+        '${token.isNotEmpty}:$resolvedAccountId:$resolvedWallet:${signedIn.toString()}';
 
-    if (signature == provider._lastAuthSignature) return;
+    if (signature == previousSignature) return;
     provider._lastAuthSignature = signature;
+    if (resolvedAccountId.isNotEmpty) {
+      provider._lastAuthAccountId = resolvedAccountId;
+    }
 
     final hasSession =
         token.isNotEmpty || resolvedWallet.isNotEmpty || signedIn;
@@ -330,10 +337,13 @@ void _chatProviderBindAuthContext(
       return;
     }
 
-    // A signed-in identity with no wallet is a different account from whatever
-    // held the chat state before. Clear that state now, before the wallet-keyed
-    // paths below can return early and leave it in memory.
-    if (resolvedWallet.isEmpty) {
+    // A canonical account can change while the wallet stays the same (for
+    // example, a shared wallet linked to another email account). Clear the old
+    // account's state before the wallet-keyed paths below can return early.
+    if (accountChanged) {
+      provider._resetSessionState(reason: 'accountChanged');
+    } else if (resolvedWallet.isEmpty) {
+      // Walletless accounts are identified by their canonical account ID.
       provider._resetSessionState(reason: 'identityWithoutWallet');
     }
 

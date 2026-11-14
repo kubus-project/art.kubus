@@ -427,6 +427,82 @@ void main() {
     expect(provider.debugResourceSnapshot['cachedUsers'], 0);
   });
 
+  test(
+      'linked account switch clears cached chat state when the wallet is the '
+      'same', () async {
+    final http = _ChatHttp();
+    BackendApiService().setHttpClient(http.client());
+    BackendApiService().setAuthTokenForTesting('tokenA');
+
+    final provider = ChatProvider();
+    provider.bindAuthContext(
+      accountId: 'account-A',
+      walletAddress: 'walletA',
+      isSignedIn: true,
+    );
+    await http.arrived('conversations');
+    http.complete('conversations', {
+      'success': true,
+      'data': [_conversation('convA')],
+    });
+    await Future<void>.delayed(Duration.zero);
+    final loadA = provider.loadMessages('convA');
+    await http.arrived('messages');
+    http.complete('messages', {
+      'success': true,
+      'data': [_message('m1', 'convA')],
+    });
+    await loadA;
+    expect(provider.conversations, isNotEmpty);
+    expect(provider.messages.containsKey('convA'), isTrue);
+
+    BackendApiService().setAuthTokenForTesting('tokenB');
+    provider.bindAuthContext(
+      accountId: 'account-B',
+      walletAddress: 'walletA',
+      isSignedIn: true,
+    );
+    expect(provider.conversations, isEmpty);
+    expect(provider.messages, isEmpty);
+    expect(provider.participantIdentitySnapshot, isEmpty);
+  });
+
+  test('case-only wallet identity change resets account chat state', () async {
+    final http = _ChatHttp();
+    BackendApiService().setHttpClient(http.client());
+    BackendApiService().setAuthTokenForTesting('tokenA');
+
+    final provider = ChatProvider();
+    provider.bindAuthContext(
+      accountId: 'account-A',
+      walletAddress: 'walletA',
+      isSignedIn: true,
+    );
+    await http.arrived('conversations');
+    http.complete('conversations', {
+      'success': true,
+      'data': [_conversation('convA')],
+    });
+    await Future<void>.delayed(Duration.zero);
+    final loadA = provider.loadMessages('convA');
+    await http.arrived('messages');
+    http.complete('messages', {
+      'success': true,
+      'data': [_message('m1', 'convA')],
+    });
+    await loadA;
+    expect(provider.conversations, isNotEmpty);
+    expect(provider.messages.containsKey('convA'), isTrue);
+
+    provider.bindAuthContext(
+      accountId: 'account-A',
+      walletAddress: 'WalletA',
+      isSignedIn: true,
+    );
+    expect(provider.conversations, isEmpty);
+    expect(provider.messages, isEmpty);
+  });
+
   test('clearing the wallet on a wallet session drops its chat state',
       () async {
     final http = _ChatHttp();

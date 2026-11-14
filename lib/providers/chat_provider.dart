@@ -532,6 +532,7 @@ class ChatProvider extends ChangeNotifier {
   DateTime? _lastUnauthorizedAt;
   final Duration _unauthCooldown = const Duration(seconds: 30);
   String _lastAuthSignature = '';
+  String _lastAuthAccountId = '';
   DateTime? _lastIncomingMessageAt;
   String? _lastIncomingConversationId;
   final Map<String, int> _messageCacheTouchMs = {};
