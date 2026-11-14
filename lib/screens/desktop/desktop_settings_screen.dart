@@ -13,6 +13,7 @@ import '../../providers/profile_provider.dart';
 import '../../providers/stats_provider.dart';
 import '../../providers/task_provider.dart';
 import '../../providers/wallet_provider.dart';
+import '../../utils/wallet_presentation_state.dart';
 import '../../providers/platform_provider.dart';
 import '../../providers/security_gate_provider.dart';
 import '../../providers/email_preferences_provider.dart';
@@ -121,7 +122,7 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
   String _networkSelection = 'Mainnet';
   bool _autoBackup = true;
   WalletBackupStatusSnapshot _walletBackupStatus =
-      const WalletBackupStatusSnapshot.noWallet();
+      const WalletBackupStatusSnapshot.pending();
 
   // Profile interaction settings
   bool _showAchievements = true;

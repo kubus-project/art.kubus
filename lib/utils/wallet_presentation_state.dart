@@ -61,4 +61,35 @@ class WalletPresentationStateResolver {
 
   static bool hasWalletIdentity(WalletAuthoritySnapshot authority) =>
       authority.hasWalletIdentity;
+
+  /// True while the account-to-wallet linkage is still being established
+  /// (provider not yet ready, a session restore, or a link attempt in flight).
+  /// Until it settles, no copy may claim that the account has no wallet.
+  static bool isLinkagePending(WalletPresentationState state) =>
+      switch (state) {
+        WalletPresentationState.unknown ||
+        WalletPresentationState.restoring ||
+        WalletPresentationState.accountLinkInProgress =>
+          true,
+        WalletPresentationState.signedOut ||
+        WalletPresentationState.accountLinkFailed ||
+        WalletPresentationState.accountShellOnly ||
+        WalletPresentationState.walletReadOnly ||
+        WalletPresentationState.localSignerReady ||
+        WalletPresentationState.externalWalletReady ||
+        WalletPresentationState.encryptedBackupAvailableSignerMissing ||
+        WalletPresentationState.recoveryNeeded =>
+          false,
+      };
+
+  /// [isLinkagePending] for the live provider, resolved the same way the
+  /// wallet home resolves its own loading state.
+  static bool linkagePendingFor(WalletProvider walletProvider) =>
+      isLinkagePending(
+        resolve(
+          walletProvider.authority,
+          sessionPhase: walletProvider.sessionPhase,
+          accountLinkPhase: walletProvider.accountLinkPhase,
+        ),
+      );
 }

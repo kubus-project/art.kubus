@@ -2673,7 +2673,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get walletActionAccountShellNeedsWalletToast =>
-      'Your account is signed in, but this device still needs the wallet restored or connected before this action can continue.';
+      'Your account is signed in without a wallet. Connect one to continue with this action.';
 
   @override
   String get walletActionEncryptedBackupRestoreToast =>
@@ -2713,8 +2713,11 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsBackupStatusNoWallet => 'No wallet connected yet';
 
   @override
-  String get settingsBackupStatusAccountShellOnly =>
-      'Account wallet has not been restored on this device yet';
+  String get settingsBackupStatusChecking => 'Checking wallet status…';
+
+  @override
+  String get settingsBackupStatusWalletless =>
+      'No wallet linked to this account';
 
   @override
   String get settingsBackupStatusNoBackup =>
@@ -11352,15 +11355,23 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get walletBackupProtectionNoWalletBody =>
-      'Connect or restore the wallet on this device before managing backup protection.';
+      'Connect a wallet on this device before managing backup protection.';
 
   @override
-  String get walletBackupProtectionAccountShellHeadline =>
-      'Your account is ready, but this device does not have wallet access yet.';
+  String get walletBackupProtectionCheckingHeadline =>
+      'Checking wallet status…';
 
   @override
-  String get walletBackupProtectionAccountShellBody =>
-      'Restore the account wallet on this device before you configure wallet backup protection, transfers, or future wallet-linked access.';
+  String get walletBackupProtectionCheckingBody =>
+      'This device is checking whether a wallet is linked to your account. Backup options appear when the check finishes.';
+
+  @override
+  String get walletBackupProtectionWalletlessHeadline =>
+      'No wallet is linked to this account.';
+
+  @override
+  String get walletBackupProtectionWalletlessBody =>
+      'A wallet is optional. Connect one from the Wallet screen when you need wallet-based ownership or participation.';
 
   @override
   String get walletBackupProtectionNoBackupHeadline =>
@@ -11408,7 +11419,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get walletBackupProtectionReadOnlyBody =>
-      'Restore signing access with your encrypted backup or recovery phrase before using transfers and other wallet-protected actions on this device.';
+      'Reconnect your wallet provider, or import your recovery phrase, before using transfers and other wallet-protected actions on this device.';
 
   @override
   String get walletSessionStateAccountShellOnly => 'Account shell only';
@@ -12098,9 +12109,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get securityHubExternalSignerConnected => 'External signer connected';
-
-  @override
-  String get securityHubConnectOrRestoreWallet => 'Connect or restore a wallet';
 
   @override
   String get securityHubDeleteBackupAction => 'Delete backup';

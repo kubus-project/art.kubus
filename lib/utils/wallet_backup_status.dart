@@ -14,7 +14,22 @@ class WalletBackupStatusSnapshot {
     required this.hasEncryptedServerBackup,
     required this.hasPasskeyProtection,
     this.encryptedBackupStatusKnown = true,
+    this.resolved = true,
   });
+
+  /// Nothing has been resolved yet: the copy stays neutral and never reads as
+  /// "no wallet" or "restore" before the account's wallet linkage is known.
+  const WalletBackupStatusSnapshot.pending()
+      : walletAddress = null,
+        hasAccountSession = false,
+        hasWalletIdentity = false,
+        hasSigner = false,
+        isReadOnlySession = false,
+        mnemonicBackupRequired = false,
+        hasEncryptedServerBackup = false,
+        hasPasskeyProtection = false,
+        encryptedBackupStatusKnown = true,
+        resolved = false;
 
   const WalletBackupStatusSnapshot.noWallet()
       : walletAddress = null,
@@ -25,7 +40,8 @@ class WalletBackupStatusSnapshot {
         mnemonicBackupRequired = false,
         hasEncryptedServerBackup = false,
         hasPasskeyProtection = false,
-        encryptedBackupStatusKnown = true;
+        encryptedBackupStatusKnown = true,
+        resolved = true;
 
   final String? walletAddress;
   final bool hasAccountSession;
@@ -36,16 +52,29 @@ class WalletBackupStatusSnapshot {
   final bool hasEncryptedServerBackup;
   final bool hasPasskeyProtection;
   final bool encryptedBackupStatusKnown;
+  final bool resolved;
 
   bool get encryptedBackupRequirementSatisfiedForGating =>
       hasEncryptedServerBackup || !encryptedBackupStatusKnown;
 
   bool get needsSignerRestore => hasWalletIdentity && !hasSigner;
 
-  _WalletBackupStatusKind get _statusKind {
+  /// [linkagePending] is the live linkage state from
+  /// [WalletPresentationStateResolver.linkagePendingFor]. While it is pending
+  /// and no wallet identity is known, nothing can honestly be said about
+  /// wallet absence, so the copy is the neutral loading state.
+  _WalletBackupStatusKind _statusKind({required bool linkagePending}) {
+    if (!resolved) {
+      return _WalletBackupStatusKind.loading;
+    }
     if (!hasWalletIdentity) {
+      if (linkagePending) {
+        return _WalletBackupStatusKind.loading;
+      }
+      // A wallet is optional for an account. Nothing exists to restore here,
+      // so this is never a restore state.
       if (hasAccountSession) {
-        return _WalletBackupStatusKind.accountShellOnly;
+        return _WalletBackupStatusKind.walletless;
       }
       return _WalletBackupStatusKind.noWallet;
     }
@@ -67,12 +96,17 @@ class WalletBackupStatusSnapshot {
     return _WalletBackupStatusKind.noBackup;
   }
 
-  String settingsSummary(AppLocalizations l10n) {
-    switch (_statusKind) {
+  String settingsSummary(
+    AppLocalizations l10n, {
+    bool linkagePending = false,
+  }) {
+    switch (_statusKind(linkagePending: linkagePending)) {
+      case _WalletBackupStatusKind.loading:
+        return l10n.settingsBackupStatusChecking;
       case _WalletBackupStatusKind.noWallet:
         return l10n.settingsBackupStatusNoWallet;
-      case _WalletBackupStatusKind.accountShellOnly:
-        return l10n.settingsBackupStatusAccountShellOnly;
+      case _WalletBackupStatusKind.walletless:
+        return l10n.settingsBackupStatusWalletless;
       case _WalletBackupStatusKind.encryptedBackupRestoreAvailable:
         return l10n.settingsBackupStatusEncryptedBackupRestoreAvailable;
       case _WalletBackupStatusKind.readOnly:
@@ -88,12 +122,17 @@ class WalletBackupStatusSnapshot {
     }
   }
 
-  String protectionHeadline(AppLocalizations l10n) {
-    switch (_statusKind) {
+  String protectionHeadline(
+    AppLocalizations l10n, {
+    bool linkagePending = false,
+  }) {
+    switch (_statusKind(linkagePending: linkagePending)) {
+      case _WalletBackupStatusKind.loading:
+        return l10n.walletBackupProtectionCheckingHeadline;
       case _WalletBackupStatusKind.noWallet:
         return l10n.walletBackupProtectionNoWalletHeadline;
-      case _WalletBackupStatusKind.accountShellOnly:
-        return l10n.walletBackupProtectionAccountShellHeadline;
+      case _WalletBackupStatusKind.walletless:
+        return l10n.walletBackupProtectionWalletlessHeadline;
       case _WalletBackupStatusKind.encryptedBackupRestoreAvailable:
         return l10n.walletBackupProtectionEncryptedRestoreHeadline;
       case _WalletBackupStatusKind.readOnly:
@@ -109,12 +148,17 @@ class WalletBackupStatusSnapshot {
     }
   }
 
-  String protectionBody(AppLocalizations l10n) {
-    switch (_statusKind) {
+  String protectionBody(
+    AppLocalizations l10n, {
+    bool linkagePending = false,
+  }) {
+    switch (_statusKind(linkagePending: linkagePending)) {
+      case _WalletBackupStatusKind.loading:
+        return l10n.walletBackupProtectionCheckingBody;
       case _WalletBackupStatusKind.noWallet:
         return l10n.walletBackupProtectionNoWalletBody;
-      case _WalletBackupStatusKind.accountShellOnly:
-        return l10n.walletBackupProtectionAccountShellBody;
+      case _WalletBackupStatusKind.walletless:
+        return l10n.walletBackupProtectionWalletlessBody;
       case _WalletBackupStatusKind.encryptedBackupRestoreAvailable:
         return l10n.walletBackupProtectionEncryptedRestoreBody;
       case _WalletBackupStatusKind.readOnly:
@@ -132,8 +176,9 @@ class WalletBackupStatusSnapshot {
 }
 
 enum _WalletBackupStatusKind {
+  loading,
   noWallet,
-  accountShellOnly,
+  walletless,
   encryptedBackupRestoreAvailable,
   readOnly,
   recoveryPhraseRequired,
@@ -153,7 +198,18 @@ class WalletBackupStatusResolver {
     final hasWalletIdentity =
         resolvedWallet.isNotEmpty || walletProvider.hasWalletIdentity;
     if (!hasWalletIdentity) {
-      return const WalletBackupStatusSnapshot.noWallet();
+      // Keep the account session: a signed-in account without a wallet is a
+      // walletless account, which must not be read as signed out.
+      return WalletBackupStatusSnapshot(
+        walletAddress: null,
+        hasAccountSession: walletProvider.authority.hasAccountSession,
+        hasWalletIdentity: false,
+        hasSigner: false,
+        isReadOnlySession: false,
+        mnemonicBackupRequired: false,
+        hasEncryptedServerBackup: false,
+        hasPasskeyProtection: false,
+      );
     }
 
     var mnemonicBackupRequired = false;

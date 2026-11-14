@@ -1,7 +1,10 @@
 import 'package:art_kubus/models/dao.dart';
 import 'package:art_kubus/providers/dao_provider.dart';
+import 'package:art_kubus/providers/wallet_provider.dart';
 import 'package:art_kubus/screens/web3/dao/governance_hub.dart';
+import 'package:art_kubus/services/encrypted_wallet_backup_service.dart';
 import 'package:art_kubus/widgets/common/kubus_action_tile.dart';
+import 'package:art_kubus/widgets/kubus_button.dart';
 import 'package:art_kubus/widgets/dashboard/kubus_dashboard_chrome.dart';
 import 'package:art_kubus/utils/kubus_color_roles.dart';
 import 'package:art_kubus/widgets/common/kubus_stat_card.dart';
@@ -62,6 +65,51 @@ Future<void> _pump(WidgetTester tester, DAOProvider dao) async {
     tester,
     child: const GovernanceHub(),
     extraProviders: [ChangeNotifierProvider<DAOProvider>.value(value: dao)],
+  );
+  // Restore before expect(): the harness collects errors until teardown.
+  FlutterError.onError = prior;
+  expect(errors, isEmpty);
+}
+
+/// Wallet state is seeded through the provider's test hooks; deferInit keeps
+/// the real wallet bootstrap (secure storage, network) out of the test.
+class _GovernanceWallet extends WalletProvider {
+  _GovernanceWallet() : super(deferInit: true);
+}
+
+EncryptedWalletBackupDefinition _governanceBackup() {
+  return EncryptedWalletBackupDefinition(
+    walletAddress: 'wallet123',
+    version: 1,
+    kdfName: 'argon2id',
+    kdfParams: const <String, dynamic>{'iterations': 1},
+    salt: 'salt',
+    wrappedDekNonce: 'wrappedNonce',
+    wrappedDekCiphertext: 'wrappedCipher',
+    mnemonicNonce: 'mnemonicNonce',
+    mnemonicCiphertext: 'mnemonicCipher',
+    passkeys: const <WalletBackupPasskeyDefinition>[],
+  );
+}
+
+Future<void> _pumpWithWallet(
+  WidgetTester tester,
+  WalletProvider wallet, {
+  Locale locale = const Locale('en'),
+}) async {
+  SharedPreferences.setMockInitialValues(<String, Object>{
+    'DAO_onboarding_completed': true,
+    'Governance_onboarding_completed': true,
+  });
+  final prior = FlutterError.onError;
+  final errors = await pumpProductSurface(
+    tester,
+    child: const GovernanceHub(),
+    locale: locale,
+    extraProviders: [
+      ChangeNotifierProvider<DAOProvider>.value(value: _FakeDao()),
+      ChangeNotifierProvider<WalletProvider>.value(value: wallet),
+    ],
   );
   // Restore before expect(): the harness collects errors until teardown.
   FlutterError.onError = prior;
@@ -179,6 +227,101 @@ void main() {
           .evaluate()
           .isNotEmpty;
       expect(createTab, isFalse);
+    });
+  });
+
+  group('participation action follows the wallet identity state', () {
+    testWidgets('a walletless account is offered a connect, never a restore',
+        (tester) async {
+      final wallet = _GovernanceWallet()
+        ..seedAccountSessionForTesting(
+          email: 'walletless@example.com',
+          backendProfile: const <String, dynamic>{},
+        )
+        ..setCurrentWalletAddressForTesting(null);
+
+      await _pumpWithWallet(tester, wallet);
+
+      expect(
+        find.text(
+          'Your account is signed in without a wallet. Connect one to continue with this action.',
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.widgetWithText(KubusButton, 'Connect wallet'),
+        findsOneWidget,
+      );
+      expect(
+        find.widgetWithText(KubusButton, 'Restore wallet'),
+        findsNothing,
+      );
+    });
+
+    testWidgets(
+        'a read-only wallet with no proven backup is offered a reconnect',
+        (tester) async {
+      final wallet = _GovernanceWallet()
+        ..seedAccountSessionForTesting(
+          email: 'readonly@example.com',
+          backendProfile: const <String, dynamic>{},
+        )
+        ..setCurrentWalletAddressForTesting('wallet123');
+
+      await _pumpWithWallet(tester, wallet);
+
+      expect(
+        find.widgetWithText(KubusButton, 'Reconnect'),
+        findsOneWidget,
+      );
+      expect(
+        find.widgetWithText(KubusButton, 'Restore wallet'),
+        findsNothing,
+      );
+    });
+
+    testWidgets(
+        'a wallet with a proven backup and no local key is offered restore',
+        (tester) async {
+      final wallet = _GovernanceWallet()
+        ..seedAccountSessionForTesting(
+          email: 'restorable@example.com',
+          backendProfile: const <String, dynamic>{},
+        )
+        ..setCurrentWalletAddressForTesting('wallet123')
+        ..setEncryptedWalletBackupDefinitionForTesting(_governanceBackup());
+
+      await _pumpWithWallet(tester, wallet);
+
+      expect(
+        find.widgetWithText(KubusButton, 'Restore wallet'),
+        findsOneWidget,
+      );
+      expect(
+        find.widgetWithText(KubusButton, 'Reconnect'),
+        findsNothing,
+      );
+    });
+
+    testWidgets('a walletless account reads the connect copy in Slovenian',
+        (tester) async {
+      final wallet = _GovernanceWallet()
+        ..seedAccountSessionForTesting(
+          email: 'walletless@example.com',
+          backendProfile: const <String, dynamic>{},
+        )
+        ..setCurrentWalletAddressForTesting(null);
+
+      await _pumpWithWallet(tester, wallet, locale: const Locale('sl'));
+
+      expect(
+        find.widgetWithText(KubusButton, 'Poveži denarnico'),
+        findsOneWidget,
+      );
+      expect(
+        find.widgetWithText(KubusButton, 'Obnovi denarnico'),
+        findsNothing,
+      );
     });
   });
 }

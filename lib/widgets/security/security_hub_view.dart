@@ -1056,7 +1056,7 @@ class _SecurityHubViewState extends State<SecurityHubView> {
         value: _walletLabel(authority.walletAddress, l10n),
         detail: authority.hasWalletIdentity
             ? l10n.securityHubCurrentAccountWallet
-            : l10n.securityHubConnectOrRestoreWallet,
+            : l10n.authConnectWalletButton,
         icon: Icons.account_balance_wallet_outlined,
         status: authority.hasWalletIdentity
             ? SecurityHubStatus.secured

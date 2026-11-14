@@ -13,6 +13,7 @@ import '../utils/app_color_utils.dart';
 import '../providers/notification_provider.dart';
 import '../providers/web3provider.dart';
 import '../providers/wallet_provider.dart';
+import '../utils/wallet_presentation_state.dart';
 import '../providers/platform_provider.dart';
 import '../providers/profile_provider.dart';
 import '../providers/navigation_provider.dart';
@@ -114,7 +115,7 @@ class _SettingsScreenState extends State<SettingsScreen>
   String _networkSelection = 'Mainnet';
   bool _autoBackup = true;
   WalletBackupStatusSnapshot _walletBackupStatus =
-      const WalletBackupStatusSnapshot.noWallet();
+      const WalletBackupStatusSnapshot.pending();
 
   // Profile interaction settings
   bool _showAchievements = true;

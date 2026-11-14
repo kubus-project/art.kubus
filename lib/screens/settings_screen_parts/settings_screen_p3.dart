@@ -238,7 +238,14 @@ extension _SettingsScreenStatePart3 on _SettingsScreenState {
   }
 
   String _walletBackupSummary(AppLocalizations l10n) {
-    return _walletBackupStatus.settingsSummary(l10n);
+    // The linkage flag is read live so the row settles on its own state when
+    // the wallet provider finishes linking, not on the state at load time.
+    return _walletBackupStatus.settingsSummary(
+      l10n,
+      linkagePending: WalletPresentationStateResolver.linkagePendingFor(
+        Provider.of<WalletProvider>(context),
+      ),
+    );
   }
 
   Future<Map<String, dynamic>> _loadSecureAccountStatus() async {

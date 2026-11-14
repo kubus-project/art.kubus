@@ -342,9 +342,14 @@ class _GovernanceWorkspaceState extends State<GovernanceWorkspace>
         : authority.canRestoreFromEncryptedBackup
             ? l10n.walletActionEncryptedBackupRestoreToast
             : l10n.walletActionReadOnlyReconnectToast;
+    // Same wallet-identity branches as the message above: "Restore wallet" only
+    // when a server-side backup is proven restorable; otherwise reconnect the
+    // wallet already linked, or connect one when the account has none.
     final actionLabel = !capabilities.hasWalletIdentity
         ? l10n.authConnectWalletButton
-        : l10n.walletHomeRestoreWalletAction;
+        : authority.canRestoreFromEncryptedBackup
+            ? l10n.walletHomeRestoreWalletAction
+            : l10n.commonReconnect;
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(

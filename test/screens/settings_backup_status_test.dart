@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:art_kubus/l10n/app_localizations_en.dart';
+import 'package:art_kubus/l10n/app_localizations_sl.dart';
 import 'package:art_kubus/models/email_preferences.dart';
 import 'package:art_kubus/models/user_profile.dart';
 import 'package:art_kubus/providers/email_preferences_provider.dart';
@@ -23,6 +24,7 @@ import 'package:art_kubus/screens/support_center_screen.dart';
 import 'package:art_kubus/services/backend_api_service.dart';
 import 'package:art_kubus/services/encrypted_wallet_backup_service.dart';
 import 'package:art_kubus/utils/wallet_backup_status.dart';
+import 'package:art_kubus/utils/wallet_presentation_state.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
@@ -331,6 +333,297 @@ void main() {
       snapshot.settingsSummary(l10n),
       'Encrypted backup available to restore signing on this device',
     );
+  });
+
+  group('backup copy for walletless, unsettled and restorable states', () {
+    final sl = AppLocalizationsSl();
+
+    WalletBackupStatusSnapshot snapshot({
+      bool hasWalletIdentity = false,
+      bool hasEncryptedServerBackup = false,
+    }) {
+      return WalletBackupStatusSnapshot(
+        walletAddress: hasWalletIdentity ? 'wallet123' : null,
+        hasAccountSession: true,
+        hasWalletIdentity: hasWalletIdentity,
+        hasSigner: false,
+        isReadOnlySession: hasWalletIdentity,
+        mnemonicBackupRequired: false,
+        hasEncryptedServerBackup: hasEncryptedServerBackup,
+        hasPasskeyProtection: false,
+      );
+    }
+
+    void expectNoRestoreWording(String text) {
+      expect(text.toLowerCase(), isNot(contains('restor')));
+    }
+
+    test('walletless account is neutral on both surfaces (EN)', () {
+      final walletless = snapshot();
+
+      expect(
+        walletless.settingsSummary(l10n),
+        'No wallet linked to this account',
+      );
+      expect(
+        walletless.protectionHeadline(l10n),
+        'No wallet is linked to this account.',
+      );
+      expect(
+        walletless.protectionBody(l10n),
+        'A wallet is optional. Connect one from the Wallet screen when you need wallet-based ownership or participation.',
+      );
+      expectNoRestoreWording(walletless.settingsSummary(l10n));
+      expectNoRestoreWording(walletless.protectionHeadline(l10n));
+      expectNoRestoreWording(walletless.protectionBody(l10n));
+    });
+
+    test('walletless account is neutral in Slovenian (SL)', () {
+      final walletless = snapshot();
+
+      expect(
+        walletless.settingsSummary(sl),
+        'Z računom ni povezana nobena denarnica',
+      );
+      expect(
+        walletless.protectionHeadline(sl),
+        'Z vašim računom ni povezana nobena denarnica.',
+      );
+      expect(walletless.protectionBody(sl), isNot(contains('obnov')));
+    });
+
+    test('unsettled linkage shows the neutral loading copy, not restore', () {
+      final walletless = snapshot();
+
+      expect(
+        walletless.settingsSummary(l10n, linkagePending: true),
+        'Checking wallet status…',
+      );
+      expect(
+        walletless.protectionHeadline(l10n, linkagePending: true),
+        'Checking wallet status…',
+      );
+      expectNoRestoreWording(
+        walletless.protectionBody(l10n, linkagePending: true),
+      );
+      expect(
+        walletless.settingsSummary(sl, linkagePending: true),
+        'Preverjamo stanje denarnice…',
+      );
+    });
+
+    test('an unresolved snapshot is loading, never restore or no-wallet', () {
+      const pending = WalletBackupStatusSnapshot.pending();
+
+      expect(pending.settingsSummary(l10n), 'Checking wallet status…');
+      expect(pending.protectionHeadline(l10n), 'Checking wallet status…');
+      expectNoRestoreWording(pending.protectionBody(l10n));
+    });
+
+    test('a proven backup without a local key keeps the restore copy', () {
+      final restorable = snapshot(
+        hasWalletIdentity: true,
+        hasEncryptedServerBackup: true,
+      );
+
+      expect(
+        restorable.settingsSummary(l10n),
+        'Encrypted backup available to restore signing on this device',
+      );
+      expect(
+        restorable.protectionHeadline(l10n),
+        'Encrypted backup is available, but signing is not restored on this device.',
+      );
+      // A wallet already known on this account is not hidden by loading.
+      expect(
+        restorable.settingsSummary(l10n, linkagePending: true),
+        'Encrypted backup available to restore signing on this device',
+      );
+    });
+
+    test('a read-only wallet without a proven backup is not a restore state',
+        () {
+      final readOnly = snapshot(hasWalletIdentity: true);
+
+      expect(
+        readOnly.settingsSummary(l10n),
+        'Read-only wallet session on this device',
+      );
+      expect(
+        readOnly.protectionHeadline(l10n),
+        'This device has read-only wallet access.',
+      );
+      expectNoRestoreWording(readOnly.settingsSummary(l10n));
+      expectNoRestoreWording(readOnly.protectionBody(l10n));
+    });
+
+    test('a signed-in account without a wallet resolves as walletless',
+        () async {
+      final walletProvider = _FakeWalletProvider(
+        walletAddressValue: null,
+        hasWalletIdentityValue: false,
+        hasSignerValue: false,
+        isReadOnlySessionValue: false,
+        mnemonicBackupRequiredValue: false,
+      )
+        ..seedAccountSessionForTesting(
+          email: 'walletless@example.com',
+          backendProfile: const <String, dynamic>{},
+        )
+        ..setCurrentWalletAddressForTesting(null);
+
+      final resolved = await WalletBackupStatusResolver.resolve(
+        walletProvider: walletProvider,
+        refreshRemote: false,
+      );
+
+      expect(resolved.hasAccountSession, isTrue);
+      expect(resolved.hasWalletIdentity, isFalse);
+      expect(
+        resolved.settingsSummary(l10n),
+        'No wallet linked to this account',
+      );
+      expect(
+        WalletPresentationStateResolver.linkagePendingFor(walletProvider),
+        isFalse,
+      );
+    });
+
+    test('an unsettled provider reports linkage pending and loads', () async {
+      final walletProvider = _FakeWalletProvider(
+        walletAddressValue: null,
+        hasWalletIdentityValue: false,
+        hasSignerValue: false,
+        isReadOnlySessionValue: false,
+        mnemonicBackupRequiredValue: false,
+      );
+
+      final resolved = await WalletBackupStatusResolver.resolve(
+        walletProvider: walletProvider,
+        refreshRemote: false,
+      );
+      final pending =
+          WalletPresentationStateResolver.linkagePendingFor(walletProvider);
+
+      expect(pending, isTrue);
+      expect(
+        resolved.settingsSummary(l10n, linkagePending: pending),
+        'Checking wallet status…',
+      );
+    });
+
+    testWidgets('walletless account row says no wallet is linked, not restore',
+        (tester) async {
+      SharedPreferences.setMockInitialValues(<String, Object>{});
+      final walletProvider = _FakeWalletProvider(
+        walletAddressValue: null,
+        hasWalletIdentityValue: false,
+        hasSignerValue: false,
+        isReadOnlySessionValue: false,
+        mnemonicBackupRequiredValue: false,
+      )
+        ..seedAccountSessionForTesting(
+          email: 'walletless@example.com',
+          backendProfile: const <String, dynamic>{},
+        )
+        ..setCurrentWalletAddressForTesting(null);
+
+      await tester.pumpWidget(_buildSettingsApp(walletProvider));
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 2));
+      await tester.scrollUntilVisible(
+        find.text('No wallet linked to this account'),
+        250,
+        scrollable: find.byType(Scrollable).first,
+      );
+
+      expect(find.text('No wallet linked to this account'), findsOneWidget);
+      expect(find.text('Checking wallet status…'), findsNothing);
+      expect(
+        find.text('Account wallet has not been restored on this device yet'),
+        findsNothing,
+      );
+    });
+
+    testWidgets('unsettled linkage shows the loading row, not restore',
+        (tester) async {
+      SharedPreferences.setMockInitialValues(<String, Object>{});
+      final walletProvider = _FakeWalletProvider(
+        walletAddressValue: null,
+        hasWalletIdentityValue: false,
+        hasSignerValue: false,
+        isReadOnlySessionValue: false,
+        mnemonicBackupRequiredValue: false,
+      );
+
+      await tester.pumpWidget(_buildSettingsApp(walletProvider));
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 2));
+      await tester.scrollUntilVisible(
+        find.text('Checking wallet status…'),
+        250,
+        scrollable: find.byType(Scrollable).first,
+      );
+
+      expect(find.text('Checking wallet status…'), findsOneWidget);
+      expect(find.text('No wallet linked to this account'), findsNothing);
+    });
+
+    testWidgets('proven backup without a local key keeps the restore row',
+        (tester) async {
+      SharedPreferences.setMockInitialValues(<String, Object>{});
+      final walletProvider = _FakeWalletProvider(
+        walletAddressValue: 'wallet123',
+        hasWalletIdentityValue: true,
+        hasSignerValue: false,
+        isReadOnlySessionValue: true,
+        mnemonicBackupRequiredValue: false,
+        backupDefinition: _backup(),
+      );
+
+      await tester.pumpWidget(_buildSettingsApp(walletProvider));
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 2));
+      const restoreCopy =
+          'Encrypted backup available to restore signing on this device';
+      await tester.scrollUntilVisible(
+        find.text(restoreCopy),
+        250,
+        scrollable: find.byType(Scrollable).first,
+      );
+
+      expect(find.text(restoreCopy), findsOneWidget);
+    });
+
+    testWidgets(
+        'read-only wallet without a backup shows read-only, not restore',
+        (tester) async {
+      SharedPreferences.setMockInitialValues(<String, Object>{});
+      final walletProvider = _FakeWalletProvider(
+        walletAddressValue: 'wallet123',
+        hasWalletIdentityValue: true,
+        hasSignerValue: false,
+        isReadOnlySessionValue: true,
+        mnemonicBackupRequiredValue: false,
+      );
+
+      await tester.pumpWidget(_buildSettingsApp(walletProvider));
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 2));
+      await tester.scrollUntilVisible(
+        find.text('Read-only wallet session on this device'),
+        250,
+        scrollable: find.byType(Scrollable).first,
+      );
+
+      expect(
+          find.text('Read-only wallet session on this device'), findsOneWidget);
+      expect(
+        find.text(
+            'Encrypted backup available to restore signing on this device'),
+        findsNothing,
+      );
+    });
   });
 
   testWidgets(

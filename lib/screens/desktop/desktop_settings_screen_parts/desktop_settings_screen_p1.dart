@@ -96,7 +96,12 @@ extension _DesktopSettingsScreenStatePart1 on _DesktopSettingsScreenState {
   }
 
   String _walletBackupSummary(AppLocalizations l10n) {
-    return _walletBackupStatus.settingsSummary(l10n);
+    return _walletBackupStatus.settingsSummary(
+      l10n,
+      linkagePending: WalletPresentationStateResolver.linkagePendingFor(
+        Provider.of<WalletProvider>(context),
+      ),
+    );
   }
 
   Future<Map<String, dynamic>> _loadSecureAccountStatus() async {
