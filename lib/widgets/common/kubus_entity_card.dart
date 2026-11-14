@@ -199,6 +199,8 @@ class KubusEntityCard extends StatefulWidget {
 class _KubusEntityCardState extends State<KubusEntityCard> {
   bool _hovered = false;
   bool _focused = false;
+  // True focus (any input mode); `_focused` is the keyboard focus highlight only.
+  bool _hasFocus = false;
 
   bool get _interactive => widget.onTap != null;
   bool get _pointerHover => _hovered && widget.enableHover;
@@ -344,6 +346,14 @@ class _KubusEntityCardState extends State<KubusEntityCard> {
 
     final detector = FocusableActionDetector(
       mouseCursor: SystemMouseCursors.click,
+      // The focus flags live on the labelled button node below. Left on, the detector adds its own
+      // unlabelled focusable node under it (explicitChildNodes), and on the web keyboard focus then
+      // lands on a nameless element while the named button cannot be reached with Tab.
+      includeFocusSemantics: false,
+      onFocusChange: (focused) {
+        if (_hasFocus == focused) return;
+        _set(() => _hasFocus = focused);
+      },
       shortcuts: const <ShortcutActivator, Intent>{
         SingleActivator(LogicalKeyboardKey.enter): ActivateIntent(),
         SingleActivator(LogicalKeyboardKey.space): ActivateIntent(),
@@ -373,6 +383,8 @@ class _KubusEntityCardState extends State<KubusEntityCard> {
 
     return Semantics(
       button: true,
+      focusable: true,
+      focused: _hasFocus,
       label: widget.semanticLabel ?? _defaultSemanticLabel(),
       onTap: widget.onTap,
       explicitChildNodes: true,
