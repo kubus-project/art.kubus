@@ -1,8 +1,11 @@
+import 'dart:ui' show Tristate;
+
 import 'package:art_kubus/utils/kubus_color_roles.dart';
 import 'package:art_kubus/utils/kubus_entity_semantics.dart';
 import 'package:art_kubus/widgets/common/kubus_atmosphere.dart';
 import 'package:art_kubus/widgets/common/kubus_entity_card.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/semantics.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -107,6 +110,60 @@ void main() {
     expect(taps, 1);
     semantics.dispose();
   });
+
+  testWidgets(
+    'keyboard focus lands on the labelled button node, not on a nameless child',
+    (tester) async {
+      final semantics = tester.ensureSemantics();
+
+      await tester.pumpWidget(
+        _buildHarness(
+          KubusEntityCard(
+            variant: KubusEntityCardVariant.media,
+            kind: KubusEntityKind.artwork,
+            title: 'Sun Garden',
+            subtitle: 'AR mural',
+            meta: '12 likes',
+            width: 220,
+            height: 240,
+            onTap: () {},
+          ),
+        ),
+      );
+
+      final cardFinder =
+          find.bySemanticsLabel('Sun Garden, AR mural, 12 likes');
+      final atRest = tester.getSemantics(cardFinder);
+      expect(atRest.flagsCollection.isButton, isTrue);
+      expect(atRest.flagsCollection.isFocused, Tristate.isFalse);
+
+      // No other node in the card may claim focusability: the web engine would move
+      // DOM focus there and assistive technology would announce an unnamed element.
+      final nameless = <SemanticsNode>[];
+      void visit(SemanticsNode node) {
+        if (node.flagsCollection.isFocused != Tristate.none &&
+            node.label.isEmpty) {
+          nameless.add(node);
+        }
+        node.visitChildren((child) {
+          visit(child);
+          return true;
+        });
+      }
+
+      visit(atRest);
+      expect(nameless, isEmpty);
+
+      await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+      await tester.pump();
+
+      expect(
+        tester.getSemantics(cardFinder).flagsCollection.isFocused,
+        Tristate.isTrue,
+      );
+      semantics.dispose();
+    },
+  );
 
   testWidgets('a tappable entity card activates from keyboard focus', (
     tester,
