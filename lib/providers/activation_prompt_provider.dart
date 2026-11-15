@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../config/config.dart';
+import '../services/account_identity.dart';
 import '../services/backend_api_service.dart';
 import '../services/telemetry/telemetry_service.dart';
 
@@ -27,7 +28,9 @@ class ActivationPromptProvider extends ChangeNotifier {
     bool Function()? hasAuthSession,
   })  : _telemetry = telemetry ?? TelemetryService(),
         _hasAuthSession =
-            hasAuthSession ?? (() => BackendApiService().hasAuthSession);
+            hasAuthSession ?? (() => BackendApiService().hasAuthSession) {
+    AccountIdentity.addListener(_handleAccountIdentityChanged);
+  }
 
   static const String lastShownPrefsKey =
       'kubus_activation_prompt_last_shown_v1';
@@ -124,6 +127,17 @@ class ActivationPromptProvider extends ChangeNotifier {
     _armed = false;
     _resolvedThisSession = false;
     notifyListeners();
+  }
+
+  /// A pending prompt belongs to one session. An account switch or sign-out
+  /// ends that session, so its pending prompt and view count go with it. A
+  /// same-account token refresh announces no change and keeps them.
+  void _handleAccountIdentityChanged() => reset();
+
+  @override
+  void dispose() {
+    AccountIdentity.removeListener(_handleAccountIdentityChanged);
+    super.dispose();
   }
 
   Future<bool> _intervalElapsed() async {
