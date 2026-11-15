@@ -1213,9 +1213,9 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
   }
 
   Future<void> _openMessageConversation(AppLocalizations l10n) async {
-    // Conversations are addressed by wallet only. Without a linked wallet there
-    // is no message target, so nothing is sent and no id is substituted.
-    final messageTarget = user?.messagingWallet;
+    // A conversation is addressed to the wallet, or to the account UUID of a
+    // walletless account. With neither there is no target, so nothing is sent.
+    final messageTarget = user?.messageTargetId;
     if (user?.supportsMessaging != true || messageTarget == null) return;
     final authenticated = await const ContextualAuthGate().ensureAuthenticated(
       requirements: ProtectedActionRequirements.participant,
@@ -1235,8 +1235,17 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     final messenger = ScaffoldMessenger.of(context);
     final chatAuth = chatProvider.isAuthenticated;
     try {
-      final conv =
-          await chatProvider.createConversation('', false, [messageTarget]);
+      final outcome = await chatProvider
+          .createConversationOutcome('', false, [messageTarget]);
+      if (outcome.recipientUnavailable) {
+        if (mounted) {
+          messenger.showKubusSnackBar(
+            SnackBar(content: Text(l10n.messagingRecipientUnavailableToast)),
+          );
+        }
+        return;
+      }
+      final conv = outcome.conversation;
       if (conv != null) {
         if (!mounted) return;
         final preloaded = Provider.of<ChatProvider>(

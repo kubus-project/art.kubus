@@ -5649,6 +5649,10 @@ class AppLocalizationsSl extends AppLocalizations {
       'Pogovora ni bilo mogoče odpreti.';
 
   @override
+  String get messagingRecipientUnavailableToast =>
+      'Temu računu ni mogoče poslati sporočila.';
+
+  @override
   String get userProfileConversationOpenGenericErrorToast =>
       'Pogovora ni bilo mogoče odpreti. Poskusi znova.';
 

@@ -2250,6 +2250,7 @@
   "userProfileFollowingLoadFailedMessage": "Failed to load following.",
   "userProfileMessageLoginRequiredToast": "Please log in to message this user.",
   "userProfileConversationOpenFailedToast": "Could not open conversation.",
+  "messagingRecipientUnavailableToast": "You cannot message this account.",
   "userProfileConversationOpenGenericErrorToast": "Failed to open conversation. Please try again.",
   "userProfileAchievementsTitle": "Achievements",
   "profileBadgesVerificationTitle": "Profile badges",

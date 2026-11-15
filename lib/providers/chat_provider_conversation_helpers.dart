@@ -118,6 +118,38 @@ Future<void> _chatProviderPrefetchUsersForWallets(
   }
 }
 
+/// Loads the profiles of walletless participants by their account UUID. A
+/// profile fetched this way is cached like a wallet profile.
+Future<void> _chatProviderPrefetchUsersForAccountIds(
+  ChatProvider provider,
+  List<String> accountIds,
+) async {
+  try {
+    final uniq = accountIds
+        .where((id) => WalletUtils.isAccountUuid(id))
+        .toSet()
+        .toList();
+    if (uniq.isEmpty) return;
+    final generation = provider._sessionGeneration;
+    final loaded = await Future.wait(
+      uniq.map(
+        (id) => UserService.getUserById(id).catchError((_) => null),
+      ),
+    );
+    if (generation != provider._sessionGeneration) return;
+    for (final user in loaded) {
+      if (user != null && user.id.isNotEmpty) {
+        provider._cacheUser(user);
+      }
+    }
+    try {
+      provider._safeNotifyListeners(force: true);
+    } catch (_) {}
+  } catch (e) {
+    debugPrint('ChatProvider._prefetchUsersForAccountIds failed: $e');
+  }
+}
+
 void _chatProviderMergeUserCache(
   ChatProvider provider,
   List<User> users,

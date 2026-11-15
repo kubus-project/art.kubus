@@ -9898,6 +9898,12 @@ abstract class AppLocalizations {
   /// **'Could not open conversation.'**
   String get userProfileConversationOpenFailedToast;
 
+  /// No description provided for @messagingRecipientUnavailableToast.
+  ///
+  /// In en, this message translates to:
+  /// **'You cannot message this account.'**
+  String get messagingRecipientUnavailableToast;
+
   /// No description provided for @userProfileConversationOpenGenericErrorToast.
   ///
   /// In en, this message translates to:

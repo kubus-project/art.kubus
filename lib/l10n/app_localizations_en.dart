@@ -5600,6 +5600,10 @@ class AppLocalizationsEn extends AppLocalizations {
       'Could not open conversation.';
 
   @override
+  String get messagingRecipientUnavailableToast =>
+      'You cannot message this account.';
+
+  @override
   String get userProfileConversationOpenGenericErrorToast =>
       'Failed to open conversation. Please try again.';
 

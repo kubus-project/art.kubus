@@ -2200,6 +2200,7 @@
   "userProfileFollowingLoadFailedMessage": "Seznama sledenih ni bilo mogoče naložiti.",
   "userProfileMessageLoginRequiredToast": "Za sporočanje se prijavi.",
   "userProfileConversationOpenFailedToast": "Pogovora ni bilo mogoče odpreti.",
+  "messagingRecipientUnavailableToast": "Temu računu ni mogoče poslati sporočila.",
   "userProfileConversationOpenGenericErrorToast": "Pogovora ni bilo mogoče odpreti. Poskusi znova.",
   "userProfileAchievementsTitle": "Dosežki",
   "profileBadgesVerificationTitle": "Profilne značke",

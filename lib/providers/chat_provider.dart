@@ -22,6 +22,19 @@ part 'chat_provider_cache_helpers.dart';
 part 'chat_provider_conversation_helpers.dart';
 part 'chat_provider_lifecycle_helpers.dart';
 
+/// The result of starting a conversation. [recipientUnavailable] is the neutral
+/// "cannot message this account" state. The backend answers every restricted,
+/// closed or unknown recipient the same way, so no reason is carried.
+class ConversationCreateOutcome {
+  const ConversationCreateOutcome({
+    this.conversation,
+    this.recipientUnavailable = false,
+  });
+
+  final Conversation? conversation;
+  final bool recipientUnavailable;
+}
+
 class ChatProvider extends ChangeNotifier {
   static const int _maxCachedMessageConversations = 24;
   static const int _maxMessagesPerConversation = 200;
@@ -413,17 +426,30 @@ class ChatProvider extends ChangeNotifier {
     final generation = sessionGeneration ?? _sessionGeneration;
     try {
       final wallets = <String>{};
+      final accountIds = <String>{};
       final myWalletCanonical = WalletUtils.canonical(_currentWallet);
+      final mySessionAccountId = _sessionAccountUuid();
 
       void collectWallet(String? wallet) {
         if (wallet == null) return;
         final normalized = WalletUtils.normalize(wallet);
         if (normalized.isEmpty) return;
+        // An account UUID is an identity, never a wallet.
+        if (WalletUtils.isAccountUuid(normalized)) return;
         final canonical = WalletUtils.canonical(normalized);
         if (myWalletCanonical.isNotEmpty && canonical == myWalletCanonical) {
           return;
         }
         wallets.add(normalized);
+      }
+
+      // A member without a wallet is identified by its account UUID alone.
+      void collectAccountId(String? userId, {required bool hasWallet}) {
+        if (hasWallet) return;
+        final id = (userId ?? '').trim();
+        if (!WalletUtils.isAccountUuid(id)) return;
+        if (WalletUtils.sameIdentity(id, mySessionAccountId)) return;
+        accountIds.add(id);
       }
 
       final convsNeedingMembers = <Conversation>[];
@@ -433,6 +459,8 @@ class ChatProvider extends ChangeNotifier {
           hasMetadata = true;
           for (final profile in conv.memberProfiles) {
             collectWallet(profile.wallet);
+            collectAccountId(profile.userId,
+                hasWallet: WalletUtils.normalize(profile.wallet).isNotEmpty);
           }
         }
         if (conv.memberWallets.isNotEmpty) {
@@ -443,7 +471,10 @@ class ChatProvider extends ChangeNotifier {
         }
         if (conv.counterpartProfile != null) {
           hasMetadata = true;
-          collectWallet(conv.counterpartProfile!.wallet);
+          final counterpart = conv.counterpartProfile!;
+          collectWallet(counterpart.wallet);
+          collectAccountId(counterpart.userId,
+              hasWallet: WalletUtils.normalize(counterpart.wallet).isNotEmpty);
         }
         if (!hasMetadata) {
           convsNeedingMembers.add(conv);
@@ -455,14 +486,19 @@ class ChatProvider extends ChangeNotifier {
           final members = await fetchMembers(conv.id);
           if (generation != _sessionGeneration) return;
           for (final member in members) {
+            final rawId = member['id']?.toString();
             final wallet = WalletUtils.normalize(
               (member['wallet_address'] ??
                       member['wallet'] ??
                       member['walletAddress'] ??
-                      member['id'])
+                      rawId)
                   ?.toString(),
             );
             collectWallet(wallet);
+            final userId = member['user_id'] ??
+                member['userId'] ??
+                (WalletUtils.isAccountUuid(rawId) ? rawId : null);
+            collectAccountId(userId?.toString(), hasWallet: wallet.isNotEmpty);
           }
         } catch (e) {
           debugPrint(
@@ -474,11 +510,25 @@ class ChatProvider extends ChangeNotifier {
       if (wallets.isNotEmpty && generation == _sessionGeneration) {
         await _prefetchUsersForWallets(wallets.toList());
       }
+      if (accountIds.isNotEmpty && generation == _sessionGeneration) {
+        await _prefetchUsersForAccountIds(accountIds.toList());
+      }
     } catch (e) {
       debugPrint(
         'ChatProvider._prefetchMembersAndProfilesFromConversations error: $e',
       );
     }
+  }
+
+  /// Test seam: the participant prefetch for [convs], as a load runs it.
+  @visibleForTesting
+  Future<void> prefetchParticipantsForTesting(List<Conversation> convs) =>
+      _prefetchMembersAndProfilesFromConversations(convs);
+
+  /// The signed-in account's UUID, or empty. A wallet is never returned here.
+  String _sessionAccountUuid() {
+    final key = AccountIdentity.accountKey.trim();
+    return WalletUtils.isAccountUuid(key) ? key : '';
   }
 
   final BackendApiService _api = BackendApiService();
@@ -2472,6 +2522,10 @@ class ChatProvider extends ChangeNotifier {
     await _chatProviderPrefetchUsersForWallets(this, wallets);
   }
 
+  Future<void> _prefetchUsersForAccountIds(List<String> accountIds) async {
+    await _chatProviderPrefetchUsersForAccountIds(this, accountIds);
+  }
+
   /// Merge provided users into the ChatProvider user cache and notify listeners.
   /// This is intended for UI code that performs local fetches via UserService
   /// so that the provider cache remains in sync and UI updates are propagated.
@@ -2501,7 +2555,31 @@ class ChatProvider extends ChangeNotifier {
     return resp;
   }
 
+  /// The backend answers a restricted, closed or unknown recipient with
+  /// 404 RECIPIENT_UNAVAILABLE. Nothing else about the refusal is surfaced.
+  bool _isRecipientUnavailable(Map<String, dynamic> resp) {
+    if (resp['status'] != 404) return false;
+    final code = (resp['errorCode'] ?? '').toString().trim().toUpperCase();
+    return code == 'RECIPIENT_UNAVAILABLE';
+  }
+
+  static const ConversationCreateOutcome _noConversation =
+      ConversationCreateOutcome();
+
+  static ConversationCreateOutcome _created(Conversation conversation) =>
+      ConversationCreateOutcome(conversation: conversation);
+
+  /// Starts (or finds) a conversation with [members]. Members are wallets or
+  /// account UUIDs; the server resolves either. The result says when the
+  /// recipient cannot be messaged.
   Future<Conversation?> createConversation(
+    String title,
+    bool isGroup,
+    List<String> members,
+  ) async =>
+      (await createConversationOutcome(title, isGroup, members)).conversation;
+
+  Future<ConversationCreateOutcome> createConversationOutcome(
     String title,
     bool isGroup,
     List<String> members,
@@ -2512,11 +2590,11 @@ class ChatProvider extends ChangeNotifier {
     try {
       await _api.loadAuthToken();
     } catch (_) {}
-    if (generation != _sessionGeneration) return null;
+    if (generation != _sessionGeneration) return _noConversation;
     // First-pass: fetch conversations from backend and try to find an existing 1:1 conversation
     try {
       var convResp = await _api.fetchConversations();
-      if (generation != _sessionGeneration) return null;
+      if (generation != _sessionGeneration) return _noConversation;
       // If unauthorized, try to issue a token for current wallet and retry once
       try {
         final status = convResp['status'] as int?;
@@ -2526,7 +2604,7 @@ class ChatProvider extends ChangeNotifier {
             try {
               final prefs = await SharedPreferences.getInstance();
               final w = storedWalletFromPrefs(prefs);
-              if (generation != _sessionGeneration) return null;
+              if (generation != _sessionGeneration) return _noConversation;
               if (w.isNotEmpty) _currentWallet = w.toString();
             } catch (e2) {
               debugPrint(
@@ -2538,7 +2616,7 @@ class ChatProvider extends ChangeNotifier {
                 (_currentWallet == null || _currentWallet!.isEmpty)) {
               try {
                 final meResp = await _api.getMyProfile();
-                if (generation != _sessionGeneration) return null;
+                if (generation != _sessionGeneration) return _noConversation;
                 if (meResp['success'] == true && meResp['data'] != null) {
                   final me = meResp['data'] as Map<String, dynamic>;
                   _currentWallet = (me['wallet_address'] ??
@@ -2558,13 +2636,13 @@ class ChatProvider extends ChangeNotifier {
               _currentWallet != null &&
               _currentWallet!.isNotEmpty) {
             final issued = await _api.issueDebugTokenForWallet(_currentWallet!);
-            if (generation != _sessionGeneration) return null;
+            if (generation != _sessionGeneration) return _noConversation;
             if (issued) {
               try {
                 await _api.loadAuthToken();
               } catch (_) {}
               convResp = await _api.fetchConversations();
-              if (generation != _sessionGeneration) return null;
+              if (generation != _sessionGeneration) return _noConversation;
             }
           }
         }
@@ -2598,7 +2676,7 @@ class ChatProvider extends ChangeNotifier {
             if (isGroupFlag == true) continue;
 
             final mresp = await _api.fetchConversationMembers(cid);
-            if (generation != _sessionGeneration) return null;
+            if (generation != _sessionGeneration) return _noConversation;
             if ((mresp['success'] == true) || (mresp['data'] != null)) {
               final list = (mresp['data'] ??
                   mresp['members'] ??
@@ -2613,7 +2691,12 @@ class ChatProvider extends ChangeNotifier {
                                     m['id'])
                                 ?.toString() ??
                             '';
-                    if (wallet.isNotEmpty && wallet == target) {
+                    final memberUserId =
+                        ((m)['user_id'] ?? m['userId'])?.toString() ?? '';
+                    final isTarget = (wallet.isNotEmpty && wallet == target) ||
+                        (memberUserId.isNotEmpty &&
+                            WalletUtils.sameIdentity(memberUserId, target));
+                    if (isTarget) {
                       // Found existing direct conversation — build Conversation from backend item
                       Conversation conv;
                       try {
@@ -2631,7 +2714,7 @@ class ChatProvider extends ChangeNotifier {
                       _conversations.removeWhere((c) => c.id == cid);
                       _conversations.insert(0, conv);
                       _safeNotifyListeners(force: true);
-                      return conv;
+                      return _created(conv);
                     }
                   } catch (_) {}
                 }
@@ -2653,7 +2736,10 @@ class ChatProvider extends ChangeNotifier {
       isGroup: isGroup,
       members: members,
     );
-    if (generation != _sessionGeneration) return null;
+    if (generation != _sessionGeneration) return _noConversation;
+    if (_isRecipientUnavailable(resp)) {
+      return const ConversationCreateOutcome(recipientUnavailable: true);
+    }
     if (resp['success'] == true) {
       final conv = Conversation.fromJson(resp['data']);
       _conversations.insert(0, conv);
@@ -2669,12 +2755,12 @@ class ChatProvider extends ChangeNotifier {
           'ChatProvider.createConversation: subscribeConversation failed: $e',
         );
       }
-      if (generation != _sessionGeneration) return null;
+      if (generation != _sessionGeneration) return _noConversation;
       // Optionally open conversation automatically
       try {
         await openConversation(conv.id);
       } catch (_) {}
-      return conv;
+      return _created(conv);
     }
 
     // If unauthorized, attempt to obtain a token for the current wallet and retry once
@@ -2686,7 +2772,7 @@ class ChatProvider extends ChangeNotifier {
           try {
             final prefs = await SharedPreferences.getInstance();
             final w = storedWalletFromPrefs(prefs);
-            if (generation != _sessionGeneration) return null;
+            if (generation != _sessionGeneration) return _noConversation;
             if (w.isNotEmpty) {
               _currentWallet = w.toString();
             }
@@ -2700,7 +2786,7 @@ class ChatProvider extends ChangeNotifier {
               (_currentWallet == null || _currentWallet!.isEmpty)) {
             try {
               final meResp = await _api.getMyProfile();
-              if (generation != _sessionGeneration) return null;
+              if (generation != _sessionGeneration) return _noConversation;
               if (meResp['success'] == true && meResp['data'] != null) {
                 final me = meResp['data'] as Map<String, dynamic>;
                 _currentWallet = (me['wallet_address'] ??
@@ -2720,24 +2806,28 @@ class ChatProvider extends ChangeNotifier {
             _currentWallet != null &&
             _currentWallet!.isNotEmpty) {
           final issued = await _api.issueDebugTokenForWallet(_currentWallet!);
-          if (generation != _sessionGeneration) return null;
+          if (generation != _sessionGeneration) return _noConversation;
           if (issued) {
             try {
               await _api.loadAuthToken();
             } catch (_) {}
-            if (generation != _sessionGeneration) return null;
+            if (generation != _sessionGeneration) return _noConversation;
             // Retry once
             resp = await _api.createConversation(
               title: title,
               isGroup: isGroup,
               members: members,
             );
-            if (generation != _sessionGeneration) return null;
+            if (generation != _sessionGeneration) return _noConversation;
+            if (_isRecipientUnavailable(resp)) {
+              return const ConversationCreateOutcome(
+                  recipientUnavailable: true);
+            }
             if (resp['success'] == true) {
               final conv = Conversation.fromJson(resp['data']);
               _conversations.insert(0, conv);
               _safeNotifyListeners(force: true);
-              return conv;
+              return _created(conv);
             }
           }
         }
@@ -2746,7 +2836,7 @@ class ChatProvider extends ChangeNotifier {
       debugPrint('ChatProvider.createConversation retry flow failed: $e');
     }
 
-    return null;
+    return _noConversation;
   }
 
   Future<Map<String, dynamic>> uploadConversationAvatar(

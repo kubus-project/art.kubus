@@ -31,7 +31,7 @@ class WalletUtils {
       'n/a',
       'none',
       'null',
-      'undefined',
+      'undefined'
     };
     if (placeholders.contains(normalized.toLowerCase())) return false;
     // Reject strings with spaces (display names typically have spaces)
@@ -69,12 +69,26 @@ class WalletUtils {
   static bool isAccountUuid(String? value) =>
       _accountUuidPattern.hasMatch((value ?? '').trim());
 
+  /// Whether two identifiers name the same identity. An empty or null side
+  /// never matches. Account UUIDs and 0x wallets compare case-insensitively;
+  /// other (base58) wallets compare exactly.
+  static bool sameIdentity(String? a, String? b) {
+    final left = (a ?? '').trim();
+    final right = (b ?? '').trim();
+    if (left.isEmpty || right.isEmpty) return false;
+    if (_isCaseInsensitiveIdentity(left) && _isCaseInsensitiveIdentity(right)) {
+      return left.toLowerCase() == right.toLowerCase();
+    }
+    return left == right;
+  }
+
+  static bool _isCaseInsensitiveIdentity(String value) =>
+      isAccountUuid(value) || value.toLowerCase().startsWith('0x');
+
   /// Resolves the best wallet identifier from known keys within a payload.
   /// Falls back to [fallback] when no keys contain a value.
-  static String resolveFromMap(
-    Map<String, dynamic>? payload, {
-    String? fallback,
-  }) {
+  static String resolveFromMap(Map<String, dynamic>? payload,
+      {String? fallback}) {
     if (payload != null) {
       for (final key in const [
         'wallet_address',
@@ -83,7 +97,7 @@ class WalletUtils {
         'id',
         'address',
         'publicKey',
-        'public_key',
+        'public_key'
       ]) {
         final value = payload[key];
         if (value == null) continue;
@@ -95,12 +109,11 @@ class WalletUtils {
   }
 
   /// Picks the first non-empty identifier from the provided candidates and normalizes it.
-  static String coalesce({
-    String? walletAddress,
-    String? wallet,
-    String? userId,
-    String? fallback,
-  }) {
+  static String coalesce(
+      {String? walletAddress,
+      String? wallet,
+      String? userId,
+      String? fallback}) {
     for (final candidate in [walletAddress, wallet, userId, fallback]) {
       final normalized = normalize(candidate);
       if (normalized.isNotEmpty) return normalized;
@@ -121,8 +134,7 @@ class WalletUtils {
     if (trimmed.contains(' ')) return false;
     // Check for invalid base58 characters
     final invalidChars = RegExp(
-      r'[^123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]',
-    );
+        r'[^123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]');
     return !invalidChars.hasMatch(trimmed);
   }
 }
