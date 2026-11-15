@@ -136,6 +136,39 @@ class _GatedChallengeApi implements BackendApiService {
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
 
+/// Answers the challenge at once and holds each confirm until the test answers
+/// it, so a confirm can be in flight across an account switch.
+class _GatedConfirmApi implements BackendApiService {
+  final List<Completer<Map<String, dynamic>>> confirmGates =
+      <Completer<Map<String, dynamic>>>[];
+
+  @override
+  Future<Map<String, dynamic>> getAttendanceChallenge({
+    required String markerId,
+    String? walletAddress,
+  }) async =>
+      _challengeFor(markerId);
+
+  @override
+  Future<Map<String, dynamic>> confirmAttendance({
+    required String markerId,
+    required String challengeToken,
+    required Map<String, dynamic> clientLocation,
+    String? walletAddress,
+  }) {
+    final gate = Completer<Map<String, dynamic>>();
+    confirmGates.add(gate);
+    return gate.future;
+  }
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
+const Map<String, dynamic> _confirmBody = <String, dynamic>{
+  'attendanceRecorded': true,
+};
+
 Map<String, dynamic> _challengeFor(String markerId) => <String, dynamic>{
       'markerId': markerId,
       'challengeToken': 'challenge-of-$markerId',
@@ -308,6 +341,44 @@ void main() {
       expect(attendance.stateFor('marker-1').challenge, isNull);
       expect(attendance.stateFor('marker-1').isFetchingChallenge, isFalse);
     });
+
+    test('a confirm of A that lands after the switch is not kept for B',
+        () async {
+      await api.setAuthToken(_token(_accountA));
+      final confirmApi = _GatedConfirmApi();
+      final attendance = AttendanceProvider(api: confirmApi)
+        ..bindAuthContext(isSignedIn: true, walletAddress: null);
+      addTearDown(attendance.dispose);
+      attendance.updateProximity(
+        markerId: 'marker-1',
+        lat: 0,
+        lng: 0,
+        distanceMeters: 0,
+        activationRadiusMeters: 50,
+        requiresProximity: false,
+      );
+
+      final confirmA = attendance.confirmAttendance('marker-1');
+      await Future<void>.delayed(Duration.zero);
+      expect(confirmApi.confirmGates, hasLength(1));
+
+      await api.setAuthToken(_token(_accountB));
+      final confirmB = attendance.confirmAttendance('marker-1');
+      await Future<void>.delayed(Duration.zero);
+      expect(confirmApi.confirmGates, hasLength(2));
+
+      confirmApi.confirmGates[0].complete(_confirmBody);
+      expect(await confirmA, isNull);
+      final stateB = attendance.stateFor('marker-1');
+      expect(stateB.lastConfirm, isNull);
+      expect(stateB.challenge?.alreadyAttended, isNot(isTrue));
+      expect(stateB.isConfirming, isTrue,
+          reason: 'the confirm B started is still in flight');
+
+      confirmApi.confirmGates[1].complete(_confirmBody);
+      await confirmB;
+      expect(stateB.isConfirming, isFalse);
+    });
   });
 
   group('same-account token refresh', () {
@@ -432,6 +503,36 @@ void main() {
       final dto = await fetch;
       expect(dto?.challengeToken, 'challenge-of-marker-1');
       expect(attendance.stateFor('marker-1').challenge, same(dto));
+    });
+
+    test(
+        'a same-account identity change after a silent guest sign-in keeps the prompt of that account',
+        () async {
+      // Built while signed out. Guest -> A is a silent sign-in: nothing
+      // announces it, so the gate has not yet learned the account.
+      final gate = SecurityGateProvider(promptCooldown: Duration.zero)
+        ..bindDependencies(
+          profileProvider: ProfileProvider(),
+          walletProvider: _PinWallet(),
+          notificationProvider: NotificationProvider(),
+        );
+      addTearDown(gate.dispose);
+      await api.setAuthToken(_token(_accountA));
+      // A stored local account, so a lock is applied for this session.
+      SharedPreferences.setMockInitialValues(<String, Object>{
+        'jwt_token': 'stored-token',
+      });
+      await gate.refreshLocalAccountState();
+      await gate.lock(SecurityLockReason.tokenExpired);
+      final prompt = gate.waitForResolution();
+      expect(gate.isResolving, isTrue);
+
+      // A wallet link announces the change without changing the account.
+      AccountIdentity.notifyListenersChanged();
+      gate.completeForTesting(localAuthentication: true);
+
+      expect((await prompt)?.isSuccess, isTrue,
+          reason: 'the prompt raised for A is the one the user answers');
     });
   });
 }

@@ -340,6 +340,7 @@ class SecurityGateProvider extends ChangeNotifier
     _locked = true;
     _lockReason = reason;
     _authFailureContext = null;
+    _heldAccountKey = AccountIdentity.accountKey;
     _inFlight ??= Completer<AuthReauthResult>();
     notifyListeners();
   }
@@ -496,6 +497,7 @@ class SecurityGateProvider extends ChangeNotifier
         // that prompt may be cancelled, this lock may not. The waiting action
         // is refused and must be retried after unlocking.
         final sensitive = _inFlight;
+        _heldAccountKey = AccountIdentity.accountKey;
         _inFlight = Completer<AuthReauthResult>();
         _lockReason = reason;
         _authFailureContext = context;
@@ -515,6 +517,7 @@ class SecurityGateProvider extends ChangeNotifier
     _locked = true;
     _lockReason = reason;
     _authFailureContext = context;
+    _heldAccountKey = AccountIdentity.accountKey;
     _inFlight ??= Completer<AuthReauthResult>();
     notifyListeners();
   }

@@ -413,6 +413,7 @@ class AttendanceProvider extends ChangeNotifier {
       return state.lastConfirm;
     }
 
+    final epoch = _identityEpoch;
     state.isConfirming = true;
     state.lastError = null;
     if (hasListeners) notifyListeners();
@@ -428,6 +429,9 @@ class AttendanceProvider extends ChangeNotifier {
             : const <String, dynamic>{},
         walletAddress: _walletAddress,
       );
+      // Confirmed under a previous account: nothing is recorded for the
+      // current one.
+      if (epoch != _identityEpoch) return null;
       final dto = AttendanceConfirmDto.fromApi(raw);
       state.lastConfirm = dto;
 
@@ -442,14 +446,19 @@ class AttendanceProvider extends ChangeNotifier {
 
       return dto;
     } catch (e) {
+      if (epoch != _identityEpoch) return null;
       state.lastError = e.toString();
       if (kDebugMode) {
         AppConfig.debugPrint('AttendanceProvider.confirmAttendance failed: $e');
       }
       rethrow;
     } finally {
-      state.isConfirming = false;
-      if (hasListeners) notifyListeners();
+      // A stale confirm must not clear the flag of a confirm the current
+      // account started for the same marker after the switch.
+      if (epoch == _identityEpoch) {
+        state.isConfirming = false;
+        if (hasListeners) notifyListeners();
+      }
     }
   }
 }

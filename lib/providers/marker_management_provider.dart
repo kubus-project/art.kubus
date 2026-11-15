@@ -364,14 +364,22 @@ class MarkerManagementProvider extends ChangeNotifier {
     Map<String, dynamic> normalizedPayload,
     String? clientNonce,
   ) async {
+    final epoch = _identityEpoch;
     _noteContributionStarted();
     try {
       final created = await _api
           .createArtMarkerRecord(normalizedPayload)
           .timeout(const Duration(seconds: 20));
+      if (epoch != _identityEpoch) {
+        // Submitted under a previous account: the marker stays out of the
+        // current account's list and map. The publish is still counted.
+        if (created != null) _noteContributionPublished();
+        return created;
+      }
       if (created == null) {
         if (clientNonce != null && clientNonce.isNotEmpty) {
           await refresh(force: true);
+          if (epoch != _identityEpoch) return null;
           for (final marker in _markers) {
             if ((marker.metadata?['clientNonce'] ?? '').toString() ==
                 clientNonce) {
@@ -393,6 +401,7 @@ class MarkerManagementProvider extends ChangeNotifier {
       notifyListeners();
       return created;
     } catch (e) {
+      if (epoch != _identityEpoch) return null;
       _error = e.toString();
       if (kDebugMode) {
         debugPrint('MarkerManagementProvider: create failed: $e');
@@ -400,6 +409,7 @@ class MarkerManagementProvider extends ChangeNotifier {
       if (clientNonce != null && clientNonce.isNotEmpty) {
         try {
           await refresh(force: true);
+          if (epoch != _identityEpoch) return null;
           for (final marker in _markers) {
             if ((marker.metadata?['clientNonce'] ?? '').toString() ==
                 clientNonce) {
@@ -413,6 +423,7 @@ class MarkerManagementProvider extends ChangeNotifier {
           // Ignore recovery failures.
         }
       }
+      if (epoch != _identityEpoch) return null;
       notifyListeners();
       return null;
     }
@@ -463,6 +474,7 @@ class MarkerManagementProvider extends ChangeNotifier {
   ) async {
     final id = markerId.trim();
     if (id.isEmpty) return null;
+    final epoch = _identityEpoch;
     final index = _markers.indexWhere((m) => m.id == id);
     final before = index >= 0 ? _markers[index] : null;
     ArtMarker? optimistic;
@@ -479,6 +491,7 @@ class MarkerManagementProvider extends ChangeNotifier {
       final updated = await _api
           .updateArtMarkerRecord(id, updates)
           .timeout(const Duration(seconds: 20));
+      if (epoch != _identityEpoch) return updated;
       if (updated == null) {
         if (before != null) {
           _markers = _markers
@@ -515,6 +528,7 @@ class MarkerManagementProvider extends ChangeNotifier {
       notifyListeners();
       return updated;
     } catch (e) {
+      if (epoch != _identityEpoch) return null;
       _error = e.toString();
       if (kDebugMode) {
         debugPrint(
@@ -536,6 +550,7 @@ class MarkerManagementProvider extends ChangeNotifier {
   Future<bool> deleteMarker(String markerId) async {
     final id = markerId.trim();
     if (id.isEmpty) return false;
+    final epoch = _identityEpoch;
     final before = _markers;
     if (!_markers.any((m) => m.id == id)) return false;
 
@@ -548,6 +563,7 @@ class MarkerManagementProvider extends ChangeNotifier {
       final ok = await _api
           .deleteArtMarkerRecord(id)
           .timeout(const Duration(seconds: 20));
+      if (epoch != _identityEpoch) return ok;
       if (!ok) {
         _markers = before;
         _mapMarkerService.notifyMarkerUpserted(
@@ -560,6 +576,7 @@ class MarkerManagementProvider extends ChangeNotifier {
       notifyListeners();
       return true;
     } catch (e) {
+      if (epoch != _identityEpoch) return false;
       _error = e.toString();
       _markers = before;
       try {
