@@ -57,17 +57,18 @@ void main() {
       );
     });
 
-    test('a payload that names an account is never matched by wallet alone',
-        () {
-      // The session has a wallet but no account id: the payload's account
-      // cannot be verified against it, so the wallet match is not enough.
+    test(
+        'a payload naming an account matches by wallet only while the session '
+        'account id is unknown', () {
+      // A wallet session whose token has no id claim: the recipient wallet is
+      // the only proof of ownership, so an equal wallet is accepted.
       expect(
         isNotificationForCurrentIdentity(
           recipientUserId: 'user-2',
           recipientWallet: '0xaaa',
           sessionWallet: '0xaaa',
         ),
-        isFalse,
+        isTrue,
       );
       expect(
         isNotificationForCurrentIdentity(
@@ -76,6 +77,37 @@ void main() {
           sessionWallet: '0xbbb',
         ),
         isFalse,
+      );
+    });
+
+    test('a known session account id is never overridden by a wallet match',
+        () {
+      expect(
+        isNotificationForCurrentIdentity(
+          recipientUserId: 'user-2',
+          recipientWallet: '0xaaa',
+          sessionAccountId: 'user-1',
+          sessionWallet: '0xaaa',
+        ),
+        isFalse,
+      );
+    });
+
+    test('base58 wallets compare case-sensitively', () {
+      const solana = 'So11111111111111111111111111111111111111112';
+      expect(
+        isNotificationForCurrentIdentity(
+          recipientWallet: solana,
+          sessionWallet: solana.toLowerCase(),
+        ),
+        isFalse,
+      );
+      expect(
+        isNotificationForCurrentIdentity(
+          recipientWallet: solana,
+          sessionWallet: ' $solana ',
+        ),
+        isTrue,
       );
     });
 
