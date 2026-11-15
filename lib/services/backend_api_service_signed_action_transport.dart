@@ -13,7 +13,8 @@ bool _backendApiShouldQueuePublicActionAfterFailure(
     return service._isTransientWriteStatusCode(response.statusCode);
   }
 
-  final status = error == null ? null : service._tryParseRequestFailedStatus(error);
+  final status =
+      error == null ? null : service._tryParseRequestFailedStatus(error);
   if (status != null) {
     return service._isTransientWriteStatusCode(status);
   }
@@ -123,7 +124,8 @@ int? _backendApiExtractIntFromResponse(
     decoded,
     if (decoded['data'] is Map<String, dynamic>)
       decoded['data'] as Map<String, dynamic>,
-    if (decoded['data'] is Map) Map<String, dynamic>.from(decoded['data'] as Map),
+    if (decoded['data'] is Map)
+      Map<String, dynamic>.from(decoded['data'] as Map),
   ];
 
   for (final candidate in candidates) {
