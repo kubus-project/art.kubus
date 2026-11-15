@@ -1513,16 +1513,19 @@ class _ConversationScreenState extends State<ConversationScreen> {
               break;
             case 'add_member':
               try {
-                final identifier = await showKubusDialog<String?>(
+                final choice = await showKubusDialog<_AddMemberChoice?>(
                   context: context,
                   builder: (ctx) => _AddMemberDialog(),
                 );
                 debugPrint(
-                    'ConversationScreen: add_member dialog returned: "$identifier"');
+                    'ConversationScreen: add_member dialog returned: "${choice?.identifier}"');
                 if (!context.mounted) return;
-                if (identifier == null || identifier.trim().isEmpty) return;
+                if (choice == null) return;
+                final identifier = choice.identifier.trim();
+                if (identifier.isEmpty && choice.accountId == null) return;
                 final newConversation = await _chatProvider.addMember(
-                    widget.conversation.id, identifier.trim());
+                    widget.conversation.id, identifier,
+                    memberUserId: choice.accountId);
                 if (!mounted) return;
                 if (newConversation != null &&
                     newConversation.id != widget.conversation.id) {
@@ -2579,6 +2582,15 @@ class _ConversationScreenState extends State<ConversationScreen> {
   }
 }
 
+/// What the add-member dialog returns: the typed or picked identifier, and for
+/// a walletless suggestion the account id that names it.
+class _AddMemberChoice {
+  const _AddMemberChoice(this.identifier, {this.accountId});
+
+  final String identifier;
+  final String? accountId;
+}
+
 class _AddMemberDialog extends StatefulWidget {
   const _AddMemberDialog();
 
@@ -2717,11 +2729,21 @@ class _AddMemberDialogState extends State<_AddMemberDialog> {
                             onTap: () {
                               final ret =
                                   wallet.isNotEmpty ? wallet : rawUsername;
+                              // A walletless suggestion is named by its account id.
+                              final accountId = wallet.isEmpty
+                                  ? (suggestion['userId'] ??
+                                          suggestion['user_id'])
+                                      ?.toString()
+                                      .trim()
+                                  : null;
                               if (kDebugMode) {
                                 debugPrint(
                                     'AddMemberDialog: tapped suggestion -> username="$rawUsername" wallet="$wallet" returning="$ret"');
                               }
-                              Navigator.of(dialogCtx).pop(ret);
+                              Navigator.of(dialogCtx).pop(_AddMemberChoice(
+                                ret,
+                                accountId: accountId,
+                              ));
                             },
                           );
                         },
@@ -2757,7 +2779,8 @@ class _AddMemberDialogState extends State<_AddMemberDialog> {
             onPressed: () => Navigator.of(context).pop(),
             child: Text(l10n.commonCancel)),
         TextButton(
-            onPressed: () => Navigator.of(context).pop(_controller.text.trim()),
+            onPressed: () => Navigator.of(context)
+                .pop(_AddMemberChoice(_controller.text.trim())),
             child: Text(l10n.commonAdd)),
       ],
     );

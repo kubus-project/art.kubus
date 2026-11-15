@@ -2936,14 +2936,21 @@ class ChatProvider extends ChangeNotifier {
     return map.values.toList();
   }
 
-  /// Accepts either a wallet or a username. Returns the created conversation when a new group chat is spawned.
+  /// Accepts either a wallet or a username. A walletless member is named by
+  /// [memberUserId], the account id from the picker; it is then added by that
+  /// id alone. Returns the created conversation when a new group chat is spawned.
   Future<Conversation?> addMember(
     String conversationId,
-    String memberIdentifier,
-  ) async {
+    String memberIdentifier, {
+    String? memberUserId,
+  }) async {
+    final generation = _sessionGeneration;
+    final accountId = (memberUserId ?? '').trim();
+    if (WalletUtils.isAccountUuid(accountId)) {
+      return _addWalletlessMember(conversationId, accountId, generation);
+    }
     final trimmed = memberIdentifier.trim();
     if (trimmed.isEmpty) return null;
-    final generation = _sessionGeneration;
 
     var memberWallet = trimmed;
     final usernameCandidate = trimmed.replaceFirst(RegExp(r'^@+'), '');
@@ -3028,6 +3035,35 @@ class ChatProvider extends ChangeNotifier {
     if (generation != _sessionGeneration) return null;
     await fetchMembers(conversationId);
     await _prefetchUsersForWallets([memberWallet]);
+    await refreshConversations();
+    return conversation;
+  }
+
+  /// Adds a walletless member by account id. The wallet-keyed steps (the local
+  /// duplicate check and the promotion to a new group) do not apply, so the
+  /// backend decides a duplicate.
+  Future<Conversation?> _addWalletlessMember(
+    String conversationId,
+    String accountId,
+    int generation,
+  ) async {
+    final conversation = _findConversationById(conversationId);
+    try {
+      final resp = await _api.addConversationMember(
+        conversationId,
+        '',
+        userId: accountId,
+      );
+      debugPrint(
+        'ChatProvider.addMember: addConversationMember response: $resp',
+      );
+    } catch (e) {
+      debugPrint(
+        'ChatProvider.addMember: addConversationMember call failed: $e',
+      );
+    }
+    if (generation != _sessionGeneration) return null;
+    await fetchMembers(conversationId);
     await refreshConversations();
     return conversation;
   }

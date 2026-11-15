@@ -78,7 +78,11 @@ Future<List<Map<String, dynamic>>> _chatProviderFetchMembers(
       } catch (_) {}
       return <Map<String, dynamic>>[];
     },
-  ).whenComplete(() => provider._membersRequests.remove(conversationId));
+  ).whenComplete(() {
+    // A block body: an arrow would return the removed future itself, and
+    // whenComplete waits on any future its action returns, so it never ends.
+    provider._membersRequests.remove(conversationId);
+  });
 
   provider._membersRequests[conversationId] = completer;
   return await completer;
