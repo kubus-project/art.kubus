@@ -23,6 +23,7 @@ import '../../widgets/common/keyboard_inset_padding.dart';
 import '../../widgets/empty_state_card.dart';
 import '../../widgets/profile_identity_summary.dart';
 import '../../widgets/community/community_compose_intent_resumer.dart';
+import '../../widgets/community/community_posting_wallet.dart';
 import '../../widgets/community/post_like_settlement.dart';
 import '../../services/pending_action_executor.dart';
 import '../../widgets/community/community_post_card.dart';
