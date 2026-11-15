@@ -160,7 +160,7 @@ class ProfileProvider extends foundation.ChangeNotifier {
   void _handleAccountIdentityChanged() {
     final key = AccountIdentity.accountKey;
     final held = (_currentUser?.userId ?? _currentUser?.id ?? '').trim();
-    if (held.isNotEmpty && held == key) return;
+    if (held.isNotEmpty && _heldProfileBelongsTo(key)) return;
     // A load still in flight may belong to the previous account even when
     // nothing is held yet. Its response must not reach the new account.
     if (held.isNotEmpty || _profileLoadAccountKey != key) {
@@ -169,6 +169,23 @@ class ProfileProvider extends foundation.ChangeNotifier {
     if (held.isEmpty) return;
     _clearProfileState();
     notifyListeners();
+  }
+
+  /// Whether the held profile is the account [key] names. A wallet-only session
+  /// token carries no account id, so the account key is the wallet and the
+  /// profile's id is a local handle; the profile's wallet identifies it then.
+  /// A wallet disconnect does not change the account key, so it keeps the
+  /// profile.
+  bool _heldProfileBelongsTo(String key) {
+    if (key.isEmpty) return false;
+    final user = _currentUser;
+    if (user == null) return false;
+    final candidates = <String>[
+      (user.userId ?? '').trim(),
+      user.id.trim(),
+      WalletUtils.canonical(user.walletAddress),
+    ];
+    return candidates.contains(key);
   }
 
   void _clearProfileState() {

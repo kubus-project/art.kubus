@@ -6,6 +6,7 @@ import 'package:art_kubus/providers/attendance_provider.dart';
 import 'package:art_kubus/providers/notification_provider.dart';
 import 'package:art_kubus/providers/profile_provider.dart';
 import 'package:art_kubus/models/saved_item.dart';
+import 'package:art_kubus/models/user_profile.dart';
 import 'package:art_kubus/providers/saved_items_provider.dart';
 import 'package:art_kubus/providers/security_gate_provider.dart';
 import 'package:art_kubus/providers/wallet_provider.dart';
@@ -409,6 +410,35 @@ void main() {
       await api.setAuthToken(_token(_accountA, refresh: 1));
 
       expect(profile.currentUser?.userId, _accountA);
+    });
+
+    test('a wallet disconnect keeps the wallet-only profile', () async {
+      // A wallet-only session: the token carries the wallet, not an account
+      // id, and the profile's id is a local handle rather than the account key.
+      const wallet = 'WalletOnlyAccountKey1111111111111111111111';
+      final payload = base64Url
+          .encode(utf8.encode(jsonEncode({'walletAddress': wallet})))
+          .replaceAll('=', '');
+      await api.setAuthToken('e30.$payload.synthetic');
+      final profile = ProfileProvider()
+        ..setCurrentUser(
+          UserProfile(
+            id: 'profile_local',
+            walletAddress: wallet,
+            username: 'tester',
+            displayName: 'tester',
+            bio: '',
+            avatar: '',
+            createdAt: DateTime.now(),
+            updatedAt: DateTime.now(),
+          ),
+        );
+      addTearDown(profile.dispose);
+
+      // A disconnect announces a change but keeps the same account.
+      await AccountIdentity.notifyChanged();
+
+      expect(profile.currentUser?.id, 'profile_local');
     });
 
     test('keeps the pending activation prompt state', () async {
