@@ -2125,9 +2125,6 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
 
                                     final scheme =
                                         Theme.of(context).colorScheme;
-                                    final currentWallet = WalletUtils.canonical(
-                                      _currentWalletAddress() ?? '',
-                                    );
                                     final loading = commentsProvider.isLoading(
                                       post.id,
                                     );
@@ -2137,15 +2134,11 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                                     final comments = commentsProvider
                                         .commentsForPost(post.id);
 
-                                    bool canModify(Comment c) {
-                                      if (currentWallet.isEmpty) return false;
-                                      final authorKey = WalletUtils.canonical(
-                                        (c.authorWallet ?? c.authorId)
-                                            .toString(),
-                                      );
-                                      return authorKey.isNotEmpty &&
-                                          authorKey == currentWallet;
-                                    }
+                                    bool canModify(Comment c) =>
+                                        c.isAuthoredBySession(
+                                          accountId: AccountIdentity.accountKey,
+                                          wallet: _currentWalletAddress(),
+                                        );
 
                                     Future<void> showHistory(Comment c) async {
                                       if (!c.isEdited ||
