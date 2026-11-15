@@ -13,6 +13,7 @@ import 'package:art_kubus/providers/wallet_provider.dart';
 import 'package:art_kubus/services/account_identity.dart';
 import 'package:art_kubus/services/auth_session_coordinator.dart';
 import 'package:art_kubus/services/backend_api_service.dart';
+import 'package:art_kubus/services/pin_hashing.dart';
 import 'package:art_kubus/services/saved_items_repository.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -178,6 +179,87 @@ Map<String, dynamic> _challengeFor(String markerId) => <String, dynamic>{
           .add(const Duration(minutes: 1))
           .toIso8601String(),
     };
+
+/// A PIN check and a biometric check that stay in flight until the test answers
+/// each one, so an unlock can be in flight across an account switch.
+class _HeldUnlockWallet extends _PinWallet {
+  final List<Completer<PinVerifyResult>> pinChecks =
+      <Completer<PinVerifyResult>>[];
+  final List<Completer<BiometricAuthOutcome>> biometricChecks =
+      <Completer<BiometricAuthOutcome>>[];
+
+  @override
+  Future<PinVerifyResult> verifyPinDetailed(String pin) {
+    final check = Completer<PinVerifyResult>();
+    pinChecks.add(check);
+    return check.future;
+  }
+
+  @override
+  Future<BiometricAuthOutcome> authenticateWithBiometricsDetailed({
+    String? localizedReason,
+  }) {
+    final check = Completer<BiometricAuthOutcome>();
+    biometricChecks.add(check);
+    return check.future;
+  }
+}
+
+/// Holds the session renewal an unlock performs, so it can be in flight across
+/// an account switch.
+class _HeldGate extends SecurityGateProvider {
+  _HeldGate() : super(promptCooldown: Duration.zero);
+
+  final List<Completer<bool>> renewals = <Completer<bool>>[];
+
+  @override
+  Future<bool> renewBackendSessionForUnlock() {
+    final renewal = Completer<bool>();
+    renewals.add(renewal);
+    return renewal.future;
+  }
+}
+
+/// A gate locked for the signed-in account. A stored local account makes the
+/// lock apply, and the wallet holds a PIN so the prompt can be answered.
+Future<_HeldGate> _lockedGate(
+  _HeldUnlockWallet wallet,
+  SecurityLockReason reason,
+) async {
+  SharedPreferences.setMockInitialValues(<String, Object>{
+    'jwt_token': 'stored-token',
+  });
+  final gate = _HeldGate()
+    ..bindDependencies(
+      profileProvider: ProfileProvider(),
+      walletProvider: wallet,
+      notificationProvider: NotificationProvider(),
+    );
+  addTearDown(gate.dispose);
+  await gate.refreshLocalAccountState();
+  await gate.lock(reason);
+  expect(gate.isResolving, isTrue);
+  return gate;
+}
+
+/// Records how the prompt open on [gate] right now is resolved.
+List<AuthReauthResult?> _trackPrompt(SecurityGateProvider gate) {
+  final resolutions = <AuthReauthResult?>[];
+  unawaited(gate.waitForResolution().then(resolutions.add));
+  return resolutions;
+}
+
+/// The prompt armed for B is still open and nothing resolved it.
+void _expectPromptStillOpen(
+  SecurityGateProvider gate,
+  List<AuthReauthResult?> resolutions,
+) {
+  expect(gate.isLocked, isTrue, reason: 'B stays locked');
+  expect(gate.isResolving, isTrue, reason: "B's prompt is still open");
+  expect(gate.isBusy, isFalse);
+  expect(resolutions, isEmpty,
+      reason: "A's completion must not resolve the prompt armed for B");
+}
 
 void main() {
   installEmptySecureStorage();
@@ -563,6 +645,204 @@ void main() {
 
       expect((await prompt)?.isSuccess, isTrue,
           reason: 'the prompt raised for A is the one the user answers');
+    });
+  });
+
+  group('an unlock or renewal of A that completes after the switch to B', () {
+    test('a PIN unlock of A does not resolve the prompt armed for B', () async {
+      await api.setAuthToken(_token(_accountA));
+      final wallet = _HeldUnlockWallet();
+      final gate = await _lockedGate(wallet, SecurityLockReason.autoLock);
+      final aUnlock = gate.unlockWithPin('1234');
+
+      await api.setAuthToken(_token(_accountB));
+      final resolutions = _trackPrompt(gate);
+      wallet.pinChecks.single
+          .complete(const PinVerifyResult(PinVerifyOutcome.success));
+
+      expect((await aUnlock).isSuccess, isFalse);
+      await pumpEventQueue();
+      _expectPromptStillOpen(gate, resolutions);
+
+      final bUnlock = gate.unlockWithPin('1234');
+      wallet.pinChecks.last
+          .complete(const PinVerifyResult(PinVerifyOutcome.success));
+      expect((await bUnlock).isSuccess, isTrue);
+      await pumpEventQueue();
+      expect(gate.isLocked, isFalse, reason: "B's own unlock still works");
+      expect(resolutions.single?.isSuccess, isTrue);
+    });
+
+    test('a PIN check of A that fails after the switch leaves the prompt of B',
+        () async {
+      await api.setAuthToken(_token(_accountA));
+      final wallet = _HeldUnlockWallet();
+      final gate = await _lockedGate(wallet, SecurityLockReason.autoLock);
+      final aUnlock = gate.unlockWithPin('0000');
+
+      await api.setAuthToken(_token(_accountB));
+      final resolutions = _trackPrompt(gate);
+      wallet.pinChecks.single
+          .complete(const PinVerifyResult(PinVerifyOutcome.incorrect));
+
+      expect((await aUnlock).isSuccess, isFalse);
+      await pumpEventQueue();
+      _expectPromptStillOpen(gate, resolutions);
+
+      final bUnlock = gate.unlockWithPin('1234');
+      wallet.pinChecks.last
+          .complete(const PinVerifyResult(PinVerifyOutcome.success));
+      expect((await bUnlock).isSuccess, isTrue);
+      await pumpEventQueue();
+      expect(gate.isLocked, isFalse, reason: "B's own unlock still works");
+    });
+
+    test(
+        'a biometric unlock of A that succeeds after the switch leaves the prompt of B',
+        () async {
+      await api.setAuthToken(_token(_accountA));
+      final wallet = _HeldUnlockWallet();
+      final gate = await _lockedGate(wallet, SecurityLockReason.autoLock);
+      final aUnlock = gate.unlockWithBiometrics();
+
+      await api.setAuthToken(_token(_accountB));
+      final resolutions = _trackPrompt(gate);
+      wallet.biometricChecks.single.complete(BiometricAuthOutcome.success);
+
+      expect(await aUnlock, BiometricAuthOutcome.cancelled);
+      await pumpEventQueue();
+      _expectPromptStillOpen(gate, resolutions);
+
+      final bUnlock = gate.unlockWithBiometrics();
+      wallet.biometricChecks.last.complete(BiometricAuthOutcome.success);
+      expect(await bUnlock, BiometricAuthOutcome.success);
+      await pumpEventQueue();
+      expect(gate.isLocked, isFalse, reason: "B's own unlock still works");
+    });
+
+    for (final renewed in <bool>[true, false]) {
+      test(
+          'a session renewal of A that ${renewed ? 'succeeds' : 'fails'} after the switch leaves the prompt of B',
+          () async {
+        await api.setAuthToken(_token(_accountA));
+        final wallet = _HeldUnlockWallet();
+        final gate = await _lockedGate(wallet, SecurityLockReason.tokenExpired);
+        final aUnlock = gate.unlockWithPin('1234');
+        wallet.pinChecks.single
+            .complete(const PinVerifyResult(PinVerifyOutcome.success));
+        await pumpEventQueue();
+        expect(gate.renewals, hasLength(1));
+
+        await api.setAuthToken(_token(_accountB));
+        final resolutions = _trackPrompt(gate);
+        gate.renewals.single.complete(renewed);
+
+        expect((await aUnlock).isSuccess, isFalse);
+        await pumpEventQueue();
+        _expectPromptStillOpen(gate, resolutions);
+
+        final bUnlock = gate.unlockWithPin('1234');
+        wallet.pinChecks.last
+            .complete(const PinVerifyResult(PinVerifyOutcome.success));
+        await pumpEventQueue();
+        expect(gate.renewals, hasLength(2));
+        gate.renewals.last.complete(true);
+        expect((await bUnlock).isSuccess, isTrue);
+        await pumpEventQueue();
+        expect(gate.isLocked, isFalse, reason: "B's own renewal still works");
+      });
+    }
+  });
+
+  group('a same-account identity change during an unlock of A', () {
+    test('keeps a PIN unlock of A in flight', () async {
+      await api.setAuthToken(_token(_accountA));
+      final wallet = _HeldUnlockWallet();
+      final gate = await _lockedGate(wallet, SecurityLockReason.autoLock);
+      final resolutions = _trackPrompt(gate);
+      final aUnlock = gate.unlockWithPin('1234');
+
+      // A wallet link announces the change without changing the account.
+      AccountIdentity.notifyListenersChanged();
+      wallet.pinChecks.single
+          .complete(const PinVerifyResult(PinVerifyOutcome.success));
+
+      expect((await aUnlock).isSuccess, isTrue);
+      await pumpEventQueue();
+      expect(gate.isLocked, isFalse);
+      expect(resolutions.single?.isSuccess, isTrue);
+    });
+
+    test('keeps a session renewal of A in flight', () async {
+      await api.setAuthToken(_token(_accountA));
+      final wallet = _HeldUnlockWallet();
+      final gate = await _lockedGate(wallet, SecurityLockReason.tokenExpired);
+      final resolutions = _trackPrompt(gate);
+      final aUnlock = gate.unlockWithPin('1234');
+      wallet.pinChecks.single
+          .complete(const PinVerifyResult(PinVerifyOutcome.success));
+      await pumpEventQueue();
+
+      AccountIdentity.notifyListenersChanged();
+      gate.renewals.single.complete(true);
+
+      expect((await aUnlock).isSuccess, isTrue);
+      await pumpEventQueue();
+      expect(gate.isLocked, isFalse);
+      expect(resolutions.single?.isSuccess, isTrue);
+    });
+  });
+
+  group('the pending activation prompt across identity changes', () {
+    test('a wallet disconnect or link of the same account keeps it', () async {
+      AccountIdentity.setAccountKey(_accountA);
+      final prompt = ActivationPromptProvider(hasAuthSession: () => false);
+      addTearDown(prompt.dispose);
+      for (var i = 0; i < ActivationPromptProvider.viewsBeforePrompt; i++) {
+        await prompt.recordEntityView();
+      }
+      expect(prompt.shouldPrompt, isTrue);
+
+      // A wallet disconnect and a wallet link both announce the change.
+      await AccountIdentity.notifyChanged();
+      AccountIdentity.notifyListenersChanged();
+
+      expect(prompt.entityViews, ActivationPromptProvider.viewsBeforePrompt);
+      expect(prompt.shouldPrompt, isTrue);
+    });
+
+    test('logout clears it', () async {
+      await api.setAuthToken(_token(_accountA));
+      final prompt = ActivationPromptProvider(hasAuthSession: () => false);
+      addTearDown(prompt.dispose);
+      for (var i = 0; i < ActivationPromptProvider.viewsBeforePrompt; i++) {
+        await prompt.recordEntityView();
+      }
+      expect(prompt.shouldPrompt, isTrue);
+
+      await api.clearAuth();
+
+      expect(prompt.entityViews, 0);
+      expect(prompt.shouldPrompt, isFalse);
+    });
+
+    test('a guest who signs in silently and then logs out loses it', () async {
+      // Armed as a guest. A guest sign-in announces nothing, so the prompt
+      // never learns the account before the sign-out arrives.
+      final prompt = ActivationPromptProvider(
+        hasAuthSession: () => api.hasAuthSession,
+      );
+      addTearDown(prompt.dispose);
+      for (var i = 0; i < ActivationPromptProvider.viewsBeforePrompt; i++) {
+        await prompt.recordEntityView();
+      }
+      expect(prompt.shouldPrompt, isTrue);
+
+      await api.setAuthToken(_token(_accountA));
+      await api.clearAuth();
+
+      expect(prompt.entityViews, 0);
+      expect(prompt.shouldPrompt, isFalse);
     });
   });
 }

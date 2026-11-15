@@ -53,6 +53,11 @@ class ActivationPromptProvider extends ChangeNotifier {
   bool _intervalChecked = false;
   bool _intervalAllows = true;
 
+  // The account the pending state belongs to. The canonical account key, not a
+  // profile id: a wallet disconnect or a token refresh of the same account keeps
+  // the state.
+  String _heldAccountKey = AccountIdentity.accountKey;
+
   int get entityViews => _entityViews;
 
   /// True when the prompt should currently be on screen.
@@ -131,8 +136,16 @@ class ActivationPromptProvider extends ChangeNotifier {
 
   /// A pending prompt belongs to one session. An account switch or sign-out
   /// ends that session, so its pending prompt and view count go with it. A
-  /// same-account token refresh announces no change and keeps them.
-  void _handleAccountIdentityChanged() => reset();
+  /// same-account change (a token refresh, a wallet link or disconnect) keeps
+  /// them. A sign-out always clears, even when the held key is a guest's: a
+  /// guest sign-in announces nothing, so the held key may not name the account.
+  void _handleAccountIdentityChanged() {
+    final key = AccountIdentity.accountKey;
+    final sameAccount = key.isNotEmpty && key == _heldAccountKey;
+    _heldAccountKey = key;
+    if (sameAccount) return;
+    reset();
+  }
 
   @override
   void dispose() {
