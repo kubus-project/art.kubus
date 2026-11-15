@@ -1,14 +1,18 @@
 import 'dart:convert';
 
+import '../utils/wallet_utils.dart';
+
 class MessageReply {
   final String messageId;
   final String senderWallet;
+  final String? senderUserId;
   final String? senderDisplayName;
   final String? message;
 
   const MessageReply({
     required this.messageId,
     required this.senderWallet,
+    this.senderUserId,
     this.senderDisplayName,
     this.message,
   });
@@ -20,6 +24,7 @@ class MessageReply {
       senderWallet:
           (j['senderWallet'] ?? j['sender_wallet'] ?? j['wallet'] ?? '')
               .toString(),
+      senderUserId: _optionalText(j['senderUserId'] ?? j['sender_user_id']),
       senderDisplayName: j['senderDisplayName'] as String? ??
           j['sender_display_name'] as String?,
       message: j['message'] as String?,
@@ -54,12 +59,25 @@ class MessageReaction {
     }
     return MessageReaction(emoji: emoji, count: count, reactors: reactors);
   }
+
+  /// Whether the signed-in account is among the reactors. A reactor is stored
+  /// as the account's wallet when it has one and as its account id otherwise,
+  /// so either [accountId] or [wallet] may match. Absent values never match.
+  bool isReactedBy({String? accountId, String? wallet}) {
+    final me = _canonicalAccountId(accountId);
+    final myWallet = _canonicalWallet(wallet);
+    if (me.isEmpty && myWallet.isEmpty) return false;
+    return reactors.any((reactor) =>
+        (me.isNotEmpty && _canonicalAccountId(reactor) == me) ||
+        (myWallet.isNotEmpty && _canonicalWallet(reactor) == myWallet));
+  }
 }
 
 class ChatMessage {
   final String id;
   final String conversationId;
   final String senderWallet;
+  final String? senderUserId;
   final String? senderUsername;
   final String? senderDisplayName;
   final String? senderAvatar;
@@ -108,6 +126,7 @@ class ChatMessage {
     required this.id,
     required this.conversationId,
     required this.senderWallet,
+    this.senderUserId,
     this.senderUsername,
     this.senderDisplayName,
     this.senderAvatar,
@@ -249,6 +268,7 @@ class ChatMessage {
               j['wallet'] ??
               j['from']) as String? ??
           '',
+      senderUserId: _optionalText(j['sender_user_id'] ?? j['senderUserId']),
       senderUsername: (j['username'] ??
           j['sender_username'] ??
           j['senderUsername']) as String?,
@@ -273,6 +293,21 @@ class ChatMessage {
     );
   }
 
+  /// Whether the signed-in account sent this message. [accountId] is the
+  /// session's canonical account id (AccountIdentity.accountKey). When the
+  /// payload carries a sender user id, only the account id decides; the wallet
+  /// is consulted only for a payload with no user id. Absent values never
+  /// match, so two walletless senders are never each other's messages.
+  bool isSentBy({String? accountId, String? wallet}) {
+    final senderId = _canonicalAccountId(senderUserId);
+    if (senderId.isNotEmpty) {
+      return senderId == _canonicalAccountId(accountId);
+    }
+    final sender = _canonicalWallet(senderWallet);
+    final me = _canonicalWallet(wallet);
+    return sender.isNotEmpty && me.isNotEmpty && sender == me;
+  }
+
   ChatMessage copyWith({
     String? message,
     Map<String, dynamic>? data,
@@ -286,6 +321,7 @@ class ChatMessage {
       id: id,
       conversationId: conversationId,
       senderWallet: senderWallet,
+      senderUserId: senderUserId,
       senderUsername: senderUsername,
       senderDisplayName: senderDisplayName,
       senderAvatar: senderAvatar,
@@ -300,6 +336,18 @@ class ChatMessage {
     );
   }
 }
+
+/// Trimmed text, or null when the value is absent or blank.
+String? _optionalText(dynamic value) {
+  final text = value?.toString().trim() ?? '';
+  return text.isEmpty ? null : text;
+}
+
+/// Account ids are UUIDs and compare case-insensitively. Blank is absent.
+String _canonicalAccountId(String? value) => (value ?? '').trim().toLowerCase();
+
+/// Wallets compare exactly after trimming. Blank is absent.
+String _canonicalWallet(String? value) => WalletUtils.canonical(value);
 
 String _extractMessageText(Map<String, dynamic> j) {
   for (final key in const [

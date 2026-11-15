@@ -67,4 +67,33 @@ void main() {
     expect(conversation.memberProfiles.first.displayName, 'Legacy Member');
     expect(conversation.memberCount, 2);
   });
+
+  test('keeps a walletless member profile in snake_case payloads', () {
+    final conversation = Conversation.fromJson(<String, dynamic>{
+      'id': 'conversation-1',
+      'is_group': false,
+      'member_user_ids': <String>[
+        'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+        'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',
+      ],
+      'member_profiles': <Map<String, dynamic>>[
+        <String, dynamic>{
+          'user_id': 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',
+          'wallet_address': null,
+          'display_name': 'Walletless peer',
+        },
+      ],
+      'member_count': 2,
+    });
+
+    expect(conversation.memberUserIds, <String>[
+      'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+      'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',
+    ]);
+    expect(conversation.memberProfiles, hasLength(1));
+    expect(conversation.memberProfiles.single.userId,
+        'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb');
+    expect(conversation.memberProfiles.single.wallet, isEmpty);
+    expect(conversation.memberProfiles.single.displayName, 'Walletless peer');
+  });
 }
