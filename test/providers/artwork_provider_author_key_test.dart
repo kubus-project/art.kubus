@@ -11,6 +11,8 @@ import 'package:latlong2/latlong.dart';
 class _RecordingArtworkApi implements ArtworkBackendApi {
   final calls = <Map<String, Object?>>[];
   FutureOr<List<Artwork>> Function(Map<String, Object?> call)? respond;
+  Artwork? Function(String artworkId)? publishResponse;
+  Artwork? Function(String artworkId)? unpublishResponse;
   Completer<List<Artwork>>? gate;
 
   @override
@@ -41,6 +43,14 @@ class _RecordingArtworkApi implements ArtworkBackendApi {
     if (pending != null) return pending.future;
     return await respond?.call(call) ?? const <Artwork>[];
   }
+
+  @override
+  Future<Artwork?> publishArtwork(String artworkId) async =>
+      publishResponse?.call(artworkId);
+
+  @override
+  Future<Artwork?> unpublishArtwork(String artworkId) async =>
+      unpublishResponse?.call(artworkId);
 
   @override
   dynamic noSuchMethod(Invocation invocation) =>
@@ -269,6 +279,73 @@ void main() {
             .toSet(),
         {'own-public', 'imported-public', 'secondary-public'},
       );
+    });
+
+    test('unpublishing removes public sheet item but retains library item',
+        () async {
+      final publicWork = _artwork(id: 'owned-public');
+      final secondaryWork = _artwork(id: 'secondary-public');
+      final api = _RecordingArtworkApi();
+      api.respond = (call) {
+        if (call['mine'] == true) return [publicWork];
+        if (call['authorProfileId'] == '10000000-0000-4000-8000-000000000010') {
+          return [publicWork, secondaryWork];
+        }
+        return const <Artwork>[];
+      };
+      api.unpublishResponse = (_) => publicWork.copyWith(isPublic: false);
+      api.publishResponse = (_) => publicWork.copyWith(isPublic: true);
+      final provider = ArtworkProvider(backendApi: api);
+      addTearDown(provider.dispose);
+      final key = ArtworkAuthorKey.resolve(
+        accountId: '40000000-0000-4000-8000-000000000010',
+        profileId: '10000000-0000-4000-8000-000000000010',
+      )!;
+
+      await provider.loadArtworksForAuthor(key);
+      final sheetSnapshots = <Set<String>>[];
+      provider.addListener(() {
+        sheetSnapshots.add(
+          provider
+              .publicArtworksForAuthor(key)
+              .map((artwork) => artwork.id)
+              .toSet(),
+        );
+      });
+      expect(
+        provider
+            .publicArtworksForAuthor(key)
+            .map((artwork) => artwork.id)
+            .toSet(),
+        {'owned-public', 'secondary-public'},
+      );
+
+      await provider.unpublishArtwork('owned-public');
+
+      expect(
+        provider
+            .publicArtworksForAuthor(key)
+            .map((artwork) => artwork.id)
+            .toSet(),
+        {'secondary-public'},
+      );
+      expect(
+        provider.artworksForAuthor(key).map((artwork) => artwork.id).toSet(),
+        {'owned-public', 'secondary-public'},
+      );
+      expect(sheetSnapshots.last, {'secondary-public'});
+
+      // The profile association remains authoritative. Republish restores
+      // visibility from the same association without manufacturing authorship.
+      await provider.publishArtwork('owned-public');
+      expect(
+        provider
+            .publicArtworksForAuthor(key)
+            .map((artwork) => artwork.id)
+            .toSet(),
+        {'owned-public', 'secondary-public'},
+      );
+      expect(sheetSnapshots.last, {'owned-public', 'secondary-public'});
     });
 
     test('keeps own mine results when public author scope is unsupported',

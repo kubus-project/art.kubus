@@ -488,7 +488,9 @@ class ArtworkProvider extends ChangeNotifier {
   List<Artwork> publicArtworksForAuthor(ArtworkAuthorKey key) {
     final wallet = key.wallet;
     if (wallet != null) {
-      return artworksForWallet(wallet);
+      return artworksForWallet(wallet)
+          .where((artwork) => artwork.isPublic)
+          .toList(growable: false);
     }
     final profileId = key.profileId;
     if (profileId == null) return const <Artwork>[];
@@ -496,7 +498,7 @@ class ArtworkProvider extends ChangeNotifier {
     if (ids == null || ids.isEmpty) return const <Artwork>[];
 
     final matches = _artworks
-        .where((artwork) => ids.contains(artwork.id))
+        .where((artwork) => ids.contains(artwork.id) && artwork.isPublic)
         .toList(growable: false);
     matches.sort((a, b) => b.createdAt.compareTo(a.createdAt));
     return matches;
