@@ -10,6 +10,7 @@ import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../utils/design_tokens.dart';
 import '../../utils/profile_data_key.dart';
+import '../../utils/wallet_utils.dart';
 import '../../utils/artwork_author_key.dart';
 import '../../utils/kubus_brand_colors.dart';
 import '../../utils/keyboard_inset_resolver.dart';
@@ -92,6 +93,7 @@ class _ProfileScreenState extends State<ProfileScreen>
   List<Map<String, dynamic>> _artistCollections = [];
   List<Map<String, dynamic>> _artistEvents = [];
   bool _artistAuthorshipUnavailable = false;
+  bool _artistProfileHydrationStarted = false;
   int _artistDataGeneration = 0;
   String _artistDataIdentity = '';
 
@@ -200,10 +202,15 @@ class _ProfileScreenState extends State<ProfileScreen>
     if (identity == _artistDataIdentity) return;
     _artistDataIdentity = identity;
     _artistDataGeneration++;
+    final profileProvider = _listenedProfileProvider;
+    final profileConfirmed = profileProvider != null &&
+        _profileMatchesCurrentIdentity(profileProvider);
+    _artistProfileHydrationStarted =
+        !profileConfirmed && (profileProvider?.isLoading ?? false);
     if (!mounted) return;
     setState(() {
       _artistDataRequested = false;
-      _artistDataLoading = false;
+      _artistDataLoading = !profileConfirmed;
       _artistDataLoaded = false;
       _artistArtworks = [];
       _artistAuthoredTotal = null;
@@ -212,9 +219,19 @@ class _ProfileScreenState extends State<ProfileScreen>
       _artistEvents = [];
       _artistAuthorshipUnavailable = false;
     });
-    Future.microtask(() {
-      if (mounted) _maybeLoadArtistData();
-    });
+  }
+
+  bool _profileMatchesCurrentIdentity(ProfileProvider profileProvider) {
+    final identity = AccountIdentity.accountKey.trim();
+    if (identity.isEmpty) return true;
+    final profile = profileProvider.currentUser;
+    if (profile == null) return false;
+    final accountId = (profile.userId ?? '').trim();
+    if (accountId.isNotEmpty) {
+      return accountId.toLowerCase() == identity.toLowerCase();
+    }
+    final wallet = profile.walletAddress.trim();
+    return wallet.isNotEmpty && WalletUtils.equals(wallet, identity);
   }
 
   bool _hasArtistRole(
@@ -705,6 +722,24 @@ class _ProfileScreenState extends State<ProfileScreen>
     if (nextShowStatus != _showActivityStatus) {
       setState(() => _showActivityStatus = nextShowStatus);
     }
+    if (_profileMatchesCurrentIdentity(profileProvider)) {
+      _artistProfileHydrationStarted = false;
+      if (_artistDataLoading && !_artistDataRequested) {
+        setState(() => _artistDataLoading = false);
+      }
+      _maybeLoadArtistData();
+    } else if (AccountIdentity.accountKey.isNotEmpty) {
+      if (profileProvider.isLoading) {
+        _artistProfileHydrationStarted = true;
+      } else if (_artistProfileHydrationStarted) {
+        _artistProfileHydrationStarted = false;
+        setState(() {
+          _artistDataLoading = false;
+          _artistDataLoaded = true;
+          _artistAuthorshipUnavailable = true;
+        });
+      }
+    }
   }
 
   Future<String?> _resolveCurrentWallet() async {
@@ -1015,6 +1050,7 @@ class _ProfileScreenState extends State<ProfileScreen>
       context,
       listen: false,
     );
+    if (!_profileMatchesCurrentIdentity(profileProvider)) return;
     // Profile/account id first (wallet only as a legacy fallback), so a
     // walletless artist still loads authored artworks and collections.
     final wallet = profileArtistDataKey(profileProvider.currentUser);

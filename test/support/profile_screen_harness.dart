@@ -345,7 +345,7 @@ Widget _surfaceWidget(
 UserProfile _ownerProfileFrom(User user, {bool walletless = false}) {
   return UserProfile(
     id: user.id,
-    userId: user.id,
+    userId: user.userId ?? user.id,
     walletAddress: walletless ? '' : user.id,
     username: user.username,
     displayName: user.name,

@@ -158,6 +158,8 @@ void main() {
   group('owner showcase identity changes', () {
     const profileA = '10000000-0000-4000-8000-000000000001';
     const profileB = '10000000-0000-4000-8000-000000000002';
+    const accountA = '40000000-0000-4000-8000-000000000001';
+    const accountB = '40000000-0000-4000-8000-000000000002';
 
     for (final (name, surface, size) in <(String, ProfileSurface, Size)>[
       ('mobile', ProfileSurface.mobileOwner, const Size(390, 2400)),
@@ -199,14 +201,15 @@ void main() {
         SharedPreferences.setMockInitialValues(<String, Object>{});
         final aResponse = Completer<http.Response>();
         final bResponse = Completer<http.Response>();
+        final authorRequests = <String>[];
         final profileProvider = ProfileProvider();
-        AccountIdentity.setAccountKey('account-a');
+        AccountIdentity.setAccountKey(accountA);
         BackendApiService().setHttpClient(MockClient((request) async {
           if (request.url.path == '/api/artworks' &&
               request.url.queryParameters['authorProfileId'] != null) {
-            return request.url.queryParameters['authorProfileId'] == profileA
-                ? aResponse.future
-                : bResponse.future;
+            final author = request.url.queryParameters['authorProfileId']!;
+            authorRequests.add(author);
+            return author == profileA ? aResponse.future : bResponse.future;
           }
           if (request.url.path == '/api/collections') {
             final owner = request.url.queryParameters.values.firstWhere(
@@ -238,18 +241,30 @@ void main() {
         await pumpProfileSurface(
           tester,
           surface: surface,
-          user: ProfileFixtures.user(id: profileA, isArtist: true),
+          user: ProfileFixtures.user(id: profileA, isArtist: true)
+              .copyWith(userId: accountA),
           ownerWalletless: true,
           injectedProfileProvider: profileProvider,
           size: size,
         );
+        expect(AccountIdentity.accountKey, accountA);
+        expect(profileProvider.currentUser?.userId, accountA);
         expect(aResponse.isCompleted, isFalse);
+        expect(authorRequests.where((id) => id == profileA), hasLength(1));
 
-        AccountIdentity.setAccountKey('account-b');
+        // Match production order: the session is B before B's profile has
+        // hydrated, so the screen must stay cleared and must not request A.
+        AccountIdentity.setAccountKey(accountB);
         AccountIdentity.notifyListenersChanged();
-        profileProvider.setCurrentUser(_owner(profileB));
         await tester.pump();
         await tester.pump(const Duration(milliseconds: 100));
+        expect(authorRequests.where((id) => id == profileA), hasLength(1));
+        expect(authorRequests.where((id) => id == profileB), isEmpty);
+
+        profileProvider.setCurrentUser(_owner(profileB, accountB));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 100));
+        expect(authorRequests.where((id) => id == profileB), hasLength(1));
 
         aResponse.complete(_jsonResponse(<String, Object?>{
           'appliedFilters': <String, Object?>{'authorProfileId': profileA},
@@ -270,6 +285,62 @@ void main() {
         expect(find.text('A stale artwork'), findsNothing);
         expect(find.text('Collection $profileB'), findsWidgets);
         expect(find.text('Event B'), findsWidgets);
+      });
+
+      testWidgets('$name ignores delayed A showcase error after switching to B',
+          (tester) async {
+        SharedPreferences.setMockInitialValues(<String, Object>{});
+        final aResponse = Completer<http.Response>();
+        final bResponse = Completer<http.Response>();
+        final authorRequests = <String>[];
+        final profileProvider = ProfileProvider();
+        AccountIdentity.setAccountKey(accountA);
+        BackendApiService().setHttpClient(MockClient((request) async {
+          if (request.url.path == '/api/artworks' &&
+              request.url.queryParameters['authorProfileId'] != null) {
+            final author = request.url.queryParameters['authorProfileId']!;
+            authorRequests.add(author);
+            return author == profileA ? aResponse.future : bResponse.future;
+          }
+          return _jsonResponse(<String, Object?>{'data': <Object?>[]});
+        }));
+
+        await pumpProfileSurface(
+          tester,
+          surface: surface,
+          user: ProfileFixtures.user(id: profileA, isArtist: true)
+              .copyWith(userId: accountA),
+          ownerWalletless: true,
+          injectedProfileProvider: profileProvider,
+          size: size,
+        );
+        expect(authorRequests.where((id) => id == profileA), hasLength(1));
+
+        AccountIdentity.setAccountKey(accountB);
+        AccountIdentity.notifyListenersChanged();
+        await tester.pump();
+        expect(authorRequests.where((id) => id == profileA), hasLength(1));
+        expect(authorRequests.where((id) => id == profileB), isEmpty);
+
+        profileProvider.setCurrentUser(_owner(profileB, accountB));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 100));
+        expect(authorRequests.where((id) => id == profileB), hasLength(1));
+
+        aResponse.completeError(StateError('A request failed late'));
+        await tester.pump(const Duration(milliseconds: 100));
+        expect(find.text('Not available'), findsNothing);
+        expect(authorRequests.where((id) => id == profileB), hasLength(1));
+
+        bResponse.complete(_jsonResponse(<String, Object?>{
+          'appliedFilters': <String, Object?>{'authorProfileId': profileB},
+          'data': [_artworkJson('B after A error')],
+        }));
+        for (var i = 0; i < 8; i++) {
+          await tester.pump(const Duration(milliseconds: 100));
+        }
+        expect(find.text('B after A error'), findsWidgets);
+        expect(find.text('Not available'), findsNothing);
       });
     }
   });
@@ -292,9 +363,9 @@ Map<String, Object?> _artworkJson(String title) => <String, Object?>{
       'public': true,
     };
 
-UserProfile _owner(String profileId) => UserProfile(
+UserProfile _owner(String profileId, String accountId) => UserProfile(
       id: profileId,
-      userId: profileId,
+      userId: accountId,
       walletAddress: '',
       username: 'artist',
       displayName: 'Profile Artist',
