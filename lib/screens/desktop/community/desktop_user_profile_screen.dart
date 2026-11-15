@@ -2016,8 +2016,11 @@ class _UserProfileScreenState extends State<UserProfileScreen>
 
   void _confirmBlockUser() {
     final l10n = AppLocalizations.of(context)!;
-    final targetWallet = WalletUtils.canonical(user?.id ?? widget.userId);
-    if (targetWallet.isEmpty) {
+    // The wallet when the account has one, else its account UUID. The profile
+    // row id is never a block key: feeds match blocks against authorWallet or
+    // authorUserId.
+    final targetId = WalletUtils.canonical(user?.messageTargetId ?? '');
+    if (targetId.isEmpty) {
       ScaffoldMessenger.of(context).showKubusSnackBar(
         SnackBar(content: Text(l10n.userProfileUnableToBlockToast)),
       );
@@ -2033,7 +2036,7 @@ class _UserProfileScreenState extends State<UserProfileScreen>
           borderRadius: BorderRadius.circular(KubusRadius.lg),
         ),
         title: Text(
-          l10n.userProfileBlockDialogTitle(user?.name ?? targetWallet),
+          l10n.userProfileBlockDialogTitle(user?.name ?? targetId),
           style: KubusTypography.inter(
             fontWeight: FontWeight.bold,
             color: Theme.of(context).colorScheme.onSurface,
@@ -2056,7 +2059,7 @@ class _UserProfileScreenState extends State<UserProfileScreen>
             onPressed: () async {
               final messenger = ScaffoldMessenger.of(context);
               try {
-                await BlockListService().blockWallet(targetWallet);
+                await BlockListService().blockWallet(targetId);
               } catch (e) {
                 debugPrint(
                   'DesktopUserProfileScreen: failed to block user: $e',
@@ -2074,12 +2077,11 @@ class _UserProfileScreenState extends State<UserProfileScreen>
               messenger.showKubusSnackBar(
                 SnackBar(
                   content: Text(
-                    l10n.userProfileBlockedToast(user?.name ?? targetWallet),
+                    l10n.userProfileBlockedToast(user?.name ?? targetId),
                   ),
                   action: SnackBarAction(
                     label: l10n.commonUndo,
-                    onPressed: () =>
-                        BlockListService().unblockWallet(targetWallet),
+                    onPressed: () => BlockListService().unblockWallet(targetId),
                   ),
                 ),
               );

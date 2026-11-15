@@ -184,9 +184,11 @@ extension _CommunityScreenStatePart1 on _CommunityScreenState {
     if (blocked.isEmpty) return posts;
 
     return posts.where((post) {
-      final authorWallet = WalletUtils.canonical(post.authorWallet);
-      if (authorWallet.isEmpty) return true;
-      return !blocked.contains(authorWallet);
+      return !BlockListService.blocksAuthor(
+        blocked,
+        wallet: post.authorWallet,
+        accountId: post.authorUserId,
+      );
     }).toList();
   }
 
