@@ -106,6 +106,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
   List<Map<String, dynamic>> _documentedArtworks = const [];
   int? _authoredArtworksTotal;
   int? _authoredArtworksCounter;
+  bool _authoredArtworksUnavailable = false;
   List<Map<String, dynamic>> _artistCollections = [];
   List<Map<String, dynamic>> _artistEvents = [];
   String? _failedCoverImageUrl;
@@ -187,6 +188,9 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
       _authoredArtworksTotal = _profileController.authoredArtworksTotal;
       _authoredArtworksCounter =
           _profileController.package?.publicStats['authoredArtworks'];
+      _authoredArtworksUnavailable =
+          _profileController.package?.extended?.authoredArtworksUnavailable ??
+              false;
       _artistCollections = _profileController.artistCollections;
       _artistEvents = _profileController.artistEvents;
       _artistDataLoaded = _profileController.artistDataLoaded;
@@ -1108,9 +1112,11 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
         : Provider.of<ArtworkProvider>(context, listen: true)
             .artworksForAuthor(authorKey)
             .length;
-    final artworksCount = _authoredArtworksTotal ??
-        _authoredArtworksCounter ??
-        localArtworksCount;
+    final artworksCount = _authoredArtworksUnavailable
+        ? null
+        : _authoredArtworksTotal ??
+            _authoredArtworksCounter ??
+            localArtworksCount;
 
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -1157,7 +1163,9 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
             ),
             _buildProfileStatCard(
               title: l10n.userProfileArtworksTitle,
-              value: _formatCount(artworksCount),
+              value: artworksCount == null
+                  ? l10n.commonNotAvailable
+                  : _formatCount(artworksCount),
               icon: Icons.palette_outlined,
               onTap: authorKey == null
                   ? null
@@ -1389,14 +1397,26 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
           kind: KubusHeaderKind.section,
         ),
         const SizedBox(height: KubusSpacing.lg - KubusSpacing.xs),
-        _buildShowcaseSection(
-          l10n: l10n,
-          title: l10n.userProfileArtworksTitle,
-          items: _artistArtworks,
-          emptyLabel: l10n.userProfileNoArtworksYetLabel(user!.name),
-          emptyIcon: Icons.image_outlined,
-          builder: _buildArtworkCard,
-        ),
+        if (_authoredArtworksUnavailable)
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(l10n.commonNotAvailable),
+              TextButton(
+                onPressed: _handleRefresh,
+                child: Text(l10n.commonRetry),
+              ),
+            ],
+          )
+        else
+          _buildShowcaseSection(
+            l10n: l10n,
+            title: l10n.userProfileArtworksTitle,
+            items: _artistArtworks,
+            emptyLabel: l10n.userProfileNoArtworksYetLabel(user!.name),
+            emptyIcon: Icons.image_outlined,
+            builder: _buildArtworkCard,
+          ),
         if (_documentedArtworks.isNotEmpty) ...[
           const SizedBox(height: KubusSpacing.lg - KubusSpacing.xs),
           _buildShowcaseSection(

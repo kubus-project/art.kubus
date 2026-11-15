@@ -786,6 +786,7 @@ class ProfilePackageService {
       documentedArtworks: showcase.documentedArtworks,
       authoredArtworksTotal: showcase.authoredArtworksTotal,
       documentedArtworksTotal: showcase.documentedArtworksTotal,
+      authoredArtworksUnavailable: showcase.authoredArtworksUnavailable,
       artistCollections: showcase.collections,
       artistEvents: showcase.events,
       fetchedAt: DateTime.now(),
@@ -855,9 +856,12 @@ class ProfilePackageService {
     int limit = 6,
     User? user,
     String? authorProfileId,
+    String legacyWalletAddress = '',
   }) async {
     final api = BackendApiService();
-    final linkedWallet = user?.walletAddress?.trim() ?? '';
+    final linkedWallet = user?.walletAddress?.trim().isNotEmpty == true
+        ? user!.walletAddress!.trim()
+        : legacyWalletAddress.trim();
     final profileId = (authorProfileId ?? user?.profileId ?? '').trim();
     if (linkedWallet.isEmpty && profileId.isNotEmpty) {
       final authored = await api.getArtworks(
@@ -928,17 +932,26 @@ class ProfilePackageService {
 
     try {
       final api = BackendApiService();
-      final collectionsFuture =
-          api.getCollections(walletAddress: walletAddress, limit: 6);
-      final eventsFuture = api.listEvents(limit: 100);
+      final sectionsFuture = loadProfileArtworkSections(
+        walletAddress,
+        limit: 6,
+        user: user,
+      ).then<ProfileArtworkSections?>((value) => value,
+          onError: (_, __) => null);
+      final collectionsFuture = api
+          .getCollections(walletAddress: walletAddress, limit: 6)
+          .then<List<Map<String, dynamic>>>((value) => value,
+              onError: (_, __) => const <Map<String, dynamic>>[]);
+      final eventsFuture = api.listEvents(limit: 100).then((value) => value,
+          onError: (_, __) => const <Map<String, dynamic>>[]);
 
       final results = await Future.wait<dynamic>([
-        loadProfileArtworkSections(walletAddress, limit: 6, user: user),
+        sectionsFuture,
         collectionsFuture,
         eventsFuture,
       ]);
 
-      final sections = results[0] as ProfileArtworkSections;
+      final sections = results[0] as ProfileArtworkSections?;
 
       final events = (results[2] as List<Map<String, dynamic>>)
           .where((event) => profileEventBelongsToWallet(event, walletAddress))
@@ -947,10 +960,12 @@ class ProfilePackageService {
           .toList(growable: false);
 
       return _ProfileShowcasePayload(
-        artworks: sections.authored,
-        documentedArtworks: sections.documented,
-        authoredArtworksTotal: sections.authoredTotal,
-        documentedArtworksTotal: sections.documentedTotal,
+        artworks: sections?.authored ?? const <Map<String, dynamic>>[],
+        documentedArtworks:
+            sections?.documented ?? const <Map<String, dynamic>>[],
+        authoredArtworksTotal: sections?.authoredTotal,
+        documentedArtworksTotal: sections?.documentedTotal,
+        authoredArtworksUnavailable: sections == null,
         collections: (results[1] as List<Map<String, dynamic>>)
             .map((item) => Map<String, dynamic>.from(item))
             .toList(growable: false),
@@ -1140,6 +1155,7 @@ class _ProfileShowcasePayload {
     this.documentedArtworks = const <Map<String, dynamic>>[],
     this.authoredArtworksTotal,
     this.documentedArtworksTotal,
+    this.authoredArtworksUnavailable = false,
     this.collections = const <Map<String, dynamic>>[],
     this.events = const <Map<String, dynamic>>[],
   });
@@ -1148,6 +1164,7 @@ class _ProfileShowcasePayload {
   final List<Map<String, dynamic>> documentedArtworks;
   final int? authoredArtworksTotal;
   final int? documentedArtworksTotal;
+  final bool authoredArtworksUnavailable;
   final List<Map<String, dynamic>> collections;
   final List<Map<String, dynamic>> events;
 }

@@ -112,6 +112,7 @@ class ProfileExtendedPackage {
     this.documentedArtworks = const <Map<String, dynamic>>[],
     this.authoredArtworksTotal,
     this.documentedArtworksTotal,
+    this.authoredArtworksUnavailable = false,
     this.artistCollections = const <Map<String, dynamic>>[],
     this.artistEvents = const <Map<String, dynamic>>[],
     required this.fetchedAt,
@@ -132,6 +133,7 @@ class ProfileExtendedPackage {
 
   /// Full documented total, or null when the backend did not honour the scope.
   final int? documentedArtworksTotal;
+  final bool authoredArtworksUnavailable;
   final List<Map<String, dynamic>> artistCollections;
   final List<Map<String, dynamic>> artistEvents;
   final DateTime fetchedAt;
@@ -144,6 +146,7 @@ class ProfileExtendedPackage {
     List<Map<String, dynamic>>? documentedArtworks,
     int? authoredArtworksTotal,
     int? documentedArtworksTotal,
+    bool? authoredArtworksUnavailable,
     List<Map<String, dynamic>>? artistCollections,
     List<Map<String, dynamic>>? artistEvents,
     DateTime? fetchedAt,
@@ -156,6 +159,8 @@ class ProfileExtendedPackage {
           authoredArtworksTotal ?? this.authoredArtworksTotal,
       documentedArtworksTotal:
           documentedArtworksTotal ?? this.documentedArtworksTotal,
+      authoredArtworksUnavailable:
+          authoredArtworksUnavailable ?? this.authoredArtworksUnavailable,
       artistCollections: artistCollections ?? this.artistCollections,
       artistEvents: artistEvents ?? this.artistEvents,
       fetchedAt: fetchedAt ?? this.fetchedAt,
@@ -168,6 +173,7 @@ class ProfileExtendedPackage {
       'documentedArtworks': documentedArtworks,
       'authoredArtworksTotal': authoredArtworksTotal,
       'documentedArtworksTotal': documentedArtworksTotal,
+      'authoredArtworksUnavailable': authoredArtworksUnavailable,
       'artistCollections': artistCollections,
       'artistEvents': artistEvents,
       'fetchedAt': fetchedAt.toIso8601String(),
@@ -185,6 +191,7 @@ class ProfileExtendedPackage {
       documentedArtworksTotal: _ProfilePackageJson.nullableInt(
         json['documentedArtworksTotal'],
       ),
+      authoredArtworksUnavailable: json['authoredArtworksUnavailable'] == true,
       artistCollections:
           _ProfilePackageJson.listOfMaps(json['artistCollections']),
       artistEvents: _ProfilePackageJson.listOfMaps(json['artistEvents']),
@@ -257,6 +264,8 @@ class ProfilePackage {
       extended?.documentedArtworks ?? const <Map<String, dynamic>>[];
   int? get authoredArtworksTotal => extended?.authoredArtworksTotal;
   int? get documentedArtworksTotal => extended?.documentedArtworksTotal;
+  bool get authoredArtworksUnavailable =>
+      extended?.authoredArtworksUnavailable ?? false;
   List<Map<String, dynamic>> get artistCollections =>
       extended?.artistCollections ?? const <Map<String, dynamic>>[];
   List<Map<String, dynamic>> get artistEvents =>

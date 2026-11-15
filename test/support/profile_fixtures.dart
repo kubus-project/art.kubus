@@ -154,9 +154,11 @@ class ProfileFixtures {
   /// ever touching the network. Empty posts by default.
   static ProfileExtendedPackage extended({
     List<CommunityPost> initialPosts = const <CommunityPost>[],
+    bool authoredArtworksUnavailable = false,
   }) {
     return ProfileExtendedPackage(
       initialPosts: initialPosts,
+      authoredArtworksUnavailable: authoredArtworksUnavailable,
       fetchedAt: fetchedAt,
     );
   }

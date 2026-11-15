@@ -116,6 +116,7 @@ class _UserProfileScreenState extends State<UserProfileScreen>
   List<Map<String, dynamic>> _documentedArtworks = const [];
   int? _authoredArtworksTotal;
   int? _authoredArtworksCounter;
+  bool _authoredArtworksUnavailable = false;
   List<Map<String, dynamic>> _artistCollections = [];
 
   String? _currentWalletAddress() {
@@ -264,6 +265,9 @@ class _UserProfileScreenState extends State<UserProfileScreen>
       _authoredArtworksTotal = _profileController.authoredArtworksTotal;
       _authoredArtworksCounter =
           _profileController.package?.publicStats['authoredArtworks'];
+      _authoredArtworksUnavailable =
+          _profileController.package?.extended?.authoredArtworksUnavailable ??
+              false;
       _artistCollections = _profileController.artistCollections;
       _artistDataLoaded = _profileController.artistDataLoaded;
       _artistDataLoading = _profileController.artistDataLoading;
@@ -1181,9 +1185,11 @@ class _UserProfileScreenState extends State<UserProfileScreen>
         : Provider.of<ArtworkProvider>(context, listen: true)
             .artworksForAuthor(authorKey)
             .length;
-    final artworksCount = _authoredArtworksTotal ??
-        _authoredArtworksCounter ??
-        localArtworksCount;
+    final artworksCount = _authoredArtworksUnavailable
+        ? null
+        : _authoredArtworksTotal ??
+            _authoredArtworksCounter ??
+            localArtworksCount;
 
     return DesktopGrid(
       minCrossAxisCount: 2,
@@ -1223,7 +1229,9 @@ class _UserProfileScreenState extends State<UserProfileScreen>
         ),
         DesktopStatCard(
           label: l10n.userProfileArtworksTitle,
-          value: _formatCount(artworksCount),
+          value: artworksCount == null
+              ? l10n.commonNotAvailable
+              : _formatCount(artworksCount),
           icon: Icons.palette_outlined,
           color: _profileStatAccentForIcon(Icons.palette_outlined),
           onTap: authorKey == null
@@ -1366,6 +1374,16 @@ class _UserProfileScreenState extends State<UserProfileScreen>
               alignment: Alignment.center,
               child: const InlineLoading(width: 40, height: 40),
             ),
+          )
+        else if (_authoredArtworksUnavailable)
+          Column(
+            children: [
+              Text(l10n.commonNotAvailable),
+              TextButton(
+                onPressed: _handleRefresh,
+                child: Text(l10n.commonRetry),
+              ),
+            ],
           )
         else if (_artistArtworks.isEmpty)
           EmptyStateCard(

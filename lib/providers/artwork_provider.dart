@@ -1347,20 +1347,32 @@ class ArtworkProvider extends ChangeNotifier {
     _authorListErrors.remove(key.cacheKey);
     if (profileId != null) _artworkIdsByProfile.remove(profileId);
     try {
-      final results = await Future.wait(<Future<List<Artwork>>>[
+      var accountArtworks = const <Artwork>[];
+      var authoredArtworks = const <Artwork>[];
+      Object? accountFailure;
+      Object? authorshipFailure;
+      await Future.wait<void>([
         if (accountId != null && accountId.isNotEmpty)
-          _backendApi.getArtworks(mine: true, limit: 100),
+          _backendApi.getArtworks(mine: true, limit: 100).then<void>(
+                (items) => accountArtworks = items,
+                onError: (Object error, StackTrace _) => accountFailure = error,
+              ),
         if (profileId != null && profileId.isNotEmpty)
-          _backendApi.getArtworks(authorProfileId: profileId, limit: 200),
+          _backendApi
+              .getArtworks(authorProfileId: profileId, limit: 200)
+              .then<void>(
+                (items) => authoredArtworks = items,
+                onError: (Object error, StackTrace _) =>
+                    authorshipFailure = error,
+              ),
       ]);
       if (epoch != _accountEpoch) return;
-      var resultIndex = 0;
-      final accountArtworks = accountId != null && accountId.isNotEmpty
-          ? results[resultIndex++]
-          : const <Artwork>[];
-      final authoredArtworks = profileId != null && profileId.isNotEmpty
-          ? results[resultIndex]
-          : const <Artwork>[];
+      if (authorshipFailure != null) {
+        _authorListErrors[key.cacheKey] = authorshipFailure.toString();
+      }
+      if (accountFailure != null && authorshipFailure == null) {
+        _authorListErrors[key.cacheKey] = accountFailure.toString();
+      }
       final accountIds = <String>{};
       final profileIds = <String>{};
       for (final artwork in <Artwork>[
@@ -1383,7 +1395,12 @@ class ArtworkProvider extends ChangeNotifier {
       if (profileId != null) {
         _artworkIdsByProfile[profileId] = profileIds;
       }
-      notifyListeners();
+      if (accountFailure != null || authorshipFailure != null) {
+        _setError('Failed to load authored artworks: '
+            '${authorshipFailure ?? accountFailure}');
+      } else {
+        notifyListeners();
+      }
     } catch (e) {
       if (epoch == _accountEpoch) {
         _authorListErrors[key.cacheKey] = e.toString();

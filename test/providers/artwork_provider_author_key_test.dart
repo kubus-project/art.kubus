@@ -213,6 +213,30 @@ void main() {
       );
     });
 
+    test('keeps own mine results when public author scope is unsupported',
+        () async {
+      final api = _RecordingArtworkApi()
+        ..respond = (call) {
+          if (call['mine'] == true) return [_artwork(id: 'private-mine')];
+          return Future<List<Artwork>>.error(
+            StateError('authorProfileId filter unsupported'),
+          );
+        };
+      final provider = ArtworkProvider(backendApi: api);
+      addTearDown(provider.dispose);
+      final key = ArtworkAuthorKey.resolve(
+        accountId: '40000000-0000-4000-8000-000000000010',
+        profileId: '10000000-0000-4000-8000-000000000010',
+      )!;
+
+      await provider.loadArtworksForAuthor(key);
+
+      expect(api.calls, hasLength(2));
+      expect(provider.artworksForAuthor(key).map((work) => work.id),
+          ['private-mine']);
+      expect(provider.authorListErrorFor(key), contains('unsupported'));
+    });
+
     test('switching accounts never shows the previous account artworks',
         () async {
       final api = _RecordingArtworkApi();

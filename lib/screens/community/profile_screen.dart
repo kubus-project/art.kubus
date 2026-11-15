@@ -25,6 +25,7 @@ import '../../providers/saved_items_provider.dart';
 import '../../providers/community_interactions_provider.dart';
 import '../../services/backend_api_service.dart';
 import '../../services/profile_package_service.dart';
+import '../../services/account_identity.dart';
 import '../../services/share/share_service.dart';
 import '../../services/share/share_types.dart';
 import '../../utils/media_url_resolver.dart';
@@ -90,6 +91,9 @@ class _ProfileScreenState extends State<ProfileScreen>
   List<Map<String, dynamic>> _documentedArtworks = [];
   List<Map<String, dynamic>> _artistCollections = [];
   List<Map<String, dynamic>> _artistEvents = [];
+  bool _artistAuthorshipUnavailable = false;
+  int _artistDataGeneration = 0;
+  String _artistDataIdentity = '';
 
   /// Captured in `didChangeDependencies` so `dispose` never has to look the
   /// provider up through a deactivated `BuildContext`.
@@ -143,6 +147,9 @@ class _ProfileScreenState extends State<ProfileScreen>
       profileProvider.addListener(_handleProfilePreferencesChanged);
       _listenedProfileProvider = profileProvider;
     }
+    AccountIdentity.removeListener(_handleAccountIdentityChanged);
+    AccountIdentity.addListener(_handleAccountIdentityChanged);
+    _handleAccountIdentityChanged();
     if (!_didScheduleDataFetch) {
       _didScheduleDataFetch = true;
       _postsFuture = _loadUserPosts();
@@ -183,8 +190,31 @@ class _ProfileScreenState extends State<ProfileScreen>
     // up through `context` here would query a deactivated element.
     _listenedProfileProvider?.removeListener(_handleProfilePreferencesChanged);
     _listenedProfileProvider = null;
+    AccountIdentity.removeListener(_handleAccountIdentityChanged);
     _animationController.dispose();
     super.dispose();
+  }
+
+  void _handleAccountIdentityChanged() {
+    final identity = AccountIdentity.accountKey;
+    if (identity == _artistDataIdentity) return;
+    _artistDataIdentity = identity;
+    _artistDataGeneration++;
+    if (!mounted) return;
+    setState(() {
+      _artistDataRequested = false;
+      _artistDataLoading = false;
+      _artistDataLoaded = false;
+      _artistArtworks = [];
+      _artistAuthoredTotal = null;
+      _documentedArtworks = [];
+      _artistCollections = [];
+      _artistEvents = [];
+      _artistAuthorshipUnavailable = false;
+    });
+    Future.microtask(() {
+      if (mounted) _maybeLoadArtistData();
+    });
   }
 
   bool _hasArtistRole(
@@ -564,8 +594,10 @@ class _ProfileScreenState extends State<ProfileScreen>
                   AppLocalizations.of(context)!.userProfileArtworksTitle,
                   // The wallet-keyed counter is 0 for a walletless account:
                   // use the account-keyed total of its authored works.
-                  _walletlessAuthoredCount(walletAddress)?.toString() ??
-                      profileProvider.formattedArtworksCount,
+                  _artistAuthorshipUnavailable
+                      ? AppLocalizations.of(context)!.commonNotAvailable
+                      : _walletlessAuthoredCount(walletAddress)?.toString() ??
+                          profileProvider.formattedArtworksCount,
                   Icons.palette,
                   isSmallScreen: isSmallScreen,
                   onTap: authorKey == null
@@ -1007,11 +1039,16 @@ class _ProfileScreenState extends State<ProfileScreen>
       return;
     }
     _artistDataRequested = true;
+    final generation = _artistDataGeneration;
+    final identity = AccountIdentity.accountKey;
     await _loadArtistData(
       wallet,
       eventsKey: eventsKey,
       legacyWallet: legacyWallet,
+      linkedWallet: profileProvider.currentUser?.walletAddress ?? '',
       authorProfileId: profileProvider.currentUser?.id,
+      generation: generation,
+      identity: identity,
       force: force,
     );
   }
@@ -1020,7 +1057,10 @@ class _ProfileScreenState extends State<ProfileScreen>
     String walletAddress, {
     required String eventsKey,
     String legacyWallet = '',
+    String linkedWallet = '',
     String? authorProfileId,
+    required int generation,
+    required String identity,
     bool force = false,
   }) async {
     if (!mounted) return;
@@ -1032,50 +1072,68 @@ class _ProfileScreenState extends State<ProfileScreen>
         _documentedArtworks = [];
         _artistCollections = [];
         _artistEvents = [];
+        _artistAuthorshipUnavailable = false;
       }
     });
     try {
       final api = BackendApiService();
-      final sections = await ProfilePackageService.loadProfileArtworkSections(
-        walletAddress,
-        limit: 6,
-        authorProfileId: authorProfileId,
-      );
+      ProfileArtworkSections? sections;
+      try {
+        sections = await ProfilePackageService.loadProfileArtworkSections(
+          walletAddress,
+          limit: 6,
+          authorProfileId: authorProfileId,
+          legacyWalletAddress:
+              linkedWallet.isNotEmpty ? linkedWallet : legacyWallet,
+        );
+      } catch (_) {
+        if (!_isArtistDataCurrent(generation, identity)) return;
+        _artistAuthorshipUnavailable = true;
+      }
+      if (!_isArtistDataCurrent(generation, identity)) return;
       final collections = await api.getCollections(
         walletAddress: walletAddress,
         legacyWalletAddress: legacyWallet,
         limit: 6,
       );
+      if (!_isArtistDataCurrent(generation, identity)) return;
       final eventsResponse = await api.listEvents(limit: 100);
+      if (!_isArtistDataCurrent(generation, identity)) return;
       final filteredEvents = eventsResponse
           .where((event) => profileEventBelongsToWallet(event, eventsKey))
           .take(6)
           .map((e) => Map<String, dynamic>.from(e))
           .toList();
 
-      if (!mounted) return;
+      if (!_isArtistDataCurrent(generation, identity)) return;
       setState(() {
-        _artistArtworks = sections.authored;
-        _artistAuthoredTotal = sections.authoredTotal;
-        _documentedArtworks = sections.documented;
+        _artistArtworks = sections?.authored ?? [];
+        _artistAuthoredTotal = sections?.authoredTotal;
+        _documentedArtworks = sections?.documented ?? [];
         _artistCollections = collections;
         _artistEvents = filteredEvents;
         _artistDataLoaded = true;
       });
     } catch (e) {
       debugPrint('Error loading artist data: $e');
-      if (!mounted) return;
+      if (!_isArtistDataCurrent(generation, identity)) return;
       setState(() {
         _artistDataLoaded = true;
+        _artistAuthorshipUnavailable = true;
       });
     } finally {
-      if (mounted) {
+      if (_isArtistDataCurrent(generation, identity)) {
         setState(() {
           _artistDataLoading = false;
         });
       }
     }
   }
+
+  bool _isArtistDataCurrent(int generation, String identity) =>
+      mounted &&
+      generation == _artistDataGeneration &&
+      identity == AccountIdentity.accountKey;
 
   Widget _buildArtistEventsShowcase() {
     return Padding(
@@ -1132,16 +1190,28 @@ class _ProfileScreenState extends State<ProfileScreen>
             ),
           ),
           const SizedBox(height: 20),
-          _buildShowcaseSection(
-            title: AppLocalizations.of(context)!.userProfileArtworksTitle,
-            items: _artistArtworks,
-            emptyLabel: AppLocalizations.of(
-              context,
-            )!
-                .profileArtistArtworksEmptyLabel,
-            emptyIcon: Icons.image_outlined,
-            builder: _buildArtworkCard,
-          ),
+          if (_artistAuthorshipUnavailable)
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(AppLocalizations.of(context)!.commonNotAvailable),
+                TextButton(
+                  onPressed: _artistDataLoading
+                      ? null
+                      : () => _maybeLoadArtistData(force: true),
+                  child: Text(AppLocalizations.of(context)!.commonRetry),
+                ),
+              ],
+            )
+          else
+            _buildShowcaseSection(
+              title: AppLocalizations.of(context)!.userProfileArtworksTitle,
+              items: _artistArtworks,
+              emptyLabel:
+                  AppLocalizations.of(context)!.profileArtistArtworksEmptyLabel,
+              emptyIcon: Icons.image_outlined,
+              builder: _buildArtworkCard,
+            ),
           if (_documentedArtworks.isNotEmpty) ...[
             const SizedBox(height: 24),
             _buildShowcaseSection(
