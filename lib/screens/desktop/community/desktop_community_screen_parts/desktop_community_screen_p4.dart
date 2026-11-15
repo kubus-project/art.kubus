@@ -1056,10 +1056,10 @@ extension _DesktopCommunityScreenStatePart4 on _DesktopCommunityScreenState {
     try {
       final walletProvider =
           Provider.of<WalletProvider>(context, listen: false);
-      final currentWallet = walletProvider.currentWalletAddress;
-      if (currentWallet == null || currentWallet.trim().isEmpty) return false;
-      return WalletUtils.equals(
-          post.authorWallet ?? post.authorId, currentWallet);
+      return post.isAuthoredBySession(
+        accountId: AccountIdentity.accountKey,
+        wallet: walletProvider.currentWalletAddress,
+      );
     } catch (_) {
       return false;
     }

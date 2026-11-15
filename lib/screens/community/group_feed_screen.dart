@@ -34,6 +34,7 @@ import '../../utils/community_screen_utils.dart';
 import '../../utils/community_subject_navigation.dart';
 import '../../utils/media_url_resolver.dart';
 import '../../utils/wallet_utils.dart';
+import '../../services/account_identity.dart';
 import '../../utils/search_suggestions.dart';
 import '../../utils/profile_identity_navigation.dart';
 import '../../widgets/app_loading.dart';
@@ -779,7 +780,11 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
         final walletProvider =
             Provider.of<WalletProvider>(context, listen: false);
         final currentWallet = walletProvider.currentWalletAddress;
-        if (post.postType == 'repost' && post.authorWallet == currentWallet) {
+        if (post.postType == 'repost' &&
+            post.isAuthoredBySession(
+              accountId: AccountIdentity.accountKey,
+              wallet: currentWallet,
+            )) {
           _showRepostOptions(post);
         } else {
           _showRepostModal(post);
@@ -829,9 +834,10 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
   Future<void> _showPostOptionsForPost(CommunityPost post) async {
     if (!mounted) return;
     final currentWallet = _currentWalletAddress();
-    final authorWallet = post.authorWallet ?? post.authorId;
-    final isOwner = currentWallet != null &&
-        WalletUtils.equals(authorWallet, currentWallet);
+    final isOwner = post.isAuthoredBySession(
+      accountId: AccountIdentity.accountKey,
+      wallet: currentWallet,
+    );
 
     final action = await showCommunityPostOptionsSheet(
       context: context,

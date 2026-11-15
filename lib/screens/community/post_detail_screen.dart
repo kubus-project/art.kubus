@@ -13,6 +13,7 @@ import 'package:art_kubus/l10n/app_localizations.dart';
 import '../../utils/kubus_color_roles.dart';
 import '../../utils/app_color_utils.dart';
 import '../../utils/wallet_utils.dart';
+import '../../services/account_identity.dart';
 import '../../utils/search_suggestions.dart';
 import '../../community/community_interactions.dart';
 import '../../community/community_post_media.dart';
@@ -1045,9 +1046,11 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
   }
 
   bool _isCurrentUserPost(CommunityPost post) {
-    final current = _currentWalletAddress();
-    if (current == null || current.trim().isEmpty) return false;
-    return WalletUtils.equals(post.authorWallet ?? post.authorId, current);
+    // The account id decides; the wallet is the legacy fallback only.
+    return post.isAuthoredBySession(
+      accountId: AccountIdentity.accountKey,
+      wallet: _currentWalletAddress(),
+    );
   }
 
   Future<void> _showPostOptionsMenu() async {

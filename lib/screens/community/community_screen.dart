@@ -12,6 +12,7 @@ import '../../widgets/community/community_post_media_carousel.dart';
 import '../../widgets/community/community_post_token_chip.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
 import '../../utils/wallet_utils.dart';
+import '../../services/account_identity.dart';
 import '../../utils/community_search_results.dart';
 import '../../utils/search_suggestions.dart';
 import '../../utils/user_profile_navigation.dart';

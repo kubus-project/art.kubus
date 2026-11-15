@@ -401,7 +401,11 @@ extension _CommunityScreenStatePart2 on _CommunityScreenState {
         final walletProvider =
             Provider.of<WalletProvider>(context, listen: false);
         final currentWallet = walletProvider.currentWalletAddress;
-        if (post.postType == 'repost' && post.authorWallet == currentWallet) {
+        if (post.postType == 'repost' &&
+            post.isAuthoredBySession(
+              accountId: AccountIdentity.accountKey,
+              wallet: currentWallet,
+            )) {
           _showRepostOptions(post);
         } else {
           _showRepostModal(post);
