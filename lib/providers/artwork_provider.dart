@@ -479,6 +479,29 @@ class ArtworkProvider extends ChangeNotifier {
     return matches;
   }
 
+  /// Public authored works for a profile surface.
+  ///
+  /// Walletless creator libraries may combine private account-owned works
+  /// with public authorship. A profile sheet is a public authorship surface,
+  /// so it must use only the canonical profile scope. Keep legacy wallet
+  /// profile behavior unchanged.
+  List<Artwork> publicArtworksForAuthor(ArtworkAuthorKey key) {
+    final wallet = key.wallet;
+    if (wallet != null) {
+      return artworksForWallet(wallet);
+    }
+    final profileId = key.profileId;
+    if (profileId == null) return const <Artwork>[];
+    final ids = _artworkIdsByProfile[profileId];
+    if (ids == null || ids.isEmpty) return const <Artwork>[];
+
+    final matches = _artworks
+        .where((artwork) => ids.contains(artwork.id))
+        .toList(growable: false);
+    matches.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+    return matches;
+  }
+
   String? authorListErrorFor(ArtworkAuthorKey key) =>
       _authorListErrors[key.cacheKey];
 

@@ -1147,7 +1147,7 @@ class _ArtworksBottomSheet extends StatelessWidget {
 
     return Consumer<ArtworkProvider>(
       builder: (context, artworkProvider, child) {
-        final userArtworks = artworkProvider.artworksForAuthor(authorKey);
+        final userArtworks = artworkProvider.publicArtworksForAuthor(authorKey);
         final authorError = artworkProvider.authorListErrorFor(authorKey);
         final isLoading = artworkProvider.isLoading(operationKey);
 

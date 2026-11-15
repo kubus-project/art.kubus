@@ -213,6 +213,64 @@ void main() {
       );
     });
 
+    test('profile artwork scope excludes private mine after library warmup',
+        () async {
+      final api = _RecordingArtworkApi()
+        ..respond = (call) {
+          if (call['mine'] == true) {
+            return [
+              _artwork(id: 'own-private', isPublic: false),
+              _artwork(id: 'own-public'),
+            ];
+          }
+          if (call['authorProfileId'] ==
+              '10000000-0000-4000-8000-000000000010') {
+            return [
+              _artwork(id: 'own-public'),
+              _artwork(id: 'imported-public'),
+              _artwork(id: 'secondary-public'),
+            ];
+          }
+          return const <Artwork>[];
+        };
+      final provider = ArtworkProvider(backendApi: api);
+      addTearDown(provider.dispose);
+      final key = ArtworkAuthorKey.resolve(
+        accountId: '40000000-0000-4000-8000-000000000010',
+        profileId: '10000000-0000-4000-8000-000000000010',
+      )!;
+
+      await provider.loadArtworksForAuthor(key);
+
+      expect(
+        provider.artworksForAuthor(key).map((artwork) => artwork.id).toSet(),
+        {
+          'own-private',
+          'own-public',
+          'imported-public',
+          'secondary-public',
+        },
+      );
+      expect(
+        provider
+            .publicArtworksForAuthor(key)
+            .map((artwork) => artwork.id)
+            .toSet(),
+        {'own-public', 'imported-public', 'secondary-public'},
+      );
+
+      // A later library refresh can update account-owned data without making
+      // it part of the profile's public authored list.
+      await provider.loadArtworksForAuthor(key, force: true);
+      expect(
+        provider
+            .publicArtworksForAuthor(key)
+            .map((artwork) => artwork.id)
+            .toSet(),
+        {'own-public', 'imported-public', 'secondary-public'},
+      );
+    });
+
     test('keeps own mine results when public author scope is unsupported',
         () async {
       final api = _RecordingArtworkApi()
