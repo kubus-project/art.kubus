@@ -25,7 +25,14 @@ class WalletUtils {
     final normalized = normalize(wallet);
     if (normalized.isEmpty) return false;
     // Reject known placeholder strings
-    const placeholders = {'unknown', 'anonymous', 'n/a', 'none', 'null', 'undefined'};
+    const placeholders = {
+      'unknown',
+      'anonymous',
+      'n/a',
+      'none',
+      'null',
+      'undefined',
+    };
     if (placeholders.contains(normalized.toLowerCase())) return false;
     // Reject strings with spaces (display names typically have spaces)
     if (normalized.contains(' ')) return false;
@@ -39,7 +46,8 @@ class WalletUtils {
       if (RegExp(r'^[1-9A-HJ-NP-Za-km-z]+$').hasMatch(normalized)) return true;
     }
     // Generic: long alphanumeric string (>= 32 chars) without spaces
-    if (normalized.length >= 32 && RegExp(r'^[a-zA-Z0-9_-]+$').hasMatch(normalized)) {
+    if (normalized.length >= 32 &&
+        RegExp(r'^[a-zA-Z0-9_-]+$').hasMatch(normalized)) {
       return true;
     }
     return false;
@@ -51,11 +59,32 @@ class WalletUtils {
   /// Returns true when both wallets resolve to the same canonical identifier.
   static bool equals(String? a, String? b) => canonical(a) == canonical(b);
 
+  static final RegExp _accountUuidPattern = RegExp(
+    r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$',
+    caseSensitive: false,
+  );
+
+  /// Whether [value] is a canonical account UUID. An account id is never a
+  /// wallet, although [looksLikeWallet] accepts a long hyphenated hex string.
+  static bool isAccountUuid(String? value) =>
+      _accountUuidPattern.hasMatch((value ?? '').trim());
+
   /// Resolves the best wallet identifier from known keys within a payload.
   /// Falls back to [fallback] when no keys contain a value.
-  static String resolveFromMap(Map<String, dynamic>? payload, {String? fallback}) {
+  static String resolveFromMap(
+    Map<String, dynamic>? payload, {
+    String? fallback,
+  }) {
     if (payload != null) {
-      for (final key in const ['wallet_address', 'walletAddress', 'wallet', 'id', 'address', 'publicKey', 'public_key']) {
+      for (final key in const [
+        'wallet_address',
+        'walletAddress',
+        'wallet',
+        'id',
+        'address',
+        'publicKey',
+        'public_key',
+      ]) {
         final value = payload[key];
         if (value == null) continue;
         final normalized = normalize(value.toString());
@@ -66,7 +95,12 @@ class WalletUtils {
   }
 
   /// Picks the first non-empty identifier from the provided candidates and normalizes it.
-  static String coalesce({String? walletAddress, String? wallet, String? userId, String? fallback}) {
+  static String coalesce({
+    String? walletAddress,
+    String? wallet,
+    String? userId,
+    String? fallback,
+  }) {
     for (final candidate in [walletAddress, wallet, userId, fallback]) {
       final normalized = normalize(candidate);
       if (normalized.isNotEmpty) return normalized;
@@ -86,7 +120,9 @@ class WalletUtils {
     // Quick check: must not contain spaces, must be alphanumeric
     if (trimmed.contains(' ')) return false;
     // Check for invalid base58 characters
-    final invalidChars = RegExp(r'[^123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]');
+    final invalidChars = RegExp(
+      r'[^123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]',
+    );
     return !invalidChars.hasMatch(trimmed);
   }
 }

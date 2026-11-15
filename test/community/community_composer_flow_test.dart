@@ -254,12 +254,17 @@ void main() {
         api = _Api();
         picker = _FakePicker();
         ImagePickerPlatform.instance = picker;
+        // The wallet session this file starts from. Each test begins with
+        // the same preferred wallet, so no earlier test leaks into it.
         BackendApiService()
           ..setHttpClient(MockClient.streaming(api.handle))
+          ..setPreferredWalletAddress(_wallet, persist: false)
           ..setAuthTokenForTesting(_jwt());
       });
 
-      tearDown(() => BackendApiService().setAuthTokenForTesting(null));
+      tearDown(() => BackendApiService()
+        ..setAuthTokenForTesting(null)
+        ..setPreferredWalletAddress(null, persist: false));
 
       Future<void> flush(WidgetTester tester) async {
         // The real providers open a socket and reconnect on a timer. Disconnect
@@ -297,6 +302,8 @@ void main() {
         // Email or Google account: nothing stored under a wallet key, only the
         // account id in the session. The pre-gate must not stop it.
         SharedPreferences.setMockInitialValues(<String, Object>{});
+        // setUp left the device on a wallet session, so that wallet is still
+        // the preferred one when this account signs in (the account switch).
         BackendApiService().setAuthTokenForTesting(_walletlessJwt());
         await openComposer(tester, 1);
 

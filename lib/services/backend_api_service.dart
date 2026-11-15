@@ -656,6 +656,9 @@ class BackendApiService
       final raw = (payload[key] ?? '').toString();
       final canonical = WalletUtils.canonical(raw);
       if (canonical.isEmpty) continue;
+      // An account UUID is an identity, never a wallet. looksLikeWallet accepts
+      // a long hyphenated string, so it is excluded explicitly.
+      if (WalletUtils.isAccountUuid(canonical)) continue;
       if (WalletUtils.looksLikeWallet(canonical)) {
         return canonical;
       }
