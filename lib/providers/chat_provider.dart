@@ -535,6 +535,10 @@ class ChatProvider extends ChangeNotifier {
   final Duration _unauthCooldown = const Duration(seconds: 30);
   String _lastAuthSignature = '';
   String _lastAuthAccountId = '';
+  // The account whose personal socket rooms this session holds. Read by the
+  // session reset, which runs after _lastAuthAccountId has already moved on to
+  // the new account on a switch.
+  String _socketAccountId = '';
   DateTime? _lastIncomingMessageAt;
   String? _lastIncomingConversationId;
   final Map<String, int> _messageCacheTouchMs = {};

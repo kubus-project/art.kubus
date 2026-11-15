@@ -918,14 +918,34 @@ class SocketService {
     subscribeUser(walletAddress);
   }
 
-  void unsubscribeUser(String walletAddress) {
-    if (_socket == null) return;
-    final roomWallet = walletAddress.toString();
-    _socket!.emit('unsubscribe:user', roomWallet);
-    if (_currentSubscribedWallet == roomWallet) {
+  /// Leaves the rooms of the account being torn down: its personal rooms, by
+  /// wallet and by account UUID, and every joined conversation room. Either
+  /// identifier may be empty, since a walletless account has no wallet.
+  void leaveAccountRooms({String? walletAddress, String? accountId}) {
+    unsubscribeUser(walletAddress ?? '', accountId: accountId);
+    leaveAllConversations();
+  }
+
+  /// Unsubscribes the personal rooms named by [walletAddress] and [accountId].
+  /// The wallet is the identifier [subscribeUser] sends, so it is sent as-is.
+  /// The UUID is the room the server joins for the authenticated account.
+  void unsubscribeUser(String walletAddress, {String? accountId}) {
+    final roomWallet = walletAddress.trim();
+    final roomAccount = (accountId ?? '').trim();
+    // Cleared even with no socket attached: a subscription queued before the
+    // socket existed would otherwise resubscribe this wallet on connect.
+    if (roomWallet.isNotEmpty && _currentSubscribedWallet == roomWallet) {
       _currentSubscribedWallet = null;
     }
-    _resolvePendingSubscriptionAck('user:$roomWallet', false);
+    final socket = _socket;
+    if (socket == null) return;
+    if (roomWallet.isNotEmpty) {
+      socket.emit('unsubscribe:user', roomWallet);
+      _resolvePendingSubscriptionAck('user:$roomWallet', false);
+    }
+    if (roomAccount.isNotEmpty && roomAccount != roomWallet) {
+      socket.emit('unsubscribe:user', roomAccount);
+    }
   }
 
   /// Subscribe to a conversation room so the client receives message/read/member events
@@ -1009,6 +1029,22 @@ class SocketService {
 
   @visibleForTesting
   void debugResetAccountInactive() => _inactiveAccountToken = null;
+
+  /// Test seam: the socket that emits are recorded on. Null detaches it.
+  @visibleForTesting
+  void debugAttachSocketForTesting(io.Socket? socket) => _socket = socket;
+
+  /// Test seam: replaces the subscribed wallet and joined conversation rooms.
+  @visibleForTesting
+  void debugSeedRoomsForTesting({
+    String? wallet,
+    Iterable<String> conversations = const <String>[],
+  }) {
+    _currentSubscribedWallet = wallet;
+    _subscribedConversations
+      ..clear()
+      ..addAll(conversations);
+  }
 
   void disconnect() {
     _resolveAllPendingSubscriptionAcks(false);

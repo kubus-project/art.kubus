@@ -353,6 +353,12 @@ void _chatProviderBindAuthContext(
       provider._resetSessionState(reason: 'identityWithoutWallet');
     }
 
+    // The session's personal socket rooms belong to this account from here on.
+    // The next session reset leaves them by this id.
+    if (resolvedAccountId.isNotEmpty) {
+      provider._socketAccountId = resolvedAccountId;
+    }
+
     if (resolvedWallet.isNotEmpty &&
         !WalletUtils.equals(resolvedWallet, provider._currentWallet)) {
       unawaited(provider.setCurrentWallet(resolvedWallet));
