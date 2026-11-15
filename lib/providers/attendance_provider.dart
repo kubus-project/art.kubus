@@ -234,6 +234,11 @@ class AttendanceProvider extends ChangeNotifier {
   // accounts apart. A same-account change (wallet link, token refresh) keeps it.
   String _identityKey = AccountIdentity.accountKey;
 
+  // Bumped whenever user-scoped state is cleared. A challenge fetch started
+  // before a bump belongs to the account or wallet that was cleared, so when it
+  // returns it must not write into the state of the current one.
+  int _identityEpoch = 0;
+
   AttendanceProvider({BackendApiService? api})
       : _api = api ?? BackendApiService() {
     AccountIdentity.addListener(_handleAccountIdentityChanged);
@@ -271,6 +276,7 @@ class AttendanceProvider extends ChangeNotifier {
   }
 
   void _clearUserScopedState() {
+    _identityEpoch += 1;
     // Keep proximity snapshots (they are map-driven), but clear any
     // user-specific challenge/confirm state to avoid cross-session leakage.
     for (final entry in _statesByMarkerId.entries) {
@@ -348,6 +354,7 @@ class AttendanceProvider extends ChangeNotifier {
 
     if (state.isFetchingChallenge) return state.challenge;
 
+    final epoch = _identityEpoch;
     state.isFetchingChallenge = true;
     state.lastError = null;
     if (hasListeners) notifyListeners();
@@ -357,18 +364,26 @@ class AttendanceProvider extends ChangeNotifier {
         markerId: id,
         walletAddress: _walletAddress,
       );
+      // Issued under a previous account: neither kept nor handed to the
+      // current one, which then asks for its own challenge.
+      if (epoch != _identityEpoch) return null;
       final dto = AttendanceChallengeDto.fromApi(raw);
       state.challenge = dto;
       return dto;
     } catch (e) {
+      if (epoch != _identityEpoch) return null;
       state.lastError = e.toString();
       if (kDebugMode) {
         AppConfig.debugPrint('AttendanceProvider.ensureChallenge failed: $e');
       }
       rethrow;
     } finally {
-      state.isFetchingChallenge = false;
-      if (hasListeners) notifyListeners();
+      // A stale fetch must not clear the flags of a fetch the current account
+      // started for the same marker after the switch.
+      if (epoch == _identityEpoch) {
+        state.isFetchingChallenge = false;
+        if (hasListeners) notifyListeners();
+      }
     }
   }
 

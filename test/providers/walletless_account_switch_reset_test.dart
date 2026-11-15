@@ -7,7 +7,10 @@ import 'package:art_kubus/providers/notification_provider.dart';
 import 'package:art_kubus/providers/profile_provider.dart';
 import 'package:art_kubus/models/saved_item.dart';
 import 'package:art_kubus/providers/saved_items_provider.dart';
+import 'package:art_kubus/providers/security_gate_provider.dart';
+import 'package:art_kubus/providers/wallet_provider.dart';
 import 'package:art_kubus/services/account_identity.dart';
+import 'package:art_kubus/services/auth_session_coordinator.dart';
 import 'package:art_kubus/services/backend_api_service.dart';
 import 'package:art_kubus/services/saved_items_repository.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -97,6 +100,49 @@ Map<String, dynamic> _profileBody(String accountId) => {
         'username': 'profile-of-$accountId',
         'wallet_address': '',
       },
+    };
+
+/// A wallet with a PIN stored, so a lock can be applied.
+class _PinWallet extends WalletProvider {
+  _PinWallet() : super(deferInit: true);
+
+  @override
+  Future<bool> hasPin() async => true;
+
+  @override
+  Future<bool> hasPinOrThrow() async => true;
+
+  @override
+  Future<bool> canUseBiometrics() async => false;
+}
+
+/// Holds the attendance challenge until the test answers it, so a fetch can be
+/// in flight across an account switch.
+class _GatedChallengeApi implements BackendApiService {
+  final Completer<void> started = Completer<void>();
+  final Completer<Map<String, dynamic>> gate =
+      Completer<Map<String, dynamic>>();
+
+  @override
+  Future<Map<String, dynamic>> getAttendanceChallenge({
+    required String markerId,
+    String? walletAddress,
+  }) {
+    if (!started.isCompleted) started.complete();
+    return gate.future;
+  }
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
+Map<String, dynamic> _challengeFor(String markerId) => <String, dynamic>{
+      'markerId': markerId,
+      'challengeToken': 'challenge-of-$markerId',
+      'expiresAt': DateTime.now()
+          .toUtc()
+          .add(const Duration(minutes: 1))
+          .toIso8601String(),
     };
 
 void main() {
@@ -216,6 +262,52 @@ void main() {
       expect(saved.isArtworkSaved('artwork-1'), isFalse);
       expect(repository.clearCalls, 1);
     });
+
+    test('a pending re-auth prompt of A is refused and does not carry into B',
+        () async {
+      await api.setAuthToken(_token(_accountA));
+      // A stored local account, so a lock is applied for this session.
+      SharedPreferences.setMockInitialValues(<String, Object>{
+        'jwt_token': 'stored-token',
+      });
+      final gate = SecurityGateProvider(promptCooldown: Duration.zero)
+        ..bindDependencies(
+          profileProvider: ProfileProvider(),
+          walletProvider: _PinWallet(),
+          notificationProvider: NotificationProvider(),
+        );
+      addTearDown(gate.dispose);
+      await gate.refreshLocalAccountState();
+      await gate.lock(SecurityLockReason.tokenExpired);
+      final prompt = gate.waitForResolution();
+      expect(gate.isResolving, isTrue);
+
+      await api.setAuthToken(_token(_accountB));
+
+      expect((await prompt)?.outcome, AuthReauthOutcome.cancelled);
+      expect(gate.isLocked, isTrue,
+          reason: 'an identity change does not release a device lock');
+      expect(gate.isResolving, isTrue,
+          reason: 'B is prompted with a prompt of its own');
+    });
+
+    test('a challenge fetch of A that lands after the switch is not kept for B',
+        () async {
+      await api.setAuthToken(_token(_accountA));
+      final challengeApi = _GatedChallengeApi();
+      final attendance = AttendanceProvider(api: challengeApi)
+        ..bindAuthContext(isSignedIn: true, walletAddress: null);
+      addTearDown(attendance.dispose);
+
+      final fetch = attendance.ensureChallenge('marker-1');
+      await challengeApi.started.future;
+      await api.setAuthToken(_token(_accountB));
+      challengeApi.gate.complete(_challengeFor('marker-1'));
+
+      expect(await fetch, isNull);
+      expect(attendance.stateFor('marker-1').challenge, isNull);
+      expect(attendance.stateFor('marker-1').isFetchingChallenge, isFalse);
+    });
   });
 
   group('same-account token refresh', () {
@@ -296,6 +388,50 @@ void main() {
 
       expect(saved.isArtworkSaved('artwork-1'), isTrue);
       expect(repository.clearCalls, 0);
+    });
+
+    test('a same-account identity change keeps the pending re-auth prompt',
+        () async {
+      await api.setAuthToken(_token(_accountA));
+      // A stored local account, so a lock is applied for this session.
+      SharedPreferences.setMockInitialValues(<String, Object>{
+        'jwt_token': 'stored-token',
+      });
+      final gate = SecurityGateProvider(promptCooldown: Duration.zero)
+        ..bindDependencies(
+          profileProvider: ProfileProvider(),
+          walletProvider: _PinWallet(),
+          notificationProvider: NotificationProvider(),
+        );
+      addTearDown(gate.dispose);
+      await gate.refreshLocalAccountState();
+      await gate.lock(SecurityLockReason.tokenExpired);
+      final prompt = gate.waitForResolution();
+
+      // A wallet link announces the change without changing the account.
+      AccountIdentity.notifyListenersChanged();
+      gate.completeForTesting(localAuthentication: true);
+
+      expect((await prompt)?.isSuccess, isTrue,
+          reason: 'the prompt the user answers is still the same one');
+    });
+
+    test('a same-account identity change keeps a challenge fetch in flight',
+        () async {
+      await api.setAuthToken(_token(_accountA));
+      final challengeApi = _GatedChallengeApi();
+      final attendance = AttendanceProvider(api: challengeApi)
+        ..bindAuthContext(isSignedIn: true, walletAddress: null);
+      addTearDown(attendance.dispose);
+
+      final fetch = attendance.ensureChallenge('marker-1');
+      await challengeApi.started.future;
+      AccountIdentity.notifyListenersChanged();
+      challengeApi.gate.complete(_challengeFor('marker-1'));
+
+      final dto = await fetch;
+      expect(dto?.challengeToken, 'challenge-of-marker-1');
+      expect(attendance.stateFor('marker-1').challenge, same(dto));
     });
   });
 }

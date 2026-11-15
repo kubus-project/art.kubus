@@ -219,6 +219,35 @@ void main() {
     expect(provider.cachedPostState(post.id), isNotNull);
   });
 
+  test('a same-account identity notification keeps interaction state', () {
+    AccountIdentity.setAccountKey('account-A');
+    final provider = CommunityInteractionsProvider();
+    addTearDown(provider.dispose);
+    final post = _post(id: 'post-A');
+    provider.applyServerPostState(post);
+
+    // A wallet link or re-issued token announces the change, same account.
+    AccountIdentity.notifyListenersChanged();
+
+    expect(provider.cachedPostState(post.id), isNotNull);
+  });
+
+  test('a same-account identity notification keeps a read of A in flight',
+      () async {
+    AccountIdentity.setAccountKey('account-A');
+    final api = _GatedInteractionApi();
+    final provider = CommunityInteractionsProvider(api: api);
+    addTearDown(provider.dispose);
+    final post = _post(id: 'post-A', isLiked: false);
+
+    final pending = provider.refreshPostStates([post], force: true);
+    AccountIdentity.notifyListenersChanged();
+    api.release(isLiked: true, likeCount: 8, postId: post.id);
+    await pending;
+
+    expect(provider.cachedPostState(post.id)?.isLiked, isTrue);
+  });
+
   test('late post-like success from A cannot repopulate B interaction state',
       () async {
     AccountIdentity.setAccountKey('account-A');

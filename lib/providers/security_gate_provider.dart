@@ -7,6 +7,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../core/app_navigator.dart';
 import '../l10n/app_localizations.dart';
+import '../services/account_identity.dart';
 import '../services/auth_gating_service.dart';
 import '../services/auth_session_coordinator.dart';
 import '../services/backend_api_service.dart';
@@ -36,7 +37,9 @@ class SecurityGateProvider extends ChangeNotifier
     Duration promptCooldown = const Duration(seconds: 8),
     Duration lockDecisionTimeout = defaultLockDecisionTimeout,
   })  : _promptCooldown = promptCooldown,
-        _lockDecisionTimeout = lockDecisionTimeout;
+        _lockDecisionTimeout = lockDecisionTimeout {
+    AccountIdentity.addListener(_handleAccountIdentityChanged);
+  }
 
   final Duration _promptCooldown;
   final Duration _lockDecisionTimeout;
@@ -56,6 +59,11 @@ class SecurityGateProvider extends ChangeNotifier
   Future<AuthReauthResult>? _inactiveSessionEnd;
   DateTime? _cooldownUntil;
   bool _busy = false;
+
+  // The account the pending prompt and its cooldown belong to. A walletless
+  // switch leaves the wallet empty on both sides, so only the account identity
+  // can tell two accounts apart.
+  String _heldAccountKey = AccountIdentity.accountKey;
 
   Timer? _inactivityTimer;
   DateTime _lastInteractionAt = DateTime.now();
@@ -1023,6 +1031,33 @@ class SecurityGateProvider extends ChangeNotifier
   void completeForTesting({required bool localAuthentication}) {
     _lastResolutionWasLocal = localAuthentication;
     _completeAndReset(const AuthReauthResult(AuthReauthOutcome.success));
+  }
+
+  /// The pending re-auth prompt, its cooldown and its failure context belong to
+  /// the account that raised them. On a switch to another account the waiter
+  /// on the old prompt is refused, so nothing it resolves reaches the new
+  /// account, and the cooldown does not carry over. A device lock is not
+  /// released by an identity change (only a local unlock or logout releases
+  /// it, as in [reset]), so a fresh prompt is armed while the device is locked.
+  /// A notification for the same account changes nothing.
+  void _handleAccountIdentityChanged() {
+    final key = AccountIdentity.accountKey;
+    if (key == _heldAccountKey) return;
+    _heldAccountKey = key;
+    _cooldownUntil = null;
+    _authFailureContext = null;
+    final stale = _inFlight;
+    _inFlight = _locked ? Completer<AuthReauthResult>() : null;
+    if (stale != null && !stale.isCompleted) {
+      stale.complete(const AuthReauthResult(AuthReauthOutcome.cancelled));
+    }
+    notifyListeners();
+  }
+
+  @override
+  void dispose() {
+    AccountIdentity.removeListener(_handleAccountIdentityChanged);
+    super.dispose();
   }
 
   void _completeAndReset(AuthReauthResult result) {
