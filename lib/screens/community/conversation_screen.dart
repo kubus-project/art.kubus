@@ -95,9 +95,12 @@ ResolvedMessagePresentation resolveMessagePresentationForTesting({
   final normalizedCurrentWallet = WalletUtils.normalize(currentUserWallet);
   final normalizedCurrentId = WalletUtils.normalize(currentUserId);
   final normalizedSender = WalletUtils.normalize(message.senderWallet);
-  final isMine = normalizedSender.isNotEmpty &&
-      (normalizedSender == normalizedCurrentWallet ||
-          normalizedSender == normalizedCurrentId);
+  // A walletless message has no wallet to compare, so it is own only when its
+  // sender account is the signed-in account.
+  final isMine = normalizedSender.isNotEmpty
+      ? (normalizedSender == normalizedCurrentWallet ||
+          normalizedSender == normalizedCurrentId)
+      : message.isSentBy(accountId: currentUserId, wallet: currentUserWallet);
 
   return ResolvedMessagePresentation(
     rowKey: conversationMessageRowKey(message),
@@ -978,7 +981,8 @@ class _ConversationScreenState extends State<ConversationScreen> {
     final l10n = AppLocalizations.of(context)!;
     final profile = Provider.of<ProfileProvider>(context, listen: false);
     final isMe =
-        _replyingTo!.senderWallet == (profile.currentUser?.walletAddress ?? '');
+        _resolveMessagePresentation(_replyingTo!, _chatProvider, profile)
+            .isMine;
     final senderName = isMe
         ? l10n.commonYou
         : _resolveMessagePresentation(_replyingTo!, _chatProvider, profile)

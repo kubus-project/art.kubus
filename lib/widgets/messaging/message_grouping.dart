@@ -13,8 +13,14 @@ const double kMessageBubbleMaxWidth = 560;
 /// Column width for the thread and conversation list on wide layouts.
 const double kMessagingColumnMaxWidth = 760;
 
-String _senderIdentityKey(ChatMessage message) =>
-    message.senderWallet.trim().toLowerCase();
+/// A walletless sender is keyed by its account id, so walletless senders group
+/// with themselves and never with each other or with a wallet.
+String _senderIdentityKey(ChatMessage message) {
+  final wallet = message.senderWallet.trim().toLowerCase();
+  if (wallet.isNotEmpty) return wallet;
+  final userId = (message.senderUserId ?? '').trim().toLowerCase();
+  return userId.isEmpty ? '' : 'user:$userId';
+}
 
 /// True when [a] and [b] belong to the same visual group: the same sender
 /// with an identity, and created within [kMessageGroupWindow] of each other.

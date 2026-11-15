@@ -1016,6 +1016,13 @@ class ChatProvider extends ChangeNotifier {
   }
 
   @visibleForTesting
+  bool matchesOptimisticMessageForTesting(
+    ChatMessage current,
+    ChatMessage incoming,
+  ) =>
+      _matchesOptimisticMessage(current, incoming);
+
+  @visibleForTesting
   void handleMessageReactionForTesting(Map<String, dynamic> data) {
     _onMessageReaction(data);
   }
@@ -1573,6 +1580,7 @@ class ChatProvider extends ChangeNotifier {
           shouldUpdateTimestamp ? message.message : existing.lastMessage,
       displayAvatar: existing.displayAvatar,
       memberWallets: existing.memberWallets,
+      memberUserIds: existing.memberUserIds,
       memberProfiles: existing.memberProfiles,
       memberCount: existing.memberCount,
       counterpartProfile: existing.counterpartProfile,
@@ -1765,9 +1773,15 @@ class ChatProvider extends ChangeNotifier {
     final isOptimistic = current.id.startsWith('temp-') ||
         current.data?['sendStatus']?.toString() == 'sending';
     if (!isOptimistic) return false;
-    if (!WalletUtils.equals(current.senderWallet, incoming.senderWallet)) {
-      return false;
-    }
+    // A walletless optimistic message is this account's own send. Only the
+    // account's echo may replace it; another walletless sender never can.
+    final sameSender = WalletUtils.canonical(current.senderWallet).isEmpty
+        ? incoming.isSentBy(
+            accountId: AccountIdentity.accountKey,
+            wallet: _currentWallet,
+          )
+        : WalletUtils.equals(current.senderWallet, incoming.senderWallet);
+    if (!sameSender) return false;
     if (current.message.trim() != incoming.message.trim()) return false;
 
     final deltaSeconds =
@@ -2892,6 +2906,7 @@ class ChatProvider extends ChangeNotifier {
             lastMessage: old.lastMessage,
             displayAvatar: old.displayAvatar,
             memberWallets: old.memberWallets,
+            memberUserIds: old.memberUserIds,
             memberProfiles: old.memberProfiles,
             memberCount: old.memberCount,
             counterpartProfile: old.counterpartProfile,
@@ -3207,6 +3222,7 @@ class ChatProvider extends ChangeNotifier {
           lastMessage: old.lastMessage,
           displayAvatar: old.displayAvatar,
           memberWallets: old.memberWallets,
+          memberUserIds: old.memberUserIds,
           memberProfiles: old.memberProfiles,
           memberCount: old.memberCount,
           counterpartProfile: old.counterpartProfile,

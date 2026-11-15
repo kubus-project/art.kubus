@@ -180,4 +180,32 @@ void main() {
 
     expect(empty.isRenderable, isFalse);
   });
+
+  test(
+      'Walletless message is own only when its sender is the signed-in account',
+      () {
+    final provider = ChatProvider();
+    addTearDown(provider.dispose);
+    const me = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+    const other = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
+    ChatMessage walletless(String senderUserId) => ChatMessage(
+          id: 'm-$senderUserId',
+          conversationId: 'c1',
+          senderWallet: '',
+          senderUserId: senderUserId,
+          message: 'hello',
+          createdAt: DateTime(2026, 1, 1, 12),
+        );
+
+    bool isMineFor(ChatMessage candidate) =>
+        resolveMessagePresentationForTesting(
+          message: candidate,
+          conversation: Conversation(id: 'c1'),
+          chatProvider: provider,
+          currentUserId: me,
+        ).isMine;
+
+    expect(isMineFor(walletless(me)), isTrue);
+    expect(isMineFor(walletless(other)), isFalse);
+  });
 }

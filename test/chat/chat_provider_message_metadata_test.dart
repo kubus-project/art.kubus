@@ -1,6 +1,9 @@
 import 'dart:convert';
 
+import 'package:art_kubus/models/conversation.dart';
+import 'package:art_kubus/models/message.dart';
 import 'package:art_kubus/providers/chat_provider.dart';
+import 'package:art_kubus/services/account_identity.dart';
 import 'package:art_kubus/services/backend_api_service.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
@@ -183,5 +186,102 @@ void main() {
 
     expect(provider.messages['conv_open'], hasLength(1));
     expect(provider.unreadCounts['conv_open'], 0);
+  });
+
+  group('walletless identity and explicit members', () {
+    const aliceId = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+    const bobId = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
+    const members = <String>[aliceId, bobId];
+
+    tearDown(AccountIdentity.resetForTesting);
+
+    test('incoming message keeps explicit memberUserIds on the conversation',
+        () {
+      final provider = ChatProvider()..setCurrentWalletForTesting('wallet_me');
+      provider.conversations
+          .add(Conversation(id: 'conv_m', memberUserIds: members));
+
+      provider.handleIncomingMessageForTesting({
+        'conversationId': 'conv_m',
+        'message': {
+          'id': 'msg_m1',
+          'conversationId': 'conv_m',
+          'senderWallet': 'wallet_other',
+          'message': 'latest',
+          'createdAt': '2025-01-02T12:00:00Z',
+        },
+      });
+
+      final conversation = provider.conversations.single;
+      expect(conversation.lastMessage, 'latest');
+      expect(conversation.memberUserIds, members);
+    });
+
+    test('renaming a conversation keeps explicit memberUserIds', () async {
+      BackendApiService().setHttpClient(
+        MockClient((request) async {
+          if (request.url.path == '/api/messages/conv_m/rename' &&
+              request.method == 'PATCH') {
+            return http.Response(
+              jsonEncode({'success': true}),
+              200,
+              headers: {'content-type': 'application/json'},
+            );
+          }
+          return http.Response('Not Found', 404);
+        }),
+      );
+      final provider = ChatProvider()..setCurrentWalletForTesting('wallet_me');
+      provider.conversations
+          .add(Conversation(id: 'conv_m', memberUserIds: members));
+
+      await provider.renameConversation('conv_m', 'Renamed');
+
+      final conversation = provider.conversations.single;
+      expect(conversation.title, 'Renamed');
+      expect(conversation.memberUserIds, members);
+    });
+
+    test(
+        'a walletless echo from another account never matches my optimistic send',
+        () {
+      AccountIdentity.setAccountKey(aliceId);
+      final createdAt = DateTime.now();
+      // The optimistic send of a walletless session carries no wallet and no
+      // sender user id, exactly as ChatProvider.sendMessage builds it.
+      final optimistic = ChatMessage(
+        id: 'temp-1',
+        conversationId: 'conv_w',
+        senderWallet: '',
+        message: 'same text',
+        data: const <String, dynamic>{'sendStatus': 'sending'},
+        createdAt: createdAt,
+        readByCurrent: true,
+      );
+      ChatMessage echo(String id, String senderUserId) => ChatMessage(
+            id: id,
+            conversationId: 'conv_w',
+            senderWallet: '',
+            senderUserId: senderUserId,
+            message: 'same text',
+            createdAt: createdAt,
+          );
+      final provider = ChatProvider();
+
+      expect(
+        provider.matchesOptimisticMessageForTesting(
+          optimistic,
+          echo('msg_b', bobId),
+        ),
+        isFalse,
+      );
+      expect(
+        provider.matchesOptimisticMessageForTesting(
+          optimistic,
+          echo('msg_a', aliceId),
+        ),
+        isTrue,
+      );
+    });
   });
 }
