@@ -113,6 +113,27 @@ ResolvedMessagePresentation resolveMessagePresentationForTesting({
   );
 }
 
+/// The presentation the screen resolves for a message against the signed-in
+/// profile. The own-message id is the session's account id, never the profile
+/// row id, which a message does not carry as its sender.
+ResolvedMessagePresentation resolveMessagePresentationForProfile({
+  required ChatMessage message,
+  required Conversation conversation,
+  required ChatProvider chatProvider,
+  required ProfileProvider profileProvider,
+}) {
+  final profile = profileProvider.currentUser;
+  return resolveMessagePresentationForTesting(
+    message: message,
+    conversation: conversation,
+    chatProvider: chatProvider,
+    currentUserWallet: profile?.walletAddress,
+    currentUserId: AccountIdentity.accountKey,
+    currentUserDisplayName: profile?.displayName,
+    currentUserAvatarUrl: profile?.avatar,
+  );
+}
+
 /// Where a [ConversationScreen] is hosted.
 ///
 /// [fullscreen] is a routed page (mobile) and keeps the leading Back control
@@ -1800,14 +1821,11 @@ class _ConversationScreenState extends State<ConversationScreen> {
     ChatProvider chatProvider,
     ProfileProvider profileProvider,
   ) {
-    return resolveMessagePresentationForTesting(
+    return resolveMessagePresentationForProfile(
       message: message,
       conversation: widget.conversation,
       chatProvider: chatProvider,
-      currentUserWallet: profileProvider.currentUser?.walletAddress,
-      currentUserId: profileProvider.currentUser?.id,
-      currentUserDisplayName: profileProvider.currentUser?.displayName,
-      currentUserAvatarUrl: profileProvider.currentUser?.avatar,
+      profileProvider: profileProvider,
     );
   }
 
