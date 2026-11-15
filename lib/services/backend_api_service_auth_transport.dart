@@ -113,28 +113,41 @@ extension BackendApiAuthTransport on BackendApiService {
       throw ArgumentError('walletAddress cannot be empty');
     }
     final sessionEpoch = expectedEpoch ?? authSessionEpoch;
+
+    // A wallet-signed session for this very wallet is never the wrong
+    // account's: when another caller committed it while this one waited, it is
+    // the result this caller wanted, and nothing more is committed.
+    AuthSessionPayload? liveSessionForWallet() {
+      final token = (_authToken ?? '').trim();
+      final currentWallet = (getCurrentAuthWalletAddress() ?? '').trim();
+      if (token.isNotEmpty &&
+          WalletUtils.equals(currentWallet, normalizedWallet) &&
+          getCurrentAuthLevel() == BackendAuthLevel.walletSigned) {
+        return AuthSessionPayload(
+          token: token,
+          walletAddress: currentWallet,
+          authProvider: inferSignInMethodFromClaims().name,
+        );
+      }
+      return null;
+    }
+
     if (sessionEpoch != authSessionEpoch) {
+      final live = liveSessionForWallet();
+      if (live != null) return live;
       throw StateError('Authentication request belongs to an ended session');
     }
 
     setPreferredWalletAddress(normalizedWallet);
     await restoreExistingSession(allowRefresh: false);
-    final token = (_authToken ?? '').trim();
-    final currentWallet = (getCurrentAuthWalletAddress() ?? '').trim();
-    final authLevel = getCurrentAuthLevel();
-    if (token.isNotEmpty &&
-        WalletUtils.equals(currentWallet, normalizedWallet) &&
-        authLevel == BackendAuthLevel.walletSigned) {
-      return AuthSessionPayload(
-        token: token,
-        walletAddress: currentWallet,
-        authProvider: inferSignInMethodFromClaims().name,
-      );
-    }
+    final existing = liveSessionForWallet();
+    if (existing != null) return existing;
 
     final challenge = await requestWalletAuthChallenge(normalizedWallet);
     final signature = await signMessage(challenge.message);
     if (sessionEpoch != authSessionEpoch) {
+      final live = liveSessionForWallet();
+      if (live != null) return live;
       throw StateError('Authentication request belongs to an ended session');
     }
     final response = await loginWithWallet(

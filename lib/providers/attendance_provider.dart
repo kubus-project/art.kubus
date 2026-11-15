@@ -255,7 +255,17 @@ class AttendanceProvider extends ChangeNotifier {
     required String? walletAddress,
   }) {
     final normalizedWallet = (walletAddress ?? '').trim();
-    final walletChanged = (_walletAddress ?? '') != normalizedWallet;
+    final accountKey = AccountIdentity.accountKey;
+    // Linking a wallet to the account already signed in changes nothing the
+    // account owns, and must not drop its in-flight confirm.
+    final walletLinkedToSameAccount = (_walletAddress ?? '').isEmpty &&
+        normalizedWallet.isNotEmpty &&
+        _isSignedIn &&
+        isSignedIn &&
+        accountKey.isNotEmpty &&
+        accountKey == _identityKey;
+    final walletChanged = (_walletAddress ?? '') != normalizedWallet &&
+        !walletLinkedToSameAccount;
     final signedInChanged = _isSignedIn != isSignedIn;
 
     _isSignedIn = isSignedIn;
@@ -269,7 +279,9 @@ class AttendanceProvider extends ChangeNotifier {
 
   void _handleAccountIdentityChanged() {
     final key = AccountIdentity.accountKey;
-    if (key == _identityKey) return;
+    // An empty key (sign-out) always clears: a silent guest to account
+    // sign-in leaves the held key empty while signed in.
+    if (key.isNotEmpty && key == _identityKey) return;
     _identityKey = key;
     _clearUserScopedState();
     if (hasListeners) notifyListeners();

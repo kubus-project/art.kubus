@@ -70,6 +70,7 @@ class _FakeWalletProvider extends WalletProvider {
     bool persist = true,
     bool loadData = true,
     bool syncBackend = false,
+    int? expectedAuthEpoch,
   }) async {}
 }
 

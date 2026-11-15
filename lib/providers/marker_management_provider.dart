@@ -36,6 +36,7 @@ class MarkerManagementProvider extends ChangeNotifier {
   // Bumped on every account change. A /mine fetch started under the previous
   // account compares against it before writing its result.
   int _identityEpoch = 0;
+  String _heldAccountKey = AccountIdentity.accountKey;
 
   // Cache + de-dupe for /mine marker list.
   static const Duration _cacheTtl = Duration(seconds: 30);
@@ -83,6 +84,11 @@ class MarkerManagementProvider extends ChangeNotifier {
   /// it. The identity change clears the list, and any fetch still in flight
   /// for the previous account is dropped when it returns.
   void _handleAccountIdentityChanged() {
+    final key = AccountIdentity.accountKey;
+    // A wallet linked to the signed-in account announces a change too, and
+    // that account's in-flight create/update/delete is still its own.
+    if (key.isNotEmpty && key == _heldAccountKey) return;
+    _heldAccountKey = key;
     _identityEpoch += 1;
     _initialized = false;
     _loading = false;

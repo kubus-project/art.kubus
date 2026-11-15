@@ -6,17 +6,23 @@ import 'package:art_kubus/providers/activation_prompt_provider.dart';
 import 'package:art_kubus/providers/attendance_provider.dart';
 import 'package:art_kubus/providers/notification_provider.dart';
 import 'package:art_kubus/providers/profile_provider.dart';
+import 'package:art_kubus/models/art_marker.dart';
 import 'package:art_kubus/models/saved_item.dart';
+import 'package:art_kubus/models/wallet.dart';
 import 'package:art_kubus/models/user_profile.dart';
 import 'package:art_kubus/providers/saved_items_provider.dart';
 import 'package:art_kubus/providers/security_gate_provider.dart';
+import 'package:art_kubus/providers/marker_management_provider.dart';
 import 'package:art_kubus/providers/wallet_provider.dart';
 import 'package:art_kubus/services/account_identity.dart';
 import 'package:art_kubus/services/auth_session_coordinator.dart';
 import 'package:art_kubus/services/backend_api_service.dart';
 import 'package:art_kubus/services/pin_hashing.dart';
 import 'package:art_kubus/services/saved_items_repository.dart';
+import 'package:art_kubus/services/solana_wallet_service.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:latlong2/latlong.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -270,6 +276,77 @@ Future<SecurityGateProvider> _realLockedGate(
   await gate.lock(reason);
   expect(gate.isResolving, isTrue);
   return gate;
+}
+
+/// A Solana service whose balance fetch can be held, so a wallet load is in
+/// flight across an account switch. No network is reached.
+class _HeldBalanceSolana extends SolanaWalletService {
+  /// The 1-based balance fetch to hold; 0 holds none.
+  int holdCall = 0;
+  int balanceCalls = 0;
+  final Completer<void> heldReached = Completer<void>();
+  final Completer<void> release = Completer<void>();
+
+  @override
+  Future<double> getBalance(String publicKey) async {
+    balanceCalls += 1;
+    if (balanceCalls == holdCall) {
+      heldReached.complete();
+      await release.future;
+    }
+    return 0;
+  }
+
+  @override
+  Future<List<TokenBalance>> getTokenBalances(String publicKey) async =>
+      const <TokenBalance>[];
+
+  @override
+  Future<List<WalletTransaction>> getTransactionHistory(
+    String publicKey, {
+    int limit = 25,
+    String? beforeSignature,
+  }) async =>
+      const <WalletTransaction>[];
+}
+
+/// A managed (email) account's wallet provider on the real recovery path:
+/// real import, real load, real backend sync and wallet-signed login.
+class _ManagedWallet extends WalletProvider {
+  _ManagedWallet(SolanaWalletService solana)
+      : super(solanaWalletService: solana, deferInit: true);
+
+  final List<Completer<PinVerifyResult>> pinChecks =
+      <Completer<PinVerifyResult>>[];
+
+  @override
+  Future<bool> hasPin() async => true;
+
+  @override
+  Future<bool> hasPinOrThrow() async => true;
+
+  @override
+  Future<bool> canUseBiometrics() async => false;
+
+  @override
+  Future<PinVerifyResult> verifyPinDetailed(String pin) {
+    final check = Completer<PinVerifyResult>();
+    pinChecks.add(check);
+    return check.future;
+  }
+}
+
+/// A session token carrying A's wallet, as a wallet-signed login issues.
+String _walletSignedToken(String accountId, String wallet) {
+  final payload = jsonEncode({
+    'id': accountId,
+    'walletAddress': wallet,
+    'authLevel': 'wallet_signed',
+    'exp':
+        DateTime.now().add(const Duration(hours: 1)).millisecondsSinceEpoch ~/
+            1000,
+  });
+  return 'e30.${base64Url.encode(utf8.encode(payload)).replaceAll('=', '')}.synthetic';
 }
 
 /// Holds the session renewal an unlock performs, so it can be in flight across
@@ -986,6 +1063,258 @@ void main() {
 
       expect(prompt.entityViews, 0);
       expect(prompt.shouldPrompt, isFalse);
+    });
+  });
+  group('a managed-wallet unlock of A that moves on during the wallet import',
+      () {
+    const channel =
+        MethodChannel('plugins.it_nomads.com/flutter_secure_storage');
+    late _HeldBalanceSolana solana;
+    late String walletOfA;
+    late int loginRequests;
+    late Map<String, String> secure;
+
+    setUp(() async {
+      solana = _HeldBalanceSolana();
+      final mnemonic = solana.generateMnemonic();
+      walletOfA = (await solana.derivePreferredKeyPair(mnemonic)).address;
+      secure = <String, String>{'cached_mnemonic': mnemonic};
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(channel, (call) async {
+        final args = call.arguments as Map;
+        final key = args['key'] as String?;
+        if (call.method == 'read') return secure[key];
+        if (call.method == 'write') {
+          secure[key!] = args['value'] as String;
+        }
+        if (call.method == 'delete') secure.remove(key);
+        return null;
+      });
+      SharedPreferences.setMockInitialValues(<String, Object>{
+        PreferenceKeys.authLastSignInMethodV1: 'email',
+      });
+      loginRequests = 0;
+      api.setHttpClient(MockClient((request) async {
+        if (request.url.path.endsWith('/api/auth/challenge')) {
+          return http.Response(
+              jsonEncode({'message': 'synthetic-challenge'}), 200);
+        }
+        if (request.url.path.endsWith('/api/auth/login')) {
+          loginRequests += 1;
+          return http.Response(
+              jsonEncode({'token': _walletSignedToken(_accountA, walletOfA)}),
+              200);
+        }
+        return http.Response('{}', 404);
+      }));
+    });
+
+    tearDown(installEmptySecureStorage);
+
+    Future<_ManagedWallet> managedWallet() async {
+      final wallet = _ManagedWallet(solana);
+      addTearDown(wallet.dispose);
+      wallet.setCurrentWalletAddressForTesting(walletOfA);
+      return wallet;
+    }
+
+    test('control: with no switch the import signs A in', () async {
+      await api.setAuthToken(_token(_accountA));
+      final wallet = await managedWallet();
+
+      final outcome = await wallet.recoverManagedWalletSession(
+        walletAddress: walletOfA,
+        expectedAuthEpoch: api.authSessionEpoch,
+      );
+
+      expect(outcome, ManagedWalletReconnectOutcome.signerRestored);
+      expect(loginRequests, greaterThan(0));
+      expect(api.getAuthToken(), _walletSignedToken(_accountA, walletOfA));
+    });
+
+    for (final refresh in [true, false]) {
+      final shape = refresh ? 'a session-expiry renewal' : 'an auto-lock';
+      test('$shape of A does not commit A over B', () async {
+        await api.setAuthToken(_token(_accountA));
+        solana.holdCall = 2; // the import's own load, after the identity load
+        final wallet = await managedWallet();
+
+        final recovery = wallet.recoverManagedWalletSession(
+          walletAddress: walletOfA,
+          refreshBackendSession: refresh,
+          expectedAuthEpoch: api.authSessionEpoch,
+        );
+        await solana.heldReached.future;
+        await api.setAuthToken(_token(_accountB));
+        final accountB = AccountIdentity.accountKey;
+        solana.release.complete();
+
+        expect(await recovery, ManagedWalletReconnectOutcome.failed);
+        await pumpEventQueue();
+        expect(loginRequests, 0, reason: "A's wallet never signs in");
+        expect(api.getAuthToken(), _token(_accountB));
+        expect(AccountIdentity.accountKey, accountB);
+      });
+
+      test('$shape of A does not restore A after a logout', () async {
+        await api.setAuthToken(_token(_accountA));
+        solana.holdCall = 2;
+        final wallet = await managedWallet();
+
+        final recovery = wallet.recoverManagedWalletSession(
+          walletAddress: walletOfA,
+          refreshBackendSession: refresh,
+          expectedAuthEpoch: api.authSessionEpoch,
+        );
+        await solana.heldReached.future;
+        await api.clearAuth();
+        solana.release.complete();
+
+        expect(await recovery, ManagedWalletReconnectOutcome.failed);
+        await pumpEventQueue();
+        expect(loginRequests, 0);
+        expect(api.getAuthToken(), isNull);
+        expect(AccountIdentity.accountKey, isEmpty);
+      });
+    }
+
+    test('a reconnect that names no session is bound to the one it began under',
+        () async {
+      await api.setAuthToken(_token(_accountA));
+      solana.holdCall = 2;
+      final wallet = await managedWallet();
+
+      final recovery = wallet.recoverManagedWalletSession(
+        walletAddress: walletOfA,
+      );
+      await solana.heldReached.future;
+      await api.setAuthToken(_token(_accountB));
+      solana.release.complete();
+
+      expect(await recovery, ManagedWalletReconnectOutcome.failed);
+      expect(loginRequests, 0);
+      expect(api.getAuthToken(), _token(_accountB));
+    });
+
+    test('the unlock gate refuses A and leaves B when the import outlives A',
+        () async {
+      await api.setAuthToken(_token(_accountA));
+      solana.holdCall = 2;
+      final wallet = await managedWallet();
+      SharedPreferences.setMockInitialValues(<String, Object>{
+        'jwt_token': 'stored-token',
+        PreferenceKeys.authLastSignInMethodV1: 'email',
+      });
+      final gate = SecurityGateProvider(promptCooldown: Duration.zero)
+        ..bindDependencies(
+          profileProvider: ProfileProvider(),
+          walletProvider: wallet,
+          notificationProvider: NotificationProvider(),
+        );
+      addTearDown(gate.dispose);
+      await gate.refreshLocalAccountState();
+      await gate.lock(SecurityLockReason.tokenExpired);
+      final aUnlock = gate.unlockWithPin('1234');
+      wallet.pinChecks.single
+          .complete(const PinVerifyResult(PinVerifyOutcome.success));
+      await solana.heldReached.future;
+
+      await api.setAuthToken(_token(_accountB));
+      final accountB = AccountIdentity.accountKey;
+      solana.release.complete();
+
+      expect((await aUnlock).isSuccess, isFalse);
+      await pumpEventQueue();
+      expect(loginRequests, 0);
+      expect(api.getAuthToken(), _token(_accountB));
+      expect(AccountIdentity.accountKey, accountB);
+      expect(gate.isBusy, isFalse);
+    });
+  });
+
+  group('a sign-out after a silent guest to account sign-in', () {
+    test('invalidates the unlock the gate held for the account', () async {
+      // The gate learns no account: a guest sign-in announces nothing.
+      final wallet = _HeldUnlockWallet();
+      final gate = await _lockedGate(wallet, SecurityLockReason.autoLock);
+      await api.setAuthToken(_token(_accountA));
+      final aUnlock = gate.unlockWithPin('1234');
+
+      await api.clearAuth();
+      wallet.pinChecks.single
+          .complete(const PinVerifyResult(PinVerifyOutcome.success));
+
+      expect((await aUnlock).isSuccess, isFalse);
+      await pumpEventQueue();
+      expect(gate.isBusy, isFalse);
+    });
+
+    test('drops the attendance challenge fetched for the account', () async {
+      final challengeApi = _GatedChallengeApi();
+      final attendance = AttendanceProvider(api: challengeApi)
+        ..bindAuthContext(isSignedIn: true, walletAddress: null);
+      addTearDown(attendance.dispose);
+      await api.setAuthToken(_token(_accountA));
+
+      final fetch = attendance.ensureChallenge('marker-1');
+      await challengeApi.started.future;
+      await api.clearAuth();
+      challengeApi.gate.complete(_challengeFor('marker-1'));
+
+      expect(await fetch, isNull);
+      expect(attendance.stateFor('marker-1').challenge, isNull);
+    });
+  });
+
+  group('a wallet linked to the signed-in account', () {
+    test('keeps the attendance confirm of the account in flight', () async {
+      await api.setAuthToken(_token(_accountA));
+      final confirmApi = _GatedConfirmApi();
+      final attendance = AttendanceProvider(api: confirmApi)
+        ..bindAuthContext(isSignedIn: true, walletAddress: null);
+      addTearDown(attendance.dispose);
+      attendance.updateProximity(
+        markerId: 'marker-1',
+        lat: 0,
+        lng: 0,
+        distanceMeters: 0,
+        activationRadiusMeters: 50,
+        requiresProximity: false,
+      );
+      final confirm = attendance.confirmAttendance('marker-1');
+      await Future<void>.delayed(Duration.zero);
+      expect(confirmApi.confirmGates, hasLength(1));
+
+      attendance.bindAuthContext(
+          isSignedIn: true, walletAddress: 'synthetic-wallet-a');
+      confirmApi.confirmGates.single.complete(_confirmBody);
+
+      expect(await confirm, isNotNull);
+      expect(attendance.stateFor('marker-1').lastConfirm, isNotNull);
+      expect(attendance.stateFor('marker-1').isConfirming, isFalse);
+    });
+
+    test('keeps the marker list of the account on a same-account notification',
+        () async {
+      await api.setAuthToken(_token(_accountA));
+      final markers = MarkerManagementProvider();
+      addTearDown(markers.dispose);
+      markers.ingestMarker(ArtMarker(
+        id: 'marker-1',
+        name: 'Street art',
+        description: 'Description',
+        position: const LatLng(46.05, 14.5),
+        type: ArtMarkerType.streetArt,
+        createdAt: DateTime(2026, 1, 1),
+        createdBy: 'synthetic-wallet-a',
+      ));
+
+      // A wallet link announces the change without changing the account.
+      AccountIdentity.notifyListenersChanged();
+      expect(markers.markers, hasLength(1));
+
+      await api.setAuthToken(_token(_accountB));
+      expect(markers.markers, isEmpty);
     });
   });
 }

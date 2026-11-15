@@ -35,6 +35,7 @@ class _FlowWalletProvider extends WalletProvider {
     bool persist = true,
     bool loadData = true,
     bool syncBackend = false,
+    int? expectedAuthEpoch,
   }) async {
     walletAddressValue = address;
     hasSignerValue = false;

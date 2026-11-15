@@ -201,6 +201,50 @@ void main() {
       expect(secure['refresh_token'], isNull);
     });
 
+    test(
+        'two concurrent ensures of the same wallet both resolve to its session',
+        () async {
+      const wallet = 'synthetic-wallet-a';
+      final walletToken = 'e30.${base64Url.encode(utf8.encode(jsonEncode({
+                'id': 'A',
+                'walletAddress': wallet,
+                'authLevel': 'wallet_signed',
+                'exp': 2100000000,
+              }))).replaceAll('=', '')}.synthetic';
+      api.setHttpClient(MockClient((request) async {
+        if (request.url.path.endsWith('/api/auth/challenge')) {
+          return http.Response(
+              jsonEncode({'message': 'synthetic-challenge'}), 200);
+        }
+        if (request.url.path.endsWith('/api/auth/login')) {
+          return http.Response(jsonEncode({'token': walletToken}), 200);
+        }
+        return http.Response('{}', 404);
+      }));
+      final signatures = <Completer<String>>[];
+      Future<String> sign(String _) {
+        final signature = Completer<String>();
+        signatures.add(signature);
+        return signature.future;
+      }
+
+      // Neither caller names a session; both start while none is signed in.
+      final first = api.ensureSessionForActiveSigner(
+          walletAddress: wallet, signMessage: sign);
+      final second = api.ensureSessionForActiveSigner(
+          walletAddress: wallet, signMessage: sign);
+      while (signatures.length < 2) {
+        await Future<void>.delayed(Duration.zero);
+      }
+
+      signatures[0].complete('synthetic-signature-1');
+      expect((await first).token, walletToken);
+      signatures[1].complete('synthetic-signature-2');
+      expect((await second).token, walletToken,
+          reason: 'the wallet already holds a valid session; nothing throws');
+      expect(api.getAuthToken(), walletToken);
+    });
+
     test('a renewal whose session ended before it was requested does not sign',
         () async {
       await api.setAuthToken(jwt('A'));

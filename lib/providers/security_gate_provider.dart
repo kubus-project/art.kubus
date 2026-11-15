@@ -1120,7 +1120,9 @@ class SecurityGateProvider extends ChangeNotifier
   /// A notification for the same account changes nothing.
   void _handleAccountIdentityChanged() {
     final key = AccountIdentity.accountKey;
-    if (key == _heldAccountKey) return;
+    // A sign-out (empty key) always ends the session the held key may not
+    // name: a silent guest to account sign-in announces nothing.
+    if (key.isNotEmpty && key == _heldAccountKey) return;
     _heldAccountKey = key;
     _identityEpoch += 1;
     // The unlock that held the busy flag belonged to the previous identity.
