@@ -105,7 +105,14 @@ void _chatProviderResetSessionState(
       accountId: provider._socketAccountId,
     );
   } catch (_) {}
-  provider._socketAccountId = '';
+  // A same-account reset (wallet change, wallet clear, link session end) leaves
+  // the rooms it joined but keeps the account: the next switch or sign-out must
+  // still leave the account UUID room. Only a reset that ends the account, or
+  // that may be for another one, forgets the id here. The next bind re-binds it.
+  final keepsAccount = reason == 'walletChanged' ||
+      reason == 'walletCleared' ||
+      reason == 'accountLinkSessionEnded';
+  if (!keepsAccount) provider._socketAccountId = '';
 
   // Remember the conversations being left so late socket events for them are
   // rejected by _isSocketEventForCurrentSession.

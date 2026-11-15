@@ -1032,6 +1032,18 @@ class ChatProvider extends ChangeNotifier {
     _currentWallet = wallet;
   }
 
+  /// Test seam: the account whose personal socket room this session joined.
+  @visibleForTesting
+  void bindSocketAccountForTesting(String accountId) {
+    _socketAccountId = accountId;
+  }
+
+  /// Test seam: runs a session reset with [reason], as the auth bind does.
+  @visibleForTesting
+  void resetSessionForTesting(String reason) {
+    _resetSessionState(reason: reason, notify: false);
+  }
+
   @visibleForTesting
   void setOpenConversationForTesting(String? conversationId) {
     final normalized = (conversationId ?? '').trim();
@@ -1107,9 +1119,45 @@ class ChatProvider extends ChangeNotifier {
     _lastAuthAccountId = key;
   }
 
+  /// The session's canonical account id for socket routing, or empty when
+  /// unknown. A legacy token with no id claim reports its wallet as the account
+  /// key. That is a wallet, not an account id, so it is not returned here.
+  String _socketSessionAccountId() {
+    final key = AccountIdentity.accountKey.trim();
+    if (key.isEmpty || WalletUtils.equals(key, _currentWallet)) return '';
+    return key;
+  }
+
+  /// The account id a socket payload names as its recipient, or null.
+  String? _socketRecipientUserId(Map<String, dynamic>? data) {
+    if (data == null) return null;
+    final nested = data['data'] is Map
+        ? Map<String, dynamic>.from(data['data'] as Map)
+        : const <String, dynamic>{};
+    for (final source in <Map<String, dynamic>>[data, nested]) {
+      for (final key in const ['recipientUserId', 'recipient_user_id']) {
+        final value = source[key]?.toString().trim() ?? '';
+        if (value.isNotEmpty) return value;
+      }
+    }
+    return null;
+  }
+
   /// Whether a socket event for [conversationId] belongs to the current session.
-  bool _isSocketEventForCurrentSession(String conversationId) {
-    if ((_currentWallet ?? '').trim().isEmpty) return false;
+  ///
+  /// The session is known by its account id or, for a wallet session, its
+  /// wallet. A payload that names a recipient account must name this session's
+  /// account, so an event addressed to a previous account is dropped. Otherwise
+  /// the event belongs to a conversation the session has joined (or is joining).
+  bool _isSocketEventForCurrentSession(
+    String conversationId, [
+    Map<String, dynamic>? data,
+  ]) {
+    final wallet = (_currentWallet ?? '').trim();
+    final accountId = _socketSessionAccountId();
+    if (wallet.isEmpty && accountId.isEmpty) return false;
+    final addressedTo = _socketRecipientUserId(data);
+    if (addressedTo != null && addressedTo != accountId) return false;
     if (_conversations.any((c) => c.id == conversationId)) return true;
     return !_retiredSessionConversationIds.contains(conversationId);
   }
@@ -1820,7 +1868,7 @@ class ChatProvider extends ChangeNotifier {
         }
         return;
       }
-      if (!_isSocketEventForCurrentSession(convId)) {
+      if (!_isSocketEventForCurrentSession(convId, data)) {
         if (kDebugMode) {
           debugPrint(
             'ChatProvider._onMessageReceived: dropping event outside current session',
@@ -1958,7 +2006,7 @@ class ChatProvider extends ChangeNotifier {
       final reader = (data['reader'] ?? data['wallet'] ?? '').toString();
 
       if (convId.isEmpty || messageId.isEmpty) return;
-      if (!_isSocketEventForCurrentSession(convId)) return;
+      if (!_isSocketEventForCurrentSession(convId, data)) return;
 
       debugPrint(
         'ChatProvider._onMessageRead: convId=$convId, messageId=$messageId, reader=$reader',
@@ -3167,7 +3215,7 @@ class ChatProvider extends ChangeNotifier {
       final reactions = data['reactions']; // List of reaction objects
 
       if (convId.isEmpty || messageId.isEmpty) return;
-      if (!_isSocketEventForCurrentSession(convId)) return;
+      if (!_isSocketEventForCurrentSession(convId, data)) return;
 
       final list = _messages[convId];
       if (list == null) return;
