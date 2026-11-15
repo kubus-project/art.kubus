@@ -123,6 +123,8 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
   bool _autoBackup = true;
   WalletBackupStatusSnapshot _walletBackupStatus =
       const WalletBackupStatusSnapshot.pending();
+  final WalletBackupStatusTracker _walletBackupTracker =
+      WalletBackupStatusTracker();
 
   // Profile interaction settings
   bool _showAchievements = true;
@@ -141,6 +143,15 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
     _tabController = TabController(length: 11, vsync: this);
     _animationController.forward();
     _loadSettings();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Subscribes this screen to the wallet provider: a change to any backup
+    // input re-resolves the backup row (see _syncWalletBackupStatus).
+    context.watch<WalletProvider>();
+    _syncWalletBackupStatus();
   }
 
   @override

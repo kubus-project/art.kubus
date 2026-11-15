@@ -116,6 +116,8 @@ class _SettingsScreenState extends State<SettingsScreen>
   bool _autoBackup = true;
   WalletBackupStatusSnapshot _walletBackupStatus =
       const WalletBackupStatusSnapshot.pending();
+  final WalletBackupStatusTracker _walletBackupTracker =
+      WalletBackupStatusTracker();
 
   // Profile interaction settings
   bool _showAchievements = true;
@@ -146,6 +148,10 @@ class _SettingsScreenState extends State<SettingsScreen>
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
+    // Subscribes this screen to the wallet provider: a change to any backup
+    // input re-resolves the backup row (see _syncWalletBackupStatus).
+    context.watch<WalletProvider>();
+    _syncWalletBackupStatus();
     final animationTheme = context.animationTheme;
     if (_animationController.duration != animationTheme.long) {
       _animationController.duration = animationTheme.long;

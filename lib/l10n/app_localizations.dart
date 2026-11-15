@@ -4759,14 +4759,20 @@ abstract class AppLocalizations {
   /// No description provided for @walletActionRecoveryNeededToast.
   ///
   /// In en, this message translates to:
-  /// **'Restore wallet access on this device before continuing.'**
+  /// **'Reconnect your wallet or import your recovery phrase on this device before continuing.'**
   String get walletActionRecoveryNeededToast;
 
   /// No description provided for @walletActionReadOnlyReconnectToast.
   ///
   /// In en, this message translates to:
-  /// **'Reconnect with your wallet provider or restore wallet access on this device before continuing.'**
+  /// **'Reconnect with your wallet provider or import your recovery phrase on this device before continuing.'**
   String get walletActionReadOnlyReconnectToast;
+
+  /// No description provided for @walletBackupStatusUnavailableHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Backup status is unavailable right now. Try again in a moment.'**
+  String get walletBackupStatusUnavailableHint;
 
   /// No description provided for @settingsNetworkTileTitle.
   ///

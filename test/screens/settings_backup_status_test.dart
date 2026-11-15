@@ -93,6 +93,30 @@ class _FakeWalletProvider extends WalletProvider {
     backupDefinition = nextDefinition;
     notifyListeners();
   }
+
+  /// Links [address] as the account's wallet, the way a finished account link
+  /// does: identity, optional proven backup, and a settled session phase.
+  void linkWallet({
+    required String address,
+    EncryptedWalletBackupDefinition? backup,
+  }) {
+    walletAddressValue = address;
+    hasWalletIdentityValue = true;
+    hasSignerValue = false;
+    isReadOnlySessionValue = true;
+    backupDefinition = backup;
+    setCurrentWalletAddressForTesting(address);
+  }
+
+  /// Drops the wallet identity; the account session (if any) stays as seeded.
+  void unlinkWallet() {
+    walletAddressValue = null;
+    hasWalletIdentityValue = false;
+    hasSignerValue = false;
+    isReadOnlySessionValue = false;
+    backupDefinition = null;
+    setCurrentWalletAddressForTesting(null);
+  }
 }
 
 class _FakeEmailPreferencesProvider extends EmailPreferencesProvider {
@@ -457,6 +481,42 @@ void main() {
       expectNoRestoreWording(readOnly.protectionBody(l10n));
     });
 
+    test(
+        'a read-only wallet whose backup lookup failed never implies no backup',
+        () {
+      const lookupFailed = WalletBackupStatusSnapshot(
+        walletAddress: 'wallet123',
+        hasAccountSession: true,
+        hasWalletIdentity: true,
+        hasSigner: false,
+        isReadOnlySession: true,
+        mnemonicBackupRequired: false,
+        hasEncryptedServerBackup: false,
+        hasPasskeyProtection: false,
+        encryptedBackupStatusKnown: false,
+      );
+
+      expect(
+        lookupFailed.settingsSummary(l10n),
+        'Read-only wallet session on this device. '
+        'Backup status is unavailable right now. Try again in a moment.',
+      );
+      expect(
+        lookupFailed.protectionBody(l10n),
+        contains('Backup status is unavailable right now.'),
+      );
+      expect(
+        lookupFailed.settingsSummary(sl),
+        'Na tej napravi je seja denarnice samo za branje. '
+        'Stanje varnostne kopije trenutno ni na voljo. Poskusi znova čez trenutek.',
+      );
+      // A known "no backup" read-only state keeps the plain copy.
+      expect(
+        snapshot(hasWalletIdentity: true).settingsSummary(l10n),
+        'Read-only wallet session on this device',
+      );
+    });
+
     test('a signed-in account without a wallet resolves as walletless',
         () async {
       final walletProvider = _FakeWalletProvider(
@@ -705,6 +765,193 @@ void main() {
       findsOneWidget,
     );
   });
+  group('backup row follows live wallet inputs', () {
+    const restoreCopy =
+        'Encrypted backup available to restore signing on this device';
+    const walletlessCopy = 'No wallet linked to this account';
+    const checkingCopy = 'Checking wallet status…';
+
+    _FakeWalletProvider unlinked() => _FakeWalletProvider(
+          walletAddressValue: null,
+          hasWalletIdentityValue: false,
+          hasSignerValue: false,
+          isReadOnlySessionValue: false,
+          mnemonicBackupRequiredValue: false,
+        );
+
+    _FakeWalletProvider restorable() => _FakeWalletProvider(
+          walletAddressValue: 'wallet123',
+          hasWalletIdentityValue: true,
+          hasSignerValue: false,
+          isReadOnlySessionValue: true,
+          mnemonicBackupRequiredValue: false,
+          backupDefinition: _backup(),
+        );
+
+    testWidgets(
+        'wallet linked after the first build shows the restore copy, never no-wallet',
+        (tester) async {
+      SharedPreferences.setMockInitialValues(<String, Object>{});
+      final walletProvider = unlinked();
+
+      await tester.pumpWidget(_buildSettingsApp(walletProvider));
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 2));
+      await tester.scrollUntilVisible(
+        find.text(checkingCopy),
+        250,
+        scrollable: find.byType(Scrollable).first,
+      );
+      expect(find.text(checkingCopy), findsOneWidget);
+      expect(find.text(walletlessCopy), findsNothing);
+
+      walletProvider.linkWallet(address: 'wallet123', backup: _backup());
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 2));
+      await tester.scrollUntilVisible(
+        find.text(restoreCopy),
+        250,
+        scrollable: find.byType(Scrollable).first,
+      );
+
+      expect(find.text(restoreCopy), findsOneWidget);
+      expect(find.text(walletlessCopy), findsNothing);
+      expect(find.text('No wallet connected yet'), findsNothing);
+    });
+
+    testWidgets(
+        'a walletless account is never shown as no-wallet while linkage is unsettled',
+        (tester) async {
+      SharedPreferences.setMockInitialValues(<String, Object>{});
+      final walletProvider = unlinked();
+
+      await tester.pumpWidget(_buildSettingsApp(walletProvider));
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 2));
+      await tester.scrollUntilVisible(
+        find.text(checkingCopy),
+        250,
+        scrollable: find.byType(Scrollable).first,
+      );
+      expect(find.text(checkingCopy), findsOneWidget);
+      expect(find.text(walletlessCopy), findsNothing);
+
+      walletProvider.seedAccountSessionForTesting(
+        email: 'walletless@example.com',
+        backendProfile: const <String, dynamic>{},
+      );
+      walletProvider.unlinkWallet();
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 2));
+      await tester.scrollUntilVisible(
+        find.text(walletlessCopy),
+        250,
+        scrollable: find.byType(Scrollable).first,
+      );
+
+      expect(find.text(walletlessCopy), findsOneWidget);
+      expect(find.text(checkingCopy), findsNothing);
+    });
+
+    testWidgets(
+        'switching from a restorable account to a walletless one shows only the new account',
+        (tester) async {
+      SharedPreferences.setMockInitialValues(<String, Object>{});
+      final walletProvider = restorable();
+
+      await tester.pumpWidget(_buildSettingsApp(walletProvider));
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 2));
+      await tester.scrollUntilVisible(
+        find.text(restoreCopy),
+        250,
+        scrollable: find.byType(Scrollable).first,
+      );
+      expect(find.text(restoreCopy), findsOneWidget);
+
+      walletProvider.seedAccountSessionForTesting(
+        email: 'second@example.com',
+        backendProfile: const <String, dynamic>{},
+      );
+      walletProvider.unlinkWallet();
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 2));
+      await tester.scrollUntilVisible(
+        find.text(walletlessCopy),
+        250,
+        scrollable: find.byType(Scrollable).first,
+      );
+
+      expect(find.text(walletlessCopy), findsOneWidget);
+      expect(find.text(restoreCopy), findsNothing);
+    });
+
+    testWidgets(
+        'desktop settings row follows an account switch from restorable to walletless',
+        (tester) async {
+      SharedPreferences.setMockInitialValues(<String, Object>{});
+      tester.view.devicePixelRatio = 1.0;
+      await tester.binding.setSurfaceSize(const Size(1600, 1200));
+      addTearDown(() async => tester.binding.setSurfaceSize(null));
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      final walletProvider = restorable();
+      await tester.pumpWidget(
+        _buildSettingsApp(
+          walletProvider,
+          home: const DesktopSettingsScreen(),
+        ),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 2));
+      expect(find.text(restoreCopy), findsOneWidget);
+
+      walletProvider.seedAccountSessionForTesting(
+        email: 'second@example.com',
+        backendProfile: const <String, dynamic>{},
+      );
+      walletProvider.unlinkWallet();
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 2));
+
+      // The desktop Security section (and its backup row) only exists while a
+      // wallet is linked, so the walletless account shows no backup row and
+      // none of the previous account's restore copy.
+      expect(find.text(restoreCopy), findsNothing);
+      expect(find.text(walletlessCopy), findsNothing);
+    });
+
+    testWidgets(
+        'desktop backup row appears with live copy when a wallet is linked after the first build',
+        (tester) async {
+      SharedPreferences.setMockInitialValues(<String, Object>{});
+      tester.view.devicePixelRatio = 1.0;
+      await tester.binding.setSurfaceSize(const Size(1600, 1200));
+      addTearDown(() async => tester.binding.setSurfaceSize(null));
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      final walletProvider = unlinked();
+      await tester.pumpWidget(
+        _buildSettingsApp(
+          walletProvider,
+          home: const DesktopSettingsScreen(),
+        ),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 2));
+      expect(find.text(walletlessCopy), findsNothing);
+      expect(find.text('No wallet connected yet'), findsNothing);
+
+      walletProvider.linkWallet(address: 'wallet123', backup: _backup());
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 2));
+
+      expect(find.text(restoreCopy), findsOneWidget);
+      expect(find.text('No wallet connected yet'), findsNothing);
+      expect(find.text(walletlessCopy), findsNothing);
+    });
+  });
+
   for (final desktop in [false, true]) {
     for (final language in ['en', 'sl']) {
       testWidgets(

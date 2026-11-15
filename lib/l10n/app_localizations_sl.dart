@@ -2688,7 +2688,7 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get walletActionAccountShellNeedsWalletToast =>
-      'Račun je prijavljen brez denarnice. Za nadaljevanje s tem dejanjem jo povežite.';
+      'Račun je prijavljen brez denarnice. Za nadaljevanje s tem dejanjem jo poveži.';
 
   @override
   String get walletActionEncryptedBackupRestoreToast =>
@@ -2696,11 +2696,15 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get walletActionRecoveryNeededToast =>
-      'Pred nadaljevanjem na tej napravi obnovi dostop do denarnice.';
+      'Pred nadaljevanjem na tej napravi poveži denarnico ali uvozi obnovitveno frazo.';
 
   @override
   String get walletActionReadOnlyReconnectToast =>
-      'Pred nadaljevanjem se znova poveži s ponudnikom denarnice ali na tej napravi obnovi dostop do denarnice.';
+      'Pred nadaljevanjem se znova poveži s ponudnikom denarnice ali na tej napravi uvozi obnovitveno frazo.';
+
+  @override
+  String get walletBackupStatusUnavailableHint =>
+      'Stanje varnostne kopije trenutno ni na voljo. Poskusi znova čez trenutek.';
 
   @override
   String get settingsNetworkTileTitle => 'Omrežje';
@@ -11467,7 +11471,7 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get walletBackupProtectionNoWalletBody =>
-      'Pred upravljanjem zaščite z varnostno kopijo na tej napravi povežite denarnico.';
+      'Pred upravljanjem zaščite z varnostno kopijo na tej napravi poveži denarnico.';
 
   @override
   String get walletBackupProtectionCheckingHeadline =>
@@ -11531,7 +11535,7 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get walletBackupProtectionReadOnlyBody =>
-      'Pred prenosi in drugimi dejanji, zaščitenimi z denarnico, na tej napravi znova povežite ponudnika denarnice ali uvozite obnovitveno frazo.';
+      'Pred prenosi in drugimi dejanji, zaščitenimi z denarnico, na tej napravi znova poveži ponudnika denarnice ali uvozi obnovitveno frazo.';
 
   @override
   String get walletSessionStateAccountShellOnly => 'Samo lupina računa';

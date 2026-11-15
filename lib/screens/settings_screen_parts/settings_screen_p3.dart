@@ -175,10 +175,36 @@ extension _SettingsScreenStatePart3 on _SettingsScreenState {
     );
   }
 
+  /// Keeps the backup row in step with the live wallet inputs. A change drops
+  /// the row to its neutral pending state and re-resolves; a result from a
+  /// superseded resolve is ignored. [force] re-resolves regardless.
+  void _syncWalletBackupStatus({bool force = false}) {
+    final walletProvider = Provider.of<WalletProvider>(context, listen: false);
+    final inputs = WalletBackupStatusInputs.of(walletProvider);
+    if (!force && !_walletBackupTracker.needsResolve(inputs)) return;
+    final token = _walletBackupTracker.begin(inputs);
+    _applyState(
+        () => _walletBackupStatus = const WalletBackupStatusSnapshot.pending());
+    final isSignedIn = context.read<ProfileProvider>().isSignedIn;
+    final resolved = isSignedIn
+        ? WalletBackupStatusResolver.resolve(
+            walletProvider: walletProvider,
+            refreshRemote: true,
+          )
+        : Future<WalletBackupStatusSnapshot>.value(
+            const WalletBackupStatusSnapshot.noWallet(),
+          );
+    resolved.then((snapshot) {
+      if (!mounted || !_walletBackupTracker.isCurrent(token)) return;
+      _applyState(() => _walletBackupStatus = snapshot);
+    });
+  }
+
   // Load all settings
   Future<void> _loadAllSettings() async {
     final walletProvider = Provider.of<WalletProvider>(context, listen: false);
     final isSignedIn = context.read<ProfileProvider>().isSignedIn;
+    _syncWalletBackupStatus(force: true);
     final settings = await SettingsService.loadSettings(
       fallbackNetwork: walletProvider.currentSolanaNetwork.isNotEmpty
           ? walletProvider.currentSolanaNetwork
@@ -190,12 +216,6 @@ extension _SettingsScreenStatePart3 on _SettingsScreenState {
     final secureAccountStatus = isSignedIn
         ? await _loadSecureAccountStatus()
         : const <String, dynamic>{};
-    final walletBackupStatus = isSignedIn
-        ? await WalletBackupStatusResolver.resolve(
-            walletProvider: walletProvider,
-            refreshRemote: true,
-          )
-        : const WalletBackupStatusSnapshot.noWallet();
     if (!mounted) return;
 
     _applyState(() {
@@ -224,7 +244,6 @@ extension _SettingsScreenStatePart3 on _SettingsScreenState {
 
       _networkSelection = settings.networkSelection;
       _autoBackup = settings.autoBackup;
-      _walletBackupStatus = walletBackupStatus;
 
       _profileVisibility = settings.profileVisibility;
       _showAchievements = settings.showAchievements;

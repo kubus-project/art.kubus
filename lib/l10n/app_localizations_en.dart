@@ -2681,11 +2681,15 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get walletActionRecoveryNeededToast =>
-      'Restore wallet access on this device before continuing.';
+      'Reconnect your wallet or import your recovery phrase on this device before continuing.';
 
   @override
   String get walletActionReadOnlyReconnectToast =>
-      'Reconnect with your wallet provider or restore wallet access on this device before continuing.';
+      'Reconnect with your wallet provider or import your recovery phrase on this device before continuing.';
+
+  @override
+  String get walletBackupStatusUnavailableHint =>
+      'Backup status is unavailable right now. Try again in a moment.';
 
   @override
   String get settingsNetworkTileTitle => 'Network';

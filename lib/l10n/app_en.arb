@@ -1024,8 +1024,9 @@
   "walletActionConnectWalletRequiredToast": "Connect a wallet to continue with this wallet-linked action.",
   "walletActionAccountShellNeedsWalletToast": "Your account is signed in without a wallet. Connect one to continue with this action.",
   "walletActionEncryptedBackupRestoreToast": "An encrypted backup is available. Restore wallet access on this device before continuing.",
-  "walletActionRecoveryNeededToast": "Restore wallet access on this device before continuing.",
-  "walletActionReadOnlyReconnectToast": "Reconnect with your wallet provider or restore wallet access on this device before continuing.",
+  "walletActionRecoveryNeededToast": "Reconnect your wallet or import your recovery phrase on this device before continuing.",
+  "walletActionReadOnlyReconnectToast": "Reconnect with your wallet provider or import your recovery phrase on this device before continuing.",
+  "walletBackupStatusUnavailableHint": "Backup status is unavailable right now. Try again in a moment.",
   "settingsNetworkTileTitle": "Network",
   "settingsCurrentNetworkValue": "Current: {network}",
   "@settingsCurrentNetworkValue": {
