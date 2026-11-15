@@ -159,6 +159,7 @@ Widget _buildSettingsApp(
   _FakeWalletProvider walletProvider, {
   Widget? home,
   Locale locale = const Locale('en'),
+  ProfileProvider? profileProvider,
 }) {
   final web3Provider = Web3Provider()..bindWalletProvider(walletProvider);
   final content = home ?? const SettingsScreen();
@@ -177,19 +178,21 @@ Widget _buildSettingsApp(
       ChangeNotifierProvider<Web3Provider>.value(value: web3Provider),
       ChangeNotifierProvider<PlatformProvider>.value(value: PlatformProvider()),
       ChangeNotifierProvider<ProfileProvider>(
-        create: (_) => ProfileProvider()
-          ..setCurrentUser(
-            UserProfile(
-              id: 'settings-backup-profile',
-              walletAddress: 'wallet123',
-              username: 'tester',
-              displayName: 'Tester',
-              bio: '',
-              avatar: '',
-              createdAt: DateTime.now(),
-              updatedAt: DateTime.now(),
-            ),
-          ),
+        create: (_) =>
+            profileProvider ??
+            (ProfileProvider()
+              ..setCurrentUser(
+                UserProfile(
+                  id: 'settings-backup-profile',
+                  walletAddress: 'wallet123',
+                  username: 'tester',
+                  displayName: 'Tester',
+                  bio: '',
+                  avatar: '',
+                  createdAt: DateTime.now(),
+                  updatedAt: DateTime.now(),
+                ),
+              )),
       ),
       ChangeNotifierProvider<NavigationProvider>(
         create: (_) => NavigationProvider(),
@@ -948,6 +951,54 @@ void main() {
 
       expect(find.text(restoreCopy), findsOneWidget);
       expect(find.text('No wallet connected yet'), findsNothing);
+      expect(find.text(walletlessCopy), findsNothing);
+    });
+
+    testWidgets(
+        'mobile row built signed-out re-resolves to the restorable wallet on sign-in',
+        (tester) async {
+      SharedPreferences.setMockInitialValues(<String, Object>{});
+      final walletProvider = restorable()
+        // Settled linkage, as for an account whose wallet is already linked.
+        ..setCurrentWalletAddressForTesting('wallet123');
+      final profileProvider = ProfileProvider();
+
+      await tester.pumpWidget(
+        _buildSettingsApp(walletProvider, profileProvider: profileProvider),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 2));
+      expect(profileProvider.isSignedIn, isFalse);
+      expect(find.text(restoreCopy), findsNothing);
+
+      profileProvider.setCurrentUser(
+        UserProfile(
+          id: 'settings-backup-profile',
+          walletAddress: 'wallet123',
+          username: 'tester',
+          displayName: 'Tester',
+          bio: '',
+          avatar: '',
+          createdAt: DateTime.now(),
+          updatedAt: DateTime.now(),
+        ),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 2));
+
+      // The mobile list is lazy: scroll to whichever wallet-row copy is shown.
+      await tester.scrollUntilVisible(
+        find.byWidgetPredicate(
+          (widget) =>
+              widget is Text &&
+              (widget.data == restoreCopy ||
+                  widget.data == 'No wallet connected yet'),
+        ),
+        250,
+        scrollable: find.byType(Scrollable).first,
+      );
+      expect(find.text('No wallet connected yet'), findsNothing);
+      expect(find.text(restoreCopy), findsOneWidget);
       expect(find.text(walletlessCopy), findsNothing);
     });
   });

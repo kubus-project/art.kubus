@@ -175,17 +175,21 @@ extension _SettingsScreenStatePart3 on _SettingsScreenState {
     );
   }
 
-  /// Keeps the backup row in step with the live wallet inputs. A change drops
-  /// the row to its neutral pending state and re-resolves; a result from a
-  /// superseded resolve is ignored. [force] re-resolves regardless.
+  /// Keeps the backup row in step with the live wallet inputs and the profile
+  /// sign-in state. A change drops the row to its neutral pending state and
+  /// re-resolves; a result from a superseded resolve is ignored. [force]
+  /// re-resolves regardless.
   void _syncWalletBackupStatus({bool force = false}) {
     final walletProvider = Provider.of<WalletProvider>(context, listen: false);
-    final inputs = WalletBackupStatusInputs.of(walletProvider);
+    final isSignedIn = context.read<ProfileProvider>().isSignedIn;
+    final inputs = WalletBackupStatusInputs.of(
+      walletProvider,
+      profileSignedIn: isSignedIn,
+    );
     if (!force && !_walletBackupTracker.needsResolve(inputs)) return;
     final token = _walletBackupTracker.begin(inputs);
     _applyState(
         () => _walletBackupStatus = const WalletBackupStatusSnapshot.pending());
-    final isSignedIn = context.read<ProfileProvider>().isSignedIn;
     final resolved = isSignedIn
         ? WalletBackupStatusResolver.resolve(
             walletProvider: walletProvider,

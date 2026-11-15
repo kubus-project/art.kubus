@@ -148,9 +148,11 @@ class _SettingsScreenState extends State<SettingsScreen>
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    // Subscribes this screen to the wallet provider: a change to any backup
-    // input re-resolves the backup row (see _syncWalletBackupStatus).
+    // Subscribes this screen to the wallet and profile providers: a change to
+    // any backup input, or a profile sign-in flip, re-resolves the backup row
+    // (see _syncWalletBackupStatus).
     context.watch<WalletProvider>();
+    context.watch<ProfileProvider>();
     _syncWalletBackupStatus();
     final animationTheme = context.animationTheme;
     if (_animationController.duration != animationTheme.long) {

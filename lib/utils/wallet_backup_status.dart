@@ -216,9 +216,16 @@ class WalletBackupStatusInputs {
     required this.accountSignedIn,
     required this.accountEmail,
     required this.linkagePending,
+    this.profileSignedIn = true,
   });
 
-  factory WalletBackupStatusInputs.of(WalletProvider walletProvider) {
+  /// [profileSignedIn] is the profile account's sign-in state. Only the mobile
+  /// row gates on it (a signed-out row is a fixed no-wallet snapshot), so it
+  /// passes the value; a screen that does not gate keeps the default.
+  factory WalletBackupStatusInputs.of(
+    WalletProvider walletProvider, {
+    bool profileSignedIn = true,
+  }) {
     final authority = walletProvider.authority;
     return WalletBackupStatusInputs(
       walletAddress: walletProvider.currentWalletAddress,
@@ -230,6 +237,7 @@ class WalletBackupStatusInputs {
       accountEmail: authority.accountEmail,
       linkagePending:
           WalletPresentationStateResolver.linkagePendingFor(walletProvider),
+      profileSignedIn: profileSignedIn,
     );
   }
 
@@ -241,6 +249,7 @@ class WalletBackupStatusInputs {
   final bool accountSignedIn;
   final String? accountEmail;
   final bool linkagePending;
+  final bool profileSignedIn;
 
   @override
   bool operator ==(Object other) {
@@ -252,7 +261,8 @@ class WalletBackupStatusInputs {
         other.hasSigner == hasSigner &&
         other.accountSignedIn == accountSignedIn &&
         other.accountEmail == accountEmail &&
-        other.linkagePending == linkagePending;
+        other.linkagePending == linkagePending &&
+        other.profileSignedIn == profileSignedIn;
   }
 
   @override
@@ -265,6 +275,7 @@ class WalletBackupStatusInputs {
         accountSignedIn,
         accountEmail,
         linkagePending,
+        profileSignedIn,
       );
 }
 
