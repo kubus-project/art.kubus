@@ -1090,8 +1090,15 @@ void main() {
     late String walletOfA;
     late int loginRequests;
     late Map<String, String> secure;
+    // Holds the secure write of one credential, so a commit can be in flight.
+    String? heldWriteValue;
+    Completer<void>? writeHold;
+    late Completer<void> writeHeld;
 
     setUp(() async {
+      heldWriteValue = null;
+      writeHold = null;
+      writeHeld = Completer<void>();
       solana = _HeldBalanceSolana();
       final mnemonic = solana.generateMnemonic();
       walletOfA = (await solana.derivePreferredKeyPair(mnemonic)).address;
@@ -1102,6 +1109,10 @@ void main() {
         final key = args['key'] as String?;
         if (call.method == 'read') return secure[key];
         if (call.method == 'write') {
+          if (args['value'] == heldWriteValue) {
+            if (!writeHeld.isCompleted) writeHeld.complete();
+            await writeHold?.future;
+          }
           secure[key!] = args['value'] as String;
         }
         if (call.method == 'delete') secure.remove(key);
@@ -1426,6 +1437,59 @@ void main() {
 
           expect(loginRequests, 0);
           expect(api.getAuthToken(), _token(_accountB));
+        });
+
+        test(
+            "stops while B's sign-in is still committing, and B completes as B",
+            () async {
+          await api.setAuthToken(_token(_accountA));
+          final wallet = await signerWallet();
+
+          final sync = wallet.importWalletFromMnemonic(
+            secure['cached_mnemonic']!,
+          );
+          await profileReached.future;
+          // B is the pending target; its token is not yet the live one.
+          heldWriteValue = _token(_accountB);
+          writeHold = Completer<void>();
+          final bSignIn = api.setAuthToken(_token(_accountB));
+          await writeHeld.future;
+          expect(api.pendingAuthAccountKey, _accountB);
+          expect(api.getAuthToken(), _token(_accountA));
+          profileRelease.complete();
+          await pumpEventQueue();
+          writeHold!.complete();
+          await bSignIn;
+          await sync;
+          await pumpEventQueue();
+
+          expect(loginRequests, 0, reason: "A's wallet never signs in over B");
+          expect(api.getAuthToken(), _token(_accountB));
+          expect(secure['jwt_token'], _token(_accountB));
+        });
+
+        test('keeps going when the same account swaps while the swap commits',
+            () async {
+          await api.setAuthToken(_token(_accountA));
+          final wallet = await signerWallet();
+
+          final sync = wallet.importWalletFromMnemonic(
+            secure['cached_mnemonic']!,
+          );
+          await profileReached.future;
+          heldWriteValue = _token(_accountA, refresh: 9);
+          writeHold = Completer<void>();
+          final swap = api.setAuthToken(_token(_accountA, refresh: 9));
+          await writeHeld.future;
+          profileRelease.complete();
+          await pumpEventQueue();
+          writeHold!.complete();
+          // The wallet login commits after, and supersedes, the swap in flight.
+          await swap.then<Object?>((_) => null, onError: (Object _) => null);
+          await sync;
+
+          expect(loginRequests, 1);
+          expect(api.getAuthToken(), _walletSignedToken(_accountA, walletOfA));
         });
       });
 

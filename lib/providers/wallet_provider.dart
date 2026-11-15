@@ -1200,6 +1200,7 @@ class WalletProvider extends ChangeNotifier {
     final authWallet = (_apiService.getCurrentAuthWalletAddress() ?? '').trim();
     final sameWalletSession =
         (_apiService.getAuthToken() ?? '').trim().isNotEmpty &&
+            !_apiService.hasPendingAccountSwitch &&
             WalletUtils.equals(authWallet, wallet) &&
             _apiService.getCurrentAuthLevel() == BackendAuthLevel.walletSigned;
     return !sameWalletSession;
@@ -2737,11 +2738,11 @@ class WalletProvider extends ChangeNotifier {
     // The account the session belongs to at entry. With the epoch, it binds the
     // sync: a changed epoch ends it unless the live session is still this
     // account's (link, refresh, a non-wallet sign-in token swap).
-    final entryAccountKey = AccountIdentity.accountKey;
+    final entryAccountKey = _apiService.pendingAuthAccountKey;
     bool sessionEnded() {
       if (!_isStaleAuthEpoch(sessionEpoch, forWallet: address)) return false;
       return entryAccountKey.isEmpty ||
-          AccountIdentity.accountKey != entryAccountKey;
+          _apiService.pendingAuthAccountKey != entryAccountKey;
     }
 
     // Safety net: account-link wallet setup must never reach backend
@@ -2853,9 +2854,13 @@ class WalletProvider extends ChangeNotifier {
         } else if (sessionEnded()) {
           return false;
         } else if (AppConfig.enableDebugIssueToken) {
+          // Bound to the session current here: the call awaits the network.
+          final debugEpoch = _apiService.authSessionEpoch;
           final issued = await _apiService.issueDebugTokenForWallet(address);
           _walletLog('_syncBackendData: debug token issued=$issued');
-          if (issued) await _apiService.loadAuthToken();
+          if (issued && debugEpoch == _apiService.authSessionEpoch) {
+            await _apiService.loadAuthToken();
+          }
         }
       } catch (e) {
         _walletLog('_syncBackendData: session ensure failed: $e');

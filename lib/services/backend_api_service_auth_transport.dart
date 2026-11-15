@@ -123,7 +123,7 @@ extension BackendApiAuthTransport on BackendApiService {
     final sessionEpoch = expectedEpoch ?? authSessionEpoch;
     // Captured with the epoch: the epoch is current here (checked below), so
     // this is the account the operation started under.
-    final entryAccountKey = _accountKeyOf(_authToken);
+    final entryAccountKey = pendingAuthAccountKey;
 
     // A wallet-signed session for this very wallet is never the wrong
     // account's: when another caller committed it while this one waited, it is
@@ -132,6 +132,7 @@ extension BackendApiAuthTransport on BackendApiService {
       final token = (_authToken ?? '').trim();
       final currentWallet = (getCurrentAuthWalletAddress() ?? '').trim();
       if (token.isNotEmpty &&
+          !hasPendingAccountSwitch &&
           WalletUtils.equals(currentWallet, normalizedWallet) &&
           getCurrentAuthLevel() == BackendAuthLevel.walletSigned) {
         return AuthSessionPayload(
@@ -148,7 +149,7 @@ extension BackendApiAuthTransport on BackendApiService {
     bool sessionStillStands() {
       if (sessionEpoch == authSessionEpoch) return true;
       return entryAccountKey.isNotEmpty &&
-          _accountKeyOf(_authToken) == entryAccountKey;
+          pendingAuthAccountKey == entryAccountKey;
     }
 
     if (sessionEpoch != authSessionEpoch) {
