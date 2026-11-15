@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
 import 'profile_section_order.dart';
 import '../../utils/wallet_utils.dart';
+import '../../utils/artwork_author_key.dart';
 import '../../widgets/app_loading.dart';
 import '../../widgets/unavailable_entity_scaffold.dart';
 import 'package:provider/provider.dart';
@@ -626,8 +627,12 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
 
   Future<void> _showMoreOptions() async {
     final l10n = AppLocalizations.of(context)!;
+    final profileWallet = user!.walletAddress?.trim() ?? '';
+    final profileId = user!.profileId?.trim() ?? '';
+    if (profileWallet.isEmpty && profileId.isEmpty) return;
     final target = ShareTarget.profile(
-      walletAddress: user!.id,
+      walletAddress: profileWallet.isEmpty ? null : profileWallet,
+      profileId: profileWallet.isEmpty ? profileId : null,
       title: user!.name,
     );
 
@@ -1094,10 +1099,15 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
   }
 
   Widget _buildStatsRow(AppLocalizations l10n) {
-    final localArtworksCount = Provider.of<ArtworkProvider>(
-      context,
-      listen: true,
-    ).artworksForWallet(user!.id).length;
+    final authorKey = ArtworkAuthorKey.resolve(
+      walletAddress: user?.walletAddress,
+      profileId: user?.profileId,
+    );
+    final localArtworksCount = authorKey == null
+        ? 0
+        : Provider.of<ArtworkProvider>(context, listen: true)
+            .artworksForAuthor(authorKey)
+            .length;
     final artworksCount = _authoredArtworksTotal ??
         _authoredArtworksCounter ??
         localArtworksCount;
@@ -1149,12 +1159,14 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
               title: l10n.userProfileArtworksTitle,
               value: _formatCount(artworksCount),
               icon: Icons.palette_outlined,
-              onTap: () {
-                ProfileScreenMethods.showArtworks(
-                  context,
-                  walletAddress: user!.id,
-                );
-              },
+              onTap: authorKey == null
+                  ? null
+                  : () {
+                      ProfileScreenMethods.showArtworks(
+                        context,
+                        authorKey: authorKey,
+                      );
+                    },
             ),
           ],
         );

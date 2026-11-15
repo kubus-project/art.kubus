@@ -157,4 +157,100 @@ void main() {
     expect(extended.authoredArtworksTotal, isNull);
     expect(extended.documentedArtworksTotal, isNull);
   });
+
+  test('walletless profile uses profileId filter, not account id or uploader',
+      () async {
+    const profileId = '10000000-0000-4000-8000-000000000010';
+    const accountId = '40000000-0000-4000-8000-000000000010';
+    final requests = <http.Request>[];
+    BackendApiService().setHttpClient(MockClient((request) async {
+      requests.add(request);
+      if (request.url.path == '/api/artworks') {
+        return _json(<String, Object?>{
+          'source': 'postgresql',
+          'appliedFilters': <String, Object?>{'authorProfileId': profileId},
+          'data': <Map<String, Object?>>[
+            <String, Object?>{
+              'id': 'foreign-uploaded-work',
+              'walletAddress': 'uploader-wallet',
+              'title': 'Imported by another account',
+              'artist': 'Recorded artist',
+              'description': '',
+              'latitude': 46.05,
+              'longitude': 14.5,
+              'createdAt': '2026-01-01T00:00:00.000Z',
+            },
+          ],
+        });
+      }
+      return http.Response('Not found', 404);
+    }));
+    final profile = User(
+      id: profileId,
+      userId: accountId,
+      profileId: profileId,
+      walletAddress: null,
+      name: 'Walletless Author',
+      username: 'walletless-author',
+      bio: '',
+      followersCount: 0,
+      followingCount: 0,
+      postsCount: 0,
+      isFollowing: false,
+      isVerified: false,
+      isArtist: true,
+      joinedDate: 'Joined recently',
+    );
+
+    final sections = await ProfilePackageService.loadProfileArtworkSections(
+      profileId,
+      limit: 6,
+      user: profile,
+    );
+
+    expect(requests, hasLength(1));
+    expect(requests.single.url.path, '/api/artworks');
+    expect(requests.single.url.queryParameters['authorProfileId'], profileId);
+    expect(requests.single.url.queryParameters['mine'], isNull);
+    expect(sections.authored.single['id'], 'foreign-uploaded-work');
+    expect(sections.authoredTotal, 1);
+    expect(sections.documented, isEmpty);
+  });
+
+  test('walletless profile refuses a generic list without appliedFilters echo',
+      () async {
+    const profileId = '10000000-0000-4000-8000-000000000011';
+    final requests = <http.Request>[];
+    BackendApiService().setHttpClient(MockClient((request) async {
+      requests.add(request);
+      return _json(<String, Object?>{
+        'data': <Map<String, Object?>>[
+          <String, Object?>{'id': 'unfiltered'}
+        ],
+      });
+    }));
+    final profile = User(
+      id: profileId,
+      profileId: profileId,
+      name: 'Walletless Author',
+      username: 'author',
+      bio: '',
+      followersCount: 0,
+      followingCount: 0,
+      postsCount: 0,
+      isFollowing: false,
+      isVerified: false,
+      joinedDate: 'Joined recently',
+    );
+
+    await expectLater(
+      ProfilePackageService.loadProfileArtworkSections(
+        profileId,
+        user: profile,
+      ),
+      throwsA(isA<UnsupportedError>()),
+    );
+    expect(requests, hasLength(1));
+    expect(requests.single.url.queryParameters['authorProfileId'], profileId);
+  });
 }

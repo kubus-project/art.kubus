@@ -10,6 +10,7 @@ import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../utils/design_tokens.dart';
 import '../../utils/profile_data_key.dart';
+import '../../utils/artwork_author_key.dart';
 import '../../utils/kubus_brand_colors.dart';
 import '../../utils/keyboard_inset_resolver.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -509,6 +510,12 @@ class _ProfileScreenState extends State<ProfileScreen>
           final profileProvider = Provider.of<ProfileProvider>(context);
           final isSmallScreen = constraints.maxWidth < 360;
           final walletAddress = profileProvider.currentWalletAddress;
+          final currentProfile = profileProvider.currentUser;
+          final authorKey = ArtworkAuthorKey.resolve(
+            walletAddress: walletAddress,
+            accountId: currentProfile?.userId,
+            profileId: currentProfile?.id,
+          );
 
           return Padding(
             padding: EdgeInsets.symmetric(horizontal: isSmallScreen ? 16 : 24),
@@ -561,10 +568,12 @@ class _ProfileScreenState extends State<ProfileScreen>
                       profileProvider.formattedArtworksCount,
                   Icons.palette,
                   isSmallScreen: isSmallScreen,
-                  onTap: () => ProfileScreenMethods.showArtworks(
-                    context,
-                    walletAddress: walletAddress,
-                  ),
+                  onTap: authorKey == null
+                      ? null
+                      : () => ProfileScreenMethods.showArtworks(
+                            context,
+                            authorKey: authorKey,
+                          ),
                 ),
                 _buildStatCard(
                   AppLocalizations.of(context)!.userProfileCollectionsTitle,
@@ -1002,6 +1011,7 @@ class _ProfileScreenState extends State<ProfileScreen>
       wallet,
       eventsKey: eventsKey,
       legacyWallet: legacyWallet,
+      authorProfileId: profileProvider.currentUser?.id,
       force: force,
     );
   }
@@ -1010,6 +1020,7 @@ class _ProfileScreenState extends State<ProfileScreen>
     String walletAddress, {
     required String eventsKey,
     String legacyWallet = '',
+    String? authorProfileId,
     bool force = false,
   }) async {
     if (!mounted) return;
@@ -1028,6 +1039,7 @@ class _ProfileScreenState extends State<ProfileScreen>
       final sections = await ProfilePackageService.loadProfileArtworkSections(
         walletAddress,
         limit: 6,
+        authorProfileId: authorProfileId,
       );
       final collections = await api.getCollections(
         walletAddress: walletAddress,
@@ -1688,14 +1700,16 @@ class _ProfileScreenState extends State<ProfileScreen>
       context,
       listen: false,
     );
-    final wallet = (profileProvider.currentUser?.walletAddress ?? '').trim();
-    if (wallet.isEmpty) return;
+    final profile = profileProvider.currentUser;
+    final wallet = (profile?.walletAddress ?? '').trim();
+    final profileId = (profile?.id ?? '').trim();
+    if (wallet.isEmpty && profileId.isEmpty) return;
     ShareService().showShareSheet(
       context,
       target: ShareTarget.profile(
-        walletAddress: wallet,
-        title: profileProvider.currentUser?.displayName ??
-            profileProvider.currentUser?.username,
+        walletAddress: wallet.isEmpty ? null : wallet,
+        profileId: wallet.isEmpty ? profileId : null,
+        title: profile?.displayName ?? profile?.username,
       ),
       sourceScreen: 'profile',
     );

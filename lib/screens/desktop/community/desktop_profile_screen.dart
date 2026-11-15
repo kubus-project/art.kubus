@@ -11,6 +11,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../../providers/themeprovider.dart';
 import '../../../providers/web3provider.dart';
 import '../../../providers/profile_provider.dart';
+import '../../../utils/artwork_author_key.dart';
 import '../../../providers/saved_items_provider.dart';
 import '../../../providers/account_verification_provider.dart';
 import '../../../providers/task_provider.dart';
@@ -835,6 +836,12 @@ class _ProfileScreenState extends State<ProfileScreen>
       ProfileProvider profileProvider, bool isLarge) {
     final l10n = AppLocalizations.of(context)!;
     final wallet = profileProvider.currentWalletAddress;
+    final profile = profileProvider.currentUser;
+    final authorKey = ArtworkAuthorKey.resolve(
+      walletAddress: wallet,
+      accountId: profile?.userId,
+      profileId: profile?.id,
+    );
     final screenWidth = MediaQuery.of(context).size.width;
     // More columns on wider screens for compact horizontal layout
     final maxCols = screenWidth >= 1400 ? 4 : (isLarge ? 4 : 2);
@@ -878,8 +885,12 @@ class _ProfileScreenState extends State<ProfileScreen>
               : profileProvider.formattedArtworksCount,
           icon: Icons.palette_outlined,
           color: _profileStatAccentForIcon(Icons.palette_outlined),
-          onTap: () =>
-              ProfileScreenMethods.showArtworks(context, walletAddress: wallet),
+          onTap: authorKey == null
+              ? null
+              : () => ProfileScreenMethods.showArtworks(
+                    context,
+                    authorKey: authorKey,
+                  ),
         ),
       ],
     );
@@ -887,7 +898,14 @@ class _ProfileScreenState extends State<ProfileScreen>
 
   Widget _buildArtistPortfolioSection(ThemeProvider themeProvider) {
     final l10n = AppLocalizations.of(context)!;
-    final wallet = context.read<ProfileProvider>().currentWalletAddress;
+    final profileProvider = context.read<ProfileProvider>();
+    final wallet = profileProvider.currentWalletAddress;
+    final profile = profileProvider.currentUser;
+    final authorKey = ArtworkAuthorKey.resolve(
+      walletAddress: wallet,
+      accountId: profile?.userId,
+      profileId: profile?.id,
+    );
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -896,10 +914,12 @@ class _ProfileScreenState extends State<ProfileScreen>
           subtitle: l10n.desktopProfilePortfolioSubtitle,
           action: _artistArtworks.isNotEmpty
               ? TextButton.icon(
-                  onPressed: () => ProfileScreenMethods.showArtworks(
-                    context,
-                    walletAddress: wallet,
-                  ),
+                  onPressed: authorKey == null
+                      ? null
+                      : () => ProfileScreenMethods.showArtworks(
+                            context,
+                            authorKey: authorKey,
+                          ),
                   icon: const Icon(Icons.arrow_forward, size: 18),
                   label: Text(l10n.commonViewAll),
                 )
@@ -1749,6 +1769,7 @@ class _ProfileScreenState extends State<ProfileScreen>
       wallet,
       eventsKey: eventsKey,
       legacyWallet: legacyWallet,
+      authorProfileId: profileProvider.currentUser?.id,
       force: force,
     );
   }
@@ -1756,6 +1777,7 @@ class _ProfileScreenState extends State<ProfileScreen>
   Future<void> _loadArtistData(String walletAddress,
       {required String eventsKey,
       String legacyWallet = '',
+      String? authorProfileId,
       bool force = false}) async {
     if (!mounted) return;
     setState(() => _artistDataLoading = true);
@@ -1765,6 +1787,7 @@ class _ProfileScreenState extends State<ProfileScreen>
       final sections = await ProfilePackageService.loadProfileArtworkSections(
         walletAddress,
         limit: 6,
+        authorProfileId: authorProfileId,
       );
       final collections = await api.getCollections(
         walletAddress: walletAddress,
@@ -1876,13 +1899,15 @@ class _ProfileScreenState extends State<ProfileScreen>
     final profileProvider =
         Provider.of<ProfileProvider>(context, listen: false);
     final wallet = (profileProvider.currentUser?.walletAddress ?? '').trim();
-    if (wallet.isEmpty) return;
+    final profile = profileProvider.currentUser;
+    final profileId = (profile?.id ?? '').trim();
+    if (wallet.isEmpty && profileId.isEmpty) return;
     ShareService().showShareSheet(
       context,
       target: ShareTarget.profile(
-        walletAddress: wallet,
-        title: profileProvider.currentUser?.displayName ??
-            profileProvider.currentUser?.username,
+        walletAddress: wallet.isEmpty ? null : wallet,
+        profileId: wallet.isEmpty ? profileId : null,
+        title: profile?.displayName ?? profile?.username,
       ),
       sourceScreen: 'desktop_profile',
     );

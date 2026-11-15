@@ -13,6 +13,7 @@ import '../services/account_identity.dart';
 import '../services/backend_api_service.dart';
 import '../services/profile_package_mutation_tracker.dart';
 import '../services/user_action_logger.dart';
+import '../utils/artwork_author_key.dart';
 import '../utils/wallet_utils.dart';
 import 'saved_items_provider.dart';
 
@@ -27,6 +28,10 @@ class ArtworkProvider extends ChangeNotifier {
   int _loadingSequence = 0;
   final Set<String> _walletsWithPrivateArtworks = <String>{};
   final Set<String> _walletsWithPublicArtworks = <String>{};
+  // Artwork ids listed for each walletless account (keyed by account id).
+  final Map<String, Set<String>> _artworkIdsByAccount = <String, Set<String>>{};
+  final Map<String, Set<String>> _artworkIdsByProfile = <String, Set<String>>{};
+  final Map<String, String> _authorListErrors = <String, String>{};
   String? _error;
   SavedItemsProvider? _savedItemsProvider;
   final ArtworkBackendApi _backendApi;
@@ -160,8 +165,11 @@ class ArtworkProvider extends ChangeNotifier {
       ..._walletsWithPrivateArtworks,
       ..._walletsWithPublicArtworks,
     };
+    final ownedAccountArtworkIds =
+        _artworkIdsByAccount.values.expand((ids) => ids).toSet();
     bool ownedByEndingSession(Artwork artwork) {
       if (!artwork.isPublic) return true;
+      if (ownedAccountArtworkIds.contains(artwork.id)) return true;
       final wallet = artwork.walletAddress?.trim() ?? '';
       return wallet.isNotEmpty &&
           ownedWallets.contains(WalletUtils.canonical(wallet));
@@ -179,6 +187,9 @@ class ArtworkProvider extends ChangeNotifier {
     _supplementalArtworkIds.clear();
     _walletsWithPrivateArtworks.clear();
     _walletsWithPublicArtworks.clear();
+    _artworkIdsByAccount.clear();
+    _artworkIdsByProfile.clear();
+    _authorListErrors.clear();
     _lastArtworksLoadAt = null;
     _inFlightLoadArtworks = null;
     _inFlightArtworkFetches.clear();
@@ -445,6 +456,31 @@ class ArtworkProvider extends ChangeNotifier {
     matches.sort((a, b) => b.createdAt.compareTo(a.createdAt));
     return matches;
   }
+
+  /// Artwork library visible for [key]. Wallet behavior stays legacy-compatible;
+  /// walletless owners combine their authorized own list and the public works
+  /// attributed to their canonical profile.
+  List<Artwork> artworksForAuthor(ArtworkAuthorKey key) {
+    final wallet = key.wallet;
+    if (wallet != null) {
+      return artworksForWallet(wallet);
+    }
+    final ids = <String>{
+      if (key.accountId != null) ...?_artworkIdsByAccount[key.accountId],
+      if (key.profileId != null) ...?_artworkIdsByProfile[key.profileId],
+    };
+    if (ids.isEmpty) {
+      return const <Artwork>[];
+    }
+    final matches = _artworks
+        .where((artwork) => ids.contains(artwork.id))
+        .toList(growable: false);
+    matches.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+    return matches;
+  }
+
+  String? authorListErrorFor(ArtworkAuthorKey key) =>
+      _authorListErrors[key.cacheKey];
 
   /// Get artworks by category
   List<Artwork> getArtworksByCategory(String category) {
@@ -1191,6 +1227,7 @@ class ArtworkProvider extends ChangeNotifier {
       if (refresh) {
         _walletsWithPrivateArtworks.clear();
         _walletsWithPublicArtworks.clear();
+        _artworkIdsByAccount.clear();
       }
       final artworks = await _backendApi.getArtworks(limit: 100);
       if (epoch != _accountEpoch) return;
@@ -1268,6 +1305,90 @@ class ArtworkProvider extends ChangeNotifier {
       }
     } catch (e) {
       _setError('Failed to load wallet artworks: $e');
+    } finally {
+      _endLoading(operationKey, loadingGeneration);
+    }
+  }
+
+  /// Loads the artworks authored by [key].
+  ///
+  /// Wallet reads remain unchanged. Walletless own libraries combine the
+  /// caller's private/owned `mine=true` list with public authorship filtered by
+  /// canonical `profiles.id`; foreign profiles request only the public scope.
+  Future<void> loadArtworksForAuthor(
+    ArtworkAuthorKey key, {
+    bool force = false,
+    bool includePrivateForWallet = true,
+  }) async {
+    final wallet = key.wallet;
+    if (wallet != null) {
+      return loadArtworksForWallet(
+        wallet,
+        force: force,
+        includePrivateForWallet: includePrivateForWallet,
+      );
+    }
+    final accountId = key.accountId;
+    final profileId = key.profileId;
+    if ((accountId == null || accountId.isEmpty) &&
+        (profileId == null || profileId.isEmpty)) {
+      return;
+    }
+    if (!force &&
+        profileId == null &&
+        accountId != null &&
+        _artworkIdsByAccount.containsKey(accountId)) {
+      return;
+    }
+
+    final operationKey = key.loadOperationKey;
+    final loadingGeneration = _beginLoading(operationKey);
+    final epoch = _accountEpoch;
+    _authorListErrors.remove(key.cacheKey);
+    if (profileId != null) _artworkIdsByProfile.remove(profileId);
+    try {
+      final results = await Future.wait(<Future<List<Artwork>>>[
+        if (accountId != null && accountId.isNotEmpty)
+          _backendApi.getArtworks(mine: true, limit: 100),
+        if (profileId != null && profileId.isNotEmpty)
+          _backendApi.getArtworks(authorProfileId: profileId, limit: 200),
+      ]);
+      if (epoch != _accountEpoch) return;
+      var resultIndex = 0;
+      final accountArtworks = accountId != null && accountId.isNotEmpty
+          ? results[resultIndex++]
+          : const <Artwork>[];
+      final authoredArtworks = profileId != null && profileId.isNotEmpty
+          ? results[resultIndex]
+          : const <Artwork>[];
+      final accountIds = <String>{};
+      final profileIds = <String>{};
+      for (final artwork in <Artwork>[
+        ...accountArtworks,
+        ...authoredArtworks
+      ]) {
+        final merged = _mergeSavedBookmarkState(artwork);
+        _upsertArtwork(merged);
+        _supplementalArtworkIds.add(merged.id);
+      }
+      for (final artwork in accountArtworks) {
+        accountIds.add(artwork.id);
+      }
+      for (final artwork in authoredArtworks) {
+        profileIds.add(artwork.id);
+      }
+      if (accountId != null) {
+        _artworkIdsByAccount[accountId] = accountIds;
+      }
+      if (profileId != null) {
+        _artworkIdsByProfile[profileId] = profileIds;
+      }
+      notifyListeners();
+    } catch (e) {
+      if (epoch == _accountEpoch) {
+        _authorListErrors[key.cacheKey] = e.toString();
+        _setError('Failed to load authored artworks: $e');
+      }
     } finally {
       _endLoading(operationKey, loadingGeneration);
     }

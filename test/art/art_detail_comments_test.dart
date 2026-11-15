@@ -49,6 +49,8 @@ class _FakeArtworkApi implements ArtworkBackendApi {
     String? walletAddress,
     bool includePrivateForWallet = false,
     List<String>? ids,
+    bool mine = false,
+    String? authorProfileId,
   }) =>
       throw UnimplementedError();
 

@@ -361,6 +361,7 @@ class _ProfilePackageJson {
     return <String, dynamic>{
       'id': user.id,
       if (user.userId != null) 'userId': user.userId,
+      if (user.profileId != null) 'profileId': user.profileId,
       if (user.walletAddress != null) 'walletAddress': user.walletAddress,
       'allowsMessages': user.allowsMessages,
       'name': user.name,
@@ -386,6 +387,7 @@ class _ProfilePackageJson {
     return User(
       id: json['id']?.toString() ?? '',
       userId: stringOrNull(json['userId']),
+      profileId: stringOrNull(json['profileId']),
       walletAddress: stringOrNull(json['walletAddress']),
       allowsMessages: json['allowsMessages'] is bool
           ? json['allowsMessages'] as bool

@@ -853,17 +853,44 @@ class ProfilePackageService {
   static Future<ProfileArtworkSections> loadProfileArtworkSections(
     String walletAddress, {
     int limit = 6,
+    User? user,
+    String? authorProfileId,
   }) async {
     final api = BackendApiService();
+    final linkedWallet = user?.walletAddress?.trim() ?? '';
+    final profileId = (authorProfileId ?? user?.profileId ?? '').trim();
+    if (linkedWallet.isEmpty && profileId.isNotEmpty) {
+      final authored = await api.getArtworks(
+        authorProfileId: profileId,
+        limit: 200,
+      );
+      final items = authored
+          .take(200)
+          .map((artwork) => artwork.toMap())
+          .toList(growable: false);
+      return ProfileArtworkSections(
+        authored: items,
+        documented: const <Map<String, dynamic>>[],
+        authoredTotal: authored.length,
+      );
+    }
+    if (linkedWallet.isEmpty &&
+        user != null &&
+        RegExp(r'^[0-9a-f-]{36}$', caseSensitive: false).hasMatch(user.id)) {
+      // A UUID without explicit profileId is not enough to choose between the
+      // account and profile namespaces; do not query with the ambiguous ID.
+      return const ProfileArtworkSections();
+    }
+
     final authoredFuture = api.getProfileArtworks(
-      walletAddress,
+      linkedWallet.isNotEmpty ? linkedWallet : walletAddress,
       relationship: 'authored',
       limit: limit,
     );
     // A documented-scope failure must not hide the authored showcase.
     final documentedFuture = api
         .getProfileArtworks(
-          walletAddress,
+          linkedWallet.isNotEmpty ? linkedWallet : walletAddress,
           relationship: 'documented',
           limit: limit,
         )
@@ -906,7 +933,7 @@ class ProfilePackageService {
       final eventsFuture = api.listEvents(limit: 100);
 
       final results = await Future.wait<dynamic>([
-        loadProfileArtworkSections(walletAddress, limit: 6),
+        loadProfileArtworkSections(walletAddress, limit: 6, user: user),
         collectionsFuture,
         eventsFuture,
       ]);

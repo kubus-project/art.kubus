@@ -14,6 +14,7 @@ import '../../../providers/artwork_provider.dart';
 import '../../../providers/profile_provider.dart';
 import '../../../providers/web3provider.dart';
 import '../../../widgets/disk_cached_artwork_image.dart';
+import '../../../utils/artwork_author_key.dart';
 import '../../../utils/creator_shell_navigation.dart';
 import '../../../utils/kubus_color_roles.dart';
 import '../../../utils/design_tokens.dart';
@@ -57,38 +58,72 @@ class _CollectionCreatorState extends State<CollectionCreator> {
   String _artworkSearchQuery = '';
   bool _artworksLoading = false;
   bool _artworkLibraryLoadRequested = false;
+  String? _authorScopeKey;
+  int _authorLoadGeneration = 0;
   String _lastPrefetchedArtworkSignature = '';
   String? _createdCollectionId;
   bool _partialSuccessWithoutId = false;
 
   @override
   void dispose() {
+    _authorLoadGeneration++;
     _nameController.dispose();
     _descriptionController.dispose();
     super.dispose();
   }
 
-  Future<void> _loadArtworksForWallet(String walletAddress) async {
-    final normalized = walletAddress.trim();
-    if (normalized.isEmpty) return;
-
+  Future<void> _loadArtworksForAuthor(ArtworkAuthorKey authorKey) async {
+    final loadGeneration = ++_authorLoadGeneration;
+    final scopeKey = authorKey.cacheKey;
     final artworkProvider = context.read<ArtworkProvider>();
     setState(() {
       _artworkLibraryLoadRequested = true;
       _artworksLoading = true;
     });
     try {
-      await artworkProvider.loadArtworksForWallet(normalized);
-      if (!mounted) return;
-      final loaded = artworkProvider.artworksForWallet(normalized);
+      await artworkProvider.loadArtworksForAuthor(authorKey);
+      if (!mounted ||
+          loadGeneration != _authorLoadGeneration ||
+          scopeKey != _authorScopeKey) {
+        return;
+      }
+      final loaded = artworkProvider.artworksForAuthor(authorKey);
       _prefetchArtworkImages(loaded);
     } catch (_) {
       // Non-fatal; artworks list will be empty.
     } finally {
-      if (mounted) {
+      if (mounted &&
+          loadGeneration == _authorLoadGeneration &&
+          scopeKey == _authorScopeKey) {
         setState(() => _artworksLoading = false);
       }
     }
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final profile = context.read<ProfileProvider>().currentUser;
+    final web3 = context.read<Web3Provider>();
+    final authorKey = ArtworkAuthorKey.resolve(
+      walletAddress: WalletUtils.coalesce(
+        walletAddress: profile?.walletAddress,
+        wallet: web3.walletAddress,
+      ),
+      accountId: profile?.userId,
+      profileId: profile?.id,
+    );
+    final nextScopeKey = authorKey?.cacheKey;
+    if (_authorScopeKey == nextScopeKey) return;
+    if (_authorScopeKey != null) {
+      _authorLoadGeneration++;
+      _selectedArtworkIds.clear();
+      _artworkSearchQuery = '';
+      _artworksLoading = false;
+      _artworkLibraryLoadRequested = false;
+      _lastPrefetchedArtworkSignature = '';
+    }
+    _authorScopeKey = nextScopeKey;
   }
 
   void _prefetchArtworkImages(List<Artwork> artworks) {
@@ -299,11 +334,17 @@ class _CollectionCreatorState extends State<CollectionCreator> {
       walletAddress: profileProvider.currentUser?.walletAddress,
       wallet: web3Provider.walletAddress,
     );
+    // Wallet when the account has one; otherwise the account id.
+    final authorKey = ArtworkAuthorKey.resolve(
+      walletAddress: walletAddress,
+      accountId: profileProvider.currentUser?.userId,
+      profileId: profileProvider.currentUser?.id,
+    );
     final artworkProvider = context.watch<ArtworkProvider>();
-    final allArtworks = artworkProvider.artworks;
-    if (allArtworks.isNotEmpty) {
-      _prefetchArtworkImages(allArtworks);
-    }
+    final authorArtworks = authorKey == null
+        ? const <Artwork>[]
+        : artworkProvider.artworksForAuthor(authorKey);
+    if (authorArtworks.isNotEmpty) _prefetchArtworkImages(authorArtworks);
 
     final formBody = Form(
       key: _formKey,
@@ -393,8 +434,8 @@ class _CollectionCreatorState extends State<CollectionCreator> {
           _buildArtworkSelectionSection(
             l10n,
             studioAccent,
-            walletAddress,
-            allArtworks,
+            authorKey,
+            authorArtworks,
           ),
 
           const CreatorSectionSpacing(),
@@ -437,9 +478,7 @@ class _CollectionCreatorState extends State<CollectionCreator> {
           semantic: DesktopCreatorSectionSemantic.status,
         ),
         mainContent: formBody,
-        sidebar: _buildDesktopSidebar(
-          l10n,
-        ),
+        sidebar: _buildDesktopSidebar(l10n),
       );
     }
 
@@ -449,9 +488,7 @@ class _CollectionCreatorState extends State<CollectionCreator> {
     );
   }
 
-  Widget _buildDesktopSidebar(
-    AppLocalizations l10n,
-  ) {
+  Widget _buildDesktopSidebar(AppLocalizations l10n) {
     final scheme = Theme.of(context).colorScheme;
     final createdId = _createdCollectionId ?? '';
     final created = createdId.isNotEmpty;
@@ -618,10 +655,13 @@ class _CollectionCreatorState extends State<CollectionCreator> {
   Widget _buildArtworkSelectionSection(
     AppLocalizations l10n,
     Color accent,
-    String walletAddress,
+    ArtworkAuthorKey? authorKey,
     List<Artwork> allArtworks,
   ) {
     final scheme = Theme.of(context).colorScheme;
+    final authorError = authorKey == null
+        ? null
+        : context.read<ArtworkProvider>().authorListErrorFor(authorKey);
 
     // Filter artworks by search query.
     final query = _artworkSearchQuery.toLowerCase().trim();
@@ -636,6 +676,21 @@ class _CollectionCreatorState extends State<CollectionCreator> {
     return CreatorSection(
       title: l10n.collectionCreatorAddArtworksTitle,
       children: [
+        if (authorError != null) ...[
+          CreatorInfoBox(
+            text: l10n.commonNotAvailable,
+            icon: Icons.info_outline,
+            accentColor: accent,
+          ),
+          const CreatorFieldSpacing(),
+          OutlinedButton.icon(
+            onPressed: _artworksLoading || authorKey == null
+                ? null
+                : () => unawaited(_loadArtworksForAuthor(authorKey)),
+            icon: const Icon(Icons.refresh),
+            label: Text(l10n.commonRetry),
+          ),
+        ],
         // Search field
         CreatorSearchField(
           hint: l10n.collectionCreatorSearchArtworksHint,
@@ -646,7 +701,7 @@ class _CollectionCreatorState extends State<CollectionCreator> {
 
         const CreatorFieldSpacing(),
 
-        if (walletAddress.isEmpty) ...[
+        if (authorKey == null) ...[
           CreatorInfoBox(
             text: l10n.collectionCreatorConnectWalletLabel,
             icon: Icons.account_balance_wallet_outlined,
@@ -655,9 +710,11 @@ class _CollectionCreatorState extends State<CollectionCreator> {
           const CreatorFieldSpacing(),
         ] else if (allArtworks.isEmpty) ...[
           CreatorInfoBox(
-            text: _artworkLibraryLoadRequested
-                ? l10n.collectionCreatorArtworkLibraryLoadingLabel
-                : l10n.collectionCreatorArtworkLibraryPlaceholderLabel,
+            text: authorError != null
+                ? l10n.commonNotAvailable
+                : _artworkLibraryLoadRequested
+                    ? l10n.collectionCreatorArtworkLibraryLoadingLabel
+                    : l10n.collectionCreatorArtworkLibraryPlaceholderLabel,
             icon: Icons.collections_bookmark_outlined,
             accentColor: accent,
           ),
@@ -665,14 +722,16 @@ class _CollectionCreatorState extends State<CollectionCreator> {
           OutlinedButton.icon(
             onPressed: _artworksLoading
                 ? null
-                : () => unawaited(_loadArtworksForWallet(walletAddress)),
+                : () => unawaited(_loadArtworksForAuthor(authorKey)),
             icon: Icon(_artworksLoading
                 ? Icons.hourglass_bottom_outlined
                 : Icons.download_outlined),
             label: Text(
               _artworksLoading
                   ? l10n.collectionCreatorLoadingLibraryLabel
-                  : l10n.collectionCreatorLoadArtworkLibraryLabel,
+                  : authorError != null
+                      ? l10n.commonRetry
+                      : l10n.collectionCreatorLoadArtworkLibraryLabel,
             ),
           ),
         ],

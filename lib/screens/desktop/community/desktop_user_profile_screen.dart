@@ -7,6 +7,7 @@ import 'package:art_kubus/l10n/app_localizations.dart';
 import '../../community/profile_section_order.dart';
 import '../../../utils/design_tokens.dart';
 import '../../../utils/wallet_utils.dart';
+import '../../../utils/artwork_author_key.dart';
 import '../../../widgets/app_loading.dart';
 import 'package:provider/provider.dart';
 import '../../../models/profile_package.dart';
@@ -623,12 +624,14 @@ class _UserProfileScreenState extends State<UserProfileScreen>
   }
 
   void _handleShare() {
-    final targetWallet = user?.id.toString().trim();
-    if (targetWallet == null || targetWallet.isEmpty) return;
+    final wallet = user?.walletAddress?.trim() ?? '';
+    final profileId = user?.profileId?.trim() ?? '';
+    if (wallet.isEmpty && profileId.isEmpty) return;
     ShareService().showShareSheet(
       context,
       target: ShareTarget.profile(
-        walletAddress: targetWallet,
+        walletAddress: wallet.isEmpty ? null : wallet,
+        profileId: wallet.isEmpty ? profileId : null,
         title: user?.name,
       ),
       sourceScreen: 'desktop_user_profile',
@@ -1169,10 +1172,15 @@ class _UserProfileScreenState extends State<UserProfileScreen>
     final screenWidth = MediaQuery.of(context).size.width;
     final maxCols =
         isCommunityOverlay ? 2 : (screenWidth >= 1400 ? 4 : (isLarge ? 4 : 2));
-    final localArtworksCount = Provider.of<ArtworkProvider>(
-      context,
-      listen: true,
-    ).artworksForWallet(user!.id).length;
+    final authorKey = ArtworkAuthorKey.resolve(
+      walletAddress: user?.walletAddress,
+      profileId: user?.profileId,
+    );
+    final localArtworksCount = authorKey == null
+        ? 0
+        : Provider.of<ArtworkProvider>(context, listen: true)
+            .artworksForAuthor(authorKey)
+            .length;
     final artworksCount = _authoredArtworksTotal ??
         _authoredArtworksCounter ??
         localArtworksCount;
@@ -1218,9 +1226,12 @@ class _UserProfileScreenState extends State<UserProfileScreen>
           value: _formatCount(artworksCount),
           icon: Icons.palette_outlined,
           color: _profileStatAccentForIcon(Icons.palette_outlined),
-          onTap: () {
-            ProfileScreenMethods.showArtworks(context, walletAddress: user!.id);
-          },
+          onTap: authorKey == null
+              ? null
+              : () => ProfileScreenMethods.showArtworks(
+                    context,
+                    authorKey: authorKey,
+                  ),
         ),
       ],
     );

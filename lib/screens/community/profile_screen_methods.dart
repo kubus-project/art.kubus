@@ -16,6 +16,7 @@ import '../../providers/platform_provider.dart';
 import '../../services/backend_api_service.dart';
 import '../../services/profile_package_service.dart';
 import '../../services/user_service.dart';
+import '../../utils/artwork_author_key.dart';
 import '../../utils/artwork_navigation.dart';
 import '../../utils/artwork_media_resolver.dart';
 import '../../utils/creator_display_format.dart';
@@ -554,36 +555,24 @@ class ProfileScreenMethods {
     );
   }
 
-  static void showArtworks(BuildContext context, {String? walletAddress}) {
-    final targetWallet = walletAddress?.trim();
+  static void showArtworks(
+    BuildContext context, {
+    required ArtworkAuthorKey authorKey,
+  }) {
     final platform = Provider.of<PlatformProvider>(context, listen: false);
     final isDesktopLike = platform.isDesktop ||
         (platform.isWeb && MediaQuery.of(context).size.width >= 900);
     final artworkProvider =
         Provider.of<ArtworkProvider>(context, listen: false);
-    final walletProvider = Provider.of<WalletProvider>(context, listen: false);
-    final profileProvider =
-        Provider.of<ProfileProvider>(context, listen: false);
-    final resolvedWallet = (targetWallet != null && targetWallet.isNotEmpty)
-        ? targetWallet
-        : (profileProvider.currentWalletAddress ??
-            walletProvider.currentWalletAddress);
-
-    if (resolvedWallet == null || resolvedWallet.isEmpty) {
-      return;
-    }
-
-    // Prime wallet-keyed artworks cache before modal open (non-blocking).
-    final currentWallet = (walletProvider.currentWalletAddress ??
-            profileProvider.currentWalletAddress)
-        ?.trim();
-    final includePrivate = currentWallet != null &&
-        currentWallet.isNotEmpty &&
-        WalletUtils.equals(currentWallet, resolvedWallet);
+    final activeWallet = Provider.of<ProfileProvider>(context, listen: false)
+        .currentWalletAddress;
+    final includePrivate = authorKey.isWallet &&
+        WalletUtils.equals(activeWallet, authorKey.wallet);
+    // Prime the author's artworks cache before modal open (non-blocking).
     try {
       unawaited(
-        artworkProvider.loadArtworksForWallet(
-          resolvedWallet,
+        artworkProvider.loadArtworksForAuthor(
+          authorKey,
           force: false,
           includePrivateForWallet: includePrivate,
         ),
@@ -596,7 +585,10 @@ class ProfileScreenMethods {
       enableDrag: !isDesktopLike,
       showDragHandle: false,
       backgroundColor: Colors.transparent,
-      builder: (context) => _ArtworksBottomSheet(walletAddress: resolvedWallet),
+      builder: (context) => _ArtworksBottomSheet(
+        authorKey: authorKey,
+        includePrivateForWallet: includePrivate,
+      ),
     );
   }
 
@@ -1035,9 +1027,13 @@ class _FollowingBottomSheetState extends State<_FollowingBottomSheet> {
 
 // ==================== Artworks Bottom Sheet ====================
 class _ArtworksBottomSheet extends StatelessWidget {
-  final String walletAddress;
+  final ArtworkAuthorKey authorKey;
+  final bool includePrivateForWallet;
 
-  const _ArtworksBottomSheet({required this.walletAddress});
+  const _ArtworksBottomSheet({
+    required this.authorKey,
+    required this.includePrivateForWallet,
+  });
 
   Widget _buildArtworkCover({
     required BuildContext context,
@@ -1144,15 +1140,15 @@ class _ArtworksBottomSheet extends StatelessWidget {
     final isDesktopLike = platform.isDesktop ||
         (platform.isWeb && MediaQuery.of(context).size.width >= 900);
     const enableCardBlur = false;
-    final operationKey =
-        'load_artworks_wallet_${WalletUtils.canonical(walletAddress)}';
+    final operationKey = authorKey.loadOperationKey;
     final contentHeight = (MediaQuery.of(context).size.height * 0.6)
         .clamp(180.0, 900.0)
         .toDouble();
 
     return Consumer<ArtworkProvider>(
       builder: (context, artworkProvider, child) {
-        final userArtworks = artworkProvider.artworksForWallet(walletAddress);
+        final userArtworks = artworkProvider.artworksForAuthor(authorKey);
+        final authorError = artworkProvider.authorListErrorFor(authorKey);
         final isLoading = artworkProvider.isLoading(operationKey);
 
         return SizedBox(
@@ -1176,107 +1172,159 @@ class _ArtworksBottomSheet extends StatelessWidget {
                     onPressed: () => Navigator.pop(context),
                   ),
                 ),
+                if (authorError != null && userArtworks.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: KubusSpacing.md,
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Flexible(child: Text(l10n.commonNotAvailable)),
+                        TextButton(
+                          onPressed: () => unawaited(
+                            artworkProvider.loadArtworksForAuthor(
+                              authorKey,
+                              force: true,
+                              includePrivateForWallet: includePrivateForWallet,
+                            ),
+                          ),
+                          child: Text(l10n.commonRetry),
+                        ),
+                      ],
+                    ),
+                  ),
                 SizedBox(
                   height: contentHeight,
                   child: (isLoading && userArtworks.isEmpty)
                       ? const AppLoading()
-                      : userArtworks.isEmpty
+                      : userArtworks.isEmpty && authorError != null
                           ? Center(
                               child: Column(
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
-                                  Icon(
-                                    Icons.image_not_supported,
-                                    size: 64,
-                                    color: theme.colorScheme.onSurface
-                                        .withValues(alpha: 0.3),
-                                  ),
-                                  const SizedBox(height: 16),
                                   Text(
-                                    l10n.artistGalleryEmptyTitle,
-                                    style: KubusTypography.inter(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.w500,
-                                      color: theme.colorScheme.onSurface
-                                          .withValues(alpha: 0.6),
+                                    l10n.commonNotAvailable,
+                                    textAlign: TextAlign.center,
+                                  ),
+                                  const SizedBox(height: KubusSpacing.sm),
+                                  TextButton.icon(
+                                    onPressed: () => unawaited(
+                                      artworkProvider.loadArtworksForAuthor(
+                                        authorKey,
+                                        force: true,
+                                        includePrivateForWallet:
+                                            includePrivateForWallet,
+                                      ),
                                     ),
+                                    icon: const Icon(Icons.refresh),
+                                    label: Text(l10n.commonRetry),
                                   ),
                                 ],
                               ),
                             )
-                          : GridView.builder(
-                              padding:
-                                  const EdgeInsets.symmetric(horizontal: 16),
-                              gridDelegate:
-                                  const SliverGridDelegateWithFixedCrossAxisCount(
-                                crossAxisCount: 2,
-                                crossAxisSpacing: 12,
-                                mainAxisSpacing: 12,
-                                childAspectRatio: 0.8,
-                              ),
-                              itemCount: userArtworks.length,
-                              itemBuilder: (context, index) {
-                                final artwork = userArtworks[index];
-                                return GestureDetector(
-                                  onTap: () {
-                                    openArtwork(context, artwork.id,
-                                        source: 'profile_methods');
-                                  },
-                                  child: LiquidGlassCard(
-                                    borderRadius:
-                                        BorderRadius.circular(KubusRadius.lg),
-                                    enableBlur: enableCardBlur,
-                                    padding: EdgeInsets.zero,
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Expanded(
-                                          child: _buildArtworkCover(
-                                            context: context,
-                                            theme: theme,
-                                            artwork: artwork,
-                                          ),
+                          : userArtworks.isEmpty
+                              ? Center(
+                                  child: Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Icon(
+                                        Icons.image_not_supported,
+                                        size: 64,
+                                        color: theme.colorScheme.onSurface
+                                            .withValues(alpha: 0.3),
+                                      ),
+                                      const SizedBox(height: 16),
+                                      Text(
+                                        l10n.artistGalleryEmptyTitle,
+                                        style: KubusTypography.inter(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.w500,
+                                          color: theme.colorScheme.onSurface
+                                              .withValues(alpha: 0.6),
                                         ),
-                                        Padding(
-                                          padding: const EdgeInsets.all(
-                                              KubusSpacing.sm),
-                                          child: Column(
-                                            crossAxisAlignment:
-                                                CrossAxisAlignment.start,
-                                            children: [
-                                              Text(
-                                                artwork.title,
-                                                style: KubusTypography.inter(
-                                                  fontWeight: FontWeight.w600,
-                                                  fontSize: 14,
-                                                  color: theme
-                                                      .colorScheme.onSurface,
-                                                ),
-                                                maxLines: 1,
-                                                overflow: TextOverflow.ellipsis,
-                                              ),
-                                              const SizedBox(
-                                                  height: KubusSpacing.xxs),
-                                              Text(
-                                                l10n.userProfileLikesLabel(
-                                                    artwork.likesCount),
-                                                style: KubusTypography.inter(
-                                                  fontSize: 12,
-                                                  color: theme
-                                                      .colorScheme.onSurface
-                                                      .withValues(alpha: 0.6),
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                      ],
-                                    ),
+                                      ),
+                                    ],
                                   ),
-                                );
-                              },
-                            ),
+                                )
+                              : GridView.builder(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 16),
+                                  gridDelegate:
+                                      const SliverGridDelegateWithFixedCrossAxisCount(
+                                    crossAxisCount: 2,
+                                    crossAxisSpacing: 12,
+                                    mainAxisSpacing: 12,
+                                    childAspectRatio: 0.8,
+                                  ),
+                                  itemCount: userArtworks.length,
+                                  itemBuilder: (context, index) {
+                                    final artwork = userArtworks[index];
+                                    return GestureDetector(
+                                      onTap: () {
+                                        openArtwork(context, artwork.id,
+                                            source: 'profile_methods');
+                                      },
+                                      child: LiquidGlassCard(
+                                        borderRadius: BorderRadius.circular(
+                                            KubusRadius.lg),
+                                        enableBlur: enableCardBlur,
+                                        padding: EdgeInsets.zero,
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Expanded(
+                                              child: _buildArtworkCover(
+                                                context: context,
+                                                theme: theme,
+                                                artwork: artwork,
+                                              ),
+                                            ),
+                                            Padding(
+                                              padding: const EdgeInsets.all(
+                                                  KubusSpacing.sm),
+                                              child: Column(
+                                                crossAxisAlignment:
+                                                    CrossAxisAlignment.start,
+                                                children: [
+                                                  Text(
+                                                    artwork.title,
+                                                    style:
+                                                        KubusTypography.inter(
+                                                      fontWeight:
+                                                          FontWeight.w600,
+                                                      fontSize: 14,
+                                                      color: theme.colorScheme
+                                                          .onSurface,
+                                                    ),
+                                                    maxLines: 1,
+                                                    overflow:
+                                                        TextOverflow.ellipsis,
+                                                  ),
+                                                  const SizedBox(
+                                                      height: KubusSpacing.xxs),
+                                                  Text(
+                                                    l10n.userProfileLikesLabel(
+                                                        artwork.likesCount),
+                                                    style:
+                                                        KubusTypography.inter(
+                                                      fontSize: 12,
+                                                      color: theme
+                                                          .colorScheme.onSurface
+                                                          .withValues(
+                                                              alpha: 0.6),
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    );
+                                  },
+                                ),
                 ),
               ],
             ),
