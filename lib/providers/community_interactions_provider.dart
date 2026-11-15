@@ -26,6 +26,7 @@ class CommunityInteractionsProvider extends ChangeNotifier {
   String? _boundWallet;
   Timer? _walletDebounce;
   int _authEpoch = 0;
+  String _heldAccountKey = AccountIdentity.accountKey;
 
   final Map<String, CommunityEntityInteractionState> _postStates = {};
   final Map<String, DateTime> _postStateFetchedAt = {};
@@ -219,7 +220,7 @@ class CommunityInteractionsProvider extends ChangeNotifier {
     for (final post in targets) {
       _postStateInflight[post.id] = true;
     }
-    final requestEpoch = _authEpoch;
+    final requestEpoch = _captureAuthEpoch();
     final requestSeq = ++_stateSeq;
     try {
       final batch = await _api.getCommunityInteractionStates(
@@ -294,7 +295,7 @@ class CommunityInteractionsProvider extends ChangeNotifier {
   }
 
   Future<void> togglePostLike(CommunityPost post) async {
-    final requestEpoch = _authEpoch;
+    final requestEpoch = _captureAuthEpoch();
     final previousLiked = post.isLiked;
     final previousCount = post.likeCount;
 
@@ -384,7 +385,7 @@ class CommunityInteractionsProvider extends ChangeNotifier {
           'CommunityInteractionsProvider: load post likes postId=$postId force=$force');
     }
 
-    final requestEpoch = _authEpoch;
+    final requestEpoch = _captureAuthEpoch();
     final future = _api.getPostLikes(postId).then((users) {
       if (requestEpoch != _authEpoch) return const <CommunityLikeUser>[];
       _postLikeUsers[postId] = users;
@@ -419,7 +420,7 @@ class CommunityInteractionsProvider extends ChangeNotifier {
           'CommunityInteractionsProvider: load comment likes commentId=$commentId force=$force');
     }
 
-    final requestEpoch = _authEpoch;
+    final requestEpoch = _captureAuthEpoch();
     final future = _api.getCommentLikes(commentId).then((users) {
       if (requestEpoch != _authEpoch) return const <CommunityLikeUser>[];
       _commentLikeUsers[commentId] = users;
@@ -448,7 +449,18 @@ class CommunityInteractionsProvider extends ChangeNotifier {
     _walletDebounce?.cancel();
     _walletDebounce = null;
     _boundWallet = _normalizedWallet(_walletProvider?.currentWalletAddress);
+    // A same-account change (wallet link, re-issued token) keeps the hydrated
+    // interaction state.
+    final key = AccountIdentity.accountKey;
+    if (key.isNotEmpty && key == _heldAccountKey) return;
     _invalidateAccountState();
+  }
+
+  /// Starts a request under the current account. Its response is applied only
+  /// while the account is unchanged, so the held account is recorded here.
+  int _captureAuthEpoch() {
+    _heldAccountKey = AccountIdentity.accountKey;
+    return _authEpoch;
   }
 
   void _invalidateAccountState() {

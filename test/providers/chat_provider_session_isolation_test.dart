@@ -7,6 +7,7 @@ import 'package:http/testing.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:art_kubus/providers/chat_provider.dart';
+import 'package:art_kubus/services/account_identity.dart';
 import 'package:art_kubus/services/backend_api_service.dart';
 import '../helpers/secure_storage_absent.dart';
 
@@ -104,6 +105,22 @@ Map<String, dynamic> _message(String id, String conversationId) => {
       'message': 'hello from B',
       'createdAt': DateTime.utc(2026, 10, 21).toIso8601String(),
     };
+
+const _walletlessA = 'walletless-account-a';
+const _walletlessB = 'walletless-account-b';
+
+/// A session token carrying only the canonical account id, as a walletless
+/// account has. [refresh] re-issues the token for the same account.
+String _walletlessToken(String accountId, {int refresh = 0}) {
+  final payload = jsonEncode({
+    'id': accountId,
+    'iat': refresh,
+    'exp':
+        DateTime.now().add(const Duration(hours: 1)).millisecondsSinceEpoch ~/
+            1000,
+  });
+  return 'e30.${base64Url.encode(utf8.encode(payload)).replaceAll('=', '')}.synthetic';
+}
 
 void main() {
   installEmptySecureStorage();
@@ -596,5 +613,66 @@ void main() {
       http.requests.where((r) => r == 'POST /api/messages'),
       isEmpty,
     );
+  });
+
+  group('walletless account identity', () {
+    test('a walletless switch from A to B clears A conversations at the switch',
+        () async {
+      final http = _ChatHttp(walletlessProfile: true);
+      BackendApiService().setHttpClient(http.client());
+      BackendApiService()
+          .setAuthTokenForTesting(_walletlessToken(_walletlessA));
+
+      final provider = ChatProvider();
+      addTearDown(provider.dispose);
+
+      final loadA = provider.refreshConversations();
+      await http.arrived('conversations');
+      http.complete('conversations', {
+        'success': true,
+        'data': [_conversation('convA')],
+      });
+      await loadA;
+      expect(provider.conversations, isNotEmpty);
+
+      // Walletless A -> B. Both wallets are empty, and the profile that carries
+      // the account id has not loaded yet. Only the identity change reaches the
+      // provider before B's first request.
+      BackendApiService()
+          .setAuthTokenForTesting(_walletlessToken(_walletlessB));
+      AccountIdentity.notifyListenersChanged();
+
+      expect(provider.conversations, isEmpty);
+      expect(provider.unreadCounts, isEmpty);
+    });
+
+    test('a same-account identity change keeps the loaded conversations',
+        () async {
+      final http = _ChatHttp(walletlessProfile: true);
+      BackendApiService().setHttpClient(http.client());
+      BackendApiService()
+          .setAuthTokenForTesting(_walletlessToken(_walletlessA));
+
+      final provider = ChatProvider();
+      addTearDown(provider.dispose);
+      // Account A becomes the current account; the identity listener records it.
+      AccountIdentity.notifyListenersChanged();
+
+      final loadA = provider.refreshConversations();
+      await http.arrived('conversations');
+      http.complete('conversations', {
+        'success': true,
+        'data': [_conversation('convA')],
+      });
+      await loadA;
+
+      // A wallet link re-issues A's token: same account, nothing to clear.
+      BackendApiService()
+          .setAuthTokenForTesting(_walletlessToken(_walletlessA, refresh: 1));
+      AccountIdentity.notifyListenersChanged();
+
+      expect(provider.conversations, isNotEmpty);
+      expect(provider.unreadCounts['convA'], 3);
+    });
   });
 }

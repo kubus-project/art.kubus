@@ -74,4 +74,17 @@ void main() {
 
     expect(provider.commentsForPost('post-A'), hasLength(1));
   });
+
+  test('same-account identity notification keeps loaded comments', () async {
+    AccountIdentity.setAccountKey('account-A');
+    final provider = CommunityCommentsProvider(api: _GatedCommentsApi());
+    addTearDown(provider.dispose);
+    await provider.loadComments('post-A');
+
+    // A wallet link re-issues the token: the notification fires, the account
+    // does not change.
+    AccountIdentity.notifyListenersChanged();
+
+    expect(provider.commentsForPost('post-A'), hasLength(1));
+  });
 }

@@ -1,10 +1,15 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:art_kubus/providers/activation_prompt_provider.dart';
+import 'package:art_kubus/providers/attendance_provider.dart';
 import 'package:art_kubus/providers/notification_provider.dart';
 import 'package:art_kubus/providers/profile_provider.dart';
+import 'package:art_kubus/models/saved_item.dart';
+import 'package:art_kubus/providers/saved_items_provider.dart';
 import 'package:art_kubus/services/account_identity.dart';
 import 'package:art_kubus/services/backend_api_service.dart';
+import 'package:art_kubus/services/saved_items_repository.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -49,6 +54,50 @@ class _ProfileApi implements ProfileBackendApi {
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
+
+/// Holds the profile response until the test answers it, so a load can be in
+/// flight across an account switch.
+class _GatedProfileApi extends _ProfileApi {
+  _GatedProfileApi(super.accountId);
+
+  Completer<Map<String, dynamic>>? gate;
+
+  @override
+  Future<Map<String, dynamic>> getMyProfile() {
+    final pending = gate;
+    if (pending != null) return pending.future;
+    return super.getMyProfile();
+  }
+}
+
+/// Counts the cache clears. Saves stay local: no backend call is made.
+class _RecordingSavedItemsRepository extends SavedItemsRepository {
+  _RecordingSavedItemsRepository() : super(api: BackendApiService());
+
+  int clearCalls = 0;
+
+  @override
+  Future<bool> hasBackendSession() async => true;
+
+  @override
+  Future<SavedItemRecord> save(SavedItemRecord item) async => item;
+
+  @override
+  Future<void> clearCachedState() async {
+    clearCalls += 1;
+    await super.clearCachedState();
+  }
+}
+
+Map<String, dynamic> _profileBody(String accountId) => {
+      'success': true,
+      'data': {
+        'id': accountId,
+        'user_id': accountId,
+        'username': 'profile-of-$accountId',
+        'wallet_address': '',
+      },
+    };
 
 void main() {
   installEmptySecureStorage();
@@ -118,6 +167,55 @@ void main() {
       expect(prompt.entityViews, 0);
       expect(prompt.shouldPrompt, isFalse);
     });
+
+    test('the attendance challenge and confirm state of A is not kept for B',
+        () async {
+      await api.setAuthToken(_token(_accountA));
+      final attendance = AttendanceProvider(api: api);
+      addTearDown(attendance.dispose);
+      final state = attendance.stateFor('marker-1');
+      state.lastError = 'challenge of A';
+      state.isConfirming = true;
+
+      await api.setAuthToken(_token(_accountB));
+
+      expect(attendance.stateFor('marker-1').lastError, isNull);
+      expect(attendance.stateFor('marker-1').isConfirming, isFalse);
+    });
+
+    test('a profile of A still loading is not applied to B', () async {
+      await api.setAuthToken(_token(_accountA));
+      final gated = _GatedProfileApi(_accountA)
+        ..gate = Completer<Map<String, dynamic>>();
+      final profile = ProfileProvider(apiService: gated);
+      addTearDown(profile.dispose);
+
+      // Nothing is held yet, so the wallet and profile listeners have nothing
+      // to clear. The response arrives after the switch.
+      final loadA = profile.loadAuthenticatedProfile();
+      await api.setAuthToken(_token(_accountB));
+      gated.gate!.complete(_profileBody(_accountA));
+      await loadA;
+
+      expect(profile.currentUser, isNull);
+    });
+
+    test('saved items of A are not shown as B', () async {
+      await api.setAuthToken(_token(_accountA));
+      final repository = _RecordingSavedItemsRepository();
+      addTearDown(repository.dispose);
+      final saved = SavedItemsProvider(repository: repository);
+      addTearDown(saved.dispose);
+      await saved.initialize(syncBackend: false);
+      await saved.toggleArtworkSaved('artwork-1');
+      expect(saved.isArtworkSaved('artwork-1'), isTrue);
+
+      await api.setAuthToken(_token(_accountB));
+      await saved.initialize(syncBackend: false);
+
+      expect(saved.isArtworkSaved('artwork-1'), isFalse);
+      expect(repository.clearCalls, 1);
+    });
   });
 
   group('same-account token refresh', () {
@@ -163,6 +261,41 @@ void main() {
       await api.setAuthToken(_token(_accountA, refresh: 1));
 
       expect(prompt.entityViews, ActivationPromptProvider.viewsBeforePrompt);
+    });
+
+    test('a same-account identity change keeps a profile load in flight',
+        () async {
+      await api.setAuthToken(_token(_accountA));
+      final gated = _GatedProfileApi(_accountA)
+        ..gate = Completer<Map<String, dynamic>>();
+      final profile = ProfileProvider(apiService: gated);
+      addTearDown(profile.dispose);
+
+      // A wallet link announces the change without changing the account.
+      final loadA = profile.loadAuthenticatedProfile();
+      AccountIdentity.notifyListenersChanged();
+      gated.gate!.complete(_profileBody(_accountA));
+      await loadA;
+
+      expect(profile.currentUser?.userId, _accountA);
+    });
+
+    test('a same-account identity change keeps saved items and the outbox',
+        () async {
+      await api.setAuthToken(_token(_accountA));
+      final repository = _RecordingSavedItemsRepository();
+      addTearDown(repository.dispose);
+      final saved = SavedItemsProvider(repository: repository);
+      addTearDown(saved.dispose);
+      await saved.initialize(syncBackend: false);
+      await saved.toggleArtworkSaved('artwork-1');
+
+      // A wallet link re-issues the token: the same account, nothing to clear.
+      AccountIdentity.notifyListenersChanged();
+      await saved.initialize(syncBackend: false);
+
+      expect(saved.isArtworkSaved('artwork-1'), isTrue);
+      expect(repository.clearCalls, 0);
     });
   });
 }

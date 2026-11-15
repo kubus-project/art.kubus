@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 
 import '../config/config.dart';
 import '../models/attestation.dart';
+import '../services/account_identity.dart';
 import '../services/backend_api_service.dart';
 
 class AttendanceProximitySnapshot {
@@ -228,8 +229,21 @@ class AttendanceProvider extends ChangeNotifier {
   bool _isSignedIn = false;
   String? _walletAddress;
 
+  // The account the user-specific state belongs to. A walletless switch leaves
+  // the wallet empty on both sides, so only the account identity can tell two
+  // accounts apart. A same-account change (wallet link, token refresh) keeps it.
+  String _identityKey = AccountIdentity.accountKey;
+
   AttendanceProvider({BackendApiService? api})
-      : _api = api ?? BackendApiService();
+      : _api = api ?? BackendApiService() {
+    AccountIdentity.addListener(_handleAccountIdentityChanged);
+  }
+
+  @override
+  void dispose() {
+    AccountIdentity.removeListener(_handleAccountIdentityChanged);
+    super.dispose();
+  }
 
   void bindAuthContext({
     required bool isSignedIn,
@@ -243,16 +257,28 @@ class AttendanceProvider extends ChangeNotifier {
     _walletAddress = normalizedWallet;
 
     if (walletChanged || (!isSignedIn && signedInChanged)) {
-      // Keep proximity snapshots (they are map-driven), but clear any
-      // user-specific challenge/confirm state to avoid cross-session leakage.
-      for (final entry in _statesByMarkerId.entries) {
-        entry.value.challenge = null;
-        entry.value.lastConfirm = null;
-        entry.value.isFetchingChallenge = false;
-        entry.value.isConfirming = false;
-        entry.value.lastError = null;
-      }
+      _clearUserScopedState();
       if (hasListeners) notifyListeners();
+    }
+  }
+
+  void _handleAccountIdentityChanged() {
+    final key = AccountIdentity.accountKey;
+    if (key == _identityKey) return;
+    _identityKey = key;
+    _clearUserScopedState();
+    if (hasListeners) notifyListeners();
+  }
+
+  void _clearUserScopedState() {
+    // Keep proximity snapshots (they are map-driven), but clear any
+    // user-specific challenge/confirm state to avoid cross-session leakage.
+    for (final entry in _statesByMarkerId.entries) {
+      entry.value.challenge = null;
+      entry.value.lastConfirm = null;
+      entry.value.isFetchingChallenge = false;
+      entry.value.isConfirming = false;
+      entry.value.lastError = null;
     }
   }
 

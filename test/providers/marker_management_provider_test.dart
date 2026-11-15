@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:art_kubus/models/art_marker.dart';
 import 'package:art_kubus/models/street_art_claim.dart';
 import 'package:art_kubus/providers/marker_management_provider.dart';
+import 'package:art_kubus/services/account_identity.dart';
 import 'package:art_kubus/services/backend_api_service.dart';
 import 'package:art_kubus/services/map_marker_service.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -376,5 +377,48 @@ void main() {
     expect(results[1]?.id, 'm-new');
     expect(api.createCalls, 1);
     expect(provider.markers.where((m) => m.id == 'm-new').length, 1);
+  });
+
+  test('a walletless account switch clears the /mine list and refetches',
+      () async {
+    final api = _FakeMarkerApi();
+    final provider = MarkerManagementProvider(
+        api: api, mapMarkerService: MapMarkerService());
+    addTearDown(provider.dispose);
+
+    api.getMyResult = <ArtMarker>[_marker('a1')];
+    await provider.refresh(force: true);
+    expect(provider.markers.map((m) => m.id), ['a1']);
+
+    // Walletless A -> B: the wallet is empty on both sides, so only the
+    // identity change reaches the provider.
+    AccountIdentity.notifyListenersChanged();
+
+    expect(provider.markers, isEmpty);
+    expect(provider.initialized, isFalse);
+
+    api.getMyResult = <ArtMarker>[_marker('b1')];
+    await provider.initialize();
+    expect(api.getMyCalls, 2);
+    expect(provider.markers.map((m) => m.id), ['b1']);
+  });
+
+  test('a /mine fetch that returns after an account switch is dropped',
+      () async {
+    final api = _FakeMarkerApi();
+    final provider = MarkerManagementProvider(
+        api: api, mapMarkerService: MapMarkerService());
+    addTearDown(provider.dispose);
+
+    api.getMyCompleter = Completer<List<ArtMarker>>();
+    final inFlight = provider.refresh(force: true);
+    expect(provider.isLoading, isTrue);
+
+    AccountIdentity.notifyListenersChanged();
+    api.getMyCompleter!.complete(<ArtMarker>[_marker('a1')]);
+    await inFlight;
+
+    expect(provider.markers, isEmpty);
+    expect(provider.isLoading, isFalse);
   });
 }

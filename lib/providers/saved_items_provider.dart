@@ -41,6 +41,9 @@ class SavedItemsProvider extends ChangeNotifier {
   };
 
   bool _isInitialized = false;
+  // The account the held items were loaded for. A same-account identity change
+  // (wallet link, re-issued token) keeps the items, the cache and the outbox.
+  String _heldAccountKey = AccountIdentity.accountKey;
   bool _legacyMigrationAttempted = false;
   bool _isSyncing = false;
   SharedPreferences? _prefs;
@@ -119,6 +122,13 @@ class SavedItemsProvider extends ChangeNotifier {
   }
 
   void _handleAccountIdentityChanged() {
+    final key = AccountIdentity.accountKey;
+    if (key.isNotEmpty && key == _heldAccountKey) return;
+    _resetForIdentityChange();
+  }
+
+  void _resetForIdentityChange() {
+    _heldAccountKey = AccountIdentity.accountKey;
     _identityGeneration += 1;
     _replaceAll(const <SavedItemRecord>[]);
     _isInitialized = false;
@@ -173,6 +183,7 @@ class SavedItemsProvider extends ChangeNotifier {
       if (!_isCurrentIdentity(generation)) return;
       final legacy = _loadLegacyItems();
       _replaceAll(_mergeRecords([...cached, ...legacy]));
+      _heldAccountKey = AccountIdentity.accountKey;
       _isInitialized = true;
       notifyListeners();
     }
@@ -686,7 +697,8 @@ class SavedItemsProvider extends ChangeNotifier {
   }
 
   Future<void> resetForLogout() async {
-    _handleAccountIdentityChanged();
+    // Unguarded: a sign-out always clears, even before the key has changed.
+    _resetForIdentityChange();
     await _identityCleanup;
   }
 

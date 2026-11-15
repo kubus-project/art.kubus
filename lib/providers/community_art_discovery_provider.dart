@@ -87,6 +87,8 @@ class CommunityArtDiscoveryProvider extends ChangeNotifier {
   ArtDiscoveryLocation? _location;
   double _radiusKm = kArtDiscoveryRadiiKm.first;
   int _generation = 0;
+  // The account the held results were loaded for.
+  String _heldAccountKey = AccountIdentity.accountKey;
   final Set<String> _removedPostIds = <String>{};
   int _failedSources = 0;
   String? _boundAccount;
@@ -156,6 +158,10 @@ class CommunityArtDiscoveryProvider extends ChangeNotifier {
   }
 
   void _handleAccountIdentityChanged() {
+    // A same-account change (wallet link, re-issued token) keeps the discovery
+    // results loaded for this account.
+    final key = AccountIdentity.accountKey;
+    if (key.isNotEmpty && key == _heldAccountKey) return;
     _clearAccountState();
   }
 
@@ -197,6 +203,7 @@ class CommunityArtDiscoveryProvider extends ChangeNotifier {
     bool promptForLocation = false,
   }) async {
     final generation = ++_generation;
+    _heldAccountKey = AccountIdentity.accountKey;
     _failedSources = 0;
     _loading = true;
     _error = null;

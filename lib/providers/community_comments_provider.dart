@@ -18,6 +18,7 @@ class CommunityCommentsProvider extends ChangeNotifier {
   String? _boundWallet;
   Timer? _walletDebounce;
   int _authEpoch = 0;
+  String _heldAccountKey = AccountIdentity.accountKey;
 
   final Map<String, List<Comment>> _commentsByPostId =
       <String, List<Comment>>{};
@@ -76,7 +77,7 @@ class CommunityCommentsProvider extends ChangeNotifier {
     _errorByPostId[postId] = null;
     notifyListeners();
 
-    final requestEpoch = _authEpoch;
+    final requestEpoch = _captureAuthEpoch();
     try {
       final comments =
           await _api.getComments(postId: postId, page: page, limit: limit);
@@ -171,7 +172,17 @@ class CommunityCommentsProvider extends ChangeNotifier {
   void _handleAccountIdentityChanged() {
     _walletDebounce?.cancel();
     _boundWallet = _normalizedWallet(_walletProvider?.currentWalletAddress);
+    // A same-account change (wallet link, re-issued token) keeps the comments.
+    final key = AccountIdentity.accountKey;
+    if (key.isNotEmpty && key == _heldAccountKey) return;
     _clearAccountState();
+  }
+
+  /// Starts a request under the current account. Its response is applied only
+  /// while the account is unchanged, so the held account is recorded here.
+  int _captureAuthEpoch() {
+    _heldAccountKey = AccountIdentity.accountKey;
+    return _authEpoch;
   }
 
   void _clearAccountState() {

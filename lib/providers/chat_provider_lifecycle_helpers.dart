@@ -321,6 +321,8 @@ void _chatProviderBindAuthContext(
     final accountChanged = previousSignature.isNotEmpty &&
         resolvedAccountId.isNotEmpty &&
         provider._lastAuthAccountId != resolvedAccountId;
+    // Read before this bind records the account below.
+    final previousAccountId = provider._lastAuthAccountId;
     final signature =
         '${token.isNotEmpty}:$resolvedAccountId:$resolvedWallet:${signedIn.toString()}';
 
@@ -342,8 +344,12 @@ void _chatProviderBindAuthContext(
     // account's state before the wallet-keyed paths below can return early.
     if (accountChanged) {
       provider._resetSessionState(reason: 'accountChanged');
-    } else if (resolvedWallet.isEmpty) {
-      // Walletless accounts are identified by their canonical account ID.
+    } else if (resolvedWallet.isEmpty &&
+        !(resolvedAccountId.isNotEmpty &&
+            resolvedAccountId == previousAccountId)) {
+      // Walletless accounts are identified by their canonical account ID. An ID
+      // the identity listener has already recorded needs no second reset; any
+      // other walletless state may belong to a different account.
       provider._resetSessionState(reason: 'identityWithoutWallet');
     }
 

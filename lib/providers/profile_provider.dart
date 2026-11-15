@@ -93,6 +93,8 @@ class ProfileProvider extends foundation.ChangeNotifier {
   foundation.VoidCallback? _walletProviderListener;
   String? _boundWalletAddress;
   int _profileLoadEpoch = 0;
+  // The account the most recent load was started for.
+  String _profileLoadAccountKey = '';
 
   /// Account session the current request belongs to. A sign-out ends it, so a
   /// response that arrives afterwards must not write the previous account.
@@ -156,9 +158,15 @@ class ProfileProvider extends foundation.ChangeNotifier {
   /// see it. An identity change to another account, or to none, clears it. A
   /// same-account change (token refresh, wallet link) keeps it.
   void _handleAccountIdentityChanged() {
+    final key = AccountIdentity.accountKey;
     final held = (_currentUser?.userId ?? _currentUser?.id ?? '').trim();
-    if (held.isEmpty || held == AccountIdentity.accountKey) return;
-    _profileLoadEpoch += 1;
+    if (held.isNotEmpty && held == key) return;
+    // A load still in flight may belong to the previous account even when
+    // nothing is held yet. Its response must not reach the new account.
+    if (held.isNotEmpty || _profileLoadAccountKey != key) {
+      _profileLoadEpoch += 1;
+    }
+    if (held.isEmpty) return;
     _clearProfileState();
     notifyListeners();
   }
@@ -734,6 +742,7 @@ class ProfileProvider extends foundation.ChangeNotifier {
   /// Load profile by wallet address
   Future<void> loadAuthenticatedProfile() async {
     final requestEpoch = ++_profileLoadEpoch;
+    _profileLoadAccountKey = AccountIdentity.accountKey;
     final sessionEpoch = _accountSessionEpoch;
     bool isCurrentLoad() =>
         requestEpoch == _profileLoadEpoch &&
@@ -812,6 +821,7 @@ class ProfileProvider extends foundation.ChangeNotifier {
     bool allowWalletAutoRegister = false,
   }) async {
     final requestEpoch = ++_profileLoadEpoch;
+    _profileLoadAccountKey = AccountIdentity.accountKey;
     final sessionEpoch = _accountSessionEpoch;
     bool isCurrentLoad() =>
         requestEpoch == _profileLoadEpoch &&
