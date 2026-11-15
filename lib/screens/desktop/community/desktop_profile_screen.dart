@@ -1870,30 +1870,36 @@ class _ProfileScreenState extends State<ProfileScreen>
         _artistAuthorshipUnavailable = true;
       }
       if (!_isArtistDataCurrent(generation, identity)) return;
-      final collections = await api.getCollections(
-        walletAddress: walletAddress,
-        legacyWalletAddress: legacyWallet,
-        limit: 6,
-      );
-      if (!_isArtistDataCurrent(generation, identity)) return;
-      final eventsResponse = await api.listEvents(limit: 100);
-      if (!_isArtistDataCurrent(generation, identity)) return;
-      final filteredEvents = eventsResponse
-          .where((event) => profileEventBelongsToWallet(event, eventsKey))
-          .take(6)
-          .map((e) => Map<String, dynamic>.from(e))
-          .toList();
-
-      if (!_isArtistDataCurrent(generation, identity)) return;
       setState(() {
         _artistArtworks = sections?.authored ?? [];
         _artistAuthoredTotal = sections?.authoredTotal;
         _artistDocumentedArtworks = sections?.documented ?? [];
-        _artistCollections = collections;
-        _artistEvents = filteredEvents;
         _artistDataLoaded = true;
         _artistAuthorshipUnavailable = sections == null;
       });
+      try {
+        final collections = await api.getCollections(
+          walletAddress: walletAddress,
+          legacyWalletAddress: legacyWallet,
+          limit: 6,
+        );
+        if (!_isArtistDataCurrent(generation, identity)) return;
+        setState(() => _artistCollections = collections);
+      } catch (e) {
+        debugPrint('Error loading artist collections: $e');
+      }
+      try {
+        final eventsResponse = await api.listEvents(limit: 100);
+        if (!_isArtistDataCurrent(generation, identity)) return;
+        final filteredEvents = eventsResponse
+            .where((event) => profileEventBelongsToWallet(event, eventsKey))
+            .take(6)
+            .map((e) => Map<String, dynamic>.from(e))
+            .toList();
+        setState(() => _artistEvents = filteredEvents);
+      } catch (e) {
+        debugPrint('Error loading artist events: $e');
+      }
     } catch (e) {
       debugPrint('Error loading artist data: $e');
       if (_isArtistDataCurrent(generation, identity)) {

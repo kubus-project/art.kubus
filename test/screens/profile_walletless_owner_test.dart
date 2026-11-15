@@ -170,9 +170,36 @@ void main() {
         SharedPreferences.setMockInitialValues(<String, Object>{});
         final requests = <http.Request>[];
         var supportsAuthorFilter = false;
+        var failCollections = false;
+        var collectionFailures = 0;
         const profileId = '10000000-0000-4000-8000-000000000003';
         BackendApiService().setHttpClient(MockClient((request) async {
           requests.add(request);
+          if (request.url.path == '/api/collections') {
+            if (failCollections) {
+              collectionFailures++;
+              return http.Response('collection unavailable', 503);
+            }
+            return _jsonResponse(<String, Object?>{
+              'data': [
+                <String, Object?>{
+                  'id': 'collection-after-author-error',
+                  'title': 'Collections still load',
+                },
+              ],
+            });
+          }
+          if (request.url.path == '/api/events') {
+            return _jsonResponse(<String, Object?>{
+              'data': [
+                <String, Object?>{
+                  'id': 'event-after-author-error',
+                  'title': 'Events still load',
+                  'createdBy': profileId,
+                },
+              ],
+            });
+          }
           if (request.url.path == '/api/artworks' &&
               request.url.queryParameters['authorProfileId'] == profileId) {
             return supportsAuthorFilter
@@ -206,9 +233,12 @@ void main() {
         );
         expect(find.text('Not available'), findsWidgets);
         expect(find.text('Retry'), findsWidgets);
+        expect(find.text('Collections still load'), findsWidgets);
+        expect(find.text('Events still load'), findsWidgets);
 
         if (surface == ProfileSurface.desktopOwner) {
           supportsAuthorFilter = true;
+          failCollections = true;
           await tester.tap(find.text('Retry').last);
           for (var i = 0; i < 8; i++) {
             await tester.pump(const Duration(milliseconds: 150));
@@ -217,6 +247,7 @@ void main() {
           expect(find.text('Recovered artwork'), findsWidgets);
           expect(find.text('Not available'), findsNothing);
           expect(find.text('1'), findsWidgets);
+          expect(collectionFailures, greaterThan(0));
         }
       });
 
