@@ -3817,12 +3817,18 @@ class BackendApiService
         onCompressionProgress: onCompressionProgress,
       );
 
-  /// Add a member to conversation
+  /// Add a member to conversation. A walletless target is named by [userId].
   Future<Map<String, dynamic>> addConversationMember(
     String conversationId,
-    String walletAddress,
-  ) =>
-      _backendApiAddConversationMemberImpl(this, conversationId, walletAddress);
+    String walletAddress, {
+    String? userId,
+  }) =>
+      _backendApiAddConversationMemberImpl(
+        this,
+        conversationId,
+        walletAddress,
+        userId: userId,
+      );
 
   /// Remove a member from conversation (best-effort)
   Future<Map<String, dynamic>> removeConversationMember(

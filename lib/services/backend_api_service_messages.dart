@@ -337,13 +337,20 @@ Future<Map<String, dynamic>> _backendApiUploadConversationAvatarImpl(
 Future<Map<String, dynamic>> _backendApiAddConversationMemberImpl(
   BackendApiService service,
   String conversationId,
-  String walletAddress,
-) async {
+  String walletAddress, {
+  String? userId,
+}) async {
+  // A walletless target is named by its account id; the route accepts userId.
+  final wallet = walletAddress.trim();
+  final accountId = (userId ?? '').trim();
+  final target = wallet.isEmpty && accountId.isNotEmpty
+      ? <String, dynamic>{'userId': accountId}
+      : <String, dynamic>{'walletAddress': wallet};
   try {
     final response = await service._post(
       Uri.parse('${service.baseUrl}/api/messages/$conversationId/members'),
       headers: service._getHeaders(),
-      body: jsonEncode({'walletAddress': walletAddress}),
+      body: jsonEncode(target),
     );
     if (response.statusCode == 200 || response.statusCode == 201) {
       return jsonDecode(response.body) as Map<String, dynamic>;
