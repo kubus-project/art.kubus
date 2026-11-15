@@ -169,11 +169,23 @@ void main() {
           (tester) async {
         SharedPreferences.setMockInitialValues(<String, Object>{});
         final requests = <http.Request>[];
+        var supportsAuthorFilter = false;
+        const profileId = '10000000-0000-4000-8000-000000000003';
         BackendApiService().setHttpClient(MockClient((request) async {
           requests.add(request);
+          if (request.url.path == '/api/artworks' &&
+              request.url.queryParameters['authorProfileId'] == profileId) {
+            return supportsAuthorFilter
+                ? _jsonResponse(<String, Object?>{
+                    'appliedFilters': <String, Object?>{
+                      'authorProfileId': profileId,
+                    },
+                    'data': [_artworkJson('Recovered artwork')],
+                  })
+                : _jsonResponse(<String, Object?>{'data': <Object?>[]});
+          }
           return _jsonResponse(<String, Object?>{'data': <Object?>[]});
         }));
-        const profileId = '10000000-0000-4000-8000-000000000003';
 
         await pumpProfileSurface(
           tester,
@@ -194,6 +206,18 @@ void main() {
         );
         expect(find.text('Not available'), findsWidgets);
         expect(find.text('Retry'), findsWidgets);
+
+        if (surface == ProfileSurface.desktopOwner) {
+          supportsAuthorFilter = true;
+          await tester.tap(find.text('Retry').last);
+          for (var i = 0; i < 8; i++) {
+            await tester.pump(const Duration(milliseconds: 150));
+          }
+
+          expect(find.text('Recovered artwork'), findsWidgets);
+          expect(find.text('Not available'), findsNothing);
+          expect(find.text('1'), findsWidgets);
+        }
       });
 
       testWidgets('$name discards delayed A showcase after switching to B',

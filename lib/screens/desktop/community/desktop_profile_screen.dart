@@ -1854,9 +1854,9 @@ class _ProfileScreenState extends State<ProfileScreen>
     if (!mounted) return;
     setState(() => _artistDataLoading = true);
 
+    ProfileArtworkSections? sections;
     try {
       final api = BackendApiService();
-      ProfileArtworkSections? sections;
       try {
         sections = await ProfilePackageService.loadProfileArtworkSections(
           walletAddress,
@@ -1892,11 +1892,12 @@ class _ProfileScreenState extends State<ProfileScreen>
         _artistCollections = collections;
         _artistEvents = filteredEvents;
         _artistDataLoaded = true;
+        _artistAuthorshipUnavailable = sections == null;
       });
     } catch (e) {
       debugPrint('Error loading artist data: $e');
       if (_isArtistDataCurrent(generation, identity)) {
-        setState(() => _artistAuthorshipUnavailable = true);
+        setState(() => _artistAuthorshipUnavailable = sections == null);
       }
     } finally {
       if (_isArtistDataCurrent(generation, identity)) {
