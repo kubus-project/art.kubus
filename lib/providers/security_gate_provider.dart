@@ -911,6 +911,7 @@ class SecurityGateProvider extends ChangeNotifier
     if (wallet == null) return BiometricAuthOutcome.error;
 
     final epoch = _beginOperation();
+    final authEpoch = BackendApiService().authSessionEpoch;
     try {
       final outcome = await wallet.authenticateWithBiometricsDetailed(
         localizedReason: localizedReason,
@@ -918,7 +919,7 @@ class SecurityGateProvider extends ChangeNotifier
       if (!_isCurrent(epoch)) return BiometricAuthOutcome.cancelled;
       if (outcome != BiometricAuthOutcome.success) return outcome;
 
-      final ok = await _finalizeUnlockAfterLocalVerification(epoch);
+      final ok = await _finalizeUnlockAfterLocalVerification(epoch, authEpoch);
       if (!_isCurrent(epoch)) return BiometricAuthOutcome.cancelled;
       return ok ? BiometricAuthOutcome.success : BiometricAuthOutcome.error;
     } catch (e) {
@@ -941,6 +942,7 @@ class SecurityGateProvider extends ChangeNotifier
     if (wallet == null) return const PinVerifyResult(PinVerifyOutcome.error);
 
     final epoch = _beginOperation();
+    final authEpoch = BackendApiService().authSessionEpoch;
     try {
       final result = await wallet.verifyPinDetailed(pin);
       // A stale check reads as a failed attempt here. The prompt armed for the
@@ -950,7 +952,7 @@ class SecurityGateProvider extends ChangeNotifier
       }
       if (!result.isSuccess) return result;
 
-      final ok = await _finalizeUnlockAfterLocalVerification(epoch);
+      final ok = await _finalizeUnlockAfterLocalVerification(epoch, authEpoch);
       if (!_isCurrent(epoch)) {
         return const PinVerifyResult(PinVerifyOutcome.error);
       }
@@ -992,10 +994,13 @@ class SecurityGateProvider extends ChangeNotifier
     return (settled?.isSuccess ?? false) && _lastResolutionWasLocal;
   }
 
-  Future<bool> _finalizeUnlockAfterLocalVerification(int epoch) async {
+  Future<bool> _finalizeUnlockAfterLocalVerification(
+    int epoch,
+    int authEpoch,
+  ) async {
     final reason = _lockReason;
     if (reason == SecurityLockReason.tokenExpired) {
-      final ok = await renewBackendSessionForUnlock();
+      final ok = await renewBackendSessionForUnlock(authEpoch);
       if (!_isCurrent(epoch)) return false;
       if (!ok) {
         // Keep locked so the user can choose "Sign in" or "Logout".
@@ -1004,7 +1009,10 @@ class SecurityGateProvider extends ChangeNotifier
         return false;
       }
     } else if (reason == SecurityLockReason.autoLock) {
-      await _attemptManagedWalletReconnect(refreshBackendSession: false);
+      await _attemptManagedWalletReconnect(
+        refreshBackendSession: false,
+        expectedAuthEpoch: authEpoch,
+      );
       if (!_isCurrent(epoch)) return false;
     }
 
@@ -1015,6 +1023,7 @@ class SecurityGateProvider extends ChangeNotifier
 
   Future<void> _attemptManagedWalletReconnect({
     required bool refreshBackendSession,
+    required int expectedAuthEpoch,
   }) async {
     final wallet = _walletProvider;
     if (wallet == null || !wallet.isReadOnlySession) return;
@@ -1025,6 +1034,7 @@ class SecurityGateProvider extends ChangeNotifier
       await wallet.recoverManagedWalletSession(
         walletAddress: walletAddress?.trim(),
         refreshBackendSession: refreshBackendSession,
+        expectedAuthEpoch: expectedAuthEpoch,
       );
     } catch (e) {
       if (kDebugMode) {
@@ -1034,11 +1044,14 @@ class SecurityGateProvider extends ChangeNotifier
   }
 
   /// The backend session renewal an unlock of a session-expiry lock performs.
-  /// Overridable so tests can hold it open across an account switch.
+  /// [authEpoch] is the auth session the unlock started under; a renewal that
+  /// lands after it ended must not apply. Overridable so tests can hold it open
+  /// across an account switch.
   @protected
-  Future<bool> renewBackendSessionForUnlock() => _renewBackendSession();
+  Future<bool> renewBackendSessionForUnlock(int authEpoch) =>
+      _renewBackendSession(authEpoch);
 
-  Future<bool> _renewBackendSession() async {
+  Future<bool> _renewBackendSession(int authEpoch) async {
     try {
       final walletAddress = await _resolveWalletAddress();
       if (walletAddress == null || walletAddress.trim().isEmpty) return false;
@@ -1050,9 +1063,11 @@ class SecurityGateProvider extends ChangeNotifier
           await wallet.recoverManagedWalletSession(
             walletAddress: walletAddress.trim(),
             refreshBackendSession: true,
+            expectedAuthEpoch: authEpoch,
           );
         } else if (await wallet.ensureBackendSessionForActiveSigner(
           walletAddress: walletAddress.trim(),
+          expectedAuthEpoch: authEpoch,
         )) {
           return true;
         } else {

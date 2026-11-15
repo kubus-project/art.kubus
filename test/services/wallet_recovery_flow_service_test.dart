@@ -44,6 +44,7 @@ class _FlowWalletProvider extends WalletProvider {
   Future<ManagedWalletReconnectOutcome> recoverManagedWalletSession({
     String? walletAddress,
     bool refreshBackendSession = true,
+    int? expectedAuthEpoch,
   }) async {
     return ManagedWalletReconnectOutcome.manualConnectRequired;
   }

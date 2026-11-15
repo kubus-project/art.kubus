@@ -254,10 +254,12 @@ class BackendSignedActionTransport {
   Future<AuthSessionPayload> ensureWalletSignedSession({
     required String walletAddress,
     required Future<String> Function(String message) signMessage,
+    int? expectedEpoch,
   }) {
     return _service.ensureSessionForActiveSigner(
       walletAddress: walletAddress,
       signMessage: signMessage,
+      expectedEpoch: expectedEpoch,
     );
   }
 

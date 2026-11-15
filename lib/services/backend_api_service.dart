@@ -3134,12 +3134,14 @@ class BackendApiService
     required String walletAddress,
     required String signature,
     required String message,
+    int? expectedEpoch,
   }) =>
       _backendApiLoginWithWallet(
         this,
         walletAddress: walletAddress,
         signature: signature,
         message: message,
+        expectedEpoch: expectedEpoch,
       );
 
   /// Register with email + password.

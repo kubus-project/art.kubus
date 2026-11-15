@@ -100,13 +100,21 @@ extension BackendApiAuthTransport on BackendApiService {
     );
   }
 
+  /// [expectedEpoch] is the auth session the caller started under. The wallet
+  /// signature can take seconds, and a session that ends meanwhile must not
+  /// receive this wallet's token.
   Future<AuthSessionPayload> ensureSessionForActiveSigner({
     required String walletAddress,
     required Future<String> Function(String message) signMessage,
+    int? expectedEpoch,
   }) async {
     final normalizedWallet = walletAddress.trim();
     if (normalizedWallet.isEmpty) {
       throw ArgumentError('walletAddress cannot be empty');
+    }
+    final sessionEpoch = expectedEpoch ?? authSessionEpoch;
+    if (sessionEpoch != authSessionEpoch) {
+      throw StateError('Authentication request belongs to an ended session');
     }
 
     setPreferredWalletAddress(normalizedWallet);
@@ -126,10 +134,14 @@ extension BackendApiAuthTransport on BackendApiService {
 
     final challenge = await requestWalletAuthChallenge(normalizedWallet);
     final signature = await signMessage(challenge.message);
+    if (sessionEpoch != authSessionEpoch) {
+      throw StateError('Authentication request belongs to an ended session');
+    }
     final response = await loginWithWallet(
       walletAddress: normalizedWallet,
       signature: signature,
       message: challenge.message,
+      expectedEpoch: sessionEpoch,
     );
     return AuthSessionPayload.fromResponse(response);
   }

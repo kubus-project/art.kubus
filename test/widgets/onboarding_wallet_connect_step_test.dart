@@ -58,6 +58,7 @@ class _FakeWalletProvider extends WalletProvider {
   @override
   Future<bool> ensureBackendSessionForActiveSigner({
     String? walletAddress,
+    int? expectedAuthEpoch,
   }) async {
     ensureBackendSessionCalled = true;
     return false;

@@ -1137,6 +1137,7 @@ class WalletProvider extends ChangeNotifier {
   Future<ManagedWalletReconnectOutcome> recoverManagedWalletSession({
     String? walletAddress,
     bool refreshBackendSession = true,
+    int? expectedAuthEpoch,
   }) async {
     final inFlight = _managedReconnectInFlight;
     if (inFlight != null) {
@@ -1145,6 +1146,7 @@ class WalletProvider extends ChangeNotifier {
     final reconnectFuture = _recoverManagedWalletSessionInternal(
       walletAddress: walletAddress,
       refreshBackendSession: refreshBackendSession,
+      expectedAuthEpoch: expectedAuthEpoch,
     );
     _managedReconnectInFlight = reconnectFuture;
     try {
@@ -1156,9 +1158,15 @@ class WalletProvider extends ChangeNotifier {
     }
   }
 
+  /// Whether the auth session a managed reconnect started under has ended.
+  bool _isStaleAuthEpoch(int? expectedAuthEpoch) =>
+      expectedAuthEpoch != null &&
+      expectedAuthEpoch != _apiService.authSessionEpoch;
+
   Future<ManagedWalletReconnectOutcome> _recoverManagedWalletSessionInternal({
     String? walletAddress,
     bool refreshBackendSession = true,
+    int? expectedAuthEpoch,
   }) async {
     final targetWallet = await _resolveWalletForRecovery(
       preferredWallet: walletAddress,
@@ -1183,6 +1191,9 @@ class WalletProvider extends ChangeNotifier {
             .timeout(const Duration(seconds: 4));
       }
 
+      if (_isStaleAuthEpoch(expectedAuthEpoch)) {
+        return ManagedWalletReconnectOutcome.failed;
+      }
       await setReadOnlyWalletIdentity(
         targetWallet,
         loadData: true,
@@ -1192,7 +1203,9 @@ class WalletProvider extends ChangeNotifier {
           canTransact) {
         if (refreshBackendSession) {
           await ensureBackendSessionForActiveSigner(
-              walletAddress: targetWallet);
+            walletAddress: targetWallet,
+            expectedAuthEpoch: expectedAuthEpoch,
+          );
         }
         _clearLastError();
         return ManagedWalletReconnectOutcome.signerRestored;
@@ -1221,6 +1234,9 @@ class WalletProvider extends ChangeNotifier {
         return ManagedWalletReconnectOutcome.manualConnectRequired;
       }
 
+      if (_isStaleAuthEpoch(expectedAuthEpoch)) {
+        return ManagedWalletReconnectOutcome.failed;
+      }
       await importWalletFromMnemonic(
         normalizedMnemonic,
         preDerived: derived,
@@ -1230,7 +1246,9 @@ class WalletProvider extends ChangeNotifier {
           canTransact) {
         if (refreshBackendSession) {
           await ensureBackendSessionForActiveSigner(
-              walletAddress: targetWallet);
+            walletAddress: targetWallet,
+            expectedAuthEpoch: expectedAuthEpoch,
+          );
         }
         _clearLastError();
         return ManagedWalletReconnectOutcome.signerRestored;
@@ -3527,6 +3545,7 @@ class WalletProvider extends ChangeNotifier {
 
   Future<bool> ensureBackendSessionForActiveSigner({
     String? walletAddress,
+    int? expectedAuthEpoch,
   }) async {
     final targetWallet = (walletAddress ?? _currentWalletAddress ?? '').trim();
     if (targetWallet.isEmpty ||
@@ -3540,6 +3559,7 @@ class WalletProvider extends ChangeNotifier {
       await _apiService.signedActions.ensureWalletSignedSession(
         walletAddress: targetWallet,
         signMessage: signMessage,
+        expectedEpoch: expectedAuthEpoch,
       );
       final authWallet =
           (_apiService.getCurrentAuthWalletAddress() ?? '').trim();

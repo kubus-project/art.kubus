@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:art_kubus/config/config.dart';
 import 'package:art_kubus/providers/activation_prompt_provider.dart';
 import 'package:art_kubus/providers/attendance_provider.dart';
 import 'package:art_kubus/providers/notification_provider.dart';
@@ -16,6 +17,8 @@ import 'package:art_kubus/services/backend_api_service.dart';
 import 'package:art_kubus/services/pin_hashing.dart';
 import 'package:art_kubus/services/saved_items_repository.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:http/http.dart' as http;
+import 'package:http/testing.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../helpers/secure_storage_absent.dart';
@@ -205,6 +208,70 @@ class _HeldUnlockWallet extends _PinWallet {
   }
 }
 
+const _walletOfAccountA = 'synthetic-wallet-a';
+
+/// A wallet whose renewal signs through the real backend session path, so the
+/// test decides when the wallet signature lands.
+class _SigningWallet extends _HeldUnlockWallet {
+  _SigningWallet(this.onSign);
+
+  final Future<String> Function(String message) onSign;
+
+  @override
+  String? get currentWalletAddress => _walletOfAccountA;
+
+  @override
+  Future<bool> ensureBackendSessionForActiveSigner({
+    String? walletAddress,
+    int? expectedAuthEpoch,
+  }) async {
+    try {
+      await BackendApiService().ensureSessionForActiveSigner(
+        walletAddress: walletAddress ?? _walletOfAccountA,
+        signMessage: onSign,
+        expectedEpoch: expectedAuthEpoch,
+      );
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+}
+
+/// Serves the wallet challenge and a login that would issue A's session.
+void _serveWalletLoginForA(BackendApiService api) {
+  api.setHttpClient(MockClient((request) async {
+    if (request.url.path.endsWith('/api/auth/challenge')) {
+      return http.Response(jsonEncode({'message': 'synthetic-challenge'}), 200);
+    }
+    if (request.url.path.endsWith('/api/auth/login')) {
+      return http.Response(jsonEncode({'token': _token(_accountA)}), 200);
+    }
+    return http.Response('{}', 404);
+  }));
+}
+
+/// A gate locked on the real renewal path, unlike [_lockedGate].
+Future<SecurityGateProvider> _realLockedGate(
+  _SigningWallet wallet,
+  SecurityLockReason reason,
+) async {
+  SharedPreferences.setMockInitialValues(<String, Object>{
+    'jwt_token': 'stored-token',
+  });
+  final gate = SecurityGateProvider(promptCooldown: Duration.zero)
+    ..bindDependencies(
+      profileProvider: ProfileProvider(),
+      walletProvider: wallet,
+      notificationProvider: NotificationProvider(),
+    );
+  addTearDown(gate.dispose);
+  await gate.refreshLocalAccountState();
+  await gate.lock(reason);
+  expect(gate.isResolving, isTrue);
+  return gate;
+}
+
 /// Holds the session renewal an unlock performs, so it can be in flight across
 /// an account switch.
 class _HeldGate extends SecurityGateProvider {
@@ -213,7 +280,7 @@ class _HeldGate extends SecurityGateProvider {
   final List<Completer<bool>> renewals = <Completer<bool>>[];
 
   @override
-  Future<bool> renewBackendSessionForUnlock() {
+  Future<bool> renewBackendSessionForUnlock(int authEpoch) {
     final renewal = Completer<bool>();
     renewals.add(renewal);
     return renewal.future;
@@ -752,6 +819,82 @@ void main() {
         expect(gate.isLocked, isFalse, reason: "B's own renewal still works");
       });
     }
+  });
+
+  group('a wallet signature of A that lands after the session moved on', () {
+    test('a switch to B keeps B and refuses the unlock of A', () async {
+      await api.setAuthToken(_token(_accountA));
+      _serveWalletLoginForA(api);
+      final signRequested = Completer<void>();
+      final signature = Completer<String>();
+      final wallet = _SigningWallet((_) {
+        signRequested.complete();
+        return signature.future;
+      });
+      final gate =
+          await _realLockedGate(wallet, SecurityLockReason.tokenExpired);
+      final aUnlock = gate.unlockWithPin('1234');
+      wallet.pinChecks.single
+          .complete(const PinVerifyResult(PinVerifyOutcome.success));
+      await signRequested.future;
+
+      await api.setAuthToken(_token(_accountB));
+      final resolutions = _trackPrompt(gate);
+      final accountB = AccountIdentity.accountKey;
+      signature.complete('synthetic-signature');
+
+      expect((await aUnlock).isSuccess, isFalse);
+      await pumpEventQueue();
+      expect(api.getAuthToken(), _token(_accountB));
+      expect(AccountIdentity.accountKey, accountB);
+      _expectPromptStillOpen(gate, resolutions);
+    });
+
+    test('a logout does not restore A', () async {
+      await api.setAuthToken(_token(_accountA));
+      _serveWalletLoginForA(api);
+      final signRequested = Completer<void>();
+      final signature = Completer<String>();
+      final wallet = _SigningWallet((_) {
+        signRequested.complete();
+        return signature.future;
+      });
+      final gate =
+          await _realLockedGate(wallet, SecurityLockReason.tokenExpired);
+      final aUnlock = gate.unlockWithPin('1234');
+      wallet.pinChecks.single
+          .complete(const PinVerifyResult(PinVerifyOutcome.success));
+      await signRequested.future;
+
+      await api.clearAuth();
+      signature.complete('synthetic-signature');
+
+      expect((await aUnlock).isSuccess, isFalse);
+      await pumpEventQueue();
+      expect(api.getAuthToken(), isNull);
+      expect(gate.isBusy, isFalse);
+    });
+
+    test(
+        'an auto-lock reconnect of A that lands after the switch sets no wallet',
+        () async {
+      await api.setAuthToken(_token(_accountA));
+      final epochOfA = api.authSessionEpoch;
+      await api.setAuthToken(_token(_accountB));
+      SharedPreferences.setMockInitialValues(<String, Object>{
+        PreferenceKeys.authLastSignInMethodV1: 'email',
+      });
+      final wallet = WalletProvider(deferInit: true);
+
+      final outcome = await wallet.recoverManagedWalletSession(
+        walletAddress: _walletOfAccountA,
+        refreshBackendSession: false,
+        expectedAuthEpoch: epochOfA,
+      );
+
+      expect(outcome, ManagedWalletReconnectOutcome.failed);
+      expect(wallet.currentWalletAddress, isNull);
+    });
   });
 
   group('a same-account identity change during an unlock of A', () {
