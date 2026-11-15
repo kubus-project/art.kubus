@@ -140,6 +140,22 @@ void main() {
       expect(service.currentSubscribedAccountId, _accountA);
     });
 
+    test('a same-identity subscribe that names an account id records it', () {
+      service.subscribeUser(_walletA);
+      socket.fire(
+        'subscribe:ok',
+        _ackFor('user:$_walletA', <String>['user:$_walletA']),
+      );
+      expect(service.currentSubscribedAccountId, isNull);
+
+      service.subscribeUser(_walletA, accountId: _accountA);
+
+      expect(socket.emitsOf('subscribe:user'), <dynamic>[_walletA]);
+      expect(socket.emitsOf('unsubscribe:user'), isEmpty);
+      expect(service.currentSubscribedWallet, _walletA);
+      expect(service.currentSubscribedAccountId, _accountA);
+    });
+
     test('a reconnect resubscribes the wallet and the account it held', () {
       service.debugSeedRoomsForTesting(wallet: _walletA, accountId: _accountA);
 

@@ -388,6 +388,9 @@ class SocketService {
 
     if (previousIdentity == identity &&
         !_pendingSubscriptionAcks.containsKey(expectedRoom)) {
+      // The room is already joined. Record the account id this call names, so
+      // teardown can leave the account room by it.
+      _holdPersonalSubscription(roomWallet, roomAccount);
       _log('Already subscribed to the personal room');
       return true;
     }
