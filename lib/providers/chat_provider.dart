@@ -1230,7 +1230,14 @@ class ChatProvider extends ChangeNotifier {
     final accountId = _socketSessionAccountId();
     if (wallet.isEmpty && accountId.isEmpty) return false;
     final addressedTo = _socketRecipientUserId(data);
-    if (addressedTo != null && addressedTo != accountId) return false;
+    // Addressed to this session by account id, or by wallet for a legacy
+    // payload. An unknown identity never matches, and ids compare
+    // case-insensitively.
+    if (addressedTo != null &&
+        !WalletUtils.sameIdentity(addressedTo, accountId) &&
+        !WalletUtils.sameIdentity(addressedTo, wallet)) {
+      return false;
+    }
     if (_conversations.any((c) => c.id == conversationId)) return true;
     return !_retiredSessionConversationIds.contains(conversationId);
   }
@@ -1963,28 +1970,10 @@ class ChatProvider extends ChangeNotifier {
         return;
       }
       final normalizedMsg = msg;
-      final senderUserId = (data['senderUserId'] ??
-              data['sender_user_id'] ??
-              payload['senderUserId'] ??
-              payload['sender_user_id'])
-          ?.toString()
-          .trim();
-      final currentClaims = _api.getCurrentAuthTokenClaims();
-      final currentUserId = (currentClaims?['id'] ??
-              currentClaims?['user_id'] ??
-              currentClaims?['sub'])
-          ?.toString()
-          .trim();
-      final senderWallet = WalletUtils.canonical(normalizedMsg.senderWallet);
-      final currentWallet = WalletUtils.canonical(_currentWallet);
-      final isSelfSender = (senderWallet.isNotEmpty &&
-              currentWallet.isNotEmpty &&
-              senderWallet == currentWallet) ||
-          (senderUserId != null &&
-              senderUserId.isNotEmpty &&
-              currentUserId != null &&
-              currentUserId.isNotEmpty &&
-              senderUserId == currentUserId);
+      final isSelfSender = normalizedMsg.isSentBy(
+        accountId: AccountIdentity.accountKey,
+        wallet: _currentWallet,
+      );
       final existing = _messages[convId] ?? const <ChatMessage>[];
       final next = <ChatMessage>[];
       var inserted = false;
