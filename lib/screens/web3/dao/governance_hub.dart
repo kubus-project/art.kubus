@@ -10,6 +10,7 @@ import '../../onboarding/web3/onboarding_data.dart';
 import '../../../providers/dao_provider.dart';
 import '../../../providers/web3provider.dart';
 import '../../../providers/wallet_provider.dart';
+import '../../../utils/wallet_presentation_state.dart';
 import '../../../providers/profile_provider.dart';
 import '../../../widgets/empty_state_card.dart';
 import '../../../models/dao.dart';
@@ -336,7 +337,27 @@ class _GovernanceWorkspaceState extends State<GovernanceWorkspace>
   /// applies (connect a wallet, or restore signing for a read-only one).
   Widget _buildParticipationState(Web3Capabilities capabilities) {
     final l10n = AppLocalizations.of(context)!;
-    final authority = context.watch<WalletProvider>().authority;
+    final walletProvider = context.watch<WalletProvider>();
+    final authority = walletProvider.authority;
+    // While the account's wallet linkage is still settling, neither "no wallet"
+    // nor "connect one" may be shown: the state is unknown until it settles.
+    if (!capabilities.hasWalletIdentity &&
+        WalletPresentationStateResolver.linkagePendingFor(walletProvider)) {
+      return Padding(
+        padding: const EdgeInsets.fromLTRB(
+          KubusSpacing.md,
+          KubusSpacing.sm,
+          KubusSpacing.md,
+          0,
+        ),
+        child: KubusNoticeBanner(
+          margin: EdgeInsets.zero,
+          icon: Icons.hourglass_empty_outlined,
+          title: l10n.settingsBackupStatusChecking,
+          message: l10n.walletHomeLoadingLabel,
+        ),
+      );
+    }
     final message = !capabilities.hasWalletIdentity
         ? l10n.walletActionAccountShellNeedsWalletToast
         : authority.canRestoreFromEncryptedBackup

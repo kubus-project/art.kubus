@@ -323,5 +323,40 @@ void main() {
         findsNothing,
       );
     });
+
+    testWidgets(
+        'an account whose wallet link is still settling is not told to connect one',
+        (tester) async {
+      final wallet = _GovernanceWallet()
+        ..seedAccountSessionForTesting(
+          email: 'settling@example.com',
+          backendProfile: const <String, dynamic>{},
+        );
+
+      await _pumpWithWallet(tester, wallet);
+
+      expect(find.text('Checking wallet status…'), findsOneWidget);
+      expect(
+        find.text(
+          'Your account is signed in without a wallet. Connect one to continue with this action.',
+        ),
+        findsNothing,
+      );
+      expect(
+        find.widgetWithText(KubusButton, 'Connect wallet'),
+        findsNothing,
+      );
+
+      // The link settles without a wallet: only now is connecting offered.
+      wallet.setCurrentWalletAddressForTesting(null);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+
+      expect(find.text('Checking wallet status…'), findsNothing);
+      expect(
+        find.widgetWithText(KubusButton, 'Connect wallet'),
+        findsOneWidget,
+      );
+    });
   });
 }

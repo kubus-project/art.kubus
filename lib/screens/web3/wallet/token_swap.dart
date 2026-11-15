@@ -10,6 +10,7 @@ import '../../../config/api_keys.dart';
 import '../../../models/swap_quote.dart';
 import '../../../models/wallet.dart';
 import '../../../providers/wallet_provider.dart';
+import '../../../utils/wallet_presentation_state.dart';
 import '../../../providers/profile_provider.dart';
 import '../../../utils/design_tokens.dart';
 import '../../../utils/kubus_color_roles.dart';
@@ -98,7 +99,15 @@ class _TokenSwapState extends State<TokenSwap> {
     final walletProvider = context.watch<WalletProvider>();
     final authority = walletProvider.authority;
     if (!authority.canTransact) {
-      return _buildAuthorityState(theme, swapColor, l10n, authority);
+      final linkagePending = !authority.hasWalletIdentity &&
+          WalletPresentationStateResolver.linkagePendingFor(walletProvider);
+      return _buildAuthorityState(
+        theme,
+        swapColor,
+        l10n,
+        authority,
+        linkagePending: linkagePending,
+      );
     }
     final tokens = _availableTokens(walletProvider);
     final hasTokens = tokens.isNotEmpty;
@@ -200,38 +209,46 @@ class _TokenSwapState extends State<TokenSwap> {
     ThemeData theme,
     Color swapColor,
     AppLocalizations l10n,
-    WalletAuthoritySnapshot authority,
-  ) {
+    WalletAuthoritySnapshot authority, {
+    bool linkagePending = false,
+  }) {
     final canRestore = authority.canRestoreFromEncryptedBackup;
-    final title = switch (authority.state) {
-      WalletAuthorityState.signedOut => l10n.walletHomeSignedOutTitle,
-      WalletAuthorityState.accountShellOnly => l10n.walletHomeAccountShellTitle,
-      WalletAuthorityState.walletReadOnly =>
-        l10n.walletSessionStateWalletReadOnly,
-      WalletAuthorityState.localSignerReady =>
-        l10n.walletSessionStateLocalSignerReady,
-      WalletAuthorityState.externalWalletReady =>
-        l10n.walletSessionStateExternalWalletReady,
-      WalletAuthorityState.encryptedBackupAvailableSignerMissing =>
-        l10n.walletSessionStateEncryptedBackupAvailable,
-      WalletAuthorityState.recoveryNeeded =>
-        l10n.walletSessionStateRecoveryNeeded,
-    };
-    final body = switch (authority.state) {
-      WalletAuthorityState.signedOut => l10n.walletActionSignInRequiredToast,
-      WalletAuthorityState.accountShellOnly =>
-        l10n.walletActionAccountShellNeedsWalletToast,
-      WalletAuthorityState.walletReadOnly =>
-        l10n.walletActionReadOnlyReconnectToast,
-      WalletAuthorityState.localSignerReady =>
-        l10n.walletSecurityLocalSignerReadyValue,
-      WalletAuthorityState.externalWalletReady =>
-        l10n.walletSecuritySignerExternalReadyValue,
-      WalletAuthorityState.encryptedBackupAvailableSignerMissing =>
-        l10n.walletActionEncryptedBackupRestoreToast,
-      WalletAuthorityState.recoveryNeeded =>
-        l10n.walletActionRecoveryNeededToast,
-    };
+    // Until linkage settles, neither "no wallet" nor "connect one" is shown.
+    final title = linkagePending
+        ? l10n.settingsBackupStatusChecking
+        : switch (authority.state) {
+            WalletAuthorityState.signedOut => l10n.walletHomeSignedOutTitle,
+            WalletAuthorityState.accountShellOnly =>
+              l10n.walletHomeAccountShellTitle,
+            WalletAuthorityState.walletReadOnly =>
+              l10n.walletSessionStateWalletReadOnly,
+            WalletAuthorityState.localSignerReady =>
+              l10n.walletSessionStateLocalSignerReady,
+            WalletAuthorityState.externalWalletReady =>
+              l10n.walletSessionStateExternalWalletReady,
+            WalletAuthorityState.encryptedBackupAvailableSignerMissing =>
+              l10n.walletSessionStateEncryptedBackupAvailable,
+            WalletAuthorityState.recoveryNeeded =>
+              l10n.walletSessionStateRecoveryNeeded,
+          };
+    final body = linkagePending
+        ? l10n.walletHomeLoadingLabel
+        : switch (authority.state) {
+            WalletAuthorityState.signedOut =>
+              l10n.walletActionSignInRequiredToast,
+            WalletAuthorityState.accountShellOnly =>
+              l10n.walletActionAccountShellNeedsWalletToast,
+            WalletAuthorityState.walletReadOnly =>
+              l10n.walletActionReadOnlyReconnectToast,
+            WalletAuthorityState.localSignerReady =>
+              l10n.walletSecurityLocalSignerReadyValue,
+            WalletAuthorityState.externalWalletReady =>
+              l10n.walletSecuritySignerExternalReadyValue,
+            WalletAuthorityState.encryptedBackupAvailableSignerMissing =>
+              l10n.walletActionEncryptedBackupRestoreToast,
+            WalletAuthorityState.recoveryNeeded =>
+              l10n.walletActionRecoveryNeededToast,
+          };
 
     return Scaffold(
       backgroundColor: Colors.transparent,
