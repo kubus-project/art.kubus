@@ -17,12 +17,16 @@ import 'app_refresh_provider.dart';
 
 String _normalizeIdentity(String? value) => (value ?? '').trim().toLowerCase();
 
-/// Decides whether a notification payload is addressed to the current session.
+/// Decides whether a socket payload is addressed to the current session.
 ///
-/// - Both a recipient user id and a session account id known: they must match.
-/// - Otherwise both a recipient wallet and a session wallet known: they must
-///   match (case-insensitive).
-/// - Otherwise no identity can be compared and the event is kept.
+/// - A payload that names an account (`recipientUserId`) is the session's only
+///   when the session's account id is known and equal. A wallet match never
+///   stands in for it, so a walletless session matches on its UUID alone.
+/// - A wallet-only payload (no `recipientUserId`) is the session's when both
+///   wallets are known and equal (case-insensitive).
+/// - Empty or null identities never match.
+/// - A payload that names neither is unaddressed. The server emits it only to
+///   the owner's socket room, and that room is the gate.
 bool isNotificationForCurrentIdentity({
   String? recipientUserId,
   String? recipientWallet,
@@ -30,18 +34,18 @@ bool isNotificationForCurrentIdentity({
   String? sessionWallet,
 }) {
   final payloadUserId = _normalizeIdentity(recipientUserId);
-  final sessionUserId = _normalizeIdentity(sessionAccountId);
-  if (payloadUserId.isNotEmpty && sessionUserId.isNotEmpty) {
-    return payloadUserId == sessionUserId;
-  }
   final payloadWallet =
       _normalizeIdentity(WalletUtils.canonical(recipientWallet));
+  if (payloadUserId.isEmpty && payloadWallet.isEmpty) return true;
+  if (payloadUserId.isNotEmpty) {
+    final sessionUserId = _normalizeIdentity(sessionAccountId);
+    return sessionUserId.isNotEmpty && payloadUserId == sessionUserId;
+  }
   final sessionWalletKey =
       _normalizeIdentity(WalletUtils.canonical(sessionWallet));
-  if (payloadWallet.isNotEmpty && sessionWalletKey.isNotEmpty) {
-    return payloadWallet == sessionWalletKey;
-  }
-  return true;
+  return payloadWallet.isNotEmpty &&
+      sessionWalletKey.isNotEmpty &&
+      payloadWallet == sessionWalletKey;
 }
 
 class NotificationProvider extends ChangeNotifier {
@@ -599,6 +603,7 @@ class NotificationProvider extends ChangeNotifier {
 
   void _handleUnreadSummary(Map<String, dynamic> payload) {
     if (!_hasAuthContext) return;
+    if (!_isAddressedToCurrentSession(payload)) return;
     _summaryRevision++;
     _summaryRequestVersion++;
     _scheduledServerSync?.cancel();
