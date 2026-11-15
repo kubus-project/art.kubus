@@ -106,7 +106,7 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
                 Consumer<CommunityHubProvider>(
                   builder: (context, hub, _) {
                     final latest = _resolveGroup(hub);
-                    final isOwner = latest.isOwner;
+                    final isOwner = _isGroupOwner(latest);
                     final isMember = latest.isMember;
                     final label = isOwner
                         ? l10n.commonOwner
@@ -236,7 +236,7 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
     final scheme = Theme.of(context).colorScheme;
     final profileProvider = context.watch<ProfileProvider>();
     final isSignedIn = profileProvider.isSignedIn;
-    final isMember = summary.isMember || summary.isOwner;
+    final isMember = summary.isMember || _isGroupOwner(summary);
     final draft = hub.draft;
 
     if (!isSignedIn) {
@@ -494,13 +494,15 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
       if (!mounted) return;
       messenger.showKubusSnackBar(
         SnackBar(
-          content: Text(communityComposerFailureMessage(
-            l10n,
-            e,
-            unuploadedMediaCount: _composerMedia.hasFailedUploads
-                ? _composerMedia.unuploadedCount
-                : null,
-          )),
+          content: Text(communityGroupPostMembershipRequired(e)
+              ? l10n.groupFeedJoinToPostLabel
+              : communityComposerFailureMessage(
+                  l10n,
+                  e,
+                  unuploadedMediaCount: _composerMedia.hasFailedUploads
+                      ? _composerMedia.unuploadedCount
+                      : null,
+                )),
           duration: const Duration(seconds: 3),
         ),
       );
@@ -829,6 +831,16 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
     } catch (_) {
       return null;
     }
+  }
+
+  /// Whether the signed-in session owns [group]. The server's owner flag is
+  /// trusted first; otherwise the owner account id, then the legacy owner wallet.
+  bool _isGroupOwner(CommunityGroupSummary group) {
+    if (group.isOwner) return true;
+    return group.isOwnedBySession(
+      accountId: AccountIdentity.accountKey,
+      wallet: _currentWalletAddress(),
+    );
   }
 
   Future<void> _showPostOptionsForPost(CommunityPost post) async {

@@ -1,5 +1,7 @@
 import 'package:equatable/equatable.dart';
 
+import 'message.dart';
+
 class GroupPostPreview extends Equatable {
   final String id;
   final String? content;
@@ -23,6 +25,7 @@ class CommunityGroupSummary extends Equatable {
   final String? coverImage;
   final bool isPublic;
   final String ownerWallet;
+  final String? ownerUserId;
   final int memberCount;
   final bool isMember;
   final bool isOwner;
@@ -36,11 +39,23 @@ class CommunityGroupSummary extends Equatable {
     this.coverImage,
     required this.isPublic,
     required this.ownerWallet,
+    this.ownerUserId,
     required this.memberCount,
     required this.isMember,
     required this.isOwner,
     this.latestPost,
   });
+
+  /// Whether the account [accountId] or [wallet] owns this group. The owner
+  /// account id is compared first; the owner wallet is the fallback for a row
+  /// that carries no account id. Empty identities never match.
+  bool isOwnedBySession({String? accountId, String? wallet}) =>
+      isSameAccountActor(
+        userId: ownerUserId,
+        wallet: ownerWallet,
+        otherUserId: accountId,
+        otherWallet: wallet,
+      );
 
   CommunityGroupSummary copyWith({
     String? name,
@@ -49,6 +64,7 @@ class CommunityGroupSummary extends Equatable {
     String? coverImage,
     bool? isPublic,
     String? ownerWallet,
+    String? ownerUserId,
     int? memberCount,
     bool? isMember,
     bool? isOwner,
@@ -62,6 +78,7 @@ class CommunityGroupSummary extends Equatable {
       coverImage: coverImage ?? this.coverImage,
       isPublic: isPublic ?? this.isPublic,
       ownerWallet: ownerWallet ?? this.ownerWallet,
+      ownerUserId: ownerUserId ?? this.ownerUserId,
       memberCount: memberCount ?? this.memberCount,
       isMember: isMember ?? this.isMember,
       isOwner: isOwner ?? this.isOwner,
@@ -78,6 +95,7 @@ class CommunityGroupSummary extends Equatable {
         coverImage,
         isPublic,
         ownerWallet,
+        ownerUserId,
         memberCount,
         isMember,
         isOwner,
