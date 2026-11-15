@@ -4,13 +4,16 @@ import 'package:art_kubus/community/community_upload_feedback.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:art_kubus/models/community_group.dart';
 import 'package:art_kubus/models/user_profile.dart';
+import 'package:art_kubus/providers/wallet_provider.dart';
 import 'package:art_kubus/screens/community/group_feed_screen.dart';
 import 'package:art_kubus/services/account_identity.dart';
 import 'package:art_kubus/services/backend_api_service.dart';
+import 'package:art_kubus/utils/community_screen_utils.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
+import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../helpers/secure_storage_absent.dart';
@@ -24,6 +27,16 @@ const _groupId = '22222222-2222-4222-8222-222222222222';
 const _legacyWallet = '7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU';
 
 final _l10n = lookupAppLocalizations(const Locale('en'));
+
+/// A wallet account whose wallet is the legacy owner-wallet fixture.
+class _WalletAt extends WalletProvider {
+  _WalletAt(this._address) : super(deferInit: true);
+
+  final String _address;
+
+  @override
+  String? get currentWalletAddress => _address;
+}
 
 UserProfile _walletlessProfile() => UserProfile(
       id: 'profile-row-1',
@@ -224,6 +237,44 @@ void main() {
 
       expect(find.text(_l10n.commonJoin), findsWidgets);
       expect(find.text(_l10n.groupFeedJoinToPostLabel), findsOneWidget);
+    });
+  });
+
+  group('group opened from a post chip', () {
+    testWidgets('the post author on this wallet is not shown as the owner',
+        (tester) async {
+      // A post chip carries no owner: its author is not the group owner, and
+      // the group is absent from the hub, so the summary is all there is.
+      AccountIdentity.setAccountKey(_legacyWallet);
+      final chipGroup = communityGroupSummaryFromReference(
+        const CommunityGroupReference(id: _groupId, name: 'Walletless group'),
+      );
+      final prior = FlutterError.onError;
+      await pumpProductSurface(
+        tester,
+        child: GroupFeedScreen(group: chipGroup),
+        signedInProfile: UserProfile(
+          id: 'profile-row-2',
+          walletAddress: _legacyWallet,
+          username: 'wallet_account',
+          displayName: 'Wallet account',
+          bio: '',
+          avatar: '',
+          isArtist: false,
+          isInstitution: false,
+          createdAt: ProfileFixtures.fetchedAt,
+          updatedAt: ProfileFixtures.fetchedAt,
+        ),
+        extraProviders: [
+          ChangeNotifierProvider<WalletProvider>.value(
+            value: _WalletAt(_legacyWallet),
+          ),
+        ],
+      );
+      FlutterError.onError = prior;
+
+      expect(find.text(_l10n.commonOwner), findsNothing);
+      expect(find.text(_l10n.commonJoin), findsWidgets);
     });
   });
 }
