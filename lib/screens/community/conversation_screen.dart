@@ -56,6 +56,26 @@ Key conversationMessageRowKey(ChatMessage message) {
   );
 }
 
+/// Ids of the visible messages this session should mark as read. A session with
+/// neither a wallet nor an account id marks nothing. A message the session sent
+/// or has already read is never marked.
+@visibleForTesting
+List<String> readReceiptCandidateIds(
+  Iterable<ChatMessage> visibleMessages, {
+  required String accountId,
+  required String wallet,
+}) {
+  if (accountId.trim().isEmpty && wallet.trim().isEmpty) {
+    return const <String>[];
+  }
+  return <String>[
+    for (final message in visibleMessages)
+      if (!message.readByCurrent &&
+          !message.isSentBy(accountId: accountId, wallet: wallet))
+        message.id,
+  ];
+}
+
 @visibleForTesting
 class ResolvedMessagePresentation {
   const ResolvedMessagePresentation({
@@ -2453,15 +2473,15 @@ class _ConversationScreenState extends State<ConversationScreen> {
     if (!mounted) return;
     final profile = Provider.of<ProfileProvider>(context, listen: false);
     final myWallet = profile.currentUser?.walletAddress ?? '';
-    if (myWallet.isEmpty) return;
+    final accountId = AccountIdentity.accountKey;
 
     final availableHeight = MediaQuery.of(context).size.height -
         (kToolbarHeight + MediaQuery.of(context).padding.top);
 
     final sourceMessages =
         _chatProvider.messages[widget.conversation.id] ?? const <ChatMessage>[];
-    for (var i = 0; i < sourceMessages.length; i++) {
-      final message = sourceMessages[i];
+    final visibleMessages = <ChatMessage>[];
+    for (final message in sourceMessages) {
       final key = _messageKeys[_messageAnimationId(message)];
       if (key == null) continue;
       final ctx = key.currentContext;
@@ -2475,14 +2495,19 @@ class _ConversationScreenState extends State<ConversationScreen> {
       final height = renderObject.size.height;
       final visible = (position + height) > 0 && position < availableHeight;
       if (!visible) continue;
+      visibleMessages.add(message);
+    }
 
-      final isMine = _normWallet(message.senderWallet) == _normWallet(myWallet);
-      if (isMine || message.readByCurrent) continue;
-      if (_pendingReadMarks.contains(message.id)) continue;
-
-      _pendingReadMarks.add(message.id);
-      _chatProvider.markMessageReadLocal(widget.conversation.id, message.id);
-      _queueMarkMessageRead(message.id);
+    final candidates = readReceiptCandidateIds(
+      visibleMessages,
+      accountId: accountId,
+      wallet: myWallet,
+    );
+    for (final messageId in candidates) {
+      if (_pendingReadMarks.contains(messageId)) continue;
+      _pendingReadMarks.add(messageId);
+      _chatProvider.markMessageReadLocal(widget.conversation.id, messageId);
+      _queueMarkMessageRead(messageId);
     }
   }
 
