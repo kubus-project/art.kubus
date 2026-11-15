@@ -319,6 +319,23 @@ class _ManagedWallet extends WalletProvider {
   final List<Completer<PinVerifyResult>> pinChecks =
       <Completer<PinVerifyResult>>[];
 
+  /// When set, the eligibility check waits for it and then answers [eligible]
+  /// (a non-managed account), so a switch can land while the gate's renewal
+  /// is still resolving how to renew.
+  Completer<void>? eligibilityHold;
+  Completer<void> eligibilityReached = Completer<void>();
+  bool? eligible;
+
+  @override
+  Future<bool> isManagedReconnectEligible() async {
+    final hold = eligibilityHold;
+    if (hold != null) {
+      if (!eligibilityReached.isCompleted) eligibilityReached.complete();
+      await hold.future;
+    }
+    return eligible ?? await super.isManagedReconnectEligible();
+  }
+
   @override
   Future<bool> hasPin() async => true;
 
@@ -1229,6 +1246,239 @@ void main() {
       expect(api.getAuthToken(), _token(_accountB));
       expect(AccountIdentity.accountKey, accountB);
       expect(gate.isBusy, isFalse);
+    });
+
+    group('with the managed signer already active (canTransact)', () {
+      Future<_ManagedWallet> signerWallet() async {
+        final wallet = await managedWallet();
+        final derived = await solana.derivePreferredKeyPair(
+          secure['cached_mnemonic']!,
+        );
+        solana.setActiveKeyPair(derived.hdKeyPair);
+        expect(wallet.canTransact, isTrue);
+        return wallet;
+      }
+
+      /// What the switch to B leaves behind for B: no wallet of A kept as the
+      /// preferred or persisted wallet. Whatever A wrote while A was current
+      /// is cleared here, so anything present afterwards was written late.
+      Future<void> clearWhatBStarts() async {
+        api.setPreferredWalletAddress(null, persist: false);
+        final prefs = await SharedPreferences.getInstance();
+        for (final key in [
+          PreferenceKeys.walletAddress,
+          'wallet_address',
+          'walletAddress',
+          'wallet',
+          'has_wallet',
+        ]) {
+          await prefs.remove(key);
+        }
+        await pumpEventQueue();
+      }
+
+      Future<void> expectNothingOfAWritten() async {
+        await pumpEventQueue();
+        final prefs = await SharedPreferences.getInstance();
+        expect(prefs.getString(PreferenceKeys.walletAddress), isNot(walletOfA),
+            reason: "A's wallet is not persisted as the preferred wallet");
+        expect(prefs.getString('wallet_address'), isNot(walletOfA));
+        expect(prefs.getString('walletAddress'), isNot(walletOfA));
+        expect(prefs.getString('wallet'), isNot(walletOfA));
+        expect(api.preferredWalletForTesting, isNull,
+            reason: "A's wallet is not B's in-memory preferred wallet");
+        expect(loginRequests, 0, reason: "A's wallet never signs in");
+      }
+
+      for (final refresh in [true, false]) {
+        final shape = refresh ? 'a session-expiry renewal' : 'an auto-lock';
+        test('$shape of A over a switch to B writes none of A', () async {
+          await api.setAuthToken(_token(_accountA));
+          solana.holdCall = 1; // the identity load, signer already active
+          final wallet = await signerWallet();
+
+          final recovery = wallet.recoverManagedWalletSession(
+            walletAddress: walletOfA,
+            refreshBackendSession: refresh,
+            expectedAuthEpoch: api.authSessionEpoch,
+          );
+          await solana.heldReached.future;
+          await api.setAuthToken(_token(_accountB));
+          await clearWhatBStarts();
+          solana.release.complete();
+
+          expect(await recovery, ManagedWalletReconnectOutcome.failed);
+          expect(api.getAuthToken(), _token(_accountB));
+          await expectNothingOfAWritten();
+        });
+
+        test('$shape of A over a logout writes none of A', () async {
+          await api.setAuthToken(_token(_accountA));
+          solana.holdCall = 1;
+          final wallet = await signerWallet();
+
+          final recovery = wallet.recoverManagedWalletSession(
+            walletAddress: walletOfA,
+            refreshBackendSession: refresh,
+            expectedAuthEpoch: api.authSessionEpoch,
+          );
+          await solana.heldReached.future;
+          await api.clearAuth();
+          await clearWhatBStarts();
+          solana.release.complete();
+
+          expect(await recovery, ManagedWalletReconnectOutcome.failed);
+          expect(api.getAuthToken(), isNull);
+          await expectNothingOfAWritten();
+        });
+      }
+
+      test('the gate renewal of a non-managed A over a switch writes none of A',
+          () async {
+        await api.setAuthToken(_token(_accountA));
+        final wallet = await signerWallet();
+        wallet
+          ..eligibilityHold = Completer<void>()
+          ..eligible = false;
+        SharedPreferences.setMockInitialValues(<String, Object>{
+          'jwt_token': 'stored-token',
+        });
+        final gate = SecurityGateProvider(promptCooldown: Duration.zero)
+          ..bindDependencies(
+            profileProvider: ProfileProvider(),
+            walletProvider: wallet,
+            notificationProvider: NotificationProvider(),
+          );
+        addTearDown(gate.dispose);
+        await gate.refreshLocalAccountState();
+        await gate.lock(SecurityLockReason.tokenExpired);
+        final aUnlock = gate.unlockWithPin('1234');
+        wallet.pinChecks.single
+            .complete(const PinVerifyResult(PinVerifyOutcome.success));
+        await wallet.eligibilityReached.future;
+
+        await api.setAuthToken(_token(_accountB));
+        await clearWhatBStarts();
+        wallet.eligibilityHold!.complete();
+
+        expect((await aUnlock).isSuccess, isFalse);
+        expect(api.getAuthToken(), _token(_accountB));
+        await expectNothingOfAWritten();
+      });
+
+      group('a backend sync held at its profile lookup', () {
+        late Completer<void> profileReached;
+        late Completer<void> profileRelease;
+
+        setUp(() {
+          profileReached = Completer<void>();
+          profileRelease = Completer<void>();
+          api.setHttpClient(MockClient((request) async {
+            if (request.url.path.endsWith('/api/auth/challenge')) {
+              return http.Response(
+                  jsonEncode({'message': 'synthetic-challenge'}), 200);
+            }
+            if (request.url.path.endsWith('/api/auth/login')) {
+              loginRequests += 1;
+              return http.Response(
+                  jsonEncode(
+                      {'token': _walletSignedToken(_accountA, walletOfA)}),
+                  200);
+            }
+            if (request.url.path.contains('/api/profiles/')) {
+              if (!profileReached.isCompleted) profileReached.complete();
+              await profileRelease.future;
+            }
+            return http.Response('{}', 404);
+          }));
+        });
+
+        test('keeps going when the same account swaps its token meanwhile',
+            () async {
+          await api.setAuthToken(_token(_accountA));
+          final wallet = await signerWallet();
+
+          final sync = wallet.importWalletFromMnemonic(
+            secure['cached_mnemonic']!,
+          );
+          await profileReached.future;
+          await api.setAuthToken(_token(_accountA, refresh: 7));
+          profileRelease.complete();
+          await sync;
+
+          expect(loginRequests, 1,
+              reason: 'the same account: the wallet-signed session is issued');
+          expect(api.getAuthToken(), _walletSignedToken(_accountA, walletOfA));
+        });
+
+        test('stops when another account replaces the session meanwhile',
+            () async {
+          await api.setAuthToken(_token(_accountA));
+          final wallet = await signerWallet();
+
+          final sync = wallet.importWalletFromMnemonic(
+            secure['cached_mnemonic']!,
+          );
+          await profileReached.future;
+          await api.setAuthToken(_token(_accountB));
+          profileRelease.complete();
+          await sync;
+
+          expect(loginRequests, 0);
+          expect(api.getAuthToken(), _token(_accountB));
+        });
+      });
+
+      test('with no named session, a guest wallet sign-in still succeeds',
+          () async {
+        final wallet = await signerWallet();
+
+        final ok = await wallet.ensureBackendSessionForActiveSigner();
+
+        expect(ok, isTrue);
+        expect(loginRequests, 1);
+        expect(api.getAuthToken(), _walletSignedToken(_accountA, walletOfA));
+      });
+
+      test('with no named session, an A to B switch during the load refuses',
+          () async {
+        await api.setAuthToken(_token(_accountA));
+        solana.holdCall = 1;
+        final wallet = await signerWallet();
+
+        // The wallet is current as A; the sync binds itself to the session
+        // current when its load began.
+        final load = wallet.setReadOnlyWalletIdentity(
+          walletOfA,
+          loadData: true,
+          syncBackend: false,
+        );
+        await solana.heldReached.future;
+        await api.setAuthToken(_token(_accountB));
+        solana.release.complete();
+        await load;
+
+        expect(loginRequests, 0);
+        expect(api.getAuthToken(), _token(_accountB));
+      });
+
+      test('control: with no switch the recovery persists and signs A in',
+          () async {
+        await api.setAuthToken(_token(_accountA));
+        final wallet = await signerWallet();
+
+        final outcome = await wallet.recoverManagedWalletSession(
+          walletAddress: walletOfA,
+          expectedAuthEpoch: api.authSessionEpoch,
+        );
+        await pumpEventQueue();
+
+        expect(outcome, ManagedWalletReconnectOutcome.signerRestored);
+        expect(loginRequests, 1);
+        expect(api.preferredWalletForTesting, isNotNull);
+        final prefs = await SharedPreferences.getInstance();
+        expect(prefs.getString(PreferenceKeys.walletAddress), walletOfA);
+      });
     });
   });
 

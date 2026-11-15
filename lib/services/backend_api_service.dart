@@ -622,6 +622,9 @@ class BackendApiService
     }());
   }
 
+  @visibleForTesting
+  String? get preferredWalletForTesting => _preferredWalletCanonical;
+
   Map<String, dynamic>? _tryDecodeJwtPayload(String token) {
     try {
       final parts = token.split('.');

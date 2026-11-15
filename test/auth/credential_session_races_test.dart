@@ -245,6 +245,101 @@ void main() {
       expect(api.getAuthToken(), walletToken);
     });
 
+    group('a caller that names no session', () {
+      /// The same account under another credential, as a link or a non-wallet
+      /// sign-in token swap issues.
+      String swapped(String id) =>
+          'e30.${base64Url.encode(utf8.encode(jsonEncode({
+                    'id': id,
+                    'iat': 1,
+                    'exp': 2100000000,
+                  }))).replaceAll('=', '')}.synthetic';
+
+      test('is bound to the account at entry: A to B during the signature',
+          () async {
+        await api.setAuthToken(jwt('A'));
+        var loginRequests = 0;
+        final base = MockClient((request) async {
+          if (request.url.path.endsWith('/api/auth/login')) loginRequests += 1;
+          if (request.url.path.endsWith('/api/auth/challenge')) {
+            return http.Response(
+                jsonEncode({'message': 'synthetic-challenge'}), 200);
+          }
+          return http.Response(jsonEncode({'token': jwt('A')}), 200);
+        });
+        api.setHttpClient(base);
+        final signRequested = Completer<void>();
+        final signature = Completer<String>();
+        final renewal = api.ensureSessionForActiveSigner(
+          walletAddress: 'synthetic-wallet-a',
+          signMessage: (_) {
+            signRequested.complete();
+            return signature.future;
+          },
+        );
+        final rejected = expectLater(renewal, throwsStateError);
+        await signRequested.future;
+        await api.setAuthToken(jwt('B'));
+        signature.complete('synthetic-signature');
+        await rejected;
+        expect(loginRequests, 0);
+        expect(api.getAuthToken(), jwt('B'));
+      });
+
+      test(
+          'resolves when the same account swaps its token during the signature',
+          () async {
+        await api.setAuthToken(jwt('A'));
+        serveWalletLoginForA();
+        final signRequested = Completer<void>();
+        final signature = Completer<String>();
+        final renewal = api.ensureSessionForActiveSigner(
+          walletAddress: 'synthetic-wallet-a',
+          signMessage: (_) {
+            signRequested.complete();
+            return signature.future;
+          },
+        );
+        await signRequested.future;
+        await api.setAuthToken(swapped('A'));
+        signature.complete('synthetic-signature');
+
+        expect((await renewal).token, jwt('A'));
+        expect(api.getAuthToken(), jwt('A'));
+      });
+
+      test('resolves for a guest: no session to the one this call creates',
+          () async {
+        serveWalletLoginForA();
+        final payload = await api.ensureSessionForActiveSigner(
+          walletAddress: 'synthetic-wallet-a',
+          signMessage: (_) async => 'synthetic-signature',
+        );
+        expect(payload.token, jwt('A'));
+        expect(api.getAuthToken(), jwt('A'));
+      });
+
+      test('refuses a guest whose session another account created meanwhile',
+          () async {
+        serveWalletLoginForA();
+        final signRequested = Completer<void>();
+        final signature = Completer<String>();
+        final renewal = api.ensureSessionForActiveSigner(
+          walletAddress: 'synthetic-wallet-a',
+          signMessage: (_) {
+            signRequested.complete();
+            return signature.future;
+          },
+        );
+        final rejected = expectLater(renewal, throwsStateError);
+        await signRequested.future;
+        await api.setAuthToken(jwt('B'));
+        signature.complete('synthetic-signature');
+        await rejected;
+        expect(api.getAuthToken(), jwt('B'));
+      });
+    });
+
     test('a renewal whose session ended before it was requested does not sign',
         () async {
       await api.setAuthToken(jwt('A'));
