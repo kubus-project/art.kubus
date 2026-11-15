@@ -20,6 +20,7 @@ import 'messages_screen.dart';
 import '../../providers/chat_provider.dart';
 import '../../services/socket_service.dart';
 import '../../providers/profile_provider.dart';
+import '../../services/account_identity.dart';
 import '../../providers/cache_provider.dart';
 import '../../services/user_service.dart';
 import '../../services/account_cache_store.dart';
@@ -749,14 +750,16 @@ class _ConversationScreenState extends State<ConversationScreen> {
     } catch (_) {}
   }
 
-  Widget _buildReadersAvatars(
-      List<Map<String, dynamic>> readers, String senderWallet) {
+  Widget _buildReadersAvatars(List<Map<String, dynamic>> readers,
+      String senderWallet, String? senderUserId) {
     if (readers.isEmpty) return const SizedBox.shrink();
-    final items = readers.where((r) {
-      final wallet =
-          (r['wallet_address'] as String? ?? r['wallet'] as String? ?? '');
-      return _normWallet(wallet) != _normWallet(senderWallet);
-    }).toList();
+    final items = readers
+        .where((r) => isReceiptFromOtherThanSender(
+              r,
+              senderUserId: senderUserId,
+              senderWallet: senderWallet,
+            ))
+        .toList();
     if (items.isEmpty) return const SizedBox.shrink();
     final count = items.length;
     final visible = items.take(3).toList();
@@ -775,19 +778,22 @@ class _ConversationScreenState extends State<ConversationScreen> {
               transitionBuilder: (child, anim) =>
                   ScaleTransition(scale: anim, child: child),
               child: Builder(
-                  key: ValueKey(
-                      '${visible[i]['wallet_address'] ?? visible[i]['wallet'] ?? i}'),
+                  key: ValueKey(_readerKey(visible[i], i)),
                   builder: (ctx) {
                     final r = visible[i];
                     final avatar = r['avatar_url'] as String?;
                     final wallet = (r['wallet_address'] as String? ??
                         r['wallet'] as String? ??
                         '');
+                    final userId = (r['user_id'] as String? ??
+                        r['userId'] as String? ??
+                        '');
                     final effectiveAvatar =
                         (avatar != null && avatar.isNotEmpty)
                             ? (_normalizeAvatar(avatar) ?? avatar)
                             : null;
-                    final display = (r['displayName'] as String?) ?? wallet;
+                    final display = (r['displayName'] as String?) ??
+                        (wallet.isNotEmpty ? wallet : userId);
                     String suffix = '';
                     final readAtStr =
                         r['read_at'] as String? ?? r['readAt'] as String?;
@@ -799,7 +805,8 @@ class _ConversationScreenState extends State<ConversationScreen> {
                     }
                     return Tooltip(
                       message: '$display$suffix',
-                      child: _buildAvatar(effectiveAvatar, wallet,
+                      child: _buildAvatar(
+                          effectiveAvatar, wallet.isNotEmpty ? wallet : userId,
                           radius: avatarSize / 2),
                     );
                   }),
@@ -829,20 +836,28 @@ class _ConversationScreenState extends State<ConversationScreen> {
     );
   }
 
-  bool _hasReceivedRead(
-      List<Map<String, dynamic>> readers, String senderWallet) {
-    if (readers.isEmpty) return false;
-    final senderNorm = _normWallet(senderWallet);
-    for (final entry in readers) {
-      final wallet = (entry['wallet_address'] as String?) ??
-          (entry['wallet'] as String?) ??
-          '';
-      if (wallet.isEmpty) continue;
-      if (_normWallet(wallet) != senderNorm) {
-        return true;
-      }
-    }
-    return false;
+  /// A reader counts when it is someone other than the sender. Account-only
+  /// readers (no wallet) count by account id.
+  bool _hasReceivedRead(List<Map<String, dynamic>> readers, String senderWallet,
+      {String? senderUserId}) {
+    return hasReceiptFromOtherThanSender(
+      readers,
+      senderUserId: senderUserId,
+      senderWallet: senderWallet,
+    );
+  }
+
+  /// A stable key for a reader avatar: the wallet, else the account id.
+  String _readerKey(Map<String, dynamic> reader, int index) {
+    final wallet = (reader['wallet_address'] as String? ??
+            reader['wallet'] as String? ??
+            '')
+        .trim();
+    if (wallet.isNotEmpty) return wallet;
+    final userId =
+        (reader['user_id'] as String? ?? reader['userId'] as String? ?? '')
+            .trim();
+    return userId.isNotEmpty ? userId : '#$index';
   }
 
   Color _readIndicatorColor(BuildContext context,
@@ -1045,10 +1060,14 @@ class _ConversationScreenState extends State<ConversationScreen> {
         Provider.of<ProfileProvider>(context, listen: false)
             .currentUser
             ?.walletAddress;
+    final currentAccountId = AccountIdentity.accountKey;
 
     for (final r in message.reactions) {
       reactionCounts[r.emoji] = r.count;
-      if (currentUserWallet != null && r.reactors.contains(currentUserWallet)) {
+      if (r.isReactedBy(
+        accountId: currentAccountId,
+        wallet: currentUserWallet,
+      )) {
         myReactions.add(r.emoji);
       }
     }
@@ -1755,10 +1774,18 @@ class _ConversationScreenState extends State<ConversationScreen> {
     final newer = hasNewer ? display[index - 1] : null;
     return isReadReceiptBoundary(
       isMine: isMine,
-      readByPeer: _hasReceivedRead(message.readers, message.senderWallet),
+      readByPeer: _hasReceivedRead(
+        message.readers,
+        message.senderWallet,
+        senderUserId: message.senderUserId,
+      ),
       hasNewerMessage: hasNewer,
-      newerReadByPeer:
-          newer != null && _hasReceivedRead(newer.readers, newer.senderWallet),
+      newerReadByPeer: newer != null &&
+          _hasReceivedRead(
+            newer.readers,
+            newer.senderWallet,
+            senderUserId: newer.senderUserId,
+          ),
     );
   }
 
@@ -1971,7 +1998,11 @@ class _ConversationScreenState extends State<ConversationScreen> {
       {required bool showTime}) {
     final accent =
         Provider.of<ThemeProvider>(context, listen: false).accentColor;
-    final isRead = _hasReceivedRead(message.readers, message.senderWallet);
+    final isRead = _hasReceivedRead(
+      message.readers,
+      message.senderWallet,
+      senderUserId: message.senderUserId,
+    );
 
     return Row(
       mainAxisSize: MainAxisSize.min,
@@ -1993,7 +2024,11 @@ class _ConversationScreenState extends State<ConversationScreen> {
             color: _readIndicatorColor(context, isMine: true, isRead: isRead),
           ),
           const SizedBox(width: 4),
-          _buildReadersAvatars(message.readers, message.senderWallet),
+          _buildReadersAvatars(
+            message.readers,
+            message.senderWallet,
+            message.senderUserId,
+          ),
         ],
       ],
     );

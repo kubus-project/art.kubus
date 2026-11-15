@@ -98,6 +98,63 @@ void main() {
     provider.dispose();
   });
 
+  test('a walletless reader by account id leaves a receipt on the message', () {
+    BackendApiService().setAuthTokenForTesting(_walletlessToken(_accountA));
+    final provider = ChatProvider();
+    provider.setCurrentWalletForTesting(null);
+    // Account A's own message, which account B (walletless) reads.
+    provider.handleIncomingMessageForTesting({
+      'id': 'mine1',
+      'conversationId': 'convA',
+      'senderUserId': _accountA,
+      'senderWallet': '',
+      'message': 'mine',
+      'createdAt': DateTime.utc(2026, 11, 15).toIso8601String(),
+    });
+
+    provider.handleMessageReadForTesting({
+      'message_id': 'mine1',
+      'conversation_id': 'convA',
+      'reader': _accountB,
+      'wallet': null,
+      'userId': _accountB,
+      'read_at': DateTime.utc(2026, 11, 15, 1).toIso8601String(),
+    });
+
+    final message = provider.messages['convA']!.single;
+    expect(message.readersCount, 1);
+    expect(message.readers.single['user_id'], _accountB);
+    expect(
+      message.readByCurrent,
+      isFalse,
+      reason: 'the peer read it, not the session account',
+    );
+    provider.dispose();
+  });
+
+  test('a walletless session reading a message marks it read for itself', () {
+    BackendApiService().setAuthTokenForTesting(_walletlessToken(_accountA));
+    final provider = ChatProvider();
+    provider.setCurrentWalletForTesting(null);
+    provider.handleIncomingMessageForTesting(
+      _liveMessage('m5', 'convA', recipientUserId: _accountA),
+    );
+
+    provider.handleMessageReadForTesting({
+      'message_id': 'm5',
+      'conversation_id': 'convA',
+      'reader': _accountA,
+      'wallet': null,
+      'userId': _accountA,
+      'read_at': DateTime.utc(2026, 11, 15, 1).toIso8601String(),
+    });
+
+    final message = provider.messages['convA']!.single;
+    expect(message.readByCurrent, isTrue);
+    expect(message.readers.single['user_id'], _accountA);
+    provider.dispose();
+  });
+
   test('a session with neither wallet nor account id drops every event', () {
     final provider = ChatProvider();
     provider.setCurrentWalletForTesting(null);
