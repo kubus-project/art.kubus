@@ -4,6 +4,7 @@ import '../config/config.dart';
 import '../models/community_group.dart';
 import '../models/community_subject.dart';
 import '../models/achievements.dart' as achievements_model;
+import '../models/message.dart' show isSameAccountActor;
 import '../models/profile_identity_data.dart';
 import '../models/saved_item.dart';
 import '../providers/saved_items_provider.dart';
@@ -323,19 +324,21 @@ String? communityAuthorUserIdOf(ProfileIdentityData identity) {
   return WalletUtils.isAccountUuid(id) ? id : null;
 }
 
-/// Whether the signed-in session wrote the content. The author's account id
-/// is compared first; the wallet is only the legacy fallback for content
-/// that carries no account id. Empty and null identities never match.
+/// Whether the signed-in session wrote the content. Delegates to
+/// [isSameAccountActor], so the account id decides when both sides carry one
+/// and the wallet is the legacy fallback otherwise (a wallet-keyed legacy
+/// token counts as no account id). Empty and null identities never match.
 bool communityAuthoredBySession(
   ProfileIdentityData identity, {
   String? accountId,
   String? wallet,
 }) {
-  final postAccount = communityAuthorUserIdOf(identity);
-  if (postAccount != null && (accountId ?? '').trim().isNotEmpty) {
-    return WalletUtils.sameIdentity(postAccount, accountId);
-  }
-  return WalletUtils.sameIdentity(communityAuthorWalletOf(identity), wallet);
+  return isSameAccountActor(
+    userId: communityAuthorUserIdOf(identity),
+    wallet: communityAuthorWalletOf(identity),
+    otherUserId: accountId,
+    otherWallet: wallet,
+  );
 }
 
 ProfileIdentityData _legacyAuthorIdentity({
@@ -1269,8 +1272,14 @@ class CommunityService {
 
   static String _resolveWalletIdentifier(SharedPreferences prefs,
       {String? walletOverride}) {
-    final raw = walletOverride ??
-        prefs.getString('wallet_address') ??
+    final wallet = (walletOverride ?? '').trim();
+    if (wallet.isNotEmpty) return wallet.toLowerCase();
+    // A walletless account is scoped by its own account id. The preferences
+    // below are device-wide: they can name another account, or a wallet left
+    // from an earlier sign-in, so they never decide a session with an id.
+    final account = AccountIdentity.accountKey.trim();
+    if (WalletUtils.isAccountUuid(account)) return account.toLowerCase();
+    final raw = prefs.getString('wallet_address') ??
         prefs.getString('walletAddress') ??
         prefs.getString('wallet') ??
         prefs.getString('user_id');

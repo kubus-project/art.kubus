@@ -102,6 +102,16 @@ void main() {
       );
     });
 
+    test('a legacy token keyed by its wallet still owns a UUID-carrying post',
+        () {
+      // A legacy token has no id claim, so its account key is the wallet.
+      final post = _post({'walletAddress': _walletW, 'userId': _accountA});
+      expect(
+        post.isAuthoredBySession(accountId: _walletW, wallet: _walletW),
+        isTrue,
+      );
+    });
+
     test('a legacy wallet-only post is owned through the wallet', () {
       final post = _post({'walletAddress': _walletW});
       expect(post.authorUserId, isNull);
