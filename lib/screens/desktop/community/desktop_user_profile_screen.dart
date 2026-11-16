@@ -489,17 +489,30 @@ class _UserProfileScreenState extends State<UserProfileScreen>
   }) {
     switch (section) {
       case ProfileSection.work:
-        return [
-          if (isArtist) ...[
-            _buildArtistPortfolioSection(themeProvider, l10n),
-            if (_documentedArtworks.isNotEmpty) ...[
-              const SizedBox(height: KubusSpacing.md),
-              _buildArtistDocumentedSection(l10n),
-            ],
-            const SizedBox(height: KubusSpacing.md),
+        // Authored works and public collections are public content, not an
+        // artist privilege. The artist title and the institution programme
+        // stay on their roles; a non-artist sees only the bands with content.
+        if (isInstitution && !isArtist) {
+          return [_buildInstitutionHighlightsSection(themeProvider, l10n)];
+        }
+        final contentOnly = !isArtist;
+        final bands = <Widget>[
+          if (!contentOnly || _artistArtworks.isNotEmpty)
+            _buildArtistPortfolioSection(
+              themeProvider,
+              l10n,
+              isArtist: isArtist,
+            ),
+          if (_documentedArtworks.isNotEmpty)
+            _buildArtistDocumentedSection(l10n),
+          if (!contentOnly || _artistCollections.isNotEmpty)
             _buildArtistCollectionsSection(themeProvider, l10n),
-          ] else if (isInstitution)
-            _buildInstitutionHighlightsSection(themeProvider, l10n),
+        ];
+        return [
+          for (var i = 0; i < bands.length; i++) ...[
+            if (i > 0) const SizedBox(height: KubusSpacing.md),
+            bands[i],
+          ],
         ];
       case ProfileSection.publicArt:
         // The canonical artist hero already carries the added-art count.
@@ -1338,13 +1351,16 @@ class _UserProfileScreenState extends State<UserProfileScreen>
 
   Widget _buildArtistPortfolioSection(
     ThemeProvider themeProvider,
-    AppLocalizations l10n,
-  ) {
+    AppLocalizations l10n, {
+    required bool isArtist,
+  }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         DesktopSectionHeader(
-          title: l10n.userProfileArtistPortfolioTitle,
+          title: isArtist
+              ? l10n.userProfileArtistPortfolioTitle
+              : l10n.userProfileArtworksTitle,
           subtitle: l10n.userProfileArtistPortfolioDesktopSubtitle,
         ),
         const SizedBox(height: KubusSpacing.md),

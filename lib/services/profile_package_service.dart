@@ -896,14 +896,18 @@ class ProfilePackageService {
     User user,
     String walletAddress,
   ) async {
+    // Authored artworks and public collections are public content, not an
+    // artist privilege, so every profile loads them. Events stay a creator
+    // surface.
     final isCreator = user.isArtist || user.isInstitution;
-    if (!isCreator) return const _ProfileShowcasePayload();
 
     try {
       final api = BackendApiService();
       final collectionsFuture =
           api.getCollections(walletAddress: walletAddress, limit: 6);
-      final eventsFuture = api.listEvents(limit: 100);
+      final eventsFuture = isCreator
+          ? api.listEvents(limit: 100)
+          : Future.value(const <Map<String, dynamic>>[]);
 
       final results = await Future.wait<dynamic>([
         loadProfileArtworkSections(walletAddress, limit: 6),
