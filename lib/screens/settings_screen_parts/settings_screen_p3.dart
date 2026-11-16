@@ -182,15 +182,21 @@ extension _SettingsScreenStatePart3 on _SettingsScreenState {
   void _syncWalletBackupStatus({bool force = false}) {
     final walletProvider = Provider.of<WalletProvider>(context, listen: false);
     final isSignedIn = context.read<ProfileProvider>().isSignedIn;
+    // Profile loading can fail while WalletProvider already holds a valid
+    // account session (and its linked wallet). Keep the backup row grounded in
+    // that authority instead of treating the profile fallback as signed out.
+    final hasAccountContext = isSignedIn ||
+        walletProvider.authority.hasAccountSession ||
+        walletProvider.hasWalletIdentity;
     final inputs = WalletBackupStatusInputs.of(
       walletProvider,
-      profileSignedIn: isSignedIn,
+      profileSignedIn: hasAccountContext,
     );
     if (!force && !_walletBackupTracker.needsResolve(inputs)) return;
     final token = _walletBackupTracker.begin(inputs);
     _applyState(
         () => _walletBackupStatus = const WalletBackupStatusSnapshot.pending());
-    final resolved = isSignedIn
+    final resolved = hasAccountContext
         ? WalletBackupStatusResolver.resolve(
             walletProvider: walletProvider,
             refreshRemote: true,

@@ -1001,6 +1001,36 @@ void main() {
       expect(find.text(restoreCopy), findsOneWidget);
       expect(find.text(walletlessCopy), findsNothing);
     });
+
+    testWidgets(
+        'mobile backup row follows wallet authority while profile stays signed out',
+        (tester) async {
+      SharedPreferences.setMockInitialValues(<String, Object>{});
+      final walletProvider = restorable()
+        ..setCurrentWalletAddressForTesting('wallet123')
+        ..seedAccountSessionForTesting(
+          email: 'restorable@example.com',
+          backendProfile: const <String, dynamic>{},
+        );
+      final profileProvider = ProfileProvider();
+
+      await tester.pumpWidget(
+        _buildSettingsApp(walletProvider, profileProvider: profileProvider),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 2));
+
+      expect(profileProvider.isSignedIn, isFalse);
+      await tester.scrollUntilVisible(
+        find.text(restoreCopy),
+        250,
+        scrollable: find.byType(Scrollable).first,
+      );
+      expect(profileProvider.isSignedIn, isFalse);
+      expect(find.text(restoreCopy), findsOneWidget);
+      expect(find.text('No wallet connected yet'), findsNothing);
+      expect(find.text(walletlessCopy), findsNothing);
+    });
   });
 
   for (final desktop in [false, true]) {

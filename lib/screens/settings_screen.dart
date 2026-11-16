@@ -175,6 +175,10 @@ class _SettingsScreenState extends State<SettingsScreen>
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final isSignedIn = context.watch<ProfileProvider>().isSignedIn;
+    final walletProvider = context.watch<WalletProvider>();
+    final hasWalletAccountContext =
+        walletProvider.authority.hasAccountSession ||
+            walletProvider.hasWalletIdentity;
     return Scaffold(
       backgroundColor: Colors.transparent,
       body: SafeArea(
@@ -212,7 +216,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                           // account, so it is always reachable.
                           _buildPrivacySection(l10n),
                           const SizedBox(height: 40),
-                          if (isSignedIn) ...[
+                          if (isSignedIn || hasWalletAccountContext) ...[
                             _buildSettingsGroupHeading(
                                 l10n.settingsGroupInfrastructure),
                             _buildPlatformCapabilitiesSection(l10n),
