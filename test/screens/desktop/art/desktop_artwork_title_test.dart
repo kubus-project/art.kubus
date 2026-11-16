@@ -9,6 +9,7 @@ import 'package:art_kubus/providers/wallet_provider.dart';
 import 'package:art_kubus/screens/desktop/art/desktop_artwork_detail_screen.dart';
 import 'package:art_kubus/screens/desktop/desktop_shell_scope.dart';
 import 'package:art_kubus/widgets/detail/detail_shell_primitives.dart';
+import 'package:art_kubus/widgets/artwork_private_preview_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:latlong2/latlong.dart';
@@ -16,8 +17,13 @@ import 'package:provider/provider.dart';
 
 const String _title = 'Vodnik mural';
 const String _artworkId = 'title-fixture';
+const String _privateCoverPath = '/api/artworks/title-fixture/media/cover';
 
-Artwork _artwork() => Artwork(
+Artwork _artwork({
+  bool isPublic = true,
+  ArtworkMediaPreviewDescriptor? mediaPreview,
+}) =>
+    Artwork(
       id: _artworkId,
       title: _title,
       artist: 'Miron Milić',
@@ -27,6 +33,9 @@ Artwork _artwork() => Artwork(
       createdAt: DateTime(2024),
       updatedAt: DateTime(2024),
       category: 'Mural',
+      isPublic: isPublic,
+      mediaPreview: mediaPreview,
+      mediaPreviewProvided: mediaPreview != null,
     );
 
 /// Saved status is read from secure storage, which does not complete under the
@@ -161,5 +170,46 @@ void main() {
 
     expect(_textCount('art.kubus'), 1);
     expect(_textCount(_title), 1);
+  });
+
+  testWidgets(
+      'private preview descriptor takes precedence when detail omits isPublic',
+      (tester) async {
+    final artwork = _artwork(
+      mediaPreview: const ArtworkMediaPreviewDescriptor(
+        auth: 'bearer',
+        cover: _privateCoverPath,
+        gallery: <String?>[],
+        poap: null,
+      ),
+    );
+    final app = MultiProvider(
+      providers: [
+        ChangeNotifierProvider<ArtworkProvider>.value(
+          value: _QuietArtworkProvider()..seedArtworksForTesting([artwork]),
+        ),
+        ChangeNotifierProvider(create: (_) => ProfileProvider()),
+        ChangeNotifierProvider(create: (_) => WalletProvider()),
+        ChangeNotifierProvider(create: (_) => ThemeProvider()),
+        ChangeNotifierProvider<SavedItemsProvider>(
+          create: (_) => _NoStorageSavedItems(),
+        ),
+      ],
+      child: MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: Scaffold(
+          body: const DesktopArtworkDetailScreen(artworkId: _artworkId),
+        ),
+      ),
+    );
+
+    await pumpAt1440(tester, app);
+
+    final preview = tester.widget<ArtworkPrivatePreviewImage>(
+      find.byType(ArtworkPrivatePreviewImage),
+    );
+    expect(preview.isPublic, isFalse);
+    expect(preview.descriptor?.cover, _privateCoverPath);
   });
 }

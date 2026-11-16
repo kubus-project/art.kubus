@@ -793,14 +793,15 @@ class _ArtDetailScreenState extends State<ArtDetailScreen> {
   }
 
   Widget _buildGallerySection(Artwork artwork) {
-    if (artwork.isPublic && artwork.galleryUrls.isEmpty) {
+    final hasPrivatePreview = artwork.mediaPreview != null;
+    if (artwork.isPublic && !hasPrivatePreview && artwork.galleryUrls.isEmpty) {
       return const SizedBox.shrink();
     }
-    if (!artwork.isPublic && artwork.mediaPreview == null) {
+    if (!artwork.isPublic && !hasPrivatePreview) {
       return const SizedBox.shrink();
     }
 
-    if (!artwork.isPublic) {
+    if (!artwork.isPublic || hasPrivatePreview) {
       final descriptor = artwork.mediaPreview!;
       final slots = <String>[
         if (descriptor.cover != null) 'cover',

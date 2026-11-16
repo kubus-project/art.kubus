@@ -105,6 +105,42 @@ void main() {
   );
 
   testWidgets(
+    'a supplied private descriptor overrides a missing public flag',
+    (tester) async {
+      final api = _PreviewApi()
+        ..onBytes = () async => base64Decode(
+              'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/yL8AAAAASUVORK5CYII=',
+            );
+      final client = ArtworkPrivatePreviewClient(
+        api: api,
+        listenForIdentityChanges: false,
+      );
+
+      await tester.pumpWidget(
+        _app(
+          ArtworkPrivatePreviewImage(
+            artworkId: _artworkId,
+            isPublic: true,
+            slot: 'cover',
+            descriptor: _draftArtwork().mediaPreview,
+            publicFallback: const Text('unsafe public fallback'),
+            client: client,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(api.byteCalls, 1);
+      expect(
+        find.byKey(const ValueKey('private-artwork-preview-bytes')),
+        findsOneWidget,
+      );
+      expect(find.text('unsafe public fallback'), findsNothing);
+      client.dispose();
+    },
+  );
+
+  testWidgets(
     'a denied private preview shows unavailable copy without public fallback',
     (tester) async {
       final api = _PreviewApi()

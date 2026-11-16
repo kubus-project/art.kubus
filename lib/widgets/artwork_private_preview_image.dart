@@ -51,6 +51,8 @@ class _ArtworkPrivatePreviewImageState
   ArtworkPrivatePreviewClient get _client =>
       widget.client ?? ArtworkPrivatePreviewClient.shared;
 
+  bool get _usesPrivatePreview => !widget.isPublic || widget.descriptor != null;
+
   @override
   void initState() {
     super.initState();
@@ -95,7 +97,7 @@ class _ArtworkPrivatePreviewImageState
     final generation = ++_generation;
     _bytes = null;
     _failure = null;
-    if (widget.isPublic) {
+    if (!_usesPrivatePreview) {
       _loading = false;
       return;
     }
@@ -108,7 +110,7 @@ class _ArtworkPrivatePreviewImageState
       final bytes = await _client.loadBytes(
         artworkId: widget.artworkId,
         slot: widget.slot,
-        isPublic: widget.isPublic,
+        isPublic: !_usesPrivatePreview,
         knownDescriptor: widget.descriptor,
         descriptorProvided: widget.descriptorProvided,
       );
@@ -173,7 +175,7 @@ class _ArtworkPrivatePreviewImageState
 
   @override
   Widget build(BuildContext context) {
-    if (widget.isPublic) return widget.publicFallback;
+    if (!_usesPrivatePreview) return widget.publicFallback;
     final l10n = AppLocalizations.of(context)!;
     final provider = _imageProvider;
     if (_bytes != null && provider != null) {

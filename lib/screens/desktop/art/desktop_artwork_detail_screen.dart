@@ -522,7 +522,7 @@ class _DesktopArtworkDetailScreenState
 
   Widget _buildMedia(Artwork artwork, String? coverUrl) {
     final scheme = Theme.of(context).colorScheme;
-    if (!artwork.isPublic) {
+    if (!artwork.isPublic || artwork.mediaPreview != null) {
       return ClipRRect(
         borderRadius: BorderRadius.circular(KubusRadius.lg),
         child: AspectRatio(
@@ -581,7 +581,7 @@ class _DesktopArtworkDetailScreenState
 
   Widget _buildGallerySection(Artwork artwork, String? coverUrl) {
     final l10n = AppLocalizations.of(context)!;
-    if (!artwork.isPublic) {
+    if (!artwork.isPublic || artwork.mediaPreview != null) {
       final descriptor = artwork.mediaPreview;
       if (descriptor == null || descriptor.gallery.isEmpty) {
         return const SizedBox.shrink();
