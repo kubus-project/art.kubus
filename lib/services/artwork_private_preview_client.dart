@@ -13,8 +13,8 @@ class ArtworkPrivatePreviewClient {
   ArtworkPrivatePreviewClient({
     ArtworkPrivatePreviewApi? api,
     bool listenForIdentityChanges = true,
-  }) : _api = api ?? BackendApiService(),
-       _listening = listenForIdentityChanges {
+  })  : _api = api ?? BackendApiService(),
+        _listening = listenForIdentityChanges {
     if (_listening) AccountIdentity.addListener(_handleIdentityChanged);
   }
 
@@ -49,9 +49,7 @@ class ArtworkPrivatePreviewClient {
     }
     final generation = _generation;
     final descriptor = knownDescriptor ??
-        (descriptorProvided
-            ? null
-            : await _descriptorFor(id));
+        (descriptorProvided ? null : await _descriptorFor(id));
     _ensureCurrent(generation, accountKey);
     if (descriptor == null || descriptor.auth != 'bearer') {
       throw StateError('Private preview unavailable');
@@ -107,8 +105,7 @@ class ArtworkPrivatePreviewClient {
   }
 
   bool _matchesSubject(String id, String slot, String path) {
-    final validSlot =
-        slot == 'cover' ||
+    final validSlot = slot == 'cover' ||
         slot == 'poap' ||
         RegExp(r'^gallery-(?:[0-9]|[1-9][0-9])$').hasMatch(slot);
     return validSlot &&

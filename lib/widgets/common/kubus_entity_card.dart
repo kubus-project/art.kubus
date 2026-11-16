@@ -95,9 +95,9 @@ class KubusEntityCard extends StatefulWidget {
     this.enableHover = true,
     this.cacheVersion,
   }) : assert(
-         height == null || aspectRatio == null,
-         'Give the card a height or an aspect ratio, not both.',
-       );
+          height == null || aspectRatio == null,
+          'Give the card a height or an aspect ratio, not both.',
+        );
 
   final KubusEntityCardVariant variant;
 
@@ -247,8 +247,8 @@ class _KubusEntityCardState extends State<KubusEntityCard> {
           color: _focused
               ? accent
               : _pointerHover
-              ? accent.withValues(alpha: 0.55)
-              : roles.rule,
+                  ? accent.withValues(alpha: 0.55)
+                  : roles.rule,
           width: _focused ? 2 : KubusSizes.hairline,
         ),
         // Nothing at rest: a rail of cards must not read as floating chrome.
@@ -386,10 +386,10 @@ class _KubusEntityCardState extends State<KubusEntityCard> {
   }
 
   String _defaultSemanticLabel() => <String>[
-    widget.title,
-    if ((widget.subtitle ?? '').trim().isNotEmpty) widget.subtitle!.trim(),
-    if ((widget.meta ?? '').trim().isNotEmpty) widget.meta!.trim(),
-  ].join(', ');
+        widget.title,
+        if ((widget.subtitle ?? '').trim().isNotEmpty) widget.subtitle!.trim(),
+        if ((widget.meta ?? '').trim().isNotEmpty) widget.meta!.trim(),
+      ].join(', ');
 
   Widget _buildMediaLayer(
     BuildContext context,
@@ -400,8 +400,7 @@ class _KubusEntityCardState extends State<KubusEntityCard> {
     final hasMedia =
         widget.mediaChild != null || (resolved != null && resolved.isNotEmpty);
 
-    final media =
-        widget.mediaChild ??
+    final media = widget.mediaChild ??
         (hasMedia
             ? KubusCachedImage(
                 imageUrl: widget.imageUrl,

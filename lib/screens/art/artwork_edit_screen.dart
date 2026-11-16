@@ -63,13 +63,12 @@ enum ArtworkEditChrome {
 }
 
 /// Signature of the upload used for a replacement cover or AR model.
-typedef EditorUpload =
-    Future<Map<String, dynamic>> Function({
-      required List<int> fileBytes,
-      required String fileName,
-      required String fileType,
-      Map<String, String>? metadata,
-    });
+typedef EditorUpload = Future<Map<String, dynamic>> Function({
+  required List<int> fileBytes,
+  required String fileName,
+  required String fileType,
+  Map<String, String>? metadata,
+});
 
 class ArtworkEditScreen extends StatefulWidget {
   final String artworkId;
@@ -224,9 +223,9 @@ class _ArtworkEditScreenState extends State<ArtworkEditScreen> {
     }
 
     final members = context.read<CollabProvider>().collaboratorsFor(
-      'artwork',
-      artwork.id,
-    );
+          'artwork',
+          artwork.id,
+        );
     for (final member in members) {
       final memberWallet = WalletUtils.canonical(member.user?.walletAddress);
       if (memberWallet.isNotEmpty &&
@@ -321,29 +320,28 @@ class _ArtworkEditScreenState extends State<ArtworkEditScreen> {
     final messenger = ScaffoldMessenger.of(context);
     final navigator = Navigator.of(context);
     _deleteDialogOpenArtworkIds.add(artwork.id);
-    final confirmed =
-        await showKubusDialog<bool>(
-          context: context,
-          builder: (dialogContext) => KubusAlertDialog(
-            size: KubusDialogSize.compact,
-            backgroundColor: scheme.surfaceContainerHighest,
-            title: Text(l10n.artistGalleryDeleteArtworkTitle),
-            content: Text(l10n.artistGalleryDeleteConfirmBody(artwork.title)),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(dialogContext).pop(false),
-                child: Text(l10n.commonCancel),
-              ),
-              ElevatedButton(
-                onPressed: () => Navigator.of(dialogContext).pop(true),
-                style: ElevatedButton.styleFrom(backgroundColor: scheme.error),
-                child: Text(l10n.commonDelete),
-              ),
-            ],
+    final confirmed = await showKubusDialog<bool>(
+      context: context,
+      builder: (dialogContext) => KubusAlertDialog(
+        size: KubusDialogSize.compact,
+        backgroundColor: scheme.surfaceContainerHighest,
+        title: Text(l10n.artistGalleryDeleteArtworkTitle),
+        content: Text(l10n.artistGalleryDeleteConfirmBody(artwork.title)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: Text(l10n.commonCancel),
           ),
-        ).whenComplete(() {
-          _deleteDialogOpenArtworkIds.remove(artwork.id);
-        });
+          ElevatedButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            style: ElevatedButton.styleFrom(backgroundColor: scheme.error),
+            child: Text(l10n.commonDelete),
+          ),
+        ],
+      ),
+    ).whenComplete(() {
+      _deleteDialogOpenArtworkIds.remove(artwork.id);
+    });
     if (confirmed != true) return;
     if (!mounted) return;
     if (_deleteInFlightArtworkIds.contains(artwork.id)) return;
@@ -426,11 +424,9 @@ class _ArtworkEditScreenState extends State<ArtworkEditScreen> {
   Widget _buildDesktopSidebar(AppLocalizations l10n, Artwork art) {
     final hasTitle = _titleController.text.trim().isNotEmpty;
     final hasDescription = _descriptionController.text.trim().isNotEmpty;
-    final hasCover =
-        _nextCoverBytes != null ||
+    final hasCover = _nextCoverBytes != null ||
         (ArtworkMediaResolver.resolveCover(artwork: art) ?? '').isNotEmpty;
-    final hasAr =
-        !AppConfig.enableARViewer ||
+    final hasAr = !AppConfig.enableARViewer ||
         (_arEnabled && _arScaleController.text.trim().isNotEmpty);
     const contextType = DesktopCreatorContextType.artwork;
 
@@ -475,8 +471,7 @@ class _ArtworkEditScreenState extends State<ArtworkEditScreen> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               FilledButton.icon(
-                onPressed:
-                    _isSaving ||
+                onPressed: _isSaving ||
                         !_canEditArtwork(_resolveCurrentCollabRole(art))
                     ? null
                     : _save,
@@ -551,8 +546,8 @@ class _ArtworkEditScreenState extends State<ArtworkEditScreen> {
   void _seedFromArtworkIfReady() {
     if (_seeded) return;
     final artwork = context.read<ArtworkProvider>().getArtworkById(
-      widget.artworkId,
-    );
+          widget.artworkId,
+        );
     if (artwork == null) return;
 
     _titleController.text = artwork.title;
@@ -561,11 +556,10 @@ class _ArtworkEditScreenState extends State<ArtworkEditScreen> {
     _descriptionController.text = artwork.description;
     _categoryController.text = artwork.category;
     _tagsController.text = artwork.tags.join(', ');
-    _locationNameController.text =
-        (artwork.metadata?['locationName'] ??
-                artwork.metadata?['location_name'] ??
-                '')
-            .toString();
+    _locationNameController.text = (artwork.metadata?['locationName'] ??
+            artwork.metadata?['location_name'] ??
+            '')
+        .toString();
     _latitudeController.text = artwork.position.latitude.toString();
     _longitudeController.text = artwork.position.longitude.toString();
     _priceController.text = artwork.price?.toString() ?? '';
@@ -719,8 +713,7 @@ class _ArtworkEditScreenState extends State<ArtworkEditScreen> {
     if (artistName != null) updates['artistName'] = artistName;
     // Only the signed-in account's own declaration is ever sent, as a bare
     // flag: the backend resolves the account from the session.
-    final selfAllowed =
-        AuthoredBySelf.displayNameFor(
+    final selfAllowed = AuthoredBySelf.displayNameFor(
           profileProvider.currentUser,
           isSignedIn: profileProvider.isSignedIn,
         ) !=
@@ -761,20 +754,18 @@ class _ArtworkEditScreenState extends State<ArtworkEditScreen> {
     }
 
     final locationName = _locationNameController.text.trim();
-    final currentLocationName =
-        (artwork.metadata?['locationName'] ??
-                artwork.metadata?['location_name'] ??
-                '')
-            .toString()
-            .trim();
+    final currentLocationName = (artwork.metadata?['locationName'] ??
+            artwork.metadata?['location_name'] ??
+            '')
+        .toString()
+        .trim();
     if (locationName.isNotEmpty && locationName != currentLocationName) {
       updates['locationName'] = locationName;
     }
 
     final nextPriceRaw = _priceController.text.trim();
-    final nextPrice = nextPriceRaw.isEmpty
-        ? null
-        : double.tryParse(nextPriceRaw);
+    final nextPrice =
+        nextPriceRaw.isEmpty ? null : double.tryParse(nextPriceRaw);
     if (nextPriceRaw.isNotEmpty && nextPrice == null) {
       messenger.showKubusSnackBar(
         SnackBar(content: Text(l10n.commonActionFailedToast)),
@@ -786,9 +777,8 @@ class _ArtworkEditScreenState extends State<ArtworkEditScreen> {
     }
 
     final nextArScaleRaw = _arScaleController.text.trim();
-    final nextArScale = nextArScaleRaw.isEmpty
-        ? null
-        : double.tryParse(nextArScaleRaw);
+    final nextArScale =
+        nextArScaleRaw.isEmpty ? null : double.tryParse(nextArScaleRaw);
     if (nextArScaleRaw.isNotEmpty && nextArScale == null) {
       messenger.showKubusSnackBar(
         SnackBar(content: Text(l10n.commonActionFailedToast)),
@@ -825,8 +815,7 @@ class _ArtworkEditScreenState extends State<ArtworkEditScreen> {
             'source': 'artwork_edit',
           },
         );
-        final coverUrl =
-            (upload['uploadedUrl'] as String?) ??
+        final coverUrl = (upload['uploadedUrl'] as String?) ??
             (upload['data']?['url'] as String?);
         final coverCid =
             (upload['cid'] as String?) ?? (upload['data']?['cid'] as String?);
@@ -848,8 +837,7 @@ class _ArtworkEditScreenState extends State<ArtworkEditScreen> {
             'source': 'artwork_edit',
           },
         );
-        final modelUrl =
-            (upload['uploadedUrl'] as String?) ??
+        final modelUrl = (upload['uploadedUrl'] as String?) ??
             (upload['data']?['url'] as String?);
         final modelCid =
             (upload['cid'] as String?) ?? (upload['data']?['cid'] as String?);
@@ -970,9 +958,8 @@ class _ArtworkEditScreenState extends State<ArtworkEditScreen> {
     _seedFromArtworkIfReady();
 
     final art = artwork;
-    final coverUrl = art == null
-        ? null
-        : ArtworkMediaResolver.resolveCover(artwork: art);
+    final coverUrl =
+        art == null ? null : ArtworkMediaResolver.resolveCover(artwork: art);
 
     final Widget? body = art == null
         ? null
@@ -1012,55 +999,60 @@ class _ArtworkEditScreenState extends State<ArtworkEditScreen> {
                         child: _nextCoverBytes != null
                             ? Image.memory(_nextCoverBytes!, fit: BoxFit.cover)
                             : !art.isPublic
-                            ? ArtworkPrivatePreviewImage(
-                                artworkId: art.id,
-                                isPublic: false,
-                                slot: 'cover',
-                                descriptor: art.mediaPreview,
-                                    descriptorProvided: art.mediaPreviewProvided,
-                                fit: BoxFit.cover,
-                                publicFallback: Container(
-                                  color: scheme.surfaceContainerHighest,
-                                  child: Icon(
-                                    Icons.image_not_supported,
-                                    color: scheme.outline,
-                                  ),
-                                ),
-                              )
-                            : (coverUrl != null && coverUrl.isNotEmpty)
-                            ? Image.network(
-                                coverUrl,
-                                fit: BoxFit.cover,
-                                errorBuilder: (_, __, ___) => Container(
-                                  color: scheme.surfaceContainerHighest,
-                                  child: Icon(
-                                    Icons.image_not_supported,
-                                    color: scheme.outline,
-                                  ),
-                                ),
-                              )
-                            // No cover yet: the work's own slot is
-                            // a studio-coloured media field that
-                            // offers the one action it needs.
-                            : KubusAtmosphere(
-                                key: const ValueKey<String>(
-                                  'artwork_edit_empty_cover',
-                                ),
-                                accent: KubusColorRoles.of(
-                                  context,
-                                ).web3ArtistStudioAccent,
-                                glyph: Icons.image_outlined,
-                                glyphAlignment: Alignment.bottomRight,
-                                framed: false,
-                                child: Center(
-                                  child: KubusButton(
-                                    onPressed: _isSaving ? null : _pickCover,
-                                    icon: Icons.add_photo_alternate_outlined,
-                                    label: l10n.mapMarkerDialogUploadCover,
-                                    variant: KubusButtonVariant.secondary,
-                                  ),
-                                ),
-                              ),
+                                ? ArtworkPrivatePreviewImage(
+                                    artworkId: art.id,
+                                    isPublic: false,
+                                    slot: 'cover',
+                                    descriptor: art.mediaPreview,
+                                    descriptorProvided:
+                                        art.mediaPreviewProvided,
+                                    fit: BoxFit.cover,
+                                    publicFallback: Container(
+                                      color: scheme.surfaceContainerHighest,
+                                      child: Icon(
+                                        Icons.image_not_supported,
+                                        color: scheme.outline,
+                                      ),
+                                    ),
+                                  )
+                                : (coverUrl != null && coverUrl.isNotEmpty)
+                                    ? Image.network(
+                                        coverUrl,
+                                        fit: BoxFit.cover,
+                                        errorBuilder: (_, __, ___) => Container(
+                                          color: scheme.surfaceContainerHighest,
+                                          child: Icon(
+                                            Icons.image_not_supported,
+                                            color: scheme.outline,
+                                          ),
+                                        ),
+                                      )
+                                    // No cover yet: the work's own slot is
+                                    // a studio-coloured media field that
+                                    // offers the one action it needs.
+                                    : KubusAtmosphere(
+                                        key: const ValueKey<String>(
+                                          'artwork_edit_empty_cover',
+                                        ),
+                                        accent: KubusColorRoles.of(
+                                          context,
+                                        ).web3ArtistStudioAccent,
+                                        glyph: Icons.image_outlined,
+                                        glyphAlignment: Alignment.bottomRight,
+                                        framed: false,
+                                        child: Center(
+                                          child: KubusButton(
+                                            onPressed:
+                                                _isSaving ? null : _pickCover,
+                                            icon: Icons
+                                                .add_photo_alternate_outlined,
+                                            label:
+                                                l10n.mapMarkerDialogUploadCover,
+                                            variant:
+                                                KubusButtonVariant.secondary,
+                                          ),
+                                        ),
+                                      ),
                       ),
                     ),
                   ],
@@ -1229,9 +1221,8 @@ class _ArtworkEditScreenState extends State<ArtworkEditScreen> {
                           ),
                           const SizedBox(width: DetailSpacing.md),
                           IconButton(
-                            onPressed: _isSaving || !_arEnabled
-                                ? null
-                                : _pickModel,
+                            onPressed:
+                                _isSaving || !_arEnabled ? null : _pickModel,
                             icon: const Icon(Icons.upload_file),
                             tooltip: l10n.commonEdit,
                           ),
@@ -1253,8 +1244,7 @@ class _ArtworkEditScreenState extends State<ArtworkEditScreen> {
               ],
               if (!widget.isEmbedded)
                 FilledButton.icon(
-                  onPressed:
-                      _isSaving ||
+                  onPressed: _isSaving ||
                           !_canEditArtwork(_resolveCurrentCollabRole(art))
                       ? null
                       : _save,

@@ -110,10 +110,10 @@ class ArtworkAuthorProfile {
   }
 
   Map<String, dynamic> toMap() => <String, dynamic>{
-    'profileId': profileId,
-    'username': username,
-    'displayName': displayName,
-  };
+        'profileId': profileId,
+        'username': username,
+        'displayName': displayName,
+      };
 
   ArtworkAuthorProfile copyWith({
     String? profileId,
@@ -173,12 +173,12 @@ class ArtworkMediaPreviewDescriptor {
     final galleryRaw = raw['gallery'];
     final gallery = galleryRaw is List
         ? galleryRaw
-              .map(
-                (value) => value is String && value.trim().isNotEmpty
-                    ? value.trim()
-                    : null,
-              )
-              .toList(growable: false)
+            .map(
+              (value) => value is String && value.trim().isNotEmpty
+                  ? value.trim()
+                  : null,
+            )
+            .toList(growable: false)
         : const <String?>[];
     String? readPath(Object? value) =>
         value is String && value.trim().isNotEmpty ? value.trim() : null;
@@ -443,8 +443,8 @@ class Artwork {
     final nft = map['nft'] is Map<String, dynamic>
         ? Map<String, dynamic>.from(map['nft'] as Map<String, dynamic>)
         : (map['nft'] is Map
-              ? Map<String, dynamic>.from(map['nft'] as Map)
-              : null);
+            ? Map<String, dynamic>.from(map['nft'] as Map)
+            : null);
     return Artwork(
       id: map['id'] ?? '',
       walletAddress:
@@ -470,29 +470,25 @@ class Artwork {
           : double.tryParse('${map['price'] ?? ''}'),
       currency: map['currency']?.toString(),
       isNft: map['isNft'] == true || map['is_nft'] == true || nft != null,
-      nftMintAddress:
-          map['nftMintAddress']?.toString() ??
+      nftMintAddress: map['nftMintAddress']?.toString() ??
           map['nft_mint_address']?.toString() ??
           nft?['mintAddress']?.toString() ??
           nft?['mint_address']?.toString(),
-      nftMetadataUri:
-          map['nftMetadataUri']?.toString() ??
+      nftMetadataUri: map['nftMetadataUri']?.toString() ??
           map['nft_metadata_uri']?.toString() ??
           nft?['metadataUri']?.toString() ??
           nft?['metadata_uri']?.toString() ??
           nft?['uri']?.toString(),
       arEnabled: map['arEnabled'] ?? false,
-      spatialCaptureCount:
-          int.tryParse(
+      spatialCaptureCount: int.tryParse(
             (map['spatialCaptureCount'] ?? map['spatial_capture_count'] ?? 0)
                 .toString(),
           ) ??
           0,
       rewards: map['rewards']?.toInt() ?? 0,
       createdAt: DateTime.tryParse(map['createdAt'] ?? '') ?? DateTime.now(),
-      updatedAt: map['updatedAt'] != null
-          ? DateTime.tryParse(map['updatedAt'])
-          : null,
+      updatedAt:
+          map['updatedAt'] != null ? DateTime.tryParse(map['updatedAt']) : null,
       discoveredAt: map['discoveredAt'] != null
           ? DateTime.tryParse(map['discoveredAt'])
           : null,
@@ -511,9 +507,9 @@ class Artwork {
       galleryUrls: List<String>.from(map['galleryUrls'] ?? []),
       galleryMeta: map['galleryMeta'] is List
           ? (map['galleryMeta'] as List)
-                .whereType<Map>()
-                .map((e) => Map<String, dynamic>.from(e))
-                .toList()
+              .whereType<Map>()
+              .map((e) => Map<String, dynamic>.from(e))
+              .toList()
           : const [],
       poapMode: ArtworkPoapModeApi.fromApiValue(map['poapMode']?.toString()),
       poapEnabled: map['poapEnabled'] == true,
@@ -548,8 +544,8 @@ class Artwork {
           map['metadata'] is Map<String, dynamic>
               ? map['metadata'] as Map<String, dynamic>
               : (map['metadata'] is Map
-                    ? Map<String, dynamic>.from(map['metadata'] as Map)
-                    : null),
+                  ? Map<String, dynamic>.from(map['metadata'] as Map)
+                  : null),
         ],
       ),
     );
@@ -629,9 +625,8 @@ class Artwork {
       walletAddress: walletAddress ?? this.walletAddress,
       title: title ?? this.title,
       artist: artist ?? this.artist,
-      authorProfile: clearAuthorProfile
-          ? null
-          : (authorProfile ?? this.authorProfile),
+      authorProfile:
+          clearAuthorProfile ? null : (authorProfile ?? this.authorProfile),
       description: description ?? this.description,
       imageUrl: imageUrl ?? this.imageUrl,
       galleryUrls: galleryUrls ?? this.galleryUrls,
@@ -651,9 +646,8 @@ class Artwork {
       rewards: rewards ?? this.rewards,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
-      discoveredAt: clearDiscoveredAt
-          ? null
-          : (discoveredAt ?? this.discoveredAt),
+      discoveredAt:
+          clearDiscoveredAt ? null : (discoveredAt ?? this.discoveredAt),
       discoveryUserId: clearDiscoveryUserId
           ? null
           : (discoveryUserId ?? this.discoveryUserId),

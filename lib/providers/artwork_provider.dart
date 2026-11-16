@@ -53,10 +53,10 @@ class ArtworkProvider extends ChangeNotifier {
   bool _historyLoaded = false;
 
   ArtworkProvider({ArtworkBackendApi? backendApi})
-    : _backendApi = backendApi ?? BackendApiService(),
-      _spatialApi = backendApi == null
-          ? BackendApiService()
-          : (backendApi is BackendApiService ? backendApi : null) {
+      : _backendApi = backendApi ?? BackendApiService(),
+        _spatialApi = backendApi == null
+            ? BackendApiService()
+            : (backendApi is BackendApiService ? backendApi : null) {
     // Every identity change (sign-out, wallet mismatch, disconnect, another
     // account's token) drops this provider's account-scoped state.
     AccountIdentity.addListener(_handleAccountIdentityChanged);
@@ -196,8 +196,7 @@ class ArtworkProvider extends ChangeNotifier {
 
     for (final id in _artworkById.keys.toList(growable: false)) {
       final artwork = _artworkById[id]!;
-      final viewerScoped =
-          artwork.isLikedByCurrentUser ||
+      final viewerScoped = artwork.isLikedByCurrentUser ||
           artwork.isFavoriteByCurrentUser ||
           artwork.isDiscovered ||
           artwork.discoveredAt != null ||
@@ -244,9 +243,8 @@ class ArtworkProvider extends ChangeNotifier {
         ? Map<String, dynamic>.from(media)
         : const <String, dynamic>{};
     final authorship = presentation['authorship'];
-    final artist = authorship is Map
-        ? (authorship['name']?.toString() ?? '')
-        : '';
+    final artist =
+        authorship is Map ? (authorship['name']?.toString() ?? '') : '';
     final place = presentation['place'];
     final placeData = place is Map
         ? Map<String, dynamic>.from(place)
@@ -260,21 +258,17 @@ class ArtworkProvider extends ChangeNotifier {
     final legacyImageCreditData = legacyImageCredit is Map
         ? Map<String, dynamic>.from(legacyImageCredit)
         : const <String, dynamic>{};
-    final source =
-        provenanceData['recordSource'] ??
+    final source = provenanceData['recordSource'] ??
         (isLegacyPresentation ? provenanceData['source'] : null);
     final sourceData = source is Map
         ? Map<String, dynamic>.from(source)
         : const <String, dynamic>{};
-    final imageCreator =
-        primaryMedia['creator'] ??
+    final imageCreator = primaryMedia['creator'] ??
         (isLegacyPresentation ? legacyImageCreditData['credit'] : null);
     final imageCreditText = primaryMedia['creditText'];
-    final imageLicense =
-        primaryMedia['license'] ??
+    final imageLicense = primaryMedia['license'] ??
         (isLegacyPresentation ? legacyImageCreditData['license'] : null);
-    final imageSourceUrl =
-        primaryMedia['sourceUrl'] ??
+    final imageSourceUrl = primaryMedia['sourceUrl'] ??
         (isLegacyPresentation ? legacyImageCreditData['sourceUrl'] : null);
     final latitude = placeData['latitude'];
     final longitude = placeData['longitude'];
@@ -337,7 +331,8 @@ class ArtworkProvider extends ChangeNotifier {
           }
         }
         return _backendApi.getArtwork(key);
-      })().then((fetched) {
+      })()
+          .then((fetched) {
         if (epoch == _accountEpoch) {
           addOrUpdateArtwork(fetched, retainWhenListRefresh: true);
         }
@@ -489,12 +484,10 @@ class ArtworkProvider extends ChangeNotifier {
       return const <Artwork>[];
     }
 
-    final matches = _artworks
-        .where((artwork) {
-          final artworkWallet = WalletUtils.normalize(artwork.walletAddress);
-          return artworkWallet == normalizedWallet;
-        })
-        .toList(growable: false);
+    final matches = _artworks.where((artwork) {
+      final artworkWallet = WalletUtils.normalize(artwork.walletAddress);
+      return artworkWallet == normalizedWallet;
+    }).toList(growable: false);
 
     matches.sort((a, b) => b.createdAt.compareTo(a.createdAt));
     return matches;
@@ -744,9 +737,8 @@ class ArtworkProvider extends ChangeNotifier {
       // but its result is unknown. Keep the user's edits visible locally; the
       // portfolio refresh that follows fetches the authoritative record.
       final cached = getArtworkById(id);
-      final patched = cached == null
-          ? null
-          : _applyUpdatesLocally(cached, updates);
+      final patched =
+          cached == null ? null : _applyUpdatesLocally(cached, updates);
       if (patched != null) _commitSavedArtwork(patched);
       return ArtworkUpdateResult.acknowledged(patched);
     } catch (e) {
@@ -1574,8 +1566,7 @@ class ViewHistoryEntry {
   factory ViewHistoryEntry.fromJson(Map<String, dynamic> json) {
     return ViewHistoryEntry(
       artworkId: json['artworkId']?.toString() ?? '',
-      viewedAt:
-          DateTime.tryParse(json['viewedAt']?.toString() ?? '') ??
+      viewedAt: DateTime.tryParse(json['viewedAt']?.toString() ?? '') ??
           DateTime.now(),
       markerId: json['markerId']?.toString(),
     );
@@ -1648,16 +1639,16 @@ class ArtworkUpdateResult {
   const ArtworkUpdateResult._(this.status, this.artwork, this.failure);
 
   const ArtworkUpdateResult.confirmed(Artwork artwork)
-    : this._(ArtworkUpdateStatus.confirmed, artwork, null);
+      : this._(ArtworkUpdateStatus.confirmed, artwork, null);
 
   const ArtworkUpdateResult.acknowledged(Artwork? artwork)
-    : this._(ArtworkUpdateStatus.acknowledged, artwork, null);
+      : this._(ArtworkUpdateStatus.acknowledged, artwork, null);
 
   const ArtworkUpdateResult.failed(ArtworkUpdateFailure failure)
-    : this._(ArtworkUpdateStatus.failed, null, failure);
+      : this._(ArtworkUpdateStatus.failed, null, failure);
 
   const ArtworkUpdateResult.alreadyInFlight()
-    : this._(ArtworkUpdateStatus.alreadyInFlight, null, null);
+      : this._(ArtworkUpdateStatus.alreadyInFlight, null, null);
 
   final ArtworkUpdateStatus status;
 

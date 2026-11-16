@@ -144,9 +144,7 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String archiveObjectSeriesDefaultDescription(
-    Object artworkTitle,
-    Object artistName,
-  ) {
+      Object artworkTitle, Object artistName) {
     return 'Digitalne izdaje umetnine $artworkTitle, avtor: $artistName';
   }
 
@@ -182,11 +180,7 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String communityAchievementUnlockedToast(
-    Object title,
-    Object extra,
-    Object amount,
-    Object currency,
-  ) {
+      Object title, Object extra, Object amount, Object currency) {
     return 'Dosežek odklenjen\n$title$extra\n+$amount $currency priznanja';
   }
 
@@ -244,9 +238,7 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String recentActivityArchiveObjectStatusDescription(
-    Object status,
-    Object title,
-  ) {
+      Object status, Object title) {
     return 'Digitalna izdaja $status za $title';
   }
 
@@ -2683,10 +2675,7 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String walletSessionStatusSummary(
-    Object accountStatus,
-    Object walletStatus,
-    Object signerStatus,
-  ) {
+      Object accountStatus, Object walletStatus, Object signerStatus) {
     return 'Račun: $accountStatus · Denarnica: $walletStatus · Dostop: $signerStatus';
   }
 
@@ -7668,10 +7657,7 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String receiveTokenSidebarTransferSubtitle(
-    Object token,
-    Object amount,
-    Object date,
-  ) {
+      Object token, Object amount, Object date) {
     return '$token • $amount • $date';
   }
 
@@ -7726,10 +7712,7 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String sendTokenSidebarRecipientSubtitle(
-    Object token,
-    Object amount,
-    Object date,
-  ) {
+      Object token, Object amount, Object date) {
     return '$token • $amount • $date';
   }
 
@@ -7841,10 +7824,7 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String sendTokenSendSuccessWithSignatureToast(
-    Object amount,
-    Object token,
-    Object signature,
-  ) {
+      Object amount, Object token, Object signature) {
     return '$amount $token oddano. Tx: $signature';
   }
 
@@ -9546,9 +9526,7 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String marketplaceOpenCollectibleDetailsSemantic(
-    Object title,
-    Object tokenId,
-  ) {
+      Object title, Object tokenId) {
     return 'Odpri podrobnosti za $title, žeton $tokenId';
   }
 
@@ -9893,9 +9871,7 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String daoDelegateVotingPowerDialogBody(
-    Object votingPower,
-    Object delegateName,
-  ) {
+      Object votingPower, Object delegateName) {
     return 'Ali res želiš delegirati svojo glasovalno moč $votingPower delegatu $delegateName?';
   }
 
@@ -12194,9 +12170,7 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String securityHubCreatedAndLastUsed(
-    Object createdDate,
-    Object lastUsedDate,
-  ) {
+      Object createdDate, Object lastUsedDate) {
     return 'Ustvarjeno $createdDate. Nazadnje uporabljeno $lastUsedDate.';
   }
 
@@ -12212,10 +12186,7 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String securityHubPasskeyStatusSummary(
-    Object lastActivity,
-    Object prfLabel,
-    Object recoveryMaterial,
-  ) {
+      Object lastActivity, Object prfLabel, Object recoveryMaterial) {
     return '$lastActivity. $prfLabel. $recoveryMaterial.';
   }
 
@@ -12502,10 +12473,7 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String walletSwapSubmittedToastWithSignature(
-    Object fromToken,
-    Object toToken,
-    Object signature,
-  ) {
+      Object fromToken, Object toToken, Object signature) {
     return 'Zamenjava oddana: $fromToken → $toToken. Tx: $signature';
   }
 
@@ -14608,9 +14576,7 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String analyticsRecommendationConsistencyDescription(
-    Object activeBuckets,
-    Object totalBuckets,
-  ) {
+      Object activeBuckets, Object totalBuckets) {
     return 'Aktivnost je bila zabeležena v $activeBuckets od $totalBuckets intervalov.';
   }
 
@@ -14812,9 +14778,7 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String daoProposalVotesSupportSummaryLabel(
-    Object totalVotes,
-    Object supportPct,
-  ) {
+      Object totalVotes, Object supportPct) {
     return '$totalVotes glasov • $supportPct% podpore';
   }
 
@@ -16218,10 +16182,7 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String analyticsInsightActivePatternDescription(
-    Object activeBuckets,
-    Object totalBuckets,
-    Object metric,
-  ) {
+      Object activeBuckets, Object totalBuckets, Object metric) {
     return '$activeBuckets od $totalBuckets intervalov je zabeležilo: $metric.';
   }
 
@@ -17949,11 +17910,7 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String marketplaceListingValueSemantic(
-    String source,
-    String amount,
-    String currency,
-    String state,
-  ) {
+      String source, String amount, String currency, String state) {
     return '$source: $amount $currency. $state';
   }
 

@@ -43,7 +43,7 @@ class ArtistPortfolioScreen extends StatefulWidget {
   /// Opens a studio card. Defaults to the artwork detail, the marker detail,
   /// or the collection or exhibition detail. Tests inject a spy here.
   final Future<void> Function(BuildContext context, PortfolioEntry entry)?
-  onOpenEntry;
+      onOpenEntry;
 
   const ArtistPortfolioScreen({
     super.key,
@@ -353,8 +353,7 @@ class _ArtistPortfolioScreenState extends State<ArtistPortfolioScreen> {
     PortfolioSectionStatus status,
     List<PortfolioEntry> entries,
   ) {
-    final unsupported =
-        status.loaded &&
+    final unsupported = status.loaded &&
         !status.honoured &&
         section != PortfolioStudioSection.collectionsAndExhibitions;
     final initialLoading = status.isLoading && !status.loaded;
@@ -363,8 +362,7 @@ class _ArtistPortfolioScreenState extends State<ArtistPortfolioScreen> {
     // section shows nothing rather than a misleading "no artworks yet".
     // A client-side filter can hide every loaded row while later pages still
     // hold matches, so the section is only empty once no more pages remain.
-    final showEmpty =
-        entries.isEmpty &&
+    final showEmpty = entries.isEmpty &&
         status.loaded &&
         !status.hasMore &&
         !initialLoading &&
@@ -485,23 +483,23 @@ class _ArtistPortfolioScreenState extends State<ArtistPortfolioScreen> {
     final scheme = Theme.of(context).colorScheme;
     final (icon, title, description, showCreate) = switch (section) {
       PortfolioStudioSection.authoredArtworks => (
-        Icons.collections_bookmark_outlined,
-        l10n.artistGalleryEmptyTitle,
-        l10n.artistGalleryEmptyDescription,
-        true,
-      ),
+          Icons.collections_bookmark_outlined,
+          l10n.artistGalleryEmptyTitle,
+          l10n.artistGalleryEmptyDescription,
+          true,
+        ),
       PortfolioStudioSection.publicArt => (
-        Icons.place_outlined,
-        l10n.artistPortfolioPublicArtEmptyTitle,
-        l10n.artistPortfolioPublicArtEmptyDescription,
-        false,
-      ),
+          Icons.place_outlined,
+          l10n.artistPortfolioPublicArtEmptyTitle,
+          l10n.artistPortfolioPublicArtEmptyDescription,
+          false,
+        ),
       PortfolioStudioSection.collectionsAndExhibitions => (
-        Icons.collections_outlined,
-        l10n.artistPortfolioCollectionsEmptyTitle,
-        l10n.artistPortfolioCollectionsEmptyDescription,
-        false,
-      ),
+          Icons.collections_outlined,
+          l10n.artistPortfolioCollectionsEmptyTitle,
+          l10n.artistPortfolioCollectionsEmptyDescription,
+          false,
+        ),
     };
 
     return Padding(
@@ -642,30 +640,31 @@ class _ArtistPortfolioScreenState extends State<ArtistPortfolioScreen> {
         : null;
     final coverUrl = artwork != null
         ? (ArtworkMediaResolver.resolveCover(artwork: artwork) ??
-              MediaUrlResolver.resolve(entry.coverUrl))
+            MediaUrlResolver.resolve(entry.coverUrl))
         : MediaUrlResolver.resolve(entry.coverUrl);
 
     final kind = switch (entry.type) {
       PortfolioEntryType.artwork ||
-      PortfolioEntryType.publicArtMarker => KubusEntityKind.artwork,
+      PortfolioEntryType.publicArtMarker =>
+        KubusEntityKind.artwork,
       PortfolioEntryType.collection => KubusEntityKind.collection,
       PortfolioEntryType.exhibition => KubusEntityKind.exhibition,
     };
     final (primaryLine, secondaryLine) = switch (entry.type) {
       PortfolioEntryType.artwork || PortfolioEntryType.publicArtMarker => (
-        _artistLine(l10n, entry.artistName),
-        section == PortfolioStudioSection.publicArt
-            ? l10n.artistPortfolioAddedByYou
-            : _nonEmpty(entry.subtitle),
-      ),
+          _artistLine(l10n, entry.artistName),
+          section == PortfolioStudioSection.publicArt
+              ? l10n.artistPortfolioAddedByYou
+              : _nonEmpty(entry.subtitle),
+        ),
       PortfolioEntryType.collection => (
-        l10n.userProfileCollectionsTitle,
-        _nonEmpty(entry.subtitle),
-      ),
+          l10n.userProfileCollectionsTitle,
+          _nonEmpty(entry.subtitle),
+        ),
       PortfolioEntryType.exhibition => (
-        l10n.artistStudioTabExhibitions,
-        _nonEmpty(entry.subtitle),
-      ),
+          l10n.artistStudioTabExhibitions,
+          _nonEmpty(entry.subtitle),
+        ),
     };
 
     final title = entry.title.isEmpty ? l10n.commonArtwork : entry.title;
@@ -955,8 +954,8 @@ class _ArtistPortfolioScreenState extends State<ArtistPortfolioScreen> {
       subtitle: entry.type == PortfolioEntryType.artwork
           ? l10n.userProfileArtworksTitle
           : (entry.type == PortfolioEntryType.collection
-                ? l10n.userProfileCollectionsTitle
-                : l10n.artistStudioTabExhibitions),
+              ? l10n.userProfileCollectionsTitle
+              : l10n.artistStudioTabExhibitions),
       actions: actions,
       presentation: presentation,
     );

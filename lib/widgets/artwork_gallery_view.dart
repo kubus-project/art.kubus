@@ -299,8 +299,10 @@ class _ArtworkGalleryViewState extends State<ArtworkGalleryView>
                               border: Border.all(
                                 color: selected
                                     ? Theme.of(context).colorScheme.primary
-                                    : Theme.of(context).colorScheme.outline
-                                          .withValues(alpha: 0.18),
+                                    : Theme.of(context)
+                                        .colorScheme
+                                        .outline
+                                        .withValues(alpha: 0.18),
                                 width: selected ? 2 : 1,
                               ),
                             ),
@@ -369,10 +371,8 @@ class _ArtworkLightboxDialogState extends State<_ArtworkLightboxDialog> {
 
   void _prefetchAround(int index) {
     if (widget.privateArtwork != null) return;
-    final urls = widget.urls
-        .map((u) => u.trim())
-        .where((u) => u.isNotEmpty)
-        .toList();
+    final urls =
+        widget.urls.map((u) => u.trim()).where((u) => u.isNotEmpty).toList();
     if (urls.isEmpty) return;
     final candidates = <int>{
       index.clamp(0, urls.length - 1),

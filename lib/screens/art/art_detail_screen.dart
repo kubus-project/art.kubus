@@ -108,9 +108,8 @@ class _ArtDetailScreenState extends State<ArtDetailScreen> {
       return;
     }
     final reduceMotion = MediaQuery.disableAnimationsOf(context);
-    final duration = reduceMotion
-        ? Duration.zero
-        : const Duration(milliseconds: 250);
+    final duration =
+        reduceMotion ? Duration.zero : const Duration(milliseconds: 250);
 
     for (var attempt = 0; attempt < 3; attempt++) {
       if (!_isCommentsScrollCurrent(generation)) return;
@@ -142,9 +141,9 @@ class _ArtDetailScreenState extends State<ArtDetailScreen> {
   String _publicReturnRoute(BuildContext context) {
     try {
       return context.read<PublicEntityTakeoverProvider>().returnRouteFor(
-            widget.publicEntityType,
-            widget.publicEntryId,
-          ) ??
+                widget.publicEntityType,
+                widget.publicEntryId,
+              ) ??
           '/${widget.publicEntityType == ShareEntityType.nft ? 'n' : 'a'}/${Uri.encodeComponent(widget.publicEntryId)}';
     } catch (_) {
       return '/${widget.publicEntityType == ShareEntityType.nft ? 'n' : 'a'}/${Uri.encodeComponent(widget.publicEntryId)}';
@@ -228,263 +227,255 @@ class _ArtDetailScreenState extends State<ArtDetailScreen> {
   /// Loading, error and not-found views hold the requested entity's URL without
   /// telling the takeover it is ready (see [PublicEntityTakeoverReady]).
   Widget _holdEntryUrl(Widget child) => PublicEntityTakeoverReady(
-    type: widget.publicEntityType,
-    entityId: widget.publicEntryId,
-    signalReady: false,
-    child: child,
-  );
+        type: widget.publicEntityType,
+        entityId: widget.publicEntryId,
+        signalReady: false,
+        child: child,
+      );
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    return Consumer4<
-      ArtworkProvider,
-      ProfileProvider,
-      SavedItemsProvider,
-      WalletProvider
-    >(
-      builder:
-          (
-            context,
-            artworkProvider,
-            profileProvider,
-            savedItemsProvider,
-            walletProvider,
-            child,
-          ) {
-            final artwork = artworkProvider.getArtworkById(widget.artworkId);
-            final isSignedIn = profileProvider.isSignedIn;
-            final viewerWallet = WalletUtils.coalesce(
-              walletAddress: profileProvider.currentUser?.walletAddress,
-              wallet: walletProvider.currentWalletAddress,
-              userId: profileProvider.currentUser?.id,
-            );
-            final artworkOwnerWallet = WalletUtils.canonical(
-              artwork?.walletAddress,
-            );
-            final isOwner =
-                viewerWallet.isNotEmpty &&
-                artworkOwnerWallet.isNotEmpty &&
-                WalletUtils.equals(viewerWallet, artworkOwnerWallet);
-            final canManage = isSignedIn && isOwner;
+    return Consumer4<ArtworkProvider, ProfileProvider, SavedItemsProvider,
+        WalletProvider>(
+      builder: (
+        context,
+        artworkProvider,
+        profileProvider,
+        savedItemsProvider,
+        walletProvider,
+        child,
+      ) {
+        final artwork = artworkProvider.getArtworkById(widget.artworkId);
+        final isSignedIn = profileProvider.isSignedIn;
+        final viewerWallet = WalletUtils.coalesce(
+          walletAddress: profileProvider.currentUser?.walletAddress,
+          wallet: walletProvider.currentWalletAddress,
+          userId: profileProvider.currentUser?.id,
+        );
+        final artworkOwnerWallet = WalletUtils.canonical(
+          artwork?.walletAddress,
+        );
+        final isOwner = viewerWallet.isNotEmpty &&
+            artworkOwnerWallet.isNotEmpty &&
+            WalletUtils.equals(viewerWallet, artworkOwnerWallet);
+        final canManage = isSignedIn && isOwner;
 
-            if (_artworkLoading) {
-              return _holdEntryUrl(
-                AnimatedGradientBackground(
-                  child: Scaffold(
-                    backgroundColor: Theme.of(context).colorScheme.surface,
-                    appBar: AppBar(
-                      title: Text(
-                        l10n.artDetailLoadingTitle,
+        if (_artworkLoading) {
+          return _holdEntryUrl(
+            AnimatedGradientBackground(
+              child: Scaffold(
+                backgroundColor: Theme.of(context).colorScheme.surface,
+                appBar: AppBar(
+                  title: Text(
+                    l10n.artDetailLoadingTitle,
+                    style: KubusTypography.inter(
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  backgroundColor: Theme.of(context).colorScheme.surface,
+                  elevation: 0,
+                ),
+                body: const Center(child: InlineLoading()),
+              ),
+            ),
+          );
+        }
+
+        if (_artworkError != null) {
+          return _holdEntryUrl(
+            Scaffold(
+              backgroundColor: Theme.of(context).colorScheme.surface,
+              appBar: AppBar(
+                title: Text(
+                  l10n.artDetailTitle,
+                  style: KubusTypography.inter(fontWeight: FontWeight.w600),
+                ),
+                backgroundColor: Theme.of(context).colorScheme.surface,
+                elevation: 0,
+              ),
+              body: Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(DetailSpacing.xl),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.error_outline_rounded,
+                        size: 48,
+                        color: Theme.of(context).colorScheme.error,
+                      ),
+                      const SizedBox(height: DetailSpacing.lg),
+                      Text(
+                        _artworkError!,
                         style: KubusTypography.inter(
-                          fontWeight: FontWeight.w600,
+                          fontSize: 15,
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.onSurface.withValues(alpha: 0.8),
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: DetailSpacing.xl),
+                      FilledButton.icon(
+                        onPressed: _loadArtworkDetails,
+                        icon: const Icon(Icons.refresh, size: 18),
+                        label: Text(
+                          l10n.commonRetry,
+                          style: KubusTypography.inter(
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
                       ),
-                      backgroundColor: Theme.of(context).colorScheme.surface,
-                      elevation: 0,
-                    ),
-                    body: const Center(child: InlineLoading()),
-                  ),
-                ),
-              );
-            }
-
-            if (_artworkError != null) {
-              return _holdEntryUrl(
-                Scaffold(
-                  backgroundColor: Theme.of(context).colorScheme.surface,
-                  appBar: AppBar(
-                    title: Text(
-                      l10n.artDetailTitle,
-                      style: KubusTypography.inter(fontWeight: FontWeight.w600),
-                    ),
-                    backgroundColor: Theme.of(context).colorScheme.surface,
-                    elevation: 0,
-                  ),
-                  body: Center(
-                    child: Padding(
-                      padding: const EdgeInsets.all(DetailSpacing.xl),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            Icons.error_outline_rounded,
-                            size: 48,
-                            color: Theme.of(context).colorScheme.error,
-                          ),
-                          const SizedBox(height: DetailSpacing.lg),
-                          Text(
-                            _artworkError!,
-                            style: KubusTypography.inter(
-                              fontSize: 15,
-                              color: Theme.of(
-                                context,
-                              ).colorScheme.onSurface.withValues(alpha: 0.8),
-                            ),
-                            textAlign: TextAlign.center,
-                          ),
-                          const SizedBox(height: DetailSpacing.xl),
-                          FilledButton.icon(
-                            onPressed: _loadArtworkDetails,
-                            icon: const Icon(Icons.refresh, size: 18),
-                            label: Text(
-                              l10n.commonRetry,
-                              style: KubusTypography.inter(
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-              );
-            }
-
-            if (artwork == null ||
-                (widget.publicEntityType == ShareEntityType.nft &&
-                    (!artwork.isNft ||
-                        !artwork.isPublic ||
-                        !artwork.isActive))) {
-              return _holdEntryUrl(
-                Scaffold(
-                  backgroundColor: Theme.of(context).colorScheme.surface,
-                  appBar: AppBar(
-                    title: Text(
-                      l10n.artworkNotFound,
-                      style: KubusTypography.inter(fontWeight: FontWeight.w600),
-                    ),
-                    backgroundColor: Theme.of(context).colorScheme.surface,
-                    elevation: 0,
-                  ),
-                  body: Center(
-                    child: Padding(
-                      padding: const EdgeInsets.all(DetailSpacing.xl),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            Icons.image_not_supported_outlined,
-                            size: 56,
-                            color: Theme.of(
-                              context,
-                            ).colorScheme.onSurface.withValues(alpha: 0.3),
-                          ),
-                          const SizedBox(height: DetailSpacing.lg),
-                          Text(
-                            l10n.artworkNotFound,
-                            style: KubusTypography.inter(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600,
-                              color: Theme.of(
-                                context,
-                              ).colorScheme.onSurface.withValues(alpha: 0.7),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-              );
-            }
-
-            return PublicEntityTakeoverReady(
-              type: widget.publicEntityType,
-              entityId: widget.publicEntryId,
-              child: DocumentTitle(
-                title: artworkDocumentTitle(artwork.title, artwork.artist),
-                child: AnimatedGradientBackground(
-                  child: Scaffold(
-                    backgroundColor: Theme.of(context).colorScheme.surface,
-                    body: CustomScrollView(
-                      controller: _scrollController,
-                      slivers: [
-                        _buildAppBar(artwork),
-                        SliverToBoxAdapter(
-                          child: Padding(
-                            padding: const EdgeInsets.fromLTRB(
-                              DetailSpacing.lg,
-                              DetailSpacing.md,
-                              DetailSpacing.lg,
-                              0,
-                            ),
-                            child: AspectRatio(
-                              // The server frame uses the portrait public
-                              // artwork crop at this same compact width.
-                              aspectRatio: 0.77,
-                              child: _buildPreviewCoverImage(
-                                artwork,
-                                ArtworkMediaResolver.resolveCover(
-                                  artwork: artwork,
-                                ),
-                                semanticLabel: artwork.title.trim().isEmpty
-                                    ? 'Artwork image'
-                                    : '${artwork.title} image',
-                              ),
-                            ),
-                          ),
-                        ),
-                        SliverPadding(
-                          padding: const EdgeInsets.fromLTRB(
-                            DetailSpacing.lg,
-                            DetailSpacing.xl,
-                            DetailSpacing.lg,
-                            DetailSpacing.xl,
-                          ),
-                          sliver: SliverList(
-                            // Editorial rhythm: major zones breathe with the
-                            // larger card gap instead of packing tightly.
-                            delegate: SliverChildListDelegate([
-                              _buildArtInfo(artwork),
-                              const SizedBox(height: DetailSpacing.cardGap),
-                              _buildPrimaryActionButtons(artwork),
-                              const SizedBox(height: DetailSpacing.cardGap),
-                              _buildDescription(artwork),
-                              const SizedBox(height: DetailSpacing.cardGap),
-                              ArtworkProvenanceSection(artwork: artwork),
-                              const SizedBox(height: DetailSpacing.cardGap),
-                              _buildGallerySection(artwork),
-                              if (_hasGalleryMedia(artwork))
-                                const SizedBox(height: DetailSpacing.cardGap),
-                              ArtworkSpatialArchiveSection(
-                                artwork: artwork,
-                                contextMarkerId: widget.attendanceMarkerId,
-                              ),
-                              const SizedBox(height: DetailSpacing.cardGap),
-                              _buildSocialStats(artwork),
-                              const SizedBox(height: DetailSpacing.cardGap),
-                              _buildAdditionalActions(
-                                artwork,
-                                isOwner: isOwner,
-                                canManage: canManage,
-                              ),
-                              const SizedBox(height: DetailSpacing.cardGap),
-                              if (AppConfig.isFeatureEnabled('collabInvites') &&
-                                  isSignedIn) ...[
-                                CollaborationPanel(
-                                  entityType: 'artworks',
-                                  entityId: artwork.id,
-                                  myRole: isOwner ? 'owner' : null,
-                                ),
-                                const SizedBox(height: DetailSpacing.xl),
-                              ],
-                              _buildCommentsSection(artwork, artworkProvider),
-                              const SizedBox(height: 100), // Bottom padding
-                            ]),
-                          ),
-                        ),
-                      ],
-                    ),
-                    floatingActionButton: (_showComments && isSignedIn)
-                        ? _buildCommentFAB(artwork)
-                        : null,
+                    ],
                   ),
                 ),
               ),
-            );
-          },
+            ),
+          );
+        }
+
+        if (artwork == null ||
+            (widget.publicEntityType == ShareEntityType.nft &&
+                (!artwork.isNft || !artwork.isPublic || !artwork.isActive))) {
+          return _holdEntryUrl(
+            Scaffold(
+              backgroundColor: Theme.of(context).colorScheme.surface,
+              appBar: AppBar(
+                title: Text(
+                  l10n.artworkNotFound,
+                  style: KubusTypography.inter(fontWeight: FontWeight.w600),
+                ),
+                backgroundColor: Theme.of(context).colorScheme.surface,
+                elevation: 0,
+              ),
+              body: Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(DetailSpacing.xl),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.image_not_supported_outlined,
+                        size: 56,
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.onSurface.withValues(alpha: 0.3),
+                      ),
+                      const SizedBox(height: DetailSpacing.lg),
+                      Text(
+                        l10n.artworkNotFound,
+                        style: KubusTypography.inter(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.onSurface.withValues(alpha: 0.7),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          );
+        }
+
+        return PublicEntityTakeoverReady(
+          type: widget.publicEntityType,
+          entityId: widget.publicEntryId,
+          child: DocumentTitle(
+            title: artworkDocumentTitle(artwork.title, artwork.artist),
+            child: AnimatedGradientBackground(
+              child: Scaffold(
+                backgroundColor: Theme.of(context).colorScheme.surface,
+                body: CustomScrollView(
+                  controller: _scrollController,
+                  slivers: [
+                    _buildAppBar(artwork),
+                    SliverToBoxAdapter(
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(
+                          DetailSpacing.lg,
+                          DetailSpacing.md,
+                          DetailSpacing.lg,
+                          0,
+                        ),
+                        child: AspectRatio(
+                          // The server frame uses the portrait public
+                          // artwork crop at this same compact width.
+                          aspectRatio: 0.77,
+                          child: _buildPreviewCoverImage(
+                            artwork,
+                            ArtworkMediaResolver.resolveCover(
+                              artwork: artwork,
+                            ),
+                            semanticLabel: artwork.title.trim().isEmpty
+                                ? 'Artwork image'
+                                : '${artwork.title} image',
+                          ),
+                        ),
+                      ),
+                    ),
+                    SliverPadding(
+                      padding: const EdgeInsets.fromLTRB(
+                        DetailSpacing.lg,
+                        DetailSpacing.xl,
+                        DetailSpacing.lg,
+                        DetailSpacing.xl,
+                      ),
+                      sliver: SliverList(
+                        // Editorial rhythm: major zones breathe with the
+                        // larger card gap instead of packing tightly.
+                        delegate: SliverChildListDelegate([
+                          _buildArtInfo(artwork),
+                          const SizedBox(height: DetailSpacing.cardGap),
+                          _buildPrimaryActionButtons(artwork),
+                          const SizedBox(height: DetailSpacing.cardGap),
+                          _buildDescription(artwork),
+                          const SizedBox(height: DetailSpacing.cardGap),
+                          ArtworkProvenanceSection(artwork: artwork),
+                          const SizedBox(height: DetailSpacing.cardGap),
+                          _buildGallerySection(artwork),
+                          if (_hasGalleryMedia(artwork))
+                            const SizedBox(height: DetailSpacing.cardGap),
+                          ArtworkSpatialArchiveSection(
+                            artwork: artwork,
+                            contextMarkerId: widget.attendanceMarkerId,
+                          ),
+                          const SizedBox(height: DetailSpacing.cardGap),
+                          _buildSocialStats(artwork),
+                          const SizedBox(height: DetailSpacing.cardGap),
+                          _buildAdditionalActions(
+                            artwork,
+                            isOwner: isOwner,
+                            canManage: canManage,
+                          ),
+                          const SizedBox(height: DetailSpacing.cardGap),
+                          if (AppConfig.isFeatureEnabled('collabInvites') &&
+                              isSignedIn) ...[
+                            CollaborationPanel(
+                              entityType: 'artworks',
+                              entityId: artwork.id,
+                              myRole: isOwner ? 'owner' : null,
+                            ),
+                            const SizedBox(height: DetailSpacing.xl),
+                          ],
+                          _buildCommentsSection(artwork, artworkProvider),
+                          const SizedBox(height: 100), // Bottom padding
+                        ]),
+                      ),
+                    ),
+                  ],
+                ),
+                floatingActionButton: (_showComments && isSignedIn)
+                    ? _buildCommentFAB(artwork)
+                    : null,
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 
@@ -626,16 +617,15 @@ class _ArtDetailScreenState extends State<ArtDetailScreen> {
         ],
         Text(
           artwork.title,
-          style:
-              KubusTextStyles.responsiveTitleStyle(
-                context,
-                KubusTypography.textTheme.displayLarge!,
-                availableWidth:
-                    MediaQuery.sizeOf(context).width - (DetailSpacing.lg * 2),
-              ).copyWith(
-                color: Theme.of(context).colorScheme.onSurface,
-                height: 1.08,
-              ),
+          style: KubusTextStyles.responsiveTitleStyle(
+            context,
+            KubusTypography.textTheme.displayLarge!,
+            availableWidth:
+                MediaQuery.sizeOf(context).width - (DetailSpacing.lg * 2),
+          ).copyWith(
+            color: Theme.of(context).colorScheme.onSurface,
+            height: 1.08,
+          ),
         ),
         const SizedBox(height: DetailSpacing.sm),
         ArtworkAuthorLine(
@@ -898,8 +888,7 @@ class _ArtDetailScreenState extends State<ArtDetailScreen> {
     if (raw is! Map) return const SizedBox.shrink();
 
     final poap = Map<String, dynamic>.from(raw);
-    final enabled =
-        poap['enabled'] == true ||
+    final enabled = poap['enabled'] == true ||
         poap['poapEnabled'] == true ||
         poap['poap_enabled'] == true;
     final eventId = (poap['eventId'] ?? poap['poapEventId'] ?? poap['event_id'])
@@ -910,16 +899,14 @@ class _ArtDetailScreenState extends State<ArtDetailScreen> {
             ?.toString()
             .trim();
     final rewardAmount = poap['rewardAmount'] ?? poap['poapRewardAmount'];
-    final validFromRaw = (poap['validFrom'] ?? poap['poapValidFrom'])
-        ?.toString();
+    final validFromRaw =
+        (poap['validFrom'] ?? poap['poapValidFrom'])?.toString();
     final validToRaw = (poap['validTo'] ?? poap['poapValidTo'])?.toString();
-    final validFrom = validFromRaw != null
-        ? DateTime.tryParse(validFromRaw)
-        : null;
+    final validFrom =
+        validFromRaw != null ? DateTime.tryParse(validFromRaw) : null;
     final validTo = validToRaw != null ? DateTime.tryParse(validToRaw) : null;
 
-    final hasReference =
-        (eventId != null && eventId.isNotEmpty) ||
+    final hasReference = (eventId != null && eventId.isNotEmpty) ||
         (claimUrl != null && claimUrl.isNotEmpty);
     if (!enabled && !hasReference) return const SizedBox.shrink();
 
@@ -1060,15 +1047,14 @@ class _ArtDetailScreenState extends State<ArtDetailScreen> {
   }) {
     final scheme = Theme.of(context).colorScheme;
     final l10n = AppLocalizations.of(context)!;
-    final canMint =
-        canManage &&
+    final canMint = canManage &&
         AppConfig.isFeatureEnabled('web3') &&
         AppConfig.isFeatureEnabled('nftMinting');
 
     final markerIdCandidate = (artwork.arMarkerId ?? '').toString().trim();
     final canShowStreetArtClaimCta =
         AppConfig.isFeatureEnabled('streetArtClaims') &&
-        markerIdCandidate.isNotEmpty;
+            markerIdCandidate.isNotEmpty;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -1265,29 +1251,28 @@ class _ArtDetailScreenState extends State<ArtDetailScreen> {
     final l10n = AppLocalizations.of(context)!;
     final scheme = Theme.of(context).colorScheme;
     _deleteDialogOpenArtworkIds.add(artwork.id);
-    final confirmed =
-        await showKubusDialog<bool>(
-          context: context,
-          builder: (dialogContext) => KubusAlertDialog(
-            size: KubusDialogSize.compact,
-            backgroundColor: scheme.surfaceContainerHighest,
-            title: Text(l10n.artistGalleryDeleteArtworkTitle),
-            content: Text(l10n.artistGalleryDeleteConfirmBody(artwork.title)),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(dialogContext).pop(false),
-                child: Text(l10n.commonCancel),
-              ),
-              ElevatedButton(
-                onPressed: () => Navigator.of(dialogContext).pop(true),
-                style: ElevatedButton.styleFrom(backgroundColor: scheme.error),
-                child: Text(l10n.commonDelete),
-              ),
-            ],
+    final confirmed = await showKubusDialog<bool>(
+      context: context,
+      builder: (dialogContext) => KubusAlertDialog(
+        size: KubusDialogSize.compact,
+        backgroundColor: scheme.surfaceContainerHighest,
+        title: Text(l10n.artistGalleryDeleteArtworkTitle),
+        content: Text(l10n.artistGalleryDeleteConfirmBody(artwork.title)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: Text(l10n.commonCancel),
           ),
-        ).whenComplete(() {
-          _deleteDialogOpenArtworkIds.remove(artwork.id);
-        });
+          ElevatedButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            style: ElevatedButton.styleFrom(backgroundColor: scheme.error),
+            child: Text(l10n.commonDelete),
+          ),
+        ],
+      ),
+    ).whenComplete(() {
+      _deleteDialogOpenArtworkIds.remove(artwork.id);
+    });
     if (confirmed != true) return;
     if (!mounted) return;
     if (_deleteInFlightArtworkIds.contains(artwork.id)) return;
@@ -1371,9 +1356,8 @@ class _ArtDetailScreenState extends State<ArtDetailScreen> {
       return const SizedBox(height: DetailSpacing.md);
     }
 
-    final markerIdCandidate = (widget.attendanceMarkerId ?? artwork.arMarkerId)
-        ?.toString()
-        .trim();
+    final markerIdCandidate =
+        (widget.attendanceMarkerId ?? artwork.arMarkerId)?.toString().trim();
     if (markerIdCandidate == null || markerIdCandidate.isEmpty) {
       return const SizedBox(height: DetailSpacing.md);
     }
@@ -1413,8 +1397,8 @@ class _ArtDetailScreenState extends State<ArtDetailScreen> {
         final label = isConfirming
             ? l10n.exhibitionDetailAttendanceConfirmingAction
             : (alreadyAttended
-                  ? l10n.exhibitionDetailAttendanceAlreadyCheckedIn
-                  : l10n.exhibitionDetailAttendanceConfirmAction);
+                ? l10n.exhibitionDetailAttendanceAlreadyCheckedIn
+                : l10n.exhibitionDetailAttendanceConfirmAction);
         final icon = isConfirming
             ? Icons.hourglass_top
             : (alreadyAttended ? Icons.check_circle : Icons.verified_user);
@@ -1436,11 +1420,11 @@ class _ArtDetailScreenState extends State<ArtDetailScreen> {
                     onPressed: (alreadyAttended || isConfirming)
                         ? null
                         : () => unawaited(
-                            _confirmAttendance(
-                              markerId: markerIdCandidate,
-                              artwork: artwork,
+                              _confirmAttendance(
+                                markerId: markerIdCandidate,
+                                artwork: artwork,
+                              ),
                             ),
-                          ),
                   ),
                 ),
               ],
@@ -1496,9 +1480,8 @@ class _ArtDetailScreenState extends State<ArtDetailScreen> {
 
       final poap = result.poap;
       final poapStatus = (poap?['status'] ?? '').toString().trim();
-      final claimUrl = (poap?['claimUrl'] ?? poap?['claim_url'])
-          ?.toString()
-          .trim();
+      final claimUrl =
+          (poap?['claimUrl'] ?? poap?['claim_url'])?.toString().trim();
 
       final wasIdempotent =
           result.attendanceRecorded != true && result.viewedAdded != true;
@@ -1580,7 +1563,7 @@ class _ArtDetailScreenState extends State<ArtDetailScreen> {
             authRequired
                 ? l10n.communityCommentAuthRequiredToast
                 : (backendMessage ??
-                      '${l10n.commonSomethingWentWrong} (${e.statusCode})'),
+                    '${l10n.commonSomethingWentWrong} (${e.statusCode})'),
           ),
           action: authRequired
               ? SnackBarAction(
@@ -1600,9 +1583,8 @@ class _ArtDetailScreenState extends State<ArtDetailScreen> {
                 )
               : null,
         ),
-        tone: authRequired
-            ? KubusSnackBarTone.warning
-            : KubusSnackBarTone.error,
+        tone:
+            authRequired ? KubusSnackBarTone.warning : KubusSnackBarTone.error,
       );
     } catch (_) {
       if (!mounted) return;
@@ -1802,9 +1784,8 @@ class _ArtDetailScreenState extends State<ArtDetailScreen> {
               ),
               actions: [
                 TextButton(
-                  onPressed: saving
-                      ? null
-                      : () => Navigator.of(dialogContext).pop(),
+                  onPressed:
+                      saving ? null : () => Navigator.of(dialogContext).pop(),
                   child: Text(l10n.commonCancel),
                 ),
                 FilledButton(
@@ -1865,33 +1846,32 @@ class _ArtDetailScreenState extends State<ArtDetailScreen> {
     final messenger = ScaffoldMessenger.of(context);
 
     _deleteDialogOpenCommentIds.add(comment.id);
-    final confirmed =
-        await showKubusDialog<bool>(
-          context: context,
-          builder: (dialogContext) {
-            return KubusAlertDialog(
-              size: KubusDialogSize.compact,
-              title: Text(l10n.commentDeleteConfirmTitle),
-              content: Text(l10n.commentDeleteConfirmMessage),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.of(dialogContext).pop(false),
-                  child: Text(l10n.commonCancel),
-                ),
-                FilledButton(
-                  onPressed: () => Navigator.of(dialogContext).pop(true),
-                  style: FilledButton.styleFrom(
-                    backgroundColor: scheme.error,
-                    foregroundColor: scheme.onError,
-                  ),
-                  child: Text(l10n.commonDelete),
-                ),
-              ],
-            );
-          },
-        ).whenComplete(() {
-          _deleteDialogOpenCommentIds.remove(comment.id);
-        });
+    final confirmed = await showKubusDialog<bool>(
+      context: context,
+      builder: (dialogContext) {
+        return KubusAlertDialog(
+          size: KubusDialogSize.compact,
+          title: Text(l10n.commentDeleteConfirmTitle),
+          content: Text(l10n.commentDeleteConfirmMessage),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(false),
+              child: Text(l10n.commonCancel),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(dialogContext).pop(true),
+              style: FilledButton.styleFrom(
+                backgroundColor: scheme.error,
+                foregroundColor: scheme.onError,
+              ),
+              child: Text(l10n.commonDelete),
+            ),
+          ],
+        );
+      },
+    ).whenComplete(() {
+      _deleteDialogOpenCommentIds.remove(comment.id);
+    });
 
     if (confirmed != true) return;
     if (_deleteInFlightCommentIds.contains(comment.id)) return;
@@ -1935,8 +1915,7 @@ class _ArtDetailScreenState extends State<ArtDetailScreen> {
     final currentId = WalletUtils.canonical((currentUser?.id ?? '').toString());
     final authorKey = WalletUtils.canonical(comment.userId);
 
-    final canModify =
-        authorKey.isNotEmpty &&
+    final canModify = authorKey.isNotEmpty &&
         (authorKey == currentWallet ||
             (currentId.isNotEmpty && authorKey == currentId));
 
@@ -2317,9 +2296,8 @@ class _ArtDetailScreenState extends State<ArtDetailScreen> {
                   .toString()
                   .trim();
               if (msg.isNotEmpty) {
-                backendMessage = msg.length > 140
-                    ? '${msg.substring(0, 140)}\u2026'
-                    : msg;
+                backendMessage =
+                    msg.length > 140 ? '${msg.substring(0, 140)}\u2026' : msg;
               }
             }
           }
@@ -2338,7 +2316,7 @@ class _ArtDetailScreenState extends State<ArtDetailScreen> {
       final fallbackMessage = authRequired
           ? l10n.communityCommentAuthRequiredToast
           : (backendMessage ??
-                '${l10n.commonSomethingWentWrong} (${e.statusCode})');
+              '${l10n.commonSomethingWentWrong} (${e.statusCode})');
       messenger.showKubusSnackBar(
         SnackBar(
           content: Text(fallbackMessage, style: KubusTypography.inter()),
@@ -2362,8 +2340,7 @@ class _ArtDetailScreenState extends State<ArtDetailScreen> {
     } catch (e) {
       if (!mounted) return;
       final raw = e.toString();
-      final looksLikeNetwork =
-          raw.contains('XMLHttpRequest error') ||
+      final looksLikeNetwork = raw.contains('XMLHttpRequest error') ||
           raw.contains('ClientException') ||
           raw.contains('Failed to fetch') ||
           raw.contains('fetch failed') ||
@@ -2599,7 +2576,8 @@ class _ArtDetailScreenState extends State<ArtDetailScreen> {
           content: Text(
             AppLocalizations.of(
               context,
-            )!.walletActionConnectWalletRequiredToast,
+            )!
+                .walletActionConnectWalletRequiredToast,
           ),
         ),
         tone: KubusSnackBarTone.warning,
