@@ -13,12 +13,15 @@ dependencies. Exploratory means evidence is required before committing to a desi
 Release readiness belongs in PRs and engineering handoffs, not permanent completion
 claims here. Revalidate status when the implementing PR merges.
 
-**Release boundary:** v0.8.8 remains the active integration, deep-research
-remediation and acceptance release, including the profile gallery and basic
-owner-controlled curation. v0.9 starts only after v0.8.8 release acceptance and
-cleanup; it adds dedicated curator identities and collaborative exhibition
-infrastructure. The planned [curatorial programme](https://github.com/kubus-project/art.kubus/issues/441)
-does not move v0.8.8 gallery/curation work to v0.9.
+**Release boundary:** v0.8.8 remains the active integration, original
+227-requirement deep-research remediation, profile gallery/basic owner curation
+(including persistent artwork and section ordering), and acceptance release.
+**v0.9 begins only after v0.8.8 release verification and cleanup.** It extends
+accepted foundations with [curator collaboration](https://github.com/kubus-project/art.kubus/issues/441),
+[Web2.5 platform infrastructure, cultural imports, spatial, native distribution,
+portfolios and MCP](https://github.com/kubus-project/art.kubus/issues/443).
+The October 2026 implementation directive is historical planning input, not an
+authority to defer unfinished v0.8.8 work or reuse outdated PR/migration states.
 
 ## Discovery and mapping
 
@@ -101,6 +104,47 @@ does not move v0.8.8 gallery/curation work to v0.9.
 | Planned | Progressive spatial viewing and preservation | [Spatial delivery specification](SPATIAL_DELIVERY_ROADMAP.md) retains variant/streaming/retention details. Real field assets must prove meaningful first frame, memory, transferred bytes, Range/ETag, scoped access, integrity and fallback. |
 | Exploratory | XR, spatial archives and cultural infrastructure interoperability | Require realistic device/GPU trials, publication/privacy contracts and a clear user task. Do not label reconstruction output as streamed LOD without actual derivatives. |
 | Exploratory | Experimental decentralized capabilities | Evaluate capacity, security, operator policy and interoperability before architecture commitments. Preserve private/unpublished inputs and canonical archives. |
+
+## v0.9 programme — after v0.8.8 acceptance
+
+The owner-supplied October 18 master engineering and visual implementation
+directive is reconciled in [the v0.9 technical programme](https://github.com/kubus-project/art.kubus/issues/443),
+with the distinct [curatorial programme](https://github.com/kubus-project/art.kubus/issues/441).
+This is **planned scope, not implemented or authorized work**. Its older PR
+references and implementation commands are historical; current evidence and
+repository contracts take precedence. Reuse everything accepted in v0.8.8
+rather than reopening the remediation programme.
+
+| Status | Outcome | Dependencies and completion criteria |
+| --- | --- | --- |
+| Planned | Wallet-optional cultural identity and mature real-time participation | One account principal across web, native and optional wallet; correct artist/contributor/rights distinctions, revocable creator and institution roles, account-bound messaging and isolation. Build on existing v0.8.8 identity/community implementations and prove any additional 0.9 deltas with real E2E. |
+| Planned | Store-safe native app capability separation | Full cultural experience without a wallet; restricted financial routes unreachable through UI, router, deep links, notifications or remotely enabled flags. Reuse Flutter capability gates and preserve common account/content IDs between native and web. |
+| Planned | Canonical web-to-native entry and distribution readiness | Same-route semantic SSR→Flutter continuation, accurate EN/SL public URLs, 200/404/503, factual metadata and private bootstrap isolation; verified Android App Links and iOS Universal Links; native signing/store submissions remain owner-gated. Retain any verified v0.8.8 contract rather than rebuilding it. |
+| Planned | Progressive Spatial capture-to-archive integration | Existing kubus Node/backend/Flutter pipeline; real SPZ previews and RAD/runtime derivatives when supported; manifests, private capture protection, capability expiry, retry/recovery, retention, Range/ETag, renderer fallback, licensing and representative actual hardware tests. No fake streamed LOD. |
+| Planned | Verified institution programme and event persistence | Public institution identity separate from authenticated workspace; verified representatives, revocation and distinct organizer/venue/rights authority; accurate event data and supported relationships, not inferred institution-event ownership. |
+| Planned | Secure cultural import pipeline | Reuse backend/operations infrastructure for staged source→extract→normalize→review→authorized publication; bounded CSV, ICS (recurrence/timezones/cancellation), approved structured URLs, provenance and idempotent reimport. Require SSRF/parser/tenant isolation tests and no parallel CMS. |
+| Planned | Independent nonspatial creator portfolio projects | Account-owned draft/published projects with cover, media, collaborators, attribution/rights and optional public-art relationships; reviewed PDFs/media and bounded external embeds, no mandatory coordinates or fabricated markers. Integrate with the **v0.8.8 gallery** and Artist Studio. |
+| Planned | Curator identity, independent pop-up exhibitions and institutional collaboration | [Detailed curatorial scope](https://github.com/kubus-project/art.kubus/issues/441): one account may be artist/curator/institution collaborator; proposals/invitations, scoped multi-editor permissions, independently published virtual exhibitions, revision/versioned layouts and copyright/withdrawal safeguards. Reuse 0.8.8 2.5D gallery/curation; visual and technical designs require owner selection. |
+| Planned | Public read-only art discovery MCP | [Technical programme](https://github.com/kubus-project/art.kubus/issues/443); bounded canonical public discovery tools over existing domain services, schema validation, visibility and moderation fences, EN/SL, rate limits, prompt-injection resilience, current official MCP protocol, interoperability checks and immediate disable/rollback. No direct public DB credential or writes. |
+| Exploratory | Protected MCP and local operator adapters | Separately gated OAuth-protected personal reads (PKCE, scopes, audience, revocation and per-record auth), private aggregate-only Admin MCP, local-only read-only kubus Node MCP. Validate handler side effects; keep disabled unless their trust boundaries are proven. |
+| Planned | Continuous security, privacy and operational reliability | Cross-repository negative tests for authorization, sockets, uploads/imports, Spatial/IPFS, OAuth/MCP, public SSR and native feature exclusions; migration/schema parity, controlled retention, exact-head CI, isolation and rollback. Owner gates for production migration, deployment and external distribution. |
+| Planned | Complete visual implementation and acceptance | Separate technical integration followed by real cross-screen design/UX implementation: map, discovery, profile/portfolio, community, Artist Studio, Institution Hub, exhibitions, SSR, native and Spatial. Enforce existing Sofia Sans/Space Mono tokens, actual mobile/desktop, EN/SL, light/dark, text scaling, reduced motion, accessibility, meaningful painted screenshots and measured performance. |
+
+**0.9 beta release cutline:** a coherent working Web2.5 cultural platform with
+the required v0.9 technical and curator outcomes, public read-only art MCP,
+store-safe native engineering profile, real E2E/security and visual QA. Optional
+authenticated/Admin/Node MCP, hardware-dependent Spatial/AR and externally
+approved app-store publication may be separately gated or disabled. Major
+tokenomics, KUB8 settlement, marketplace/DAO expansion, autonomous moderation,
+new consensus, unrestricted MCP writes, private Spatial Workspace and Node
+operator/GPU-network expansions remain **0.10+ or separately approved**.
+
+**Execution:** first verify v0.8.8 release completion, then owner-approved
+visual/architecture design and small backend-first PRs. Technical integration
+precedes a dedicated visual implementation pass. Distinguish implemented,
+tested, reviewed, merged, deployed, production verified and accepted. No
+protected merge, production migration/deployment or store submission is
+authorized by roadmap status.
 
 ## Maintaining this roadmap
 
