@@ -928,7 +928,6 @@ class ProfilePackageService {
     String walletAddress,
   ) async {
     final isCreator = user.isArtist || user.isInstitution;
-    if (!isCreator) return const _ProfileShowcasePayload();
 
     try {
       final api = BackendApiService();
@@ -942,8 +941,10 @@ class ProfilePackageService {
           .getCollections(walletAddress: walletAddress, limit: 6)
           .then<List<Map<String, dynamic>>>((value) => value,
               onError: (_, __) => const <Map<String, dynamic>>[]);
-      final eventsFuture = api.listEvents(limit: 100).then((value) => value,
-          onError: (_, __) => const <Map<String, dynamic>>[]);
+      final eventsFuture = isCreator
+          ? api.listEvents(limit: 100).then((value) => value,
+              onError: (_, __) => const <Map<String, dynamic>>[])
+          : Future.value(const <Map<String, dynamic>>[]);
 
       final results = await Future.wait<dynamic>([
         sectionsFuture,

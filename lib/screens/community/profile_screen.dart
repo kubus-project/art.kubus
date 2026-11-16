@@ -334,6 +334,15 @@ class _ProfileScreenState extends State<ProfileScreen>
             SliverToBoxAdapter(child: _buildInstitutionHighlightsSection()),
             gap,
           ],
+          if (!isArtist && !isInstitution && _hasPublicWork) ...[
+            SliverToBoxAdapter(
+              child: _buildArtistHighlightsGrid(
+                showHeader: false,
+                contentOnly: true,
+              ),
+            ),
+            gap,
+          ],
         ];
       case ProfileSection.publicArt:
         // Added public art is shown on the viewed profile; the owner reaches
@@ -1065,9 +1074,6 @@ class _ProfileScreenState extends State<ProfileScreen>
     );
     final isArtist = _hasArtistRole(profileProvider, verification);
     final isInstitution = _hasInstitutionRole(profileProvider, verification);
-    if (!(isArtist || isInstitution)) {
-      return;
-    }
     if (_artistDataLoading && !force) {
       return;
     }
@@ -1086,6 +1092,7 @@ class _ProfileScreenState extends State<ProfileScreen>
       generation: generation,
       identity: identity,
       force: force,
+      loadEvents: isArtist || isInstitution,
     );
   }
 
@@ -1098,6 +1105,7 @@ class _ProfileScreenState extends State<ProfileScreen>
     required int generation,
     required String identity,
     bool force = false,
+    bool loadEvents = true,
   }) async {
     if (!mounted) return;
     setState(() {
@@ -1145,17 +1153,19 @@ class _ProfileScreenState extends State<ProfileScreen>
       } catch (e) {
         debugPrint('Error loading artist collections: $e');
       }
-      try {
-        final eventsResponse = await api.listEvents(limit: 100);
-        if (!_isArtistDataCurrent(generation, identity)) return;
-        final filteredEvents = eventsResponse
-            .where((event) => profileEventBelongsToWallet(event, eventsKey))
-            .take(6)
-            .map((e) => Map<String, dynamic>.from(e))
-            .toList();
-        setState(() => _artistEvents = filteredEvents);
-      } catch (e) {
-        debugPrint('Error loading artist events: $e');
+      if (loadEvents) {
+        try {
+          final eventsResponse = await api.listEvents(limit: 100);
+          if (!_isArtistDataCurrent(generation, identity)) return;
+          final filteredEvents = eventsResponse
+              .where((event) => profileEventBelongsToWallet(event, eventsKey))
+              .take(6)
+              .map((e) => Map<String, dynamic>.from(e))
+              .toList();
+          setState(() => _artistEvents = filteredEvents);
+        } catch (e) {
+          debugPrint('Error loading artist events: $e');
+        }
       }
     } catch (e) {
       debugPrint('Error loading artist data: $e');
@@ -1208,77 +1218,88 @@ class _ProfileScreenState extends State<ProfileScreen>
     );
   }
 
-  Widget _buildArtistHighlightsGrid() {
+  bool get _hasPublicWork =>
+      _artistArtworks.isNotEmpty ||
+      _documentedArtworks.isNotEmpty ||
+      _artistCollections.isNotEmpty;
+
+  Widget _buildArtistHighlightsGrid({
+    bool showHeader = true,
+    bool contentOnly = false,
+  }) {
+    final l10n = AppLocalizations.of(context)!;
+    final bands = <Widget>[
+      if (!contentOnly ||
+          _artistArtworks.isNotEmpty ||
+          _artistAuthorshipUnavailable)
+        _artistAuthorshipUnavailable
+            ? Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(l10n.commonNotAvailable),
+                  TextButton(
+                    onPressed: _artistDataLoading
+                        ? null
+                        : () => _maybeLoadArtistData(force: true),
+                    child: Text(l10n.commonRetry),
+                  ),
+                ],
+              )
+            : _buildShowcaseSection(
+                title: l10n.userProfileArtworksTitle,
+                items: _artistArtworks,
+                emptyLabel: l10n.profileArtistArtworksEmptyLabel,
+                emptyIcon: Icons.image_outlined,
+                builder: _buildArtworkCard,
+              ),
+      if (_documentedArtworks.isNotEmpty)
+        _buildShowcaseSection(
+          title: l10n.profilePublicArtAddedTitle,
+          subtitle: l10n.profilePublicArtAddedSubtitle,
+          items: _documentedArtworks,
+          emptyLabel: l10n.profilePublicArtAddedSubtitle,
+          emptyIcon: Icons.image_outlined,
+          builder: _buildArtworkCard,
+        ),
+      if (!contentOnly || _artistCollections.isNotEmpty)
+        _buildShowcaseSection(
+          title: l10n.userProfileCollectionsTitle,
+          items: _artistCollections,
+          emptyLabel: l10n.profileArtistCollectionsEmptyLabel,
+          emptyIcon: Icons.collections_outlined,
+          builder: _buildCollectionCard,
+        ),
+    ];
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 24),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            AppLocalizations.of(context)!.userProfileArtistHighlightsTitle,
-            style: KubusTypography.inter(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-              color: Theme.of(context).colorScheme.onSurface,
+          if (showHeader) ...[
+            Text(
+              l10n.userProfileArtistHighlightsTitle,
+              style: KubusTypography.inter(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color: Theme.of(context).colorScheme.onSurface,
+              ),
             ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            AppLocalizations.of(context)!.profileArtistHighlightsSubtitle,
-            style: KubusTypography.inter(
-              fontSize: 14,
-              color: Theme.of(
-                context,
-              ).colorScheme.onSurface.withValues(alpha: 0.7),
+            const SizedBox(height: 8),
+            Text(
+              l10n.profileArtistHighlightsSubtitle,
+              style: KubusTypography.inter(
+                fontSize: 14,
+                color: Theme.of(
+                  context,
+                ).colorScheme.onSurface.withValues(alpha: 0.7),
+              ),
             ),
-          ),
-          const SizedBox(height: 20),
-          if (_artistAuthorshipUnavailable)
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(AppLocalizations.of(context)!.commonNotAvailable),
-                TextButton(
-                  onPressed: _artistDataLoading
-                      ? null
-                      : () => _maybeLoadArtistData(force: true),
-                  child: Text(AppLocalizations.of(context)!.commonRetry),
-                ),
-              ],
-            )
-          else
-            _buildShowcaseSection(
-              title: AppLocalizations.of(context)!.userProfileArtworksTitle,
-              items: _artistArtworks,
-              emptyLabel:
-                  AppLocalizations.of(context)!.profileArtistArtworksEmptyLabel,
-              emptyIcon: Icons.image_outlined,
-              builder: _buildArtworkCard,
-            ),
-          if (_documentedArtworks.isNotEmpty) ...[
-            const SizedBox(height: 24),
-            _buildShowcaseSection(
-              title: AppLocalizations.of(context)!.profilePublicArtAddedTitle,
-              subtitle:
-                  AppLocalizations.of(context)!.profilePublicArtAddedSubtitle,
-              items: _documentedArtworks,
-              emptyLabel:
-                  AppLocalizations.of(context)!.profilePublicArtAddedSubtitle,
-              emptyIcon: Icons.image_outlined,
-              builder: _buildArtworkCard,
-            ),
+            const SizedBox(height: 20),
           ],
-          const SizedBox(height: 24),
-          _buildShowcaseSection(
-            title: AppLocalizations.of(context)!.userProfileCollectionsTitle,
-            items: _artistCollections,
-            emptyLabel: AppLocalizations.of(
-              context,
-            )!
-                .profileArtistCollectionsEmptyLabel,
-            emptyIcon: Icons.collections_outlined,
-            builder: _buildCollectionCard,
-          ),
+          for (var i = 0; i < bands.length; i++) ...[
+            if (i > 0) const SizedBox(height: 24),
+            bands[i],
+          ],
         ],
       ),
     );

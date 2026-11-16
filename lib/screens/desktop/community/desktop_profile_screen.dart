@@ -327,7 +327,8 @@ class _ProfileScreenState extends State<ProfileScreen>
     const gap = SizedBox(height: DetailSpacing.lg);
     switch (section) {
       case ProfileSection.work:
-        // Only the parts that apply to the role.
+        // Events remain role-gated. Authored works and public collections are
+        // profile content, so show their bands to any owner when populated.
         return [
           if (isArtist) ...[
             _buildArtistPortfolioSection(themeProvider),
@@ -343,6 +344,19 @@ class _ProfileScreenState extends State<ProfileScreen>
             _buildInstitutionEventsSection(themeProvider),
             gap,
             _buildInstitutionCollectionsSection(themeProvider),
+          ] else if (_hasPublicWork) ...[
+            if (_artistArtworks.isNotEmpty)
+              _buildArtistPortfolioSection(themeProvider),
+            if (_artistDocumentedArtworks.isNotEmpty) ...[
+              if (_artistArtworks.isNotEmpty) gap,
+              _buildArtistDocumentedSection(),
+            ],
+            if (_artistCollections.isNotEmpty) ...[
+              if (_artistArtworks.isNotEmpty ||
+                  _artistDocumentedArtworks.isNotEmpty)
+                gap,
+              _buildArtistCollectionsSection(themeProvider),
+            ],
           ],
         ];
       case ProfileSection.activity:
@@ -1824,7 +1838,6 @@ class _ProfileScreenState extends State<ProfileScreen>
         Provider.of<AccountVerificationProvider>(context, listen: false);
     final isArtist = _hasArtistRole(profileProvider, verification);
     final isInstitution = _hasInstitutionRole(profileProvider, verification);
-    if (!(isArtist || isInstitution)) return;
     if (_artistDataLoading && !force) return;
     if (_artistDataRequested && !force) return;
 
@@ -1840,8 +1853,14 @@ class _ProfileScreenState extends State<ProfileScreen>
       generation: generation,
       identity: identity,
       force: force,
+      loadEvents: isArtist || isInstitution,
     );
   }
+
+  bool get _hasPublicWork =>
+      _artistArtworks.isNotEmpty ||
+      _artistDocumentedArtworks.isNotEmpty ||
+      _artistCollections.isNotEmpty;
 
   Future<void> _loadArtistData(String walletAddress,
       {required String eventsKey,
@@ -1850,7 +1869,8 @@ class _ProfileScreenState extends State<ProfileScreen>
       String? authorProfileId,
       required int generation,
       required String identity,
-      bool force = false}) async {
+      bool force = false,
+      bool loadEvents = true}) async {
     if (!mounted) return;
     setState(() => _artistDataLoading = true);
 
@@ -1888,17 +1908,19 @@ class _ProfileScreenState extends State<ProfileScreen>
       } catch (e) {
         debugPrint('Error loading artist collections: $e');
       }
-      try {
-        final eventsResponse = await api.listEvents(limit: 100);
-        if (!_isArtistDataCurrent(generation, identity)) return;
-        final filteredEvents = eventsResponse
-            .where((event) => profileEventBelongsToWallet(event, eventsKey))
-            .take(6)
-            .map((e) => Map<String, dynamic>.from(e))
-            .toList();
-        setState(() => _artistEvents = filteredEvents);
-      } catch (e) {
-        debugPrint('Error loading artist events: $e');
+      if (loadEvents) {
+        try {
+          final eventsResponse = await api.listEvents(limit: 100);
+          if (!_isArtistDataCurrent(generation, identity)) return;
+          final filteredEvents = eventsResponse
+              .where((event) => profileEventBelongsToWallet(event, eventsKey))
+              .take(6)
+              .map((e) => Map<String, dynamic>.from(e))
+              .toList();
+          setState(() => _artistEvents = filteredEvents);
+        } catch (e) {
+          debugPrint('Error loading artist events: $e');
+        }
       }
     } catch (e) {
       debugPrint('Error loading artist data: $e');

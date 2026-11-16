@@ -93,6 +93,11 @@ Future<void> pumpProfileSurface(
   List<CommunityPost> posts = const <CommunityPost>[],
   bool authoredArtworksUnavailable = false,
 
+  /// Authored works and public collections, injected through the same package
+  /// seam. Empty by default.
+  List<Map<String, dynamic>> artistArtworks = const <Map<String, dynamic>>[],
+  List<Map<String, dynamic>> artistCollections = const <Map<String, dynamic>>[],
+
   /// Injected DAO state (for example an approved role review); a fresh
   /// [DAOProvider] otherwise.
   AccountVerificationProvider? accountVerification,
@@ -140,6 +145,8 @@ Future<void> pumpProfileSurface(
     withAchievements: withAchievements,
     posts: posts,
     authoredArtworksUnavailable: authoredArtworksUnavailable,
+    artistArtworks: artistArtworks,
+    artistCollections: artistCollections,
   );
 
   await tester.pumpWidget(
@@ -240,6 +247,8 @@ Widget _surfaceWidget(
   bool withAchievements = false,
   List<CommunityPost> posts = const <CommunityPost>[],
   bool authoredArtworksUnavailable = false,
+  List<Map<String, dynamic>> artistArtworks = const <Map<String, dynamic>>[],
+  List<Map<String, dynamic>> artistCollections = const <Map<String, dynamic>>[],
 }) {
   final critical = ProfileFixtures.critical(
     user: user,
@@ -249,6 +258,8 @@ Widget _surfaceWidget(
     ProfileFixtures.extended(
       initialPosts: posts,
       authoredArtworksUnavailable: authoredArtworksUnavailable,
+      artistArtworks: artistArtworks,
+      artistCollections: artistCollections,
     ),
   );
 
