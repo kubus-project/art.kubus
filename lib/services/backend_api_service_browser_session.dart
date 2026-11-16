@@ -74,6 +74,8 @@ class _PreferencesLogoutIntentStore implements BrowserSessionLogoutIntentStore {
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setBool(_key, true);
+      // Read back from storage, not from this tab's cache.
+      await prefs.reload();
       return prefs.getBool(_key) == true;
     } catch (_) {
       return false;
@@ -87,6 +89,9 @@ class _PreferencesLogoutIntentStore implements BrowserSessionLogoutIntentStore {
   Future<bool?> readPendingLogout() async {
     try {
       final prefs = await SharedPreferences.getInstance();
+      // Another tab may have confirmed the revocation and removed the marker since
+      // this tab's cache loaded. A stale cached marker must never authorize a logout.
+      await prefs.reload();
       return prefs.getBool(_key) == true;
     } catch (_) {
       return null;
@@ -98,6 +103,8 @@ class _PreferencesLogoutIntentStore implements BrowserSessionLogoutIntentStore {
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.remove(_key);
+      // Read back from storage, not from this tab's cache.
+      await prefs.reload();
       return prefs.getBool(_key) == null;
     } catch (_) {
       return false;
@@ -205,7 +212,10 @@ Future<Map<String, dynamic>> _browserSessionIssueAfterEmailLogin(
   );
   if (result == null) {
     // The issue is still inside the cross-tab lock and may yet set a cookie.
-    // A revocation queued behind it ends whatever it starts; nothing is adopted.
+    // Refuse restores now, before the revocation's marker write has landed: a
+    // restore queued behind the issue must not run. A revocation queued behind
+    // it ends whatever it starts; nothing is adopted.
+    service._browserRestoreBlocked = true;
     unawaited(
       service.endBrowserSessionForLogout().catchError((Object _) => false),
     );
@@ -457,8 +467,16 @@ Future<bool> _browserSessionRestoreIfDue(
       // tab still settles it, but not on every request: a failed attempt backs
       // off, so the owed revocation never becomes a wait on each call.
       if (backingOff) return false;
-      if (!await service.endBrowserSessionForLogout()) {
+      final end = await service._endBrowserSessionForLogout(
+        requireConfirmation: false,
+      );
+      if (!end.revoked) {
         service._browserSessionRestoreUnavailable = true;
+      }
+      // A feature that is off (404) keeps the marker owed for re-enable and is
+      // not a revocation, so it backs off like a failed attempt. Otherwise every
+      // request without a bearer would POST /logout again.
+      if (!end.revoked || end.disabled) {
         service._browserRestoreRetryAt =
             DateTime.now().add(_browserLogoutRetryBackoff);
       }
@@ -508,6 +526,9 @@ Future<bool> _browserSessionRecoverRejectedBearer(
   if (sent != current) return true;
   // The restore is checked against the originating account and family, before
   // it is committed or retried. A different account is refused, never replayed.
+  // A blocked tab, or a logout still owed to the server, never restores here.
+  if (service._browserRestoreBlocked) return false;
+  if (await _readLogoutIntent(service) != _LogoutIntentState.none) return false;
   return _browserSessionRestoreOnce(
     service,
     expectedBrowserSessionToken: sent,
@@ -573,9 +594,19 @@ extension BackendApiBrowserSession on BackendApiService {
   /// cancelled.
   Future<bool> endBrowserSessionForLogout({
     bool requireConfirmation = false,
+  }) async =>
+      (await _endBrowserSessionForLogout(
+        requireConfirmation: requireConfirmation,
+      ))
+          .revoked;
+
+  /// [endBrowserSessionForLogout], also reporting whether the feature is off on
+  /// the server (`disabled`). A disabled feature is not a revocation.
+  Future<({bool revoked, bool disabled})> _endBrowserSessionForLogout({
+    required bool requireConfirmation,
   }) async {
     final controller = _browserSessionFor(this);
-    if (controller == null) return true;
+    if (controller == null) return (revoked: true, disabled: false);
     // The intent is written before the revocation starts, so a reload or another
     // tab sees it owed. Only the newest intent may clear the markers.
     final generation = ++_browserLogoutIntentSeq;
@@ -602,16 +633,18 @@ extension BackendApiBrowserSession on BackendApiService {
       // Unsettled or refused: the revocation stays owed, and the tab says so.
       _browserLogoutUnconfirmed = true;
     }
-    final legacyDisabled = result.outcome == BrowserSessionOutcome.disabled &&
-        !_browserSessionIsBound(this);
+    final disabled = result.outcome == BrowserSessionOutcome.disabled;
+    final legacyDisabled = disabled && !_browserSessionIsBound(this);
     final revoked = result.isSuccess || legacyDisabled;
-    if (requireConfirmation && !revoked) return false;
+    if (requireConfirmation && !revoked) {
+      return (revoked: false, disabled: disabled);
+    }
     if (_authSessionEpoch == epoch) {
       _browserRestoreBlocked = true;
       _browserRestoreRetryAt = null;
       _browserBoundToken = null;
     }
-    return revoked;
+    return (revoked: revoked, disabled: disabled);
   }
 
   /// True while this tab's bearer was issued or restored by a browser session.

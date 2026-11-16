@@ -12,6 +12,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+// Reads the plugin's platform store behind the preferences cache.
+// ignore: depend_on_referenced_packages
+import 'package:shared_preferences_platform_interface/shared_preferences_platform_interface.dart';
 
 const _secureChannel =
     MethodChannel('plugins.it_nomads.com/flutter_secure_storage');
@@ -124,6 +127,40 @@ class FlakyIntentStore implements BrowserSessionLogoutIntentStore {
   @override
   Future<bool> clear() => _inner.clear();
 }
+
+/// Shared marker whose writes after the first [freeWrites] wait for [gate],
+/// modelling a preference write that has not landed yet.
+class GatedWriteIntentStore implements BrowserSessionLogoutIntentStore {
+  GatedWriteIntentStore(
+    this._inner, {
+    required this.gate,
+    this.freeWrites = 1,
+  });
+
+  final BrowserSessionLogoutIntentStore _inner;
+  final Completer<void> gate;
+  final int freeWrites;
+  int _writes = 0;
+
+  @override
+  Future<bool> writePendingLogout({bool sharedMarkerWritten = false}) async {
+    _writes += 1;
+    if (_writes > freeWrites) await gate.future;
+    return _inner.writePendingLogout(sharedMarkerWritten: sharedMarkerWritten);
+  }
+
+  @override
+  Future<bool> readDependsOnSharedMarker() =>
+      _inner.readDependsOnSharedMarker();
+
+  @override
+  Future<bool?> readPendingLogout() => _inner.readPendingLogout();
+
+  @override
+  Future<bool> clear() => _inner.clear();
+}
+
+const String _sharedLogoutKey = 'browser_session_pending_logout_v1';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -1311,6 +1348,159 @@ void main() {
       expect(session.restoreCalls, 0);
       expect(api.getAuthToken(), isNull);
       expect(api.browserSessionRestoreUnavailable, isTrue);
+    });
+
+    test(
+        'a long-lived tab with a stale cached shared marker never revokes the account another tab signed in',
+        () async {
+      await startTabWithSession(tabAToken);
+      // The real preferences-backed shared marker, read through tab 1's cache.
+      api.debugSetBrowserSessionLogoutIntentStoresForTesting(
+          fallback: fallback);
+      session.logoutScript = () => const BrowserSessionResult.unavailable();
+      expect(await api.endBrowserSessionForLogout(), isFalse);
+      expect(await fallback.readPendingLogout(), isTrue);
+      await api.clearAuth();
+      expect(
+        (await SharedPreferences.getInstance()).getBool(_sharedLogoutKey),
+        isTrue,
+      );
+
+      // Tab 2 confirms the revocation, removes the marker behind tab 1's cache
+      // and signs in as B. Tab 1 never reloads.
+      await SharedPreferencesStorePlatform.instance
+          .remove('flutter.$_sharedLogoutKey');
+      session.logoutScript =
+          () => BrowserSessionResult.success({'success': true});
+      final logoutsBefore = session.logoutCalls;
+      final restoresBefore = session.restoreCalls;
+
+      expect(await api.restoreExistingSession(allowRefresh: false), isFalse);
+
+      expect(session.logoutCalls, logoutsBefore,
+          reason: 'the newer account cookie family must not be revoked');
+      expect(session.restoreCalls, restoresBefore);
+      expect(api.getAuthToken(), isNull);
+      expect(api.browserSessionBearerActive, isFalse);
+      expect(await fallback.readPendingLogout(), isFalse);
+    });
+
+    test('a shared marker still present in a long-lived tab stays owed',
+        () async {
+      await startTabWithSession(tabAToken);
+      api.debugSetBrowserSessionLogoutIntentStoresForTesting(
+          fallback: fallback);
+      session.logoutScript = () => const BrowserSessionResult.unavailable();
+      expect(await api.endBrowserSessionForLogout(), isFalse);
+      await api.clearAuth();
+      final logoutsBefore = session.logoutCalls;
+
+      expect(await api.restoreExistingSession(allowRefresh: false), isFalse);
+
+      expect(session.logoutCalls, logoutsBefore + 1,
+          reason: 'a marker that is still present must be settled');
+      expect(
+        (await SharedPreferences.getInstance()).getBool(_sharedLogoutKey),
+        isTrue,
+      );
+      expect(await fallback.readPendingLogout(), isTrue);
+    });
+
+    test(
+        'a feature-disabled logout while a marker is owed backs off instead of posting /logout on every request',
+        () async {
+      await startTabWithSession(tabAToken);
+      session.logoutScript = () => const BrowserSessionResult.unavailable();
+      expect(await api.endBrowserSessionForLogout(), isFalse);
+      await api.clearAuth();
+      // The feature is off on the server; the marker stays owed for re-enable.
+      session.logoutScript = () => BrowserSessionResult.failure(
+          BrowserSessionOutcome.disabled,
+          statusCode: 404);
+      final logoutsBefore = session.logoutCalls;
+      final restoresBefore = session.restoreCalls;
+
+      for (var i = 0; i < 3; i++) {
+        expect(await api.restoreExistingSession(allowRefresh: false), isFalse);
+      }
+
+      expect(session.logoutCalls, logoutsBefore + 1);
+      expect(session.restoreCalls, restoresBefore);
+      expect(await primary.readPendingLogout(), isTrue);
+      expect(await fallback.readPendingLogout(), isTrue);
+    });
+
+    test('a 401 on the bound bearer never restores while a logout is owed',
+        () async {
+      await startTabWithSession(tabAToken);
+      // Another tab signed out and its revocation is still owed.
+      expect(await primary.writePendingLogout(), isTrue);
+      final restoredToken =
+          sessionJwt('after-owed', account: 'acct-1', family: 'family-a');
+      session.restoreScript = () => BrowserSessionResult.success({
+            'success': true,
+            'data': {
+              'token': restoredToken,
+              'user': {'id': 'acct-1'}
+            },
+          });
+      final restoresBefore = session.restoreCalls;
+      final sent = <String>[];
+      api.setHttpClient(MockClient((request) async {
+        if (request.url.path != '/api/profiles/me') {
+          return http.Response('{}', 200);
+        }
+        sent.add(request.headers['Authorization'] ?? '');
+        return http.Response('{"success":false}', 401);
+      }));
+
+      final profile = await api.getMyProfile();
+
+      expect(profile['success'], isFalse);
+      expect(session.restoreCalls, restoresBefore,
+          reason: 'an owed logout must be settled before any restore');
+      expect(sent, ['Bearer $tabAToken']);
+      expect(api.getAuthToken(), isNot(restoredToken));
+    });
+
+    test(
+        'a restore that starts right after a timed-out sign-in is refused before its cleanup revoke is written',
+        () async {
+      api.debugSetBrowserSessionWaitsForTesting(
+        restore: const Duration(milliseconds: 30),
+        operation: const Duration(milliseconds: 30),
+      );
+      serveEmailLogin(jwt('login-b'));
+      session.issueGate = Completer<void>();
+      final writeGate = Completer<void>();
+      api.debugSetBrowserSessionLogoutIntentStoresForTesting(
+        primary: GatedWriteIntentStore(
+          createBrowserSessionLogoutIntentStore(),
+          gate: writeGate,
+        ),
+        fallback: fallback,
+      );
+
+      await expectLater(
+        api
+            .loginWithEmail(
+              email: 'b@example.invalid',
+              password: 'pw-pw-pw-pw',
+            )
+            .timeout(const Duration(seconds: 2)),
+        throwsA(isA<StateError>()),
+      );
+      // The cleanup revoke is queued, but its marker write has not landed yet,
+      // so the restore sees no owed logout. Only the blocked flag can refuse it.
+      expect(await api.restoreExistingSession(allowRefresh: false), isFalse);
+      // Releasing the hung issue and the write only then lets the queue run.
+      session.issueGate!.complete();
+      writeGate.complete();
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+
+      expect(session.restoreCalls, 0,
+          reason: 'a restore queued behind the timed-out issue must not run');
+      expect(api.getAuthToken(), isNull);
     });
   });
 }
