@@ -13,6 +13,13 @@ dependencies. Exploratory means evidence is required before committing to a desi
 Release readiness belongs in PRs and engineering handoffs, not permanent completion
 claims here. Revalidate status when the implementing PR merges.
 
+**Release boundary:** v0.8.8 remains the active integration, deep-research
+remediation and acceptance release, including the profile gallery and basic
+owner-controlled curation. v0.9 starts only after v0.8.8 release acceptance and
+cleanup; it adds dedicated curator identities and collaborative exhibition
+infrastructure. The planned [curatorial programme](https://github.com/kubus-project/art.kubus/issues/441)
+does not move v0.8.8 gallery/curation work to v0.9.
+
 ## Discovery and mapping
 
 | Status | Outcome | Dependencies and completion criteria |
@@ -30,6 +37,7 @@ claims here. Revalidate status when the implementing PR merges.
 | In progress | Shared owner/visitor identity hierarchy and authored-cover framing on mobile | Preserve actions, permissions, source media and desktop composition; verify widths 320–430, long names, text scale, failed covers and crop fixtures. |
 | Planned | Consistent authorship, attribution, contributor and provenance presentation | Revalidate renderer/client data together. Never infer artist from uploader. Completion requires attributed/unknown authorship and contributor/photographer cases with canonical-ID parity. |
 | Planned | Creator task continuity across drafts, portfolio and public detail | Existing providers/services and real backend contracts; prove save/publish/edit/return journeys, permissions and error recovery without duplicate creation flows. |
+| Planned | v0.8.8 profile gallery and basic curation | Present real artworks in an approved gallery/2.5D composition; enable authorized owners/editors to arrange works and sections, persist order and preview the result, and retain correct authorship, media visibility, EN/SL, mobile/desktop and reduced-motion behavior. Reuse existing artist/exhibition/institution presentation contracts where applicable. Design approval, real-data browser checks and release acceptance are required; professional curator accounts and cross-institution collaboration are **not** part of this row. |
 
 ## Community
 
@@ -48,6 +56,14 @@ claims here. Revalidate status when the implementing PR merges.
 | Planned | Coherent public institution versus operational workspace experience | [Institution/editorial lifecycle](INSTITUTION_EDITORIAL_LIFECYCLE.md); verify public discovery, authorized editing, preview, attribution and moderation handoffs. |
 | Planned | Cultural datasets, partnerships and existing editorial integrations | Evolve existing backend/admin systems rather than introduce a third CMS. Require source ownership, freshness, publication permissions and representative real-data acceptance. |
 | Exploratory | Municipal/institutional pilots | Establish qualified enquiries, useful product journeys and operational capacity; avoid promised partnerships or completion dates without agreements. |
+
+## Curatorial collaboration and virtual exhibitions
+
+| Status | Outcome | Dependencies and completion criteria |
+| --- | --- | --- |
+| Planned | v0.9 curator professional identities and affiliations | [Curatorial infrastructure scope](https://github.com/kubus-project/art.kubus/issues/441); one existing account can be artist, curator and authorized institution collaborator. Define verified roles, invitations, revocation, visibility and auditability without a new login system. Depends on accepted v0.8.8 account/profile contracts. |
+| Planned | v0.9 independent virtual pop-ups and institution-linked exhibitions | Curators can create standalone exhibition drafts and, separately, propose or accept institutional collaboration. Support independent, institutional and multi-curator models without transferring artwork ownership or publication/reproduction rights. Require drafts, scoped review/publication, withdrawal, attribution, EN/SL and canonical public behavior. |
+| Planned | v0.9 collaborative exhibition curation and durable arrangements | Reuse the v0.8.8 gallery/2.5D composition, filters, ordering and accessible fallbacks rather than build a second gallery or CMS. Add scoped multi-editor permissions, versioned arrangements, concurrent edit handling, editorial history, proposal/approval flows, backend publication/outbox safety, and Admin integration. Mockups and written data/authz design require owner approval before implementation. |
 
 ## Governance and infrastructure
 
