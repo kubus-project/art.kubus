@@ -48,7 +48,6 @@ void main() {
                 'description': 'From /api/events',
                 'type': 'workshop',
                 'category': 'digital',
-                'institution_id': 'inst-1',
                 'starts_at': '2026-08-01T18:00:00.000Z',
                 'ends_at': '2026-08-01T20:00:00.000Z',
                 'location_name': 'Studio 2',
@@ -69,13 +68,23 @@ void main() {
     await provider.initialize();
 
     expect(requests, containsAll(<String>['/api/institutions', '/api/events']));
+    expect(
+      requests.where(
+          (path) => RegExp(r'^/api/institutions/[^/]+/events$').hasMatch(path)),
+      isEmpty,
+      reason: 'the backend serves no institution-event route',
+    );
     expect(provider.events, hasLength(1));
     final event = provider.events.single;
     expect(event.id, 'event-1');
     expect(event.type, EventType.workshop);
     expect(event.category, EventCategory.digital);
-    expect(event.institutionId, 'inst-1');
-    expect(event.institution?.id, 'inst-1');
+    expect(
+      event.institutionId,
+      isEmpty,
+      reason: 'the global event endpoint does not serve an institution link',
+    );
+    expect(event.institution, isNull);
     expect(event.location, 'Studio 2');
     expect(event.coverUrl, '/uploads/events/backend.png');
   });

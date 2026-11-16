@@ -910,9 +910,7 @@ class Event {
           (raw['institution'] is Map ? raw['institution']['id'] : null) ??
           raw['hostInstitutionId'] ??
           raw['host_institution_id'] ??
-          institution?.id ??
-          event.host?.walletAddress ??
-          event.host?.id,
+          institution?.id,
     );
     final location = _eventString(event.locationName);
     final cityCountry = [

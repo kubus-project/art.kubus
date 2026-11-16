@@ -8161,10 +8161,10 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get eventCreatorNoInstitutionAvailableMessage =>
-      'Za ta dogodek še ni na voljo institucije.';
+      'Za ta dogodek še ni na voljo lokacijskega konteksta.';
 
   @override
-  String get eventCreatorInstitutionLabel => 'Institucija';
+  String get eventCreatorInstitutionLabel => 'Lokacijski kontekst';
 
   @override
   String get eventCreatorSelectDateLabel => 'Izberi datum';
@@ -8352,11 +8352,11 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get eventCreatorNoInstitutionAvailableToast =>
-      'Za ta dogodek ni na voljo institucije';
+      'Za ta dogodek ni na voljo lokacijskega konteksta';
 
   @override
   String get eventCreatorSelectedInstitutionNotFoundToast =>
-      'Izbrana institucija ni najdena';
+      'Izbrani lokacijski kontekst ni najden';
 
   @override
   String get eventCreatorEndTimeAfterStartToast =>
@@ -8406,16 +8406,16 @@ class AppLocalizationsSl extends AppLocalizations {
   String get eventCreatorHelpTooltip => 'Pomoč';
 
   @override
-  String get eventCreatorReadyInstitutionLabel => 'Institucija izbrana';
+  String get eventCreatorReadyInstitutionLabel => 'Lokacijski kontekst';
 
   @override
   String eventCreatorReadyInstitutionComplete(Object institutionName) {
-    return 'Dogodek bo pripadal instituciji $institutionName.';
+    return 'Koordinate so povzete po ustanovi $institutionName. Dogodek se shrani pod tvojim računom; povezovanje dogodkov z ustanovami še ni podprto.';
   }
 
   @override
   String get eventCreatorReadyInstitutionPending =>
-      'Najprej izberi institucijo.';
+      'Najprej izberi lokacijski kontekst.';
 
   @override
   String get eventCreatorReadyBasicsLabel => 'Osnove zaključene';
@@ -9004,7 +9004,7 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get desktopInstitutionCreateEventSubtitle =>
-      'Načrtuj in objavi dogodke institucije';
+      'Načrtuj in objavi dogodke';
 
   @override
   String get desktopInstitutionCreateExhibitionSubtitle =>
@@ -9069,7 +9069,7 @@ class AppLocalizationsSl extends AppLocalizations {
   String get eventManagerTitle => 'Upravitelj dogodkov';
 
   @override
-  String get eventManagerSubtitle => 'Upravljaj dogodke svoje institucije';
+  String get eventManagerSubtitle => 'Upravljaj svoje dogodke';
 
   @override
   String get eventManagerStatTotalEvents => 'Skupaj dogodkov';
@@ -18626,23 +18626,18 @@ class AppLocalizationsSl extends AppLocalizations {
       'Uradne informacije za obiskovalce';
 
   @override
-  String get institutionDetailStatActiveEvents => 'Aktivni dogodki';
-
-  @override
   String get institutionDetailStatArtworkViews => 'Ogledi umetnin';
 
   @override
   String get institutionDetailStatVisitors => 'Obiskovalci';
 
   @override
-  String get institutionDetailEventsTitle => 'Dogodki';
-
-  @override
-  String get institutionDetailNoEventsTitle => 'Dogodkov še ni';
+  String get institutionDetailNoEventsTitle =>
+      'Dogodki še niso povezani z ustanovami';
 
   @override
   String get institutionDetailNoEventsDescription =>
-      'Ta ustanova trenutno nima javno napovedanih dogodkov.';
+      'Dogodke lahko pregleduješ ločeno, storitev pa jih za zdaj ne povezuje s profili ustanov.';
 
   @override
   String get institutionDetailFallbackTitle => 'Ustanova';

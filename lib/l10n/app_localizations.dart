@@ -14152,13 +14152,13 @@ abstract class AppLocalizations {
   /// No description provided for @eventCreatorNoInstitutionAvailableMessage.
   ///
   /// In en, this message translates to:
-  /// **'No institution is available for this event yet.'**
+  /// **'No location context is available for this event yet.'**
   String get eventCreatorNoInstitutionAvailableMessage;
 
   /// No description provided for @eventCreatorInstitutionLabel.
   ///
   /// In en, this message translates to:
-  /// **'Institution'**
+  /// **'Location context'**
   String get eventCreatorInstitutionLabel;
 
   /// No description provided for @eventCreatorSelectDateLabel.
@@ -14518,13 +14518,13 @@ abstract class AppLocalizations {
   /// No description provided for @eventCreatorNoInstitutionAvailableToast.
   ///
   /// In en, this message translates to:
-  /// **'No institution available for this event'**
+  /// **'No location context is available for this event'**
   String get eventCreatorNoInstitutionAvailableToast;
 
   /// No description provided for @eventCreatorSelectedInstitutionNotFoundToast.
   ///
   /// In en, this message translates to:
-  /// **'Selected institution not found'**
+  /// **'Selected location context not found'**
   String get eventCreatorSelectedInstitutionNotFoundToast;
 
   /// No description provided for @eventCreatorEndTimeAfterStartToast.
@@ -14608,19 +14608,19 @@ abstract class AppLocalizations {
   /// No description provided for @eventCreatorReadyInstitutionLabel.
   ///
   /// In en, this message translates to:
-  /// **'Institution selected'**
+  /// **'Location context'**
   String get eventCreatorReadyInstitutionLabel;
 
   /// No description provided for @eventCreatorReadyInstitutionComplete.
   ///
   /// In en, this message translates to:
-  /// **'The event will belong to {institutionName}.'**
+  /// **'Coordinates are taken from {institutionName}. The event is saved under your account; linking events to institutions is not supported yet.'**
   String eventCreatorReadyInstitutionComplete(Object institutionName);
 
   /// No description provided for @eventCreatorReadyInstitutionPending.
   ///
   /// In en, this message translates to:
-  /// **'Choose the institution first.'**
+  /// **'Choose a location context first.'**
   String get eventCreatorReadyInstitutionPending;
 
   /// No description provided for @eventCreatorReadyBasicsLabel.
@@ -15592,7 +15592,7 @@ abstract class AppLocalizations {
   /// No description provided for @desktopInstitutionCreateEventSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Schedule and publish institution events'**
+  /// **'Schedule and publish events'**
   String get desktopInstitutionCreateEventSubtitle;
 
   /// No description provided for @desktopInstitutionCreateExhibitionSubtitle.
@@ -15706,7 +15706,7 @@ abstract class AppLocalizations {
   /// No description provided for @eventManagerSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Manage your institution\'s events'**
+  /// **'Manage your events'**
   String get eventManagerSubtitle;
 
   /// No description provided for @eventManagerStatTotalEvents.
@@ -31977,12 +31977,6 @@ abstract class AppLocalizations {
   /// **'Official visitor information'**
   String get institutionDetailVisitorSourceLink;
 
-  /// No description provided for @institutionDetailStatActiveEvents.
-  ///
-  /// In en, this message translates to:
-  /// **'Active events'**
-  String get institutionDetailStatActiveEvents;
-
   /// No description provided for @institutionDetailStatArtworkViews.
   ///
   /// In en, this message translates to:
@@ -31995,22 +31989,16 @@ abstract class AppLocalizations {
   /// **'Visitors'**
   String get institutionDetailStatVisitors;
 
-  /// No description provided for @institutionDetailEventsTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Events'**
-  String get institutionDetailEventsTitle;
-
   /// No description provided for @institutionDetailNoEventsTitle.
   ///
   /// In en, this message translates to:
-  /// **'No events yet'**
+  /// **'Institution events are not linked yet'**
   String get institutionDetailNoEventsTitle;
 
   /// No description provided for @institutionDetailNoEventsDescription.
   ///
   /// In en, this message translates to:
-  /// **'This institution does not have public events scheduled right now.'**
+  /// **'Events can be browsed separately, but the service does not currently link events to institution profiles.'**
   String get institutionDetailNoEventsDescription;
 
   /// No description provided for @institutionDetailFallbackTitle.

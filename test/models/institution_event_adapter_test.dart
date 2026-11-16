@@ -9,7 +9,6 @@ void main() {
       'description': 'Public opening',
       'type': 'gallery_opening',
       'category': 'mixed_media',
-      'institution_id': 'inst-1',
       'starts_at': '2026-08-01T18:00:00.000Z',
       'ends_at': '2026-08-01T20:30:00.000Z',
       'location_name': 'Main Hall',
@@ -27,7 +26,11 @@ void main() {
     expect(event.id, 'event-1');
     expect(event.type, EventType.galleryOpening);
     expect(event.category, EventCategory.mixedMedia);
-    expect(event.institutionId, 'inst-1');
+    expect(
+      event.institutionId,
+      isEmpty,
+      reason: 'host_user_id is an account, not an institution relation',
+    );
     expect(event.location, 'Main Hall');
     expect(event.latitude, 46.0511);
     expect(event.longitude, 14.5051);

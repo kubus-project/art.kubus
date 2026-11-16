@@ -323,12 +323,6 @@ class InstitutionProvider extends ChangeNotifier {
   }
 
   // Event management
-  List<Event> getEventsByInstitution(String institutionId) {
-    return events
-        .where((event) => event.institutionId == institutionId)
-        .toList();
-  }
-
   List<Event> getUpcomingEvents() {
     final now = DateTime.now();
     return events.where((event) => event.startDate.isAfter(now)).toList()

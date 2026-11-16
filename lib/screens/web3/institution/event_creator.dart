@@ -184,8 +184,8 @@ class _EventCreatorState extends State<EventCreator>
   void didChangeDependencies() {
     super.didChangeDependencies();
     if (_institutionId != null && _institutionId!.isNotEmpty) return;
-    // Events are created for an institution the account is a member of, never for
-    // an arbitrary listing: the default is the membership it is acting for.
+    // Use the current membership as the location context. The event API does
+    // not persist an institution-event relation.
     final membership =
         context.read<AccountVerificationProvider>().selectedMembership;
     if (membership != null) _institutionId = membership.institutionId;
@@ -655,26 +655,29 @@ class _EventCreatorState extends State<EventCreator>
       padding: const EdgeInsets.all(KubusSpacing.lg),
       child: Row(
         children: [
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                _isEditing
-                    ? l10n.eventCreatorShellEditTitle
-                    : l10n.eventCreatorShellCreateTitle,
-                style: KubusTextStyles.mobileAppBarTitle.copyWith(
-                  color: scheme.onSurface,
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  _isEditing
+                      ? l10n.eventCreatorShellEditTitle
+                      : l10n.eventCreatorShellCreateTitle,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: KubusTextStyles.mobileAppBarTitle.copyWith(
+                    color: scheme.onSurface,
+                  ),
                 ),
-              ),
-              Text(
-                l10n.eventCreatorStepLabel(_currentStep + 1),
-                style: KubusTextStyles.detailCaption.copyWith(
-                  color: scheme.onSurface.withValues(alpha: 0.7),
+                Text(
+                  l10n.eventCreatorStepLabel(_currentStep + 1),
+                  style: KubusTextStyles.detailCaption.copyWith(
+                    color: scheme.onSurface.withValues(alpha: 0.7),
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
-          const Spacer(),
           IconButton(
             icon: Icon(Icons.help_outline, color: scheme.onSurface),
             onPressed: () => _showHelp(),
@@ -1182,7 +1185,8 @@ class _EventCreatorState extends State<EventCreator>
       builder: (context, provider, _) {
         final l10n = AppLocalizations.of(context)!;
         final scheme = Theme.of(context).colorScheme;
-        // Only institutions the account is a member of can own its events.
+        // Only memberships offer a location context; the event itself is not
+        // linked to the institution.
         final memberIds = context
             .watch<AccountVerificationProvider>()
             .memberships
