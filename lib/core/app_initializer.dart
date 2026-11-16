@@ -213,7 +213,9 @@ class _AppInitializerState extends State<AppInitializer> {
   }
 
   void _showBrowserSessionRestoreUnavailable(NavigatorState navigator) {
-    if (!kIsWeb || !BackendApiService().browserSessionRestoreUnavailable) {
+    final api = BackendApiService();
+    final unresolved = api.browserSessionLogoutUnresolved;
+    if (!kIsWeb || (!api.browserSessionRestoreUnavailable && !unresolved)) {
       return;
     }
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -221,13 +223,21 @@ class _AppInitializerState extends State<AppInitializer> {
       final context = navigator.context;
       final l10n = AppLocalizations.of(context);
       if (l10n == null) return;
+      // An unconfirmed sign-out cannot be fixed by signing in: sign-in waits
+      // behind the same unconfirmed revocation. Say so, without a sign-in action.
       ScaffoldMessenger.maybeOf(context)?.showSnackBar(
         SnackBar(
-          content: Text(l10n.browserSessionRestoreUnavailable),
-          action: SnackBarAction(
-            label: l10n.commonSignIn,
-            onPressed: () => navigator.pushNamed('/sign-in'),
+          content: Text(
+            unresolved
+                ? l10n.browserSessionLogoutUnresolved
+                : l10n.browserSessionRestoreUnavailable,
           ),
+          action: unresolved
+              ? null
+              : SnackBarAction(
+                  label: l10n.commonSignIn,
+                  onPressed: () => navigator.pushNamed('/sign-in'),
+                ),
         ),
       );
     });

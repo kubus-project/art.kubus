@@ -6,6 +6,7 @@ import 'package:art_kubus/services/backend_api_service.dart';
 import 'package:art_kubus/services/browser_session/browser_session_api.dart';
 import 'package:art_kubus/services/browser_session/browser_session_controller.dart';
 import 'package:art_kubus/services/browser_session/browser_session_lock.dart';
+import 'package:art_kubus/services/browser_session/browser_session_logout_intent_store.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
@@ -30,6 +31,16 @@ String sessionJwt(String id,
               'nonce': id,
             }))).replaceAll('=', '')}.synthetic';
 
+String expiredSessionJwt(String id,
+        {String account = 'acct-1',
+        String family = 'browser-session-family'}) =>
+    'e30.${base64Url.encode(utf8.encode(jsonEncode({
+              'id': account,
+              'bsid': family,
+              'exp': 1000,
+              'nonce': id,
+            }))).replaceAll('=', '')}.synthetic';
+
 /// Scripted browser-session API: every outcome is set by the test.
 class ScriptedSessionApi implements BrowserSessionApi {
   int issueCalls = 0;
@@ -37,6 +48,8 @@ class ScriptedSessionApi implements BrowserSessionApi {
   int logoutCalls = 0;
   String? lastLoginToken;
   Completer<void>? restoreGate;
+  Completer<void>? issueGate;
+  Completer<void>? logoutGate;
   void Function()? onLogout;
   BrowserSessionResult Function() logoutScript =
       () => BrowserSessionResult.success({'success': true});
@@ -62,6 +75,8 @@ class ScriptedSessionApi implements BrowserSessionApi {
   Future<BrowserSessionResult> issue({required String loginToken}) async {
     issueCalls += 1;
     lastLoginToken = loginToken;
+    final gate = issueGate;
+    if (gate != null) await gate.future;
     return issueScript();
   }
 
@@ -77,8 +92,31 @@ class ScriptedSessionApi implements BrowserSessionApi {
   Future<BrowserSessionResult> logout() async {
     logoutCalls += 1;
     onLogout?.call();
+    final gate = logoutGate;
+    if (gate != null) await gate.future;
     return logoutScript();
   }
+}
+
+/// Marker storage whose writes or reads can be made to fail, modelling browser
+/// storage that refuses a write (quota, disabled) and later accepts it again.
+class FlakyIntentStore implements BrowserSessionLogoutIntentStore {
+  FlakyIntentStore() : _inner = createBrowserSessionLogoutIntentStore();
+
+  final BrowserSessionLogoutIntentStore _inner;
+  bool writesFail = false;
+  bool readsFail = false;
+
+  @override
+  Future<bool> writePendingLogout() async =>
+      writesFail ? false : _inner.writePendingLogout();
+
+  @override
+  Future<bool?> readPendingLogout() async =>
+      readsFail ? null : _inner.readPendingLogout();
+
+  @override
+  Future<bool> clear() => _inner.clear();
 }
 
 void main() {
@@ -693,6 +731,502 @@ void main() {
       expect(calls, 1);
       expect(session.restoreCalls, 2);
       expect(api.getAuthToken(), isNull);
+    });
+  });
+
+  Map<String, dynamic> bearerBodyFor(String token) => {
+        'success': true,
+        'data': {
+          'token': token,
+          'user': {'id': 'acct-2'},
+        },
+      };
+
+  /// A tab holding the session-bound bearer [token], restored from the cookie.
+  Future<void> startTabWithSession(String token) async {
+    session.restoreScript = () => BrowserSessionResult.success({
+          'success': true,
+          'data': {
+            'token': token,
+            'user': {'id': 'acct-1'}
+          },
+        });
+    expect(await api.restoreBrowserSessionForStart(), isTrue);
+    expect(api.getAuthToken(), token);
+  }
+
+  group('cross-tab 401 recovery', () {
+    final tabAToken = sessionJwt('a1', account: 'acct-1', family: 'family-a');
+    final tabAReturnToken =
+        sessionJwt('a2', account: 'acct-1', family: 'family-a');
+    final tabBToken = sessionJwt('b1', account: 'acct-2', family: 'family-b');
+
+    setUp(() {
+      api.debugSetBrowserSessionWaitsForTesting(
+        restore: const Duration(seconds: 2),
+        operation: const Duration(seconds: 2),
+      );
+    });
+
+    /// Tab B signs in elsewhere: the shared cookie now belongs to B's family and
+    /// A's family is revoked. Only that cookie-level effect reaches tab A. Tab
+    /// A's memory is untouched, exactly as with a second browser tab.
+    void tabBSignsInElsewhere() {
+      session.restoreScript = () => BrowserSessionResult.success({
+            'success': true,
+            'data': {
+              'token': tabBToken,
+              'user': {'id': 'acct-2'}
+            },
+          });
+    }
+
+    test(
+        'a delayed A GET 401 after B signs in elsewhere is not replayed or adopted as B',
+        () async {
+      await startTabWithSession(tabAToken);
+      final sent = <String>[];
+      final entered = Completer<void>();
+      final release = Completer<http.Response>();
+      api.setHttpClient(MockClient((request) async {
+        if (request.url.path != '/api/profiles/me') {
+          return http.Response('{}', 200);
+        }
+        sent.add(request.headers['Authorization'] ?? '');
+        if (sent.length == 1) {
+          entered.complete();
+          return release.future;
+        }
+        return http.Response('{"success":true,"data":{"id":"acct-2"}}', 200);
+      }));
+
+      final pending = api.getMyProfile();
+      await entered.future;
+      tabBSignsInElsewhere();
+      release.complete(http.Response('{"success":false}', 401));
+      final profile = await pending;
+
+      expect(profile['success'], isFalse);
+      expect(sent, ['Bearer $tabAToken']);
+      expect(api.getAuthToken(), isNull);
+      expect(api.browserSessionBearerActive, isFalse);
+      expect(session.restoreCalls, 2);
+    });
+
+    test(
+        'a delayed A POST 401 after B signs in elsewhere is never replayed as B',
+        () async {
+      await startTabWithSession(tabAToken);
+      final sent = <String>[];
+      final entered = Completer<void>();
+      final release = Completer<http.Response>();
+      api.setHttpClient(MockClient((request) async {
+        if (request.method != 'POST') return http.Response('{}', 200);
+        sent.add(request.headers['Authorization'] ?? '');
+        if (sent.length == 1) {
+          entered.complete();
+          return release.future;
+        }
+        return http.Response('{"success":true,"data":{}}', 201);
+      }));
+
+      // likeArtwork is an authenticated POST marked idempotent, so it is the
+      // replay-safe kind that may take the one recovery retry.
+      final pending = api.likeArtwork('art-1');
+      await entered.future;
+      tabBSignsInElsewhere();
+      release.complete(http.Response('{"success":false}', 401));
+      await pending.catchError((Object _) => null);
+
+      // The public-action fallback may send an unauthenticated request; no
+      // request may carry B's bearer, and A's POST is not replayed with A.
+      expect(sent.first, 'Bearer $tabAToken');
+      expect(sent.where((h) => h.contains(tabBToken)), isEmpty);
+      expect(sent.where((h) => h == 'Bearer $tabAToken'), hasLength(1));
+      expect(api.getAuthToken(), isNull);
+      expect(session.restoreCalls, 2);
+    });
+
+    test(
+        'an expired A bearer restored after B signs in elsewhere is refused, not replaced by B',
+        () async {
+      api.setAuthTokenForTesting(
+          expiredSessionJwt('a0', account: 'acct-1', family: 'family-a'));
+      tabBSignsInElsewhere();
+      final sent = <String>[];
+      api.setHttpClient(MockClient((request) async {
+        if (request.url.path != '/api/profiles/me') {
+          return http.Response('{}', 200);
+        }
+        sent.add(request.headers['Authorization'] ?? '');
+        return http.Response('{"success":false}', 401);
+      }));
+
+      final profile = await api.getMyProfile();
+
+      expect(profile['success'], isFalse);
+      expect(sent.any((h) => h.contains(tabBToken)), isFalse);
+      expect(api.getAuthToken(), isNull);
+      expect(session.restoreCalls, 1);
+    });
+
+    test('concurrent A 401s share one restore and both refuse B without replay',
+        () async {
+      await startTabWithSession(tabAToken);
+      session.restoreGate = Completer<void>();
+      final sent = <String>[];
+      api.setHttpClient(MockClient((request) async {
+        if (request.url.path != '/api/profiles/me') {
+          return http.Response('{}', 200);
+        }
+        sent.add(request.headers['Authorization'] ?? '');
+        return http.Response('{"success":false}', 401);
+      }));
+
+      final first = api.getMyProfile();
+      final second = api.getMyProfile();
+      await Future<void>.delayed(const Duration(milliseconds: 20));
+      tabBSignsInElsewhere();
+      session.restoreGate!.complete();
+      final results = await Future.wait([first, second]);
+
+      expect(results.map((r) => r['success']), [false, false]);
+      expect(sent, hasLength(2));
+      expect(sent.any((h) => h.contains(tabBToken)), isFalse);
+      expect(session.restoreCalls, 2);
+      expect(api.getAuthToken(), isNull);
+    });
+
+    test(
+        'same-family refresh serves concurrent A 401s with one restore and retries both',
+        () async {
+      await startTabWithSession(tabAToken);
+      session.restoreGate = Completer<void>();
+      session.restoreScript = () => BrowserSessionResult.success({
+            'success': true,
+            'data': {
+              'token': tabAReturnToken,
+              'user': {'id': 'acct-1'}
+            },
+          });
+      final sent = <String>[];
+      api.setHttpClient(MockClient((request) async {
+        if (request.url.path != '/api/profiles/me') {
+          return http.Response('{}', 200);
+        }
+        sent.add(request.headers['Authorization'] ?? '');
+        if (sent.length <= 2) return http.Response('{"success":false}', 401);
+        return http.Response('{"success":true,"data":{"id":"acct-1"}}', 200);
+      }));
+
+      final first = api.getMyProfile();
+      final second = api.getMyProfile();
+      await Future<void>.delayed(const Duration(milliseconds: 20));
+      session.restoreGate!.complete();
+      final results = await Future.wait([first, second]);
+
+      expect(results.map((r) => r['success']), [true, true]);
+      expect(session.restoreCalls, 2);
+      expect(api.getAuthToken(), tabAReturnToken);
+      expect(sent.sublist(2), [
+        'Bearer $tabAReturnToken',
+        'Bearer $tabAReturnToken',
+      ]);
+    });
+
+    test(
+        'a restore that settles late after its wait never adopts, even when a sign-in follows',
+        () async {
+      api.debugSetBrowserSessionWaitsForTesting(
+        restore: const Duration(milliseconds: 30),
+        operation: const Duration(seconds: 2),
+      );
+      session.restoreGate = Completer<void>();
+      session.restoreScript = () => BrowserSessionResult.success({
+            'success': true,
+            'data': {
+              'token': tabAToken,
+              'user': {'id': 'acct-1'}
+            },
+          });
+
+      expect(await api.restoreBrowserSessionForStart(), isFalse);
+      expect(api.browserSessionRestoreUnavailable, isTrue);
+
+      serveEmailLogin(jwt('login-c'));
+      session.issueScript = () => BrowserSessionResult.success({
+            'success': true,
+            'data': {
+              'token': sessionJwt('c1', account: 'acct-3', family: 'family-c'),
+              'user': {'id': 'acct-3'}
+            },
+          });
+      final signIn = api.loginWithEmail(
+        email: 'c@example.invalid',
+        password: 'pw-pw-pw-pw',
+      );
+      await Future<void>.delayed(const Duration(milliseconds: 20));
+      session.restoreGate!.complete();
+      await signIn;
+
+      expect(
+        api.getAuthToken(),
+        sessionJwt('c1', account: 'acct-3', family: 'family-c'),
+      );
+      expect(api.getAuthToken(), isNot(tabAToken));
+      expect(session.restoreCalls, 1);
+    });
+  });
+
+  group('bounded browser-session waits', () {
+    setUp(() {
+      api.debugSetBrowserSessionWaitsForTesting(
+        restore: const Duration(milliseconds: 30),
+        operation: const Duration(milliseconds: 30),
+      );
+    });
+
+    test('a never-settling pending-logout revoke cannot hold startup',
+        () async {
+      SharedPreferences.setMockInitialValues({
+        'browser_session_pending_logout_v1': true,
+      });
+      session.logoutGate = Completer<void>();
+
+      final restored = await api
+          .restoreBrowserSessionForStart()
+          .timeout(const Duration(seconds: 2));
+
+      expect(restored, isFalse);
+      expect(api.browserSessionRestoreUnavailable, isTrue);
+      expect(session.restoreCalls, 0);
+      expect(api.getAuthToken(), isNull);
+      session.logoutGate!.complete();
+    });
+
+    test('a never-settling startup restore settles unavailable and stays inert',
+        () async {
+      session.restoreGate = Completer<void>();
+      session.restoreScript = () => BrowserSessionResult.success({
+            'success': true,
+            'data': {
+              'token': jwt('late'),
+              'user': {'id': 'acct-1'}
+            },
+          });
+
+      expect(
+        await api.restoreBrowserSessionForStart().timeout(
+              const Duration(seconds: 2),
+            ),
+        isFalse,
+      );
+      expect(api.browserSessionRestoreUnavailable, isTrue);
+      session.restoreGate!.complete();
+      await Future<void>.delayed(const Duration(milliseconds: 20));
+
+      expect(api.getAuthToken(), isNull);
+      expect(session.restoreCalls, 1);
+    });
+
+    test(
+        'a never-settling sign-in issue settles and its late session is revoked, not adopted',
+        () async {
+      serveEmailLogin(jwt('login-b'));
+      session.issueGate = Completer<void>();
+
+      await expectLater(
+        api
+            .loginWithEmail(
+              email: 'b@example.invalid',
+              password: 'pw-pw-pw-pw',
+            )
+            .timeout(const Duration(seconds: 2)),
+        throwsA(isA<StateError>()),
+      );
+      expect(api.getAuthToken(), isNull);
+
+      session.issueGate!.complete();
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+
+      expect(api.getAuthToken(), isNull);
+      expect(session.issueCalls, 1);
+      expect(session.logoutCalls, 2);
+    });
+
+    test(
+        'a never-settling sign-in revoke denies wallet sign-in within its bound',
+        () async {
+      session.logoutGate = Completer<void>();
+      api.setHttpClient(MockClient((request) async {
+        return http.Response(jsonEncode(bearerBodyFor(jwt('wallet'))), 200);
+      }));
+
+      await expectLater(
+        api
+            .loginWithWallet(
+              walletAddress: 'wallet-1',
+              signature: 'sig',
+              message: 'msg',
+            )
+            .timeout(const Duration(seconds: 2)),
+        throwsStateError,
+      );
+      expect(api.getAuthToken(), isNull);
+      expect(session.issueCalls, 0);
+
+      session.logoutGate!.complete();
+      await Future<void>.delayed(const Duration(milliseconds: 20));
+      expect(api.getAuthToken(), isNull);
+    });
+
+    test(
+        'an unconfirmed sign-out reports false without claiming cancellation; the late confirmed revoke clears the marker',
+        () async {
+      SharedPreferences.setMockInitialValues({});
+      session.logoutGate = Completer<void>();
+
+      expect(
+        await api
+            .endBrowserSessionForLogout()
+            .timeout(const Duration(seconds: 2)),
+        isFalse,
+      );
+      expect(
+        (await SharedPreferences.getInstance())
+            .getBool('browser_session_pending_logout_v1'),
+        isTrue,
+      );
+      expect(api.browserSessionLogoutUnresolved, isTrue);
+
+      session.logoutGate!.complete();
+      await Future<void>.delayed(const Duration(milliseconds: 20));
+
+      expect(
+        (await SharedPreferences.getInstance())
+            .getBool('browser_session_pending_logout_v1'),
+        isNull,
+      );
+      expect(api.browserSessionLogoutUnresolved, isFalse);
+    });
+  });
+
+  group('logout intent durability', () {
+    final tabAToken = sessionJwt('a1', account: 'acct-1', family: 'family-a');
+    late FlakyIntentStore primary;
+    late FlakyIntentStore fallback;
+
+    setUp(() {
+      api.debugSetBrowserSessionWaitsForTesting(
+        restore: const Duration(seconds: 2),
+        operation: const Duration(seconds: 2),
+      );
+      primary = FlakyIntentStore();
+      fallback = FlakyIntentStore();
+      api.debugSetBrowserSessionLogoutIntentStoresForTesting(
+        primary: primary,
+        fallback: fallback,
+      );
+    });
+
+    test(
+        'a failed shared marker write keeps the owed logout in the tab marker across a reload',
+        () async {
+      await startTabWithSession(tabAToken);
+      primary.writesFail = true;
+      session.logoutScript = () => const BrowserSessionResult.unavailable();
+
+      expect(await api.endBrowserSessionForLogout(), isFalse);
+      expect(api.browserSessionLogoutUnresolved, isTrue);
+      expect(await fallback.readPendingLogout(), isTrue);
+      await api.clearAuth();
+
+      // Storage is readable again and the tab reloads; the server is back.
+      primary.writesFail = false;
+      session.logoutScript =
+          () => BrowserSessionResult.success({'success': true});
+      api.debugSimulateTabReloadForTesting();
+      final restoresBefore = session.restoreCalls;
+
+      expect(await api.restoreBrowserSessionForStart(), isFalse);
+      expect(session.restoreCalls, restoresBefore);
+      expect(api.getAuthToken(), isNull);
+      expect(api.browserSessionLogoutUnresolved, isFalse);
+      expect(await primary.readPendingLogout(), isFalse);
+      expect(await fallback.readPendingLogout(), isFalse);
+      await expectNoCredentialStorage(tabAToken);
+    });
+
+    test(
+        'a logout intent no store accepts is unresolved and blocks restore until the write lands',
+        () async {
+      await startTabWithSession(tabAToken);
+      primary.writesFail = true;
+      fallback.writesFail = true;
+      session.logoutScript = () => const BrowserSessionResult.unavailable();
+
+      expect(await api.endBrowserSessionForLogout(), isFalse);
+      expect(api.browserSessionLogoutUnresolved, isTrue);
+      await api.clearAuth();
+      final restoresBefore = session.restoreCalls;
+
+      // Storage accepts writes again in this tab: the next restore decision
+      // retries the write once, then refuses to restore while unconfirmed.
+      primary.writesFail = false;
+      expect(await api.restoreBrowserSessionForStart(), isFalse);
+      expect(session.restoreCalls, restoresBefore);
+      expect(await primary.readPendingLogout(), isTrue);
+      expect(api.browserSessionLogoutUnresolved, isTrue);
+      expect(api.getAuthToken(), isNull);
+
+      // The server recovers; a reload sees the durable marker and revokes first.
+      session.logoutScript =
+          () => BrowserSessionResult.success({'success': true});
+      api.debugSimulateTabReloadForTesting();
+
+      expect(await api.restoreBrowserSessionForStart(), isFalse);
+      expect(session.restoreCalls, restoresBefore);
+      expect(await primary.readPendingLogout(), isFalse);
+      expect(api.browserSessionLogoutUnresolved, isFalse);
+    });
+
+    test(
+        'a late confirmed revoke of an older intent never clears a newer unconfirmed one',
+        () async {
+      api.debugSetBrowserSessionWaitsForTesting(
+        restore: const Duration(seconds: 2),
+        operation: const Duration(milliseconds: 30),
+      );
+      await startTabWithSession(tabAToken);
+      session.logoutGate = Completer<void>();
+      session.logoutScript = () => session.logoutCalls == 1
+          ? BrowserSessionResult.success({'success': true})
+          : const BrowserSessionResult.unavailable();
+
+      final first = api.endBrowserSessionForLogout();
+      expect(await first, isFalse);
+      primary.writesFail = true;
+      fallback.writesFail = true;
+      final second = api.endBrowserSessionForLogout();
+      expect(await second, isFalse);
+
+      session.logoutGate!.complete();
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+
+      expect(session.logoutCalls, 2);
+      expect(await primary.readPendingLogout(), isTrue);
+      expect(await fallback.readPendingLogout(), isTrue);
+      expect(api.browserSessionLogoutUnresolved, isTrue);
+    });
+
+    test('an unreadable marker never authorizes a restore', () async {
+      primary.readsFail = true;
+
+      expect(await api.restoreBrowserSessionForStart(), isFalse);
+
+      expect(session.restoreCalls, 0);
+      expect(api.getAuthToken(), isNull);
+      expect(api.browserSessionRestoreUnavailable, isTrue);
     });
   });
 }

@@ -3205,6 +3205,10 @@ class AppLocalizationsSl extends AppLocalizations {
       'Seje brskalnika ni bilo mogoče obnoviti. Za nadaljevanje se znova prijavite.';
 
   @override
+  String get browserSessionLogoutUnresolved =>
+      'Ni mogoče potrditi, da se je vaša prejšnja seja v brskalniku končala. Ko bo povezava spet na voljo, se znova odjavite.';
+
+  @override
   String get settingsTransactionHistoryDialogTitle => 'Zgodovina transakcij';
 
   @override

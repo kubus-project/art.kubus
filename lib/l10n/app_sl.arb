@@ -1192,6 +1192,7 @@
   "settingsLogoutButton": "Odjava",
   "settingsBrowserLogoutPending": "Na tej napravi ste odjavljeni. Strežnik odjave ni mogel potrditi; pred obnovitvijo seje bo poskus ponovljen.",
   "browserSessionRestoreUnavailable": "Seje brskalnika ni bilo mogoče obnoviti. Za nadaljevanje se znova prijavite.",
+  "browserSessionLogoutUnresolved": "Ni mogoče potrditi, da se je vaša prejšnja seja v brskalniku končala. Ko bo povezava spet na voljo, se znova odjavite.",
   "settingsTransactionHistoryDialogTitle": "Zgodovina transakcij",
   "settingsRecentTransactionsTitle": "Nedavne transakcije",
   "settingsNoTransactionsTitle": "Ni transakcij",

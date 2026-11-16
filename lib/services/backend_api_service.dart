@@ -10,6 +10,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'browser_session/browser_session_api.dart';
 import 'browser_session/browser_session_controller.dart';
 import 'browser_session/browser_session_http_client.dart';
+import 'browser_session/browser_session_logout_intent_store.dart';
 import '../models/art_marker.dart';
 import '../models/map_marker_overview.dart';
 import '../models/promotion.dart';
@@ -449,13 +450,29 @@ class BackendApiService
   // never sets these, and the session endpoints are never called there.
   BrowserSessionController? _browserSessionController;
   bool Function() _browserSessionIsWeb = _browserSessionIsWebPlatform;
-  Future<bool>? _browserRestoreFlight;
+  _BrowserRestoreFlight? _browserRestoreFlight;
   // The bearer this tab holds because a browser session issued or restored it.
   String? _browserBoundToken;
   DateTime? _browserRestoreRetryAt;
   // Set when the server refused the session or the user signed out; a sign-in clears it.
   bool _browserRestoreBlocked = false;
   bool _browserSessionRestoreUnavailable = false;
+  // Waits bound only how long a caller stops waiting. The browser request keeps
+  // its cross-tab lock until it settles, and a late result never adopts.
+  Duration _browserSessionRestoreWait = const Duration(seconds: 15);
+  Duration _browserSessionOperationWait = const Duration(seconds: 5);
+  // Logout-intent stores: the shared marker first, a tab-scoped fallback second.
+  // Null until first use; tests inject them.
+  BrowserSessionLogoutIntentStore? _browserLogoutPrimaryStore;
+  BrowserSessionLogoutIntentStore? _browserLogoutFallbackStore;
+  // Generation of the newest logout intent. Only that generation may clear the
+  // markers, so a late confirmation of an older intent cannot erase a newer one.
+  int _browserLogoutIntentSeq = 0;
+  // A logout is owed to the server and not yet confirmed. Cleared only by a
+  // confirmed revocation of the newest intent.
+  bool _browserLogoutUnconfirmed = false;
+  // The newest intent could not be written to any store.
+  bool _browserLogoutIntentUnwritten = false;
 
   /// Bumped at every credential commit and sign-out. Account requests capture it when
   /// they start and drop their local writes once it has moved on, so a response
@@ -1395,7 +1412,10 @@ class BackendApiService
   ///
   /// This never restores signer authority. Callers that need wallet-proofed
   /// authority must upgrade through ensureSessionForActiveSigner.
-  Future<bool> restoreExistingSession({bool allowRefresh = true}) async {
+  Future<bool> restoreExistingSession({
+    bool allowRefresh = true,
+    String? expectedBrowserSessionToken,
+  }) async {
     try {
       await loadAuthToken();
       final token = (_authToken ?? '').trim();
@@ -1404,7 +1424,11 @@ class BackendApiService
       }
 
       // Web: no usable bearer in this tab. Browser-session restore (native: false).
-      return await _browserSessionRestoreIfDue(this);
+      return await _browserSessionRestoreIfDue(
+        this,
+        expectedBrowserSessionToken:
+            expectedBrowserSessionToken ?? (token.isEmpty ? null : token),
+      );
     } catch (e) {
       AppConfig.debugPrint(
         'BackendApiService.restoreExistingSession failed: $e',
@@ -1567,7 +1591,9 @@ class BackendApiService
           token.isEmpty || !AuthGatingService.isAccessTokenValid(token);
       if (needsSessionRestore) {
         try {
-          await restoreExistingSession();
+          await restoreExistingSession(
+            expectedBrowserSessionToken: token.isEmpty ? null : token,
+          );
         } catch (_) {
           // Fall through and let the request/auth-coordinator path decide.
         }

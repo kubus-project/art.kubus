@@ -6,9 +6,15 @@ part of 'backend_api_service.dart';
 // endpoint is called. The bearer stays in this tab's memory (AuthCredentialStore
 // web mode). The cookie is HttpOnly and held by the browser; this code never reads,
 // stores or logs it. Persisted account hints remain hints, never authority.
+//
+// Waits are bounded for the user, never for the transport: a bounded caller stops
+// waiting, but the browser request keeps the cross-tab lock until it settles, and
+// a result that arrives after its caller stopped waiting is never adopted.
 
 const String _browserSessionApiPath = '/api/auth/browser-session';
 const Duration _browserSessionStartWait = Duration(seconds: 15);
+// After a failed owed-logout attempt during restore, the next attempt waits.
+const Duration _browserLogoutRetryBackoff = Duration(seconds: 30);
 
 bool _browserSessionIsWebPlatform() => kIsWeb;
 
@@ -35,6 +41,100 @@ String? _browserSessionTokenOf(Map<String, dynamic> body) {
 bool _browserSessionIsBound(BackendApiService service) {
   final bound = service._browserBoundToken;
   return bound != null && (service._authToken ?? '').trim() == bound;
+}
+
+/// One cookie restore in flight in this tab. Callers share its browser request
+/// and its single commit. Once a caller stops waiting the flight is abandoned,
+/// and its result belongs to no account: nobody adopts it.
+class _BrowserRestoreFlight {
+  _BrowserRestoreFlight(this.result);
+
+  final Future<BrowserSessionResult> result;
+  Future<bool>? adoption;
+  bool abandoned = false;
+}
+
+/// Runs [operation] for at most [wait]. The operation is never cancelled; only
+/// the caller stops waiting. Returns null on timeout.
+Future<T?> _browserSessionBounded<T>(Future<T> operation, Duration wait) async {
+  try {
+    return await operation.timeout(wait);
+  } on TimeoutException {
+    return null;
+  }
+}
+
+/// The shared logout marker, in preferences: every tab of the origin sees it.
+/// It holds no credential, only the fact that a revocation is owed.
+class _PreferencesLogoutIntentStore implements BrowserSessionLogoutIntentStore {
+  static const String _key = PreferenceKeys.browserSessionPendingLogoutV1;
+
+  @override
+  Future<bool> writePendingLogout() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool(_key, true);
+      return prefs.getBool(_key) == true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  @override
+  Future<bool?> readPendingLogout() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      return prefs.getBool(_key) == true;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  @override
+  Future<bool> clear() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove(_key);
+      return prefs.getBool(_key) == null;
+    } catch (_) {
+      return false;
+    }
+  }
+}
+
+enum _LogoutIntentState { none, owed, unreadable }
+
+BrowserSessionLogoutIntentStore _sharedLogoutStore(BackendApiService service) =>
+    service._browserLogoutPrimaryStore ??= _PreferencesLogoutIntentStore();
+
+BrowserSessionLogoutIntentStore _tabLogoutStore(BackendApiService service) =>
+    service._browserLogoutFallbackStore ??=
+        createBrowserSessionLogoutIntentStore();
+
+/// Writes the logout marker to both stores and verifies it. Durable when at least
+/// one store reads it back. Otherwise the intent stays unwritten in this tab and
+/// is retried before the next restore decision.
+Future<bool> _writeLogoutIntent(BackendApiService service) async {
+  final shared = await _sharedLogoutStore(service).writePendingLogout();
+  final tab = await _tabLogoutStore(service).writePendingLogout();
+  final durable = shared || tab;
+  service._browserLogoutIntentUnwritten = !durable;
+  return durable;
+}
+
+Future<void> _clearLogoutIntent(BackendApiService service) async {
+  await _sharedLogoutStore(service).clear();
+  await _tabLogoutStore(service).clear();
+}
+
+/// Whether a logout is owed. Either store holding the marker makes it owed. An
+/// unreadable shared store is unreadable, which never authorizes a restore.
+Future<_LogoutIntentState> _readLogoutIntent(BackendApiService service) async {
+  final shared = await _sharedLogoutStore(service).readPendingLogout();
+  final tab = await _tabLogoutStore(service).readPendingLogout();
+  if (shared == true || tab == true) return _LogoutIntentState.owed;
+  if (shared == null) return _LogoutIntentState.unreadable;
+  return _LogoutIntentState.none;
 }
 
 /// Web, before a sign-in that does not start a browser session (wallet, Google,
@@ -70,7 +170,7 @@ Future<Map<String, dynamic>> _browserSessionIssueAfterEmailLogin(
   final loginToken = _browserSessionTokenOf(loginBody);
   if (controller == null || loginToken == null) return loginBody;
   // End any previous account's cookie before exchanging the new identity.
-  // A failed confirmation means the new bearer must not be committed.
+  // A failed or unsettled confirmation means the new bearer must not be committed.
   if (!await service.endBrowserSessionForLogout(requireConfirmation: true)) {
     throw StateError('Could not end the previous browser session');
   }
@@ -78,7 +178,18 @@ Future<Map<String, dynamic>> _browserSessionIssueAfterEmailLogin(
   service._browserRestoreBlocked = false;
   service._browserSessionRestoreUnavailable = false;
 
-  final result = await controller.issue(loginToken: loginToken);
+  final result = await _browserSessionBounded(
+    controller.issue(loginToken: loginToken),
+    service._browserSessionOperationWait,
+  );
+  if (result == null) {
+    // The issue is still inside the cross-tab lock and may yet set a cookie.
+    // A revocation queued behind it ends whatever it starts; nothing is adopted.
+    unawaited(
+      service.endBrowserSessionForLogout().catchError((Object _) => false),
+    );
+    throw StateError('Browser session start did not settle');
+  }
   final payload = result.payload;
   if (!result.isSuccess || payload == null) {
     // Issuance can fail after the server has rotated the cookie. Confirm a
@@ -89,8 +200,7 @@ Future<Map<String, dynamic>> _browserSessionIssueAfterEmailLogin(
     return loginBody;
   }
   if (expectedEpoch != service._authSessionEpoch) {
-    // A sign-out or newer sign-in won while the request was in flight. The
-    // controller serializes the following logout behind issue.
+    // A sign-out or newer sign-in won while the request was in flight.
     await service.endBrowserSessionForLogout();
     return loginBody;
   }
@@ -105,34 +215,136 @@ Future<Map<String, dynamic>> _browserSessionIssueAfterEmailLogin(
   return <String, dynamic>{...loginBody, 'data': payload};
 }
 
-/// Restores the browser session, joining the attempt already in flight in this
-/// tab. The attempt commits its bearer once, so overlapping callers never
-/// commit twice (each commit advances the session epoch).
-Future<bool> _browserSessionRestoreOnce(BackendApiService service) {
+/// The restore flight for this tab, joining the one in flight when present.
+_BrowserRestoreFlight _browserSessionRestoreFlight(BackendApiService service) {
   final existing = service._browserRestoreFlight;
   if (existing != null) return existing;
-  late final Future<bool> flight;
-  flight = _browserSessionRestoreAttempt(service).whenComplete(() {
-    if (identical(service._browserRestoreFlight, flight)) {
-      service._browserRestoreFlight = null;
-    }
-  });
+  final controller = _browserSessionFor(service);
+  final result = controller == null
+      ? Future<BrowserSessionResult>.value(
+          BrowserSessionResult.failure(BrowserSessionOutcome.disabled),
+        )
+      : controller.restore();
+  final flight = _BrowserRestoreFlight(result);
   service._browserRestoreFlight = flight;
   return flight;
 }
 
-Future<bool> _browserSessionRestoreAttempt(BackendApiService service) async {
-  final controller = _browserSessionFor(service);
-  if (controller == null) return false;
-  final epoch = service._authSessionEpoch;
-  final result = await controller.restore();
-  if (result.isSuccess) {
-    final body = result.body;
-    if (body == null) return false;
-    return _browserSessionAdopt(service, body, expectedEpoch: epoch);
+/// Frees the flight slot, but only while it still holds [flight].
+void _releaseBrowserRestoreFlight(
+  BackendApiService service,
+  _BrowserRestoreFlight flight,
+) {
+  if (identical(service._browserRestoreFlight, flight)) {
+    service._browserRestoreFlight = null;
   }
-  await _browserSessionHandleRefusal(service, result, expectedEpoch: epoch);
-  return false;
+}
+
+/// Restores the browser session for one caller. The caller waits at most the
+/// restore bound. The flight commits its bearer once, and the slot stays
+/// claimed until that commit settles, so a caller that starts during the commit
+/// joins it instead of making a second restore. Every caller then checks the
+/// restored identity against its own expectation, and against the current
+/// bearer, before it reports success.
+Future<bool> _browserSessionRestoreOnce(
+  BackendApiService service, {
+  String? expectedBrowserSessionToken,
+}) async {
+  final epoch = service._authSessionEpoch;
+  final flight = _browserSessionRestoreFlight(service);
+  final result = await _browserSessionBounded(
+    flight.result,
+    service._browserSessionRestoreWait,
+  );
+  if (result == null) {
+    // Stop waiting: the late result is never adopted. The cookie may have been
+    // rotated, so the tab does not replay the restore and shows a settled state.
+    flight.abandoned = true;
+    _releaseBrowserRestoreFlight(service, flight);
+    await _browserSessionHandleRefusal(
+      service,
+      const BrowserSessionResult.unavailable(),
+      expectedEpoch: epoch,
+    );
+    return false;
+  }
+  if (!result.isSuccess) {
+    _releaseBrowserRestoreFlight(service, flight);
+    await _browserSessionHandleRefusal(service, result, expectedEpoch: epoch);
+    return false;
+  }
+  final body = result.body;
+  final restoredToken = body == null ? null : _browserSessionTokenOf(body);
+  if (body == null || restoredToken == null) {
+    _releaseBrowserRestoreFlight(service, flight);
+    return false;
+  }
+  final expected = expectedBrowserSessionToken;
+  if (expected != null &&
+      !_browserSessionSameIdentity(service, expected, restoredToken)) {
+    _releaseBrowserRestoreFlight(service, flight);
+    await _browserSessionRejectMismatchedRestore(
+      service,
+      expected,
+      expectedEpoch: epoch,
+    );
+    return false;
+  }
+  if (flight.abandoned) {
+    _releaseBrowserRestoreFlight(service, flight);
+    return false;
+  }
+  try {
+    final adopted = await (flight.adoption ??= _browserSessionAdopt(
+      service,
+      body,
+      expectedEpoch: epoch,
+    ));
+    if (!adopted) return false;
+    if (expected == null) return true;
+    // Joined flights adopt once; a later account change must still refuse this one.
+    return _browserSessionSameIdentity(
+      service,
+      expected,
+      (service._authToken ?? '').trim(),
+    );
+  } finally {
+    _releaseBrowserRestoreFlight(service, flight);
+  }
+}
+
+bool _browserSessionSameIdentity(
+  BackendApiService service,
+  String expectedToken,
+  String restoredToken,
+) {
+  final expected = service._tryDecodeJwtPayload(expectedToken);
+  final restored = service._tryDecodeJwtPayload(restoredToken);
+  final expectedId = expected?['id'];
+  final expectedFamily = expected?['bsid'];
+  return expectedId != null &&
+      expectedFamily is String &&
+      expectedFamily.isNotEmpty &&
+      restored?['id'] == expectedId &&
+      restored?['bsid'] == expectedFamily;
+}
+
+Future<void> _browserSessionRejectMismatchedRestore(
+  BackendApiService service,
+  String expectedToken, {
+  required int expectedEpoch,
+}) async {
+  if (expectedEpoch != service._authSessionEpoch) return;
+  service._browserRestoreBlocked = true;
+  service._browserSessionRestoreUnavailable = true;
+  service._browserRestoreRetryAt = null;
+  if ((service._authToken ?? '').trim() == expectedToken) {
+    // Remove this tab's stale identity only. The cookie may belong to a newer
+    // account in another tab, so never call the cookie-only logout here.
+    try {
+      await service.clearAuth();
+    } catch (_) {}
+  }
 }
 
 /// Commits a restored or issued session exactly as the email sign-in does, then
@@ -206,24 +418,44 @@ Future<void> _browserSessionHandleRefusal(
 
 /// `restoreExistingSession` with no usable bearer in this tab: one restore per
 /// settled outcome. Blocked after a refusal, backed off after a transient failure.
-Future<bool> _browserSessionRestoreIfDue(BackendApiService service) async {
+/// A logout owed to the server is settled first, and never followed by a restore.
+Future<bool> _browserSessionRestoreIfDue(
+  BackendApiService service, {
+  String? expectedBrowserSessionToken,
+}) async {
   if (_browserSessionFor(service) == null) return false;
-  if (service._browserRestoreBlocked) return false;
-  try {
-    final prefs = await SharedPreferences.getInstance();
-    if (prefs.getBool(PreferenceKeys.browserSessionPendingLogoutV1) == true) {
-      await service.endBrowserSessionForLogout();
-      return false;
-    }
-  } catch (_) {
-    // Storage uncertainty never authorizes restoring a browser cookie.
-    return false;
+  // A marker that could not be written is retried once per decision.
+  if (service._browserLogoutIntentUnwritten) {
+    await _writeLogoutIntent(service);
   }
   final retryAt = service._browserRestoreRetryAt;
-  if (retryAt != null && DateTime.now().isBefore(retryAt)) {
-    return false;
+  final backingOff = retryAt != null && DateTime.now().isBefore(retryAt);
+  switch (await _readLogoutIntent(service)) {
+    case _LogoutIntentState.owed:
+      // A revocation is owed: settle it (bounded) and restore nothing. A blocked
+      // tab still settles it, but not on every request: a failed attempt backs
+      // off, so the owed revocation never becomes a wait on each call.
+      if (backingOff) return false;
+      if (!await service.endBrowserSessionForLogout()) {
+        service._browserSessionRestoreUnavailable = true;
+        service._browserRestoreRetryAt =
+            DateTime.now().add(_browserLogoutRetryBackoff);
+      }
+      return false;
+    case _LogoutIntentState.unreadable:
+      // Storage uncertainty never authorizes restoring a browser cookie.
+      service._browserRestoreBlocked = true;
+      service._browserSessionRestoreUnavailable = true;
+      return false;
+    case _LogoutIntentState.none:
+      break;
   }
-  return _browserSessionRestoreOnce(service);
+  if (service._browserRestoreBlocked) return false;
+  if (backingOff) return false;
+  return _browserSessionRestoreOnce(
+    service,
+    expectedBrowserSessionToken: expectedBrowserSessionToken,
+  );
 }
 
 /// A 401 for the bearer this request sent. Returns true when the request should
@@ -253,7 +485,12 @@ Future<bool> _browserSessionRecoverRejectedBearer(
   // produced before protected route execution, so the original operation was
   // not accepted; unrelated credential changes are never replayed.
   if (sent != current) return true;
-  return _browserSessionRestoreOnce(service);
+  // The restore is checked against the originating account and family, before
+  // it is committed or retried. A different account is refused, never replayed.
+  return _browserSessionRestoreOnce(
+    service,
+    expectedBrowserSessionToken: sent,
+  );
 }
 
 void _debugSetBrowserSession(
@@ -268,6 +505,13 @@ void _debugSetBrowserSession(
   service._browserRestoreRetryAt = null;
   service._browserRestoreBlocked = false;
   service._browserSessionRestoreUnavailable = false;
+  service._browserSessionRestoreWait = const Duration(seconds: 15);
+  service._browserSessionOperationWait = const Duration(seconds: 5);
+  service._browserLogoutPrimaryStore = null;
+  service._browserLogoutFallbackStore = null;
+  service._browserLogoutIntentSeq = 0;
+  service._browserLogoutIntentUnwritten = false;
+  service._browserLogoutUnconfirmed = false;
 }
 
 extension BackendApiBrowserSession on BackendApiService {
@@ -279,34 +523,20 @@ extension BackendApiBrowserSession on BackendApiService {
     Duration waitLimit = _browserSessionStartWait,
   }) async {
     if (_browserSessionFor(this) == null) return false;
+    final restore = restoreExistingSession(allowRefresh: false);
     try {
-      final prefs = await SharedPreferences.getInstance();
-      if (prefs.getBool(PreferenceKeys.browserSessionPendingLogoutV1) == true) {
-        // A prior tab cleared local auth but could not confirm cookie revocation.
-        // Retry cookie-only logout before any restore can re-admit that account.
-        if (!await endBrowserSessionForLogout()) {
-          _browserSessionRestoreUnavailable = true;
-          return false;
-        }
-        return false;
-      }
-      // Do not classify a still-running restore as guest. A settled unavailable
-      // response is shown in discovery with a sign-in action; it is never
-      // silently replayed because cookie rotation may have committed.
-      final restore = restoreExistingSession(allowRefresh: false);
-      try {
-        return await restore.timeout(waitLimit);
-      } on TimeoutException {
-        // Future.timeout does not cancel the browser request. Keep its
-        // cross-tab lock held, invalidate the captured generation so a late
-        // result cannot adopt, and let the unavailable UI route to sign-in;
-        // sign-in must wait for a cookie-only logout behind this operation.
-        _browserRestoreBlocked = true;
-        _browserSessionRestoreUnavailable = true;
-        _browserRestoreRetryAt = null;
-        _authSessionEpoch += 1;
-        return false;
-      }
+      return await restore.timeout(waitLimit);
+    } on TimeoutException {
+      // Future.timeout does not cancel the browser request. Keep its
+      // cross-tab lock held, abandon the flight so a late result cannot adopt,
+      // and let the unavailable UI route to sign-in. Sign-in waits behind the
+      // same lock.
+      _browserRestoreFlight?.abandoned = true;
+      _browserRestoreBlocked = true;
+      _browserSessionRestoreUnavailable = true;
+      _browserRestoreRetryAt = null;
+      _authSessionEpoch += 1;
+      return false;
     } catch (_) {
       _browserRestoreBlocked = true;
       _browserSessionRestoreUnavailable = true;
@@ -314,50 +544,51 @@ extension BackendApiBrowserSession on BackendApiService {
     }
   }
 
-  /// Sign-out, web only: persists non-secret retry intent and revokes the browser
-  /// session. The underlying cookie operation remains serialized until settled;
-  /// a UI caller may bound only how long it waits for this result.
+  /// Sign-out, web only: persists the logout intent and revokes the browser
+  /// session. Resolves within the operation bound. Returns true only for a
+  /// confirmed revocation (or a feature that is off with no bound bearer). When
+  /// the revocation has not settled, the intent stays owed and the late result
+  /// is recorded when it arrives; it never claims the server operation was
+  /// cancelled.
   Future<bool> endBrowserSessionForLogout({
     bool requireConfirmation = false,
   }) async {
     final controller = _browserSessionFor(this);
     if (controller == null) return true;
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setBool(PreferenceKeys.browserSessionPendingLogoutV1, true);
-    } catch (_) {
-      // Without durable retry state, do not report a failed logout as complete.
-    }
+    // The intent is written before the revocation starts, so a reload or another
+    // tab sees it owed. Only the newest intent may clear the markers.
+    final generation = ++_browserLogoutIntentSeq;
+    final epoch = _authSessionEpoch;
+    await _writeLogoutIntent(this);
     if (!requireConfirmation) {
       _browserRestoreBlocked = true;
       _browserRestoreRetryAt = null;
       _browserBoundToken = null;
     }
-    BrowserSessionResult result;
-    try {
-      // Keeping the cross-tab lock until the transport settles prevents a late
-      // issue/restore response from changing the cookie after logout returns.
-      result = await controller.logout();
-    } catch (_) {
-      result = const BrowserSessionResult.unavailable();
+    // The revocation holds the cross-tab lock until it settles, so a late issue
+    // or restore response cannot set a cookie after logout returns.
+    final settled = controller
+        .logout()
+        .then((result) => _settleLogoutIntent(this, generation, result));
+    final result = await _browserSessionBounded(
+          settled,
+          _browserSessionOperationWait,
+        ) ??
+        const BrowserSessionResult.unavailable();
+    if (!result.isSuccess &&
+        result.outcome != BrowserSessionOutcome.disabled &&
+        generation == _browserLogoutIntentSeq) {
+      // Unsettled or refused: the revocation stays owed, and the tab says so.
+      _browserLogoutUnconfirmed = true;
     }
-    final confirmedRevocation = result.isSuccess;
-    // Preserve the legacy sign-in path when the feature is disabled and this
-    // tab has no bound bearer, but retain the durable marker: an HttpOnly cookie
-    // from an earlier deployment may still exist and become restorable later.
-    final legacyDisabled = requireConfirmation &&
-        result.outcome == BrowserSessionOutcome.disabled &&
+    final legacyDisabled = result.outcome == BrowserSessionOutcome.disabled &&
         !_browserSessionIsBound(this);
-    final revoked = confirmedRevocation || legacyDisabled;
+    final revoked = result.isSuccess || legacyDisabled;
     if (requireConfirmation && !revoked) return false;
-    _browserRestoreBlocked = true;
-    _browserRestoreRetryAt = null;
-    _browserBoundToken = null;
-    if (confirmedRevocation) {
-      try {
-        final prefs = await SharedPreferences.getInstance();
-        await prefs.remove(PreferenceKeys.browserSessionPendingLogoutV1);
-      } catch (_) {}
+    if (_authSessionEpoch == epoch) {
+      _browserRestoreBlocked = true;
+      _browserRestoreRetryAt = null;
+      _browserBoundToken = null;
     }
     return revoked;
   }
@@ -370,6 +601,10 @@ extension BackendApiBrowserSession on BackendApiService {
   bool get browserSessionRestoreUnavailable =>
       _browserSessionRestoreUnavailable;
 
+  /// True while a logout is owed to the server and has not been confirmed. The
+  /// tab must say so; it must not present the session as ended.
+  bool get browserSessionLogoutUnresolved => _browserLogoutUnconfirmed;
+
   /// Test seam: installs a controller and whether this build counts as web.
   @visibleForTesting
   void debugSetBrowserSessionForTesting(
@@ -378,4 +613,63 @@ extension BackendApiBrowserSession on BackendApiService {
   }) {
     _debugSetBrowserSession(this, controller, isWeb);
   }
+
+  /// Test seam: bounds for restore and for sign-in, logout and issue waits.
+  @visibleForTesting
+  void debugSetBrowserSessionWaitsForTesting({
+    Duration? restore,
+    Duration? operation,
+  }) {
+    _browserSessionRestoreWait = restore ?? _browserSessionRestoreWait;
+    _browserSessionOperationWait = operation ?? _browserSessionOperationWait;
+  }
+
+  /// Test seam: the shared marker and the tab-scoped fallback. Null restores
+  /// the defaults.
+  @visibleForTesting
+  void debugSetBrowserSessionLogoutIntentStoresForTesting({
+    BrowserSessionLogoutIntentStore? primary,
+    BrowserSessionLogoutIntentStore? fallback,
+  }) {
+    _browserLogoutPrimaryStore = primary;
+    _browserLogoutFallbackStore = fallback;
+  }
+
+  /// Test seam: a page reload. Tab memory is lost; the stores, which model
+  /// shared and tab-session storage, keep what they hold.
+  @visibleForTesting
+  void debugSimulateTabReloadForTesting() {
+    _authToken = null;
+    _credentialTargetToken = null;
+    _browserBoundToken = null;
+    _browserRestoreFlight = null;
+    _browserRestoreRetryAt = null;
+    _browserRestoreBlocked = false;
+    _browserSessionRestoreUnavailable = false;
+    _browserLogoutIntentUnwritten = false;
+    _browserLogoutUnconfirmed = false;
+  }
+}
+
+/// Runs when a revocation settles, whether or not a caller still waits. A
+/// confirmed revocation of the newest intent clears the markers. A failed one
+/// keeps the logout unconfirmed. Older intents never change either state.
+Future<BrowserSessionResult> _settleLogoutIntent(
+  BackendApiService service,
+  int generation,
+  BrowserSessionResult result,
+) async {
+  final newest = generation == service._browserLogoutIntentSeq;
+  if (result.isSuccess) {
+    if (newest) {
+      service._browserLogoutUnconfirmed = false;
+      // Checked synchronously above: any newer intent is issued after this
+      // clear, so its marker survives it.
+      await _clearLogoutIntent(service);
+    }
+  } else if (newest && result.outcome != BrowserSessionOutcome.disabled) {
+    // A disabled feature leaves the marker for re-enable and cannot restore.
+    service._browserLogoutUnconfirmed = true;
+  }
+  return result;
 }

@@ -3177,7 +3177,11 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get browserSessionRestoreUnavailable =>
-      "We couldn't restore your browser session. Sign in again to continue.";
+      'We couldn\'t restore your browser session. Sign in again to continue.';
+
+  @override
+  String get browserSessionLogoutUnresolved =>
+      'We couldn\'t confirm that your earlier browser session ended. Sign out again when the connection is back.';
 
   @override
   String get settingsTransactionHistoryDialogTitle => 'Transaction history';
