@@ -3934,6 +3934,8 @@
   "communityGroupsEndOfDirectory": "Konec imenika",
   "communityGroupsDirectoryTitle": "Imenik skupin",
   "communityGroupsDirectoryDescription": "Poišči osredotočene prostore za kritike, razstave, javno umetnost, dogodke in sodelovanja.",
+  "communityGroupsJoinedSectionTitle": "Vaše skupine",
+  "communityGroupsDiscoverSectionTitle": "Poišči javne skupine",
   "communityGroupsSearchHint": "Išči skupine",
   "communityClearSearchTooltip": "Počisti iskanje",
   "communityFabNewPost": "Nova objava",

@@ -7235,14 +7235,24 @@ class BackendApiService
 
   /// Share a post (increment share counter)
   /// POST /api/community/posts/:id/share
+  /// Throws when the share is not counted (for example a 404 for a post the
+  /// caller cannot see) so the caller can roll back its optimistic count.
   Future<void> sharePost(String postId) async {
     try {
-      await _post(
+      final response = await _post(
         Uri.parse('$baseUrl/api/community/posts/$postId/share'),
         headers: _getHeaders(),
       );
+      if (!_isSuccessStatus(response.statusCode)) {
+        throw BackendApiRequestException(
+          statusCode: response.statusCode,
+          path: '/api/community/posts/$postId/share',
+          body: response.body,
+        );
+      }
     } catch (e) {
       AppConfig.debugPrint('BackendApiService.sharePost failed: $e');
+      rethrow;
     }
   }
 
@@ -7353,9 +7363,11 @@ class BackendApiService
       final uri = Uri.parse(
         '$baseUrl/api/groups',
       ).replace(queryParameters: queryParams);
+      // Sent with the session token when one exists so isMember/isOwner are
+      // answered for the caller; a guest request stays anonymous.
       final jsonData = await _fetchJson(
         uri,
-        includeAuth: false,
+        includeAuth: true,
         allowOrbitFallback: false,
       );
       final dynamic payload =

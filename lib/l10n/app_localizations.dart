@@ -17823,6 +17823,18 @@ abstract class AppLocalizations {
   /// **'Find focused spaces for critiques, exhibitions, public art, events, and collaborations.'**
   String get communityGroupsDirectoryDescription;
 
+  /// No description provided for @communityGroupsJoinedSectionTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Your groups'**
+  String get communityGroupsJoinedSectionTitle;
+
+  /// No description provided for @communityGroupsDiscoverSectionTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Discover public groups'**
+  String get communityGroupsDiscoverSectionTitle;
+
   /// No description provided for @communityClearSearchTooltip.
   ///
   /// In en, this message translates to:

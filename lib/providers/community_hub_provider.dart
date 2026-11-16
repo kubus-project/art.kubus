@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import '../community/community_interactions.dart';
 import '../models/community_group.dart';
 import '../models/community_subject.dart';
+import '../services/account_identity.dart';
 import '../services/backend_api_service.dart';
 import '../services/profile_package_mutation_tracker.dart';
 import 'community_subject_provider.dart';
@@ -74,10 +75,23 @@ class CommunityPostDraft {
 
 class CommunityHubProvider extends ChangeNotifier {
   CommunityHubProvider({BackendApiService? apiService})
-      : _apiService = apiService ?? BackendApiService();
+      : _apiService = apiService ?? BackendApiService() {
+    AccountIdentity.addListener(_handleAccountIdentityChanged);
+  }
 
   final BackendApiService _apiService;
   CommunitySubjectProvider? _subjectProvider;
+  // The account the group state was loaded for. Bumped by [_accountEpoch] on
+  // every account change, so a response still in flight for the previous
+  // account is dropped instead of written into the new account's state.
+  String _heldAccountKey = AccountIdentity.accountKey;
+  int _accountEpoch = 0;
+
+  @override
+  void dispose() {
+    AccountIdentity.removeListener(_handleAccountIdentityChanged);
+    super.dispose();
+  }
 
   // ---------- Group directory state ----------
   static const int _groupsPageSize = 20;
@@ -96,12 +110,23 @@ class CommunityHubProvider extends ChangeNotifier {
   String? get groupsError => _groupsError;
   String get currentGroupSearchQuery => _currentSearchQuery;
 
+  /// Groups the caller belongs to or owns.
+  List<CommunityGroupSummary> get joinedGroups =>
+      _groups.where((g) => g.isMember || g.isOwner).toList(growable: false);
+
+  /// Public groups the caller has not joined yet.
+  List<CommunityGroupSummary> get discoverableGroups => _groups
+      .where((g) => g.isPublic && !g.isMember && !g.isOwner)
+      .toList(growable: false);
+
   Future<void> loadGroups({bool refresh = false, String? search}) async {
     if (_groupsLoading) return;
     final normalizedSearch = search?.trim() ?? _currentSearchQuery;
     final shouldReset = refresh || normalizedSearch != _currentSearchQuery;
     final targetPage = shouldReset ? 1 : _nextGroupsPage;
+    final epoch = _accountEpoch;
 
+    _heldAccountKey = AccountIdentity.accountKey;
     _groupsLoading = true;
     _groupsError = null;
     notifyListeners();
@@ -116,6 +141,7 @@ class CommunityHubProvider extends ChangeNotifier {
         limit: _groupsPageSize,
         search: normalizedSearch.isEmpty ? null : normalizedSearch,
       );
+      if (epoch != _accountEpoch) return;
       if (targetPage == 1) {
         _groups
           ..clear()
@@ -135,6 +161,7 @@ class CommunityHubProvider extends ChangeNotifier {
       _currentSearchQuery = normalizedSearch;
       _groupsInitialized = true;
     } catch (e) {
+      if (epoch != _accountEpoch) return;
       _groupsError = e.toString();
       // Avoid noisy logs in release; failing to load groups is non-fatal.
       if (kDebugMode) {
@@ -145,8 +172,10 @@ class CommunityHubProvider extends ChangeNotifier {
       _groupsInitialized = true;
       _groupsHasMore = false;
     } finally {
-      _groupsLoading = false;
-      notifyListeners();
+      if (epoch == _accountEpoch) {
+        _groupsLoading = false;
+        notifyListeners();
+      }
     }
   }
 
@@ -178,15 +207,30 @@ class CommunityHubProvider extends ChangeNotifier {
     return summary;
   }
 
+  /// A successful join always leaves the caller a member, even when the
+  /// response carries no group row to replace the cached one with.
   Future<void> joinGroup(String groupId) async {
+    final epoch = _accountEpoch;
     final summary = await _apiService.joinCommunityGroup(groupId);
+    if (epoch != _accountEpoch) return;
     if (summary != null) {
-      _replaceGroupSummary(summary);
+      _replaceGroupSummary(summary.copyWith(isMember: true));
+      return;
+    }
+    final idx = _groups.indexWhere((g) => g.id == groupId);
+    if (idx != -1 && !_groups[idx].isMember) {
+      _groups[idx] = _groups[idx].copyWith(
+        isMember: true,
+        memberCount: _groups[idx].memberCount + 1,
+      );
+      notifyListeners();
     }
   }
 
   Future<void> leaveGroup(String groupId) async {
+    final epoch = _accountEpoch;
     final summary = await _apiService.leaveCommunityGroup(groupId);
+    if (epoch != _accountEpoch) return;
     if (summary != null) {
       _replaceGroupSummary(summary);
     } else {
@@ -196,6 +240,36 @@ class CommunityHubProvider extends ChangeNotifier {
         notifyListeners();
       }
     }
+  }
+
+  // A group's membership and feed are the signed-in account's view. A switch
+  // to another account (or sign-out) must not leave them on screen.
+  void _handleAccountIdentityChanged() {
+    final key = AccountIdentity.accountKey;
+    // A same-account change (wallet link, re-issued token) keeps the state.
+    if (key.isNotEmpty && key == _heldAccountKey) return;
+    _clearAccountState();
+  }
+
+  void _clearAccountState() {
+    _accountEpoch++;
+    _heldAccountKey = AccountIdentity.accountKey;
+    _groups.clear();
+    _groupsLoading = false;
+    _groupsInitialized = false;
+    _groupsHasMore = true;
+    _nextGroupsPage = 1;
+    _currentSearchQuery = '';
+    _groupsError = null;
+    _groupPosts.clear();
+    _groupPostsLoading.clear();
+    _groupPostsHasMore.clear();
+    _groupPostsPage.clear();
+    _groupPostsError.clear();
+    if (_draft.targetGroup != null) {
+      _draft = _draft.copyWith(clearGroup: true);
+    }
+    notifyListeners();
   }
 
   // ---------- Group posts state ----------
@@ -216,6 +290,7 @@ class CommunityHubProvider extends ChangeNotifier {
   Future<void> loadGroupPosts(String groupId, {bool refresh = false}) async {
     if (_groupPostsLoading[groupId] == true) return;
     final targetPage = refresh ? 1 : (_groupPostsPage[groupId] ?? 1);
+    final epoch = _accountEpoch;
 
     _groupPostsLoading[groupId] = true;
     _groupPostsError[groupId] = null;
@@ -227,6 +302,7 @@ class CommunityHubProvider extends ChangeNotifier {
         page: targetPage,
         limit: _groupPostsPageSize,
       );
+      if (epoch != _accountEpoch) return;
       if (targetPage == 1) {
         _groupPosts[groupId] = posts;
       } else {
@@ -237,11 +313,14 @@ class CommunityHubProvider extends ChangeNotifier {
       _groupPostsHasMore[groupId] = posts.length >= _groupPostsPageSize;
       _groupPostsPage[groupId] = targetPage + 1;
     } catch (e) {
+      if (epoch != _accountEpoch) return;
       _groupPostsError[groupId] = e.toString();
       debugPrint('CommunityHubProvider.loadGroupPosts failed: $e');
     } finally {
-      _groupPostsLoading[groupId] = false;
-      notifyListeners();
+      if (epoch == _accountEpoch) {
+        _groupPostsLoading[groupId] = false;
+        notifyListeners();
+      }
     }
   }
 

@@ -10322,6 +10322,12 @@ class AppLocalizationsSl extends AppLocalizations {
       'Poišči osredotočene prostore za kritike, razstave, javno umetnost, dogodke in sodelovanja.';
 
   @override
+  String get communityGroupsJoinedSectionTitle => 'Vaše skupine';
+
+  @override
+  String get communityGroupsDiscoverSectionTitle => 'Poišči javne skupine';
+
+  @override
   String get communityClearSearchTooltip => 'Počisti iskanje';
 
   @override

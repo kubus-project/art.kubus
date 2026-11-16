@@ -10227,6 +10227,12 @@ class AppLocalizationsEn extends AppLocalizations {
       'Find focused spaces for critiques, exhibitions, public art, events, and collaborations.';
 
   @override
+  String get communityGroupsJoinedSectionTitle => 'Your groups';
+
+  @override
+  String get communityGroupsDiscoverSectionTitle => 'Discover public groups';
+
+  @override
   String get communityClearSearchTooltip => 'Clear search';
 
   @override

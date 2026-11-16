@@ -1101,7 +1101,10 @@ extension _CommunityScreenStatePart1 on _CommunityScreenState {
           return const AppLoading();
         }
 
-        final hasGroups = hub.groups.isNotEmpty;
+        final joinedGroups = hub.joinedGroups;
+        final discoverableGroups = hub.discoverableGroups;
+        final hasGroups =
+            joinedGroups.isNotEmpty || discoverableGroups.isNotEmpty;
         final listView = ListView(
           physics: const AlwaysScrollableScrollPhysics(),
           padding: const EdgeInsets.fromLTRB(
@@ -1130,7 +1133,12 @@ extension _CommunityScreenStatePart1 on _CommunityScreenState {
                         ),
                 ),
               ),
-            if (hasGroups) ...hub.groups.map((group) => _buildGroupCard(group)),
+            if (hasGroups)
+              CommunityGroupSections(
+                joinedGroups: joinedGroups,
+                discoverableGroups: discoverableGroups,
+                cardBuilder: (group) => _buildGroupCard(group),
+              ),
             if (hub.groupsLoading && hasGroups)
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: KubusSpacing.lg),

@@ -4220,6 +4220,8 @@
   "communityGroupsSearchHint": "Search community groups",
   "communityGroupsDirectoryTitle": "Group directory",
   "communityGroupsDirectoryDescription": "Find focused spaces for critiques, exhibitions, public art, events, and collaborations.",
+  "communityGroupsJoinedSectionTitle": "Your groups",
+  "communityGroupsDiscoverSectionTitle": "Discover public groups",
   "communityClearSearchTooltip": "Clear search",
   "communityFabNewPost": "New post",
   "communityFabCreateGroup": "Create group",
