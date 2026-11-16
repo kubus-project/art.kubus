@@ -13,6 +13,7 @@ class FakeBrowserSessionApi implements BrowserSessionApi {
   String? lastLoginToken;
   BrowserSessionResult Function()? restoreScript;
   Completer<void>? restoreGate;
+  Completer<void>? issueGate;
   bool issueThrows = false;
 
   static final BrowserSessionResult issued = BrowserSessionResult.success(
@@ -26,6 +27,8 @@ class FakeBrowserSessionApi implements BrowserSessionApi {
   Future<BrowserSessionResult> issue({required String loginToken}) async {
     issueCalls += 1;
     lastLoginToken = loginToken;
+    final gate = issueGate;
+    if (gate != null) await gate.future;
     if (issueThrows) throw StateError('synthetic issue failure');
     return issued;
   }
@@ -74,6 +77,13 @@ class SpyLock implements BrowserSessionLock {
   }
 }
 
+class UnavailableLock implements BrowserSessionLock {
+  @override
+  Future<T> run<T>(Future<T> Function() body) async {
+    throw StateError('cross-tab locks unavailable');
+  }
+}
+
 void main() {
   group('restore', () {
     test('overlapping callers share one in-flight restore', () async {
@@ -119,6 +129,23 @@ void main() {
       expect(lock.maxActive, 1);
     });
 
+    test('restore, issue, and logout share the same cross-tab queue', () async {
+      final api = FakeBrowserSessionApi()..restoreGate = Completer<void>();
+      final lock = SpyLock();
+      final controller = BrowserSessionController(api: api, lock: lock);
+      final restore = controller.restore();
+      final issue = controller.issue(loginToken: 'next-account');
+      final logout = controller.logout();
+      await Future<void>.delayed(const Duration(milliseconds: 10));
+      expect(api.issueCalls, 0);
+      expect(api.logoutCalls, 0);
+      api.restoreGate!.complete();
+      await Future.wait([restore, issue, logout]);
+      expect(lock.maxActive, 1);
+      expect(api.issueCalls, 1);
+      expect(api.logoutCalls, 1);
+    });
+
     test('a restore that throws settles as unavailable, never as a throw',
         () async {
       final api = FakeBrowserSessionApi()
@@ -135,6 +162,25 @@ void main() {
   });
 
   group('issue and logout', () {
+    test('missing cross-tab coordination fails closed for cookie operations',
+        () async {
+      final api = FakeBrowserSessionApi();
+      final controller = BrowserSessionController(
+        api: api,
+        lock: UnavailableLock(),
+      );
+
+      final issue = await controller.issue(loginToken: 'login-token');
+      final restore = await controller.restore();
+      final logout = await controller.logout();
+      expect(issue.outcome, BrowserSessionOutcome.unavailable);
+      expect(restore.outcome, BrowserSessionOutcome.unavailable);
+      expect(logout.outcome, BrowserSessionOutcome.unavailable);
+      expect(api.issueCalls, 0);
+      expect(api.restoreCalls, 0);
+      expect(api.logoutCalls, 0);
+    });
+
     test('issue forwards the login token and never throws', () async {
       final api = FakeBrowserSessionApi();
       final controller = BrowserSessionController(
@@ -161,6 +207,24 @@ void main() {
       final result = await controller.logout();
 
       expect(result.isSuccess, isTrue);
+      expect(api.logoutCalls, 1);
+    });
+
+    test(
+        'logout waits for an in-flight issue before clearing the shared cookie',
+        () async {
+      final api = FakeBrowserSessionApi()..issueGate = Completer<void>();
+      final controller = BrowserSessionController(
+        api: api,
+        lock: InProcessBrowserSessionLock(),
+      );
+      final issue = controller.issue(loginToken: 'login-token');
+      final logout = controller.logout();
+      await Future<void>.delayed(const Duration(milliseconds: 10));
+      expect(api.logoutCalls, 0);
+      api.issueGate!.complete();
+      await Future.wait([issue, logout]);
+      expect(api.issueCalls, 1);
       expect(api.logoutCalls, 1);
     });
   });

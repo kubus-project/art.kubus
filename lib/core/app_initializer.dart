@@ -18,6 +18,7 @@ import '../providers/deep_link_provider.dart';
 import '../providers/auth_deep_link_provider.dart';
 import '../providers/deferred_onboarding_provider.dart';
 import '../services/backend_api_service.dart';
+import '../l10n/app_localizations.dart';
 import '../services/app_bootstrap_service.dart';
 import '../services/auth_onboarding_service.dart';
 import '../services/onboarding_state_service.dart';
@@ -209,6 +210,27 @@ class _AppInitializerState extends State<AppInitializer> {
     if (!mounted || _didNavigate) return;
     _didNavigate = true;
     _replaceWithShell(navigator, entry.shellRoute);
+  }
+
+  void _showBrowserSessionRestoreUnavailable(NavigatorState navigator) {
+    if (!kIsWeb || !BackendApiService().browserSessionRestoreUnavailable) {
+      return;
+    }
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !navigator.mounted) return;
+      final context = navigator.context;
+      final l10n = AppLocalizations.of(context);
+      if (l10n == null) return;
+      ScaffoldMessenger.maybeOf(context)?.showSnackBar(
+        SnackBar(
+          content: Text(l10n.browserSessionRestoreUnavailable),
+          action: SnackBarAction(
+            label: l10n.commonSignIn,
+            onPressed: () => navigator.pushNamed('/sign-in'),
+          ),
+        ),
+      );
+    });
   }
 
   /// The safe fallback when startup is already degraded (initialisation threw
@@ -1071,6 +1093,7 @@ class _AppInitializerState extends State<AppInitializer> {
         if (!mounted) return;
         _didNavigate = true;
         _replaceWithShell(navigator, entry.shellRoute);
+        _showBrowserSessionRestoreUnavailable(navigator);
         return;
       }
 

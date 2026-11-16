@@ -5626,6 +5626,12 @@ abstract class AppLocalizations {
   /// **'Log out'**
   String get settingsLogoutButton;
 
+  /// Message shown when local sign-out completed but cookie revocation is pending.
+  String get settingsBrowserLogoutPending;
+
+  /// Message shown when browser session restoration could not be confirmed.
+  String get browserSessionRestoreUnavailable;
+
   /// No description provided for @settingsTransactionHistoryDialogTitle.
   ///
   /// In en, this message translates to:

@@ -20,6 +20,16 @@ String jwt(String id) => 'e30.${base64Url.encode(utf8.encode(jsonEncode({
           'exp': 2100000000,
         }))).replaceAll('=', '')}.synthetic';
 
+String sessionJwt(String id,
+        {String account = 'acct-1',
+        String family = 'browser-session-family'}) =>
+    'e30.${base64Url.encode(utf8.encode(jsonEncode({
+              'id': account,
+              'bsid': family,
+              'exp': 2100000000,
+              'nonce': id,
+            }))).replaceAll('=', '')}.synthetic';
+
 /// Scripted browser-session API: every outcome is set by the test.
 class ScriptedSessionApi implements BrowserSessionApi {
   int issueCalls = 0;
@@ -193,6 +203,43 @@ void main() {
       expect(api.getAuthToken(), jwt('login'));
     });
 
+    test('A to B issue failure confirms cookie revocation before fallback',
+        () async {
+      serveEmailLogin(jwt('login-a'));
+      await api.loginWithEmail(
+          email: 'a@example.invalid', password: 'pw-pw-pw-pw');
+      session.onLogout = () {
+        session.restoreScript = () => BrowserSessionResult.failure(
+            BrowserSessionOutcome.invalid,
+            statusCode: 401);
+      };
+      session.issueScript = () => const BrowserSessionResult.unavailable();
+      serveEmailLogin(jwt('login-b'));
+
+      await api.loginWithEmail(
+          email: 'b@example.invalid', password: 'pw-pw-pw-pw');
+      expect(api.getAuthToken(), jwt('login-b'));
+      expect(session.logoutCalls, 3);
+      await api.clearAuth();
+      expect(await api.restoreBrowserSessionForStart(), isFalse);
+      expect(api.getAuthToken(), isNull);
+    });
+
+    test('failed cookie revocation denies an email account switch', () async {
+      serveEmailLogin(jwt('login-a'));
+      await api.loginWithEmail(
+          email: 'a@example.invalid', password: 'pw-pw-pw-pw');
+      session.logoutScript = () => const BrowserSessionResult.unavailable();
+      serveEmailLogin(jwt('login-b'));
+
+      await expectLater(
+        api.loginWithEmail(email: 'b@example.invalid', password: 'pw-pw-pw-pw'),
+        throwsStateError,
+      );
+      expect(api.getAuthToken(), jwt('session'));
+      expect(session.issueCalls, 1);
+    });
+
     test('native never calls the session client', () async {
       api.debugSetBrowserSessionForTesting(
         BrowserSessionController(
@@ -268,20 +315,57 @@ void main() {
       expect(api.getAuthToken(), jwt('restored'));
     });
 
-    test('a start restore that outlives its timeout settles to guest',
+    test('a start restore remains pending until the cookie request settles',
         () async {
       session.restoreGate = Completer<void>();
 
-      final restored = await api.restoreBrowserSessionForStart(
-          timeout: const Duration(milliseconds: 20));
+      var settled = false;
+      final restore = api.restoreBrowserSessionForStart().then((value) {
+        settled = true;
+        return value;
+      });
+      await Future<void>.delayed(const Duration(milliseconds: 30));
 
-      expect(restored, isFalse);
+      expect(settled, isFalse);
       expect(api.getAuthToken(), isNull);
-      // The late restore completes in the background; let it settle so it
-      // cannot leak a bearer into the next test.
       session.restoreGate!.complete();
+      expect(await restore, isTrue);
+      expect(api.getAuthToken(), jwt('restored'));
       await Future<void>.delayed(const Duration(milliseconds: 100));
       expect(api.getAuthToken(), jwt('restored'));
+    });
+
+    test('settled restore failure is visible and is not replayed automatically',
+        () async {
+      session.restoreScript = () => const BrowserSessionResult.unavailable();
+      expect(await api.restoreBrowserSessionForStart(), isFalse);
+      expect(api.browserSessionRestoreUnavailable, isTrue);
+      expect(session.restoreCalls, 1);
+      expect(await api.restoreExistingSession(allowRefresh: false), isFalse);
+      expect(session.restoreCalls, 1);
+    });
+
+    test(
+        'startup wait expiry fences late restore while its cookie lock remains held',
+        () async {
+      session.restoreGate = Completer<void>();
+      expect(
+        await api.restoreBrowserSessionForStart(
+          waitLimit: const Duration(milliseconds: 20),
+        ),
+        isFalse,
+      );
+      expect(api.browserSessionRestoreUnavailable, isTrue);
+      expect(api.getAuthToken(), isNull);
+      final logout = api.endBrowserSessionForLogout();
+      await Future<void>.delayed(const Duration(milliseconds: 10));
+      expect(session.logoutCalls, 0);
+      session.restoreGate!.complete();
+      await logout;
+      await Future<void>.delayed(const Duration(milliseconds: 10));
+      expect(api.getAuthToken(), isNull);
+      expect(session.restoreCalls, 1);
+      expect(session.logoutCalls, 1);
     });
   });
 
@@ -303,14 +387,44 @@ void main() {
 
     test('a failed revoke still clears local state', () async {
       await api.restoreBrowserSessionForStart();
-      session.restoreScript = () => BrowserSessionResult.failure(
+      session.logoutScript = () => BrowserSessionResult.failure(
           BrowserSessionOutcome.unavailable,
           statusCode: 503);
 
-      await api.endBrowserSessionForLogout();
+      expect(await api.endBrowserSessionForLogout(), isFalse);
       await api.clearAuth();
 
       expect(api.getAuthToken(), isNull);
+      expect(
+        (await SharedPreferences.getInstance())
+            .getBool('browser_session_pending_logout_v1'),
+        isTrue,
+      );
+      expect(await api.restoreBrowserSessionForStart(), isFalse);
+      expect(session.restoreCalls, 1);
+      expect(session.logoutCalls, 2);
+    });
+
+    test('404 retains pending revocation through feature re-enable', () async {
+      session.logoutScript = () => BrowserSessionResult.failure(
+          BrowserSessionOutcome.disabled,
+          statusCode: 404);
+      expect(await api.endBrowserSessionForLogout(requireConfirmation: true),
+          isTrue);
+      expect(
+        (await SharedPreferences.getInstance())
+            .getBool('browser_session_pending_logout_v1'),
+        isTrue,
+      );
+      session.logoutScript =
+          () => BrowserSessionResult.success({'success': true});
+      expect(await api.restoreBrowserSessionForStart(), isFalse);
+      expect(session.restoreCalls, 0);
+      expect(
+        (await SharedPreferences.getInstance())
+            .getBool('browser_session_pending_logout_v1'),
+        isNull,
+      );
     });
   });
 
@@ -462,6 +576,10 @@ void main() {
 
   group('401 from the normal API', () {
     test('one restore then one retry with the restored bearer', () async {
+      session.restoreScript = () => BrowserSessionResult.success({
+            'success': true,
+            'data': {'token': sessionJwt('restored')},
+          });
       await api.restoreBrowserSessionForStart();
       var calls = 0;
       final seen = <String>[];
@@ -474,15 +592,17 @@ void main() {
         seen.add(
             '${request.method} ${request.url.path} ${request.headers['Authorization']}');
         if (calls == 1) {
-          expect(request.headers['Authorization'], 'Bearer ${jwt('restored')}');
+          expect(request.headers['Authorization'],
+              'Bearer ${sessionJwt('restored')}');
           return http.Response('{"success":false}', 401);
         }
-        expect(request.headers['Authorization'], 'Bearer ${jwt('rotated')}');
+        expect(request.headers['Authorization'],
+            'Bearer ${sessionJwt('rotated')}');
         return http.Response('{"success":true,"data":{"id":"acct-1"}}', 200);
       }));
       session.restoreScript = () => BrowserSessionResult.success({
             'success': true,
-            'data': {'token': jwt('rotated')},
+            'data': {'token': sessionJwt('rotated')},
           });
 
       final profile = await api.getMyProfile();
@@ -490,11 +610,73 @@ void main() {
       expect(profile['success'], isTrue, reason: '$seen');
       expect(calls, 2, reason: '$seen');
       expect(session.restoreCalls, 2);
-      expect(api.getAuthToken(), jwt('rotated'));
+      expect(api.getAuthToken(), sessionJwt('rotated'));
     });
+
+    for (final mutation in [false, true]) {
+      test('delayed A ${mutation ? 'POST' : 'GET'} 401 is not replayed as B',
+          () async {
+        session.restoreScript = () => BrowserSessionResult.success({
+              'success': true,
+              'data': {'token': sessionJwt('account-a')},
+            });
+        await api.restoreBrowserSessionForStart();
+        final entered = Completer<void>();
+        final response = Completer<http.Response>();
+        var protectedCalls = 0;
+        api.setHttpClient(MockClient((request) async {
+          if (request.url.path.endsWith('/api/auth/login/email')) {
+            return http.Response(
+                jsonEncode({
+                  'success': true,
+                  'data': {
+                    'token': jwt('login-b'),
+                    'user': {'id': 'acct-2'}
+                  },
+                }),
+                200);
+          }
+          protectedCalls += 1;
+          if (protectedCalls == 1) {
+            entered.complete();
+            return response.future;
+          }
+          return http.Response('{}', 200);
+        }));
+        session.issueScript = () => BrowserSessionResult.success({
+              'success': true,
+              'data': {
+                'token': sessionJwt('account-b',
+                    account: 'acct-2', family: 'family-b'),
+              },
+            });
+
+        final Future<dynamic> pending = mutation
+            ? api.createArtworkComment(artworkId: 'art-1', content: 'hello')
+            : api.getMyProfile();
+        await entered.future;
+        await api.loginWithEmail(
+            email: 'b@example.invalid', password: 'pw-pw-pw-pw');
+        response.complete(http.Response('{"success":false}', 401));
+        if (mutation) {
+          await expectLater(pending, throwsA(anything));
+        } else {
+          expect((await pending)['success'], isFalse);
+        }
+        expect(protectedCalls, 1);
+        expect(
+          api.getAuthToken(),
+          sessionJwt('account-b', account: 'acct-2', family: 'family-b'),
+        );
+      });
+    }
 
     test('a refused restore ends the session instead of retrying forever',
         () async {
+      session.restoreScript = () => BrowserSessionResult.success({
+            'success': true,
+            'data': {'token': sessionJwt('restored')},
+          });
       await api.restoreBrowserSessionForStart();
       var calls = 0;
       api.setHttpClient(MockClient((_) async {

@@ -3172,6 +3172,14 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsLogoutButton => 'Log out';
 
   @override
+  String get settingsBrowserLogoutPending =>
+      'You are signed out on this device. The browser could not confirm server sign-out; it will retry before restoring a session.';
+
+  @override
+  String get browserSessionRestoreUnavailable =>
+      "We couldn't restore your browser session. Sign in again to continue.";
+
+  @override
   String get settingsTransactionHistoryDialogTitle => 'Transaction history';
 
   @override

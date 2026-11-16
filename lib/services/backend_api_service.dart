@@ -455,6 +455,7 @@ class BackendApiService
   DateTime? _browserRestoreRetryAt;
   // Set when the server refused the session or the user signed out; a sign-in clears it.
   bool _browserRestoreBlocked = false;
+  bool _browserSessionRestoreUnavailable = false;
 
   /// Bumped at every credential commit and sign-out. Account requests capture it when
   /// they start and drop their local writes once it has moved on, so a response
@@ -1589,6 +1590,7 @@ class BackendApiService
       ),
       includeAuth: includeAuth,
     );
+    final requestSessionEpoch = _authSessionEpoch;
 
     if (kDebugMode &&
         includeAuth &&
@@ -1744,7 +1746,9 @@ class BackendApiService
     // then one retry. A failed restore falls through to the re-auth path below.
     if (response.statusCode == 401 &&
         includeAuth &&
+        (isIdempotent || replaySafe) &&
         !retriedAfterReauth &&
+        requestSessionEpoch == _authSessionEpoch &&
         await _browserSessionRecoverRejectedBearer(
           this,
           resolvedHeaders['Authorization'],

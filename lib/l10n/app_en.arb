@@ -1194,6 +1194,8 @@
   "settingsLogoutDialogTitle": "Log out",
   "settingsLogoutDialogBody": "Disconnect your wallet and clear your session on this device?",
   "settingsLogoutButton": "Log out",
+  "settingsBrowserLogoutPending": "You are signed out on this device. The browser could not confirm server sign-out; it will retry before restoring a session.",
+  "browserSessionRestoreUnavailable": "We couldn't restore your browser session. Sign in again to continue.",
   "settingsTransactionHistoryDialogTitle": "Transaction history",
   "settingsRecentTransactionsTitle": "Recent transactions",
   "settingsNoTransactionsTitle": "No transactions found",

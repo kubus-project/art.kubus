@@ -10,13 +10,15 @@ BrowserSessionLock createBrowserSessionLock() => _WebLocksBrowserSessionLock();
 
 class _WebLocksBrowserSessionLock implements BrowserSessionLock {
   static const String _lockName = 'kubus-browser-session';
-  final InProcessBrowserSessionLock _inTab = InProcessBrowserSessionLock();
 
   @override
   Future<T> run<T>(Future<T> Function() body) async {
     final locks = _locksOrNull();
-    // Without Web Locks (insecure context) only the in-tab queue applies.
-    if (locks == null) return _inTab.run(body);
+    // A per-tab queue cannot protect the shared single-use cookie from another
+    // tab. Fail closed when cross-tab coordination is unavailable.
+    if (locks == null) {
+      throw StateError('Cross-tab browser session locking is unavailable');
+    }
 
     T? result;
     Object? failure;

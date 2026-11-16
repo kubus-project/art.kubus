@@ -3197,6 +3197,14 @@ class AppLocalizationsSl extends AppLocalizations {
   String get settingsLogoutButton => 'Odjava';
 
   @override
+  String get settingsBrowserLogoutPending =>
+      'Na tej napravi ste odjavljeni. Strežnik odjave ni mogel potrditi; pred obnovitvijo seje bo poskus ponovljen.';
+
+  @override
+  String get browserSessionRestoreUnavailable =>
+      'Seje brskalnika ni bilo mogoče obnoviti. Za nadaljevanje se znova prijavite.';
+
+  @override
   String get settingsTransactionHistoryDialogTitle => 'Zgodovina transakcij';
 
   @override

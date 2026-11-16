@@ -1,9 +1,8 @@
 import 'browser_session_api.dart';
 import 'browser_session_lock.dart';
 
-/// Tab-level coordination for browser sessions: one restore in flight at a
-/// time, restores serialized across tabs by [BrowserSessionLock], and no call
-/// that throws. Callers decide what a result means for their in-memory state.
+/// Cookie-changing browser-session operations are serialized across tabs.
+/// Callers decide what a result means for their in-memory state.
 class BrowserSessionController {
   BrowserSessionController({
     required BrowserSessionApi api,
@@ -17,7 +16,7 @@ class BrowserSessionController {
 
   /// Best effort. Never throws; any failure is an unavailable result.
   Future<BrowserSessionResult> issue({required String loginToken}) {
-    return _guarded(() => _api.issue(loginToken: loginToken));
+    return _guarded(() => _lock.run(() => _api.issue(loginToken: loginToken)));
   }
 
   /// Joins the restore already in flight in this tab, or starts one inside the
@@ -34,7 +33,8 @@ class BrowserSessionController {
   }
 
   /// Revokes the session family. Never throws.
-  Future<BrowserSessionResult> logout() => _guarded(_api.logout);
+  Future<BrowserSessionResult> logout() =>
+      _guarded(() => _lock.run(_api.logout));
 
   static Future<BrowserSessionResult> _guarded(
     Future<BrowserSessionResult> Function() call,

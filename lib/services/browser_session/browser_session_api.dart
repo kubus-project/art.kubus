@@ -20,8 +20,8 @@ enum BrowserSessionOutcome {
   /// 429: back off before the next attempt.
   rateLimited,
 
-  /// 503, network failure, timeout or a malformed success body. The cookie is
-  /// kept by the server, so a later attempt may still succeed.
+  /// 503, network failure, timeout or a malformed success body. The caller
+  /// cannot know whether a rotation committed, so it must not retry silently.
   unavailable,
 
   /// 403 origin/header, 405, 415 or any other status: a deployment or client bug.
@@ -104,17 +104,14 @@ class HttpBrowserSessionApi implements BrowserSessionApi {
   HttpBrowserSessionApi({
     required http.Client client,
     required Uri Function(String endpoint) endpointUri,
-    Duration timeout = const Duration(seconds: 15),
   })  : _client = client,
-        _endpointUri = endpointUri,
-        _timeout = timeout;
+        _endpointUri = endpointUri;
 
   /// Custom header that makes every call non-simple (CSRF check on the server).
   static const String sessionHeader = 'X-Kubus-Browser-Session';
 
   final http.Client _client;
   final Uri Function(String endpoint) _endpointUri;
-  final Duration _timeout;
 
   @override
   Future<BrowserSessionResult> issue({required String loginToken}) {
@@ -144,19 +141,19 @@ class HttpBrowserSessionApi implements BrowserSessionApi {
   }) async {
     final http.Response response;
     try {
-      response = await _client
-          .post(
-            _endpointUri(endpoint),
-            headers: <String, String>{
-              'Content-Type': 'application/json',
-              'Accept': 'application/json',
-              sessionHeader: '1',
-              if (bearer != null && bearer.trim().isNotEmpty)
-                'Authorization': 'Bearer ${bearer.trim()}',
-            },
-            body: '{}',
-          )
-          .timeout(_timeout);
+      // Do not wrap cookie-changing fetches in Future.timeout: Dart would
+      // abandon the wait while the browser request could still apply Set-Cookie.
+      response = await _client.post(
+        _endpointUri(endpoint),
+        headers: <String, String>{
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          sessionHeader: '1',
+          if (bearer != null && bearer.trim().isNotEmpty)
+            'Authorization': 'Bearer ${bearer.trim()}',
+        },
+        body: '{}',
+      );
     } catch (_) {
       return const BrowserSessionResult.unavailable();
     }
