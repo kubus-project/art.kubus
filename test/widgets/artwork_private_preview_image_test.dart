@@ -209,4 +209,36 @@ void main() {
     );
     client.dispose();
   });
+
+  testWidgets('received bytes reach the image without a second copy', (
+    tester,
+  ) async {
+    final bytes = base64Decode(
+      'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/yL8AAAAASUVORK5CYII=',
+    );
+    final api = _PreviewApi()..onBytes = () async => bytes;
+    final client = ArtworkPrivatePreviewClient(
+      api: api,
+      listenForIdentityChanges: false,
+    );
+    await tester.pumpWidget(
+      _app(
+        ArtworkPrivatePreviewImage(
+          artworkId: _artworkId,
+          isPublic: false,
+          slot: 'cover',
+          descriptor: _draftArtwork().mediaPreview,
+          publicFallback: const Text('unsafe public fallback'),
+          client: client,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final image = tester.widget<Image>(
+      find.byKey(const ValueKey('private-artwork-preview-bytes')),
+    );
+    expect((image.image as MemoryImage).bytes, same(bytes));
+    client.dispose();
+  });
 }

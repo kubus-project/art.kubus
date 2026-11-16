@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/services.dart' show MissingPluginException;
 import 'dart:convert';
+import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:http/http.dart' as http;
@@ -434,6 +435,23 @@ List<Map<String, dynamic>> mergeCollectionLists(
     return merged.sublist(0, limit);
   }
   return merged;
+}
+
+/// Largest private artwork media body the client accepts. Matches the preview
+/// contract (server `MAX_UPLOAD_SIZE`, default 50 MB).
+const int _privateArtworkMediaMaxBytes = 50 * 1024 * 1024;
+
+/// Opt-in for a GET whose body is streamed and bounded while it arrives. Used
+/// only for private artwork media, where the buffered path would hold an
+/// unbounded response in memory before any size check runs.
+class _BoundedBodyRequest {
+  const _BoundedBodyRequest({required this.maxBytes, required this.isCurrent});
+
+  final int maxBytes;
+
+  /// False once the session that asked for the bytes has moved on. Chunks that
+  /// arrive after that are dropped, not collected.
+  final bool Function() isCurrent;
 }
 
 class BackendApiService
@@ -1529,7 +1547,9 @@ class BackendApiService
     bool allowImplicitBackendFailover = true,
     bool replaySafe = false,
     Set<String>? attemptedBackendOrigins,
+    _BoundedBodyRequest? boundedBody,
   }) async {
+    assert(boundedBody == null || method.toUpperCase() == 'GET');
     final attemptedOrigins = Set<String>.from(
       attemptedBackendOrigins ?? const <String>{},
     );
@@ -1623,8 +1643,19 @@ class BackendApiService
     try {
       switch (method.toUpperCase()) {
         case 'GET':
-          response =
-              await _client.get(uri, headers: resolvedHeaders).timeout(timeout);
+          final bounded = boundedBody;
+          if (bounded != null) {
+            response = await _getBoundedBody(
+              uri,
+              headers: resolvedHeaders,
+              timeout: timeout,
+              bounded: bounded,
+            );
+          } else {
+            response = await _client
+                .get(uri, headers: resolvedHeaders)
+                .timeout(timeout);
+          }
           break;
         case 'HEAD':
           response = await _client
@@ -1703,6 +1734,7 @@ class BackendApiService
             allowWritableRedirect: allowWritableRedirect,
             allowImplicitBackendFailover: allowImplicitBackendFailover,
             attemptedBackendOrigins: attemptedOrigins,
+            boundedBody: boundedBody,
           );
         }
       }
@@ -1732,11 +1764,15 @@ class BackendApiService
     );
 
     final coordinator = _authCoordinator;
+    // Only a 403 can be an account-inactive or token-error answer, so the body
+    // is decoded for that status alone. Decoding every authenticated body,
+    // including a 50 MB private image, would cost memory for no effect.
+    final failureBody = response.statusCode == 403 ? response.body : null;
     final accountInactive = includeAuth &&
         coordinator != null &&
         AccountInactiveSignal.isRestResponse(
           statusCode: response.statusCode,
-          body: response.body,
+          body: failureBody,
         );
     final isAuthFailure = accountInactive ||
         (includeAuth &&
@@ -1744,7 +1780,7 @@ class BackendApiService
             AppConfig.isFeatureEnabled('rePromptLoginOnExpiry') &&
             _isAuthFailureStatus(
               statusCode: response.statusCode,
-              responseBody: response.body,
+              responseBody: failureBody,
             ));
 
     if (!isAuthFailure) {
@@ -1782,6 +1818,7 @@ class BackendApiService
             allowWritableRedirect: allowWritableRedirect,
             allowImplicitBackendFailover: false,
             attemptedBackendOrigins: attemptedOrigins,
+            boundedBody: boundedBody,
           );
         }
         throw _nodeNotWritableException(response, uri);
@@ -1815,6 +1852,7 @@ class BackendApiService
             allowWritableRedirect: allowWritableRedirect,
             allowImplicitBackendFailover: allowImplicitBackendFailover,
             attemptedBackendOrigins: attemptedOrigins,
+            boundedBody: boundedBody,
           );
         }
       }
@@ -1858,10 +1896,117 @@ class BackendApiService
         retriedAfterWritableRedirect: retriedAfterWritableRedirect,
         allowImplicitBackendFailover: allowImplicitBackendFailover,
         attemptedBackendOrigins: attemptedOrigins,
+        boundedBody: boundedBody,
       );
     }
 
     return response;
+  }
+
+  /// Streams a GET over the same [_client] and collects its body as it arrives.
+  ///
+  /// A declared Content-Length above the cap is refused before the body is
+  /// listened to, so none of it is read. Otherwise [_collectBoundedBody] reads
+  /// the body and cancels at the cap.
+  ///
+  /// Web: the app's web client is package:http BrowserClient. In http >=1.4.0
+  /// (locked 1.6.0) it reads the Fetch ReadableStream chunk by chunk and
+  /// cancels the reader when the subscription is cancelled, so the bound holds
+  /// on web as well.
+  ///
+  /// Redirects are not followed: the request carries the bearer token, and a
+  /// redirect would re-send it to another location.
+  Future<http.Response> _getBoundedBody(
+    Uri uri, {
+    required Map<String, String> headers,
+    required Duration timeout,
+    required _BoundedBodyRequest bounded,
+  }) async {
+    final request = http.Request('GET', uri)
+      ..headers.addAll(headers)
+      ..followRedirects = false;
+    final streamed = await _client.send(request).timeout(timeout);
+    final declared = streamed.contentLength ??
+        int.tryParse(streamed.headers['content-length'] ?? '');
+    if (declared != null && declared > bounded.maxBytes) {
+      // Release the body unread: listening and cancelling closes the response
+      // now rather than leaving it open until it times out.
+      unawaited(streamed.stream.listen(null).cancel().catchError((_) {}));
+      throw const FormatException('Invalid private media size');
+    }
+    final bytes = await _collectBoundedBody(
+      streamed.stream,
+      bounded: bounded,
+      timeout: timeout,
+    );
+    return http.Response.bytes(
+      bytes,
+      streamed.statusCode,
+      headers: streamed.headers,
+      request: request,
+      reasonPhrase: streamed.reasonPhrase,
+    );
+  }
+
+  /// Collects [stream] into one buffer that never holds more than
+  /// `bounded.maxBytes`. The subscription is cancelled the moment the running
+  /// total would pass the cap, so later chunks are never pulled. Each chunk is
+  /// checked against the session first, and a chunk that arrives after an
+  /// account switch is dropped. Every failure path discards the partial buffer.
+  Future<Uint8List> _collectBoundedBody(
+    Stream<List<int>> stream, {
+    required _BoundedBodyRequest bounded,
+    required Duration timeout,
+  }) {
+    final builder = BytesBuilder(copy: false);
+    final completer = Completer<Uint8List>();
+    var total = 0;
+    StreamSubscription<List<int>>? subscription;
+
+    void release() {
+      builder.clear();
+      final active = subscription;
+      subscription = null;
+      if (active != null) unawaited(active.cancel().catchError((_) {}));
+    }
+
+    void fail(Object error, [StackTrace? stack]) {
+      release();
+      if (!completer.isCompleted) {
+        completer.completeError(error, stack ?? StackTrace.current);
+      }
+    }
+
+    subscription = stream.listen(
+      (chunk) {
+        if (completer.isCompleted) return;
+        if (!bounded.isCurrent()) {
+          fail(StateError('Authentication session changed'));
+          return;
+        }
+        if (chunk.length > bounded.maxBytes - total) {
+          fail(const FormatException('Invalid private media size'));
+          return;
+        }
+        total += chunk.length;
+        builder.add(chunk);
+      },
+      onError: (Object error, StackTrace stack) => fail(error, stack),
+      onDone: () {
+        if (completer.isCompleted) return;
+        subscription = null;
+        completer.complete(builder.takeBytes());
+      },
+      cancelOnError: true,
+    );
+
+    return completer.future.timeout(
+      timeout,
+      onTimeout: () {
+        release();
+        throw TimeoutException('Private media body', timeout);
+      },
+    );
   }
 
   Future<http.Response> _get(
@@ -5965,6 +6110,10 @@ class BackendApiService
     final token = (_authToken ?? '').trim();
     if (token.isEmpty) throw StateError('Authentication required');
     final epoch = _authSessionEpoch;
+    // Checked per chunk while the body arrives, so bytes that land after an
+    // account switch are dropped rather than collected.
+    bool isCurrent() =>
+        epoch == _authSessionEpoch && token == (_authToken ?? '').trim();
     final uri = Uri.parse('$baseUrl$descriptorPath');
     final response = await _request(
       'GET',
@@ -5977,6 +6126,10 @@ class BackendApiService
       timeout: const Duration(seconds: 5),
       allowWritableRedirect: false,
       allowImplicitBackendFailover: false,
+      boundedBody: _BoundedBodyRequest(
+        maxBytes: _privateArtworkMediaMaxBytes,
+        isCurrent: isCurrent,
+      ),
     );
     if (epoch != _authSessionEpoch || token != (_authToken ?? '').trim()) {
       throw StateError('Authentication session changed');
@@ -6002,11 +6155,13 @@ class BackendApiService
         !cacheControl.contains('no-store')) {
       throw const FormatException('Private media response is cacheable');
     }
-    if (response.bodyBytes.isEmpty ||
-        response.bodyBytes.length > 50 * 1024 * 1024) {
+    // The cap was enforced while the bytes arrived. Return the received
+    // Uint8List: copying it into an unmodifiable List<int> stores each byte in
+    // its own pointer-sized slot, several times the size of the image.
+    if (response.bodyBytes.isEmpty) {
       throw const FormatException('Invalid private media size');
     }
-    return List<int>.unmodifiable(response.bodyBytes);
+    return response.bodyBytes;
   }
 
   /// Update an artwork

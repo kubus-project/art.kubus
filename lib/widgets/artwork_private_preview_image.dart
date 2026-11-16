@@ -8,6 +8,7 @@ import '../models/artwork.dart';
 import '../services/account_identity.dart';
 import '../services/artwork_private_preview_client.dart';
 import '../services/backend_api_service.dart';
+import 'inline_loading.dart';
 
 /// Displays an authenticated, in-memory draft artwork preview. Public artwork
 /// remains on its existing URL-based media path.
@@ -112,7 +113,7 @@ class _ArtworkPrivatePreviewImageState
         descriptorProvided: widget.descriptorProvided,
       );
       if (!mounted || generation != _generation || _sessionInvalidated) return;
-      final imageBytes = Uint8List.fromList(bytes);
+      final imageBytes = bytes is Uint8List ? bytes : Uint8List.fromList(bytes);
       setState(() {
         _bytes = imageBytes;
         _imageProvider = MemoryImage(imageBytes);
@@ -158,11 +159,7 @@ class _ArtworkPrivatePreviewImageState
       liveRegion: loading,
       child: Center(
         child: loading
-            ? const SizedBox(
-                width: 24,
-                height: 24,
-                child: CircularProgressIndicator(strokeWidth: 2),
-              )
+            ? const InlineLoading(width: 24, height: 24)
             : Tooltip(
                 message: label,
                 child: Icon(
