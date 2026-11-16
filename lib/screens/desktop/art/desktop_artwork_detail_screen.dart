@@ -30,6 +30,7 @@ import '../../../utils/design_tokens.dart';
 import '../../../utils/kubus_color_roles.dart';
 import '../../../utils/wallet_utils.dart';
 import '../../../widgets/artwork_gallery_view.dart';
+import '../../../widgets/artwork_private_preview_image.dart';
 import '../../../widgets/artwork_author_line.dart';
 import '../../../widgets/inline_loading.dart';
 import '../../../widgets/detail/detail_shell_components.dart';
@@ -96,9 +97,9 @@ class _DesktopArtworkDetailScreenState
   String _publicReturnRoute(BuildContext context) {
     try {
       return context.read<PublicEntityTakeoverProvider>().returnRouteFor(
-                widget.publicEntityType,
-                widget.publicEntryId,
-              ) ??
+            widget.publicEntityType,
+            widget.publicEntryId,
+          ) ??
           '/${widget.publicEntityType == ShareEntityType.nft ? 'n' : 'a'}/${Uri.encodeComponent(widget.publicEntryId)}';
     } catch (_) {
       return '/${widget.publicEntityType == ShareEntityType.nft ? 'n' : 'a'}/${Uri.encodeComponent(widget.publicEntryId)}';
@@ -162,6 +163,10 @@ class _DesktopArtworkDetailScreenState
     final savedItemsProvider = context.read<SavedItemsProvider>();
 
     if (existing != null) {
+      if (!existing.isPublic && !existing.mediaPreviewProvided) {
+        await provider.refreshPrivatePreviewMetadata(widget.artworkId);
+        if (!mounted) return;
+      }
       await savedItemsProvider.hydrateSavedStatus(
         type: SavedItemType.artwork,
         ids: [widget.artworkId],
@@ -184,6 +189,12 @@ class _DesktopArtworkDetailScreenState
 
     try {
       await provider.fetchArtworkIfNeeded(widget.artworkId);
+      final fetchedArtwork = provider.getArtworkById(widget.artworkId);
+      if (fetchedArtwork != null &&
+          !fetchedArtwork.isPublic &&
+          !fetchedArtwork.mediaPreviewProvided) {
+        await provider.refreshPrivatePreviewMetadata(widget.artworkId);
+      }
       await savedItemsProvider.hydrateSavedStatus(
         type: SavedItemType.artwork,
         ids: [widget.artworkId],
@@ -205,11 +216,11 @@ class _DesktopArtworkDetailScreenState
   /// Loading, error and not-found views hold the requested entity's URL without
   /// telling the takeover it is ready (see [PublicEntityTakeoverReady]).
   Widget _holdEntryUrl(Widget child) => PublicEntityTakeoverReady(
-        type: widget.publicEntityType,
-        entityId: widget.publicEntryId,
-        signalReady: false,
-        child: child,
-      );
+    type: widget.publicEntityType,
+    entityId: widget.publicEntryId,
+    signalReady: false,
+    child: child,
+  );
 
   @override
   Widget build(BuildContext context) {
@@ -370,7 +381,8 @@ class _DesktopArtworkDetailScreenState
       ),
       child: LayoutBuilder(
         builder: (context, constraints) {
-          final useComposedHero = constraints.maxWidth >= 900 ||
+          final useComposedHero =
+              constraints.maxWidth >= 900 ||
               (isCanonicalPublicEntry &&
                   MediaQuery.sizeOf(context).width >= 900);
           final publicPlaceLabel = _publicEntryPlaceLabel(artwork.id);
@@ -384,7 +396,7 @@ class _DesktopArtworkDetailScreenState
                 placeLabel: publicPlaceLabel,
                 coordinates: ArtworkLocationActions.hasValidLocation(artwork)
                     ? '${artwork.position.latitude.toStringAsFixed(4)}, '
-                        '${artwork.position.longitude.toStringAsFixed(4)}'
+                          '${artwork.position.longitude.toStringAsFixed(4)}'
                     : null,
               ),
               const SizedBox(height: DetailSpacing.lg),
@@ -511,6 +523,28 @@ class _DesktopArtworkDetailScreenState
 
   Widget _buildMedia(Artwork artwork, String? coverUrl) {
     final scheme = Theme.of(context).colorScheme;
+    if (!artwork.isPublic) {
+      return ClipRRect(
+        borderRadius: BorderRadius.circular(KubusRadius.lg),
+        child: AspectRatio(
+          aspectRatio: 14 / 9,
+          child: ArtworkPrivatePreviewImage(
+            artworkId: artwork.id,
+            isPublic: false,
+            slot: 'cover',
+            descriptor: artwork.mediaPreview,
+            descriptorProvided: artwork.mediaPreviewProvided,
+            publicFallback: Container(
+              color: scheme.surfaceContainerHighest,
+              child: Icon(
+                Icons.image_not_supported,
+                color: scheme.onSurfaceVariant,
+              ),
+            ),
+          ),
+        ),
+      );
+    }
     final primaryCover = <String>[
       if (coverUrl != null && coverUrl.trim().isNotEmpty) coverUrl.trim(),
       ...artwork.galleryUrls.map((u) => u.trim()).where((u) => u.isNotEmpty),
@@ -548,6 +582,47 @@ class _DesktopArtworkDetailScreenState
 
   Widget _buildGallerySection(Artwork artwork, String? coverUrl) {
     final l10n = AppLocalizations.of(context)!;
+    if (!artwork.isPublic) {
+      final descriptor = artwork.mediaPreview;
+      if (descriptor == null || descriptor.gallery.isEmpty) {
+        return const SizedBox.shrink();
+      }
+      final slots = List<String>.generate(
+        descriptor.gallery.length,
+        (index) => 'gallery-$index',
+        growable: false,
+      );
+      return Padding(
+        padding: const EdgeInsets.only(top: DetailSpacing.cardGap),
+        child: DetailCard(
+          child: DetailSection(
+            title: l10n.artistStudioTabGallery,
+            collapsible: true,
+            initiallyExpanded: true,
+            child: Padding(
+              padding: const EdgeInsets.only(top: DetailSpacing.sm),
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  final galleryHeight = (constraints.maxWidth / 1.9)
+                      .clamp(180.0, 260.0)
+                      .toDouble();
+                  return ArtworkGalleryView(
+                    imageUrls: List<String>.filled(
+                      slots.length,
+                      'private-preview-slot',
+                    ),
+                    privateArtwork: artwork,
+                    privateSlots: slots,
+                    height: galleryHeight,
+                    semanticLabel: _artworkImageSemanticLabel(artwork),
+                  );
+                },
+              ),
+            ),
+          ),
+        ),
+      );
+    }
     final normalizedCover = (coverUrl ?? '').trim();
     final urls = artwork.galleryUrls
         .map((u) => u.trim())
@@ -567,8 +642,9 @@ class _DesktopArtworkDetailScreenState
             padding: const EdgeInsets.only(top: DetailSpacing.sm),
             child: LayoutBuilder(
               builder: (context, constraints) {
-                final galleryHeight =
-                    (constraints.maxWidth / 1.9).clamp(180.0, 260.0).toDouble();
+                final galleryHeight = (constraints.maxWidth / 1.9)
+                    .clamp(180.0, 260.0)
+                    .toDouble();
                 return ArtworkGalleryView(
                   imageUrls: urls,
                   height: galleryHeight,
@@ -601,7 +677,8 @@ class _DesktopArtworkDetailScreenState
       userId: profileProvider.currentUser?.id,
     );
     final ownerWallet = WalletUtils.canonical(artwork.walletAddress);
-    final isOwner = viewerWallet.isNotEmpty &&
+    final isOwner =
+        viewerWallet.isNotEmpty &&
         ownerWallet.isNotEmpty &&
         WalletUtils.equals(viewerWallet, ownerWallet);
 
@@ -717,19 +794,21 @@ class _DesktopArtworkDetailScreenState
           DetailIdentityBlock(
             title: artwork.title,
             showTitle: !_repeatsShellTitle(context, artwork.title),
-            kicker:
-                category.isNotEmpty && category != 'General' ? category : null,
-            titleStyle: KubusTextStyles.responsiveTitleStyle(
-              context,
-              KubusTextStyles.display.copyWith(
-                fontSize: 60,
-                fontWeight: FontWeight.w700,
-              ),
-              availableWidth: constraints.maxWidth,
-            ).copyWith(
-              color: Theme.of(context).colorScheme.onSurface,
-              height: 1.02,
-            ),
+            kicker: category.isNotEmpty && category != 'General'
+                ? category
+                : null,
+            titleStyle:
+                KubusTextStyles.responsiveTitleStyle(
+                  context,
+                  KubusTextStyles.display.copyWith(
+                    fontSize: 60,
+                    fontWeight: FontWeight.w700,
+                  ),
+                  availableWidth: constraints.maxWidth,
+                ).copyWith(
+                  color: Theme.of(context).colorScheme.onSurface,
+                  height: 1.02,
+                ),
           ),
           const SizedBox(height: DetailSpacing.sm),
           ArtworkAuthorLine(
@@ -787,7 +866,8 @@ class _DesktopArtworkDetailScreenState
     if (raw is! Map) return const SizedBox.shrink();
 
     final poap = Map<String, dynamic>.from(raw);
-    final enabled = poap['enabled'] == true ||
+    final enabled =
+        poap['enabled'] == true ||
         poap['poapEnabled'] == true ||
         poap['poap_enabled'] == true;
     final eventId = (poap['eventId'] ?? poap['poapEventId'] ?? poap['event_id'])
@@ -798,14 +878,16 @@ class _DesktopArtworkDetailScreenState
             ?.toString()
             .trim();
     final rewardAmount = poap['rewardAmount'] ?? poap['poapRewardAmount'];
-    final validFromRaw =
-        (poap['validFrom'] ?? poap['poapValidFrom'])?.toString();
+    final validFromRaw = (poap['validFrom'] ?? poap['poapValidFrom'])
+        ?.toString();
     final validToRaw = (poap['validTo'] ?? poap['poapValidTo'])?.toString();
-    final validFrom =
-        validFromRaw != null ? DateTime.tryParse(validFromRaw) : null;
+    final validFrom = validFromRaw != null
+        ? DateTime.tryParse(validFromRaw)
+        : null;
     final validTo = validToRaw != null ? DateTime.tryParse(validToRaw) : null;
 
-    final hasReference = (eventId != null && eventId.isNotEmpty) ||
+    final hasReference =
+        (eventId != null && eventId.isNotEmpty) ||
         (claimUrl != null && claimUrl.isNotEmpty);
     if (!enabled && !hasReference) return const SizedBox.shrink();
 
@@ -872,7 +954,7 @@ class _DesktopArtworkDetailScreenState
     final markerIdCandidate = (artwork.arMarkerId ?? '').toString().trim();
     final canShowStreetArtClaimCta =
         AppConfig.isFeatureEnabled('streetArtClaims') &&
-            markerIdCandidate.isNotEmpty;
+        markerIdCandidate.isNotEmpty;
 
     final roles = KubusColorRoles.of(context);
     return Column(
@@ -951,8 +1033,9 @@ class _DesktopArtworkDetailScreenState
                   icon: Icons.navigation_outlined,
                   label: l10n.commonNavigate,
                   onPressed: () => unawaited(
-                    MapDestination.ofArtwork(artwork)
-                        .showNavigationOptions(context),
+                    MapDestination.ofArtwork(
+                      artwork,
+                    ).showNavigationOptions(context),
                   ),
                 ),
               if (showArPrimaryAction)
@@ -1027,8 +1110,9 @@ class _DesktopArtworkDetailScreenState
       return const SizedBox.shrink();
     }
 
-    final markerIdCandidate =
-        (widget.attendanceMarkerId ?? artwork.arMarkerId)?.toString().trim();
+    final markerIdCandidate = (widget.attendanceMarkerId ?? artwork.arMarkerId)
+        ?.toString()
+        .trim();
     if (markerIdCandidate == null || markerIdCandidate.isEmpty) {
       return const SizedBox.shrink();
     }
@@ -1064,8 +1148,8 @@ class _DesktopArtworkDetailScreenState
         final label = isConfirming
             ? l10n.exhibitionDetailAttendanceConfirmingAction
             : (alreadyAttended
-                ? l10n.exhibitionDetailAttendanceAlreadyCheckedIn
-                : l10n.exhibitionDetailAttendanceConfirmAction);
+                  ? l10n.exhibitionDetailAttendanceAlreadyCheckedIn
+                  : l10n.exhibitionDetailAttendanceConfirmAction);
         final icon = isConfirming
             ? Icons.hourglass_top
             : (alreadyAttended ? Icons.check_circle : Icons.verified_user);
@@ -1078,16 +1162,17 @@ class _DesktopArtworkDetailScreenState
             backgroundColor: alreadyAttended
                 ? scheme.surfaceContainerHighest.withValues(alpha: 0.35)
                 : scheme.primary,
-            foregroundColor:
-                alreadyAttended ? scheme.onSurfaceVariant : scheme.onPrimary,
+            foregroundColor: alreadyAttended
+                ? scheme.onSurfaceVariant
+                : scheme.onPrimary,
             onPressed: (alreadyAttended || isConfirming)
                 ? null
                 : () => unawaited(
-                      _confirmAttendance(
-                        markerId: markerIdCandidate,
-                        artwork: artwork,
-                      ),
+                    _confirmAttendance(
+                      markerId: markerIdCandidate,
+                      artwork: artwork,
                     ),
+                  ),
           ),
         );
       },
@@ -1138,8 +1223,9 @@ class _DesktopArtworkDetailScreenState
 
       final poap = result.poap;
       final poapStatus = (poap?['status'] ?? '').toString().trim();
-      final claimUrl =
-          (poap?['claimUrl'] ?? poap?['claim_url'])?.toString().trim();
+      final claimUrl = (poap?['claimUrl'] ?? poap?['claim_url'])
+          ?.toString()
+          .trim();
 
       final wasIdempotent =
           result.attendanceRecorded != true && result.viewedAdded != true;
@@ -1223,7 +1309,7 @@ class _DesktopArtworkDetailScreenState
             authRequired
                 ? l10n.communityCommentAuthRequiredToast
                 : (backendMessage ??
-                    '${l10n.commonSomethingWentWrong} (${e.statusCode})'),
+                      '${l10n.commonSomethingWentWrong} (${e.statusCode})'),
             style: KubusTypography.inter(),
           ),
           action: authRequired
@@ -1244,8 +1330,9 @@ class _DesktopArtworkDetailScreenState
                 )
               : null,
         ),
-        tone:
-            authRequired ? KubusSnackBarTone.warning : KubusSnackBarTone.error,
+        tone: authRequired
+            ? KubusSnackBarTone.warning
+            : KubusSnackBarTone.error,
       );
     } catch (_) {
       if (!mounted) return;
