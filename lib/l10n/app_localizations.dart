@@ -14152,13 +14152,13 @@ abstract class AppLocalizations {
   /// No description provided for @eventCreatorNoInstitutionAvailableMessage.
   ///
   /// In en, this message translates to:
-  /// **'No location context is available for this event yet.'**
+  /// **'No location source is available for this event yet.'**
   String get eventCreatorNoInstitutionAvailableMessage;
 
   /// No description provided for @eventCreatorInstitutionLabel.
   ///
   /// In en, this message translates to:
-  /// **'Location context'**
+  /// **'Location source'**
   String get eventCreatorInstitutionLabel;
 
   /// No description provided for @eventCreatorSelectDateLabel.
@@ -14518,13 +14518,13 @@ abstract class AppLocalizations {
   /// No description provided for @eventCreatorNoInstitutionAvailableToast.
   ///
   /// In en, this message translates to:
-  /// **'No location context is available for this event'**
+  /// **'No location source is available for this event'**
   String get eventCreatorNoInstitutionAvailableToast;
 
   /// No description provided for @eventCreatorSelectedInstitutionNotFoundToast.
   ///
   /// In en, this message translates to:
-  /// **'Selected location context not found'**
+  /// **'Selected location source not found'**
   String get eventCreatorSelectedInstitutionNotFoundToast;
 
   /// No description provided for @eventCreatorEndTimeAfterStartToast.
@@ -14608,7 +14608,7 @@ abstract class AppLocalizations {
   /// No description provided for @eventCreatorReadyInstitutionLabel.
   ///
   /// In en, this message translates to:
-  /// **'Location context'**
+  /// **'Location source'**
   String get eventCreatorReadyInstitutionLabel;
 
   /// No description provided for @eventCreatorReadyInstitutionComplete.
@@ -14620,7 +14620,7 @@ abstract class AppLocalizations {
   /// No description provided for @eventCreatorReadyInstitutionPending.
   ///
   /// In en, this message translates to:
-  /// **'Choose a location context first.'**
+  /// **'Choose a location source first.'**
   String get eventCreatorReadyInstitutionPending;
 
   /// No description provided for @eventCreatorReadyBasicsLabel.
