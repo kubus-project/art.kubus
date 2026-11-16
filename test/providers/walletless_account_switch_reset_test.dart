@@ -1314,12 +1314,13 @@ void main() {
             expectedAuthEpoch: api.authSessionEpoch,
           );
           await solana.heldReached.future;
-          await api.setAuthToken(_token(_accountB));
+          final tokenB = _token(_accountB);
+          await api.setAuthToken(tokenB);
           await clearWhatBStarts();
           solana.release.complete();
 
           expect(await recovery, ManagedWalletReconnectOutcome.failed);
-          expect(api.getAuthToken(), _token(_accountB));
+          expect(api.getAuthToken(), tokenB);
           await expectNothingOfAWritten();
         });
 
