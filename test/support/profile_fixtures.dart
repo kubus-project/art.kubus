@@ -154,12 +154,14 @@ class ProfileFixtures {
   /// ever touching the network. Empty posts, works and collections by default.
   static ProfileExtendedPackage extended({
     List<CommunityPost> initialPosts = const <CommunityPost>[],
+    bool authoredArtworksUnavailable = false,
     List<Map<String, dynamic>> artistArtworks = const <Map<String, dynamic>>[],
     List<Map<String, dynamic>> artistCollections =
         const <Map<String, dynamic>>[],
   }) {
     return ProfileExtendedPackage(
       initialPosts: initialPosts,
+      authoredArtworksUnavailable: authoredArtworksUnavailable,
       artistArtworks: artistArtworks,
       artistCollections: artistCollections,
       fetchedAt: fetchedAt,

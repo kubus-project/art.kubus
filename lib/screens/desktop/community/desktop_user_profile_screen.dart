@@ -7,6 +7,7 @@ import 'package:art_kubus/l10n/app_localizations.dart';
 import '../../community/profile_section_order.dart';
 import '../../../utils/design_tokens.dart';
 import '../../../utils/wallet_utils.dart';
+import '../../../utils/artwork_author_key.dart';
 import '../../../widgets/app_loading.dart';
 import 'package:provider/provider.dart';
 import '../../../models/profile_package.dart';
@@ -115,6 +116,7 @@ class _UserProfileScreenState extends State<UserProfileScreen>
   List<Map<String, dynamic>> _documentedArtworks = const [];
   int? _authoredArtworksTotal;
   int? _authoredArtworksCounter;
+  bool _authoredArtworksUnavailable = false;
   List<Map<String, dynamic>> _artistCollections = [];
 
   String? _currentWalletAddress() {
@@ -263,6 +265,9 @@ class _UserProfileScreenState extends State<UserProfileScreen>
       _authoredArtworksTotal = _profileController.authoredArtworksTotal;
       _authoredArtworksCounter =
           _profileController.package?.publicStats['authoredArtworks'];
+      _authoredArtworksUnavailable =
+          _profileController.package?.extended?.authoredArtworksUnavailable ??
+              false;
       _artistCollections = _profileController.artistCollections;
       _artistDataLoaded = _profileController.artistDataLoaded;
       _artistDataLoading = _profileController.artistDataLoading;
@@ -497,7 +502,9 @@ class _UserProfileScreenState extends State<UserProfileScreen>
         }
         final contentOnly = !isArtist;
         final bands = <Widget>[
-          if (!contentOnly || _artistArtworks.isNotEmpty)
+          if (!contentOnly ||
+              _artistArtworks.isNotEmpty ||
+              _authoredArtworksUnavailable)
             _buildArtistPortfolioSection(
               themeProvider,
               l10n,
@@ -636,12 +643,14 @@ class _UserProfileScreenState extends State<UserProfileScreen>
   }
 
   void _handleShare() {
-    final targetWallet = user?.id.toString().trim();
-    if (targetWallet == null || targetWallet.isEmpty) return;
+    final wallet = user?.walletAddress?.trim() ?? '';
+    final profileId = user?.profileId?.trim() ?? '';
+    if (wallet.isEmpty && profileId.isEmpty) return;
     ShareService().showShareSheet(
       context,
       target: ShareTarget.profile(
-        walletAddress: targetWallet,
+        walletAddress: wallet.isEmpty ? null : wallet,
+        profileId: wallet.isEmpty ? profileId : null,
         title: user?.name,
       ),
       sourceScreen: 'desktop_user_profile',
@@ -1182,13 +1191,20 @@ class _UserProfileScreenState extends State<UserProfileScreen>
     final screenWidth = MediaQuery.of(context).size.width;
     final maxCols =
         isCommunityOverlay ? 2 : (screenWidth >= 1400 ? 4 : (isLarge ? 4 : 2));
-    final localArtworksCount = Provider.of<ArtworkProvider>(
-      context,
-      listen: true,
-    ).artworksForWallet(user!.id).length;
-    final artworksCount = _authoredArtworksTotal ??
-        _authoredArtworksCounter ??
-        localArtworksCount;
+    final authorKey = ArtworkAuthorKey.resolve(
+      walletAddress: user?.walletAddress,
+      profileId: user?.profileId,
+    );
+    final localArtworksCount = authorKey == null
+        ? 0
+        : Provider.of<ArtworkProvider>(context, listen: true)
+            .artworksForAuthor(authorKey)
+            .length;
+    final artworksCount = _authoredArtworksUnavailable
+        ? null
+        : _authoredArtworksTotal ??
+            _authoredArtworksCounter ??
+            localArtworksCount;
 
     return DesktopGrid(
       minCrossAxisCount: 2,
@@ -1228,12 +1244,17 @@ class _UserProfileScreenState extends State<UserProfileScreen>
         ),
         DesktopStatCard(
           label: l10n.userProfileArtworksTitle,
-          value: _formatCount(artworksCount),
+          value: artworksCount == null
+              ? l10n.commonNotAvailable
+              : _formatCount(artworksCount),
           icon: Icons.palette_outlined,
           color: _profileStatAccentForIcon(Icons.palette_outlined),
-          onTap: () {
-            ProfileScreenMethods.showArtworks(context, walletAddress: user!.id);
-          },
+          onTap: authorKey == null
+              ? null
+              : () => ProfileScreenMethods.showArtworks(
+                    context,
+                    authorKey: authorKey,
+                  ),
         ),
       ],
     );
@@ -1371,6 +1392,16 @@ class _UserProfileScreenState extends State<UserProfileScreen>
               alignment: Alignment.center,
               child: const InlineLoading(width: 40, height: 40),
             ),
+          )
+        else if (_authoredArtworksUnavailable)
+          Column(
+            children: [
+              Text(l10n.commonNotAvailable),
+              TextButton(
+                onPressed: _handleRefresh,
+                child: Text(l10n.commonRetry),
+              ),
+            ],
           )
         else if (_artistArtworks.isEmpty)
           EmptyStateCard(

@@ -145,4 +145,31 @@ void main() {
     expect(find.text(l10n.userProfileNoCreatorContentTitle), findsNothing);
     expect(find.text(l10n.userProfileArtistPortfolioTitle), findsNothing);
   });
+
+  for (final (name, surface, size) in <(String, ProfileSurface, Size)>[
+    ('mobile', ProfileSurface.mobilePublic, const Size(390, 9000)),
+    ('desktop', ProfileSurface.desktopPublic, const Size(1440, 9000)),
+  ]) {
+    for (final withCollection in <bool>[false, true]) {
+      testWidgets(
+          '$name non-artist keeps authored-work retry visible with ${withCollection ? 'a collection' : 'empty scopes'}',
+          (tester) async {
+        await pumpProfileSurface(
+          tester,
+          surface: surface,
+          canonicalPublicEntry: surface == ProfileSurface.desktopPublic,
+          user: ProfileFixtures.user(),
+          authoredArtworksUnavailable: true,
+          artistCollections: withCollection ? _collections : const [],
+          size: size,
+        );
+
+        expect(find.text('Not available'), findsWidgets);
+        expect(find.text('Retry'), findsWidgets);
+        if (withCollection) {
+          expect(find.text('Head of Flowers'), findsWidgets);
+        }
+      });
+    }
+  }
 }

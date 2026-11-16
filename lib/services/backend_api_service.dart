@@ -239,6 +239,8 @@ abstract class ArtworkBackendApi {
     String? walletAddress,
     bool includePrivateForWallet = false,
     List<String>? ids,
+    bool mine = false,
+    String? authorProfileId,
   });
 
   Future<Artwork> getArtwork(String artworkId);
@@ -5704,9 +5706,17 @@ class BackendApiService
     String? walletAddress,
     bool includePrivateForWallet = false,
     List<String>? ids,
+    bool mine = false,
+    String? authorProfileId,
   }) async {
     try {
-      if (includePrivateForWallet) {
+      final normalizedAuthorProfileId = authorProfileId?.trim().toLowerCase();
+      if (normalizedAuthorProfileId != null &&
+          !RegExp(r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$')
+              .hasMatch(normalizedAuthorProfileId)) {
+        throw ArgumentError.value(authorProfileId, 'authorProfileId');
+      }
+      if (includePrivateForWallet || mine) {
         await _ensureAuthBeforeRequest();
       }
 
@@ -5735,6 +5745,14 @@ class BackendApiService
           queryParams['publicOnly'] = 'false';
         }
       }
+      // ?mine=true: the caller's own artworks, by wallet or, for a walletless
+      // account, by account id (creator_id). Private rows included.
+      if (mine) {
+        queryParams['mine'] = 'true';
+      }
+      if (normalizedAuthorProfileId != null) {
+        queryParams['authorProfileId'] = normalizedAuthorProfileId;
+      }
 
       return await _performPublicRead<List<Artwork>>(
         liveRead: (candidateBaseUrl) async {
@@ -5742,9 +5760,24 @@ class BackendApiService
             candidateBaseUrl,
             '/api/artworks',
             queryParameters: queryParams,
-            includeAuth: includePrivateForWallet,
-            allowOrbitFallback: true,
+            includeAuth: includePrivateForWallet || mine,
+            allowOrbitFallback: normalizedAuthorProfileId == null,
           );
+          if (normalizedAuthorProfileId != null) {
+            final appliedFilters = data['appliedFilters'];
+            final appliedAuthorProfileId = appliedFilters is Map
+                ? (appliedFilters['authorProfileId'] ??
+                        appliedFilters['author_profile_id'])
+                    ?.toString()
+                    .trim()
+                    .toLowerCase()
+                : null;
+            if (appliedAuthorProfileId != normalizedAuthorProfileId) {
+              throw UnsupportedError(
+                'Backend did not confirm the requested author profile filter.',
+              );
+            }
+          }
           final dynamic listCandidate =
               data['artworks'] ?? data['data'] ?? data['items'];
           final List<dynamic> artworks =
@@ -5757,7 +5790,12 @@ class BackendApiService
               .toList(growable: false);
         },
         snapshotRead: () async {
-          if (includePrivateForWallet) {
+          if (normalizedAuthorProfileId != null) {
+            throw UnsupportedError(
+              'Author-filtered artwork lists require a supporting backend.',
+            );
+          }
+          if (includePrivateForWallet || mine) {
             throw Exception(
               'Private artwork data is unavailable in public snapshot fallback.',
             );
@@ -5812,6 +5850,7 @@ class BackendApiService
               .map(parseArtworkFromBackendJson)
               .toList(growable: false);
         },
+        allowSnapshot: normalizedAuthorProfileId == null,
       );
     } catch (e) {
       AppConfig.debugPrint('BackendApiService.getArtworks failed: $e');

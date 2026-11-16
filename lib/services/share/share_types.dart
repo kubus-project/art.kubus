@@ -101,9 +101,20 @@ class ShareTarget {
         type: ShareEntityType.exhibition, shareId: exhibitionId, title: title);
   }
 
-  factory ShareTarget.profile({required String walletAddress, String? title}) {
+  factory ShareTarget.profile({
+    String? walletAddress,
+    String? profileId,
+    String? title,
+  }) {
+    final identifier = (profileId ?? walletAddress ?? '').trim();
+    if (identifier.isEmpty) {
+      throw ArgumentError('A profile ID or wallet address is required.');
+    }
     return ShareTarget(
-        type: ShareEntityType.profile, shareId: walletAddress, title: title);
+      type: ShareEntityType.profile,
+      shareId: identifier,
+      title: title,
+    );
   }
 
   factory ShareTarget.nft({required String mintAddress, String? title}) {

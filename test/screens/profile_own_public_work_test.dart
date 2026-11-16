@@ -19,8 +19,12 @@ import '../support/profile_screen_harness.dart';
 const String _profileId = '8c03b35a-a4d6-4c08-95fc-503c879fbc45';
 
 const List<Map<String, Object?>> _authoredWorks = <Map<String, Object?>>[
-  <String, Object?>{'id': 'authored-lala', 'title': 'Lala Pilot Work'},
-  <String, Object?>{'id': 'authored-nez', 'title': 'Nezaboravak Pilot Work'},
+  <String, Object?>{'id': 'credited-work-1', 'title': 'Credited Work 1'},
+  <String, Object?>{'id': 'credited-work-2', 'title': 'Credited Work 2'},
+  <String, Object?>{'id': 'credited-work-3', 'title': 'Credited Work 3'},
+  <String, Object?>{'id': 'credited-work-4', 'title': 'Credited Work 4'},
+  <String, Object?>{'id': 'credited-work-5', 'title': 'Credited Work 5'},
+  <String, Object?>{'id': 'credited-work-6', 'title': 'Credited Work 6'},
 ];
 
 http.Response _json(Object? payload) {
@@ -39,17 +43,32 @@ MockClient _ownerClient({
   return MockClient((request) async {
     requests.add(request.url);
     final path = request.url.path;
-    if (path == '/api/profiles/$_profileId/artworks') {
-      final relationship = request.url.queryParameters['relationship'];
-      final items = relationship == 'authored' && withWorks
-          ? _authoredWorks
+    if (path == '/api/artworks') {
+      final authorProfileId =
+          request.url.queryParameters['authorProfileId']?.toLowerCase();
+      final items = authorProfileId == _profileId.toLowerCase() && withWorks
+          ? <Map<String, Object?>>[
+              for (final item in _authoredWorks)
+                <String, Object?>{
+                  ...item,
+                  'walletAddress': 'uploader-wallet',
+                  'artist': 'turrdl',
+                  'description': '',
+                  'latitude': 46.05,
+                  'longitude': 14.5,
+                  'createdAt': '2026-01-01T00:00:00.000Z',
+                },
+            ]
           : const <Map<String, Object?>>[];
       return _json(<String, Object?>{
+        'source': 'postgresql',
+        'appliedFilters': <String, Object?>{
+          'authorProfileId': authorProfileId,
+        },
         'data': items,
-        'relationship': relationship,
         'pagination': <String, Object?>{
           'total': items.length,
-          'limit': 6,
+          'limit': 200,
           'offset': 0,
         },
       });
@@ -125,7 +144,7 @@ void main() {
     );
     final l10n = _l10n(tester);
 
-    expect(find.text('Lala Pilot Work'), findsWidgets);
+    expect(find.text('Credited Work 1'), findsWidgets);
     expect(find.text('Head of Flowers'), findsWidgets);
     expect(find.text(l10n.userProfileArtistHighlightsTitle), findsNothing);
     expect(find.text(l10n.userProfileEventsTitle), findsNothing);
@@ -148,7 +167,7 @@ void main() {
     );
     final l10n = _l10n(tester);
 
-    expect(find.text('Lala Pilot Work'), findsWidgets);
+    expect(find.text('Credited Work 1'), findsWidgets);
     expect(find.text('Head of Flowers'), findsWidgets);
     expect(find.text(l10n.desktopProfileEventsTitle), findsNothing);
     expect(

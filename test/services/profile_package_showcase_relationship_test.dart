@@ -28,6 +28,37 @@ MockClient _showcaseClient({
   return MockClient((request) async {
     requests?.add(request.url);
     final path = request.url.path;
+    if (path == '/api/artworks' &&
+        request.url.queryParameters['authorProfileId'] != null) {
+      final authorProfileId =
+          request.url.queryParameters['authorProfileId']!.toLowerCase();
+      return _json(<String, Object?>{
+        'source': 'postgresql',
+        'appliedFilters': <String, Object?>{
+          'authorProfileId': authorProfileId,
+        },
+        'data': <Map<String, Object?>>[
+          for (final id in const <String>[
+            'credited-work-1',
+            'credited-work-2',
+            'credited-work-3',
+            'credited-work-4',
+            'credited-work-5',
+            'credited-work-6',
+          ])
+            <String, Object?>{
+              'id': id,
+              'walletAddress': 'uploader-wallet',
+              'title': id,
+              'artist': 'turrdl',
+              'description': '',
+              'latitude': 46.05,
+              'longitude': 14.5,
+              'createdAt': '2026-01-01T00:00:00.000Z',
+            },
+        ],
+      });
+    }
     if (path.endsWith('/artworks')) {
       if (!honourScope) {
         // Older backend: ignores `relationship`, no echo, same mixed list.
@@ -89,13 +120,14 @@ const User _artist = User(
   isArtist: true,
 );
 
-/// A walletless author without artist privileges: the profile is addressed by
-/// its UUID and carries authored works, like the pilot profile does.
-const User _walkerProfile = User(
-  id: '8c03b35a-a4d6-4c08-95fc-503c879fbc45',
-  name: 'Walker Author',
-  username: 'walker_author',
-  bio: 'Showcase fixture without an artist role.',
+const User _walletlessAuthor = User(
+  id: '40000000-0000-4000-8000-000000000010',
+  userId: '40000000-0000-4000-8000-000000000010',
+  profileId: '10000000-0000-4000-8000-000000000010',
+  walletAddress: null,
+  name: 'Walletless Author',
+  username: 'walletless-author',
+  bio: '',
   followersCount: 0,
   followingCount: 0,
   postsCount: 0,
@@ -183,9 +215,8 @@ void main() {
   });
 
   test(
-      'a profile that is neither artist nor institution still shows its '
-      'authored works and public collections, and asks for no events',
-      () async {
+      'walletless non-creator still loads public authored work and collections, '
+      'without requesting events', () async {
     final requests = <Uri>[];
     BackendApiService().setHttpClient(
       _showcaseClient(
@@ -197,17 +228,28 @@ void main() {
 
     final extended =
         await ProfilePackageService.loadPublicProfileExtendedPackage(
-      _walkerProfile.id,
+      _walletlessAuthor.id,
       forceRefresh: true,
       includePosts: false,
       includeShowcase: true,
-      user: _walkerProfile,
+      user: _walletlessAuthor,
     );
 
     expect(extended, isNotNull);
     expect(
       extended!.artistArtworks.map((item) => item['id']),
-      <Object?>['authored-1', 'authored-2'],
+      <Object?>[
+        'credited-work-1',
+        'credited-work-2',
+        'credited-work-3',
+        'credited-work-4',
+        'credited-work-5',
+        'credited-work-6',
+      ],
+    );
+    expect(
+      extended.artistArtworks.map((item) => item['artist']),
+      everyElement('turrdl'),
     );
     expect(
       extended.artistCollections.map((item) => item['id']),
@@ -238,5 +280,101 @@ void main() {
       requests.where((uri) => uri.path.endsWith('/api/events')),
       isNotEmpty,
     );
+  });
+
+  test('walletless profile uses profileId filter, not account id or uploader',
+      () async {
+    const profileId = '10000000-0000-4000-8000-000000000010';
+    const accountId = '40000000-0000-4000-8000-000000000010';
+    final requests = <http.Request>[];
+    BackendApiService().setHttpClient(MockClient((request) async {
+      requests.add(request);
+      if (request.url.path == '/api/artworks') {
+        return _json(<String, Object?>{
+          'source': 'postgresql',
+          'appliedFilters': <String, Object?>{'authorProfileId': profileId},
+          'data': <Map<String, Object?>>[
+            <String, Object?>{
+              'id': 'foreign-uploaded-work',
+              'walletAddress': 'uploader-wallet',
+              'title': 'Imported by another account',
+              'artist': 'Recorded artist',
+              'description': '',
+              'latitude': 46.05,
+              'longitude': 14.5,
+              'createdAt': '2026-01-01T00:00:00.000Z',
+            },
+          ],
+        });
+      }
+      return http.Response('Not found', 404);
+    }));
+    final profile = User(
+      id: profileId,
+      userId: accountId,
+      profileId: profileId,
+      walletAddress: null,
+      name: 'Walletless Author',
+      username: 'walletless-author',
+      bio: '',
+      followersCount: 0,
+      followingCount: 0,
+      postsCount: 0,
+      isFollowing: false,
+      isVerified: false,
+      isArtist: true,
+      joinedDate: 'Joined recently',
+    );
+
+    final sections = await ProfilePackageService.loadProfileArtworkSections(
+      profileId,
+      limit: 6,
+      user: profile,
+    );
+
+    expect(requests, hasLength(1));
+    expect(requests.single.url.path, '/api/artworks');
+    expect(requests.single.url.queryParameters['authorProfileId'], profileId);
+    expect(requests.single.url.queryParameters['mine'], isNull);
+    expect(sections.authored.single['id'], 'foreign-uploaded-work');
+    expect(sections.authoredTotal, 1);
+    expect(sections.documented, isEmpty);
+  });
+
+  test('walletless profile refuses a generic list without appliedFilters echo',
+      () async {
+    const profileId = '10000000-0000-4000-8000-000000000011';
+    final requests = <http.Request>[];
+    BackendApiService().setHttpClient(MockClient((request) async {
+      requests.add(request);
+      return _json(<String, Object?>{
+        'data': <Map<String, Object?>>[
+          <String, Object?>{'id': 'unfiltered'}
+        ],
+      });
+    }));
+    final profile = User(
+      id: profileId,
+      profileId: profileId,
+      name: 'Walletless Author',
+      username: 'author',
+      bio: '',
+      followersCount: 0,
+      followingCount: 0,
+      postsCount: 0,
+      isFollowing: false,
+      isVerified: false,
+      joinedDate: 'Joined recently',
+    );
+
+    await expectLater(
+      ProfilePackageService.loadProfileArtworkSections(
+        profileId,
+        user: profile,
+      ),
+      throwsA(isA<UnsupportedError>()),
+    );
+    expect(requests, hasLength(1));
+    expect(requests.single.url.queryParameters['authorProfileId'], profileId);
   });
 }

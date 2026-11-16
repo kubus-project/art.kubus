@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import '../../../widgets/profile/profile_identity_hero.dart';
 import '../../../widgets/profile/profile_owner_identity.dart';
 import '../../../utils/profile_data_key.dart';
+import '../../../utils/wallet_utils.dart';
 import '../../../widgets/inline_loading.dart';
 import 'package:provider/provider.dart';
 import '../../../l10n/app_localizations.dart';
@@ -11,6 +12,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../../providers/themeprovider.dart';
 import '../../../providers/web3provider.dart';
 import '../../../providers/profile_provider.dart';
+import '../../../utils/artwork_author_key.dart';
 import '../../../providers/saved_items_provider.dart';
 import '../../../providers/account_verification_provider.dart';
 import '../../../providers/task_provider.dart';
@@ -19,6 +21,7 @@ import '../../../providers/stats_provider.dart';
 import '../../../providers/community_interactions_provider.dart';
 import '../../../services/backend_api_service.dart';
 import '../../../services/profile_package_service.dart';
+import '../../../services/account_identity.dart';
 import '../../../services/share/share_service.dart';
 import '../../../services/share/share_types.dart';
 import '../../../utils/artwork_navigation.dart';
@@ -86,6 +89,10 @@ class _ProfileScreenState extends State<ProfileScreen>
   List<Map<String, dynamic>> _artistDocumentedArtworks = [];
   List<Map<String, dynamic>> _artistCollections = [];
   List<Map<String, dynamic>> _artistEvents = [];
+  bool _artistAuthorshipUnavailable = false;
+  bool _artistProfileHydrationStarted = false;
+  int _artistDataGeneration = 0;
+  String _artistDataIdentity = '';
   bool _showActivityStatus = true;
 
   /// Captured in `didChangeDependencies` so `dispose` never has to look the
@@ -121,6 +128,9 @@ class _ProfileScreenState extends State<ProfileScreen>
       profileProvider.addListener(_handleProfilePreferencesChanged);
       _listenedProfileProvider = profileProvider;
     }
+    AccountIdentity.removeListener(_handleAccountIdentityChanged);
+    AccountIdentity.addListener(_handleAccountIdentityChanged);
+    _handleAccountIdentityChanged();
     if (!_didScheduleDataFetch) {
       _didScheduleDataFetch = true;
       _postsFuture = _loadUserPosts();
@@ -158,8 +168,46 @@ class _ProfileScreenState extends State<ProfileScreen>
     // up through `context` here would query a deactivated element.
     _listenedProfileProvider?.removeListener(_handleProfilePreferencesChanged);
     _listenedProfileProvider = null;
+    AccountIdentity.removeListener(_handleAccountIdentityChanged);
     _animationController.dispose();
     super.dispose();
+  }
+
+  void _handleAccountIdentityChanged() {
+    final identity = AccountIdentity.accountKey;
+    if (identity == _artistDataIdentity) return;
+    _artistDataIdentity = identity;
+    _artistDataGeneration++;
+    final profileProvider = _listenedProfileProvider;
+    final profileConfirmed = profileProvider != null &&
+        _profileMatchesCurrentIdentity(profileProvider);
+    _artistProfileHydrationStarted =
+        !profileConfirmed && (profileProvider?.isLoading ?? false);
+    if (!mounted) return;
+    setState(() {
+      _artistDataRequested = false;
+      _artistDataLoading = !profileConfirmed;
+      _artistDataLoaded = false;
+      _artistArtworks = [];
+      _artistAuthoredTotal = null;
+      _artistDocumentedArtworks = [];
+      _artistCollections = [];
+      _artistEvents = [];
+      _artistAuthorshipUnavailable = false;
+    });
+  }
+
+  bool _profileMatchesCurrentIdentity(ProfileProvider profileProvider) {
+    final identity = AccountIdentity.accountKey.trim();
+    if (identity.isEmpty) return true;
+    final profile = profileProvider.currentUser;
+    if (profile == null) return false;
+    final accountId = (profile.userId ?? '').trim();
+    if (accountId.isNotEmpty) {
+      return accountId.toLowerCase() == identity.toLowerCase();
+    }
+    final wallet = profile.walletAddress.trim();
+    return wallet.isNotEmpty && WalletUtils.equals(wallet, identity);
   }
 
   bool _hasArtistRole(
@@ -279,30 +327,36 @@ class _ProfileScreenState extends State<ProfileScreen>
     const gap = SizedBox(height: DetailSpacing.lg);
     switch (section) {
       case ProfileSection.work:
-        // Events are the role's. Authored works and public collections are
-        // public content: a non-artist owner sees the bands that have content,
-        // as a visitor does.
-        if (isInstitution && !isArtist) {
-          return [
+        // Events remain role-gated. Authored works and public collections are
+        // profile content, so show their bands to any owner when populated.
+        return [
+          if (isArtist) ...[
+            _buildArtistPortfolioSection(themeProvider),
+            if (_artistDocumentedArtworks.isNotEmpty) ...[
+              gap,
+              _buildArtistDocumentedSection(),
+            ],
+            gap,
+            _buildArtistCollectionsSection(themeProvider),
+            gap,
+            _buildArtistEventsSection(themeProvider),
+          ] else if (isInstitution) ...[
             _buildInstitutionEventsSection(themeProvider),
             gap,
             _buildInstitutionCollectionsSection(themeProvider),
-          ];
-        }
-        final contentOnly = !isArtist;
-        final bands = <Widget>[
-          if (!contentOnly || _artistArtworks.isNotEmpty)
-            _buildArtistPortfolioSection(themeProvider),
-          if (_artistDocumentedArtworks.isNotEmpty)
-            _buildArtistDocumentedSection(),
-          if (!contentOnly || _artistCollections.isNotEmpty)
-            _buildArtistCollectionsSection(themeProvider),
-          if (isArtist) _buildArtistEventsSection(themeProvider),
-        ];
-        return [
-          for (var i = 0; i < bands.length; i++) ...[
-            if (i > 0) gap,
-            bands[i],
+          ] else if (_hasPublicWork) ...[
+            if (_artistArtworks.isNotEmpty || _artistAuthorshipUnavailable)
+              _buildArtistPortfolioSection(themeProvider),
+            if (_artistDocumentedArtworks.isNotEmpty) ...[
+              if (_artistArtworks.isNotEmpty) gap,
+              _buildArtistDocumentedSection(),
+            ],
+            if (_artistCollections.isNotEmpty) ...[
+              if (_artistArtworks.isNotEmpty ||
+                  _artistDocumentedArtworks.isNotEmpty)
+                gap,
+              _buildArtistCollectionsSection(themeProvider),
+            ],
           ],
         ];
       case ProfileSection.activity:
@@ -843,6 +897,12 @@ class _ProfileScreenState extends State<ProfileScreen>
       ProfileProvider profileProvider, bool isLarge) {
     final l10n = AppLocalizations.of(context)!;
     final wallet = profileProvider.currentWalletAddress;
+    final profile = profileProvider.currentUser;
+    final authorKey = ArtworkAuthorKey.resolve(
+      walletAddress: wallet,
+      accountId: profile?.userId,
+      profileId: profile?.id,
+    );
     final screenWidth = MediaQuery.of(context).size.width;
     // More columns on wider screens for compact horizontal layout
     final maxCols = screenWidth >= 1400 ? 4 : (isLarge ? 4 : 2);
@@ -881,13 +941,19 @@ class _ProfileScreenState extends State<ProfileScreen>
           label: l10n.userProfileArtworksTitle,
           // Counters are wallet-keyed; a walletless account uses the
           // account-keyed total of its authored works.
-          value: _walletlessAuthoredCount(wallet) != null
-              ? '${_walletlessAuthoredCount(wallet)}'
-              : profileProvider.formattedArtworksCount,
+          value: _artistAuthorshipUnavailable
+              ? l10n.commonNotAvailable
+              : _walletlessAuthoredCount(wallet) != null
+                  ? '${_walletlessAuthoredCount(wallet)}'
+                  : profileProvider.formattedArtworksCount,
           icon: Icons.palette_outlined,
           color: _profileStatAccentForIcon(Icons.palette_outlined),
-          onTap: () =>
-              ProfileScreenMethods.showArtworks(context, walletAddress: wallet),
+          onTap: authorKey == null
+              ? null
+              : () => ProfileScreenMethods.showArtworks(
+                    context,
+                    authorKey: authorKey,
+                  ),
         ),
       ],
     );
@@ -895,7 +961,14 @@ class _ProfileScreenState extends State<ProfileScreen>
 
   Widget _buildArtistPortfolioSection(ThemeProvider themeProvider) {
     final l10n = AppLocalizations.of(context)!;
-    final wallet = context.read<ProfileProvider>().currentWalletAddress;
+    final profileProvider = context.read<ProfileProvider>();
+    final wallet = profileProvider.currentWalletAddress;
+    final profile = profileProvider.currentUser;
+    final authorKey = ArtworkAuthorKey.resolve(
+      walletAddress: wallet,
+      accountId: profile?.userId,
+      profileId: profile?.id,
+    );
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -904,10 +977,12 @@ class _ProfileScreenState extends State<ProfileScreen>
           subtitle: l10n.desktopProfilePortfolioSubtitle,
           action: _artistArtworks.isNotEmpty
               ? TextButton.icon(
-                  onPressed: () => ProfileScreenMethods.showArtworks(
-                    context,
-                    walletAddress: wallet,
-                  ),
+                  onPressed: authorKey == null
+                      ? null
+                      : () => ProfileScreenMethods.showArtworks(
+                            context,
+                            authorKey: authorKey,
+                          ),
                   icon: const Icon(Icons.arrow_forward, size: 18),
                   label: Text(l10n.commonViewAll),
                 )
@@ -920,6 +995,20 @@ class _ProfileScreenState extends State<ProfileScreen>
               height: 200,
               alignment: Alignment.center,
               child: const InlineLoading(width: 40, height: 40),
+            ),
+          )
+        else if (_artistAuthorshipUnavailable)
+          DesktopCard(
+            child: Column(
+              children: [
+                Text(l10n.commonNotAvailable),
+                TextButton(
+                  onPressed: _artistDataLoading
+                      ? null
+                      : () => _maybeLoadArtistData(force: true),
+                  child: Text(l10n.commonRetry),
+                ),
+              ],
             ),
           )
         else if (_artistArtworks.isEmpty)
@@ -1738,6 +1827,7 @@ class _ProfileScreenState extends State<ProfileScreen>
   Future<void> _maybeLoadArtistData({bool force = false}) async {
     final profileProvider =
         Provider.of<ProfileProvider>(context, listen: false);
+    if (!_profileMatchesCurrentIdentity(profileProvider)) return;
     // Profile/account id first; wallet only as a legacy fallback.
     final wallet = profileArtistDataKey(profileProvider.currentUser);
     final eventsKey = profileEventsMatchKey(profileProvider.currentUser);
@@ -1752,58 +1842,103 @@ class _ProfileScreenState extends State<ProfileScreen>
     if (_artistDataRequested && !force) return;
 
     _artistDataRequested = true;
+    final generation = _artistDataGeneration;
+    final identity = AccountIdentity.accountKey;
     await _loadArtistData(
       wallet,
       eventsKey: eventsKey,
       legacyWallet: legacyWallet,
+      linkedWallet: profileProvider.currentUser?.walletAddress ?? '',
+      authorProfileId: profileProvider.currentUser?.id,
+      generation: generation,
+      identity: identity,
       force: force,
-      // Events are a creator surface; works and collections are public.
       loadEvents: isArtist || isInstitution,
     );
   }
 
+  bool get _hasPublicWork =>
+      _artistArtworks.isNotEmpty ||
+      _artistDocumentedArtworks.isNotEmpty ||
+      _artistCollections.isNotEmpty ||
+      _artistAuthorshipUnavailable;
+
   Future<void> _loadArtistData(String walletAddress,
       {required String eventsKey,
       String legacyWallet = '',
+      String linkedWallet = '',
+      String? authorProfileId,
+      required int generation,
+      required String identity,
       bool force = false,
       bool loadEvents = true}) async {
     if (!mounted) return;
     setState(() => _artistDataLoading = true);
 
+    ProfileArtworkSections? sections;
     try {
       final api = BackendApiService();
-      final sections = await ProfilePackageService.loadProfileArtworkSections(
-        walletAddress,
-        limit: 6,
-      );
-      final collections = await api.getCollections(
-        walletAddress: walletAddress,
-        legacyWalletAddress: legacyWallet,
-        limit: 6,
-      );
-      final eventsResponse =
-          loadEvents ? await api.listEvents(limit: 100) : const [];
-      final filteredEvents = eventsResponse
-          .where((event) => profileEventBelongsToWallet(event, eventsKey))
-          .take(6)
-          .map((e) => Map<String, dynamic>.from(e))
-          .toList();
-
-      if (!mounted) return;
+      try {
+        sections = await ProfilePackageService.loadProfileArtworkSections(
+          walletAddress,
+          limit: 6,
+          authorProfileId: authorProfileId,
+          legacyWalletAddress:
+              linkedWallet.isNotEmpty ? linkedWallet : legacyWallet,
+        );
+      } catch (_) {
+        if (!_isArtistDataCurrent(generation, identity)) return;
+        _artistAuthorshipUnavailable = true;
+      }
+      if (!_isArtistDataCurrent(generation, identity)) return;
       setState(() {
-        _artistArtworks = sections.authored;
-        _artistAuthoredTotal = sections.authoredTotal;
-        _artistDocumentedArtworks = sections.documented;
-        _artistCollections = collections;
-        _artistEvents = filteredEvents;
+        _artistArtworks = sections?.authored ?? [];
+        _artistAuthoredTotal = sections?.authoredTotal;
+        _artistDocumentedArtworks = sections?.documented ?? [];
         _artistDataLoaded = true;
+        _artistAuthorshipUnavailable = sections == null;
       });
+      try {
+        final collections = await api.getCollections(
+          walletAddress: walletAddress,
+          legacyWalletAddress: legacyWallet,
+          limit: 6,
+        );
+        if (!_isArtistDataCurrent(generation, identity)) return;
+        setState(() => _artistCollections = collections);
+      } catch (e) {
+        debugPrint('Error loading artist collections: $e');
+      }
+      if (loadEvents) {
+        try {
+          final eventsResponse = await api.listEvents(limit: 100);
+          if (!_isArtistDataCurrent(generation, identity)) return;
+          final filteredEvents = eventsResponse
+              .where((event) => profileEventBelongsToWallet(event, eventsKey))
+              .take(6)
+              .map((e) => Map<String, dynamic>.from(e))
+              .toList();
+          setState(() => _artistEvents = filteredEvents);
+        } catch (e) {
+          debugPrint('Error loading artist events: $e');
+        }
+      }
     } catch (e) {
       debugPrint('Error loading artist data: $e');
+      if (_isArtistDataCurrent(generation, identity)) {
+        setState(() => _artistAuthorshipUnavailable = sections == null);
+      }
     } finally {
-      if (mounted) setState(() => _artistDataLoading = false);
+      if (_isArtistDataCurrent(generation, identity)) {
+        setState(() => _artistDataLoading = false);
+      }
     }
   }
+
+  bool _isArtistDataCurrent(int generation, String identity) =>
+      mounted &&
+      generation == _artistDataGeneration &&
+      identity == AccountIdentity.accountKey;
 
   Future<void> _loadPrivacySettings() async {
     final profileProvider =
@@ -1881,19 +2016,39 @@ class _ProfileScreenState extends State<ProfileScreen>
     if (nextShowStatus != _showActivityStatus) {
       setState(() => _showActivityStatus = nextShowStatus);
     }
+    if (_profileMatchesCurrentIdentity(profileProvider)) {
+      _artistProfileHydrationStarted = false;
+      if (_artistDataLoading && !_artistDataRequested) {
+        setState(() => _artistDataLoading = false);
+      }
+      _maybeLoadArtistData();
+    } else if (AccountIdentity.accountKey.isNotEmpty) {
+      if (profileProvider.isLoading) {
+        _artistProfileHydrationStarted = true;
+      } else if (_artistProfileHydrationStarted) {
+        _artistProfileHydrationStarted = false;
+        setState(() {
+          _artistDataLoading = false;
+          _artistDataLoaded = true;
+          _artistAuthorshipUnavailable = true;
+        });
+      }
+    }
   }
 
   void _shareProfile() {
     final profileProvider =
         Provider.of<ProfileProvider>(context, listen: false);
     final wallet = (profileProvider.currentUser?.walletAddress ?? '').trim();
-    if (wallet.isEmpty) return;
+    final profile = profileProvider.currentUser;
+    final profileId = (profile?.id ?? '').trim();
+    if (wallet.isEmpty && profileId.isEmpty) return;
     ShareService().showShareSheet(
       context,
       target: ShareTarget.profile(
-        walletAddress: wallet,
-        title: profileProvider.currentUser?.displayName ??
-            profileProvider.currentUser?.username,
+        walletAddress: wallet.isEmpty ? null : wallet,
+        profileId: wallet.isEmpty ? profileId : null,
+        title: profile?.displayName ?? profile?.username,
       ),
       sourceScreen: 'desktop_profile',
     );

@@ -10,6 +10,9 @@ class User {
   /// wallet-only profiles; it must never be synthesized from a profile UUID.
   final String? userId;
 
+  /// Canonical `profiles.id` returned by the public profile endpoint.
+  final String? profileId;
+
   /// Real linked wallet, kept separate from [id] for walletless accounts.
   final String? walletAddress;
 
@@ -81,6 +84,7 @@ class User {
   const User({
     required this.id,
     this.userId,
+    this.profileId,
     this.walletAddress,
     this.allowsMessages = true,
     required this.name,
@@ -122,6 +126,7 @@ class User {
   User copyWith({
     String? id,
     String? userId,
+    String? profileId,
     String? walletAddress,
     bool? allowsMessages,
     String? name,
@@ -149,6 +154,7 @@ class User {
     return User(
       id: id ?? this.id,
       userId: userId ?? this.userId,
+      profileId: profileId ?? this.profileId,
       walletAddress: walletAddress ?? this.walletAddress,
       allowsMessages: allowsMessages ?? this.allowsMessages,
       name: name ?? this.name,
