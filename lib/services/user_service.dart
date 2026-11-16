@@ -638,6 +638,7 @@ class UserService {
       var user = User(
         id: resolvedWallet,
         userId: accountUserId,
+        profileId: (profile['profileId'] ?? profile['profile_id'])?.toString(),
         walletAddress: publicWalletAddress.isEmpty ? null : publicWalletAddress,
         // The wallet requirement lives in User.supportsMessaging: a profile
         // without a wallet has no message target, whatever its preference.

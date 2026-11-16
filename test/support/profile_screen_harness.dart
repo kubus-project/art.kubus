@@ -91,10 +91,17 @@ Future<void> pumpProfileSurface(
   /// Posts by the viewed profile, injected through the screens' existing
   /// extended-package seam. Empty by default.
   List<CommunityPost> posts = const <CommunityPost>[],
+  bool authoredArtworksUnavailable = false,
+
+  /// Authored works and public collections, injected through the same package
+  /// seam. Empty by default.
+  List<Map<String, dynamic>> artistArtworks = const <Map<String, dynamic>>[],
+  List<Map<String, dynamic>> artistCollections = const <Map<String, dynamic>>[],
 
   /// Injected DAO state (for example an approved role review); a fresh
   /// [DAOProvider] otherwise.
   AccountVerificationProvider? accountVerification,
+  ProfileProvider? injectedProfileProvider,
 
   /// Paint the theme ground under the screen, as the app shell does, so a
   /// screenshot of a transparent screen is not composited on white.
@@ -121,7 +128,7 @@ Future<void> pumpProfileSurface(
   addTearDown(tester.view.reset);
 
   final themeProvider = ThemeProvider();
-  final profileProvider = ProfileProvider();
+  final profileProvider = injectedProfileProvider ?? ProfileProvider();
   if (surface == ProfileSurface.mobileOwner ||
       surface == ProfileSurface.desktopOwner ||
       surface == ProfileSurface.desktopOwnerInShell ||
@@ -137,6 +144,9 @@ Future<void> pumpProfileSurface(
     canonicalPublicEntry: canonicalPublicEntry,
     withAchievements: withAchievements,
     posts: posts,
+    authoredArtworksUnavailable: authoredArtworksUnavailable,
+    artistArtworks: artistArtworks,
+    artistCollections: artistCollections,
   );
 
   await tester.pumpWidget(
@@ -236,13 +246,21 @@ Widget _surfaceWidget(
   bool canonicalPublicEntry = false,
   bool withAchievements = false,
   List<CommunityPost> posts = const <CommunityPost>[],
+  bool authoredArtworksUnavailable = false,
+  List<Map<String, dynamic>> artistArtworks = const <Map<String, dynamic>>[],
+  List<Map<String, dynamic>> artistCollections = const <Map<String, dynamic>>[],
 }) {
   final critical = ProfileFixtures.critical(
     user: user,
     withAchievements: withAchievements,
   );
   final extended = Future<ProfileExtendedPackage?>.value(
-    ProfileFixtures.extended(initialPosts: posts),
+    ProfileFixtures.extended(
+      initialPosts: posts,
+      authoredArtworksUnavailable: authoredArtworksUnavailable,
+      artistArtworks: artistArtworks,
+      artistCollections: artistCollections,
+    ),
   );
 
   switch (surface) {
@@ -338,7 +356,7 @@ Widget _surfaceWidget(
 UserProfile _ownerProfileFrom(User user, {bool walletless = false}) {
   return UserProfile(
     id: user.id,
-    userId: user.id,
+    userId: user.userId ?? user.id,
     walletAddress: walletless ? '' : user.id,
     username: user.username,
     displayName: user.name,

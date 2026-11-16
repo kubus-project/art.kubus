@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
 import 'profile_section_order.dart';
 import '../../utils/wallet_utils.dart';
+import '../../utils/artwork_author_key.dart';
 import '../../widgets/app_loading.dart';
 import '../../widgets/unavailable_entity_scaffold.dart';
 import 'package:provider/provider.dart';
@@ -105,6 +106,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
   List<Map<String, dynamic>> _documentedArtworks = const [];
   int? _authoredArtworksTotal;
   int? _authoredArtworksCounter;
+  bool _authoredArtworksUnavailable = false;
   List<Map<String, dynamic>> _artistCollections = [];
   List<Map<String, dynamic>> _artistEvents = [];
   String? _failedCoverImageUrl;
@@ -186,6 +188,9 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
       _authoredArtworksTotal = _profileController.authoredArtworksTotal;
       _authoredArtworksCounter =
           _profileController.package?.publicStats['authoredArtworks'];
+      _authoredArtworksUnavailable =
+          _profileController.package?.extended?.authoredArtworksUnavailable ??
+              false;
       _artistCollections = _profileController.artistCollections;
       _artistEvents = _profileController.artistEvents;
       _artistDataLoaded = _profileController.artistDataLoaded;
@@ -626,8 +631,12 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
 
   Future<void> _showMoreOptions() async {
     final l10n = AppLocalizations.of(context)!;
+    final profileWallet = user!.walletAddress?.trim() ?? '';
+    final profileId = user!.profileId?.trim() ?? '';
+    if (profileWallet.isEmpty && profileId.isEmpty) return;
     final target = ShareTarget.profile(
-      walletAddress: user!.id,
+      walletAddress: profileWallet.isEmpty ? null : profileWallet,
+      profileId: profileWallet.isEmpty ? profileId : null,
       title: user!.name,
     );
 
@@ -1063,16 +1072,18 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
           ],
         ];
       case ProfileSection.work:
-        // An artist's section is their portfolio and events; an institution's
-        // is its programme; a profile that is neither is not given empty
-        // artist bands.
+        // Authored works and public collections belong to the profile, not to
+        // an artist role. Keep the artist and institution event surfaces role
+        // gated, and do not render empty artwork/collection bands for others.
         return [
           if (isArtist) ...[
             _buildArtistHighlightsGrid(l10n),
             const SizedBox(height: DetailSpacing.xl),
             _buildArtistEventsShowcase(l10n),
           ] else if (isInstitution)
-            _buildInstitutionHighlights(l10n),
+            _buildInstitutionHighlights(l10n)
+          else if (_hasPublicWork)
+            _buildArtistHighlightsGrid(l10n, contentOnly: true),
         ];
       case ProfileSection.publicArt:
         // The canonical hero already carries the added-public-art count.
@@ -1094,13 +1105,20 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
   }
 
   Widget _buildStatsRow(AppLocalizations l10n) {
-    final localArtworksCount = Provider.of<ArtworkProvider>(
-      context,
-      listen: true,
-    ).artworksForWallet(user!.id).length;
-    final artworksCount = _authoredArtworksTotal ??
-        _authoredArtworksCounter ??
-        localArtworksCount;
+    final authorKey = ArtworkAuthorKey.resolve(
+      walletAddress: user?.walletAddress,
+      profileId: user?.profileId,
+    );
+    final localArtworksCount = authorKey == null
+        ? 0
+        : Provider.of<ArtworkProvider>(context, listen: true)
+            .artworksForAuthor(authorKey)
+            .length;
+    final artworksCount = _authoredArtworksUnavailable
+        ? null
+        : _authoredArtworksTotal ??
+            _authoredArtworksCounter ??
+            localArtworksCount;
 
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -1147,14 +1165,18 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
             ),
             _buildProfileStatCard(
               title: l10n.userProfileArtworksTitle,
-              value: _formatCount(artworksCount),
+              value: artworksCount == null
+                  ? l10n.commonNotAvailable
+                  : _formatCount(artworksCount),
               icon: Icons.palette_outlined,
-              onTap: () {
-                ProfileScreenMethods.showArtworks(
-                  context,
-                  walletAddress: user!.id,
-                );
-              },
+              onTap: authorKey == null
+                  ? null
+                  : () {
+                      ProfileScreenMethods.showArtworks(
+                        context,
+                        authorKey: authorKey,
+                      );
+                    },
             ),
           ],
         );
@@ -1367,37 +1389,50 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     );
   }
 
-  Widget _buildArtistHighlightsGrid(AppLocalizations l10n) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        KubusHeaderText(
-          title: l10n.userProfileArtistHighlightsTitle,
-          subtitle: l10n.userProfileArtistHighlightsSubtitle(user!.name),
-          kind: KubusHeaderKind.section,
-        ),
-        const SizedBox(height: KubusSpacing.lg - KubusSpacing.xs),
+  bool get _hasPublicWork =>
+      _artistArtworks.isNotEmpty ||
+      _documentedArtworks.isNotEmpty ||
+      _artistCollections.isNotEmpty ||
+      _authoredArtworksUnavailable;
+
+  Widget _buildArtistHighlightsGrid(
+    AppLocalizations l10n, {
+    bool contentOnly = false,
+  }) {
+    final bands = <Widget>[
+      if (!contentOnly ||
+          _artistArtworks.isNotEmpty ||
+          _authoredArtworksUnavailable)
+        _authoredArtworksUnavailable
+            ? Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(l10n.commonNotAvailable),
+                  TextButton(
+                    onPressed: _handleRefresh,
+                    child: Text(l10n.commonRetry),
+                  ),
+                ],
+              )
+            : _buildShowcaseSection(
+                l10n: l10n,
+                title: l10n.userProfileArtworksTitle,
+                items: _artistArtworks,
+                emptyLabel: l10n.userProfileNoArtworksYetLabel(user!.name),
+                emptyIcon: Icons.image_outlined,
+                builder: _buildArtworkCard,
+              ),
+      if (_documentedArtworks.isNotEmpty)
         _buildShowcaseSection(
           l10n: l10n,
-          title: l10n.userProfileArtworksTitle,
-          items: _artistArtworks,
-          emptyLabel: l10n.userProfileNoArtworksYetLabel(user!.name),
+          title: l10n.profilePublicArtAddedTitle,
+          subtitle: l10n.profilePublicArtAddedSubtitle,
+          items: _documentedArtworks,
+          emptyLabel: l10n.profilePublicArtAddedSubtitle,
           emptyIcon: Icons.image_outlined,
           builder: _buildArtworkCard,
         ),
-        if (_documentedArtworks.isNotEmpty) ...[
-          const SizedBox(height: KubusSpacing.lg - KubusSpacing.xs),
-          _buildShowcaseSection(
-            l10n: l10n,
-            title: l10n.profilePublicArtAddedTitle,
-            subtitle: l10n.profilePublicArtAddedSubtitle,
-            items: _documentedArtworks,
-            emptyLabel: l10n.profilePublicArtAddedSubtitle,
-            emptyIcon: Icons.image_outlined,
-            builder: _buildArtworkCard,
-          ),
-        ],
-        const SizedBox(height: KubusSpacing.lg - KubusSpacing.xs),
+      if (!contentOnly || _artistCollections.isNotEmpty)
         _buildShowcaseSection(
           l10n: l10n,
           title: l10n.userProfileCollectionsTitle,
@@ -1406,6 +1441,22 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
           emptyIcon: Icons.collections_outlined,
           builder: _buildCollectionCard,
         ),
+    ];
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (!contentOnly) ...[
+          KubusHeaderText(
+            title: l10n.userProfileArtistHighlightsTitle,
+            subtitle: l10n.userProfileArtistHighlightsSubtitle(user!.name),
+            kind: KubusHeaderKind.section,
+          ),
+          const SizedBox(height: KubusSpacing.lg - KubusSpacing.xs),
+        ],
+        for (var i = 0; i < bands.length; i++) ...[
+          if (i > 0) const SizedBox(height: KubusSpacing.lg - KubusSpacing.xs),
+          bands[i],
+        ],
       ],
     );
   }
