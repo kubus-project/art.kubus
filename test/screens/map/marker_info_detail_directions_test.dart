@@ -74,7 +74,9 @@ bool _launchSharesMethodWithMapReference(
     }
     if (bodyStarted && depth == 0) break;
   }
-  return mapReference.hasMatch(methodLines.join('\n'));
+  final methodSource = methodLines.join('\n');
+  return mapReference.hasMatch(methodSource) ||
+      RegExp(r'\bmap\b').hasMatch(methodSource);
 }
 
 void main() {
@@ -183,6 +185,18 @@ void main() {
       '  launchUrl(uri);',
       '}',
     ];
+    const lowercaseMapLaunch = <String>[
+      'void _openDestination(LatLng position) {',
+      '  final map = buildDirectionsUri(position);',
+      '  launchUrl(map);',
+      '}',
+    ];
+    const dartMapTypeExternalLaunch = <String>[
+      'void _openClaim(Uri uri) {',
+      '  final Map<String, dynamic> metadata = <String, dynamic>{};',
+      '  launchUrl(uri);',
+      '}',
+    ];
     final mapReference = RegExp(
       r'\b(?:maps|maplibre|openstreetmap)\b(?!\s*<)|'
       r'Map(?:Destination|Navigation|Screen|Marker|Overlay)',
@@ -204,6 +218,22 @@ void main() {
         mapReference,
       ),
       isTrue,
+    );
+    expect(
+      _launchSharesMethodWithMapReference(
+        lowercaseMapLaunch,
+        2,
+        mapReference,
+      ),
+      isTrue,
+    );
+    expect(
+      _launchSharesMethodWithMapReference(
+        dartMapTypeExternalLaunch,
+        2,
+        mapReference,
+      ),
+      isFalse,
     );
   });
 }
