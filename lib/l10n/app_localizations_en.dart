@@ -8102,10 +8102,10 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get eventCreatorNoInstitutionAvailableMessage =>
-      'No location context is available for this event yet.';
+      'No location source is available for this event yet.';
 
   @override
-  String get eventCreatorInstitutionLabel => 'Location context';
+  String get eventCreatorInstitutionLabel => 'Location source';
 
   @override
   String get eventCreatorSelectDateLabel => 'Select date';
@@ -8293,11 +8293,11 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get eventCreatorNoInstitutionAvailableToast =>
-      'No location context is available for this event';
+      'No location source is available for this event';
 
   @override
   String get eventCreatorSelectedInstitutionNotFoundToast =>
-      'Selected location context not found';
+      'Selected location source not found';
 
   @override
   String get eventCreatorEndTimeAfterStartToast =>
@@ -8347,7 +8347,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get eventCreatorHelpTooltip => 'Help';
 
   @override
-  String get eventCreatorReadyInstitutionLabel => 'Location context';
+  String get eventCreatorReadyInstitutionLabel => 'Location source';
 
   @override
   String eventCreatorReadyInstitutionComplete(Object institutionName) {
@@ -8356,7 +8356,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get eventCreatorReadyInstitutionPending =>
-      'Choose a location context first.';
+      'Choose a location source first.';
 
   @override
   String get eventCreatorReadyBasicsLabel => 'Basics complete';

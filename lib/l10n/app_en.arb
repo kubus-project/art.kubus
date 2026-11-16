@@ -3337,8 +3337,8 @@
   "artworkDetailLiked": "Liked",
   "artworkDetailHideComments": "Hide comments",
   "artworkDetailMintNft": "Create digital edition",
-  "eventCreatorNoInstitutionAvailableMessage": "No location context is available for this event yet.",
-  "eventCreatorInstitutionLabel": "Location context",
+  "eventCreatorNoInstitutionAvailableMessage": "No location source is available for this event yet.",
+  "eventCreatorInstitutionLabel": "Location source",
   "eventCreatorSelectDateLabel": "Select date",
   "eventCreatorSelectTimeLabel": "Select time",
   "eventCreatorNotSelectedLabel": "Not selected",
@@ -3398,8 +3398,8 @@
   "eventCreatorReviewRegistrationLabel": "Registration",
   "eventCreatorSelectStartEndDatesToast": "Please select start and end dates",
   "eventCreatorEnterCapacityToast": "Please enter event capacity",
-  "eventCreatorNoInstitutionAvailableToast": "No location context is available for this event",
-  "eventCreatorSelectedInstitutionNotFoundToast": "Selected location context not found",
+  "eventCreatorNoInstitutionAvailableToast": "No location source is available for this event",
+  "eventCreatorSelectedInstitutionNotFoundToast": "Selected location source not found",
   "eventCreatorEndTimeAfterStartToast": "End time must be after start time",
   "eventCreatorEventUpdatedTitle": "Event updated",
   "eventCreatorEventCreatedTitle": "Event created",
@@ -3420,14 +3420,14 @@
     }
   },
   "eventCreatorHelpTooltip": "Help",
-  "eventCreatorReadyInstitutionLabel": "Location context",
+  "eventCreatorReadyInstitutionLabel": "Location source",
   "eventCreatorReadyInstitutionComplete": "Coordinates are taken from {institutionName}. The event is saved under your account; linking events to institutions is not supported yet.",
   "@eventCreatorReadyInstitutionComplete": {
     "placeholders": {
       "institutionName": {}
     }
   },
-  "eventCreatorReadyInstitutionPending": "Choose a location context first.",
+  "eventCreatorReadyInstitutionPending": "Choose a location source first.",
   "eventCreatorReadyBasicsLabel": "Basics complete",
   "eventCreatorReadyBasicsDescription": "Title, description, and event type are in place.",
   "eventCreatorReadyDatesLabel": "Dates selected",

@@ -3075,8 +3075,8 @@
   "artworkDetailLiked": "Všečkano",
   "artworkDetailHideComments": "Skrij komentarje",
   "artworkDetailMintNft": "Ustvari digitalno izdajo",
-  "eventCreatorNoInstitutionAvailableMessage": "Za ta dogodek še ni na voljo lokacijskega konteksta.",
-  "eventCreatorInstitutionLabel": "Lokacijski kontekst",
+  "eventCreatorNoInstitutionAvailableMessage": "Za ta dogodek še ni na voljo vira lokacije.",
+  "eventCreatorInstitutionLabel": "Vir lokacije",
   "eventCreatorSelectDateLabel": "Izberi datum",
   "eventCreatorSelectTimeLabel": "Izberi čas",
   "eventCreatorNotSelectedLabel": "Ni izbrano",
@@ -3136,8 +3136,8 @@
   "eventCreatorReviewRegistrationLabel": "Prijava",
   "eventCreatorSelectStartEndDatesToast": "Prosim, izberi začetni in končni datum",
   "eventCreatorEnterCapacityToast": "Prosim, vnesi kapaciteto dogodka",
-  "eventCreatorNoInstitutionAvailableToast": "Za ta dogodek ni na voljo lokacijskega konteksta",
-  "eventCreatorSelectedInstitutionNotFoundToast": "Izbrani lokacijski kontekst ni najden",
+  "eventCreatorNoInstitutionAvailableToast": "Za ta dogodek ni na voljo vira lokacije",
+  "eventCreatorSelectedInstitutionNotFoundToast": "Izbrani vir lokacije ni najden",
   "eventCreatorEndTimeAfterStartToast": "Končni čas mora biti po začetnem času",
   "eventCreatorEventUpdatedTitle": "Dogodek posodobljen",
   "eventCreatorEventCreatedTitle": "Dogodek ustvarjen",
@@ -3158,14 +3158,14 @@
     }
   },
   "eventCreatorHelpTooltip": "Pomoč",
-  "eventCreatorReadyInstitutionLabel": "Lokacijski kontekst",
+  "eventCreatorReadyInstitutionLabel": "Vir lokacije",
   "eventCreatorReadyInstitutionComplete": "Koordinate so povzete po ustanovi {institutionName}. Dogodek se shrani pod tvojim računom; povezovanje dogodkov z ustanovami še ni podprto.",
   "@eventCreatorReadyInstitutionComplete": {
     "placeholders": {
       "institutionName": {}
     }
   },
-  "eventCreatorReadyInstitutionPending": "Najprej izberi lokacijski kontekst.",
+  "eventCreatorReadyInstitutionPending": "Najprej izberi vir lokacije.",
   "eventCreatorReadyBasicsLabel": "Osnove zaključene",
   "eventCreatorReadyBasicsDescription": "Naslov, opis in tip dogodka so pripravljeni.",
   "eventCreatorReadyDatesLabel": "Datumi izbrani",

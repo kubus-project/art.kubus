@@ -113,7 +113,7 @@ void main() {
   });
 
   testWidgets(
-      'without a membership the creator names a location context, '
+      'without a membership the creator names a location source, '
       'not an institution owner (EN)', (tester) async {
     final errors = await _pump(
       tester,
@@ -122,7 +122,7 @@ void main() {
     );
     expect(errors, isEmpty);
     expect(
-      find.text('No location context is available for this event yet.'),
+      find.text('No location source is available for this event yet.'),
       findsOneWidget,
     );
     expect(_visibleTexts(tester).where(_ownershipClaim.hasMatch), isEmpty);
@@ -137,13 +137,13 @@ void main() {
     );
     expect(errors, isEmpty);
     expect(
-      find.text('Za ta dogodek še ni na voljo lokacijskega konteksta.'),
+      find.text('Za ta dogodek še ni na voljo vira lokacije.'),
       findsOneWidget,
     );
     expect(_visibleTexts(tester).where(_ownershipClaim.hasMatch), isEmpty);
   });
 
-  testWidgets('a membership offers a location context selector (EN)',
+  testWidgets('a membership offers a location source selector (EN)',
       (tester) async {
     final errors = await _pump(
       tester,
@@ -151,7 +151,7 @@ void main() {
       withMembership: true,
     );
     expect(errors, isEmpty);
-    expect(find.text('Location context'), findsWidgets);
+    expect(find.text('Location source'), findsWidgets);
     expect(find.text('Institution'), findsNothing);
     expect(_visibleTexts(tester).where(_ownershipClaim.hasMatch), isEmpty);
   });

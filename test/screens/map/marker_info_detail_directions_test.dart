@@ -1,5 +1,4 @@
 import 'dart:io';
-import 'dart:math' as math;
 
 import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:art_kubus/models/art_marker.dart';
@@ -38,6 +37,44 @@ Future<void> _pump(WidgetTester tester, ArtMarker marker) {
       ),
     ),
   );
+}
+
+bool _launchSharesMethodWithMapReference(
+  List<String> lines,
+  int launchLine,
+  RegExp mapReference,
+) {
+  final methodDeclaration = RegExp(
+    r'^\s*(?:Future(?:<[^>]+>)?|void|bool|[A-Z]\w*(?:<[^>]+>)?)\s+'
+    r'\w+\s*\(',
+  );
+  var methodStart = -1;
+  for (var i = launchLine; i >= 0; i--) {
+    if (methodDeclaration.hasMatch(lines[i])) {
+      methodStart = i;
+      break;
+    }
+  }
+  if (methodStart < 0) return false;
+
+  var bodyStarted = false;
+  var depth = 0;
+  final methodLines = <String>[];
+  for (var i = methodStart; i < lines.length; i++) {
+    final line = lines[i];
+    methodLines.add(line);
+    for (final character in line.runes) {
+      if (character == 123) {
+        bodyStarted = true;
+        depth++;
+      } else if (character == 125 && bodyStarted) {
+        depth--;
+        if (depth == 0) break;
+      }
+    }
+    if (bodyStarted && depth == 0) break;
+  }
+  return mapReference.hasMatch(methodLines.join('\n'));
 }
 
 void main() {
@@ -83,8 +120,8 @@ void main() {
   test('every directions link is built in MapDestination, nowhere else', () {
     // One navigation path. Across all of lib/, only map_destination_actions.dart
     // may name a maps provider scheme, host or directions form, construct a
-    // geo: URI, or launch a URL near map code. The desktop panel and the
-    // walking route once launched Google Maps URLs directly, which bypassed
+    // geo: URI, or launch a URL from a method containing map code. The desktop
+    // panel and walking route once launched Google Maps URLs directly, bypassing
     // the provider choice, the coordinate rule and the web fallbacks.
     const allowed = 'lib/utils/map_destination_actions.dart';
     const providerTokens = <String>[
@@ -105,7 +142,7 @@ void main() {
 
     // A map reference, not the Dart type Map<K, V>.
     final mapReference = RegExp(
-      r'\b(?:maps?|maplibre|openstreetmap)\b(?!\s*<)|'
+      r'\b(?:maps|maplibre|openstreetmap)\b(?!\s*<)|'
       r'Map(?:Destination|Navigation|Screen|Marker|Overlay)',
       caseSensitive: false,
     );
@@ -122,14 +159,51 @@ void main() {
       final lines = source.split('\n');
       for (var i = 0; i < lines.length; i++) {
         if (!lines[i].contains('launchUrl(')) continue;
-        final from = math.max(0, i - 8);
-        final to = math.min(lines.length, i + 9);
-        final window = lines.sublist(from, to).join('\n');
-        if (mapReference.hasMatch(window)) {
+        if (_launchSharesMethodWithMapReference(lines, i, mapReference)) {
           offenders.add('$path:${i + 1} launches a URL near map code');
         }
       }
     }
     expect(offenders, isEmpty, reason: offenders.join('\n'));
+  });
+
+  test('directions scanner scopes launches to their containing method', () {
+    const externalLinkBesideMapMethod = <String>[
+      'void _openExternal(Uri uri) {',
+      '  launchUrl(uri);',
+      '}',
+      'void _openInstitutionOnMap(LatLng position) {',
+      '  MapNavigation.open(position);',
+      '}',
+    ];
+    const rawDirectionsLaunch = <String>[
+      'void _openDirections(LatLng position) {',
+      "  final uri = Uri.https('maps.example', '/directions');",
+      '  MapNavigation.open(position);',
+      '  launchUrl(uri);',
+      '}',
+    ];
+    final mapReference = RegExp(
+      r'\b(?:maps|maplibre|openstreetmap)\b(?!\s*<)|'
+      r'Map(?:Destination|Navigation|Screen|Marker|Overlay)',
+      caseSensitive: false,
+    );
+
+    expect(
+      _launchSharesMethodWithMapReference(
+        externalLinkBesideMapMethod,
+        1,
+        mapReference,
+      ),
+      isFalse,
+    );
+    expect(
+      _launchSharesMethodWithMapReference(
+        rawDirectionsLaunch,
+        3,
+        mapReference,
+      ),
+      isTrue,
+    );
   });
 }

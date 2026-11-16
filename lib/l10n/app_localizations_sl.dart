@@ -8161,10 +8161,10 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get eventCreatorNoInstitutionAvailableMessage =>
-      'Za ta dogodek še ni na voljo lokacijskega konteksta.';
+      'Za ta dogodek še ni na voljo vira lokacije.';
 
   @override
-  String get eventCreatorInstitutionLabel => 'Lokacijski kontekst';
+  String get eventCreatorInstitutionLabel => 'Vir lokacije';
 
   @override
   String get eventCreatorSelectDateLabel => 'Izberi datum';
@@ -8352,11 +8352,11 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get eventCreatorNoInstitutionAvailableToast =>
-      'Za ta dogodek ni na voljo lokacijskega konteksta';
+      'Za ta dogodek ni na voljo vira lokacije';
 
   @override
   String get eventCreatorSelectedInstitutionNotFoundToast =>
-      'Izbrani lokacijski kontekst ni najden';
+      'Izbrani vir lokacije ni najden';
 
   @override
   String get eventCreatorEndTimeAfterStartToast =>
@@ -8406,7 +8406,7 @@ class AppLocalizationsSl extends AppLocalizations {
   String get eventCreatorHelpTooltip => 'Pomoč';
 
   @override
-  String get eventCreatorReadyInstitutionLabel => 'Lokacijski kontekst';
+  String get eventCreatorReadyInstitutionLabel => 'Vir lokacije';
 
   @override
   String eventCreatorReadyInstitutionComplete(Object institutionName) {
@@ -8415,7 +8415,7 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get eventCreatorReadyInstitutionPending =>
-      'Najprej izberi lokacijski kontekst.';
+      'Najprej izberi vir lokacije.';
 
   @override
   String get eventCreatorReadyBasicsLabel => 'Osnove zaključene';
