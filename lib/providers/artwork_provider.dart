@@ -327,9 +327,11 @@ class ArtworkProvider extends ChangeNotifier {
           try {
             return await (api as ArtworkPrivatePreviewApi)
                 .getArtworkDetailWithMediaPreview(key);
-          } catch (_) {
-            // Preserve the public/snapshot read path when the authenticated
-            // endpoint is unavailable or the record is not caller-owned.
+          } catch (e) {
+            // Only a rejected session degrades to the public read. A network
+            // or server failure must not let a stale public/snapshot
+            // document stand in for the live visibility decision.
+            if (!_isSessionRejection(e)) rethrow;
           }
         }
         return _backendApi.getArtwork(key);
@@ -351,6 +353,10 @@ class ArtworkProvider extends ChangeNotifier {
       _inFlightArtworkFetches.remove(key);
     }
   }
+
+  static bool _isSessionRejection(Object error) =>
+      error is BackendApiRequestException &&
+      (error.statusCode == 401 || error.statusCode == 403);
 
   /// Refreshes detail visibility and media authority for the current screen
   /// entry, even when an older detail response already supplied a descriptor.
@@ -384,8 +390,10 @@ class ArtworkProvider extends ChangeNotifier {
         try {
           fetched = await (api as ArtworkPrivatePreviewApi)
               .getArtworkDetailWithMediaPreview(id);
-        } catch (_) {
-          // A public detail read remains authoritative for non-owner callers.
+        } catch (e) {
+          // A rejected session reads as a guest; any other failure is not
+          // proof that the artwork is still public.
+          if (!_isSessionRejection(e)) rethrow;
           fetched = await api.getArtwork(id);
         }
       } else {
