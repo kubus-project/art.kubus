@@ -163,10 +163,25 @@ class _DesktopArtworkDetailScreenState
     final savedItemsProvider = context.read<SavedItemsProvider>();
 
     if (existing != null) {
-      if (!existing.isPublic && !existing.mediaPreviewProvided) {
-        await provider.refreshPrivatePreviewMetadata(widget.artworkId);
-        if (!mounted) return;
+      if (mounted) {
+        setState(() {
+          _artworkLoading = true;
+          _artworkError = null;
+        });
       }
+      final refreshed =
+          await provider.refreshArtworkDetailMetadata(widget.artworkId);
+      if (!mounted) return;
+      if (refreshed == null) {
+        setState(() {
+          _artworkLoading = false;
+          _artworkError = l10n.artDetailLoadFailedMessage;
+        });
+        return;
+      }
+    }
+
+    if (existing != null) {
       await savedItemsProvider.hydrateSavedStatus(
         type: SavedItemType.artwork,
         ids: [widget.artworkId],
@@ -189,12 +204,7 @@ class _DesktopArtworkDetailScreenState
 
     try {
       await provider.fetchArtworkIfNeeded(widget.artworkId);
-      final fetchedArtwork = provider.getArtworkById(widget.artworkId);
-      if (fetchedArtwork != null &&
-          !fetchedArtwork.isPublic &&
-          !fetchedArtwork.mediaPreviewProvided) {
-        await provider.refreshPrivatePreviewMetadata(widget.artworkId);
-      }
+
       await savedItemsProvider.hydrateSavedStatus(
         type: SavedItemType.artwork,
         ids: [widget.artworkId],
@@ -522,7 +532,7 @@ class _DesktopArtworkDetailScreenState
 
   Widget _buildMedia(Artwork artwork, String? coverUrl) {
     final scheme = Theme.of(context).colorScheme;
-    if (!artwork.isPublic || artwork.mediaPreview != null) {
+    if (!artwork.canUsePublicMedia || artwork.mediaPreview != null) {
       return ClipRRect(
         borderRadius: BorderRadius.circular(KubusRadius.lg),
         child: AspectRatio(
@@ -581,7 +591,7 @@ class _DesktopArtworkDetailScreenState
 
   Widget _buildGallerySection(Artwork artwork, String? coverUrl) {
     final l10n = AppLocalizations.of(context)!;
-    if (!artwork.isPublic || artwork.mediaPreview != null) {
+    if (!artwork.canUsePublicMedia || artwork.mediaPreview != null) {
       final descriptor = artwork.mediaPreview;
       if (descriptor == null || descriptor.gallery.isEmpty) {
         return const SizedBox.shrink();

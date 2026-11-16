@@ -36,6 +36,8 @@ class ArtworkProvider extends ChangeNotifier {
   final Map<String, String> _spatialHistoryErrors = {};
   final Map<String, Future<Artwork>> _inFlightArtworkFetches =
       <String, Future<Artwork>>{};
+  final Map<String, Future<Artwork?>> _inFlightArtworkDetailRefreshes =
+      <String, Future<Artwork?>>{};
   // Individual detail requests may return artwork outside the first page used
   // by the startup list. Keep those records available for the provider's
   // lifetime instead of treating an omitted first-page row as a deletion.
@@ -350,36 +352,54 @@ class ArtworkProvider extends ChangeNotifier {
     }
   }
 
-  /// Refreshes owner/collaborator preview metadata only for private artwork.
-  /// Older test APIs and public artwork keep their existing read path.
-  Future<Artwork?> refreshPrivatePreviewMetadata(String artworkId) async {
+  /// Refreshes detail visibility and media authority for the current screen
+  /// entry, even when an older detail response already supplied a descriptor.
+  Future<Artwork?> refreshArtworkDetailMetadata(String artworkId) async {
     final id = artworkId.trim();
     final current = getArtworkById(id);
-    if (id.isEmpty ||
-        current == null ||
-        current.isPublic ||
-        current.mediaPreviewProvided) {
-      return current;
-    }
-    final api = _backendApi;
-    if (api is! ArtworkPrivatePreviewApi ||
-        AccountIdentity.accountKey.isEmpty) {
-      return current;
-    }
+    if (id.isEmpty || current == null) return current;
+
     final epoch = _accountEpoch;
+    final requestKey = '$epoch-$id';
+    final pending = _inFlightArtworkDetailRefreshes[requestKey];
+    if (pending != null) return pending;
+
+    final future = _fetchArtworkDetailMetadata(id, epoch);
+    _inFlightArtworkDetailRefreshes[requestKey] = future;
     try {
-      final fetched = await (api as ArtworkPrivatePreviewApi)
-          .getArtworkDetailWithMediaPreview(id);
-      if (epoch != _accountEpoch || fetched.id != id || fetched.isPublic) {
-        return null;
+      return await future;
+    } finally {
+      if (identical(_inFlightArtworkDetailRefreshes[requestKey], future)) {
+        _inFlightArtworkDetailRefreshes.remove(requestKey);
       }
+    }
+  }
+
+  Future<Artwork?> _fetchArtworkDetailMetadata(String id, int epoch) async {
+    final api = _backendApi;
+    try {
+      late final Artwork fetched;
+      if (api is ArtworkPrivatePreviewApi &&
+          AccountIdentity.accountKey.isNotEmpty) {
+        try {
+          fetched = await (api as ArtworkPrivatePreviewApi)
+              .getArtworkDetailWithMediaPreview(id);
+        } catch (_) {
+          // A public detail read remains authoritative for non-owner callers.
+          fetched = await api.getArtwork(id);
+        }
+      } else {
+        // Public detail responses do not need a mediaPreview key. A settled
+        // detail response still supplies the visibility/state authority.
+        fetched = await api.getArtwork(id);
+      }
+      if (epoch != _accountEpoch || fetched.id != id) return null;
       addOrUpdateArtwork(fetched, retainWhenListRefresh: true);
       return getArtworkById(id);
     } catch (_) {
-      // Preview metadata is an enhancement to a private detail record. The
-      // image widget will show an explicit unavailable state without falling
-      // back to the public URL when the endpoint is absent or denied.
-      return current;
+      // A cached detail is not proof that media remains public. Callers keep
+      // the loading/error surface instead of displaying stale URLs.
+      return null;
     }
   }
 

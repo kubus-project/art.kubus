@@ -525,7 +525,7 @@ class _ArtworkEditScreenState extends State<ArtworkEditScreen> {
       if (artwork != null &&
           !artwork.isPublic &&
           !artwork.mediaPreviewProvided) {
-        await provider.refreshPrivatePreviewMetadata(id);
+        await provider.refreshArtworkDetailMetadata(id);
       }
       if (collabProvider != null) {
         unawaited(

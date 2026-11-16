@@ -6,10 +6,12 @@ import 'package:art_kubus/models/saved_item.dart';
 import 'package:art_kubus/providers/saved_items_provider.dart';
 import 'package:art_kubus/providers/themeprovider.dart';
 import 'package:art_kubus/providers/wallet_provider.dart';
+import 'package:art_kubus/services/backend_api_service.dart';
 import 'package:art_kubus/screens/desktop/art/desktop_artwork_detail_screen.dart';
 import 'package:art_kubus/screens/desktop/desktop_shell_scope.dart';
 import 'package:art_kubus/widgets/detail/detail_shell_primitives.dart';
 import 'package:art_kubus/widgets/artwork_private_preview_image.dart';
+import 'package:art_kubus/widgets/artwork_gallery_view.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:latlong2/latlong.dart';
@@ -57,13 +59,38 @@ class _QuietArtworkProvider extends ArtworkProvider {
 
   @override
   Future<void> incrementViewCount(String artworkId) async {}
+
+  @override
+  Future<Artwork?> refreshArtworkDetailMetadata(String artworkId) async =>
+      getArtworkById(artworkId);
+}
+
+class _RefreshingArtworkProvider extends _QuietArtworkProvider {
+  int detailRefreshes = 0;
+
+  @override
+  Future<Artwork?> refreshArtworkDetailMetadata(String artworkId) async {
+    detailRefreshes += 1;
+    final fetched = getArtworkById(artworkId)!.copyWith(
+      editorialState: 'rejected',
+      mediaPreviewProvided: true,
+    );
+    addOrUpdateArtwork(fetched, retainWhenListRefresh: true);
+    return fetched;
+  }
 }
 
 /// The detail screen hosted the way the desktop shell hosts it: [host] wraps
 /// it (a sub-screen for in-app navigation, or the bare screen for a raw link).
-Widget _app(Widget Function(Widget screen) host) {
-  final artworks = _QuietArtworkProvider()
-    ..seedArtworksForTesting([_artwork()]);
+Widget _app(
+  Widget Function(Widget screen) host, {
+  Artwork? artwork,
+  _QuietArtworkProvider? artworkProvider,
+}) {
+  final artworks = artworkProvider ?? _QuietArtworkProvider();
+  if (artworkProvider == null) {
+    artworks.seedArtworksForTesting([artwork ?? _artwork()]);
+  }
   return MultiProvider(
     providers: [
       ChangeNotifierProvider<ArtworkProvider>.value(value: artworks),
@@ -211,5 +238,81 @@ void main() {
     );
     expect(preview.isPublic, isFalse);
     expect(preview.descriptor?.cover, _privateCoverPath);
+  });
+
+  testWidgets(
+      'rejected authorized detail does not use its public image URL when the preview descriptor is null',
+      (tester) async {
+    final artwork = parseArtworkFromBackendJson(<String, dynamic>{
+      'id': _artworkId,
+      'title': _title,
+      'artistName': 'Artist',
+      'description': 'A hidden record.',
+      'latitude': 46.0,
+      'longitude': 14.0,
+      'createdAt': '2026-01-01T00:00:00.000Z',
+      'imageURL': '/uploads/artworks/covers/hidden.png',
+      'galleryUrls': <String>['/uploads/artworks/covers/hidden-gallery.png'],
+      'isPublic': true,
+      'isActive': true,
+      'editorialState': 'rejected',
+      'mediaPreview': null,
+    });
+
+    await pumpAt1440(tester, _app((screen) => screen, artwork: artwork));
+
+    expect(find.byType(ArtworkPrivatePreviewImage), findsOneWidget);
+    final preview = tester.widget<ArtworkPrivatePreviewImage>(
+      find.byType(ArtworkPrivatePreviewImage),
+    );
+    expect(preview.isPublic, isFalse);
+    expect(find.byType(ArtworkGalleryView), findsNothing);
+  });
+
+  testWidgets(
+      'a cached public detail refreshes eligibility before reusing its public image URL',
+      (tester) async {
+    final artwork = _artwork().copyWith(
+      imageUrl: '/uploads/artworks/covers/stale.png',
+      editorialState: 'approved',
+      mediaPreviewProvided: true,
+    );
+    final provider = _RefreshingArtworkProvider()
+      ..seedArtworksForTesting([artwork]);
+
+    await pumpAt1440(
+      tester,
+      _app((screen) => screen, artworkProvider: provider),
+    );
+
+    expect(provider.detailRefreshes, 1);
+    expect(find.byType(ArtworkPrivatePreviewImage), findsOneWidget);
+    final preview = tester.widget<ArtworkPrivatePreviewImage>(
+      find.byType(ArtworkPrivatePreviewImage),
+    );
+    expect(preview.isPublic, isFalse);
+    expect(find.byType(ArtworkGalleryView), findsNothing);
+  });
+  testWidgets(
+      'a cached public-list row refreshes authorized visibility before using its public image URL',
+      (tester) async {
+    final artwork = _artwork().copyWith(
+      imageUrl: '/uploads/artworks/covers/stale.png',
+    );
+    final provider = _RefreshingArtworkProvider()
+      ..seedArtworksForTesting([artwork]);
+
+    await pumpAt1440(
+      tester,
+      _app((screen) => screen, artworkProvider: provider),
+    );
+
+    expect(provider.detailRefreshes, 1);
+    expect(find.byType(ArtworkPrivatePreviewImage), findsOneWidget);
+    final preview = tester.widget<ArtworkPrivatePreviewImage>(
+      find.byType(ArtworkPrivatePreviewImage),
+    );
+    expect(preview.isPublic, isFalse);
+    expect(find.byType(ArtworkGalleryView), findsNothing);
   });
 }

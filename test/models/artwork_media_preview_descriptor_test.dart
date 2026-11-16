@@ -49,4 +49,58 @@ void main() {
       isTrue,
     );
   });
+
+  test(
+      'public media eligibility follows explicit visibility and editorial state',
+      () {
+    Artwork parse(Map<String, dynamic> state) => parseArtworkFromBackendJson({
+          'id': 'id',
+          'title': 'Artwork',
+          'latitude': 0,
+          'longitude': 0,
+          ...state,
+        });
+
+    expect(
+      parse({
+        'isPublic': true,
+        'isActive': true,
+        'editorialState': 'approved',
+      }).canUsePublicMedia,
+      isTrue,
+    );
+    expect(
+      parse({
+        'isPublic': true,
+        'isActive': true,
+        'editorialState': 'unreviewed',
+      }).canUsePublicMedia,
+      isTrue,
+    );
+    for (final state in ['rejected', 'archived', 'future_state']) {
+      expect(
+        parse({
+          'isPublic': true,
+          'isActive': true,
+          'editorialState': state,
+        }).canUsePublicMedia,
+        isFalse,
+        reason: 'state $state must not expose the public media URL',
+      );
+    }
+    expect(
+      parse({
+        'isPublic': true,
+        'isActive': false,
+        'editorialState': 'approved',
+      }).canUsePublicMedia,
+      isFalse,
+    );
+    expect(
+      parse({'isPublic': true, 'isActive': true}).canUsePublicMedia,
+      isTrue,
+      reason:
+          'public list documents without editorial metadata stay compatible',
+    );
+  });
 }

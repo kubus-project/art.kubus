@@ -207,6 +207,7 @@ class Artwork {
   final ArtworkStatus status;
   final bool isPublic;
   final bool isActive;
+  final String? editorialState;
   final bool isForSale;
   final double? price;
   final String? currency;
@@ -301,6 +302,7 @@ class Artwork {
     this.status = ArtworkStatus.undiscovered,
     this.isPublic = true,
     this.isActive = true,
+    this.editorialState,
     this.isForSale = false,
     this.price,
     this.currency,
@@ -370,6 +372,16 @@ class Artwork {
   /// Check if artwork is favorite
   bool get isFavorite => status == ArtworkStatus.favorite;
 
+  /// Whether URL-based public media is allowed by the known publication state.
+  /// Missing state remains compatible with public-list documents; an unknown
+  /// explicit state fails closed so a new moderation state cannot expose bytes.
+  bool get canUsePublicMedia {
+    if (!isPublic || !isActive) return false;
+    final state = editorialState?.trim().toLowerCase();
+    if (state == null || state.isEmpty) return true;
+    return const {'unreviewed', 'needs_review', 'approved'}.contains(state);
+  }
+
   /// Backward-compatible legacy alias. Do not use in presentation.
   @Deprecated('Legacy artwork reward alias; do not present as artwork value.')
   int get actualRewards => rewards;
@@ -391,6 +403,7 @@ class Artwork {
       'status': status.name,
       'isPublic': isPublic,
       'isActive': isActive,
+      if (editorialState != null) 'editorialState': editorialState,
       'isForSale': isForSale,
       'price': price,
       'currency': currency,
@@ -464,6 +477,8 @@ class Artwork {
       ),
       isPublic: map['isPublic'] ?? map['is_public'] ?? true,
       isActive: map['isActive'] ?? map['is_active'] ?? true,
+      editorialState: map['editorialState']?.toString() ??
+          map['editorial_state']?.toString(),
       isForSale: map['isForSale'] ?? map['is_for_sale'] ?? false,
       price: map['price'] is num
           ? (map['price'] as num).toDouble()
@@ -566,6 +581,7 @@ class Artwork {
     ArtworkStatus? status,
     bool? isPublic,
     bool? isActive,
+    String? editorialState,
     bool? isForSale,
     double? price,
     String? currency,
@@ -635,6 +651,7 @@ class Artwork {
       status: status ?? this.status,
       isPublic: isPublic ?? this.isPublic,
       isActive: isActive ?? this.isActive,
+      editorialState: editorialState ?? this.editorialState,
       isForSale: isForSale ?? this.isForSale,
       price: clearPrice ? null : (price ?? this.price),
       currency: currency ?? this.currency,

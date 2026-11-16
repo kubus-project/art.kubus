@@ -486,10 +486,25 @@ class _ArtDetailScreenState extends State<ArtDetailScreen> {
     final savedItemsProvider = context.read<SavedItemsProvider>();
 
     if (existing != null) {
-      if (!existing.isPublic && !existing.mediaPreviewProvided) {
-        await provider.refreshPrivatePreviewMetadata(widget.artworkId);
-        if (!mounted) return;
+      if (mounted) {
+        setState(() {
+          _artworkLoading = true;
+          _artworkError = null;
+        });
       }
+      final refreshed =
+          await provider.refreshArtworkDetailMetadata(widget.artworkId);
+      if (!mounted) return;
+      if (refreshed == null) {
+        setState(() {
+          _artworkLoading = false;
+          _artworkError = l10n.artDetailLoadFailedMessage;
+        });
+        return;
+      }
+    }
+
+    if (existing != null) {
       await savedItemsProvider.hydrateSavedStatus(
         type: SavedItemType.artwork,
         ids: [widget.artworkId],
@@ -512,12 +527,7 @@ class _ArtDetailScreenState extends State<ArtDetailScreen> {
 
     try {
       await provider.fetchArtworkIfNeeded(widget.artworkId);
-      final fetchedArtwork = provider.getArtworkById(widget.artworkId);
-      if (fetchedArtwork != null &&
-          !fetchedArtwork.isPublic &&
-          !fetchedArtwork.mediaPreviewProvided) {
-        await provider.refreshPrivatePreviewMetadata(widget.artworkId);
-      }
+
       await savedItemsProvider.hydrateSavedStatus(
         type: SavedItemType.artwork,
         ids: [widget.artworkId],
@@ -556,7 +566,7 @@ class _ArtDetailScreenState extends State<ArtDetailScreen> {
     );
   }
 
-  bool _hasGalleryMedia(Artwork artwork) => artwork.isPublic
+  bool _hasGalleryMedia(Artwork artwork) => artwork.canUsePublicMedia
       ? artwork.galleryUrls.isNotEmpty
       : artwork.mediaPreview?.gallery.isNotEmpty == true;
 
@@ -588,7 +598,7 @@ class _ArtDetailScreenState extends State<ArtDetailScreen> {
           );
     return ArtworkPrivatePreviewImage(
       artworkId: artwork.id,
-      isPublic: artwork.isPublic,
+      isPublic: artwork.canUsePublicMedia,
       slot: 'cover',
       descriptor: artwork.mediaPreview,
       descriptorProvided: artwork.mediaPreviewProvided,
@@ -794,14 +804,15 @@ class _ArtDetailScreenState extends State<ArtDetailScreen> {
 
   Widget _buildGallerySection(Artwork artwork) {
     final hasPrivatePreview = artwork.mediaPreview != null;
-    if (artwork.isPublic && !hasPrivatePreview && artwork.galleryUrls.isEmpty) {
+    final canUsePublicMedia = artwork.canUsePublicMedia && !hasPrivatePreview;
+    if (canUsePublicMedia && artwork.galleryUrls.isEmpty) {
       return const SizedBox.shrink();
     }
-    if (!artwork.isPublic && !hasPrivatePreview) {
+    if (!canUsePublicMedia && !hasPrivatePreview) {
       return const SizedBox.shrink();
     }
 
-    if (!artwork.isPublic || hasPrivatePreview) {
+    if (!canUsePublicMedia) {
       final descriptor = artwork.mediaPreview!;
       final slots = <String>[
         if (descriptor.cover != null) 'cover',

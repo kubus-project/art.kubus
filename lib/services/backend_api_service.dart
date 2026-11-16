@@ -12804,6 +12804,9 @@ Artwork parseArtworkFromBackendJson(Map<String, dynamic> json) {
   );
   final isPublic = boolVal(json['isPublic'] ?? json['is_public']) ?? true;
   final isActive = boolVal(json['isActive'] ?? json['is_active']) ?? true;
+  final editorialState = nullableString(
+    json['editorialState'] ?? json['editorial_state'],
+  )?.toLowerCase();
   final isForSale = boolVal(json['isForSale'] ?? json['is_for_sale']) ?? false;
   final price = doubleVal(json['price']);
   final currency = nullableString(json['currency']);
@@ -12911,6 +12914,7 @@ Artwork parseArtworkFromBackendJson(Map<String, dynamic> json) {
     ),
     isPublic: isPublic,
     isActive: isActive,
+    editorialState: editorialState,
     isForSale: isForSale,
     price: price,
     currency: currency,
