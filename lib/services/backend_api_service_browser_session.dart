@@ -39,6 +39,26 @@ bool _browserSessionIsBound(BackendApiService service) {
   return bound != null && (service._authToken ?? '').trim() == bound;
 }
 
+/// Web, before a sign-in that does not start a browser session (wallet, Google,
+/// passkey, registration) commits its bearer: revokes the browser session, so a
+/// reload cannot restore an earlier email account. Sends /logout only (cookie
+/// only, no bearer); never /issue or /restore. The request is bounded:
+/// new sign-in proceeds only after confirmed revocation or a disabled endpoint
+/// with no active session-bound bearer. A response without a bearer is no
+/// sign-in and revokes nothing.
+Future<void> _browserSessionEndForSignIn(
+  BackendApiService service,
+  Map<String, dynamic> body,
+) async {
+  if (_browserSessionFor(service) == null) return;
+  if (_browserSessionTokenOf(body) == null) return;
+  if (!await service.endBrowserSessionForLogout(
+    requireConfirmation: true,
+  )) {
+    throw StateError('Could not end the previous browser session');
+  }
+}
+
 /// Web, after a successful email login: exchanges the login token for a
 /// session-bound bearer. Returns the body to commit. When no session starts the
 /// login body is returned unchanged, so the login token stays this tab's bearer
@@ -218,17 +238,30 @@ extension BackendApiBrowserSession on BackendApiService {
   /// Sign-out, web only: revokes the browser session. Sent at once, awaited by
   /// the caller with a bound, never throws. Blocks restoration until the next
   /// email sign-in.
-  Future<void> endBrowserSessionForLogout() async {
+  Future<bool> endBrowserSessionForLogout({
+    bool requireConfirmation = false,
+  }) async {
+    final controller = _browserSessionFor(this);
+    if (controller == null) return true;
+    if (!requireConfirmation) {
+      _browserRestoreBlocked = true;
+      _browserRestoreRetryAt = null;
+      _browserBoundToken = null;
+    }
+    BrowserSessionResult result;
+    try {
+      result = await controller.logout().timeout(_browserSessionLogoutTimeout);
+    } catch (_) {
+      result = const BrowserSessionResult.unavailable();
+    }
+    final revoked = result.isSuccess ||
+        (result.outcome == BrowserSessionOutcome.disabled &&
+            !_browserSessionIsBound(this));
+    if (requireConfirmation && !revoked) return false;
     _browserRestoreBlocked = true;
     _browserRestoreRetryAt = null;
     _browserBoundToken = null;
-    final controller = _browserSessionFor(this);
-    if (controller == null) return;
-    try {
-      await controller.logout().timeout(_browserSessionLogoutTimeout);
-    } catch (_) {
-      // Best effort: local sign-out proceeds regardless.
-    }
+    return revoked;
   }
 
   /// True while this tab's bearer was issued or restored by a browser session.

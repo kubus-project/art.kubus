@@ -27,6 +27,9 @@ class ScriptedSessionApi implements BrowserSessionApi {
   int logoutCalls = 0;
   String? lastLoginToken;
   Completer<void>? restoreGate;
+  void Function()? onLogout;
+  BrowserSessionResult Function() logoutScript =
+      () => BrowserSessionResult.success({'success': true});
 
   BrowserSessionResult Function() issueScript =
       () => BrowserSessionResult.success({
@@ -63,7 +66,8 @@ class ScriptedSessionApi implements BrowserSessionApi {
   @override
   Future<BrowserSessionResult> logout() async {
     logoutCalls += 1;
-    return BrowserSessionResult.success({'success': true});
+    onLogout?.call();
+    return logoutScript();
   }
 }
 
@@ -156,6 +160,7 @@ void main() {
       expect(session.issueCalls, 1);
       expect(session.lastLoginToken, jwt('login'));
       expect(api.getAuthToken(), jwt('session'));
+      expect(api.getAuthToken(), isNot(jwt('login')));
       expect(api.browserSessionBearerActive, isTrue);
       await expectNoCredentialStorage(jwt('session'));
       await expectNoCredentialStorage(jwt('login'));
@@ -306,6 +311,152 @@ void main() {
       await api.clearAuth();
 
       expect(api.getAuthToken(), isNull);
+    });
+  });
+
+  group('other sign-ins on web', () {
+    /// Every request answers [body]: each sign-in below makes one request.
+    void serveAll(Map<String, dynamic> body, {int status = 200}) {
+      api.setHttpClient(MockClient((request) async {
+        return http.Response(jsonEncode(body), status);
+      }));
+    }
+
+    Map<String, dynamic> bearerBody(String token) => {
+          'success': true,
+          'data': {
+            'token': token,
+            'user': {'id': 'acct-2'},
+          },
+        };
+
+    test('wallet sign-in ends the browser session before its bearer is kept',
+        () async {
+      String? tokenDuringRevoke = 'not revoked';
+      session.onLogout = () => tokenDuringRevoke = api.getAuthToken();
+      serveAll(bearerBody(jwt('wallet')));
+
+      await api.loginWithWallet(
+          walletAddress: 'wallet-1', signature: 'sig', message: 'msg');
+
+      expect(session.logoutCalls, 1);
+      expect(tokenDuringRevoke, isNull);
+      expect(session.issueCalls, 0);
+      expect(session.restoreCalls, 0);
+      expect(api.getAuthToken(), jwt('wallet'));
+      expect(api.browserSessionBearerActive, isFalse);
+      await expectNoCredentialStorage(jwt('wallet'));
+    });
+
+    test('Google, passkey and email registration each end the browser session',
+        () async {
+      serveAll(bearerBody(jwt('google')));
+      await api.loginWithGoogle(code: 'one-time-code', origin: 'web');
+      expect(session.logoutCalls, 1);
+      expect(api.getAuthToken(), jwt('google'));
+
+      serveAll(bearerBody(jwt('passkey')));
+      await api.verifyPasskeyLogin(responsePayload: {'id': 'credential-1'});
+      expect(session.logoutCalls, 2);
+      expect(api.getAuthToken(), jwt('passkey'));
+
+      serveAll(bearerBody(jwt('register')), status: 201);
+      await api.registerWithEmail(
+          email: 'b@example.invalid', password: 'pw-pw-pw-pw');
+      expect(session.logoutCalls, 3);
+      expect(api.getAuthToken(), jwt('register'));
+      expect(session.issueCalls, 0);
+      expect(session.restoreCalls, 0);
+    });
+
+    test('a registration that returns no bearer ends nothing', () async {
+      serveAll({
+        'success': true,
+        'data': {
+          'user': {'id': 'acct-2'}
+        },
+      }, status: 201);
+
+      await api.registerWithEmail(
+          email: 'b@example.invalid', password: 'pw-pw-pw-pw');
+
+      expect(session.logoutCalls, 0);
+      expect(api.getAuthToken(), isNull);
+    });
+
+    test('a failed revoke denies wallet sign-in and preserves current account',
+        () async {
+      await api.restoreBrowserSessionForStart();
+      final previousToken = api.getAuthToken();
+      session.logoutScript = () => const BrowserSessionResult.unavailable();
+      serveAll(bearerBody(jwt('wallet')));
+
+      await expectLater(
+        api.loginWithWallet(
+            walletAddress: 'wallet-1', signature: 'sig', message: 'msg'),
+        throwsStateError,
+      );
+
+      expect(session.logoutCalls, 1);
+      expect(api.getAuthToken(), previousToken);
+      expect(api.browserSessionBearerActive, isTrue);
+    });
+
+    test('a disabled browser-session endpoint keeps legacy wallet sign-in',
+        () async {
+      session.logoutScript = () => BrowserSessionResult.failure(
+          BrowserSessionOutcome.disabled,
+          statusCode: 404);
+      serveAll(bearerBody(jwt('wallet')));
+
+      final result = await api.loginWithWallet(
+          walletAddress: 'wallet-1', signature: 'sig', message: 'msg');
+
+      expect(session.logoutCalls, 1);
+      expect(result['success'], isTrue);
+      expect(api.getAuthToken(), jwt('wallet'));
+    });
+
+    test('native sign-in never calls the session client', () async {
+      api.debugSetBrowserSessionForTesting(
+        BrowserSessionController(
+            api: session, lock: InProcessBrowserSessionLock()),
+        isWeb: () => false,
+      );
+      serveAll(bearerBody(jwt('wallet')));
+
+      await api.loginWithWallet(
+          walletAddress: 'wallet-1', signature: 'sig', message: 'msg');
+
+      expect(session.logoutCalls, 0);
+      expect(api.getAuthToken(), jwt('wallet'));
+    });
+
+    test('bind-wallet from a session-bound bearer keeps the browser session',
+        () async {
+      await api.restoreBrowserSessionForStart();
+      expect(api.browserSessionBearerActive, isTrue);
+      serveAll(bearerBody(jwt('restored-bound')));
+
+      await api.bindAuthenticatedWallet('wallet-1', signature: 'sig');
+
+      expect(session.logoutCalls, 0);
+      expect(api.getAuthToken(), jwt('restored-bound'));
+      expect(api.browserSessionBearerActive, isTrue);
+    });
+
+    test('bind-wallet from an unbound bearer ends the browser session',
+        () async {
+      serveAll(bearerBody(jwt('wallet')));
+      await api.loginWithWallet(
+          walletAddress: 'wallet-1', signature: 'sig', message: 'msg');
+      serveAll(bearerBody(jwt('bound-wallet')));
+
+      await api.bindAuthenticatedWallet('wallet-2', signature: 'sig');
+
+      expect(session.logoutCalls, 2);
+      expect(api.getAuthToken(), jwt('bound-wallet'));
+      expect(api.browserSessionBearerActive, isFalse);
     });
   });
 
