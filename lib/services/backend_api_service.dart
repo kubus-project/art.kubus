@@ -7,6 +7,9 @@ import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'browser_session/browser_session_api.dart';
+import 'browser_session/browser_session_controller.dart';
+import 'browser_session/browser_session_http_client.dart';
 import '../models/art_marker.dart';
 import '../models/map_marker_overview.dart';
 import '../models/promotion.dart';
@@ -68,6 +71,7 @@ part 'backend_api_service_messages.dart';
 part 'backend_api_service_profile_helpers.dart';
 part 'backend_api_service_parsers.dart';
 part 'backend_api_service_upload_helpers.dart';
+part 'backend_api_service_browser_session.dart';
 
 /// Backend API Service
 ///
@@ -440,6 +444,17 @@ class BackendApiService
 
   http.Client _client = http.Client();
   AuthSessionCoordinator? _authCoordinator;
+
+  // Web browser-session state (backend_api_service_browser_session.dart). Native
+  // never sets these, and the session endpoints are never called there.
+  BrowserSessionController? _browserSessionController;
+  bool Function() _browserSessionIsWeb = _browserSessionIsWebPlatform;
+  Future<bool>? _browserRestoreFlight;
+  // The bearer this tab holds because a browser session issued or restored it.
+  String? _browserBoundToken;
+  DateTime? _browserRestoreRetryAt;
+  // Set when the server refused the session or the user signed out; a sign-in clears it.
+  bool _browserRestoreBlocked = false;
 
   /// Bumped at every credential commit and sign-out. Account requests capture it when
   /// they start and drop their local writes once it has moved on, so a response
@@ -1387,7 +1402,8 @@ class BackendApiService
         return true;
       }
 
-      return false;
+      // Web: no usable bearer in this tab. Browser-session restore (native: false).
+      return await _browserSessionRestoreIfDue(this);
     } catch (e) {
       AppConfig.debugPrint(
         'BackendApiService.restoreExistingSession failed: $e',
@@ -1723,6 +1739,32 @@ class BackendApiService
       uri: uri,
       response: response,
     );
+
+    // Web browser session: a 401 for the bearer this request sent. One restore,
+    // then one retry. A failed restore falls through to the re-auth path below.
+    if (response.statusCode == 401 &&
+        includeAuth &&
+        !retriedAfterReauth &&
+        await _browserSessionRecoverRejectedBearer(
+          this,
+          resolvedHeaders['Authorization'],
+        )) {
+      return _request(
+        method,
+        uri,
+        includeAuth: includeAuth,
+        headers: headers,
+        body: body,
+        encoding: encoding,
+        isIdempotent: isIdempotent,
+        replaySafe: replaySafe,
+        timeout: timeout,
+        retriedAfterReauth: true,
+        retriedAfterWritableRedirect: retriedAfterWritableRedirect,
+        allowImplicitBackendFailover: allowImplicitBackendFailover,
+        attemptedBackendOrigins: attemptedOrigins,
+      );
+    }
 
     final coordinator = _authCoordinator;
     final accountInactive = includeAuth &&

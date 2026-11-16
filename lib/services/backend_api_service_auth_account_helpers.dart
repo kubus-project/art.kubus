@@ -172,16 +172,23 @@ Future<Map<String, dynamic>> _backendApiLoginWithEmail(
     );
     final data = jsonDecode(response.body) as Map<String, dynamic>;
     if (response.statusCode == 200) {
-      sessionEpoch = await service._persistTokenFromResponse(data,
+      // Web: the login token is exchanged for a session-bound bearer first
+      // (best effort; the login body is kept when no session starts).
+      final committed = await _browserSessionIssueAfterEmailLogin(
+        service,
+        data,
+        expectedEpoch: sessionEpoch,
+      );
+      sessionEpoch = await service._persistTokenFromResponse(committed,
           expectedEpoch: sessionEpoch);
       await service.syncSecureAccountStatusFromResponse(
-        data,
+        committed,
         sessionEpoch: sessionEpoch,
         fetchIfMissing: false,
       );
       await service.setLastSignInMethod(AuthSignInMethod.email,
           sessionEpoch: sessionEpoch);
-      return data;
+      return committed;
     }
     if (response.statusCode == 429) {
       service._markRateLimited(key, response, defaultWindowMs: 900000);

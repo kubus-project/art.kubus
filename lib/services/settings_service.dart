@@ -162,7 +162,10 @@ class SettingsService {
     // First, and synchronous: nothing below may fail before the map's memory of
     // this account (camera, filters, search, selection) is gone.
     KubusMapSessionMemory.clearAll();
+    // Web: revoke the browser session (cookie) alongside the local clear.
+    final browserSessionEnded = backendApi.endBrowserSessionForLogout();
     await backendApi.clearAuth();
+    await browserSessionEnded;
     // Cached public profile packages, in memory and persisted, belong to the
     // session that is ending; the next sign-in starts with none.
     await ProfilePackageService.clearForSignOut();

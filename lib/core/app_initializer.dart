@@ -555,6 +555,11 @@ class _AppInitializerState extends State<AppInitializer> {
           ) ??
           ProtectedActionRequirements.accountOnly;
       await BackendApiService().loadAuthToken();
+      if (kIsWeb) {
+        // Web: a reload leaves no bearer in this tab. Restore the browser session
+        // before the route is chosen (bounded), so the guest map is not shown first.
+        await BackendApiService().restoreBrowserSessionForStart();
+      }
       final inMemoryToken = BackendApiService().getAuthToken();
       final sessionStatus = (inMemoryToken != null &&
               inMemoryToken.trim().isNotEmpty &&
