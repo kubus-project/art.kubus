@@ -108,8 +108,14 @@ class FlakyIntentStore implements BrowserSessionLogoutIntentStore {
   bool readsFail = false;
 
   @override
-  Future<bool> writePendingLogout() async =>
-      writesFail ? false : _inner.writePendingLogout();
+  Future<bool> writePendingLogout({bool sharedMarkerWritten = false}) async =>
+      writesFail
+          ? false
+          : _inner.writePendingLogout(sharedMarkerWritten: sharedMarkerWritten);
+
+  @override
+  Future<bool> readDependsOnSharedMarker() =>
+      _inner.readDependsOnSharedMarker();
 
   @override
   Future<bool?> readPendingLogout() async =>
@@ -1217,6 +1223,84 @@ void main() {
       expect(await primary.readPendingLogout(), isTrue);
       expect(await fallback.readPendingLogout(), isTrue);
       expect(api.browserSessionLogoutUnresolved, isTrue);
+    });
+
+    test(
+        'a stale tab marker never revokes a newer account signed in by another tab',
+        () async {
+      // Tab 1 signs out of account A; the server is down, so both the shared
+      // marker and tab 1's own marker are written.
+      await startTabWithSession(tabAToken);
+      session.logoutScript = () => const BrowserSessionResult.unavailable();
+      expect(await api.endBrowserSessionForLogout(), isFalse);
+      expect(await primary.readPendingLogout(), isTrue);
+      expect(await fallback.readPendingLogout(), isTrue);
+      await api.clearAuth();
+
+      // Tab 2 signs in as B: its confirmed logout clears the shared marker
+      // (tab 2 has its own sessionStorage, so tab 1's marker stays) and B's
+      // cookie is issued.
+      expect(await primary.clear(), isTrue);
+      final tabBToken = sessionJwt('b1', account: 'acct-2', family: 'family-b');
+      session.restoreScript = () => BrowserSessionResult.success({
+            'success': true,
+            'data': {
+              'token': tabBToken,
+              'user': {'id': 'acct-2'}
+            },
+          });
+      session.logoutScript =
+          () => BrowserSessionResult.success({'success': true});
+
+      // Tab 1 reloads with no bearer.
+      api.debugSimulateTabReloadForTesting();
+      final logoutsBefore = session.logoutCalls;
+
+      await api.restoreBrowserSessionForStart();
+
+      expect(session.logoutCalls, logoutsBefore,
+          reason: 'the newer account cookie family must not be revoked');
+      expect(await fallback.readPendingLogout(), isFalse);
+      expect(await primary.readPendingLogout(), isFalse);
+    });
+
+    test(
+        'a tab marker written while the shared write failed is still owed after a reload',
+        () async {
+      await startTabWithSession(tabAToken);
+      primary.writesFail = true;
+      session.logoutScript = () => const BrowserSessionResult.unavailable();
+      expect(await api.endBrowserSessionForLogout(), isFalse);
+      await api.clearAuth();
+
+      primary.writesFail = false;
+      session.logoutScript =
+          () => BrowserSessionResult.success({'success': true});
+      api.debugSimulateTabReloadForTesting();
+      final logoutsBefore = session.logoutCalls;
+
+      expect(await api.restoreBrowserSessionForStart(), isFalse);
+
+      expect(session.logoutCalls, logoutsBefore + 1);
+      expect(await fallback.readPendingLogout(), isFalse);
+    });
+
+    test('an unreadable shared marker keeps a shared-dependent tab marker',
+        () async {
+      await startTabWithSession(tabAToken);
+      session.logoutScript = () => const BrowserSessionResult.unavailable();
+      expect(await api.endBrowserSessionForLogout(), isFalse);
+      await api.clearAuth();
+
+      primary.readsFail = true;
+      api.debugSimulateTabReloadForTesting();
+
+      expect(await api.restoreBrowserSessionForStart(), isFalse);
+
+      // Unreadable is never a verdict: the marker is neither cleared nor used
+      // to authorize a restore.
+      expect(await fallback.readPendingLogout(), isTrue);
+      expect(api.browserSessionRestoreUnavailable, isTrue);
     });
 
     test('an unreadable marker never authorizes a restore', () async {

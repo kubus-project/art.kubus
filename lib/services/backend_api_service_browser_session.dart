@@ -70,7 +70,7 @@ class _PreferencesLogoutIntentStore implements BrowserSessionLogoutIntentStore {
   static const String _key = PreferenceKeys.browserSessionPendingLogoutV1;
 
   @override
-  Future<bool> writePendingLogout() async {
+  Future<bool> writePendingLogout({bool sharedMarkerWritten = false}) async {
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setBool(_key, true);
@@ -79,6 +79,9 @@ class _PreferencesLogoutIntentStore implements BrowserSessionLogoutIntentStore {
       return false;
     }
   }
+
+  @override
+  Future<bool> readDependsOnSharedMarker() async => false;
 
   @override
   Future<bool?> readPendingLogout() async {
@@ -116,7 +119,10 @@ BrowserSessionLogoutIntentStore _tabLogoutStore(BackendApiService service) =>
 /// is retried before the next restore decision.
 Future<bool> _writeLogoutIntent(BackendApiService service) async {
   final shared = await _sharedLogoutStore(service).writePendingLogout();
-  final tab = await _tabLogoutStore(service).writePendingLogout();
+  // The tab marker records whether the shared one was written: only a tab
+  // marker that is the sole record may outlive the shared marker.
+  final tab = await _tabLogoutStore(service)
+      .writePendingLogout(sharedMarkerWritten: shared);
   final durable = shared || tab;
   service._browserLogoutIntentUnwritten = !durable;
   return durable;
@@ -127,12 +133,27 @@ Future<void> _clearLogoutIntent(BackendApiService service) async {
   await _tabLogoutStore(service).clear();
 }
 
-/// Whether a logout is owed. Either store holding the marker makes it owed. An
-/// unreadable shared store is unreadable, which never authorizes a restore.
+/// Whether a logout is owed. The shared marker makes it owed. A tab marker does
+/// too, unless it was written alongside a shared marker that is now gone (stale).
+/// An unreadable shared store is unreadable, which never authorizes a restore.
 Future<_LogoutIntentState> _readLogoutIntent(BackendApiService service) async {
   final shared = await _sharedLogoutStore(service).readPendingLogout();
-  final tab = await _tabLogoutStore(service).readPendingLogout();
-  if (shared == true || tab == true) return _LogoutIntentState.owed;
+  if (shared == true) return _LogoutIntentState.owed;
+  final tabStore = _tabLogoutStore(service);
+  final tab = await tabStore.readPendingLogout();
+  if (tab == true) {
+    if (!await tabStore.readDependsOnSharedMarker()) {
+      return _LogoutIntentState.owed;
+    }
+    // Written alongside a shared marker that is gone: another tab confirmed
+    // the revocation, so this marker is stale. Acting on it would revoke
+    // whatever account that tab signed in since.
+    if (shared == false) {
+      await tabStore.clear();
+      return _LogoutIntentState.none;
+    }
+    // Shared unreadable: no verdict, so neither owed nor cleared.
+  }
   if (shared == null) return _LogoutIntentState.unreadable;
   return _LogoutIntentState.none;
 }
