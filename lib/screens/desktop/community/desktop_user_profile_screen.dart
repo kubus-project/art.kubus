@@ -502,7 +502,9 @@ class _UserProfileScreenState extends State<UserProfileScreen>
         }
         final contentOnly = !isArtist;
         final bands = <Widget>[
-          if (!contentOnly || _artistArtworks.isNotEmpty)
+          if (!contentOnly ||
+              _artistArtworks.isNotEmpty ||
+              _authoredArtworksUnavailable)
             _buildArtistPortfolioSection(
               themeProvider,
               l10n,

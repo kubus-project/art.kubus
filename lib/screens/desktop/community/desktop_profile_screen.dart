@@ -345,7 +345,7 @@ class _ProfileScreenState extends State<ProfileScreen>
             gap,
             _buildInstitutionCollectionsSection(themeProvider),
           ] else if (_hasPublicWork) ...[
-            if (_artistArtworks.isNotEmpty)
+            if (_artistArtworks.isNotEmpty || _artistAuthorshipUnavailable)
               _buildArtistPortfolioSection(themeProvider),
             if (_artistDocumentedArtworks.isNotEmpty) ...[
               if (_artistArtworks.isNotEmpty) gap,
@@ -1860,7 +1860,8 @@ class _ProfileScreenState extends State<ProfileScreen>
   bool get _hasPublicWork =>
       _artistArtworks.isNotEmpty ||
       _artistDocumentedArtworks.isNotEmpty ||
-      _artistCollections.isNotEmpty;
+      _artistCollections.isNotEmpty ||
+      _artistAuthorshipUnavailable;
 
   Future<void> _loadArtistData(String walletAddress,
       {required String eventsKey,

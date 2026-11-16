@@ -1221,7 +1221,8 @@ class _ProfileScreenState extends State<ProfileScreen>
   bool get _hasPublicWork =>
       _artistArtworks.isNotEmpty ||
       _documentedArtworks.isNotEmpty ||
-      _artistCollections.isNotEmpty;
+      _artistCollections.isNotEmpty ||
+      _artistAuthorshipUnavailable;
 
   Widget _buildArtistHighlightsGrid({
     bool showHeader = true,

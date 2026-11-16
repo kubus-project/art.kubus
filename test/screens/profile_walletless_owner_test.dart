@@ -155,6 +155,66 @@ void main() {
     }
   });
 
+  group('non-artist walletless owner author-filter failures', () {
+    const profileId = '10000000-0000-4000-8000-000000000004';
+    for (final (name, surface, size) in <(String, ProfileSurface, Size)>[
+      ('mobile', ProfileSurface.mobileOwner, const Size(390, 2400)),
+      ('desktop', ProfileSurface.desktopOwner, const Size(1440, 1600)),
+    ]) {
+      for (final withCollection in <bool>[false, true]) {
+        testWidgets(
+            '$name exposes author retry with ${withCollection ? 'a collection' : 'empty scopes'}',
+            (tester) async {
+          SharedPreferences.setMockInitialValues(<String, Object>{});
+          final requests = <http.Request>[];
+          BackendApiService().setHttpClient(MockClient((request) async {
+            requests.add(request);
+            if (request.url.path == '/api/artworks' &&
+                request.url.queryParameters['authorProfileId'] == profileId) {
+              return http.Response('author filter unavailable', 503);
+            }
+            if (request.url.path == '/api/collections') {
+              return _jsonResponse(<String, Object?>{
+                'data': withCollection
+                    ? <Map<String, Object?>>[
+                        <String, Object?>{
+                          'id': 'collection-preserves-retry',
+                          'title': 'Collection beside retry',
+                        },
+                      ]
+                    : <Object?>[],
+              });
+            }
+            return _jsonResponse(<String, Object?>{'data': <Object?>[]});
+          }));
+
+          await pumpProfileSurface(
+            tester,
+            surface: surface,
+            user: ProfileFixtures.user(id: profileId),
+            ownerWalletless: true,
+            size: size,
+          );
+          for (var i = 0; i < 8; i++) {
+            await tester.pump(const Duration(milliseconds: 150));
+          }
+
+          expect(
+            requests.any((request) =>
+                request.url.path == '/api/artworks' &&
+                request.url.queryParameters['authorProfileId'] == profileId),
+            isTrue,
+          );
+          expect(find.text('Not available'), findsWidgets);
+          expect(find.text('Retry'), findsWidgets);
+          if (withCollection) {
+            expect(find.text('Collection beside retry'), findsWidgets);
+          }
+        });
+      }
+    }
+  });
+
   group('owner showcase identity changes', () {
     const profileA = '10000000-0000-4000-8000-000000000001';
     const profileB = '10000000-0000-4000-8000-000000000002';
