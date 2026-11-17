@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:art_kubus/models/artwork.dart';
 import 'package:art_kubus/providers/artwork_provider.dart';
 import 'package:art_kubus/services/account_identity.dart';
+import 'package:art_kubus/services/artwork_private_preview_client.dart';
 import 'package:art_kubus/services/backend_api_service.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:latlong2/latlong.dart';
@@ -380,6 +381,25 @@ void main() {
     var current = provider.getArtworkById('a1')!;
     expect(current.canUsePublicMedia, isFalse);
     expect(current.imageUrl, bListRow.imageUrl);
+
+    final privatePreviewClient = ArtworkPrivatePreviewClient(
+      api: api,
+      listenForIdentityChanges: false,
+    );
+    expect(current.mediaPreview, isNull);
+    expect(current.mediaPreviewProvided, isTrue);
+    await expectLater(
+      privatePreviewClient.loadBytes(
+        artworkId: current.id,
+        slot: 'cover',
+        isPublic: current.canUsePublicMedia,
+        knownDescriptor: current.mediaPreview,
+        descriptorProvided: current.mediaPreviewProvided,
+      ),
+      throwsA(isA<StateError>()),
+    );
+    expect(api.calls, <String>['current:true']);
+    privatePreviewClient.dispose();
 
     final freshB = Artwork.fromMap(<String, dynamic>{
       ...bListRow.toMap(),

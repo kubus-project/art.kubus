@@ -647,6 +647,12 @@ class Artwork {
     bool clearDiscoveryUserId = false,
     bool clearAuthorProfile = false,
   }) {
+    // An explicit descriptor-presence value wins over clearing the value.
+    // Account-switch tombstones clear the descriptor but set this to true so
+    // private-preview code cannot fetch another session's detail as fallback.
+    final resolvedMediaPreviewProvided = mediaPreviewProvided ??
+        (clearMediaPreview ? false : this.mediaPreviewProvided);
+
     return Artwork(
       id: id ?? this.id,
       walletAddress: walletAddress ?? this.walletAddress,
@@ -715,8 +721,7 @@ class Artwork {
       metadata: metadata ?? this.metadata,
       mediaPreview:
           clearMediaPreview ? null : (mediaPreview ?? this.mediaPreview),
-      mediaPreviewProvided: mediaPreviewProvided ??
-          (clearMediaPreview ? false : this.mediaPreviewProvided),
+      mediaPreviewProvided: resolvedMediaPreviewProvided,
       promotion: promotion ?? this.promotion,
     );
   }

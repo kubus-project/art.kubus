@@ -50,6 +50,27 @@ void main() {
     );
   });
 
+  test('explicit descriptor presence survives copyWith clearing', () {
+    final artwork = parseArtworkFromBackendJson({
+      'id': 'id',
+      'title': 'Artwork',
+      'latitude': 0,
+      'longitude': 0,
+      'mediaPreview': {
+        'auth': 'bearer',
+        'cover': '/api/artworks/id/media/cover',
+      },
+    });
+
+    final tombstone = artwork.copyWith(
+      clearMediaPreview: true,
+      mediaPreviewProvided: true,
+    );
+
+    expect(tombstone.mediaPreview, isNull);
+    expect(tombstone.mediaPreviewProvided, isTrue);
+  });
+
   test(
       'public media eligibility follows explicit visibility and editorial state',
       () {
