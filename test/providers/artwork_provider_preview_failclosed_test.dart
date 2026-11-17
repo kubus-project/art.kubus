@@ -28,6 +28,8 @@ class _FailingPreviewApi
   final Object previewError;
   Object? guestError;
   Artwork? currentDetail;
+  bool? currentPermissionOverride;
+  List<Artwork>? listedArtworks;
   bool mediaAllowed = true;
   int publicReads = 0;
   int currentReads = 0;
@@ -49,15 +51,32 @@ class _FailingPreviewApi
   }) async {
     calls.add('current:$includeAuth');
     currentReads += 1;
-    final error = includeAuth && AccountIdentity.accountKey.isNotEmpty
+    final error = includeAuth &&
+            AccountIdentity.accountKey.isNotEmpty &&
+            currentDetail == null
         ? previewError
         : guestError;
     if (error != null) throw error;
+    final currentArtwork = currentDetail ?? _artwork(identifier);
+    final allowed = currentPermissionOverride ??
+        (mediaAllowed && currentArtwork.canUsePublicMedia);
     return ArtworkCurrentMediaDetail(
-      artwork: currentDetail ?? _artwork(identifier),
-      publicMediaAllowed: mediaAllowed,
+      artwork: currentArtwork.copyWith(currentPublicMediaAllowed: allowed),
+      publicMediaAllowed: allowed,
     );
   }
+
+  @override
+  Future<List<Artwork>> getArtworks({
+    String? category,
+    bool? arEnabled,
+    int page = 1,
+    int limit = 20,
+    String? walletAddress,
+    bool includePrivateForWallet = false,
+    List<String>? ids,
+  }) async =>
+      listedArtworks ?? const <Artwork>[];
 
   @override
   Future<Artwork> getArtwork(String artworkId) async {
@@ -229,7 +248,7 @@ void main() {
     await Future<void>.delayed(Duration.zero);
 
     AccountIdentity.setAccountKey('account-b');
-    await AccountIdentity.notifyChanged();
+    AccountIdentity.notifyListenersChanged();
     api.pending.complete(ArtworkCurrentMediaDetail(
       artwork: _artwork('a1').copyWith(title: 'Account A response'),
       publicMediaAllowed: true,
@@ -237,5 +256,90 @@ void main() {
 
     expect(await pending, isNull);
     expect(provider.getArtworkById('a1')?.title, 'Work a1');
+  });
+
+  test(
+      'held current detail survives list and wallet refreshes without new URLs',
+      () async {
+    final held = _artwork('a1').copyWith(
+      isPublic: true,
+      isActive: true,
+      editorialState: 'approved',
+      currentPublicMediaAllowed: false,
+      imageUrl: 'https://images.example.test/current-held.jpg',
+      galleryUrls: const <String>[
+        'https://images.example.test/current-held-gallery.jpg',
+      ],
+    );
+    final api = _FailingPreviewApi(StateError('unused'))
+      ..currentDetail = held
+      ..currentPermissionOverride = false;
+    final provider = ArtworkProvider(backendApi: api)..addOrUpdateArtwork(held);
+
+    final verified = await provider.refreshArtworkDetailMetadata('a1');
+    expect(verified?.canUsePublicMedia, isFalse);
+
+    final listCopy = Artwork.fromMap(<String, dynamic>{
+      ...held.toMap(),
+      'imageUrl': 'https://images.example.test/untrusted-list.jpg',
+      'galleryUrls': <String>[
+        'https://images.example.test/untrusted-list-gallery.jpg',
+      ],
+    });
+    api.listedArtworks = <Artwork>[listCopy];
+    await provider.loadArtworks(refresh: true);
+    var current = provider.getArtworkById('a1')!;
+    expect(current.imageUrl, held.imageUrl);
+    expect(current.galleryUrls, held.galleryUrls);
+    expect(current.canUsePublicMedia, isFalse);
+
+    await provider.loadArtworksForWallet(
+      '0xabc',
+      force: true,
+      includePrivateForWallet: true,
+    );
+    current = provider.getArtworkById('a1')!;
+    expect(current.imageUrl, held.imageUrl);
+    expect(current.galleryUrls, held.galleryUrls);
+    expect(current.canUsePublicMedia, isFalse);
+  });
+
+  test('untrusted replacement cannot reuse allow; fresh current detail can',
+      () async {
+    final trusted = _artwork('a1').copyWith(
+      isPublic: true,
+      isActive: true,
+      editorialState: 'approved',
+      imageUrl: 'https://images.example.test/current-original.jpg',
+    );
+    final api = _FailingPreviewApi(StateError('unused'))
+      ..currentDetail = trusted
+      ..currentPermissionOverride = true;
+    final provider = ArtworkProvider(backendApi: api)
+      ..addOrUpdateArtwork(trusted);
+    expect(
+        (await provider.refreshArtworkDetailMetadata('a1'))?.canUsePublicMedia,
+        isTrue);
+
+    api.listedArtworks = <Artwork>[
+      Artwork.fromMap(<String, dynamic>{
+        ...trusted.toMap(),
+        'imageUrl': 'https://images.example.test/untrusted-replacement.jpg',
+      }),
+    ];
+    await provider.loadArtworks(refresh: true);
+    var current = provider.getArtworkById('a1')!;
+    expect(current.imageUrl, trusted.imageUrl);
+    expect(current.canUsePublicMedia, isTrue);
+
+    final fresh = Artwork.fromMap(<String, dynamic>{
+      ...trusted.toMap(),
+      'imageUrl': 'https://images.example.test/fresh-current.jpg',
+    });
+    api.currentDetail = fresh;
+    await provider.refreshArtworkDetailMetadata('a1');
+    current = provider.getArtworkById('a1')!;
+    expect(current.imageUrl, fresh.imageUrl);
+    expect(current.canUsePublicMedia, isTrue);
   });
 }

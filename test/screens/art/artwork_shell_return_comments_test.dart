@@ -42,14 +42,42 @@ Artwork _artwork() => Artwork(
       createdAt: DateTime(2020),
     );
 
-class _FakeArtworkApi implements ArtworkBackendApi {
+class _FakeArtworkApi implements ArtworkBackendApi, ArtworkCurrentMediaApi {
   _FakeArtworkApi(this.artwork, {this.commentsFuture});
 
   final Artwork artwork;
   final Future<List<ArtworkComment>> Function()? commentsFuture;
+  List<Artwork> listedArtworks = const <Artwork>[];
+
+  @override
+  int get authSessionEpoch => 0;
+
+  @override
+  Future<ArtworkCurrentMediaDetail> getArtworkCurrentMediaDetail(
+    String identifier, {
+    required bool includeAuth,
+  }) async {
+    final allowed = artwork.canUsePublicMedia;
+    return ArtworkCurrentMediaDetail(
+      artwork: artwork.copyWith(currentPublicMediaAllowed: allowed),
+      publicMediaAllowed: allowed,
+    );
+  }
 
   @override
   Future<Artwork> getArtwork(String artworkId) async => artwork;
+
+  @override
+  Future<List<Artwork>> getArtworks({
+    String? category,
+    bool? arEnabled,
+    int page = 1,
+    int limit = 20,
+    String? walletAddress,
+    bool includePrivateForWallet = false,
+    List<String>? ids,
+  }) async =>
+      listedArtworks;
 
   @override
   Future<int?> recordArtworkView(String artworkId) async => null;
@@ -64,21 +92,6 @@ class _FakeArtworkApi implements ArtworkBackendApi {
 
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
-}
-
-class _CurrentMediaDeniedArtworkProvider extends ArtworkProvider {
-  _CurrentMediaDeniedArtworkProvider(Artwork artwork)
-      : super(backendApi: _FakeArtworkApi(artwork));
-
-  @override
-  Future<void> loadComments(String artworkId, {bool force = false}) async {}
-
-  @override
-  Future<void> incrementViewCount(String artworkId) async {}
-
-  @override
-  Future<Artwork?> refreshArtworkDetailMetadata(String artworkId) async =>
-      getArtworkById(artworkId);
 }
 
 class _NoopSavedItemsRepository extends SavedItemsRepository {
@@ -241,7 +254,8 @@ void main() {
           'https://images.example.test/held-mobile-gallery.jpg',
         ],
       );
-      final provider = _CurrentMediaDeniedArtworkProvider(artwork)
+      final api = _FakeArtworkApi(artwork);
+      final provider = ArtworkProvider(backendApi: api)
         ..addOrUpdateArtwork(artwork);
 
       await tester.pumpWidget(
@@ -264,6 +278,20 @@ void main() {
       );
       expect(preview.isPublic, isFalse, reason: viewer);
       expect(preview.descriptor, isNull, reason: viewer);
+
+      final listReplacement = Artwork.fromMap(<String, dynamic>{
+        ...artwork.toMap(),
+        'imageUrl': 'https://images.example.test/untrusted-list.jpg',
+        'galleryUrls': <String>[
+          'https://images.example.test/untrusted-list-gallery.jpg',
+        ],
+      });
+      api.listedArtworks = <Artwork>[listReplacement];
+      await provider.loadArtworks(refresh: true);
+      await tester.pump();
+      expect(provider.getArtworkById(_artworkId)?.imageUrl, artwork.imageUrl,
+          reason: viewer);
+      expect(find.byType(ArtworkGalleryView), findsNothing, reason: viewer);
       await tester.pumpWidget(const SizedBox.shrink());
       provider.dispose();
     }

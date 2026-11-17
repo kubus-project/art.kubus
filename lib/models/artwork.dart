@@ -636,9 +636,13 @@ class Artwork {
     bool? mediaPreviewProvided,
     PromotionMetadata? promotion,
     // `copyWith` keeps the old value for a null argument; these flags are the
-    // only way to explicitly clear a nullable field.
+    // explicit clear flags are the only way to clear nullable fields.
     bool clearPrice = false,
     bool clearArScale = false,
+    bool clearImageUrl = false,
+    bool clearModel3DURL = false,
+    bool clearPoapImageUrl = false,
+    bool clearMediaPreview = false,
     bool clearDiscoveredAt = false,
     bool clearDiscoveryUserId = false,
     bool clearAuthorProfile = false,
@@ -651,7 +655,7 @@ class Artwork {
       authorProfile:
           clearAuthorProfile ? null : (authorProfile ?? this.authorProfile),
       description: description ?? this.description,
-      imageUrl: imageUrl ?? this.imageUrl,
+      imageUrl: clearImageUrl ? null : (imageUrl ?? this.imageUrl),
       galleryUrls: galleryUrls ?? this.galleryUrls,
       galleryMeta: galleryMeta ?? this.galleryMeta,
       position: position ?? this.position,
@@ -681,7 +685,7 @@ class Artwork {
       arConfigId: arConfigId ?? this.arConfigId,
       arStatus: arStatus ?? this.arStatus,
       model3DCID: model3DCID ?? this.model3DCID,
-      model3DURL: model3DURL ?? this.model3DURL,
+      model3DURL: clearModel3DURL ? null : (model3DURL ?? this.model3DURL),
       arScale: clearArScale ? null : (arScale ?? this.arScale),
       arRotation: arRotation ?? this.arRotation,
       arEnableAnimation: arEnableAnimation ?? this.arEnableAnimation,
@@ -695,7 +699,8 @@ class Artwork {
       poapRewardAmount: poapRewardAmount ?? this.poapRewardAmount,
       poapTitle: poapTitle ?? this.poapTitle,
       poapDescription: poapDescription ?? this.poapDescription,
-      poapImageUrl: poapImageUrl ?? this.poapImageUrl,
+      poapImageUrl:
+          clearPoapImageUrl ? null : (poapImageUrl ?? this.poapImageUrl),
       likesCount: likesCount ?? this.likesCount,
       commentsCount: commentsCount ?? this.commentsCount,
       viewsCount: viewsCount ?? this.viewsCount,
@@ -708,8 +713,11 @@ class Artwork {
       averageRating: averageRating ?? this.averageRating,
       ratingsCount: ratingsCount ?? this.ratingsCount,
       metadata: metadata ?? this.metadata,
-      mediaPreview: mediaPreview ?? this.mediaPreview,
-      mediaPreviewProvided: mediaPreviewProvided ?? this.mediaPreviewProvided,
+      mediaPreview:
+          clearMediaPreview ? null : (mediaPreview ?? this.mediaPreview),
+      mediaPreviewProvided: clearMediaPreview
+          ? false
+          : (mediaPreviewProvided ?? this.mediaPreviewProvided),
       promotion: promotion ?? this.promotion,
     );
   }
