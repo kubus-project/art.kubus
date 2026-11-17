@@ -838,11 +838,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     final profile = user!;
     final roles = KubusColorRoles.of(context);
     final placeLabel = _publicEntryPlaceLabel();
-    final roleLabel = isInstitution
-        ? l10n.settingsRoleInstitutionTitle
-        : isArtist
-            ? l10n.settingsRoleArtistTitle
-            : null;
+    const avatarRadius = 42.0;
     final titleStyle = KubusTextStyles.responsiveTitleStyle(
       context,
       KubusTypography.content(fontSize: 40, fontWeight: FontWeight.w700),
@@ -853,26 +849,41 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const SizedBox(height: KubusSpacing.lg),
-        if (roleLabel != null) ...[
-          Text(
-            roleLabel.toUpperCase(),
-            style: KubusTextStyles.structuralLabel.copyWith(
-              color: roles.foregroundMuted,
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            ProfileAvatarMount(
+              radius: avatarRadius,
+              isVerified: profile.isVerified,
+              isArtist: isArtist,
+              isInstitution: isInstitution,
+              child: AvatarWidget(
+                wallet: profile.id,
+                displayName: profile.name,
+                avatarUrl: profile.profileImageUrl,
+                radius: avatarRadius,
+                borderWidth: 0,
+                borderColor: Colors.transparent,
+                enableProfileNavigation: false,
+                heroTag: widget.heroTag,
+              ),
             ),
-          ),
-          const SizedBox(height: KubusSpacing.sm),
-        ],
-        ProfileIdentityBlock(
-          displayName: profile.name,
-          handle: profile.username,
-          isVerified: profile.isVerified,
-          isArtist: isArtist,
-          isInstitution: isInstitution,
-          density: ProfileIdentityDensity.spacious,
-          nameStyle: titleStyle,
-          handleStyle: KubusTextStyles.metadataRegister,
-          nameColor: roles.foreground,
-          handleColor: roles.foregroundMuted,
+            const SizedBox(width: KubusSpacing.md),
+            Expanded(
+              child: ProfileIdentityBlock(
+                displayName: profile.name,
+                handle: profile.username,
+                isVerified: profile.isVerified,
+                isArtist: isArtist,
+                isInstitution: isInstitution,
+                density: ProfileIdentityDensity.spacious,
+                nameStyle: titleStyle,
+                handleStyle: KubusTextStyles.metadataRegister,
+                nameColor: roles.foreground,
+                handleColor: roles.foregroundMuted,
+              ),
+            ),
+          ],
         ),
         if (placeLabel != null) ...[
           const SizedBox(height: KubusSpacing.sm),
