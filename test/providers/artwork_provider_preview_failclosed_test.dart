@@ -76,6 +76,8 @@ class _FailingPreviewApi
     String? walletAddress,
     bool includePrivateForWallet = false,
     List<String>? ids,
+    bool mine = false,
+    String? authorProfileId,
   }) async =>
       listedArtworks ?? const <Artwork>[];
 
