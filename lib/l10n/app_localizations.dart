@@ -5626,6 +5626,24 @@ abstract class AppLocalizations {
   /// **'Log out'**
   String get settingsLogoutButton;
 
+  /// Message shown when local sign-out completed but cookie revocation is pending.
+  ///
+  /// In en, this message translates to:
+  /// **'You are signed out on this device. The browser could not confirm server sign-out; it will retry before restoring a session.'**
+  String get settingsBrowserLogoutPending;
+
+  /// Message shown when browser session restoration could not be confirmed.
+  ///
+  /// In en, this message translates to:
+  /// **'We couldn\'t restore your browser session. Sign in again to continue.'**
+  String get browserSessionRestoreUnavailable;
+
+  /// Message shown when a web sign-out could not be confirmed on the server.
+  ///
+  /// In en, this message translates to:
+  /// **'We couldn\'t confirm that your earlier browser session ended. Sign out again when the connection is back.'**
+  String get browserSessionLogoutUnresolved;
+
   /// No description provided for @settingsTransactionHistoryDialogTitle.
   ///
   /// In en, this message translates to:

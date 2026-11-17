@@ -151,7 +151,7 @@ class SettingsService {
   /// local wallet (its connection, cached recovery phrase and persisted
   /// identity) is left exactly as it was. Used when the backend, not the user,
   /// ended the session (a suspended account).
-  static Future<void> logout({
+  static Future<bool> logout({
     required WalletProvider walletProvider,
     required BackendApiService backendApi,
     NotificationProvider? notificationProvider,
@@ -162,7 +162,13 @@ class SettingsService {
     // First, and synchronous: nothing below may fail before the map's memory of
     // this account (camera, filters, search, selection) is gone.
     KubusMapSessionMemory.clearAll();
+    // Web: revoke the browser session (cookie) alongside the local clear.
+    final browserSessionEnded = backendApi.endBrowserSessionForLogout();
     await backendApi.clearAuth();
+    final browserSessionRevoked = await browserSessionEnded.timeout(
+      const Duration(seconds: 5),
+      onTimeout: () => false,
+    );
     // Cached public profile packages, in memory and persisted, belong to the
     // session that is ending; the next sign-in starts with none.
     await ProfilePackageService.clearForSignOut();
@@ -228,6 +234,7 @@ class SettingsService {
 
     // Keep onboarding state intact on logout so returning users are not
     // forced through onboarding again unless they explicitly reset it.
+    return browserSessionRevoked;
   }
 
   /// Clear as much local state as possible while preserving secure wallet storage.
@@ -258,9 +265,14 @@ class SettingsService {
     final keepPurge =
         prefs.getBool(WalletProvider.pendingMnemonicPurgeKey) == true ||
             await walletProvider.cachedMnemonicMayRemain();
+    final keepBrowserLogout =
+        prefs.getBool(PreferenceKeys.browserSessionPendingLogoutV1) == true;
     await prefs.clear();
     if (keepPurge) {
       await prefs.setBool(WalletProvider.pendingMnemonicPurgeKey, true);
+    }
+    if (keepBrowserLogout) {
+      await prefs.setBool(PreferenceKeys.browserSessionPendingLogoutV1, true);
     }
   }
 
