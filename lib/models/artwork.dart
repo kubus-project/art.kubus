@@ -208,6 +208,10 @@ class Artwork {
   final bool isPublic;
   final bool isActive;
   final String? editorialState;
+
+  /// Runtime-only permission from a current-media response. It is excluded
+  /// from snapshots because a hold or restriction can change between reads.
+  final bool? currentPublicMediaAllowed;
   final bool isForSale;
   final double? price;
   final String? currency;
@@ -303,6 +307,7 @@ class Artwork {
     this.isPublic = true,
     this.isActive = true,
     this.editorialState,
+    this.currentPublicMediaAllowed,
     this.isForSale = false,
     this.price,
     this.currency,
@@ -376,6 +381,7 @@ class Artwork {
   /// Missing state remains compatible with public-list documents; an unknown
   /// explicit state fails closed so a new moderation state cannot expose bytes.
   bool get canUsePublicMedia {
+    if (currentPublicMediaAllowed == false) return false;
     if (!isPublic || !isActive) return false;
     final state = editorialState?.trim().toLowerCase();
     if (state == null || state.isEmpty) return true;
@@ -582,6 +588,7 @@ class Artwork {
     bool? isPublic,
     bool? isActive,
     String? editorialState,
+    bool? currentPublicMediaAllowed,
     bool? isForSale,
     double? price,
     String? currency,
@@ -652,6 +659,8 @@ class Artwork {
       isPublic: isPublic ?? this.isPublic,
       isActive: isActive ?? this.isActive,
       editorialState: editorialState ?? this.editorialState,
+      currentPublicMediaAllowed:
+          currentPublicMediaAllowed ?? this.currentPublicMediaAllowed,
       isForSale: isForSale ?? this.isForSale,
       price: clearPrice ? null : (price ?? this.price),
       currency: currency ?? this.currency,

@@ -66,6 +66,201 @@ void main() {
     },
   );
 
+  test('current media detail is a bounded direct current-row request',
+      () async {
+    final requests = <http.Request>[];
+    api.setHttpClient(
+      MockClient((request) async {
+        requests.add(request);
+        expect(request.method, 'GET');
+        expect(request.url.path, '/api/artworks/$_id');
+        expect(request.url.queryParameters,
+            <String, String>{'currentMedia': 'true'});
+        expect(request.followRedirects, isFalse);
+        expect(request.headers['authorization'], 'Bearer preview-test-token');
+        expect(request.headers['cache-control'], 'no-cache, no-store');
+        return http.Response(
+          jsonEncode(<String, Object?>{
+            'success': true,
+            'source': 'postgresql',
+            'mode': 'current-media',
+            'current': true,
+            'publicMediaAllowed': true,
+            'data': _draftJson()
+              ..['isPublic'] = true
+              ..['isActive'] = true
+              ..['editorialState'] = 'approved',
+          }),
+          200,
+          headers: const <String, String>{
+            'content-type': 'application/json',
+            'cache-control': 'private, no-cache, no-store',
+          },
+        );
+      }),
+    );
+
+    final result = await api.getArtworkCurrentMediaDetail(
+      _id,
+      includeAuth: true,
+    );
+    expect(result.publicMediaAllowed, isTrue);
+    expect(result.artwork.id, _id);
+    expect(result.artwork.canUsePublicMedia, isTrue);
+    expect(requests, hasLength(1));
+
+    api.setHttpClient(MockClient((request) async => http.Response(
+          jsonEncode(<String, Object?>{
+            'success': true,
+            'source': 'postgresql',
+            'mode': 'current-media',
+            'current': true,
+            'publicMediaAllowed': false,
+            'data': _draftJson()
+              ..['isPublic'] = true
+              ..['isActive'] = true
+              ..['editorialState'] = 'approved',
+          }),
+          200,
+          headers: const <String, String>{
+            'cache-control': 'private, no-cache, no-store',
+          },
+        )));
+    final heldOwner = await api.getArtworkCurrentMediaDetail(
+      _id,
+      includeAuth: true,
+    );
+    expect(heldOwner.publicMediaAllowed, isFalse);
+    expect(heldOwner.artwork.isPublic, isTrue);
+    expect(heldOwner.artwork.canUsePublicMedia, isFalse);
+    expect(heldOwner.artwork.toMap().containsKey('currentPublicMediaAllowed'),
+        isFalse);
+  });
+
+  test('mint current detail binds to canonical UUID and rejects wrong aliases',
+      () async {
+    const mint = 'MintAddress111111111111111111111111111111';
+    final payload = <String, Object?>{
+      'success': true,
+      'source': 'postgresql',
+      'mode': 'current-media',
+      'current': true,
+      'publicMediaAllowed': true,
+      'data': _draftJson()
+        ..['id'] = _id
+        ..['isNft'] = true
+        ..['nftMintAddress'] = mint
+        ..['isPublic'] = true
+        ..['isActive'] = true
+        ..['editorialState'] = 'approved',
+    };
+    api.setHttpClient(MockClient((request) async {
+      expect(request.url.path, '/api/artworks/$mint');
+      expect(request.url.queryParameters['currentMedia'], 'true');
+      return http.Response(
+        jsonEncode(payload),
+        200,
+        headers: const <String, String>{
+          'cache-control': 'private, no-cache, no-store',
+        },
+      );
+    }));
+    final result = await api.getArtworkCurrentMediaDetail(
+      mint,
+      includeAuth: false,
+    );
+    expect(result.artwork.id, _id);
+    expect(result.artwork.nftMintAddress, mint);
+
+    api.setHttpClient(MockClient((request) async => http.Response(
+          jsonEncode(payload),
+          200,
+          headers: const <String, String>{
+            'cache-control': 'private, no-cache, no-store',
+          },
+        )));
+    payload['data'] = <String, Object?>{
+      ..._draftJson(),
+      'id': _id,
+      'isNft': true,
+      'nftMintAddress': 'some-other-mint',
+    };
+    await expectLater(
+      api.getArtworkCurrentMediaDetail(mint, includeAuth: false),
+      throwsFormatException,
+    );
+
+    payload['data'] = <String, Object?>{
+      ..._draftJson(),
+      'id': 'not-a-canonical-uuid',
+      'isNft': true,
+      'nftMintAddress': mint,
+    };
+    await expectLater(
+      api.getArtworkCurrentMediaDetail(mint, includeAuth: false),
+      throwsFormatException,
+    );
+  });
+
+  test(
+      'current detail denial, malformed body, redirect, and outage fail closed',
+      () async {
+    final requests = <http.Request>[];
+    api.setHttpClient(
+      MockClient((request) async {
+        requests.add(request);
+        return http.Response('{"error":"offline"}', 503);
+      }),
+    );
+    await expectLater(
+      api.getArtworkCurrentMediaDetail(_id, includeAuth: false),
+      throwsA(isA<BackendApiRequestException>().having(
+        (error) => error.statusCode,
+        'statusCode',
+        503,
+      )),
+    );
+    expect(requests, hasLength(1));
+
+    api.setHttpClient(MockClient((request) async => http.Response(
+          '{"success":true,"source":"postgresql","mode":"wrong-mode","current":true,"publicMediaAllowed":true,"data":{"id":"$_id"}}',
+          200,
+          headers: const <String, String>{
+            'cache-control': 'private, no-cache, no-store',
+          },
+        )));
+    await expectLater(
+      api.getArtworkCurrentMediaDetail(_id, includeAuth: false),
+      throwsFormatException,
+    );
+
+    api.setHttpClient(MockClient((request) async => http.Response(
+          'redirect',
+          302,
+          headers: const <String, String>{
+            'location': 'https://evil.test/steal'
+          },
+        )));
+    await expectLater(
+      api.getArtworkCurrentMediaDetail(_id, includeAuth: true),
+      throwsA(isA<BackendApiRequestException>()),
+    );
+  });
+
+  test('current detail response body is bounded while streamed', () async {
+    api.setHttpClient(MockClient((request) async => http.Response(
+          List<String>.filled(1024 * 1024 + 1, 'x').join(),
+          200,
+          headers: const <String, String>{
+            'cache-control': 'private, no-cache, no-store',
+          },
+        )));
+    await expectLater(
+      api.getArtworkCurrentMediaDetail(_id, includeAuth: false),
+      throwsFormatException,
+    );
+  });
+
   test(
     'private byte transport sends bearer only to the descriptor-bound path',
     () async {

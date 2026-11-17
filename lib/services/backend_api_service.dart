@@ -288,6 +288,26 @@ abstract class ArtworkPrivatePreviewApi {
   });
 }
 
+class ArtworkCurrentMediaDetail {
+  const ArtworkCurrentMediaDetail({
+    required this.artwork,
+    required this.publicMediaAllowed,
+  });
+
+  final Artwork artwork;
+  final bool publicMediaAllowed;
+}
+
+/// Current artwork detail mode that binds media URLs and permission to one
+/// live PostgreSQL row. Implementations must bypass snapshots and mirrors.
+abstract class ArtworkCurrentMediaApi {
+  int get authSessionEpoch;
+  Future<ArtworkCurrentMediaDetail> getArtworkCurrentMediaDetail(
+    String identifier, {
+    required bool includeAuth,
+  });
+}
+
 /// Minimal contract for profile endpoints used by providers.
 abstract class ProfileBackendApi {
   String get baseUrl;
@@ -458,6 +478,7 @@ class BackendApiService
     implements
         ArtworkBackendApi,
         ArtworkPrivatePreviewApi,
+        ArtworkCurrentMediaApi,
         ProfileBackendApi,
         MarkerBackendApi,
         AccountClosureApi {
@@ -6084,6 +6105,89 @@ class BackendApiService
     );
     if (artwork.id != id) throw const FormatException('Artwork id mismatch');
     return artwork;
+  }
+
+  /// Reads one current PostgreSQL detail and its media permission together.
+  /// This explicit mode never uses shared cache, Orbit, snapshots, or failover.
+  @override
+  Future<ArtworkCurrentMediaDetail> getArtworkCurrentMediaDetail(
+    String identifier, {
+    required bool includeAuth,
+  }) async {
+    final id = identifier.trim();
+    if (id.isEmpty || id.contains('/') || id.contains('\\')) {
+      throw ArgumentError.value(identifier, 'identifier');
+    }
+    if (includeAuth) await ensureAuthLoaded();
+    final epoch = _authSessionEpoch;
+    final token = (_authToken ?? '').trim();
+    bool isCurrent() =>
+        epoch == _authSessionEpoch &&
+        (!includeAuth || token == (_authToken ?? '').trim());
+    final uri = Uri.parse(
+      '$baseUrl/api/artworks/${Uri.encodeComponent(id)}?currentMedia=true',
+    );
+    final response = await _request(
+      'GET',
+      uri,
+      includeAuth: includeAuth,
+      headers: const <String, String>{
+        'Cache-Control': 'no-cache, no-store',
+      },
+      isIdempotent: true,
+      timeout: const Duration(seconds: 5),
+      allowWritableRedirect: false,
+      allowImplicitBackendFailover: false,
+      boundedBody: _BoundedBodyRequest(
+        maxBytes: 1024 * 1024,
+        isCurrent: isCurrent,
+      ),
+    );
+    if (!isCurrent()) throw StateError('Authentication session changed');
+    if (response.statusCode != 200) {
+      throw BackendApiRequestException(
+        statusCode: response.statusCode,
+        path: uri.path,
+      );
+    }
+    final cacheControl =
+        (response.headers['cache-control'] ?? '').toLowerCase();
+    if (!cacheControl.contains('no-store')) {
+      throw const FormatException('Current artwork detail is cacheable');
+    }
+    final decoded = jsonDecode(utf8.decode(response.bodyBytes));
+    final payload = decoded is Map ? decoded['data'] : null;
+    if (decoded is! Map ||
+        decoded['success'] != true ||
+        decoded['source'] != 'postgresql' ||
+        decoded['mode'] != 'current-media' ||
+        decoded['current'] != true ||
+        decoded['publicMediaAllowed'] is! bool ||
+        payload is! Map ||
+        payload['id'] is! String) {
+      throw const FormatException('Invalid current artwork detail payload');
+    }
+    final artwork = parseArtworkFromBackendJson(
+      Map<String, dynamic>.from(payload),
+    );
+    final canonicalArtworkUuid = RegExp(
+      r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89aAbB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$',
+    );
+    final isUuid = canonicalArtworkUuid.hasMatch(id);
+    final resolvedIdIsUuid = canonicalArtworkUuid.hasMatch(artwork.id);
+    if (!resolvedIdIsUuid ||
+        (isUuid && artwork.id.toLowerCase() != id.toLowerCase()) ||
+        (!isUuid && (!artwork.isNft || artwork.nftMintAddress?.trim() != id))) {
+      throw const FormatException('Current artwork identifier mismatch');
+    }
+    if (!isCurrent()) throw StateError('Authentication session changed');
+    final publicMediaAllowed = decoded['publicMediaAllowed'] as bool;
+    return ArtworkCurrentMediaDetail(
+      artwork: artwork.copyWith(
+        currentPublicMediaAllowed: publicMediaAllowed,
+      ),
+      publicMediaAllowed: publicMediaAllowed,
+    );
   }
 
   /// Loads private preview bytes only from the exact relative route bound to

@@ -80,6 +80,11 @@ class _RefreshingArtworkProvider extends _QuietArtworkProvider {
   }
 }
 
+class _UnverifiedArtworkProvider extends _QuietArtworkProvider {
+  @override
+  Future<Artwork?> refreshArtworkDetailMetadata(String artworkId) async => null;
+}
+
 /// The detail screen hosted the way the desktop shell hosts it: [host] wraps
 /// it (a sub-screen for in-app navigation, or the bare screen for a raw link).
 Widget _app(
@@ -293,6 +298,69 @@ void main() {
     expect(preview.isPublic, isFalse);
     expect(find.byType(ArtworkGalleryView), findsNothing);
   });
+
+  testWidgets(
+      'a cached public image stays hidden while live media authority is unavailable',
+      (tester) async {
+    final artwork = _artwork().copyWith(
+      imageUrl: 'https://images.example.test/previously-public.jpg',
+      galleryUrls: const <String>[
+        'https://images.example.test/previously-public-gallery.jpg',
+      ],
+      editorialState: 'approved',
+    );
+    final provider = _UnverifiedArtworkProvider()
+      ..seedArtworksForTesting([artwork]);
+
+    await tester.pumpWidget(
+      _app((screen) => screen, artworkProvider: provider),
+    );
+    for (var i = 0; i < 8; i++) {
+      await tester.pump(const Duration(milliseconds: 100));
+    }
+
+    expect(find.byType(ElevatedButton), findsOneWidget);
+    expect(find.byType(ArtworkGalleryView), findsNothing);
+    expect(find.byType(ArtworkPrivatePreviewImage), findsNothing);
+  });
+
+  testWidgets(
+      'held approved public artwork never renders an external image for its owner or collaborator',
+      (tester) async {
+    for (final viewer in const <String>['owner', 'collaborator']) {
+      final held = _artwork().copyWith(
+        isPublic: true,
+        isActive: true,
+        editorialState: 'approved',
+        currentPublicMediaAllowed: false,
+        imageUrl: 'https://images.example.test/held.jpg',
+        galleryUrls: const <String>[
+          'https://images.example.test/held-gallery.jpg',
+        ],
+      );
+      final provider = _QuietArtworkProvider()..seedArtworksForTesting([held]);
+      await pumpAt1440(
+        tester,
+        _app((screen) => screen, artworkProvider: provider),
+      );
+
+      expect(held.canUsePublicMedia, isFalse, reason: viewer);
+      expect(find.byType(ArtworkGalleryView), findsNothing, reason: viewer);
+      expect(find.byType(ArtworkPrivatePreviewImage), findsOneWidget,
+          reason: viewer);
+      expect(
+        tester
+            .widget<ArtworkPrivatePreviewImage>(
+              find.byType(ArtworkPrivatePreviewImage),
+            )
+            .descriptor,
+        isNull,
+        reason: viewer,
+      );
+      await tester.pumpWidget(const SizedBox.shrink());
+    }
+  });
+
   testWidgets(
       'a cached public-list row refreshes authorized visibility before using its public image URL',
       (tester) async {

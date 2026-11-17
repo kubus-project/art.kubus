@@ -21,6 +21,8 @@ import 'package:art_kubus/utils/artwork_navigation.dart';
 import 'package:art_kubus/utils/kubus_color_roles.dart';
 import 'package:art_kubus/utils/share_deep_link_navigation.dart';
 import 'package:art_kubus/widgets/detail/subject_action_group.dart';
+import 'package:art_kubus/widgets/artwork_gallery_view.dart';
+import 'package:art_kubus/widgets/artwork_private_preview_image.dart';
 import 'package:art_kubus/widgets/navigation/kubus_mobile_navigation_bar.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -62,6 +64,21 @@ class _FakeArtworkApi implements ArtworkBackendApi {
 
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
+class _CurrentMediaDeniedArtworkProvider extends ArtworkProvider {
+  _CurrentMediaDeniedArtworkProvider(Artwork artwork)
+      : super(backendApi: _FakeArtworkApi(artwork));
+
+  @override
+  Future<void> loadComments(String artworkId, {bool force = false}) async {}
+
+  @override
+  Future<void> incrementViewCount(String artworkId) async {}
+
+  @override
+  Future<Artwork?> refreshArtworkDetailMetadata(String artworkId) async =>
+      getArtworkById(artworkId);
 }
 
 class _NoopSavedItemsRepository extends SavedItemsRepository {
@@ -203,6 +220,53 @@ void main() {
 
   setUp(() {
     SharedPreferences.setMockInitialValues(<String, Object>{});
+  });
+
+  testWidgets(
+      'held approved public artwork never renders external media for owner or collaborator',
+      (tester) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(390, 844);
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    for (final viewer in const <String>['owner', 'collaborator']) {
+      final artwork = _artwork().copyWith(
+        isPublic: true,
+        isActive: true,
+        editorialState: 'approved',
+        currentPublicMediaAllowed: false,
+        imageUrl: 'https://images.example.test/held-mobile.jpg',
+        galleryUrls: const <String>[
+          'https://images.example.test/held-mobile-gallery.jpg',
+        ],
+      );
+      final provider = _CurrentMediaDeniedArtworkProvider(artwork)
+        ..addOrUpdateArtwork(artwork);
+
+      await tester.pumpWidget(
+        _appHarness(
+          artworkProvider: provider,
+          tabs: MainTabProvider(),
+          home: ArtDetailScreen(artworkId: _artworkId),
+        ),
+      );
+      for (var frame = 0; frame < 8; frame++) {
+        await tester.pump(const Duration(milliseconds: 50));
+      }
+
+      expect(artwork.canUsePublicMedia, isFalse, reason: viewer);
+      expect(find.byType(ArtworkGalleryView), findsNothing, reason: viewer);
+      expect(find.byType(ArtworkPrivatePreviewImage), findsOneWidget,
+          reason: viewer);
+      final preview = tester.widget<ArtworkPrivatePreviewImage>(
+        find.byType(ArtworkPrivatePreviewImage).first,
+      );
+      expect(preview.isPublic, isFalse, reason: viewer);
+      expect(preview.descriptor, isNull, reason: viewer);
+      await tester.pumpWidget(const SizedBox.shrink());
+      provider.dispose();
+    }
   });
 
   for (final entry in const <int, String>{

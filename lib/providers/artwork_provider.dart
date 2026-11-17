@@ -34,8 +34,8 @@ class ArtworkProvider extends ChangeNotifier {
   final Map<String, ArtworkSpatialHistory> _spatialHistory = {};
   final Map<String, Future<ArtworkSpatialHistory>> _spatialHistoryLoads = {};
   final Map<String, String> _spatialHistoryErrors = {};
-  final Map<String, Future<Artwork>> _inFlightArtworkFetches =
-      <String, Future<Artwork>>{};
+  final Map<String, Future<Artwork?>> _inFlightArtworkFetches =
+      <String, Future<Artwork?>>{};
   final Map<String, Future<Artwork?>> _inFlightArtworkDetailRefreshes =
       <String, Future<Artwork?>>{};
   // Individual detail requests may return artwork outside the first page used
@@ -322,24 +322,11 @@ class ArtworkProvider extends ChangeNotifier {
       final epoch = _accountEpoch;
       final future = (() async {
         final api = _backendApi;
-        if (api is ArtworkPrivatePreviewApi &&
-            AccountIdentity.accountKey.isNotEmpty) {
-          try {
-            return await (api as ArtworkPrivatePreviewApi)
-                .getArtworkDetailWithMediaPreview(key);
-          } catch (e) {
-            // Only a rejected session degrades to the public read. A network
-            // or server failure must not let a stale public/snapshot
-            // document stand in for the live visibility decision.
-            if (!_isSessionRejection(e)) rethrow;
-          }
-        }
-        return _backendApi.getArtwork(key);
+        return _getCurrentMediaArtwork(api, key);
       })()
           .then((fetched) {
-        if (epoch == _accountEpoch) {
-          addOrUpdateArtwork(fetched, retainWhenListRefresh: true);
-        }
+        if (epoch != _accountEpoch) return null;
+        addOrUpdateArtwork(fetched, retainWhenListRefresh: true);
         return fetched;
       });
       _inFlightArtworkFetches[key] = future;
@@ -357,6 +344,39 @@ class ArtworkProvider extends ChangeNotifier {
   static bool _isSessionRejection(Object error) =>
       error is BackendApiRequestException &&
       (error.statusCode == 401 || error.statusCode == 403);
+
+  Future<Artwork> _getCurrentMediaArtwork(
+    ArtworkBackendApi api,
+    String identifier,
+  ) async {
+    if (api is! ArtworkCurrentMediaApi) {
+      throw StateError('Current artwork media detail unavailable');
+    }
+    final currentApi = api as ArtworkCurrentMediaApi;
+    late final ArtworkCurrentMediaDetail current;
+    try {
+      current = await currentApi.getArtworkCurrentMediaDetail(
+        identifier,
+        includeAuth: true,
+      );
+    } catch (error) {
+      // A rejected session gets exactly one guest current-row read. Other
+      // errors remain fail-closed and never fall back to snapshots or Orbit.
+      if (!_isSessionRejection(error)) rethrow;
+      final guest = await currentApi.getArtworkCurrentMediaDetail(
+        identifier,
+        includeAuth: false,
+      );
+      if (!guest.publicMediaAllowed) {
+        throw BackendApiRequestException(
+          statusCode: 404,
+          path: '/api/artworks/$identifier?currentMedia=true',
+        );
+      }
+      return guest.artwork;
+    }
+    return current.artwork;
+  }
 
   /// Refreshes detail visibility and media authority for the current screen
   /// entry, even when an older detail response already supplied a descriptor.
@@ -384,26 +404,13 @@ class ArtworkProvider extends ChangeNotifier {
   Future<Artwork?> _fetchArtworkDetailMetadata(String id, int epoch) async {
     final api = _backendApi;
     try {
-      late final Artwork fetched;
-      if (api is ArtworkPrivatePreviewApi &&
-          AccountIdentity.accountKey.isNotEmpty) {
-        try {
-          fetched = await (api as ArtworkPrivatePreviewApi)
-              .getArtworkDetailWithMediaPreview(id);
-        } catch (e) {
-          // A rejected session reads as a guest; any other failure is not
-          // proof that the artwork is still public.
-          if (!_isSessionRejection(e)) rethrow;
-          fetched = await api.getArtwork(id);
-        }
-      } else {
-        // Public detail responses do not need a mediaPreview key. A settled
-        // detail response still supplies the visibility/state authority.
-        fetched = await api.getArtwork(id);
-      }
-      if (epoch != _accountEpoch || fetched.id != id) return null;
+      final fetched = await _getCurrentMediaArtwork(api, id);
+      final exactId = fetched.id.toLowerCase() == id.toLowerCase();
+      final exactMintAlias =
+          fetched.isNft && fetched.nftMintAddress?.trim() == id;
+      if (epoch != _accountEpoch || (!exactId && !exactMintAlias)) return null;
       addOrUpdateArtwork(fetched, retainWhenListRefresh: true);
-      return getArtworkById(id);
+      return getArtworkById(fetched.id);
     } catch (_) {
       // A cached detail is not proof that media remains public. Callers keep
       // the loading/error surface instead of displaying stale URLs.
