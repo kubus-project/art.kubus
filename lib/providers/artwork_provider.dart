@@ -45,6 +45,9 @@ class ArtworkProvider extends ChangeNotifier {
   // Permission is coupled to the URLs from the current detail response. List,
   // wallet, and local upserts cannot introduce different media under that grant.
   final Map<String, Artwork> _trustedCurrentMediaDetails = <String, Artwork>{};
+  // Account switches invalidate grants but keep an in-memory deny-only marker
+  // until a fresh current read for that identity replaces it.
+  final Set<String> _currentMediaDenyIds = <String>{};
   Future<void>? _inFlightLoadArtworks;
   DateTime? _lastArtworksLoadAt;
   // Bumped by clearAccountScopedState. A response that started under an
@@ -182,6 +185,7 @@ class ArtworkProvider extends ChangeNotifier {
     );
 
     _supplementalArtworkIds.clear();
+    _currentMediaDenyIds.addAll(_trustedCurrentMediaDetails.keys);
     _trustedCurrentMediaDetails.clear();
     _walletsWithPrivateArtworks.clear();
     _walletsWithPublicArtworks.clear();
@@ -204,9 +208,11 @@ class ArtworkProvider extends ChangeNotifier {
       final artwork = _artworkById[id]!;
       if (artwork.currentPublicMediaAllowed != null ||
           artwork.mediaPreview != null) {
+        _currentMediaDenyIds.add(id);
         _artworkById[id] = artwork.copyWith(
           currentPublicMediaAllowed: false,
           clearMediaPreview: true,
+          mediaPreviewProvided: true,
         );
       }
     }
@@ -583,9 +589,16 @@ class ArtworkProvider extends ChangeNotifier {
     final trusted = _trustedCurrentMediaDetails[incoming.id];
     if (trusted == null) {
       // A runtime grant copied from an old model is not a new current read.
-      return incoming.currentPublicMediaAllowed == null
-          ? incoming
-          : incoming.copyWith(currentPublicMediaAllowed: false);
+      if (_currentMediaDenyIds.contains(incoming.id) ||
+          incoming.currentPublicMediaAllowed != null) {
+        _currentMediaDenyIds.add(incoming.id);
+        return incoming.copyWith(
+          currentPublicMediaAllowed: false,
+          clearMediaPreview: true,
+          mediaPreviewProvided: true,
+        );
+      }
+      return incoming;
     }
     return incoming.copyWith(
       imageUrl: trusted.imageUrl,
@@ -607,6 +620,7 @@ class ArtworkProvider extends ChangeNotifier {
     final artwork = _mergeSavedBookmarkState(current.artwork.copyWith(
       currentPublicMediaAllowed: current.publicMediaAllowed,
     ));
+    _currentMediaDenyIds.remove(artwork.id);
     _upsertArtwork(artwork, currentMediaDetail: true);
     return artwork;
   }
@@ -710,6 +724,7 @@ class ArtworkProvider extends ChangeNotifier {
     _artworks.removeWhere((artwork) => artwork.id == artworkId);
     _artworkById.remove(artworkId);
     _trustedCurrentMediaDetails.remove(artworkId);
+    _currentMediaDenyIds.remove(artworkId);
     _comments.remove(artworkId);
     notifyListeners();
   }

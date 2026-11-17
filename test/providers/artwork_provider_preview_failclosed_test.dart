@@ -342,4 +342,57 @@ void main() {
     expect(current.imageUrl, fresh.imageUrl);
     expect(current.canUsePublicMedia, isTrue);
   });
+
+  test('account B list and wallet rows stay denied until B current detail',
+      () async {
+    final heldByA = _artwork('a1').copyWith(
+      isPublic: true,
+      isActive: true,
+      editorialState: 'approved',
+      imageUrl: 'https://images.example.test/account-a-held.jpg',
+    );
+    final api = _FailingPreviewApi(StateError('unused'))
+      ..currentDetail = heldByA
+      ..currentPermissionOverride = false;
+    final provider = ArtworkProvider(backendApi: api)
+      ..addOrUpdateArtwork(heldByA);
+    expect(
+      (await provider.refreshArtworkDetailMetadata('a1'))?.canUsePublicMedia,
+      isFalse,
+    );
+
+    AccountIdentity.setAccountKey('account-b');
+    AccountIdentity.notifyListenersChanged();
+    final bListRow = Artwork.fromMap(<String, dynamic>{
+      ...heldByA.toMap(),
+      'imageUrl': 'https://images.example.test/account-b-list.jpg',
+      'galleryUrls': <String>[
+        'https://images.example.test/account-b-list-gallery.jpg',
+      ],
+    });
+    api.listedArtworks = <Artwork>[bListRow];
+    await provider.loadArtworks(refresh: true);
+    await provider.loadArtworksForWallet(
+      '0xabc',
+      force: true,
+      includePrivateForWallet: true,
+    );
+    var current = provider.getArtworkById('a1')!;
+    expect(current.canUsePublicMedia, isFalse);
+    expect(current.imageUrl, bListRow.imageUrl);
+
+    final freshB = Artwork.fromMap(<String, dynamic>{
+      ...bListRow.toMap(),
+      'imageUrl': 'https://images.example.test/account-b-current.jpg',
+    });
+    api.currentDetail = freshB;
+    api.currentPermissionOverride = true;
+    expect(
+      (await provider.refreshArtworkDetailMetadata('a1'))?.canUsePublicMedia,
+      isTrue,
+    );
+    current = provider.getArtworkById('a1')!;
+    expect(current.imageUrl, freshB.imageUrl);
+    provider.dispose();
+  });
 }

@@ -715,9 +715,8 @@ class Artwork {
       metadata: metadata ?? this.metadata,
       mediaPreview:
           clearMediaPreview ? null : (mediaPreview ?? this.mediaPreview),
-      mediaPreviewProvided: clearMediaPreview
-          ? false
-          : (mediaPreviewProvided ?? this.mediaPreviewProvided),
+      mediaPreviewProvided: mediaPreviewProvided ??
+          (clearMediaPreview ? false : this.mediaPreviewProvided),
       promotion: promotion ?? this.promotion,
     );
   }

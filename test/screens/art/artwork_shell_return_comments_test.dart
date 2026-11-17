@@ -14,6 +14,7 @@ import 'package:art_kubus/providers/task_provider.dart';
 import 'package:art_kubus/providers/wallet_provider.dart';
 import 'package:art_kubus/screens/art/art_detail_screen.dart';
 import 'package:art_kubus/services/backend_api_service.dart';
+import 'package:art_kubus/services/account_identity.dart';
 import 'package:art_kubus/services/saved_items_repository.dart';
 import 'package:art_kubus/services/share/share_deep_link_parser.dart';
 import 'package:art_kubus/services/share/share_types.dart';
@@ -59,7 +60,10 @@ class _FakeArtworkApi implements ArtworkBackendApi, ArtworkCurrentMediaApi {
   }) async {
     final allowed = artwork.canUsePublicMedia;
     return ArtworkCurrentMediaDetail(
-      artwork: artwork.copyWith(currentPublicMediaAllowed: allowed),
+      artwork: artwork.copyWith(
+        currentPublicMediaAllowed: allowed,
+        mediaPreviewProvided: true,
+      ),
       publicMediaAllowed: allowed,
     );
   }
@@ -257,6 +261,10 @@ void main() {
       final api = _FakeArtworkApi(artwork);
       final provider = ArtworkProvider(backendApi: api)
         ..addOrUpdateArtwork(artwork);
+      final priorAccount = AccountIdentity.accountKey;
+      AccountIdentity.setAccountKey('account-a');
+      AccountIdentity.notifyListenersChanged();
+      await provider.refreshArtworkDetailMetadata(_artworkId);
 
       await tester.pumpWidget(
         _appHarness(
@@ -279,6 +287,8 @@ void main() {
       expect(preview.isPublic, isFalse, reason: viewer);
       expect(preview.descriptor, isNull, reason: viewer);
 
+      AccountIdentity.setAccountKey('account-b');
+      AccountIdentity.notifyListenersChanged();
       final listReplacement = Artwork.fromMap(<String, dynamic>{
         ...artwork.toMap(),
         'imageUrl': 'https://images.example.test/untrusted-list.jpg',
@@ -288,12 +298,22 @@ void main() {
       });
       api.listedArtworks = <Artwork>[listReplacement];
       await provider.loadArtworks(refresh: true);
+      await provider.loadArtworksForWallet(
+        '0xabc',
+        force: true,
+        includePrivateForWallet: true,
+      );
       await tester.pump();
-      expect(provider.getArtworkById(_artworkId)?.imageUrl, artwork.imageUrl,
+      expect(provider.getArtworkById(_artworkId)?.imageUrl,
+          listReplacement.imageUrl,
+          reason: viewer);
+      expect(provider.getArtworkById(_artworkId)?.canUsePublicMedia, isFalse,
           reason: viewer);
       expect(find.byType(ArtworkGalleryView), findsNothing, reason: viewer);
       await tester.pumpWidget(const SizedBox.shrink());
       provider.dispose();
+      AccountIdentity.setAccountKey(priorAccount);
+      AccountIdentity.notifyListenersChanged();
     }
   });
 
