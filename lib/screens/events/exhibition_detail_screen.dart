@@ -1,3 +1,5 @@
+import 'package:art_kubus/models/gallery_presentation.dart';
+import 'package:art_kubus/widgets/detail/gallery_presentation.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'package:file_picker/file_picker.dart';
@@ -1184,7 +1186,13 @@ class _ExhibitionDetailScreenState extends State<ExhibitionDetailScreen> {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) => GalleryHostScope(
+        type: GalleryHostType.exhibition,
+        hostId: widget.exhibitionId,
+        builder: _buildWithGallery,
+      );
+
+  Widget _buildWithGallery(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final scheme = Theme.of(context).colorScheme;
     final isCanonicalPublicEntry = isCanonicalPublicEntityEntry(
@@ -1371,7 +1379,8 @@ class _ExhibitionDetailScreenState extends State<ExhibitionDetailScreen> {
                   ],
                 );
 
-                final artworksCard = DetailCard(
+                final artworksCard = GalleryPanel(
+                    fallback: DetailCard(
                   borderRadius: DetailRadius.md,
                   padding: DetailSpacing.editorialCardPadding,
                   child: Column(
@@ -1392,7 +1401,7 @@ class _ExhibitionDetailScreenState extends State<ExhibitionDetailScreen> {
                       _LinkedArtworksList(exhibition: ex),
                     ],
                   ),
-                );
+                ));
 
                 final programCard = _ProgramSection(
                   exhibition: ex,
@@ -1402,6 +1411,11 @@ class _ExhibitionDetailScreenState extends State<ExhibitionDetailScreen> {
                   onCreateEvent: () => _createProgramEvent(ex),
                   onUnlinkEvent: (event) => _unlinkProgramEvent(ex, event),
                 );
+
+                final galleryPanels = orderedGallerySections(context, {
+                  'program': programCard,
+                  'artworks': artworksCard,
+                });
 
                 final collab = CollaborationPanel(
                   entityType: 'exhibitions',
@@ -1424,9 +1438,11 @@ class _ExhibitionDetailScreenState extends State<ExhibitionDetailScreen> {
                                   topActions,
                                   details,
                                   const SizedBox(height: DetailSpacing.cardGap),
-                                  programCard,
-                                  const SizedBox(height: DetailSpacing.cardGap),
-                                  artworksCard,
+                                  for (final panel in galleryPanels) ...[
+                                    panel,
+                                    const SizedBox(
+                                        height: DetailSpacing.cardGap),
+                                  ],
                                 ],
                               ),
                             ),
@@ -1464,9 +1480,10 @@ class _ExhibitionDetailScreenState extends State<ExhibitionDetailScreen> {
                     const SizedBox(height: DetailSpacing.cardGap),
                     topActions,
                     const SizedBox(height: DetailSpacing.cardGap),
-                    programCard,
-                    const SizedBox(height: DetailSpacing.cardGap),
-                    artworksCard,
+                    for (final panel in galleryPanels) ...[
+                      panel,
+                      const SizedBox(height: DetailSpacing.cardGap),
+                    ],
                     const SizedBox(height: DetailSpacing.cardGap),
                     collab,
                     if (provider.isDetailLoading)

@@ -62,18 +62,8 @@ import 'app_localizations_sl.dart';
 /// be consistent with the languages listed in the AppLocalizations.supportedLocales
 /// property.
 abstract class AppLocalizations {
-  AppLocalizations(String locale) : localeName = _supportedLocaleName(locale);
-
-  // Keep this guard after `flutter gen-l10n`: the generator's default locale
-  // normalization does not trim input or fall back to the app's supported
-  // locales, and this constructor is used directly by non-widget callers.
-  static String _supportedLocaleName(String locale) {
-    final normalizedLocale = intl.Intl.canonicalizedLocale(locale.trim());
-    return switch (normalizedLocale) {
-      'en' || 'sl' => normalizedLocale,
-      _ => 'sl',
-    };
-  }
+  AppLocalizations(String locale)
+      : localeName = intl.Intl.canonicalizedLocale(locale.toString());
 
   final String localeName;
 
@@ -33104,6 +33094,264 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Optional analytics choice'**
   String get analyticsConsentPromptSemanticsLabel;
+
+  /// No description provided for @galleryTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Gallery'**
+  String get galleryTitle;
+
+  /// No description provided for @galleryCurate.
+  ///
+  /// In en, this message translates to:
+  /// **'Curate gallery'**
+  String get galleryCurate;
+
+  /// No description provided for @galleryModeWall.
+  ///
+  /// In en, this message translates to:
+  /// **'Gallery wall'**
+  String get galleryModeWall;
+
+  /// No description provided for @galleryModeRooms.
+  ///
+  /// In en, this message translates to:
+  /// **'Folded rooms'**
+  String get galleryModeRooms;
+
+  /// No description provided for @galleryModeField.
+  ///
+  /// In en, this message translates to:
+  /// **'Reading field'**
+  String get galleryModeField;
+
+  /// No description provided for @galleryModeLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Layout'**
+  String get galleryModeLabel;
+
+  /// No description provided for @galleryPublished.
+  ///
+  /// In en, this message translates to:
+  /// **'Published'**
+  String get galleryPublished;
+
+  /// No description provided for @galleryUnpublished.
+  ///
+  /// In en, this message translates to:
+  /// **'Unpublished draft'**
+  String get galleryUnpublished;
+
+  /// No description provided for @galleryUnsaved.
+  ///
+  /// In en, this message translates to:
+  /// **'Unsaved changes'**
+  String get galleryUnsaved;
+
+  /// No description provided for @galleryArtworkOrder.
+  ///
+  /// In en, this message translates to:
+  /// **'Artwork order'**
+  String get galleryArtworkOrder;
+
+  /// No description provided for @gallerySectionOrder.
+  ///
+  /// In en, this message translates to:
+  /// **'Section order'**
+  String get gallerySectionOrder;
+
+  /// No description provided for @galleryMoveEarlier.
+  ///
+  /// In en, this message translates to:
+  /// **'Move earlier'**
+  String get galleryMoveEarlier;
+
+  /// No description provided for @galleryMoveLater.
+  ///
+  /// In en, this message translates to:
+  /// **'Move later'**
+  String get galleryMoveLater;
+
+  /// No description provided for @galleryHideSection.
+  ///
+  /// In en, this message translates to:
+  /// **'Hide section'**
+  String get galleryHideSection;
+
+  /// No description provided for @gallerySaveDraft.
+  ///
+  /// In en, this message translates to:
+  /// **'Save draft'**
+  String get gallerySaveDraft;
+
+  /// No description provided for @galleryPublish.
+  ///
+  /// In en, this message translates to:
+  /// **'Publish gallery'**
+  String get galleryPublish;
+
+  /// No description provided for @galleryResetToAutomatic.
+  ///
+  /// In en, this message translates to:
+  /// **'Reset to automatic'**
+  String get galleryResetToAutomatic;
+
+  /// No description provided for @galleryDiscard.
+  ///
+  /// In en, this message translates to:
+  /// **'Discard changes'**
+  String get galleryDiscard;
+
+  /// No description provided for @galleryDiscardPrompt.
+  ///
+  /// In en, this message translates to:
+  /// **'Discard your unsaved changes to the gallery?'**
+  String get galleryDiscardPrompt;
+
+  /// No description provided for @galleryConflict.
+  ///
+  /// In en, this message translates to:
+  /// **'This gallery changed elsewhere. Reload before saving again.'**
+  String get galleryConflict;
+
+  /// No description provided for @galleryUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Gallery unavailable.'**
+  String get galleryUnavailable;
+
+  /// No description provided for @galleryArtworkUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Artwork unavailable'**
+  String get galleryArtworkUnavailable;
+
+  /// No description provided for @galleryEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No artworks to display.'**
+  String get galleryEmpty;
+
+  /// No description provided for @galleryMore.
+  ///
+  /// In en, this message translates to:
+  /// **'Show more artworks'**
+  String get galleryMore;
+
+  /// No description provided for @gallerySectionIdentity.
+  ///
+  /// In en, this message translates to:
+  /// **'Identity'**
+  String get gallerySectionIdentity;
+
+  /// No description provided for @gallerySectionStats.
+  ///
+  /// In en, this message translates to:
+  /// **'Statistics'**
+  String get gallerySectionStats;
+
+  /// No description provided for @gallerySectionWork.
+  ///
+  /// In en, this message translates to:
+  /// **'Works and projects'**
+  String get gallerySectionWork;
+
+  /// No description provided for @gallerySectionPublicArt.
+  ///
+  /// In en, this message translates to:
+  /// **'Public art'**
+  String get gallerySectionPublicArt;
+
+  /// No description provided for @gallerySectionActivity.
+  ///
+  /// In en, this message translates to:
+  /// **'Activity'**
+  String get gallerySectionActivity;
+
+  /// No description provided for @gallerySectionRecognition.
+  ///
+  /// In en, this message translates to:
+  /// **'Recognition'**
+  String get gallerySectionRecognition;
+
+  /// No description provided for @gallerySectionProgram.
+  ///
+  /// In en, this message translates to:
+  /// **'Programme'**
+  String get gallerySectionProgram;
+
+  /// No description provided for @gallerySectionPoap.
+  ///
+  /// In en, this message translates to:
+  /// **'Attendance collectible'**
+  String get gallerySectionPoap;
+
+  /// No description provided for @gallerySectionVisit.
+  ///
+  /// In en, this message translates to:
+  /// **'Visit'**
+  String get gallerySectionVisit;
+
+  /// No description provided for @gallerySectionEvents.
+  ///
+  /// In en, this message translates to:
+  /// **'Events'**
+  String get gallerySectionEvents;
+
+  /// No description provided for @gallerySectionCredits.
+  ///
+  /// In en, this message translates to:
+  /// **'Credits'**
+  String get gallerySectionCredits;
+
+  /// No description provided for @galleryPersonalPreview.
+  ///
+  /// In en, this message translates to:
+  /// **'Draft preview'**
+  String get galleryPersonalPreview;
+
+  /// No description provided for @galleryReload.
+  ///
+  /// In en, this message translates to:
+  /// **'Reload gallery'**
+  String get galleryReload;
+
+  /// No description provided for @galleryArtworkSizing.
+  ///
+  /// In en, this message translates to:
+  /// **'Artwork size and placement'**
+  String get galleryArtworkSizing;
+
+  /// No description provided for @gallerySizeSmall.
+  ///
+  /// In en, this message translates to:
+  /// **'Small'**
+  String get gallerySizeSmall;
+
+  /// No description provided for @gallerySizeStandard.
+  ///
+  /// In en, this message translates to:
+  /// **'Standard'**
+  String get gallerySizeStandard;
+
+  /// No description provided for @gallerySizeLead.
+  ///
+  /// In en, this message translates to:
+  /// **'Large'**
+  String get gallerySizeLead;
+
+  /// No description provided for @galleryMakeLead.
+  ///
+  /// In en, this message translates to:
+  /// **'Make lead artwork'**
+  String get galleryMakeLead;
+
+  /// No description provided for @galleryClearLead.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear lead artwork'**
+  String get galleryClearLead;
 }
 
 class _AppLocalizationsDelegate

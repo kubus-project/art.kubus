@@ -1,3 +1,5 @@
+import 'package:art_kubus/models/gallery_presentation.dart';
+import 'package:art_kubus/widgets/detail/gallery_presentation.dart';
 import 'package:art_kubus/widgets/community/community_post_media_carousel.dart';
 import 'package:art_kubus/widgets/community/community_post_card.dart';
 import 'package:flutter/material.dart';
@@ -251,7 +253,13 @@ class _ProfileScreenState extends State<ProfileScreen>
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) => GalleryHostScope(
+        type: GalleryHostType.profile,
+        hostId: context.watch<ProfileProvider>().currentUser?.id,
+        builder: _buildProfileWithGallery,
+      );
+
+  Widget _buildProfileWithGallery(BuildContext context) {
     final themeProvider = Provider.of<ThemeProvider>(context);
     final profileProvider = Provider.of<ProfileProvider>(context);
     final verification = Provider.of<AccountVerificationProvider>(context);
@@ -281,7 +289,8 @@ class _ProfileScreenState extends State<ProfileScreen>
                       // The public profile's hierarchy (identity, work,
                       // activity, recognition, closing stats), then the
                       // owner's tools as their own secondary block.
-                      for (final section in ownerProfileSections)
+                      for (final section
+                          in gallerySectionOrder(context, ownerProfileSections))
                         ..._sectionSlivers(
                           section,
                           isArtist: isArtist,
@@ -1233,26 +1242,27 @@ class _ProfileScreenState extends State<ProfileScreen>
       if (!contentOnly ||
           _artistArtworks.isNotEmpty ||
           _artistAuthorshipUnavailable)
-        _artistAuthorshipUnavailable
-            ? Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(l10n.commonNotAvailable),
-                  TextButton(
-                    onPressed: _artistDataLoading
-                        ? null
-                        : () => _maybeLoadArtistData(force: true),
-                    child: Text(l10n.commonRetry),
-                  ),
-                ],
-              )
-            : _buildShowcaseSection(
-                title: l10n.userProfileArtworksTitle,
-                items: _artistArtworks,
-                emptyLabel: l10n.profileArtistArtworksEmptyLabel,
-                emptyIcon: Icons.image_outlined,
-                builder: _buildArtworkCard,
-              ),
+        GalleryPanel(
+            fallback: _artistAuthorshipUnavailable
+                ? Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(l10n.commonNotAvailable),
+                      TextButton(
+                        onPressed: _artistDataLoading
+                            ? null
+                            : () => _maybeLoadArtistData(force: true),
+                        child: Text(l10n.commonRetry),
+                      ),
+                    ],
+                  )
+                : _buildShowcaseSection(
+                    title: l10n.userProfileArtworksTitle,
+                    items: _artistArtworks,
+                    emptyLabel: l10n.profileArtistArtworksEmptyLabel,
+                    emptyIcon: Icons.image_outlined,
+                    builder: _buildArtworkCard,
+                  )),
       if (_documentedArtworks.isNotEmpty)
         _buildShowcaseSection(
           title: l10n.profilePublicArtAddedTitle,

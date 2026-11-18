@@ -19074,4 +19074,135 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get analyticsConsentPromptSemanticsLabel =>
       'Optional analytics choice';
+
+  @override
+  String get galleryTitle => 'Gallery';
+
+  @override
+  String get galleryCurate => 'Curate gallery';
+
+  @override
+  String get galleryModeWall => 'Gallery wall';
+
+  @override
+  String get galleryModeRooms => 'Folded rooms';
+
+  @override
+  String get galleryModeField => 'Reading field';
+
+  @override
+  String get galleryModeLabel => 'Layout';
+
+  @override
+  String get galleryPublished => 'Published';
+
+  @override
+  String get galleryUnpublished => 'Unpublished draft';
+
+  @override
+  String get galleryUnsaved => 'Unsaved changes';
+
+  @override
+  String get galleryArtworkOrder => 'Artwork order';
+
+  @override
+  String get gallerySectionOrder => 'Section order';
+
+  @override
+  String get galleryMoveEarlier => 'Move earlier';
+
+  @override
+  String get galleryMoveLater => 'Move later';
+
+  @override
+  String get galleryHideSection => 'Hide section';
+
+  @override
+  String get gallerySaveDraft => 'Save draft';
+
+  @override
+  String get galleryPublish => 'Publish gallery';
+
+  @override
+  String get galleryResetToAutomatic => 'Reset to automatic';
+
+  @override
+  String get galleryDiscard => 'Discard changes';
+
+  @override
+  String get galleryDiscardPrompt =>
+      'Discard your unsaved changes to the gallery?';
+
+  @override
+  String get galleryConflict =>
+      'This gallery changed elsewhere. Reload before saving again.';
+
+  @override
+  String get galleryUnavailable => 'Gallery unavailable.';
+
+  @override
+  String get galleryArtworkUnavailable => 'Artwork unavailable';
+
+  @override
+  String get galleryEmpty => 'No artworks to display.';
+
+  @override
+  String get galleryMore => 'Show more artworks';
+
+  @override
+  String get gallerySectionIdentity => 'Identity';
+
+  @override
+  String get gallerySectionStats => 'Statistics';
+
+  @override
+  String get gallerySectionWork => 'Works and projects';
+
+  @override
+  String get gallerySectionPublicArt => 'Public art';
+
+  @override
+  String get gallerySectionActivity => 'Activity';
+
+  @override
+  String get gallerySectionRecognition => 'Recognition';
+
+  @override
+  String get gallerySectionProgram => 'Programme';
+
+  @override
+  String get gallerySectionPoap => 'Attendance collectible';
+
+  @override
+  String get gallerySectionVisit => 'Visit';
+
+  @override
+  String get gallerySectionEvents => 'Events';
+
+  @override
+  String get gallerySectionCredits => 'Credits';
+
+  @override
+  String get galleryPersonalPreview => 'Draft preview';
+
+  @override
+  String get galleryReload => 'Reload gallery';
+
+  @override
+  String get galleryArtworkSizing => 'Artwork size and placement';
+
+  @override
+  String get gallerySizeSmall => 'Small';
+
+  @override
+  String get gallerySizeStandard => 'Standard';
+
+  @override
+  String get gallerySizeLead => 'Large';
+
+  @override
+  String get galleryMakeLead => 'Make lead artwork';
+
+  @override
+  String get galleryClearLead => 'Clear lead artwork';
 }

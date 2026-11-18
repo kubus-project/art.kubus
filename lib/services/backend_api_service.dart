@@ -12,6 +12,7 @@ import '../models/art_marker.dart';
 import '../models/map_marker_overview.dart';
 import '../models/promotion.dart';
 import '../models/artwork.dart';
+import '../models/gallery_presentation.dart';
 import '../models/artwork_comment.dart';
 import '../models/kubus_node_models.dart';
 import '../models/community_group.dart';
@@ -481,11 +482,125 @@ class BackendApiService
         ArtworkBackendApi,
         ArtworkPrivatePreviewApi,
         ArtworkCurrentMediaApi,
+        GalleryApi,
         ProfileBackendApi,
         MarkerBackendApi,
         AccountClosureApi {
   static final BackendApiService _instance = BackendApiService._internal();
   factory BackendApiService() => _instance;
+  Future<Map<String, dynamic>?> _galleryRequest(
+    GalleryHost host,
+    String method,
+    String suffix, {
+    required bool includeAuth,
+    Map<String, dynamic>? body,
+  }) async {
+    final epoch = authSessionEpoch;
+    if (includeAuth) await ensureAuthLoaded();
+    if (epoch != authSessionEpoch) {
+      throw StateError('Authentication session changed');
+    }
+    final credential = (_authToken ?? '').trim();
+    if (includeAuth && credential.isEmpty) {
+      if (method == 'GET') return null;
+      throw const GalleryRequestException(401);
+    }
+    final uri = Uri.parse(
+      '$baseUrl/api/${host.type.route}/${Uri.encodeComponent(host.id)}/gallery$suffix',
+    );
+    final request = http.Request(method, uri)..followRedirects = false;
+    request.headers.addAll(_getHeaders(includeAuth: false));
+    if (includeAuth) request.headers['Authorization'] = 'Bearer $credential';
+    if (body != null) request.body = jsonEncode(body);
+    // A write carries the credential captured for this account epoch. This
+    // transport cannot follow a writable redirect or retry after reauth.
+    final response = await _client
+        .send(request)
+        .then(http.Response.fromStream)
+        .timeout(const Duration(seconds: 8));
+    if (epoch != authSessionEpoch ||
+        (includeAuth && credential != (_authToken ?? '').trim())) {
+      throw StateError('Authentication session changed');
+    }
+    if (method == 'GET' &&
+        suffix == '/draft' &&
+        (response.statusCode == 401 ||
+            response.statusCode == 403 ||
+            response.statusCode == 404)) {
+      return null;
+    }
+    Map<String, dynamic>? payload;
+    try {
+      payload =
+          jsonDecode(utf8.decode(response.bodyBytes)) as Map<String, dynamic>;
+    } on FormatException {
+      // An unavailable route may return an HTML error page.
+    } on TypeError {
+      // Treat unexpected JSON shapes like an unavailable contract.
+    }
+    if (response.statusCode != 200 || payload?['success'] != true) {
+      throw GalleryRequestException(
+        response.statusCode,
+        code: payload?['errorCode'] as String?,
+        currentRevision: payload?['currentRevision'] as int?,
+      );
+    }
+    if (!(response.headers['cache-control'] ?? '')
+        .toLowerCase()
+        .contains('no-store')) {
+      throw const FormatException('Gallery response is cacheable');
+    }
+    return payload!['data'] as Map<String, dynamic>;
+  }
+
+  @override
+  Future<PublishedGallery> getPublishedGallery(GalleryHost host) async =>
+      PublishedGallery.fromJson(
+        (await _galleryRequest(host, 'GET', '', includeAuth: false))!,
+      );
+
+  @override
+  Future<DraftGallery?> getGalleryDraft(GalleryHost host) async {
+    final payload =
+        await _galleryRequest(host, 'GET', '/draft', includeAuth: true);
+    return payload == null ? null : DraftGallery.fromJson(payload);
+  }
+
+  @override
+  Future<void> saveGalleryDraft(
+    GalleryHost host, {
+    required int expectedRevision,
+    required String mutationId,
+    required GalleryLayout? layout,
+  }) async {
+    await _galleryRequest(
+      host,
+      'PUT',
+      '/draft',
+      includeAuth: true,
+      body: {
+        'expectedRevision': expectedRevision,
+        'mutationId': mutationId,
+        'layout': layout?.toJson(),
+      },
+    );
+  }
+
+  @override
+  Future<void> publishGallery(
+    GalleryHost host, {
+    required int expectedRevision,
+    required String mutationId,
+  }) async {
+    await _galleryRequest(
+      host,
+      'POST',
+      '/publish',
+      includeAuth: true,
+      body: {'expectedRevision': expectedRevision, 'mutationId': mutationId},
+    );
+  }
+
   BackendApiService._internal() {
     // Ensure a single, consistent HTTP client across the app.
     // On Flutter Web, this enables credentialed requests (cookies) when needed.

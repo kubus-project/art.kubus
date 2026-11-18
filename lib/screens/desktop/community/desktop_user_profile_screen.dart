@@ -1,3 +1,5 @@
+import 'package:art_kubus/models/gallery_presentation.dart';
+import 'package:art_kubus/widgets/detail/gallery_presentation.dart';
 import 'package:art_kubus/widgets/community/community_post_media_carousel.dart';
 import 'dart:async';
 
@@ -290,7 +292,13 @@ class _UserProfileScreenState extends State<UserProfileScreen>
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) => GalleryHostScope(
+        type: GalleryHostType.profile,
+        hostId: user?.profileId,
+        builder: _buildProfileWithGallery,
+      );
+
+  Widget _buildProfileWithGallery(BuildContext context) {
     final themeProvider = Provider.of<ThemeProvider>(context);
     final l10n = AppLocalizations.of(context)!;
     final animationTheme = context.animationTheme;
@@ -428,34 +436,62 @@ class _UserProfileScreenState extends State<UserProfileScreen>
                               ? KubusSpacing.lg
                               : KubusSpacing.xl,
                         ),
-                        if (isCanonicalPublicEntry)
-                          _buildStatsCards(themeProvider, isLarge, l10n)
-                        else
-                          _buildStatsCards(
-                            themeProvider,
-                            isLarge,
-                            l10n,
-                            isCommunityOverlay: isCommunityOverlay,
-                          ),
-                        const SizedBox(height: KubusSpacing.xl),
-                        // Wide two-column content begins at ~1200px so
-                        // intermediate desktop widths do not inherit the mobile
-                        // single-column layout.
-                        if (!isCanonicalPublicEntry && isLarge)
-                          _buildTwoColumnLayout(
-                            themeProvider: themeProvider,
-                            isArtist: isArtist,
-                            isInstitution: isInstitution,
-                            l10n: l10n,
+                        if (GalleryHostScope.maybeOf(context)
+                                ?.published
+                                ?.automatic ==
+                            false)
+                          ...composeProfileSections<Widget>(
+                            order: gallerySectionOrder(
+                                    context, publicProfileSections)
+                                .where(
+                              (section) => section != ProfileSection.identity,
+                            ),
+                            gap: (_, __) =>
+                                const SizedBox(height: KubusSpacing.md),
+                            build: (section) => section == ProfileSection.stats
+                                ? [
+                                    _buildStatsCards(
+                                        themeProvider, isLarge, l10n,
+                                        isCommunityOverlay: isCommunityOverlay)
+                                  ]
+                                : _contentSectionWidgets(section,
+                                    themeProvider: themeProvider,
+                                    isArtist: isArtist,
+                                    isInstitution: isInstitution,
+                                    isCanonicalPublicEntry:
+                                        isCanonicalPublicEntry,
+                                    l10n: l10n),
                           )
-                        else
-                          _buildSingleColumnContent(
-                            themeProvider: themeProvider,
-                            isArtist: isArtist,
-                            isInstitution: isInstitution,
-                            isCanonicalPublicEntry: isCanonicalPublicEntry,
-                            l10n: l10n,
-                          ),
+                        else ...[
+                          if (isCanonicalPublicEntry)
+                            _buildStatsCards(themeProvider, isLarge, l10n)
+                          else
+                            _buildStatsCards(
+                              themeProvider,
+                              isLarge,
+                              l10n,
+                              isCommunityOverlay: isCommunityOverlay,
+                            ),
+                          const SizedBox(height: KubusSpacing.xl),
+                          // Wide two-column content begins at ~1200px so
+                          // intermediate desktop widths do not inherit the mobile
+                          // single-column layout.
+                          if (!isCanonicalPublicEntry && isLarge)
+                            _buildTwoColumnLayout(
+                              themeProvider: themeProvider,
+                              isArtist: isArtist,
+                              isInstitution: isInstitution,
+                              l10n: l10n,
+                            )
+                          else
+                            _buildSingleColumnContent(
+                              themeProvider: themeProvider,
+                              isArtist: isArtist,
+                              isInstitution: isInstitution,
+                              isCanonicalPublicEntry: isCanonicalPublicEntry,
+                              l10n: l10n,
+                            ),
+                        ],
                         const SizedBox(height: KubusSpacing.lg),
                       ],
                     ),
@@ -505,11 +541,12 @@ class _UserProfileScreenState extends State<UserProfileScreen>
           if (!contentOnly ||
               _artistArtworks.isNotEmpty ||
               _authoredArtworksUnavailable)
-            _buildArtistPortfolioSection(
+            GalleryPanel(
+                fallback: _buildArtistPortfolioSection(
               themeProvider,
               l10n,
               isArtist: isArtist,
-            ),
+            )),
           if (_documentedArtworks.isNotEmpty)
             _buildArtistDocumentedSection(l10n),
           if (!contentOnly || _artistCollections.isNotEmpty)
