@@ -12860,6 +12860,17 @@ class AppLocalizationsSl extends AppLocalizations {
   String get commonLoading => 'Nalagam';
 
   @override
+  String get artworkPrivatePreviewDenied =>
+      'Prijavite se z računom, ki si lahko ogleda ta osnutek.';
+
+  @override
+  String get artworkPrivatePreviewUnavailable => 'Ta predogled ni na voljo.';
+
+  @override
+  String get artworkPrivatePreviewRetry =>
+      'Ta predogled je začasno nedosegljiv. Poskusite pozneje.';
+
+  @override
   String get desktopShellNavHome => 'Domov';
 
   @override

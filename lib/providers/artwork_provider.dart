@@ -39,12 +39,20 @@ class ArtworkProvider extends ChangeNotifier {
   final Map<String, ArtworkSpatialHistory> _spatialHistory = {};
   final Map<String, Future<ArtworkSpatialHistory>> _spatialHistoryLoads = {};
   final Map<String, String> _spatialHistoryErrors = {};
-  final Map<String, Future<Artwork>> _inFlightArtworkFetches =
-      <String, Future<Artwork>>{};
+  final Map<String, Future<Artwork?>> _inFlightArtworkFetches =
+      <String, Future<Artwork?>>{};
+  final Map<String, Future<Artwork?>> _inFlightArtworkDetailRefreshes =
+      <String, Future<Artwork?>>{};
   // Individual detail requests may return artwork outside the first page used
   // by the startup list. Keep those records available for the provider's
   // lifetime instead of treating an omitted first-page row as a deletion.
   final Set<String> _supplementalArtworkIds = <String>{};
+  // Permission is coupled to the URLs from the current detail response. List,
+  // wallet, and local upserts cannot introduce different media under that grant.
+  final Map<String, Artwork> _trustedCurrentMediaDetails = <String, Artwork>{};
+  // Account switches invalidate grants but keep an in-memory deny-only marker
+  // until a fresh current read for that identity replaces it.
+  final Set<String> _currentMediaDenyIds = <String>{};
   Future<void>? _inFlightLoadArtworks;
   DateTime? _lastArtworksLoadAt;
   // Bumped by clearAccountScopedState. A response that started under an
@@ -185,6 +193,8 @@ class ArtworkProvider extends ChangeNotifier {
     );
 
     _supplementalArtworkIds.clear();
+    _currentMediaDenyIds.addAll(_trustedCurrentMediaDetails.keys);
+    _trustedCurrentMediaDetails.clear();
     _walletsWithPrivateArtworks.clear();
     _walletsWithPublicArtworks.clear();
     _artworkIdsByAccount.clear();
@@ -205,6 +215,18 @@ class ArtworkProvider extends ChangeNotifier {
     _commentLoadErrors.clear();
     _commentSubmitErrors.clear();
 
+    for (final id in _artworkById.keys.toList(growable: false)) {
+      final artwork = _artworkById[id]!;
+      if (artwork.currentPublicMediaAllowed != null ||
+          artwork.mediaPreview != null) {
+        _currentMediaDenyIds.add(id);
+        _artworkById[id] = artwork.copyWith(
+          currentPublicMediaAllowed: false,
+          clearMediaPreview: true,
+          mediaPreviewProvided: true,
+        );
+      }
+    }
     for (final id in _artworkById.keys.toList(growable: false)) {
       final artwork = _artworkById[id]!;
       final viewerScoped = artwork.isLikedByCurrentUser ||
@@ -329,10 +351,14 @@ class ArtworkProvider extends ChangeNotifier {
 
     try {
       final epoch = _accountEpoch;
-      final future = _backendApi.getArtwork(key).then((fetched) {
-        if (epoch == _accountEpoch) {
-          addOrUpdateArtwork(fetched, retainWhenListRefresh: true);
-        }
+      final future = (() async {
+        final api = _backendApi;
+        return _getCurrentMediaArtwork(api, key);
+      })()
+          .then((current) {
+        if (epoch != _accountEpoch) return null;
+        final fetched = _storeCurrentMediaDetail(current);
+        addOrUpdateArtwork(fetched, retainWhenListRefresh: true);
         return fetched;
       });
       _inFlightArtworkFetches[key] = future;
@@ -344,6 +370,86 @@ class ArtworkProvider extends ChangeNotifier {
       rethrow;
     } finally {
       _inFlightArtworkFetches.remove(key);
+    }
+  }
+
+  static bool _isSessionRejection(Object error) =>
+      error is BackendApiRequestException &&
+      (error.statusCode == 401 || error.statusCode == 403);
+
+  Future<ArtworkCurrentMediaDetail> _getCurrentMediaArtwork(
+    ArtworkBackendApi api,
+    String identifier,
+  ) async {
+    if (api is! ArtworkCurrentMediaApi) {
+      throw StateError('Current artwork media detail unavailable');
+    }
+    final currentApi = api as ArtworkCurrentMediaApi;
+    late final ArtworkCurrentMediaDetail current;
+    try {
+      current = await currentApi.getArtworkCurrentMediaDetail(
+        identifier,
+        includeAuth: true,
+      );
+    } catch (error) {
+      // A rejected session gets exactly one guest current-row read. Other
+      // errors remain fail-closed and never fall back to snapshots or Orbit.
+      if (!_isSessionRejection(error)) rethrow;
+      final guest = await currentApi.getArtworkCurrentMediaDetail(
+        identifier,
+        includeAuth: false,
+      );
+      if (!guest.publicMediaAllowed) {
+        throw BackendApiRequestException(
+          statusCode: 404,
+          path: '/api/artworks/$identifier?currentMedia=true',
+        );
+      }
+      return guest;
+    }
+    return current;
+  }
+
+  /// Refreshes detail visibility and media authority for the current screen
+  /// entry, even when an older detail response already supplied a descriptor.
+  Future<Artwork?> refreshArtworkDetailMetadata(String artworkId) async {
+    final id = artworkId.trim();
+    final current = getArtworkById(id);
+    if (id.isEmpty || current == null) return current;
+
+    final epoch = _accountEpoch;
+    final requestKey = '$epoch-$id';
+    final pending = _inFlightArtworkDetailRefreshes[requestKey];
+    if (pending != null) return pending;
+
+    final future = _fetchArtworkDetailMetadata(id, epoch);
+    _inFlightArtworkDetailRefreshes[requestKey] = future;
+    try {
+      return await future;
+    } finally {
+      if (identical(_inFlightArtworkDetailRefreshes[requestKey], future)) {
+        _inFlightArtworkDetailRefreshes.remove(requestKey);
+      }
+    }
+  }
+
+  Future<Artwork?> _fetchArtworkDetailMetadata(String id, int epoch) async {
+    final api = _backendApi;
+    try {
+      final current = await _getCurrentMediaArtwork(api, id);
+      final fetched = current.artwork;
+      final exactId = fetched.id.toLowerCase() == id.toLowerCase();
+      final exactMintAlias =
+          fetched.isNft && fetched.nftMintAddress?.trim() == id;
+      if (epoch != _accountEpoch || (!exactId && !exactMintAlias)) return null;
+      final stored = _storeCurrentMediaDetail(current);
+      _supplementalArtworkIds.add(stored.id);
+      notifyListeners();
+      return getArtworkById(stored.id);
+    } catch (_) {
+      // A cached detail is not proof that media remains public. Callers keep
+      // the loading/error surface instead of displaying stale URLs.
+      return null;
     }
   }
 
@@ -525,14 +631,59 @@ class ArtworkProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  void _upsertArtwork(Artwork artwork) {
-    final index = _artworks.indexWhere((a) => a.id == artwork.id);
-    if (index >= 0) {
-      _artworks[index] = artwork;
-    } else {
-      _artworks.add(artwork);
+  void _upsertArtwork(Artwork artwork, {bool currentMediaDetail = false}) {
+    final nextArtwork =
+        currentMediaDetail ? artwork : _bindCurrentMediaToTrustedUrls(artwork);
+    if (currentMediaDetail) {
+      _trustedCurrentMediaDetails[nextArtwork.id] = nextArtwork;
     }
-    _artworkById[artwork.id] = artwork;
+    final index = _artworks.indexWhere((a) => a.id == nextArtwork.id);
+    if (index >= 0) {
+      _artworks[index] = nextArtwork;
+    } else {
+      _artworks.add(nextArtwork);
+    }
+    _artworkById[nextArtwork.id] = nextArtwork;
+  }
+
+  Artwork _bindCurrentMediaToTrustedUrls(Artwork incoming) {
+    final trusted = _trustedCurrentMediaDetails[incoming.id];
+    if (trusted == null) {
+      // A runtime grant copied from an old model is not a new current read.
+      if (_currentMediaDenyIds.contains(incoming.id) ||
+          incoming.currentPublicMediaAllowed != null) {
+        _currentMediaDenyIds.add(incoming.id);
+        return incoming.copyWith(
+          currentPublicMediaAllowed: false,
+          clearMediaPreview: true,
+          mediaPreviewProvided: true,
+        );
+      }
+      return incoming;
+    }
+    return incoming.copyWith(
+      imageUrl: trusted.imageUrl,
+      clearImageUrl: trusted.imageUrl == null,
+      galleryUrls: trusted.galleryUrls,
+      galleryMeta: trusted.galleryMeta,
+      model3DURL: trusted.model3DURL,
+      clearModel3DURL: trusted.model3DURL == null,
+      poapImageUrl: trusted.poapImageUrl,
+      clearPoapImageUrl: trusted.poapImageUrl == null,
+      mediaPreview: trusted.mediaPreview,
+      clearMediaPreview: trusted.mediaPreview == null,
+      mediaPreviewProvided: trusted.mediaPreviewProvided,
+      currentPublicMediaAllowed: trusted.currentPublicMediaAllowed,
+    );
+  }
+
+  Artwork _storeCurrentMediaDetail(ArtworkCurrentMediaDetail current) {
+    final artwork = _mergeSavedBookmarkState(current.artwork.copyWith(
+      currentPublicMediaAllowed: current.publicMediaAllowed,
+    ));
+    _currentMediaDenyIds.remove(artwork.id);
+    _upsertArtwork(artwork, currentMediaDetail: true);
+    return artwork;
   }
 
   void _invalidateShowcaseForArtwork(Artwork artwork) {
@@ -633,6 +784,8 @@ class ArtworkProvider extends ChangeNotifier {
   void removeArtwork(String artworkId) {
     _artworks.removeWhere((artwork) => artwork.id == artworkId);
     _artworkById.remove(artworkId);
+    _trustedCurrentMediaDetails.remove(artworkId);
+    _currentMediaDenyIds.remove(artworkId);
     _comments.remove(artworkId);
     notifyListeners();
   }
@@ -1256,13 +1409,17 @@ class ArtworkProvider extends ChangeNotifier {
       }
       final artworks = await _backendApi.getArtworks(limit: 100);
       if (epoch != _accountEpoch) return;
-      final merged = artworks.map(_mergeSavedBookmarkState).toList();
+      final merged = artworks
+          .map(_mergeSavedBookmarkState)
+          .map(_bindCurrentMediaToTrustedUrls)
+          .toList();
       final listedArtworkIds = merged.map((artwork) => artwork.id).toSet();
       final supplementalArtworks = _supplementalArtworkIds
           .where((artworkId) => !listedArtworkIds.contains(artworkId))
           .map((artworkId) => _artworkById[artworkId])
           .whereType<Artwork>()
           .map(_mergeSavedBookmarkState)
+          .map(_bindCurrentMediaToTrustedUrls)
           .toList(growable: false);
       _artworks
         ..clear()
@@ -1314,7 +1471,9 @@ class ArtworkProvider extends ChangeNotifier {
       if (epoch != _accountEpoch) return;
       bool updated = false;
       for (final artwork in walletArtworks) {
-        final merged = _mergeSavedBookmarkState(artwork);
+        final merged = _bindCurrentMediaToTrustedUrls(
+          _mergeSavedBookmarkState(artwork),
+        );
         final index = _artworks.indexWhere((a) => a.id == artwork.id);
         if (index >= 0) {
           _artworks[index] = merged;

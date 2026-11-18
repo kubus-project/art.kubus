@@ -23,10 +23,24 @@ import 'package:latlong2/latlong.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-class _FakeArtworkBackendApi implements ArtworkBackendApi {
+class _FakeArtworkBackendApi
+    implements ArtworkBackendApi, ArtworkCurrentMediaApi {
   final Artwork artwork;
 
   _FakeArtworkBackendApi(this.artwork);
+
+  @override
+  int get authSessionEpoch => 0;
+
+  @override
+  Future<ArtworkCurrentMediaDetail> getArtworkCurrentMediaDetail(
+    String identifier, {
+    required bool includeAuth,
+  }) async =>
+      ArtworkCurrentMediaDetail(
+        artwork: artwork,
+        publicMediaAllowed: artwork.canUsePublicMedia,
+      );
 
   @override
   Future<Artwork> getArtwork(String artworkId) async => artwork;

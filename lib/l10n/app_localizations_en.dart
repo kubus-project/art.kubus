@@ -12730,6 +12730,18 @@ class AppLocalizationsEn extends AppLocalizations {
   String get commonLoading => 'Loading';
 
   @override
+  String get artworkPrivatePreviewDenied =>
+      'Sign in with an account that can view this draft.';
+
+  @override
+  String get artworkPrivatePreviewUnavailable =>
+      'This preview is not available.';
+
+  @override
+  String get artworkPrivatePreviewRetry =>
+      'This preview is temporarily unavailable. Try again later.';
+
+  @override
   String get desktopShellNavHome => 'Home';
 
   @override
