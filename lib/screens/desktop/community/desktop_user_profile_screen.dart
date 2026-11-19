@@ -792,35 +792,46 @@ class _UserProfileScreenState extends State<UserProfileScreen>
       KubusTypography.content(fontSize: 64, fontWeight: FontWeight.w700),
       availableWidth: MediaQuery.sizeOf(context).width,
     ).copyWith(height: 1.02, letterSpacing: -0.65);
-    final roleLabel = isInstitution
-        ? l10n.settingsRoleInstitutionTitle
-        : isArtist
-            ? l10n.settingsRoleArtistTitle
-            : null;
+    const avatarRadius = 44.0;
 
     final identity = Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        if (roleLabel != null) ...[
-          Text(
-            roleLabel,
-            style: KubusTextStyles.structuralLabel.copyWith(
-              color: roles.foregroundMuted,
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            ProfileAvatarMount(
+              radius: avatarRadius,
+              isVerified: profile.isVerified,
+              isArtist: isArtist,
+              isInstitution: isInstitution,
+              child: AvatarWidget(
+                wallet: profile.id,
+                displayName: profile.name,
+                avatarUrl: profile.profileImageUrl,
+                radius: avatarRadius,
+                borderWidth: 0,
+                borderColor: Colors.transparent,
+                enableProfileNavigation: false,
+                heroTag: widget.heroTag,
+              ),
             ),
-          ),
-          const SizedBox(height: KubusSpacing.md),
-        ],
-        ProfileIdentityBlock(
-          displayName: profile.name,
-          handle: profile.username,
-          isVerified: profile.isVerified,
-          isArtist: isArtist,
-          isInstitution: isInstitution,
-          density: ProfileIdentityDensity.spacious,
-          nameStyle: titleStyle,
-          handleStyle: KubusTextStyles.metadataRegister,
-          nameColor: roles.foreground,
-          handleColor: roles.foregroundMuted,
+            const SizedBox(width: KubusSpacing.md),
+            Expanded(
+              child: ProfileIdentityBlock(
+                displayName: profile.name,
+                handle: profile.username,
+                isVerified: profile.isVerified,
+                isArtist: isArtist,
+                isInstitution: isInstitution,
+                density: ProfileIdentityDensity.spacious,
+                nameStyle: titleStyle,
+                handleStyle: KubusTextStyles.metadataRegister,
+                nameColor: roles.foreground,
+                handleColor: roles.foregroundMuted,
+              ),
+            ),
+          ],
         ),
         if (placeLabel != null) ...[
           const SizedBox(height: KubusSpacing.sm),

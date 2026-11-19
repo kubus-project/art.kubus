@@ -1,5 +1,6 @@
 import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:art_kubus/widgets/detail/profile_identity_block.dart';
+import 'package:art_kubus/widgets/artist_badge.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -91,7 +92,7 @@ void main() {
     expect(find.text('Head of Flowers'), findsWidgets);
   });
 
-  testWidgets('desktop artist keeps the artist portfolio and label',
+  testWidgets('desktop artist keeps the artist portfolio and role badge',
       (tester) async {
     await pumpProfileSurface(
       tester,
@@ -105,7 +106,8 @@ void main() {
     final l10n = l10nOf(tester);
 
     expect(find.text(l10n.userProfileArtistPortfolioTitle), findsOneWidget);
-    expect(find.text(l10n.settingsRoleArtistTitle), findsWidgets);
+    expect(find.byType(ArtistBadge), findsOneWidget);
+    expect(find.text(l10n.settingsRoleArtistTitle), findsNothing);
     expect(find.text('Lala Pilot Work'), findsWidgets);
   });
 
