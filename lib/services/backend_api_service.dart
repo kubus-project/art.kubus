@@ -624,6 +624,9 @@ class BackendApiService
     }());
   }
 
+  @visibleForTesting
+  String? get preferredWalletForTesting => _preferredWalletCanonical;
+
   Map<String, dynamic>? _tryDecodeJwtPayload(String token) {
     try {
       final parts = token.split('.');
@@ -1170,6 +1173,19 @@ class BackendApiService
     }
     return _tryExtractWalletFromToken(token) ?? '';
   }
+
+  /// The account the session is moving to or already is: the credential target
+  /// when a commit is pending, else the live token. The target is set
+  /// synchronously with the epoch bump and cleared on sign-out, so from the
+  /// instant another account's credential becomes the target this differs
+  /// from the account an earlier operation started under. Empty for a guest.
+  String get pendingAuthAccountKey =>
+      _accountKeyOf(_credentialTargetToken ?? _authToken);
+
+  /// True while a credential of another account than the live token's is the
+  /// commit target: the live token no longer speaks for the session.
+  bool get hasPendingAccountSwitch =>
+      pendingAuthAccountKey != _accountKeyOf(_authToken);
 
   /// Native secure persistence; browser credentials remain in memory only.
   ///
@@ -3136,12 +3152,14 @@ class BackendApiService
     required String walletAddress,
     required String signature,
     required String message,
+    int? expectedEpoch,
   }) =>
       _backendApiLoginWithWallet(
         this,
         walletAddress: walletAddress,
         signature: signature,
         message: message,
+        expectedEpoch: expectedEpoch,
       );
 
   /// Register with email + password.

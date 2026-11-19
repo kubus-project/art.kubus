@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:async';
 import '../config/config.dart';
+import '../services/account_identity.dart';
 import '../services/backend_api_service.dart';
 import '../services/socket_service.dart';
 import '../models/conversation.dart';
@@ -28,6 +29,7 @@ class ChatProvider extends ChangeNotifier {
   static const int _maxCachedUsers = 320;
 
   ChatProvider() {
+    AccountIdentity.addListener(_handleAccountIdentityChanged);
     // Register socket listeners early so the provider receives events even
     // if initialize() runs earlier or in a different order. SocketService
     // deduplicates listeners, so calling these here is safe.
@@ -532,6 +534,7 @@ class ChatProvider extends ChangeNotifier {
   DateTime? _lastUnauthorizedAt;
   final Duration _unauthCooldown = const Duration(seconds: 30);
   String _lastAuthSignature = '';
+  String _lastAuthAccountId = '';
   DateTime? _lastIncomingMessageAt;
   String? _lastIncomingConversationId;
   final Map<String, int> _messageCacheTouchMs = {};
@@ -1080,6 +1083,19 @@ class ChatProvider extends ChangeNotifier {
     _chatProviderResetSessionState(this, reason: reason, notify: notify);
   }
 
+  /// A walletless switch leaves the wallet empty on both sides, and the profile
+  /// that carries the account id clears first. The identity change is the
+  /// signal that reaches this provider before the next token's first request.
+  /// A same-account change (wallet link, re-issued token) keeps the state.
+  void _handleAccountIdentityChanged() {
+    final key = AccountIdentity.accountKey;
+    if (key.isNotEmpty && key == _lastAuthAccountId) return;
+    _resetSessionState(reason: 'accountChanged');
+    // Recorded after the reset so the bind path sees this account as current
+    // and does not reset again for the same switch.
+    _lastAuthAccountId = key;
+  }
+
   /// Whether a socket event for [conversationId] belongs to the current session.
   bool _isSocketEventForCurrentSession(String conversationId) {
     if ((_currentWallet ?? '').trim().isEmpty) return false;
@@ -1461,12 +1477,14 @@ class ChatProvider extends ChangeNotifier {
 
   void bindAuthContext({
     ProfileProvider? profileProvider,
+    String? accountId,
     String? walletAddress,
     bool? isSignedIn,
   }) {
     _chatProviderBindAuthContext(
       this,
       profileProvider: profileProvider,
+      accountId: accountId,
       walletAddress: walletAddress,
       isSignedIn: isSignedIn,
     );
@@ -3073,6 +3091,7 @@ class ChatProvider extends ChangeNotifier {
 
   @override
   void dispose() {
+    AccountIdentity.removeListener(_handleAccountIdentityChanged);
     _unbindRefreshProvider();
     try {
       _subscriptionMonitorTimer?.cancel();

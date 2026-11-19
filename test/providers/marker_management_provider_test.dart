@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:art_kubus/models/art_marker.dart';
 import 'package:art_kubus/models/street_art_claim.dart';
 import 'package:art_kubus/providers/marker_management_provider.dart';
+import 'package:art_kubus/services/account_identity.dart';
 import 'package:art_kubus/services/backend_api_service.dart';
 import 'package:art_kubus/services/map_marker_service.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -376,5 +377,124 @@ void main() {
     expect(results[1]?.id, 'm-new');
     expect(api.createCalls, 1);
     expect(provider.markers.where((m) => m.id == 'm-new').length, 1);
+  });
+
+  test('a walletless account switch clears the /mine list and refetches',
+      () async {
+    final api = _FakeMarkerApi();
+    final provider = MarkerManagementProvider(
+        api: api, mapMarkerService: MapMarkerService());
+    addTearDown(provider.dispose);
+
+    api.getMyResult = <ArtMarker>[_marker('a1')];
+    await provider.refresh(force: true);
+    expect(provider.markers.map((m) => m.id), ['a1']);
+
+    // Walletless A -> B: the wallet is empty on both sides, so only the
+    // identity change reaches the provider.
+    AccountIdentity.notifyListenersChanged();
+
+    expect(provider.markers, isEmpty);
+    expect(provider.initialized, isFalse);
+
+    api.getMyResult = <ArtMarker>[_marker('b1')];
+    await provider.initialize();
+    expect(api.getMyCalls, 2);
+    expect(provider.markers.map((m) => m.id), ['b1']);
+  });
+
+  test('a /mine fetch that returns after an account switch is dropped',
+      () async {
+    final api = _FakeMarkerApi();
+    final provider = MarkerManagementProvider(
+        api: api, mapMarkerService: MapMarkerService());
+    addTearDown(provider.dispose);
+
+    api.getMyCompleter = Completer<List<ArtMarker>>();
+    final inFlight = provider.refresh(force: true);
+    expect(provider.isLoading, isTrue);
+
+    AccountIdentity.notifyListenersChanged();
+    api.getMyCompleter!.complete(<ArtMarker>[_marker('a1')]);
+    await inFlight;
+
+    expect(provider.markers, isEmpty);
+    expect(provider.isLoading, isFalse);
+  });
+
+  test(
+      'a create that returns after an account switch is not kept for the next account',
+      () async {
+    final api = _FakeMarkerApi();
+    final provider = MarkerManagementProvider(
+        api: api, mapMarkerService: MapMarkerService());
+    addTearDown(provider.dispose);
+
+    api.createCompleter = Completer<ArtMarker?>();
+    final create = provider.createMarker(<String, dynamic>{'name': 'Mine'});
+    expect(api.createCalls, 1);
+
+    AccountIdentity.notifyListenersChanged();
+    api.createCompleter!.complete(_marker('a-created'));
+    await create;
+
+    expect(provider.markers, isEmpty);
+  });
+
+  test(
+      'a create answered with null after an account switch does not refetch the next account list',
+      () async {
+    final api = _FakeMarkerApi();
+    final provider = MarkerManagementProvider(
+        api: api, mapMarkerService: MapMarkerService());
+    addTearDown(provider.dispose);
+
+    api.createCompleter = Completer<ArtMarker?>();
+    final create = provider.createMarker(<String, dynamic>{'name': 'Mine'});
+
+    AccountIdentity.notifyListenersChanged();
+    api.createCompleter!.complete(null);
+
+    expect(await create, isNull);
+    expect(api.getMyCalls, 0);
+    expect(provider.markers, isEmpty);
+  });
+
+  test(
+      'an update that returns after an account switch is not inserted into the next account list',
+      () async {
+    final api = _FakeMarkerApi();
+    final provider = MarkerManagementProvider(
+        api: api, mapMarkerService: MapMarkerService());
+    addTearDown(provider.dispose);
+
+    api.updateCompleter = Completer<ArtMarker?>();
+    final update =
+        provider.updateMarker('a1', <String, dynamic>{'name': 'Renamed'});
+
+    AccountIdentity.notifyListenersChanged();
+    api.updateCompleter!.complete(_marker('a1', name: 'Renamed'));
+
+    expect(await update, isNotNull);
+    expect(provider.markers, isEmpty);
+  });
+
+  test(
+      'a failed delete that returns after an account switch does not restore the previous list',
+      () async {
+    final api = _FakeMarkerApi();
+    final provider = MarkerManagementProvider(
+        api: api, mapMarkerService: MapMarkerService());
+    addTearDown(provider.dispose);
+
+    provider.ingestMarker(_marker('a1'));
+    api.deleteCompleter = Completer<bool>();
+    final delete = provider.deleteMarker('a1');
+
+    AccountIdentity.notifyListenersChanged();
+    api.deleteCompleter!.complete(false);
+
+    expect(await delete, isFalse);
+    expect(provider.markers, isEmpty);
   });
 }

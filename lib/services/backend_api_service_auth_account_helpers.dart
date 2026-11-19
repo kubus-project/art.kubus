@@ -35,8 +35,9 @@ Future<Map<String, dynamic>> _backendApiLoginWithWallet(
   required String walletAddress,
   required String signature,
   required String message,
+  int? expectedEpoch,
 }) async {
-  var sessionEpoch = service._authSessionEpoch;
+  var sessionEpoch = expectedEpoch ?? service._authSessionEpoch;
   try {
     const path = '/api/auth/login';
     final response = await service._sendAuthRequestWithFailover(

@@ -904,6 +904,8 @@ class _AppLauncherState extends State<AppLauncher> {
                   provider.bindToRefresh(appRefreshProvider);
                   provider.bindAuthContext(
                     profileProvider: profileProvider,
+                    accountId: profileProvider.currentUser?.userId ??
+                        profileProvider.currentUser?.id,
                     walletAddress: walletProvider.currentWalletAddress,
                     isSignedIn: walletProvider.authority.hasAccountSession,
                   );

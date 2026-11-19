@@ -100,36 +100,86 @@ extension BackendApiAuthTransport on BackendApiService {
     );
   }
 
+  /// [expectedEpoch] is the auth session the caller started under. The wallet
+  /// signature can take seconds, and a session that ends meanwhile must not
+  /// receive this wallet's token.
+  ///
+  /// A caller that passes none is bound to the session current at entry: the
+  /// epoch AND the account that session belongs to. When the signature returns,
+  /// the commit is refused if the live session belongs to another account or
+  /// is logged out. A change of credentials within the same account (link,
+  /// refresh, a non-wallet sign-in token swap) is not an ended session, and a
+  /// session that does not exist yet (guest, or the account this very call
+  /// creates) is not one either.
   Future<AuthSessionPayload> ensureSessionForActiveSigner({
     required String walletAddress,
     required Future<String> Function(String message) signMessage,
+    int? expectedEpoch,
   }) async {
     final normalizedWallet = walletAddress.trim();
     if (normalizedWallet.isEmpty) {
       throw ArgumentError('walletAddress cannot be empty');
     }
+    final sessionEpoch = expectedEpoch ?? authSessionEpoch;
+    // Captured with the epoch: the epoch is current here (checked below), so
+    // this is the account the operation started under.
+    final entryAccountKey = pendingAuthAccountKey;
 
-    setPreferredWalletAddress(normalizedWallet);
-    await restoreExistingSession(allowRefresh: false);
-    final token = (_authToken ?? '').trim();
-    final currentWallet = (getCurrentAuthWalletAddress() ?? '').trim();
-    final authLevel = getCurrentAuthLevel();
-    if (token.isNotEmpty &&
-        WalletUtils.equals(currentWallet, normalizedWallet) &&
-        authLevel == BackendAuthLevel.walletSigned) {
-      return AuthSessionPayload(
-        token: token,
-        walletAddress: currentWallet,
-        authProvider: inferSignInMethodFromClaims().name,
-      );
+    // A wallet-signed session for this very wallet is never the wrong
+    // account's: when another caller committed it while this one waited, it is
+    // the result this caller wanted, and nothing more is committed.
+    AuthSessionPayload? liveSessionForWallet() {
+      final token = (_authToken ?? '').trim();
+      final currentWallet = (getCurrentAuthWalletAddress() ?? '').trim();
+      if (token.isNotEmpty &&
+          !hasPendingAccountSwitch &&
+          WalletUtils.equals(currentWallet, normalizedWallet) &&
+          getCurrentAuthLevel() == BackendAuthLevel.walletSigned) {
+        return AuthSessionPayload(
+          token: token,
+          walletAddress: currentWallet,
+          authProvider: inferSignInMethodFromClaims().name,
+        );
+      }
+      return null;
     }
+
+    // The session the operation started under still stands: same epoch, or the
+    // same account under a swapped credential.
+    bool sessionStillStands() {
+      if (sessionEpoch == authSessionEpoch) return true;
+      return entryAccountKey.isNotEmpty &&
+          pendingAuthAccountKey == entryAccountKey;
+    }
+
+    if (sessionEpoch != authSessionEpoch) {
+      final live = liveSessionForWallet();
+      if (live != null) return live;
+      throw StateError('Authentication request belongs to an ended session');
+    }
+
+    setPreferredWalletAddress(
+      normalizedWallet,
+      expectedAuthSessionEpoch: sessionEpoch,
+    );
+    await restoreExistingSession(allowRefresh: false);
+    final existing = liveSessionForWallet();
+    if (existing != null) return existing;
 
     final challenge = await requestWalletAuthChallenge(normalizedWallet);
     final signature = await signMessage(challenge.message);
+    if (!sessionStillStands()) {
+      final live = liveSessionForWallet();
+      if (live != null) return live;
+      throw StateError('Authentication request belongs to an ended session');
+    }
     final response = await loginWithWallet(
       walletAddress: normalizedWallet,
       signature: signature,
       message: challenge.message,
+      // Rebound to the live epoch of the same account: nothing awaits between
+      // the check above and the commit's epoch test.
+      expectedEpoch: authSessionEpoch,
     );
     return AuthSessionPayload.fromResponse(response);
   }

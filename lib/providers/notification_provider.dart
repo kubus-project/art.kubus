@@ -8,6 +8,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../l10n/app_localizations.dart';
 import '../l10n/app_localizations_en.dart';
 import '../l10n/app_localizations_sl.dart';
+import '../services/account_identity.dart';
 import '../services/backend_api_service.dart';
 import '../services/socket_service.dart';
 import '../services/push_notification_service.dart';
@@ -101,6 +102,7 @@ class NotificationProvider extends ChangeNotifier {
   bool get hasNew => _hasNew;
 
   NotificationProvider() {
+    AccountIdentity.addListener(_handleAccountIdentityChanged);
     // Defer heavy work until the widget tree is ready; initialization is invoked
     // explicitly from ArtKubus after providers mount. This constructor must not
     // start async work so unit tests/builds without Material bindings stay safe.
@@ -302,6 +304,16 @@ class NotificationProvider extends ChangeNotifier {
     } else {
       _hasNew = _communityUnreadCount > 0;
     }
+  }
+
+  /// Unread counts belong to the account they were fetched for. A walletless
+  /// switch leaves the wallet empty on both sides, so initialize() cannot tell
+  /// the accounts apart. The identity change is the signal that can, and it
+  /// arrives before any await. A same-account token refresh announces nothing.
+  void _handleAccountIdentityChanged() {
+    final held = (_currentAccountId ?? '').trim();
+    if (held.isNotEmpty && held == AccountIdentity.accountKey) return;
+    _resetSessionState(clearUnreadCount: true);
   }
 
   void _handleSocketReconnect() {
@@ -946,6 +958,7 @@ class NotificationProvider extends ChangeNotifier {
     _scheduledServerSync = null;
     _scheduledServerSyncDueAt = null;
     _stopAutoRefreshLoop();
+    AccountIdentity.removeListener(_handleAccountIdentityChanged);
     super.dispose();
   }
 

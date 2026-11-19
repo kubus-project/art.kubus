@@ -7,6 +7,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../config/config.dart';
 import '../models/user_profile.dart';
 import '../models/user_persona.dart';
+import '../services/account_identity.dart';
 import '../services/backend_api_service.dart';
 import '../services/stats_api_service.dart';
 import '../models/user.dart';
@@ -92,6 +93,8 @@ class ProfileProvider extends foundation.ChangeNotifier {
   foundation.VoidCallback? _walletProviderListener;
   String? _boundWalletAddress;
   int _profileLoadEpoch = 0;
+  // The account the most recent load was started for.
+  String _profileLoadAccountKey = '';
 
   /// Account session the current request belongs to. A sign-out ends it, so a
   /// response that arrives afterwards must not write the previous account.
@@ -104,7 +107,9 @@ class ProfileProvider extends foundation.ChangeNotifier {
 
   ProfileProvider({ProfileBackendApi? apiService, StatsApiService? statsApi})
       : _apiService = apiService ?? BackendApiService(),
-        _statsApi = statsApi ?? StatsApiService();
+        _statsApi = statsApi ?? StatsApiService() {
+    AccountIdentity.addListener(_handleAccountIdentityChanged);
+  }
 
   void bindWalletProvider(WalletProvider walletProvider) {
     if (identical(_walletProvider, walletProvider)) return;
@@ -146,6 +151,41 @@ class ProfileProvider extends foundation.ChangeNotifier {
       }
     }
     notifyListeners();
+  }
+
+  /// The held profile belongs to the account it was loaded for. A walletless
+  /// switch leaves the wallet empty on both sides, so the wallet listener cannot
+  /// see it. An identity change to another account, or to none, clears it. A
+  /// same-account change (token refresh, wallet link) keeps it.
+  void _handleAccountIdentityChanged() {
+    final key = AccountIdentity.accountKey;
+    final held = (_currentUser?.userId ?? _currentUser?.id ?? '').trim();
+    if (held.isNotEmpty && _heldProfileBelongsTo(key)) return;
+    // A load still in flight may belong to the previous account even when
+    // nothing is held yet. Its response must not reach the new account.
+    if (held.isNotEmpty || _profileLoadAccountKey != key) {
+      _profileLoadEpoch += 1;
+    }
+    if (held.isEmpty) return;
+    _clearProfileState();
+    notifyListeners();
+  }
+
+  /// Whether the held profile is the account [key] names. A wallet-only session
+  /// token carries no account id, so the account key is the wallet and the
+  /// profile's id is a local handle; the profile's wallet identifies it then.
+  /// A wallet disconnect does not change the account key, so it keeps the
+  /// profile.
+  bool _heldProfileBelongsTo(String key) {
+    if (key.isEmpty) return false;
+    final user = _currentUser;
+    if (user == null) return false;
+    final candidates = <String>[
+      (user.userId ?? '').trim(),
+      user.id.trim(),
+      WalletUtils.canonical(user.walletAddress),
+    ];
+    return candidates.contains(key);
   }
 
   void _clearProfileState() {
@@ -719,6 +759,7 @@ class ProfileProvider extends foundation.ChangeNotifier {
   /// Load profile by wallet address
   Future<void> loadAuthenticatedProfile() async {
     final requestEpoch = ++_profileLoadEpoch;
+    _profileLoadAccountKey = AccountIdentity.accountKey;
     final sessionEpoch = _accountSessionEpoch;
     bool isCurrentLoad() =>
         requestEpoch == _profileLoadEpoch &&
@@ -797,6 +838,7 @@ class ProfileProvider extends foundation.ChangeNotifier {
     bool allowWalletAutoRegister = false,
   }) async {
     final requestEpoch = ++_profileLoadEpoch;
+    _profileLoadAccountKey = AccountIdentity.accountKey;
     final sessionEpoch = _accountSessionEpoch;
     bool isCurrentLoad() =>
         requestEpoch == _profileLoadEpoch &&
@@ -2236,6 +2278,7 @@ class ProfileProvider extends foundation.ChangeNotifier {
     if (_walletProvider != null && listener != null) {
       _walletProvider!.removeListener(listener);
     }
+    AccountIdentity.removeListener(_handleAccountIdentityChanged);
     super.dispose();
   }
 }
