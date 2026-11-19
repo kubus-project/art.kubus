@@ -101,6 +101,71 @@ void main() {
     expect(draft?.submitError, l10n.artworkDraftPublishFailed);
   });
 
+  test('persists valid gallery variant identities in positional metadata',
+      () async {
+    final l10n = await AppLocalizations.delegate.load(const Locale('en'));
+    var uploads = 0;
+    Map<String, dynamic>? sent;
+    final groupId = 'a' * 64;
+    BackendApiService().setHttpClient(MockClient((request) async {
+      if (request.url.path == '/api/upload') {
+        uploads++;
+        return http.Response(
+          jsonEncode({
+            'success': true,
+            'data': {
+              'relativeUrl': '/uploads/artworks/$uploads.png',
+              'imageVariants': {
+                'groupId': uploads == 2 ? groupId : 'invalid',
+              },
+              if (uploads == 2)
+                'imageMetadata': {
+                  'width': 768,
+                  'height': 512,
+                  'bytes': 12345,
+                  'mimetype': 'image/jpeg',
+                },
+            },
+          }),
+          200,
+          headers: const {'content-type': 'application/json'},
+        );
+      }
+      if (request.url.path == '/api/artworks') {
+        sent = jsonDecode(request.body) as Map<String, dynamic>;
+        return http.Response('{"success":false,"error":"stop here"}', 422,
+            headers: const {'content-type': 'application/json'});
+      }
+      return http.Response('unexpected', 500);
+    }));
+    final provider = ArtworkDraftsProvider();
+    final id = provider.createDraft();
+    provider.updateBasics(draftId: id, title: 'Title', description: 'Details');
+    provider.setCover(draftId: id, bytes: _png1x1(), fileName: 'cover.png');
+    provider.addGalleryItems(id, [
+      ArtworkDraftGalleryItem(
+          bytes: _png1x1(),
+          fileName: 'first.png',
+          width: 4000,
+          height: 3000,
+          sizeBytes: 99999,
+          mimeType: 'image/png'),
+      ArtworkDraftGalleryItem(bytes: _png1x1(), fileName: 'second.png'),
+    ]);
+    await provider.submitDraft(draftId: id, walletAddress: _wallet, l10n: l10n);
+    final metadata = sent!['galleryMeta'] as List<dynamic>;
+    final urls = sent!['galleryUrls'] as List<dynamic>;
+    expect(metadata, hasLength(2));
+    expect(metadata[0]['url'], urls[0]);
+    expect(metadata[0]['variantGroupId'], groupId);
+    expect(metadata[0]['width'], 768);
+    expect(metadata[0]['height'], 512);
+    expect(metadata[0]['sizeBytes'], 12345);
+    expect(metadata[0]['mimeType'], 'image/jpeg');
+    expect(metadata[1]['url'], urls[1]);
+    expect(metadata[1].containsKey('variantGroupId'), isFalse);
+  });
+
   group('authorship on submit', () {
     // Submits a minimal draft and returns the JSON body sent to POST
     // /api/artworks, so the request is what is asserted, not a mock.
