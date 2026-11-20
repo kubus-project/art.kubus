@@ -19,6 +19,7 @@ import '../../services/profile_package_mutation_tracker.dart';
 import '../../services/share/share_service.dart';
 import '../../services/share/share_types.dart';
 import '../../utils/artwork_authorship.dart';
+import '../../utils/artwork_editorial_hold_message.dart';
 import '../../utils/authored_by_self.dart';
 import '../../utils/artwork_media_resolver.dart';
 import '../../utils/artwork_navigation.dart';
@@ -32,6 +33,7 @@ import '../../widgets/kubus_button.dart';
 import '../../utils/kubus_color_roles.dart';
 import '../../widgets/detail/detail_shell_components.dart';
 import '../../widgets/inline_loading.dart';
+import '../../widgets/artwork_private_preview_image.dart';
 import '../../widgets/glass_components.dart';
 import '../desktop/desktop_shell.dart';
 import '../web3/artist/artwork_ar_manager_screen.dart';
@@ -145,13 +147,7 @@ class _ArtworkEditScreenState extends State<ArtworkEditScreen> {
         icon: Icons.open_in_new_outlined,
         label: l10n.commonOpen,
         onSelected: () {
-          unawaited(
-            openArtwork(
-              context,
-              artwork.id,
-              source: 'artwork_edit',
-            ),
-          );
+          unawaited(openArtwork(context, artwork.id, source: 'artwork_edit'));
         },
       ),
       SubjectOptionsAction(
@@ -227,8 +223,10 @@ class _ArtworkEditScreenState extends State<ArtworkEditScreen> {
       return 'owner';
     }
 
-    final members =
-        context.read<CollabProvider>().collaboratorsFor('artwork', artwork.id);
+    final members = context.read<CollabProvider>().collaboratorsFor(
+          'artwork',
+          artwork.id,
+        );
     for (final member in members) {
       final memberWallet = WalletUtils.canonical(member.user?.walletAddress);
       if (memberWallet.isNotEmpty &&
@@ -302,6 +300,11 @@ class _ArtworkEditScreenState extends State<ArtworkEditScreen> {
                 : l10n.commonActionFailedToast,
           ),
         ),
+      );
+    } on ArtworkEditorialHoldException catch (hold) {
+      if (!mounted) return;
+      messenger.showKubusSnackBar(
+        SnackBar(content: Text(artworkEditorialHoldMessage(l10n, hold))),
       );
     } catch (_) {
       if (!mounted) return;
@@ -524,9 +527,16 @@ class _ArtworkEditScreenState extends State<ArtworkEditScreen> {
 
     try {
       await provider.fetchArtworkIfNeeded(id);
+      final artwork = provider.getArtworkById(id);
+      if (artwork != null &&
+          !artwork.isPublic &&
+          !artwork.mediaPreviewProvided) {
+        await provider.refreshArtworkDetailMetadata(id);
+      }
       if (collabProvider != null) {
         unawaited(
-            collabProvider.refreshCollaboratorsInBackground('artwork', id));
+          collabProvider.refreshCollaboratorsInBackground('artwork', id),
+        );
       }
     } catch (_) {
       // Surface a friendly error; provider already logs in debug.
@@ -541,8 +551,9 @@ class _ArtworkEditScreenState extends State<ArtworkEditScreen> {
 
   void _seedFromArtworkIfReady() {
     if (_seeded) return;
-    final artwork =
-        context.read<ArtworkProvider>().getArtworkById(widget.artworkId);
+    final artwork = context.read<ArtworkProvider>().getArtworkById(
+          widget.artworkId,
+        );
     if (artwork == null) return;
 
     _titleController.text = artwork.title;
@@ -676,7 +687,8 @@ class _ArtworkEditScreenState extends State<ArtworkEditScreen> {
     final artwork = provider.getArtworkById(widget.artworkId);
     if (artwork == null) {
       messenger.showKubusSnackBar(
-          SnackBar(content: Text(l10n.commonSomethingWentWrong)));
+        SnackBar(content: Text(l10n.commonSomethingWentWrong)),
+      );
       return;
     }
 
@@ -691,7 +703,8 @@ class _ArtworkEditScreenState extends State<ArtworkEditScreen> {
     final description = _descriptionController.text.trim();
     if (title.isEmpty || description.isEmpty) {
       messenger.showKubusSnackBar(
-          SnackBar(content: Text(l10n.commonActionFailedToast)));
+        SnackBar(content: Text(l10n.commonActionFailedToast)),
+      );
       return;
     }
 
@@ -761,7 +774,8 @@ class _ArtworkEditScreenState extends State<ArtworkEditScreen> {
         nextPriceRaw.isEmpty ? null : double.tryParse(nextPriceRaw);
     if (nextPriceRaw.isNotEmpty && nextPrice == null) {
       messenger.showKubusSnackBar(
-          SnackBar(content: Text(l10n.commonActionFailedToast)));
+        SnackBar(content: Text(l10n.commonActionFailedToast)),
+      );
       return;
     }
     if (nextPrice != artwork.price) {
@@ -773,7 +787,8 @@ class _ArtworkEditScreenState extends State<ArtworkEditScreen> {
         nextArScaleRaw.isEmpty ? null : double.tryParse(nextArScaleRaw);
     if (nextArScaleRaw.isNotEmpty && nextArScale == null) {
       messenger.showKubusSnackBar(
-          SnackBar(content: Text(l10n.commonActionFailedToast)));
+        SnackBar(content: Text(l10n.commonActionFailedToast)),
+      );
       return;
     }
     if (nextArScale != artwork.arScale) {
@@ -803,7 +818,7 @@ class _ArtworkEditScreenState extends State<ArtworkEditScreen> {
           fileType: 'image',
           metadata: const {
             'uploadFolder': 'artworks/covers',
-            'source': 'artwork_edit'
+            'source': 'artwork_edit',
           },
         );
         final coverUrl = (upload['uploadedUrl'] as String?) ??
@@ -825,7 +840,7 @@ class _ArtworkEditScreenState extends State<ArtworkEditScreen> {
           fileType: 'model',
           metadata: const {
             'uploadFolder': 'ar/models',
-            'source': 'artwork_edit'
+            'source': 'artwork_edit',
           },
         );
         final modelUrl = (upload['uploadedUrl'] as String?) ??
@@ -851,7 +866,9 @@ class _ArtworkEditScreenState extends State<ArtworkEditScreen> {
         // The write did not happen: say so, keep the editor and every field
         // the user typed, and do not leave.
         messenger.showKubusSnackBar(
-          SnackBar(content: Text(_failureMessage(l10n, result.failure))),
+          SnackBar(
+            content: Text(_failureMessage(l10n, result.failure, result.hold)),
+          ),
         );
         return;
       }
@@ -860,8 +877,9 @@ class _ArtworkEditScreenState extends State<ArtworkEditScreen> {
       // editor still being on screen: the user may have navigated away while
       // the request ran, and the portfolio still has to learn about the edit.
       refresh.triggerPortfolio();
-      messenger
-          .showKubusSnackBar(SnackBar(content: Text(l10n.commonSavedToast)));
+      messenger.showKubusSnackBar(
+        SnackBar(content: Text(l10n.commonSavedToast)),
+      );
       if (!mounted) return;
       _closeEditor(shellScope: shellScope, navigator: navigator);
     } catch (error) {
@@ -869,7 +887,11 @@ class _ArtworkEditScreenState extends State<ArtworkEditScreen> {
       messenger.showKubusSnackBar(
         SnackBar(
           content: Text(
-            _failureMessage(l10n, classifyArtworkUpdateFailure(error)),
+            _failureMessage(
+              l10n,
+              classifyArtworkUpdateFailure(error),
+              error is ArtworkEditorialHoldException ? error : null,
+            ),
           ),
         ),
       );
@@ -881,8 +903,16 @@ class _ArtworkEditScreenState extends State<ArtworkEditScreen> {
   }
 
   /// A contextual message for a failed save, drawn from existing strings.
-  String _failureMessage(AppLocalizations l10n, ArtworkUpdateFailure? failure) {
+  String _failureMessage(
+    AppLocalizations l10n,
+    ArtworkUpdateFailure? failure,
+    ArtworkEditorialHoldException? hold,
+  ) {
     switch (failure) {
+      case ArtworkUpdateFailure.editorialHold:
+        return hold == null
+            ? l10n.artworkPublishHeldGeneric
+            : artworkEditorialHoldMessage(l10n, hold);
       case ArtworkUpdateFailure.unauthorized:
         return l10n.communityCommentAuthRequiredToast;
       case ArtworkUpdateFailure.forbidden:
@@ -972,7 +1002,8 @@ class _ArtworkEditScreenState extends State<ArtworkEditScreen> {
                         // Replace action only once there is a cover: an
                         // empty slot already offers its one upload button.
                         if (_nextCoverBytes != null ||
-                            (coverUrl != null && coverUrl.isNotEmpty))
+                            (coverUrl != null && coverUrl.isNotEmpty) ||
+                            art.mediaPreview?.cover != null)
                           IconButton(
                             onPressed: _isSaving ? null : _pickCover,
                             icon: const Icon(Icons.edit_outlined),
@@ -987,38 +1018,61 @@ class _ArtworkEditScreenState extends State<ArtworkEditScreen> {
                         borderRadius: BorderRadius.circular(DetailRadius.md),
                         child: _nextCoverBytes != null
                             ? Image.memory(_nextCoverBytes!, fit: BoxFit.cover)
-                            : (coverUrl != null && coverUrl.isNotEmpty)
-                                ? Image.network(
-                                    coverUrl,
+                            : !art.isPublic
+                                ? ArtworkPrivatePreviewImage(
+                                    artworkId: art.id,
+                                    isPublic: false,
+                                    slot: 'cover',
+                                    descriptor: art.mediaPreview,
+                                    descriptorProvided:
+                                        art.mediaPreviewProvided,
                                     fit: BoxFit.cover,
-                                    errorBuilder: (_, __, ___) => Container(
+                                    publicFallback: Container(
                                       color: scheme.surfaceContainerHighest,
-                                      child: Icon(Icons.image_not_supported,
-                                          color: scheme.outline),
-                                    ),
-                                  )
-                                // No cover yet: the work's own slot is
-                                // a studio-coloured media field that
-                                // offers the one action it needs.
-                                : KubusAtmosphere(
-                                    key: const ValueKey<String>(
-                                        'artwork_edit_empty_cover'),
-                                    accent: KubusColorRoles.of(context)
-                                        .web3ArtistStudioAccent,
-                                    glyph: Icons.image_outlined,
-                                    glyphAlignment: Alignment.bottomRight,
-                                    framed: false,
-                                    child: Center(
-                                      child: KubusButton(
-                                        onPressed:
-                                            _isSaving ? null : _pickCover,
-                                        icon:
-                                            Icons.add_photo_alternate_outlined,
-                                        label: l10n.mapMarkerDialogUploadCover,
-                                        variant: KubusButtonVariant.secondary,
+                                      child: Icon(
+                                        Icons.image_not_supported,
+                                        color: scheme.outline,
                                       ),
                                     ),
-                                  ),
+                                  )
+                                : (coverUrl != null && coverUrl.isNotEmpty)
+                                    ? Image.network(
+                                        coverUrl,
+                                        fit: BoxFit.cover,
+                                        errorBuilder: (_, __, ___) => Container(
+                                          color: scheme.surfaceContainerHighest,
+                                          child: Icon(
+                                            Icons.image_not_supported,
+                                            color: scheme.outline,
+                                          ),
+                                        ),
+                                      )
+                                    // No cover yet: the work's own slot is
+                                    // a studio-coloured media field that
+                                    // offers the one action it needs.
+                                    : KubusAtmosphere(
+                                        key: const ValueKey<String>(
+                                          'artwork_edit_empty_cover',
+                                        ),
+                                        accent: KubusColorRoles.of(
+                                          context,
+                                        ).web3ArtistStudioAccent,
+                                        glyph: Icons.image_outlined,
+                                        glyphAlignment: Alignment.bottomRight,
+                                        framed: false,
+                                        child: Center(
+                                          child: KubusButton(
+                                            onPressed:
+                                                _isSaving ? null : _pickCover,
+                                            icon: Icons
+                                                .add_photo_alternate_outlined,
+                                            label:
+                                                l10n.mapMarkerDialogUploadCover,
+                                            variant:
+                                                KubusButtonVariant.secondary,
+                                          ),
+                                        ),
+                                      ),
                       ),
                     ),
                   ],
@@ -1063,14 +1117,16 @@ class _ArtworkEditScreenState extends State<ArtworkEditScreen> {
                 controller: _categoryController,
                 enabled: !_isSaving,
                 decoration: InputDecoration(
-                    labelText: l10n.mapMarkerDialogCategoryLabel),
+                  labelText: l10n.mapMarkerDialogCategoryLabel,
+                ),
               ),
               const SizedBox(height: DetailSpacing.md),
               TextField(
                 controller: _tagsController,
                 enabled: !_isSaving,
                 decoration: InputDecoration(
-                    hintText: l10n.communitySearchSheetHintTags),
+                  hintText: l10n.communitySearchSheetHintTags,
+                ),
               ),
               const SizedBox(height: DetailSpacing.lg),
               DetailCard(
@@ -1078,8 +1134,10 @@ class _ArtworkEditScreenState extends State<ArtworkEditScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(l10n.commonPrice,
-                        style: DetailTypography.sectionTitle(context)),
+                    Text(
+                      l10n.commonPrice,
+                      style: DetailTypography.sectionTitle(context),
+                    ),
                     const SizedBox(height: DetailSpacing.sm),
                     Row(
                       children: [
@@ -1088,8 +1146,9 @@ class _ArtworkEditScreenState extends State<ArtworkEditScreen> {
                             controller: _priceController,
                             enabled: !_isSaving,
                             keyboardType: TextInputType.number,
-                            decoration:
-                                InputDecoration(labelText: l10n.commonPrice),
+                            decoration: InputDecoration(
+                              labelText: l10n.commonPrice,
+                            ),
                           ),
                         ),
                       ],
@@ -1103,14 +1162,17 @@ class _ArtworkEditScreenState extends State<ArtworkEditScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(l10n.exhibitionCreatorLocationLabel,
-                        style: DetailTypography.sectionTitle(context)),
+                    Text(
+                      l10n.exhibitionCreatorLocationLabel,
+                      style: DetailTypography.sectionTitle(context),
+                    ),
                     const SizedBox(height: DetailSpacing.md),
                     TextField(
                       controller: _locationNameController,
                       enabled: !_isSaving,
                       decoration: InputDecoration(
-                          labelText: l10n.exhibitionCreatorLocationLabel),
+                        labelText: l10n.exhibitionCreatorLocationLabel,
+                      ),
                     ),
                     const SizedBox(height: DetailSpacing.md),
                     Row(
@@ -1121,7 +1183,8 @@ class _ArtworkEditScreenState extends State<ArtworkEditScreen> {
                             enabled: !_isSaving,
                             keyboardType: TextInputType.number,
                             decoration: InputDecoration(
-                                labelText: l10n.mapMarkerDialogLatitudeLabel),
+                              labelText: l10n.mapMarkerDialogLatitudeLabel,
+                            ),
                           ),
                         ),
                         const SizedBox(width: DetailSpacing.md),
@@ -1131,7 +1194,8 @@ class _ArtworkEditScreenState extends State<ArtworkEditScreen> {
                             enabled: !_isSaving,
                             keyboardType: TextInputType.number,
                             decoration: InputDecoration(
-                                labelText: l10n.mapMarkerDialogLongitudeLabel),
+                              labelText: l10n.mapMarkerDialogLongitudeLabel,
+                            ),
                           ),
                         ),
                       ],
@@ -1149,8 +1213,10 @@ class _ArtworkEditScreenState extends State<ArtworkEditScreen> {
                       Row(
                         children: [
                           Expanded(
-                            child: Text(l10n.mapArReadyChipLabel,
-                                style: DetailTypography.sectionTitle(context)),
+                            child: Text(
+                              l10n.mapArReadyChipLabel,
+                              style: DetailTypography.sectionTitle(context),
+                            ),
                           ),
                           Switch(
                             value: _arEnabled,
@@ -1169,7 +1235,8 @@ class _ArtworkEditScreenState extends State<ArtworkEditScreen> {
                               enabled: !_isSaving,
                               keyboardType: TextInputType.number,
                               decoration: InputDecoration(
-                                  labelText: l10n.arDetailScaleLabel),
+                                labelText: l10n.arDetailScaleLabel,
+                              ),
                             ),
                           ),
                           const SizedBox(width: DetailSpacing.md),

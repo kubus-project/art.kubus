@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 
 import '../config/config.dart';
 import '../models/attestation.dart';
+import '../services/account_identity.dart';
 import '../services/backend_api_service.dart';
 
 class AttendanceProximitySnapshot {
@@ -228,31 +229,74 @@ class AttendanceProvider extends ChangeNotifier {
   bool _isSignedIn = false;
   String? _walletAddress;
 
+  // The account the user-specific state belongs to. A walletless switch leaves
+  // the wallet empty on both sides, so only the account identity can tell two
+  // accounts apart. A same-account change (wallet link, token refresh) keeps it.
+  String _identityKey = AccountIdentity.accountKey;
+
+  // Bumped whenever user-scoped state is cleared. A challenge fetch started
+  // before a bump belongs to the account or wallet that was cleared, so when it
+  // returns it must not write into the state of the current one.
+  int _identityEpoch = 0;
+
   AttendanceProvider({BackendApiService? api})
-      : _api = api ?? BackendApiService();
+      : _api = api ?? BackendApiService() {
+    AccountIdentity.addListener(_handleAccountIdentityChanged);
+  }
+
+  @override
+  void dispose() {
+    AccountIdentity.removeListener(_handleAccountIdentityChanged);
+    super.dispose();
+  }
 
   void bindAuthContext({
     required bool isSignedIn,
     required String? walletAddress,
   }) {
     final normalizedWallet = (walletAddress ?? '').trim();
-    final walletChanged = (_walletAddress ?? '') != normalizedWallet;
+    final accountKey = AccountIdentity.accountKey;
+    // Linking a wallet to the account already signed in changes nothing the
+    // account owns, and must not drop its in-flight confirm.
+    final walletLinkedToSameAccount = (_walletAddress ?? '').isEmpty &&
+        normalizedWallet.isNotEmpty &&
+        _isSignedIn &&
+        isSignedIn &&
+        accountKey.isNotEmpty &&
+        accountKey == _identityKey;
+    final walletChanged = (_walletAddress ?? '') != normalizedWallet &&
+        !walletLinkedToSameAccount;
     final signedInChanged = _isSignedIn != isSignedIn;
 
     _isSignedIn = isSignedIn;
     _walletAddress = normalizedWallet;
 
     if (walletChanged || (!isSignedIn && signedInChanged)) {
-      // Keep proximity snapshots (they are map-driven), but clear any
-      // user-specific challenge/confirm state to avoid cross-session leakage.
-      for (final entry in _statesByMarkerId.entries) {
-        entry.value.challenge = null;
-        entry.value.lastConfirm = null;
-        entry.value.isFetchingChallenge = false;
-        entry.value.isConfirming = false;
-        entry.value.lastError = null;
-      }
+      _clearUserScopedState();
       if (hasListeners) notifyListeners();
+    }
+  }
+
+  void _handleAccountIdentityChanged() {
+    final key = AccountIdentity.accountKey;
+    // An empty key (sign-out) always clears: a silent guest to account
+    // sign-in leaves the held key empty while signed in.
+    if (key.isNotEmpty && key == _identityKey) return;
+    _identityKey = key;
+    _clearUserScopedState();
+    if (hasListeners) notifyListeners();
+  }
+
+  void _clearUserScopedState() {
+    _identityEpoch += 1;
+    // Keep proximity snapshots (they are map-driven), but clear any
+    // user-specific challenge/confirm state to avoid cross-session leakage.
+    for (final entry in _statesByMarkerId.entries) {
+      entry.value.challenge = null;
+      entry.value.lastConfirm = null;
+      entry.value.isFetchingChallenge = false;
+      entry.value.isConfirming = false;
+      entry.value.lastError = null;
     }
   }
 
@@ -322,6 +366,7 @@ class AttendanceProvider extends ChangeNotifier {
 
     if (state.isFetchingChallenge) return state.challenge;
 
+    final epoch = _identityEpoch;
     state.isFetchingChallenge = true;
     state.lastError = null;
     if (hasListeners) notifyListeners();
@@ -331,18 +376,26 @@ class AttendanceProvider extends ChangeNotifier {
         markerId: id,
         walletAddress: _walletAddress,
       );
+      // Issued under a previous account: neither kept nor handed to the
+      // current one, which then asks for its own challenge.
+      if (epoch != _identityEpoch) return null;
       final dto = AttendanceChallengeDto.fromApi(raw);
       state.challenge = dto;
       return dto;
     } catch (e) {
+      if (epoch != _identityEpoch) return null;
       state.lastError = e.toString();
       if (kDebugMode) {
         AppConfig.debugPrint('AttendanceProvider.ensureChallenge failed: $e');
       }
       rethrow;
     } finally {
-      state.isFetchingChallenge = false;
-      if (hasListeners) notifyListeners();
+      // A stale fetch must not clear the flags of a fetch the current account
+      // started for the same marker after the switch.
+      if (epoch == _identityEpoch) {
+        state.isFetchingChallenge = false;
+        if (hasListeners) notifyListeners();
+      }
     }
   }
 
@@ -372,6 +425,7 @@ class AttendanceProvider extends ChangeNotifier {
       return state.lastConfirm;
     }
 
+    final epoch = _identityEpoch;
     state.isConfirming = true;
     state.lastError = null;
     if (hasListeners) notifyListeners();
@@ -387,6 +441,9 @@ class AttendanceProvider extends ChangeNotifier {
             : const <String, dynamic>{},
         walletAddress: _walletAddress,
       );
+      // Confirmed under a previous account: nothing is recorded for the
+      // current one.
+      if (epoch != _identityEpoch) return null;
       final dto = AttendanceConfirmDto.fromApi(raw);
       state.lastConfirm = dto;
 
@@ -401,14 +458,19 @@ class AttendanceProvider extends ChangeNotifier {
 
       return dto;
     } catch (e) {
+      if (epoch != _identityEpoch) return null;
       state.lastError = e.toString();
       if (kDebugMode) {
         AppConfig.debugPrint('AttendanceProvider.confirmAttendance failed: $e');
       }
       rethrow;
     } finally {
-      state.isConfirming = false;
-      if (hasListeners) notifyListeners();
+      // A stale confirm must not clear the flag of a confirm the current
+      // account started for the same marker after the switch.
+      if (epoch == _identityEpoch) {
+        state.isConfirming = false;
+        if (hasListeners) notifyListeners();
+      }
     }
   }
 }

@@ -125,6 +125,7 @@ class _RecordingWalletProvider extends WalletProvider {
     bool persist = true,
     bool loadData = true,
     bool syncBackend = false,
+    int? expectedAuthEpoch,
   }) async {
     readOnlyIdentityCalls += 1;
     _currentWallet = address;

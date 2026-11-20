@@ -799,9 +799,11 @@ extension _DesktopCommunityScreenStatePart3 on _DesktopCommunityScreenState {
   void _handleRepostTap(CommunityPost post) {
     final walletProvider = Provider.of<WalletProvider>(context, listen: false);
     final currentWallet = walletProvider.currentWalletAddress;
-    final authorWallet = post.authorWallet ?? post.authorId;
     if (post.postType == 'repost' &&
-        WalletUtils.equals(authorWallet, currentWallet)) {
+        post.isAuthoredBySession(
+          accountId: AccountIdentity.accountKey,
+          wallet: currentWallet,
+        )) {
       unawaited(_showUnrepostOptions(post));
       return;
     }

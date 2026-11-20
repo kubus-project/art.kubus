@@ -167,7 +167,8 @@ void main() {
             (tester) async {
           SharedPreferences.setMockInitialValues(<String, Object>{});
           final requests = <http.Request>[];
-          BackendApiService().setHttpClient(MockClient((request) async {
+          BackendApiService()
+              .setHttpClient(legacyProfileClient((request) async {
             requests.add(request);
             if (request.url.path == '/api/artworks' &&
                 request.url.queryParameters['authorProfileId'] == profileId) {
@@ -233,7 +234,7 @@ void main() {
         var failCollections = false;
         var collectionFailures = 0;
         const profileId = '10000000-0000-4000-8000-000000000003';
-        BackendApiService().setHttpClient(MockClient((request) async {
+        BackendApiService().setHttpClient(legacyProfileClient((request) async {
           requests.add(request);
           if (request.url.path == '/api/collections') {
             if (failCollections) {
@@ -319,7 +320,7 @@ void main() {
         final authorRequests = <String>[];
         final profileProvider = ProfileProvider();
         AccountIdentity.setAccountKey(accountA);
-        BackendApiService().setHttpClient(MockClient((request) async {
+        BackendApiService().setHttpClient(legacyProfileClient((request) async {
           if (request.url.path == '/api/artworks' &&
               request.url.queryParameters['authorProfileId'] != null) {
             final author = request.url.queryParameters['authorProfileId']!;
@@ -410,7 +411,7 @@ void main() {
         final authorRequests = <String>[];
         final profileProvider = ProfileProvider();
         AccountIdentity.setAccountKey(accountA);
-        BackendApiService().setHttpClient(MockClient((request) async {
+        BackendApiService().setHttpClient(legacyProfileClient((request) async {
           if (request.url.path == '/api/artworks' &&
               request.url.queryParameters['authorProfileId'] != null) {
             final author = request.url.queryParameters['authorProfileId']!;

@@ -1,3 +1,5 @@
+import 'package:art_kubus/models/gallery_presentation.dart';
+import 'package:art_kubus/widgets/detail/gallery_presentation.dart';
 import 'package:art_kubus/widgets/community/community_post_media_carousel.dart';
 import 'dart:async';
 
@@ -469,7 +471,13 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) => GalleryHostScope(
+        type: GalleryHostType.profile,
+        hostId: user?.profileId,
+        builder: _buildProfileWithGallery,
+      );
+
+  Widget _buildProfileWithGallery(BuildContext context) {
     final themeProvider = Provider.of<ThemeProvider>(context);
     final l10n = AppLocalizations.of(context)!;
 
@@ -590,7 +598,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                 // [publicProfileSections]); a surface only decides what a
                 // section contributes.
                 ...composeProfileSections<Widget>(
-                  order: publicProfileSections,
+                  order: gallerySectionOrder(context, publicProfileSections),
                   gap: (previous, _) => SizedBox(
                     height: previous == ProfileSection.identity
                         ? DetailSpacing.md
@@ -1246,9 +1254,9 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
   }
 
   Future<void> _openMessageConversation(AppLocalizations l10n) async {
-    // Conversations are addressed by wallet only. Without a linked wallet there
-    // is no message target, so nothing is sent and no id is substituted.
-    final messageTarget = user?.messagingWallet;
+    // A conversation is addressed to the wallet, or to the account UUID of a
+    // walletless account. With neither there is no target, so nothing is sent.
+    final messageTarget = user?.messageTargetId;
     if (user?.supportsMessaging != true || messageTarget == null) return;
     final authenticated = await const ContextualAuthGate().ensureAuthenticated(
       requirements: ProtectedActionRequirements.participant,
@@ -1268,8 +1276,17 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     final messenger = ScaffoldMessenger.of(context);
     final chatAuth = chatProvider.isAuthenticated;
     try {
-      final conv =
-          await chatProvider.createConversation('', false, [messageTarget]);
+      final outcome = await chatProvider
+          .createConversationOutcome('', false, [messageTarget]);
+      if (outcome.recipientUnavailable) {
+        if (mounted) {
+          messenger.showKubusSnackBar(
+            SnackBar(content: Text(l10n.messagingRecipientUnavailableToast)),
+          );
+        }
+        return;
+      }
+      final conv = outcome.conversation;
       if (conv != null) {
         if (!mounted) return;
         final preloaded = Provider.of<ChatProvider>(
@@ -1414,25 +1431,26 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
       if (!contentOnly ||
           _artistArtworks.isNotEmpty ||
           _authoredArtworksUnavailable)
-        _authoredArtworksUnavailable
-            ? Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(l10n.commonNotAvailable),
-                  TextButton(
-                    onPressed: _handleRefresh,
-                    child: Text(l10n.commonRetry),
-                  ),
-                ],
-              )
-            : _buildShowcaseSection(
-                l10n: l10n,
-                title: l10n.userProfileArtworksTitle,
-                items: _artistArtworks,
-                emptyLabel: l10n.userProfileNoArtworksYetLabel(user!.name),
-                emptyIcon: Icons.image_outlined,
-                builder: _buildArtworkCard,
-              ),
+        GalleryPanel(
+            fallback: _authoredArtworksUnavailable
+                ? Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(l10n.commonNotAvailable),
+                      TextButton(
+                        onPressed: _handleRefresh,
+                        child: Text(l10n.commonRetry),
+                      ),
+                    ],
+                  )
+                : _buildShowcaseSection(
+                    l10n: l10n,
+                    title: l10n.userProfileArtworksTitle,
+                    items: _artistArtworks,
+                    emptyLabel: l10n.userProfileNoArtworksYetLabel(user!.name),
+                    emptyIcon: Icons.image_outlined,
+                    builder: _buildArtworkCard,
+                  )),
       if (_documentedArtworks.isNotEmpty)
         _buildShowcaseSection(
           l10n: l10n,
@@ -1675,10 +1693,11 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
           ElevatedButton(
             onPressed: () async {
               final messenger = ScaffoldMessenger.of(context);
-              final targetWallet = WalletUtils.canonical(
-                user?.id ?? widget.userId,
-              );
-              if (targetWallet.isEmpty) {
+              // The wallet when the account has one, else its account UUID.
+              // The profile row id is never a block key: feeds match blocks
+              // against authorWallet or authorUserId.
+              final targetId = user?.messageTargetId ?? '';
+              if (targetId.isEmpty) {
                 if (!mounted) return;
                 Navigator.pop(context);
                 messenger.showKubusSnackBar(
@@ -1688,7 +1707,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
               }
 
               try {
-                await BlockListService().blockWallet(targetWallet);
+                await BlockListService().blockWallet(targetId);
               } catch (e) {
                 debugPrint('UserProfileScreen: failed to block user: $e');
                 if (!mounted) return;
@@ -1704,7 +1723,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
               messenger.showKubusSnackBar(
                 SnackBar(
                   content: Text(
-                    l10n.userProfileBlockedToast(user?.name ?? targetWallet),
+                    l10n.userProfileBlockedToast(user?.name ?? targetId),
                   ),
                 ),
               );

@@ -4,6 +4,7 @@ import 'package:art_kubus/community/community_interactions.dart';
 import 'package:art_kubus/models/community_subject.dart';
 import 'package:art_kubus/models/profile_identity_data.dart';
 import 'package:art_kubus/providers/community_interactions_provider.dart';
+import 'package:art_kubus/services/account_identity.dart';
 import 'package:art_kubus/services/backend_api_service.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -171,7 +172,119 @@ class _GatedInteractionApi extends _FakeBackendApiService {
   }
 }
 
+class _GatedLikeMutationApi extends _FakeBackendApiService {
+  final Completer<void> started = Completer<void>();
+  final Completer<int?> result = Completer<int?>();
+
+  @override
+  Future<int?> likePost(String postId) {
+    if (!started.isCompleted) started.complete();
+    return result.future;
+  }
+}
+
 void main() {
+  tearDown(AccountIdentity.resetForTesting);
+
+  test('account identity change clears and invalidates community state reads',
+      () async {
+    AccountIdentity.setAccountKey('account-A');
+    final api = _GatedInteractionApi();
+    final provider = CommunityInteractionsProvider(api: api);
+    addTearDown(provider.dispose);
+    final post = _post(id: 'post-A', isLiked: true);
+    provider.applyServerPostState(post);
+
+    final pending = provider.refreshPostStates([post], force: true);
+    AccountIdentity.setAccountKey('account-B');
+    AccountIdentity.notifyListenersChanged();
+
+    expect(provider.cachedPostState(post.id), isNull);
+    api.release(isLiked: false, likeCount: 0, postId: post.id);
+    await pending;
+    expect(provider.cachedPostState(post.id), isNull);
+  });
+
+  test('same-account token refresh does not clear community state', () {
+    AccountIdentity.setAccountKey('account-A');
+    final provider = CommunityInteractionsProvider();
+    addTearDown(provider.dispose);
+    final post = _post(id: 'post-A');
+    provider.applyServerPostState(post);
+
+    // Credential refreshes for the same account do not announce an identity
+    // change through AccountIdentity.
+    AccountIdentity.setAccountKey('account-A');
+
+    expect(provider.cachedPostState(post.id), isNotNull);
+  });
+
+  test('a same-account identity notification keeps interaction state', () {
+    AccountIdentity.setAccountKey('account-A');
+    final provider = CommunityInteractionsProvider();
+    addTearDown(provider.dispose);
+    final post = _post(id: 'post-A');
+    provider.applyServerPostState(post);
+
+    // A wallet link or re-issued token announces the change, same account.
+    AccountIdentity.notifyListenersChanged();
+
+    expect(provider.cachedPostState(post.id), isNotNull);
+  });
+
+  test('a same-account identity notification keeps a read of A in flight',
+      () async {
+    AccountIdentity.setAccountKey('account-A');
+    final api = _GatedInteractionApi();
+    final provider = CommunityInteractionsProvider(api: api);
+    addTearDown(provider.dispose);
+    final post = _post(id: 'post-A', isLiked: false);
+
+    final pending = provider.refreshPostStates([post], force: true);
+    AccountIdentity.notifyListenersChanged();
+    api.release(isLiked: true, likeCount: 8, postId: post.id);
+    await pending;
+
+    expect(provider.cachedPostState(post.id)?.isLiked, isTrue);
+  });
+
+  test('late post-like success from A cannot repopulate B interaction state',
+      () async {
+    AccountIdentity.setAccountKey('account-A');
+    final api = _GatedLikeMutationApi();
+    final provider = CommunityInteractionsProvider(api: api);
+    addTearDown(provider.dispose);
+    final post = _post(id: 'post-A', isLiked: false);
+
+    final pending = provider.togglePostLike(post);
+    await api.started.future;
+    AccountIdentity.setAccountKey('account-B');
+    AccountIdentity.notifyListenersChanged();
+    expect(provider.cachedPostState(post.id), isNull);
+
+    api.result.complete(8);
+    await pending;
+    expect(provider.cachedPostState(post.id), isNull);
+  });
+
+  test('late post-like error from A cannot restore A interaction state',
+      () async {
+    AccountIdentity.setAccountKey('account-A');
+    final api = _GatedLikeMutationApi();
+    final provider = CommunityInteractionsProvider(api: api);
+    addTearDown(provider.dispose);
+    final post = _post(id: 'post-A', isLiked: false);
+
+    final pending = provider.togglePostLike(post);
+    await api.started.future;
+    AccountIdentity.setAccountKey('account-B');
+    AccountIdentity.notifyListenersChanged();
+
+    api.result.completeError(StateError('synthetic A failure'));
+    await expectLater(pending, completes);
+    expect(provider.cachedPostState(post.id), isNull);
+  });
+
   test('a read that was in flight does not undo a newer confirmed like',
       () async {
     final api = _GatedInteractionApi();

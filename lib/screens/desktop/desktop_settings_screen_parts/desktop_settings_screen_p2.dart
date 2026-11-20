@@ -564,7 +564,7 @@ extension _DesktopSettingsScreenStatePart2 on _DesktopSettingsScreenState {
         Provider.of<NotificationProvider>(context, listen: false);
     final profileProvider =
         Provider.of<ProfileProvider>(context, listen: false);
-    await SettingsService.logout(
+    final browserSessionRevoked = await SettingsService.logout(
       walletProvider: walletProvider,
       backendApi: BackendApiService(),
       notificationProvider: notificationProvider,
@@ -574,6 +574,11 @@ extension _DesktopSettingsScreenStatePart2 on _DesktopSettingsScreenState {
     );
 
     if (!mounted) return;
+    if (!browserSessionRevoked) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(l10n.settingsBrowserLogoutPending)),
+      );
+    }
     _restartToOnboarding();
   }
 

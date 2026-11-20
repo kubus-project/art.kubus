@@ -7,6 +7,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../core/app_navigator.dart';
 import '../l10n/app_localizations.dart';
+import '../services/account_identity.dart';
 import '../services/auth_gating_service.dart';
 import '../services/auth_session_coordinator.dart';
 import '../services/backend_api_service.dart';
@@ -36,7 +37,9 @@ class SecurityGateProvider extends ChangeNotifier
     Duration promptCooldown = const Duration(seconds: 8),
     Duration lockDecisionTimeout = defaultLockDecisionTimeout,
   })  : _promptCooldown = promptCooldown,
-        _lockDecisionTimeout = lockDecisionTimeout;
+        _lockDecisionTimeout = lockDecisionTimeout {
+    AccountIdentity.addListener(_handleAccountIdentityChanged);
+  }
 
   final Duration _promptCooldown;
   final Duration _lockDecisionTimeout;
@@ -56,6 +59,20 @@ class SecurityGateProvider extends ChangeNotifier
   Future<AuthReauthResult>? _inactiveSessionEnd;
   DateTime? _cooldownUntil;
   bool _busy = false;
+
+  // Bumped on every identity change. An unlock, renewal or re-auth that started
+  // under one identity may apply nothing once the identity has moved on.
+  int _identityEpoch = 0;
+
+  static const AuthReauthResult _staleReauth = AuthReauthResult(
+    AuthReauthOutcome.cancelled,
+    message: 'Identity changed; the request is not retried',
+  );
+
+  // The account the pending prompt and its cooldown belong to. A walletless
+  // switch leaves the wallet empty on both sides, so only the account identity
+  // can tell two accounts apart.
+  String _heldAccountKey = AccountIdentity.accountKey;
 
   Timer? _inactivityTimer;
   DateTime _lastInteractionAt = DateTime.now();
@@ -332,6 +349,7 @@ class SecurityGateProvider extends ChangeNotifier
     _locked = true;
     _lockReason = reason;
     _authFailureContext = null;
+    _heldAccountKey = AccountIdentity.accountKey;
     _inFlight ??= Completer<AuthReauthResult>();
     notifyListeners();
   }
@@ -488,6 +506,7 @@ class SecurityGateProvider extends ChangeNotifier
         // that prompt may be cancelled, this lock may not. The waiting action
         // is refused and must be retried after unlocking.
         final sensitive = _inFlight;
+        _heldAccountKey = AccountIdentity.accountKey;
         _inFlight = Completer<AuthReauthResult>();
         _lockReason = reason;
         _authFailureContext = context;
@@ -507,6 +526,7 @@ class SecurityGateProvider extends ChangeNotifier
     _locked = true;
     _lockReason = reason;
     _authFailureContext = context;
+    _heldAccountKey = AccountIdentity.accountKey;
     _inFlight ??= Completer<AuthReauthResult>();
     notifyListeners();
   }
@@ -630,9 +650,11 @@ class SecurityGateProvider extends ChangeNotifier
           message: 'Auth endpoint does not require re-auth');
     }
 
+    final epoch = _identityEpoch;
     SharedPreferences? prefs;
     try {
       prefs = await SharedPreferences.getInstance();
+      if (!_isCurrent(epoch)) return _staleReauth;
       _hasLocalAccount = AuthGatingService.hasLocalAccountSync(prefs: prefs);
       _settings ??= SettingsState.fromPrefs(prefs);
     } catch (_) {}
@@ -659,6 +681,7 @@ class SecurityGateProvider extends ChangeNotifier
     // this check, so we use extractJwtExpiryUtc rather than isAccessTokenValid
     // (which returns true when no exp claim is present).
     await BackendApiService().loadAuthToken();
+    if (!_isCurrent(epoch)) return _staleReauth;
     final inMemoryToken = (BackendApiService().getAuthToken() ?? '').trim();
     final hasValidInMemorySession = _tokenHasFutureExpiry(inMemoryToken);
     if (hasValidInMemorySession) {
@@ -674,6 +697,7 @@ class SecurityGateProvider extends ChangeNotifier
         final restored = await BackendApiService().restoreExistingSession(
           allowRefresh: false,
         );
+        if (!_isCurrent(epoch)) return _staleReauth;
         if (restored) {
           _cooldownUntil = DateTime.now().add(_promptCooldown);
           return const AuthReauthResult(AuthReauthOutcome.success);
@@ -687,6 +711,7 @@ class SecurityGateProvider extends ChangeNotifier
     // 3. User has app lock configured (PIN or biometrics)
     final shouldPrompt =
         await AuthGatingService.shouldPromptReauth(prefs: prefs);
+    if (!_isCurrent(epoch)) return _staleReauth;
     final hasAppLock = requirePin || biometricsEnabled;
 
     if (!shouldPrompt) {
@@ -707,7 +732,12 @@ class SecurityGateProvider extends ChangeNotifier
           message: 'App lock not configured; sign-in required');
     }
 
-    await lock(SecurityLockReason.tokenExpired, context: context);
+    await _lock(
+      SecurityLockReason.tokenExpired,
+      context: context,
+      isCurrent: () => _isCurrent(epoch),
+    );
+    if (!_isCurrent(epoch)) return _staleReauth;
     final inflight = _inFlight;
     if (inflight == null) {
       _cooldownUntil = DateTime.now().add(_promptCooldown);
@@ -805,12 +835,30 @@ class SecurityGateProvider extends ChangeNotifier
     navigator.pushNamedAndRemoveUntil('/sign-in', (_) => false);
   }
 
+  /// Starts an unlock or renewal under the current identity. Returns the epoch
+  /// it belongs to: its outcome applies only while that epoch is still current.
+  int _beginOperation() {
+    _busy = true;
+    notifyListeners();
+    return _identityEpoch;
+  }
+
+  /// Ends the operation started at [epoch]. A stale operation leaves the busy
+  /// flag alone: a newer operation of the current identity may hold it.
+  void _endOperation(int epoch) {
+    if (!_isCurrent(epoch)) return;
+    _busy = false;
+    notifyListeners();
+  }
+
+  /// Whether an operation started at [epoch] still belongs to the session.
+  bool _isCurrent(int epoch) => epoch == _identityEpoch;
+
   Future<bool> unlockWithSignIn() async {
     if (!_locked) return true;
     if (_busy) return false;
 
-    _busy = true;
-    notifyListeners();
+    final epoch = _beginOperation();
     try {
       final navigator = appNavigatorKey.currentState;
       if (navigator == null || !navigator.mounted) return false;
@@ -826,11 +874,13 @@ class SecurityGateProvider extends ChangeNotifier
           builder: (_) => const SignInScreen(onAuthSuccess: _noOpAuthCallback),
         ),
       );
+      if (!_isCurrent(epoch)) return false;
 
       if (result == true) {
         try {
           await BackendApiService().loadAuthToken();
         } catch (_) {}
+        if (!_isCurrent(epoch)) return false;
         _lastResolutionWasLocal = false;
         _completeAndReset(const AuthReauthResult(AuthReauthOutcome.success));
         return true;
@@ -839,14 +889,14 @@ class SecurityGateProvider extends ChangeNotifier
       _cooldownUntil = DateTime.now().add(_promptCooldown);
       return false;
     } catch (e) {
+      if (!_isCurrent(epoch)) return false;
       _cooldownUntil = DateTime.now().add(_promptCooldown);
       if (kDebugMode) {
         debugPrint('SecurityGateProvider.unlockWithSignIn failed: $e');
       }
       return false;
     } finally {
-      _busy = false;
-      notifyListeners();
+      _endOperation(epoch);
     }
   }
 
@@ -860,24 +910,27 @@ class SecurityGateProvider extends ChangeNotifier
     final wallet = _walletProvider;
     if (wallet == null) return BiometricAuthOutcome.error;
 
-    _busy = true;
-    notifyListeners();
+    final epoch = _beginOperation();
+    final authEpoch = BackendApiService().authSessionEpoch;
     try {
       final outcome = await wallet.authenticateWithBiometricsDetailed(
         localizedReason: localizedReason,
       );
+      if (!_isCurrent(epoch)) return BiometricAuthOutcome.cancelled;
       if (outcome != BiometricAuthOutcome.success) return outcome;
 
-      final ok = await _finalizeUnlockAfterLocalVerification();
+      final ok = await _finalizeUnlockAfterLocalVerification(epoch, authEpoch);
+      if (!_isCurrent(epoch)) return BiometricAuthOutcome.cancelled;
       return ok ? BiometricAuthOutcome.success : BiometricAuthOutcome.error;
     } catch (e) {
       if (kDebugMode) {
         debugPrint('SecurityGateProvider.unlockWithBiometrics failed: $e');
       }
-      return BiometricAuthOutcome.error;
+      return _isCurrent(epoch)
+          ? BiometricAuthOutcome.error
+          : BiometricAuthOutcome.cancelled;
     } finally {
-      _busy = false;
-      notifyListeners();
+      _endOperation(epoch);
     }
   }
 
@@ -888,17 +941,24 @@ class SecurityGateProvider extends ChangeNotifier
     final wallet = _walletProvider;
     if (wallet == null) return const PinVerifyResult(PinVerifyOutcome.error);
 
-    _busy = true;
-    notifyListeners();
+    final epoch = _beginOperation();
+    final authEpoch = BackendApiService().authSessionEpoch;
     try {
       final result = await wallet.verifyPinDetailed(pin);
+      // A stale check reads as a failed attempt here. The prompt armed for the
+      // current identity is not touched.
+      if (!_isCurrent(epoch)) {
+        return const PinVerifyResult(PinVerifyOutcome.error);
+      }
       if (!result.isSuccess) return result;
 
-      final ok = await _finalizeUnlockAfterLocalVerification();
+      final ok = await _finalizeUnlockAfterLocalVerification(epoch, authEpoch);
+      if (!_isCurrent(epoch)) {
+        return const PinVerifyResult(PinVerifyOutcome.error);
+      }
       return ok ? result : const PinVerifyResult(PinVerifyOutcome.error);
     } finally {
-      _busy = false;
-      notifyListeners();
+      _endOperation(epoch);
     }
   }
 
@@ -908,6 +968,7 @@ class SecurityGateProvider extends ChangeNotifier
   bool _lastResolutionWasLocal = false;
 
   Future<bool> requireSensitiveActionVerification() async {
+    final epoch = _identityEpoch;
     final wallet = _walletProvider;
     bool hasPin;
     try {
@@ -919,19 +980,28 @@ class SecurityGateProvider extends ChangeNotifier
     final canUseBiometrics =
         biometricsEnabled && (await wallet?.canUseBiometrics() ?? false);
 
-    await lock(SecurityLockReason.sensitiveAction);
+    await _lock(
+      SecurityLockReason.sensitiveAction,
+      isCurrent: () => _isCurrent(epoch),
+    );
+    if (!_isCurrent(epoch)) return false;
     if (!(hasPin || canUseBiometrics)) {
       return true;
     }
 
     final settled = await _inFlight?.future;
+    if (!_isCurrent(epoch)) return false;
     return (settled?.isSuccess ?? false) && _lastResolutionWasLocal;
   }
 
-  Future<bool> _finalizeUnlockAfterLocalVerification() async {
+  Future<bool> _finalizeUnlockAfterLocalVerification(
+    int epoch,
+    int authEpoch,
+  ) async {
     final reason = _lockReason;
     if (reason == SecurityLockReason.tokenExpired) {
-      final ok = await _renewBackendSession();
+      final ok = await renewBackendSessionForUnlock(authEpoch);
+      if (!_isCurrent(epoch)) return false;
       if (!ok) {
         // Keep locked so the user can choose "Sign in" or "Logout".
         _cooldownUntil = DateTime.now().add(_promptCooldown);
@@ -939,7 +1009,11 @@ class SecurityGateProvider extends ChangeNotifier
         return false;
       }
     } else if (reason == SecurityLockReason.autoLock) {
-      await _attemptManagedWalletReconnect(refreshBackendSession: false);
+      await _attemptManagedWalletReconnect(
+        refreshBackendSession: false,
+        expectedAuthEpoch: authEpoch,
+      );
+      if (!_isCurrent(epoch)) return false;
     }
 
     _lastResolutionWasLocal = true;
@@ -949,6 +1023,7 @@ class SecurityGateProvider extends ChangeNotifier
 
   Future<void> _attemptManagedWalletReconnect({
     required bool refreshBackendSession,
+    required int expectedAuthEpoch,
   }) async {
     final wallet = _walletProvider;
     if (wallet == null || !wallet.isReadOnlySession) return;
@@ -959,6 +1034,7 @@ class SecurityGateProvider extends ChangeNotifier
       await wallet.recoverManagedWalletSession(
         walletAddress: walletAddress?.trim(),
         refreshBackendSession: refreshBackendSession,
+        expectedAuthEpoch: expectedAuthEpoch,
       );
     } catch (e) {
       if (kDebugMode) {
@@ -967,7 +1043,15 @@ class SecurityGateProvider extends ChangeNotifier
     }
   }
 
-  Future<bool> _renewBackendSession() async {
+  /// The backend session renewal an unlock of a session-expiry lock performs.
+  /// [authEpoch] is the auth session the unlock started under; a renewal that
+  /// lands after it ended must not apply. Overridable so tests can hold it open
+  /// across an account switch.
+  @protected
+  Future<bool> renewBackendSessionForUnlock(int authEpoch) =>
+      _renewBackendSession(authEpoch);
+
+  Future<bool> _renewBackendSession(int authEpoch) async {
     try {
       final walletAddress = await _resolveWalletAddress();
       if (walletAddress == null || walletAddress.trim().isEmpty) return false;
@@ -979,9 +1063,11 @@ class SecurityGateProvider extends ChangeNotifier
           await wallet.recoverManagedWalletSession(
             walletAddress: walletAddress.trim(),
             refreshBackendSession: true,
+            expectedAuthEpoch: authEpoch,
           );
         } else if (await wallet.ensureBackendSessionForActiveSigner(
           walletAddress: walletAddress.trim(),
+          expectedAuthEpoch: authEpoch,
         )) {
           return true;
         } else {
@@ -1023,6 +1109,38 @@ class SecurityGateProvider extends ChangeNotifier
   void completeForTesting({required bool localAuthentication}) {
     _lastResolutionWasLocal = localAuthentication;
     _completeAndReset(const AuthReauthResult(AuthReauthOutcome.success));
+  }
+
+  /// The pending re-auth prompt, its cooldown and its failure context belong to
+  /// the account that raised them. On a switch to another account the waiter
+  /// on the old prompt is refused, so nothing it resolves reaches the new
+  /// account, and the cooldown does not carry over. A device lock is not
+  /// released by an identity change (only a local unlock or logout releases
+  /// it, as in [reset]), so a fresh prompt is armed while the device is locked.
+  /// A notification for the same account changes nothing.
+  void _handleAccountIdentityChanged() {
+    final key = AccountIdentity.accountKey;
+    // A sign-out (empty key) always ends the session the held key may not
+    // name: a silent guest to account sign-in announces nothing.
+    if (key.isNotEmpty && key == _heldAccountKey) return;
+    _heldAccountKey = key;
+    _identityEpoch += 1;
+    // The unlock that held the busy flag belonged to the previous identity.
+    _busy = false;
+    _cooldownUntil = null;
+    _authFailureContext = null;
+    final stale = _inFlight;
+    _inFlight = _locked ? Completer<AuthReauthResult>() : null;
+    if (stale != null && !stale.isCompleted) {
+      stale.complete(const AuthReauthResult(AuthReauthOutcome.cancelled));
+    }
+    notifyListeners();
+  }
+
+  @override
+  void dispose() {
+    AccountIdentity.removeListener(_handleAccountIdentityChanged);
+    super.dispose();
   }
 
   void _completeAndReset(AuthReauthResult result) {

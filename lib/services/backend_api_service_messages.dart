@@ -199,6 +199,19 @@ Future<Map<String, dynamic>> _backendApiUploadMessageAttachmentImpl(
   }
 }
 
+/// The machine-readable `errorCode` of a refused response body, or null.
+String? _backendApiRefusalErrorCode(String body) {
+  try {
+    final decoded = jsonDecode(body);
+    if (decoded is! Map) return null;
+    final code =
+        (decoded['errorCode'] ?? decoded['error_code'] ?? '').toString().trim();
+    return code.isEmpty ? null : code;
+  } catch (_) {
+    return null;
+  }
+}
+
 Future<Map<String, dynamic>> _backendApiCreateConversationImpl(
   BackendApiService service, {
   String? title,
@@ -219,7 +232,12 @@ Future<Map<String, dynamic>> _backendApiCreateConversationImpl(
     if (response.statusCode == 200 || response.statusCode == 201) {
       return jsonDecode(response.body) as Map<String, dynamic>;
     }
-    return {'success': false, 'status': response.statusCode};
+    final refusalCode = _backendApiRefusalErrorCode(response.body);
+    return {
+      'success': false,
+      'status': response.statusCode,
+      if (refusalCode != null) 'errorCode': refusalCode,
+    };
   } catch (e) {
     AppConfig.debugPrint('BackendApiService.createConversation failed: $e');
     return {'success': false, 'error': e.toString()};
@@ -237,8 +255,8 @@ Future<Map<String, dynamic>> _backendApiUploadConversationAvatarImpl(
   void Function(UploadCompressionProgress progress)? onCompressionProgress,
 }) async {
   try {
-    var uri = Uri.parse(
-        '${service.baseUrl}/api/messages/$conversationId/avatar');
+    var uri =
+        Uri.parse('${service.baseUrl}/api/messages/$conversationId/avatar');
     var uploadBytes = Uint8List.fromList(bytes);
     var uploadFileName = filename;
     var uploadContentType = contentType;
@@ -319,13 +337,20 @@ Future<Map<String, dynamic>> _backendApiUploadConversationAvatarImpl(
 Future<Map<String, dynamic>> _backendApiAddConversationMemberImpl(
   BackendApiService service,
   String conversationId,
-  String walletAddress,
-) async {
+  String walletAddress, {
+  String? userId,
+}) async {
+  // A walletless target is named by its account id; the route accepts userId.
+  final wallet = walletAddress.trim();
+  final accountId = (userId ?? '').trim();
+  final target = wallet.isEmpty && accountId.isNotEmpty
+      ? <String, dynamic>{'userId': accountId}
+      : <String, dynamic>{'walletAddress': wallet};
   try {
     final response = await service._post(
       Uri.parse('${service.baseUrl}/api/messages/$conversationId/members'),
       headers: service._getHeaders(),
-      body: jsonEncode({'walletAddress': walletAddress}),
+      body: jsonEncode(target),
     );
     if (response.statusCode == 200 || response.statusCode == 201) {
       return jsonDecode(response.body) as Map<String, dynamic>;
