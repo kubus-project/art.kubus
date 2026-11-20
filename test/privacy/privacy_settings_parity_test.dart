@@ -23,6 +23,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:url_launcher_platform_interface/link.dart';
+import 'package:url_launcher_platform_interface/url_launcher_platform_interface.dart';
 
 UserProfile _signedInProfile() => UserProfile(
       id: 'privacy-settings-profile',
@@ -337,4 +339,122 @@ void main() {
       expect(shareSwitch.onChanged, isNull);
     },
   );
+  Future<void> pumpSettingsHome(
+      WidgetTester tester, Widget home, Size size) async {
+    SharedPreferences.setMockInitialValues({});
+    BackendApiService().setAuthTokenForTesting(null);
+    tester.view.devicePixelRatio = 1.0;
+    await tester.binding.setSurfaceSize(size);
+    addTearDown(() async => tester.binding.setSurfaceSize(null));
+    addTearDown(tester.view.resetDevicePixelRatio);
+    final profileProvider = ProfileProvider(apiService: _PrivacyProfileApi());
+    await profileProvider.initialize();
+    profileProvider.setCurrentUser(_signedInProfile());
+    final solana = SolanaWalletService();
+    await tester.pumpWidget(
+      _wrapWithApp(
+        home: home,
+        themeProvider: ThemeProvider(),
+        profileProvider: profileProvider,
+        web3Provider: Web3Provider(solanaWalletService: solana),
+        walletProvider:
+            WalletProvider(solanaWalletService: solana, deferInit: true),
+        platformProvider: PlatformProvider(),
+        notificationProvider: NotificationProvider(),
+        navigationProvider: NavigationProvider(),
+        localeProvider: LocaleProvider(),
+        statsProvider: StatsProvider(),
+      ),
+    );
+    await tester.pump(const Duration(milliseconds: 200));
+  }
+
+  Future<void> openDialogAndFollowLink(
+    WidgetTester tester, {
+    required String tileTitle,
+    required String actionLabel,
+    required String expectedUrl,
+  }) async {
+    final launcher = _RecordingUrlLauncher();
+    final original = UrlLauncherPlatform.instance;
+    UrlLauncherPlatform.instance = launcher;
+    addTearDown(() => UrlLauncherPlatform.instance = original);
+    final tile = find.text(tileTitle);
+    if (tile.evaluate().isEmpty) {
+      await tester.scrollUntilVisible(tile, 300);
+    }
+    await tester.ensureVisible(tile.first);
+    await tester.pump();
+    await tester.tap(tile.first);
+    await tester.pump(const Duration(milliseconds: 300));
+    // TextButton.icon builds a TextButton subclass, so match by `is`.
+    final action = find.ancestor(
+      of: find.text(actionLabel),
+      matching: find.byWidgetPredicate((widget) => widget is TextButton),
+    );
+    expect(action, findsOneWidget);
+    await tester.tap(action);
+    await tester.pump();
+    expect(launcher.launchedUrls, <String>[expectedUrl]);
+  }
+
+  testWidgets('Mobile Terms and Privacy dialogs link to the published pages',
+      (tester) async {
+    await pumpSettingsHome(
+        tester, const SettingsScreen(), const Size(1200, 900));
+    await openDialogAndFollowLink(tester,
+        tileTitle: 'Terms of service',
+        actionLabel: 'Read full terms',
+        expectedUrl: 'https://art.kubus.site/terms-of-use.html');
+    await tester.tap(find.widgetWithText(TextButton, 'Close'));
+    await tester.pump(const Duration(milliseconds: 300));
+    await openDialogAndFollowLink(tester,
+        tileTitle: 'Privacy policy',
+        actionLabel: 'Read full privacy policy',
+        expectedUrl: 'https://art.kubus.site/privacy-policy.html');
+  });
+
+  testWidgets('Desktop Terms and Privacy dialogs link to the published pages',
+      (tester) async {
+    await pumpSettingsHome(
+        tester, const DesktopSettingsScreen(), const Size(1600, 1200));
+    await tester.tap(
+        find.byKey(const ValueKey('desktop_settings_sidebar_item_8')).first);
+    await tester.pump(const Duration(milliseconds: 300));
+    await openDialogAndFollowLink(tester,
+        tileTitle: 'Terms of service',
+        actionLabel: 'Read full terms',
+        expectedUrl: 'https://art.kubus.site/terms-of-use.html');
+    await tester.tap(find.widgetWithText(TextButton, 'Close'));
+    await tester.pump(const Duration(milliseconds: 300));
+    await openDialogAndFollowLink(tester,
+        tileTitle: 'Privacy policy',
+        actionLabel: 'Read full privacy policy',
+        expectedUrl: 'https://art.kubus.site/privacy-policy.html');
+  });
+}
+
+class _RecordingUrlLauncher extends UrlLauncherPlatform {
+  final List<String> launchedUrls = <String>[];
+
+  @override
+  LinkDelegate? get linkDelegate => null;
+
+  @override
+  Future<bool> canLaunch(String url) async => true;
+
+  @override
+  Future<bool> launch(
+    String url, {
+    required bool useSafariVC,
+    required bool useWebView,
+    required bool enableJavaScript,
+    required bool enableDomStorage,
+    required bool universalLinksOnly,
+    required Map<String, String> headers,
+    String? webOnlyWindowName,
+  }) async {
+    launchedUrls.add(url);
+    return true;
+  }
 }
