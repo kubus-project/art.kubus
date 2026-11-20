@@ -174,6 +174,7 @@ void main() {
           '$name ${isOwner ? 'own' : 'foreign'} showcase reports unsupported author filter',
           (tester) async {
         const profileId = '10000000-0000-4000-8000-000000000022';
+        BackendApiService().setHttpClient(legacyProfileClient());
         final user = ProfileFixtures.user(id: profileId, isArtist: true)
             .copyWith(profileId: profileId);
         await pumpProfileSurface(

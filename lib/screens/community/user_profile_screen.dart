@@ -1,3 +1,5 @@
+import 'package:art_kubus/models/gallery_presentation.dart';
+import 'package:art_kubus/widgets/detail/gallery_presentation.dart';
 import 'package:art_kubus/widgets/community/community_post_media_carousel.dart';
 import 'dart:async';
 
@@ -469,7 +471,13 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) => GalleryHostScope(
+        type: GalleryHostType.profile,
+        hostId: user?.profileId,
+        builder: _buildProfileWithGallery,
+      );
+
+  Widget _buildProfileWithGallery(BuildContext context) {
     final themeProvider = Provider.of<ThemeProvider>(context);
     final l10n = AppLocalizations.of(context)!;
 
@@ -590,7 +598,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                 // [publicProfileSections]); a surface only decides what a
                 // section contributes.
                 ...composeProfileSections<Widget>(
-                  order: publicProfileSections,
+                  order: gallerySectionOrder(context, publicProfileSections),
                   gap: (previous, _) => SizedBox(
                     height: previous == ProfileSection.identity
                         ? DetailSpacing.md
@@ -1414,25 +1422,26 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
       if (!contentOnly ||
           _artistArtworks.isNotEmpty ||
           _authoredArtworksUnavailable)
-        _authoredArtworksUnavailable
-            ? Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(l10n.commonNotAvailable),
-                  TextButton(
-                    onPressed: _handleRefresh,
-                    child: Text(l10n.commonRetry),
-                  ),
-                ],
-              )
-            : _buildShowcaseSection(
-                l10n: l10n,
-                title: l10n.userProfileArtworksTitle,
-                items: _artistArtworks,
-                emptyLabel: l10n.userProfileNoArtworksYetLabel(user!.name),
-                emptyIcon: Icons.image_outlined,
-                builder: _buildArtworkCard,
-              ),
+        GalleryPanel(
+            fallback: _authoredArtworksUnavailable
+                ? Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(l10n.commonNotAvailable),
+                      TextButton(
+                        onPressed: _handleRefresh,
+                        child: Text(l10n.commonRetry),
+                      ),
+                    ],
+                  )
+                : _buildShowcaseSection(
+                    l10n: l10n,
+                    title: l10n.userProfileArtworksTitle,
+                    items: _artistArtworks,
+                    emptyLabel: l10n.userProfileNoArtworksYetLabel(user!.name),
+                    emptyIcon: Icons.image_outlined,
+                    builder: _buildArtworkCard,
+                  )),
       if (_documentedArtworks.isNotEmpty)
         _buildShowcaseSection(
           l10n: l10n,

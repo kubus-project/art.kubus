@@ -1,12 +1,41 @@
 import 'package:art_kubus/l10n/app_localizations.dart';
+import 'package:art_kubus/models/artwork.dart';
 import 'package:art_kubus/providers/artwork_provider.dart';
 import 'package:art_kubus/providers/themeprovider.dart';
 import 'package:art_kubus/screens/art/artwork_edit_screen.dart';
 import 'package:art_kubus/screens/desktop/desktop_shell_scope.dart';
+import 'package:art_kubus/services/backend_api_service.dart';
 import 'package:art_kubus/utils/artwork_edit_navigation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:latlong2/latlong.dart';
 import 'package:provider/provider.dart';
+
+class _FakeArtworkApi implements ArtworkBackendApi, ArtworkCurrentMediaApi {
+  @override
+  int get authSessionEpoch => 0;
+
+  @override
+  Future<ArtworkCurrentMediaDetail> getArtworkCurrentMediaDetail(
+    String identifier, {
+    required bool includeAuth,
+  }) async =>
+      ArtworkCurrentMediaDetail(
+        artwork: Artwork(
+          id: identifier,
+          title: 'Artwork',
+          artist: 'Artist',
+          description: '',
+          position: const LatLng(0, 0),
+          rewards: 0,
+          createdAt: DateTime(2020),
+        ),
+        publicMediaAllowed: true,
+      );
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
 
 /// Exactly one owner of the editor's screen chrome.
 ///
@@ -28,7 +57,8 @@ void main() {
       providers: [
         ChangeNotifierProvider<ThemeProvider>(create: (_) => ThemeProvider()),
         ChangeNotifierProvider<ArtworkProvider>(
-            create: (_) => ArtworkProvider()),
+          create: (_) => ArtworkProvider(backendApi: _FakeArtworkApi()),
+        ),
       ],
       child: MaterialApp(
         localizationsDelegates: AppLocalizations.localizationsDelegates,
