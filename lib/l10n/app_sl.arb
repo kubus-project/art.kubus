@@ -8106,5 +8106,21 @@
   "gallerySizeStandard": "Običajno",
   "gallerySizeLead": "Veliko",
   "galleryMakeLead": "Nastavi kot vodilno delo",
-  "galleryClearLead": "Odstrani oznako vodilnega dela"
+  "galleryClearLead": "Odstrani oznako vodilnega dela",
+  "galleryPublishNotAllowed": "Galerijo lahko urejate, vendar je ne morete objaviti.",
+  "galleryRefreshFailed": "Sprememba je shranjena, galerije pa ni bilo mogoče osvežiti.",
+  "galleryMovedTo": "Premaknjeno na mesto {position} od {total}",
+  "@galleryMovedTo": {
+    "placeholders": {
+      "position": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "artworkPublishHeldWithdrawn": "Urednik je to delo umaknil. Obnovi ga lahko samo uredniška odločitev.",
+  "artworkPublishHeldInReview": "To delo čaka na uredniški pregled. Objavljeno bo, ko bo odobreno.",
+  "artworkPublishHeldGeneric": "To delo je v uredniškem zadržanju in ga še ni mogoče objaviti."
 }

@@ -30,6 +30,7 @@ import '../../services/backend_api_service.dart'
 import '../../services/share/share_service.dart';
 import '../../services/share/share_types.dart';
 import '../../services/contextual_auth_gate.dart';
+import '../../services/public_entity_load_outcome.dart';
 import '../../l10n/app_localizations.dart';
 import '../../utils/artwork_media_resolver.dart';
 import '../../utils/app_color_utils.dart';
@@ -123,13 +124,13 @@ class _ExhibitionDetailScreenState extends State<ExhibitionDetailScreen> {
       final exhibition =
           await provider.fetchExhibition(widget.exhibitionId, force: true);
       if (exhibition == null) reason = UnavailableEntityReason.loadFailed;
-    } on BackendApiRequestException catch (e) {
-      reason = e.statusCode == 404 || e.statusCode == 410
+    } catch (error) {
+      // Provider handles errors. Only the API's own 404/410 says the entity is
+      // gone; the public read reports it as `Request failed: 404`, not always
+      // as a BackendApiRequestException.
+      reason = isEntityNotFoundError(error)
           ? UnavailableEntityReason.notFound
           : UnavailableEntityReason.loadFailed;
-    } catch (_) {
-      // Provider handles errors.
-      reason = UnavailableEntityReason.loadFailed;
     }
     if (mounted && _unavailableReason != reason) {
       setState(() => _unavailableReason = reason);

@@ -826,6 +826,10 @@ class ArtworkProvider extends ChangeNotifier {
         // No cached artwork; backend likely succeeded but we can't verify
         return null;
       }
+    } on ArtworkEditorialHoldException {
+      // An editor's hold is a decision the caller explains to the owner, not
+      // a generic failure, and it is never retried.
+      rethrow;
     } catch (e) {
       if (epoch == _accountEpoch) _setError('Failed to publish artwork: $e');
       return null;
@@ -911,7 +915,10 @@ class ArtworkProvider extends ChangeNotifier {
     } catch (e) {
       final failure = classifyArtworkUpdateFailure(e);
       if (epoch == _accountEpoch) _setError('Failed to update artwork: $e');
-      return ArtworkUpdateResult.failed(failure);
+      return ArtworkUpdateResult.failed(
+        failure,
+        hold: e is ArtworkEditorialHoldException ? e : null,
+      );
     } finally {
       _endLoading(operation, loadingGeneration);
     }
@@ -1879,6 +1886,10 @@ enum ArtworkUpdateFailure {
   /// 409: the record changed underneath the edit.
   conflict,
 
+  /// 409 ARTWORK_EDITORIAL_HOLD: an editor holds the artwork; publishing it is
+  /// an editorial decision.
+  editorialHold,
+
   /// 429
   rateLimited,
 
@@ -1900,6 +1911,9 @@ ArtworkUpdateFailure classifyArtworkUpdateFailure(Object error) {
     }
     if (code == 401) return ArtworkUpdateFailure.unauthorized;
     if (code == 403) return ArtworkUpdateFailure.forbidden;
+    if (error is ArtworkEditorialHoldException) {
+      return ArtworkUpdateFailure.editorialHold;
+    }
     if (code == 409) return ArtworkUpdateFailure.conflict;
     if (code == 429) return ArtworkUpdateFailure.rateLimited;
     if (code == 400 || code == 404 || code == 422) {
@@ -1911,7 +1925,8 @@ ArtworkUpdateFailure classifyArtworkUpdateFailure(Object error) {
 }
 
 class ArtworkUpdateResult {
-  const ArtworkUpdateResult._(this.status, this.artwork, this.failure);
+  const ArtworkUpdateResult._(this.status, this.artwork, this.failure,
+      [this.hold]);
 
   const ArtworkUpdateResult.confirmed(Artwork artwork)
       : this._(ArtworkUpdateStatus.confirmed, artwork, null);
@@ -1919,8 +1934,9 @@ class ArtworkUpdateResult {
   const ArtworkUpdateResult.acknowledged(Artwork? artwork)
       : this._(ArtworkUpdateStatus.acknowledged, artwork, null);
 
-  const ArtworkUpdateResult.failed(ArtworkUpdateFailure failure)
-      : this._(ArtworkUpdateStatus.failed, null, failure);
+  const ArtworkUpdateResult.failed(ArtworkUpdateFailure failure,
+      {ArtworkEditorialHoldException? hold})
+      : this._(ArtworkUpdateStatus.failed, null, failure, hold);
 
   const ArtworkUpdateResult.alreadyInFlight()
       : this._(ArtworkUpdateStatus.alreadyInFlight, null, null);
@@ -1932,6 +1948,9 @@ class ArtworkUpdateResult {
   final Artwork? artwork;
 
   final ArtworkUpdateFailure? failure;
+
+  /// The editorial hold behind an [ArtworkUpdateFailure.editorialHold].
+  final ArtworkEditorialHoldException? hold;
 
   /// True when the backend accepted the write.
   bool get succeeded =>

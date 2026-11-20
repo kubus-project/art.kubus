@@ -18,6 +18,8 @@ import '../../../utils/artwork_media_resolver.dart';
 import '../../../utils/artwork_navigation.dart';
 import '../../../utils/media_url_resolver.dart';
 import '../../../utils/artwork_edit_navigation.dart';
+import '../../../utils/artwork_editorial_hold_message.dart';
+import '../../../services/backend_api_service.dart';
 import '../../../utils/share_deep_link_navigation.dart';
 import '../../../utils/wallet_action_guard.dart';
 import '../../../utils/design_tokens.dart';
@@ -999,7 +1001,8 @@ class _ArtistPortfolioScreenState extends State<ArtistPortfolioScreen> {
     required bool publish,
   }) async {
     final messenger = ScaffoldMessenger.of(context);
-    final savedToastMessage = AppLocalizations.of(context)!.commonSavedToast;
+    final l10n = AppLocalizations.of(context)!;
+    final savedToastMessage = l10n.commonSavedToast;
     final profileProvider = context.read<ProfileProvider>();
     final walletProvider = context.read<WalletProvider>();
     final canProceed = await WalletActionGuard.ensureSignerAccess(
@@ -1011,10 +1014,19 @@ class _ArtistPortfolioScreenState extends State<ArtistPortfolioScreen> {
       return;
     }
 
-    if (publish) {
-      await provider.publishArtwork(artworkId);
-    } else {
-      await provider.unpublishArtwork(artworkId);
+    try {
+      if (publish) {
+        await provider.publishArtwork(artworkId);
+      } else {
+        await provider.unpublishArtwork(artworkId);
+      }
+    } on ArtworkEditorialHoldException catch (hold) {
+      // An editor's hold is a decision to explain, not a failure to retry.
+      if (!mounted) return;
+      messenger.showKubusSnackBar(
+        SnackBar(content: Text(artworkEditorialHoldMessage(l10n, hold))),
+      );
+      return;
     }
 
     if (!mounted) return;

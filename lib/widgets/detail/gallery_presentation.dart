@@ -3,6 +3,7 @@ import 'dart:collection';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/semantics.dart';
 import 'package:provider/provider.dart';
 
 import '../../l10n/app_localizations.dart';
@@ -14,6 +15,7 @@ import '../../utils/artwork_media_resolver.dart';
 import '../../utils/artwork_navigation.dart';
 import '../../utils/design_tokens.dart';
 import '../common/kubus_cached_image.dart';
+import '../glass_components.dart';
 import '../inline_loading.dart';
 
 class _GalleryMedia {
@@ -460,184 +462,249 @@ class _GalleryEditor extends StatelessWidget {
             ],
           );
         }
-        final busy = controller.busy;
-        final error = controller.error;
-        final nestedSection = switch (controller.host.type) {
-          GalleryHostType.profile => null,
-          GalleryHostType.exhibition => 'poap',
-          GalleryHostType.institution => 'credits',
-        };
-        final order = <String>{
-          ...layout.artworkOrder,
-          ...draft.artworkIds,
-        }.toList();
-        return PopScope(
-          canPop: !controller.dirty,
-          onPopInvokedWithResult: (didPop, _) {
-            if (!didPop) unawaited(_close(context));
-          },
-          child: AlertDialog(
-            title: Text(l10n.galleryCurate),
-            scrollable: true,
-            content: SizedBox(
-              width: 560,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Semantics(
-                    liveRegion: true,
-                    child: Text(controller.dirty
-                        ? l10n.galleryUnsaved
-                        : draft.hasUnpublishedChanges
-                            ? l10n.galleryUnpublished
-                            : l10n.galleryPublished),
+        // Reset to automatic drops the custom layout: the lists must show the
+        // host's own order at once, not the order the draft was saved in.
+        final automatic = controller.editing == null;
+        final known = controller.automaticArtworkOrder;
+        final resolve = automatic && known == null;
+        List<String> orderFor(List<String> automaticIds) => automatic
+            ? automaticIds
+            : <String>{...layout.artworkOrder, ...draft.artworkIds}.toList();
+        Widget editor(List<String> order) =>
+            _buildEditor(context, l10n, draft, layout, order);
+        if (resolve) {
+          return _AutomaticOrder(
+            ids: draft.artworkIds,
+            media: media,
+            builder: (context, ids) => editor(orderFor(ids)),
+          );
+        }
+        return editor(orderFor([
+          ...?known?.where(draft.artworkIds.contains),
+          ...draft.artworkIds.where((id) => !(known?.contains(id) ?? false)),
+        ]));
+      },
+    );
+  }
+
+  Widget _buildEditor(
+    BuildContext context,
+    AppLocalizations l10n,
+    DraftGallery draft,
+    GalleryLayout layout,
+    List<String> order,
+  ) {
+    // `working` is a request in flight; `busy` also holds the controls while a
+    // refresh after a saved write is still owed.
+    final working = controller.busy;
+    final busy = working || controller.needsRefresh;
+    final error = controller.error;
+    final nestedSection = switch (controller.host.type) {
+      GalleryHostType.profile => null,
+      GalleryHostType.exhibition => 'poap',
+      GalleryHostType.institution => 'credits',
+    };
+    final previewIds = order.where(draft.artworkIds.contains).toList();
+    return PopScope(
+      canPop: !controller.dirty,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) unawaited(_close(context));
+      },
+      // KubusAlertDialog, not AlertDialog: AlertDialog measures its content's
+      // intrinsic size, which the shrink-wrapped reorder lists and the preview's
+      // LayoutBuilder cannot answer (a debug assertion), and it lets the three
+      // actions stack when a localized label does not fit a phone.
+      child: KubusAlertDialog(
+        size: KubusDialogSize.standard,
+        semanticLabel: l10n.galleryCurate,
+        title: Text(l10n.galleryCurate),
+        insetPadding: const EdgeInsets.symmetric(
+          horizontal: KubusSpacing.md,
+          vertical: KubusSpacing.lg,
+        ),
+        contentPadding: const EdgeInsets.fromLTRB(
+          KubusSpacing.md,
+          KubusSpacing.md,
+          KubusSpacing.md,
+          KubusSpacing.lg,
+        ),
+        content: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (!controller.refreshFailed)
+              Semantics(
+                liveRegion: true,
+                child: Text(controller.dirty
+                    ? l10n.galleryUnsaved
+                    : draft.hasUnpublishedChanges
+                        ? l10n.galleryUnpublished
+                        : l10n.galleryPublished),
+              ),
+            if (controller.refreshFailed) ...[
+              Semantics(
+                liveRegion: true,
+                child: Text(l10n.galleryRefreshFailed),
+              ),
+              Align(
+                alignment: AlignmentDirectional.centerStart,
+                child: TextButton(
+                  onPressed: working ? null : controller.retryRefresh,
+                  child: Text(l10n.galleryReload),
+                ),
+              ),
+            ],
+            if (!draft.canPublish)
+              Padding(
+                padding: const EdgeInsets.only(top: KubusSpacing.xs),
+                child: Text(
+                  l10n.galleryPublishNotAllowed,
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+              ),
+            const SizedBox(height: KubusSpacing.md),
+            DropdownButtonFormField<GalleryMode>(
+              key: ValueKey(layout.mode),
+              initialValue: layout.mode,
+              isExpanded: true,
+              decoration: InputDecoration(labelText: l10n.galleryModeLabel),
+              items: [
+                for (final mode in GalleryMode.values)
+                  DropdownMenuItem(
+                    value: mode,
+                    child: Text(_modeLabel(l10n, mode),
+                        maxLines: 1, overflow: TextOverflow.ellipsis),
                   ),
-                  const SizedBox(height: KubusSpacing.md),
-                  DropdownButtonFormField<GalleryMode>(
-                    key: ValueKey(layout.mode),
-                    initialValue: layout.mode,
-                    decoration:
-                        InputDecoration(labelText: l10n.galleryModeLabel),
-                    items: [
-                      for (final mode in GalleryMode.values)
-                        DropdownMenuItem(
-                            value: mode, child: Text(_modeLabel(l10n, mode))),
-                    ],
-                    onChanged: busy
-                        ? null
-                        : (mode) =>
-                            controller.edit(layout.copyWith(mode: mode)),
-                  ),
-                  const SizedBox(height: KubusSpacing.md),
-                  Text(l10n.galleryPersonalPreview,
-                      style: Theme.of(context).textTheme.titleSmall),
-                  _GalleryGrid(
-                      layout: layout,
-                      artworkIds: draft.artworkIds,
-                      media: media),
-                  const SizedBox(height: KubusSpacing.md),
-                  Text(l10n.galleryArtworkOrder,
-                      style: Theme.of(context).textTheme.titleSmall),
-                  _GalleryReorder(
-                    keys: order,
-                    fixedFirst: false,
-                    busy: busy,
-                    label: (id) => draft.unavailableArtworkIds.contains(id)
-                        ? Text(l10n.galleryArtworkUnavailable)
-                        : _GalleryArtworkLabel(id: id, media: media),
-                    onChanged: (value) =>
-                        controller.edit(layout.copyWith(artworkOrder: value)),
-                    trailing: (id) => PopupMenuButton<String>(
-                      tooltip: l10n.galleryArtworkSizing,
-                      enabled: !busy,
-                      onSelected: (action) =>
-                          controller.edit(layout.placeArtwork(
-                        id,
-                        size: action == 'toggle-lead' ? null : action,
-                        toggleLead: action == 'toggle-lead',
-                      )),
-                      itemBuilder: (context) => [
-                        PopupMenuItem(
-                            value: 'small', child: Text(l10n.gallerySizeSmall)),
-                        PopupMenuItem(
-                            value: 'standard',
-                            child: Text(l10n.gallerySizeStandard)),
-                        PopupMenuItem(
-                            value: 'lead', child: Text(l10n.gallerySizeLead)),
-                        PopupMenuItem(
-                          value: 'toggle-lead',
-                          child: Text(layout.leadArtworkId == id
-                              ? l10n.galleryClearLead
-                              : l10n.galleryMakeLead),
-                        ),
-                      ],
-                    ),
-                  ),
-                  Text(l10n.gallerySectionOrder,
-                      style: Theme.of(context).textTheme.titleSmall),
-                  _GalleryReorder(
-                    keys: layout.sectionOrder
-                        .where((section) => section != nestedSection)
-                        .toList(),
-                    fixedFirst: true,
-                    busy: busy,
-                    label: (id) => Text(_sectionLabel(l10n, id)),
-                    onChanged: (value) {
-                      final reordered = Queue<String>.of(value);
-                      controller.edit(layout.copyWith(sectionOrder: [
-                        for (final section in layout.sectionOrder)
-                          if (section == nestedSection)
-                            section
-                          else
-                            reordered.removeFirst(),
-                      ]));
-                    },
-                    trailing: (id) => id == 'identity' ||
-                            id == 'work' ||
-                            id == 'artworks'
-                        ? const SizedBox.shrink()
-                        : Checkbox(
-                            semanticLabel: l10n.galleryHideSection,
-                            value: layout.hiddenSections.contains(id),
-                            onChanged: busy
-                                ? null
-                                : (hidden) => controller.edit(
-                                      layout.copyWith(hiddenSections: [
-                                        ...layout.hiddenSections
-                                            .where((section) => section != id),
-                                        if (hidden == true) id,
-                                      ]),
-                                    ),
-                          ),
-                  ),
-                  if (busy) const InlineLoading(width: 96, height: 4),
-                  if (error != null)
-                    Semantics(
-                      liveRegion: true,
-                      child: Text(error is GalleryRequestException &&
-                              error.isRevisionConflict
-                          ? l10n.galleryConflict
-                          : l10n.galleryUnavailable),
-                    ),
-                  if (error != null)
-                    TextButton(
-                        onPressed: busy ? null : () => _reload(context),
-                        child: Text(l10n.galleryReload)),
-                  Align(
-                    alignment: AlignmentDirectional.centerStart,
-                    child: TextButton(
-                      onPressed: busy || controller.editing == null
-                          ? null
-                          : () => controller.edit(null),
-                      child: Text(l10n.galleryResetToAutomatic),
-                    ),
+              ],
+              onChanged: busy
+                  ? null
+                  : (mode) => controller.edit(layout.copyWith(mode: mode)),
+            ),
+            const SizedBox(height: KubusSpacing.md),
+            Text(l10n.galleryPersonalPreview,
+                style: Theme.of(context).textTheme.titleSmall),
+            _GalleryGrid(layout: layout, artworkIds: previewIds, media: media),
+            const SizedBox(height: KubusSpacing.md),
+            Text(l10n.galleryArtworkOrder,
+                style: Theme.of(context).textTheme.titleSmall),
+            _GalleryReorder(
+              keys: order,
+              fixedFirst: false,
+              busy: busy,
+              label: (id) => draft.unavailableArtworkIds.contains(id)
+                  ? Text(l10n.galleryArtworkUnavailable,
+                      maxLines: 1, overflow: TextOverflow.ellipsis)
+                  : _GalleryArtworkLabel(id: id, media: media),
+              onChanged: (value) =>
+                  controller.edit(layout.copyWith(artworkOrder: value)),
+              trailing: (id) => PopupMenuButton<String>(
+                tooltip: l10n.galleryArtworkSizing,
+                enabled: !busy,
+                onSelected: (action) => controller.edit(layout.placeArtwork(
+                  id,
+                  size: action == 'toggle-lead' ? null : action,
+                  toggleLead: action == 'toggle-lead',
+                )),
+                itemBuilder: (context) => [
+                  PopupMenuItem(
+                      value: 'small', child: Text(l10n.gallerySizeSmall)),
+                  PopupMenuItem(
+                      value: 'standard', child: Text(l10n.gallerySizeStandard)),
+                  PopupMenuItem(
+                      value: 'lead', child: Text(l10n.gallerySizeLead)),
+                  PopupMenuItem(
+                    value: 'toggle-lead',
+                    child: Text(layout.leadArtworkId == id
+                        ? l10n.galleryClearLead
+                        : l10n.galleryMakeLead),
                   ),
                 ],
               ),
             ),
-            actions: [
+            Text(l10n.gallerySectionOrder,
+                style: Theme.of(context).textTheme.titleSmall),
+            _GalleryReorder(
+              keys: layout.sectionOrder
+                  .where((section) => section != nestedSection)
+                  .toList(),
+              fixedFirst: true,
+              busy: busy,
+              label: (id) => Text(_sectionLabel(l10n, id),
+                  maxLines: 1, overflow: TextOverflow.ellipsis),
+              onChanged: (value) {
+                final reordered = Queue<String>.of(value);
+                controller.edit(layout.copyWith(sectionOrder: [
+                  for (final section in layout.sectionOrder)
+                    if (section == nestedSection)
+                      section
+                    else
+                      reordered.removeFirst(),
+                ]));
+              },
+              trailing: (id) =>
+                  id == 'identity' || id == 'work' || id == 'artworks'
+                      ? const SizedBox.shrink()
+                      : Checkbox(
+                          visualDensity: VisualDensity.compact,
+                          semanticLabel: l10n.galleryHideSection,
+                          value: layout.hiddenSections.contains(id),
+                          onChanged: busy
+                              ? null
+                              : (hidden) => controller.edit(
+                                    layout.copyWith(hiddenSections: [
+                                      ...layout.hiddenSections
+                                          .where((section) => section != id),
+                                      if (hidden == true) id,
+                                    ]),
+                                  ),
+                        ),
+            ),
+            if (working) const InlineLoading(width: 96, height: 4),
+            if (error != null)
+              Semantics(
+                liveRegion: true,
+                child: Text(
+                    error is GalleryRequestException && error.isRevisionConflict
+                        ? l10n.galleryConflict
+                        : l10n.galleryUnavailable),
+              ),
+            if (error != null)
               TextButton(
-                onPressed: busy ? null : () => _close(context),
-                child: Text(MaterialLocalizations.of(context).closeButtonLabel),
-              ),
-              OutlinedButton(
-                onPressed: busy || !controller.dirty ? null : controller.save,
-                child: Text(l10n.gallerySaveDraft),
-              ),
-              FilledButton(
-                onPressed: busy ||
-                        controller.dirty ||
-                        !draft.canPublish ||
-                        !draft.hasUnpublishedChanges
+                  onPressed: working ? null : () => _reload(context),
+                  child: Text(l10n.galleryReload)),
+            Align(
+              alignment: AlignmentDirectional.centerStart,
+              child: TextButton(
+                onPressed: busy || controller.editing == null
                     ? null
-                    : controller.publish,
-                child: Text(l10n.galleryPublish),
+                    : () => controller.edit(null),
+                child: Text(l10n.galleryResetToAutomatic),
               ),
-            ],
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: working ? null : () => _close(context),
+            child: Text(MaterialLocalizations.of(context).closeButtonLabel),
           ),
-        );
-      },
+          OutlinedButton(
+            onPressed: busy || !controller.dirty ? null : controller.save,
+            child: Text(l10n.gallerySaveDraft),
+          ),
+          // A role that can edit but never publish gets the reason above
+          // instead of a button that stays disabled: controls appear only
+          // when they can do what they say.
+          if (draft.canPublish)
+            FilledButton(
+              onPressed:
+                  busy || controller.dirty || !draft.hasUnpublishedChanges
+                      ? null
+                      : controller.publish,
+              child: Text(l10n.galleryPublish),
+            ),
+        ],
+      ),
     );
   }
 
@@ -676,7 +743,64 @@ class _GalleryEditor extends StatelessWidget {
   }
 }
 
-class _GalleryReorder extends StatelessWidget {
+/// Orders [ids] the way the host does when it has no saved layout (newest
+/// first) for a draft that never saw the automatic order. Until the artwork
+/// details arrive the given order stands.
+class _AutomaticOrder extends StatefulWidget {
+  const _AutomaticOrder({
+    required this.ids,
+    required this.media,
+    required this.builder,
+  });
+
+  final List<String> ids;
+  final _GalleryMedia media;
+  final Widget Function(BuildContext, List<String>) builder;
+
+  @override
+  State<_AutomaticOrder> createState() => _AutomaticOrderState();
+}
+
+class _AutomaticOrderState extends State<_AutomaticOrder> {
+  late Future<List<String>> _sorted = _sort();
+
+  Future<List<String>> _sort() async {
+    final ids = widget.ids;
+    final details = await Future.wait(ids.map(widget.media.load));
+    final created = <String, DateTime>{
+      for (var index = 0; index < ids.length; index++)
+        if (details[index] case final detail?)
+          ids[index]: detail.artwork.createdAt,
+    };
+    return [...ids]..sort((a, b) {
+        final left = created[a];
+        final right = created[b];
+        if (left != null && right != null) {
+          final byDate = right.compareTo(left);
+          if (byDate != 0) return byDate;
+        } else if (left != null || right != null) {
+          return left == null ? 1 : -1;
+        }
+        return a.compareTo(b);
+      });
+  }
+
+  @override
+  void didUpdateWidget(covariant _AutomaticOrder oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.ids.join(',') != widget.ids.join(',')) _sorted = _sort();
+  }
+
+  @override
+  Widget build(BuildContext context) => FutureBuilder<List<String>>(
+        future: _sorted,
+        initialData: widget.ids,
+        builder: (context, snapshot) =>
+            widget.builder(context, snapshot.data ?? widget.ids),
+      );
+}
+
+class _GalleryReorder extends StatefulWidget {
   const _GalleryReorder({
     required this.keys,
     required this.fixedFirst,
@@ -694,57 +818,138 @@ class _GalleryReorder extends StatelessWidget {
   final ValueChanged<List<String>> onChanged;
 
   @override
+  State<_GalleryReorder> createState() => _GalleryReorderState();
+}
+
+class _GalleryReorderState extends State<_GalleryReorder> {
+  static const _control = 44.0;
+  final _earlier = <String, FocusNode>{};
+  final _later = <String, FocusNode>{};
+
+  FocusNode _node(Map<String, FocusNode> nodes, String id) => nodes.putIfAbsent(
+        id,
+        () => FocusNode(
+          debugLabel:
+              'gallery move ${identical(nodes, _earlier) ? 'earlier' : 'later'} $id',
+        ),
+      );
+
+  @override
+  void didUpdateWidget(covariant _GalleryReorder oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    final live = widget.keys.toSet();
+    for (final nodes in [_earlier, _later]) {
+      nodes.removeWhere((id, node) {
+        if (live.contains(id)) return false;
+        node.dispose();
+        return true;
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    for (final node in [..._earlier.values, ..._later.values]) {
+      node.dispose();
+    }
+    super.dispose();
+  }
+
+  int get _minimum => widget.fixedFirst ? 1 : 0;
+
+  /// Moves one entry. [control] names the keyboard control that asked for the
+  /// move; focus then returns to that control on the moved row, so a keyboard
+  /// user can press it again.
+  void _move(int from, int to, {Map<String, FocusNode>? control}) {
+    final keys = widget.keys;
+    if (widget.busy ||
+        from < _minimum ||
+        to < _minimum ||
+        from >= keys.length ||
+        to >= keys.length ||
+        from == to) {
+      return;
+    }
+    final id = keys[from];
+    final ordered = [...keys];
+    ordered.insert(to, ordered.removeAt(from));
+    widget.onChanged(ordered);
+    unawaited(SemanticsService.sendAnnouncement(
+      View.of(context),
+      AppLocalizations.of(context)!
+          .galleryMovedTo(to + 1 - _minimum, keys.length - _minimum),
+      Directionality.of(context),
+    ));
+    if (control == null) return;
+    // The control on the far end of the list is disabled after the move, so
+    // focus goes to the opposite one on the same row rather than to the body.
+    final canEarlier = to > _minimum;
+    final canLater = to < keys.length - 1;
+    final target = identical(control, _earlier)
+        ? (canEarlier ? _earlier : _later)
+        : (canLater ? _later : _earlier);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) target[id]?.requestFocus();
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    final minimum = fixedFirst ? 1 : 0;
-    void move(int from, int to) {
-      if (busy ||
-          from < minimum ||
-          to < minimum ||
-          from >= keys.length ||
-          to >= keys.length ||
-          from == to) {
-        return;
-      }
-      final ordered = [...keys];
-      ordered.insert(to, ordered.removeAt(from));
-      onChanged(ordered);
-    }
-
+    final keys = widget.keys;
+    final busy = widget.busy;
     return ReorderableListView.builder(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
       buildDefaultDragHandles: false,
       itemCount: keys.length,
-      onReorderItem: move,
+      onReorderItem: _move,
       itemBuilder: (context, index) {
         final id = keys[index];
-        return Wrap(
+        const constraints = BoxConstraints.tightFor(
+          width: _control,
+          height: _control,
+        );
+        // One line per entry: the title gives way, the controls never wrap.
+        return Row(
           key: ValueKey(id),
-          crossAxisAlignment: WrapCrossAlignment.center,
           children: [
-            Padding(
-              padding: const EdgeInsets.all(KubusSpacing.sm),
-              child: label(id),
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.all(KubusSpacing.sm),
+                child: widget.label(id),
+              ),
             ),
             IconButton(
+              focusNode: _node(_earlier, id),
               tooltip: l10n.galleryMoveEarlier,
-              onPressed: busy || index <= minimum
+              constraints: constraints,
+              padding: EdgeInsets.zero,
+              onPressed: busy || index <= _minimum
                   ? null
-                  : () => move(index, index - 1),
+                  : () => _move(index, index - 1, control: _earlier),
               icon: const Icon(Icons.arrow_upward),
             ),
             IconButton(
+              focusNode: _node(_later, id),
               tooltip: l10n.galleryMoveLater,
-              onPressed: busy || index < minimum || index == keys.length - 1
+              constraints: constraints,
+              padding: EdgeInsets.zero,
+              onPressed: busy || index < _minimum || index == keys.length - 1
                   ? null
-                  : () => move(index, index + 1),
+                  : () => _move(index, index + 1, control: _later),
               icon: const Icon(Icons.arrow_downward),
             ),
-            if (!busy && index >= minimum)
+            if (!busy && index >= _minimum)
               ReorderableDragStartListener(
-                  index: index, child: const Icon(Icons.drag_handle)),
-            if (trailing != null) trailing!(id),
+                index: index,
+                child: const SizedBox(
+                  width: 32,
+                  height: _control,
+                  child: Icon(Icons.drag_handle),
+                ),
+              ),
+            if (widget.trailing != null) widget.trailing!(id),
           ],
         );
       },
@@ -771,7 +976,9 @@ class _GalleryArtworkLabelState extends State<_GalleryArtworkLabel> {
       builder: (context, snapshot) => Text(
           snapshot.data?.publicMediaAllowed == true
               ? snapshot.data!.artwork.title
-              : AppLocalizations.of(context)!.commonArtwork),
+              : AppLocalizations.of(context)!.commonArtwork,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis),
     );
   }
 }

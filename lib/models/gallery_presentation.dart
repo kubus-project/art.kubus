@@ -164,6 +164,18 @@ class DraftGallery {
 
   bool get hasUnpublishedChanges =>
       revision > 0 && revision != publishedRevision;
+
+  /// The same draft showing [layout], for a save the server accepted when the
+  /// read-back failed. The revision stays the last one read.
+  DraftGallery withLayout(GalleryLayout? layout) => DraftGallery(
+        revision: revision,
+        publishedRevision: publishedRevision,
+        layout: layout,
+        defaultLayout: defaultLayout,
+        canPublish: canPublish,
+        artworkIds: artworkIds,
+        unavailableArtworkIds: unavailableArtworkIds,
+      );
 }
 
 class GalleryRequestException implements Exception {

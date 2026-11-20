@@ -19424,4 +19424,29 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get galleryClearLead => 'Odstrani oznako vodilnega dela';
+
+  @override
+  String get galleryPublishNotAllowed =>
+      'Galerijo lahko urejate, vendar je ne morete objaviti.';
+
+  @override
+  String get galleryRefreshFailed =>
+      'Sprememba je shranjena, galerije pa ni bilo mogoče osvežiti.';
+
+  @override
+  String galleryMovedTo(int position, int total) {
+    return 'Premaknjeno na mesto $position od $total';
+  }
+
+  @override
+  String get artworkPublishHeldWithdrawn =>
+      'Urednik je to delo umaknil. Obnovi ga lahko samo uredniška odločitev.';
+
+  @override
+  String get artworkPublishHeldInReview =>
+      'To delo čaka na uredniški pregled. Objavljeno bo, ko bo odobreno.';
+
+  @override
+  String get artworkPublishHeldGeneric =>
+      'To delo je v uredniškem zadržanju in ga še ni mogoče objaviti.';
 }

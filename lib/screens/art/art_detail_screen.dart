@@ -35,6 +35,7 @@ import '../../services/nft_minting_service.dart';
 import '../../services/profile_package_mutation_tracker.dart';
 import '../../models/collectible.dart';
 import '../../utils/artwork_media_resolver.dart';
+import '../../utils/artwork_editorial_hold_message.dart';
 import '../../features/map/shared/map_screen_shared_helpers.dart';
 import '../../utils/artwork_location_actions.dart';
 import '../../utils/artwork_edit_navigation.dart';
@@ -1245,6 +1246,11 @@ class _ArtDetailScreenState extends State<ArtDetailScreen> {
                 : l10n.commonActionFailedToast,
           ),
         ),
+      );
+    } on ArtworkEditorialHoldException catch (hold) {
+      if (!mounted) return;
+      messenger.showKubusSnackBar(
+        SnackBar(content: Text(artworkEditorialHoldMessage(l10n, hold))),
       );
     } catch (_) {
       if (!mounted) return;

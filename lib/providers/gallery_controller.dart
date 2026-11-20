@@ -24,6 +24,13 @@ class GalleryController extends ChangeNotifier {
   PublishedGallery? _published;
   GalleryLayout? _editing;
   Object? _error;
+  // The write succeeded but the follow-up read did not. The saved draft stays
+  // on screen with a soft retry instead of an error state.
+  bool _refreshFailed = false;
+  // The draft read failed after a write, so the revision on screen is behind
+  // the server's. Edits wait for a successful refresh instead of conflicting.
+  bool _draftStale = false;
+  List<String>? _automaticOrder;
   String? _pendingSave;
   String? _pendingPublish;
 
@@ -34,6 +41,12 @@ class GalleryController extends ChangeNotifier {
   PublishedGallery? get published => isCurrent ? _published : null;
   GalleryLayout? get editing => isCurrent ? _editing : null;
   Object? get error => isCurrent ? _error : null;
+  bool get refreshFailed => isCurrent && _refreshFailed;
+  bool get needsRefresh => isCurrent && _draftStale;
+
+  /// The host's automatic artwork order when a read has shown it: a draft with
+  /// no saved layout, or an automatic published gallery. Null when unknown.
+  List<String>? get automaticArtworkOrder => isCurrent ? _automaticOrder : null;
 
   Future<void> reload() => _operation(() async {
         final loaded = await _fetch();
@@ -42,13 +55,16 @@ class GalleryController extends ChangeNotifier {
         _draft = loaded.draft;
         _editing = _draft?.layout;
         _dirty = false;
+        _refreshFailed = false;
+        _draftStale = false;
         _pendingSave = null;
         _pendingPublish = null;
         _error = loaded.error;
+        _learnAutomaticOrder();
       });
 
   void edit(GalleryLayout? layout) {
-    if (!isCurrent || _busy || _draft == null) return;
+    if (!isCurrent || _busy || _draftStale || _draft == null) return;
     _editing = layout;
     _dirty = true;
     _pendingSave = null;
@@ -58,7 +74,7 @@ class GalleryController extends ChangeNotifier {
 
   Future<void> save() async {
     final base = draft;
-    if (base == null || !dirty) return;
+    if (base == null || !dirty || _draftStale) return;
     await _operation(() async {
       _pendingSave ??= _mutationId();
       await _api.saveGalleryDraft(
@@ -77,6 +93,7 @@ class GalleryController extends ChangeNotifier {
     if (base == null ||
         !base.canPublish ||
         !base.hasUnpublishedChanges ||
+        _draftStale ||
         dirty) {
       return;
     }
@@ -92,36 +109,97 @@ class GalleryController extends ChangeNotifier {
     });
   }
 
+  /// Reads the host again after a write the server accepted. A read that fails
+  /// is not allowed to turn that success into an error: what was just saved
+  /// stays visible and [refreshFailed] asks for a retry.
   Future<void> _refreshAfterWrite() async {
+    final saved = _editing;
+    final base = _draft;
     final loaded = await _fetch();
     if (!isCurrent) return;
-    _published = loaded.published;
-    _draft = loaded.draft;
-    _editing = _draft?.layout;
-    _dirty = false;
     _pendingSave = null;
     _pendingPublish = null;
-    _error = loaded.error;
+    _dirty = false;
+    _error = null;
+    _refreshFailed = loaded.publicFailed || loaded.draftFailed;
+    _draftStale = loaded.draftFailed;
+    if (!loaded.publicFailed) _published = loaded.published;
+    if (loaded.draftFailed) {
+      _draft = base?.withLayout(saved);
+      _editing = saved;
+    } else {
+      _draft = loaded.draft;
+      _editing = _draft?.layout;
+    }
+    _learnAutomaticOrder();
   }
 
-  Future<({PublishedGallery? published, DraftGallery? draft, Object? error})>
-      _fetch() async {
+  /// Retries the read that failed after a successful write.
+  Future<void> retryRefresh() async {
+    if (!_refreshFailed) return reload();
+    await _operation(() async {
+      final saved = _editing;
+      final base = _draft;
+      final loaded = await _fetch();
+      if (!isCurrent) return;
+      _refreshFailed = loaded.publicFailed || loaded.draftFailed;
+      _draftStale = loaded.draftFailed;
+      if (!loaded.publicFailed) _published = loaded.published;
+      if (!loaded.draftFailed) {
+        _draft = loaded.draft;
+        _editing = _draft?.layout;
+        _dirty = false;
+      } else {
+        _draft = base?.withLayout(saved);
+      }
+      _learnAutomaticOrder();
+    });
+  }
+
+  void _learnAutomaticOrder() {
+    final draft = _draft;
+    final published = _published;
+    if (draft != null && draft.layout == null) {
+      _automaticOrder = draft.artworkIds;
+    } else if (published != null && published.automatic) {
+      _automaticOrder = published.artworkIds;
+    }
+  }
+
+  Future<
+      ({
+        PublishedGallery? published,
+        DraftGallery? draft,
+        Object? error,
+        bool publicFailed,
+        bool draftFailed,
+      })> _fetch() async {
     PublishedGallery? publicResult;
     DraftGallery? privateResult;
     Object? failure;
+    var publicFailed = false;
+    var draftFailed = false;
     try {
       publicResult = await _api.getPublishedGallery(host);
     } catch (error) {
       failure = error;
+      publicFailed = true;
     }
     if (signedIn && isCurrent) {
       try {
         privateResult = await _api.getGalleryDraft(host);
       } catch (error) {
         failure ??= error;
+        draftFailed = true;
       }
     }
-    return (published: publicResult, draft: privateResult, error: failure);
+    return (
+      published: publicResult,
+      draft: privateResult,
+      error: failure,
+      publicFailed: publicFailed,
+      draftFailed: draftFailed,
+    );
   }
 
   Future<void> _operation(Future<void> Function() work) async {
