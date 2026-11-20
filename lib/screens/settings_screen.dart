@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import '../widgets/inline_loading.dart';
+import '../widgets/legal_document_link_action.dart';
 import 'moderation/my_reports_screen.dart';
 import 'package:flutter/foundation.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';

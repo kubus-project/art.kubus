@@ -3237,6 +3237,17 @@ class AppLocalizationsEn extends AppLocalizations {
       'Your privacy matters to us:\n\n• We only collect personal data when it is needed and you have consented\n• Your wallet keys and recovery phrase stay under your control\n• We may collect anonymous usage statistics to improve the app\n• We do not share your data with third parties\n• You can disable analytics in Privacy settings\n\nFor our complete privacy policy, visit our website.';
 
   @override
+  String get settingsLegalOpenFullTerms => 'Read full terms';
+
+  @override
+  String get settingsLegalOpenFullPrivacy => 'Read full privacy policy';
+
+  @override
+  String settingsLegalOpenFailed(String url) {
+    return 'Could not open $url';
+  }
+
+  @override
   String get settingsSupportDialogTitle => 'Support';
 
   @override

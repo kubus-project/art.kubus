@@ -3262,6 +3262,18 @@ class AppLocalizationsSl extends AppLocalizations {
       'Tvoja zasebnost nam je pomembna:\n\n• Osebne podatke zbiramo le, ko so potrebni in ko za to podaš soglasje\n• Zasebni ključi in obnovitvena fraza ostanejo pod tvojim nadzorom\n• Za izboljšave aplikacije lahko zbiramo anonimne statistične podatke o uporabi\n• Tvojih podatkov ne delimo s tretjimi osebami\n• Analitiko lahko izključiš v nastavitvah zasebnosti\n\nZa celoten pravilnik obišči našo spletno stran.';
 
   @override
+  String get settingsLegalOpenFullTerms => 'Preberi celotne pogoje';
+
+  @override
+  String get settingsLegalOpenFullPrivacy =>
+      'Preberi celoten pravilnik o zasebnosti';
+
+  @override
+  String settingsLegalOpenFailed(String url) {
+    return 'Povezave ni bilo mogoče odpreti: $url';
+  }
+
+  @override
   String get settingsSupportDialogTitle => 'Podpora';
 
   @override
