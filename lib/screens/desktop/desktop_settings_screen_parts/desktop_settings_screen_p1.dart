@@ -898,6 +898,7 @@ extension _DesktopSettingsScreenStatePart1 on _DesktopSettingsScreenState {
           ),
         ),
         actions: [
+          const LegalDocumentLinkAction(document: LegalDocument.termsOfUse),
           TextButton(
               onPressed: () => Navigator.pop(context),
               child: Text(l10n.commonClose)),
@@ -926,6 +927,7 @@ extension _DesktopSettingsScreenStatePart1 on _DesktopSettingsScreenState {
           ),
         ),
         actions: [
+          const LegalDocumentLinkAction(document: LegalDocument.privacyPolicy),
           TextButton(
               onPressed: () => Navigator.pop(context),
               child: Text(l10n.commonClose)),

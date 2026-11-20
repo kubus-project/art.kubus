@@ -529,6 +529,7 @@ extension _SettingsScreenStatePart3 on _SettingsScreenState {
           ),
         ),
         actions: [
+          const LegalDocumentLinkAction(document: LegalDocument.termsOfUse),
           TextButton(
             onPressed: () => Navigator.pop(context),
             child: Text(
@@ -566,6 +567,7 @@ extension _SettingsScreenStatePart3 on _SettingsScreenState {
           ),
         ),
         actions: [
+          const LegalDocumentLinkAction(document: LegalDocument.privacyPolicy),
           TextButton(
             onPressed: () => Navigator.pop(context),
             child: Text(
