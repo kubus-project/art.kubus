@@ -1922,9 +1922,9 @@ class _UserProfileScreenState extends State<UserProfileScreen>
   }
 
   Future<void> _openConversation() async {
-    // Conversations are addressed by wallet only. Without a linked wallet there
-    // is no message target, so nothing is sent and no id is substituted.
-    final messageTarget = user?.messagingWallet;
+    // A conversation is addressed to the wallet, or to the account UUID of a
+    // walletless account. With neither there is no target, so nothing is sent.
+    final messageTarget = user?.messageTargetId;
     if (user?.supportsMessaging != true || messageTarget == null) return;
     final l10n = AppLocalizations.of(context)!;
     final authenticated = await const ContextualAuthGate().ensureAuthenticated(
@@ -1944,8 +1944,17 @@ class _UserProfileScreenState extends State<UserProfileScreen>
     final chatAuth = chatProvider.isAuthenticated;
 
     try {
-      final conv =
-          await chatProvider.createConversation('', false, [messageTarget]);
+      final outcome = await chatProvider
+          .createConversationOutcome('', false, [messageTarget]);
+      if (outcome.recipientUnavailable) {
+        if (mounted) {
+          messenger.showKubusSnackBar(
+            SnackBar(content: Text(l10n.messagingRecipientUnavailableToast)),
+          );
+        }
+        return;
+      }
+      final conv = outcome.conversation;
       if (conv != null) {
         if (!mounted) return;
         final preloaded = chatProvider.getPreloadedProfileMapsForConversation(
@@ -2065,8 +2074,11 @@ class _UserProfileScreenState extends State<UserProfileScreen>
 
   void _confirmBlockUser() {
     final l10n = AppLocalizations.of(context)!;
-    final targetWallet = WalletUtils.canonical(user?.id ?? widget.userId);
-    if (targetWallet.isEmpty) {
+    // The wallet when the account has one, else its account UUID. The profile
+    // row id is never a block key: feeds match blocks against authorWallet or
+    // authorUserId.
+    final targetId = WalletUtils.canonical(user?.messageTargetId ?? '');
+    if (targetId.isEmpty) {
       ScaffoldMessenger.of(context).showKubusSnackBar(
         SnackBar(content: Text(l10n.userProfileUnableToBlockToast)),
       );
@@ -2082,7 +2094,7 @@ class _UserProfileScreenState extends State<UserProfileScreen>
           borderRadius: BorderRadius.circular(KubusRadius.lg),
         ),
         title: Text(
-          l10n.userProfileBlockDialogTitle(user?.name ?? targetWallet),
+          l10n.userProfileBlockDialogTitle(user?.name ?? targetId),
           style: KubusTypography.inter(
             fontWeight: FontWeight.bold,
             color: Theme.of(context).colorScheme.onSurface,
@@ -2105,7 +2117,7 @@ class _UserProfileScreenState extends State<UserProfileScreen>
             onPressed: () async {
               final messenger = ScaffoldMessenger.of(context);
               try {
-                await BlockListService().blockWallet(targetWallet);
+                await BlockListService().blockWallet(targetId);
               } catch (e) {
                 debugPrint(
                   'DesktopUserProfileScreen: failed to block user: $e',
@@ -2123,12 +2135,11 @@ class _UserProfileScreenState extends State<UserProfileScreen>
               messenger.showKubusSnackBar(
                 SnackBar(
                   content: Text(
-                    l10n.userProfileBlockedToast(user?.name ?? targetWallet),
+                    l10n.userProfileBlockedToast(user?.name ?? targetId),
                   ),
                   action: SnackBarAction(
                     label: l10n.commonUndo,
-                    onPressed: () =>
-                        BlockListService().unblockWallet(targetWallet),
+                    onPressed: () => BlockListService().unblockWallet(targetId),
                   ),
                 ),
               );

@@ -397,7 +397,13 @@ extension _CommunityScreenStatePart4 on _CommunityScreenState {
     hub.setDraftLocation(location, label: result);
   }
 
-  Future<String?> _ensureWalletForPosting(BuildContext ctx) async {
+  /// Publish gate. A walletless signed-in account posts as itself, and a guest
+  /// is sent to sign-in with the compose intent remembered. A wallet session
+  /// keeps the wallet check.
+  Future<bool> _ensurePostingIdentity(
+    BuildContext ctx,
+    CommunityHubProvider hub,
+  ) async {
     try {
       final walletProvider = ctx.read<WalletProvider?>();
       final prefs = await SharedPreferences.getInstance();
@@ -405,10 +411,23 @@ extension _CommunityScreenStatePart4 on _CommunityScreenState {
           prefs.getString('wallet_address') ??
           prefs.getString('walletAddress');
       if (walletAddress == null || walletAddress.isEmpty) {
-        if (!mounted) return null;
+        if (!mounted) return false;
         final l10n = AppLocalizations.of(context)!;
-        _showSnack(l10n.communityPostingNeedsWalletToast);
-        return null;
+        final canPost = await const ContextualAuthGate().ensureAuthenticated(
+          context,
+          requirements: ProtectedActionRequirements.participant,
+          actionLabel: l10n.communityComposeAuthAction,
+          returnRoute: '/community',
+          sourceScreen: 'community_screen',
+          onAuthJourneyStarted: () =>
+              hub.rememberComposeIntentForAuth(CommunityComposeIntent.post),
+        );
+        if (!canPost || !mounted) return false;
+        if (!await communityPostingHasIdentity()) {
+          _showSnack(l10n.communityPostingNeedsWalletToast);
+          return false;
+        }
+        return true;
       }
       final api = BackendApiService();
       await api.restoreExistingSession(allowRefresh: false);
@@ -432,15 +451,15 @@ extension _CommunityScreenStatePart4 on _CommunityScreenState {
           );
         }
       }
-      return walletAddress;
+      return true;
     } catch (e) {
       if (kDebugMode) {
         debugPrint('CommunityScreen: wallet auth failed: $e');
       }
-      if (!mounted) return null;
+      if (!mounted) return false;
       final l10n = AppLocalizations.of(context)!;
       _showSnack(l10n.communityUnableToAuthenticateToast);
-      return null;
+      return false;
     }
   }
 
@@ -561,8 +580,7 @@ extension _CommunityScreenStatePart4 on _CommunityScreenState {
       return;
     }
 
-    final walletAddress = await _ensureWalletForPosting(sheetContext);
-    if (walletAddress == null) return;
+    if (!await _ensurePostingIdentity(sheetContext, hub)) return;
     if (appModeProvider?.isIpfsFallbackMode ?? false) {
       messenger.showKubusSnackBar(
         SnackBar(

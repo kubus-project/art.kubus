@@ -624,6 +624,9 @@ class BackendApiService
     }());
   }
 
+  @visibleForTesting
+  String? get preferredWalletForTesting => _preferredWalletCanonical;
+
   Map<String, dynamic>? _tryDecodeJwtPayload(String token) {
     try {
       final parts = token.split('.');
@@ -655,6 +658,9 @@ class BackendApiService
       final raw = (payload[key] ?? '').toString();
       final canonical = WalletUtils.canonical(raw);
       if (canonical.isEmpty) continue;
+      // An account UUID is an identity, never a wallet. looksLikeWallet accepts
+      // a long hyphenated string, so it is excluded explicitly.
+      if (WalletUtils.isAccountUuid(canonical)) continue;
       if (WalletUtils.looksLikeWallet(canonical)) {
         return canonical;
       }
@@ -1170,6 +1176,19 @@ class BackendApiService
     }
     return _tryExtractWalletFromToken(token) ?? '';
   }
+
+  /// The account the session is moving to or already is: the credential target
+  /// when a commit is pending, else the live token. The target is set
+  /// synchronously with the epoch bump and cleared on sign-out, so from the
+  /// instant another account's credential becomes the target this differs
+  /// from the account an earlier operation started under. Empty for a guest.
+  String get pendingAuthAccountKey =>
+      _accountKeyOf(_credentialTargetToken ?? _authToken);
+
+  /// True while a credential of another account than the live token's is the
+  /// commit target: the live token no longer speaks for the session.
+  bool get hasPendingAccountSwitch =>
+      pendingAuthAccountKey != _accountKeyOf(_authToken);
 
   /// Native secure persistence; browser credentials remain in memory only.
   ///
@@ -3136,12 +3155,14 @@ class BackendApiService
     required String walletAddress,
     required String signature,
     required String message,
+    int? expectedEpoch,
   }) =>
       _backendApiLoginWithWallet(
         this,
         walletAddress: walletAddress,
         signature: signature,
         message: message,
+        expectedEpoch: expectedEpoch,
       );
 
   /// Register with email + password.
@@ -3798,12 +3819,18 @@ class BackendApiService
         onCompressionProgress: onCompressionProgress,
       );
 
-  /// Add a member to conversation
+  /// Add a member to conversation. A walletless target is named by [userId].
   Future<Map<String, dynamic>> addConversationMember(
     String conversationId,
-    String walletAddress,
-  ) =>
-      _backendApiAddConversationMemberImpl(this, conversationId, walletAddress);
+    String walletAddress, {
+    String? userId,
+  }) =>
+      _backendApiAddConversationMemberImpl(
+        this,
+        conversationId,
+        walletAddress,
+        userId: userId,
+      );
 
   /// Remove a member from conversation (best-effort)
   Future<Map<String, dynamic>> removeConversationMember(
@@ -7247,14 +7274,24 @@ class BackendApiService
 
   /// Share a post (increment share counter)
   /// POST /api/community/posts/:id/share
+  /// Throws when the share is not counted (for example a 404 for a post the
+  /// caller cannot see) so the caller can roll back its optimistic count.
   Future<void> sharePost(String postId) async {
     try {
-      await _post(
+      final response = await _post(
         Uri.parse('$baseUrl/api/community/posts/$postId/share'),
         headers: _getHeaders(),
       );
+      if (!_isSuccessStatus(response.statusCode)) {
+        throw BackendApiRequestException(
+          statusCode: response.statusCode,
+          path: '/api/community/posts/$postId/share',
+          body: response.body,
+        );
+      }
     } catch (e) {
       AppConfig.debugPrint('BackendApiService.sharePost failed: $e');
+      rethrow;
     }
   }
 
@@ -7365,9 +7402,11 @@ class BackendApiService
       final uri = Uri.parse(
         '$baseUrl/api/groups',
       ).replace(queryParameters: queryParams);
+      // Sent with the session token when one exists so isMember/isOwner are
+      // answered for the caller; a guest request stays anonymous.
       final jsonData = await _fetchJson(
         uri,
-        includeAuth: false,
+        includeAuth: true,
         allowOrbitFallback: false,
       );
       final dynamic payload =

@@ -69,9 +69,20 @@ class User {
     return WalletUtils.looksLikeWallet(legacy) ? legacy : null;
   }
 
-  /// A conversation can be opened only when messages are allowed and a real
-  /// wallet exists to address it ([messagingWallet]); [userId] is never used.
-  bool get supportsMessaging => allowsMessages && messagingWallet != null;
+  /// The identifier a conversation is addressed to: the wallet when the account
+  /// has one, else the account UUID of a walletless account. Null when neither
+  /// exists. The profile [id] is never used.
+  String? get messageTargetId {
+    final wallet = messagingWallet;
+    if (wallet != null) return wallet;
+    final account = userId?.trim();
+    if (account != null && WalletUtils.isAccountUuid(account)) return account;
+    return null;
+  }
+
+  /// A conversation can be opened when messages are allowed and the account can
+  /// be addressed ([messageTargetId]): a wallet, or an account UUID.
+  bool get supportsMessaging => allowsMessages && messageTargetId != null;
 
   /// The identity a follow (live or replayed after sign-in) must target: the
   /// account UUID when known, else the wallet. Null when neither is known.

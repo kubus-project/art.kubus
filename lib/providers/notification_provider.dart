@@ -8,6 +8,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../l10n/app_localizations.dart';
 import '../l10n/app_localizations_en.dart';
 import '../l10n/app_localizations_sl.dart';
+import '../services/account_identity.dart';
 import '../services/backend_api_service.dart';
 import '../services/socket_service.dart';
 import '../services/push_notification_service.dart';
@@ -16,12 +17,28 @@ import 'app_refresh_provider.dart';
 
 String _normalizeIdentity(String? value) => (value ?? '').trim().toLowerCase();
 
-/// Decides whether a notification payload is addressed to the current session.
+/// A wallet's comparison key. 0x (EVM) addresses are hex, so their case is
+/// folded. Other wallets (base58) are case-sensitive and compare as they are.
+String _walletKey(String? wallet) {
+  final value = WalletUtils.canonical(wallet);
+  if (value.isEmpty) return '';
+  return RegExp(r'^0x', caseSensitive: false).hasMatch(value)
+      ? value.toLowerCase()
+      : value;
+}
+
+/// Decides whether a socket payload is addressed to the current session.
 ///
-/// - Both a recipient user id and a session account id known: they must match.
-/// - Otherwise both a recipient wallet and a session wallet known: they must
-///   match (case-insensitive).
-/// - Otherwise no identity can be compared and the event is kept.
+/// - A payload that names an account (`recipientUserId`) is the session's when
+///   the session's account id is known and equal. A wallet match never stands in
+///   for a known account id, so a walletless session matches on its UUID alone.
+///   When the session's account id is unknown (a token with no id claim), the
+///   payload's recipient wallet equal to the session's wallet is the proof.
+/// - A wallet-only payload (no `recipientUserId`) is the session's when both
+///   wallets are known and equal (see [_walletKey] for the case rule).
+/// - Empty or null identities never match.
+/// - A payload that names neither is unaddressed. The server emits it only to
+///   the owner's socket room, and that room is the gate.
 bool isNotificationForCurrentIdentity({
   String? recipientUserId,
   String? recipientWallet,
@@ -29,18 +46,18 @@ bool isNotificationForCurrentIdentity({
   String? sessionWallet,
 }) {
   final payloadUserId = _normalizeIdentity(recipientUserId);
-  final sessionUserId = _normalizeIdentity(sessionAccountId);
-  if (payloadUserId.isNotEmpty && sessionUserId.isNotEmpty) {
-    return payloadUserId == sessionUserId;
+  final payloadWallet = _walletKey(recipientWallet);
+  if (payloadUserId.isEmpty && payloadWallet.isEmpty) return true;
+  final sessionWalletKey = _walletKey(sessionWallet);
+  final walletMatches = payloadWallet.isNotEmpty &&
+      sessionWalletKey.isNotEmpty &&
+      payloadWallet == sessionWalletKey;
+  if (payloadUserId.isNotEmpty) {
+    final sessionUserId = _normalizeIdentity(sessionAccountId);
+    if (sessionUserId.isNotEmpty) return payloadUserId == sessionUserId;
+    return walletMatches;
   }
-  final payloadWallet =
-      _normalizeIdentity(WalletUtils.canonical(recipientWallet));
-  final sessionWalletKey =
-      _normalizeIdentity(WalletUtils.canonical(sessionWallet));
-  if (payloadWallet.isNotEmpty && sessionWalletKey.isNotEmpty) {
-    return payloadWallet == sessionWalletKey;
-  }
-  return true;
+  return walletMatches;
 }
 
 class NotificationProvider extends ChangeNotifier {
@@ -101,6 +118,7 @@ class NotificationProvider extends ChangeNotifier {
   bool get hasNew => _hasNew;
 
   NotificationProvider() {
+    AccountIdentity.addListener(_handleAccountIdentityChanged);
     // Defer heavy work until the widget tree is ready; initialization is invoked
     // explicitly from ArtKubus after providers mount. This constructor must not
     // start async work so unit tests/builds without Material bindings stay safe.
@@ -173,26 +191,10 @@ class NotificationProvider extends ChangeNotifier {
       // calling connect() again is safe and will no-op when already connected.
       try {
         await _socket.connect(_backend.baseUrl);
-        // Ensure we are subscribed to user's room so incoming notifications are delivered
+        // Ensure we are subscribed to the session's personal room so incoming
+        // notifications are delivered. A walletless session subscribes by account.
         try {
-          if (_currentWallet != null && _currentWallet!.isNotEmpty) {
-            var ok = await _socket.connectAndSubscribe(
-              _backend.baseUrl,
-              _currentWallet!,
-            );
-            debugPrint(
-              'NotificationProvider.initialize: connectAndSubscribe result: $ok',
-            );
-            debugPrint(
-              'NotificationProvider.initialize: socket currentSubscribedWallet=${_socket.currentSubscribedWallet}',
-            );
-            if (!ok) {
-              debugPrint(
-                'NotificationProvider.initialize: connectAndSubscribe failed, falling back to subscribeUser',
-              );
-              _socket.subscribeUser(_currentWallet!);
-            }
-          }
+          await _subscribePersonalRoom();
         } catch (e) {
           debugPrint(
             'NotificationProvider.initialize: subscribe to user room failed: $e',
@@ -304,23 +306,47 @@ class NotificationProvider extends ChangeNotifier {
     }
   }
 
+  /// Unread counts belong to the account they were fetched for. A walletless
+  /// switch leaves the wallet empty on both sides, so initialize() cannot tell
+  /// the accounts apart. The identity change is the signal that can, and it
+  /// arrives before any await. A same-account token refresh announces nothing.
+  void _handleAccountIdentityChanged() {
+    final held = (_currentAccountId ?? '').trim();
+    if (held.isNotEmpty && held == AccountIdentity.accountKey) return;
+    _resetSessionState(clearUnreadCount: true);
+  }
+
   void _handleSocketReconnect() {
     unawaited(_refreshAfterSocketReconnect());
   }
 
+  /// Subscribes the session's personal room. A walletless session has no wallet
+  /// and subscribes by its account id. A wallet session subscribes by wallet and
+  /// carries the account id along. Both come from the current session only.
+  Future<void> _subscribePersonalRoom() async {
+    final wallet = _currentWallet ?? '';
+    final accountId = _currentAccountId ?? '';
+    if (wallet.isEmpty && accountId.isEmpty) return;
+    final ok = await _socket.connectAndSubscribe(
+      _backend.baseUrl,
+      wallet,
+      accountId: accountId,
+    );
+    debugPrint('NotificationProvider: personal room subscribe result: $ok');
+    if (!ok) {
+      debugPrint(
+        'NotificationProvider: connectAndSubscribe failed, falling back to subscribeUser',
+      );
+      _socket.subscribeUser(wallet, accountId: accountId);
+    }
+  }
+
   Future<void> _refreshAfterSocketReconnect() async {
-    final wallet = _currentWallet;
     if (!_hasAuthContext) return;
-    if (wallet != null && wallet.isNotEmpty) {
-      try {
-        final ok = await _socket.connectAndSubscribe(
-          _backend.baseUrl,
-          wallet,
-        );
-        if (!ok) _socket.subscribeUser(wallet);
-      } catch (e) {
-        debugPrint('NotificationProvider: reconnect resubscribe failed: $e');
-      }
+    try {
+      await _subscribePersonalRoom();
+    } catch (e) {
+      debugPrint('NotificationProvider: reconnect resubscribe failed: $e');
     }
     // Account rooms are joined from the authenticated socket token, so a
     // walletless account still receives summaries after reconnect.
@@ -587,6 +613,7 @@ class NotificationProvider extends ChangeNotifier {
 
   void _handleUnreadSummary(Map<String, dynamic> payload) {
     if (!_hasAuthContext) return;
+    if (!_isAddressedToCurrentSession(payload)) return;
     _summaryRevision++;
     _summaryRequestVersion++;
     _scheduledServerSync?.cancel();
@@ -946,6 +973,7 @@ class NotificationProvider extends ChangeNotifier {
     _scheduledServerSync = null;
     _scheduledServerSyncDueAt = null;
     _stopAutoRefreshLoop();
+    AccountIdentity.removeListener(_handleAccountIdentityChanged);
     super.dispose();
   }
 
@@ -973,6 +1001,9 @@ class NotificationProvider extends ChangeNotifier {
   }
 
   @visibleForTesting
+  Future<void> subscribePersonalRoomForTesting() => _subscribePersonalRoom();
+
+  @visibleForTesting
   void handleUnreadSummaryForTesting(Map<String, dynamic> payload) {
     _handleUnreadSummary(payload);
   }
@@ -995,20 +1026,18 @@ class NotificationProvider extends ChangeNotifier {
     _lastSubscriptionCheckAt = now;
     try {
       final expectedWallet = WalletUtils.canonical(_currentWallet);
-      if (expectedWallet.isEmpty) return;
-      final subscribed = WalletUtils.canonical(_socket.currentSubscribedWallet);
-      if (subscribed.isEmpty || subscribed != expectedWallet) {
+      final expectedAccount = (_currentAccountId ?? '').trim();
+      if (expectedWallet.isEmpty && expectedAccount.isEmpty) return;
+      // A wallet session is matched by wallet; a walletless one by account id.
+      final subscribedMatches = expectedWallet.isNotEmpty
+          ? WalletUtils.canonical(_socket.currentSubscribedWallet) ==
+              expectedWallet
+          : (_socket.currentSubscribedAccountId ?? '') == expectedAccount;
+      if (!subscribedMatches) {
         debugPrint(
-          'NotificationProvider: subscription check mismatch (subscribed=$subscribed expected=$_currentWallet), attempting resubscribe',
+          'NotificationProvider: subscription check mismatch, attempting resubscribe',
         );
-        _socket
-            .connectAndSubscribe(_backend.baseUrl, _currentWallet!)
-            .then((ok) {
-          debugPrint('NotificationProvider: connectAndSubscribe -> $ok');
-          if (!ok) {
-            _socket.subscribeUser(_currentWallet!);
-          }
-        }).catchError((e) {
+        _subscribePersonalRoom().catchError((Object e) {
           debugPrint('NotificationProvider: connectAndSubscribe error: $e');
         });
       }

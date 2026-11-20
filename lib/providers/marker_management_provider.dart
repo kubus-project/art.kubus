@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:latlong2/latlong.dart';
 
 import '../models/art_marker.dart';
+import '../services/account_identity.dart';
 import '../services/backend_api_service.dart';
 import '../services/achievement_service.dart';
 import '../services/map_marker_service.dart';
@@ -18,7 +19,9 @@ class MarkerManagementProvider extends ChangeNotifier {
     TelemetryService? telemetry,
   })  : _api = api ?? BackendApiService(),
         _mapMarkerService = mapMarkerService ?? MapMarkerService(),
-        _telemetry = telemetry ?? TelemetryService();
+        _telemetry = telemetry ?? TelemetryService() {
+    AccountIdentity.addListener(_handleAccountIdentityChanged);
+  }
 
   final MarkerBackendApi _api;
   final MapMarkerService _mapMarkerService;
@@ -29,6 +32,11 @@ class MarkerManagementProvider extends ChangeNotifier {
   bool _loading = false;
   String? _error;
   List<ArtMarker> _markers = const <ArtMarker>[];
+
+  // Bumped on every account change. A /mine fetch started under the previous
+  // account compares against it before writing its result.
+  int _identityEpoch = 0;
+  String _heldAccountKey = AccountIdentity.accountKey;
 
   // Cache + de-dupe for /mine marker list.
   static const Duration _cacheTtl = Duration(seconds: 30);
@@ -69,6 +77,32 @@ class MarkerManagementProvider extends ChangeNotifier {
     // Schedule notifyListeners in microtask to avoid synchronous notification
     // during ProxyProvider update callback, which could cause infinite recursion.
     Future.microtask(notifyListeners);
+  }
+
+  /// The /mine list belongs to the account it was fetched for. A walletless
+  /// switch leaves the wallet empty on both sides, so [bindWallet] cannot see
+  /// it. The identity change clears the list, and any fetch still in flight
+  /// for the previous account is dropped when it returns.
+  void _handleAccountIdentityChanged() {
+    final key = AccountIdentity.accountKey;
+    // A wallet linked to the signed-in account announces a change too, and
+    // that account's in-flight create/update/delete is still its own.
+    if (key.isNotEmpty && key == _heldAccountKey) return;
+    _heldAccountKey = key;
+    _identityEpoch += 1;
+    _initialized = false;
+    _loading = false;
+    _error = null;
+    _markers = const <ArtMarker>[];
+    _lastFetch = null;
+    _inFlightRefresh = null;
+    notifyListeners();
+  }
+
+  @override
+  void dispose() {
+    AccountIdentity.removeListener(_handleAccountIdentityChanged);
+    super.dispose();
   }
 
   Future<void> initialize({bool force = false}) async {
@@ -118,6 +152,7 @@ class MarkerManagementProvider extends ChangeNotifier {
     }
 
     Future<void> run() async {
+      final epoch = _identityEpoch;
       _loading = true;
       _error = null;
       notifyListeners();
@@ -125,24 +160,30 @@ class MarkerManagementProvider extends ChangeNotifier {
         final results = await _api.getMyArtMarkers().timeout(
               const Duration(seconds: 20),
             );
+        // A list fetched under a previous account must not reach this one.
+        if (epoch != _identityEpoch) return;
         _markers = results;
         _lastFetch = DateTime.now();
       } catch (e) {
-        _error = e.toString();
+        if (epoch == _identityEpoch) _error = e.toString();
         if (kDebugMode) {
           debugPrint('MarkerManagementProvider: refresh failed: $e');
         }
       } finally {
-        _loading = false;
-        notifyListeners();
+        // A stale run must not clear the loading flag of the newer account's fetch.
+        if (epoch == _identityEpoch) {
+          _loading = false;
+          notifyListeners();
+        }
       }
     }
 
-    _inFlightRefresh = run();
+    final future = run();
+    _inFlightRefresh = future;
     try {
-      await _inFlightRefresh;
+      await future;
     } finally {
-      _inFlightRefresh = null;
+      if (identical(_inFlightRefresh, future)) _inFlightRefresh = null;
     }
   }
 
@@ -329,14 +370,22 @@ class MarkerManagementProvider extends ChangeNotifier {
     Map<String, dynamic> normalizedPayload,
     String? clientNonce,
   ) async {
+    final epoch = _identityEpoch;
     _noteContributionStarted();
     try {
       final created = await _api
           .createArtMarkerRecord(normalizedPayload)
           .timeout(const Duration(seconds: 20));
+      if (epoch != _identityEpoch) {
+        // Submitted under a previous account: the marker stays out of the
+        // current account's list and map. The publish is still counted.
+        if (created != null) _noteContributionPublished();
+        return created;
+      }
       if (created == null) {
         if (clientNonce != null && clientNonce.isNotEmpty) {
           await refresh(force: true);
+          if (epoch != _identityEpoch) return null;
           for (final marker in _markers) {
             if ((marker.metadata?['clientNonce'] ?? '').toString() ==
                 clientNonce) {
@@ -358,6 +407,7 @@ class MarkerManagementProvider extends ChangeNotifier {
       notifyListeners();
       return created;
     } catch (e) {
+      if (epoch != _identityEpoch) return null;
       _error = e.toString();
       if (kDebugMode) {
         debugPrint('MarkerManagementProvider: create failed: $e');
@@ -365,6 +415,7 @@ class MarkerManagementProvider extends ChangeNotifier {
       if (clientNonce != null && clientNonce.isNotEmpty) {
         try {
           await refresh(force: true);
+          if (epoch != _identityEpoch) return null;
           for (final marker in _markers) {
             if ((marker.metadata?['clientNonce'] ?? '').toString() ==
                 clientNonce) {
@@ -378,6 +429,7 @@ class MarkerManagementProvider extends ChangeNotifier {
           // Ignore recovery failures.
         }
       }
+      if (epoch != _identityEpoch) return null;
       notifyListeners();
       return null;
     }
@@ -428,6 +480,7 @@ class MarkerManagementProvider extends ChangeNotifier {
   ) async {
     final id = markerId.trim();
     if (id.isEmpty) return null;
+    final epoch = _identityEpoch;
     final index = _markers.indexWhere((m) => m.id == id);
     final before = index >= 0 ? _markers[index] : null;
     ArtMarker? optimistic;
@@ -444,6 +497,7 @@ class MarkerManagementProvider extends ChangeNotifier {
       final updated = await _api
           .updateArtMarkerRecord(id, updates)
           .timeout(const Duration(seconds: 20));
+      if (epoch != _identityEpoch) return updated;
       if (updated == null) {
         if (before != null) {
           _markers = _markers
@@ -480,6 +534,7 @@ class MarkerManagementProvider extends ChangeNotifier {
       notifyListeners();
       return updated;
     } catch (e) {
+      if (epoch != _identityEpoch) return null;
       _error = e.toString();
       if (kDebugMode) {
         debugPrint(
@@ -501,6 +556,7 @@ class MarkerManagementProvider extends ChangeNotifier {
   Future<bool> deleteMarker(String markerId) async {
     final id = markerId.trim();
     if (id.isEmpty) return false;
+    final epoch = _identityEpoch;
     final before = _markers;
     if (!_markers.any((m) => m.id == id)) return false;
 
@@ -513,6 +569,7 @@ class MarkerManagementProvider extends ChangeNotifier {
       final ok = await _api
           .deleteArtMarkerRecord(id)
           .timeout(const Duration(seconds: 20));
+      if (epoch != _identityEpoch) return ok;
       if (!ok) {
         _markers = before;
         _mapMarkerService.notifyMarkerUpserted(
@@ -525,6 +582,7 @@ class MarkerManagementProvider extends ChangeNotifier {
       notifyListeners();
       return true;
     } catch (e) {
+      if (epoch != _identityEpoch) return false;
       _error = e.toString();
       _markers = before;
       try {

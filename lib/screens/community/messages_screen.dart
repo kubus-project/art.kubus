@@ -30,6 +30,7 @@ import '../../utils/design_tokens.dart';
 import '../../widgets/kubus_button.dart';
 import '../../utils/kubus_color_roles.dart';
 import '../../utils/wallet_utils.dart';
+import '../../widgets/kubus_snackbar.dart';
 import '../../utils/media_url_resolver.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
 import '../../widgets/glass_components.dart';
@@ -1637,14 +1638,19 @@ class _CreateConversationDialogState extends State<_CreateConversationDialog> {
                       (avatar != null && avatar.toString().isNotEmpty)
                           ? avatar.toString()
                           : null;
-                  // Prefer adding the wallet address when available; otherwise fall back to username
+                  // Prefer the wallet, then the account UUID of a walletless
+                  // account, then the username.
                   final walletAddr =
                       (s['wallet_address'] ?? s['wallet'] ?? s['walletAddress'])
                               ?.toString() ??
                           '';
+                  final accountUserId =
+                      ((s['userId'] ?? s['user_id'])?.toString() ?? '').trim();
                   final addValue = walletAddr.isNotEmpty
                       ? walletAddr
-                      : (username ?? '').toString();
+                      : (WalletUtils.isAccountUuid(accountUserId)
+                          ? accountUserId
+                          : (username ?? '').toString());
                   return ListTile(
                     title: Text(display ?? username),
                     subtitle: Text(
@@ -1731,12 +1737,24 @@ class _CreateConversationDialogState extends State<_CreateConversationDialog> {
             final members = [..._memberList, ...manualMembers];
             final cp = Provider.of<ChatProvider>(context, listen: false);
             final navigator = Navigator.of(context);
-            final res = await cp.createConversation(
+            final messenger = ScaffoldMessenger.of(context);
+            final l10n = AppLocalizations.of(context)!;
+            final outcome = await cp.createConversationOutcome(
               _title.text,
               _isGroup,
               members,
             );
             if (!mounted) return;
+            if (outcome.recipientUnavailable) {
+              // Neutral: the dialog stays open and the reason is not shown.
+              messenger.showKubusSnackBar(
+                SnackBar(
+                  content: Text(l10n.messagingRecipientUnavailableToast),
+                ),
+              );
+              return;
+            }
+            final res = outcome.conversation;
             if (res != null && _avatarBytes != null) {
               try {
                 await cp.uploadConversationAvatar(

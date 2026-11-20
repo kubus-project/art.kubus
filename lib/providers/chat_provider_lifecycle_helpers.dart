@@ -301,6 +301,7 @@ void _chatProviderBindToRefresh(
 void _chatProviderBindAuthContext(
   ChatProvider provider, {
   ProfileProvider? profileProvider,
+  String? accountId,
   String? walletAddress,
   bool? isSignedIn,
 }) {
@@ -310,12 +311,26 @@ void _chatProviderBindAuthContext(
     final wallet = WalletUtils.normalize(walletAddress);
     final resolvedWallet = profileWallet.isNotEmpty ? profileWallet : wallet;
     final signedIn = isSignedIn ?? (profileProvider?.isSignedIn ?? false);
+    final resolvedAccountId = (accountId ??
+            profileProvider?.currentUser?.userId ??
+            profileProvider?.currentUser?.id ??
+            '')
+        .trim();
     final token = (provider._api.getAuthToken() ?? '').trim();
+    final previousSignature = provider._lastAuthSignature;
+    final accountChanged = previousSignature.isNotEmpty &&
+        resolvedAccountId.isNotEmpty &&
+        provider._lastAuthAccountId != resolvedAccountId;
+    // Read before this bind records the account below.
+    final previousAccountId = provider._lastAuthAccountId;
     final signature =
-        '${token.isNotEmpty}:${resolvedWallet.toLowerCase()}:${signedIn.toString()}';
+        '${token.isNotEmpty}:$resolvedAccountId:$resolvedWallet:${signedIn.toString()}';
 
-    if (signature == provider._lastAuthSignature) return;
+    if (signature == previousSignature) return;
     provider._lastAuthSignature = signature;
+    if (resolvedAccountId.isNotEmpty) {
+      provider._lastAuthAccountId = resolvedAccountId;
+    }
 
     final hasSession =
         token.isNotEmpty || resolvedWallet.isNotEmpty || signedIn;
@@ -324,11 +339,24 @@ void _chatProviderBindAuthContext(
       return;
     }
 
-    // A signed-in identity with no wallet is a different account from whatever
-    // held the chat state before. Clear that state now, before the wallet-keyed
-    // paths below can return early and leave it in memory.
-    if (resolvedWallet.isEmpty) {
+    // A canonical account can change while the wallet stays the same (for
+    // example, a shared wallet linked to another email account). Clear the old
+    // account's state before the wallet-keyed paths below can return early.
+    if (accountChanged) {
+      provider._resetSessionState(reason: 'accountChanged');
+    } else if (resolvedWallet.isEmpty &&
+        !(resolvedAccountId.isNotEmpty &&
+            resolvedAccountId == previousAccountId)) {
+      // Walletless accounts are identified by their canonical account ID. An ID
+      // the identity listener has already recorded needs no second reset; any
+      // other walletless state may belong to a different account.
       provider._resetSessionState(reason: 'identityWithoutWallet');
+    }
+
+    // The session's personal socket rooms belong to this account from here on.
+    // The next session reset leaves them by this id.
+    if (resolvedAccountId.isNotEmpty) {
+      provider._socketAccountId = resolvedAccountId;
     }
 
     if (resolvedWallet.isNotEmpty &&

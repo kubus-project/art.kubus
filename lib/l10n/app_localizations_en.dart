@@ -5611,6 +5611,10 @@ class AppLocalizationsEn extends AppLocalizations {
       'Could not open conversation.';
 
   @override
+  String get messagingRecipientUnavailableToast =>
+      'You cannot message this account.';
+
+  @override
   String get userProfileConversationOpenGenericErrorToast =>
       'Failed to open conversation. Please try again.';
 
@@ -10232,6 +10236,12 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get communityGroupsDirectoryDescription =>
       'Find focused spaces for critiques, exhibitions, public art, events, and collaborations.';
+
+  @override
+  String get communityGroupsJoinedSectionTitle => 'Your groups';
+
+  @override
+  String get communityGroupsDiscoverSectionTitle => 'Discover public groups';
 
   @override
   String get communityClearSearchTooltip => 'Clear search';
