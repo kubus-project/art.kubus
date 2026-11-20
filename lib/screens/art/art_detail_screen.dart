@@ -11,6 +11,7 @@ import '../../widgets/inline_loading.dart';
 import '../../widgets/identity/kubus_identity_avatar.dart';
 import '../../widgets/artwork_author_line.dart';
 import '../../widgets/artwork_gallery_view.dart';
+import '../../widgets/artwork_private_preview_image.dart';
 import '../../widgets/detail/detail_shell_components.dart';
 import '../../widgets/detail/artwork_provenance_section.dart';
 import '../../widgets/detail/subject_action_group.dart';
@@ -268,7 +269,9 @@ class _ArtDetailScreenState extends State<ArtDetailScreen> {
                 appBar: AppBar(
                   title: Text(
                     l10n.artDetailLoadingTitle,
-                    style: KubusTypography.inter(fontWeight: FontWeight.w600),
+                    style: KubusTypography.inter(
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                   backgroundColor: Theme.of(context).colorScheme.surface,
                   elevation: 0,
@@ -403,7 +406,10 @@ class _ArtDetailScreenState extends State<ArtDetailScreen> {
                           // artwork crop at this same compact width.
                           aspectRatio: 0.77,
                           child: _buildPreviewCoverImage(
-                            ArtworkMediaResolver.resolveCover(artwork: artwork),
+                            artwork,
+                            ArtworkMediaResolver.resolveCover(
+                              artwork: artwork,
+                            ),
                             semanticLabel: artwork.title.trim().isEmpty
                                 ? 'Artwork image'
                                 : '${artwork.title} image',
@@ -431,7 +437,7 @@ class _ArtDetailScreenState extends State<ArtDetailScreen> {
                           ArtworkProvenanceSection(artwork: artwork),
                           const SizedBox(height: DetailSpacing.cardGap),
                           _buildGallerySection(artwork),
-                          if (artwork.galleryUrls.isNotEmpty)
+                          if (_hasGalleryMedia(artwork))
                             const SizedBox(height: DetailSpacing.cardGap),
                           ArtworkSpatialArchiveSection(
                             artwork: artwork,
@@ -480,6 +486,25 @@ class _ArtDetailScreenState extends State<ArtDetailScreen> {
     final savedItemsProvider = context.read<SavedItemsProvider>();
 
     if (existing != null) {
+      if (mounted) {
+        setState(() {
+          _artworkLoading = true;
+          _artworkError = null;
+        });
+      }
+      final refreshed =
+          await provider.refreshArtworkDetailMetadata(widget.artworkId);
+      if (!mounted) return;
+      if (refreshed == null) {
+        setState(() {
+          _artworkLoading = false;
+          _artworkError = l10n.artDetailLoadFailedMessage;
+        });
+        return;
+      }
+    }
+
+    if (existing != null) {
       await savedItemsProvider.hydrateSavedStatus(
         type: SavedItemType.artwork,
         ids: [widget.artworkId],
@@ -502,6 +527,7 @@ class _ArtDetailScreenState extends State<ArtDetailScreen> {
 
     try {
       await provider.fetchArtworkIfNeeded(widget.artworkId);
+
       await savedItemsProvider.hydrateSavedStatus(
         type: SavedItemType.artwork,
         ids: [widget.artworkId],
@@ -540,7 +566,15 @@ class _ArtDetailScreenState extends State<ArtDetailScreen> {
     );
   }
 
-  Widget _buildPreviewCoverImage(String? imageUrl, {String? semanticLabel}) {
+  bool _hasGalleryMedia(Artwork artwork) => artwork.canUsePublicMedia
+      ? artwork.galleryUrls.isNotEmpty
+      : artwork.mediaPreview?.gallery.isNotEmpty == true;
+
+  Widget _buildPreviewCoverImage(
+    Artwork artwork,
+    String? imageUrl, {
+    String? semanticLabel,
+  }) {
     final scheme = Theme.of(context).colorScheme;
     final resolved = (imageUrl ?? '').trim();
     final placeholder = Container(
@@ -554,18 +588,22 @@ class _ArtDetailScreenState extends State<ArtDetailScreen> {
       ),
     );
 
-    if (resolved.isEmpty) {
-      return placeholder;
-    }
-
-    // KubusCachedImage walks the gateway candidates (an IPFS cover moves to the
-    // next gateway when one fails) and shows the placeholder, not a broken
-    // image, when every candidate has failed.
-    return KubusCachedImage(
-      imageUrl: resolved,
+    final fallback = resolved.isEmpty
+        ? placeholder
+        : KubusCachedImage(
+            imageUrl: resolved,
+            fit: BoxFit.cover,
+            semanticLabel: semanticLabel,
+            errorBuilder: (_, __, ___) => placeholder,
+          );
+    return ArtworkPrivatePreviewImage(
+      artworkId: artwork.id,
+      isPublic: artwork.canUsePublicMedia,
+      slot: 'cover',
+      descriptor: artwork.mediaPreview,
+      descriptorProvided: artwork.mediaPreviewProvided,
+      publicFallback: fallback,
       fit: BoxFit.cover,
-      semanticLabel: semanticLabel,
-      errorBuilder: (_, __, ___) => placeholder,
     );
   }
 
@@ -737,8 +775,9 @@ class _ArtDetailScreenState extends State<ArtDetailScreen> {
                   SubjectAction(
                     icon: Icons.navigation_outlined,
                     label: l10n.commonNavigate,
-                    onPressed: () => MapDestination.ofArtwork(artwork)
-                        .showNavigationOptions(context),
+                    onPressed: () => MapDestination.ofArtwork(
+                      artwork,
+                    ).showNavigationOptions(context),
                   ),
                 ],
               ),
@@ -764,7 +803,31 @@ class _ArtDetailScreenState extends State<ArtDetailScreen> {
   }
 
   Widget _buildGallerySection(Artwork artwork) {
-    if (artwork.galleryUrls.isEmpty) return const SizedBox.shrink();
+    final hasPrivatePreview = artwork.mediaPreview != null;
+    final canUsePublicMedia = artwork.canUsePublicMedia && !hasPrivatePreview;
+    if (canUsePublicMedia && artwork.galleryUrls.isEmpty) {
+      return const SizedBox.shrink();
+    }
+    if (!canUsePublicMedia && !hasPrivatePreview) {
+      return const SizedBox.shrink();
+    }
+
+    if (!canUsePublicMedia) {
+      final descriptor = artwork.mediaPreview!;
+      final slots = <String>[
+        if (descriptor.cover != null) 'cover',
+        for (var index = 0; index < descriptor.gallery.length; index++)
+          'gallery-$index',
+      ];
+      if (slots.isEmpty) return const SizedBox.shrink();
+      final title = artwork.title.trim();
+      return ArtworkGalleryView(
+        imageUrls: List<String>.filled(slots.length, 'private-preview-slot'),
+        privateArtwork: artwork,
+        privateSlots: slots,
+        semanticLabel: title.isEmpty ? null : '$title image',
+      );
+    }
 
     final coverUrl = ArtworkMediaResolver.resolveCover(artwork: artwork);
     final urls = <String>[

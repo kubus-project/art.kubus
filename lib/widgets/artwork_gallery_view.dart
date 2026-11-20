@@ -3,18 +3,24 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../utils/design_tokens.dart';
+import '../models/artwork.dart';
+import 'artwork_private_preview_image.dart';
 import 'disk_cached_artwork_image.dart';
 
 class ArtworkGalleryView extends StatefulWidget {
   final List<String> imageUrls;
   final double height;
   final String? semanticLabel;
+  final Artwork? privateArtwork;
+  final List<String>? privateSlots;
 
   const ArtworkGalleryView({
     super.key,
     required this.imageUrls,
     this.height = 260,
     this.semanticLabel,
+    this.privateArtwork,
+    this.privateSlots,
   });
 
   @override
@@ -57,6 +63,7 @@ class _ArtworkGalleryViewState extends State<ArtworkGalleryView>
   }
 
   void _prefetchAround(int index) {
+    if (widget.privateArtwork != null) return;
     final urls = widget.imageUrls
         .map((u) => u.trim())
         .where((u) => u.isNotEmpty)
@@ -108,6 +115,8 @@ class _ArtworkGalleryViewState extends State<ArtworkGalleryView>
         urls: urls,
         initialIndex: initialIndex,
         semanticLabel: _semanticSubject,
+        privateArtwork: widget.privateArtwork,
+        privateSlots: widget.privateSlots,
       ),
     );
   }
@@ -136,18 +145,48 @@ class _ArtworkGalleryViewState extends State<ArtworkGalleryView>
               child: SizedBox(
                 height: height,
                 width: double.infinity,
-                child: _DiskCachedArtworkImage(
+                child: _imageAt(
                   url: url,
+                  index: index,
                   fit: BoxFit.cover,
                   showProgress: true,
                   errorIconColor: scheme.outline.withValues(alpha: 0.8),
-                  excludeFromSemantics: true,
                 ),
               ),
             ),
           ),
         ),
       ),
+    );
+  }
+
+  Widget _imageAt({
+    required String url,
+    required int index,
+    required BoxFit fit,
+    required bool showProgress,
+    required Color errorIconColor,
+  }) {
+    final artwork = widget.privateArtwork;
+    final slots = widget.privateSlots;
+    final slot = slots != null && index < slots.length ? slots[index] : null;
+    if (artwork != null) {
+      return ArtworkPrivatePreviewImage(
+        artworkId: artwork.id,
+        isPublic: false,
+        slot: slot ?? 'unavailable',
+        descriptor: artwork.mediaPreview,
+        descriptorProvided: artwork.mediaPreviewProvided,
+        fit: fit,
+        publicFallback: const SizedBox.expand(),
+      );
+    }
+    return _DiskCachedArtworkImage(
+      url: url,
+      fit: fit,
+      showProgress: showProgress,
+      errorIconColor: errorIconColor,
+      excludeFromSemantics: true,
     );
   }
 
@@ -202,10 +241,9 @@ class _ArtworkGalleryViewState extends State<ArtworkGalleryView>
                       shape: BoxShape.circle,
                       color: idx == _index
                           ? Theme.of(context).colorScheme.primary
-                          : Theme.of(context)
-                              .colorScheme
-                              .outline
-                              .withValues(alpha: 0.35),
+                          : Theme.of(
+                              context,
+                            ).colorScheme.outline.withValues(alpha: 0.35),
                     ),
                   ),
                 ),
@@ -272,10 +310,9 @@ class _ArtworkGalleryViewState extends State<ArtworkGalleryView>
                               url: url,
                               fit: BoxFit.cover,
                               showProgress: false,
-                              errorIconColor: Theme.of(context)
-                                  .colorScheme
-                                  .outline
-                                  .withValues(alpha: 0.6),
+                              errorIconColor: Theme.of(
+                                context,
+                              ).colorScheme.outline.withValues(alpha: 0.6),
                               excludeFromSemantics: true,
                             ),
                           ),
@@ -297,11 +334,15 @@ class _ArtworkLightboxDialog extends StatefulWidget {
   final List<String> urls;
   final int initialIndex;
   final String semanticLabel;
+  final Artwork? privateArtwork;
+  final List<String>? privateSlots;
 
   const _ArtworkLightboxDialog({
     required this.urls,
     required this.initialIndex,
     required this.semanticLabel,
+    this.privateArtwork,
+    this.privateSlots,
   });
 
   @override
@@ -316,9 +357,7 @@ class _ArtworkLightboxDialogState extends State<_ArtworkLightboxDialog> {
   void initState() {
     super.initState();
     _index = widget.initialIndex.clamp(0, widget.urls.length - 1);
-    _controller = PageController(
-      initialPage: _index,
-    );
+    _controller = PageController(initialPage: _index);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _prefetchAround(_index);
     });
@@ -331,6 +370,7 @@ class _ArtworkLightboxDialogState extends State<_ArtworkLightboxDialog> {
   }
 
   void _prefetchAround(int index) {
+    if (widget.privateArtwork != null) return;
     final urls =
         widget.urls.map((u) => u.trim()).where((u) => u.isNotEmpty).toList();
     if (urls.isEmpty) return;
@@ -381,13 +421,7 @@ class _ArtworkLightboxDialogState extends State<_ArtworkLightboxDialog> {
                       minScale: 0.8,
                       maxScale: 4,
                       child: Center(
-                        child: _DiskCachedArtworkImage(
-                          url: url,
-                          fit: BoxFit.contain,
-                          showProgress: true,
-                          errorIconColor: scheme.outline.withValues(alpha: 0.8),
-                          excludeFromSemantics: true,
-                        ),
+                        child: _imageAt(url: url, index: idx, scheme: scheme),
                       ),
                     ),
                   ),
@@ -413,6 +447,34 @@ class _ArtworkLightboxDialogState extends State<_ArtworkLightboxDialog> {
           ],
         ),
       ),
+    );
+  }
+
+  Widget _imageAt({
+    required String url,
+    required int index,
+    required ColorScheme scheme,
+  }) {
+    final artwork = widget.privateArtwork;
+    final slots = widget.privateSlots;
+    final slot = slots != null && index < slots.length ? slots[index] : null;
+    if (artwork != null) {
+      return ArtworkPrivatePreviewImage(
+        artworkId: artwork.id,
+        isPublic: false,
+        slot: slot ?? 'unavailable',
+        descriptor: artwork.mediaPreview,
+        descriptorProvided: artwork.mediaPreviewProvided,
+        fit: BoxFit.contain,
+        publicFallback: const SizedBox.expand(),
+      );
+    }
+    return _DiskCachedArtworkImage(
+      url: url,
+      fit: BoxFit.contain,
+      showProgress: true,
+      errorIconColor: scheme.outline.withValues(alpha: 0.8),
+      excludeFromSemantics: true,
     );
   }
 }

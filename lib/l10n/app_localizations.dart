@@ -22199,6 +22199,24 @@ abstract class AppLocalizations {
   /// **'Loading'**
   String get commonLoading;
 
+  /// No description provided for @artworkPrivatePreviewDenied.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign in with an account that can view this draft.'**
+  String get artworkPrivatePreviewDenied;
+
+  /// No description provided for @artworkPrivatePreviewUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'This preview is not available.'**
+  String get artworkPrivatePreviewUnavailable;
+
+  /// No description provided for @artworkPrivatePreviewRetry.
+  ///
+  /// In en, this message translates to:
+  /// **'This preview is temporarily unavailable. Try again later.'**
+  String get artworkPrivatePreviewRetry;
+
   /// No description provided for @desktopShellNavHome.
   ///
   /// In en, this message translates to:
