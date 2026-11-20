@@ -19216,4 +19216,29 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get galleryClearLead => 'Clear lead artwork';
+
+  @override
+  String get galleryPublishNotAllowed =>
+      'You can edit this gallery but not publish it.';
+
+  @override
+  String get galleryRefreshFailed =>
+      'Your change was saved, but the gallery could not be refreshed.';
+
+  @override
+  String galleryMovedTo(int position, int total) {
+    return 'Moved to position $position of $total';
+  }
+
+  @override
+  String get artworkPublishHeldWithdrawn =>
+      'An editor withdrew this artwork. Only an editorial decision can restore it.';
+
+  @override
+  String get artworkPublishHeldInReview =>
+      'This artwork is waiting for editorial review. It can be published once it is approved.';
+
+  @override
+  String get artworkPublishHeldGeneric =>
+      'This artwork is on editorial hold and cannot be published yet.';
 }

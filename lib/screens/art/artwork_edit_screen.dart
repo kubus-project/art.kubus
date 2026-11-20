@@ -19,6 +19,7 @@ import '../../services/profile_package_mutation_tracker.dart';
 import '../../services/share/share_service.dart';
 import '../../services/share/share_types.dart';
 import '../../utils/artwork_authorship.dart';
+import '../../utils/artwork_editorial_hold_message.dart';
 import '../../utils/authored_by_self.dart';
 import '../../utils/artwork_media_resolver.dart';
 import '../../utils/artwork_navigation.dart';
@@ -299,6 +300,11 @@ class _ArtworkEditScreenState extends State<ArtworkEditScreen> {
                 : l10n.commonActionFailedToast,
           ),
         ),
+      );
+    } on ArtworkEditorialHoldException catch (hold) {
+      if (!mounted) return;
+      messenger.showKubusSnackBar(
+        SnackBar(content: Text(artworkEditorialHoldMessage(l10n, hold))),
       );
     } catch (_) {
       if (!mounted) return;
@@ -860,7 +866,9 @@ class _ArtworkEditScreenState extends State<ArtworkEditScreen> {
         // The write did not happen: say so, keep the editor and every field
         // the user typed, and do not leave.
         messenger.showKubusSnackBar(
-          SnackBar(content: Text(_failureMessage(l10n, result.failure))),
+          SnackBar(
+            content: Text(_failureMessage(l10n, result.failure, result.hold)),
+          ),
         );
         return;
       }
@@ -879,7 +887,11 @@ class _ArtworkEditScreenState extends State<ArtworkEditScreen> {
       messenger.showKubusSnackBar(
         SnackBar(
           content: Text(
-            _failureMessage(l10n, classifyArtworkUpdateFailure(error)),
+            _failureMessage(
+              l10n,
+              classifyArtworkUpdateFailure(error),
+              error is ArtworkEditorialHoldException ? error : null,
+            ),
           ),
         ),
       );
@@ -891,8 +903,16 @@ class _ArtworkEditScreenState extends State<ArtworkEditScreen> {
   }
 
   /// A contextual message for a failed save, drawn from existing strings.
-  String _failureMessage(AppLocalizations l10n, ArtworkUpdateFailure? failure) {
+  String _failureMessage(
+    AppLocalizations l10n,
+    ArtworkUpdateFailure? failure,
+    ArtworkEditorialHoldException? hold,
+  ) {
     switch (failure) {
+      case ArtworkUpdateFailure.editorialHold:
+        return hold == null
+            ? l10n.artworkPublishHeldGeneric
+            : artworkEditorialHoldMessage(l10n, hold);
       case ArtworkUpdateFailure.unauthorized:
         return l10n.communityCommentAuthRequiredToast;
       case ArtworkUpdateFailure.forbidden:

@@ -152,6 +152,64 @@ class BackendApiRequestException implements Exception {
   }
 }
 
+/// Which editorial hold refused an owner publish.
+enum ArtworkEditorialHoldKind {
+  /// An editor rejected or archived the artwork.
+  withdrawn,
+
+  /// The artwork is waiting for editorial review.
+  inReview,
+
+  /// The backend named the hold without saying which one.
+  unspecified,
+}
+
+/// The backend refused to publish an editorially held artwork: HTTP 409 with
+/// errorCode `ARTWORK_EDITORIAL_HOLD`. Only an editorial decision lifts the
+/// hold, so a caller must not retry. It is still a 409
+/// [BackendApiRequestException] for code that only looks at the status.
+class ArtworkEditorialHoldException extends BackendApiRequestException {
+  const ArtworkEditorialHoldException({
+    required super.path,
+    required this.kind,
+    this.editorialState,
+    super.body,
+  }) : super(statusCode: 409);
+
+  static const String errorCode = 'ARTWORK_EDITORIAL_HOLD';
+
+  final ArtworkEditorialHoldKind kind;
+  final String? editorialState;
+
+  /// The typed hold for a 409 response carrying [errorCode], else null.
+  static ArtworkEditorialHoldException? tryParse({
+    required int statusCode,
+    required String path,
+    String? body,
+  }) {
+    if (statusCode != 409 || body == null || body.isEmpty) return null;
+    final Object? decoded;
+    try {
+      decoded = jsonDecode(body);
+    } on FormatException {
+      return null;
+    }
+    if (decoded is! Map || decoded['errorCode'] != errorCode) return null;
+    final state = decoded['editorialState']?.toString().trim().toLowerCase();
+    final kind = switch (state) {
+      'rejected' || 'archived' => ArtworkEditorialHoldKind.withdrawn,
+      'needs_review' => ArtworkEditorialHoldKind.inReview,
+      _ => ArtworkEditorialHoldKind.unspecified,
+    };
+    return ArtworkEditorialHoldException(
+      path: path,
+      kind: kind,
+      editorialState: state,
+      body: body,
+    );
+  }
+}
+
 /// Account-scoped unread counts returned by `/api/notifications/unread-summary`.
 /// Message counts come from authoritative conversation state and are kept
 /// separate from notification rows so a DM is counted only once.
@@ -6464,11 +6522,16 @@ class BackendApiService
         }
         return null;
       }
-      throw BackendApiRequestException(
-        statusCode: response.statusCode,
-        path: path,
-        body: response.body,
-      );
+      throw ArtworkEditorialHoldException.tryParse(
+            statusCode: response.statusCode,
+            path: path,
+            body: response.body,
+          ) ??
+          BackendApiRequestException(
+            statusCode: response.statusCode,
+            path: path,
+            body: response.body,
+          );
     } catch (error, stackTrace) {
       _throwTypedMutationFailure(
         error: error,
@@ -6504,6 +6567,13 @@ class BackendApiService
         }
         return null;
       }
+      // An editorial hold is a decision, not a failure to retry.
+      final hold = ArtworkEditorialHoldException.tryParse(
+        statusCode: response.statusCode,
+        path: uri.path,
+        body: response.body,
+      );
+      if (hold != null) throw hold;
       throw Exception(
         'Failed to publish artwork: ${response.statusCode} ${response.body}',
       );
@@ -9557,6 +9627,8 @@ class BackendApiService
 
   /// Get institution by id
   /// GET /api/institutions/:id
+  ///
+  /// Returns null only when the API answers 404. Other failures throw.
   Future<Map<String, dynamic>?> getInstitution(String id) async {
     try {
       final response = await _get(
@@ -9575,7 +9647,10 @@ class BackendApiService
       }
     } catch (e) {
       AppConfig.debugPrint('BackendApiService.getInstitution failed: $e');
-      return null;
+      // Only the API's 404 above means "not found". Any other failure is
+      // surfaced so the screen can offer a retry instead of claiming the
+      // institution does not exist.
+      rethrow;
     }
   }
 

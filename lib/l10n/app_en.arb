@@ -8169,5 +8169,21 @@
   "gallerySizeStandard": "Standard",
   "gallerySizeLead": "Large",
   "galleryMakeLead": "Make lead artwork",
-  "galleryClearLead": "Clear lead artwork"
+  "galleryClearLead": "Clear lead artwork",
+  "galleryPublishNotAllowed": "You can edit this gallery but not publish it.",
+  "galleryRefreshFailed": "Your change was saved, but the gallery could not be refreshed.",
+  "galleryMovedTo": "Moved to position {position} of {total}",
+  "@galleryMovedTo": {
+    "placeholders": {
+      "position": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "artworkPublishHeldWithdrawn": "An editor withdrew this artwork. Only an editorial decision can restore it.",
+  "artworkPublishHeldInReview": "This artwork is waiting for editorial review. It can be published once it is approved.",
+  "artworkPublishHeldGeneric": "This artwork is on editorial hold and cannot be published yet."
 }

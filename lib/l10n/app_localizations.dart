@@ -33380,6 +33380,42 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Clear lead artwork'**
   String get galleryClearLead;
+
+  /// No description provided for @galleryPublishNotAllowed.
+  ///
+  /// In en, this message translates to:
+  /// **'You can edit this gallery but not publish it.'**
+  String get galleryPublishNotAllowed;
+
+  /// No description provided for @galleryRefreshFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Your change was saved, but the gallery could not be refreshed.'**
+  String get galleryRefreshFailed;
+
+  /// No description provided for @galleryMovedTo.
+  ///
+  /// In en, this message translates to:
+  /// **'Moved to position {position} of {total}'**
+  String galleryMovedTo(int position, int total);
+
+  /// No description provided for @artworkPublishHeldWithdrawn.
+  ///
+  /// In en, this message translates to:
+  /// **'An editor withdrew this artwork. Only an editorial decision can restore it.'**
+  String get artworkPublishHeldWithdrawn;
+
+  /// No description provided for @artworkPublishHeldInReview.
+  ///
+  /// In en, this message translates to:
+  /// **'This artwork is waiting for editorial review. It can be published once it is approved.'**
+  String get artworkPublishHeldInReview;
+
+  /// No description provided for @artworkPublishHeldGeneric.
+  ///
+  /// In en, this message translates to:
+  /// **'This artwork is on editorial hold and cannot be published yet.'**
+  String get artworkPublishHeldGeneric;
 }
 
 class _AppLocalizationsDelegate
