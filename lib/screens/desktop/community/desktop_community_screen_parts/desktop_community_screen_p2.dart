@@ -791,30 +791,26 @@ extension _DesktopCommunityScreenStatePart2 on _DesktopCommunityScreenState {
             selection: TextSelection.collapsed(offset: currentQuery.length),
           );
         }
-        final groups = communityProvider.groups;
+        final joinedGroups = communityProvider.joinedGroups;
+        final discoverableGroups = communityProvider.discoverableGroups;
+        final hasGroups =
+            joinedGroups.isNotEmpty || discoverableGroups.isNotEmpty;
         final isLoading = communityProvider.groupsLoading;
         final error = communityProvider.groupsError;
 
-        if (isLoading && groups.isEmpty) {
+        if (isLoading && !hasGroups) {
           return _buildLoadingState(
               themeProvider, l10n.desktopCommunityLoadingGroupsLabel);
         }
 
-        if (error != null && groups.isEmpty) {
+        if (error != null && !hasGroups) {
           return _buildErrorState(themeProvider, error, () async {
             await communityProvider.loadGroups(refresh: true);
           });
         }
 
-        if (groups.isEmpty) {
-          return _buildEmptyState(
-            themeProvider,
-            Icons.groups_outlined,
-            l10n.desktopCommunityEmptyGroupsTitle,
-            l10n.desktopCommunityEmptyGroupsBody,
-          );
-        }
-
+        // The search row is the list's first item even when nothing matches,
+        // so a query can always be changed or cleared.
         return RefreshIndicator(
           onRefresh: () async {
             await communityProvider.loadGroups(
@@ -823,7 +819,7 @@ extension _DesktopCommunityScreenStatePart2 on _DesktopCommunityScreenState {
           color: themeProvider.accentColor,
           child: ListView.builder(
             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-            itemCount: groups.length + 1,
+            itemCount: 2,
             itemBuilder: (context, index) {
               if (index == 0) {
                 return Padding(
@@ -874,7 +870,27 @@ extension _DesktopCommunityScreenStatePart2 on _DesktopCommunityScreenState {
                   ),
                 );
               }
-              return _buildGroupCard(groups[index - 1], themeProvider);
+              if (!hasGroups) {
+                final query = communityProvider.currentGroupSearchQuery;
+                return Padding(
+                  padding: const EdgeInsets.only(top: 48),
+                  child: _buildEmptyState(
+                    themeProvider,
+                    Icons.groups_outlined,
+                    query.isEmpty
+                        ? l10n.desktopCommunityEmptyGroupsTitle
+                        : l10n.communityGroupsEmptyTitle,
+                    query.isEmpty
+                        ? l10n.desktopCommunityEmptyGroupsBody
+                        : l10n.communityGroupsEmptySearchDescription(query),
+                  ),
+                );
+              }
+              return CommunityGroupSections(
+                joinedGroups: joinedGroups,
+                discoverableGroups: discoverableGroups,
+                cardBuilder: (group) => _buildGroupCard(group, themeProvider),
+              );
             },
           ),
         );
@@ -993,12 +1009,47 @@ extension _DesktopCommunityScreenStatePart2 on _DesktopCommunityScreenState {
     );
   }
 
+  /// Join or leave from the card. A failed change leaves the list as it was and
+  /// says so, rather than showing a membership that did not happen.
+  Future<void> _handleGroupMembershipToggle(CommunityGroupSummary group) async {
+    if (_groupActionsInFlight.contains(group.id)) return;
+    _applyState(() {
+      _groupActionsInFlight.add(group.id);
+    });
+    try {
+      final hub = context.read<CommunityHubProvider>();
+      if (group.isMember) {
+        await hub.leaveGroup(group.id);
+      } else {
+        await hub.joinGroup(group.id);
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint(
+            'DesktopCommunityScreen: failed to update group membership: $e');
+      }
+      if (!mounted) return;
+      final l10n = AppLocalizations.of(context)!;
+      ScaffoldMessenger.of(context).showKubusSnackBar(
+        SnackBar(content: Text(l10n.communityGroupMembershipUpdateFailedToast)),
+      );
+    } finally {
+      if (mounted) {
+        _applyState(() {
+          _groupActionsInFlight.remove(group.id);
+        });
+      }
+    }
+  }
+
   Widget _buildGroupCard(
       CommunityGroupSummary group, ThemeProvider themeProvider) {
     return CommunityGroupCard(
       group: group,
       accentColor: themeProvider.accentColor,
       variant: CommunityGroupCardVariant.desktop,
+      onToggleMembership: () => unawaited(_handleGroupMembershipToggle(group)),
+      isMembershipActionInFlight: _groupActionsInFlight.contains(group.id),
       onOpenGroupFeed: () {
         final shellScope = DesktopShellScope.of(context);
         if (shellScope != null) {

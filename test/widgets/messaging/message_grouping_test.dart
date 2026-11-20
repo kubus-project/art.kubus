@@ -37,6 +37,30 @@ void main() {
       expect(messagesShareGroup(a, b), isTrue);
     });
 
+    test('walletless messages group by sender account, not by empty wallet',
+        () {
+      ChatMessage walletless(String userId, DateTime at) => ChatMessage(
+            id: 'w-$userId-${at.millisecondsSinceEpoch}',
+            conversationId: 'c1',
+            senderWallet: '',
+            senderUserId: userId,
+            message: 'hi',
+            createdAt: at,
+          );
+      final at = DateTime(2026, 10, 20, 12);
+      expect(
+        messagesShareGroup(
+          walletless('user-a', at),
+          walletless('user-a', at.add(const Duration(seconds: 30))),
+        ),
+        isTrue,
+      );
+      expect(
+        messagesShareGroup(walletless('user-a', at), walletless('user-b', at)),
+        isFalse,
+      );
+    });
+
     test('a gap beyond the window breaks the group', () {
       final a = _message(at: DateTime(2026, 10, 20, 12));
       final b = _message(at: DateTime(2026, 10, 20, 12, 5, 1));

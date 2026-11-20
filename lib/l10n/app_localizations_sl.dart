@@ -5661,6 +5661,10 @@ class AppLocalizationsSl extends AppLocalizations {
       'Pogovora ni bilo mogoče odpreti.';
 
   @override
+  String get messagingRecipientUnavailableToast =>
+      'Temu računu ni mogoče poslati sporočila.';
+
+  @override
   String get userProfileConversationOpenGenericErrorToast =>
       'Pogovora ni bilo mogoče odpreti. Poskusi znova.';
 
@@ -10328,6 +10332,12 @@ class AppLocalizationsSl extends AppLocalizations {
   @override
   String get communityGroupsDirectoryDescription =>
       'Poišči osredotočene prostore za kritike, razstave, javno umetnost, dogodke in sodelovanja.';
+
+  @override
+  String get communityGroupsJoinedSectionTitle => 'Vaše skupine';
+
+  @override
+  String get communityGroupsDiscoverSectionTitle => 'Poišči javne skupine';
 
   @override
   String get communityClearSearchTooltip => 'Počisti iskanje';

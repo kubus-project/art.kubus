@@ -9916,6 +9916,12 @@ abstract class AppLocalizations {
   /// **'Could not open conversation.'**
   String get userProfileConversationOpenFailedToast;
 
+  /// No description provided for @messagingRecipientUnavailableToast.
+  ///
+  /// In en, this message translates to:
+  /// **'You cannot message this account.'**
+  String get messagingRecipientUnavailableToast;
+
   /// No description provided for @userProfileConversationOpenGenericErrorToast.
   ///
   /// In en, this message translates to:
@@ -17834,6 +17840,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Find focused spaces for critiques, exhibitions, public art, events, and collaborations.'**
   String get communityGroupsDirectoryDescription;
+
+  /// No description provided for @communityGroupsJoinedSectionTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Your groups'**
+  String get communityGroupsJoinedSectionTitle;
+
+  /// No description provided for @communityGroupsDiscoverSectionTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Discover public groups'**
+  String get communityGroupsDiscoverSectionTitle;
 
   /// No description provided for @communityClearSearchTooltip.
   ///

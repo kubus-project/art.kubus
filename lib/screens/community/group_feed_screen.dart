@@ -34,6 +34,7 @@ import '../../utils/community_screen_utils.dart';
 import '../../utils/community_subject_navigation.dart';
 import '../../utils/media_url_resolver.dart';
 import '../../utils/wallet_utils.dart';
+import '../../services/account_identity.dart';
 import '../../utils/search_suggestions.dart';
 import '../../utils/profile_identity_navigation.dart';
 import '../../widgets/app_loading.dart';
@@ -105,7 +106,7 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
                 Consumer<CommunityHubProvider>(
                   builder: (context, hub, _) {
                     final latest = _resolveGroup(hub);
-                    final isOwner = latest.isOwner;
+                    final isOwner = _isGroupOwner(latest);
                     final isMember = latest.isMember;
                     final label = isOwner
                         ? l10n.commonOwner
@@ -235,7 +236,7 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
     final scheme = Theme.of(context).colorScheme;
     final profileProvider = context.watch<ProfileProvider>();
     final isSignedIn = profileProvider.isSignedIn;
-    final isMember = summary.isMember || summary.isOwner;
+    final isMember = summary.isMember || _isGroupOwner(summary);
     final draft = hub.draft;
 
     if (!isSignedIn) {
@@ -493,13 +494,15 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
       if (!mounted) return;
       messenger.showKubusSnackBar(
         SnackBar(
-          content: Text(communityComposerFailureMessage(
-            l10n,
-            e,
-            unuploadedMediaCount: _composerMedia.hasFailedUploads
-                ? _composerMedia.unuploadedCount
-                : null,
-          )),
+          content: Text(communityGroupPostMembershipRequired(e)
+              ? l10n.groupFeedJoinToPostLabel
+              : communityComposerFailureMessage(
+                  l10n,
+                  e,
+                  unuploadedMediaCount: _composerMedia.hasFailedUploads
+                      ? _composerMedia.unuploadedCount
+                      : null,
+                )),
           duration: const Duration(seconds: 3),
         ),
       );
@@ -779,7 +782,11 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
         final walletProvider =
             Provider.of<WalletProvider>(context, listen: false);
         final currentWallet = walletProvider.currentWalletAddress;
-        if (post.postType == 'repost' && post.authorWallet == currentWallet) {
+        if (post.postType == 'repost' &&
+            post.isAuthoredBySession(
+              accountId: AccountIdentity.accountKey,
+              wallet: currentWallet,
+            )) {
           _showRepostOptions(post);
         } else {
           _showRepostModal(post);
@@ -826,12 +833,23 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
     }
   }
 
+  /// Whether the signed-in session owns [group]. The server's owner flag is
+  /// trusted first; otherwise the owner account id, then the legacy owner wallet.
+  bool _isGroupOwner(CommunityGroupSummary group) {
+    if (group.isOwner) return true;
+    return group.isOwnedBySession(
+      accountId: AccountIdentity.accountKey,
+      wallet: _currentWalletAddress(),
+    );
+  }
+
   Future<void> _showPostOptionsForPost(CommunityPost post) async {
     if (!mounted) return;
     final currentWallet = _currentWalletAddress();
-    final authorWallet = post.authorWallet ?? post.authorId;
-    final isOwner = currentWallet != null &&
-        WalletUtils.equals(authorWallet, currentWallet);
+    final isOwner = post.isAuthoredBySession(
+      accountId: AccountIdentity.accountKey,
+      wallet: currentWallet,
+    );
 
     final action = await showCommunityPostOptionsSheet(
       context: context,

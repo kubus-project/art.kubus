@@ -3,18 +3,22 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 
 import '../community/community_interactions.dart' show Comment;
+import '../services/account_identity.dart';
 import '../services/backend_api_service.dart';
 import 'wallet_provider.dart';
 
 class CommunityCommentsProvider extends ChangeNotifier {
   CommunityCommentsProvider({BackendApiService? api})
-      : _api = api ?? BackendApiService();
+      : _api = api ?? BackendApiService() {
+    AccountIdentity.addListener(_handleAccountIdentityChanged);
+  }
 
   final BackendApiService _api;
   WalletProvider? _walletProvider;
   String? _boundWallet;
   Timer? _walletDebounce;
   int _authEpoch = 0;
+  String _heldAccountKey = AccountIdentity.accountKey;
 
   final Map<String, List<Comment>> _commentsByPostId =
       <String, List<Comment>>{};
@@ -50,6 +54,7 @@ class CommunityCommentsProvider extends ChangeNotifier {
   void dispose() {
     _walletDebounce?.cancel();
     _walletProvider?.removeListener(_handleWalletMaybeChanged);
+    AccountIdentity.removeListener(_handleAccountIdentityChanged);
     super.dispose();
   }
 
@@ -72,7 +77,7 @@ class CommunityCommentsProvider extends ChangeNotifier {
     _errorByPostId[postId] = null;
     notifyListeners();
 
-    final requestEpoch = _authEpoch;
+    final requestEpoch = _captureAuthEpoch();
     try {
       final comments =
           await _api.getComments(postId: postId, page: page, limit: limit);
@@ -82,8 +87,10 @@ class CommunityCommentsProvider extends ChangeNotifier {
       if (requestEpoch != _authEpoch) return;
       _errorByPostId[postId] = e.toString();
     } finally {
-      _loadingByPostId[postId] = false;
-      notifyListeners();
+      if (requestEpoch == _authEpoch) {
+        _loadingByPostId[postId] = false;
+        notifyListeners();
+      }
     }
   }
 
@@ -158,11 +165,32 @@ class CommunityCommentsProvider extends ChangeNotifier {
           _normalizedWallet(_walletProvider?.currentWalletAddress);
       if (nextWallet == _boundWallet) return;
       _boundWallet = nextWallet;
-      _authEpoch += 1;
-      _commentsByPostId.clear();
-      _errorByPostId.clear();
-      notifyListeners();
+      _clearAccountState();
     });
+  }
+
+  void _handleAccountIdentityChanged() {
+    _walletDebounce?.cancel();
+    _boundWallet = _normalizedWallet(_walletProvider?.currentWalletAddress);
+    // A same-account change (wallet link, re-issued token) keeps the comments.
+    final key = AccountIdentity.accountKey;
+    if (key.isNotEmpty && key == _heldAccountKey) return;
+    _clearAccountState();
+  }
+
+  /// Starts a request under the current account. Its response is applied only
+  /// while the account is unchanged, so the held account is recorded here.
+  int _captureAuthEpoch() {
+    _heldAccountKey = AccountIdentity.accountKey;
+    return _authEpoch;
+  }
+
+  void _clearAccountState() {
+    _authEpoch += 1;
+    _commentsByPostId.clear();
+    _loadingByPostId.clear();
+    _errorByPostId.clear();
+    notifyListeners();
   }
 
   String? _normalizedWallet(String? wallet) {
