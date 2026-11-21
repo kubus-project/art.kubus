@@ -209,6 +209,20 @@ void main() {
       );
       expect(fake.requests, isEmpty);
     });
+
+    testWidgets('tells a rights holder how to ask for removal', (tester) async {
+      final fake = backend((_) async => _ok(<Object?>[]));
+      await pumpScreen(tester, signedIn: false);
+
+      const question =
+          'I hold rights in something shown here. How do I ask for its removal?';
+      await tester.ensureVisible(find.text(question));
+      await tester.tap(find.text(question));
+      await settle(tester);
+      expect(find.textContaining('support@kubus.site'), findsOneWidget);
+      expect(find.textContaining('needs no legal action'), findsOneWidget);
+      expect(fake.requests, isEmpty);
+    });
   });
 
   group('contact and bug forms', () {

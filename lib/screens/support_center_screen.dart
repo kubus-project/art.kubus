@@ -659,6 +659,7 @@ class _SupportCenterScreenState extends State<SupportCenterScreen> {
       (l10n.supportFaqQuestion3, l10n.supportFaqAnswer3),
       (l10n.supportFaqQuestion4, l10n.supportFaqAnswer4),
       (l10n.supportFaqQuestion5, l10n.supportFaqAnswer5),
+      (l10n.supportFaqQuestion6, l10n.supportFaqAnswer6),
     ];
     return _panel(
       child: Column(

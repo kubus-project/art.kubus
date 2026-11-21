@@ -21,6 +21,11 @@ enum ReportCategory {
   /// operator's decision, not the app's.
   bool get needsGoodFaithStatement =>
       this == ReportCategory.illegalContent || this == ReportCategory.copyright;
+
+  /// Categories a rights holder or a depicted person would pick; the dialog
+  /// explains how such a notice is handled.
+  bool get isRightsOrLegal =>
+      needsGoodFaithStatement || this == ReportCategory.privacy;
 }
 
 class ContentReportDraft {

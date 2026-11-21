@@ -134,6 +134,36 @@ void main() {
     expect(_result, isNull);
   });
 
+  testWidgets('rights-type categories explain how the notice is handled',
+      (tester) async {
+    await _open(tester);
+    final note = find.byKey(const ValueKey<String>('report-rights-note'));
+    expect(note, findsNothing);
+    await _pick(tester, ReportCategory.spam);
+    expect(note, findsNothing);
+    for (final category in [
+      ReportCategory.copyright,
+      ReportCategory.illegalContent,
+      ReportCategory.privacy,
+    ]) {
+      await _pick(tester, category);
+      expect(note, findsOneWidget, reason: category.wire);
+    }
+    final text = tester.widget<Text>(note).data!;
+    expect(text, contains('support@kubus.site'));
+    expect(text, contains('no legal action'));
+    await _pick(tester, ReportCategory.harassment);
+    expect(note, findsNothing);
+  });
+
+  testWidgets('the rights note is shown in Slovenian', (tester) async {
+    await _open(tester, locale: const Locale('sl'));
+    await _pick(tester, ReportCategory.copyright);
+    final note = find.byKey(const ValueKey<String>('report-rights-note'));
+    expect(note, findsOneWidget);
+    expect(tester.widget<Text>(note).data, contains('brezplačno'));
+  });
+
   testWidgets('Slovenian shows every label in Slovenian', (tester) async {
     await _open(tester, locale: const Locale('sl'));
     expect(find.text('Prijavi vsebino'), findsOneWidget);

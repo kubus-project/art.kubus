@@ -5737,7 +5737,7 @@ abstract class AppLocalizations {
   /// No description provided for @settingsTermsDialogBody.
   ///
   /// In en, this message translates to:
-  /// **'By using art.kubus, you agree to these terms:\n\n1. art.kubus is an open art platform and research-development prototype.\n2. You are responsible for protecting any wallet, recovery phrase, and recovery passwords you choose to use.\n3. Wallet-based actions can be final and irreversible.\n4. Discovery, community participation, and public cultural access should be used responsibly.\n5. We may update these terms over time.\n\nFor the complete terms, visit our website.'**
+  /// **'By using art.kubus, you agree to these terms:\n\n1. art.kubus is an open art platform and research-development prototype.\n2. You are responsible for protecting any wallet, recovery phrase, and recovery passwords you choose to use.\n3. Wallet-based actions can be final and irreversible.\n4. Discovery, community participation, and public cultural access should be used responsibly.\n5. If you hold rights in something shown here, or you appear in it, you can ask us to remove it: write to support@kubus.site or use the report control. It costs nothing and needs no legal action. A person reads each notice, we may hide the content while we review it, and we tell you what we decided.\n6. We may update these terms over time.\n\nFor the complete terms, visit our website.'**
   String get settingsTermsDialogBody;
 
   /// No description provided for @settingsPrivacyPolicyDialogTitle.
@@ -5749,7 +5749,7 @@ abstract class AppLocalizations {
   /// No description provided for @settingsPrivacyPolicyDialogBody.
   ///
   /// In en, this message translates to:
-  /// **'Your privacy matters to us:\n\n• We only collect personal data when it is needed and you have consented\n• Your wallet keys and recovery phrase stay under your control\n• We may collect anonymous usage statistics to improve the app\n• We do not share your data with third parties\n• You can disable analytics in Privacy settings\n\nFor our complete privacy policy, visit our website.'**
+  /// **'Your privacy matters to us:\n\n• We only collect personal data when it is needed and you have consented\n• Your wallet keys and recovery phrase stay under your control\n• We may collect anonymous usage statistics to improve the app\n• We do not share your data with third parties\n• You can disable analytics in Privacy settings\n• A takedown notice holds your name, contact details and explanation. Moderators and support staff read it. We keep it as long as needed to handle it and any appeal; no fixed period is set yet\n\nFor our complete privacy policy, visit our website.'**
   String get settingsPrivacyPolicyDialogBody;
 
   /// No description provided for @settingsLegalOpenFullTerms.
@@ -31095,6 +31095,18 @@ abstract class AppLocalizations {
   /// **'Open My requests and select a request to read replies and respond.'**
   String get supportFaqAnswer5;
 
+  /// No description provided for @supportFaqQuestion6.
+  ///
+  /// In en, this message translates to:
+  /// **'I hold rights in something shown here. How do I ask for its removal?'**
+  String get supportFaqQuestion6;
+
+  /// No description provided for @supportFaqAnswer6.
+  ///
+  /// In en, this message translates to:
+  /// **'Write to support@kubus.site, or use the report control on a post or profile and choose Copyright or other rights. Say what the work is, what right you hold and where it appears. It costs nothing and needs no legal action. The Terms of service describe what happens next.'**
+  String get supportFaqAnswer6;
+
   /// No description provided for @supportFormSubjectLabel.
   ///
   /// In en, this message translates to:
@@ -32468,6 +32480,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Enter a valid email address.'**
   String get reportContentContactInvalid;
+
+  /// No description provided for @reportContentRightsNote.
+  ///
+  /// In en, this message translates to:
+  /// **'A person on our team reads this report. If it looks well founded we may hide the content while we review it, and we tell you what we decided. It costs nothing and needs no legal action. You can also write to support@kubus.site.'**
+  String get reportContentRightsNote;
 
   /// No description provided for @reportContentAccountNote.
   ///

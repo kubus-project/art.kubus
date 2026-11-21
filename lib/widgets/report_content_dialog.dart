@@ -159,6 +159,12 @@ class _ReportContentDialogState extends State<_ReportContentDialog> {
               errorText: emailInvalid ? l10n.reportContentContactInvalid : null,
             ),
           ),
+          if (category?.isRightsOrLegal ?? false) ...[
+            const SizedBox(height: KubusSpacing.sm),
+            Text(l10n.reportContentRightsNote,
+                key: const ValueKey<String>('report-rights-note'),
+                style: Theme.of(context).textTheme.bodySmall),
+          ],
           const SizedBox(height: KubusSpacing.sm),
           Text(l10n.reportContentAccountNote,
               style: Theme.of(context).textTheme.bodySmall),
