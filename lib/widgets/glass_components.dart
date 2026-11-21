@@ -682,6 +682,15 @@ class KubusAlertDialog extends StatelessWidget {
   final TextStyle? titleTextStyle;
   final TextStyle? contentTextStyle;
 
+  /// Renders a solid panel: the theme surface at full alpha, no backdrop blur
+  /// and no translucent gradient stop, so page content never shows through.
+  ///
+  /// Use it for dialogs that hold dense, interactive content (a curation
+  /// editor with reorder rows and action buttons) where text from the page
+  /// behind the panel would collide with the controls. The default stays the
+  /// frosted glass panel.
+  final bool opaque;
+
   /// Maximum width class. On narrow viewports the dialog still uses the
   /// available width minus [insetPadding].
   final KubusDialogSize size;
@@ -709,6 +718,7 @@ class KubusAlertDialog extends StatelessWidget {
     this.titleTextStyle,
     this.contentTextStyle,
     this.size = KubusDialogSize.standard,
+    this.opaque = false,
   });
 
   @override
@@ -718,9 +728,13 @@ class KubusAlertDialog extends StatelessWidget {
     final isDark = theme.brightness == Brightness.dark;
 
     final surface = backgroundColor ?? scheme.surface;
-    final tint = (Color.lerp(surface, scheme.primary, 0.06) ?? surface)
-        .withValues(
-            alpha: isDark ? 0.22 : KubusGlassEffects.dialogTintAlphaLight);
+    final tint =
+        (Color.lerp(surface, scheme.primary, 0.06) ?? surface).withValues(
+            alpha: opaque
+                ? 1.0
+                : isDark
+                    ? 0.22
+                    : KubusGlassEffects.dialogTintAlphaLight);
 
     final resolvedShape = shape ??
         RoundedRectangleBorder(
@@ -868,7 +882,13 @@ class KubusAlertDialog extends StatelessWidget {
         blurSigma: blurSigma,
         showBorder: showBorder,
         backgroundColor: tint,
-        minimumStopOpacity: isDark ? null : lightStopOpacityFloor,
+        // A solid panel skips the backdrop blur (nothing shows through to
+        // blur) and holds both gradient stops at full alpha.
+        enableBlur: !opaque,
+        fallbackMinOpacity:
+            opaque ? 1.0 : KubusGlassEffects.fallbackOpaqueOpacity,
+        minimumStopOpacity:
+            opaque ? 1.0 : (isDark ? null : lightStopOpacityFloor),
         child: body,
       ),
     );

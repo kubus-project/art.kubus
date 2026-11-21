@@ -516,6 +516,9 @@ class _GalleryEditor extends StatelessWidget {
       // actions stack when a localized label does not fit a phone.
       child: KubusAlertDialog(
         size: KubusDialogSize.standard,
+        // Solid panel: the reorder rows and the three actions sit over page
+        // text otherwise.
+        opaque: true,
         semanticLabel: l10n.galleryCurate,
         title: Text(l10n.galleryCurate),
         insetPadding: const EdgeInsets.symmetric(
@@ -888,8 +891,31 @@ class _GalleryReorderState extends State<_GalleryReorder> {
     final target = identical(control, _earlier)
         ? (canEarlier ? _earlier : _later)
         : (canLater ? _later : _earlier);
+    _refocus(target, id, leaving: identical(target, control));
+  }
+
+  /// Puts focus back on the [nodes] entry for [id] once the move is laid out.
+  ///
+  /// The move re-parents the row's semantics node. On the web the browser then
+  /// drops DOM focus to `<body>`, and Flutter's engine restores it only when
+  /// the node's focused flag changes. When focus stays on the very control
+  /// that was pressed, logical focus never changes, a plain `requestFocus` is a
+  /// no-op, and DOM focus stays lost until something else rebuilds the node
+  /// (seconds on a slow device, indefinitely otherwise). With [leaving] the
+  /// control gives up focus now, so the frame that carries the move reports the
+  /// flag as false, and takes it back after that frame, so the next frame
+  /// reports true and the engine re-focuses the element. A different control
+  /// (the pressed one became disabled) changes the flag by itself.
+  void _refocus(
+    Map<String, FocusNode> nodes,
+    String id, {
+    required bool leaving,
+  }) {
+    final node = nodes[id];
+    if (node == null) return;
+    if (leaving) node.unfocus();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) target[id]?.requestFocus();
+      if (mounted && identical(nodes[id], node)) node.requestFocus();
     });
   }
 
