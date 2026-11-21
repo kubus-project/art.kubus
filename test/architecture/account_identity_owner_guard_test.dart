@@ -173,8 +173,14 @@ void main() {
 
     // The signed-in profile's account id is read through accountId, never the
     // raw (untrimmed) userId field.
-    final rawSignedIn = RegExp(r'currentUser\??\.userId\b');
+    final rawSignedIn = RegExp(
+      r'\b(?:currentUser|currentProfile|currentAccount|heldProfile)\??\.userId\b',
+    );
     expect(rawSignedIn.hasMatch('profile.currentUser?.userId ?? ""'), isTrue);
+    expect(rawSignedIn.hasMatch('currentProfile?.userId'), isTrue);
+    expect(rawSignedIn.hasMatch('final a = currentAccount.userId;'), isTrue);
+    expect(rawSignedIn.hasMatch('provider?.heldProfile?.userId'), isTrue);
+    expect(rawSignedIn.hasMatch('institution.account?.userId'), isFalse);
     expect(rawSignedIn.hasMatch('profile.currentUser?.accountId'), isFalse);
     expect(
       filesMatching(allLib, rawSignedIn, except: const <String>{}),

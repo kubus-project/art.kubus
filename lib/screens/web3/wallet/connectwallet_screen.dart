@@ -243,7 +243,7 @@ class _ConnectWalletState extends State<ConnectWallet>
 
     final profileProvider =
         Provider.of<ProfileProvider?>(context, listen: false);
-    final userId = profileProvider?.heldProfile?.userId;
+    final userId = profileProvider?.heldProfile?.accountId;
     await const WalletSessionSyncService().bindAuthenticatedWallet(
       providers: _walletSessionProviders(),
       walletAddress: normalizedWallet,

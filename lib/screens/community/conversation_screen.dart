@@ -1099,7 +1099,7 @@ class _ConversationScreenState extends State<ConversationScreen> {
     final currentAccount =
         Provider.of<ProfileProvider>(context, listen: false).currentUser;
     final currentUserWallet = currentAccount?.walletAddress;
-    final currentAccountId = currentAccount?.userId;
+    final currentAccountId = currentAccount?.accountId;
 
     for (final r in message.reactions) {
       reactionCounts[r.emoji] = r.count;

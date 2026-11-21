@@ -564,7 +564,7 @@ class _ProfileScreenState extends State<ProfileScreen>
           final walletAddress = currentProfile?.walletAddress;
           final authorKey = ArtworkAuthorKey.resolve(
             walletAddress: walletAddress,
-            accountId: currentProfile?.userId,
+            accountId: currentProfile?.accountId,
             profileId: currentProfile?.id,
           );
 
