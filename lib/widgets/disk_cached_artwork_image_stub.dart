@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'inline_loading.dart';
 
 import '../utils/media_url_resolver.dart';
+import '../utils/image_variant_selector.dart';
 import 'common/kubus_cached_image.dart';
 
 final Map<String, Future<void>> _prefetchInFlight = <String, Future<void>>{};
@@ -11,6 +12,9 @@ final Map<String, Future<void>> _prefetchInFlight = <String, Future<void>>{};
 Future<void> prefetchDiskCachedArtworkImage(String url) {
   final normalized = MediaUrlResolver.resolveDisplayUrl(url);
   if (normalized == null) return Future<void>.value();
+  if (ImageVariantSelector.isRevocableDerivative(normalized)) {
+    return Future<void>.value();
+  }
 
   final existing = _prefetchInFlight[normalized];
   if (existing != null) return existing;
@@ -43,7 +47,7 @@ Future<void> prefetchDiskCachedArtworkImage(String url) {
   return completer.future;
 }
 
-class DiskCachedArtworkImage extends StatelessWidget {
+class DiskCachedArtworkImage extends StatefulWidget {
   const DiskCachedArtworkImage({
     super.key,
     required this.url,
@@ -65,14 +69,56 @@ class DiskCachedArtworkImage extends StatelessWidget {
   final bool excludeFromSemantics;
 
   @override
+  State<DiskCachedArtworkImage> createState() => _DiskCachedArtworkImageState();
+}
+
+class _DiskCachedArtworkImageState extends State<DiskCachedArtworkImage> {
+  void _evict(String raw) {
+    final resolved = MediaUrlResolver.resolveDisplayUrl(raw);
+    if (resolved != null &&
+        ImageVariantSelector.isRevocableDerivative(resolved)) {
+      unawaited(NetworkImage(resolved).evict());
+    }
+  }
+
+  @override
+  void didUpdateWidget(covariant DiskCachedArtworkImage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.url != widget.url) _evict(oldWidget.url);
+  }
+
+  @override
+  void dispose() {
+    _evict(widget.url);
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final errorColor = errorIconColor ?? scheme.outline.withValues(alpha: 0.8);
+    final errorColor =
+        widget.errorIconColor ?? scheme.outline.withValues(alpha: 0.8);
+    final resolved = MediaUrlResolver.resolveDisplayUrl(widget.url);
+    if (resolved != null &&
+        ImageVariantSelector.isRevocableDerivative(resolved)) {
+      return Image.network(
+        resolved,
+        fit: widget.fit,
+        semanticLabel: widget.semanticLabel,
+        excludeFromSemantics: widget.excludeFromSemantics,
+        errorBuilder: (_, __, ___) =>
+            Center(child: Icon(Icons.image_not_supported, color: errorColor)),
+        loadingBuilder: (context, child, progress) => progress == null ||
+                !widget.showProgress
+            ? child
+            : Center(child: InlineLoading(tileSize: 4, color: scheme.primary)),
+      );
+    }
     return KubusCachedImage(
-      imageUrl: url,
-      fit: fit,
+      imageUrl: widget.url,
+      fit: widget.fit,
       placeholderBuilder: (context) {
-        if (!showProgress) return const SizedBox.shrink();
+        if (!widget.showProgress) return const SizedBox.shrink();
         return Center(
           child: InlineLoading(tileSize: 4, color: scheme.primary),
         );
@@ -80,8 +126,8 @@ class DiskCachedArtworkImage extends StatelessWidget {
       errorBuilder: (_, __, ___) => Center(
         child: Icon(Icons.image_not_supported, color: errorColor),
       ),
-      semanticLabel: semanticLabel,
-      excludeFromSemantics: excludeFromSemantics,
+      semanticLabel: widget.semanticLabel,
+      excludeFromSemantics: widget.excludeFromSemantics,
     );
   }
 }

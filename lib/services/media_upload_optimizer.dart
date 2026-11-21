@@ -252,7 +252,8 @@ class MediaUploadOptimizer {
         kind: UploadCompressionKind.image,
       );
     }
-    if (_extension(request.fileName) == '.gif') {
+    if (_extension(request.fileName) == '.gif' ||
+        _isAnimatedOrUncertainWebp(request.bytes)) {
       return UploadCompressionResultDto.skipped(
         request,
         'animated_image_exempt',
@@ -267,9 +268,19 @@ class MediaUploadOptimizer {
       maxDimension: request.policy.maxImageDimension,
       quality: request.policy.imageQuality,
     );
+    // Some browser encoders silently fall back to PNG when a requested format
+    // is unavailable. Never upload those bytes under a mismatched declaration.
+    final safeCompressed = compressed != null &&
+            _matchesImageDeclaration(
+              compressed,
+              request.fileName,
+              _contentTypeForImage(request),
+            )
+        ? compressed
+        : null;
     return _smallerOrSkipped(
       request,
-      compressed,
+      safeCompressed,
       kind: UploadCompressionKind.image,
       skippedReason: 'image_not_smaller',
       contentType: _contentTypeForImage(request),
@@ -598,6 +609,60 @@ class MediaUploadOptimizer {
       return CompressFormat.jpeg;
     }
     return null;
+  }
+
+  // RIFF chunk parsing is deliberately fail-safe: malformed WebP stays intact
+  // for authoritative server validation rather than risking animation loss.
+  bool _isAnimatedOrUncertainWebp(Uint8List bytes) {
+    bool tag(int offset, String value) =>
+        offset + value.length <= bytes.length &&
+        value.codeUnits.asMap().entries.every(
+              (entry) => bytes[offset + entry.key] == entry.value,
+            );
+    if (!tag(0, 'RIFF') || !tag(8, 'WEBP')) return false;
+    if (bytes.length < 12) return true;
+    final data = ByteData.sublistView(bytes);
+    final end = data.getUint32(4, Endian.little) + 8;
+    if (end != bytes.length || end < 20) return true;
+    var offset = 12;
+    while (offset < end) {
+      if (offset + 8 > end) return true;
+      final size = data.getUint32(offset + 4, Endian.little);
+      final payload = offset + 8;
+      final next = payload + size + (size & 1);
+      if (next > end) return true;
+      if (tag(offset, 'ANIM') || tag(offset, 'ANMF')) return true;
+      if (tag(offset, 'VP8X')) {
+        if (size != 10) return true;
+        if ((bytes[payload] & 0x02) != 0) return true;
+      }
+      offset = next;
+    }
+    return false;
+  }
+
+  bool _matchesImageDeclaration(
+    Uint8List bytes,
+    String fileName,
+    String? contentType,
+  ) {
+    final ext = _extension(fileName);
+    final mime = (contentType ?? '').toLowerCase().split(';').first.trim();
+    final isJpeg = bytes.length >= 3 &&
+        bytes[0] == 0xff &&
+        bytes[1] == 0xd8 &&
+        bytes[2] == 0xff;
+    final isPng = bytes.length >= 8 &&
+        listEquals(bytes.sublist(0, 8), <int>[137, 80, 78, 71, 13, 10, 26, 10]);
+    final isWebp = bytes.length >= 12 &&
+        ascii.decode(bytes.sublist(0, 4), allowInvalid: true) == 'RIFF' &&
+        ascii.decode(bytes.sublist(8, 12), allowInvalid: true) == 'WEBP';
+    if (ext == '.jpg' || ext == '.jpeg') {
+      return isJpeg && (mime.isEmpty || mime == 'image/jpeg');
+    }
+    if (ext == '.png') return isPng && (mime.isEmpty || mime == 'image/png');
+    if (ext == '.webp') return isWebp && (mime.isEmpty || mime == 'image/webp');
+    return false;
   }
 
   String? _contentTypeForImage(UploadCompressionRequestDto request) {

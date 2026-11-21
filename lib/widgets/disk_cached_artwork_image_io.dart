@@ -6,6 +6,7 @@ import 'inline_loading.dart';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 
 import '../utils/media_url_resolver.dart';
+import '../utils/image_variant_selector.dart';
 
 class _KubusArtworkCacheManager {
   const _KubusArtworkCacheManager._();
@@ -23,6 +24,7 @@ class _KubusArtworkCacheManager {
 Future<void> prefetchDiskCachedArtworkImage(String url) async {
   final resolved = MediaUrlResolver.resolveDisplayUrl(url);
   if (resolved == null) return;
+  if (ImageVariantSelector.isRevocableDerivative(resolved)) return;
   await _KubusArtworkCacheManager.instance.downloadFile(resolved);
 }
 
@@ -67,6 +69,7 @@ class _DiskCachedArtworkImageState extends State<DiskCachedArtworkImage> {
   void didUpdateWidget(covariant DiskCachedArtworkImage oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.url != widget.url) {
+      _evictRevocable();
       _load();
     }
   }
@@ -74,9 +77,23 @@ class _DiskCachedArtworkImageState extends State<DiskCachedArtworkImage> {
   void _load() {
     _resolvedUrl = MediaUrlResolver.resolveDisplayUrl(widget.url);
     final resolved = _resolvedUrl;
-    _fileFuture = resolved == null
-        ? Future<File?>.value(null)
-        : _KubusArtworkCacheManager.instance.getSingleFile(resolved);
+    _fileFuture =
+        resolved == null || ImageVariantSelector.isRevocableDerivative(resolved)
+            ? Future<File?>.value(null)
+            : _KubusArtworkCacheManager.instance.getSingleFile(resolved);
+  }
+
+  void _evictRevocable() {
+    final url = _resolvedUrl;
+    if (url != null && ImageVariantSelector.isRevocableDerivative(url)) {
+      unawaited(NetworkImage(url).evict());
+    }
+  }
+
+  @override
+  void dispose() {
+    _evictRevocable();
+    super.dispose();
   }
 
   @override

@@ -162,6 +162,7 @@ class _DesktopArtworkDetailScreenState
     final savedItemsProvider = context.read<SavedItemsProvider>();
 
     if (existing != null) {
+      unawaited(provider.loadArtworkImageVariants(widget.artworkId));
       await savedItemsProvider.hydrateSavedStatus(
         type: SavedItemType.artwork,
         ids: [widget.artworkId],
@@ -184,6 +185,7 @@ class _DesktopArtworkDetailScreenState
 
     try {
       await provider.fetchArtworkIfNeeded(widget.artworkId);
+      unawaited(provider.loadArtworkImageVariants(widget.artworkId));
       await savedItemsProvider.hydrateSavedStatus(
         type: SavedItemType.artwork,
         ids: [widget.artworkId],
@@ -511,6 +513,7 @@ class _DesktopArtworkDetailScreenState
 
   Widget _buildMedia(Artwork artwork, String? coverUrl) {
     final scheme = Theme.of(context).colorScheme;
+    final artworkProvider = context.watch<ArtworkProvider>();
     final primaryCover = <String>[
       if (coverUrl != null && coverUrl.trim().isNotEmpty) coverUrl.trim(),
       ...artwork.galleryUrls.map((u) => u.trim()).where((u) => u.isNotEmpty),
@@ -537,8 +540,17 @@ class _DesktopArtworkDetailScreenState
         // The public server frame presents the primary artwork in a near
         // square crop; keep that media geometry through the native handoff.
         final tunedCoverHeight = constraints.maxWidth.clamp(320.0, 680.0);
+        if (artworkProvider.imageVariantsPending(artwork) &&
+            artwork.galleryUrls.contains(primaryCover)) {
+          return SizedBox(
+            height: tunedCoverHeight,
+            child: const Center(child: InlineLoading()),
+          );
+        }
         return ArtworkGalleryView(
           imageUrls: [primaryCover],
+          sourceImageVariants:
+              artworkProvider.imageVariantsForArtwork(artwork.id),
           height: tunedCoverHeight,
           semanticLabel: _artworkImageSemanticLabel(artwork),
         );
@@ -548,6 +560,7 @@ class _DesktopArtworkDetailScreenState
 
   Widget _buildGallerySection(Artwork artwork, String? coverUrl) {
     final l10n = AppLocalizations.of(context)!;
+    final artworkProvider = context.watch<ArtworkProvider>();
     final normalizedCover = (coverUrl ?? '').trim();
     final urls = artwork.galleryUrls
         .map((u) => u.trim())
@@ -555,6 +568,9 @@ class _DesktopArtworkDetailScreenState
         .toList(growable: false);
 
     if (urls.isEmpty) return const SizedBox.shrink();
+    if (artworkProvider.imageVariantsPending(artwork)) {
+      return const SizedBox(height: 260, child: Center(child: InlineLoading()));
+    }
 
     return Padding(
       padding: const EdgeInsets.only(top: DetailSpacing.cardGap),
@@ -571,6 +587,8 @@ class _DesktopArtworkDetailScreenState
                     (constraints.maxWidth / 1.9).clamp(180.0, 260.0).toDouble();
                 return ArtworkGalleryView(
                   imageUrls: urls,
+                  sourceImageVariants:
+                      artworkProvider.imageVariantsForArtwork(artwork.id),
                   height: galleryHeight,
                   semanticLabel: _artworkImageSemanticLabel(artwork),
                 );
