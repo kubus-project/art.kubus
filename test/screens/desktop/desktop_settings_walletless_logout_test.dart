@@ -26,6 +26,7 @@ import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../../support/account_session_fixture.dart';
 
 /// A wallet account: the wallet identity is on this device.
 class _WalletAccountWallet extends WalletProvider {
@@ -136,6 +137,10 @@ Widget _app({required bool walletless, required bool mobile}) {
 }
 
 void main() {
+  // A signed-in surface has a live session behind its held profile.
+  setUp(() => AccountSessionFixture.start(accountId: 'test-account'));
+  tearDown(AccountSessionFixture.end);
+
   TestWidgetsFlutterBinding.ensureInitialized();
   final l10n = AppLocalizationsEn();
 

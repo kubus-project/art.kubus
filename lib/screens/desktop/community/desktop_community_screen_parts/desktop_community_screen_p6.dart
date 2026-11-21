@@ -721,7 +721,8 @@ extension _DesktopCommunityScreenStatePart6 on _DesktopCommunityScreenState {
     // A signed-in account posts with or without a wallet; stop before any
     // upload or request only when there is no identity at all. The draft and
     // media stay in the dialog.
-    if (!await communityPostingHasIdentity()) {
+    final isSignedIn = context.read<ProfileProvider>().isSignedIn;
+    if (!await communityPostingHasIdentity(isSignedIn: isSignedIn)) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showKubusSnackBar(
         SnackBar(

@@ -202,6 +202,7 @@ extension _SettingsScreenStatePart3 on _SettingsScreenState {
     final walletBackupStatus = isSignedIn
         ? await WalletBackupStatusResolver.resolve(
             walletProvider: walletProvider,
+            isSignedIn: isSignedIn,
             refreshRemote: true,
           )
         : const WalletBackupStatusSnapshot.noWallet();

@@ -1,27 +1,22 @@
 import 'package:art_kubus/features/web3/web3_capabilities.dart';
 import 'package:art_kubus/providers/wallet_provider.dart';
-import 'package:art_kubus/services/backend_api_service.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+/// Wallet facts only. Whether an account is signed in is the profile
+/// provider's answer and arrives as `profileSignedIn` on the context.
 WalletAuthoritySnapshot authority({
-  bool accountSignedIn = true,
   String? walletAddress = 'wallet-owner',
   bool signerReady = true,
   String accountRole = 'user',
 }) {
   return WalletAuthoritySnapshot(
-    state: !accountSignedIn
-        ? WalletAuthorityState.signedOut
-        : walletAddress == null
-            ? WalletAuthorityState.accountShellOnly
-            : signerReady
-                ? WalletAuthorityState.localSignerReady
-                : WalletAuthorityState.walletReadOnly,
+    state: walletAddress == null
+        ? WalletAuthorityState.noWallet
+        : signerReady
+            ? WalletAuthorityState.localSignerReady
+            : WalletAuthorityState.walletReadOnly,
     signerSource:
         signerReady ? WalletSignerSource.local : WalletSignerSource.none,
-    accountSignedIn: accountSignedIn,
-    signInMethod: AuthSignInMethod.email,
-    accountEmail: accountSignedIn ? 'person@example.test' : null,
     accountRole: accountRole,
     walletAddress: walletAddress,
     hasLocalSigner: signerReady,
@@ -76,7 +71,6 @@ void main() {
     final capabilities = Web3CapabilityResolver.resolve(
       contextFor(
         walletAuthority: authority(
-          accountSignedIn: false,
           walletAddress: null,
           signerReady: false,
         ),
@@ -109,18 +103,20 @@ void main() {
     expect(capabilities.canCreateEdition, isFalse);
   });
 
-  test('account shell without a wallet-keyed profile is not a guest', () {
+  test('an account is signed in by its profile, not by the wallet authority',
+      () {
+    // A wallet authority with a signer says nothing about the account: with no
+    // signed-in profile the visitor is a guest to every capability.
     final capabilities = Web3CapabilityResolver.resolve(
       contextFor(
-        walletAuthority: authority(walletAddress: null, signerReady: false),
+        walletAuthority: authority(),
         profileHydrated: false,
         profileSignedIn: false,
       ),
     );
 
-    expect(capabilities.needsAccount, isFalse);
-    expect(capabilities.hasAccount, isTrue);
-    expect(capabilities.hasWalletIdentity, isFalse);
+    expect(capabilities.needsAccount, isTrue);
+    expect(capabilities.hasAccount, isFalse);
     expect(capabilities.canTransact, isFalse);
   });
 

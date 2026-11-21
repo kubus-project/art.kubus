@@ -9,6 +9,7 @@ import 'package:provider/provider.dart';
 import '../../l10n/app_localizations.dart';
 import '../../models/gallery_presentation.dart';
 import '../../providers/gallery_controller.dart';
+import '../../providers/profile_provider.dart';
 import '../../providers/wallet_provider.dart';
 import '../../services/backend_api_service.dart';
 import '../../utils/artwork_media_resolver.dart';
@@ -105,9 +106,7 @@ class _GalleryHostScopeState extends State<GalleryHostScope> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    _signedIn =
-        Provider.of<WalletProvider?>(context)?.authority.hasAccountSession ??
-            false;
+    _signedIn = Provider.of<ProfileProvider?>(context)?.isSignedIn ?? false;
     _bind();
   }
 

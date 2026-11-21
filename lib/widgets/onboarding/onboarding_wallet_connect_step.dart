@@ -94,7 +94,7 @@ class _OnboardingWalletConnectStepState
   }
 
   Future<String?> _resolveCurrentUserId() async {
-    final user = context.read<ProfileProvider>().currentUser;
+    final user = context.read<ProfileProvider>().heldProfile;
     final fromProfile = (user?.userId ?? user?.id ?? '').trim();
     if (fromProfile.isNotEmpty) return fromProfile;
     final prefs = await SharedPreferences.getInstance();
@@ -198,7 +198,7 @@ class _OnboardingWalletConnectStepState
     );
     if (!mounted || !_ownsSnapshot(snapshot)) return;
 
-    final profileSnapshot = context.read<ProfileProvider>().currentUser;
+    final profileSnapshot = context.read<ProfileProvider>().heldProfile;
     setState(() {
       _busyAction = action;
       _phase = OnboardingWalletLinkPhase.creatingWallet;
@@ -363,7 +363,7 @@ class _OnboardingWalletConnectStepState
     final l10n = AppLocalizations.of(context)!;
     final theme = Theme.of(context);
     final profileProvider = context.watch<ProfileProvider>();
-    final currentUser = profileProvider.currentUser;
+    final currentUser = profileProvider.heldProfile;
 
     // Trust the hydrated profile wallet only when it belongs to the same
     // account that is signed in here — never local wallet state alone.

@@ -26,6 +26,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher_platform_interface/link.dart';
 import 'package:url_launcher_platform_interface/url_launcher_platform_interface.dart';
 
+import '../support/account_session_fixture.dart';
+
 UserProfile _signedInProfile() => UserProfile(
       id: 'privacy-settings-profile',
       walletAddress: 'privacy-settings-wallet',
@@ -154,6 +156,9 @@ void main() {
       final themeProvider = ThemeProvider();
       final profileProvider = ProfileProvider(apiService: _PrivacyProfileApi());
       await profileProvider.initialize();
+      // The account is signed in: a live session behind its held profile.
+      AccountSessionFixture.start(accountId: 'privacy-profile');
+      addTearDown(AccountSessionFixture.end);
       profileProvider.setCurrentUser(_signedInProfile());
       await profileProvider.updatePreferences(
         showActivityStatus: true,
@@ -257,6 +262,9 @@ void main() {
       final themeProvider = ThemeProvider();
       final profileProvider = ProfileProvider(apiService: _PrivacyProfileApi());
       await profileProvider.initialize();
+      // The account is signed in: a live session behind its held profile.
+      AccountSessionFixture.start(accountId: 'privacy-profile');
+      addTearDown(AccountSessionFixture.end);
       profileProvider.setCurrentUser(_signedInProfile());
       await profileProvider.updatePreferences(
         showActivityStatus: true,
@@ -349,6 +357,9 @@ void main() {
     addTearDown(tester.view.resetDevicePixelRatio);
     final profileProvider = ProfileProvider(apiService: _PrivacyProfileApi());
     await profileProvider.initialize();
+    // The account is signed in: a live session behind its held profile.
+    AccountSessionFixture.start(accountId: 'privacy-profile');
+    addTearDown(AccountSessionFixture.end);
     profileProvider.setCurrentUser(_signedInProfile());
     final solana = SolanaWalletService();
     await tester.pumpWidget(

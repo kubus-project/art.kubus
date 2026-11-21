@@ -5456,8 +5456,7 @@ class _MapScreenState extends State<MapScreen>
   bool _markerOwnedByCurrentUser(ArtMarker marker) {
     return KubusMarkerOverlayHelpers.markerOwnedByCurrentUser(
       marker: marker,
-      walletAddress: context.read<WalletProvider>().currentWalletAddress,
-      currentUserId: context.read<ProfileProvider>().currentUser?.id,
+      profile: context.read<ProfileProvider>(),
     );
   }
 

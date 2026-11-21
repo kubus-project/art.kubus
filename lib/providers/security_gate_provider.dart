@@ -1085,6 +1085,8 @@ class SecurityGateProvider extends ChangeNotifier
     }
   }
 
+  // The wallet the lock screen and PIN are filed under: device key material,
+  // not who is signed in, so it may resolve without a live session.
   Future<String?> _resolveWalletAddress() async {
     final fromProfile = _profileProvider?.currentUser?.walletAddress;
     if (fromProfile != null && fromProfile.trim().isNotEmpty) {

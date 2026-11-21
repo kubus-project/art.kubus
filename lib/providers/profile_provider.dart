@@ -71,10 +71,11 @@ String? _profileErrorCodeFromBody(String? body) {
 }
 
 class ProfileProvider extends foundation.ChangeNotifier {
+  /// The held profile: the last one loaded or set. It is not the signed-in
+  /// account: a session ended elsewhere leaves the stored wallet's profile here
+  /// with nothing behind it. Read it through [currentUser] (gated by
+  /// [isSignedIn]) or, for restore and auth flows only, [heldProfile].
   UserProfile? _currentUser;
-  final List<UserProfile> _followingUsers = [];
-  final List<UserProfile> _followers = [];
-  bool _isSignedIn = false;
   bool _isLoading = false;
   String? _error;
 
@@ -95,6 +96,9 @@ class ProfileProvider extends foundation.ChangeNotifier {
   int _profileLoadEpoch = 0;
   // The account the most recent load was started for.
   String _profileLoadAccountKey = '';
+  // Whether the last announced state had a live session, so a session that
+  // starts or ends without touching the held profile still reaches listeners.
+  bool _announcedLiveSession = false;
 
   /// Account session the current request belongs to. A sign-out ends it, so a
   /// response that arrives afterwards must not write the previous account.
@@ -108,6 +112,7 @@ class ProfileProvider extends foundation.ChangeNotifier {
   ProfileProvider({ProfileBackendApi? apiService, StatsApiService? statsApi})
       : _apiService = apiService ?? BackendApiService(),
         _statsApi = statsApi ?? StatsApiService() {
+    _announcedLiveSession = _hasLiveSession;
     AccountIdentity.addListener(_handleAccountIdentityChanged);
   }
 
@@ -158,6 +163,15 @@ class ProfileProvider extends foundation.ChangeNotifier {
   /// see it. An identity change to another account, or to none, clears it. A
   /// same-account change (token refresh, wallet link) keeps it.
   void _handleAccountIdentityChanged() {
+    _reconcileHeldProfileWithAccount();
+    final live = _hasLiveSession;
+    if (live == _announcedLiveSession) return;
+    _announcedLiveSession = live;
+    // The held profile may now be, or no longer be, the signed-in account.
+    notifyListeners();
+  }
+
+  void _reconcileHeldProfileWithAccount() {
     final key = AccountIdentity.accountKey;
     final held = (_currentUser?.userId ?? _currentUser?.id ?? '').trim();
     if (held.isNotEmpty && _heldProfileBelongsTo(key)) return;
@@ -190,8 +204,6 @@ class ProfileProvider extends foundation.ChangeNotifier {
 
   void _clearProfileState() {
     _currentUser = null;
-    _followingUsers.clear();
-    _followers.clear();
     _collectionsCount = 0;
     _realFollowersCount = 0;
     _realFollowingCount = 0;
@@ -199,7 +211,6 @@ class ProfileProvider extends foundation.ChangeNotifier {
     _cachedPreferences = null;
     _hasHydratedProfile = false;
     _isLoading = false;
-    _isSignedIn = false;
     _error = null;
     _clearPreferenceSyncState();
   }
@@ -416,15 +427,77 @@ class ProfileProvider extends foundation.ChangeNotifier {
     return _apiService.verifyImageUrl(url);
   }
 
-  UserProfile? get currentUser => _currentUser;
-  UserProfile? get profile => _currentUser; // Alias for compatibility
-  List<UserProfile> get followingUsers => _followingUsers;
-  List<UserProfile> get followers => _followers;
-  bool get isSignedIn => _isSignedIn;
-  bool get hasWallet =>
-      (_currentUser?.walletAddress.trim().isNotEmpty ?? false) ||
-      (_walletProvider?.currentWalletAddress?.trim().isNotEmpty ?? false);
+  /// The credential fact behind [isSignedIn]: a live account session exists.
+  /// Private on purpose. Nothing outside this provider decides who is signed in.
+  bool get _hasLiveSession => BackendApiService().hasAuthSession;
+
+  /// THE definition of "signed in": a live account session, with a held profile
+  /// to show for it. It is derived on every read, never latched, so a session
+  /// lost in place or never restored (forced sign-out, wallet-only device)
+  /// reads false the moment the credential is gone.
+  bool get isSignedIn => _currentUser != null && _hasLiveSession;
+
+  /// The signed-in account's profile, or null when nobody is signed in. This is
+  /// the one accessor display code reads: name, handle, avatar, role badges,
+  /// wallet shown as identity, counts and owner affordances all come from here.
+  UserProfile? get currentUser => isSignedIn ? _currentUser : null;
+
+  /// The profile held in memory whether or not a session backs it. For restore,
+  /// sign-in and onboarding flows that must read what was just loaded before a
+  /// session exists. Never for display: a held profile with no session is not
+  /// the account of anyone signed in (see the architecture identity guard).
+  UserProfile? get heldProfile => _currentUser;
+
+  /// The signed-in account's sign-in email: a claim of the live credential, so
+  /// it is read, never copied. Null when nobody is signed in.
+  String? get accountEmail =>
+      isSignedIn ? BackendApiService().getCurrentAuthEmail() : null;
+
+  /// How the signed-in account signed in. Unknown when nobody is.
+  AuthSignInMethod get accountSignInMethod => isSignedIn
+      ? BackendApiService().currentSignInMethod
+      : AuthSignInMethod.unknown;
+
+  /// Whether [id] names the signed-in account: its account id, profile id,
+  /// linked wallet or public actor id. False for everyone when nobody is
+  /// signed in. Usernames and display names are never compared; they can
+  /// collide or change independently of ownership.
+  bool isCurrentAccount(String? id) {
+    final target = _identityKey(id);
+    if (target.isEmpty) return false;
+    final account = currentUser;
+    if (account == null) return false;
+    return <String?>[
+      account.userId,
+      account.id,
+      account.walletAddress,
+      account.publicActorId,
+    ].any((identifier) {
+      final key = _identityKey(identifier);
+      return key.isNotEmpty && key == target;
+    });
+  }
+
+  static final RegExp _accountUuid = RegExp(
+    r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$',
+  );
+
+  static String _identityKey(String? identifier) {
+    final value = WalletUtils.canonical(identifier);
+    if (value.isEmpty) return '';
+    // A UUID is an account ID and is case-insensitive. It must be recognised
+    // before the wallet heuristic, which accepts any 32+ character
+    // `[a-zA-Z0-9_-]` string (a hyphenated UUID included) and would keep its case.
+    if (_accountUuid.hasMatch(value)) return value.toLowerCase();
+    // Wallet keys are case-sensitive; other account IDs are treated as
+    // case-insensitive stable identifiers.
+    return WalletUtils.looksLikeWallet(value) ? value : value.toLowerCase();
+  }
+
   bool get isLoading => _isLoading;
+
+  // Load state of the held profile. Routing inputs for restore and onboarding
+  // (booleans, no identity), so they are not gated by a session.
   bool get hasHydratedProfile => _hasHydratedProfile;
 
   /// See [isUsablePublicProfile]: hydrated, with a display name.
@@ -433,24 +506,24 @@ class ProfileProvider extends foundation.ChangeNotifier {
         displayName: _currentUser?.displayName,
       );
   String? get error => _error;
-  bool get hasProfile => _currentUser != null;
-  ProfilePreferences get preferences =>
-      _currentUser?.preferences ??
-      _cachedPreferences ??
-      _cachedPreferencesFromPrefs();
+
+  /// The account's preferences. Without a live session the survived local
+  /// mirrors (privacy, activity status) are not anybody's setting, so the
+  /// defaults are returned. While a session is live and the profile is still
+  /// loading the mirrors keep offline continuity.
+  ProfilePreferences get preferences => !_hasLiveSession
+      ? ProfilePreferences()
+      : _currentUser?.preferences ??
+          _cachedPreferences ??
+          _cachedPreferencesFromPrefs();
   bool get isSavingPreferences => _isSavingPreferences;
   bool get hasUnsyncedPreferences => _hasUnsyncedPreferences;
   String? get preferencesSaveError => _preferencesSaveError;
   bool get hasPendingPreferenceSync =>
       _isSavingPreferences || _hasUnsyncedPreferences;
 
-  /// Best-effort wallet address for the currently active profile.
-  ///
-  /// Prefer this over reading `currentUser?.walletAddress` directly in UI,
-  /// because it can fall back to persisted wallet state before profile
-  /// hydration completes.
-  String? get currentWalletAddress => _currentWalletAddress;
-
+  // The wallet the persona and onboarding keys are filed under: the held
+  // profile's, else the wallet this device stored. Key material, not identity.
   String? get _currentWalletAddress {
     final wallet = _currentUser?.walletAddress;
     if (wallet != null && wallet.isNotEmpty) return wallet;
@@ -483,6 +556,7 @@ class ProfileProvider extends foundation.ChangeNotifier {
       'notification_preference_${key}_$walletAddress';
 
   UserPersona? get userPersona {
+    if (!_hasLiveSession) return null;
     final raw = preferences.persona;
     final parsed = UserPersonaX.tryParse(raw);
     if (parsed != null) return parsed;
@@ -521,6 +595,7 @@ class ProfileProvider extends foundation.ChangeNotifier {
   /// condition under which an established account's persona is inferred silently
   /// from an approved DAO review.
   bool get needsPersonaOnboarding {
+    if (!_hasLiveSession) return false;
     final wallet = _currentWalletAddress;
     if (wallet == null || wallet.isEmpty) return false;
     // Only prompt once per wallet. If the user dismissed the prompt we should
@@ -532,12 +607,12 @@ class ProfileProvider extends foundation.ChangeNotifier {
   bool get hasSelectedStructuredRole => userPersona != null;
 
   bool get needsStructuredRoleSelection {
-    if (!_isSignedIn || !_hasHydratedProfile) return false;
+    if (!isSignedIn || !_hasHydratedProfile) return false;
     return !hasSelectedStructuredRole;
   }
 
   bool get needsStructuredProfileCompletion {
-    if (!_isSignedIn || !_hasHydratedProfile) return false;
+    if (!isSignedIn || !_hasHydratedProfile) return false;
     final user = _currentUser;
     if (user == null) return false;
 
@@ -572,15 +647,17 @@ class ProfileProvider extends foundation.ChangeNotifier {
   }
 
   // Dynamic getters for profile stats (from backend)
-  int get artworksCount => _currentUser?.stats?.artworksCreated ?? 0;
+  // Counts belong to the account; without a session they read zero.
+  int get artworksCount =>
+      isSignedIn ? _currentUser?.stats?.artworksCreated ?? 0 : 0;
 
-  int get collectionsCount => _collectionsCount;
+  int get collectionsCount => isSignedIn ? _collectionsCount : 0;
 
-  int get followersCount => _realFollowersCount;
+  int get followersCount => isSignedIn ? _realFollowersCount : 0;
 
-  int get followingCount => _realFollowingCount;
+  int get followingCount => isSignedIn ? _realFollowingCount : 0;
 
-  int get postsCount => _realPostsCount;
+  int get postsCount => isSignedIn ? _realPostsCount : 0;
 
   String get formattedFollowersCount => _formatCount(followersCount);
   String get formattedFollowingCount => _formatCount(followingCount);
@@ -590,7 +667,6 @@ class ProfileProvider extends foundation.ChangeNotifier {
 
   void setCurrentUser(UserProfile user) {
     _currentUser = user;
-    _isSignedIn = true;
     _hasHydratedProfile = true;
     notifyListeners();
     try {
@@ -787,7 +863,6 @@ class ProfileProvider extends foundation.ChangeNotifier {
             _currentUser?.copyWith(avatar: _convertSvgToRaster(resolved));
       } catch (_) {}
 
-      _isSignedIn = true;
       _hasHydratedProfile = true;
       final accountKey =
           (_currentUser?.userId ?? _currentUser?.id ?? '').trim();
@@ -941,7 +1016,6 @@ class ProfileProvider extends foundation.ChangeNotifier {
           _currentUser =
               _currentUser?.copyWith(avatar: _convertSvgToRaster(resolved));
         } catch (_) {}
-        _isSignedIn = BackendApiService().hasAuthSession;
         _hasHydratedProfile = true;
         // Merge backend preferences with locally cached toggles for offline continuity
         final mergedPrefs = _mergePreferencesWithLocalPersona(walletAddress);
@@ -1022,7 +1096,6 @@ class ProfileProvider extends foundation.ChangeNotifier {
             _currentUser =
                 _currentUser?.copyWith(avatar: _convertSvgToRaster(resolved));
           } catch (_) {}
-          _isSignedIn = BackendApiService().hasAuthSession;
           _hasHydratedProfile = true;
           final mergedPrefs = _mergePreferencesWithLocalPersona(walletAddress);
           _currentUser = _currentUser?.copyWith(preferences: mergedPrefs);
@@ -1032,7 +1105,6 @@ class ProfileProvider extends foundation.ChangeNotifier {
               'ProfileProvider: Auto-registration failed: $regError, creating local default');
           // If registration also fails, create local default
           _currentUser = _createDefaultProfile(walletAddress);
-          _isSignedIn = BackendApiService().hasAuthSession;
           _hasHydratedProfile = true;
           final mergedPrefs = _mergePreferencesWithLocalPersona(walletAddress);
           _currentUser = _currentUser?.copyWith(preferences: mergedPrefs);
@@ -1222,9 +1294,6 @@ class ProfileProvider extends foundation.ChangeNotifier {
               .catchError((_) {}),
         );
       }
-
-      // Update sign-in state
-      _isSignedIn = true;
 
       // Persist preferences (including persona) locally for offline continuity.
       try {
@@ -1424,7 +1493,6 @@ class ProfileProvider extends foundation.ChangeNotifier {
         } catch (_) {}
       }
 
-      _isSignedIn = true;
       // Avatar/cover-only saves must reach the shared cache too, otherwise
       // other surfaces keep showing the previous image.
       _publishSavedProfileToUserCache(sessionEpoch);
@@ -2178,97 +2246,6 @@ class ProfileProvider extends foundation.ChangeNotifier {
     _profileLoadEpoch += 1;
     _clearProfileState();
     unawaited(UserService.clearCache());
-    notifyListeners();
-  }
-
-  Future<void> followUser(UserProfile user) async {
-    try {
-      await _apiService.followUser(user.walletAddress);
-      if (!_followingUsers.any((u) => u.id == user.id)) {
-        _followingUsers.add(user);
-        _realFollowingCount++;
-        ProfilePackageMutationTracker.followStateChanged(
-          targetWallet: user.walletAddress,
-          actorWallet: _currentUser?.walletAddress,
-          isFollowing: true,
-          followingCount: _realFollowingCount,
-        );
-        notifyListeners();
-      }
-    } catch (e) {
-      debugPrint('Error following user: $e');
-      rethrow;
-    }
-  }
-
-  Future<void> unfollowUser(String walletAddress) async {
-    try {
-      await _apiService.unfollowUser(walletAddress);
-      _followingUsers.removeWhere((user) =>
-          user.id == walletAddress || user.walletAddress == walletAddress);
-      _realFollowingCount = _followingUsers.length;
-      ProfilePackageMutationTracker.followStateChanged(
-        targetWallet: walletAddress,
-        actorWallet: _currentUser?.walletAddress,
-        isFollowing: false,
-        followingCount: _realFollowingCount,
-      );
-      notifyListeners();
-    } catch (e) {
-      debugPrint('Error unfollowing user: $e');
-      rethrow;
-    }
-  }
-
-  bool isFollowing(String userId) {
-    return _followingUsers
-        .any((user) => user.id == userId || user.walletAddress == userId);
-  }
-
-  Future<bool> checkIsFollowing(String walletAddress) async {
-    try {
-      return await _apiService.isFollowing(walletAddress);
-    } catch (e) {
-      debugPrint('Error checking follow status: $e');
-      return isFollowing(walletAddress);
-    }
-  }
-
-  void addFollower(UserProfile user) {
-    if (!_followers.any((u) => u.id == user.id)) {
-      _followers.add(user);
-      notifyListeners();
-    }
-  }
-
-  void removeFollower(String userId) {
-    _followers.removeWhere((user) => user.id == userId);
-    notifyListeners();
-  }
-
-  // Initialize with sample data (deprecated - use loadProfile instead)
-  void initializeSampleData() {
-    // Create a sample current user with new model
-    _currentUser = UserProfile(
-      id: 'current_user',
-      walletAddress: '7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU',
-      username: 'current_user',
-      displayName: 'Current User',
-      bio:
-          'Digital artist exploring the intersection of AR, blockchain, and creativity.',
-      avatar:
-          '${_apiService.baseUrl.replaceAll(RegExp(r'/$'), '')}/api/avatar/current?style=avataaars&format=png&raw=true',
-      stats: UserStats(
-        followersCount: 1250,
-        followingCount: 340,
-        artworksDiscovered: 45,
-        artworksCreated: 12,
-      ),
-      createdAt: DateTime.now().subtract(const Duration(days: 365)),
-      updatedAt: DateTime.now(),
-    );
-    _isSignedIn = true;
-
     notifyListeners();
   }
 

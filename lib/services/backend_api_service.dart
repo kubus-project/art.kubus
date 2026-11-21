@@ -767,6 +767,9 @@ class BackendApiService
   String? _authToken;
   String? _credentialTargetToken;
   String? _authWalletCanonical;
+  // How the live credential was obtained, kept beside it so account screens
+  // can read it without waiting on storage. Cleared with the credential.
+  AuthSignInMethod _signInMethod = AuthSignInMethod.unknown;
   String? _preferredWalletCanonical;
   AuthCredentialStore _credentialStore = AuthCredentialStore();
   Future<void>? _authInitFuture;
@@ -972,6 +975,7 @@ class BackendApiService
   }) async {
     final epoch = sessionEpoch ?? _authSessionEpoch;
     final value = _authSignInMethodToStorageValue(method);
+    if (epoch == _authSessionEpoch) _signInMethod = method;
     try {
       final prefs = await SharedPreferences.getInstance();
       if (epoch != _authSessionEpoch) return;
@@ -988,13 +992,26 @@ class BackendApiService
   Future<AuthSignInMethod> getLastSignInMethod() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      return _authSignInMethodFromStorageValue(
+      final stored = _authSignInMethodFromStorageValue(
         prefs.getString(PreferenceKeys.authLastSignInMethodV1),
       );
+      if (stored != AuthSignInMethod.unknown && hasAuthSession) {
+        _signInMethod = stored;
+      }
+      return stored;
     } catch (e) {
       AppConfig.debugPrint('BackendApiService.getLastSignInMethod failed: $e');
       return AuthSignInMethod.unknown;
     }
+  }
+
+  /// How the live credential was obtained, readable synchronously: the method
+  /// recorded at sign-in, else what the token's claims say. Unknown without a
+  /// credential.
+  AuthSignInMethod get currentSignInMethod {
+    if (!hasAuthSession) return AuthSignInMethod.unknown;
+    if (_signInMethod != AuthSignInMethod.unknown) return _signInMethod;
+    return inferSignInMethodFromClaims();
   }
 
   Future<AuthSignInMethod> resolveLastSignInMethod({
@@ -1031,6 +1048,7 @@ class BackendApiService
 
   @visibleForTesting
   void setAuthTokenForTesting(String? token) {
+    if ((token ?? '').isEmpty) _signInMethod = AuthSignInMethod.unknown;
     _authToken = token;
     _credentialTargetToken = token;
     _authWalletCanonical = _tryExtractWalletFromToken(token);
@@ -1608,6 +1626,7 @@ class BackendApiService
     _authToken = null;
     _credentialTargetToken = null;
     _authWalletCanonical = null;
+    _signInMethod = AuthSignInMethod.unknown;
     _authCoordinator?.reset();
     AccountIdentity.setAccountKey('');
     AccountIdentity.notifyListenersChanged();

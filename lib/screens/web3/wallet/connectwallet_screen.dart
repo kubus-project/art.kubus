@@ -243,7 +243,7 @@ class _ConnectWalletState extends State<ConnectWallet>
 
     final profileProvider =
         Provider.of<ProfileProvider?>(context, listen: false);
-    final userId = profileProvider?.currentUser?.userId;
+    final userId = profileProvider?.heldProfile?.userId;
     await const WalletSessionSyncService().bindAuthenticatedWallet(
       providers: _walletSessionProviders(),
       walletAddress: normalizedWallet,
@@ -440,7 +440,7 @@ class _ConnectWalletState extends State<ConnectWallet>
       widget.authInline || _normalizedAuthFlow() != null;
 
   void _emitProfileUpdate(ProfileProvider profileProvider) {
-    final currentUser = profileProvider.currentUser;
+    final currentUser = profileProvider.heldProfile;
     if (currentUser == null) return;
 
     final user = User(
@@ -494,7 +494,7 @@ class _ConnectWalletState extends State<ConnectWallet>
       debugPrint('connectwallet: profile load failed for $address: $e');
     }
 
-    if (!profileExistsOnBackend && profileProvider.currentUser == null) {
+    if (!profileExistsOnBackend && profileProvider.heldProfile == null) {
       try {
         final created = await profileProvider.createProfileFromWallet(
             walletAddress: address);

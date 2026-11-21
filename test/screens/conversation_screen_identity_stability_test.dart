@@ -8,8 +8,13 @@ import 'package:art_kubus/screens/community/conversation_screen.dart';
 import 'package:art_kubus/services/account_identity.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../support/account_session_fixture.dart';
 
 void main() {
+  // A signed-in surface has a live session behind its held profile.
+  setUp(() => AccountSessionFixture.start(accountId: 'test-account'));
+  tearDown(AccountSessionFixture.end);
+
   ChatMessage message({
     String id = 'm1',
     String wallet = '0x1234567890abcdef1234567890abcdef12345678',

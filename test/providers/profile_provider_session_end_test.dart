@@ -6,6 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:art_kubus/providers/profile_provider.dart';
 import 'package:art_kubus/services/backend_api_service.dart';
+import '../support/account_session_fixture.dart';
 
 const MethodChannel _secureStorageChannel =
     MethodChannel('plugins.it_nomads.com/flutter_secure_storage');
@@ -133,6 +134,12 @@ void main() {
 
   test('a profile save for a session that stays open persists the account',
       () async {
+    // The session stays open: a credential is behind the saved account.
+    AccountSessionFixture.start(
+      accountId: 'user-person',
+      wallet: 'WalletAddr111',
+    );
+    addTearDown(AccountSessionFixture.end);
     final api = _HeldSaveApi();
     final provider = ProfileProvider(apiService: api);
     final save = provider.saveProfile(

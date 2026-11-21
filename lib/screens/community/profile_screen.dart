@@ -12,7 +12,6 @@ import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../utils/design_tokens.dart';
 import '../../utils/profile_data_key.dart';
-import '../../utils/wallet_utils.dart';
 import '../../utils/artwork_author_key.dart';
 import '../../utils/kubus_brand_colors.dart';
 import '../../utils/keyboard_inset_resolver.dart';
@@ -205,8 +204,8 @@ class _ProfileScreenState extends State<ProfileScreen>
     _artistDataIdentity = identity;
     _artistDataGeneration++;
     final profileProvider = _listenedProfileProvider;
-    final profileConfirmed = profileProvider != null &&
-        _profileMatchesCurrentIdentity(profileProvider);
+    final profileConfirmed =
+        profileProvider != null && profileProvider.isSignedIn;
     _artistProfileHydrationStarted =
         !profileConfirmed && (profileProvider?.isLoading ?? false);
     if (!mounted) return;
@@ -221,19 +220,6 @@ class _ProfileScreenState extends State<ProfileScreen>
       _artistEvents = [];
       _artistAuthorshipUnavailable = false;
     });
-  }
-
-  bool _profileMatchesCurrentIdentity(ProfileProvider profileProvider) {
-    final identity = AccountIdentity.accountKey.trim();
-    if (identity.isEmpty) return true;
-    final profile = profileProvider.currentUser;
-    if (profile == null) return false;
-    final accountId = (profile.userId ?? '').trim();
-    if (accountId.isNotEmpty) {
-      return accountId.toLowerCase() == identity.toLowerCase();
-    }
-    final wallet = profile.walletAddress.trim();
-    return wallet.isNotEmpty && WalletUtils.equals(wallet, identity);
   }
 
   bool _hasArtistRole(
@@ -574,8 +560,8 @@ class _ProfileScreenState extends State<ProfileScreen>
         builder: (context, constraints) {
           final profileProvider = Provider.of<ProfileProvider>(context);
           final isSmallScreen = constraints.maxWidth < 360;
-          final walletAddress = profileProvider.currentWalletAddress;
           final currentProfile = profileProvider.currentUser;
+          final walletAddress = currentProfile?.walletAddress;
           final authorKey = ArtworkAuthorKey.resolve(
             walletAddress: walletAddress,
             accountId: currentProfile?.userId,
@@ -740,7 +726,7 @@ class _ProfileScreenState extends State<ProfileScreen>
     if (nextShowStatus != _showActivityStatus) {
       setState(() => _showActivityStatus = nextShowStatus);
     }
-    if (_profileMatchesCurrentIdentity(profileProvider)) {
+    if (profileProvider.isSignedIn) {
       _artistProfileHydrationStarted = false;
       if (_artistDataLoading && !_artistDataRequested) {
         setState(() => _artistDataLoading = false);
@@ -1068,7 +1054,7 @@ class _ProfileScreenState extends State<ProfileScreen>
       context,
       listen: false,
     );
-    if (!_profileMatchesCurrentIdentity(profileProvider)) return;
+    if (!profileProvider.isSignedIn) return;
     // Profile/account id first (wallet only as a legacy fallback), so a
     // walletless artist still loads authored artworks and collections.
     final wallet = profileArtistDataKey(profileProvider.currentUser);

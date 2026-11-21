@@ -101,6 +101,8 @@ class NotificationProvider extends ChangeNotifier {
   int _debugSyncs = 0;
   int _debugSkippedSyncs = 0;
   bool get _hasAuthToken => (_backend.getAuthToken() ?? '').isNotEmpty;
+  // A wallet alone may request a notification session, so it counts here. This
+  // gates network work only; nothing in the UI reads it as "signed in".
   bool get _hasAuthContext =>
       _hasAuthToken || ((_currentWallet ?? '').isNotEmpty);
 

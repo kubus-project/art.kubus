@@ -2,6 +2,8 @@ import 'dart:convert';
 
 import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:art_kubus/models/gallery_presentation.dart';
+import 'package:art_kubus/models/user_profile.dart';
+import 'package:art_kubus/providers/profile_provider.dart';
 import 'package:art_kubus/providers/wallet_provider.dart';
 import 'package:art_kubus/services/backend_api_service.dart';
 import 'package:art_kubus/widgets/detail/gallery_presentation.dart';
@@ -176,8 +178,28 @@ void main() {
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
     await tester.pumpWidget(
-      ChangeNotifierProvider<WalletProvider>(
-        create: (_) => WalletProvider(deferInit: true),
+      MultiProvider(
+        providers: [
+          ChangeNotifierProvider<WalletProvider>(
+            create: (_) => WalletProvider(deferInit: true),
+          ),
+          // The editor is for a signed-in account: the token above is its
+          // session, and this is the profile held behind it.
+          ChangeNotifierProvider<ProfileProvider>.value(
+            value: ProfileProvider()
+              ..setCurrentUser(UserProfile(
+                id: 'gallery-editor',
+                userId: 'gallery-editor',
+                walletAddress: '',
+                username: 'editor',
+                displayName: 'Editor',
+                bio: '',
+                avatar: '',
+                createdAt: DateTime(2026),
+                updatedAt: DateTime(2026),
+              )),
+          ),
+        ],
         child: MaterialApp(
           locale: locale,
           localizationsDelegates: AppLocalizations.localizationsDelegates,

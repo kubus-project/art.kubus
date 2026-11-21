@@ -44,6 +44,8 @@ class Web3Provider extends ChangeNotifier {
     return provider;
   }
 
+  // Wallet forwarders below are signing state, not identity: the wallet this
+  // device can sign for. Who is signed in is the profile provider's answer.
   bool get hasWalletIdentity => _walletProvider?.hasWalletIdentity ?? false;
   bool get hasSigner => _walletProvider?.hasSigner ?? false;
   bool get canTransact => _walletProvider?.authority.canTransact ?? false;
@@ -58,9 +60,6 @@ class Web3Provider extends ChangeNotifier {
       _walletProvider?.currentSolanaNetwork ?? _solanaService.currentNetwork;
   List<WalletTransaction> get transactions =>
       List.unmodifiable(_walletProvider?.transactions ?? const []);
-  Map<String, dynamic>? get backendProfile => _walletProvider?.backendProfile;
-  int get collectionsCount => _walletProvider?.collectionsCount ?? 0;
-  int get achievementsUnlocked => _walletProvider?.achievementsUnlocked ?? 0;
   double get achievementTokenTotal =>
       _walletProvider?.achievementTokenTotal ?? 0.0;
   String get kub8TokenAddress => ApiKeys.kub8MintAddress;

@@ -15,6 +15,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../support/account_session_fixture.dart';
 
 const _accountA = '40000000-0000-4000-8000-000000000010';
 const _profileA = '10000000-0000-4000-8000-000000000010';
@@ -107,6 +108,10 @@ Future<void> _pumpFrames(WidgetTester tester, [int count = 4]) async {
 }
 
 void main() {
+  // A signed-in surface has a live session behind its held profile.
+  setUp(() => AccountSessionFixture.start(accountId: 'test-account'));
+  tearDown(AccountSessionFixture.end);
+
   TestWidgetsFlutterBinding.ensureInitialized();
 
   setUp(() {

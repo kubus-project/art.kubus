@@ -8,6 +8,7 @@ import '../../../config/api_keys.dart';
 import '../../../utils/design_tokens.dart';
 import '../../../providers/wallet_provider.dart';
 import '../../../providers/navigation_provider.dart';
+import '../../../providers/profile_provider.dart';
 import 'wallet_backup_protection_screen.dart';
 import '../../../models/wallet.dart';
 import 'nft_gallery.dart';
@@ -76,6 +77,7 @@ class _WalletHomeState extends State<WalletHome> {
         final authority = walletProvider.authority;
         final presentationState = WalletPresentationStateResolver.resolve(
           authority,
+          isSignedIn: context.watch<ProfileProvider>().isSignedIn,
           sessionPhase: walletProvider.sessionPhase,
           accountLinkPhase: walletProvider.accountLinkPhase,
         );
@@ -783,6 +785,7 @@ class _WalletHomeState extends State<WalletHome> {
           l10n: l10n,
           roles: roles,
           authority: authority,
+          isSignedIn: Provider.of<ProfileProvider>(context).isSignedIn,
           onSend: () => _openSendScreen(walletProvider, canTransact),
           onReceive: _openReceiveScreen,
           onSwap: () => _openSwapScreen(walletProvider, canTransact),

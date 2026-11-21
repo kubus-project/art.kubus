@@ -289,7 +289,8 @@ extension _DesktopCommunityScreenStatePart5 on _DesktopCommunityScreenState {
     if (!canPost || !mounted) return;
     // A signed-in account posts with or without a wallet. Only a session with
     // no identity at all stops here, keeping the draft in the composer.
-    if (!await communityPostingHasIdentity()) {
+    final isSignedIn = context.read<ProfileProvider>().isSignedIn;
+    if (!await communityPostingHasIdentity(isSignedIn: isSignedIn)) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showKubusSnackBar(
         SnackBar(

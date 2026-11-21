@@ -13,6 +13,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../support/account_session_fixture.dart';
+
 /// Visual contract for the redesigned onboarding shell: light contextual
 /// header, stage-grouped progress, reduced-motion support, and the calm
 /// one-decision wallet step.
@@ -56,6 +58,7 @@ Future<void> _pumpOnboardingReady(WidgetTester tester) async {
 }
 
 ProfileProvider _signedInAccountWithoutWallet() {
+  AccountSessionFixture.start(accountId: 'profile_visual');
   return ProfileProvider()
     ..setCurrentUser(UserProfile(
       id: 'profile_visual',

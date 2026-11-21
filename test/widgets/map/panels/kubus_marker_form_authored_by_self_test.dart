@@ -17,6 +17,7 @@ import 'package:latlong2/latlong.dart';
 // ignore: depend_on_referenced_packages
 import 'package:plugin_platform_interface/plugin_platform_interface.dart';
 import 'package:provider/provider.dart';
+import '../../../support/account_session_fixture.dart';
 
 /// "I am the creator" on the street-art marker form, mirroring the artwork
 /// create and edit forms: the box fills the artist field with the signed-in
@@ -169,6 +170,10 @@ bool _artistReadOnly(WidgetTester tester) => tester
     .readOnly;
 
 void main() {
+  // A signed-in surface has a live session behind its held profile.
+  setUp(() => AccountSessionFixture.start(accountId: 'test-account'));
+  tearDown(AccountSessionFixture.end);
+
   testWidgets('ticking fills the artist field, locks it and sends the flag',
       (tester) async {
     final submitted = <MapMarkerFormResult>[];

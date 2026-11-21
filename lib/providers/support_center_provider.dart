@@ -99,6 +99,7 @@ class SupportCenterProvider extends ChangeNotifier {
   /// Whether the Support Center is switched on for this build.
   bool get supportEnabled => _supportEnabled;
 
+  // Credential fact gating support requests; not identity display state.
   bool get signedIn => BackendApiService().hasAuthSession;
 
   // Everything below belongs to the account that was signed in when it was

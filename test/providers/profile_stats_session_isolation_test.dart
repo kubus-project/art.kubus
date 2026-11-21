@@ -3,9 +3,11 @@ import 'dart:async';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:art_kubus/models/stats/stats_models.dart';
+import 'package:art_kubus/models/user_profile.dart';
 import 'package:art_kubus/providers/profile_provider.dart';
 import 'package:art_kubus/services/backend_api_service.dart';
 import 'package:art_kubus/services/stats_api_service.dart';
+import '../support/account_session_fixture.dart';
 
 /// Profile API that is never reached by these tests: refreshStats with an
 /// explicit wallet only touches the stats service.
@@ -48,8 +50,25 @@ StatsSnapshot _snapshot(String entityId, Map<String, int> counters) {
   );
 }
 
+/// The counters belong to the signed-in account: a live session and a held
+/// profile. Setting both is how a test reads them.
+UserProfile _account(String wallet) => UserProfile(
+      id: 'profile-$wallet',
+      userId: 'user-$wallet',
+      walletAddress: wallet,
+      username: 'user_$wallet',
+      displayName: 'User $wallet',
+      bio: '',
+      avatar: '',
+      createdAt: DateTime(2026),
+      updatedAt: DateTime(2026),
+    );
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
+
+  setUp(() => AccountSessionFixture.start(accountId: 'user-walletA'));
+  tearDown(AccountSessionFixture.end);
 
   test('stats response for account A is dropped after sign-out', () async {
     final stats = _CompleterStatsApi();
@@ -67,9 +86,11 @@ void main() {
         .complete(_snapshot('walletA', {'followers': 99, 'following': 7}));
     await pending;
 
+    expect(provider.currentUser, isNull);
+    // The next account reads its own counters, never A's late response.
+    provider.setCurrentUser(_account('walletB'));
     expect(provider.followersCount, 0);
     expect(provider.followingCount, 0);
-    expect(provider.currentUser, isNull);
   });
 
   test('stats response for account A is dropped after switching to B',
@@ -92,6 +113,7 @@ void main() {
     stats.requests.first.completer
         .complete(_snapshot('walletA', {'followers': 99}));
     await pendingA;
+    provider.setCurrentUser(_account('walletB'));
     expect(provider.followersCount, 0);
 
     stats.requests.last.completer
@@ -107,6 +129,7 @@ void main() {
       statsApi: stats,
     );
 
+    provider.setCurrentUser(_account('walletA'));
     final pending = provider.refreshStats(walletAddress: 'walletA');
     await Future<void>.delayed(Duration.zero);
     stats.requests.single.completer

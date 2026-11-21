@@ -423,7 +423,9 @@ extension _CommunityScreenStatePart4 on _CommunityScreenState {
               hub.rememberComposeIntentForAuth(CommunityComposeIntent.post),
         );
         if (!canPost || !mounted) return false;
-        if (!await communityPostingHasIdentity()) {
+        if (!await communityPostingHasIdentity(
+          isSignedIn: context.read<ProfileProvider>().isSignedIn,
+        )) {
           _showSnack(l10n.communityPostingNeedsWalletToast);
           return false;
         }

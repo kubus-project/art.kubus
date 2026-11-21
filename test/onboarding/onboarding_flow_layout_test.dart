@@ -28,6 +28,8 @@ import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../helpers/secure_storage_absent.dart';
 
+import '../support/account_session_fixture.dart';
+
 Widget _buildTestApp({
   required Widget child,
   required Locale locale,
@@ -136,6 +138,8 @@ Map<String, dynamic> _profileJson({
 /// the onboarding avatar flush + hydration logic in isolation.
 class _FakeAvatarProfileProvider extends ProfileProvider {
   _FakeAvatarProfileProvider(UserProfile user) {
+    // An account journey runs behind a live session.
+    AccountSessionFixture.start(accountId: user.userId ?? user.id);
     setCurrentUser(user);
   }
 
@@ -1361,6 +1365,7 @@ void main() {
     await tester.binding.setSurfaceSize(const Size(390, 1700));
     addTearDown(() async => tester.binding.setSurfaceSize(null));
 
+    AccountSessionFixture.start(accountId: 'profile_creator');
     final profileProvider = ProfileProvider()
       ..setCurrentUser(UserProfile(
         id: 'profile_creator',

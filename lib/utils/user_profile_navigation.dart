@@ -16,7 +16,6 @@ import '../services/profile_package_service.dart';
 import '../services/public_entity_load_outcome.dart';
 import '../utils/home/home_quick_action_executor.dart';
 import '../utils/home/home_quick_action_models.dart';
-import '../utils/wallet_utils.dart';
 import '../widgets/glass_components.dart';
 import 'design_tokens.dart';
 
@@ -162,46 +161,13 @@ class UserProfileNavigation {
     return _targetsCurrentUser(context, targetId);
   }
 
-  /// Match only stable account identifiers and linked wallet/public actor IDs.
-  /// Display names and usernames are intentionally excluded because they can
-  /// collide or change independently of account ownership.
+  /// The profile provider's one "is this me" answer, read for [targetId].
   static bool _targetsCurrentUser(BuildContext context, String targetId) {
-    final target = _identityKey(targetId);
-    if (target.isEmpty) return false;
     try {
-      final provider = context.read<ProfileProvider>();
-      if (!provider.isSignedIn) return false;
-      final current = provider.currentUser;
-      if (current == null) return false;
-      final linkedIdentifiers = <String?>[
-        current.userId,
-        current.id,
-        current.walletAddress,
-        current.publicActorId,
-      ];
-      return linkedIdentifiers.any((identifier) {
-        final key = _identityKey(identifier);
-        return key.isNotEmpty && key == target;
-      });
+      return context.read<ProfileProvider>().isCurrentAccount(targetId);
     } catch (_) {
       return false;
     }
-  }
-
-  static final RegExp _uuid = RegExp(
-    r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$',
-  );
-
-  static String _identityKey(String? identifier) {
-    final value = WalletUtils.canonical(identifier);
-    if (value.isEmpty) return '';
-    // A UUID is an account ID and is case-insensitive. It must be recognised
-    // before the wallet heuristic, which accepts any 32+ character
-    // `[a-zA-Z0-9_-]` string (a hyphenated UUID included) and would keep its case.
-    if (_uuid.hasMatch(value)) return value.toLowerCase();
-    // Wallet keys are case-sensitive; other account IDs are treated as
-    // case-insensitive stable identifiers.
-    return WalletUtils.looksLikeWallet(value) ? value : value.toLowerCase();
   }
 
   static Future<void> _openOwnerProfile(BuildContext context) async {

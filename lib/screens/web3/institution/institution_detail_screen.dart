@@ -224,6 +224,7 @@ class _InstitutionDetailScreenState extends State<InstitutionDetailScreen> {
   /// Signed-out visitors and any failure leave the claim action available.
   Future<void> _refreshOwnClaimState(Institution institution) async {
     if (!institution.isImportedUnclaimed) return;
+    // Credential fact gating a network read; not identity display.
     if ((_api.getAuthToken() ?? '').trim().isEmpty) return;
     final epoch = _claimEpoch;
     // The read belongs to the account that was signed in when it started. A

@@ -6,7 +6,6 @@ import 'package:flutter/material.dart';
 import '../../../widgets/profile/profile_identity_hero.dart';
 import '../../../widgets/profile/profile_owner_identity.dart';
 import '../../../utils/profile_data_key.dart';
-import '../../../utils/wallet_utils.dart';
 import '../../../widgets/inline_loading.dart';
 import 'package:provider/provider.dart';
 import '../../../l10n/app_localizations.dart';
@@ -181,8 +180,8 @@ class _ProfileScreenState extends State<ProfileScreen>
     _artistDataIdentity = identity;
     _artistDataGeneration++;
     final profileProvider = _listenedProfileProvider;
-    final profileConfirmed = profileProvider != null &&
-        _profileMatchesCurrentIdentity(profileProvider);
+    final profileConfirmed =
+        profileProvider != null && profileProvider.isSignedIn;
     _artistProfileHydrationStarted =
         !profileConfirmed && (profileProvider?.isLoading ?? false);
     if (!mounted) return;
@@ -197,19 +196,6 @@ class _ProfileScreenState extends State<ProfileScreen>
       _artistEvents = [];
       _artistAuthorshipUnavailable = false;
     });
-  }
-
-  bool _profileMatchesCurrentIdentity(ProfileProvider profileProvider) {
-    final identity = AccountIdentity.accountKey.trim();
-    if (identity.isEmpty) return true;
-    final profile = profileProvider.currentUser;
-    if (profile == null) return false;
-    final accountId = (profile.userId ?? '').trim();
-    if (accountId.isNotEmpty) {
-      return accountId.toLowerCase() == identity.toLowerCase();
-    }
-    final wallet = profile.walletAddress.trim();
-    return wallet.isNotEmpty && WalletUtils.equals(wallet, identity);
   }
 
   bool _hasArtistRole(
@@ -930,8 +916,8 @@ class _ProfileScreenState extends State<ProfileScreen>
   Widget _buildStatsCards(ThemeProvider themeProvider,
       ProfileProvider profileProvider, bool isLarge) {
     final l10n = AppLocalizations.of(context)!;
-    final wallet = profileProvider.currentWalletAddress;
     final profile = profileProvider.currentUser;
+    final wallet = profile?.walletAddress;
     final authorKey = ArtworkAuthorKey.resolve(
       walletAddress: wallet,
       accountId: profile?.userId,
@@ -996,8 +982,8 @@ class _ProfileScreenState extends State<ProfileScreen>
   Widget _buildArtistPortfolioSection(ThemeProvider themeProvider) {
     final l10n = AppLocalizations.of(context)!;
     final profileProvider = context.read<ProfileProvider>();
-    final wallet = profileProvider.currentWalletAddress;
     final profile = profileProvider.currentUser;
+    final wallet = profile?.walletAddress;
     final authorKey = ArtworkAuthorKey.resolve(
       walletAddress: wallet,
       accountId: profile?.userId,
@@ -1861,7 +1847,7 @@ class _ProfileScreenState extends State<ProfileScreen>
   Future<void> _maybeLoadArtistData({bool force = false}) async {
     final profileProvider =
         Provider.of<ProfileProvider>(context, listen: false);
-    if (!_profileMatchesCurrentIdentity(profileProvider)) return;
+    if (!profileProvider.isSignedIn) return;
     // Profile/account id first; wallet only as a legacy fallback.
     final wallet = profileArtistDataKey(profileProvider.currentUser);
     final eventsKey = profileEventsMatchKey(profileProvider.currentUser);
@@ -2050,7 +2036,7 @@ class _ProfileScreenState extends State<ProfileScreen>
     if (nextShowStatus != _showActivityStatus) {
       setState(() => _showActivityStatus = nextShowStatus);
     }
-    if (_profileMatchesCurrentIdentity(profileProvider)) {
+    if (profileProvider.isSignedIn) {
       _artistProfileHydrationStarted = false;
       if (_artistDataLoading && !_artistDataRequested) {
         setState(() => _artistDataLoading = false);

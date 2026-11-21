@@ -844,7 +844,7 @@ class _AppLauncherState extends State<AppLauncher> {
                 ) {
                   final provider = attendanceProvider ?? AttendanceProvider();
                   provider.bindAuthContext(
-                    isSignedIn: walletProvider.authority.hasAccountSession,
+                    isSignedIn: profileProvider.isSignedIn,
                     walletAddress: walletProvider.currentWalletAddress,
                   );
                   return provider;
@@ -867,7 +867,7 @@ class _AppLauncherState extends State<AppLauncher> {
                       verificationProvider ?? AccountVerificationProvider();
                   provider.bindAccount(
                     accountId: profileProvider.currentUser?.userId,
-                    isSignedIn: walletProvider.authority.hasAccountSession,
+                    isSignedIn: profileProvider.isSignedIn,
                   );
                   return provider;
                 },
@@ -883,9 +883,8 @@ class _AppLauncherState extends State<AppLauncher> {
                 ) {
                   final provider = attestationProvider ?? AttestationProvider();
                   provider.bindAuthContext(
-                    isSignedIn: walletProvider.authority.hasAccountSession,
-                    walletAddress: profileProvider.currentUser?.walletAddress ??
-                        walletProvider.currentWalletAddress,
+                    isSignedIn: profileProvider.isSignedIn,
+                    walletAddress: walletProvider.currentWalletAddress,
                   );
                   return provider;
                 },
@@ -902,12 +901,10 @@ class _AppLauncherState extends State<AppLauncher> {
                 ) {
                   final provider = chatProvider ?? ChatProvider();
                   provider.bindToRefresh(appRefreshProvider);
+                  // Who is signed in comes from the owner, through profileProvider.
                   provider.bindAuthContext(
                     profileProvider: profileProvider,
-                    accountId: profileProvider.currentUser?.userId ??
-                        profileProvider.currentUser?.id,
                     walletAddress: walletProvider.currentWalletAddress,
-                    isSignedIn: walletProvider.authority.hasAccountSession,
                   );
                   return provider;
                 },
@@ -936,21 +933,13 @@ class _AppLauncherState extends State<AppLauncher> {
                   return provider;
                 },
               ),
-              ChangeNotifierProxyProvider<SecurityGateProvider,
+              ChangeNotifierProxyProvider<ProfileProvider,
                   EmailPreferencesProvider>(
                 create: (context) => EmailPreferencesProvider(),
-                update:
-                    (context, securityGateProvider, emailPreferencesProvider) {
+                update: (context, profileProvider, emailPreferencesProvider) {
                   final provider =
                       emailPreferencesProvider ?? EmailPreferencesProvider();
-                  final tokenPresent =
-                      (BackendApiService().getAuthToken() ?? '')
-                          .trim()
-                          .isNotEmpty;
-                  provider.bindSession(
-                    hasSession:
-                        tokenPresent || securityGateProvider.hasLocalAccount,
-                  );
+                  provider.bindSession(hasSession: profileProvider.isSignedIn);
                   return provider;
                 },
               ),
@@ -965,10 +954,8 @@ class _AppLauncherState extends State<AppLauncher> {
                 ) {
                   final provider =
                       markerManagementProvider ?? MarkerManagementProvider();
-                  provider.bindWallet(
-                    profileProvider.currentUser?.walletAddress ??
-                        walletProvider.currentWalletAddress,
-                  );
+                  // A wallet is signing state, not identity: the wallet provider's.
+                  provider.bindWallet(walletProvider.currentWalletAddress);
                   if (!provider.initialized && !provider.isLoading) {
                     unawaited(provider.initialize());
                   }
@@ -981,10 +968,8 @@ class _AppLauncherState extends State<AppLauncher> {
                 update:
                     (context, profileProvider, walletProvider, claimsProvider) {
                   final provider = claimsProvider ?? StreetArtClaimsProvider();
-                  provider.bindWallet(
-                    profileProvider.currentUser?.walletAddress ??
-                        walletProvider.currentWalletAddress,
-                  );
+                  // A wallet is signing state, not identity: the wallet provider's.
+                  provider.bindWallet(walletProvider.currentWalletAddress);
                   if (!provider.initialized) {
                     unawaited(provider.initialize());
                   }

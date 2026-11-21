@@ -10,11 +10,9 @@ import '../../models/artwork.dart';
 import '../../models/artwork_comment.dart';
 import '../../providers/artwork_provider.dart';
 import '../../providers/profile_provider.dart';
-import '../../providers/wallet_provider.dart';
 import '../../services/backend_api_service.dart';
 import '../../services/contextual_auth_gate.dart';
 import '../../utils/design_tokens.dart';
-import '../../utils/wallet_utils.dart';
 import '../identity/kubus_identity_avatar.dart';
 import '../collaboration_panel.dart';
 import '../glass_components.dart';
@@ -78,17 +76,9 @@ class _ArtworkCollaboratorsExpandableCardState
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    final profileProvider = context.read<ProfileProvider>();
-    final walletProvider = context.read<WalletProvider>();
-    final viewerWallet = WalletUtils.canonical(
-      profileProvider.currentUser?.walletAddress ??
-          walletProvider.currentWalletAddress ??
-          '',
-    );
-    final ownerWallet = WalletUtils.canonical(
-      widget.artwork.walletAddress ?? '',
-    );
-    final isOwner = viewerWallet.isNotEmpty && ownerWallet == viewerWallet;
+    final isOwner = context
+        .read<ProfileProvider>()
+        .isCurrentAccount(widget.artwork.walletAddress);
 
     return DetailCard(
       padding: const EdgeInsets.fromLTRB(
@@ -487,18 +477,8 @@ class _ArtworkCommentsExpandableCardState
   }) {
     final l10n = AppLocalizations.of(context)!;
     final scheme = Theme.of(context).colorScheme;
-    final profile = context.read<ProfileProvider>().currentUser;
-    final walletProvider = context.read<WalletProvider>();
-
-    final currentWallet = WalletUtils.canonical(
-      (profile?.walletAddress ?? walletProvider.currentWalletAddress ?? '')
-          .toString(),
-    );
-    final currentId = WalletUtils.canonical((profile?.id ?? '').toString());
-    final authorKey = WalletUtils.canonical(comment.userId);
-    final canModify = authorKey.isNotEmpty &&
-        (authorKey == currentWallet ||
-            (currentId.isNotEmpty && authorKey == currentId));
+    final canModify =
+        context.read<ProfileProvider>().isCurrentAccount(comment.userId);
 
     Future<void> showHistory() async {
       if (!comment.isEdited || comment.originalContent == null) return;

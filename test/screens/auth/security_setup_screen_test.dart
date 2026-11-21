@@ -1,12 +1,12 @@
 import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:art_kubus/providers/glass_capabilities_provider.dart';
 import 'package:art_kubus/providers/security_gate_provider.dart';
+import 'package:art_kubus/providers/profile_provider.dart';
 import 'package:art_kubus/providers/themeprovider.dart';
 import 'package:art_kubus/providers/wallet_provider.dart';
 import 'package:art_kubus/screens/auth/security_setup_screen.dart';
 import 'package:art_kubus/screens/security/security_hub_screen.dart';
 import 'package:art_kubus/screens/web3/wallet/wallet_backup_protection_screen.dart';
-import 'package:art_kubus/services/backend_api_service.dart';
 import 'package:art_kubus/services/encrypted_wallet_backup_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -49,9 +49,6 @@ class _SecuritySetupWalletProvider extends WalletProvider {
   WalletAuthoritySnapshot get authority => WalletAuthoritySnapshot(
         state: WalletAuthorityState.localSignerReady,
         signerSource: WalletSignerSource.local,
-        accountSignedIn: true,
-        signInMethod: AuthSignInMethod.email,
-        accountEmail: 'tester@example.com',
         walletAddress: walletAddress,
         hasLocalSigner: true,
         hasExternalSigner: false,
@@ -137,6 +134,9 @@ Widget _buildSecurityApp({
         create: (_) => GlassCapabilitiesProvider(),
       ),
       ChangeNotifierProvider<WalletProvider>.value(value: walletProvider),
+      ChangeNotifierProvider<ProfileProvider>(
+        create: (_) => ProfileProvider(),
+      ),
       ChangeNotifierProvider<SecurityGateProvider>(
         create: (_) => SecurityGateProvider(),
       ),

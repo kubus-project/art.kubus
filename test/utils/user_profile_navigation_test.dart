@@ -18,12 +18,25 @@ import 'package:art_kubus/utils/share_deep_link_navigation.dart';
 import 'package:art_kubus/utils/user_profile_navigation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:provider/provider.dart';
+import '../support/account_session_fixture.dart';
+import '../helpers/secure_storage_absent.dart';
 
 const _accountId = '11111111-1111-4111-8111-111111111111';
 const _wallet = 'ArtistWallet111111111111111111111111111111111';
 
 void main() {
+  // Authenticated requests read the closure receipt from secure storage, which
+  // never answers in fake time unless the channel is mocked.
+  installEmptySecureStorage();
+  // A signed-in surface has a live session behind its held profile.
+  setUp(() {
+    SharedPreferences.setMockInitialValues(<String, Object>{});
+    AccountSessionFixture.start(accountId: 'test-account');
+  });
+  tearDown(AccountSessionFixture.end);
+
   testWidgets('username-only entry resolves the account before owner routing',
       (tester) async {
     final profileProvider = ProfileProvider()..setCurrentUser(_ownerProfile());

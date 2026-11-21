@@ -11,6 +11,8 @@ class AttestationProvider extends ChangeNotifier {
 
   final BackendApiService _api;
 
+  // Bind-time inputs from the profile provider and the wallet provider, kept
+  // only to reset this provider's per-account state when either changes.
   bool _isSignedIn = false;
   String? _walletAddress;
   bool _isLoading = false;

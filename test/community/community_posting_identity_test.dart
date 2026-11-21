@@ -15,25 +15,31 @@ void main() {
   tearDown(AccountIdentity.resetForTesting);
 
   test('a guest has no identity to publish as', () async {
-    expect(await communityPostingHasIdentity(), isFalse);
+    expect(await communityPostingHasIdentity(isSignedIn: false), isFalse);
   });
 
   test('a walletless signed-in account can publish as itself', () async {
     AccountIdentity.setAccountKey(_accountId);
 
     expect(await readCommunityPostingWallet(), isNull);
-    expect(await communityPostingHasIdentity(), isTrue);
+    expect(await communityPostingHasIdentity(isSignedIn: true), isTrue);
   });
 
-  test('a stored wallet is an identity on its own', () async {
+  test('a stored wallet is an identity for a signed-in account', () async {
     SharedPreferences.setMockInitialValues(<String, Object>{'wallet': _wallet});
 
-    expect(await communityPostingHasIdentity(), isTrue);
+    expect(await communityPostingHasIdentity(isSignedIn: true), isTrue);
+  });
+
+  test('a wallet that survived a forced sign-out is no identity', () async {
+    SharedPreferences.setMockInitialValues(<String, Object>{'wallet': _wallet});
+
+    expect(await communityPostingHasIdentity(isSignedIn: false), isFalse);
   });
 
   test('a blank account id never counts as an identity', () async {
     AccountIdentity.setAccountKey('   ');
 
-    expect(await communityPostingHasIdentity(), isFalse);
+    expect(await communityPostingHasIdentity(isSignedIn: true), isFalse);
   });
 }

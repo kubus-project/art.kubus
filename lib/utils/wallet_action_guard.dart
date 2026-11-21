@@ -28,7 +28,7 @@ class WalletSessionAccessSnapshot {
   }) {
     final authority = walletProvider.authority;
     return WalletSessionAccessSnapshot(
-      isSignedIn: authority.accountSignedIn,
+      isSignedIn: profileProvider.isSignedIn,
       hasWalletIdentity: authority.hasWalletIdentity,
       hasSigner: authority.canTransact,
       authorityState: authority.state,
@@ -97,7 +97,7 @@ class WalletSessionAccessSnapshot {
       case WalletSignerActionBlock.signInRequired:
         return l10n.walletActionSignInRequiredToast;
       case WalletSignerActionBlock.walletRequired:
-        if (authorityState == WalletAuthorityState.accountShellOnly) {
+        if (isSignedIn && authorityState == WalletAuthorityState.noWallet) {
           return l10n.walletActionAccountShellNeedsWalletToast;
         }
         return l10n.walletActionConnectWalletRequiredToast;
@@ -111,8 +111,7 @@ class WalletSessionAccessSnapshot {
             return l10n.walletActionReadOnlyReconnectToast;
           case WalletAuthorityState.localSignerReady:
           case WalletAuthorityState.externalWalletReady:
-          case WalletAuthorityState.accountShellOnly:
-          case WalletAuthorityState.signedOut:
+          case WalletAuthorityState.noWallet:
             return l10n.walletReconnectManualRequiredToast;
         }
     }

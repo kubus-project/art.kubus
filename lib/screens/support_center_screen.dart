@@ -70,6 +70,8 @@ class _SupportCenterScreenState extends State<SupportCenterScreen> {
   String? _formError;
   String? _replyFormError;
 
+  // Credential fact, read right after the token is (re)loaded in the sign-in
+  // flow, before any profile exists: it gates requests, not identity display.
   bool get _signedIn => BackendApiService().hasAuthSession;
 
   SupportCenterProvider get _support => context.read<SupportCenterProvider>();

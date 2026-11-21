@@ -226,6 +226,8 @@ class AttendanceProvider extends ChangeNotifier {
   final Map<String, AttendanceMarkerState> _statesByMarkerId =
       <String, AttendanceMarkerState>{};
 
+  // Bind-time inputs from the profile provider and the wallet provider, kept
+  // only to reset this provider's per-account state when either changes.
   bool _isSignedIn = false;
   String? _walletAddress;
 

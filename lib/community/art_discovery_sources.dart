@@ -8,7 +8,6 @@ import '../features/map/session/kubus_map_session_memory.dart';
 import '../models/exhibition.dart';
 import '../providers/artwork_provider.dart';
 import '../providers/community_art_discovery_provider.dart';
-import '../providers/profile_provider.dart';
 import '../providers/saved_items_provider.dart';
 import '../providers/wallet_provider.dart';
 import '../services/backend_api_service.dart';
@@ -34,7 +33,6 @@ ArtDiscoverySources buildLiveArtDiscoverySources(BuildContext context) {
   final api = BackendApiService();
   final artworks = context.read<ArtworkProvider>();
   final saved = context.read<SavedItemsProvider>();
-  final profile = context.read<ProfileProvider>();
   final wallet = context.read<WalletProvider>();
   KubusMapSessionMemory? mapMemory;
   try {
@@ -73,8 +71,9 @@ ArtDiscoverySources buildLiveArtDiscoverySources(BuildContext context) {
       return list;
     },
     signals: () async {
-      final walletAddress =
-          profile.currentWalletAddress ?? wallet.currentWalletAddress;
+      // A wallet is signing state: the follow cache is keyed by the device
+      // wallet, so ranking reads it from the wallet provider.
+      final walletAddress = wallet.currentWalletAddress;
       final followed = <String>{};
       if (walletAddress != null && walletAddress.trim().isNotEmpty) {
         try {

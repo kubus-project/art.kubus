@@ -9,6 +9,8 @@ import 'package:art_kubus/services/presence_api.dart';
 import 'package:fake_async/fake_async.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import '../support/account_session_fixture.dart';
+
 class _FakePresenceApi implements PresenceApi {
   int batchCalls = 0;
   int pingCalls = 0;
@@ -299,6 +301,9 @@ void main() {
     final provider = PresenceProvider(api: _FakePresenceApi());
     final profileProvider = ProfileProvider(apiService: _FakeProfileApi());
     addTearDown(provider.dispose);
+    // Presence is an account feature: the profile is signed in, by a session.
+    AccountSessionFixture.start(accountId: 'p1', wallet: 'wallet_1');
+    addTearDown(AccountSessionFixture.end);
     profileProvider.setCurrentUser(
       UserProfile(
         id: 'p1',

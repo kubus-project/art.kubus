@@ -33,7 +33,16 @@ class HomeQuickActionExecutor {
     }
 
     final target = _targetFor(context, definition, source);
-    if (!_passesCapabilities(context, definition)) return false;
+    if (!_passesCapabilities(
+      context,
+      definition,
+      required: <HomeQuickActionCapability>{
+        ...definition.capabilities,
+        if (target.requiresSignedIn) HomeQuickActionCapability.signedIn,
+      },
+    )) {
+      return false;
+    }
 
     final handled = _executeTarget(context, definition, target);
     if (handled) {
@@ -245,9 +254,10 @@ class HomeQuickActionExecutor {
 
   static bool _passesCapabilities(
     BuildContext context,
-    HomeQuickActionDefinition definition,
-  ) {
-    for (final capability in definition.capabilities) {
+    HomeQuickActionDefinition definition, {
+    required Set<HomeQuickActionCapability> required,
+  }) {
+    for (final capability in required) {
       switch (capability) {
         case HomeQuickActionCapability.signedIn:
           if (!_isSignedIn(context)) {

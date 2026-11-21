@@ -79,6 +79,8 @@ class AuthGatingService {
     return expiry.isAfter(now.add(clockSkew));
   }
 
+  // A stored-prefs hint for routing before any provider is bound (lock screen,
+  // cold start). It is not the signed-in answer: that is the profile provider's.
   static bool hasLocalAccountSync({
     required SharedPreferences prefs,
   }) {

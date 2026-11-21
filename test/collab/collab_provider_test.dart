@@ -10,6 +10,8 @@ import 'package:art_kubus/services/collab_api.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../support/account_session_fixture.dart';
+
 class _FakeCollabApi implements CollabApi {
   @override
   String? getAuthToken() => 'token';
@@ -263,6 +265,11 @@ void main() {
       role: 'viewer',
       status: 'pending',
     );
+
+    // Signed in is a live session behind the held profile.
+    setUp(() => AccountSessionFixture.start(
+        accountId: 'e10d1421-019f-481a-8065-637f1fad53ed'));
+    tearDown(AccountSessionFixture.end);
 
     UserProfile profile({String wallet = '', String id = 'profile-1'}) =>
         UserProfile(

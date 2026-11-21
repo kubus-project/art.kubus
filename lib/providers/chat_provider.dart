@@ -1025,8 +1025,12 @@ class ChatProvider extends ChangeNotifier {
     return normalized.trim();
   }
 
+  // Credential fact for messaging requests (is a bearer token held), not
+  // identity: who is signed in is the profile provider's answer.
   bool get isAuthenticated => (_api.getAuthToken() ?? '').isNotEmpty;
   bool get _hasAuthToken => (_api.getAuthToken() ?? '').isNotEmpty;
+  // A wallet alone may request a chat session, so it counts here. This gates
+  // network work only; nothing in the UI reads it as "signed in".
   bool get _hasAuthContext =>
       _hasAuthToken || ((_currentWallet ?? '').isNotEmpty);
   Map<String, Object?> get debugResourceSnapshot => <String, Object?>{

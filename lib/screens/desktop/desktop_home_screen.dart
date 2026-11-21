@@ -7,7 +7,6 @@ import 'package:provider/provider.dart';
 import 'package:geolocator/geolocator.dart';
 import '../../providers/themeprovider.dart';
 import '../../providers/web3provider.dart';
-import '../../providers/wallet_provider.dart';
 import '../../providers/artwork_provider.dart';
 import '../../providers/promotion_provider.dart';
 import '../../providers/profile_provider.dart';
@@ -181,7 +180,8 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
     }
 
     final walletAddress =
-        (context.watch<WalletProvider>().currentWalletAddress ?? '').trim();
+        (context.watch<ProfileProvider>().currentUser?.walletAddress ?? '')
+            .trim();
     if (walletAddress.isEmpty) {
       _lastDiscoveredStatsWallet = '';
       return;
@@ -718,12 +718,12 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
     final themeProvider = Provider.of<ThemeProvider>(context);
     final l10n = AppLocalizations.of(context)!;
     // Guests are welcomed to the product rather than addressed as "there".
-    final headerDisplayName = profileProvider.isSignedIn
-        ? resolveHomeHeaderDisplayName(
+    final headerDisplayName = user == null
+        ? l10n.homeGuestHeaderTitle
+        : resolveHomeHeaderDisplayName(
             user: user,
             fallbackLabel: l10n.homeDefaultDisplayName,
-          )
-        : l10n.homeGuestHeaderTitle;
+          );
     final isArtist = user?.isArtist ?? false;
     final isInstitution = user?.isInstitution ?? false;
     // Same live network pill as mobile home: label from the provider and
@@ -762,7 +762,7 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
                             color: Theme.of(context).colorScheme.onSurface,
                           ),
                           compact: false,
-                          footer: web3Provider.hasWalletIdentity
+                          footer: user != null && web3Provider.hasWalletIdentity
                               ? Wrap(
                                   spacing: KubusSpacing.sm,
                                   runSpacing: KubusSpacing.xxs,
@@ -902,12 +902,9 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
     final exhibitionsProvider = Provider.of<ExhibitionsProvider>(context);
     final statsProvider = context.watch<StatsProvider>();
     final l10n = AppLocalizations.of(context)!;
-    final walletAddress = context
-            .select<WalletProvider, String?>(
-              (provider) => provider.currentWalletAddress,
-            )
-            ?.trim() ??
-        '';
+    // The account's wallet, not the stored one: stats need a live session.
+    final walletAddress =
+        profileProvider.currentUser?.walletAddress.trim() ?? '';
     final publicSnapshot = walletAddress.isEmpty
         ? null
         : statsProvider.getSnapshot(

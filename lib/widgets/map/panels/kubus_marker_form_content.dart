@@ -425,7 +425,6 @@ class _KubusMarkerFormContentState extends State<KubusMarkerFormContent> {
     final profile = Provider.of<ProfileProvider?>(context, listen: false);
     return AuthoredBySelf.displayNameFor(
       profile?.currentUser,
-      isSignedIn: profile?.isSignedIn ?? false,
     );
   }
 

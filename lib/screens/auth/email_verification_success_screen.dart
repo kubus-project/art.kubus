@@ -139,12 +139,12 @@ class _EmailVerificationSuccessScreenState
         }
       }
 
-      final walletAddress = (profileProvider.currentUser?.walletAddress ??
+      final walletAddress = (profileProvider.heldProfile?.walletAddress ??
               walletProvider.currentWalletAddress ??
               '')
           .trim();
-      final userId = (profileProvider.currentUser?.userId ??
-              profileProvider.currentUser?.id ??
+      final userId = (profileProvider.heldProfile?.userId ??
+              profileProvider.heldProfile?.id ??
               prefs.getString('user_id') ??
               '')
           .trim();

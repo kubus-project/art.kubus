@@ -5,6 +5,8 @@ import 'package:art_kubus/services/backend_api_service.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../support/account_session_fixture.dart';
+
 /// Records the profile saves a provider makes, and serves a fixed `/me` body.
 class _RecordingProfileApi implements ProfileBackendApi {
   _RecordingProfileApi({this.myProfile = const <String, dynamic>{}});
@@ -89,7 +91,10 @@ UserProfile _walletAccount() => UserProfile.fromJson(<String, dynamic>{
 void main() {
   setUp(() {
     SharedPreferences.setMockInitialValues(<String, Object>{});
+    // The account is signed in: a held profile with a live session.
+    AccountSessionFixture.start(accountId: 'acc-1');
   });
+  tearDown(AccountSessionFixture.end);
 
   test('walletless account role choice is saved, not dropped', () async {
     final api = _RecordingProfileApi();
