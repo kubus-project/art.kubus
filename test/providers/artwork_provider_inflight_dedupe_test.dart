@@ -9,19 +9,42 @@ import 'package:art_kubus/services/backend_api_service.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:latlong2/latlong.dart';
 
-class _FakeArtworkApi implements ArtworkBackendApi {
+class _FakeArtworkApi implements ArtworkBackendApi, ArtworkCurrentMediaApi {
   int getArtworkCalls = 0;
+  int currentMediaCalls = 0;
+  final callOrder = <String>[];
   final requestedIds = <String>[];
   Completer<Artwork>? completer;
   Completer<List<Artwork>>? artworksCompleter;
 
   @override
   Future<Artwork> getArtwork(String artworkId) {
+    callOrder.add('detail');
     getArtworkCalls += 1;
     requestedIds.add(artworkId);
     final c = completer;
     if (c != null) return c.future;
     throw StateError('completer not set');
+  }
+
+  @override
+  @override
+  int get authSessionEpoch => 0;
+
+  @override
+  Future<ArtworkCurrentMediaDetail> getArtworkCurrentMediaDetail(
+    String identifier, {
+    required bool includeAuth,
+  }) async {
+    callOrder.add('current');
+    currentMediaCalls += 1;
+    requestedIds.add(identifier);
+    final c = completer;
+    if (c == null) throw StateError('completer not set');
+    return ArtworkCurrentMediaDetail(
+      artwork: await c.future,
+      publicMediaAllowed: true,
+    );
   }
 
   // Unused endpoints for these tests.
@@ -168,7 +191,9 @@ void main() {
     });
     expect(provider.getArtworkById('opened-mint'), isNull);
     final fetch = provider.fetchArtworkIfNeeded('opened-mint');
-    expect(api.getArtworkCalls, 1);
+    await Future<void>.delayed(Duration.zero);
+    expect(api.getArtworkCalls, 0);
+    expect(api.callOrder, <String>['current']);
     api.completer!.complete(Artwork(
         id: 'backing-record',
         title: 'Public edition',
@@ -177,7 +202,8 @@ void main() {
         position: const LatLng(0, 0),
         rewards: 0,
         createdAt: DateTime(2026),
-        isNft: true));
+        isNft: true,
+        nftMintAddress: 'opened-mint'));
     expect((await fetch)?.id, 'backing-record');
     expect(provider.getArtworkById('opened-mint'), isNull);
     expect(provider.getArtworkById('backing-record')?.isNft, isTrue);
@@ -192,7 +218,10 @@ void main() {
     final f1 = provider.fetchArtworkIfNeeded('a1');
     final f2 = provider.fetchArtworkIfNeeded('a1');
 
-    expect(api.getArtworkCalls, 1);
+    await Future<void>.delayed(Duration.zero);
+    expect(api.getArtworkCalls, 0);
+    expect(api.currentMediaCalls, 1);
+    expect(api.callOrder, <String>['current']);
 
     api.completer!.complete(
       Artwork(
@@ -213,7 +242,7 @@ void main() {
     // Subsequent call should hit local cache, not backend.
     final f3 = await provider.fetchArtworkIfNeeded('a1');
     expect(f3?.id, 'a1');
-    expect(api.getArtworkCalls, 1);
+    expect(api.getArtworkCalls, 0);
   });
 
   test('ArtworkProvider retains a deep-link detail fetched during list startup',

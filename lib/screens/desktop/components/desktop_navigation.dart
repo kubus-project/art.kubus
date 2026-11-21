@@ -1108,7 +1108,12 @@ class _DesktopNavigationState extends State<DesktopNavigation>
                                   overflow: TextOverflow.ellipsis,
                                   maxLines: 1,
                                 ),
-                                if (user?.username != null)
+                                // The handle is account identity: shown only with
+                                // a live session, like the name above it. A held
+                                // profile without one (a forced sign-out's cold
+                                // start) must not leave the account on the sidebar.
+                                if (profileProvider.isSignedIn &&
+                                    user?.username != null)
                                   Text(
                                     '@${user!.username}',
                                     style:

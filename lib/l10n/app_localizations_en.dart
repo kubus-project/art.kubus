@@ -3169,7 +3169,23 @@ class AppLocalizationsEn extends AppLocalizations {
       'Disconnect your wallet and clear your session on this device?';
 
   @override
+  String get settingsLogoutDialogBodyAccountOnly =>
+      'Clear your session on this device?';
+
+  @override
   String get settingsLogoutButton => 'Log out';
+
+  @override
+  String get settingsBrowserLogoutPending =>
+      'You are signed out on this device. The browser could not confirm server sign-out; it will retry before restoring a session.';
+
+  @override
+  String get browserSessionRestoreUnavailable =>
+      'We couldn\'t restore your browser session. Sign in again to continue.';
+
+  @override
+  String get browserSessionLogoutUnresolved =>
+      'We couldn\'t confirm that your earlier browser session ended. Sign out again when the connection is back.';
 
   @override
   String get settingsTransactionHistoryDialogTitle => 'Transaction history';
@@ -5609,6 +5625,10 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get userProfileConversationOpenFailedToast =>
       'Could not open conversation.';
+
+  @override
+  String get messagingRecipientUnavailableToast =>
+      'You cannot message this account.';
 
   @override
   String get userProfileConversationOpenGenericErrorToast =>
@@ -10234,6 +10254,12 @@ class AppLocalizationsEn extends AppLocalizations {
       'Find focused spaces for critiques, exhibitions, public art, events, and collaborations.';
 
   @override
+  String get communityGroupsJoinedSectionTitle => 'Your groups';
+
+  @override
+  String get communityGroupsDiscoverSectionTitle => 'Discover public groups';
+
+  @override
   String get communityClearSearchTooltip => 'Clear search';
 
   @override
@@ -12739,6 +12765,18 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get commonLoading => 'Loading';
+
+  @override
+  String get artworkPrivatePreviewDenied =>
+      'Sign in with an account that can view this draft.';
+
+  @override
+  String get artworkPrivatePreviewUnavailable =>
+      'This preview is not available.';
+
+  @override
+  String get artworkPrivatePreviewRetry =>
+      'This preview is temporarily unavailable. Try again later.';
 
   @override
   String get desktopShellNavHome => 'Home';
@@ -19073,4 +19111,160 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get analyticsConsentPromptSemanticsLabel =>
       'Optional analytics choice';
+
+  @override
+  String get galleryTitle => 'Gallery';
+
+  @override
+  String get galleryCurate => 'Curate gallery';
+
+  @override
+  String get galleryModeWall => 'Gallery wall';
+
+  @override
+  String get galleryModeRooms => 'Folded rooms';
+
+  @override
+  String get galleryModeField => 'Reading field';
+
+  @override
+  String get galleryModeLabel => 'Layout';
+
+  @override
+  String get galleryPublished => 'Published';
+
+  @override
+  String get galleryUnpublished => 'Unpublished draft';
+
+  @override
+  String get galleryUnsaved => 'Unsaved changes';
+
+  @override
+  String get galleryArtworkOrder => 'Artwork order';
+
+  @override
+  String get gallerySectionOrder => 'Section order';
+
+  @override
+  String get galleryMoveEarlier => 'Move earlier';
+
+  @override
+  String get galleryMoveLater => 'Move later';
+
+  @override
+  String get galleryHideSection => 'Hide section';
+
+  @override
+  String get gallerySaveDraft => 'Save draft';
+
+  @override
+  String get galleryPublish => 'Publish gallery';
+
+  @override
+  String get galleryResetToAutomatic => 'Reset to automatic';
+
+  @override
+  String get galleryDiscard => 'Discard changes';
+
+  @override
+  String get galleryDiscardPrompt =>
+      'Discard your unsaved changes to the gallery?';
+
+  @override
+  String get galleryConflict =>
+      'This gallery changed elsewhere. Reload before saving again.';
+
+  @override
+  String get galleryUnavailable => 'Gallery unavailable.';
+
+  @override
+  String get galleryArtworkUnavailable => 'Artwork unavailable';
+
+  @override
+  String get galleryEmpty => 'No artworks to display.';
+
+  @override
+  String get galleryMore => 'Show more artworks';
+
+  @override
+  String get gallerySectionIdentity => 'Identity';
+
+  @override
+  String get gallerySectionStats => 'Statistics';
+
+  @override
+  String get gallerySectionWork => 'Works and projects';
+
+  @override
+  String get gallerySectionPublicArt => 'Public art';
+
+  @override
+  String get gallerySectionActivity => 'Activity';
+
+  @override
+  String get gallerySectionRecognition => 'Recognition';
+
+  @override
+  String get gallerySectionProgram => 'Programme';
+
+  @override
+  String get gallerySectionPoap => 'Attendance collectible';
+
+  @override
+  String get gallerySectionVisit => 'Visit';
+
+  @override
+  String get gallerySectionEvents => 'Events';
+
+  @override
+  String get gallerySectionCredits => 'Credits';
+
+  @override
+  String get galleryPersonalPreview => 'Draft preview';
+
+  @override
+  String get galleryReload => 'Reload gallery';
+
+  @override
+  String get galleryArtworkSizing => 'Artwork size and placement';
+
+  @override
+  String get gallerySizeSmall => 'Small';
+
+  @override
+  String get gallerySizeStandard => 'Standard';
+
+  @override
+  String get gallerySizeLead => 'Large';
+
+  @override
+  String get galleryMakeLead => 'Make lead artwork';
+
+  @override
+  String get galleryClearLead => 'Clear lead artwork';
+
+  @override
+  String get galleryPublishNotAllowed =>
+      'You can edit this gallery but not publish it.';
+
+  @override
+  String get galleryRefreshFailed =>
+      'Your change was saved, but the gallery could not be refreshed.';
+
+  @override
+  String galleryMovedTo(int position, int total) {
+    return 'Moved to position $position of $total';
+  }
+
+  @override
+  String get artworkPublishHeldWithdrawn =>
+      'An editor withdrew this artwork. Only an editorial decision can restore it.';
+
+  @override
+  String get artworkPublishHeldInReview =>
+      'This artwork is waiting for editorial review. It can be published once it is approved.';
+
+  @override
+  String get artworkPublishHeldGeneric =>
+      'This artwork is on editorial hold and cannot be published yet.';
 }

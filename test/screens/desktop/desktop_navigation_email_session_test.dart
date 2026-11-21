@@ -84,6 +84,24 @@ Map<String, dynamic> _aliceAccount() => <String, dynamic>{
       'updatedAt': '2026-03-31T00:00:00.000Z',
     };
 
+/// Serves a wallet account's public profile by its wallet address, which is how
+/// the cold-start load reads a stored wallet with no account session.
+class _WalletProfileApi extends _EmailSessionApi {
+  @override
+  Future<Map<String, dynamic>> getProfileByWallet(String walletAddress) async =>
+      <String, dynamic>{
+        'id': 'user-artist',
+        'userId': 'user-artist',
+        'walletAddress': walletAddress,
+        'username': 'qa088_artist',
+        'displayName': 'QA Artist',
+        'bio': '',
+        'avatar': '',
+        'createdAt': '2026-03-31T00:00:00.000Z',
+        'updatedAt': '2026-03-31T00:00:00.000Z',
+      };
+}
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
@@ -173,5 +191,25 @@ void main() {
 
     expect(find.text('Sign in'), findsOneWidget);
     expect(find.text('Alice'), findsNothing);
+    expect(find.text('@alice'), findsNothing);
+  });
+
+  testWidgets(
+      'a forced sign-out on reload shows Sign in without the previous account handle',
+      (tester) async {
+    // The stored wallet outlives a forced sign-out, so the cold-start load holds
+    // that wallet's account profile while no session is left behind it.
+    SharedPreferences.setMockInitialValues(<String, Object>{
+      'wallet_address': 'WalletArtist111',
+    });
+    final profile = ProfileProvider(apiService: _WalletProfileApi());
+    await tester.runAsync(() => profile.loadProfile('WalletArtist111'));
+    expect(profile.isSignedIn, isFalse);
+    expect(profile.currentUser?.username, 'qa088_artist');
+
+    await pumpRail(tester, profile);
+
+    expect(find.text('Sign in'), findsOneWidget);
+    expect(find.text('@qa088_artist'), findsNothing);
   });
 }

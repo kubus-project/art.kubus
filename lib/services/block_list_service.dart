@@ -97,6 +97,22 @@ class BlockListService {
     return AccountIdentity.decodeWalletList(prefs.getString(scoped));
   }
 
+  /// Whether [blocked] covers a post author, by wallet or by account id. A
+  /// walletless author is blocked by account id, so a post with no wallet is
+  /// still hidden. Blank identities never match; an account id ignores case.
+  static bool blocksAuthor(
+    Set<String> blocked, {
+    String? wallet,
+    String? accountId,
+  }) {
+    final author = WalletUtils.canonical(wallet);
+    if (author.isNotEmpty && blocked.contains(author)) return true;
+    final account = (accountId ?? '').trim();
+    if (!WalletUtils.isAccountUuid(account)) return false;
+    final lower = account.toLowerCase();
+    return blocked.any((entry) => entry.toLowerCase() == lower);
+  }
+
   Future<Set<String>> loadBlockedWallets() async {
     try {
       final current = await _current();

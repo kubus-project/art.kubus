@@ -35,6 +35,7 @@ class _FlowWalletProvider extends WalletProvider {
     bool persist = true,
     bool loadData = true,
     bool syncBackend = false,
+    int? expectedAuthEpoch,
   }) async {
     walletAddressValue = address;
     hasSignerValue = false;
@@ -44,6 +45,7 @@ class _FlowWalletProvider extends WalletProvider {
   Future<ManagedWalletReconnectOutcome> recoverManagedWalletSession({
     String? walletAddress,
     bool refreshBackendSession = true,
+    int? expectedAuthEpoch,
   }) async {
     return ManagedWalletReconnectOutcome.manualConnectRequired;
   }

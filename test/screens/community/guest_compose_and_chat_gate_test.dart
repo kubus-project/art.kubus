@@ -1,3 +1,4 @@
+import 'package:art_kubus/screens/community/community_screen.dart';
 import 'package:art_kubus/screens/community/messages_screen.dart';
 import 'package:art_kubus/screens/desktop/community/desktop_community_screen.dart';
 import 'package:art_kubus/services/backend_api_service.dart';
@@ -69,5 +70,30 @@ void main() {
     // Dismissing the gate leaves the composer collapsed.
     expect(find.text('Create a free account to write a post'), findsNothing);
     expect(find.text("What's happening?"), findsOneWidget);
+  });
+
+  testWidgets('a guest opening the mobile composer is sent to sign-in',
+      (tester) async {
+    await _pumpGuest(
+      tester,
+      child: const CommunityScreen(),
+      size: const Size(390, 844),
+    );
+
+    await tester.tap(find.byType(FloatingActionButton).first);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Create a free account to write a post'), findsOneWidget);
+    expect(find.text('Not now'), findsOneWidget);
+
+    await tester.tap(find.text('Not now'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Create a free account to write a post'), findsNothing);
+    // The mobile feed starts session work on a timer; let it finish so the
+    // test does not end with a pending timer.
+    for (var i = 0; i < 5; i++) {
+      await tester.pump(const Duration(seconds: 1));
+    }
   });
 }

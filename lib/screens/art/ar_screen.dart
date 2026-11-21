@@ -3780,11 +3780,20 @@ class _ARScreenState extends State<ARScreen>
       isLiked: _likedArtworks.contains(artwork['id']),
     );
 
-    await CommunityService.togglePostLike(
-      post,
-      currentUserWallet: walletAddress,
-      trackUserAction: true,
-    );
+    try {
+      await CommunityService.togglePostLike(
+        post,
+        currentUserWallet: walletAddress,
+        trackUserAction: true,
+      );
+    } catch (e) {
+      // The server did not record the like (for example a 404 for a post the
+      // viewer cannot see). Keep the error inside the tap handler.
+      if (kDebugMode) {
+        debugPrint('ARScreen: like sync failed: $e');
+      }
+      return;
+    }
 
     if (!mounted) return;
     final isLiked = _likedArtworks.contains(artwork['id']);

@@ -717,6 +717,8 @@ class PreferenceKeys {
   static const String secureAccountStatusCacheTsV1 =
       'secure_account_status_cache_ts_v1';
   static const String authLastSignInMethodV1 = 'auth_last_sign_in_method_v1';
+  static const String browserSessionPendingLogoutV1 =
+      'browser_session_pending_logout_v1';
   static const String walletAddress = 'wallet_address';
   static const String walletMnemonicBackedUpV1Prefix =
       'wallet_mnemonic_backed_up_v1';

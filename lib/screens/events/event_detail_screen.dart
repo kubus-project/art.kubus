@@ -15,6 +15,7 @@ import '../../providers/profile_provider.dart';
 import '../../providers/saved_items_provider.dart';
 import '../../providers/public_entity_takeover_provider.dart';
 import '../../services/contextual_auth_gate.dart';
+import '../../services/public_entity_load_outcome.dart';
 import '../../services/telemetry/telemetry_service.dart';
 import '../../screens/collab/invites_inbox_screen.dart';
 import '../../services/backend_api_service.dart'
@@ -82,13 +83,13 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
     try {
       final event = await events.fetchEvent(widget.eventId, force: true);
       if (event == null) reason = UnavailableEntityReason.loadFailed;
-    } on BackendApiRequestException catch (e) {
-      reason = e.statusCode == 404 || e.statusCode == 410
+    } catch (error) {
+      // Provider handles errors. Only the API's own 404/410 says the entity is
+      // gone; the public read reports it as `Request failed: 404`, not always
+      // as a BackendApiRequestException.
+      reason = isEntityNotFoundError(error)
           ? UnavailableEntityReason.notFound
           : UnavailableEntityReason.loadFailed;
-    } catch (_) {
-      // Provider handles errors.
-      reason = UnavailableEntityReason.loadFailed;
     }
     if (mounted && _unavailableReason != reason) {
       setState(() => _unavailableReason = reason);

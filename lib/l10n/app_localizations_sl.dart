@@ -3194,7 +3194,23 @@ class AppLocalizationsSl extends AppLocalizations {
       'Odklopim denarnico in počistim sejo na tej napravi?';
 
   @override
+  String get settingsLogoutDialogBodyAccountOnly =>
+      'Počistim sejo na tej napravi?';
+
+  @override
   String get settingsLogoutButton => 'Odjava';
+
+  @override
+  String get settingsBrowserLogoutPending =>
+      'Na tej napravi ste odjavljeni. Strežnik odjave ni mogel potrditi; pred obnovitvijo seje bo poskus ponovljen.';
+
+  @override
+  String get browserSessionRestoreUnavailable =>
+      'Seje brskalnika ni bilo mogoče obnoviti. Za nadaljevanje se znova prijavite.';
+
+  @override
+  String get browserSessionLogoutUnresolved =>
+      'Ni mogoče potrditi, da se je vaša prejšnja seja v brskalniku končala. Ko bo povezava spet na voljo, se znova odjavite.';
 
   @override
   String get settingsTransactionHistoryDialogTitle => 'Zgodovina transakcij';
@@ -5659,6 +5675,10 @@ class AppLocalizationsSl extends AppLocalizations {
   @override
   String get userProfileConversationOpenFailedToast =>
       'Pogovora ni bilo mogoče odpreti.';
+
+  @override
+  String get messagingRecipientUnavailableToast =>
+      'Temu računu ni mogoče poslati sporočila.';
 
   @override
   String get userProfileConversationOpenGenericErrorToast =>
@@ -10330,6 +10350,12 @@ class AppLocalizationsSl extends AppLocalizations {
       'Poišči osredotočene prostore za kritike, razstave, javno umetnost, dogodke in sodelovanja.';
 
   @override
+  String get communityGroupsJoinedSectionTitle => 'Vaše skupine';
+
+  @override
+  String get communityGroupsDiscoverSectionTitle => 'Poišči javne skupine';
+
+  @override
   String get communityClearSearchTooltip => 'Počisti iskanje';
 
   @override
@@ -12870,6 +12896,17 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get commonLoading => 'Nalagam';
+
+  @override
+  String get artworkPrivatePreviewDenied =>
+      'Prijavite se z računom, ki si lahko ogleda ta osnutek.';
+
+  @override
+  String get artworkPrivatePreviewUnavailable => 'Ta predogled ni na voljo.';
+
+  @override
+  String get artworkPrivatePreviewRetry =>
+      'Ta predogled je začasno nedosegljiv. Poskusite pozneje.';
 
   @override
   String get desktopShellNavHome => 'Domov';
@@ -19260,4 +19297,160 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get analyticsConsentPromptSemanticsLabel => 'Izbira izbirne analitike';
+
+  @override
+  String get galleryTitle => 'Galerija';
+
+  @override
+  String get galleryCurate => 'Uredi galerijo';
+
+  @override
+  String get galleryModeWall => 'Galerijska stena';
+
+  @override
+  String get galleryModeRooms => 'Zgibani prostori';
+
+  @override
+  String get galleryModeField => 'Bralno polje';
+
+  @override
+  String get galleryModeLabel => 'Postavitev';
+
+  @override
+  String get galleryPublished => 'Objavljeno';
+
+  @override
+  String get galleryUnpublished => 'Neobjavljen osnutek';
+
+  @override
+  String get galleryUnsaved => 'Neshranjene spremembe';
+
+  @override
+  String get galleryArtworkOrder => 'Vrstni red del';
+
+  @override
+  String get gallerySectionOrder => 'Vrstni red razdelkov';
+
+  @override
+  String get galleryMoveEarlier => 'Premakni navzgor';
+
+  @override
+  String get galleryMoveLater => 'Premakni navzdol';
+
+  @override
+  String get galleryHideSection => 'Skrij razdelek';
+
+  @override
+  String get gallerySaveDraft => 'Shrani osnutek';
+
+  @override
+  String get galleryPublish => 'Objavi galerijo';
+
+  @override
+  String get galleryResetToAutomatic => 'Ponastavi na samodejno';
+
+  @override
+  String get galleryDiscard => 'Zavrzi spremembe';
+
+  @override
+  String get galleryDiscardPrompt =>
+      'Želite zavreči neshranjene spremembe galerije?';
+
+  @override
+  String get galleryConflict =>
+      'Galerija je bila spremenjena drugje. Pred ponovnim shranjevanjem jo znova naložite.';
+
+  @override
+  String get galleryUnavailable => 'Galerija ni dostopna.';
+
+  @override
+  String get galleryArtworkUnavailable => 'Delo ni dostopno';
+
+  @override
+  String get galleryEmpty => 'Ni del za prikaz.';
+
+  @override
+  String get galleryMore => 'Prikaži več del';
+
+  @override
+  String get gallerySectionIdentity => 'Predstavitev';
+
+  @override
+  String get gallerySectionStats => 'Statistika';
+
+  @override
+  String get gallerySectionWork => 'Dela in projekti';
+
+  @override
+  String get gallerySectionPublicArt => 'Umetnost v javnem prostoru';
+
+  @override
+  String get gallerySectionActivity => 'Dejavnost';
+
+  @override
+  String get gallerySectionRecognition => 'Priznanja';
+
+  @override
+  String get gallerySectionProgram => 'Program';
+
+  @override
+  String get gallerySectionPoap => 'Zbirateljski predmet za udeležbo';
+
+  @override
+  String get gallerySectionVisit => 'Obisk';
+
+  @override
+  String get gallerySectionEvents => 'Dogodki';
+
+  @override
+  String get gallerySectionCredits => 'Zasluge';
+
+  @override
+  String get galleryPersonalPreview => 'Predogled osnutka';
+
+  @override
+  String get galleryReload => 'Znova naloži galerijo';
+
+  @override
+  String get galleryArtworkSizing => 'Velikost in umestitev dela';
+
+  @override
+  String get gallerySizeSmall => 'Majhno';
+
+  @override
+  String get gallerySizeStandard => 'Običajno';
+
+  @override
+  String get gallerySizeLead => 'Veliko';
+
+  @override
+  String get galleryMakeLead => 'Nastavi kot vodilno delo';
+
+  @override
+  String get galleryClearLead => 'Odstrani oznako vodilnega dela';
+
+  @override
+  String get galleryPublishNotAllowed =>
+      'Galerijo lahko urejate, vendar je ne morete objaviti.';
+
+  @override
+  String get galleryRefreshFailed =>
+      'Sprememba je shranjena, galerije pa ni bilo mogoče osvežiti.';
+
+  @override
+  String galleryMovedTo(int position, int total) {
+    return 'Premaknjeno na mesto $position od $total';
+  }
+
+  @override
+  String get artworkPublishHeldWithdrawn =>
+      'Urednik je to delo umaknil. Obnovi ga lahko samo uredniška odločitev.';
+
+  @override
+  String get artworkPublishHeldInReview =>
+      'To delo čaka na uredniški pregled. Objavljeno bo, ko bo odobreno.';
+
+  @override
+  String get artworkPublishHeldGeneric =>
+      'To delo je v uredniškem zadržanju in ga še ni mogoče objaviti.';
 }

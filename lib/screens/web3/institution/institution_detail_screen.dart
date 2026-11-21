@@ -1,3 +1,5 @@
+import 'package:art_kubus/models/gallery_presentation.dart';
+import 'package:art_kubus/widgets/detail/gallery_presentation.dart';
 import 'dart:async';
 
 import 'package:art_kubus/l10n/app_localizations.dart';
@@ -1041,7 +1043,13 @@ class _InstitutionDetailScreenState extends State<InstitutionDetailScreen> {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) => GalleryHostScope(
+        type: GalleryHostType.institution,
+        hostId: _institution?.id,
+        builder: _buildWithGallery,
+      );
+
+  Widget _buildWithGallery(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final institution = _institution;
     final name = institution?.name.trim() ?? '';
@@ -1108,11 +1116,16 @@ class _InstitutionDetailScreenState extends State<InstitutionDetailScreen> {
                     institution,
                   ),
                   const SizedBox(height: KubusSpacing.lg),
-                  if (institution.visitorAccess != null) ...[
-                    _buildVisitSection(context, institution.visitorAccess!),
+                  for (final section in orderedGallerySections(context, {
+                    if (institution.visitorAccess != null)
+                      'visit': _buildVisitSection(
+                          context, institution.visitorAccess!),
+                    'events': _buildEventsSection(context),
+                    'artworks': const GalleryPanel(fallback: SizedBox.shrink()),
+                  })) ...[
+                    section,
                     const SizedBox(height: KubusSpacing.lg),
                   ],
-                  _buildEventsSection(context),
                 ],
               );
 

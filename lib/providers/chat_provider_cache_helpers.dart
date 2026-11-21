@@ -97,15 +97,22 @@ void _chatProviderResetSessionState(
   } catch (_) {}
 
   provider._openConversationId = null;
+  // Leave the session's personal rooms by wallet and by account UUID, and its
+  // conversation rooms. A walletless session has only the UUID to leave.
   try {
-    provider._socket.leaveAllConversations();
+    provider._socket.leaveAccountRooms(
+      walletAddress: provider._socket.currentSubscribedWallet,
+      accountId: provider._socketAccountId,
+    );
   } catch (_) {}
-  try {
-    final subscribedWallet = provider._socket.currentSubscribedWallet;
-    if (subscribedWallet != null && subscribedWallet.isNotEmpty) {
-      provider._socket.unsubscribeUser(subscribedWallet);
-    }
-  } catch (_) {}
+  // A same-account reset (wallet change, wallet clear, link session end) leaves
+  // the rooms it joined but keeps the account: the next switch or sign-out must
+  // still leave the account UUID room. Only a reset that ends the account, or
+  // that may be for another one, forgets the id here. The next bind re-binds it.
+  final keepsAccount = reason == 'walletChanged' ||
+      reason == 'walletCleared' ||
+      reason == 'accountLinkSessionEnded';
+  if (!keepsAccount) provider._socketAccountId = '';
 
   // Remember the conversations being left so late socket events for them are
   // rejected by _isSocketEventForCurrentSession.

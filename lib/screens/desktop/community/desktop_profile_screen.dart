@@ -1,3 +1,5 @@
+import 'package:art_kubus/models/gallery_presentation.dart';
+import 'package:art_kubus/widgets/detail/gallery_presentation.dart';
 import 'package:art_kubus/widgets/community/community_post_media_carousel.dart';
 import '../../../widgets/common/kubus_screen_header.dart';
 import 'package:flutter/material.dart';
@@ -227,7 +229,13 @@ class _ProfileScreenState extends State<ProfileScreen>
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) => GalleryHostScope(
+        type: GalleryHostType.profile,
+        hostId: context.watch<ProfileProvider>().currentUser?.id,
+        builder: _buildProfileWithGallery,
+      );
+
+  Widget _buildProfileWithGallery(BuildContext context) {
     final themeProvider = Provider.of<ThemeProvider>(context);
     final profileProvider = Provider.of<ProfileProvider>(context);
     final verification = Provider.of<AccountVerificationProvider>(context);
@@ -275,7 +283,32 @@ class _ProfileScreenState extends State<ProfileScreen>
                         _buildProfileCard(themeProvider, profileProvider,
                             isArtist, isInstitution),
                         const SizedBox(height: DetailSpacing.xl),
-                        if (isLarge)
+                        if (GalleryHostScope.maybeOf(context)
+                                ?.published
+                                ?.automatic ==
+                            false) ...[
+                          ...composeProfileSections<Widget>(
+                            order: gallerySectionOrder(
+                                    context, ownerProfileSections)
+                                .where(
+                              (section) =>
+                                  section != ProfileSection.identity &&
+                                  section != ProfileSection.ownerTools,
+                            ),
+                            gap: (_, __) =>
+                                const SizedBox(height: DetailSpacing.lg),
+                            build: (section) => section == ProfileSection.stats
+                                ? [
+                                    _buildStatsCards(
+                                        themeProvider, profileProvider, false)
+                                  ]
+                                : _contentSectionWidgets(section, themeProvider,
+                                    isArtist: isArtist,
+                                    isInstitution: isInstitution),
+                          ),
+                          ..._ownerTools(themeProvider,
+                              isArtist: isArtist, isInstitution: isInstitution),
+                        ] else if (isLarge)
                           _buildTwoColumnLayout(
                             themeProvider: themeProvider,
                             profileProvider: profileProvider,
@@ -331,7 +364,7 @@ class _ProfileScreenState extends State<ProfileScreen>
         // profile content, so show their bands to any owner when populated.
         return [
           if (isArtist) ...[
-            _buildArtistPortfolioSection(themeProvider),
+            GalleryPanel(fallback: _buildArtistPortfolioSection(themeProvider)),
             if (_artistDocumentedArtworks.isNotEmpty) ...[
               gap,
               _buildArtistDocumentedSection(),
@@ -346,7 +379,8 @@ class _ProfileScreenState extends State<ProfileScreen>
             _buildInstitutionCollectionsSection(themeProvider),
           ] else if (_hasPublicWork) ...[
             if (_artistArtworks.isNotEmpty || _artistAuthorshipUnavailable)
-              _buildArtistPortfolioSection(themeProvider),
+              GalleryPanel(
+                  fallback: _buildArtistPortfolioSection(themeProvider)),
             if (_artistDocumentedArtworks.isNotEmpty) ...[
               if (_artistArtworks.isNotEmpty) gap,
               _buildArtistDocumentedSection(),

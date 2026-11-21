@@ -1,16 +1,22 @@
 import 'dart:async';
 import 'package:flutter/services.dart' show MissingPluginException;
 import 'dart:convert';
+import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'browser_session/browser_session_api.dart';
+import 'browser_session/browser_session_controller.dart';
+import 'browser_session/browser_session_http_client.dart';
+import 'browser_session/browser_session_logout_intent_store.dart';
 import '../models/art_marker.dart';
 import '../models/map_marker_overview.dart';
 import '../models/promotion.dart';
 import '../models/artwork.dart';
+import '../models/gallery_presentation.dart';
 import '../models/artwork_comment.dart';
 import '../models/kubus_node_models.dart';
 import '../models/community_group.dart';
@@ -68,6 +74,7 @@ part 'backend_api_service_messages.dart';
 part 'backend_api_service_profile_helpers.dart';
 part 'backend_api_service_parsers.dart';
 part 'backend_api_service_upload_helpers.dart';
+part 'backend_api_service_browser_session.dart';
 
 /// Backend API Service
 ///
@@ -147,6 +154,64 @@ class BackendApiRequestException implements Exception {
   @override
   String toString() {
     return userMessage;
+  }
+}
+
+/// Which editorial hold refused an owner publish.
+enum ArtworkEditorialHoldKind {
+  /// An editor rejected or archived the artwork.
+  withdrawn,
+
+  /// The artwork is waiting for editorial review.
+  inReview,
+
+  /// The backend named the hold without saying which one.
+  unspecified,
+}
+
+/// The backend refused to publish an editorially held artwork: HTTP 409 with
+/// errorCode `ARTWORK_EDITORIAL_HOLD`. Only an editorial decision lifts the
+/// hold, so a caller must not retry. It is still a 409
+/// [BackendApiRequestException] for code that only looks at the status.
+class ArtworkEditorialHoldException extends BackendApiRequestException {
+  const ArtworkEditorialHoldException({
+    required super.path,
+    required this.kind,
+    this.editorialState,
+    super.body,
+  }) : super(statusCode: 409);
+
+  static const String errorCode = 'ARTWORK_EDITORIAL_HOLD';
+
+  final ArtworkEditorialHoldKind kind;
+  final String? editorialState;
+
+  /// The typed hold for a 409 response carrying [errorCode], else null.
+  static ArtworkEditorialHoldException? tryParse({
+    required int statusCode,
+    required String path,
+    String? body,
+  }) {
+    if (statusCode != 409 || body == null || body.isEmpty) return null;
+    final Object? decoded;
+    try {
+      decoded = jsonDecode(body);
+    } on FormatException {
+      return null;
+    }
+    if (decoded is! Map || decoded['errorCode'] != errorCode) return null;
+    final state = decoded['editorialState']?.toString().trim().toLowerCase();
+    final kind = switch (state) {
+      'rejected' || 'archived' => ArtworkEditorialHoldKind.withdrawn,
+      'needs_review' => ArtworkEditorialHoldKind.inReview,
+      _ => ArtworkEditorialHoldKind.unspecified,
+    };
+    return ArtworkEditorialHoldException(
+      path: path,
+      kind: kind,
+      editorialState: state,
+      body: body,
+    );
   }
 }
 
@@ -275,6 +340,38 @@ abstract class ArtworkBackendApi {
   Future<int?> deleteArtworkComment(String commentId);
   Future<int?> likeComment(String commentId);
   Future<int?> unlikeComment(String commentId);
+}
+
+/// Optional authenticated preview transport used only by owner/collaborator
+/// draft detail and edit surfaces.
+abstract class ArtworkPrivatePreviewApi {
+  Future<Artwork> getArtworkDetailWithMediaPreview(String artworkId);
+
+  Future<List<int>> getArtworkPrivateMediaBytes({
+    required String artworkId,
+    required String slot,
+    required String descriptorPath,
+  });
+}
+
+class ArtworkCurrentMediaDetail {
+  const ArtworkCurrentMediaDetail({
+    required this.artwork,
+    required this.publicMediaAllowed,
+  });
+
+  final Artwork artwork;
+  final bool publicMediaAllowed;
+}
+
+/// Current artwork detail mode that binds media URLs and permission to one
+/// live PostgreSQL row. Implementations must bypass snapshots and mirrors.
+abstract class ArtworkCurrentMediaApi {
+  int get authSessionEpoch;
+  Future<ArtworkCurrentMediaDetail> getArtworkCurrentMediaDetail(
+    String identifier, {
+    required bool includeAuth,
+  });
 }
 
 /// Minimal contract for profile endpoints used by providers.
@@ -426,14 +523,147 @@ List<Map<String, dynamic>> mergeCollectionLists(
   return merged;
 }
 
+/// Largest private artwork media body the client accepts. Matches the preview
+/// contract (server `MAX_UPLOAD_SIZE`, default 50 MB).
+const int _privateArtworkMediaMaxBytes = 50 * 1024 * 1024;
+
+/// Opt-in for a GET whose body is streamed and bounded while it arrives. Used
+/// only for private artwork media, where the buffered path would hold an
+/// unbounded response in memory before any size check runs.
+class _BoundedBodyRequest {
+  const _BoundedBodyRequest({required this.maxBytes, required this.isCurrent});
+
+  final int maxBytes;
+
+  /// False once the session that asked for the bytes has moved on. Chunks that
+  /// arrive after that are dropped, not collected.
+  final bool Function() isCurrent;
+}
+
 class BackendApiService
     implements
         ArtworkBackendApi,
+        ArtworkPrivatePreviewApi,
+        ArtworkCurrentMediaApi,
+        GalleryApi,
         ProfileBackendApi,
         MarkerBackendApi,
         AccountClosureApi {
   static final BackendApiService _instance = BackendApiService._internal();
   factory BackendApiService() => _instance;
+  Future<Map<String, dynamic>?> _galleryRequest(
+    GalleryHost host,
+    String method,
+    String suffix, {
+    required bool includeAuth,
+    Map<String, dynamic>? body,
+  }) async {
+    final epoch = authSessionEpoch;
+    if (includeAuth) await ensureAuthLoaded();
+    if (epoch != authSessionEpoch) {
+      throw StateError('Authentication session changed');
+    }
+    final credential = (_authToken ?? '').trim();
+    if (includeAuth && credential.isEmpty) {
+      if (method == 'GET') return null;
+      throw const GalleryRequestException(401);
+    }
+    final uri = Uri.parse(
+      '$baseUrl/api/${host.type.route}/${Uri.encodeComponent(host.id)}/gallery$suffix',
+    );
+    final request = http.Request(method, uri)..followRedirects = false;
+    request.headers.addAll(_getHeaders(includeAuth: false));
+    if (includeAuth) request.headers['Authorization'] = 'Bearer $credential';
+    if (body != null) request.body = jsonEncode(body);
+    // A write carries the credential captured for this account epoch. This
+    // transport cannot follow a writable redirect or retry after reauth.
+    final response = await _client
+        .send(request)
+        .then(http.Response.fromStream)
+        .timeout(const Duration(seconds: 8));
+    if (epoch != authSessionEpoch ||
+        (includeAuth && credential != (_authToken ?? '').trim())) {
+      throw StateError('Authentication session changed');
+    }
+    if (method == 'GET' &&
+        suffix == '/draft' &&
+        (response.statusCode == 401 ||
+            response.statusCode == 403 ||
+            response.statusCode == 404)) {
+      return null;
+    }
+    Map<String, dynamic>? payload;
+    try {
+      payload =
+          jsonDecode(utf8.decode(response.bodyBytes)) as Map<String, dynamic>;
+    } on FormatException {
+      // An unavailable route may return an HTML error page.
+    } on TypeError {
+      // Treat unexpected JSON shapes like an unavailable contract.
+    }
+    if (response.statusCode != 200 || payload?['success'] != true) {
+      throw GalleryRequestException(
+        response.statusCode,
+        code: payload?['errorCode'] as String?,
+        currentRevision: payload?['currentRevision'] as int?,
+      );
+    }
+    if (!(response.headers['cache-control'] ?? '')
+        .toLowerCase()
+        .contains('no-store')) {
+      throw const FormatException('Gallery response is cacheable');
+    }
+    return payload!['data'] as Map<String, dynamic>;
+  }
+
+  @override
+  Future<PublishedGallery> getPublishedGallery(GalleryHost host) async =>
+      PublishedGallery.fromJson(
+        (await _galleryRequest(host, 'GET', '', includeAuth: false))!,
+      );
+
+  @override
+  Future<DraftGallery?> getGalleryDraft(GalleryHost host) async {
+    final payload =
+        await _galleryRequest(host, 'GET', '/draft', includeAuth: true);
+    return payload == null ? null : DraftGallery.fromJson(payload);
+  }
+
+  @override
+  Future<void> saveGalleryDraft(
+    GalleryHost host, {
+    required int expectedRevision,
+    required String mutationId,
+    required GalleryLayout? layout,
+  }) async {
+    await _galleryRequest(
+      host,
+      'PUT',
+      '/draft',
+      includeAuth: true,
+      body: {
+        'expectedRevision': expectedRevision,
+        'mutationId': mutationId,
+        'layout': layout?.toJson(),
+      },
+    );
+  }
+
+  @override
+  Future<void> publishGallery(
+    GalleryHost host, {
+    required int expectedRevision,
+    required String mutationId,
+  }) async {
+    await _galleryRequest(
+      host,
+      'POST',
+      '/publish',
+      includeAuth: true,
+      body: {'expectedRevision': expectedRevision, 'mutationId': mutationId},
+    );
+  }
+
   BackendApiService._internal() {
     // Ensure a single, consistent HTTP client across the app.
     // On Flutter Web, this enables credentialed requests (cookies) when needed.
@@ -442,6 +672,34 @@ class BackendApiService
 
   http.Client _client = http.Client();
   AuthSessionCoordinator? _authCoordinator;
+
+  // Web browser-session state (backend_api_service_browser_session.dart). Native
+  // never sets these, and the session endpoints are never called there.
+  BrowserSessionController? _browserSessionController;
+  bool Function() _browserSessionIsWeb = _browserSessionIsWebPlatform;
+  _BrowserRestoreFlight? _browserRestoreFlight;
+  // The bearer this tab holds because a browser session issued or restored it.
+  String? _browserBoundToken;
+  DateTime? _browserRestoreRetryAt;
+  // Set when the server refused the session or the user signed out; a sign-in clears it.
+  bool _browserRestoreBlocked = false;
+  bool _browserSessionRestoreUnavailable = false;
+  // Waits bound only how long a caller stops waiting. The browser request keeps
+  // its cross-tab lock until it settles, and a late result never adopts.
+  Duration _browserSessionRestoreWait = const Duration(seconds: 15);
+  Duration _browserSessionOperationWait = const Duration(seconds: 5);
+  // Logout-intent stores: the shared marker first, a tab-scoped fallback second.
+  // Null until first use; tests inject them.
+  BrowserSessionLogoutIntentStore? _browserLogoutPrimaryStore;
+  BrowserSessionLogoutIntentStore? _browserLogoutFallbackStore;
+  // Generation of the newest logout intent. Only that generation may clear the
+  // markers, so a late confirmation of an older intent cannot erase a newer one.
+  int _browserLogoutIntentSeq = 0;
+  // A logout is owed to the server and not yet confirmed. Cleared only by a
+  // confirmed revocation of the newest intent.
+  bool _browserLogoutUnconfirmed = false;
+  // The newest intent could not be written to any store.
+  bool _browserLogoutIntentUnwritten = false;
 
   /// Bumped at every credential commit and sign-out. Account requests capture it when
   /// they start and drop their local writes once it has moved on, so a response
@@ -624,6 +882,9 @@ class BackendApiService
     }());
   }
 
+  @visibleForTesting
+  String? get preferredWalletForTesting => _preferredWalletCanonical;
+
   Map<String, dynamic>? _tryDecodeJwtPayload(String token) {
     try {
       final parts = token.split('.');
@@ -655,6 +916,9 @@ class BackendApiService
       final raw = (payload[key] ?? '').toString();
       final canonical = WalletUtils.canonical(raw);
       if (canonical.isEmpty) continue;
+      // An account UUID is an identity, never a wallet. looksLikeWallet accepts
+      // a long hyphenated string, so it is excluded explicitly.
+      if (WalletUtils.isAccountUuid(canonical)) continue;
       if (WalletUtils.looksLikeWallet(canonical)) {
         return canonical;
       }
@@ -702,8 +966,10 @@ class BackendApiService
     return AuthSignInMethod.unknown;
   }
 
-  Future<void> setLastSignInMethod(AuthSignInMethod method,
-      {int? sessionEpoch}) async {
+  Future<void> setLastSignInMethod(
+    AuthSignInMethod method, {
+    int? sessionEpoch,
+  }) async {
     final epoch = sessionEpoch ?? _authSessionEpoch;
     final value = _authSignInMethodToStorageValue(method);
     try {
@@ -971,10 +1237,13 @@ class BackendApiService
     r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$',
   );
   static final RegExp _diagnosticsNumericSegment = RegExp(r'^\d+$');
-  static final RegExp _diagnosticsHexSegment =
-      RegExp(r'^0x[0-9a-fA-F]+$', caseSensitive: false);
-  static final RegExp _diagnosticsBase58Segment =
-      RegExp(r'^[1-9A-HJ-NP-Za-km-z]{32,}$');
+  static final RegExp _diagnosticsHexSegment = RegExp(
+    r'^0x[0-9a-fA-F]+$',
+    caseSensitive: false,
+  );
+  static final RegExp _diagnosticsBase58Segment = RegExp(
+    r'^[1-9A-HJ-NP-Za-km-z]{32,}$',
+  );
 
   /// Collapses identifier-like path segments so `/api/profiles/<id>` reports
   /// for different ids share one dedupe key.
@@ -1171,6 +1440,19 @@ class BackendApiService
     return _tryExtractWalletFromToken(token) ?? '';
   }
 
+  /// The account the session is moving to or already is: the credential target
+  /// when a commit is pending, else the live token. The target is set
+  /// synchronously with the epoch bump and cleared on sign-out, so from the
+  /// instant another account's credential becomes the target this differs
+  /// from the account an earlier operation started under. Empty for a guest.
+  String get pendingAuthAccountKey =>
+      _accountKeyOf(_credentialTargetToken ?? _authToken);
+
+  /// True while a credential of another account than the live token's is the
+  /// commit target: the live token no longer speaks for the session.
+  bool get hasPendingAccountSwitch =>
+      pendingAuthAccountKey != _accountKeyOf(_authToken);
+
   /// Native secure persistence; browser credentials remain in memory only.
   ///
   /// Returns the session epoch this token was committed under. A caller that
@@ -1203,8 +1485,11 @@ class BackendApiService
     );
   }
 
-  Future<int> _commitAuthSessionLocked(String token,
-      {required int epoch, String? refreshToken}) async {
+  Future<int> _commitAuthSessionLocked(
+    String token, {
+    required int epoch,
+    String? refreshToken,
+  }) async {
     if (epoch != _authSessionEpoch) {
       throw StateError('Authentication session changed');
     }
@@ -1245,8 +1530,10 @@ class BackendApiService
     }
   }
 
-  Future<void> setRefreshToken(String token,
-      {required String forAccessToken}) async {
+  Future<void> setRefreshToken(
+    String token, {
+    required String forAccessToken,
+  }) async {
     if (token.trim().isEmpty || !_hasInitializedBinding) return;
     final epoch = _authSessionEpoch;
     bool current() =>
@@ -1274,9 +1561,9 @@ class BackendApiService
     if ((_authToken ?? '').isNotEmpty) return;
     final epoch = _authSessionEpoch;
     try {
-      final token = await _credentialStore
-          .readAccess()
-          .timeout(const Duration(seconds: 1));
+      final token = await _credentialStore.readAccess().timeout(
+            const Duration(seconds: 1),
+          );
       if (epoch != _authSessionEpoch || (_authToken ?? '').isNotEmpty) return;
       if (token != null &&
           token.isNotEmpty &&
@@ -1296,7 +1583,8 @@ class BackendApiService
       // Unavailable/corrupt storage is not a session and never enables a
       // preference fallback. No platform error text or credential is logged.
       AppConfig.debugPrint(
-          'BackendApiService: credential restoration unavailable');
+        'BackendApiService: credential restoration unavailable',
+      );
     }
   }
 
@@ -1329,14 +1617,16 @@ class BackendApiService
   Future<void> _finishClearAuth(int epoch) async {
     final cleanup = _credentialStore.clear();
     try {
-      await AccountIdentity.purgeChangedAccount()
-          .timeout(const Duration(seconds: 1));
+      await AccountIdentity.purgeChangedAccount().timeout(
+        const Duration(seconds: 1),
+      );
     } catch (_) {}
     try {
       final result = await cleanup.timeout(const Duration(seconds: 3));
       if (!result.complete || !result.restartBlocked) {
         AppConfig.debugPrint(
-            'BackendApiService: credential cleanup incomplete; restoration blocked where marker persisted');
+          'BackendApiService: credential cleanup incomplete; restoration blocked where marker persisted',
+        );
       }
     } catch (_) {
       // The serialized cleanup continues: timing out must not allow a late
@@ -1347,7 +1637,7 @@ class BackendApiService
       final prefs = await SharedPreferences.getInstance();
       for (final key in [
         PreferenceKeys.authLastSignInMethodV1,
-        ...secureAccountStatusPrefKeys
+        ...secureAccountStatusPrefKeys,
       ]) {
         if (epoch != _authSessionEpoch) break;
         try {
@@ -1362,7 +1652,10 @@ class BackendApiService
   ///
   /// This never restores signer authority. Callers that need wallet-proofed
   /// authority must upgrade through ensureSessionForActiveSigner.
-  Future<bool> restoreExistingSession({bool allowRefresh = true}) async {
+  Future<bool> restoreExistingSession({
+    bool allowRefresh = true,
+    String? expectedBrowserSessionToken,
+  }) async {
     try {
       await loadAuthToken();
       final token = (_authToken ?? '').trim();
@@ -1370,7 +1663,12 @@ class BackendApiService
         return true;
       }
 
-      return false;
+      // Web: no usable bearer in this tab. Browser-session restore (native: false).
+      return await _browserSessionRestoreIfDue(
+        this,
+        expectedBrowserSessionToken:
+            expectedBrowserSessionToken ?? (token.isEmpty ? null : token),
+      );
     } catch (e) {
       AppConfig.debugPrint(
         'BackendApiService.restoreExistingSession failed: $e',
@@ -1505,7 +1803,9 @@ class BackendApiService
     bool allowImplicitBackendFailover = true,
     bool replaySafe = false,
     Set<String>? attemptedBackendOrigins,
+    _BoundedBodyRequest? boundedBody,
   }) async {
+    assert(boundedBody == null || method.toUpperCase() == 'GET');
     final attemptedOrigins = Set<String>.from(
       attemptedBackendOrigins ?? const <String>{},
     );
@@ -1533,7 +1833,9 @@ class BackendApiService
           token.isEmpty || !AuthGatingService.isAccessTokenValid(token);
       if (needsSessionRestore) {
         try {
-          await restoreExistingSession();
+          await restoreExistingSession(
+            expectedBrowserSessionToken: token.isEmpty ? null : token,
+          );
         } catch (_) {
           // Fall through and let the request/auth-coordinator path decide.
         }
@@ -1556,6 +1858,7 @@ class BackendApiService
       ),
       includeAuth: includeAuth,
     );
+    final requestSessionEpoch = _authSessionEpoch;
 
     if (kDebugMode &&
         includeAuth &&
@@ -1599,8 +1902,19 @@ class BackendApiService
     try {
       switch (method.toUpperCase()) {
         case 'GET':
-          response =
-              await _client.get(uri, headers: resolvedHeaders).timeout(timeout);
+          final bounded = boundedBody;
+          if (bounded != null) {
+            response = await _getBoundedBody(
+              uri,
+              headers: resolvedHeaders,
+              timeout: timeout,
+              bounded: bounded,
+            );
+          } else {
+            response = await _client
+                .get(uri, headers: resolvedHeaders)
+                .timeout(timeout);
+          }
           break;
         case 'HEAD':
           response = await _client
@@ -1679,6 +1993,7 @@ class BackendApiService
             allowWritableRedirect: allowWritableRedirect,
             allowImplicitBackendFailover: allowImplicitBackendFailover,
             attemptedBackendOrigins: attemptedOrigins,
+            boundedBody: boundedBody,
           );
         }
       }
@@ -1707,12 +2022,44 @@ class BackendApiService
       response: response,
     );
 
+    // Web browser session: a 401 for the bearer this request sent. One restore,
+    // then one retry. A failed restore falls through to the re-auth path below.
+    if (response.statusCode == 401 &&
+        includeAuth &&
+        (isIdempotent || replaySafe) &&
+        !retriedAfterReauth &&
+        requestSessionEpoch == _authSessionEpoch &&
+        await _browserSessionRecoverRejectedBearer(
+          this,
+          resolvedHeaders['Authorization'],
+        )) {
+      return _request(
+        method,
+        uri,
+        includeAuth: includeAuth,
+        headers: headers,
+        body: body,
+        encoding: encoding,
+        isIdempotent: isIdempotent,
+        replaySafe: replaySafe,
+        timeout: timeout,
+        retriedAfterReauth: true,
+        retriedAfterWritableRedirect: retriedAfterWritableRedirect,
+        allowImplicitBackendFailover: allowImplicitBackendFailover,
+        attemptedBackendOrigins: attemptedOrigins,
+      );
+    }
+
     final coordinator = _authCoordinator;
+    // Only a 403 can be an account-inactive or token-error answer, so the body
+    // is decoded for that status alone. Decoding every authenticated body,
+    // including a 50 MB private image, would cost memory for no effect.
+    final failureBody = response.statusCode == 403 ? response.body : null;
     final accountInactive = includeAuth &&
         coordinator != null &&
         AccountInactiveSignal.isRestResponse(
           statusCode: response.statusCode,
-          body: response.body,
+          body: failureBody,
         );
     final isAuthFailure = accountInactive ||
         (includeAuth &&
@@ -1720,7 +2067,7 @@ class BackendApiService
             AppConfig.isFeatureEnabled('rePromptLoginOnExpiry') &&
             _isAuthFailureStatus(
               statusCode: response.statusCode,
-              responseBody: response.body,
+              responseBody: failureBody,
             ));
 
     if (!isAuthFailure) {
@@ -1758,6 +2105,7 @@ class BackendApiService
             allowWritableRedirect: allowWritableRedirect,
             allowImplicitBackendFailover: false,
             attemptedBackendOrigins: attemptedOrigins,
+            boundedBody: boundedBody,
           );
         }
         throw _nodeNotWritableException(response, uri);
@@ -1791,6 +2139,7 @@ class BackendApiService
             allowWritableRedirect: allowWritableRedirect,
             allowImplicitBackendFailover: allowImplicitBackendFailover,
             attemptedBackendOrigins: attemptedOrigins,
+            boundedBody: boundedBody,
           );
         }
       }
@@ -1834,10 +2183,117 @@ class BackendApiService
         retriedAfterWritableRedirect: retriedAfterWritableRedirect,
         allowImplicitBackendFailover: allowImplicitBackendFailover,
         attemptedBackendOrigins: attemptedOrigins,
+        boundedBody: boundedBody,
       );
     }
 
     return response;
+  }
+
+  /// Streams a GET over the same [_client] and collects its body as it arrives.
+  ///
+  /// A declared Content-Length above the cap is refused before the body is
+  /// listened to, so none of it is read. Otherwise [_collectBoundedBody] reads
+  /// the body and cancels at the cap.
+  ///
+  /// Web: the app's web client is package:http BrowserClient. In http >=1.4.0
+  /// (locked 1.6.0) it reads the Fetch ReadableStream chunk by chunk and
+  /// cancels the reader when the subscription is cancelled, so the bound holds
+  /// on web as well.
+  ///
+  /// Redirects are not followed: the request carries the bearer token, and a
+  /// redirect would re-send it to another location.
+  Future<http.Response> _getBoundedBody(
+    Uri uri, {
+    required Map<String, String> headers,
+    required Duration timeout,
+    required _BoundedBodyRequest bounded,
+  }) async {
+    final request = http.Request('GET', uri)
+      ..headers.addAll(headers)
+      ..followRedirects = false;
+    final streamed = await _client.send(request).timeout(timeout);
+    final declared = streamed.contentLength ??
+        int.tryParse(streamed.headers['content-length'] ?? '');
+    if (declared != null && declared > bounded.maxBytes) {
+      // Release the body unread: listening and cancelling closes the response
+      // now rather than leaving it open until it times out.
+      unawaited(streamed.stream.listen(null).cancel().catchError((_) {}));
+      throw const FormatException('Invalid private media size');
+    }
+    final bytes = await _collectBoundedBody(
+      streamed.stream,
+      bounded: bounded,
+      timeout: timeout,
+    );
+    return http.Response.bytes(
+      bytes,
+      streamed.statusCode,
+      headers: streamed.headers,
+      request: request,
+      reasonPhrase: streamed.reasonPhrase,
+    );
+  }
+
+  /// Collects [stream] into one buffer that never holds more than
+  /// `bounded.maxBytes`. The subscription is cancelled the moment the running
+  /// total would pass the cap, so later chunks are never pulled. Each chunk is
+  /// checked against the session first, and a chunk that arrives after an
+  /// account switch is dropped. Every failure path discards the partial buffer.
+  Future<Uint8List> _collectBoundedBody(
+    Stream<List<int>> stream, {
+    required _BoundedBodyRequest bounded,
+    required Duration timeout,
+  }) {
+    final builder = BytesBuilder(copy: false);
+    final completer = Completer<Uint8List>();
+    var total = 0;
+    StreamSubscription<List<int>>? subscription;
+
+    void release() {
+      builder.clear();
+      final active = subscription;
+      subscription = null;
+      if (active != null) unawaited(active.cancel().catchError((_) {}));
+    }
+
+    void fail(Object error, [StackTrace? stack]) {
+      release();
+      if (!completer.isCompleted) {
+        completer.completeError(error, stack ?? StackTrace.current);
+      }
+    }
+
+    subscription = stream.listen(
+      (chunk) {
+        if (completer.isCompleted) return;
+        if (!bounded.isCurrent()) {
+          fail(StateError('Authentication session changed'));
+          return;
+        }
+        if (chunk.length > bounded.maxBytes - total) {
+          fail(const FormatException('Invalid private media size'));
+          return;
+        }
+        total += chunk.length;
+        builder.add(chunk);
+      },
+      onError: (Object error, StackTrace stack) => fail(error, stack),
+      onDone: () {
+        if (completer.isCompleted) return;
+        subscription = null;
+        completer.complete(builder.takeBytes());
+      },
+      cancelOnError: true,
+    );
+
+    return completer.future.timeout(
+      timeout,
+      onTimeout: () {
+        release();
+        throw TimeoutException('Private media body', timeout);
+      },
+    );
   }
 
   Future<http.Response> _get(
@@ -2177,10 +2633,15 @@ class BackendApiService
     );
   }
 
-  Future<int> _persistTokenFromResponse(Map<String, dynamic> body,
-          {required int expectedEpoch}) =>
-      _backendApiPersistTokenFromResponse(this, body,
-          expectedEpoch: expectedEpoch);
+  Future<int> _persistTokenFromResponse(
+    Map<String, dynamic> body, {
+    required int expectedEpoch,
+  }) =>
+      _backendApiPersistTokenFromResponse(
+        this,
+        body,
+        expectedEpoch: expectedEpoch,
+      );
 
   /// Persists the backend JWT (and refresh token) returned inside an auth
   /// success response (`data.token` / `token`). Used by auth-continuation
@@ -2188,10 +2649,15 @@ class BackendApiService
   /// returns a fresh authenticated session for the same user.
   ///
   /// Returns true when a non-empty token was persisted.
-  Future<bool> persistAuthTokensFromResponse(Map<String, dynamic> body,
-      {int? sessionEpoch}) async {
-    await _backendApiPersistTokenFromResponse(this, body,
-        expectedEpoch: sessionEpoch ?? _authSessionEpoch);
+  Future<bool> persistAuthTokensFromResponse(
+    Map<String, dynamic> body, {
+    int? sessionEpoch,
+  }) async {
+    await _backendApiPersistTokenFromResponse(
+      this,
+      body,
+      expectedEpoch: sessionEpoch ?? _authSessionEpoch,
+    );
     final token = (getAuthToken() ?? '').trim();
     return token.isNotEmpty;
   }
@@ -2203,8 +2669,11 @@ class BackendApiService
     Map<String, dynamic> body, {
     required int sessionEpoch,
   }) =>
-      _backendApiPersistTokenFromResponse(this, body,
-          expectedEpoch: sessionEpoch);
+      _backendApiPersistTokenFromResponse(
+        this,
+        body,
+        expectedEpoch: sessionEpoch,
+      );
 
   Map<String, dynamic> _responsePayload(Map<String, dynamic> body) {
     return _backendApiResponsePayload(body);
@@ -2400,7 +2869,8 @@ class BackendApiService
       final data = _tryDecodeJsonObject(fallbackResponse.body);
       if (data == null) {
         throw Exception(
-            '$primaryFailure (Orbit fallback returned an invalid response)');
+          '$primaryFailure (Orbit fallback returned an invalid response)',
+        );
       }
       data['source'] = data['source'] ?? 'orbitdb';
       return data;
@@ -2424,7 +2894,8 @@ class BackendApiService
       throw Exception('Request failed: $fallbackStatus ($primaryFailure)');
     }
     throw Exception(
-        '$primaryFailure (Orbit fallback failed: ${fallbackResponse.statusCode})');
+      '$primaryFailure (Orbit fallback failed: ${fallbackResponse.statusCode})',
+    );
   }
 
   String _normalizeApiBaseUrl(String rawBaseUrl) {
@@ -3136,12 +3607,14 @@ class BackendApiService
     required String walletAddress,
     required String signature,
     required String message,
+    int? expectedEpoch,
   }) =>
       _backendApiLoginWithWallet(
         this,
         walletAddress: walletAddress,
         signature: signature,
         message: message,
+        expectedEpoch: expectedEpoch,
       );
 
   /// Register with email + password.
@@ -3683,8 +4156,9 @@ class BackendApiService
     final base = Uri.parse(baseUrl);
     final uri = base.resolve(reference);
     final uuid = r'[0-9a-fA-F-]{36}';
-    final route =
-        RegExp('^/api/messages/$uuid/messages/$uuid/attachments/$uuid\$');
+    final route = RegExp(
+      '^/api/messages/$uuid/messages/$uuid/attachments/$uuid\$',
+    );
     if (uri.origin != base.origin ||
         uri.userInfo.isNotEmpty ||
         uri.hasQuery ||
@@ -3699,8 +4173,9 @@ class BackendApiService
     request.headers.addAll(_getHeaders());
     final streamed =
         await _client.send(request).timeout(AppConfig.requestTimeout);
-    final response = await http.Response.fromStream(streamed)
-        .timeout(AppConfig.requestTimeout);
+    final response = await http.Response.fromStream(
+      streamed,
+    ).timeout(AppConfig.requestTimeout);
     if (epoch != _authSessionEpoch || response.statusCode != 200) {
       throw StateError('Attachment is unavailable for this session');
     }
@@ -3798,12 +4273,18 @@ class BackendApiService
         onCompressionProgress: onCompressionProgress,
       );
 
-  /// Add a member to conversation
+  /// Add a member to conversation. A walletless target is named by [userId].
   Future<Map<String, dynamic>> addConversationMember(
     String conversationId,
-    String walletAddress,
-  ) =>
-      _backendApiAddConversationMemberImpl(this, conversationId, walletAddress);
+    String walletAddress, {
+    String? userId,
+  }) =>
+      _backendApiAddConversationMemberImpl(
+        this,
+        conversationId,
+        walletAddress,
+        userId: userId,
+      );
 
   /// Remove a member from conversation (best-effort)
   Future<Map<String, dynamic>> removeConversationMember(
@@ -4859,9 +5340,7 @@ class BackendApiService
           return _artMarkerFromBackendJson(payload);
         }
         if (payload is Map) {
-          return _artMarkerFromBackendJson(
-            Map<String, dynamic>.from(payload),
-          );
+          return _artMarkerFromBackendJson(Map<String, dynamic>.from(payload));
         }
         return null;
       },
@@ -5893,6 +6372,213 @@ class BackendApiService
     }
   }
 
+  /// Authenticated detail fetch for owner/collaborator draft preview metadata.
+  /// Public detail reads continue to use [getArtwork] and its snapshot fallback.
+  @override
+  Future<Artwork> getArtworkDetailWithMediaPreview(String artworkId) async {
+    final id = artworkId.trim();
+    if (id.isEmpty || id.contains('/') || id.contains('\\')) {
+      throw ArgumentError.value(artworkId, 'artworkId');
+    }
+    await ensureAuthLoaded();
+    final token = (_authToken ?? '').trim();
+    if (token.isEmpty) throw StateError('Authentication required');
+    final epoch = _authSessionEpoch;
+    final uri = Uri.parse('$baseUrl/api/artworks/${Uri.encodeComponent(id)}');
+    final response = await _request(
+      'GET',
+      uri,
+      includeAuth: true,
+      headers: const <String, String>{
+        'Cache-Control': 'no-cache, no-store',
+      },
+      isIdempotent: true,
+      timeout: const Duration(seconds: 5),
+      allowWritableRedirect: false,
+      allowImplicitBackendFailover: false,
+    );
+    if (epoch != _authSessionEpoch || token != (_authToken ?? '').trim()) {
+      throw StateError('Authentication session changed');
+    }
+    if (response.statusCode != 200) {
+      throw BackendApiRequestException(
+        statusCode: response.statusCode,
+        path: uri.path,
+      );
+    }
+    final decoded = jsonDecode(response.body);
+    final payload = decoded is Map
+        ? (decoded['artwork'] ?? decoded['data'] ?? decoded)
+        : null;
+    if (payload is! Map) throw const FormatException('Invalid artwork payload');
+    final artwork = parseArtworkFromBackendJson(
+      Map<String, dynamic>.from(payload),
+    );
+    if (artwork.id != id) throw const FormatException('Artwork id mismatch');
+    return artwork;
+  }
+
+  /// Reads one current PostgreSQL detail and its media permission together.
+  /// This explicit mode never uses shared cache, Orbit, snapshots, or failover.
+  @override
+  Future<ArtworkCurrentMediaDetail> getArtworkCurrentMediaDetail(
+    String identifier, {
+    required bool includeAuth,
+  }) async {
+    final id = identifier.trim();
+    if (id.isEmpty || id.contains('/') || id.contains('\\')) {
+      throw ArgumentError.value(identifier, 'identifier');
+    }
+    if (includeAuth) await ensureAuthLoaded();
+    final epoch = _authSessionEpoch;
+    final token = (_authToken ?? '').trim();
+    bool isCurrent() =>
+        epoch == _authSessionEpoch &&
+        (!includeAuth || token == (_authToken ?? '').trim());
+    final uri = Uri.parse(
+      '$baseUrl/api/artworks/${Uri.encodeComponent(id)}?currentMedia=true',
+    );
+    final response = await _request(
+      'GET',
+      uri,
+      includeAuth: includeAuth,
+      headers: const <String, String>{
+        'Cache-Control': 'no-cache, no-store',
+      },
+      isIdempotent: true,
+      timeout: const Duration(seconds: 5),
+      allowWritableRedirect: false,
+      allowImplicitBackendFailover: false,
+      boundedBody: _BoundedBodyRequest(
+        maxBytes: 1024 * 1024,
+        isCurrent: isCurrent,
+      ),
+    );
+    if (!isCurrent()) throw StateError('Authentication session changed');
+    if (response.statusCode != 200) {
+      throw BackendApiRequestException(
+        statusCode: response.statusCode,
+        path: uri.path,
+      );
+    }
+    final cacheControl =
+        (response.headers['cache-control'] ?? '').toLowerCase();
+    if (!cacheControl.contains('no-store')) {
+      throw const FormatException('Current artwork detail is cacheable');
+    }
+    final decoded = jsonDecode(utf8.decode(response.bodyBytes));
+    final payload = decoded is Map ? decoded['data'] : null;
+    if (decoded is! Map ||
+        decoded['success'] != true ||
+        decoded['source'] != 'postgresql' ||
+        decoded['mode'] != 'current-media' ||
+        decoded['current'] != true ||
+        decoded['publicMediaAllowed'] is! bool ||
+        payload is! Map ||
+        payload['id'] is! String) {
+      throw const FormatException('Invalid current artwork detail payload');
+    }
+    final artwork = parseArtworkFromBackendJson(
+      Map<String, dynamic>.from(payload),
+    );
+    final canonicalArtworkUuid = RegExp(
+      r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89aAbB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$',
+    );
+    final isUuid = canonicalArtworkUuid.hasMatch(id);
+    final resolvedIdIsUuid = canonicalArtworkUuid.hasMatch(artwork.id);
+    if (!resolvedIdIsUuid ||
+        (isUuid && artwork.id.toLowerCase() != id.toLowerCase()) ||
+        (!isUuid && (!artwork.isNft || artwork.nftMintAddress?.trim() != id))) {
+      throw const FormatException('Current artwork identifier mismatch');
+    }
+    if (!isCurrent()) throw StateError('Authentication session changed');
+    final publicMediaAllowed = decoded['publicMediaAllowed'] as bool;
+    return ArtworkCurrentMediaDetail(
+      artwork: artwork.copyWith(
+        currentPublicMediaAllowed: publicMediaAllowed,
+      ),
+      publicMediaAllowed: publicMediaAllowed,
+    );
+  }
+
+  /// Loads private preview bytes only from the exact relative route bound to
+  /// this artwork and slot in its authenticated descriptor.
+  @override
+  Future<List<int>> getArtworkPrivateMediaBytes({
+    required String artworkId,
+    required String slot,
+    required String descriptorPath,
+  }) async {
+    final id = artworkId.trim();
+    final validSlot = slot == 'cover' ||
+        slot == 'poap' ||
+        RegExp(r'^gallery-(?:[0-9]|[1-9][0-9])$').hasMatch(slot);
+    final expectedPath = '/api/artworks/${Uri.encodeComponent(id)}/media/$slot';
+    if (id.isEmpty ||
+        !validSlot ||
+        descriptorPath != expectedPath ||
+        descriptorPath.contains('?') ||
+        descriptorPath.contains('#')) {
+      throw const FormatException('Invalid private media descriptor');
+    }
+    await ensureAuthLoaded();
+    final token = (_authToken ?? '').trim();
+    if (token.isEmpty) throw StateError('Authentication required');
+    final epoch = _authSessionEpoch;
+    // Checked per chunk while the body arrives, so bytes that land after an
+    // account switch are dropped rather than collected.
+    bool isCurrent() =>
+        epoch == _authSessionEpoch && token == (_authToken ?? '').trim();
+    final uri = Uri.parse('$baseUrl$descriptorPath');
+    final response = await _request(
+      'GET',
+      uri,
+      includeAuth: true,
+      headers: const <String, String>{
+        'Cache-Control': 'no-cache, no-store',
+      },
+      isIdempotent: true,
+      timeout: const Duration(seconds: 5),
+      allowWritableRedirect: false,
+      allowImplicitBackendFailover: false,
+      boundedBody: _BoundedBodyRequest(
+        maxBytes: _privateArtworkMediaMaxBytes,
+        isCurrent: isCurrent,
+      ),
+    );
+    if (epoch != _authSessionEpoch || token != (_authToken ?? '').trim()) {
+      throw StateError('Authentication session changed');
+    }
+    if (response.statusCode != 200) {
+      throw BackendApiRequestException(
+        statusCode: response.statusCode,
+        path: uri.path,
+      );
+    }
+    final contentType = (response.headers['content-type'] ?? '').toLowerCase();
+    final cacheControl =
+        (response.headers['cache-control'] ?? '').toLowerCase();
+    if (!const <String>{
+      'image/jpeg',
+      'image/png',
+      'image/gif',
+      'image/webp',
+    }.contains(contentType)) {
+      throw const FormatException('Unsupported private media type');
+    }
+    if (!cacheControl.contains('private') ||
+        !cacheControl.contains('no-store')) {
+      throw const FormatException('Private media response is cacheable');
+    }
+    // The cap was enforced while the bytes arrived. Return the received
+    // Uint8List: copying it into an unmodifiable List<int> stores each byte in
+    // its own pointer-sized slot, several times the size of the image.
+    if (response.bodyBytes.isEmpty) {
+      throw const FormatException('Invalid private media size');
+    }
+    return response.bodyBytes;
+  }
+
   /// Update an artwork
   /// PUT /api/artworks/:id
   ///
@@ -5935,11 +6621,16 @@ class BackendApiService
         }
         return null;
       }
-      throw BackendApiRequestException(
-        statusCode: response.statusCode,
-        path: path,
-        body: response.body,
-      );
+      throw ArtworkEditorialHoldException.tryParse(
+            statusCode: response.statusCode,
+            path: path,
+            body: response.body,
+          ) ??
+          BackendApiRequestException(
+            statusCode: response.statusCode,
+            path: path,
+            body: response.body,
+          );
     } catch (error, stackTrace) {
       _throwTypedMutationFailure(
         error: error,
@@ -5975,6 +6666,13 @@ class BackendApiService
         }
         return null;
       }
+      // An editorial hold is a decision, not a failure to retry.
+      final hold = ArtworkEditorialHoldException.tryParse(
+        statusCode: response.statusCode,
+        path: uri.path,
+        body: response.body,
+      );
+      if (hold != null) throw hold;
       throw Exception(
         'Failed to publish artwork: ${response.statusCode} ${response.body}',
       );
@@ -7247,14 +7945,24 @@ class BackendApiService
 
   /// Share a post (increment share counter)
   /// POST /api/community/posts/:id/share
+  /// Throws when the share is not counted (for example a 404 for a post the
+  /// caller cannot see) so the caller can roll back its optimistic count.
   Future<void> sharePost(String postId) async {
     try {
-      await _post(
+      final response = await _post(
         Uri.parse('$baseUrl/api/community/posts/$postId/share'),
         headers: _getHeaders(),
       );
+      if (!_isSuccessStatus(response.statusCode)) {
+        throw BackendApiRequestException(
+          statusCode: response.statusCode,
+          path: '/api/community/posts/$postId/share',
+          body: response.body,
+        );
+      }
     } catch (e) {
       AppConfig.debugPrint('BackendApiService.sharePost failed: $e');
+      rethrow;
     }
   }
 
@@ -7365,9 +8073,11 @@ class BackendApiService
       final uri = Uri.parse(
         '$baseUrl/api/groups',
       ).replace(queryParameters: queryParams);
+      // Sent with the session token when one exists so isMember/isOwner are
+      // answered for the caller; a guest request stays anonymous.
       final jsonData = await _fetchJson(
         uri,
-        includeAuth: false,
+        includeAuth: true,
         allowOrbitFallback: false,
       );
       final dynamic payload =
@@ -8246,7 +8956,8 @@ class BackendApiService
   }
 
   Future<FollowMutationRecord?> unfollowAccountWithResponse(
-      String userId) async {
+    String userId,
+  ) async {
     final targetId = userId.trim().toLowerCase();
     final encoded = Uri.encodeComponent(targetId);
     try {
@@ -8501,7 +9212,8 @@ class BackendApiService
     await ensureAuthLoaded();
     if (!hasAuthSession) return false;
     final uri = Uri.parse(
-        '$baseUrl/api/community/follow/account/${Uri.encodeComponent(targetId)}/status');
+      '$baseUrl/api/community/follow/account/${Uri.encodeComponent(targetId)}/status',
+    );
     final response = await _get(uri, headers: _getHeaders());
     if (!_isSuccessStatus(response.statusCode)) {
       throw BackendApiRequestException(
@@ -8630,8 +9342,10 @@ class BackendApiService
 
   /// The affected person appeals a decision about their content or account.
   /// POST /api/reports/:id/appeal
-  Future<void> appealModerationDecision(String reportId,
-          {required String note}) =>
+  Future<void> appealModerationDecision(
+    String reportId, {
+    required String note,
+  }) =>
       _postModerationRequest('/api/reports/$reportId/appeal', note);
 
   Future<void> _postModerationRequest(String path, String? note) async {
@@ -8641,8 +9355,9 @@ class BackendApiService
     final response = await _post(
       uri,
       headers: _getHeaders(),
-      body: jsonEncode(
-          <String, dynamic>{if (trimmed.isNotEmpty) 'note': trimmed}),
+      body: jsonEncode(<String, dynamic>{
+        if (trimmed.isNotEmpty) 'note': trimmed,
+      }),
       isIdempotent: false,
     );
     if (response.statusCode == 200 || response.statusCode == 201) return;
@@ -8989,13 +9704,13 @@ class BackendApiService
   }) async {
     try {
       final term = search?.trim() ?? '';
-      final uri = Uri.parse(
-        '$baseUrl/api/institutions',
-      ).replace(queryParameters: {
-        'limit': '$limit',
-        'offset': '$offset',
-        if (term.isNotEmpty) 'search': term,
-      });
+      final uri = Uri.parse('$baseUrl/api/institutions').replace(
+        queryParameters: {
+          'limit': '$limit',
+          'offset': '$offset',
+          if (term.isNotEmpty) 'search': term,
+        },
+      );
       final response = await _get(
         uri,
         includeAuth: false,
@@ -9023,6 +9738,8 @@ class BackendApiService
 
   /// Get institution by id
   /// GET /api/institutions/:id
+  ///
+  /// Returns null only when the API answers 404. Other failures throw.
   Future<Map<String, dynamic>?> getInstitution(String id) async {
     try {
       final response = await _get(
@@ -9041,7 +9758,10 @@ class BackendApiService
       }
     } catch (e) {
       AppConfig.debugPrint('BackendApiService.getInstitution failed: $e');
-      return null;
+      // Only the API's 404 above means "not found". Any other failure is
+      // surfaced so the screen can offer a retry instead of claiming the
+      // institution does not exist.
+      rethrow;
     }
   }
 
@@ -9072,7 +9792,8 @@ class BackendApiService
       return null;
     } catch (e) {
       AppConfig.debugPrint(
-          'BackendApiService.institutionClaimsAvailable failed: $e');
+        'BackendApiService.institutionClaimsAvailable failed: $e',
+      );
       return null;
     }
   }
@@ -9094,7 +9815,8 @@ class BackendApiService
     try {
       await _ensureAuthBeforeRequest();
       final uri = Uri.parse(
-          '$baseUrl/api/institutions/${Uri.encodeComponent(institutionId)}/claims');
+        '$baseUrl/api/institutions/${Uri.encodeComponent(institutionId)}/claims',
+      );
       final title = claimantTitle?.trim() ?? '';
       final evidence = evidenceUrl?.trim() ?? '';
       final response = await _post(
@@ -9136,7 +9858,8 @@ class BackendApiService
       return claim;
     } catch (e) {
       AppConfig.debugPrint(
-          'BackendApiService.submitInstitutionClaim failed: $e');
+        'BackendApiService.submitInstitutionClaim failed: $e',
+      );
       rethrow;
     }
   }
@@ -9165,7 +9888,8 @@ class BackendApiService
           .toList(growable: false);
     } catch (e) {
       AppConfig.debugPrint(
-          'BackendApiService.getMyInstitutionClaims failed: $e');
+        'BackendApiService.getMyInstitutionClaims failed: $e',
+      );
       rethrow;
     }
   }
@@ -9219,7 +9943,8 @@ class BackendApiService
       return application;
     } catch (e) {
       AppConfig.debugPrint(
-          'BackendApiService.submitArtistApplication failed: $e');
+        'BackendApiService.submitArtistApplication failed: $e',
+      );
       rethrow;
     }
   }
@@ -9252,7 +9977,8 @@ class BackendApiService
       return ArtistApplicationSummary.tryParse(decoded?['data'] ?? decoded);
     } catch (e) {
       AppConfig.debugPrint(
-          'BackendApiService.getMyArtistApplication failed: $e');
+        'BackendApiService.getMyArtistApplication failed: $e',
+      );
       rethrow;
     }
   }
@@ -9291,7 +10017,8 @@ class BackendApiService
       return state;
     } catch (e) {
       AppConfig.debugPrint(
-          'BackendApiService.getAccountVerification failed: $e');
+        'BackendApiService.getAccountVerification failed: $e',
+      );
       rethrow;
     }
   }
@@ -9369,7 +10096,8 @@ class BackendApiService
       return request;
     } catch (e) {
       AppConfig.debugPrint(
-          'BackendApiService.submitInstitutionPresenceRequest failed: $e');
+        'BackendApiService.submitInstitutionPresenceRequest failed: $e',
+      );
       rethrow;
     }
   }
@@ -9380,7 +10108,8 @@ class BackendApiService
     try {
       await _ensureAuthBeforeRequest();
       final uri = Uri.parse(
-          '$baseUrl/api/institutions/presence-requests/${Uri.encodeComponent(requestId)}/withdraw');
+        '$baseUrl/api/institutions/presence-requests/${Uri.encodeComponent(requestId)}/withdraw',
+      );
       final response = await _post(
         uri,
         headers: _getHeaders(),
@@ -9396,7 +10125,8 @@ class BackendApiService
       }
     } catch (e) {
       AppConfig.debugPrint(
-          'BackendApiService.withdrawInstitutionPresenceRequest failed: $e');
+        'BackendApiService.withdrawInstitutionPresenceRequest failed: $e',
+      );
       rethrow;
     }
   }
@@ -10857,8 +11587,11 @@ class BackendApiService
   /// Ingest app client telemetry in batches (best-effort; non-blocking).
   ///
   /// POST /api/analytics/app
-  Future<http.Response?> postAppTelemetry(String jsonBody,
-      {int? consentGeneration, int? accountSessionEpoch}) async {
+  Future<http.Response?> postAppTelemetry(
+    String jsonBody, {
+    int? consentGeneration,
+    int? accountSessionEpoch,
+  }) async {
     final consent = OptionalAnalyticsConsent.instance;
     final generation = consentGeneration ?? consent.generation;
     final accountEpoch = accountSessionEpoch ?? authSessionEpoch;
@@ -10873,7 +11606,8 @@ class BackendApiService
       final events = payload['events'];
       if (events is! List ||
           events.any(
-              (event) => event is! Map || event['actor_user_id'] != actor)) {
+            (event) => event is! Map || event['actor_user_id'] != actor,
+          )) {
         return null;
       }
       final uri = Uri.parse('$baseUrl/api/analytics/app');
@@ -11012,8 +11746,10 @@ class BackendApiService
             // A profile/account id is never a wallet: compare it with the
             // snapshot's owner id fields, exactly as the live query does.
             collections = collections
-                .where((entry) =>
-                    snapshotCollectionOwnedBy(entry, snapshotWalletFilter))
+                .where(
+                  (entry) =>
+                      snapshotCollectionOwnedBy(entry, snapshotWalletFilter),
+                )
                 .toList(growable: false);
           } else if (snapshotWalletFilter.isNotEmpty) {
             final canonicalRequested = WalletUtils.canonical(
@@ -11498,7 +12234,8 @@ class BackendApiService
       statusCode != 409;
 
   Future<AccountClosureStatus> getAccountClosureStatus(
-      AccountClosureReceipt receipt) async {
+    AccountClosureReceipt receipt,
+  ) async {
     final session = (_authToken ?? '').trim();
     if (session.isNotEmpty && _accountKeyOf(session) != receipt.accountId) {
       throw StateError('Closure receipt belongs to another account');
@@ -11508,7 +12245,7 @@ class BackendApiService
       includeAuth: false,
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': 'Bearer ${receipt.statusToken}'
+        'Authorization': 'Bearer ${receipt.statusToken}',
       },
       body: jsonEncode({'operationId': receipt.operationId}),
       isIdempotent: true,
@@ -11516,13 +12253,15 @@ class BackendApiService
     );
     if (response.statusCode != 200) {
       throw BackendApiRequestException(
-          statusCode: response.statusCode,
-          path: '/api/auth/account-closure/status',
-          body: null);
+        statusCode: response.statusCode,
+        path: '/api/auth/account-closure/status',
+        body: null,
+      );
     }
     final body = jsonDecode(response.body) as Map<String, dynamic>;
     return AccountClosureStatus.fromJson(
-        Map<String, dynamic>.from(body['data'] as Map));
+      Map<String, dynamic>.from(body['data'] as Map),
+    );
   }
 
   /// Delete the authenticated account (`users.id` from the JWT).
@@ -11571,7 +12310,7 @@ class BackendApiService
 
     final closureHeaders = {
       'Content-Type': 'application/json',
-      'Authorization': 'Bearer $closureToken'
+      'Authorization': 'Bearer $closureToken',
     };
     onStage?.call(AccountClosureStage.preparing, closureEpoch);
     try {
@@ -11586,9 +12325,10 @@ class BackendApiService
       );
       if (prepared.statusCode != 200) {
         throw BackendApiRequestException(
-            statusCode: prepared.statusCode,
-            path: '/api/auth/account-closure/prepare',
-            body: null);
+          statusCode: prepared.statusCode,
+          path: '/api/auth/account-closure/prepare',
+          body: null,
+        );
       }
       requireSameSession();
       final preparedBody = jsonDecode(prepared.body) as Map<String, dynamic>;
@@ -11633,7 +12373,8 @@ class BackendApiService
       return clearedEpoch;
     } catch (e) {
       AppConfig.debugPrint(
-          'BackendApiService.deleteMyAccount failed (${e.runtimeType})');
+        'BackendApiService.deleteMyAccount failed (${e.runtimeType})',
+      );
       rethrow;
     }
   }
@@ -11661,7 +12402,8 @@ class BackendApiService
     }
     if (requestedWallet.isNotEmpty && requestedWallet != currentWallet) {
       throw StateError(
-          'Account closure wallet does not match the signed-in account');
+        'Account closure wallet does not match the signed-in account',
+      );
     }
     await deleteMyAccount();
   }
@@ -12506,6 +13248,9 @@ Artwork parseArtworkFromBackendJson(Map<String, dynamic> json) {
   );
   final isPublic = boolVal(json['isPublic'] ?? json['is_public']) ?? true;
   final isActive = boolVal(json['isActive'] ?? json['is_active']) ?? true;
+  final editorialState = nullableString(
+    json['editorialState'] ?? json['editorial_state'],
+  )?.toLowerCase();
   final isForSale = boolVal(json['isForSale'] ?? json['is_for_sale']) ?? false;
   final price = doubleVal(json['price']);
   final currency = nullableString(json['currency']);
@@ -12613,6 +13358,7 @@ Artwork parseArtworkFromBackendJson(Map<String, dynamic> json) {
     ),
     isPublic: isPublic,
     isActive: isActive,
+    editorialState: editorialState,
     isForSale: isForSale,
     price: price,
     currency: currency,
@@ -12642,6 +13388,8 @@ Artwork parseArtworkFromBackendJson(Map<String, dynamic> json) {
     poapDescription: poapDescription,
     poapImageUrl: poapImageUrl,
     metadata: metadata.isEmpty ? null : metadata,
+    mediaPreview: ArtworkMediaPreviewDescriptor.tryParse(json['mediaPreview']),
+    mediaPreviewProvided: json.containsKey('mediaPreview'),
     promotion: promotion,
   );
 }

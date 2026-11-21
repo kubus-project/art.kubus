@@ -36,9 +36,26 @@ import 'package:art_kubus/screens/desktop/desktop_shell_scope.dart';
 import 'package:art_kubus/utils/user_profile_navigation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:http/http.dart' as http;
+import 'package:http/testing.dart';
 import 'package:provider/provider.dart';
 
 import 'profile_fixtures.dart';
+
+/// Models a profile backend that predates the gallery routes.
+MockClient legacyProfileClient([
+  Future<http.Response> Function(http.Request)? handleRequest,
+]) =>
+    MockClient((request) async {
+      if (RegExp(r'^/api/profiles/[^/]+/gallery(?:/draft)?$')
+          .hasMatch(request.url.path)) {
+        return http.Response(
+            '{"success":false,"message":"Route not found"}', 404);
+      }
+      return handleRequest == null
+          ? http.Response('', 400)
+          : handleRequest(request);
+    });
 
 /// Which real profile surface a test or QA capture should render.
 enum ProfileSurface {

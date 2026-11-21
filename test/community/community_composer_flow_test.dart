@@ -49,6 +49,20 @@ String _jwt() {
       })}.sig';
 }
 
+const _accountId = '6f1c1d2e-3a4b-4c5d-8e9f-0a1b2c3d4e5f';
+
+/// A signed-in account with no wallet: the token names the account id only.
+String _walletlessJwt() {
+  String b64(Map<String, Object?> m) =>
+      base64Url.encode(utf8.encode(jsonEncode(m))).replaceAll('=', '');
+  final exp = DateTime.now().add(const Duration(hours: 1));
+  return '${b64({'alg': 'none'})}.'
+      '${b64({
+        'user_id': _accountId,
+        'exp': exp.millisecondsSinceEpoch ~/ 1000,
+      })}.sig';
+}
+
 class _FakePicker extends ImagePickerPlatform {
   @override
   Future<XFile?> getVideo(
@@ -240,12 +254,17 @@ void main() {
         api = _Api();
         picker = _FakePicker();
         ImagePickerPlatform.instance = picker;
+        // The wallet session this file starts from. Each test begins with
+        // the same preferred wallet, so no earlier test leaks into it.
         BackendApiService()
           ..setHttpClient(MockClient.streaming(api.handle))
+          ..setPreferredWalletAddress(_wallet, persist: false)
           ..setAuthTokenForTesting(_jwt());
       });
 
-      tearDown(() => BackendApiService().setAuthTokenForTesting(null));
+      tearDown(() => BackendApiService()
+        ..setAuthTokenForTesting(null)
+        ..setPreferredWalletAddress(null, persist: false));
 
       Future<void> flush(WidgetTester tester) async {
         // The real providers open a socket and reconnect on a timer. Disconnect
@@ -277,6 +296,25 @@ void main() {
       },
           skip: _skipUnlessMulti,
           timeout: const Timeout(Duration(seconds: 120)));
+
+      testWidgets('a walletless signed-in account posts as itself',
+          (tester) async {
+        // Email or Google account: nothing stored under a wallet key, only the
+        // account id in the session. The pre-gate must not stop it.
+        SharedPreferences.setMockInitialValues(<String, Object>{});
+        // setUp left the device on a wallet session, so that wallet is still
+        // the preferred one when this account signs in (the account switch).
+        BackendApiService().setAuthTokenForTesting(_walletlessJwt());
+        await openComposer(tester, 1);
+
+        await tester.tap(postButton());
+        await _settle(tester, 60);
+
+        expect(find.text(_l10n.communityPostingNeedsWalletToast), findsNothing);
+        expect(api.creates, hasLength(1));
+        expect(api.created, 1);
+        await flush(tester);
+      }, timeout: const Timeout(Duration(seconds: 120)));
 
       testWidgets(
           'mixed media reorders, removes and publishes the visible order',
