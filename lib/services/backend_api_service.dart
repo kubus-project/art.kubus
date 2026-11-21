@@ -1458,6 +1458,16 @@ class BackendApiService
     return _tryExtractWalletFromToken(token) ?? '';
   }
 
+  /// The live session's own account id (a JWT claim), or its wallet for a
+  /// legacy token with no id claim; empty without a session. The owner
+  /// (ProfileProvider) binds the held profile to the session with this; display
+  /// code never reads it.
+  String get authAccountKey => _accountKeyOf(_authToken);
+
+  /// The wallet the live session's token carries, or empty.
+  String get authWalletAddress =>
+      _authWalletCanonical ?? _tryExtractWalletFromToken(_authToken) ?? '';
+
   /// The account the session is moving to or already is: the credential target
   /// when a commit is pending, else the live token. The target is set
   /// synchronously with the epoch bump and cleared on sign-out, so from the

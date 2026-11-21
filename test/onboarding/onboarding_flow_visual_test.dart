@@ -58,10 +58,11 @@ Future<void> _pumpOnboardingReady(WidgetTester tester) async {
 }
 
 ProfileProvider _signedInAccountWithoutWallet() {
-  AccountSessionFixture.start(accountId: 'profile_visual');
+  AccountSessionFixture.start(accountId: 'visual-account');
   return ProfileProvider()
     ..setCurrentUser(UserProfile(
       id: 'profile_visual',
+      userId: 'visual-account',
       walletAddress: '',
       username: 'visual_user',
       displayName: 'Visual User',

@@ -192,7 +192,8 @@ class _NoopSavedItemsRepository extends SavedItemsRepository {
 
 void main() {
   // A signed-in surface has a live session behind its held profile.
-  setUp(() => AccountSessionFixture.start(accountId: 'test-account'));
+  setUp(
+      () => AccountSessionFixture.start(accountId: 'user_1', wallet: '0xabc'));
   tearDown(AccountSessionFixture.end);
 
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -236,7 +237,7 @@ void main() {
       ..setCurrentWalletAddressForTesting('0xabc');
 
     final attendanceProvider = AttendanceProvider()
-      ..bindAuthContext(isSignedIn: true, walletAddress: '0xabc')
+      ..bindAuthContext(identityOwner: profileProvider, walletAddress: '0xabc')
       ..updateProximity(
         markerId: markerId,
         lat: 0,

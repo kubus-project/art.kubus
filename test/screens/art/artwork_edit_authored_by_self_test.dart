@@ -162,7 +162,8 @@ void _editorTest(
 
 void main() {
   // A signed-in surface has a live session behind its held profile.
-  setUp(() => AccountSessionFixture.start(accountId: 'test-account'));
+  setUp(() =>
+      AccountSessionFixture.start(accountId: _profileId, wallet: '0xabc'));
   tearDown(AccountSessionFixture.end);
 
   TestWidgetsFlutterBinding.ensureInitialized();

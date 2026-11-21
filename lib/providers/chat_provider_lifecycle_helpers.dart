@@ -306,6 +306,7 @@ void _chatProviderBindAuthContext(
   bool? isSignedIn,
 }) {
   try {
+    if (profileProvider != null) provider._identityOwner = profileProvider;
     final profileWallet =
         WalletUtils.normalize(profileProvider?.currentUser?.walletAddress);
     final wallet = WalletUtils.normalize(walletAddress);

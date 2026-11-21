@@ -137,6 +137,8 @@ void main() {
     expect(provider.currentUser?.displayName, 'Alice');
 
     // Sign-in as B replaces the session; the authenticated load follows it.
+    await BackendApiService()
+        .setAuthToken(AccountSessionFixture.jwt(accountId: 'user-b'));
     api.account = _emailAccount(
       userId: 'user-b',
       username: 'bob',
@@ -161,6 +163,8 @@ void main() {
     await provider.loadAuthenticatedProfile();
 
     provider.signOut();
+    await BackendApiService()
+        .setAuthToken(AccountSessionFixture.jwt(accountId: 'user-b'));
     api.account = _emailAccount(
       userId: 'user-b',
       username: 'bob',

@@ -289,8 +289,7 @@ extension _DesktopCommunityScreenStatePart5 on _DesktopCommunityScreenState {
     if (!canPost || !mounted) return;
     // A signed-in account posts with or without a wallet. Only a session with
     // no identity at all stops here, keeping the draft in the composer.
-    final isSignedIn = context.read<ProfileProvider>().isSignedIn;
-    if (!await communityPostingHasIdentity(isSignedIn: isSignedIn)) {
+    if (!context.read<ProfileProvider>().isSignedIn) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showKubusSnackBar(
         SnackBar(
@@ -963,10 +962,10 @@ extension _DesktopCommunityScreenStatePart5 on _DesktopCommunityScreenState {
                   ? institutionId
                   : ((walletAddress ?? artist['id'])?.toString() ?? handle);
               final canonicalWallet = WalletUtils.canonical(walletAddress);
-              final currentWallet = WalletUtils.canonical(
-                  context.read<WalletProvider>().currentWalletAddress);
               final canFollow = canonicalWallet.isNotEmpty &&
-                  !WalletUtils.equals(canonicalWallet, currentWallet);
+                  !context
+                      .read<ProfileProvider>()
+                      .isCurrentAccount(canonicalWallet);
               final isFollowing =
                   canFollow && _followingWallets.contains(canonicalWallet);
               final isFollowBusy = canFollow &&

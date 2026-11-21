@@ -513,16 +513,6 @@ class _AppLauncherState extends State<AppLauncher> {
               ChangeNotifierProvider(
                 create: (context) => DeferredOnboardingProvider(),
               ),
-              // Remembers the identity-dependent action a guest attempted, so
-              // it can be offered back to them after they create an account.
-              ChangeNotifierProvider(
-                create: (context) => PendingActionProvider(),
-              ),
-              // Non-blocking "create a free account" prompt, armed only after
-              // a visitor has shown real interest.
-              ChangeNotifierProvider(
-                create: (context) => ActivationPromptProvider(),
-              ),
               ChangeNotifierProvider(
                 create: (context) => PublicEntityTakeoverProvider(),
               ),
@@ -586,6 +576,24 @@ class _AppLauncherState extends State<AppLauncher> {
                   provider.bindWalletProvider(walletProvider);
                   return provider;
                 },
+              ),
+              // Remembers the identity-dependent action a guest attempted, so
+              // it can be offered back to them after they create an account.
+              ChangeNotifierProxyProvider<ProfileProvider,
+                  PendingActionProvider>(
+                create: (context) => PendingActionProvider(),
+                update: (context, profileProvider, pendingActions) =>
+                    (pendingActions ?? PendingActionProvider())
+                      ..bindIdentityOwner(profileProvider),
+              ),
+              // Non-blocking "create a free account" prompt, armed only after
+              // a visitor has shown real interest.
+              ChangeNotifierProxyProvider<ProfileProvider,
+                  ActivationPromptProvider>(
+                create: (context) => ActivationPromptProvider(),
+                update: (context, profileProvider, activationPrompt) =>
+                    (activationPrompt ?? ActivationPromptProvider())
+                      ..bindIdentityOwner(profileProvider),
               ),
               ChangeNotifierProxyProvider2<AppRefreshProvider, ConfigProvider,
                   StatsProvider>(
@@ -844,7 +852,7 @@ class _AppLauncherState extends State<AppLauncher> {
                 ) {
                   final provider = attendanceProvider ?? AttendanceProvider();
                   provider.bindAuthContext(
-                    isSignedIn: profileProvider.isSignedIn,
+                    identityOwner: profileProvider,
                     walletAddress: walletProvider.currentWalletAddress,
                   );
                   return provider;
@@ -883,7 +891,7 @@ class _AppLauncherState extends State<AppLauncher> {
                 ) {
                   final provider = attestationProvider ?? AttestationProvider();
                   provider.bindAuthContext(
-                    isSignedIn: profileProvider.isSignedIn,
+                    identityOwner: profileProvider,
                     walletAddress: walletProvider.currentWalletAddress,
                   );
                   return provider;

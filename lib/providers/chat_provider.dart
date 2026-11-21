@@ -584,6 +584,9 @@ class ChatProvider extends ChangeNotifier {
   DateTime? _lastUnauthorizedAt;
   final Duration _unauthCooldown = const Duration(seconds: 30);
   String _lastAuthSignature = '';
+  // The owner of "who is signed in", handed in by the binder. Every "is this
+  // me" decision about a message or socket payload goes through it.
+  ProfileProvider? _identityOwner;
   String _lastAuthAccountId = '';
   // The account whose personal socket rooms this session holds. Read by the
   // session reset, which runs after _lastAuthAccountId has already moved on to
@@ -1025,9 +1028,6 @@ class ChatProvider extends ChangeNotifier {
     return normalized.trim();
   }
 
-  // Credential fact for messaging requests (is a bearer token held), not
-  // identity: who is signed in is the profile provider's answer.
-  bool get isAuthenticated => (_api.getAuthToken() ?? '').isNotEmpty;
   bool get _hasAuthToken => (_api.getAuthToken() ?? '').isNotEmpty;
   // A wallet alone may request a chat session, so it counts here. This gates
   // network work only; nothing in the UI reads it as "signed in".
@@ -1084,6 +1084,12 @@ class ChatProvider extends ChangeNotifier {
   @visibleForTesting
   void handleMessageReadForTesting(Map<String, dynamic> data) {
     _onMessageRead(data);
+  }
+
+  /// Test seam: the owner that answers "is this me", as the binder hands it in.
+  @visibleForTesting
+  void setIdentityOwnerForTesting(ProfileProvider? owner) {
+    _identityOwner = owner;
   }
 
   @visibleForTesting
@@ -1187,14 +1193,12 @@ class ChatProvider extends ChangeNotifier {
     return key;
   }
 
-  /// Whether an identity named by a socket payload is the signed-in account.
+  /// Whether an identity named by a socket payload or a message is the
+  /// signed-in account. The owner answers; without one bound nobody is.
   bool _isCurrentAccountActor({String? userId, String? wallet}) =>
-      isSameAccountActor(
-        userId: userId,
-        wallet: wallet,
-        otherUserId: _socketSessionAccountId(),
-        otherWallet: _currentWallet,
-      );
+      _identityOwner?.isCurrentAccountActor(
+          accountId: userId, wallet: wallet) ??
+      false;
 
   /// A trimmed identifier from the first of [keys] that carries one, or null.
   String? _identityText(Map<String, dynamic> data, List<String> keys) {
@@ -1251,7 +1255,7 @@ class ChatProvider extends ChangeNotifier {
     if (_initialized) {
       if (normalizedInitialWallet.isNotEmpty) {
         await setCurrentWallet(normalizedInitialWallet);
-      } else if (_conversations.isEmpty && isAuthenticated) {
+      } else if (_conversations.isEmpty && _hasAuthToken) {
         unawaited(refreshConversations());
       }
       return;
@@ -1908,9 +1912,9 @@ class ChatProvider extends ChangeNotifier {
     // A walletless optimistic message is this account's own send. Only the
     // account's echo may replace it; another walletless sender never can.
     final sameSender = WalletUtils.canonical(current.senderWallet).isEmpty
-        ? incoming.isSentBy(
-            accountId: AccountIdentity.accountKey,
-            wallet: _currentWallet,
+        ? _isCurrentAccountActor(
+            userId: incoming.senderUserId,
+            wallet: incoming.senderWallet,
           )
         : WalletUtils.equals(current.senderWallet, incoming.senderWallet);
     if (!sameSender) return false;
@@ -1974,9 +1978,9 @@ class ChatProvider extends ChangeNotifier {
         return;
       }
       final normalizedMsg = msg;
-      final isSelfSender = normalizedMsg.isSentBy(
-        accountId: AccountIdentity.accountKey,
-        wallet: _currentWallet,
+      final isSelfSender = _isCurrentAccountActor(
+        userId: normalizedMsg.senderUserId,
+        wallet: normalizedMsg.senderWallet,
       );
       final existing = _messages[convId] ?? const <ChatMessage>[];
       final next = <ChatMessage>[];

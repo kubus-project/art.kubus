@@ -648,6 +648,7 @@ class _AppInitializerState extends State<AppInitializer> {
         prefs,
         scopeKey: OnboardingStateService.buildAuthOnboardingScopeKey(
           walletAddress: walletAddress,
+          // Onboarding-record scope key, not an identity source.
           userId: (prefs.getString('user_id') ?? '').trim(),
         ),
       );
@@ -660,6 +661,7 @@ class _AppInitializerState extends State<AppInitializer> {
       final authOnboardingScopeKey =
           OnboardingStateService.buildAuthOnboardingScopeKey(
         walletAddress: walletAddress,
+        // Onboarding-record scope key, not an identity source.
         userId: (prefs.getString('user_id') ?? '').trim(),
       );
       final pendingAuthOnboardingResume = hasValidSession

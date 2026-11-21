@@ -1,16 +1,4 @@
-import 'package:art_kubus/services/account_identity.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-
-/// True when a signed-in account has an identity to publish as: a stored
-/// wallet, or its account id. [isSignedIn] is the profile provider's answer,
-/// passed in: a wallet that survived a forced sign-out is nobody's identity.
-/// A walletless account posts as itself; the backend keys its posts by account
-/// id. A guest has neither.
-Future<bool> communityPostingHasIdentity({required bool isSignedIn}) async {
-  if (!isSignedIn) return false;
-  if (await readCommunityPostingWallet() != null) return true;
-  return AccountIdentity.accountKey.trim().isNotEmpty;
-}
 
 /// Wallet address stored for the current account, or null when the account
 /// has no wallet (email-only accounts). Mirrors the mobile posting gate.

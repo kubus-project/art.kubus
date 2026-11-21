@@ -139,7 +139,10 @@ Map<String, dynamic> _profileJson({
 class _FakeAvatarProfileProvider extends ProfileProvider {
   _FakeAvatarProfileProvider(UserProfile user) {
     // An account journey runs behind a live session.
-    AccountSessionFixture.start(accountId: user.userId ?? user.id);
+    AccountSessionFixture.start(
+      accountId: user.userId ?? user.id,
+      wallet: user.walletAddress,
+    );
     setCurrentUser(user);
   }
 
@@ -1365,7 +1368,10 @@ void main() {
     await tester.binding.setSurfaceSize(const Size(390, 1700));
     addTearDown(() async => tester.binding.setSurfaceSize(null));
 
-    AccountSessionFixture.start(accountId: 'profile_creator');
+    AccountSessionFixture.start(
+      accountId: 'profile_creator',
+      wallet: '0xcreator',
+    );
     final profileProvider = ProfileProvider()
       ..setCurrentUser(UserProfile(
         id: 'profile_creator',

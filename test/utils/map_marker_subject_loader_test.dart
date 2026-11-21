@@ -32,7 +32,10 @@ Institution _institution(String id) => Institution(
 
 void main() {
   // A signed-in surface has a live session behind its held profile.
-  setUp(() => AccountSessionFixture.start(accountId: 'test-account'));
+  setUp(() => AccountSessionFixture.start(
+        accountId: 'loader-account',
+        wallet: _institutionWallet,
+      ));
   tearDown(AccountSessionFixture.end);
 
   setUp(() {

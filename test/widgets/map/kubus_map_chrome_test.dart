@@ -383,9 +383,7 @@ void main() {
             ChangeNotifierProvider(create: (_) => ExhibitionsProvider()),
             ChangeNotifierProvider(create: (_) => EventsProvider()),
             ChangeNotifierProvider(
-              create: (_) => ActivationPromptProvider(
-                hasAuthSession: () => false,
-              ),
+              create: (_) => ActivationPromptProvider(),
             ),
             ChangeNotifierProvider(create: (_) => MarkerManagementProvider()),
             ChangeNotifierProvider(create: (_) => PresenceProvider()),
@@ -419,7 +417,7 @@ void main() {
     testWidgets('prompt CTA and dismiss targets are at least 48px high',
         (tester) async {
       SharedPreferences.setMockInitialValues(<String, Object>{});
-      final provider = ActivationPromptProvider(hasAuthSession: () => false);
+      final provider = ActivationPromptProvider();
       addTearDown(provider.dispose);
       await tester.runAsync(() async {
         for (var i = 0; i < ActivationPromptProvider.viewsBeforePrompt; i++) {
@@ -486,9 +484,7 @@ void main() {
             ChangeNotifierProvider(create: (_) => ExhibitionsProvider()),
             ChangeNotifierProvider(create: (_) => EventsProvider()),
             ChangeNotifierProvider(
-              create: (_) => ActivationPromptProvider(
-                hasAuthSession: () => false,
-              ),
+              create: (_) => ActivationPromptProvider(),
             ),
             ChangeNotifierProvider(create: (_) => MarkerManagementProvider()),
             ChangeNotifierProvider(create: (_) => PresenceProvider()),

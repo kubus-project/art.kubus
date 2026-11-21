@@ -94,12 +94,9 @@ class _OnboardingWalletConnectStepState
   }
 
   Future<String?> _resolveCurrentUserId() async {
-    final user = context.read<ProfileProvider>().heldProfile;
+    final user = context.read<ProfileProvider>().currentUser;
     final fromProfile = (user?.userId ?? user?.id ?? '').trim();
-    if (fromProfile.isNotEmpty) return fromProfile;
-    final prefs = await SharedPreferences.getInstance();
-    final fromPrefs = (prefs.getString('user_id') ?? '').trim();
-    return fromPrefs.isEmpty ? null : fromPrefs;
+    return fromProfile.isEmpty ? null : fromProfile;
   }
 
   Future<_AccountLinkSnapshot?> _captureAccountSnapshot() async {

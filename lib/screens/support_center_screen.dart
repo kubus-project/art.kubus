@@ -6,9 +6,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart'
     show HardwareKeyboard, KeyDownEvent, KeyEvent;
 import 'package:provider/provider.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 import '../l10n/app_localizations.dart';
+import '../providers/profile_provider.dart';
 import '../providers/support_center_provider.dart';
 import '../services/backend_api_service.dart';
 import '../services/contextual_auth_gate.dart';
@@ -72,7 +72,6 @@ class _SupportCenterScreenState extends State<SupportCenterScreen> {
 
   // Credential fact, read right after the token is (re)loaded in the sign-in
   // flow, before any profile exists: it gates requests, not identity display.
-  bool get _signedIn => BackendApiService().hasAuthSession;
 
   SupportCenterProvider get _support => context.read<SupportCenterProvider>();
 
@@ -132,7 +131,7 @@ class _SupportCenterScreenState extends State<SupportCenterScreen> {
     final draft = support.takeDraft(
       section: _section.name,
       ticketId: widget.resumeTicketId,
-      currentUserId: await _currentUserId(),
+      currentUserId: _currentUserId(),
     );
     if (draft == null || !mounted) return;
     setState(() {
@@ -151,16 +150,18 @@ class _SupportCenterScreenState extends State<SupportCenterScreen> {
     }
   }
 
-  /// The signed-in account, or null for a guest. Read the way the pending
-  /// action provider reads it, so the two agree on ownership.
-  Future<String?> _currentUserId() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final value = (prefs.getString('user_id') ?? '').trim();
-      return value.isEmpty ? null : value;
-    } catch (_) {
-      return null;
-    }
+  /// A bearer token is held, so a request goes out authenticated. This is a
+  /// credential fact, not an identity: it must hold right after a cold-start
+  /// token load and for a session the server refused, before (or without) any
+  /// profile. Who is signed in is the profile provider's answer.
+  bool get _holdsCredential => BackendApiService().hasAuthSession;
+
+  /// The signed-in account's id, or null for a guest. Read from the owner, as
+  /// the pending action provider does, so the two agree on ownership.
+  String? _currentUserId() {
+    final account = context.read<ProfileProvider?>()?.currentUser;
+    final value = (account?.userId ?? account?.id ?? '').trim();
+    return value.isEmpty ? null : value;
   }
 
   /// The raw contact or bug form text, kept so the restored form shows the
@@ -231,7 +232,7 @@ class _SupportCenterScreenState extends State<SupportCenterScreen> {
       // Fall through as a guest.
     }
     if (!mounted) return false;
-    if (_signedIn) return true;
+    if (_holdsCredential) return true;
     final l10n = AppLocalizations.of(context)!;
     if (draft != null) _support.stashDraft(draft);
     final proceed = await const ContextualAuthGate().ensureAuthenticated(
@@ -274,7 +275,7 @@ class _SupportCenterScreenState extends State<SupportCenterScreen> {
   Future<void> _signInThenRefresh() async {
     final support = _support;
     final tokenBefore = BackendApiService().getAuthToken();
-    if (_signedIn && _sessionRefused(support)) {
+    if (_holdsCredential && _sessionRefused(support)) {
       await _openSignIn(ticketId: support.openId);
       // Backing out of the sign-in route with the same refused session changes
       // nothing, so no request is repeated.
@@ -282,7 +283,7 @@ class _SupportCenterScreenState extends State<SupportCenterScreen> {
     } else {
       await _ensureSignedIn();
     }
-    if (!mounted || !_signedIn) return;
+    if (!mounted || !_holdsCredential) return;
     final id = support.openId;
     if (id != null) {
       await support.openTicket(id);
@@ -308,7 +309,7 @@ class _SupportCenterScreenState extends State<SupportCenterScreen> {
       // different account signing in next never receives it. A draft with no
       // readable account id is bound to the session identity instead, which
       // no other account matches.
-      final owner = await _currentUserId() ??
+      final owner = _currentUserId() ??
           SupportCenterProvider.accountKeyOf(
               BackendApiService().getAuthToken());
       if (!mounted) return;
@@ -334,7 +335,7 @@ class _SupportCenterScreenState extends State<SupportCenterScreen> {
     required SupportDraft draft,
   }) async {
     if (!mounted) return;
-    if (_signedIn) {
+    if (_holdsCredential) {
       await _openSignIn(draft: draft, ticketId: ticketId);
     } else {
       await _ensureSignedIn(

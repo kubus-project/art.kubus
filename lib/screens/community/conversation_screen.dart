@@ -20,7 +20,6 @@ import 'messages_screen.dart';
 import '../../providers/chat_provider.dart';
 import '../../services/socket_service.dart';
 import '../../providers/profile_provider.dart';
-import '../../services/account_identity.dart';
 import '../../providers/cache_provider.dart';
 import '../../services/user_service.dart';
 import '../../services/account_cache_store.dart';
@@ -148,7 +147,7 @@ ResolvedMessagePresentation resolveMessagePresentationForProfile({
     conversation: conversation,
     chatProvider: chatProvider,
     currentUserWallet: profile?.walletAddress,
-    currentUserId: AccountIdentity.accountKey,
+    currentUserId: profile?.userId,
     currentUserDisplayName: profile?.displayName,
     currentUserAvatarUrl: profile?.avatar,
   );
@@ -1097,11 +1096,10 @@ class _ConversationScreenState extends State<ConversationScreen> {
 
     final reactionCounts = <String, int>{};
     final myReactions = <String>{};
-    final currentUserWallet =
-        Provider.of<ProfileProvider>(context, listen: false)
-            .currentUser
-            ?.walletAddress;
-    final currentAccountId = AccountIdentity.accountKey;
+    final currentAccount =
+        Provider.of<ProfileProvider>(context, listen: false).currentUser;
+    final currentUserWallet = currentAccount?.walletAddress;
+    final currentAccountId = currentAccount?.userId;
 
     for (final r in message.reactions) {
       reactionCounts[r.emoji] = r.count;
@@ -2476,7 +2474,7 @@ class _ConversationScreenState extends State<ConversationScreen> {
     if (!mounted) return;
     final profile = Provider.of<ProfileProvider>(context, listen: false);
     final myWallet = profile.currentUser?.walletAddress ?? '';
-    final accountId = AccountIdentity.accountKey;
+    final accountId = profile.currentUser?.userId ?? '';
 
     final availableHeight = MediaQuery.of(context).size.height -
         (kToolbarHeight + MediaQuery.of(context).padding.top);

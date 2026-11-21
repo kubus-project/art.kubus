@@ -143,6 +143,8 @@ class _EmailVerificationSuccessScreenState
               walletProvider.currentWalletAddress ??
               '')
           .trim();
+      // Onboarding-record scope key (the stored id is its fallback), not an
+      // identity source.
       final userId = (profileProvider.heldProfile?.userId ??
               profileProvider.heldProfile?.id ??
               prefs.getString('user_id') ??

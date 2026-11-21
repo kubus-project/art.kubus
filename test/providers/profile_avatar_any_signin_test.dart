@@ -321,7 +321,8 @@ void main() {
           'updatedAt': '2026-03-31T00:00:00.000Z',
         },
       };
-    BackendApiService().setAuthTokenForTesting('email-session-token');
+    BackendApiService().setAuthTokenForTesting(
+        AccountSessionFixture.jwt(accountId: 'user-email'));
     addTearDown(() => BackendApiService().setAuthTokenForTesting(null));
     final provider = ProfileProvider(apiService: api);
 

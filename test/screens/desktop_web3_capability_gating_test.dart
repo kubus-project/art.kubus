@@ -150,7 +150,10 @@ Future<void> _pumpGovernance(
 
 void main() {
   // A signed-in surface has a live session behind its held profile.
-  setUp(() => AccountSessionFixture.start(accountId: 'test-account'));
+  setUp(() => AccountSessionFixture.start(
+        accountId: 'user-1',
+        wallet: 'wallet-member',
+      ));
   tearDown(AccountSessionFixture.end);
 
   TestWidgetsFlutterBinding.ensureInitialized();

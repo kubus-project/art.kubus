@@ -11,6 +11,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../../core/conversation_navigator.dart';
 import '../../../models/institution.dart';
 import '../../../providers/chat_provider.dart';
+import '../../../providers/profile_provider.dart';
 import '../../../providers/institution_provider.dart';
 import '../../../services/backend_api_service.dart';
 import '../../../services/contextual_auth_gate.dart';
@@ -447,7 +448,8 @@ class _InstitutionDetailScreenState extends State<InstitutionDetailScreen> {
     if (!authenticated || !mounted) return;
     final chatProvider = Provider.of<ChatProvider>(context, listen: false);
     final messenger = ScaffoldMessenger.of(context);
-    final chatAuth = chatProvider.isAuthenticated;
+    final chatAuth =
+        Provider.of<ProfileProvider>(context, listen: false).isSignedIn;
     try {
       final conv = await chatProvider.createConversation('', false, [wallet]);
       if (!mounted) return;

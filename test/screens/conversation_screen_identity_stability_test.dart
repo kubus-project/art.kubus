@@ -260,7 +260,7 @@ void main() {
     test(
         'walletless own message is mine when the profile row id differs from the account id',
         () {
-      AccountIdentity.setAccountKey(accountId);
+      AccountSessionFixture.start(accountId: accountId);
       final chatProvider = ChatProvider();
       addTearDown(chatProvider.dispose);
       final profileProvider = ProfileProvider()
@@ -281,6 +281,7 @@ void main() {
 
     test('wallet account without user ids still owns its wallet messages', () {
       const wallet = '0x1234567890abcdef1234567890abcdef12345678';
+      AccountSessionFixture.start(accountId: 'test-account', wallet: wallet);
       final chatProvider = ChatProvider();
       addTearDown(chatProvider.dispose);
       final profileProvider = ProfileProvider()

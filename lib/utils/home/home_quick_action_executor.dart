@@ -260,7 +260,13 @@ class HomeQuickActionExecutor {
     for (final capability in required) {
       switch (capability) {
         case HomeQuickActionCapability.signedIn:
-          if (!_isSignedIn(context)) {
+          bool signedIn;
+          try {
+            signedIn = context.read<ProfileProvider>().isSignedIn;
+          } catch (_) {
+            signedIn = false;
+          }
+          if (!signedIn) {
             _showSnackBar(
               context,
               AppLocalizations.of(context)!.walletActionSignInRequiredToast,
@@ -287,14 +293,6 @@ class HomeQuickActionExecutor {
       }
     }
     return true;
-  }
-
-  static bool _isSignedIn(BuildContext context) {
-    try {
-      return context.read<ProfileProvider>().isSignedIn;
-    } catch (_) {
-      return false;
-    }
   }
 
   static bool _isWalletConnected(BuildContext context) {

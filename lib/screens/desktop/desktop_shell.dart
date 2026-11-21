@@ -1224,9 +1224,7 @@ class _DesktopShellState extends State<DesktopShell>
     // visitor left. Land on the destination they asked for, but only if the
     // journey actually produced a session: dismissing it must leave them where
     // they were.
-    if (shouldContinueToLockedDestination(
-      hasAuthSession: BackendApiService().hasAuthSession,
-    )) {
+    if (context.read<ProfileProvider>().isSignedIn) {
       _navigateToRoute(item.route);
     }
   }
@@ -1252,10 +1250,3 @@ class _DesktopShellState extends State<DesktopShell>
     );
   }
 }
-
-/// Whether a guest who tapped a locked rail item should be taken to it once the
-/// account gate has closed. Only an established session continues; a dismissed
-/// or abandoned journey does not.
-@visibleForTesting
-bool shouldContinueToLockedDestination({required bool hasAuthSession}) =>
-    hasAuthSession;

@@ -171,7 +171,7 @@ bool _artistReadOnly(WidgetTester tester) => tester
 
 void main() {
   // A signed-in surface has a live session behind its held profile.
-  setUp(() => AccountSessionFixture.start(accountId: 'test-account'));
+  setUp(() => AccountSessionFixture.start(accountId: _profileId));
   tearDown(AccountSessionFixture.end);
 
   testWidgets('ticking fills the artist field, locks it and sends the flag',

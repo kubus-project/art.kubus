@@ -84,7 +84,7 @@ class UserProfileNavigation {
     String? heroTag,
     bool allowOwnerShortcut = true,
   }) async {
-    if (allowOwnerShortcut && _targetsCurrentUser(context, userId)) {
+    if (allowOwnerShortcut && isCurrentUser(context, userId)) {
       await _openOwnerProfile(context);
       return;
     }
@@ -98,7 +98,7 @@ class UserProfileNavigation {
       if (!context.mounted) return;
       if (allowOwnerShortcut &&
           resolved != null &&
-          _targetsCurrentUser(context, resolved.user.id)) {
+          isCurrentUser(context, resolved.user.id)) {
         await _openOwnerProfile(context);
         return;
       }
@@ -158,11 +158,6 @@ class UserProfileNavigation {
   /// self-message actions when the owner views their own public profile.
   static bool isCurrentUser(BuildContext context, String? targetId) {
     if (targetId == null) return false;
-    return _targetsCurrentUser(context, targetId);
-  }
-
-  /// The profile provider's one "is this me" answer, read for [targetId].
-  static bool _targetsCurrentUser(BuildContext context, String targetId) {
     try {
       return context.read<ProfileProvider>().isCurrentAccount(targetId);
     } catch (_) {
@@ -212,7 +207,7 @@ class UserProfileNavigation {
     Future<PublicEntityLoadOutcome<ProfileCriticalPackage>>?
         initialCriticalPackageFuture,
   }) async {
-    if (_targetsCurrentUser(context, userId)) {
+    if (isCurrentUser(context, userId)) {
       await _openOwnerProfile(context);
       return;
     }
@@ -229,7 +224,7 @@ class UserProfileNavigation {
     if (userId.trim().isEmpty && criticalFuture != null) {
       final resolved = (await criticalFuture).valueOrNull;
       if (!context.mounted) return;
-      if (resolved != null && _targetsCurrentUser(context, resolved.user.id)) {
+      if (resolved != null && isCurrentUser(context, resolved.user.id)) {
         await _openOwnerProfile(context);
         return;
       }

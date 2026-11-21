@@ -11,6 +11,7 @@ import 'package:provider/provider.dart';
 import 'package:provider/single_child_widget.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../support/account_session_fixture.dart';
 import '../../support/product_surface_harness.dart';
 import '../../support/product_v5_qa_fixtures.dart' as qa;
 
@@ -29,7 +30,11 @@ class _FakeOnboardingState extends State<_FakeOnboarding> {
   void initState() {
     super.initState();
     // Email sign-in authenticates the session before the profile step opens.
-    BackendApiService().setAuthTokenForTesting('test-token');
+    final owner = qa.qaOwner();
+    AccountSessionFixture.start(
+      accountId: owner.userId!,
+      wallet: owner.walletAddress,
+    );
   }
 
   @override

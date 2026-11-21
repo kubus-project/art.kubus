@@ -408,16 +408,12 @@ class ProfileScreenMethods {
 
     final profileProvider =
         Provider.of<ProfileProvider>(context, listen: false);
-    final walletProvider = Provider.of<WalletProvider>(context, listen: false);
     final artworkProvider =
         Provider.of<ArtworkProvider>(context, listen: false);
 
-    final currentWallet = (walletProvider.currentWalletAddress ??
-            profileProvider.currentUser?.walletAddress)
-        ?.trim();
-    final includePrivate = currentWallet != null &&
-        currentWallet.isNotEmpty &&
-        WalletUtils.equals(currentWallet, canonicalWallet);
+    // Private content is the signed-in account's own; a wallet that survived a
+    // sign-out is not.
+    final includePrivate = profileProvider.isCurrentAccount(canonicalWallet);
 
     Future<void> runPrefetch() async {
       if (prefetchStatsSnapshot) {

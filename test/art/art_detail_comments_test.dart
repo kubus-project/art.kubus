@@ -233,6 +233,8 @@ void main() {
     await provider.initialize();
 
     const wallet = 'wallet_2';
+    // The saved wallet profile is the account behind the session.
+    AccountSessionFixture.start(accountId: 'test-account', wallet: wallet);
     final ok = await provider.saveProfile(
       walletAddress: wallet,
       username: 'tester',

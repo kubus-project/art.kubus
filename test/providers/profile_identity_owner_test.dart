@@ -138,9 +138,10 @@ void main() {
     profile.addListener(() => notified++);
     expect(profile.isSignedIn, isFalse);
 
+    // The session starts the way production starts one: the account key is
+    // set, and nothing else is announced by hand.
     AccountSessionFixture.start(
         accountId: accountId, wallet: forcedSignOutWallet);
-    AccountIdentity.notifyListenersChanged();
 
     expect(profile.isSignedIn, isTrue);
     expect(profile.currentUser?.username, forcedSignOutUsername);

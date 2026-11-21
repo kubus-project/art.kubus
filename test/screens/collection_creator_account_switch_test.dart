@@ -132,7 +132,7 @@ void main() {
     addTearDown(collectionsProvider.dispose);
     addTearDown(web3Provider.dispose);
 
-    AccountIdentity.setAccountKey(_accountA);
+    AccountSessionFixture.start(accountId: _accountA);
     profileProvider.setCurrentUser(
       _profile(accountId: _accountA, profileId: _profileA),
     );
@@ -174,7 +174,7 @@ void main() {
     expect(find.text('Private A library item'), findsWidgets);
     expect(tester.widget<Checkbox>(find.byType(Checkbox).first).value, isTrue);
 
-    AccountIdentity.setAccountKey(_accountB);
+    AccountSessionFixture.start(accountId: _accountB);
     profileProvider.setCurrentUser(
       _profile(accountId: _accountB, profileId: _profileB),
     );
@@ -199,7 +199,7 @@ void main() {
     addTearDown(collectionsProvider.dispose);
     addTearDown(web3Provider.dispose);
 
-    AccountIdentity.setAccountKey(_accountA);
+    AccountSessionFixture.start(accountId: _accountA);
     profileProvider.setCurrentUser(
       _profile(accountId: _accountA, profileId: _profileA),
     );
@@ -222,7 +222,7 @@ void main() {
     await tester.pump();
     expect(api.calls, contains((mine: true, authorProfileId: null)));
 
-    AccountIdentity.setAccountKey(_accountB);
+    AccountSessionFixture.start(accountId: _accountB);
     profileProvider.setCurrentUser(
       _profile(accountId: _accountB, profileId: _profileB),
     );

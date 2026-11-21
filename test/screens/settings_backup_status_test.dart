@@ -194,7 +194,10 @@ void main() {
   // never answers in fake time unless the channel is mocked.
   installEmptySecureStorage();
   // A signed-in surface has a live session behind its held profile.
-  setUp(() => AccountSessionFixture.start(accountId: 'test-account'));
+  setUp(() => AccountSessionFixture.start(
+        accountId: 'settings-backup-profile',
+        wallet: 'wallet123',
+      ));
   tearDown(AccountSessionFixture.end);
 
   TestWidgetsFlutterBinding.ensureInitialized();

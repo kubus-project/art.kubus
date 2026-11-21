@@ -157,7 +157,7 @@ void main() {
       final profileProvider = ProfileProvider(apiService: _PrivacyProfileApi());
       await profileProvider.initialize();
       // The account is signed in: a live session behind its held profile.
-      AccountSessionFixture.start(accountId: 'privacy-profile');
+      AccountSessionFixture.start(accountId: 'privacy-settings-profile');
       addTearDown(AccountSessionFixture.end);
       profileProvider.setCurrentUser(_signedInProfile());
       await profileProvider.updatePreferences(
@@ -263,7 +263,7 @@ void main() {
       final profileProvider = ProfileProvider(apiService: _PrivacyProfileApi());
       await profileProvider.initialize();
       // The account is signed in: a live session behind its held profile.
-      AccountSessionFixture.start(accountId: 'privacy-profile');
+      AccountSessionFixture.start(accountId: 'privacy-settings-profile');
       addTearDown(AccountSessionFixture.end);
       profileProvider.setCurrentUser(_signedInProfile());
       await profileProvider.updatePreferences(
@@ -358,7 +358,7 @@ void main() {
     final profileProvider = ProfileProvider(apiService: _PrivacyProfileApi());
     await profileProvider.initialize();
     // The account is signed in: a live session behind its held profile.
-    AccountSessionFixture.start(accountId: 'privacy-profile');
+    AccountSessionFixture.start(accountId: 'privacy-settings-profile');
     addTearDown(AccountSessionFixture.end);
     profileProvider.setCurrentUser(_signedInProfile());
     final solana = SolanaWalletService();

@@ -18,7 +18,9 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../helpers/secure_storage_absent.dart';
 import '../support/product_surface_harness.dart';
+import '../support/account_session_fixture.dart';
 import '../support/profile_fixtures.dart';
+import '../support/signed_in_profile.dart';
 
 /// A signed-in account with no wallet. Its profile row id is not its account id.
 const _ownerAccount = '6f1c1d2e-3a4b-4c5d-8e9f-0a1b2c3d4e5f';
@@ -27,6 +29,19 @@ const _groupId = '22222222-2222-4222-8222-222222222222';
 const _legacyWallet = '7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU';
 
 final _l10n = lookupAppLocalizations(const Locale('en'));
+
+/// Whether [group] is owned by the account the owner (ProfileProvider) holds as
+/// signed in: [accountId] with [wallet] (none for either: a guest).
+bool ownsGroup(CommunityGroupSummary group, String? accountId, String? wallet) {
+  final profile = (accountId == null && wallet == null) ||
+          ((accountId ?? '').isEmpty && (wallet ?? '').isEmpty)
+      ? signedInProfile(accountId: 'someone-unrelated')
+      : signedInProfile(accountId: accountId, wallet: wallet);
+  return profile.isCurrentAccountActor(
+    accountId: group.ownerUserId,
+    wallet: group.ownerWallet,
+  );
+}
 
 /// A wallet account whose wallet is the legacy owner-wallet fixture.
 class _WalletAt extends WalletProvider {
@@ -119,6 +134,7 @@ void main() {
   });
 
   tearDown(() {
+    AccountSessionFixture.end();
     AccountIdentity.setAccountKey('');
     BackendApiService()
       ..setAuthTokenForTesting(null)
@@ -134,11 +150,11 @@ void main() {
       );
 
       expect(
-        group.isOwnedBySession(accountId: _ownerAccount, wallet: null),
+        ownsGroup(group, _ownerAccount, null),
         isTrue,
       );
       expect(
-        group.isOwnedBySession(accountId: _otherAccount, wallet: null),
+        ownsGroup(group, _otherAccount, null),
         isFalse,
       );
     });
@@ -148,10 +164,13 @@ void main() {
         () {
       final unowned = _group(isOwner: false, isMember: false);
 
-      expect(unowned.isOwnedBySession(accountId: '', wallet: ''), isFalse);
+      expect(ownsGroup(unowned, '', ''), isFalse);
       expect(
-        _group(ownerUserId: _ownerAccount, isOwner: false, isMember: false)
-            .isOwnedBySession(accountId: '', wallet: null),
+        ownsGroup(
+          _group(ownerUserId: _ownerAccount, isOwner: false, isMember: false),
+          '',
+          null,
+        ),
         isFalse,
       );
     });
@@ -165,7 +184,7 @@ void main() {
       );
 
       expect(
-        group.isOwnedBySession(accountId: null, wallet: _legacyWallet),
+        ownsGroup(group, null, _legacyWallet),
         isTrue,
       );
     });

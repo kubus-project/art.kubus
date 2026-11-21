@@ -112,7 +112,10 @@ void main() {
     await profileProvider.initialize();
     // The account is signed in: a live session behind its held profile. It
     // starts after initialize(), which would otherwise load it over the network.
-    AccountSessionFixture.start(accountId: 'settings-profile');
+    AccountSessionFixture.start(
+      accountId: 'notification-settings-profile',
+      wallet: 'notification-settings-wallet',
+    );
     addTearDown(AccountSessionFixture.end);
 
     final solana = SolanaWalletService();
@@ -170,7 +173,10 @@ void main() {
     await profileProvider.initialize();
     // The account is signed in: a live session behind its held profile. It
     // starts after initialize(), which would otherwise load it over the network.
-    AccountSessionFixture.start(accountId: 'settings-profile');
+    AccountSessionFixture.start(
+      accountId: 'notification-settings-profile',
+      wallet: 'notification-settings-wallet',
+    );
     addTearDown(AccountSessionFixture.end);
 
     final solana = SolanaWalletService();

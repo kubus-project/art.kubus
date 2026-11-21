@@ -280,7 +280,10 @@ Future<void> _pumpEditScreen(
 
 void main() {
   // A signed-in surface has a live session behind its held profile.
-  setUp(() => AccountSessionFixture.start(accountId: 'test-account'));
+  setUp(() => AccountSessionFixture.start(
+        accountId: 'profile-1',
+        wallet: 'ArtistWallet111111111111111111111111111111111',
+      ));
   tearDown(AccountSessionFixture.end);
 
   TestWidgetsFlutterBinding.ensureInitialized();

@@ -14,6 +14,7 @@ import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../support/account_session_fixture.dart';
 
 const _host = '11111111-1111-4111-8111-111111111111';
 const _a = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
@@ -30,9 +31,6 @@ const _created = {
   _b: '2026-02-01T10:00:00.000Z',
   _c: '2026-01-01T10:00:00.000Z',
 };
-const _token = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.'
-    'eyJleHAiOjQ3MzM4NTYwMDAsIndhbGxldEFkZHJlc3MiOiJXYWxsZXRUZXN0MTExMTExMTExMTExMTExMTExMTExMTExMTExMSJ9.'
-    'signature';
 
 http.Response _json(Map<String, Object?> data, [int status = 200]) =>
     http.Response(jsonEncode(data), status, headers: {
@@ -158,7 +156,9 @@ void main() {
   setUp(() {
     api = BackendApiService();
     SharedPreferences.setMockInitialValues({});
-    api.setAuthTokenForTesting(_token);
+    api.setAuthTokenForTesting(
+      AccountSessionFixture.jwt(accountId: 'gallery-editor'),
+    );
   });
   tearDown(() {
     api.setAuthTokenForTesting(null);

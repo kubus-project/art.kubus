@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart' as foundation;
 import 'package:path/path.dart' as path;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../config/config.dart';
+import '../models/message.dart' show isSameAccountActor;
 import '../models/user_profile.dart';
 import '../models/user_persona.dart';
 import '../services/account_identity.dart';
@@ -96,9 +97,9 @@ class ProfileProvider extends foundation.ChangeNotifier {
   int _profileLoadEpoch = 0;
   // The account the most recent load was started for.
   String _profileLoadAccountKey = '';
-  // Whether the last announced state had a live session, so a session that
-  // starts or ends without touching the held profile still reaches listeners.
-  bool _announcedLiveSession = false;
+  // Whether the last announced state was signed in, so a session that starts
+  // or ends without touching the held profile still reaches listeners.
+  bool _announcedSignedIn = false;
 
   /// Account session the current request belongs to. A sign-out ends it, so a
   /// response that arrives afterwards must not write the previous account.
@@ -112,8 +113,9 @@ class ProfileProvider extends foundation.ChangeNotifier {
   ProfileProvider({ProfileBackendApi? apiService, StatsApiService? statsApi})
       : _apiService = apiService ?? BackendApiService(),
         _statsApi = statsApi ?? StatsApiService() {
-    _announcedLiveSession = _hasLiveSession;
+    _announcedSignedIn = isSignedIn;
     AccountIdentity.addListener(_handleAccountIdentityChanged);
+    AccountIdentity.addSessionStartListener(_handleAccountIdentityChanged);
   }
 
   void bindWalletProvider(WalletProvider walletProvider) {
@@ -160,46 +162,48 @@ class ProfileProvider extends foundation.ChangeNotifier {
 
   /// The held profile belongs to the account it was loaded for. A walletless
   /// switch leaves the wallet empty on both sides, so the wallet listener cannot
-  /// see it. An identity change to another account, or to none, clears it. A
-  /// same-account change (token refresh, wallet link) keeps it.
+  /// see it. A session that ends, a session for another account, and a session
+  /// that starts (announced by [AccountIdentity], which also fires when there
+  /// was no session before) all land here: a held profile that is not the
+  /// session's account is cleared. A same-account change (token refresh, wallet
+  /// link) keeps it.
   void _handleAccountIdentityChanged() {
     _reconcileHeldProfileWithAccount();
-    final live = _hasLiveSession;
-    if (live == _announcedLiveSession) return;
-    _announcedLiveSession = live;
+    final signedIn = isSignedIn;
+    if (signedIn == _announcedSignedIn) return;
+    _announcedSignedIn = signedIn;
     // The held profile may now be, or no longer be, the signed-in account.
     notifyListeners();
   }
 
   void _reconcileHeldProfileWithAccount() {
-    final key = AccountIdentity.accountKey;
-    final held = (_currentUser?.userId ?? _currentUser?.id ?? '').trim();
-    if (held.isNotEmpty && _heldProfileBelongsTo(key)) return;
+    final key = BackendApiService().authAccountKey;
+    final hasHeld = _currentUser != null;
+    if (hasHeld && key.isNotEmpty && _heldProfileBelongsToSession) return;
     // A load still in flight may belong to the previous account even when
     // nothing is held yet. Its response must not reach the new account.
-    if (held.isNotEmpty || _profileLoadAccountKey != key) {
+    if (hasHeld || _profileLoadAccountKey != key) {
       _profileLoadEpoch += 1;
     }
-    if (held.isEmpty) return;
+    if (!hasHeld) return;
     _clearProfileState();
     notifyListeners();
   }
 
-  /// Whether the held profile is the account [key] names. A wallet-only session
-  /// token carries no account id, so the account key is the wallet and the
-  /// profile's id is a local handle; the profile's wallet identifies it then.
-  /// A wallet disconnect does not change the account key, so it keeps the
-  /// profile.
-  bool _heldProfileBelongsTo(String key) {
-    if (key.isEmpty) return false;
+  /// Whether the held profile is the live session's account. The account ids
+  /// decide when both sides carry one; a wallet-only session token carries no
+  /// account id, so the profile's wallet identifies it then. A wallet
+  /// disconnect does not change the session, so it keeps the profile.
+  bool get _heldProfileBelongsToSession {
     final user = _currentUser;
     if (user == null) return false;
-    final candidates = <String>[
-      (user.userId ?? '').trim(),
-      user.id.trim(),
-      WalletUtils.canonical(user.walletAddress),
-    ];
-    return candidates.contains(key);
+    final session = BackendApiService();
+    return isSameAccountActor(
+      userId: _accountIdOf(user),
+      wallet: user.walletAddress,
+      otherUserId: session.authAccountKey,
+      otherWallet: session.authWalletAddress,
+    );
   }
 
   void _clearProfileState() {
@@ -427,14 +431,20 @@ class ProfileProvider extends foundation.ChangeNotifier {
     return _apiService.verifyImageUrl(url);
   }
 
-  /// The credential fact behind [isSignedIn]: a live account session exists.
-  /// Private on purpose. Nothing outside this provider decides who is signed in.
-  bool get _hasLiveSession => BackendApiService().hasAuthSession;
+  /// The credential fact behind [isSignedIn]: a live account session exists and
+  /// no profile of another account is held under it. Private on purpose.
+  /// Nothing outside this provider decides who is signed in; the one gate that
+  /// [isSignedIn], the preferences and the persona all share.
+  bool get _hasLiveSession =>
+      BackendApiService().hasAuthSession &&
+      (_currentUser == null || _heldProfileBelongsToSession);
 
-  /// THE definition of "signed in": a live account session, with a held profile
-  /// to show for it. It is derived on every read, never latched, so a session
-  /// lost in place or never restored (forced sign-out, wallet-only device)
-  /// reads false the moment the credential is gone.
+  /// THE definition of "signed in": a live account session, with the session's
+  /// own account profile held to show for it. It is derived on every read,
+  /// never latched, so a session lost in place or never restored (forced
+  /// sign-out, wallet-only device) reads false the moment the credential is
+  /// gone, and a session for another account never shows the profile that was
+  /// held before it.
   bool get isSignedIn => _currentUser != null && _hasLiveSession;
 
   /// The signed-in account's profile, or null when nobody is signed in. This is
@@ -476,6 +486,31 @@ class ProfileProvider extends foundation.ChangeNotifier {
       final key = _identityKey(identifier);
       return key.isNotEmpty && key == target;
     });
+  }
+
+  /// Whether an actor named by an account id and/or a wallet (a post or
+  /// comment author, a message sender, an owner field) is the signed-in
+  /// account. The ids decide when both sides carry one; the wallets decide
+  /// otherwise (legacy payloads). False for everyone when nobody is signed in,
+  /// so a wallet left on the device by a forced sign-out owns nothing.
+  bool isCurrentAccountActor({String? accountId, String? wallet}) {
+    final account = currentUser;
+    if (account == null) return false;
+    return isSameAccountActor(
+      userId: accountId,
+      wallet: wallet,
+      otherUserId: _accountIdOf(account),
+      otherWallet: account.walletAddress,
+    );
+  }
+
+  /// The profile's account id: its user id, else its id unless that is the
+  /// local `profile_...` handle a wallet-only profile gets (not an account id).
+  static String? _accountIdOf(UserProfile profile) {
+    final userId = (profile.userId ?? '').trim();
+    if (userId.isNotEmpty) return userId;
+    final id = profile.id.trim();
+    return id.isEmpty || id.startsWith('profile_') ? null : id;
   }
 
   static final RegExp _accountUuid = RegExp(
@@ -835,7 +870,7 @@ class ProfileProvider extends foundation.ChangeNotifier {
   /// Load profile by wallet address
   Future<void> loadAuthenticatedProfile() async {
     final requestEpoch = ++_profileLoadEpoch;
-    _profileLoadAccountKey = AccountIdentity.accountKey;
+    _profileLoadAccountKey = BackendApiService().authAccountKey;
     final sessionEpoch = _accountSessionEpoch;
     bool isCurrentLoad() =>
         requestEpoch == _profileLoadEpoch &&
@@ -913,7 +948,7 @@ class ProfileProvider extends foundation.ChangeNotifier {
     bool allowWalletAutoRegister = false,
   }) async {
     final requestEpoch = ++_profileLoadEpoch;
-    _profileLoadAccountKey = AccountIdentity.accountKey;
+    _profileLoadAccountKey = BackendApiService().authAccountKey;
     final sessionEpoch = _accountSessionEpoch;
     bool isCurrentLoad() =>
         requestEpoch == _profileLoadEpoch &&
@@ -1252,6 +1287,7 @@ class ProfileProvider extends foundation.ChangeNotifier {
         final fallbackCreatedAt = _currentUser?.createdAt ?? DateTime.now();
         profileJson = {
           'id': _currentUser?.id ?? 'profile_$fallbackIdSuffix',
+          if (_currentUser?.userId != null) 'userId': _currentUser!.userId,
           'walletAddress': walletAddress,
           'username': profileData['username'] ?? _currentUser?.username ?? '',
           'displayName':
@@ -1272,6 +1308,23 @@ class ProfileProvider extends foundation.ChangeNotifier {
         };
       }
 
+      // Saving does not change whose profile this is: a response that carries no
+      // account id keeps the one already held, so the saved profile is still
+      // the signed-in account's.
+      final held = _currentUser;
+      if (held != null) {
+        if ((profileJson['id'] ?? '').toString().trim().isEmpty) {
+          profileJson['id'] = held.id;
+        }
+        final heldUserId = (held.userId ?? '').trim();
+        if (heldUserId.isNotEmpty &&
+            (profileJson['userId'] ?? profileJson['user_id'] ?? '')
+                .toString()
+                .trim()
+                .isEmpty) {
+          profileJson['userId'] = heldUserId;
+        }
+      }
       _currentUser = UserProfile.fromJson(profileJson);
       // A saved avatar must stay in the cache even when the response omits it.
       final submittedAvatar = effectiveAvatar;
@@ -2256,6 +2309,7 @@ class ProfileProvider extends foundation.ChangeNotifier {
       _walletProvider!.removeListener(listener);
     }
     AccountIdentity.removeListener(_handleAccountIdentityChanged);
+    AccountIdentity.removeSessionStartListener(_handleAccountIdentityChanged);
     super.dispose();
   }
 }

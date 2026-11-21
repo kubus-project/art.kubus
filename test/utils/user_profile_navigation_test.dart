@@ -33,7 +33,7 @@ void main() {
   // A signed-in surface has a live session behind its held profile.
   setUp(() {
     SharedPreferences.setMockInitialValues(<String, Object>{});
-    AccountSessionFixture.start(accountId: 'test-account');
+    AccountSessionFixture.start(accountId: _accountId, wallet: _wallet);
   });
   tearDown(AccountSessionFixture.end);
 
@@ -307,6 +307,7 @@ void main() {
   testWidgets('an upper-case UUID still reaches the owner profile',
       (tester) async {
     const lowerId = 'abcdef12-3456-4abc-8def-0123456789ab';
+    AccountSessionFixture.start(accountId: lowerId, wallet: _wallet);
     final owner = _ownerProfile(userId: lowerId);
     final screen = await _openDesktop(tester, owner, lowerId.toUpperCase());
 

@@ -1,10 +1,10 @@
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/pending_action_intent.dart';
 import '../providers/artwork_provider.dart';
+import '../providers/profile_provider.dart';
 import '../providers/saved_items_provider.dart';
 import '../services/pending_action_executor.dart';
 import '../services/pending_action_service.dart';
@@ -37,6 +37,13 @@ class PendingActionProvider extends ChangeNotifier {
   final PendingActionService _service;
   final PendingActionExecutor _executor;
   final TelemetryService _telemetry;
+
+  // The owner of "who is signed in". An intent is pinned to, and claimed by,
+  // the account it names; nothing here reads the device's stored user id.
+  ProfileProvider? _identityOwner;
+
+  /// Hands in the owner. Called by the provider tree on every owner change.
+  void bindIdentityOwner(ProfileProvider owner) => _identityOwner = owner;
 
   PendingActionIntent? _pending;
   bool _awaitingConfirmation = false;
@@ -93,7 +100,7 @@ class PendingActionProvider extends ChangeNotifier {
       sessionId: intent.sessionId ?? _telemetry.currentSessionId,
       // Pin an intent captured while signed in to that account, so a later
       // sign-out and sign-in on the same device cannot inherit it.
-      capturedByUserId: intent.capturedByUserId ?? await _currentUserId(),
+      capturedByUserId: intent.capturedByUserId ?? _currentUserId(),
     );
     final saved = await _service.save(stamped);
     if (!saved) return;
@@ -129,7 +136,14 @@ class PendingActionProvider extends ChangeNotifier {
     // An intent captured by a different account must never be offered to this
     // one — that would let one person's pending action run under another's
     // identity on a shared device.
-    if (!intent.isClaimableBy(await _currentUserId())) {
+    final owner = _identityOwner;
+    final capturedBy = (intent.capturedByUserId ?? '').trim();
+    if (capturedBy.isNotEmpty && !(owner?.isSignedIn ?? false)) {
+      // Nobody is signed in to claim it yet (a profile that has not loaded is
+      // not a different account), so it stays where it is.
+      return null;
+    }
+    if (!intent.isClaimableBy(_currentUserId())) {
       await _service.clear();
       _pending = null;
       _awaitingConfirmation = false;
@@ -274,14 +288,10 @@ class PendingActionProvider extends ChangeNotifier {
   }
 
   /// The signed-in account, or null for a guest.
-  Future<String?> _currentUserId() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final value = (prefs.getString('user_id') ?? '').trim();
-      return value.isEmpty ? null : value;
-    } catch (_) {
-      return null;
-    }
+  String? _currentUserId() {
+    final account = _identityOwner?.currentUser;
+    final value = (account?.userId ?? account?.id ?? '').trim();
+    return value.isEmpty ? null : value;
   }
 
   Future<void> _finish(PendingActionIntent intent) async {

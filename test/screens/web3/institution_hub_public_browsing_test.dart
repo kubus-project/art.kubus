@@ -24,6 +24,7 @@ import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../helpers/secure_storage_absent.dart';
 import '../../support/verification_fixtures.dart';
+import '../../support/account_session_fixture.dart';
 
 /// Public institution browsing must never open Web3 onboarding, and an
 /// account without a wallet is a normal account.
@@ -83,7 +84,14 @@ Future<List<String>> _pumpHub(
 }) async {
   SharedPreferences.setMockInitialValues(<String, Object>{...initialPrefs});
   final api = BackendApiService();
-  api.setAuthTokenForTesting(signedIn ? 'test-token' : null);
+  api.setAuthTokenForTesting(
+    signedIn
+        ? AccountSessionFixture.jwt(
+            accountId: user?.id ?? 'fixture-account',
+            wallet: user?.walletAddress,
+          )
+        : null,
+  );
   api.setHttpClient(MockClient((request) async {
     requests.add('${request.method} ${request.url.path}');
     const headers = <String, String>{'content-type': 'application/json'};

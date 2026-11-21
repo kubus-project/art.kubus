@@ -19,7 +19,10 @@ import '../../support/account_session_fixture.dart';
 /// explicit statement and is never inferred from the uploader.
 void main() {
   // A signed-in surface has a live session behind its held profile.
-  setUp(() => AccountSessionFixture.start(accountId: 'test-account'));
+  setUp(() => AccountSessionFixture.start(
+        accountId: 'u1',
+        wallet: 'WalletUploader1111111111111111111111111111111',
+      ));
   tearDown(AccountSessionFixture.end);
 
   TestWidgetsFlutterBinding.ensureInitialized();

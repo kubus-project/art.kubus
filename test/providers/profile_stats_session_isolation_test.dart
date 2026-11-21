@@ -113,6 +113,7 @@ void main() {
     stats.requests.first.completer
         .complete(_snapshot('walletA', {'followers': 99}));
     await pendingA;
+    AccountSessionFixture.start(accountId: 'user-walletB');
     provider.setCurrentUser(_account('walletB'));
     expect(provider.followersCount, 0);
 

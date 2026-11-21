@@ -80,6 +80,7 @@ Widget _app(Widget home) {
           ..setCurrentUser(
             UserProfile(
               id: 'closure-entry-profile',
+              userId: 'closure-entry-account',
               walletAddress: '',
               username: 'tester',
               displayName: 'Tester',
@@ -165,7 +166,7 @@ Future<void> _deleteThroughUi(WidgetTester tester, AppLocalizationsEn l10n,
 
 void main() {
   // A signed-in surface has a live session behind its held profile.
-  setUp(() => AccountSessionFixture.start(accountId: 'test-account'));
+  setUp(() => AccountSessionFixture.start(accountId: 'closure-entry-account'));
   tearDown(AccountSessionFixture.end);
 
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -216,7 +217,7 @@ void main() {
     await tester.binding.setSurfaceSize(const Size(430, 932));
     // The first deletion ended the session; the second tree is a fresh
     // signed-in account behind its own session.
-    AccountSessionFixture.start(accountId: 'test-account');
+    AccountSessionFixture.start(accountId: 'closure-entry-account');
     await tester.pumpWidget(_app(const SettingsScreen()));
     await tester.pump(const Duration(seconds: 2));
 

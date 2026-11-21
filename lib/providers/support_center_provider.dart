@@ -99,8 +99,10 @@ class SupportCenterProvider extends ChangeNotifier {
   /// Whether the Support Center is switched on for this build.
   bool get supportEnabled => _supportEnabled;
 
-  // Credential fact gating support requests; not identity display state.
-  bool get signedIn => BackendApiService().hasAuthSession;
+  // A bearer token is held. Gates the request only; who is signed in is the
+  // profile provider's answer.
+  bool get _hasCredential =>
+      (BackendApiService().getAuthToken() ?? '').isNotEmpty;
 
   // Everything below belongs to the account that was signed in when it was
   // loaded. This provider outlives a sign-out, so each getter answers only
@@ -230,7 +232,7 @@ class SupportCenterProvider extends ChangeNotifier {
     _listFailure = null;
     notifyListeners();
     try {
-      if (!signedIn) {
+      if (!_hasCredential) {
         _tickets = null;
         _listFailure = SupportFailure.signIn;
         return;

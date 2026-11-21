@@ -271,7 +271,7 @@ void main() {
       final profileProvider = ProfileProvider(apiService: _FakeProfileApi());
       addTearDown(provider.dispose);
 
-      BackendApiService().setAuthTokenForTesting('token');
+      AccountSessionFixture.start(accountId: 'p1', wallet: 'wallet_1');
       profileProvider.setCurrentUser(
         UserProfile(
           id: 'p1',
@@ -348,7 +348,7 @@ void main() {
       async.elapse(const Duration(milliseconds: 80));
       expect(api.batchCalls, 1);
 
-      BackendApiService().setAuthTokenForTesting('token');
+      AccountSessionFixture.start(accountId: 'p1', wallet: 'wallet_1');
       profileProvider.setCurrentUser(
         UserProfile(
           id: 'p1',

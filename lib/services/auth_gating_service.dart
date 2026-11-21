@@ -90,6 +90,8 @@ class AuthGatingService {
         refreshTokenKeys.any((key) => _hasNonEmptyPref(prefs, key));
     final hasAuthOnboarding =
         prefs.getBool(PreferenceKeys.hasCompletedAuthOnboarding) ?? false;
+    // A lock-screen hint that an account existed on this device, by design;
+    // not an identity source.
     final hasAccountRecord =
         (prefs.getString('user_id') ?? '').trim().isNotEmpty;
     return hasAccessToken ||

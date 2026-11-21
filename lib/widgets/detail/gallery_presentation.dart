@@ -101,22 +101,23 @@ class _GalleryHostScopeState extends State<GalleryHostScope> {
   final _api = BackendApiService();
   GalleryController? _controller;
   _GalleryMedia? _media;
-  bool _signedIn = false;
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    _signedIn = Provider.of<ProfileProvider?>(context)?.isSignedIn ?? false;
-    _bind();
+    _bind(Provider.of<ProfileProvider?>(context)?.isSignedIn ?? false);
   }
 
   @override
   void didUpdateWidget(covariant GalleryHostScope oldWidget) {
     super.didUpdateWidget(oldWidget);
-    _bind();
+    _bind(
+      Provider.of<ProfileProvider?>(context, listen: false)?.isSignedIn ??
+          false,
+    );
   }
 
-  void _bind() {
+  void _bind(bool signedIn) {
     final id = widget.hostId?.trim();
     final current = _controller;
     if (id == null || !_uuid.hasMatch(id)) {
@@ -128,12 +129,12 @@ class _GalleryHostScopeState extends State<GalleryHostScope> {
     final host = (type: widget.type, id: id.toLowerCase());
     if (current != null &&
         current.host == host &&
-        current.signedIn == _signedIn &&
+        current.signedIn == signedIn &&
         current.isCurrent) {
       return;
     }
     current?.dispose();
-    final next = GalleryController(api: _api, host: host, signedIn: _signedIn);
+    final next = GalleryController(api: _api, host: host, signedIn: signedIn);
     _controller = next;
     _media = _GalleryMedia();
     WidgetsBinding.instance.addPostFrameCallback((_) {

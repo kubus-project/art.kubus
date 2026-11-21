@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 
 import '../models/attestation.dart';
+import 'profile_provider.dart';
 import '../services/backend_api_service.dart';
 
 class AttestationProvider extends ChangeNotifier {
@@ -11,9 +12,9 @@ class AttestationProvider extends ChangeNotifier {
 
   final BackendApiService _api;
 
-  // Bind-time inputs from the profile provider and the wallet provider, kept
-  // only to reset this provider's per-account state when either changes.
-  bool _isSignedIn = false;
+  // The owner of "who is signed in", and the wallet handed in with it. The
+  // wallet is kept only to reset per-account state when it changes.
+  ProfileProvider? _identityOwner;
   String? _walletAddress;
   bool _isLoading = false;
   String? _lastError;
@@ -40,14 +41,14 @@ class AttestationProvider extends ChangeNotifier {
   }
 
   void bindAuthContext({
-    required bool isSignedIn,
+    required ProfileProvider identityOwner,
     required String? walletAddress,
   }) {
+    _identityOwner = identityOwner;
+    final isSignedIn = identityOwner.isSignedIn;
     final normalizedWallet = (walletAddress ?? '').trim();
     final walletChanged = (_walletAddress ?? '') != normalizedWallet;
-    final signedInChanged = _isSignedIn != isSignedIn;
 
-    _isSignedIn = isSignedIn;
     _walletAddress = normalizedWallet;
 
     if (!isSignedIn || normalizedWallet.isEmpty) {
@@ -61,13 +62,14 @@ class AttestationProvider extends ChangeNotifier {
       return;
     }
 
-    if (walletChanged || signedInChanged || _attestations.isEmpty) {
+    // Signing out empties the list above, so a new sign-in refreshes here.
+    if (walletChanged || _attestations.isEmpty) {
       unawaited(refresh(force: true));
     }
   }
 
   Future<void> refresh({bool force = false}) async {
-    if (!_isSignedIn) return;
+    if (!(_identityOwner?.isSignedIn ?? false)) return;
     final wallet = (_walletAddress ?? '').trim();
     if (wallet.isEmpty) return;
     if (_isLoading) return;

@@ -240,7 +240,6 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
   bool _webLocationGrantedOverride = false;
 
   bool _isSkippingFlow = false;
-  bool _isSignedIn = false;
   bool _pendingEmailVerification = false;
   String? _pendingVerificationEmail;
   String _pendingVerificationSignupMethod = _emailSignupMethod;
@@ -326,10 +325,10 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
         _scope?.requiresWallet != true) {
       return false;
     }
-    final profileProvider =
-        Provider.of<ProfileProvider>(context, listen: false);
-    if (!profileProvider.isSignedIn) return false;
-    return (profileProvider.heldProfile?.walletAddress ?? '').trim().isEmpty;
+    final account =
+        Provider.of<ProfileProvider>(context, listen: false).currentUser;
+    if (account == null) return false;
+    return account.walletAddress.trim().isEmpty;
   }
 
   static _StepPalette _paletteFrom(KubusAccentGradient g) =>
@@ -551,8 +550,6 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
 
   Future<void> _bootstrap() async {
     try {
-      _isSignedIn =
-          Provider.of<ProfileProvider>(context, listen: false).isSignedIn;
       final isWidgetTestBinding = WidgetsBinding.instance.runtimeType
           .toString()
           .contains('TestWidgetsFlutterBinding');
@@ -859,6 +856,7 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
     final resolvedPrefs = prefs ?? await SharedPreferences.getInstance();
     final walletAddress =
         await _resolveWalletForBackupCheck(prefs: resolvedPrefs);
+    // Onboarding-record scope key, not an identity source.
     final userId = (resolvedPrefs.getString('user_id') ?? '').trim();
     return OnboardingStateService.buildAuthOnboardingScopeKey(
       walletAddress: walletAddress,
@@ -875,6 +873,7 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
     final normalizedWalletAddress = (walletAddress ?? '').trim();
     _flowScopeKey = OnboardingStateService.buildAuthOnboardingScopeKey(
       walletAddress: normalizedWalletAddress,
+      // Onboarding-record scope key, not an identity source.
       userId: (prefs.getString('user_id') ?? '').trim(),
     );
     if (!_walletBackupOnboardingEnabled) {
@@ -1204,7 +1203,11 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
   /// (no scope) keeps its explicit finish step.
   void _finishScopedFlowIfSatisfied() {
     if (!mounted || _scope == null || _isFinishingOnboarding) return;
-    if (_isInitializing || _steps.isEmpty || !_isSignedIn) return;
+    if (_isInitializing ||
+        _steps.isEmpty ||
+        !Provider.of<ProfileProvider>(context, listen: false).isSignedIn) {
+      return;
+    }
     if (_verificationRequired) return;
     final satisfied = _steps.every(
       (step) => _completed.contains(step) || _deferred.contains(step),
@@ -1767,10 +1770,6 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
   }
 
   void _refreshAuthDerivedSteps() {
-    final signedInNow =
-        Provider.of<ProfileProvider>(context, listen: false).isSignedIn;
-
-    _isSignedIn = signedInNow;
     _steps = _buildSteps();
     if (!_requiresVerificationStep) {
       _verificationDraft = null;
@@ -2822,7 +2821,7 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
       await _syncWalletSessionIntoProviders();
       _refreshAuthDerivedSteps();
 
-      if (!_isSignedIn) {
+      if (!profileProvider.isSignedIn) {
         final authToken = (api.getAuthToken() ?? '').trim();
         if (authToken.isNotEmpty) {
           final prefs = await SharedPreferences.getInstance();
@@ -2846,7 +2845,7 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
         }
       }
 
-      if (_isSignedIn) {
+      if (profileProvider.isSignedIn) {
         await _syncLocalProfileDraftToBackendIfPossible();
         final uploadedAvatarUrl = await _flushPendingAvatarUploadIfPossible();
         if (!mounted) return;
@@ -2923,7 +2922,7 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
         await _markCompleted(_OnboardingStep.guestPermissions);
         return;
       case _OnboardingStep.account:
-        if (_isSignedIn) {
+        if (Provider.of<ProfileProvider>(context, listen: false).isSignedIn) {
           await _markCompleted(_OnboardingStep.account);
         } else {
           await _deferCurrentStep();
@@ -3165,7 +3164,7 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
           body: l10n.onboardingFlowVerifyLastBody,
           email: _pendingVerificationEmail,
           isVerified: _emailVerifiedConfirmed,
-          isSignedIn: _isSignedIn,
+          isSignedIn: Provider.of<ProfileProvider>(context).isSignedIn,
           requiresFinishSignIn: _verificationRequired &&
               _emailVerifiedConfirmed &&
               !_sessionMatchesPendingVerificationEmail(),

@@ -84,6 +84,11 @@ class _FakeEmailPreferencesProvider extends EmailPreferencesProvider {
 Widget _app({required bool walletless, required bool mobile}) {
   final wallet = walletless ? _WalletlessWallet() : _WalletAccountWallet();
   final web3Provider = Web3Provider()..bindWalletProvider(wallet);
+  // The held account is the one behind the live session.
+  AccountSessionFixture.start(
+    accountId: 'settings-logout-profile',
+    wallet: walletless ? null : 'wallet123',
+  );
   final profile = ProfileProvider()
     ..setCurrentUser(
       UserProfile(

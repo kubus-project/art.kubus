@@ -33,8 +33,9 @@ class AccountSessionFixture {
     return 'e30.$encoded.';
   }
 
-  /// Installs a live session. Does not announce an identity change, so a
-  /// provider constructed earlier keeps whatever it already holds.
+  /// Installs a live session. A session that starts from none is announced to
+  /// the owner by the account key itself, as in production; a held profile of
+  /// another account does not survive it.
   static void start({
     String accountId = 'fixture-account',
     String? wallet,
