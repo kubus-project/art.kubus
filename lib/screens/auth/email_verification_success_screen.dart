@@ -145,8 +145,7 @@ class _EmailVerificationSuccessScreenState
           .trim();
       // Onboarding-record scope key (the stored id is its fallback), not an
       // identity source.
-      final userId = (profileProvider.heldProfile?.userId ??
-              profileProvider.heldProfile?.id ??
+      final userId = (profileProvider.heldProfile?.accountId ??
               prefs.getString('user_id') ??
               '')
           .trim();

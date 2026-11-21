@@ -30,6 +30,7 @@ import '../support/account_session_fixture.dart';
 
 UserProfile _signedInProfile() => UserProfile(
       id: 'privacy-settings-profile',
+      userId: 'privacy-settings-profile',
       walletAddress: 'privacy-settings-wallet',
       username: 'tester',
       displayName: 'Tester',

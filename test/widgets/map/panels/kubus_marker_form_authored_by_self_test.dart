@@ -32,6 +32,7 @@ ProfileProvider _signedIn({String displayName = 'Damjan Stevovic'}) =>
       ..setCurrentUser(
         UserProfile(
           id: _profileId,
+          userId: _profileId,
           // Walletless: the declaration speaks for the account, not a wallet.
           walletAddress: '',
           username: 'damjan_stevovic',

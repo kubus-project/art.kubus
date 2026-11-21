@@ -70,9 +70,6 @@ class _SupportCenterScreenState extends State<SupportCenterScreen> {
   String? _formError;
   String? _replyFormError;
 
-  // Credential fact, read right after the token is (re)loaded in the sign-in
-  // flow, before any profile exists: it gates requests, not identity display.
-
   SupportCenterProvider get _support => context.read<SupportCenterProvider>();
 
   /// One focus node per section tab, so the ring can follow keyboard focus.
@@ -150,18 +147,10 @@ class _SupportCenterScreenState extends State<SupportCenterScreen> {
     }
   }
 
-  /// A bearer token is held, so a request goes out authenticated. This is a
-  /// credential fact, not an identity: it must hold right after a cold-start
-  /// token load and for a session the server refused, before (or without) any
-  /// profile. Who is signed in is the profile provider's answer.
-  bool get _holdsCredential => BackendApiService().hasAuthSession;
-
   /// The signed-in account's id, or null for a guest. Read from the owner, as
   /// the pending action provider does, so the two agree on ownership.
   String? _currentUserId() {
-    final account = context.read<ProfileProvider?>()?.currentUser;
-    final value = (account?.userId ?? account?.id ?? '').trim();
-    return value.isEmpty ? null : value;
+    return context.read<ProfileProvider?>()?.currentUser?.accountId;
   }
 
   /// The raw contact or bug form text, kept so the restored form shows the
@@ -232,7 +221,7 @@ class _SupportCenterScreenState extends State<SupportCenterScreen> {
       // Fall through as a guest.
     }
     if (!mounted) return false;
-    if (_holdsCredential) return true;
+    if (BackendApiService().hasAuthSession) return true;
     final l10n = AppLocalizations.of(context)!;
     if (draft != null) _support.stashDraft(draft);
     final proceed = await const ContextualAuthGate().ensureAuthenticated(
@@ -275,7 +264,7 @@ class _SupportCenterScreenState extends State<SupportCenterScreen> {
   Future<void> _signInThenRefresh() async {
     final support = _support;
     final tokenBefore = BackendApiService().getAuthToken();
-    if (_holdsCredential && _sessionRefused(support)) {
+    if (BackendApiService().hasAuthSession && _sessionRefused(support)) {
       await _openSignIn(ticketId: support.openId);
       // Backing out of the sign-in route with the same refused session changes
       // nothing, so no request is repeated.
@@ -283,7 +272,7 @@ class _SupportCenterScreenState extends State<SupportCenterScreen> {
     } else {
       await _ensureSignedIn();
     }
-    if (!mounted || !_holdsCredential) return;
+    if (!mounted || !BackendApiService().hasAuthSession) return;
     final id = support.openId;
     if (id != null) {
       await support.openTicket(id);
@@ -335,7 +324,7 @@ class _SupportCenterScreenState extends State<SupportCenterScreen> {
     required SupportDraft draft,
   }) async {
     if (!mounted) return;
-    if (_holdsCredential) {
+    if (BackendApiService().hasAuthSession) {
       await _openSignIn(draft: draft, ticketId: ticketId);
     } else {
       await _ensureSignedIn(

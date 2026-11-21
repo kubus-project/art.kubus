@@ -100,11 +100,10 @@ class NotificationProvider extends ChangeNotifier {
   int _debugCadenceTicks = 0;
   int _debugSyncs = 0;
   int _debugSkippedSyncs = 0;
-  bool get _hasAuthToken => (_backend.getAuthToken() ?? '').isNotEmpty;
   // A wallet alone may request a notification session, so it counts here. This
   // gates network work only; nothing in the UI reads it as "signed in".
   bool get _hasAuthContext =>
-      _hasAuthToken || ((_currentWallet ?? '').isNotEmpty);
+      _backend.hasAuthSession || ((_currentWallet ?? '').isNotEmpty);
 
   AppLocalizations get _l10n {
     final languageCode =
@@ -223,7 +222,7 @@ class NotificationProvider extends ChangeNotifier {
   Future<String?> _resolveWallet(String? override) async {
     if (override != null && override.isNotEmpty) return override;
     try {
-      if (_hasAuthToken) {
+      if (_backend.hasAuthSession) {
         final me = await _backend.getMyProfile();
         if (me['success'] == true && me['data'] != null) {
           final data = me['data'] as Map<String, dynamic>;
@@ -415,7 +414,7 @@ class NotificationProvider extends ChangeNotifier {
     if (!_socket.isConnected) return false;
     // Account rooms are joined from the authenticated socket token. A
     // walletless signed-in account is healthy as soon as its socket connects.
-    if (expectedWallet.isEmpty) return _hasAuthToken;
+    if (expectedWallet.isEmpty) return _backend.hasAuthSession;
     final subscribed = WalletUtils.canonical(_socket.currentSubscribedWallet);
     return subscribed.isNotEmpty && subscribed == expectedWallet;
   }

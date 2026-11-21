@@ -93,6 +93,7 @@ Widget _app({required bool walletless, required bool mobile}) {
     ..setCurrentUser(
       UserProfile(
         id: 'settings-logout-profile',
+        userId: 'settings-logout-profile',
         walletAddress: walletless ? '' : 'wallet123',
         username: 'tester',
         displayName: 'Tester',

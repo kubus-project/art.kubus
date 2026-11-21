@@ -2498,7 +2498,7 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
       await _persistLocalDrafts();
       final currentUser = profileProvider.heldProfile;
       final wallet = (currentUser?.walletAddress ?? '').trim();
-      final accountKey = (currentUser?.userId ?? currentUser?.id ?? '').trim();
+      final accountKey = currentUser?.accountId ?? '';
       // A walletless (email/Google) account has no wallet but still has an
       // account id. Its role is saved against that id. A session with neither
       // (a guest walking the flow) keeps the choice in the local draft only,
@@ -2576,10 +2576,7 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
         Provider.of<ProfileProvider>(context, listen: false);
     final l10n = AppLocalizations.of(context)!;
     final messenger = ScaffoldMessenger.of(context);
-    final expectedUserId = (profileProvider.heldProfile?.userId ??
-            profileProvider.heldProfile?.id ??
-            '')
-        .trim();
+    final expectedUserId = profileProvider.heldProfile?.accountId ?? '';
 
     // Reaching this callback means AccountWalletLinkService already bound the
     // wallet AND verified through /api/profiles/me that the signed-in account
@@ -2619,10 +2616,7 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
     if (profileReloaded && profileProvider.hasHydratedProfile) {
       final linkedWallet =
           (profileProvider.heldProfile?.walletAddress ?? '').trim();
-      final reloadedUserId = (profileProvider.heldProfile?.userId ??
-              profileProvider.heldProfile?.id ??
-              '')
-          .trim();
+      final reloadedUserId = profileProvider.heldProfile?.accountId ?? '';
       final userIdStable = expectedUserId.isEmpty ||
           reloadedUserId.isEmpty ||
           reloadedUserId == expectedUserId;

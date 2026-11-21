@@ -109,6 +109,7 @@ class _ProfileEditTestProvider extends ProfileProvider {
 
   static final _initialProfile = UserProfile(
     id: 'profile-1',
+    userId: 'profile-1',
     walletAddress: 'ArtistWallet111111111111111111111111111111111',
     username: 'artist_user',
     displayName: 'Artist User',

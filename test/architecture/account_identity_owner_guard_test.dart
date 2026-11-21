@@ -104,6 +104,52 @@ void main() {
     );
   });
 
+  test('"a bearer token is held" has one accessor: hasAuthSession', () {
+    // A getter that re-wraps the token check under another name (hasAuthToken,
+    // _hasCredential, _holdsCredential...) is the same fact twice.
+    final wrapper = RegExp(
+      r'bool\s+get\s+\w+\s*(?:=>|\{)\s*(?:return\s+)?'
+      r'\(?[\w.()]*getAuthToken\(\)',
+    );
+    for (final sample in const <String>[
+      'bool get _hasCredential =>\n  (BackendApiService().getAuthToken() ?? "").isNotEmpty;',
+      'bool get hasAuthToken {\n    return (_api.getAuthToken() ?? "").isNotEmpty;',
+      'bool get _hasAuthToken => (_api.getAuthToken() ?? "").isNotEmpty;',
+    ]) {
+      expect(wrapper.hasMatch(sample), isTrue, reason: sample);
+    }
+    expect(
+      filesMatching(
+        allLib,
+        wrapper,
+        except: const <String>{'lib/services/backend_api_service.dart'},
+      ),
+      isEmpty,
+      reason: 'read BackendApiService().hasAuthSession instead of '
+          'defining another credential getter',
+    );
+  });
+
+  test('a profile is never asked for an account id by falling back to its id',
+      () {
+    // UserProfile.id is the profile ROW id for a legacy wallet profile; no
+    // session token names it. The account id is UserProfile.accountId.
+    final fallback = RegExp(r'userId\s*\?\?\s*[\w.?]*\bid\b');
+    expect(fallback.hasMatch('(account?.userId ?? account?.id ?? "")'), isTrue);
+    expect(
+      filesMatching(
+        allLib,
+        fallback,
+        except: const <String>{
+          // Reads JSON payload keys (`user['id']`), not a profile.
+          'lib/services/post_auth_coordinator.dart',
+        },
+      ),
+      isEmpty,
+      reason: 'use UserProfile.accountId',
+    );
+  });
+
   test('the wallet authority no longer answers who is signed in', () {
     expect(
       filesMatching(

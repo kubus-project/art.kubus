@@ -1028,14 +1028,13 @@ class ChatProvider extends ChangeNotifier {
     return normalized.trim();
   }
 
-  bool get _hasAuthToken => (_api.getAuthToken() ?? '').isNotEmpty;
   // A wallet alone may request a chat session, so it counts here. This gates
   // network work only; nothing in the UI reads it as "signed in".
   bool get _hasAuthContext =>
-      _hasAuthToken || ((_currentWallet ?? '').isNotEmpty);
+      _api.hasAuthSession || ((_currentWallet ?? '').isNotEmpty);
   Map<String, Object?> get debugResourceSnapshot => <String, Object?>{
         'initialized': _initialized,
-        'hasAuthToken': _hasAuthToken,
+        'hasAuthToken': _api.hasAuthSession,
         'currentWallet': _currentWallet,
         'openConversationId': _openConversationId,
         'lastIncomingMessageAt': _lastIncomingMessageAt?.toIso8601String(),
@@ -1255,7 +1254,7 @@ class ChatProvider extends ChangeNotifier {
     if (_initialized) {
       if (normalizedInitialWallet.isNotEmpty) {
         await setCurrentWallet(normalizedInitialWallet);
-      } else if (_conversations.isEmpty && _hasAuthToken) {
+      } else if (_conversations.isEmpty && _api.hasAuthSession) {
         unawaited(refreshConversations());
       }
       return;
@@ -1642,7 +1641,7 @@ class ChatProvider extends ChangeNotifier {
     final generation = _sessionGeneration;
     try {
       debugPrint(
-        'ChatProvider.refreshConversations: isAuthenticated=$_hasAuthToken',
+        'ChatProvider.refreshConversations: isAuthenticated=${_api.hasAuthSession}',
       );
       if (!_hasAuthContext) {
         return;
@@ -1658,7 +1657,7 @@ class ChatProvider extends ChangeNotifier {
         _lastUnauthorizedAt = DateTime.now();
         return;
       }
-      if (!_hasAuthToken && (_currentWallet ?? '').isNotEmpty) {
+      if (!_api.hasAuthSession && (_currentWallet ?? '').isNotEmpty) {
         try {
           await _api.ensureAuthLoaded(walletAddress: _currentWallet);
         } catch (_) {}
@@ -2609,7 +2608,7 @@ class ChatProvider extends ChangeNotifier {
               );
             }
             // If we still don't have a wallet and there IS a token, try resolving via getMyProfile
-            if ((_api.getAuthToken() ?? '').isNotEmpty &&
+            if (_api.hasAuthSession &&
                 (_currentWallet == null || _currentWallet!.isEmpty)) {
               try {
                 final meResp = await _api.getMyProfile();
@@ -2779,7 +2778,7 @@ class ChatProvider extends ChangeNotifier {
             );
           }
           // If we have a token and no wallet, try to call getMyProfile
-          if ((_api.getAuthToken() ?? '').isNotEmpty &&
+          if (_api.hasAuthSession &&
               (_currentWallet == null || _currentWallet!.isEmpty)) {
             try {
               final meResp = await _api.getMyProfile();

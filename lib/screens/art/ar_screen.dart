@@ -3465,8 +3465,8 @@ class _ARScreenState extends State<ARScreen>
     // Track AR view achievement, for the signed-in account only.
     final account =
         Provider.of<ProfileProvider>(context, listen: false).currentUser;
-    final userId = (account?.userId ?? account?.id ?? '').trim();
-    if (userId.isNotEmpty) {
+    final userId = account?.accountId;
+    if (userId != null) {
       await AchievementService().checkAchievements(
         userId: userId,
         action: 'ar_viewed',

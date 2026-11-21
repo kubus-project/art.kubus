@@ -95,8 +95,7 @@ class _OnboardingWalletConnectStepState
 
   Future<String?> _resolveCurrentUserId() async {
     final user = context.read<ProfileProvider>().currentUser;
-    final fromProfile = (user?.userId ?? user?.id ?? '').trim();
-    return fromProfile.isEmpty ? null : fromProfile;
+    return user?.accountId;
   }
 
   Future<_AccountLinkSnapshot?> _captureAccountSnapshot() async {
@@ -364,7 +363,7 @@ class _OnboardingWalletConnectStepState
 
     // Trust the hydrated profile wallet only when it belongs to the same
     // account that is signed in here — never local wallet state alone.
-    final profileUserId = (currentUser?.userId ?? currentUser?.id ?? '').trim();
+    final profileUserId = currentUser?.accountId ?? '';
     final profileWallet = (currentUser?.walletAddress ?? '').trim();
     final verifiedWallet = (_linkedWallet ?? '').trim().isNotEmpty
         ? _linkedWallet!.trim()

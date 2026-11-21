@@ -142,8 +142,7 @@ class ProfileProvider extends foundation.ChangeNotifier {
 
     _boundWalletAddress = nextWallet;
     _profileLoadEpoch += 1;
-    final hasAccountProfile =
-        (_currentUser?.userId?.trim().isNotEmpty ?? false);
+    final hasAccountProfile = _currentUser?.accountId != null;
 
     if (hasAccountProfile) {
       if (nextWallet.isNotEmpty &&
@@ -199,7 +198,7 @@ class ProfileProvider extends foundation.ChangeNotifier {
     if (user == null) return false;
     final session = BackendApiService();
     return isSameAccountActor(
-      userId: _accountIdOf(user),
+      userId: user.accountId,
       wallet: user.walletAddress,
       otherUserId: session.authAccountKey,
       otherWallet: session.authWalletAddress,
@@ -468,9 +467,13 @@ class ProfileProvider extends foundation.ChangeNotifier {
       ? BackendApiService().currentSignInMethod
       : AuthSignInMethod.unknown;
 
-  /// Whether [id] names the signed-in account: its account id, profile id,
-  /// linked wallet or public actor id. False for everyone when nobody is
-  /// signed in. Usernames and display names are never compared; they can
+  /// Whether [id] names the signed-in account by ANY identifier it is
+  /// addressed by: its account id, profile row id, linked wallet or public
+  /// actor id (profile pages and owner fields use all four). This is a lookup
+  /// of an identifier; authorship of a post, comment or message is
+  /// [isCurrentAccountActor], which compares account ids only (never the
+  /// profile row id) and falls back to the wallet. False for everyone when
+  /// nobody is signed in. Usernames and display names are never compared; they can
   /// collide or change independently of ownership.
   bool isCurrentAccount(String? id) {
     final target = _identityKey(id);
@@ -478,7 +481,7 @@ class ProfileProvider extends foundation.ChangeNotifier {
     final account = currentUser;
     if (account == null) return false;
     return <String?>[
-      account.userId,
+      account.accountId,
       account.id,
       account.walletAddress,
       account.publicActorId,
@@ -499,18 +502,9 @@ class ProfileProvider extends foundation.ChangeNotifier {
     return isSameAccountActor(
       userId: accountId,
       wallet: wallet,
-      otherUserId: _accountIdOf(account),
+      otherUserId: account.accountId,
       otherWallet: account.walletAddress,
     );
-  }
-
-  /// The profile's account id: its user id, else its id unless that is the
-  /// local `profile_...` handle a wallet-only profile gets (not an account id).
-  static String? _accountIdOf(UserProfile profile) {
-    final userId = (profile.userId ?? '').trim();
-    if (userId.isNotEmpty) return userId;
-    final id = profile.id.trim();
-    return id.isEmpty || id.startsWith('profile_') ? null : id;
   }
 
   static final RegExp _accountUuid = RegExp(
@@ -576,8 +570,7 @@ class ProfileProvider extends foundation.ChangeNotifier {
   String? get _personaStorageKey {
     final wallet = _currentWalletAddress;
     if (wallet != null && wallet.isNotEmpty) return wallet;
-    final accountKey = (_currentUser?.userId ?? _currentUser?.id ?? '').trim();
-    return accountKey.isEmpty ? null : accountKey;
+    return _currentUser?.accountId;
   }
 
   String _personaKeyForWallet(String walletAddress) =>
@@ -899,21 +892,20 @@ class ProfileProvider extends foundation.ChangeNotifier {
       } catch (_) {}
 
       _hasHydratedProfile = true;
-      final accountKey =
-          (_currentUser?.userId ?? _currentUser?.id ?? '').trim();
       final preferenceKey =
           (_currentUser?.walletAddress.trim().isNotEmpty ?? false)
               ? _currentUser!.walletAddress
-              : accountKey;
+              : (_currentUser?.accountId ?? '');
       final mergedPrefs = _mergePreferencesWithLocalPersona(preferenceKey);
       _currentUser = _currentUser?.copyWith(preferences: mergedPrefs);
       await _persistPreferences(mergedPrefs, sessionEpoch: sessionEpoch);
       if (!isCurrentLoad()) return;
-      if (accountKey.isNotEmpty) {
+      final accountId = _currentUser?.accountId;
+      if (accountId != null) {
         await _writeAccountPrefsIfCurrent(
           sessionEpoch,
           isCurrentLoad,
-          {'user_id': accountKey},
+          {'user_id': accountId},
         );
       }
 
@@ -1316,7 +1308,7 @@ class ProfileProvider extends foundation.ChangeNotifier {
         if ((profileJson['id'] ?? '').toString().trim().isEmpty) {
           profileJson['id'] = held.id;
         }
-        final heldUserId = (held.userId ?? '').trim();
+        final heldUserId = held.accountId ?? '';
         if (heldUserId.isNotEmpty &&
             (profileJson['userId'] ?? profileJson['user_id'] ?? '')
                 .toString()

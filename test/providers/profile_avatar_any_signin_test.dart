@@ -95,7 +95,8 @@ class _EmailSessionApi implements ProfileBackendApi {
 }
 
 UserProfile _emailAccount() => UserProfile(
-      id: 'user-email',
+      id: 'profile-email',
+      userId: 'user-email',
       walletAddress: '',
       username: 'alice',
       displayName: 'Alice',

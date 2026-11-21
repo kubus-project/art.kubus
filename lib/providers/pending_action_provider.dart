@@ -289,9 +289,7 @@ class PendingActionProvider extends ChangeNotifier {
 
   /// The signed-in account, or null for a guest.
   String? _currentUserId() {
-    final account = _identityOwner?.currentUser;
-    final value = (account?.userId ?? account?.id ?? '').trim();
-    return value.isEmpty ? null : value;
+    return _identityOwner?.currentUser?.accountId;
   }
 
   Future<void> _finish(PendingActionIntent intent) async {
