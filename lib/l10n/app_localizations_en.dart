@@ -3169,6 +3169,10 @@ class AppLocalizationsEn extends AppLocalizations {
       'Disconnect your wallet and clear your session on this device?';
 
   @override
+  String get settingsLogoutDialogBodyAccountOnly =>
+      'Clear your session on this device?';
+
+  @override
   String get settingsLogoutButton => 'Log out';
 
   @override

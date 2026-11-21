@@ -139,4 +139,32 @@ void main() {
     expect(
         find.text(l10n.walletSecurityRecoveryNotNeededValue), findsOneWidget);
   });
+
+  testWidgets(
+      'walletless account shows no wallet as a neutral state, not an error',
+      (tester) async {
+    await tester.pumpWidget(
+      _wrap(
+        WalletCustodyStatusPanel(
+          authority: _snapshot(
+            state: WalletAuthorityState.accountShellOnly,
+            signerSource: WalletSignerSource.none,
+            walletAddress: null,
+          ),
+        ),
+      ),
+    );
+    final context = tester.element(find.byType(WalletCustodyStatusPanel));
+    final l10n = AppLocalizations.of(context)!;
+    final scheme = Theme.of(context).colorScheme;
+
+    expect(find.text(l10n.walletSessionStateAccountShellOnly), findsOneWidget);
+    // Walletless is by design (#437): not an access failure.
+    expect(find.text(l10n.walletSecuritySignerMissingValue), findsNothing);
+    expect(find.text(l10n.walletSecurityLocalSignerMissingValue), findsNothing);
+    final signerValue = tester.widget<Text>(
+      find.text(l10n.settingsNoWalletConnected),
+    );
+    expect(signerValue.style?.color, isNot(scheme.error));
+  });
 }

@@ -72,14 +72,12 @@ class WalletCustodyStatusPanel extends StatelessWidget {
             icon: Icons.draw_outlined,
             label: l10n.walletSecuritySignerStatusLabel,
             value: _signerStatusLabel(l10n),
-            valueColor: authority.canTransact ? scheme.tertiary : scheme.error,
+            valueColor: _signerValueColor(scheme),
           ),
           _WalletStatusRow(
             icon: Icons.phone_iphone_outlined,
             label: l10n.walletSecurityLocalSignerLabel,
-            value: authority.hasLocalSigner
-                ? l10n.walletSecurityLocalSignerReadyValue
-                : l10n.walletSecurityLocalSignerMissingValue,
+            value: _localSignerLabel(l10n),
           ),
           _WalletStatusRow(
             icon: Icons.wallet_outlined,
@@ -236,7 +234,24 @@ class WalletCustodyStatusPanel extends StatelessWidget {
     return '${address.substring(0, 6)}...${address.substring(address.length - 6)}';
   }
 
+  /// A walletless account has no wallet to sign for. That is a neutral state
+  /// (#437), not an access failure: only a wallet identity without signing
+  /// access is shown as an error.
+  Color? _signerValueColor(ColorScheme scheme) {
+    if (authority.canTransact) return scheme.tertiary;
+    return authority.hasWalletIdentity ? scheme.error : null;
+  }
+
+  String _localSignerLabel(AppLocalizations l10n) {
+    if (authority.hasLocalSigner) {
+      return l10n.walletSecurityLocalSignerReadyValue;
+    }
+    if (!authority.hasWalletIdentity) return l10n.walletSecurityNotAvailable;
+    return l10n.walletSecurityLocalSignerMissingValue;
+  }
+
   String _signerStatusLabel(AppLocalizations l10n) {
+    if (!authority.hasWalletIdentity) return l10n.settingsNoWalletConnected;
     switch (authority.signerSource) {
       case WalletSignerSource.local:
         return l10n.walletSecuritySignerLocalReadyValue;

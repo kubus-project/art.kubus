@@ -1189,6 +1189,7 @@
   "settingsEnableNotificationsInSystemToast": "Za prejemanje obvestil jih omogoči v sistemskih nastavitvah.",
   "settingsLogoutDialogTitle": "Odjava",
   "settingsLogoutDialogBody": "Odklopim denarnico in počistim sejo na tej napravi?",
+  "settingsLogoutDialogBodyAccountOnly": "Počistim sejo na tej napravi?",
   "settingsLogoutButton": "Odjava",
   "settingsBrowserLogoutPending": "Na tej napravi ste odjavljeni. Strežnik odjave ni mogel potrditi; pred obnovitvijo seje bo poskus ponovljen.",
   "browserSessionRestoreUnavailable": "Seje brskalnika ni bilo mogoče obnoviti. Za nadaljevanje se znova prijavite.",

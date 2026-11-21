@@ -3194,6 +3194,10 @@ class AppLocalizationsSl extends AppLocalizations {
       'Odklopim denarnico in počistim sejo na tej napravi?';
 
   @override
+  String get settingsLogoutDialogBodyAccountOnly =>
+      'Počistim sejo na tej napravi?';
+
+  @override
   String get settingsLogoutButton => 'Odjava';
 
   @override

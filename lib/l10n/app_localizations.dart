@@ -5620,6 +5620,12 @@ abstract class AppLocalizations {
   /// **'Disconnect your wallet and clear your session on this device?'**
   String get settingsLogoutDialogBody;
 
+  /// No description provided for @settingsLogoutDialogBodyAccountOnly.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear your session on this device?'**
+  String get settingsLogoutDialogBodyAccountOnly;
+
   /// No description provided for @settingsLogoutButton.
   ///
   /// In en, this message translates to:
