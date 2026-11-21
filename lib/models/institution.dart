@@ -240,6 +240,132 @@ class InstitutionImageAttribution {
   }
 }
 
+/// Where part of an institution's public data comes from, with the credit and
+/// the open-data offer its licence requires. Today only OpenStreetMap
+/// (`id == 'osm'`, ODbL 1.0) is supplied. Invalid or absent URLs are discarded
+/// at the JSON boundary, and a source with no derived field is not a source.
+class InstitutionDataSource {
+  const InstitutionDataSource({
+    required this.id,
+    required this.attributionLine,
+    this.license,
+    this.licenseUrl,
+    this.copyrightUrl,
+    this.exportPath,
+    this.sourceUrls = const [],
+    this.fields = const [],
+  });
+
+  static const String openStreetMapId = 'osm';
+
+  /// Source id, `osm` for OpenStreetMap.
+  final String id;
+
+  /// The credit line as the backend states it, e.g. `Data © OpenStreetMap
+  /// contributors (ODbL)`. Used verbatim for sources the app has no localised
+  /// wording for.
+  final String attributionLine;
+
+  /// Short licence name, e.g. `ODbL-1.0`.
+  final String? license;
+  final String? licenseUrl;
+
+  /// The source's own copyright page.
+  final String? copyrightUrl;
+
+  /// Backend-relative path of the open-data download (`/api/open-data/...`).
+  final String? exportPath;
+
+  /// The source objects this institution's data came from.
+  final List<String> sourceUrls;
+
+  /// Institution fields still taken from the source (name, coordinates, ...).
+  final List<String> fields;
+
+  bool get isOpenStreetMap => id == openStreetMapId;
+
+  /// Absolute download URL against the backend origin, or null.
+  Uri? exportUri(String backendBaseUrl) {
+    final path = exportPath;
+    if (path == null) return null;
+    final base = Uri.tryParse(backendBaseUrl.trim());
+    if (base == null || base.host.isEmpty) return null;
+    return Uri(
+      scheme: base.scheme,
+      userInfo: '',
+      host: base.host,
+      port: base.hasPort ? base.port : null,
+      path: path,
+    );
+  }
+
+  static List<InstitutionDataSource> listFromJson(Object? value) {
+    if (value is! List) return const [];
+    final out = <InstitutionDataSource>[];
+    for (final entry in value) {
+      if (entry is! Map) continue;
+      final id = InstitutionImageAttribution._cleanText(entry['id']);
+      final line = InstitutionImageAttribution._cleanText(
+          entry['attributionLine'] ?? entry['attribution']);
+      final fields = entry['fields'] is List
+          ? (entry['fields'] as List)
+              .whereType<String>()
+              .map((f) => f.trim())
+              .where((f) => f.isNotEmpty)
+              .toList(growable: false)
+          : const <String>[];
+      if (id == null || line == null || fields.isEmpty) continue;
+      final path = InstitutionImageAttribution._cleanText(entry['exportUrl']);
+      out.add(InstitutionDataSource(
+        id: id,
+        attributionLine: line,
+        license: InstitutionImageAttribution._cleanText(entry['license']),
+        licenseUrl: InstitutionImageAttribution._safeAttributionUrl(
+            entry['licenseUrl']),
+        copyrightUrl: InstitutionImageAttribution._safeAttributionUrl(
+            entry['copyrightUrl']),
+        // Only a path on our own backend: never another origin.
+        exportPath: path != null && path.startsWith('/api/') ? path : null,
+        sourceUrls: entry['sourceUrls'] is List
+            ? (entry['sourceUrls'] as List)
+                .map(InstitutionImageAttribution._safeAttributionUrl)
+                .whereType<String>()
+                .toList(growable: false)
+            : const <String>[],
+        fields: fields,
+      ));
+    }
+    return List.unmodifiable(out);
+  }
+
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'attributionLine': attributionLine,
+        if (license != null) 'license': license,
+        if (licenseUrl != null) 'licenseUrl': licenseUrl,
+        if (copyrightUrl != null) 'copyrightUrl': copyrightUrl,
+        if (exportPath != null) 'exportUrl': exportPath,
+        'sourceUrls': sourceUrls,
+        'fields': fields,
+      };
+
+  @override
+  bool operator ==(Object other) =>
+      other is InstitutionDataSource &&
+      other.id == id &&
+      other.attributionLine == attributionLine &&
+      other.license == license &&
+      other.licenseUrl == licenseUrl &&
+      other.copyrightUrl == copyrightUrl &&
+      other.exportPath == exportPath &&
+      jsonEncode(other.sourceUrls) == jsonEncode(sourceUrls) &&
+      jsonEncode(other.fields) == jsonEncode(fields);
+
+  @override
+  int get hashCode => Object.hash(id, attributionLine, license, licenseUrl,
+      copyrightUrl, exportPath, jsonEncode(sourceUrls), jsonEncode(fields));
+}
+
 /// The creator of a work visible in an institution image (the building's
 /// architect, a sculptor), credited beside the photographer.
 class InstitutionDepictedWork {
@@ -455,6 +581,10 @@ class Institution {
   final InstitutionImageAttribution? logoAttribution;
   final InstitutionVisitorAccess? visitorAccess;
   final List<InstitutionDiscipline> disciplines;
+
+  /// Credit and open-data offer for facts taken from an open source (ODbL).
+  /// Empty when none of the shown facts came from one.
+  final List<InstitutionDataSource> dataSources;
   final InstitutionStats stats;
   final bool isVerified;
   final VerifiedInstitutionAccountProfile? verifiedAccountProfile;
@@ -489,6 +619,7 @@ class Institution {
     this.logoAttribution,
     this.visitorAccess,
     this.disciplines = const [],
+    this.dataSources = const [],
     required this.stats,
     this.isVerified = false,
     this.verifiedAccountProfile,
@@ -513,6 +644,15 @@ class Institution {
   /// The venue kind to display, from [kind] or the legacy [type] guess.
   InstitutionKind? get institutionKind =>
       InstitutionKind.resolve(kind: kind, type: type);
+
+  /// The OpenStreetMap credit of this institution, or null when no shown fact
+  /// came from OpenStreetMap.
+  InstitutionDataSource? get openStreetMapSource {
+    for (final source in dataSources) {
+      if (source.isOpenStreetMap) return source;
+    }
+    return null;
+  }
 
   /// True for a profile compiled from public sources that no institution has
   /// claimed: it is unofficial and unverified, and anyone may ask to claim it.
@@ -551,6 +691,7 @@ class Institution {
               labelEn: v['labelEn'] as String,
               labelSl: v['labelSl'] is String ? v['labelSl'] as String : ''))
           .toList(growable: false),
+      dataSources: InstitutionDataSource.listFromJson(json['dataSources']),
       stats: InstitutionStats.fromJson(json['stats']),
       isVerified: json['isVerified'] ?? false,
       verifiedAccountProfile: json['verifiedAccountProfile'] == null
@@ -582,6 +723,9 @@ class Institution {
       if (logoAttribution != null) 'logoAttribution': logoAttribution!.toJson(),
       if (visitorAccess != null) 'visitorAccess': visitorAccess!.toJson(),
       'disciplines': disciplines.map((d) => d.toJson()).toList(growable: false),
+      if (dataSources.isNotEmpty)
+        'dataSources':
+            dataSources.map((s) => s.toJson()).toList(growable: false),
       'stats': stats.toJson(),
       'isVerified': isVerified,
       if (verifiedAccountProfile != null)
@@ -609,6 +753,7 @@ class Institution {
     InstitutionImageAttribution? logoAttribution,
     InstitutionVisitorAccess? visitorAccess,
     List<InstitutionDiscipline>? disciplines,
+    List<InstitutionDataSource>? dataSources,
     InstitutionStats? stats,
     bool? isVerified,
     VerifiedInstitutionAccountProfile? verifiedAccountProfile,
@@ -633,6 +778,7 @@ class Institution {
       logoAttribution: logoAttribution ?? this.logoAttribution,
       visitorAccess: visitorAccess ?? this.visitorAccess,
       disciplines: disciplines ?? this.disciplines,
+      dataSources: dataSources ?? this.dataSources,
       stats: stats ?? this.stats,
       isVerified: isVerified ?? this.isVerified,
       verifiedAccountProfile:

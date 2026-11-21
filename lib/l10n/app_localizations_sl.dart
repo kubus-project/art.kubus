@@ -18643,6 +18643,32 @@ class AppLocalizationsSl extends AppLocalizations {
       'Vir slike, odpre se v brskalniku';
 
   @override
+  String get institutionDetailDataSourcesTitle => 'Viri podatkov';
+
+  @override
+  String get institutionDetailDataSourceOsm =>
+      'Podatki © OpenStreetMap contributors (ODbL)';
+
+  @override
+  String get institutionDetailDataSourceLicenceLink => 'Licenca ODbL 1.0';
+
+  @override
+  String get institutionDetailDataSourceCopyrightLink =>
+      'Avtorske pravice OpenStreetMap';
+
+  @override
+  String get institutionDetailDataSourceObjectLink => 'Objekt OpenStreetMap';
+
+  @override
+  String get institutionDetailDataSourceExportLink =>
+      'Prenesi podatke, izpeljane iz OpenStreetMap (ODbL)';
+
+  @override
+  String institutionDetailDataSourceLinkSemantics(Object label) {
+    return '$label, odpre se v brskalniku';
+  }
+
+  @override
   String get institutionDetailVisitTitle => 'Obisk';
 
   @override

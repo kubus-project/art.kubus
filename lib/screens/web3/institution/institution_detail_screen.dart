@@ -9,6 +9,7 @@ import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/conversation_navigator.dart';
+import '../../../config/config.dart';
 import '../../../models/institution.dart';
 import '../../../providers/chat_provider.dart';
 import '../../../providers/institution_provider.dart';
@@ -656,6 +657,103 @@ class _InstitutionDetailScreenState extends State<InstitutionDetailScreen> {
     );
   }
 
+  /// Credit and open-data offer for facts taken from OpenStreetMap (ODbL):
+  /// `Data © OpenStreetMap contributors (ODbL)`, the licence, the OSM copyright
+  /// page and the download of the OSM-derived institution data.
+  Widget _buildDataSourcesFooter(
+    BuildContext context,
+    InstitutionDataSource source,
+  ) {
+    final l10n = AppLocalizations.of(context)!;
+    final scheme = Theme.of(context).colorScheme;
+    final textStyle = KubusTypography.textTheme.bodySmall?.copyWith(
+      color: scheme.onSurfaceVariant,
+    );
+    final licenceUrl = source.licenseUrl;
+    final copyrightUrl = source.copyrightUrl;
+    final exportUri = source.exportUri(AppConfig.baseApiUrl);
+    final objectUrl =
+        source.sourceUrls.isEmpty ? null : source.sourceUrls.first;
+    final links = <({String label, String semantics, Uri uri})>[
+      if (licenceUrl != null)
+        (
+          label: l10n.institutionDetailDataSourceLicenceLink,
+          semantics: l10n.institutionDetailDataSourceLinkSemantics(
+              l10n.institutionDetailDataSourceLicenceLink),
+          uri: Uri.parse(licenceUrl),
+        ),
+      if (copyrightUrl != null)
+        (
+          label: l10n.institutionDetailDataSourceCopyrightLink,
+          semantics: l10n.institutionDetailDataSourceLinkSemantics(
+              l10n.institutionDetailDataSourceCopyrightLink),
+          uri: Uri.parse(copyrightUrl),
+        ),
+      if (objectUrl != null)
+        (
+          label: l10n.institutionDetailDataSourceObjectLink,
+          semantics: l10n.institutionDetailDataSourceLinkSemantics(
+              l10n.institutionDetailDataSourceObjectLink),
+          uri: Uri.parse(objectUrl),
+        ),
+      if (exportUri != null)
+        (
+          label: l10n.institutionDetailDataSourceExportLink,
+          semantics: l10n.institutionDetailDataSourceLinkSemantics(
+              l10n.institutionDetailDataSourceExportLink),
+          uri: exportUri,
+        ),
+    ];
+    return Container(
+      key: const ValueKey('institution-data-sources'),
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(
+        KubusSpacing.lg,
+        KubusSpacing.md,
+        KubusSpacing.lg,
+        KubusSpacing.lg,
+      ),
+      decoration: BoxDecoration(
+        border: Border(
+          top: BorderSide(color: scheme.outline.withValues(alpha: 0.18)),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            l10n.institutionDetailDataSourcesTitle,
+            style: KubusTextStyles.navMetaLabel.copyWith(
+              color: scheme.onSurface.withValues(alpha: 0.64),
+            ),
+          ),
+          const SizedBox(height: KubusSpacing.xs),
+          Text(
+            source.isOpenStreetMap
+                ? l10n.institutionDetailDataSourceOsm
+                : source.attributionLine,
+            key: const ValueKey('institution-data-source-line'),
+            style: textStyle,
+          ),
+          if (links.isNotEmpty)
+            Wrap(
+              crossAxisAlignment: WrapCrossAlignment.center,
+              children: [
+                for (var i = 0; i < links.length; i++) ...[
+                  if (i > 0) Text(' · ', style: textStyle),
+                  _CreditLink(
+                    label: links[i].label,
+                    semanticsLabel: links[i].semantics,
+                    onPressed: () => _openExternal(links[i].uri),
+                  ),
+                ],
+              ],
+            ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildHeaderCard(
     BuildContext context,
     Institution institution,
@@ -910,6 +1008,9 @@ class _InstitutionDetailScreenState extends State<InstitutionDetailScreen> {
                 ),
               ),
               if (credits.isNotEmpty) _buildCreditsFooter(context, credits),
+              if (institution.openStreetMapSource != null)
+                _buildDataSourcesFooter(
+                    context, institution.openStreetMapSource!),
             ],
           ),
         ),
