@@ -175,10 +175,46 @@ extension _SettingsScreenStatePart3 on _SettingsScreenState {
     );
   }
 
+  /// Keeps the backup row in step with the live wallet inputs and the profile
+  /// sign-in state. A change drops the row to its neutral pending state and
+  /// re-resolves; a result from a superseded resolve is ignored. [force]
+  /// re-resolves regardless.
+  void _syncWalletBackupStatus({bool force = false}) {
+    final walletProvider = Provider.of<WalletProvider>(context, listen: false);
+    final isSignedIn = context.read<ProfileProvider>().isSignedIn;
+    // Profile loading can fail while WalletProvider already holds a valid
+    // account session (and its linked wallet). Keep the backup row grounded in
+    // that authority instead of treating the profile fallback as signed out.
+    final hasAccountContext = isSignedIn ||
+        walletProvider.authority.hasAccountSession ||
+        walletProvider.hasWalletIdentity;
+    final inputs = WalletBackupStatusInputs.of(
+      walletProvider,
+      profileSignedIn: hasAccountContext,
+    );
+    if (!force && !_walletBackupTracker.needsResolve(inputs)) return;
+    final token = _walletBackupTracker.begin(inputs);
+    _applyState(
+        () => _walletBackupStatus = const WalletBackupStatusSnapshot.pending());
+    final resolved = hasAccountContext
+        ? WalletBackupStatusResolver.resolve(
+            walletProvider: walletProvider,
+            refreshRemote: true,
+          )
+        : Future<WalletBackupStatusSnapshot>.value(
+            const WalletBackupStatusSnapshot.noWallet(),
+          );
+    resolved.then((snapshot) {
+      if (!mounted || !_walletBackupTracker.isCurrent(token)) return;
+      _applyState(() => _walletBackupStatus = snapshot);
+    });
+  }
+
   // Load all settings
   Future<void> _loadAllSettings() async {
     final walletProvider = Provider.of<WalletProvider>(context, listen: false);
     final isSignedIn = context.read<ProfileProvider>().isSignedIn;
+    _syncWalletBackupStatus(force: true);
     final settings = await SettingsService.loadSettings(
       fallbackNetwork: walletProvider.currentSolanaNetwork.isNotEmpty
           ? walletProvider.currentSolanaNetwork
@@ -190,12 +226,6 @@ extension _SettingsScreenStatePart3 on _SettingsScreenState {
     final secureAccountStatus = isSignedIn
         ? await _loadSecureAccountStatus()
         : const <String, dynamic>{};
-    final walletBackupStatus = isSignedIn
-        ? await WalletBackupStatusResolver.resolve(
-            walletProvider: walletProvider,
-            refreshRemote: true,
-          )
-        : const WalletBackupStatusSnapshot.noWallet();
     if (!mounted) return;
 
     _applyState(() {
@@ -224,7 +254,6 @@ extension _SettingsScreenStatePart3 on _SettingsScreenState {
 
       _networkSelection = settings.networkSelection;
       _autoBackup = settings.autoBackup;
-      _walletBackupStatus = walletBackupStatus;
 
       _profileVisibility = settings.profileVisibility;
       _showAchievements = settings.showAchievements;
@@ -238,7 +267,14 @@ extension _SettingsScreenStatePart3 on _SettingsScreenState {
   }
 
   String _walletBackupSummary(AppLocalizations l10n) {
-    return _walletBackupStatus.settingsSummary(l10n);
+    // The linkage flag is read live so the row settles on its own state when
+    // the wallet provider finishes linking, not on the state at load time.
+    return _walletBackupStatus.settingsSummary(
+      l10n,
+      linkagePending: WalletPresentationStateResolver.linkagePendingFor(
+        Provider.of<WalletProvider>(context),
+      ),
+    );
   }
 
   Future<Map<String, dynamic>> _loadSecureAccountStatus() async {

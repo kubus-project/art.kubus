@@ -5,6 +5,7 @@ import 'package:art_kubus/models/pending_action_intent.dart';
 import 'package:art_kubus/providers/profile_provider.dart';
 import 'package:art_kubus/providers/wallet_provider.dart';
 import 'package:art_kubus/services/contextual_auth_gate.dart';
+import 'package:art_kubus/utils/wallet_presentation_state.dart';
 import 'package:art_kubus/utils/wallet_reconnect_action.dart';
 
 enum WalletSignerActionBlock {
@@ -20,6 +21,7 @@ class WalletSessionAccessSnapshot {
     required this.hasSigner,
     required this.authorityState,
     required this.canRestoreFromEncryptedBackup,
+    this.linkagePending = false,
   });
 
   factory WalletSessionAccessSnapshot.fromProviders({
@@ -33,6 +35,8 @@ class WalletSessionAccessSnapshot {
       hasSigner: authority.canTransact,
       authorityState: authority.state,
       canRestoreFromEncryptedBackup: authority.canRestoreFromEncryptedBackup,
+      linkagePending:
+          WalletPresentationStateResolver.linkagePendingFor(walletProvider),
     );
   }
 
@@ -41,6 +45,10 @@ class WalletSessionAccessSnapshot {
   final bool hasSigner;
   final WalletAuthorityState authorityState;
   final bool canRestoreFromEncryptedBackup;
+
+  /// True while the account's wallet linkage is still settling. Until it does,
+  /// the absence of a wallet is unknown and must not be presented as final.
+  final bool linkagePending;
 
   bool get canTransact => hasWalletIdentity && hasSigner;
   bool get isReadOnlySession => hasWalletIdentity && !hasSigner;
@@ -97,6 +105,9 @@ class WalletSessionAccessSnapshot {
       case WalletSignerActionBlock.signInRequired:
         return l10n.walletActionSignInRequiredToast;
       case WalletSignerActionBlock.walletRequired:
+        if (linkagePending) {
+          return l10n.settingsBackupStatusChecking;
+        }
         if (authorityState == WalletAuthorityState.accountShellOnly) {
           return l10n.walletActionAccountShellNeedsWalletToast;
         }
@@ -145,6 +156,20 @@ class WalletActionGuard {
     final block = access.signerActionBlock(requireSignedIn: requireSignedIn);
     if (block == null) {
       return true;
+    }
+
+    if (block == WalletSignerActionBlock.walletRequired &&
+        access.linkagePending) {
+      // The account's wallet is still being linked. Starting a connect flow
+      // now would set up a second wallet for an account that may already have
+      // one, so report the unsettled state and stop here.
+      final l10n = AppLocalizations.of(context);
+      if (l10n != null) {
+        ScaffoldMessenger.maybeOf(context)?.showSnackBar(
+          SnackBar(content: Text(access.blockMessage(l10n, block))),
+        );
+      }
+      return false;
     }
 
     if (block == WalletSignerActionBlock.signerRequired) {

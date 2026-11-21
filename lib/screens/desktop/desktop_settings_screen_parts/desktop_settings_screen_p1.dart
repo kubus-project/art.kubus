@@ -40,8 +40,28 @@ extension _DesktopSettingsScreenStatePart1 on _DesktopSettingsScreenState {
     await _loadSettings();
   }
 
+  /// Keeps the backup row in step with the live wallet inputs. A change drops
+  /// the row to its neutral pending state and re-resolves; a result from a
+  /// superseded resolve is ignored. [force] re-resolves regardless.
+  void _syncWalletBackupStatus({bool force = false}) {
+    final walletProvider = Provider.of<WalletProvider>(context, listen: false);
+    final inputs = WalletBackupStatusInputs.of(walletProvider);
+    if (!force && !_walletBackupTracker.needsResolve(inputs)) return;
+    final token = _walletBackupTracker.begin(inputs);
+    _applyState(
+        () => _walletBackupStatus = const WalletBackupStatusSnapshot.pending());
+    WalletBackupStatusResolver.resolve(
+      walletProvider: walletProvider,
+      refreshRemote: true,
+    ).then((snapshot) {
+      if (!mounted || !_walletBackupTracker.isCurrent(token)) return;
+      _applyState(() => _walletBackupStatus = snapshot);
+    });
+  }
+
   Future<void> _loadSettings() async {
     final walletProvider = Provider.of<WalletProvider>(context, listen: false);
+    _syncWalletBackupStatus(force: true);
     final settings = await SettingsService.loadSettings(
       fallbackNetwork: walletProvider.currentSolanaNetwork.isNotEmpty
           ? walletProvider.currentSolanaNetwork
@@ -50,10 +70,6 @@ extension _DesktopSettingsScreenStatePart1 on _DesktopSettingsScreenState {
     final hasPin = await walletProvider.hasPin();
     final biometricsSupported = await walletProvider.canUseBiometrics();
     final secureAccountStatus = await _loadSecureAccountStatus();
-    final walletBackupStatus = await WalletBackupStatusResolver.resolve(
-      walletProvider: walletProvider,
-      refreshRemote: true,
-    );
     if (!mounted) return;
 
     _applyState(() {
@@ -89,14 +105,18 @@ extension _DesktopSettingsScreenStatePart1 on _DesktopSettingsScreenState {
 
       _networkSelection = settings.networkSelection;
       _autoBackup = settings.autoBackup;
-      _walletBackupStatus = walletBackupStatus;
       _secureAccountHasEmail = secureAccountStatus['hasEmail'] == true;
       _secureAccountHasPassword = secureAccountStatus['hasPassword'] == true;
     });
   }
 
   String _walletBackupSummary(AppLocalizations l10n) {
-    return _walletBackupStatus.settingsSummary(l10n);
+    return _walletBackupStatus.settingsSummary(
+      l10n,
+      linkagePending: WalletPresentationStateResolver.linkagePendingFor(
+        Provider.of<WalletProvider>(context),
+      ),
+    );
   }
 
   Future<Map<String, dynamic>> _loadSecureAccountStatus() async {
