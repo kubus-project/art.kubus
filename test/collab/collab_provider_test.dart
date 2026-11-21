@@ -320,6 +320,25 @@ void main() {
       expect(provider.pendingInviteCount, 1);
     });
 
+    test('a walletless profile row id is not an account identity', () async {
+      SharedPreferences.setMockInitialValues({});
+      final api = _FakeCollabApi()..inbox = <CollabInvite>[invite];
+      final row = UserProfile(
+        id: 'e10d1421-019f-481a-8065-637f1fad53ed',
+        walletAddress: '',
+        username: 'artist',
+        displayName: 'Artist',
+        bio: '',
+        avatar: '',
+        createdAt: DateTime(2026),
+        updatedAt: DateTime(2026),
+      );
+
+      final provider = await bind(api, ProfileProvider()..setCurrentUser(row));
+
+      expect(provider.pendingInviteCount, 0);
+    });
+
     test('a guest has no inbox', () async {
       SharedPreferences.setMockInitialValues({});
       final api = _FakeCollabApi()..inbox = <CollabInvite>[invite];

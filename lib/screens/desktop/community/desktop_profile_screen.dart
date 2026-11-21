@@ -920,7 +920,7 @@ class _ProfileScreenState extends State<ProfileScreen>
     final wallet = profile?.walletAddress;
     final authorKey = ArtworkAuthorKey.resolve(
       walletAddress: wallet,
-      accountId: profile?.userId,
+      accountId: profile?.accountId,
       profileId: profile?.id,
     );
     final screenWidth = MediaQuery.of(context).size.width;
@@ -986,7 +986,7 @@ class _ProfileScreenState extends State<ProfileScreen>
     final wallet = profile?.walletAddress;
     final authorKey = ArtworkAuthorKey.resolve(
       walletAddress: wallet,
-      accountId: profile?.userId,
+      accountId: profile?.accountId,
       profileId: profile?.id,
     );
     return Column(

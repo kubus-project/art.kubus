@@ -148,6 +148,39 @@ void main() {
       isEmpty,
       reason: 'use UserProfile.accountId',
     );
+
+    // The same fallback written as a candidate list, either order.
+    final list = RegExp(
+      r'\[[^\]]*\buserId\b\s*,\s*[\w.?]*\.id\s*\]|'
+      r'\[[^\]]*[\w.?]*\.id\s*,\s*[\w.?]*\.userId\b[^\]]*\]',
+    );
+    expect(list.hasMatch('<String?>[user.userId, user.id]'), isTrue);
+    expect(list.hasMatch('[user.id, user.userId]'), isTrue);
+    expect(list.hasMatch('[user.userId, user.walletAddress]'), isFalse);
+    expect(
+      filesMatching(
+        allLib,
+        list,
+        except: const <String>{
+          // A data-loading key: the backend resolves a profile id and an
+          // account id on the same artist-data endpoints. Not an account id.
+          'lib/utils/profile_data_key.dart',
+        },
+      ),
+      isEmpty,
+      reason: 'use UserProfile.accountId',
+    );
+
+    // The signed-in profile's account id is read through accountId, never the
+    // raw (untrimmed) userId field.
+    final rawSignedIn = RegExp(r'currentUser\??\.userId\b');
+    expect(rawSignedIn.hasMatch('profile.currentUser?.userId ?? ""'), isTrue);
+    expect(rawSignedIn.hasMatch('profile.currentUser?.accountId'), isFalse);
+    expect(
+      filesMatching(allLib, rawSignedIn, except: const <String>{}),
+      isEmpty,
+      reason: 'read currentUser.accountId',
+    );
   });
 
   test('the wallet authority no longer answers who is signed in', () {

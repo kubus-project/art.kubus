@@ -1279,7 +1279,8 @@ class ProfileProvider extends foundation.ChangeNotifier {
         final fallbackCreatedAt = _currentUser?.createdAt ?? DateTime.now();
         profileJson = {
           'id': _currentUser?.id ?? 'profile_$fallbackIdSuffix',
-          if (_currentUser?.userId != null) 'userId': _currentUser!.userId,
+          if (_currentUser?.accountId != null)
+            'userId': _currentUser!.accountId,
           'walletAddress': walletAddress,
           'username': profileData['username'] ?? _currentUser?.username ?? '',
           'displayName':

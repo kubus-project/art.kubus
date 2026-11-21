@@ -147,7 +147,7 @@ ResolvedMessagePresentation resolveMessagePresentationForProfile({
     conversation: conversation,
     chatProvider: chatProvider,
     currentUserWallet: profile?.walletAddress,
-    currentUserId: profile?.userId,
+    currentUserId: profile?.accountId,
     currentUserDisplayName: profile?.displayName,
     currentUserAvatarUrl: profile?.avatar,
   );
@@ -2474,7 +2474,7 @@ class _ConversationScreenState extends State<ConversationScreen> {
     if (!mounted) return;
     final profile = Provider.of<ProfileProvider>(context, listen: false);
     final myWallet = profile.currentUser?.walletAddress ?? '';
-    final accountId = profile.currentUser?.userId ?? '';
+    final accountId = profile.currentUser?.accountId ?? '';
 
     final availableHeight = MediaQuery.of(context).size.height -
         (kToolbarHeight + MediaQuery.of(context).padding.top);

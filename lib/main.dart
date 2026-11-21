@@ -874,7 +874,7 @@ class _AppLauncherState extends State<AppLauncher> {
                   final provider =
                       verificationProvider ?? AccountVerificationProvider();
                   provider.bindAccount(
-                    accountId: profileProvider.currentUser?.userId,
+                    accountId: profileProvider.currentUser?.accountId,
                     isSignedIn: profileProvider.isSignedIn,
                   );
                   return provider;
