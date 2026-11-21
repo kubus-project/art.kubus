@@ -8,6 +8,7 @@ import 'package:art_kubus/providers/themeprovider.dart';
 import 'package:art_kubus/services/backend_api_service.dart';
 import 'package:art_kubus/services/http_client_factory.dart';
 import 'package:art_kubus/screens/support_center_screen.dart';
+import 'package:art_kubus/widgets/legal_document_link_action.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -221,6 +222,9 @@ void main() {
       await settle(tester);
       expect(find.textContaining('support@kubus.site'), findsOneWidget);
       expect(find.textContaining('needs no legal action'), findsOneWidget);
+      final link = tester.widget<LegalDocumentLinkAction>(
+          find.byType(LegalDocumentLinkAction));
+      expect(link.document, LegalDocument.takedownNotice);
       expect(fake.requests, isEmpty);
     });
   });

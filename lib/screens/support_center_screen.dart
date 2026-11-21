@@ -16,6 +16,7 @@ import '../utils/design_tokens.dart';
 import '../utils/kubus_color_roles.dart';
 import '../widgets/inline_loading.dart';
 import '../widgets/kubus_snackbar.dart';
+import '../widgets/legal_document_link_action.dart';
 
 /// Sections of the shared Help & support destination. Mobile settings, desktop
 /// settings and the profile all open [SupportCenterScreen]; [initialSection]
@@ -652,6 +653,10 @@ class _SupportCenterScreenState extends State<SupportCenterScreen> {
     );
   }
 
+  /// The rights-holder entry; it points at the Terms section that describes
+  /// the notice-and-takedown process.
+  static const int _takedownFaqIndex = 5;
+
   Widget _faq(AppLocalizations l10n) {
     final entries = <(String, String)>[
       (l10n.supportFaqQuestion1, l10n.supportFaqAnswer1),
@@ -671,7 +676,15 @@ class _SupportCenterScreenState extends State<SupportCenterScreen> {
               title: Text(entries[i].$1),
               childrenPadding: const EdgeInsets.only(bottom: KubusSpacing.md),
               expandedCrossAxisAlignment: CrossAxisAlignment.start,
-              children: [Text(entries[i].$2)],
+              children: [
+                Text(entries[i].$2),
+                if (i == _takedownFaqIndex)
+                  const Align(
+                    alignment: AlignmentDirectional.centerStart,
+                    child: LegalDocumentLinkAction(
+                        document: LegalDocument.takedownNotice),
+                  ),
+              ],
             ),
             if (i != entries.length - 1) const Divider(height: 1),
           ],

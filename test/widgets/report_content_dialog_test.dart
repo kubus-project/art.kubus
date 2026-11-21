@@ -1,5 +1,6 @@
 import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:art_kubus/services/content_report_service.dart';
+import 'package:art_kubus/widgets/legal_document_link_action.dart';
 import 'package:art_kubus/widgets/report_content_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -161,7 +162,19 @@ void main() {
     await _pick(tester, ReportCategory.copyright);
     final note = find.byKey(const ValueKey<String>('report-rights-note'));
     expect(note, findsOneWidget);
-    expect(tester.widget<Text>(note).data, contains('brezplačno'));
+    expect(tester.widget<Text>(note).data, contains('brezplačna'));
+  });
+
+  testWidgets('the rights note links to the takedown section of the Terms',
+      (tester) async {
+    await _open(tester);
+    expect(find.byType(LegalDocumentLinkAction), findsNothing);
+    await _pick(tester, ReportCategory.copyright);
+    final link = tester
+        .widget<LegalDocumentLinkAction>(find.byType(LegalDocumentLinkAction));
+    expect(link.document, LegalDocument.takedownNotice);
+    await _pick(tester, ReportCategory.spam);
+    expect(find.byType(LegalDocumentLinkAction), findsNothing);
   });
 
   testWidgets('Slovenian shows every label in Slovenian', (tester) async {

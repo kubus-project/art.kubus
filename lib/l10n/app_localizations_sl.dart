@@ -3264,14 +3264,14 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get settingsTermsDialogBody =>
-      'Z uporabo art.kubus se strinjaš s temi pogoji:\n\n1. art.kubus je odprta umetniška platforma in raziskovalno-razvojni prototip.\n2. Sam/-a si odgovoren/-na za zaščito denarnice, obnovitvene fraze in obnovitvenih gesel, če jih uporabiš.\n3. Dejanja z denarnico so lahko dokončna in nepovratna.\n4. Odkrivanje, sodelovanje v skupnosti in javni kulturni dostop uporabljaj odgovorno.\n5. Če imaš pravice do nečesa, kar je tu prikazano, ali si v tem prikazan/-a, lahko zahtevaš odstranitev: piši na support@kubus.site ali uporabi gumb za prijavo. Brezplačno je in ne zahteva sodnega postopka. Vsako obvestilo prebere oseba, vsebino lahko med pregledom skrijemo, o odločitvi pa te obvestimo.\n6. Pogoje lahko sčasoma posodobimo.\n\nZa celotne pogoje obišči našo spletno stran.';
+      'Z uporabo art.kubus se strinjaš s temi pogoji:\n\n1. art.kubus je odprta umetniška platforma in raziskovalno-razvojni prototip.\n2. Sam/-a si odgovoren/-na za zaščito denarnice, obnovitvene fraze in obnovitvenih gesel, če jih uporabiš.\n3. Dejanja z denarnico so lahko dokončna in nepovratna.\n4. Odkrivanje, sodelovanje v skupnosti in javni kulturni dostop uporabljaj odgovorno.\n5. Če imaš pravice do nečesa, kar je tu prikazano, ali si v tem prikazan/-a, lahko zahtevaš odstranitev: piši na support@kubus.site (za katero koli vsebino, račun ni potreben) ali uporabi gumb za prijavo pri objavi ali profilu. Brezplačno je in ne zahteva sodnega postopka. Vsako obvestilo prebere oseba, vsebino lahko med pregledom skrijemo, o odločitvi pa te obvestimo.\n6. Pogoje lahko sčasoma posodobimo.\n\nZa celotne pogoje obišči našo spletno stran.';
 
   @override
   String get settingsPrivacyPolicyDialogTitle => 'Pravilnik o zasebnosti';
 
   @override
   String get settingsPrivacyPolicyDialogBody =>
-      'Tvoja zasebnost nam je pomembna:\n\n• Osebne podatke zbiramo le, ko so potrebni in ko za to podaš soglasje\n• Zasebni ključi in obnovitvena fraza ostanejo pod tvojim nadzorom\n• Za izboljšave aplikacije lahko zbiramo anonimne statistične podatke o uporabi\n• Tvojih podatkov ne delimo s tretjimi osebami\n• Analitiko lahko izključiš v nastavitvah zasebnosti\n• Obvestilo o odstranitvi vsebine vsebuje tvoje ime, kontakt in pojasnilo. Preberejo ga moderatorji in podporno osebje. Hranimo ga, dokler je potrebno za obravnavo in morebitno pritožbo; stalnega roka še nismo določili\n\nZa celoten pravilnik obišči našo spletno stran.';
+      'Tvoja zasebnost nam je pomembna:\n\n• Osebne podatke zbiramo le, ko so potrebni, s tvojim soglasjem ali na drugi pravni podlagi iz celotnega pravilnika\n• Zasebni ključi in obnovitvena fraza ostanejo pod tvojim nadzorom\n• Za izboljšave aplikacije lahko zbiramo anonimne statistične podatke o uporabi\n• Tvojih podatkov ne prodajamo. Z njimi seznanimo le ponudnike storitev, ki jih obdelujejo za nas, in organe, kjer to zahteva zakon\n• Analitiko lahko izključiš v nastavitvah zasebnosti\n• Obvestilo o odstranitvi vsebine vsebuje tvoje ime, kontakt in pojasnilo. Preberejo ga moderatorji in podporno osebje, pa tudi ponudniki e-pošte in gostovanja, ki obdelujejo našo pošto. Prizadeta oseba vidi našo odločitev in razloge, ne pa tvojega imena, razen če je to nujno za obravnavo nasprotnega obvestila ali če to zahteva zakon. Hranimo ga, dokler je potrebno za obravnavo, morebitno pritožbo in morebitni poznejši zahtevek glede iste vsebine; stalnega roka še nismo določili\n\nZa celoten pravilnik obišči našo spletno stran.';
 
   @override
   String get settingsLegalOpenFullTerms => 'Preberi celotne pogoje';
@@ -3279,6 +3279,10 @@ class AppLocalizationsSl extends AppLocalizations {
   @override
   String get settingsLegalOpenFullPrivacy =>
       'Preberi celoten pravilnik o zasebnosti';
+
+  @override
+  String get settingsLegalOpenTakedown =>
+      'Kako deluje obvestilo in odstranitev';
 
   @override
   String settingsLegalOpenFailed(String url) {
@@ -18921,7 +18925,7 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get reportContentRightsNote =>
-      'To prijavo prebere oseba iz naše ekipe. Če se zdi utemeljena, lahko vsebino med pregledom skrijemo, o odločitvi pa vas obvestimo. Je brezplačno in ne zahteva sodnega postopka. Pišete nam lahko tudi na support@kubus.site.';
+      'To prijavo prebere oseba iz naše ekipe. Če se zdi utemeljena, lahko vsebino med pregledom skrijemo, o odločitvi pa vas obvestimo. Obravnava je brezplačna in ne zahteva sodnega postopka. Pišete nam lahko tudi na support@kubus.site.';
 
   @override
   String get reportContentAccountNote =>

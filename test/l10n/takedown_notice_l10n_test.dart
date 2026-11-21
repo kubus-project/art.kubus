@@ -44,6 +44,38 @@ void main() {
     expect(sl['settingsPrivacyPolicyDialogBody'], contains('stalnega roka'));
   });
 
+  test('the Terms summary says where the report control exists', () {
+    expect(en['settingsTermsDialogBody'], contains('on a post or profile'));
+    expect(sl['settingsTermsDialogBody'], contains('pri objavi ali profilu'));
+  });
+
+  test('the Privacy summary does not contradict the full policy', () {
+    final enBody = (en['settingsPrivacyPolicyDialogBody'] as String);
+    final slBody = (sl['settingsPrivacyPolicyDialogBody'] as String);
+    expect(
+        enBody, isNot(contains('do not share your data with third parties')));
+    expect(enBody, isNot(contains('you have consented')));
+    expect(enBody, contains('do not sell your data'));
+    expect(enBody, contains('service providers'));
+    expect(enBody, contains('any later claim about the same content'));
+    expect(slBody, isNot(contains('ne delimo s tretjimi osebami')));
+    expect(slBody, isNot(contains('podaš soglasje')));
+    expect(slBody, contains('ne prodajamo'));
+    expect(slBody, contains('ponudnike storitev'));
+    expect(slBody, contains('morebitni poznejši zahtevek glede iste vsebine'));
+  });
+
+  test('the rights note and the FAQ open the takedown section of the Terms',
+      () {
+    expect(en['settingsLegalOpenTakedown'], isNotEmpty);
+    expect(sl['settingsLegalOpenTakedown'], isNotEmpty);
+  });
+
+  test('the Slovenian rights note does not start a sentence with a bare Je',
+      () {
+    expect(sl['reportContentRightsNote'], isNot(contains('Je brezplačno')));
+  });
+
   test('no copy promises an automatic removal or a legal safe harbour', () {
     final all = [
       for (final key in keys) ...[en[key] as String, sl[key] as String],
