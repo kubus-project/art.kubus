@@ -24,6 +24,7 @@ const _validAuthToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.'
 const _coverKey = ValueKey('profile-identity-hero-cover');
 const _avatarKey = ValueKey('institution-profile-image');
 const _mapKey = ValueKey('institution-open-on-map');
+final List<String> _requestedPaths = <String>[];
 
 Map<String, Object?> _payload({
   String type = 'museum',
@@ -78,7 +79,9 @@ Map<String, Object?> _payload({
 }
 
 void _serve(Map<String, Object?> institution) {
+  _requestedPaths.clear();
   BackendApiService().setHttpClient(MockClient((request) async {
+    _requestedPaths.add(request.url.path);
     final data = request.url.path == '/api/institutions'
         ? {
             'success': true,
@@ -351,7 +354,40 @@ void main() {
     await tester.pumpWidget(const SizedBox.shrink());
     errors = await _pump(tester, institution: _payload(activeEvents: 2));
     expect(errors, isEmpty);
-    expect(find.text('Active events'), findsOneWidget);
+    expect(find.text('Active events'), findsNothing,
+        reason: 'activeEvents is an unsupported placeholder on the API');
+  });
+
+  testWidgets('institution events explain that the relation is unsupported',
+      (tester) async {
+    final errors = await _pump(tester, institution: _payload());
+    expect(errors, isEmpty);
+    expect(find.text('Institution events are not linked yet'), findsOneWidget);
+    expect(
+      find.text(
+        'Events can be browsed separately, but the service does not currently link events to institution profiles.',
+      ),
+      findsOneWidget,
+    );
+    expect(_requestedPaths,
+        isNot(contains('/api/institutions/inst-layout/events')));
+  });
+
+  testWidgets('institution event relation notice is localized in Slovenian',
+      (tester) async {
+    final errors = await _pump(
+      tester,
+      institution: _payload(),
+      locale: const Locale('sl'),
+    );
+    expect(errors, isEmpty);
+    expect(find.text('Dogodki še niso povezani z ustanovami'), findsOneWidget);
+    expect(
+      find.text(
+        'Dogodke lahko pregleduješ ločeno, storitev pa jih za zdaj ne povezuje s profili ustanov.',
+      ),
+      findsOneWidget,
+    );
   });
 
   testWidgets('a long description wraps without overflow', (tester) async {

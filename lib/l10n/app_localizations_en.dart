@@ -8113,10 +8113,10 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get eventCreatorNoInstitutionAvailableMessage =>
-      'No institution is available for this event yet.';
+      'No location source is available for this event yet.';
 
   @override
-  String get eventCreatorInstitutionLabel => 'Institution';
+  String get eventCreatorInstitutionLabel => 'Location source';
 
   @override
   String get eventCreatorSelectDateLabel => 'Select date';
@@ -8304,11 +8304,11 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get eventCreatorNoInstitutionAvailableToast =>
-      'No institution available for this event';
+      'No location source is available for this event';
 
   @override
   String get eventCreatorSelectedInstitutionNotFoundToast =>
-      'Selected institution not found';
+      'Selected location source not found';
 
   @override
   String get eventCreatorEndTimeAfterStartToast =>
@@ -8358,16 +8358,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get eventCreatorHelpTooltip => 'Help';
 
   @override
-  String get eventCreatorReadyInstitutionLabel => 'Institution selected';
+  String get eventCreatorReadyInstitutionLabel => 'Location source';
 
   @override
   String eventCreatorReadyInstitutionComplete(Object institutionName) {
-    return 'The event will belong to $institutionName.';
+    return 'Coordinates are taken from $institutionName. The event is saved under your account; linking events to institutions is not supported yet.';
   }
 
   @override
   String get eventCreatorReadyInstitutionPending =>
-      'Choose the institution first.';
+      'Choose a location source first.';
 
   @override
   String get eventCreatorReadyBasicsLabel => 'Basics complete';
@@ -8947,7 +8947,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get desktopInstitutionCreateEventSubtitle =>
-      'Schedule and publish institution events';
+      'Schedule and publish events';
 
   @override
   String get desktopInstitutionCreateExhibitionSubtitle =>
@@ -9011,7 +9011,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get eventManagerTitle => 'Event Manager';
 
   @override
-  String get eventManagerSubtitle => 'Manage your institution\'s events';
+  String get eventManagerSubtitle => 'Manage your events';
 
   @override
   String get eventManagerStatTotalEvents => 'Total events';
@@ -18451,23 +18451,18 @@ class AppLocalizationsEn extends AppLocalizations {
       'Official visitor information';
 
   @override
-  String get institutionDetailStatActiveEvents => 'Active events';
-
-  @override
   String get institutionDetailStatArtworkViews => 'Artwork views';
 
   @override
   String get institutionDetailStatVisitors => 'Visitors';
 
   @override
-  String get institutionDetailEventsTitle => 'Events';
-
-  @override
-  String get institutionDetailNoEventsTitle => 'No events yet';
+  String get institutionDetailNoEventsTitle =>
+      'Institution events are not linked yet';
 
   @override
   String get institutionDetailNoEventsDescription =>
-      'This institution does not have public events scheduled right now.';
+      'Events can be browsed separately, but the service does not currently link events to institution profiles.';
 
   @override
   String get institutionDetailFallbackTitle => 'Institution';
