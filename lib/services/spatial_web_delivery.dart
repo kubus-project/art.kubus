@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:http/http.dart' as http;
@@ -243,7 +244,9 @@ class SpatialWebDelivery {
   /// Best-effort read of the manifest transform. Never throws. The size cap
   /// bounds the download, not just the parsing: a declared length above it is
   /// refused before any body is read, and the body stream is abandoned as soon
-  /// as it passes the cap.
+  /// as it passes the cap. [timeout] is one total deadline for the request and
+  /// the whole body, so a server that drips a chunk every few seconds cannot
+  /// hold the viewer load.
   static Future<Map<String, dynamic>?> fetchTransform(
     String? manifestUrl, {
     http.Client? client,
@@ -251,6 +254,8 @@ class SpatialWebDelivery {
   }) async {
     if (manifestUrl == null) return null;
     final http.Client active = client ?? http.Client();
+    final clock = Stopwatch()..start();
+    StreamIterator<List<int>>? chunks;
     try {
       final response = await active
           .send(http.Request('GET', Uri.parse(manifestUrl)))
@@ -262,14 +267,20 @@ class SpatialWebDelivery {
         return null;
       }
       final body = <int>[];
-      await for (final chunk in response.stream.timeout(timeout)) {
-        body.addAll(chunk);
+      final iterator = chunks = StreamIterator<List<int>>(response.stream);
+      while (true) {
+        final remaining = timeout - clock.elapsed;
+        if (remaining <= Duration.zero) return null;
+        if (!await iterator.moveNext().timeout(remaining)) break;
+        body.addAll(iterator.current);
         if (body.length > manifestMaxBytes) return null;
       }
       return transformFromManifest(jsonDecode(utf8.decode(body)));
     } catch (_) {
       return null;
     } finally {
+      final open = chunks;
+      if (open != null) unawaited(open.cancel().catchError((Object _) {}));
       if (client == null) active.close();
     }
   }

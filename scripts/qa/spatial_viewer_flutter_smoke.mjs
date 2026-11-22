@@ -147,10 +147,10 @@ async function newScenario(browser, { origin, viewport, reducedMotion, hasTouch 
     // Public IPFS gateways are not a route for the public viewer (they have no withdrawal gate); any contact is a failure.
     if (/(^|\.)(dweb\.link|ipfs\.io|pinata\.cloud|cloudflare-ipfs\.com|w3s\.link|nftstorage\.link|gateway\.pinata\.cloud)$/.test(url.hostname)) { seen.gateway.push(url.hostname); return route.fulfill({ status: 404, headers: CORS, body: '' }); }
     // The Google Identity script the sign-in plugin injects at startup is a live third-party page: it is stubbed so
-    // the run is hermetic (the real script can call the plugin's onGoogleLibraryLoad twice, which surfaces as an
+    // the run does not depend on it (CanvasKit and fonts still come from the real network, see below; the real script can call the plugin's onGoogleLibraryLoad twice, which surfaces as an
     // uncaught StateError "Future already completed" from google_sign_in_web's loadWebSdk, unrelated to the viewer).
     if (url.hostname === 'accounts.google.com') return route.fulfill({ status: 200, headers: { ...CORS, 'content-type': 'text/javascript' }, body: '/* stubbed in the spatial viewer smoke */' });
-    // Fonts / canvaskit CDN etc.: let the real network answer; any other API call is refused.
+    // Fonts / canvaskit CDN etc.: NOT stubbed, the run needs internet access; let the real network answer; any other API call is refused.
     if (/\/api\//.test(url.pathname)) { seen.other.push(url.pathname); return route.fulfill({ status: 404, headers: CORS, body: '' }); }
     return route.continue();
   });
@@ -352,6 +352,16 @@ async function run(browserType, name) {
         check(`${tag}: fullscreen viewer fills the window`, !!frameBox, JSON.stringify(frameBox));
         check(`${tag}: the fullscreen viewer, with no page scroll to protect, is interactive at once`, (await s.page.locator('iframe').evaluate((el) => getComputedStyle(el).pointerEvents)) === 'auto');
         fs.writeFileSync(path.join(OUT, `${tag.replace('/', '-')}-fullscreen.png`), await s.page.screenshot());
+        // Escape pressed while the viewer iframe has focus never reaches Flutter: the viewer relays it and the dialog closes.
+        const fullBox = await s.page.locator('iframe').boundingBox();
+        await s.page.mouse.click(fullBox.x + fullBox.width / 2, fullBox.y + fullBox.height / 2);
+        await s.page.keyboard.press('Escape');
+        const closed = await waitFor(async () => {
+          if ((await s.page.locator('iframe').count()) !== 1) return null;
+          const b = await s.page.locator('iframe').boundingBox().catch(() => null);
+          return b && !fills(b) ? b : null;
+        }, 20000);
+        check(`${tag}: Escape inside the fullscreen viewer closes the dialog`, !!closed, JSON.stringify(closed));
         await s.context.close();
       }
 

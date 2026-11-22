@@ -71,7 +71,10 @@ void _ensureViewFactory() {
   _factoryRegistered = true;
   ui_web.platformViewRegistry.registerViewFactory(
     _viewType,
-    (int viewId, {Object? params}) => _iframes[params as int]!,
+    (int viewId, {Object? params}) =>
+        // A viewer disposed before Flutter created its platform view leaves no
+        // iframe in the map; an empty one keeps the factory total.
+        _iframes[params as int] ?? web.HTMLIFrameElement(),
   );
 }
 
@@ -142,7 +145,12 @@ class _WebSpatialViewerState extends State<WebSpatialViewer> {
     // Same widget slot, different piece (or a refreshed record): start over
     // instead of keeping the old piece on screen.
     _timeout?.cancel();
-    _session = SpatialWebLoadSession(widget.content);
+    // Attempt numbers continue across sessions: the iframe is reused, and a
+    // message still in flight from the old page must not match attempt 1 again.
+    _session = SpatialWebLoadSession(
+      widget.content,
+      attemptBase: _session.attempt,
+    );
     _interactive = false;
     _iframe.style.visibility = 'hidden';
     if (_session.variant != null) {
@@ -200,6 +208,18 @@ class _WebSpatialViewerState extends State<WebSpatialViewer> {
     }
   }
 
+  /// Escape pressed inside the iframe never reaches Flutter's key handling.
+  /// Where no page scroller encloses the viewer it sits in the fullscreen
+  /// dialog, so the relayed Escape closes that dialog (never a screen: only a
+  /// popup route that is on top is popped).
+  void _closeEnclosingDialog() {
+    if (_pageScrolls) return;
+    final route = ModalRoute.of(context);
+    if (route is PopupRoute && route.isCurrent) {
+      Navigator.of(context).maybePop();
+    }
+  }
+
   void _setInteractive(bool value) {
     if (!mounted || _interactive == value) return;
     setState(() => _interactive = value);
@@ -219,6 +239,7 @@ class _WebSpatialViewerState extends State<WebSpatialViewer> {
     if ('${data['attempt']}' != '${_session.attempt}') return;
     if (message == 'escape') {
       _setInteractive(false);
+      _closeEnclosingDialog();
     } else if (message == 'viewer-ready') {
       _session.onViewerReady();
       unawaited(_sendLoad());
@@ -353,10 +374,13 @@ class _WebSpatialViewerState extends State<WebSpatialViewer> {
           poster: widget.posterUrl,
           icon: Icons.view_in_ar_outlined,
           message: l10n.spatialViewerUnavailable,
-          action: TextButton(
-            onPressed: _retry,
-            child: Text(l10n.spatialViewerRetry),
-          ),
+          // Nothing to retry for a record with no viewable variant: no button.
+          action: _session.canRetry
+              ? TextButton(
+                  onPressed: _retry,
+                  child: Text(l10n.spatialViewerRetry),
+                )
+              : null,
         ),
     };
     return Semantics(

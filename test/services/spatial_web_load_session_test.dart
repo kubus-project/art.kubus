@@ -103,5 +103,53 @@ void main() {
     expect(session.status, SpatialWebLoadStatus.failed);
     expect(session.variant, isNull);
     expect(session.onFailed(), isFalse);
+    expect(
+      session.canRetry,
+      isFalse,
+      reason:
+          'nothing viewable: "Try again" would do nothing, so it is not offered',
+    );
+    session.retry();
+    expect(session.status, SpatialWebLoadStatus.failed);
+    expect(session.variant, isNull);
+  });
+
+  test('a SOG-only record (not offered on the web) has no retry either', () {
+    final session = SpatialWebLoadSession(
+      _content([_variant('spatial_mobile', 'cid-sog', 'sog')]),
+    );
+    expect(session.status, SpatialWebLoadStatus.failed);
+    expect(session.canRetry, isFalse);
+  });
+
+  test('a failed viewable record can be retried, an archive-only one too', () {
+    final session = SpatialWebLoadSession(_all);
+    session.onFailed();
+    session.onFailed();
+    expect(session.status, SpatialWebLoadStatus.failed);
+    expect(session.canRetry, isTrue);
+    expect(
+      SpatialWebLoadSession(
+        _content([_variant('spatial_archive', 'cid-archive', 'ply')]),
+      ).canRetry,
+      isTrue,
+    );
+  });
+
+  test('attempt numbers continue across a replacing session', () {
+    final first = SpatialWebLoadSession(_all);
+    first.onFailed(); // preview tier: attempt 2
+    final replacement = SpatialWebLoadSession(_all, attemptBase: first.attempt);
+    expect(replacement.attempt, greaterThan(first.attempt));
+    // A message of the old page (any attempt up to first.attempt) never
+    // matches the replacement's first attempt.
+    expect(replacement.attempt, isNot(first.attempt));
+    expect(replacement.attempt, isNot(1));
+    // Same for a replacement that starts without a loading tier.
+    final archiveOnly = SpatialWebLoadSession(
+      _content([_variant('spatial_archive', 'cid-archive', 'ply')]),
+      attemptBase: replacement.attempt,
+    );
+    expect(archiveOnly.attempt, greaterThan(replacement.attempt));
   });
 }

@@ -431,6 +431,34 @@ void main() {
       );
       expect(pulled, lessThan(SpatialWebDelivery.manifestMaxBytes * 3));
     });
+
+    test('the timeout is one total deadline, not an idle timeout per chunk',
+        () async {
+      // A server that drips a small chunk well inside the idle window forever
+      // never goes idle, yet the whole read must still end at the deadline.
+      var chunksSent = 0;
+      final dripping = MockClient.streaming((request, bodyStream) async {
+        Stream<List<int>> drip() async* {
+          while (true) {
+            await Future<void>.delayed(const Duration(milliseconds: 40));
+            chunksSent++;
+            yield <int>[0x20];
+          }
+        }
+
+        return http.StreamedResponse(drip(), 200);
+      });
+      final clock = Stopwatch()..start();
+      final result = await SpatialWebDelivery.fetchTransform(
+        'https://x/m',
+        client: dripping,
+        timeout: const Duration(milliseconds: 400),
+      );
+      clock.stop();
+      expect(result, isNull);
+      expect(chunksSent, greaterThan(2), reason: 'it was reading, not idle');
+      expect(clock.elapsedMilliseconds, lessThan(1500));
+    });
   });
 
   test('a published capture hands its manifest CID to the viewer', () {

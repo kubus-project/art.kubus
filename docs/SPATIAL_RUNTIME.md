@@ -111,7 +111,9 @@ only chooses bytes and relays messages (`viewer-ready`, `ready`, `escape`,
 it, same-origin only). Each load attempt puts its number in the page URL
 (`index.html?a=<n>`); the page echoes it in every message and the widget drops any
 message that does not carry the current attempt, so a page that is being replaced
-(a timed-out tier, a retry) cannot answer for the attempt after it. A final
+(a timed-out tier, a retry) cannot answer for the attempt after it. Attempt numbers
+never restart within one viewer: a refreshed record replaces the session but
+continues the count, so a message in flight from the old page cannot match. A final
 failure empties the iframe (`about:blank`), so a stalled download stops. All tier, timeout
 and consent decisions live in `SpatialWebLoadSession` and `SpatialWebDelivery`
 (pure Dart, tested in the VM suite).
@@ -122,8 +124,13 @@ and consent decisions live in `SpatialWebLoadSession` and `SpatialWebDelivery`
   size on the button, and confirms above 50 MiB or when the record states no size
   (the archive is the large tier by definition). `rad` is not offered (paged RAD
   needs sibling chunk URLs the single route cannot give), and `sog` is not offered
-  until a SOG fixture has been loaded through the browser smoke (Spark opens it as
-  `pcsogszip`, which the byte route gives no extension to detect).
+  on the web until a SOG fixture has been loaded through the browser smoke (Spark
+  opens it as `pcsogszip`, which the byte route gives no extension to detect). The
+  native viewer (`spatial_viewer_native.dart`) still lists `sog`: that is intended,
+  it loads through the node proxy, not the single public byte route, so the
+  two paths differ on purpose until the web path has a proven SOG fixture. A record whose only
+  viewable variant is not offered (RAD or SOG only) shows "currently unavailable"
+  with no retry button, because there is nothing a retry could start.
 - Timeouts: 120 s for the optimised and preview tiers, 10 minutes for the archive,
   so a large archive is not declared dead while it is still downloading.
 - Bytes: `GET {backend}/api/upload/file/<cid>`, anonymous and registry-authorised:
@@ -176,7 +183,9 @@ and consent decisions live in `SpatialWebLoadSession` and `SpatialWebDelivery`
   (`pointer-events: none`) under a "Tap to interact" overlay: wheel and swipes
   there scroll the page. A tap activates the viewer (it takes every gesture, the
   canvas is focused, and a Done button appears); Escape in the viewer, a tap
-  outside it or Done make it inert again. Where no vertical scroller encloses it
+  outside it or Done make it inert again. Escape pressed while the iframe has focus
+  never reaches Flutter's key handling: the viewer page relays it as `escape`, and in
+  the fullscreen dialog (no enclosing scroller) the widget closes that popup route. Where no vertical scroller encloses it
   (the fullscreen dialog, the native WebView) it is interactive at once. The page
   uses `touch-action: none` (a `pan-y` page hands vertical drags to the browser
   and leaves touch users without pitch); a wheel zooms only once the canvas has
@@ -201,8 +210,10 @@ and consent decisions live in `SpatialWebLoadSession` and `SpatialWebDelivery`
   `test/spatial_viewer_asset_contract.test.js` (licence pin, notices, CSP, bundle
   hygiene) runs in the PR workflow's Node step. Locally the page smoke serves
   `build/web` when it exists; set `WEB_ROOT` to a missing directory to test the
-  checked-in `assets/spatial_viewer` instead. The Flutter smoke is hermetic: the
-  Google Identity script that `google_sign_in_web` injects at startup is stubbed
+  checked-in `assets/spatial_viewer` instead. The Flutter smoke is not fully hermetic:
+  it needs internet access on the runner, because CanvasKit and the fonts still come
+  from the real network (and can flake on a CDN hiccup). Only the Google Identity
+  script that `google_sign_in_web` injects at startup is stubbed
   (the real script can call the plugin's `onGoogleLibraryLoad` twice, which
   surfaces as an uncaught `StateError: Future already completed` from the
   plugin's `loadWebSdk`, not from the viewer; it was the intermittent

@@ -9,10 +9,15 @@ enum SpatialWebLoadStatus { awaitingArchiveConsent, loading, ready, failed }
 /// Pure Dart on purpose. The browser-only widget owns the iframe and the
 /// timers; every decision lives here so it runs in the VM test suite.
 class SpatialWebLoadSession {
-  SpatialWebLoadSession(this.content) {
+  /// [attemptBase] is the last attempt number of the session this one
+  /// replaces (same viewer, refreshed record). Attempt numbers never repeat
+  /// within one viewer, so a message still in flight from the old page cannot
+  /// match the new session's first attempt.
+  SpatialWebLoadSession(this.content, {int attemptBase = 0})
+      : attempt = attemptBase + 1 {
     final initial = SpatialWebDelivery.defaultVariant(content);
     if (initial != null) {
-      _begin(initial);
+      _begin(initial, bump: false);
     } else if (SpatialWebDelivery.archiveVariant(content) != null) {
       status = SpatialWebLoadStatus.awaitingArchiveConsent;
     } else {
@@ -27,7 +32,7 @@ class SpatialWebLoadSession {
 
   /// Incremented every time a (new) load starts; a stale async result carries
   /// the attempt it belongs to and is dropped when it no longer matches.
-  int attempt = 0;
+  int attempt;
   bool viewerReady = false;
   bool commandSent = false;
 
@@ -38,14 +43,18 @@ class SpatialWebLoadSession {
       variant?.role != 'spatial_archive' &&
       status == SpatialWebLoadStatus.ready;
 
+  /// True when "Try again" would start something: a failed record with no
+  /// viewable variant has nothing to retry, so the button must not be offered.
+  bool get canRetry => variant != null || archive != null;
+
   /// The load budget of the tier now loading.
   Duration get timeout => variant == null
       ? const Duration(seconds: 120)
       : SpatialWebDelivery.loadTimeout(variant!);
 
-  void _begin(SpatialVariant next) {
+  void _begin(SpatialVariant next, {bool bump = true}) {
     variant = next;
-    attempt++;
+    if (bump) attempt++;
     viewerReady = false;
     commandSent = false;
     status = SpatialWebLoadStatus.loading;
