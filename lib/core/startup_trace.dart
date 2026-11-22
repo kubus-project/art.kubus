@@ -96,7 +96,9 @@ class StartupTrace {
       'collections',
       'zbirke',
       'collectibles',
-      'zbirateljski-predmeti'
+      'zbirateljski-predmeti',
+      'institutions',
+      'institucije'
     };
     final offset =
         parts.isNotEmpty && {'en', 'sl'}.contains(parts.first) ? 1 : 0;

@@ -118,6 +118,7 @@ function takeoverTargetForPath(string $path): ?array
             'exhibitions' => 'exhibition',
             'posts' => 'post',
             'collections' => 'collection',
+            'institutions' => 'institution',
             'map' => 'marker',
         ],
         'sl' => [
@@ -127,6 +128,7 @@ function takeoverTargetForPath(string $path): ?array
             'razstave' => 'exhibition',
             'objave' => 'post',
             'zbirke' => 'collection',
+            'institucije' => 'institution',
             'zemljevid' => 'marker',
         ],
     ];

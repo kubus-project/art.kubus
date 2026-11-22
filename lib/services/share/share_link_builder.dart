@@ -18,6 +18,7 @@ class ShareLinkBuilder {
     ShareEntityType.collection: {'en': 'collections', 'sl': 'zbirke'},
     ShareEntityType.nft: {'en': 'collectibles', 'sl': 'zbirateljski-predmeti'},
     ShareEntityType.marker: {'en': 'map', 'sl': 'zemljevid'},
+    ShareEntityType.institution: {'en': 'institutions', 'sl': 'institucije'},
   };
 
   Uri build(ShareTarget target, {String locale = 'en'}) {
