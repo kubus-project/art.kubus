@@ -54,15 +54,18 @@ ProfileProvider _ownerOf(String accountId) {
 const _accountA = 'walletless-account-a';
 const _accountB = 'walletless-account-b';
 
+/// 2100-01-01T00:00:00Z, in seconds.
+const int _farFutureExpirySeconds = 4102444800;
+
 /// A session token for [accountId]. [refresh] changes the token itself without
 /// changing the account, as a silent token refresh does.
 String _token(String accountId, {int refresh = 0}) {
   final payload = jsonEncode({
     'id': accountId,
     'iat': refresh,
-    'exp':
-        DateTime.now().add(const Duration(hours: 1)).millisecondsSinceEpoch ~/
-            1000,
+    // A fixed, far-future expiry: a clock-derived one differs between two
+    // calls that straddle a second boundary, which made token equality flaky.
+    'exp': _farFutureExpirySeconds,
   });
   return 'e30.${base64Url.encode(utf8.encode(payload)).replaceAll('=', '')}.synthetic';
 }
@@ -378,9 +381,9 @@ String _walletSignedToken(String accountId, String wallet) {
     'id': accountId,
     'walletAddress': wallet,
     'authLevel': 'wallet_signed',
-    'exp':
-        DateTime.now().add(const Duration(hours: 1)).millisecondsSinceEpoch ~/
-            1000,
+    // A fixed, far-future expiry: a clock-derived one differs between two
+    // calls that straddle a second boundary, which made token equality flaky.
+    'exp': _farFutureExpirySeconds,
   });
   return 'e30.${base64Url.encode(utf8.encode(payload)).replaceAll('=', '')}.synthetic';
 }
