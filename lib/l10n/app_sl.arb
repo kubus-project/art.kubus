@@ -6858,6 +6858,8 @@
   "spatialViewerFullscreen": "Celozaslonsko",
   "spatialViewerRetry": "Poskusi znova",
   "spatialViewerUnavailable": "Ta prostorski arhiv trenutno ni na voljo.",
+  "spatialViewerLoading": "Nalaganje 3D pogleda …",
+  "spatialViewerDragHint": "Povlecite za ogled okoli",
   "spatialViewerFallback": "Poskušam drugo pot do arhiva …",
   "spatialViewerWebSafety": "Odpri javni arhiv v združljivem pregledovalniku. Varna spletna stran ne vzpostavlja povezave z vozlišči v lokalnem omrežju.",
   "spatialCaptureFinish": "Zaključi zajem",

@@ -16339,6 +16339,12 @@ class AppLocalizationsEn extends AppLocalizations {
       'This spatial archive is currently unavailable.';
 
   @override
+  String get spatialViewerLoading => 'Loading the 3D view…';
+
+  @override
+  String get spatialViewerDragHint => 'Drag to look around';
+
+  @override
   String get spatialViewerFallback => 'Trying another archive route…';
 
   @override

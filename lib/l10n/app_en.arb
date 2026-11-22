@@ -6885,6 +6885,8 @@
   "spatialViewerFullscreen": "Fullscreen",
   "spatialViewerRetry": "Try again",
   "spatialViewerUnavailable": "This spatial archive is currently unavailable.",
+  "spatialViewerLoading": "Loading the 3D view…",
+  "spatialViewerDragHint": "Drag to look around",
   "spatialViewerFallback": "Trying another archive route…",
   "spatialViewerWebSafety": "Open the public archive in a compatible viewer. A secure web page does not contact local LAN nodes.",
   "spatialCaptureFinish": "Finish capture",

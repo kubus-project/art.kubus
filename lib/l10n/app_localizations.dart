@@ -28370,6 +28370,18 @@ abstract class AppLocalizations {
   /// **'This spatial archive is currently unavailable.'**
   String get spatialViewerUnavailable;
 
+  /// No description provided for @spatialViewerLoading.
+  ///
+  /// In en, this message translates to:
+  /// **'Loading the 3D view…'**
+  String get spatialViewerLoading;
+
+  /// No description provided for @spatialViewerDragHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Drag to look around'**
+  String get spatialViewerDragHint;
+
   /// No description provided for @spatialViewerFallback.
   ///
   /// In en, this message translates to:

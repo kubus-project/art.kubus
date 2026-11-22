@@ -16505,6 +16505,12 @@ class AppLocalizationsSl extends AppLocalizations {
       'Ta prostorski arhiv trenutno ni na voljo.';
 
   @override
+  String get spatialViewerLoading => 'Nalaganje 3D pogleda …';
+
+  @override
+  String get spatialViewerDragHint => 'Povlecite za ogled okoli';
+
+  @override
   String get spatialViewerFallback => 'Poskušam drugo pot do arhiva …';
 
   @override

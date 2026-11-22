@@ -88,7 +88,7 @@ HTTP endpoints to avoid mixed-content and browser-origin regressions.
 ## Rendering boundary
 
 `SpatialViewer` is renderer-neutral. Its bundled archive viewer currently uses
-Spark 2.1.0 and Three.js 0.185.1 for orbit/zoom inspection, quality selection,
+Spark 2.4.0 (MIT) and Three.js 0.185.1 for orbit/zoom inspection, quality selection,
 loading, poster, and failure states. This WebView is an archive viewer; it is not
 placed transparently over the camera and is not presented as tracked AR.
 
@@ -101,3 +101,32 @@ without changing domain records or publication APIs.
 Android is exercised by the repository Android build. The iOS ARKit dependency is
 enabled with its current adapter, but an iOS native build still requires macOS and
 Xcode and cannot be verified from the Windows development environment.
+
+## Flutter web viewer
+
+On Flutter web `SpatialViewer` resolves to `spatial_viewer_web.dart`: the same
+bundled viewer page runs in a sandboxed same-origin iframe (`HtmlElementView`).
+The widget only chooses bytes and relays messages (`viewer-ready`, `ready`,
+`error:*` from the page; `load` / `reset` commands to it, same-origin only).
+
+- Tier: `spatial_mobile`, then `spatial_preview`. The archive tier never opens by
+  default; the visitor asks for it. `rad` is not offered (paged RAD needs sibling
+  chunk URLs the single route cannot give).
+- Bytes: `GET {backend}/api/upload/file/<cid>` (anonymous, registry-authorised:
+  only CIDs of a currently public publication resolve; whole body, no Range), then
+  the configured public IPFS gateways. Never a LAN node, never plain http (except a
+  loopback backend in a local build). The legacy `/uploads/<cid>` path is a
+  different store and does not serve published spatial variants.
+- Orientation: the published manifest (`canonicalManifestCid`, same route) is read
+  best effort and its `transform` is applied: `matrix` (16 numbers, column-major,
+  the Node's form) or `position` / `rotation` / `scale`. Without a readable
+  transform the piece opens untransformed.
+- CSP: the viewer page allows `'wasm-unsafe-eval'` (Spark's WASM); the SEO takeover
+  policy in `web/seo-proxy.php` allows `frame-src 'self'` so the iframe is not blocked
+  on public pages.
+- Inline section: the artwork detail screens (desktop and mobile) show the viewer
+  inline when the public spatial history is non-empty, created when it scrolls into
+  view (`SpatialLazyReveal`); "View in 3D" opens the fullscreen dialog.
+- Browser proof: `scripts/qa/spatial_viewer_smoke.mjs` (viewer page) and
+  `scripts/qa/spatial_viewer_flutter_smoke.mjs` (the built Flutter widget), both on
+  the synthetic `test/fixtures/spatial/sample_flower.splat`.

@@ -3,13 +3,37 @@ import { SparkRenderer, SplatMesh } from "@sparkjsdev/spark";
 
 const canvas = document.querySelector("canvas");
 const status = document.querySelector("#status");
-const renderer = new THREE.WebGLRenderer({ canvas, antialias: false, alpha: true });
-renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
-const scene = new THREE.Scene();
-const camera = new THREE.PerspectiveCamera(55, 1, 0.01, 1000);
-camera.position.set(0, 0, 3);
-const spark = new SparkRenderer({ renderer });
-scene.add(spark);
+
+// Status channel. Native hosts expose a `SpatialViewer` JavaScript channel;
+// the Flutter web host embeds this page in a same-origin iframe and receives
+// the same strings as `{ kubusSpatialViewer: "<message>" }` window messages.
+function post(message) {
+  try {
+    if (window.SpatialViewer && window.SpatialViewer.postMessage) {
+      window.SpatialViewer.postMessage(message);
+    } else if (window.parent && window.parent !== window) {
+      window.parent.postMessage({ kubusSpatialViewer: message }, window.location.origin);
+    }
+  } catch (_) {
+    /* a host that cannot be reached is not a viewer failure */
+  }
+}
+
+let renderer;
+let scene;
+let camera;
+try {
+  renderer = new THREE.WebGLRenderer({ canvas, antialias: false, alpha: true });
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
+  scene = new THREE.Scene();
+  camera = new THREE.PerspectiveCamera(55, 1, 0.01, 1000);
+  camera.position.set(0, 0, 3);
+  scene.add(new SparkRenderer({ renderer }));
+} catch (error) {
+  renderer = undefined;
+  status.textContent = "This device cannot show the spatial archive (WebGL is unavailable).";
+  post(`error:webgl:${String(error)}`);
+}
 
 let mesh;
 let yaw = 0;
@@ -20,6 +44,7 @@ let lastX = 0;
 let lastY = 0;
 
 function resize() {
+  if (!renderer) return;
   const width = canvas.clientWidth;
   const height = canvas.clientHeight;
   renderer.setSize(width, height, false);
@@ -28,6 +53,7 @@ function resize() {
 }
 
 function frame() {
+  if (!renderer) return;
   resize();
   camera.position.set(
     Math.sin(yaw) * Math.cos(pitch) * distance,
@@ -53,6 +79,19 @@ canvas.addEventListener("pointermove", (event) => {
   lastY = event.clientY;
 });
 canvas.addEventListener("pointerup", () => { dragging = false; });
+canvas.addEventListener("pointercancel", () => { dragging = false; });
+canvas.tabIndex = 0;
+canvas.addEventListener("keydown", (event) => {
+  const step = 0.12;
+  if (event.key === "ArrowLeft") yaw += step;
+  else if (event.key === "ArrowRight") yaw -= step;
+  else if (event.key === "ArrowUp") pitch = Math.min(1.35, pitch + step);
+  else if (event.key === "ArrowDown") pitch = Math.max(-1.35, pitch - step);
+  else if (event.key === "+" || event.key === "=") distance = Math.max(0.4, distance * 0.9);
+  else if (event.key === "-") distance = Math.min(15, distance / 0.9);
+  else return;
+  event.preventDefault();
+});
 canvas.addEventListener("wheel", (event) => {
   event.preventDefault();
   distance = Math.max(0.4, Math.min(15, distance * Math.exp(event.deltaY * 0.001)));
@@ -64,21 +103,143 @@ window.resetSpatialView = () => {
   distance = 3;
 };
 
-window.loadSpatial = async (url) => {
-  status.textContent = "Loading spatial archiveâ€¦";
-  status.hidden = false;
-  try {
-    if (mesh) scene.remove(mesh);
-    mesh = new SplatMesh({ url });
-    scene.add(mesh);
-    await mesh.initialized;
-    status.hidden = true;
-    window.SpatialViewer?.postMessage("ready");
-  } catch (error) {
-    status.textContent = "This spatial archive could not be loaded.";
-    window.SpatialViewer?.postMessage(`error:${String(error)}`);
+const FILE_TYPES = new Set(["ply", "spz", "splat", "ksplat", "pcsogs", "pcsogszip", "rad"]);
+
+/**
+ * Applies the manifest `transform` so a piece opens upright and centred.
+ * `matrix` is 16 numbers in column-major order (three.js Matrix4.fromArray),
+ * the form the kubus Node writes. `position` / `rotation` (quaternion xyzw or
+ * Euler radians xyz) / `scale` (number or [x, y, z]) are the fallback shape.
+ */
+function applyManifestTransform(target, transform) {
+  if (!transform || typeof transform !== "object") return false;
+  const finite = (value) => typeof value === "number" && Number.isFinite(value);
+  const { matrix } = transform;
+  if (
+    Array.isArray(matrix) &&
+    matrix.length === 16 &&
+    matrix.every(finite) &&
+    (transform.matrixOrder === undefined || transform.matrixOrder === "column-major")
+  ) {
+    target.matrix.fromArray(matrix);
+    target.matrix.decompose(target.position, target.quaternion, target.scale);
+    const { x, y, z } = target.scale;
+    if (![x, y, z].every((value) => Number.isFinite(value) && value > 0)) {
+      target.position.set(0, 0, 0);
+      target.quaternion.identity();
+      target.scale.set(1, 1, 1);
+      return false;
+    }
+    return true;
   }
-};
+  let applied = false;
+  const { position, rotation, scale } = transform;
+  if (Array.isArray(position) && position.length === 3 && position.every(finite)) {
+    target.position.fromArray(position);
+    applied = true;
+  }
+  if (Array.isArray(rotation) && rotation.every(finite)) {
+    if (rotation.length === 4) {
+      target.quaternion.fromArray(rotation).normalize();
+      applied = true;
+    } else if (rotation.length === 3) {
+      target.rotation.set(rotation[0], rotation[1], rotation[2]);
+      applied = true;
+    }
+  }
+  if (finite(scale) && scale > 0) {
+    target.scale.setScalar(scale);
+    applied = true;
+  } else if (Array.isArray(scale) && scale.length === 3 && scale.every((value) => finite(value) && value > 0)) {
+    target.scale.fromArray(scale);
+    applied = true;
+  }
+  return applied;
+}
+
+async function loadOne(url, transform, fileType) {
+  if (mesh) {
+    scene.remove(mesh);
+    mesh.dispose?.();
+    mesh = undefined;
+  }
+  const options = { url };
+  if (typeof fileType === "string" && FILE_TYPES.has(fileType)) options.fileType = fileType;
+  const next = new SplatMesh(options);
+  applyManifestTransform(next, transform);
+  scene.add(next);
+  try {
+    await next.initialized;
+  } catch (error) {
+    scene.remove(next);
+    next.dispose?.();
+    throw error;
+  }
+  mesh = next;
+}
+
+// Tries each route in order; the first that yields a splat wins.
+async function loadFirst(urls, transform, fileType) {
+  if (!renderer) return;
+  status.textContent = "Loading spatial archive…";
+  status.hidden = false;
+  let lastError;
+  for (const url of urls) {
+    try {
+      await loadOne(url, transform, fileType);
+      status.hidden = true;
+      post("ready");
+      return;
+    } catch (error) {
+      lastError = error;
+    }
+  }
+  status.textContent = "This spatial archive could not be loaded.";
+  post(`error:${String(lastError)}`);
+}
+
+window.loadSpatial = (url, transform, fileType) => loadFirst([url], transform, fileType);
+
+function allowedUrl(value) {
+  if (typeof value !== "string") return undefined;
+  try {
+    const parsed = new URL(value, window.location.href);
+    const allowed =
+      parsed.protocol === "https:" ||
+      parsed.protocol === "blob:" ||
+      parsed.origin === window.location.origin;
+    return allowed ? parsed.href : undefined;
+  } catch (_) {
+    return undefined;
+  }
+}
+
+// Web host protocol: same-origin parent only; https / same-origin / blob URLs only.
+window.addEventListener("message", (event) => {
+  if (event.source !== window.parent || event.origin !== window.location.origin) return;
+  const command = event.data && event.data.kubusSpatialViewerCommand;
+  if (!command || typeof command !== "object") return;
+  if (command.type === "reset") {
+    window.resetSpatialView();
+  } else if (command.type === "load") {
+    const candidates = Array.isArray(command.urls) ? command.urls : [command.url];
+    const urls = candidates.map(allowedUrl).filter(Boolean).slice(0, 6);
+    if (urls.length === 0) {
+      post("error:url-not-allowed");
+      return;
+    }
+    void loadFirst(urls, command.transform, command.fileType);
+  }
+});
+
+// Read-only diagnostics for the browser smoke test.
+window.__spatialDebug = () => ({
+  hasMesh: Boolean(mesh),
+  matrix: mesh ? mesh.matrix.toArray() : null,
+  yaw,
+  pitch,
+  distance,
+});
 
 frame();
-window.SpatialViewer?.postMessage("viewer-ready");
+post("viewer-ready");
