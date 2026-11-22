@@ -128,8 +128,17 @@ Canonical public routes use stable IDs, not mutable or synthetic slugs.
 An institution (a row of the institutions table, not a user profile) has its own
 canonical page. Its former `/en/profiles/:id` and `/sl/profili/:id` URLs answer
 301 to it, and its compact aliases answer 308 straight to it. Slovenian points
-to Slovenian for institutions only: each locale page is its own canonical with
-reciprocal `en`/`sl`/`x-default` alternates. Institution pages are server
+to Slovenian for institutions only, and only while the institution's Slovenian
+description is checked (`description_sl_state = 'checked'`, owner decision
+2026-11-22): then each locale page is its own canonical with reciprocal
+`en`/`sl`/`x-default` alternates and both are in the institutions sitemap. An
+institution without a checked Slovenian description keeps a usable Slovenian
+page, but that page canonicalizes to the English one and is in no sitemap and no
+alternate pair; the English page then declares only `en` and `x-default`. The
+gateway and the app do not compute any of this: the canonical, the alternates and
+the sitemap come from the backend renderer's search policy
+(`institutionLocaleContent` in `publicSearchPolicy.js`), and the gateway passes
+the document through unchanged. Institution pages are server
 rendered first and, like every entity page, taken over by the app when it
 boots: the app has an institution screen (`InstitutionDetailScreen`), the
 gateway maps `institutions` / `institucije` to the `institution` takeover type
