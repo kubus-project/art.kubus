@@ -20,7 +20,7 @@ class SpatialWebLoadPlan {
 
   final SpatialVariant variant;
 
-  /// Public byte routes in the order the viewer tries them.
+  /// Byte routes the viewer tries in order (the backend's gated route only).
   final List<String> urls;
 
   /// Spark file type when the bytes carry no magic number (a raw `.splat`).
@@ -55,36 +55,45 @@ const Set<String> _kExplicitFileTypes = <String>{
 class SpatialWebDelivery {
   const SpatialWebDelivery._();
 
+  /// A CID as the backend and the public registry spell it: letters, digits,
+  /// `-` and `_` only, bounded. Anything else (`..`, a path, a query, an
+  /// encoded separator) is never turned into a URL.
+  static final RegExp _cidShape = RegExp(r'^[A-Za-z0-9_-]{4,128}$');
+
+  static bool isPlausibleCid(String? cid) =>
+      cid != null && _cidShape.hasMatch(cid);
+
   /// The anonymous, registry-authorised byte route of the backend.
   ///
   /// Only CIDs of a currently public publication resolve here (withdrawn or
-  /// private content answers 404), which is what makes it the right first
-  /// route for a visitor. The legacy `/uploads/<cid>` path is a different
+  /// private content answers 404, and an unavailable withdrawal lookup answers
+  /// 503: it fails closed). The legacy `/uploads/<cid>` path is a different
   /// store and does not serve published spatial variants.
-  static String backendUrl(String backendBase, String cid) {
+  ///
+  /// Returns null for a CID that is not a plausible CID.
+  static String? backendUrl(String backendBase, String cid) {
+    if (!isPlausibleCid(cid)) return null;
     final base = backendBase.trim().replaceAll(RegExp(r'/+$'), '');
-    return '$base/api/upload/file/${Uri.encodeComponent(cid)}';
+    return '$base/api/upload/file/$cid';
   }
 
-  /// Ordered byte routes for [cid]: the backend proxy, then public gateways.
+  /// The byte routes the public viewer may use for [cid]: the backend route
+  /// and nothing else.
   ///
-  /// Every URL is https (or the backend's own origin in a local build), so a
-  /// secure page never issues mixed content, and none points at a LAN node.
-  static List<String> candidateUrls(
-    String cid, {
-    String? backendBase,
-    List<String>? gateways,
-  }) {
+  /// Public IPFS gateways are deliberately not a fallback. The backend route
+  /// is the publication gate: it answers 404 for withdrawn or unregistered
+  /// content and 503 when the withdrawal lookup fails. A gateway has no such
+  /// gate and would keep serving pinned bytes of withdrawn content (and learn
+  /// the visitor's address), so falling through to one after a backend refusal
+  /// would defeat the gate. The URL is https (or the backend's own loopback
+  /// origin in a local build), so a secure page never issues mixed content and
+  /// none points at a LAN node.
+  static List<String> candidateUrls(String cid, {String? backendBase}) {
     final base = (backendBase ?? StorageConfig.httpBackend).trim();
-    final urls = <String>[];
-    if (base.isNotEmpty) urls.add(backendUrl(base, cid));
-    for (final gateway in gateways ?? StorageConfig.activeIpfsGateways) {
-      final trimmed = gateway.trim();
-      if (trimmed.isEmpty) continue;
-      final withSlash = trimmed.endsWith('/') ? trimmed : '$trimmed/';
-      urls.add('$withSlash${Uri.encodeComponent(cid)}');
-    }
-    return urls.where(_isSecureOrLoopback).toList(growable: false);
+    if (base.isEmpty) return const <String>[];
+    final url = backendUrl(base, cid);
+    if (url == null || !_isSecureOrLoopback(url)) return const <String>[];
+    return <String>[url];
   }
 
   static bool _isSecureOrLoopback(String url) {
@@ -96,7 +105,7 @@ class SpatialWebDelivery {
   }
 
   static bool isViewable(SpatialVariant variant) {
-    if (variant.cid.isEmpty) return false;
+    if (!isPlausibleCid(variant.cid)) return false;
     final format = variant.format.toLowerCase();
     final mimeType = variant.mimeType.toLowerCase();
     return kSpatialWebFormats.any(
@@ -109,11 +118,48 @@ class SpatialWebDelivery {
 
   /// The tier that opens by default: optimised, then preview. The archive tier
   /// is never chosen here; it is large, so the visitor asks for it.
-  static SpatialVariant? defaultVariant(SpatialContent content) {
+  static SpatialVariant? defaultVariant(SpatialContent content) =>
+      defaultTiers(content).firstOrNull;
+
+  /// The tiers that may open without the visitor asking, best first:
+  /// optimised, then preview. When one cannot be loaded (a format the viewer
+  /// rejects, a failed route) the next is tried; the archive is never in this
+  /// list.
+  static List<SpatialVariant> defaultTiers(SpatialContent content) {
     final viewable = content.variants.where(isViewable).toList();
-    return viewable.where((v) => v.role == 'spatial_mobile').firstOrNull ??
-        viewable.where((v) => v.role == 'spatial_preview').firstOrNull;
+    return <SpatialVariant>[
+      for (final role in const <String>['spatial_mobile', 'spatial_preview'])
+        ...viewable.where((v) => v.role == role).take(1),
+    ];
   }
+
+  /// The tier to try after [failed] failed, or null when none is left. The
+  /// archive tier never falls back: it was an explicit request.
+  static SpatialVariant? nextTier(
+    SpatialContent content,
+    SpatialVariant failed,
+  ) {
+    final tiers = defaultTiers(content);
+    final at = tiers.indexWhere(
+      (v) => v.role == failed.role && v.cid == failed.cid,
+    );
+    if (at < 0 || at + 1 >= tiers.length) return null;
+    return tiers[at + 1];
+  }
+
+  /// Largest archive the visitor may start without an explicit confirmation.
+  static const int archiveConfirmBytes = 50 * 1024 * 1024;
+
+  static bool archiveNeedsConfirmation(SpatialVariant variant) =>
+      variant.sizeBytes >= archiveConfirmBytes;
+
+  /// How long one load may take before it is reported as failed. The archive
+  /// tier is far larger than the other tiers, so it gets a longer budget
+  /// instead of being declared dead while it is still downloading.
+  static Duration loadTimeout(SpatialVariant variant) =>
+      variant.role == 'spatial_archive'
+          ? const Duration(minutes: 10)
+          : const Duration(seconds: 120);
 
   static SpatialVariant? archiveVariant(SpatialContent content) =>
       content.variants
@@ -125,7 +171,6 @@ class SpatialWebDelivery {
     SpatialContent content,
     SpatialVariant variant, {
     String? backendBase,
-    List<String>? gateways,
   }) {
     final format = variant.format.toLowerCase();
     final fileType = _kExplicitFileTypes.contains(format)
@@ -137,8 +182,7 @@ class SpatialWebDelivery {
     final base = (backendBase ?? StorageConfig.httpBackend).trim();
     return SpatialWebLoadPlan(
       variant: variant,
-      urls: candidateUrls(variant.cid,
-          backendBase: backendBase, gateways: gateways),
+      urls: candidateUrls(variant.cid, backendBase: backendBase),
       fileType: fileType,
       manifestUrl: manifestCid == null || manifestCid.isEmpty || base.isEmpty
           ? null

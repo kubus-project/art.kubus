@@ -32,6 +32,34 @@ test('third-party notices name Spark and Three.js with their MIT licences', () =
   }
 });
 
+test('the notices also cover what Spark bundles: fflate and the WASM crates', () => {
+  const notices = read('THIRD_PARTY_NOTICES.md');
+  assert.match(read('third_party', 'licenses', 'FFLATE-MIT.txt'), /^MIT License[^]*Arjun Barrett/);
+  assert.ok(notices.includes('third_party/licenses/FFLATE-MIT.txt'));
+  const crates = read('third_party', 'licenses', 'SPARK-WASM-CRATES.txt');
+  assert.ok(notices.includes('third_party/licenses/SPARK-WASM-CRATES.txt'));
+  assert.doesNotMatch(crates, /GPL|AGPL|LGPL|Proprietary/i, 'no copyleft or proprietary crate');
+});
+
+test('viewer source is valid UTF-8 and the shipped bundle carries no replacement character', () => {
+  const replacement = String.fromCharCode(0xfffd);
+  const decoder = new TextDecoder('utf-8', { fatal: true });
+  const source = decoder.decode(fs.readFileSync(path.join(root, 'assets', 'spatial_viewer', 'src', 'viewer.js')));
+  assert.ok(!source.includes(replacement));
+  const bundle = read('assets', 'spatial_viewer', 'viewer.bundle.js');
+  assert.ok(!bundle.includes(replacement), 'a lone CP1252 byte became U+FFFD once; it must not come back');
+});
+
+test('the viewer pauses its render loop and does not swallow page scroll', () => {
+  const source = read('assets', 'spatial_viewer', 'src', 'viewer.js');
+  assert.ok(source.includes('IntersectionObserver'));
+  assert.ok(source.includes('visibilityState'));
+  assert.ok(source.includes('document.activeElement !== canvas'));
+  assert.equal(source.split('requestAnimationFrame(').length - 1, 1, 'the loop is armed in one guarded place only');
+  assert.ok(source.includes('shouldRun()'));
+  assert.ok(read('assets', 'spatial_viewer', 'index.html').includes('touch-action:pan-y'));
+});
+
 test('the viewer page allows Spark WASM and stays closed otherwise', () => {
   const html = read('assets', 'spatial_viewer', 'index.html');
   const csp = /Content-Security-Policy" content="([^"]+)"/.exec(html)[1];

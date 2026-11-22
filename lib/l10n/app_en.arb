@@ -6878,6 +6878,24 @@
   },
   "spatialHistoryTitle": "Spatial history",
   "spatialLoadArchiveQuality": "Load archival quality",
+  "spatialLoadArchiveQualityWithSize": "Load archival quality ({size})",
+  "@spatialLoadArchiveQualityWithSize": {
+    "placeholders": {
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "spatialArchiveConsentBody": "The archival version is the full-detail capture. It is large and can use a lot of data, so it only loads when you ask.",
+  "spatialArchiveConfirmTitle": "Load a large archive?",
+  "spatialArchiveConfirmBody": "This download is about {size}. Continue only on a connection you are happy to use.",
+  "@spatialArchiveConfirmBody": {
+    "placeholders": {
+      "size": {
+        "type": "String"
+      }
+    }
+  },
   "spatialQualityMobile": "Optimised",
   "spatialQualityPreview": "Preview",
   "spatialQualityArchive": "Archival",

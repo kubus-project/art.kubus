@@ -62,6 +62,12 @@ const HISTORY = {
 HISTORY.data.current = HISTORY.data.history[0];
 const EMPTY = { success: true, data: { current: null, history: [] } };
 
+// A history whose current capture carries exactly these public variants (plus the manifest).
+function historyWith(variants) {
+  const capture = { ...HISTORY.data.history[0], variants: [HISTORY.data.history[0].variants[0], ...variants] };
+  return { success: true, data: { current: capture, history: [capture] } };
+}
+
 const MIME = {
   '.html': 'text/html', '.js': 'text/javascript', '.mjs': 'text/javascript', '.json': 'application/json',
   '.wasm': 'application/wasm', '.png': 'image/png', '.ico': 'image/x-icon', '.ttf': 'font/ttf', '.otf': 'font/otf',
@@ -135,8 +141,8 @@ async function newScenario(browser, { origin, viewport, reducedMotion, history =
       if (m[1] === 'bafy-manifest' && manifest) return route.fulfill({ status: 200, headers: { ...CORS, 'content-type': 'application/json' }, body: JSON.stringify({ schema: 'kubus.spatial/1', transform: UPRIGHT }) });
       return route.fulfill({ status: 404, headers: CORS, body: '' });
     }
-    // Public IPFS gateways are fallbacks only; the smoke never contacts them.
-    if (/(^|\.)(dweb\.link|ipfs\.io|pinata\.cloud)$/.test(url.hostname)) { seen.gateway.push(url.hostname); return route.fulfill({ status: 404, headers: CORS, body: '' }); }
+    // Public IPFS gateways are not a route for the public viewer (they have no withdrawal gate); any contact is a failure.
+    if (/(^|\.)(dweb\.link|ipfs\.io|pinata\.cloud|cloudflare-ipfs\.com|w3s\.link|nftstorage\.link|gateway\.pinata\.cloud)$/.test(url.hostname)) { seen.gateway.push(url.hostname); return route.fulfill({ status: 404, headers: CORS, body: '' }); }
     // Fonts / canvaskit CDN etc.: let the real network answer; any other API call is refused.
     if (/\/api\//.test(url.pathname)) { seen.other.push(url.pathname); return route.fulfill({ status: 404, headers: CORS, body: '' }); }
     return route.continue();
@@ -190,7 +196,7 @@ async function run(browserType, name) {
         const m = ready?.matrix || [];
         check(`${tag}: manifest transform.matrix reached the mesh`, m.length === 16 && Math.abs(m[1] - 1) < 1e-6 && Math.abs(m[4] + 1) < 1e-6, JSON.stringify(m));
         await s.page.waitForTimeout(1500);
-        const frameEl = s.page.locator('iframe[title="Interactive spatial archive"]');
+        const frameEl = s.page.locator('iframe[title="Spatial archive"]');
         check(`${tag}: one viewer iframe in the page`, (await frameEl.count()) === 1, `${await frameEl.count()}`);
         const shot = await frameEl.screenshot();
         fs.writeFileSync(path.join(OUT, `${tag.replace('/', '-')}-inline.png`), shot);
@@ -207,6 +213,9 @@ async function run(browserType, name) {
         const after = await viewerState(s.page);
         check(`${tag}: drag orbits through the Flutter platform view`, Math.abs(after.yaw - before.yaw) > 0.3, `${before.yaw.toFixed(2)} -> ${after.yaw.toFixed(2)}`);
         check(`${tag}: no CSP violation or page error`, s.problems.length === 0, s.problems.join(' | '));
+        check(`${tag}: no public gateway is contacted`, s.seen.gateway.length === 0, s.seen.gateway.join(','));
+        const label = await viewerFrame(s.page).evaluate(() => document.querySelector('canvas').getAttribute('aria-label'));
+        check(`${tag}: the canvas carries the app's localized label`, label === 'Spatial archive' || /spatial/i.test(label || ''), String(label));
         await s.context.close();
       }
 
@@ -238,6 +247,7 @@ async function run(browserType, name) {
         check(`${tag}: unreachable bytes end in the viewer failure state`, !!failed, JSON.stringify(failed));
         check(`${tag}: the failed iframe is hidden behind the Flutter failure notice`, (await s.page.locator('iframe').evaluate((el) => getComputedStyle(el).visibility)) === 'hidden');
         check(`${tag}: failure never falls back to the archive tier`, !s.seen.upload.includes('bafy-archive'), s.seen.upload.join(','));
+        check(`${tag}: failure never contacts a public gateway`, s.seen.gateway.length === 0, s.seen.gateway.join(','));
         fs.writeFileSync(path.join(OUT, `${tag.replace('/', '-')}-failure.png`), await s.page.screenshot());
         await s.context.close();
       }
@@ -263,6 +273,54 @@ async function run(browserType, name) {
         const frameBox = await s.page.locator('iframe').boundingBox();
         check(`${tag}: fullscreen viewer fills the window`, !!frameBox && frameBox.width >= layout.viewport.width - 4 && frameBox.height > layout.viewport.height * 0.6, JSON.stringify(frameBox));
         fs.writeFileSync(path.join(OUT, `${tag.replace('/', '-')}-fullscreen.png`), await s.page.screenshot());
+        await s.context.close();
+      }
+
+      // F. The optimised tier fails to load: the preview tier is tried next (no gateway, no archive).
+      {
+        const history = historyWith([
+          variant('spatial_mobile', 'bafy-bad', 'splat', 1000),
+          variant('spatial_preview', 'bafy-sample', 'splat', SAMPLE.length),
+          variant('spatial_archive', 'bafy-archive', 'ply', 9_000_000),
+        ]);
+        const s = await newScenario(browser, { origin, ...layout, history });
+        await s.page.goto(`${origin}/?spacer=0`);
+        const ready = await waitFor(async () => {
+          const st = await viewerState(s.page);
+          return st && st.hasMesh && st.statusHidden ? st : null;
+        }, 90000);
+        const order = s.seen.upload.filter((cid) => cid === 'bafy-bad' || cid === 'bafy-sample');
+        check(`${tag}: a failing optimised tier falls back to the preview tier`, !!ready && order[0] === 'bafy-bad' && order.includes('bafy-sample'), `${order.join(',')} ${JSON.stringify(ready)}`);
+        check(`${tag}: tier fallback never touches the archive or a gateway`, !s.seen.upload.includes('bafy-archive') && s.seen.gateway.length === 0, s.seen.upload.join(','));
+        await s.context.close();
+      }
+
+      // G. A large archive shows its size and asks before it downloads.
+      {
+        const history = historyWith([
+          variant('spatial_mobile', 'bafy-sample', 'splat', SAMPLE.length),
+          variant('spatial_archive', 'bafy-archive', 'ply', 300 * 1024 * 1024),
+        ]);
+        const s = await newScenario(browser, { origin, ...layout, history });
+        await s.page.goto(`${origin}/?spacer=0`);
+        await waitFor(async () => {
+          const st = await viewerState(s.page);
+          return st && st.hasMesh && st.statusHidden ? st : null;
+        });
+        await s.page.evaluate(() => document.querySelector('flt-semantics-placeholder')?.click());
+        const offer = s.page.getByRole('button', { name: 'Load archival quality (300 MB)' });
+        await offer.waitFor({ timeout: 20000 });
+        check(`${tag}: the archive button states the archive size`, (await offer.count()) === 1);
+        await offer.click();
+        await s.page.getByText('Load a large archive?').waitFor({ timeout: 20000 });
+        check(`${tag}: a large archive asks for confirmation`, true);
+        await s.page.getByRole('button', { name: 'Cancel' }).click();
+        await s.page.waitForTimeout(1500);
+        check(`${tag}: declining the confirmation downloads nothing`, !s.seen.upload.includes('bafy-archive'), s.seen.upload.join(','));
+        await s.page.getByRole('button', { name: 'Load archival quality (300 MB)' }).click();
+        await s.page.getByRole('button', { name: 'Continue' }).click();
+        const asked = await waitFor(async () => (s.seen.upload.includes('bafy-archive') ? true : null), 30000);
+        check(`${tag}: confirming starts the archive download`, !!asked, s.seen.upload.join(','));
         await s.context.close();
       }
 

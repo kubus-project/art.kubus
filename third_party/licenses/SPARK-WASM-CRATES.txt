@@ -1,0 +1,37 @@
+Rust crates compiled into the WebAssembly module that Spark 2.4.0 embeds
+(@sparkjsdev/spark dist/spark.module.js), and therefore into
+assets/spatial_viewer/viewer.bundle.js.
+
+Method: the module's embedded source paths (panic locations) name every crate
+below, with the exact version. Licences are the ones the crates.io registry
+publishes for that exact version, read on 2026-11-22. The list is a floor: a
+crate that carries no panic path would not appear in it. Spark's own Rust code
+(rust/spark-lib, rust/spark-rs) is MIT, see SPARK-MIT.txt.
+
+anyhow 1.0.98                  MIT OR Apache-2.0
+console_error_panic_hook 0.1.7 Apache-2.0 OR MIT
+fdeflate 0.3.7                 MIT OR Apache-2.0
+flate2 1.1.10                  MIT OR Apache-2.0
+hashbrown 0.16.1               MIT OR Apache-2.0
+image 0.25.10                  MIT OR Apache-2.0
+image-webp 0.2.4               MIT OR Apache-2.0
+indexmap 2.13.0                Apache-2.0 OR MIT
+js-sys 0.3.94                  MIT OR Apache-2.0
+memchr 2.7.6                   Unlicense OR MIT
+png 0.18.1                     MIT OR Apache-2.0
+ruzstd 0.9.1                   MIT
+serde 1.0.228                  MIT OR Apache-2.0
+serde_core 1.0.228             MIT OR Apache-2.0
+serde-wasm-bindgen 0.6.5       MIT
+serde_json 1.0.145             MIT OR Apache-2.0
+smallvec 1.15.1                MIT OR Apache-2.0
+wasm-bindgen 0.2.117           MIT OR Apache-2.0
+zip 7.2.0                      MIT
+zlib-rs 0.6.3                  Zlib
+
+Every dual-licensed crate is used here under its MIT option. The MIT-only
+crates (ruzstd, serde-wasm-bindgen, zip) and the MIT option of the others
+require their copyright notice to travel with copies; each crate's notice is in
+its published source package on crates.io, and the project names above are
+the upstream authors' work. zlib-rs is under the Zlib licence, which requires
+no notice for binary distribution. Nothing in the list is copyleft.

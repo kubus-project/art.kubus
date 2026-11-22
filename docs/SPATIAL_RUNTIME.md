@@ -105,28 +105,79 @@ Xcode and cannot be verified from the Windows development environment.
 ## Flutter web viewer
 
 On Flutter web `SpatialViewer` resolves to `spatial_viewer_web.dart`: the same
-bundled viewer page runs in a sandboxed same-origin iframe (`HtmlElementView`).
-The widget only chooses bytes and relays messages (`viewer-ready`, `ready`,
-`error:*` from the page; `load` / `reset` commands to it, same-origin only).
+bundled viewer page runs in a same-origin iframe (`HtmlElementView`). The widget
+only chooses bytes and relays messages (`viewer-ready`, `ready`, `error:*` from
+the page; `load` / `reset` commands to it, same-origin only). All tier, timeout
+and consent decisions live in `SpatialWebLoadSession` and `SpatialWebDelivery`
+(pure Dart, tested in the VM suite).
 
-- Tier: `spatial_mobile`, then `spatial_preview`. The archive tier never opens by
-  default; the visitor asks for it. `rad` is not offered (paged RAD needs sibling
-  chunk URLs the single route cannot give).
-- Bytes: `GET {backend}/api/upload/file/<cid>` (anonymous, registry-authorised:
-  only CIDs of a currently public publication resolve; whole body, no Range), then
-  the configured public IPFS gateways. Never a LAN node, never plain http (except a
+- Tier: `spatial_mobile`, then `spatial_preview`; when the first cannot be loaded
+  (a format Spark rejects, a failed route) the next one is tried. The archive tier
+  never opens by default and never falls back; the visitor asks for it, sees its
+  size on the button, and confirms above 50 MiB. `rad` is not offered (paged RAD
+  needs sibling chunk URLs the single route cannot give).
+- Timeouts: 120 s for the optimised and preview tiers, 10 minutes for the archive,
+  so a large archive is not declared dead while it is still downloading.
+- Bytes: `GET {backend}/api/upload/file/<cid>`, anonymous and registry-authorised:
+  only CIDs of a currently public publication resolve (withdrawn or unregistered
+  content answers 404, a failing withdrawal lookup answers 503; whole body, no
+  Range). That route is the publication gate and the only route the web viewer
+  uses: there is no public-gateway fallback, because a gateway has no withdrawal
+  gate and would keep serving pinned bytes of withdrawn content (and learn the
+  visitor's address). A CID must be CID-shaped (`[A-Za-z0-9_-]`, 4 to 128
+  characters) before it becomes a URL. Never a LAN node, never plain http (except a
   loopback backend in a local build). The legacy `/uploads/<cid>` path is a
   different store and does not serve published spatial variants.
 - Orientation: the published manifest (`canonicalManifestCid`, same route) is read
-  best effort and its `transform` is applied: `matrix` (16 numbers, column-major,
-  the Node's form) or `position` / `rotation` / `scale`. Without a readable
-  transform the piece opens untransformed.
+  best effort and its `transform` is applied; without a readable transform the
+  piece opens untransformed. Contract, to be mirrored by the backend manifest
+  contract and the Node docs when the backend accepts `matrix`:
+  - `matrix` is 16 finite numbers in COLUMN-MAJOR order (three.js
+    `Matrix4.fromArray`, the order the kubus-node GUI viewer reads); `matrixOrder`
+    is absent or `column-major`, anything else is not applied. Non-positive scale
+    after decomposition is refused. The Node's pose helper (`poseConversion.ts`)
+    is ROW-MAJOR: a producer that reuses it must transpose, or pieces stand on
+    their side.
+  - Otherwise `position` (3 numbers), `rotation` (4 numbers = quaternion xyzw, or
+    3 numbers = Euler angles in radians, order XYZ) and `scale` (positive number
+    or 3 positive numbers).
+  - Today the backend manifest contract rejects `matrix` and the app's
+    `sanitizePublicationManifest` drops it; no producer writes it yet. The viewer
+    reads it so the contract is settled before one does.
+- Isolation: the iframe is `sandbox="allow-scripts allow-same-origin"`, which is
+  not a security boundary (a same-origin frame can reach the app origin's storage).
+  What bounds the risk: the page runs only this app's own bundle; its CSP is
+  `default-src 'none'` with scripts from `'self'` and `'wasm-unsafe-eval'` only (no
+  inline script, no eval); splat bytes are parsed by Spark's WASM, never executed;
+  the host hands it no token, header or cookie (URLs, file type, transform and an
+  accessible label only); the frame has `referrerpolicy="no-referrer"` and
+  `allow=""`; messages are accepted only from the parent window of the same
+  origin and URLs only if https, blob or same-origin. `window.loadSpatial(url)`
+  is the native WebView contract and deliberately skips the URL allow-list; it is
+  reachable only by script already inside the page. Before the first deploy,
+  verify that the nginx front adds no `X-Frame-Options` or `frame-ancestors` to
+  `/assets/assets/spatial_viewer/index.html` (outside this repo; the smokes apply
+  only the `web/.htaccess` policy).
+- Render loop: it runs only while the canvas is on screen, the tab is visible and
+  a piece is loaded or loading; a wheel gesture zooms only once the viewer has
+  focus (or on a pinch), and touch uses `touch-action: pan-y` so a vertical swipe
+  scrolls the page instead of orbiting.
 - CSP: the viewer page allows `'wasm-unsafe-eval'` (Spark's WASM); the SEO takeover
   policy in `web/seo-proxy.php` allows `frame-src 'self'` so the iframe is not blocked
   on public pages.
 - Inline section: the artwork detail screens (desktop and mobile) show the viewer
   inline when the public spatial history is non-empty, created when it scrolls into
   view (`SpatialLazyReveal`); "View in 3D" opens the fullscreen dialog.
+- Backend cross-lane: the byte route sends the whole body (up to 512 MiB per
+  variant) from memory on an anonymous route. The app now shows the size and asks
+  first, but a route-level rate limit and concurrency cap belong to the backend and
+  must be confirmed before this reaches the public.
 - Browser proof: `scripts/qa/spatial_viewer_smoke.mjs` (viewer page) and
   `scripts/qa/spatial_viewer_flutter_smoke.mjs` (the built Flutter widget), both on
-  the synthetic `test/fixtures/spatial/sample_flower.splat`.
+  the synthetic `test/fixtures/spatial/sample_flower.splat`. Both run in the PR
+  workflow (the Chrome job builds the harness with `flutter build web --release -t
+  tool/qa/spatial_viewer_web_harness_main.dart --output build/spatial-harness`).
+  `test/spatial_viewer_asset_contract.test.js` (licence pin, notices, CSP, bundle
+  hygiene) runs in the PR workflow's Node step. Locally the page smoke serves
+  `build/web` when it exists; set `WEB_ROOT` to a missing directory to test the
+  checked-in `assets/spatial_viewer` instead.

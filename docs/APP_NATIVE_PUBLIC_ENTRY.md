@@ -65,6 +65,7 @@ Keep the localized stable-ID routes:
 | collection | `/en/collections/:id` | `/sl/zbirke/:id` |
 | collectible | `/en/collectibles/:id` | `/sl/zbirateljski-predmeti/:id` |
 | map record | `/en/map/:id` | `/sl/zemljevid/:id` |
+| institution | `/en/institutions/:id` | `/sl/institucije/:id` |
 
 Compact aliases remain compatibility/share redirects; they are not the primary
 product URL.

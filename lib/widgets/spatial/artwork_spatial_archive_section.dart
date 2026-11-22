@@ -304,6 +304,10 @@ class _InlineArchiveViewer extends StatelessWidget {
         final width =
             constraints.hasBoundedWidth ? constraints.maxWidth : 640.0;
         final height = (width * 0.75).clamp(260.0, 460.0);
+        // The live viewer is its canvas plus a 36 px control row. The stand-in
+        // that replaces it while the fullscreen dialog is open has the same
+        // total height, so the page does not jump when the dialog opens/closes.
+        final liveHeight = height + 36;
         final placeholder = ColoredBox(
           color: scheme.surfaceContainerHighest,
           child: Center(
@@ -317,9 +321,9 @@ class _InlineArchiveViewer extends StatelessWidget {
         return ClipRRect(
           borderRadius: BorderRadius.circular(KubusRadius.md),
           child: suspended
-              ? SizedBox(height: height, child: placeholder)
+              ? SizedBox(height: liveHeight, child: placeholder)
               : SpatialLazyReveal(
-                  height: height + 36,
+                  height: liveHeight,
                   placeholder: placeholder,
                   child: SpatialViewer(
                     key: ValueKey<String>('inline-${content.id}'),

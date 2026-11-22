@@ -621,6 +621,11 @@ test('PR validation workflow wires the tiers without weakening the required chec
   assert.ok(controlAt > 0 && controlAt < mapStepAt, 'the browser harness positive control runs before the map test');
   assert.match(mapBrowser.slice(controlAt, mapStepAt), /test\/web\/basic_browser_smoke_test\.dart[\s\S]*All tests passed/);
   assert.match(mapBrowser.slice(controlAt, mapStepAt), /test\/widgets\/map\/glass\/kubus_map_platform_backdrop_mount_browser_test\.dart/);
+  // The spatial viewer's browser proof and asset contract are wired into CI, not manual-only.
+  assert.match(mapBrowser, /node scripts\/qa\/spatial_viewer_smoke\.mjs/);
+  assert.match(mapBrowser, /flutter build web --release -t tool\/qa\/spatial_viewer_web_harness_main\.dart --output build\/spatial-harness/);
+  assert.match(mapBrowser, /node scripts\/qa\/spatial_viewer_flutter_smoke\.mjs/);
+  assert.match(content, /node --test [^\n]*test\/spatial_viewer_asset_contract\.test\.js/, 'the spatial viewer asset contract test runs in the guardrails job');
   assert.match(content.slice(content.indexOf('\n  required:')), /^\s+- map_browser_regression$/m, 'the required aggregate must need map_browser_regression');
   assert.match(content, /EXPECTED_JOBS:[^\n]*map_browser_regression/);
   const required = content.slice(content.indexOf('\n  required:'));

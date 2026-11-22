@@ -204,12 +204,40 @@ async function run(browserType, name) {
     check(`${name}: transformed piece stands upright (taller than wide)`, upright.height > upright.width * 1.4, `${upright.width}x${upright.height}`);
     check(`${name}: head (red) is above the stem (green)`, !!upright.red && !!upright.green && upright.red.y < upright.green.y - 20, JSON.stringify(upright));
 
+    // 3b. The render loop runs only while the viewer is on screen and has a piece.
+    check(`${name}: render loop runs while the loaded viewer is on screen`, (await frameOf().evaluate(() => window.__spatialDebug())).running === true);
+    await page.evaluate(() => { document.getElementById('v').style.marginTop = '3000px'; window.scrollTo(0, 0); });
+    await page.waitForTimeout(800);
+    const away = await frameOf().evaluate(() => window.__spatialDebug());
+    check(`${name}: render loop pauses when the viewer is scrolled out of view`, away.running === false && away.inView === false, JSON.stringify({ running: away.running, inView: away.inView }));
+    await page.evaluate(() => { document.getElementById('v').scrollIntoView(); });
+    await page.waitForTimeout(800);
+    const back = await frameOf().evaluate(() => window.__spatialDebug());
+    check(`${name}: render loop resumes when the viewer is back in view`, back.running === true && back.inView === true, JSON.stringify({ running: back.running, inView: back.inView }));
+    await page.evaluate(() => { document.getElementById('v').style.marginTop = '0'; window.scrollTo(0, 0); });
+    await page.waitForTimeout(300);
+
+    // 3c. A wheel gesture zooms only after the viewer is focused; before that it is left to the page.
+    const wheelBox = await page.locator('#v').boundingBox();
+    const distance0 = (await frameOf().evaluate(() => window.__spatialDebug())).distance;
+    await page.mouse.move(wheelBox.x + 100, wheelBox.y + 100);
+    await page.mouse.wheel(0, -400);
+    await page.waitForTimeout(200);
+    const distance1 = (await frameOf().evaluate(() => window.__spatialDebug())).distance;
+    check(`${name}: an unfocused viewer does not capture the wheel`, distance1 === distance0, `${distance0} -> ${distance1}`);
+    await page.mouse.click(wheelBox.x + 100, wheelBox.y + 100);
+    await page.mouse.wheel(0, -400);
+    await page.waitForTimeout(200);
+    const distance2 = (await frameOf().evaluate(() => window.__spatialDebug())).distance;
+    check(`${name}: a focused viewer zooms on the wheel`, distance2 < distance1, `${distance1} -> ${distance2}`);
+
     // 4. Failure state.
     await loadHarness();
     await page.evaluate((o) => window.sendCommand({ type: 'load', urls: [`${o}/api/upload/file/bafy-missing`] }), origin);
     await waitMsg(page, (msg) => msg.startsWith('error:'));
     const statusText = await frameOf().evaluate(() => document.querySelector('#status').textContent);
     check(`${name}: unreachable route ends in the failure state`, /could not be loaded/i.test(statusText), statusText);
+    check(`${name}: a failed viewer renders nothing`, (await frameOf().evaluate(() => window.__spatialDebug())).running === false);
 
     // 5. Disallowed URL schemes are refused, not fetched.
     await loadHarness();

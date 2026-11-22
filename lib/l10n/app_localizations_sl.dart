@@ -16483,6 +16483,23 @@ class AppLocalizationsSl extends AppLocalizations {
   String get spatialLoadArchiveQuality => 'Naloži arhivsko kakovost';
 
   @override
+  String spatialLoadArchiveQualityWithSize(String size) {
+    return 'Naloži arhivsko kakovost ($size)';
+  }
+
+  @override
+  String get spatialArchiveConsentBody =>
+      'Arhivska različica je zajem v polni podrobnosti. Je velika in lahko porabi veliko podatkov, zato se naloži le na vašo zahtevo.';
+
+  @override
+  String get spatialArchiveConfirmTitle => 'Naložim velik arhiv?';
+
+  @override
+  String spatialArchiveConfirmBody(String size) {
+    return 'Prenos je velik približno $size. Nadaljujte le na povezavi, ki jo želite uporabiti.';
+  }
+
+  @override
   String get spatialQualityMobile => 'Optimizirano';
 
   @override
@@ -16508,7 +16525,7 @@ class AppLocalizationsSl extends AppLocalizations {
   String get spatialViewerLoading => 'Nalaganje 3D pogleda …';
 
   @override
-  String get spatialViewerDragHint => 'Povlecite za ogled okoli';
+  String get spatialViewerDragHint => 'Povlecite za razgled';
 
   @override
   String get spatialViewerFallback => 'Poskušam drugo pot do arhiva …';

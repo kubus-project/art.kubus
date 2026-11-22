@@ -89,56 +89,168 @@ void main() {
     });
   });
 
+  group('tiers, fallback, timeouts and the archive size', () {
+    test('the default tiers are optimised then preview, never the archive', () {
+      final content = _content([
+        _variant('spatial_archive', 'cid-archive', 'ply'),
+        _variant('spatial_preview', 'cid-preview', 'spz'),
+        _variant('spatial_mobile', 'cid-mobile', 'spz'),
+      ]);
+      expect(
+        SpatialWebDelivery.defaultTiers(content).map((v) => v.role),
+        ['spatial_mobile', 'spatial_preview'],
+      );
+      final mobile = SpatialWebDelivery.defaultTiers(content).first;
+      expect(SpatialWebDelivery.nextTier(content, mobile)?.cid, 'cid-preview');
+      final preview = SpatialWebDelivery.defaultTiers(content).last;
+      expect(SpatialWebDelivery.nextTier(content, preview), isNull);
+      expect(
+        SpatialWebDelivery.nextTier(
+            content, SpatialWebDelivery.archiveVariant(content)!),
+        isNull,
+        reason: 'the archive is an explicit request and never falls back',
+      );
+    });
+
+    test('the archive gets a longer budget and a size confirmation', () {
+      final archive = _variant('spatial_archive', 'cid-archive', 'ply');
+      final mobile = _variant('spatial_mobile', 'cid-mobile', 'spz');
+      expect(
+        SpatialWebDelivery.loadTimeout(archive),
+        greaterThan(SpatialWebDelivery.loadTimeout(mobile)),
+      );
+      SpatialVariant sized(int bytes) => SpatialVariant(
+            role: 'spatial_archive',
+            cid: 'cid-archive',
+            sizeBytes: bytes,
+            mimeType: 'application/octet-stream',
+            format: 'ply',
+            storageClass: 'cold',
+          );
+      expect(SpatialWebDelivery.archiveNeedsConfirmation(sized(1024)), isFalse);
+      expect(
+        SpatialWebDelivery.archiveNeedsConfirmation(
+          sized(SpatialWebDelivery.archiveConfirmBytes),
+        ),
+        isTrue,
+      );
+    });
+  });
+
   group('byte routes', () {
-    test('the registry-authorised backend route comes first, then gateways',
-        () {
+    test('the registry-authorised backend route is the only route', () {
       final urls = SpatialWebDelivery.candidateUrls(
         'bafyCid',
         backendBase: 'https://api.kubus.site/',
-        gateways: const [
-          'https://gw.example/ipfs/',
-          'https://gw2.example/ipfs'
-        ],
       );
-      expect(urls, [
-        'https://api.kubus.site/api/upload/file/bafyCid',
-        'https://gw.example/ipfs/bafyCid',
-        'https://gw2.example/ipfs/bafyCid',
-      ]);
+      // No public-gateway fallback: a gateway has no withdrawal gate, so it
+      // would keep serving bytes the backend refuses (404/503) to serve.
+      expect(urls, ['https://api.kubus.site/api/upload/file/bafyCid']);
+      expect(urls.where((u) => !u.contains('/api/upload/file/')), isEmpty);
+    });
+
+    test('a withdrawn or failing backend answer never yields another URL', () {
+      // The viewer only ever receives plan.urls. Whatever the backend answers,
+      // that list has no second entry the viewer could fall through to.
+      final variant = _variant('spatial_mobile', 'bafyWithdrawn', 'spz');
+      final plan = SpatialWebDelivery.plan(
+        _content([variant]),
+        variant,
+        backendBase: 'https://api.kubus.site',
+      );
+      expect(plan.urls, hasLength(1));
+      expect(plan.urls.single, startsWith('https://api.kubus.site/'));
     });
 
     test('never offers an insecure or LAN route to a secure page', () {
-      final urls = SpatialWebDelivery.candidateUrls(
-        'bafyCid',
-        backendBase: 'http://api.kubus.site',
-        gateways: const [
-          'http://192.168.1.20:8080/ipfs/',
-          'https://gw.example/ipfs/',
-        ],
+      expect(
+        SpatialWebDelivery.candidateUrls(
+          'bafyCid',
+          backendBase: 'http://api.kubus.site',
+        ),
+        isEmpty,
       );
-      expect(urls, ['https://gw.example/ipfs/bafyCid']);
+      expect(
+        SpatialWebDelivery.candidateUrls(
+          'bafyCid',
+          backendBase: 'http://192.168.1.20:8080',
+        ),
+        isEmpty,
+      );
+    });
+
+    test('a CID that is not CID-shaped never becomes a URL', () {
+      for (final bad in <String>[
+        '',
+        '..',
+        '../x',
+        'a/b',
+        'bafy?x=1',
+        'bafy%2e%2e',
+        'bafy cid',
+        'bafy.cid',
+        'x' * 129,
+      ]) {
+        expect(SpatialWebDelivery.isPlausibleCid(bad), isFalse, reason: bad);
+        expect(
+          SpatialWebDelivery.candidateUrls(
+            bad,
+            backendBase: 'https://api.kubus.site',
+          ),
+          isEmpty,
+          reason: bad,
+        );
+        expect(
+          SpatialWebDelivery.isViewable(_variant('spatial_mobile', bad, 'spz')),
+          isFalse,
+          reason: bad,
+        );
+      }
+      expect(SpatialWebDelivery.isPlausibleCid(null), isFalse);
+      expect(
+        SpatialWebDelivery.isPlausibleCid(
+          'bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi',
+        ),
+        isTrue,
+      );
+      expect(
+        SpatialWebDelivery.isPlausibleCid(
+          'QmYwAPJzv5CZsnA625s3Xf2nemtYgPpHdWEz79ojWnPbdG',
+        ),
+        isTrue,
+      );
+    });
+
+    test('a manifest CID that is not CID-shaped yields no manifest route', () {
+      final v = _variant('spatial_mobile', 'bafyMobile', 'spz');
+      expect(
+        SpatialWebDelivery.plan(
+          _content([v], manifestCid: '../etc'),
+          v,
+          backendBase: 'https://api.kubus.site',
+        ).manifestUrl,
+        isNull,
+      );
     });
 
     test('a local build may use its own loopback backend', () {
       final urls = SpatialWebDelivery.candidateUrls(
         'bafyCid',
         backendBase: 'http://127.0.0.1:3000',
-        gateways: const [],
       );
       expect(urls, ['http://127.0.0.1:3000/api/upload/file/bafyCid']);
     });
 
     test('the plan names the file type only when bytes carry no magic number',
         () {
-      final splat = _variant('spatial_preview', 'c1', 'splat');
-      final spz = _variant('spatial_mobile', 'c2', 'spz');
-      final sog = _variant('spatial_mobile', 'c3', 'sog');
+      final splat = _variant('spatial_preview', 'cidSplat1', 'splat');
+      final spz = _variant('spatial_mobile', 'cidSpz2', 'spz');
+      final sog = _variant('spatial_mobile', 'cidSog3', 'sog');
       final content = _content([splat, spz, sog], manifestCid: 'bafyManifest');
       SpatialWebLoadPlan plan(SpatialVariant v) => SpatialWebDelivery.plan(
             content,
             v,
             backendBase: 'https://api.kubus.site',
-            gateways: const [],
           );
       expect(plan(splat).fileType, 'splat');
       expect(plan(splat).manifestUrl,
@@ -149,13 +261,12 @@ void main() {
     });
 
     test('no manifest CID means no manifest route', () {
-      final v = _variant('spatial_mobile', 'c', 'spz');
+      final v = _variant('spatial_mobile', 'cidMobile', 'spz');
       expect(
         SpatialWebDelivery.plan(
           _content([v]),
           v,
           backendBase: 'https://api.kubus.site',
-          gateways: const [],
         ).manifestUrl,
         isNull,
       );

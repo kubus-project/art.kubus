@@ -36,6 +36,9 @@ try {
 }
 
 let mesh;
+let loading = false;
+let inView = true;
+let rafId = 0;
 let yaw = 0;
 let pitch = 0;
 let distance = 3;
@@ -52,8 +55,20 @@ function resize() {
   camera.updateProjectionMatrix();
 }
 
+// The render loop runs only while it has something to show: a piece is loaded
+// or loading, the canvas is actually on screen, and the tab is visible. A
+// failed viewer, a scrolled-away page and a background tab render nothing.
+function shouldRun() {
+  return Boolean(renderer) && (Boolean(mesh) || loading) && inView && document.visibilityState !== "hidden";
+}
+
+function wake() {
+  if (rafId === 0 && shouldRun()) rafId = requestAnimationFrame(frame);
+}
+
 function frame() {
-  if (!renderer) return;
+  rafId = 0;
+  if (!shouldRun()) return;
   resize();
   camera.position.set(
     Math.sin(yaw) * Math.cos(pitch) * distance,
@@ -62,7 +77,16 @@ function frame() {
   );
   camera.lookAt(0, 0, 0);
   renderer.render(scene, camera);
-  requestAnimationFrame(frame);
+  wake();
+}
+
+document.addEventListener("visibilitychange", wake);
+if (typeof IntersectionObserver === "function") {
+  new IntersectionObserver((entries) => {
+    const latest = entries[entries.length - 1];
+    inView = latest ? latest.isIntersecting : true;
+    wake();
+  }).observe(canvas);
 }
 
 canvas.addEventListener("pointerdown", (event) => {
@@ -92,7 +116,11 @@ canvas.addEventListener("keydown", (event) => {
   else return;
   event.preventDefault();
 });
+// A wheel gesture zooms only once the visitor has focused the viewer (click or
+// Tab) or pinches (ctrl+wheel). Otherwise it is left alone, so a page scroll
+// that happens to start over a small embedded viewer is not swallowed.
 canvas.addEventListener("wheel", (event) => {
+  if (!event.ctrlKey && document.activeElement !== canvas) return;
   event.preventDefault();
   distance = Math.max(0.4, Math.min(15, distance * Math.exp(event.deltaY * 0.001)));
 }, { passive: false });
@@ -104,6 +132,13 @@ window.resetSpatialView = () => {
 };
 
 const FILE_TYPES = new Set(["ply", "spz", "splat", "ksplat", "pcsogs", "pcsogszip", "rad"]);
+
+// Hosts may name the viewer for assistive technology in the visitor's language.
+function applyLabel(label) {
+  if (typeof label === "string" && label.length > 0 && label.length <= 200) {
+    canvas.setAttribute("aria-label", label);
+  }
+}
 
 /**
  * Applies the manifest `transform` so a piece opens upright and centred.
@@ -163,6 +198,8 @@ async function loadOne(url, transform, fileType) {
     mesh.dispose?.();
     mesh = undefined;
   }
+  loading = true;
+  wake();
   const options = { url };
   if (typeof fileType === "string" && FILE_TYPES.has(fileType)) options.fileType = fileType;
   const next = new SplatMesh(options);
@@ -181,23 +218,30 @@ async function loadOne(url, transform, fileType) {
 // Tries each route in order; the first that yields a splat wins.
 async function loadFirst(urls, transform, fileType) {
   if (!renderer) return;
-  status.textContent = "Loading spatial archive…";
+  status.textContent = "Loading spatial archiveâ€¦";
   status.hidden = false;
   let lastError;
   for (const url of urls) {
     try {
       await loadOne(url, transform, fileType);
+      loading = false;
       status.hidden = true;
+      wake();
       post("ready");
       return;
     } catch (error) {
       lastError = error;
     }
   }
+  loading = false;
   status.textContent = "This spatial archive could not be loaded.";
   post(`error:${String(lastError)}`);
 }
 
+// Native hosts (the app's WebView) call this directly, with a URL they chose
+// themselves, so it does not apply the web host's URL allow-list below. It is
+// reachable only by script already running in this page, which is the app's own
+// bundle; the web host never uses it and goes through the checked message path.
 window.loadSpatial = (url, transform, fileType) => loadFirst([url], transform, fileType);
 
 function allowedUrl(value) {
@@ -228,6 +272,7 @@ window.addEventListener("message", (event) => {
       post("error:url-not-allowed");
       return;
     }
+    applyLabel(command.label);
     void loadFirst(urls, command.transform, command.fileType);
   }
 });
@@ -235,11 +280,12 @@ window.addEventListener("message", (event) => {
 // Read-only diagnostics for the browser smoke test.
 window.__spatialDebug = () => ({
   hasMesh: Boolean(mesh),
+  running: rafId !== 0,
+  inView,
   matrix: mesh ? mesh.matrix.toArray() : null,
   yaw,
   pitch,
   distance,
 });
 
-frame();
 post("viewer-ready");
