@@ -73,6 +73,7 @@ class SharedPreferencesTelemetryEventQueue implements TelemetryEventQueue {
   final List<String> _encoded = [];
   int _dropped = 0;
   String? _scope;
+  // Queue scope key (stored actor and consent), not an identity source.
   String _currentScope(SharedPreferences prefs) =>
       '${prefs.getString('user_id') ?? 'guest'}:${prefs.getString(OptionalAnalyticsConsent.prefsKey)}';
   Future<void> _op = Future.value();
@@ -117,6 +118,7 @@ class SharedPreferencesTelemetryEventQueue implements TelemetryEventQueue {
           _encoded.clear();
           _scope = scope;
         }
+        // The queue scope's actor: an event tagged for another one is not kept.
         final actor = _prefs!.getString('user_id');
         if (event.actorUserId != actor) return;
         _encoded.add(event.toJsonString());

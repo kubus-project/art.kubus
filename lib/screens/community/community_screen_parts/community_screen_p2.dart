@@ -391,13 +391,11 @@ extension _CommunityScreenStatePart2 on _CommunityScreenState {
       onToggleLike: () => _toggleLike(index),
       onOpenComments: () => _toggleInlineComments(index),
       onRepost: () {
-        final walletProvider =
-            Provider.of<WalletProvider>(context, listen: false);
-        final currentWallet = walletProvider.currentWalletAddress;
         if (post.postType == 'repost' &&
-            post.isAuthoredBySession(
-              accountId: AccountIdentity.accountKey,
-              wallet: currentWallet,
+            Provider.of<ProfileProvider>(context, listen: false)
+                .isCurrentAccountActor(
+              accountId: post.authorUserId,
+              wallet: post.authorWallet,
             )) {
           _showRepostOptions(post);
         } else {

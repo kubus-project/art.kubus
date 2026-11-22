@@ -31,6 +31,7 @@ import '../../utils/profile_showcase_normalizer.dart';
 import '../../community/community_interactions.dart';
 import '../../providers/themeprovider.dart';
 import '../../providers/chat_provider.dart';
+import '../../providers/profile_provider.dart';
 import '../../providers/stats_provider.dart';
 import '../../providers/app_refresh_provider.dart';
 import '../../providers/artwork_provider.dart';
@@ -1274,7 +1275,8 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     // navigator variable no longer used; ConversationNavigator handles
     // navigation.
     final messenger = ScaffoldMessenger.of(context);
-    final chatAuth = chatProvider.isAuthenticated;
+    final chatAuth =
+        Provider.of<ProfileProvider>(context, listen: false).isSignedIn;
     try {
       final outcome = await chatProvider
           .createConversationOutcome('', false, [messageTarget]);

@@ -6,7 +6,7 @@ import 'package:flutter/foundation.dart';
 class WalletBackupStatusSnapshot {
   const WalletBackupStatusSnapshot({
     required this.walletAddress,
-    required this.hasAccountSession,
+    required this.isSignedIn,
     required this.hasWalletIdentity,
     required this.hasSigner,
     required this.isReadOnlySession,
@@ -18,7 +18,7 @@ class WalletBackupStatusSnapshot {
 
   const WalletBackupStatusSnapshot.noWallet()
       : walletAddress = null,
-        hasAccountSession = false,
+        isSignedIn = false,
         hasWalletIdentity = false,
         hasSigner = false,
         isReadOnlySession = false,
@@ -28,7 +28,10 @@ class WalletBackupStatusSnapshot {
         encryptedBackupStatusKnown = true;
 
   final String? walletAddress;
-  final bool hasAccountSession;
+
+  /// Whether an account is signed in: the profile provider's answer, passed
+  /// in. A device with no wallet reads as "account only" by it.
+  final bool isSignedIn;
   final bool hasWalletIdentity;
   final bool hasSigner;
   final bool isReadOnlySession;
@@ -44,7 +47,7 @@ class WalletBackupStatusSnapshot {
 
   _WalletBackupStatusKind get _statusKind {
     if (!hasWalletIdentity) {
-      if (hasAccountSession) {
+      if (isSignedIn) {
         return _WalletBackupStatusKind.accountShellOnly;
       }
       return _WalletBackupStatusKind.noWallet;
@@ -145,6 +148,7 @@ enum _WalletBackupStatusKind {
 class WalletBackupStatusResolver {
   static Future<WalletBackupStatusSnapshot> resolve({
     required WalletProvider walletProvider,
+    required bool isSignedIn,
     String? walletAddress,
     bool refreshRemote = true,
   }) async {
@@ -192,7 +196,7 @@ class WalletBackupStatusResolver {
 
     return WalletBackupStatusSnapshot(
       walletAddress: resolvedWallet.isEmpty ? null : resolvedWallet,
-      hasAccountSession: walletProvider.authority.hasAccountSession,
+      isSignedIn: isSignedIn,
       hasWalletIdentity: hasWalletIdentity,
       hasSigner: walletProvider.hasSigner,
       isReadOnlySession: walletProvider.isReadOnlySession,

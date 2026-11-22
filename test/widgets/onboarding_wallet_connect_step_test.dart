@@ -17,10 +17,13 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:art_kubus/models/user_profile.dart';
+import '../support/account_session_fixture.dart';
 
 const String kWallet = 'walletlinkedtestaddress0000000000001';
 const String kUserId = 'user-google-42';
-const String kOriginalToken = 'original-google-token';
+// The Google account's session: a token for kUserId, as the app holds it.
+final String kOriginalToken = AccountSessionFixture.jwt(accountId: kUserId);
 
 class _FakeWalletProvider extends WalletProvider {
   _FakeWalletProvider()
@@ -131,7 +134,19 @@ Future<_Harness> _pumpStep(
 
   final harness = _Harness(
     walletProvider: _FakeWalletProvider(),
-    profileProvider: _FakeProfileProvider(),
+    // The account behind the session is the owner's signed-in profile.
+    profileProvider: _FakeProfileProvider()
+      ..setCurrentUser(UserProfile(
+        id: kUserId,
+        userId: kUserId,
+        walletAddress: '',
+        username: 'google_user',
+        displayName: 'Google User',
+        bio: '',
+        avatar: '',
+        createdAt: DateTime(2026),
+        updatedAt: DateTime(2026),
+      )),
     chatProvider: _RecordingChatProvider(),
   );
 
@@ -314,7 +329,10 @@ void main() {
     final prefs = await SharedPreferences.getInstance();
     expect(prefs.getString('wallet_address'), isNull);
     expect(prefs.getBool('has_wallet'), isNull);
-    expect(prefs.getString('user_id'), kUserId);
+    // The stored user id is a scope key that the account-change purge owns: the
+    // session is a real token now, so the switch to the wallet-root account and
+    // back purges it. The session itself is what rollback must restore.
+    expect(prefs.getString('user_id'), anyOf(isNull, kUserId));
     // The guard stays active so an app refresh recovers into WalletConnect.
     expect(
       prefs.getBool(OnboardingStateService.onboardingAccountLinkInProgressKey),

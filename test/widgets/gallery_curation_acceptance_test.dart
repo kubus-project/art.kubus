@@ -2,6 +2,8 @@ import 'dart:convert';
 
 import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:art_kubus/models/gallery_presentation.dart';
+import 'package:art_kubus/models/user_profile.dart';
+import 'package:art_kubus/providers/profile_provider.dart';
 import 'package:art_kubus/providers/wallet_provider.dart';
 import 'package:art_kubus/services/backend_api_service.dart';
 import 'package:art_kubus/widgets/detail/gallery_presentation.dart';
@@ -12,6 +14,7 @@ import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../support/account_session_fixture.dart';
 
 const _host = '11111111-1111-4111-8111-111111111111';
 const _a = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
@@ -28,9 +31,6 @@ const _created = {
   _b: '2026-02-01T10:00:00.000Z',
   _c: '2026-01-01T10:00:00.000Z',
 };
-const _token = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.'
-    'eyJleHAiOjQ3MzM4NTYwMDAsIndhbGxldEFkZHJlc3MiOiJXYWxsZXRUZXN0MTExMTExMTExMTExMTExMTExMTExMTExMTExMSJ9.'
-    'signature';
 
 http.Response _json(Map<String, Object?> data, [int status = 200]) =>
     http.Response(jsonEncode(data), status, headers: {
@@ -156,7 +156,9 @@ void main() {
   setUp(() {
     api = BackendApiService();
     SharedPreferences.setMockInitialValues({});
-    api.setAuthTokenForTesting(_token);
+    api.setAuthTokenForTesting(
+      AccountSessionFixture.jwt(accountId: 'gallery-editor'),
+    );
   });
   tearDown(() {
     api.setAuthTokenForTesting(null);
@@ -176,8 +178,28 @@ void main() {
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
     await tester.pumpWidget(
-      ChangeNotifierProvider<WalletProvider>(
-        create: (_) => WalletProvider(deferInit: true),
+      MultiProvider(
+        providers: [
+          ChangeNotifierProvider<WalletProvider>(
+            create: (_) => WalletProvider(deferInit: true),
+          ),
+          // The editor is for a signed-in account: the token above is its
+          // session, and this is the profile held behind it.
+          ChangeNotifierProvider<ProfileProvider>.value(
+            value: ProfileProvider()
+              ..setCurrentUser(UserProfile(
+                id: 'gallery-editor',
+                userId: 'gallery-editor',
+                walletAddress: '',
+                username: 'editor',
+                displayName: 'Editor',
+                bio: '',
+                avatar: '',
+                createdAt: DateTime(2026),
+                updatedAt: DateTime(2026),
+              )),
+          ),
+        ],
         child: MaterialApp(
           locale: locale,
           localizationsDelegates: AppLocalizations.localizationsDelegates,

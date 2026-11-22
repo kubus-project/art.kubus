@@ -1,8 +1,10 @@
 import 'package:art_kubus/l10n/app_localizations.dart';
+import 'package:art_kubus/providers/profile_provider.dart';
 import 'package:art_kubus/providers/wallet_provider.dart';
 import 'package:art_kubus/services/backend_api_service.dart';
 import 'package:art_kubus/utils/design_tokens.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'common/kubus_flat_panel.dart';
 
 class WalletCustodyStatusPanel extends StatelessWidget {
@@ -23,7 +25,11 @@ class WalletCustodyStatusPanel extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final scheme = Theme.of(context).colorScheme;
-    final stateColor = _stateColor(scheme);
+    // Who is signed in, and how, is the profile provider's answer. The wallet
+    // authority describes the wallet only.
+    final account = context.watch<ProfileProvider>();
+    final isSignedIn = account.isSignedIn;
+    final stateColor = _stateColor(scheme, isSignedIn: isSignedIn);
 
     return KubusFlatPanel(
       padding: EdgeInsets.all(compact ? KubusSpacing.md : KubusSpacing.lg),
@@ -45,8 +51,8 @@ class WalletCustodyStatusPanel extends StatelessWidget {
           Align(
             alignment: Alignment.centerLeft,
             child: WalletStatusChip(
-              label: _stateLabel(l10n),
-              icon: _stateIcon(),
+              label: _stateLabel(l10n, isSignedIn: isSignedIn),
+              icon: _stateIcon(isSignedIn: isSignedIn),
               color: stateColor,
             ),
           ),
@@ -60,7 +66,7 @@ class WalletCustodyStatusPanel extends StatelessWidget {
           _WalletStatusRow(
             icon: Icons.login_outlined,
             label: l10n.walletSecuritySignInMethodLabel,
-            value: _signInMethodLabel(l10n),
+            value: _signInMethodLabel(l10n, account),
           ),
           _WalletStatusRow(
             icon: Icons.account_balance_wallet_outlined,
@@ -144,7 +150,7 @@ class WalletCustodyStatusPanel extends StatelessWidget {
       (authority.canRestoreFromEncryptedBackup && onRestoreSigner != null) ||
       (!authority.canTransact && onConnectExternalWallet != null);
 
-  Color _stateColor(ColorScheme scheme) {
+  Color _stateColor(ColorScheme scheme, {required bool isSignedIn}) {
     switch (authority.state) {
       case WalletAuthorityState.localSignerReady:
       case WalletAuthorityState.externalWalletReady:
@@ -154,14 +160,12 @@ class WalletCustodyStatusPanel extends StatelessWidget {
       case WalletAuthorityState.encryptedBackupAvailableSignerMissing:
       case WalletAuthorityState.walletReadOnly:
         return scheme.primary;
-      case WalletAuthorityState.accountShellOnly:
-        return scheme.secondary;
-      case WalletAuthorityState.signedOut:
-        return scheme.outline;
+      case WalletAuthorityState.noWallet:
+        return isSignedIn ? scheme.secondary : scheme.outline;
     }
   }
 
-  IconData _stateIcon() {
+  IconData _stateIcon({required bool isSignedIn}) {
     switch (authority.state) {
       case WalletAuthorityState.localSignerReady:
         return Icons.key_outlined;
@@ -173,19 +177,17 @@ class WalletCustodyStatusPanel extends StatelessWidget {
         return Icons.warning_amber_rounded;
       case WalletAuthorityState.walletReadOnly:
         return Icons.visibility_outlined;
-      case WalletAuthorityState.accountShellOnly:
-        return Icons.person_outline;
-      case WalletAuthorityState.signedOut:
-        return Icons.logout_outlined;
+      case WalletAuthorityState.noWallet:
+        return isSignedIn ? Icons.person_outline : Icons.logout_outlined;
     }
   }
 
-  String _stateLabel(AppLocalizations l10n) {
+  String _stateLabel(AppLocalizations l10n, {required bool isSignedIn}) {
     switch (authority.state) {
-      case WalletAuthorityState.signedOut:
-        return l10n.walletSessionAccountSignedOut;
-      case WalletAuthorityState.accountShellOnly:
-        return l10n.walletSessionStateAccountShellOnly;
+      case WalletAuthorityState.noWallet:
+        return isSignedIn
+            ? l10n.walletSessionStateAccountShellOnly
+            : l10n.walletSessionAccountSignedOut;
       case WalletAuthorityState.walletReadOnly:
         return l10n.walletSessionStateWalletReadOnly;
       case WalletAuthorityState.localSignerReady:
@@ -199,22 +201,19 @@ class WalletCustodyStatusPanel extends StatelessWidget {
     }
   }
 
-  String _signInMethodLabel(AppLocalizations l10n) {
-    if (!authority.accountSignedIn) {
+  String _signInMethodLabel(AppLocalizations l10n, ProfileProvider account) {
+    if (!account.isSignedIn) {
       return l10n.walletSecuritySignedOutMethod;
     }
-    switch (authority.signInMethod) {
+    final email = account.accountEmail?.trim() ?? '';
+    switch (account.accountSignInMethod) {
       case AuthSignInMethod.email:
-        return authority.accountEmail?.trim().isNotEmpty == true
-            ? l10n.walletSecuritySignInMethodEmailWithAddress(
-                authority.accountEmail!.trim(),
-              )
+        return email.isNotEmpty
+            ? l10n.walletSecuritySignInMethodEmailWithAddress(email)
             : l10n.walletSecuritySignInMethodEmail;
       case AuthSignInMethod.google:
-        return authority.accountEmail?.trim().isNotEmpty == true
-            ? l10n.walletSecuritySignInMethodGoogleWithAddress(
-                authority.accountEmail!.trim(),
-              )
+        return email.isNotEmpty
+            ? l10n.walletSecuritySignInMethodGoogleWithAddress(email)
             : l10n.walletSecuritySignInMethodGoogle;
       case AuthSignInMethod.wallet:
         return l10n.walletSecuritySignInMethodWallet;

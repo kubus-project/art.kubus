@@ -8,6 +8,7 @@ import 'package:provider/provider.dart';
 
 import '../../config/config.dart';
 import '../../l10n/app_localizations.dart';
+import '../../providers/profile_provider.dart';
 import '../../providers/security_gate_provider.dart';
 import '../../providers/wallet_provider.dart';
 import '../../screens/desktop/desktop_shell_scope.dart';
@@ -108,6 +109,7 @@ class _SecurityHubViewState extends State<SecurityHubView> {
 
   Future<void> _refresh() async {
     final walletProvider = context.read<WalletProvider>();
+    final isSignedIn = context.read<ProfileProvider>().isSignedIn;
     final gate = context.read<SecurityGateProvider>();
     final l10n = AppLocalizations.of(context)!;
     String? statusError;
@@ -150,8 +152,7 @@ class _SecurityHubViewState extends State<SecurityHubView> {
       statusError ??= l10n.securityHubWalletSecurityStatusRefreshFailed;
     }
 
-    if (_passkeyProtectionService.isAvailable &&
-        walletProvider.authority.hasAccountSession) {
+    if (_passkeyProtectionService.isAvailable && isSignedIn) {
       try {
         accountPasskeyStatus = await _passkeyProtectionService
             .getAccountStatus(BackendApiService())
@@ -1029,8 +1030,9 @@ class _SecurityHubViewState extends State<SecurityHubView> {
 
   String _walletAccessLabel(
     WalletAuthoritySnapshot authority,
-    AppLocalizations l10n,
-  ) {
+    AppLocalizations l10n, {
+    required bool isSignedIn,
+  }) {
     return switch (authority.state) {
       WalletAuthorityState.localSignerReady => l10n.securityHubLocalSignerReady,
       WalletAuthorityState.externalWalletReady =>
@@ -1038,10 +1040,11 @@ class _SecurityHubViewState extends State<SecurityHubView> {
       WalletAuthorityState.encryptedBackupAvailableSignerMissing =>
         l10n.securityHubRecoveryAvailable,
       WalletAuthorityState.walletReadOnly => l10n.securityHubStatusReadOnly,
-      WalletAuthorityState.accountShellOnly => l10n.securityHubAccountOnly,
+      WalletAuthorityState.noWallet => isSignedIn
+          ? l10n.securityHubAccountOnly
+          : l10n.walletSecuritySignedOutMethod,
       WalletAuthorityState.recoveryNeeded =>
         l10n.walletSessionStateRecoveryNeeded,
-      WalletAuthorityState.signedOut => l10n.walletSecuritySignedOutMethod,
     };
   }
 
@@ -1064,7 +1067,11 @@ class _SecurityHubViewState extends State<SecurityHubView> {
       ),
       SecuritySummaryCard(
         title: l10n.securityHubWalletAccess,
-        value: _walletAccessLabel(authority, l10n),
+        value: _walletAccessLabel(
+          authority,
+          l10n,
+          isSignedIn: context.watch<ProfileProvider>().isSignedIn,
+        ),
         detail: authority.externalWalletConnected
             ? authority.externalWalletName ??
                 l10n.securityHubExternalSignerConnected
@@ -1195,8 +1202,8 @@ class _SecurityHubViewState extends State<SecurityHubView> {
         ? walletProvider.encryptedWalletBackupPasskeys
         : const <WalletBackupPasskeyDefinition>[];
     final accountPasskeys = _accountPasskeyStatus.passkeys;
-    final passkeyEnabled =
-        _passkeyProtectionService.isAvailable && authority.hasAccountSession;
+    final passkeyEnabled = _passkeyProtectionService.isAvailable &&
+        context.watch<ProfileProvider>().isSignedIn;
     final needsSignerRestore = authority.canRestoreFromEncryptedBackup;
 
     final rows = <Widget>[
@@ -1284,7 +1291,11 @@ class _SecurityHubViewState extends State<SecurityHubView> {
             : null,
         icon: Icons.verified_user_outlined,
         status: _walletAccessStatus(authority),
-        statusLabel: _walletAccessLabel(authority, l10n),
+        statusLabel: _walletAccessLabel(
+          authority,
+          l10n,
+          isSignedIn: context.watch<ProfileProvider>().isSignedIn,
+        ),
         actions: needsSignerRestore
             ? [
                 SecurityMethodAction(

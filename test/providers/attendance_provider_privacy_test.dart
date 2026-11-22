@@ -2,6 +2,9 @@ import 'package:art_kubus/providers/attendance_provider.dart';
 import 'package:art_kubus/services/backend_api_service.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import '../support/account_session_fixture.dart';
+import '../support/signed_in_profile.dart';
+
 class _AttendanceApi implements BackendApiService {
   Map<String, dynamic>? location;
   int confirms = 0;
@@ -44,6 +47,8 @@ class _AttendanceApi implements BackendApiService {
 }
 
 void main() {
+  tearDown(AccountSessionFixture.end);
+
   test('optional proximity still requires account authentication', () async {
     final api = _AttendanceApi();
     final provider = AttendanceProvider(api: api)
@@ -65,7 +70,9 @@ void main() {
   test('optional proximity cannot bypass a rejected challenge', () async {
     final api = _AttendanceApi()..rejectChallenge = true;
     final provider = AttendanceProvider(api: api)
-      ..bindAuthContext(isSignedIn: true, walletAddress: null)
+      ..bindAuthContext(
+          identityOwner: signedInProfile(accountId: 'synthetic-account'),
+          walletAddress: null)
       ..updateProximity(
         markerId: 'synthetic-marker',
         lat: 1,
@@ -87,7 +94,9 @@ void main() {
         () async {
       final api = _AttendanceApi();
       final provider = AttendanceProvider(api: api)
-        ..bindAuthContext(isSignedIn: true, walletAddress: null)
+        ..bindAuthContext(
+            identityOwner: signedInProfile(accountId: 'synthetic-account'),
+            walletAddress: null)
         ..updateProximity(
           markerId: 'synthetic-marker',
           lat: 1.25,
@@ -124,7 +133,9 @@ void main() {
       () async {
     final api = _AttendanceApi();
     final provider = AttendanceProvider(api: api)
-      ..bindAuthContext(isSignedIn: true, walletAddress: null)
+      ..bindAuthContext(
+          identityOwner: signedInProfile(accountId: 'synthetic-account'),
+          walletAddress: null)
       ..updateProximity(
           markerId: 'synthetic-marker',
           lat: 1,

@@ -5,6 +5,7 @@ import 'package:art_kubus/providers/profile_provider.dart';
 import 'package:art_kubus/utils/map_marker_subject_loader.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../support/account_session_fixture.dart';
 
 const _institutionWallet = 'LoaderInstitutionWallet11111111111111111111';
 
@@ -30,6 +31,13 @@ Institution _institution(String id) => Institution(
     );
 
 void main() {
+  // A signed-in surface has a live session behind its held profile.
+  setUp(() => AccountSessionFixture.start(
+        accountId: 'loader-account',
+        wallet: _institutionWallet,
+      ));
+  tearDown(AccountSessionFixture.end);
+
   setUp(() {
     SharedPreferences.setMockInitialValues(<String, Object>{});
   });

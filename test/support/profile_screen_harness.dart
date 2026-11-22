@@ -40,6 +40,7 @@ import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:provider/provider.dart';
 
+import 'account_session_fixture.dart';
 import 'profile_fixtures.dart';
 
 /// Models a profile backend that predates the gallery routes.
@@ -150,9 +151,14 @@ Future<void> pumpProfileSurface(
       surface == ProfileSurface.desktopOwner ||
       surface == ProfileSurface.desktopOwnerInShell ||
       viewerIsSubject) {
-    profileProvider.setCurrentUser(
-      _ownerProfileFrom(resolvedUser, walletless: ownerWalletless),
+    final owner = _ownerProfileFrom(resolvedUser, walletless: ownerWalletless);
+    // The owner is signed in: a live session behind the held profile.
+    AccountSessionFixture.start(
+      accountId: owner.userId ?? owner.id,
+      wallet: owner.walletAddress,
     );
+    addTearDown(AccountSessionFixture.end);
+    profileProvider.setCurrentUser(owner);
   }
 
   final child = _surfaceWidget(

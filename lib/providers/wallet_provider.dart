@@ -53,9 +53,11 @@ enum WalletAccountLinkPhase {
   failed,
 }
 
+/// What this device can do with a wallet. Wallet facts only: who is signed in
+/// is the profile provider's answer, never this one's, so "no wallet" is a
+/// single state here and callers that word it differently ask the owner.
 enum WalletAuthorityState {
-  signedOut,
-  accountShellOnly,
+  noWallet,
   walletReadOnly,
   localSignerReady,
   externalWalletReady,
@@ -73,9 +75,6 @@ class WalletAuthoritySnapshot {
   const WalletAuthoritySnapshot({
     required this.state,
     required this.signerSource,
-    required this.accountSignedIn,
-    required this.signInMethod,
-    required this.accountEmail,
     this.accountRole = 'user',
     required this.walletAddress,
     required this.hasLocalSigner,
@@ -91,9 +90,9 @@ class WalletAuthoritySnapshot {
 
   final WalletAuthorityState state;
   final WalletSignerSource signerSource;
-  final bool accountSignedIn;
-  final AuthSignInMethod signInMethod;
-  final String? accountEmail;
+
+  /// A claim of the live credential, read for capability checks (admin,
+  /// moderator). Not identity, and not a signed-in answer.
   final String accountRole;
   final String? walletAddress;
   final bool hasLocalSigner;
@@ -107,7 +106,6 @@ class WalletAuthoritySnapshot {
   final bool recoveryNeeded;
 
   bool get hasWalletIdentity => (walletAddress ?? '').trim().isNotEmpty;
-  bool get hasAccountSession => accountSignedIn;
   bool get canReadWallet => hasWalletIdentity;
   bool get canTransact =>
       hasWalletIdentity && (hasLocalSigner || hasExternalSigner);
@@ -229,25 +227,16 @@ class WalletProvider extends ChangeNotifier {
   String? _encryptedWalletBackupError;
   bool _encryptedWalletBackupStatusKnown = false;
   bool _mnemonicBackupRequiredForAuthority = false;
-  bool _accountSignedIn = false;
-  AuthSignInMethod _accountSignInMethod = AuthSignInMethod.unknown;
-  String? _accountEmail;
   String? _externalSignerAddress;
   String? _externalSignerName;
   BackendWalletFeeSplitterConfigDto? _walletFeeSplitterConfigCache;
   DateTime? _walletFeeSplitterConfigFetchedAt;
   static const Duration _walletFeeSplitterConfigCacheTtl = Duration(minutes: 5);
 
-  // Backend supplemental data
-  Map<String, dynamic>? _backendProfile;
-  int _collectionsCount = 0;
-  int _achievementsUnlocked = 0;
+  // Wallet-side reward figure from the stats snapshot. Account profile and
+  // counters are not kept here: the profile provider owns them.
   double _achievementTokenTotal = 0.0; // totalTokens from achievement stats
 
-  // Backend supplemental getters
-  Map<String, dynamic>? get backendProfile => _backendProfile;
-  int get collectionsCount => _collectionsCount;
-  int get achievementsUnlocked => _achievementsUnlocked;
   double get achievementTokenTotal => _achievementTokenTotal;
   WalletSessionPhase get sessionPhase => _sessionPhase;
   WalletAccountLinkPhase get accountLinkPhase => _accountLinkPhase;
@@ -312,22 +301,6 @@ class WalletProvider extends ChangeNotifier {
     }();
 
     return completer.future;
-  }
-
-  @visibleForTesting
-  void seedAccountSessionForTesting({
-    required String email,
-    required Map<String, dynamic> backendProfile,
-    int collectionsCount = 0,
-    int achievementsUnlocked = 0,
-  }) {
-    _resetAccountWalletLinkPhase();
-    _accountSignedIn = true;
-    _accountEmail = email;
-    _backendProfile = backendProfile;
-    _collectionsCount = collectionsCount;
-    _achievementsUnlocked = achievementsUnlocked;
-    notifyListeners();
   }
 
   @visibleForTesting
@@ -933,9 +906,6 @@ class WalletProvider extends ChangeNotifier {
   String? get currentWalletAddress => _currentWalletAddress;
   bool get hasWalletIdentity =>
       _currentWalletAddress != null && _currentWalletAddress!.isNotEmpty;
-  bool get accountSignedIn => authority.accountSignedIn;
-  AuthSignInMethod get accountSignInMethod => authority.signInMethod;
-  String? get accountEmail => authority.accountEmail;
   bool get hasLocalSigner => _localSignerMatchesCurrentWallet;
   bool get hasExternalSigner => _externalSignerMatchesCurrentWallet;
   bool get hasSigner => hasLocalSigner || hasExternalSigner;
@@ -985,8 +955,6 @@ class WalletProvider extends ChangeNotifier {
   }
 
   WalletAuthoritySnapshot get authority {
-    final tokenPresent = (_apiService.getAuthToken() ?? '').trim().isNotEmpty;
-    final accountSignedIn = _accountSignedIn || tokenPresent;
     final hasWallet = hasWalletIdentity;
     final localReady = _localSignerMatchesCurrentWallet;
     final externalReady = _externalSignerMatchesCurrentWallet;
@@ -1014,10 +982,8 @@ class WalletProvider extends ChangeNotifier {
       state = WalletAuthorityState.recoveryNeeded;
     } else if (hasWallet) {
       state = WalletAuthorityState.walletReadOnly;
-    } else if (accountSignedIn) {
-      state = WalletAuthorityState.accountShellOnly;
     } else {
-      state = WalletAuthorityState.signedOut;
+      state = WalletAuthorityState.noWallet;
     }
 
     return WalletAuthoritySnapshot(
@@ -1027,9 +993,6 @@ class WalletProvider extends ChangeNotifier {
           : externalReady
               ? WalletSignerSource.external
               : WalletSignerSource.none,
-      accountSignedIn: accountSignedIn,
-      signInMethod: _accountSignInMethod,
-      accountEmail: _accountEmail,
       accountRole: accountRole.isEmpty ? 'user' : accountRole,
       walletAddress: _currentWalletAddress,
       hasLocalSigner: localReady,
@@ -2063,10 +2026,6 @@ class WalletProvider extends ChangeNotifier {
     final restored = await _apiService.session.restoreStoredSession(
       allowRefresh: allowRefresh,
     );
-    _accountSignedIn = restored.hasBackendSession;
-    _accountSignInMethod = restored.signInMethod;
-    _accountEmail = restored.email;
-
     final accountWallet = (restored.walletAddress ?? '').trim();
     if (accountWallet.isNotEmpty) {
       await setReadOnlyWalletIdentity(
@@ -2077,7 +2036,7 @@ class WalletProvider extends ChangeNotifier {
     } else {
       notifyListeners();
     }
-    return _accountSignedIn;
+    return restored.hasBackendSession;
   }
 
   Future<void> clearAccountShell() async {
@@ -2087,9 +2046,6 @@ class WalletProvider extends ChangeNotifier {
 
   void _clearAccountShellState() {
     _resetAccountWalletLinkPhase();
-    _accountSignedIn = false;
-    _accountSignInMethod = AuthSignInMethod.unknown;
-    _accountEmail = null;
   }
 
   /// Commits a wallet identity that has ALREADY been verified as linked to
@@ -2757,26 +2713,17 @@ class WalletProvider extends ChangeNotifier {
     // that replaced it.
     if (_isStaleAuthEpoch(sessionEpoch, forWallet: address)) return false;
     try {
-      // Profile fetch or create
+      // Profile bootstrap only: warm the user cache and register a wallet that
+      // has no profile yet. The account's profile itself is held by the
+      // profile provider, not copied here.
       try {
         // Request fresh profile when syncing backend data for connected wallet
         final user = await UserService.getUserById(address, forceRefresh: true);
         if (sessionEnded()) return false;
-        if (user != null) {
-          _backendProfile = {
-            'walletAddress': user.id,
-            'username': user.username.replaceFirst('@', ''),
-            'displayName': user.name,
-            'bio': user.bio,
-            'avatar': user.profileImageUrl,
-            'isVerified': user.isVerified,
-            'createdAt': null,
-          };
-        } else {
+        if (user == null) {
           try {
-            final profile = await _apiService.getProfileByWallet(address);
+            await _apiService.getProfileByWallet(address);
             if (sessionEnded()) return false;
-            _backendProfile = profile;
           } catch (e) {
             if (sessionEnded()) return false;
             if (e.toString().contains('Profile not found')) {
@@ -2788,24 +2735,11 @@ class WalletProvider extends ChangeNotifier {
                 _walletLog('_syncBackendData: registerWallet response: $reg');
                 if (sessionEnded()) return false;
                 try {
-                  final profile = await _apiService.getProfileByWallet(address);
+                  await _apiService.getProfileByWallet(address);
                   if (sessionEnded()) return false;
-                  _backendProfile = profile;
                 } catch (_) {
-                  final user2 = await UserService.getUserById(address,
-                      forceRefresh: true);
+                  await UserService.getUserById(address, forceRefresh: true);
                   if (sessionEnded()) return false;
-                  if (user2 != null) {
-                    _backendProfile = {
-                      'walletAddress': user2.id,
-                      'username': user2.username.replaceFirst('@', ''),
-                      'displayName': user2.name,
-                      'bio': user2.bio,
-                      'avatar': user2.profileImageUrl,
-                      'isVerified': user2.isVerified,
-                      'createdAt': null,
-                    };
-                  }
                 }
               } catch (regErr) {
                 _walletLog('_syncBackendData: registerWallet failed: $regErr');
@@ -2819,21 +2753,15 @@ class WalletProvider extends ChangeNotifier {
         _walletLog('_syncBackendData: profile lookup failed: $e');
       }
 
-      // Canonical user snapshot (collections + achievement stats)
+      // Canonical user snapshot (achievement token total)
       try {
         final snapshot = await StatsApiService(api: _apiService).fetchSnapshot(
           entityType: 'user',
           entityId: address,
-          metrics: const [
-            'collections',
-            'achievementsUnlocked',
-            'achievementTokensTotal'
-          ],
+          metrics: const ['achievementTokensTotal'],
           scope: 'public',
         );
         if (sessionEnded()) return false;
-        _collectionsCount = snapshot.counters['collections'] ?? 0;
-        _achievementsUnlocked = snapshot.counters['achievementsUnlocked'] ?? 0;
         _achievementTokenTotal =
             (snapshot.counters['achievementTokensTotal'] ?? 0).toDouble();
       } catch (e) {
@@ -4426,16 +4354,13 @@ class WalletProvider extends ChangeNotifier {
     );
   }
 
-  /// Drops everything in memory that belongs to the signed-in ACCOUNT (backend
-  /// profile, token/transaction lists, collection and achievement counters).
+  /// Drops everything in memory that belongs to the signed-in ACCOUNT
+  /// (token/transaction lists and the achievement token total).
   /// Shared by [disconnectWallet] and [clearAccountSessionKeepWallet] so the two
   /// cannot drift.
   void _clearAccountData() {
     _tokens.clear();
     _transactions.clear();
-    _backendProfile = null;
-    _collectionsCount = 0;
-    _achievementsUnlocked = 0;
     _achievementTokenTotal = 0.0;
   }
 

@@ -44,8 +44,15 @@ abstract final class AccountIdentity {
     'event_registrations_v1_',
   ];
 
-  /// The stable id of the signed-in account, or empty for a guest.
+  /// The session's account id, kept only as a cache and storage scope key (and
+  /// to detect a change of account). It is not an identity source: who is
+  /// signed in, and whether a record is "mine", is answered by ProfileProvider.
   static String _accountKey = '';
+
+  /// Listeners told when a session starts (no session before, an account now).
+  /// The owner of identity needs this one: a start announces nothing through
+  /// [notifyChanged] because no previous identity was cleared.
+  static final List<VoidCallback> _sessionStartListeners = <VoidCallback>[];
 
   /// Shared best-effort cleanup of legacy records with no trustworthy owner.
   static Future<void>? _legacyAdoption;
@@ -53,15 +60,45 @@ abstract final class AccountIdentity {
   @visibleForTesting
   static int get listenerCount => _listeners.length;
 
-  /// The signed-in account's stable id, or empty for a guest.
+  /// Cache and storage scope key of the session's account, or empty for a
+  /// guest. Session plumbing only: never read it to decide what to display or
+  /// who owns something (ask ProfileProvider).
   static String get accountKey => _accountKey;
 
   /// Records which account the session belongs to. Does not announce a change;
   /// the caller that ends or switches a session calls [notifyChanged] too.
+  ///
+  /// A key that appears where there was none is a session start. It is announced
+  /// to the start listeners, synchronously, whichever path set the token
+  /// (a fresh sign-in, or the stored credential restored at launch).
   static void setAccountKey(String key) {
+    final previous = _accountKey;
     _accountKey = key.trim();
     AccountCacheStore.bindAccount(_accountKey);
     if (_accountKey.isNotEmpty) unawaited(adoptLegacyRecords(_accountKey));
+    if (previous.isEmpty && _accountKey.isNotEmpty) _notifySessionStarted();
+  }
+
+  static void addSessionStartListener(VoidCallback listener) {
+    if (!_sessionStartListeners.contains(listener)) {
+      _sessionStartListeners.add(listener);
+    }
+  }
+
+  static void removeSessionStartListener(VoidCallback listener) {
+    _sessionStartListeners.remove(listener);
+  }
+
+  static void _notifySessionStarted() {
+    for (final listener in List<VoidCallback>.of(_sessionStartListeners)) {
+      try {
+        listener();
+      } catch (e) {
+        if (kDebugMode) {
+          debugPrint('AccountIdentity: session-start listener failed: $e');
+        }
+      }
+    }
   }
 
   /// A preference key for [base] that belongs to one account. Null for a guest,

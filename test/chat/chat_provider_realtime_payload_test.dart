@@ -2,6 +2,9 @@ import 'package:art_kubus/models/conversation.dart';
 import 'package:art_kubus/providers/chat_provider.dart';
 import 'package:art_kubus/services/account_identity.dart';
 import 'package:flutter_test/flutter_test.dart';
+
+import '../support/account_session_fixture.dart';
+import '../support/signed_in_profile.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 const String _conversationId = 'a0840000-0000-4000-8000-0000000000c1';
@@ -230,8 +233,9 @@ void main() {
     });
 
     test('an own echo whose account id differs only in case is not unread', () {
-      AccountIdentity.setAccountKey(accountA);
-      final provider = ChatProvider();
+      addTearDown(AccountSessionFixture.end);
+      final provider = ChatProvider()
+        ..setIdentityOwnerForTesting(signedInProfile(accountId: accountA));
       provider.setCurrentWalletForTesting(_selfWallet);
 
       provider.handleIncomingMessageForTesting(<String, dynamic>{

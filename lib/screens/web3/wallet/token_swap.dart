@@ -98,7 +98,13 @@ class _TokenSwapState extends State<TokenSwap> {
     final walletProvider = context.watch<WalletProvider>();
     final authority = walletProvider.authority;
     if (!authority.canTransact) {
-      return _buildAuthorityState(theme, swapColor, l10n, authority);
+      return _buildAuthorityState(
+        theme,
+        swapColor,
+        l10n,
+        authority,
+        isSignedIn: context.watch<ProfileProvider>().isSignedIn,
+      );
     }
     final tokens = _availableTokens(walletProvider);
     final hasTokens = tokens.isNotEmpty;
@@ -200,12 +206,14 @@ class _TokenSwapState extends State<TokenSwap> {
     ThemeData theme,
     Color swapColor,
     AppLocalizations l10n,
-    WalletAuthoritySnapshot authority,
-  ) {
+    WalletAuthoritySnapshot authority, {
+    required bool isSignedIn,
+  }) {
     final canRestore = authority.canRestoreFromEncryptedBackup;
     final title = switch (authority.state) {
-      WalletAuthorityState.signedOut => l10n.walletHomeSignedOutTitle,
-      WalletAuthorityState.accountShellOnly => l10n.walletHomeAccountShellTitle,
+      WalletAuthorityState.noWallet => isSignedIn
+          ? l10n.walletHomeAccountShellTitle
+          : l10n.walletHomeSignedOutTitle,
       WalletAuthorityState.walletReadOnly =>
         l10n.walletSessionStateWalletReadOnly,
       WalletAuthorityState.localSignerReady =>
@@ -218,9 +226,9 @@ class _TokenSwapState extends State<TokenSwap> {
         l10n.walletSessionStateRecoveryNeeded,
     };
     final body = switch (authority.state) {
-      WalletAuthorityState.signedOut => l10n.walletActionSignInRequiredToast,
-      WalletAuthorityState.accountShellOnly =>
-        l10n.walletActionAccountShellNeedsWalletToast,
+      WalletAuthorityState.noWallet => isSignedIn
+          ? l10n.walletActionAccountShellNeedsWalletToast
+          : l10n.walletActionSignInRequiredToast,
       WalletAuthorityState.walletReadOnly =>
         l10n.walletActionReadOnlyReconnectToast,
       WalletAuthorityState.localSignerReady =>
@@ -311,7 +319,8 @@ class _TokenSwapState extends State<TokenSwap> {
                   child: Text(
                     canRestore
                         ? l10n.commonReconnect
-                        : authority.state == WalletAuthorityState.signedOut
+                        : !isSignedIn &&
+                                authority.state == WalletAuthorityState.noWallet
                             ? l10n.commonContinue
                             : l10n.walletSecurityConnectExternalAction,
                   ),

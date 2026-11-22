@@ -3462,19 +3462,22 @@ class _ARScreenState extends State<ARScreen>
 
     if (artwork.isEmpty) return;
 
-    // Track AR view achievement
-    final prefs = await SharedPreferences.getInstance();
-    final userId = prefs.getString('user_id') ?? 'demo_user';
-    await AchievementService().checkAchievements(
-      userId: userId,
-      action: 'ar_viewed',
-      data: {
-        'subjectId': artworkId,
-        'artworkId': artworkId,
-        'idempotencyKey':
-            'ar_viewed:$artworkId:${DateTime.now().toUtc().toIso8601String().substring(0, 13)}',
-      },
-    );
+    // Track AR view achievement, for the signed-in account only.
+    final account =
+        Provider.of<ProfileProvider>(context, listen: false).currentUser;
+    final userId = account?.accountId;
+    if (userId != null) {
+      await AchievementService().checkAchievements(
+        userId: userId,
+        action: 'ar_viewed',
+        data: {
+          'subjectId': artworkId,
+          'artworkId': artworkId,
+          'idempotencyKey':
+              'ar_viewed:$artworkId:${DateTime.now().toUtc().toIso8601String().substring(0, 13)}',
+        },
+      );
+    }
     if (!mounted) return;
 
     showModalBottomSheet(

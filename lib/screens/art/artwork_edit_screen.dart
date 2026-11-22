@@ -576,7 +576,6 @@ class _ArtworkEditScreenState extends State<ArtworkEditScreen> {
     final profileProvider = context.read<ProfileProvider>();
     final selfName = AuthoredBySelf.displayNameFor(
       profileProvider.currentUser,
-      isSignedIn: profileProvider.isSignedIn,
     );
     if (selfName != null &&
         AuthoredBySelf.isAttributedTo(artwork, profileProvider.currentUser)) {
@@ -721,7 +720,6 @@ class _ArtworkEditScreenState extends State<ArtworkEditScreen> {
     // flag: the backend resolves the account from the session.
     final selfAllowed = AuthoredBySelf.displayNameFor(
           profileProvider.currentUser,
-          isSignedIn: profileProvider.isSignedIn,
         ) !=
         null;
     final selfFlag = AuthoredBySelf.updateFlagFor(
@@ -968,7 +966,6 @@ class _ArtworkEditScreenState extends State<ArtworkEditScreen> {
     final profileProvider = context.watch<ProfileProvider>();
     final selfName = AuthoredBySelf.displayNameFor(
       profileProvider.currentUser,
-      isSignedIn: profileProvider.isSignedIn,
     );
     final authoredBySelf = _authoredBySelf && selfName != null;
     if (AppConfig.isFeatureEnabled('collabInvites')) {

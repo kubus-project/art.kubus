@@ -526,7 +526,7 @@ class _AppInitializerState extends State<AppInitializer> {
         // failure), fall back to the synchronous load exactly as before.
         final alreadyHydratedForWallet = canSkipRedundantCriticalProfileLoad(
           hasHydratedProfile: profileProvider.hasHydratedProfile,
-          hydratedWalletAddress: profileProvider.currentUser?.walletAddress,
+          hydratedWalletAddress: profileProvider.heldProfile?.walletAddress,
           routeWalletAddress: walletAddress,
         );
         if (alreadyHydratedForWallet) {
@@ -648,6 +648,7 @@ class _AppInitializerState extends State<AppInitializer> {
         prefs,
         scopeKey: OnboardingStateService.buildAuthOnboardingScopeKey(
           walletAddress: walletAddress,
+          // Onboarding-record scope key, not an identity source.
           userId: (prefs.getString('user_id') ?? '').trim(),
         ),
       );
@@ -660,6 +661,7 @@ class _AppInitializerState extends State<AppInitializer> {
       final authOnboardingScopeKey =
           OnboardingStateService.buildAuthOnboardingScopeKey(
         walletAddress: walletAddress,
+        // Onboarding-record scope key, not an identity source.
         userId: (prefs.getString('user_id') ?? '').trim(),
       );
       final pendingAuthOnboardingResume = hasValidSession
@@ -936,7 +938,7 @@ class _AppInitializerState extends State<AppInitializer> {
 
         if (hasActiveAccountLinkGuard && hasValidSession) {
           final hydratedProfileWallet =
-              (profileProvider.currentUser?.walletAddress ?? '').trim();
+              (profileProvider.heldProfile?.walletAddress ?? '').trim();
           final hasResolvedWallet = hydratedProfileWallet.isNotEmpty ||
               (walletAddress ?? '').trim().isNotEmpty;
           if (!hasResolvedWallet) {
@@ -1021,7 +1023,7 @@ class _AppInitializerState extends State<AppInitializer> {
 
       if (hasActiveOnboardingGuard) {
         final hydratedProfileWallet =
-            (profileProvider.currentUser?.walletAddress ?? '').trim();
+            (profileProvider.heldProfile?.walletAddress ?? '').trim();
         final hasResolvedWallet = hydratedProfileWallet.isNotEmpty ||
             (walletAddress ?? '').trim().isNotEmpty;
         if (!hasValidSession ||

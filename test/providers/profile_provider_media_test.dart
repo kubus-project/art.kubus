@@ -7,6 +7,7 @@ import 'package:art_kubus/models/user_profile.dart';
 import 'package:art_kubus/providers/profile_provider.dart';
 import 'package:art_kubus/services/backend_api_service.dart';
 import 'package:art_kubus/utils/profile_media_ref_utils.dart';
+import '../support/account_session_fixture.dart';
 
 class _FakeProfileApi implements ProfileBackendApi {
   Map<String, dynamic>? lastSavedProfile;
@@ -127,7 +128,13 @@ void main() {
 
   setUp(() {
     SharedPreferences.setMockInitialValues(<String, Object>{});
+    // The profile under test is the signed-in account: a live session.
+    AccountSessionFixture.start(
+      accountId: 'profile-1',
+      wallet: 'ArtistWallet111111111111111111111111111111111',
+    );
   });
+  tearDown(AccountSessionFixture.end);
 
   test('ProfileMediaRefUtils flags generated avatars and keeps upload refs',
       () {

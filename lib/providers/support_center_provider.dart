@@ -99,8 +99,6 @@ class SupportCenterProvider extends ChangeNotifier {
   /// Whether the Support Center is switched on for this build.
   bool get supportEnabled => _supportEnabled;
 
-  bool get signedIn => BackendApiService().hasAuthSession;
-
   // Everything below belongs to the account that was signed in when it was
   // loaded. This provider outlives a sign-out, so each getter answers only
   // while that same account is still signed in: after a logout or an account
@@ -229,7 +227,7 @@ class SupportCenterProvider extends ChangeNotifier {
     _listFailure = null;
     notifyListeners();
     try {
-      if (!signedIn) {
+      if (!BackendApiService().hasAuthSession) {
         _tickets = null;
         _listFailure = SupportFailure.signIn;
         return;

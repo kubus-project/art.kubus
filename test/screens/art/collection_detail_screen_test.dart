@@ -1,4 +1,5 @@
 import 'package:art_kubus/l10n/app_localizations.dart';
+import 'package:art_kubus/models/user_profile.dart';
 import 'package:art_kubus/models/collab_member.dart';
 import 'package:art_kubus/providers/collab_provider.dart';
 import 'package:art_kubus/providers/collections_provider.dart';
@@ -17,6 +18,8 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
+
+import '../../support/account_session_fixture.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -211,7 +214,26 @@ class _CollectionHarness {
       'title': 'Public collection',
       'itemCount': 0,
     });
-    if (owner) wallet.setCurrentWalletAddressForTesting('owner-wallet');
+    if (owner) {
+      wallet.setCurrentWalletAddressForTesting('owner-wallet');
+      // The owner is the signed-in account behind a live session.
+      AccountSessionFixture.start(
+        accountId: 'owner-account',
+        wallet: 'owner-wallet',
+      );
+      addTearDown(AccountSessionFixture.end);
+      profile.setCurrentUser(UserProfile(
+        id: 'owner-account',
+        userId: 'owner-account',
+        walletAddress: 'owner-wallet',
+        username: 'owner',
+        displayName: 'Owner',
+        bio: '',
+        avatar: '',
+        createdAt: DateTime(2026),
+        updatedAt: DateTime(2026),
+      ));
+    }
   }
 
   final CollectionsProvider collections;

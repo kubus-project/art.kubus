@@ -29,11 +29,7 @@ class EmailPreferencesProvider extends ChangeNotifier {
 
   bool get featureEnabled => AppConfig.isFeatureEnabled('emailAuth');
 
-  bool get hasAuthToken {
-    return (_backendApi.getAuthToken() ?? '').trim().isNotEmpty;
-  }
-
-  bool get canManage => featureEnabled && hasAuthToken;
+  bool get canManage => featureEnabled && _backendApi.hasAuthSession;
 
   void bindSession({required bool hasSession}) {
     if (_sessionActive == hasSession) return;
@@ -69,7 +65,7 @@ class EmailPreferencesProvider extends ChangeNotifier {
       _initialized = true;
       return Future.value();
     }
-    if (!hasAuthToken) {
+    if (!_backendApi.hasAuthSession) {
       _initialized = false;
       return Future.value();
     }
@@ -145,4 +141,3 @@ class EmailPreferencesProvider extends ChangeNotifier {
     return EmailPreferences.defaults();
   }
 }
-

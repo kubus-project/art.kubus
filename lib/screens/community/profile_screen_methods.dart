@@ -142,7 +142,7 @@ Widget _buildPeopleList(
     onRetry: onRetry,
     emptyTitle: emptyTitle,
     emptyDescription: emptyDescription,
-    viewerWallet: profileProvider.currentWalletAddress,
+    viewerWallet: profileProvider.currentUser?.walletAddress,
     onOpen: (entry) {
       final row = rowByWallet[entry.wallet];
       if (row == null) return;
@@ -408,16 +408,12 @@ class ProfileScreenMethods {
 
     final profileProvider =
         Provider.of<ProfileProvider>(context, listen: false);
-    final walletProvider = Provider.of<WalletProvider>(context, listen: false);
     final artworkProvider =
         Provider.of<ArtworkProvider>(context, listen: false);
 
-    final currentWallet = (walletProvider.currentWalletAddress ??
-            profileProvider.currentWalletAddress)
-        ?.trim();
-    final includePrivate = currentWallet != null &&
-        currentWallet.isNotEmpty &&
-        WalletUtils.equals(currentWallet, canonicalWallet);
+    // Private content is the signed-in account's own; a wallet that survived a
+    // sign-out is not.
+    final includePrivate = profileProvider.isCurrentAccount(canonicalWallet);
 
     Future<void> runPrefetch() async {
       if (prefetchStatsSnapshot) {
@@ -493,10 +489,12 @@ class ProfileScreenMethods {
     final walletProvider = Provider.of<WalletProvider>(context, listen: false);
     final resolvedWallet = (targetWallet != null && targetWallet.isNotEmpty)
         ? targetWallet
-        : (profileProvider.currentWalletAddress ??
-            walletProvider.currentWalletAddress);
+        : WalletUtils.coalesce(
+            walletAddress: profileProvider.currentUser?.walletAddress,
+            wallet: walletProvider.currentWalletAddress,
+          );
 
-    if (resolvedWallet == null || resolvedWallet.isEmpty) {
+    if (resolvedWallet.isEmpty) {
       return;
     }
 
@@ -530,10 +528,12 @@ class ProfileScreenMethods {
     final walletProvider = Provider.of<WalletProvider>(context, listen: false);
     final resolvedWallet = (targetWallet != null && targetWallet.isNotEmpty)
         ? targetWallet
-        : (profileProvider.currentWalletAddress ??
-            walletProvider.currentWalletAddress);
+        : WalletUtils.coalesce(
+            walletAddress: profileProvider.currentUser?.walletAddress,
+            wallet: walletProvider.currentWalletAddress,
+          );
 
-    if (resolvedWallet == null || resolvedWallet.isEmpty) {
+    if (resolvedWallet.isEmpty) {
       return;
     }
 
@@ -565,7 +565,8 @@ class ProfileScreenMethods {
     final artworkProvider =
         Provider.of<ArtworkProvider>(context, listen: false);
     final activeWallet = Provider.of<ProfileProvider>(context, listen: false)
-        .currentWalletAddress;
+        .currentUser
+        ?.walletAddress;
     final includePrivate = authorKey.isWallet &&
         WalletUtils.equals(activeWallet, authorKey.wallet);
     // Prime the author's artworks cache before modal open (non-blocking).
@@ -641,9 +642,11 @@ class _FollowersBottomSheetState extends State<_FollowersBottomSheet> {
     final explicitWallet = widget.walletAddress?.trim();
     final resolvedWallet = (explicitWallet != null && explicitWallet.isNotEmpty)
         ? explicitWallet
-        : (profileProvider.currentWalletAddress ??
-            walletProvider.currentWalletAddress);
-    if (resolvedWallet == null || resolvedWallet.isEmpty) {
+        : WalletUtils.coalesce(
+            walletAddress: profileProvider.currentUser?.walletAddress,
+            wallet: walletProvider.currentWalletAddress,
+          );
+    if (resolvedWallet.isEmpty) {
       return null;
     }
     return WalletUtils.canonical(resolvedWallet);
@@ -851,9 +854,11 @@ class _FollowingBottomSheetState extends State<_FollowingBottomSheet> {
     final explicitWallet = widget.walletAddress?.trim();
     final resolvedWallet = (explicitWallet != null && explicitWallet.isNotEmpty)
         ? explicitWallet
-        : (profileProvider.currentWalletAddress ??
-            walletProvider.currentWalletAddress);
-    if (resolvedWallet == null || resolvedWallet.isEmpty) {
+        : WalletUtils.coalesce(
+            walletAddress: profileProvider.currentUser?.walletAddress,
+            wallet: walletProvider.currentWalletAddress,
+          );
+    if (resolvedWallet.isEmpty) {
       return null;
     }
     return WalletUtils.canonical(resolvedWallet);

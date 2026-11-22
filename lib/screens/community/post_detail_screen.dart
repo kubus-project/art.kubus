@@ -13,7 +13,6 @@ import 'package:art_kubus/l10n/app_localizations.dart';
 import '../../utils/kubus_color_roles.dart';
 import '../../utils/app_color_utils.dart';
 import '../../utils/wallet_utils.dart';
-import '../../services/account_identity.dart';
 import '../../utils/search_suggestions.dart';
 import '../../community/community_interactions.dart';
 import '../../community/community_post_media.dart';
@@ -38,7 +37,7 @@ import '../../services/pending_action_executor.dart';
 import '../../widgets/community/post_like_settlement.dart';
 import '../../providers/saved_items_provider.dart';
 import '../../providers/themeprovider.dart';
-import '../../providers/wallet_provider.dart';
+import '../../providers/profile_provider.dart';
 import '../../widgets/empty_state_card.dart';
 import '../../widgets/community/community_comment_row.dart';
 import '../../widgets/community/community_composer_character_counter.dart';
@@ -65,7 +64,6 @@ class PostDetailScreen extends StatefulWidget {
       postLikesLoader;
   final Future<List<Map<String, dynamic>>> Function(String postId)?
       postRepostsLoader;
-  final String? currentWalletAddressOverride;
   final PostDetailInitialAction? initialAction;
 
   const PostDetailScreen({
@@ -75,7 +73,6 @@ class PostDetailScreen extends StatefulWidget {
     this.onClose,
     this.postLikesLoader,
     this.postRepostsLoader,
-    this.currentWalletAddressOverride,
     this.initialAction,
   }) : assert(post != null || postId != null);
 
@@ -103,19 +100,6 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
   final Set<String> _deleteDialogOpenCommentIds = <String>{};
   final Set<String> _deleteInFlightCommentIds = <String>{};
   PendingActionProvider? _pendingActions;
-
-  String? _currentWalletAddress() {
-    final override = widget.currentWalletAddressOverride;
-    if (override != null) return override;
-    try {
-      return Provider.of<WalletProvider>(
-        context,
-        listen: false,
-      ).currentWalletAddress;
-    } catch (_) {
-      return null;
-    }
-  }
 
   @override
   void initState() {
@@ -1047,9 +1031,10 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
 
   bool _isCurrentUserPost(CommunityPost post) {
     // The account id decides; the wallet is the legacy fallback only.
-    return post.isAuthoredBySession(
-      accountId: AccountIdentity.accountKey,
-      wallet: _currentWalletAddress(),
+    return Provider.of<ProfileProvider>(context, listen: false)
+        .isCurrentAccountActor(
+      accountId: post.authorUserId,
+      wallet: post.authorWallet,
     );
   }
 
@@ -2134,10 +2119,12 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                                     final comments = commentsProvider
                                         .commentsForPost(post.id);
 
+                                    final profile =
+                                        Provider.of<ProfileProvider>(context);
                                     bool canModify(Comment c) =>
-                                        c.isAuthoredBySession(
-                                          accountId: AccountIdentity.accountKey,
-                                          wallet: _currentWalletAddress(),
+                                        profile.isCurrentAccountActor(
+                                          accountId: c.authorUserId,
+                                          wallet: c.authorWallet,
                                         );
 
                                     Future<void> showHistory(Comment c) async {
