@@ -104,23 +104,9 @@ function isPublicSeoPath(string $path): bool
     ) === 1;
 }
 
-// Public pages the renderer serves that have no interactive counterpart in the app. An institution page
-// (/en/institutions/:id, /sl/institucije/:id) is server-rendered only: the Flutter app has no institution
-// detail screen (institutions are managed in the institution hub, not shown publicly), so no
-// takeover host or status section is ever injected. Keep this in step with the backend's
-// TAKEOVER_ENTITY_TYPES (src/routes/seoPublicPages.js), which does not list 'institution' either.
-const KUBUS_SSR_ONLY_SEGMENTS = [
-    'en' => ['institutions'],
-    'sl' => ['institucije'],
-];
-
 function takeoverTargetForPath(string $path): ?array
 {
     if (preg_match('#^/(en|sl)/([^/]+)/([^/]+)/?$#', $path, $matches) !== 1) {
-        return null;
-    }
-
-    if (in_array($matches[2], KUBUS_SSR_ONLY_SEGMENTS[$matches[1]] ?? [], true)) {
         return null;
     }
 
@@ -132,6 +118,7 @@ function takeoverTargetForPath(string $path): ?array
             'exhibitions' => 'exhibition',
             'posts' => 'post',
             'collections' => 'collection',
+            'institutions' => 'institution',
             'map' => 'marker',
         ],
         'sl' => [
@@ -141,6 +128,7 @@ function takeoverTargetForPath(string $path): ?array
             'razstave' => 'exhibition',
             'objave' => 'post',
             'zbirke' => 'collection',
+            'institucije' => 'institution',
             'zemljevid' => 'marker',
         ],
     ];

@@ -1159,7 +1159,7 @@ test('a host with neither data-locale nor a localized canonical path still never
   assert.equal(page.classes.has('kubus-takeover-active'), false);
 });
 
-test('PHP gateway: institution pages are server-rendered only and never a takeover target', () => {
+test('PHP gateway: institution pages reach the renderer and are a takeover target of their own type', () => {
   const gateway = fs.readFileSync(SEO_PROXY, 'utf8');
   const htaccess = fs.readFileSync(path.join(__dirname, '..', 'web', '.htaccess'), 'utf8');
 
@@ -1167,15 +1167,12 @@ test('PHP gateway: institution pages are server-rendered only and never a takeov
   assert.match(htaccess, /RewriteRule \^\(\?:en\|sl\)\/\.\+ seo-proxy\.php \[L,QSA\]/);
   assert.match(gateway, /preg_match\('#\^\/\(\?:en\|sl\)\(\?:\/\.\*\)\?\$#', \$path\) === 1/);
 
-  // The SSR-only list is explicit and is checked before the takeover segment map.
-  assert.match(gateway, /const KUBUS_SSR_ONLY_SEGMENTS = \[\s*'en' => \['institutions'\],\s*'sl' => \['institucije'\],\s*\];/);
-  const guard = gateway.indexOf('in_array($matches[2], KUBUS_SSR_ONLY_SEGMENTS[$matches[1]] ?? [], true)');
+  // The takeover map carries the institution segments in both locales and keeps profiles as profiles.
+  assert.doesNotMatch(gateway, /KUBUS_SSR_ONLY_SEGMENTS/);
   const segmentMap = gateway.indexOf('$segments = [');
-  assert.ok(guard > -1 && segmentMap > guard, 'the SSR-only guard precedes the takeover segment map');
-
-  // The takeover map itself carries no institution segment and keeps profiles as profiles.
   const map = gateway.slice(segmentMap, gateway.indexOf('$locale = $matches[1];', segmentMap));
-  assert.doesNotMatch(map, /institutions|institucije|institution/);
+  assert.match(map, /'institutions' => 'institution'/);
+  assert.match(map, /'institucije' => 'institution'/);
   assert.match(map, /'profiles' => 'profile'/);
   assert.match(map, /'profili' => 'profile'/);
 
@@ -1185,15 +1182,23 @@ test('PHP gateway: institution pages are server-rendered only and never a takeov
   assert.doesNotMatch(aliasPattern, /institution/);
 });
 
-test('the app has no institution takeover: its deep-link contract knows no institution route', () => {
-  // If an institution detail screen is added, this test is the reminder to add a takeover type to the
-  // gateway map, the backend TAKEOVER_ENTITY_TYPES and the app deep-link parser together.
-  const parser = fs.readFileSync(path.join(__dirname, '..', 'lib', 'services', 'share', 'share_deep_link_parser.dart'), 'utf8');
-  const provider = fs.readFileSync(path.join(__dirname, '..', 'lib', 'providers', 'public_entity_takeover_provider.dart'), 'utf8');
-  const types = fs.readFileSync(path.join(__dirname, '..', 'lib', 'services', 'share', 'share_types.dart'), 'utf8');
-  assert.doesNotMatch(parser, /'(?:en\/institutions|sl\/institucije)'/);
-  assert.doesNotMatch(provider, /institutions|institucije/);
-  assert.doesNotMatch(types, /enum ShareEntityType \{[^}]*institution/);
+test('the app deep-link contract routes the institution URLs to the institution screen', () => {
+  const read = (...parts) => fs.readFileSync(path.join(__dirname, '..', ...parts), 'utf8');
+  const parser = read('lib', 'services', 'share', 'share_deep_link_parser.dart');
+  const provider = read('lib', 'providers', 'public_entity_takeover_provider.dart');
+  const types = read('lib', 'services', 'share', 'share_types.dart');
+  const builder = read('lib', 'services', 'share', 'share_link_builder.dart');
+  const navigation = read('lib', 'utils', 'share_deep_link_navigation.dart');
+  const screen = read('lib', 'screens', 'web3', 'institution', 'institution_detail_screen.dart');
+  assert.match(parser, /'en\/institutions': AppRouteIntentType\.institution/);
+  assert.match(parser, /'sl\/institucije': AppRouteIntentType\.institution/);
+  assert.match(types, /enum ShareEntityType \{[^}]*institution/);
+  assert.match(builder, /ShareEntityType\.institution: \{'en': 'institutions', 'sl': 'institucije'\}/);
+  // The takeover wire type, the localized segment and the institution screen's readiness signal.
+  assert.match(provider, /ShareEntityType\.institution => 'institution'/);
+  assert.match(provider, /ShareEntityType\.institution =>\s*locale == 'sl' \? 'institucije' : 'institutions'/);
+  assert.match(navigation, /case ShareEntityType\.institution:/);
+  assert.match(screen, /type: ShareEntityType\.institution,/);
   // The profile route stays the only profile-shaped takeover.
   assert.match(parser, /'en\/profiles': AppRouteIntentType\.profile/);
   assert.match(parser, /'sl\/profili': AppRouteIntentType\.profile/);

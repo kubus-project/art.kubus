@@ -130,9 +130,13 @@ canonical page. Its former `/en/profiles/:id` and `/sl/profili/:id` URLs answer
 301 to it, and its compact aliases answer 308 straight to it. Slovenian points
 to Slovenian for institutions only: each locale page is its own canonical with
 reciprocal `en`/`sl`/`x-default` alternates. Institution pages are server
-rendered only: the app has no institution detail screen, so the gateway
-(`KUBUS_SSR_ONLY_SEGMENTS` in `web/seo-proxy.php`) never injects the takeover
-host for them. See the backend's `docs/SEO_PUBLIC_PAGES.md`, "Institution pages".
+rendered first and, like every entity page, taken over by the app when it
+boots: the app has an institution screen (`InstitutionDetailScreen`), the
+gateway maps `institutions` / `institucije` to the `institution` takeover type
+(`takeoverTargetForPath` in `web/seo-proxy.php`, the backend's
+`TAKEOVER_ENTITY_TYPES`), the deep-link parser, Android app links and share
+links route the two URLs to that screen, and the id always names an institution
+record, never an account. See the backend's `docs/SEO_PUBLIC_PAGES.md`, "Institution pages".
 
 Compact and known long-form aliases redirect directly to the English canonical
 with HTTP 308. `?lang=sl` redirects directly to Slovenian. Canonical documents
