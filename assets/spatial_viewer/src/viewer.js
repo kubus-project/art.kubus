@@ -64,7 +64,44 @@ window.resetSpatialView = () => {
   distance = 3;
 };
 
+// One load at a time. Each load takes a generation number; anything that finishes
+// after a newer load (or an unload) started discards its result instead of
+// putting a stale scene on screen.
+let generation = 0;
+const state = { stage: "idle", previewSplats: 0, runtimeSplats: 0, warnings: [] };
+
+function discard(object) {
+  if (!object) return;
+  scene.remove(object);
+  object.dispose?.();
+}
+
+function tell(message) {
+  window.SpatialViewer?.postMessage(message);
+}
+
+function nextFrame() {
+  return new Promise((resolve) => requestAnimationFrame(() => resolve()));
+}
+
+async function untilDrawn(mesh, isStale, timeoutMs) {
+  // A paged tree is initialised as soon as its header is read; it has something to
+  // draw only once the first page has been fetched, decoded and indexed.
+  const deadline = performance.now() + timeoutMs;
+  while (!isStale() && performance.now() < deadline) {
+    if ((mesh.paged?.numSplats ?? 0) > 0) {
+      await nextFrame();
+      await nextFrame();
+      return true;
+    }
+    await nextFrame();
+  }
+  return false;
+}
+
 window.loadSpatial = async (url) => {
+  generation += 1;
+  state.stage = "loading";
   status.textContent = "Loading spatial archive…";
   status.hidden = false;
   try {
@@ -72,13 +109,105 @@ window.loadSpatial = async (url) => {
     mesh = new SplatMesh({ url });
     scene.add(mesh);
     await mesh.initialized;
+    state.stage = "single";
     status.hidden = true;
     window.SpatialViewer?.postMessage("ready");
   } catch (error) {
+    state.stage = "failed";
     status.textContent = "This spatial archive could not be loaded.";
     window.SpatialViewer?.postMessage(`error:${String(error)}`);
   }
 };
+
+// Progressive load: the small preview is drawn first, then the paged runtime tree
+// replaces it as soon as it can draw. The reconstruction archive is never loaded
+// here - it is for download, and `loadSpatial(url)` still opens one on request.
+//
+// Returns { ok, stage, ... }. A runtime that fails keeps the preview on screen and
+// is reported as a warning; only when nothing can be shown is it a failure.
+window.loadSpatialProgressive = async ({ preview, runtime, runtimeTimeoutMs = 30000 } = {}) => {
+  generation += 1;
+  const mine = generation;
+  const isStale = () => mine !== generation;
+  discard(mesh);
+  mesh = undefined;
+  state.stage = "loading";
+  state.previewSplats = 0;
+  state.runtimeSplats = 0;
+  state.warnings = [];
+  status.textContent = "Loading spatial archive…";
+  status.hidden = false;
+
+  let previewMesh;
+  if (preview) {
+    try {
+      previewMesh = new SplatMesh({ url: preview });
+      scene.add(previewMesh);
+      await previewMesh.initialized;
+      if (isStale()) {
+        discard(previewMesh);
+        return { ok: false, stale: true };
+      }
+      mesh = previewMesh;
+      state.stage = "preview";
+      state.previewSplats = previewMesh.numSplats ?? 0;
+      status.hidden = true;
+      tell("ready");
+      tell("stage:preview");
+    } catch (error) {
+      discard(previewMesh);
+      previewMesh = undefined;
+      state.warnings.push(`preview:${String(error)}`);
+      tell(`warning:preview:${String(error)}`);
+    }
+  }
+
+  if (runtime) {
+    let runtimeMesh;
+    try {
+      runtimeMesh = new SplatMesh({ url: runtime, paged: true });
+      scene.add(runtimeMesh);
+      await runtimeMesh.initialized;
+      const drawn = await untilDrawn(runtimeMesh, isStale, runtimeTimeoutMs);
+      if (isStale()) {
+        discard(runtimeMesh);
+        return { ok: false, stale: true };
+      }
+      if (!drawn) throw new Error("the runtime tree drew nothing in time");
+      discard(previewMesh);
+      mesh = runtimeMesh;
+      state.stage = "runtime";
+      state.runtimeSplats = runtimeMesh.paged?.numSplats ?? 0;
+      status.hidden = true;
+      tell("ready");
+      tell("stage:runtime");
+    } catch (error) {
+      discard(runtimeMesh);
+      state.warnings.push(`runtime:${String(error)}`);
+      tell(`warning:runtime:${String(error)}`);
+    }
+  }
+
+  if (isStale()) return { ok: false, stale: true };
+  if (!mesh) {
+    state.stage = "failed";
+    status.textContent = "This spatial archive could not be loaded.";
+    status.hidden = false;
+    tell(`error:${state.warnings.join("; ") || "nothing to load"}`);
+    return { ok: false, stage: state.stage, warnings: [...state.warnings] };
+  }
+  return { ok: true, stage: state.stage, warnings: [...state.warnings] };
+};
+
+// Releases the scene and every GPU resource behind it; a pending load is abandoned.
+window.unloadSpatial = () => {
+  generation += 1;
+  discard(mesh);
+  mesh = undefined;
+  state.stage = "idle";
+};
+
+window.spatialViewerState = () => ({ ...state, warnings: [...state.warnings] });
 
 frame();
 window.SpatialViewer?.postMessage("viewer-ready");
