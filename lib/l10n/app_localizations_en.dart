@@ -16334,6 +16334,10 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get spatialArchiveConfirmBodyUnknownSize =>
+      'This download is large and its size is not known. Continue only on a connection you are happy to use.';
+
+  @override
   String get spatialQualityMobile => 'Optimised';
 
   @override
@@ -16357,6 +16361,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get spatialViewerLoading => 'Loading the 3D view…';
+
+  @override
+  String get spatialViewerActivate => 'Tap to interact';
 
   @override
   String get spatialViewerDragHint => 'Drag to look around';

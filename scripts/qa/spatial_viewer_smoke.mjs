@@ -47,11 +47,15 @@ const UPRIGHT = { matrix: [0, 1, 0, 0, -1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1], mat
 
 const HARNESS = `<!doctype html><meta charset="utf-8"><title>harness</title>
 <style>html,body{margin:0;background:#222}iframe{width:640px;height:480px;border:0;display:block}</style>
-<iframe id="v" src="${VIEWER_PATH}index.html" title="viewer"></iframe>
+<iframe id="v" src="${VIEWER_PATH}index.html?a=7" title="viewer"></iframe>
 <script>
   window.__msgs = [];
+  window.__attempts = [];
   window.addEventListener('message', (e) => {
-    if (e.source === document.getElementById('v').contentWindow && e.data && e.data.kubusSpatialViewer) window.__msgs.push(e.data.kubusSpatialViewer);
+    if (e.source === document.getElementById('v').contentWindow && e.data && e.data.kubusSpatialViewer) {
+      window.__msgs.push(e.data.kubusSpatialViewer);
+      window.__attempts.push(e.data.attempt);
+    }
   });
   window.sendCommand = (command) => document.getElementById('v').contentWindow.postMessage({ kubusSpatialViewerCommand: command }, location.origin);
 </script>`;
@@ -230,6 +234,51 @@ async function run(browserType, name) {
     await page.waitForTimeout(200);
     const distance2 = (await frameOf().evaluate(() => window.__spatialDebug())).distance;
     check(`${name}: a focused viewer zooms on the wheel`, distance2 < distance1, `${distance1} -> ${distance2}`);
+
+    // 3d. The page names the attempt it was loaded for in every message (the host drops other attempts),
+    //     and Escape / activate / deactivate are the protocol an embedding page uses to hand focus back.
+    const attempts = await page.evaluate(() => window.__attempts);
+    check(`${name}: every viewer message echoes the attempt id from the page URL`, attempts.length > 0 && attempts.every((a) => a === '7'), JSON.stringify(attempts));
+    await page.evaluate(() => window.sendCommand({ type: 'activate' }));
+    check(`${name}: an activate command focuses the canvas`, await frameOf().evaluate(() => document.activeElement === document.querySelector('canvas')));
+    await page.evaluate(() => { window.__msgs.length = 0; });
+    await page.keyboard.press('Escape');
+    await page.waitForFunction(() => window.__msgs.includes('escape'), null, { timeout: 5000 }).catch(() => {});
+    check(`${name}: Escape in the viewer tells the host and releases focus`, (await page.evaluate(() => window.__msgs.includes('escape'))) && (await frameOf().evaluate(() => document.activeElement !== document.querySelector('canvas'))));
+    await page.evaluate(() => window.sendCommand({ type: 'activate' }));
+    await page.evaluate(() => window.sendCommand({ type: 'deactivate' }));
+    check(`${name}: a deactivate command blurs the canvas`, await frameOf().evaluate(() => document.activeElement !== document.querySelector('canvas')));
+
+    // 3e. Touch: the page claims no gesture, so a vertical drag pitches the camera as far as a horizontal one yaws
+    //     (a `touch-action: pan-y` page hands the vertical drag to the browser and cripples pitch).
+    if (name === 'chromium') {
+      const touchContext = await browser.newContext({ locale: 'en-US', viewport: { width: 700, height: 540 }, hasTouch: true });
+      const touchPage = await touchContext.newPage();
+      await touchPage.goto(`${origin}/harness.html`);
+      await touchPage.waitForFunction(() => window.__msgs.includes('viewer-ready'), null, { timeout: 30000 });
+      await touchPage.evaluate((o) => window.sendCommand({ type: 'load', urls: [`${o}/api/upload/file/bafy-sample`], fileType: 'splat' }), origin);
+      await touchPage.waitForFunction(() => window.__msgs.includes('ready'), null, { timeout: 30000 });
+      const touchFrame = touchPage.frames().find((fr) => fr.url().includes(VIEWER_PATH));
+      const cdp = await touchContext.newCDPSession(touchPage);
+      const tbox = await touchPage.locator('#v').boundingBox();
+      const swipe = async (dx, dy) => {
+        const x0 = tbox.x + 320; const y0 = tbox.y + 200;
+        await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: x0, y: y0 }] });
+        for (let i = 1; i <= 10; i += 1) {
+          await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: x0 + (dx * i) / 10, y: y0 + (dy * i) / 10 }] });
+          await touchPage.waitForTimeout(16);
+        }
+        await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+      };
+      const t0 = await touchFrame.evaluate(() => window.__spatialDebug());
+      await swipe(0, 150);
+      const t1 = await touchFrame.evaluate(() => window.__spatialDebug());
+      check(`${name}: a vertical touch drag of 150 px pitches the camera (${(t1.pitch - t0.pitch).toFixed(2)} rad)`, Math.abs(t1.pitch - t0.pitch) > 0.6);
+      await swipe(200, 0);
+      const t2 = await touchFrame.evaluate(() => window.__spatialDebug());
+      check(`${name}: a horizontal touch drag of 200 px yaws the camera (${(t2.yaw - t1.yaw).toFixed(2)} rad)`, Math.abs(t2.yaw - t1.yaw) > 0.8);
+      await touchContext.close();
+    }
 
     // 4. Failure state.
     await loadHarness();

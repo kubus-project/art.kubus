@@ -39,6 +39,14 @@ test('the notices also cover what Spark bundles: fflate and the WASM crates', ()
   const crates = read('third_party', 'licenses', 'SPARK-WASM-CRATES.txt');
   assert.ok(notices.includes('third_party/licenses/SPARK-WASM-CRATES.txt'));
   assert.doesNotMatch(crates, /GPL|AGPL|LGPL|Proprietary/i, 'no copyleft or proprietary crate');
+  // Every crate carries its own notice: the MIT text (or the Zlib text) plus a copyright line or holder.
+  const sections = crates.split(/^-{78}$/m).slice(1);
+  assert.equal(sections.length, 20, 'one licence section per listed crate');
+  for (const section of sections) {
+    const title = section.trim().split(String.fromCharCode(10))[0];
+    assert.match(section, /Copyright|\(C\) 20|Holder:/, `${title} names its copyright holder`);
+    assert.match(section, /Permission is hereby granted|Permission is granted to anyone/, `${title} carries its licence text`);
+  }
 });
 
 test('viewer source is valid UTF-8 and the shipped bundle carries no replacement character', () => {
@@ -57,7 +65,23 @@ test('the viewer pauses its render loop and does not swallow page scroll', () =>
   assert.ok(source.includes('document.activeElement !== canvas'));
   assert.equal(source.split('requestAnimationFrame(').length - 1, 1, 'the loop is armed in one guarded place only');
   assert.ok(source.includes('shouldRun()'));
-  assert.ok(read('assets', 'spatial_viewer', 'index.html').includes('touch-action:pan-y'));
+  // Touch pitch needs the page to claim the gesture; the web host keeps the iframe inert instead.
+  const html = read('assets', 'spatial_viewer', 'index.html');
+  assert.ok(html.includes('touch-action:none'));
+  assert.ok(!html.includes('pan-y'));
+});
+
+test('the viewer echoes the attempt id and speaks the activation protocol', () => {
+  const source = read('assets', 'spatial_viewer', 'src', 'viewer.js');
+  assert.match(source, /get\("a"\)/);
+  assert.match(source, /payload\.attempt = attemptId/);
+  for (const token of ['"activate"', '"deactivate"', 'post("escape")']) {
+    assert.ok(source.includes(token), `viewer source speaks ${token}`);
+  }
+  const widget = read('lib', 'widgets', 'spatial', 'spatial_viewer_web.dart');
+  assert.ok(widget.includes("'a': '${_session.attempt}'"), 'the host puts the attempt in the iframe URL');
+  assert.ok(widget.includes("'${data['attempt']}' != '${_session.attempt}'"), 'the host drops other attempts');
+  assert.ok(widget.includes("pointerEvents = inert ? 'none' : 'auto'"), 'the iframe is inert until activated');
 });
 
 test('the viewer page allows Spark WASM and stays closed otherwise', () => {

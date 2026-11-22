@@ -128,6 +128,8 @@ void main() {
             storageClass: 'cold',
           );
       expect(SpatialWebDelivery.archiveNeedsConfirmation(sized(1024)), isFalse);
+      // A record that omits the size is the large tier with no stated size.
+      expect(SpatialWebDelivery.archiveNeedsConfirmation(sized(0)), isTrue);
       expect(
         SpatialWebDelivery.archiveNeedsConfirmation(
           sized(SpatialWebDelivery.archiveConfirmBytes),
@@ -245,8 +247,7 @@ void main() {
         () {
       final splat = _variant('spatial_preview', 'cidSplat1', 'splat');
       final spz = _variant('spatial_mobile', 'cidSpz2', 'spz');
-      final sog = _variant('spatial_mobile', 'cidSog3', 'sog');
-      final content = _content([splat, spz, sog], manifestCid: 'bafyManifest');
+      final content = _content([splat, spz], manifestCid: 'bafyManifest');
       SpatialWebLoadPlan plan(SpatialVariant v) => SpatialWebDelivery.plan(
             content,
             v,
@@ -257,7 +258,13 @@ void main() {
           'https://api.kubus.site/api/upload/file/bafyManifest');
       expect(plan(splat).isArchiveTier, isFalse);
       expect(plan(spz).fileType, 'spz');
-      expect(plan(sog).fileType, isNull);
+    });
+
+    test('sog is not offered until a fixture has proven it loads', () {
+      final sog = _variant('spatial_mobile', 'cidSog3', 'sog');
+      final content = _content([sog]);
+      expect(SpatialWebDelivery.isViewable(sog), isFalse);
+      expect(SpatialWebDelivery.defaultVariant(content), isNull);
     });
 
     test('no manifest CID means no manifest route', () {
@@ -381,6 +388,48 @@ void main() {
         isNull,
       );
       expect(await SpatialWebDelivery.fetchTransform(null), isNull);
+    });
+
+    test('the manifest size cap bounds the download, not only the parsing',
+        () async {
+      var drained = 0;
+      // A declared length above the cap is refused before any body is read.
+      final declared = MockClient.streaming((request, bodyStream) async {
+        return http.StreamedResponse(
+          Stream<List<int>>.fromIterable(<List<int>>[
+            <int>[0x7b],
+          ]).map((chunk) {
+            drained += chunk.length;
+            return chunk;
+          }),
+          200,
+          contentLength: SpatialWebDelivery.manifestMaxBytes + 1,
+        );
+      });
+      expect(
+        await SpatialWebDelivery.fetchTransform('https://x/m',
+            client: declared),
+        isNull,
+      );
+      expect(drained, 0);
+
+      // No declared length (chunked): the stream is dropped once past the cap.
+      var pulled = 0;
+      final chunked = MockClient.streaming((request, bodyStream) async {
+        Stream<List<int>> endless() async* {
+          while (true) {
+            pulled += 65536;
+            yield List<int>.filled(65536, 0x20);
+          }
+        }
+
+        return http.StreamedResponse(endless(), 200);
+      });
+      expect(
+        await SpatialWebDelivery.fetchTransform('https://x/m', client: chunked),
+        isNull,
+      );
+      expect(pulled, lessThan(SpatialWebDelivery.manifestMaxBytes * 3));
     });
   });
 

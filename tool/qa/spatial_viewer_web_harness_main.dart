@@ -58,7 +58,7 @@ void main() {
                     spatialCaptureCount: 1,
                   ),
                 ),
-                const SizedBox(height: 600),
+                const SizedBox(height: 1500),
               ],
             ),
           ),

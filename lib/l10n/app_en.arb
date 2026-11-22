@@ -6896,6 +6896,7 @@
       }
     }
   },
+  "spatialArchiveConfirmBodyUnknownSize": "This download is large and its size is not known. Continue only on a connection you are happy to use.",
   "spatialQualityMobile": "Optimised",
   "spatialQualityPreview": "Preview",
   "spatialQualityArchive": "Archival",
@@ -6904,6 +6905,7 @@
   "spatialViewerRetry": "Try again",
   "spatialViewerUnavailable": "This spatial archive is currently unavailable.",
   "spatialViewerLoading": "Loading the 3D view…",
+  "spatialViewerActivate": "Tap to interact",
   "spatialViewerDragHint": "Drag to look around",
   "spatialViewerFallback": "Trying another archive route…",
   "spatialViewerWebSafety": "Open the public archive in a compatible viewer. A secure web page does not contact local LAN nodes.",

@@ -6869,6 +6869,7 @@
       }
     }
   },
+  "spatialArchiveConfirmBodyUnknownSize": "Prenos je velik, njegova velikost pa ni znana. Nadaljujte le na povezavi, ki jo želite uporabiti.",
   "spatialQualityMobile": "Optimizirano",
   "spatialQualityPreview": "Predogled",
   "spatialQualityArchive": "Arhivsko",
@@ -6877,6 +6878,7 @@
   "spatialViewerRetry": "Poskusi znova",
   "spatialViewerUnavailable": "Ta prostorski arhiv trenutno ni na voljo.",
   "spatialViewerLoading": "Nalaganje 3D pogleda …",
+  "spatialViewerActivate": "Dotaknite se za interakcijo",
   "spatialViewerDragHint": "Povlecite za razgled",
   "spatialViewerFallback": "Poskušam drugo pot do arhiva …",
   "spatialViewerWebSafety": "Odpri javni arhiv v združljivem pregledovalniku. Varna spletna stran ne vzpostavlja povezave z vozlišči v lokalnem omrežju.",

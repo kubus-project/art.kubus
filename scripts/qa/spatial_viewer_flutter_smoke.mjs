@@ -13,6 +13,7 @@
 //   HARNESS_ROOT  build directory (default build/spatial-harness)
 //   BROWSERS      comma list (default chromium)
 //   QA_OUT        output directory (default output/playwright/artifacts/spatial-viewer-flutter)
+//   LAYOUTS       comma list of layouts to run: desktop, mobile (default both)
 // Exits non-zero on any failed check.
 import fs from 'node:fs';
 import http from 'node:http';
@@ -25,6 +26,7 @@ const ROOT = path.resolve(import.meta.dirname, '..', '..');
 const HARNESS_ROOT = path.resolve(process.env.HARNESS_ROOT || path.join(ROOT, 'build', 'spatial-harness'));
 const OUT = path.resolve(process.env.QA_OUT || path.join(ROOT, 'output', 'playwright', 'artifacts', 'spatial-viewer-flutter'));
 const BROWSERS = (process.env.BROWSERS || 'chromium').split(',').map((s) => s.trim()).filter(Boolean);
+const LAYOUTS = (process.env.LAYOUTS || 'desktop,mobile').split(',').map((s) => s.trim()).filter(Boolean);
 const SAMPLE = fs.readFileSync(path.join(ROOT, 'test', 'fixtures', 'spatial', 'sample_flower.splat'));
 fs.mkdirSync(OUT, { recursive: true });
 
@@ -125,8 +127,9 @@ async function colourStats(page, png) {
   }, png.toString('base64'));
 }
 
-async function newScenario(browser, { origin, viewport, reducedMotion, history = HISTORY, bytesOk = true, manifest = true }) {
-  const context = await browser.newContext({ locale: 'en-US', viewport, reducedMotion: reducedMotion ? 'reduce' : 'no-preference' });
+async function newScenario(browser, { origin, viewport, reducedMotion, hasTouch = false, history = HISTORY, bytesOk = true, manifest = true }) {
+  const context = await browser.newContext({ locale: 'en-US', viewport, hasTouch, reducedMotion: reducedMotion ? 'reduce' : 'no-preference' });
+  await context.addInitScript(() => { Error.stackTraceLimit = 60; });
   const seen = { upload: [], history: 0, other: [], gateway: [] };
   await context.route((u) => u.origin !== origin, async (route) => {
     const url = new URL(route.request().url());
@@ -143,6 +146,10 @@ async function newScenario(browser, { origin, viewport, reducedMotion, history =
     }
     // Public IPFS gateways are not a route for the public viewer (they have no withdrawal gate); any contact is a failure.
     if (/(^|\.)(dweb\.link|ipfs\.io|pinata\.cloud|cloudflare-ipfs\.com|w3s\.link|nftstorage\.link|gateway\.pinata\.cloud)$/.test(url.hostname)) { seen.gateway.push(url.hostname); return route.fulfill({ status: 404, headers: CORS, body: '' }); }
+    // The Google Identity script the sign-in plugin injects at startup is a live third-party page: it is stubbed so
+    // the run is hermetic (the real script can call the plugin's onGoogleLibraryLoad twice, which surfaces as an
+    // uncaught StateError "Future already completed" from google_sign_in_web's loadWebSdk, unrelated to the viewer).
+    if (url.hostname === 'accounts.google.com') return route.fulfill({ status: 200, headers: { ...CORS, 'content-type': 'text/javascript' }, body: '/* stubbed in the spatial viewer smoke */' });
     // Fonts / canvaskit CDN etc.: let the real network answer; any other API call is refused.
     if (/\/api\//.test(url.pathname)) { seen.other.push(url.pathname); return route.fulfill({ status: 404, headers: CORS, body: '' }); }
     return route.continue();
@@ -150,7 +157,7 @@ async function newScenario(browser, { origin, viewport, reducedMotion, history =
   const page = await context.newPage();
   const problems = [];
   page.on('console', (m) => { if (/Content Security Policy|violates/i.test(m.text())) problems.push(m.text()); });
-  page.on('pageerror', (e) => problems.push(`pageerror: ${e.message} ${String(e.stack || '').split(String.fromCharCode(10)).slice(0, 4).join(' / ')}`));
+  page.on('pageerror', (e) => problems.push(`pageerror: ${e.message} ${String(e.stack || '').split(String.fromCharCode(10)).slice(0, 40).join(' / ')}`));
   return { context, page, seen, problems };
 }
 
@@ -177,8 +184,8 @@ async function run(browserType, name) {
   try {
     for (const layout of [
       { id: 'desktop', viewport: { width: 1280, height: 900 }, reducedMotion: true },
-      { id: 'mobile', viewport: { width: 390, height: 844 }, reducedMotion: false },
-    ]) {
+      { id: 'mobile', viewport: { width: 390, height: 844 }, reducedMotion: false, hasTouch: true },
+    ].filter((l) => LAYOUTS.includes(l.id))) {
       const tag = `${name}/${layout.id}`;
 
       // A. In view: loads at once, upright through the manifest transform, orbit works, archive untouched.
@@ -205,13 +212,76 @@ async function run(browserType, name) {
         check(`${tag}: iframe is shown once the viewer is ready`, (await frameEl.evaluate((el) => getComputedStyle(el).visibility)) === 'visible');
         const box = await frameEl.boundingBox();
         check(`${tag}: viewer fits the viewport width`, box.width <= layout.viewport.width && box.width > 200, `${Math.round(box.width)}x${Math.round(box.height)}`);
+        const pointerEvents = () => frameEl.evaluate((el) => getComputedStyle(el).pointerEvents);
+        const centre = { x: box.x + box.width / 2, y: box.y + box.height / 2 };
+        check(`${tag}: the viewer starts inert so the page keeps its scroll`, (await pointerEvents()) === 'none');
+
+        // Activation: a tap hands the viewer every gesture; Escape, a tap outside and Done hand them back.
+        await s.page.mouse.click(centre.x, centre.y);
+        check(`${tag}: tapping the viewer activates it`, (await waitFor(async () => ((await pointerEvents()) === 'auto' ? true : null), 10000)) === true);
+        check(`${tag}: the viewer keeps its height while active (no row squeezes it)`, Math.abs((await frameEl.boundingBox()).height - box.height) < 2, `${Math.round(box.height)} -> ${Math.round((await frameEl.boundingBox()).height)}`);
         const before = await viewerState(s.page);
-        await s.page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
-        await s.page.mouse.down();
-        await s.page.mouse.move(box.x + box.width / 2 + 90, box.y + box.height / 2 + 10, { steps: 6 });
-        await s.page.mouse.up();
-        const after = await viewerState(s.page);
-        check(`${tag}: drag orbits through the Flutter platform view`, Math.abs(after.yaw - before.yaw) > 0.3, `${before.yaw.toFixed(2)} -> ${after.yaw.toFixed(2)}`);
+        if (layout.hasTouch && name === 'chromium') {
+          // A touch layout orbits with a finger: a horizontal drag yaws and a vertical one pitches.
+          const cdp = await s.context.newCDPSession(s.page);
+          const drag = async (dx, dy) => {
+            await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: centre.x, y: centre.y }] });
+            for (let i = 1; i <= 10; i += 1) {
+              await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: centre.x + (dx * i) / 10, y: centre.y + (dy * i) / 10 }] });
+              await s.page.waitForTimeout(16);
+            }
+            await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+          };
+          await s.page.waitForTimeout(800);
+          await drag(90, 0);
+          const mid = await viewerState(s.page);
+          check(`${tag}: a horizontal finger drag orbits through the Flutter platform view once activated`, Math.abs(mid.yaw - before.yaw) > 0.3, `${before.yaw.toFixed(2)} -> ${mid.yaw.toFixed(2)}`);
+          await drag(0, 100);
+          const end = await viewerState(s.page);
+          check(`${tag}: a vertical finger drag pitches the camera on the active viewer`, Math.abs(end.pitch - mid.pitch) > 0.4, `${mid.pitch.toFixed(2)} -> ${end.pitch.toFixed(2)}`);
+        } else {
+          await s.page.mouse.move(centre.x, centre.y);
+          await s.page.mouse.down();
+          await s.page.mouse.move(centre.x + 90, centre.y + 10, { steps: 6 });
+          await s.page.mouse.up();
+          const after = await viewerState(s.page);
+          check(`${tag}: drag orbits through the Flutter platform view once activated`, Math.abs(after.yaw - before.yaw) > 0.3, `${before.yaw.toFixed(2)} -> ${after.yaw.toFixed(2)}`);
+        }
+        await s.page.keyboard.press('Escape');
+        check(`${tag}: Escape in the active viewer makes it inert again`, (await waitFor(async () => ((await pointerEvents()) === 'none' ? true : null), 10000)) === true);
+        await s.page.mouse.click(centre.x, centre.y);
+        await waitFor(async () => ((await pointerEvents()) === 'auto' ? true : null), 10000);
+        await s.page.mouse.click(3, 3);
+        check(`${tag}: a tap outside the viewer makes it inert again`, (await waitFor(async () => ((await pointerEvents()) === 'none' ? true : null), 10000)) === true);
+
+        await s.page.evaluate(() => document.querySelector('flt-semantics-placeholder')?.click());
+        await s.page.mouse.click(centre.x, centre.y);
+        await waitFor(async () => ((await pointerEvents()) === 'auto' ? true : null), 10000);
+        await s.page.getByRole('button', { name: 'Done' }).click();
+        check(`${tag}: the Done button makes the active viewer inert again`, (await waitFor(async () => ((await pointerEvents()) === 'none' ? true : null), 10000)) === true);
+
+        // Page scroll must cross the inert viewer: wheel, and (mobile layout) a touch swipe starting on it.
+        const top0 = (await frameEl.boundingBox()).y;
+        await s.page.mouse.move(centre.x, centre.y);
+        for (let i = 0; i < 3; i += 1) { await s.page.mouse.wheel(0, 50); await s.page.waitForTimeout(80); }
+        await s.page.waitForTimeout(400);
+        const top1 = (await frameEl.boundingBox()).y;
+        check(`${tag}: wheel over the inert viewer scrolls the page (${Math.round(top0)} -> ${Math.round(top1)})`, top0 - top1 > 60);
+        if (layout.hasTouch && name === 'chromium') {
+          const cdp = await s.context.newCDPSession(s.page);
+          const y0 = (await frameEl.boundingBox()).y;
+          const startY = Math.min(y0 + 150, layout.viewport.height - 60);
+          const touchX = centre.x;
+          await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: touchX, y: startY }] });
+          for (let i = 1; i <= 8; i += 1) {
+            await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: touchX, y: startY - (i * 10) }] });
+            await s.page.waitForTimeout(16);
+          }
+          await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+          await s.page.waitForTimeout(600);
+          const y1 = (await frameEl.boundingBox()).y;
+          check(`${tag}: a touch swipe that starts on the inert viewer scrolls the page (${Math.round(y0)} -> ${Math.round(y1)})`, y0 - y1 > 30);
+        }
         check(`${tag}: no CSP violation or page error`, s.problems.length === 0, s.problems.join(' | '));
         check(`${tag}: no public gateway is contacted`, s.seen.gateway.length === 0, s.seen.gateway.join(','));
         const label = await viewerFrame(s.page).evaluate(() => document.querySelector('canvas').getAttribute('aria-label'));
@@ -240,12 +310,14 @@ async function run(browserType, name) {
       {
         const s = await newScenario(browser, { origin, ...layout, bytesOk: false });
         await s.page.goto(`${origin}/?spacer=0`);
-        const failed = await waitFor(async () => {
-          const st = await viewerState(s.page);
-          return st && /could not be loaded/i.test(st.status) ? st : null;
-        });
-        check(`${tag}: unreachable bytes end in the viewer failure state`, !!failed, JSON.stringify(failed));
-        check(`${tag}: the failed iframe is hidden behind the Flutter failure notice`, (await s.page.locator('iframe').evaluate((el) => getComputedStyle(el).visibility)) === 'hidden');
+        await s.page.waitForSelector('flt-semantics-placeholder', { state: 'attached', timeout: 30000 });
+        await s.page.evaluate(() => document.querySelector('flt-semantics-placeholder')?.click());
+        const retry = s.page.getByRole('button', { name: 'Try again' });
+        const failed = await retry.waitFor({ timeout: 60000 }).then(() => true, () => false);
+        check(`${tag}: unreachable bytes end in the Flutter failure notice (Try again offered)`, failed);
+        // A final failure empties the iframe so a stalled page stops downloading.
+        const emptied = await waitFor(async () => ((await s.page.locator('iframe').getAttribute('src')) === 'about:blank' ? true : null), 10000);
+        check(`${tag}: a failed viewer is emptied (about:blank) and hidden`, !!emptied && (await s.page.locator('iframe').evaluate((el) => getComputedStyle(el).visibility)) === 'hidden');
         check(`${tag}: failure never falls back to the archive tier`, !s.seen.upload.includes('bafy-archive'), s.seen.upload.join(','));
         check(`${tag}: failure never contacts a public gateway`, s.seen.gateway.length === 0, s.seen.gateway.join(','));
         fs.writeFileSync(path.join(OUT, `${tag.replace('/', '-')}-failure.png`), await s.page.screenshot());
@@ -270,8 +342,15 @@ async function run(browserType, name) {
           return st && st.hasMesh && st.statusHidden && (await s.page.locator('iframe').count()) === 1 ? { st, dialog } : null;
         });
         check(`${tag}: View in 3D opens a single fullscreen viewer and loads it`, !!opened, JSON.stringify(opened));
-        const frameBox = await s.page.locator('iframe').boundingBox();
-        check(`${tag}: fullscreen viewer fills the window`, !!frameBox && frameBox.width >= layout.viewport.width - 4 && frameBox.height > layout.viewport.height * 0.6, JSON.stringify(frameBox));
+        // The inline iframe is torn down while the dialog's mounts: wait for the dialog's one to fill the window.
+        const fills = (b) => !!b && b.width >= layout.viewport.width - 4 && b.height > layout.viewport.height * 0.6;
+        const frameBox = await waitFor(async () => {
+          if ((await s.page.locator('iframe').count()) !== 1) return null;
+          const b = await s.page.locator('iframe').boundingBox().catch(() => null);
+          return fills(b) ? b : null;
+        }, 20000);
+        check(`${tag}: fullscreen viewer fills the window`, !!frameBox, JSON.stringify(frameBox));
+        check(`${tag}: the fullscreen viewer, with no page scroll to protect, is interactive at once`, (await s.page.locator('iframe').evaluate((el) => getComputedStyle(el).pointerEvents)) === 'auto');
         fs.writeFileSync(path.join(OUT, `${tag.replace('/', '-')}-fullscreen.png`), await s.page.screenshot());
         await s.context.close();
       }

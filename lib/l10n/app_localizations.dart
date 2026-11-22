@@ -28352,6 +28352,12 @@ abstract class AppLocalizations {
   /// **'This download is about {size}. Continue only on a connection you are happy to use.'**
   String spatialArchiveConfirmBody(String size);
 
+  /// No description provided for @spatialArchiveConfirmBodyUnknownSize.
+  ///
+  /// In en, this message translates to:
+  /// **'This download is large and its size is not known. Continue only on a connection you are happy to use.'**
+  String get spatialArchiveConfirmBodyUnknownSize;
+
   /// No description provided for @spatialQualityMobile.
   ///
   /// In en, this message translates to:
@@ -28399,6 +28405,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Loading the 3D view…'**
   String get spatialViewerLoading;
+
+  /// No description provided for @spatialViewerActivate.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap to interact'**
+  String get spatialViewerActivate;
 
   /// No description provided for @spatialViewerDragHint.
   ///

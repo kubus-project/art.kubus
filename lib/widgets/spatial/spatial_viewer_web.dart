@@ -30,7 +30,16 @@ import '../inline_loading.dart';
 /// public-gateway fallback, and never a LAN node, so a secure page cannot issue
 /// mixed content. A tier that fails falls back to the next default tier. The
 /// archive tier is never the default; the visitor asks for it, and is asked to
-/// confirm when it is large.
+/// confirm when it is large (or of unknown size).
+///
+/// Inside a page that scrolls, the iframe is inert until the visitor taps
+/// "Tap to interact". An iframe is its own document: wheel and touch events
+/// that start on it never reach Flutter, so a live viewer would swallow page
+/// scroll for any thumb or wheel that lands on it. Inert (`pointer-events:
+/// none`), the Flutter overlay takes the gesture and the page scrolls; active,
+/// the viewer takes every gesture until the visitor taps outside it, presses
+/// Done, or presses Escape in it. Where no vertical scroller encloses the
+/// viewer (the fullscreen dialog) it is interactive at once.
 Widget buildSpatialViewer({
   required BuildContext context,
   required SpatialContent content,
@@ -79,18 +88,31 @@ class _WebSpatialViewerState extends State<WebSpatialViewer> {
   Timer? _timeout;
   late SpatialWebLoadSession _session;
 
+  /// A vertical scroller encloses the viewer, so the iframe starts inert.
+  bool _pageScrolls = true;
+
+  /// The visitor activated the viewer; it now takes every gesture.
+  bool _interactive = false;
+
+  /// A confirmation dialog for the archive is open (guards a double tap).
+  bool _confirming = false;
+
   @override
   void initState() {
     super.initState();
     _ensureViewFactory();
     _iframe = web.HTMLIFrameElement()
       ..title = 'Interactive spatial archive'
+      // Defence in depth only: it stops popups, forms and top navigation, but
+      // a same-origin frame can remove its own attribute, so the CSP and the
+      // no-credential hand-over above are what bound the page.
       ..setAttribute('sandbox', 'allow-scripts allow-same-origin')
       ..setAttribute('referrerpolicy', 'no-referrer')
       ..setAttribute('allow', '')
       ..style.border = '0'
       ..style.width = '100%'
       ..style.height = '100%'
+      ..style.pointerEvents = 'none'
       ..style.visibility = 'hidden';
     _iframe.addEventListener(
       'load',
@@ -110,6 +132,7 @@ class _WebSpatialViewerState extends State<WebSpatialViewer> {
   void didChangeDependencies() {
     super.didChangeDependencies();
     _iframe.title = AppLocalizations.of(context)!.spatialArchiveTitle;
+    _pageScrolls = Scrollable.maybeOf(context, axis: Axis.vertical) != null;
   }
 
   @override
@@ -120,6 +143,7 @@ class _WebSpatialViewerState extends State<WebSpatialViewer> {
     // instead of keeping the old piece on screen.
     _timeout?.cancel();
     _session = SpatialWebLoadSession(widget.content);
+    _interactive = false;
     _iframe.style.visibility = 'hidden';
     if (_session.variant != null) {
       _startIframe();
@@ -146,11 +170,17 @@ class _WebSpatialViewerState extends State<WebSpatialViewer> {
     return Uri.base.resolve(assetUrl).toString();
   }
 
-  /// (Re)loads the viewer page for the session's current tier.
+  /// (Re)loads the viewer page for the session's current tier. The attempt
+  /// number is part of the URL, so the page echoes it in every message and a
+  /// page that is being replaced can never answer for the next attempt.
   void _startIframe() {
     _timeout?.cancel();
+    _interactive = false;
     _iframe.style.visibility = 'hidden';
-    _iframe.src = _viewerUrl;
+    _iframe.src = Uri.parse(_viewerUrl).replace(
+        queryParameters: <String, String>{
+          'a': '${_session.attempt}'
+        }).toString();
     _timeout = Timer(_session.timeout, _fail);
   }
 
@@ -163,8 +193,17 @@ class _WebSpatialViewerState extends State<WebSpatialViewer> {
     if (fallback) {
       _startIframe();
     } else if (_session.status == SpatialWebLoadStatus.failed) {
+      // Hidden and emptied: a stalled page must not keep its download running.
+      _interactive = false;
       _iframe.style.visibility = 'hidden';
+      _iframe.src = 'about:blank';
     }
+  }
+
+  void _setInteractive(bool value) {
+    if (!mounted || _interactive == value) return;
+    setState(() => _interactive = value);
+    _send(value ? 'activate' : 'deactivate');
   }
 
   void _onMessage(web.MessageEvent event) {
@@ -176,7 +215,11 @@ class _WebSpatialViewerState extends State<WebSpatialViewer> {
     if (data is! Map) return;
     final message = data['kubusSpatialViewer'];
     if (message is! String) return;
-    if (message == 'viewer-ready') {
+    // Only the page loaded for the current attempt may speak for it.
+    if ('${data['attempt']}' != '${_session.attempt}') return;
+    if (message == 'escape') {
+      _setInteractive(false);
+    } else if (message == 'viewer-ready') {
       _session.onViewerReady();
       unawaited(_sendLoad());
     } else if (message == 'ready') {
@@ -217,12 +260,14 @@ class _WebSpatialViewerState extends State<WebSpatialViewer> {
         ?.postMessage(command.jsify(), web.window.location.origin.toJS);
   }
 
-  void _reset() => _iframe.contentWindow?.postMessage(
+  void _send(String type) => _iframe.contentWindow?.postMessage(
         <String, Object?>{
-          'kubusSpatialViewerCommand': <String, Object?>{'type': 'reset'},
+          'kubusSpatialViewerCommand': <String, Object?>{'type': type},
         }.jsify(),
         web.window.location.origin.toJS,
       );
+
+  void _reset() => _send('reset');
 
   void _retry() {
     setState(_session.retry);
@@ -232,17 +277,20 @@ class _WebSpatialViewerState extends State<WebSpatialViewer> {
   /// Starts the archive tier, after a confirmation when it is large.
   Future<void> _loadArchive() async {
     final archive = _session.archive;
-    if (archive == null) return;
+    if (archive == null || _confirming) return;
     if (SpatialWebDelivery.archiveNeedsConfirmation(archive)) {
       final l10n = AppLocalizations.of(context)!;
+      _confirming = true;
       final confirmed = await showDialog<bool>(
         context: context,
         builder: (dialogContext) => AlertDialog(
           title: Text(l10n.spatialArchiveConfirmTitle),
           content: Text(
-            l10n.spatialArchiveConfirmBody(
-              NodeStatePresentation.formatBytes(archive.sizeBytes),
-            ),
+            archive.sizeBytes > 0
+                ? l10n.spatialArchiveConfirmBody(
+                    NodeStatePresentation.formatBytes(archive.sizeBytes),
+                  )
+                : l10n.spatialArchiveConfirmBodyUnknownSize,
           ),
           actions: <Widget>[
             TextButton(
@@ -256,6 +304,7 @@ class _WebSpatialViewerState extends State<WebSpatialViewer> {
           ],
         ),
       );
+      _confirming = false;
       if (confirmed != true || !mounted) return;
     }
     setState(_session.loadArchive);
@@ -277,6 +326,10 @@ class _WebSpatialViewerState extends State<WebSpatialViewer> {
     final l10n = AppLocalizations.of(context)!;
     final scheme = Theme.of(context).colorScheme;
     final status = _session.status;
+    final inert = _pageScrolls && !_interactive;
+    // Idempotent DOM write: the iframe takes gestures only while it is the
+    // active viewer, otherwise they stay with Flutter (and the page scroll).
+    _iframe.style.pointerEvents = inert ? 'none' : 'auto';
     final overlay = switch (status) {
       SpatialWebLoadStatus.ready => null,
       SpatialWebLoadStatus.loading => _Notice(
@@ -309,50 +362,129 @@ class _WebSpatialViewerState extends State<WebSpatialViewer> {
     return Semantics(
       container: true,
       label: l10n.spatialArchiveTitle,
-      child: Column(
-        children: <Widget>[
-          Expanded(
-            child: Stack(
-              children: <Widget>[
-                Positioned.fill(
-                  child: ColoredBox(
-                    color: scheme.surfaceContainerHighest,
-                    child: HtmlElementView(
-                      viewType: _viewType,
-                      creationParams: _viewKey,
-                    ),
-                  ),
-                ),
-                if (overlay != null) Positioned.fill(child: overlay),
-              ],
-            ),
-          ),
-          if (status == SpatialWebLoadStatus.ready)
-            Padding(
-              padding: const EdgeInsets.only(top: 4),
-              child: Row(
+      child: TapRegion(
+        onTapOutside: (_) => _setInteractive(false),
+        child: Column(
+          children: <Widget>[
+            Expanded(
+              child: Stack(
                 children: <Widget>[
-                  Expanded(
-                    child: Text(
-                      l10n.spatialViewerDragHint,
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: scheme.onSurfaceVariant,
-                          ),
+                  Positioned.fill(
+                    child: ColoredBox(
+                      color: scheme.surfaceContainerHighest,
+                      child: HtmlElementView(
+                        viewType: _viewType,
+                        creationParams: _viewKey,
+                      ),
                     ),
                   ),
-                  if (_session.canOfferArchive)
-                    TextButton(
-                      onPressed: () => unawaited(_loadArchive()),
-                      child: Text(_archiveLabel(l10n)),
+                  if (overlay != null) Positioned.fill(child: overlay),
+                  if (status == SpatialWebLoadStatus.ready && inert)
+                    Positioned.fill(
+                      child: _ActivateOverlay(
+                        label: l10n.spatialViewerActivate,
+                        onActivate: () => _setInteractive(true),
+                      ),
                     ),
-                  TextButton(
-                    onPressed: _reset,
-                    child: Text(l10n.spatialViewerReset),
-                  ),
                 ],
               ),
             ),
+            if (status == SpatialWebLoadStatus.ready) _controls(context, l10n),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// The row under the viewer. While an embedded viewer is active the row is
+  /// only "Done" and "Reset view", so it never gets taller than the idle row
+  /// (a squeezed row would shrink the viewer above it).
+  Widget _controls(BuildContext context, AppLocalizations l10n) {
+    final scheme = Theme.of(context).colorScheme;
+    final active = _pageScrolls && _interactive;
+    final hint = _pageScrolls ? '' : l10n.spatialViewerDragHint;
+    return Padding(
+      padding: const EdgeInsets.only(top: 4),
+      child: Row(
+        children: <Widget>[
+          Expanded(
+            child: active
+                ? Align(
+                    alignment: AlignmentDirectional.centerStart,
+                    child: TextButton(
+                      onPressed: () => _setInteractive(false),
+                      child: Text(l10n.commonDone),
+                    ),
+                  )
+                : Text(
+                    hint,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: scheme.onSurfaceVariant,
+                        ),
+                  ),
+          ),
+          if (_session.canOfferArchive && !active)
+            TextButton(
+              onPressed: () => unawaited(_loadArchive()),
+              child: Text(
+                _archiveLabel(l10n),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          TextButton(
+            onPressed: _reset,
+            child: Text(l10n.spatialViewerReset),
+          ),
         ],
+      ),
+    );
+  }
+}
+
+/// Covers the inert viewer: a tap activates it, a drag or wheel passes through
+/// to the page's scroller.
+class _ActivateOverlay extends StatelessWidget {
+  const _ActivateOverlay({required this.label, required this.onActivate});
+
+  final String label;
+  final VoidCallback onActivate;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Semantics(
+      button: true,
+      label: label,
+      onTap: onActivate,
+      excludeSemantics: true,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: onActivate,
+        child: Align(
+          alignment: Alignment.bottomCenter,
+          child: Padding(
+            padding: const EdgeInsets.all(12),
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                color: scheme.surface.withValues(alpha: 0.82),
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Padding(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                child: Text(
+                  label,
+                  style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                        color: scheme.onSurface,
+                      ),
+                ),
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }

@@ -35,13 +35,15 @@ class SpatialWebLoadPlan {
 /// Formats the bundled Spark viewer is offered on the web.
 ///
 /// `rad` is deliberately absent: a paged RAD needs sibling chunk URLs that the
-/// single-route delivery below cannot provide.
+/// single-route delivery below cannot provide. `sog` is absent until a SOG
+/// fixture has been loaded through the browser smoke: it is a zip container
+/// that Spark opens as `pcsogszip`, the bytes route carries no file extension
+/// to detect it from, and nothing here has proven the detection by content.
 const Set<String> kSpatialWebFormats = <String>{
   'splat',
   'ply',
   'spz',
   'ksplat',
-  'sog',
 };
 
 /// Formats whose bytes cannot be recognised by content, so Spark is told.
@@ -150,8 +152,11 @@ class SpatialWebDelivery {
   /// Largest archive the visitor may start without an explicit confirmation.
   static const int archiveConfirmBytes = 50 * 1024 * 1024;
 
+  /// True when the archive is large or of unknown size. The archive is the
+  /// large tier by definition, so a record that omits `sizeBytes` (0) is asked
+  /// about too instead of being downloaded on the strength of a missing field.
   static bool archiveNeedsConfirmation(SpatialVariant variant) =>
-      variant.sizeBytes >= archiveConfirmBytes;
+      variant.sizeBytes <= 0 || variant.sizeBytes >= archiveConfirmBytes;
 
   /// How long one load may take before it is reported as failed. The archive
   /// tier is far larger than the other tiers, so it gets a longer budget
@@ -232,7 +237,13 @@ class SpatialWebDelivery {
     return result.isEmpty ? null : result;
   }
 
-  /// Best-effort read of the manifest transform. Never throws.
+  /// Largest manifest document read for its transform.
+  static const int manifestMaxBytes = 262144;
+
+  /// Best-effort read of the manifest transform. Never throws. The size cap
+  /// bounds the download, not just the parsing: a declared length above it is
+  /// refused before any body is read, and the body stream is abandoned as soon
+  /// as it passes the cap.
   static Future<Map<String, dynamic>?> fetchTransform(
     String? manifestUrl, {
     http.Client? client,
@@ -241,14 +252,21 @@ class SpatialWebDelivery {
     if (manifestUrl == null) return null;
     final http.Client active = client ?? http.Client();
     try {
-      final response =
-          await active.get(Uri.parse(manifestUrl)).timeout(timeout);
+      final response = await active
+          .send(http.Request('GET', Uri.parse(manifestUrl)))
+          .timeout(timeout);
+      final declared = response.contentLength;
       if (response.statusCode < 200 ||
           response.statusCode >= 300 ||
-          response.bodyBytes.length > 262144) {
+          (declared != null && declared > manifestMaxBytes)) {
         return null;
       }
-      return transformFromManifest(jsonDecode(utf8.decode(response.bodyBytes)));
+      final body = <int>[];
+      await for (final chunk in response.stream.timeout(timeout)) {
+        body.addAll(chunk);
+        if (body.length > manifestMaxBytes) return null;
+      }
+      return transformFromManifest(jsonDecode(utf8.decode(body)));
     } catch (_) {
       return null;
     } finally {

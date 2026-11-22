@@ -16500,6 +16500,10 @@ class AppLocalizationsSl extends AppLocalizations {
   }
 
   @override
+  String get spatialArchiveConfirmBodyUnknownSize =>
+      'Prenos je velik, njegova velikost pa ni znana. Nadaljujte le na povezavi, ki jo želite uporabiti.';
+
+  @override
   String get spatialQualityMobile => 'Optimizirano';
 
   @override
@@ -16523,6 +16527,9 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get spatialViewerLoading => 'Nalaganje 3D pogleda …';
+
+  @override
+  String get spatialViewerActivate => 'Dotaknite se za interakcijo';
 
   @override
   String get spatialViewerDragHint => 'Povlecite za razgled';

@@ -106,16 +106,24 @@ Xcode and cannot be verified from the Windows development environment.
 
 On Flutter web `SpatialViewer` resolves to `spatial_viewer_web.dart`: the same
 bundled viewer page runs in a same-origin iframe (`HtmlElementView`). The widget
-only chooses bytes and relays messages (`viewer-ready`, `ready`, `error:*` from
-the page; `load` / `reset` commands to it, same-origin only). All tier, timeout
+only chooses bytes and relays messages (`viewer-ready`, `ready`, `escape`,
+`error:*` from the page; `load` / `reset` / `activate` / `deactivate` commands to
+it, same-origin only). Each load attempt puts its number in the page URL
+(`index.html?a=<n>`); the page echoes it in every message and the widget drops any
+message that does not carry the current attempt, so a page that is being replaced
+(a timed-out tier, a retry) cannot answer for the attempt after it. A final
+failure empties the iframe (`about:blank`), so a stalled download stops. All tier, timeout
 and consent decisions live in `SpatialWebLoadSession` and `SpatialWebDelivery`
 (pure Dart, tested in the VM suite).
 
 - Tier: `spatial_mobile`, then `spatial_preview`; when the first cannot be loaded
   (a format Spark rejects, a failed route) the next one is tried. The archive tier
   never opens by default and never falls back; the visitor asks for it, sees its
-  size on the button, and confirms above 50 MiB. `rad` is not offered (paged RAD
-  needs sibling chunk URLs the single route cannot give).
+  size on the button, and confirms above 50 MiB or when the record states no size
+  (the archive is the large tier by definition). `rad` is not offered (paged RAD
+  needs sibling chunk URLs the single route cannot give), and `sog` is not offered
+  until a SOG fixture has been loaded through the browser smoke (Spark opens it as
+  `pcsogszip`, which the byte route gives no extension to detect).
 - Timeouts: 120 s for the optimised and preview tiers, 10 minutes for the archive,
   so a large archive is not declared dead while it is still downloading.
 - Bytes: `GET {backend}/api/upload/file/<cid>`, anonymous and registry-authorised:
@@ -145,7 +153,9 @@ and consent decisions live in `SpatialWebLoadSession` and `SpatialWebDelivery`
     `sanitizePublicationManifest` drops it; no producer writes it yet. The viewer
     reads it so the contract is settled before one does.
 - Isolation: the iframe is `sandbox="allow-scripts allow-same-origin"`, which is
-  not a security boundary (a same-origin frame can reach the app origin's storage).
+  not a security boundary: it stops popups, forms and top navigation, but a
+  same-origin frame can remove its own attribute and can reach the app origin's
+  storage.
   What bounds the risk: the page runs only this app's own bundle; its CSP is
   `default-src 'none'` with scripts from `'self'` and `'wasm-unsafe-eval'` only (no
   inline script, no eval); splat bytes are parsed by Spark's WASM, never executed;
@@ -159,9 +169,20 @@ and consent decisions live in `SpatialWebLoadSession` and `SpatialWebDelivery`
   `/assets/assets/spatial_viewer/index.html` (outside this repo; the smokes apply
   only the `web/.htaccess` policy).
 - Render loop: it runs only while the canvas is on screen, the tab is visible and
-  a piece is loaded or loading; a wheel gesture zooms only once the viewer has
-  focus (or on a pinch), and touch uses `touch-action: pan-y` so a vertical swipe
-  scrolls the page instead of orbiting.
+  a piece is loaded or loading.
+- Gestures and page scroll: an iframe is its own document, so wheel and touch
+  events that start on it never reach Flutter and cannot scroll the page behind
+  it. Inside a page that scrolls, the widget therefore keeps the iframe inert
+  (`pointer-events: none`) under a "Tap to interact" overlay: wheel and swipes
+  there scroll the page. A tap activates the viewer (it takes every gesture, the
+  canvas is focused, and a Done button appears); Escape in the viewer, a tap
+  outside it or Done make it inert again. Where no vertical scroller encloses it
+  (the fullscreen dialog, the native WebView) it is interactive at once. The page
+  uses `touch-action: none` (a `pan-y` page hands vertical drags to the browser
+  and leaves touch users without pitch); a wheel zooms only once the canvas has
+  focus (or on a pinch). The browser smokes assert all of this: inert wheel and
+  touch scroll the page, a tap activates, Escape and a tap outside release, and a
+  vertical touch drag pitches the camera.
 - CSP: the viewer page allows `'wasm-unsafe-eval'` (Spark's WASM); the SEO takeover
   policy in `web/seo-proxy.php` allows `frame-src 'self'` so the iframe is not blocked
   on public pages.
@@ -180,4 +201,11 @@ and consent decisions live in `SpatialWebLoadSession` and `SpatialWebDelivery`
   `test/spatial_viewer_asset_contract.test.js` (licence pin, notices, CSP, bundle
   hygiene) runs in the PR workflow's Node step. Locally the page smoke serves
   `build/web` when it exists; set `WEB_ROOT` to a missing directory to test the
-  checked-in `assets/spatial_viewer` instead.
+  checked-in `assets/spatial_viewer` instead. The Flutter smoke is hermetic: the
+  Google Identity script that `google_sign_in_web` injects at startup is stubbed
+  (the real script can call the plugin's `onGoogleLibraryLoad` twice, which
+  surfaces as an uncaught `StateError: Future already completed` from the
+  plugin's `loadWebSdk`, not from the viewer; it was the intermittent
+  `pageerror` of the first smoke runs). It exercises the harness section
+  (`ArtworkSpatialArchiveSection`), not the two detail screens themselves; the
+  screens only mount that section.

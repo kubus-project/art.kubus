@@ -4,15 +4,24 @@ import { SparkRenderer, SplatMesh } from "@sparkjsdev/spark";
 const canvas = document.querySelector("canvas");
 const status = document.querySelector("#status");
 
+// The web host names each load attempt in the page URL (`?a=<n>`) and drops any
+// message that does not echo the current one, so a page that is being replaced
+// (a timed-out tier, a retry) can never answer for the attempt that follows it.
+// Native hosts load the page without it.
+const attemptId = new URLSearchParams(window.location.search).get("a");
+
 // Status channel. Native hosts expose a `SpatialViewer` JavaScript channel;
 // the Flutter web host embeds this page in a same-origin iframe and receives
-// the same strings as `{ kubusSpatialViewer: "<message>" }` window messages.
+// the same strings as `{ kubusSpatialViewer: "<message>", attempt }` window
+// messages.
 function post(message) {
   try {
     if (window.SpatialViewer && window.SpatialViewer.postMessage) {
       window.SpatialViewer.postMessage(message);
     } else if (window.parent && window.parent !== window) {
-      window.parent.postMessage({ kubusSpatialViewer: message }, window.location.origin);
+      const payload = { kubusSpatialViewer: message };
+      if (attemptId !== null) payload.attempt = attemptId;
+      window.parent.postMessage(payload, window.location.origin);
     }
   } catch (_) {
     /* a host that cannot be reached is not a viewer failure */
@@ -113,12 +122,18 @@ canvas.addEventListener("keydown", (event) => {
   else if (event.key === "ArrowDown") pitch = Math.max(-1.35, pitch - step);
   else if (event.key === "+" || event.key === "=") distance = Math.max(0.4, distance * 0.9);
   else if (event.key === "-") distance = Math.min(15, distance / 0.9);
-  else return;
+  else if (event.key === "Escape") {
+    // Lets an embedding page take the viewer out of its interactive state.
+    canvas.blur();
+    post("escape");
+    return;
+  } else return;
   event.preventDefault();
 });
 // A wheel gesture zooms only once the visitor has focused the viewer (click or
-// Tab) or pinches (ctrl+wheel). Otherwise it is left alone, so a page scroll
-// that happens to start over a small embedded viewer is not swallowed.
+// Tab) or pinches (ctrl+wheel); otherwise it is left alone. (An embedding web
+// page keeps this iframe inert until the visitor activates it, so page scroll
+// never has to cross it; see spatial_viewer_web.dart.)
 canvas.addEventListener("wheel", (event) => {
   if (!event.ctrlKey && document.activeElement !== canvas) return;
   event.preventDefault();
@@ -265,6 +280,10 @@ window.addEventListener("message", (event) => {
   if (!command || typeof command !== "object") return;
   if (command.type === "reset") {
     window.resetSpatialView();
+  } else if (command.type === "activate") {
+    canvas.focus({ preventScroll: true });
+  } else if (command.type === "deactivate") {
+    canvas.blur();
   } else if (command.type === "load") {
     const candidates = Array.isArray(command.urls) ? command.urls : [command.url];
     const urls = candidates.map(allowedUrl).filter(Boolean).slice(0, 6);
