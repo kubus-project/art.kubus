@@ -249,6 +249,9 @@ async function run(browserType, name) {
         }
         await s.page.keyboard.press('Escape');
         check(`${tag}: Escape in the active viewer makes it inert again`, (await waitFor(async () => ((await pointerEvents()) === 'none' ? true : null), 10000)) === true);
+        // The relayed Escape belongs to the host that asked for it; the inline viewer's host asked for nothing, so nothing closes.
+        await s.page.waitForTimeout(500);
+        check(`${tag}: Escape in the inline viewer leaves the page and its viewer in place`, (await s.page.locator('iframe').count()) === 1 && (await frameEl.boundingBox())?.width > 200 && s.page.url().startsWith(origin), s.page.url());
         await s.page.mouse.click(centre.x, centre.y);
         await waitFor(async () => ((await pointerEvents()) === 'auto' ? true : null), 10000);
         await s.page.mouse.click(3, 3);

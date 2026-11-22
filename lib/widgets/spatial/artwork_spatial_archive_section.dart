@@ -397,6 +397,16 @@ class _SpatialArchiveDialog extends StatefulWidget {
 class _SpatialArchiveDialogState extends State<_SpatialArchiveDialog> {
   late ArtworkSpatialCapture selected = widget.history.current!;
 
+  /// Escape inside the web viewer closes this dialog, and only this dialog:
+  /// while another route (the archive-consent prompt) is above it, it is not
+  /// the current route and the key is ignored.
+  void _closeOnEscape() {
+    if (!mounted) return;
+    if (ModalRoute.of(context)?.isCurrent ?? false) {
+      Navigator.of(context).maybePop();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
@@ -421,6 +431,7 @@ class _SpatialArchiveDialogState extends State<_SpatialArchiveDialog> {
                     key: ValueKey(selected.id),
                     content: selected.content,
                     nodeService: nodeService,
+                    onEscape: _closeOnEscape,
                   ),
                 ),
               ),

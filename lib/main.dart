@@ -10,6 +10,7 @@ import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:provider/provider.dart';
 import 'package:logger/logger.dart';
 import 'config/config.dart';
+import 'services/third_party_licenses.dart';
 import 'providers/chat_provider.dart';
 import 'providers/glass_capabilities_provider.dart';
 import 'providers/app_mode_provider.dart';
@@ -248,6 +249,9 @@ void main() {
         // Initialize Flutter bindings in the guarded zone.
         WidgetsFlutterBinding.ensureInitialized();
         StartupTrace.mark('binding ready');
+        // Third-party notices for the bundled spatial viewer go on the in-app
+        // licence page; the text is read only when that page is opened.
+        registerSpatialViewerLicenses();
         if (kIsWeb && _enableWebSemantics) {
           // Opt in only for dedicated automation runs. Leaving semantics forced
           // on in production can place a Flutter overlay above DOM-backed

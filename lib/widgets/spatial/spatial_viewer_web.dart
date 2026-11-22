@@ -45,14 +45,27 @@ Widget buildSpatialViewer({
   required SpatialContent content,
   required KubusNodeService nodeService,
   String? posterUrl,
+  VoidCallback? onEscape,
 }) =>
-    WebSpatialViewer(content: content, posterUrl: posterUrl);
+    WebSpatialViewer(
+      content: content,
+      posterUrl: posterUrl,
+      onEscape: onEscape,
+    );
 
 class WebSpatialViewer extends StatefulWidget {
-  const WebSpatialViewer({required this.content, this.posterUrl, super.key});
+  const WebSpatialViewer({
+    required this.content,
+    this.posterUrl,
+    this.onEscape,
+    super.key,
+  });
 
   final SpatialContent content;
   final String? posterUrl;
+
+  /// Relayed Escape; see [SpatialViewer.onEscape].
+  final VoidCallback? onEscape;
 
   @override
   State<WebSpatialViewer> createState() => _WebSpatialViewerState();
@@ -208,18 +221,6 @@ class _WebSpatialViewerState extends State<WebSpatialViewer> {
     }
   }
 
-  /// Escape pressed inside the iframe never reaches Flutter's key handling.
-  /// Where no page scroller encloses the viewer it sits in the fullscreen
-  /// dialog, so the relayed Escape closes that dialog (never a screen: only a
-  /// popup route that is on top is popped).
-  void _closeEnclosingDialog() {
-    if (_pageScrolls) return;
-    final route = ModalRoute.of(context);
-    if (route is PopupRoute && route.isCurrent) {
-      Navigator.of(context).maybePop();
-    }
-  }
-
   void _setInteractive(bool value) {
     if (!mounted || _interactive == value) return;
     setState(() => _interactive = value);
@@ -239,7 +240,9 @@ class _WebSpatialViewerState extends State<WebSpatialViewer> {
     if ('${data['attempt']}' != '${_session.attempt}') return;
     if (message == 'escape') {
       _setInteractive(false);
-      _closeEnclosingDialog();
+      // Escape pressed inside the iframe never reaches Flutter's key handling;
+      // the host that owns the viewer decides what it means (if anything).
+      widget.onEscape?.call();
     } else if (message == 'viewer-ready') {
       _session.onViewerReady();
       unawaited(_sendLoad());

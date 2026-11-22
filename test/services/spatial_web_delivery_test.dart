@@ -309,6 +309,55 @@ void main() {
       );
     });
 
+    test('a matrix that is not a plain placement is refused whole', () {
+      Object? read(List<num> matrix, [Map<String, Object?> extra = const {}]) =>
+          SpatialWebDelivery.transformFromManifest({
+            'transform': {'matrix': matrix, ...extra},
+          });
+      List<num> withEdits(Map<int, num> edits) =>
+          [for (var i = 0; i < 16; i++) edits[i] ?? _upright[i]];
+      // A projective bottom row.
+      expect(read(withEdits({3: 0.5})), isNull);
+      expect(read(withEdits({15: 2})), isNull);
+      // Shear: the second axis leans onto the first.
+      expect(read(withEdits({4: -1, 5: 0.5})), isNull);
+      // Mirror: a left-handed basis.
+      expect(read(withEdits({10: -1})), isNull);
+      // Magnitudes: translation, scale too large and too small.
+      expect(read(withEdits({12: 1e9})), isNull);
+      expect(read(withEdits({0: 0, 1: 1e9})), isNull);
+      expect(read(withEdits({0: 0, 1: 1e-9})), isNull);
+      // The fallback fields never rescue a refused matrix.
+      expect(read(withEdits({3: 0.5}), {'scale': 2}), isNull);
+      // A genuine rotation, scale and translation still passes.
+      expect(read(withEdits({0: 0, 1: 2, 4: -2, 10: 3, 12: 5, 13: -4, 14: 1})),
+          isNotNull);
+    });
+
+    test('position and scale outside the sane range are dropped', () {
+      Object? read(Map<String, Object?> transform) =>
+          SpatialWebDelivery.transformFromManifest({'transform': transform});
+      expect(
+          read({
+            'position': [0, 1e12, 0]
+          }),
+          isNull);
+      expect(read({'scale': 1e30}), isNull);
+      expect(read({'scale': 1e-12}), isNull);
+      expect(
+        read({
+          'scale': [1, 1, 1e30],
+        }),
+        isNull,
+      );
+      expect(
+          read({
+            'position': [0, 1e6, 0],
+            'scale': 1e4
+          }),
+          isNotNull);
+    });
+
     test('reads the position / rotation / scale form', () {
       final transform = SpatialWebDelivery.transformFromManifest({
         'transform': {

@@ -1,5 +1,6 @@
 import * as THREE from "three";
 import { SparkRenderer, SplatMesh } from "@sparkjsdev/spark";
+import { acceptedMatrix, acceptedPosition, acceptedScale } from "./manifest_transform.mjs";
 
 const canvas = document.querySelector("canvas");
 const status = document.querySelector("#status");
@@ -167,10 +168,11 @@ function applyManifestTransform(target, transform) {
   const { matrix } = transform;
   if (
     Array.isArray(matrix) &&
-    matrix.length === 16 &&
-    matrix.every(finite) &&
     (transform.matrixOrder === undefined || transform.matrixOrder === "column-major")
   ) {
+    // A matrix that is present but not an acceptable placement is refused whole,
+    // never half-applied and never mixed with the fallback fields.
+    if (!acceptedMatrix(matrix)) return false;
     target.matrix.fromArray(matrix);
     target.matrix.decompose(target.position, target.quaternion, target.scale);
     const { x, y, z } = target.scale;
@@ -184,7 +186,7 @@ function applyManifestTransform(target, transform) {
   }
   let applied = false;
   const { position, rotation, scale } = transform;
-  if (Array.isArray(position) && position.length === 3 && position.every(finite)) {
+  if (acceptedPosition(position)) {
     target.position.fromArray(position);
     applied = true;
   }
@@ -197,11 +199,9 @@ function applyManifestTransform(target, transform) {
       applied = true;
     }
   }
-  if (finite(scale) && scale > 0) {
-    target.scale.setScalar(scale);
-    applied = true;
-  } else if (Array.isArray(scale) && scale.length === 3 && scale.every((value) => finite(value) && value > 0)) {
-    target.scale.fromArray(scale);
+  if (acceptedScale(scale)) {
+    if (Array.isArray(scale)) target.scale.fromArray(scale);
+    else target.scale.setScalar(scale);
     applied = true;
   }
   return applied;

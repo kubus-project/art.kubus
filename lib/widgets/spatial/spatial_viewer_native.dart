@@ -14,6 +14,7 @@ Widget buildSpatialViewer({
   required SpatialContent content,
   required KubusNodeService nodeService,
   String? posterUrl,
+  VoidCallback? onEscape,
 }) =>
     _NativeSpatialViewer(
       content: content,

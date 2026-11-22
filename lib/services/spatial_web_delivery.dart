@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:math' as math;
 
 import 'package:http/http.dart' as http;
 
@@ -196,11 +197,74 @@ class SpatialWebDelivery {
     );
   }
 
+  /// Largest translation component accepted from a manifest.
+  static const double maxTransformPosition = 1e6;
+
+  /// Smallest and largest per-axis scale accepted from a manifest.
+  static const double minTransformScale = 1e-6;
+  static const double maxTransformScale = 1e4;
+
+  static bool _acceptedPosition(List<Object?> position) =>
+      position.length == 3 &&
+      position.every(
+        (v) => v is num && v.isFinite && v.abs() <= maxTransformPosition,
+      );
+
+  static bool _acceptedScale(Object? v) =>
+      v is num &&
+      v.isFinite &&
+      v >= minTransformScale &&
+      v <= maxTransformScale;
+
+  /// A column-major 4x4 that is a proper affine placement: bottom row
+  /// (0, 0, 0, 1), bounded translation, axis lengths inside the scale bounds,
+  /// perpendicular axes (no shear) and a right-handed basis (no mirror). The
+  /// viewer page applies the same rules again (manifest_transform.mjs).
+  static bool _acceptedMatrix(List<double> m) {
+    const eps = 1e-6;
+    const shear = 1e-3;
+    if (m[3].abs() > eps || m[7].abs() > eps || m[11].abs() > eps) return false;
+    if ((m[15] - 1).abs() > eps) return false;
+    if ([m[12], m[13], m[14]].any((v) => v.abs() > maxTransformPosition)) {
+      return false;
+    }
+    final axes = [m.sublist(0, 3), m.sublist(4, 7), m.sublist(8, 11)];
+    double dot(List<double> a, List<double> b) =>
+        a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
+    final lengths = [for (final a in axes) math.sqrt(dot(a, a))];
+    if (!lengths.every(
+      (l) => l >= minTransformScale && l <= maxTransformScale,
+    )) {
+      return false;
+    }
+    for (final pair in const [
+      [0, 1],
+      [0, 2],
+      [1, 2],
+    ]) {
+      final i = pair[0];
+      final j = pair[1];
+      if (dot(axes[i], axes[j]).abs() > shear * lengths[i] * lengths[j]) {
+        return false;
+      }
+    }
+    final b = axes[1];
+    final c = axes[2];
+    final cross = [
+      b[1] * c[2] - b[2] * c[1],
+      b[2] * c[0] - b[0] * c[2],
+      b[0] * c[1] - b[1] * c[0],
+    ];
+    return dot(axes[0], cross) > 0;
+  }
+
   /// Extracts the viewer transform from a published manifest document.
   ///
   /// Accepts the Node's `{matrix: [16 numbers, column-major]}` and the
   /// `{position, rotation, scale}` form. Anything malformed yields null, which
-  /// makes the viewer open the piece untransformed instead of failing.
+  /// makes the viewer open the piece untransformed instead of failing. A
+  /// matrix that is not a plain placement (non-affine, sheared, mirrored,
+  /// out of bounds) is refused whole, as are out-of-bounds position and scale.
   static Map<String, dynamic>? transformFromManifest(Object? manifest) {
     if (manifest is! Map) return null;
     final raw = manifest['transform'];
@@ -209,16 +273,16 @@ class SpatialWebDelivery {
     final result = <String, dynamic>{};
     final matrix = raw['matrix'];
     final order = raw['matrixOrder'];
-    if (matrix is List &&
-        matrix.length == 16 &&
-        matrix.every(finite) &&
-        (order == null || order == 'column-major')) {
-      result['matrix'] = matrix.map((v) => (v as num).toDouble()).toList();
+    if (matrix is List && (order == null || order == 'column-major')) {
+      if (matrix.length != 16 || !matrix.every(finite)) return null;
+      final values = matrix.map((v) => (v as num).toDouble()).toList();
+      if (!_acceptedMatrix(values)) return null;
+      result['matrix'] = values;
       result['matrixOrder'] = 'column-major';
       return result;
     }
     final position = raw['position'];
-    if (position is List && position.length == 3 && position.every(finite)) {
+    if (position is List && _acceptedPosition(position)) {
       result['position'] = position.map((v) => (v as num).toDouble()).toList();
     }
     final rotation = raw['rotation'];
@@ -228,11 +292,11 @@ class SpatialWebDelivery {
       result['rotation'] = rotation.map((v) => (v as num).toDouble()).toList();
     }
     final scale = raw['scale'];
-    if (scale is num && scale.isFinite && scale > 0) {
-      result['scale'] = scale.toDouble();
+    if (_acceptedScale(scale)) {
+      result['scale'] = (scale as num).toDouble();
     } else if (scale is List &&
         scale.length == 3 &&
-        scale.every((v) => finite(v) && (v as num) > 0)) {
+        scale.every(_acceptedScale)) {
       result['scale'] = scale.map((v) => (v as num).toDouble()).toList();
     }
     return result.isEmpty ? null : result;

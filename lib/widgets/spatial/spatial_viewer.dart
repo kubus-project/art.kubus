@@ -16,11 +16,18 @@ class SpatialViewer extends StatelessWidget {
     required this.nodeService,
     super.key,
     this.posterUrl,
+    this.onEscape,
   });
 
   final SpatialContent content;
   final KubusNodeService nodeService;
   final String? posterUrl;
+
+  /// Called when the visitor presses Escape inside the web viewer. The viewer
+  /// is an iframe, so that key never reaches Flutter's own key handling; a host
+  /// that wants Escape to dismiss it (the fullscreen dialog) passes this. The
+  /// viewer itself closes nothing. Native and stub viewers never call it.
+  final VoidCallback? onEscape;
 
   @override
   Widget build(BuildContext context) => implementation.buildSpatialViewer(
@@ -28,5 +35,6 @@ class SpatialViewer extends StatelessWidget {
         content: content,
         nodeService: nodeService,
         posterUrl: posterUrl,
+        onEscape: onEscape,
       );
 }

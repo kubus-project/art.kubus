@@ -149,13 +149,21 @@ and consent decisions live in `SpatialWebLoadSession` and `SpatialWebDelivery`
   contract and the Node docs when the backend accepts `matrix`:
   - `matrix` is 16 finite numbers in COLUMN-MAJOR order (three.js
     `Matrix4.fromArray`, the order the kubus-node GUI viewer reads); `matrixOrder`
-    is absent or `column-major`, anything else is not applied. Non-positive scale
-    after decomposition is refused. The Node's pose helper (`poseConversion.ts`)
+    is absent or `column-major`, anything else is not applied. A matrix is a plain
+    placement or it is refused whole (the piece then opens untransformed): bottom
+    row (0, 0, 0, 1), translation within 1e6, per-axis scale within 1e-6 to 1e4,
+    mutually perpendicular axes (no shear, 1e-3 tolerance) and a right-handed
+    basis (no mirror). The app checks this before handing the transform over
+    (`SpatialWebDelivery.transformFromManifest`) and the viewer page checks it
+    again (`assets/spatial_viewer/src/manifest_transform.mjs`); keep the two in
+    step. The Node's pose helper (`poseConversion.ts`)
     is ROW-MAJOR: a producer that reuses it must transpose, or pieces stand on
     their side.
   - Otherwise `position` (3 numbers), `rotation` (4 numbers = quaternion xyzw, or
-    3 numbers = Euler angles in radians, order XYZ) and `scale` (positive number
-    or 3 positive numbers).
+    3 numbers = Euler angles in radians, order XYZ) and `scale` (number or 3
+    numbers, each within 1e-6 to 1e4); `position` components are within 1e6.
+    Anything outside those bounds is dropped, because a published 1e30 scale only
+    renders an empty or exploded view.
   - Today the backend manifest contract rejects `matrix` and the app's
     `sanitizePublicationManifest` drops it; no producer writes it yet. The viewer
     reads it so the contract is settled before one does.
@@ -171,7 +179,17 @@ and consent decisions live in `SpatialWebLoadSession` and `SpatialWebDelivery`
   `allow=""`; messages are accepted only from the parent window of the same
   origin and URLs only if https, blob or same-origin. `window.loadSpatial(url)`
   is the native WebView contract and deliberately skips the URL allow-list; it is
-  reachable only by script already inside the page. Before the first deploy,
+  reachable only by script already inside the page.
+  Decision (2026-11-23, review-4 N1), accepted for 0.8.8: the frame stays
+  same-origin and its CSP keeps `connect-src https:` (any host), because the
+  splat bytes come from the backend origin, which is configured per build and
+  cannot be named in a static page. A script that escaped the page's CSP could
+  therefore read the web app's storage and send it to any https host. The
+  mitigations above (own bundle only, no inline script, WASM-parsed bytes, no
+  credential handed over) are what stand between that and the app; the open
+  hardening is to serve the viewer from a separate cookieless origin, which
+  removes `allow-same-origin`, or to write the backend origin into the page's
+  `connect-src` at build time. Neither is done yet. Before the first deploy,
   verify that the nginx front adds no `X-Frame-Options` or `frame-ancestors` to
   `/assets/assets/spatial_viewer/index.html` (outside this repo; the smokes apply
   only the `web/.htaccess` policy).
@@ -184,8 +202,11 @@ and consent decisions live in `SpatialWebLoadSession` and `SpatialWebDelivery`
   there scroll the page. A tap activates the viewer (it takes every gesture, the
   canvas is focused, and a Done button appears); Escape in the viewer, a tap
   outside it or Done make it inert again. Escape pressed while the iframe has focus
-  never reaches Flutter's key handling: the viewer page relays it as `escape`, and in
-  the fullscreen dialog (no enclosing scroller) the widget closes that popup route. Where no vertical scroller encloses it
+  never reaches Flutter's key handling: the viewer page relays it as `escape`, and the
+  widget hands it to its host through `SpatialViewer.onEscape`. Only the fullscreen
+  dialog passes one (it closes itself, and only while it is the current route, so the
+  archive-consent prompt above it is not dismissed); the inline viewer passes none, so
+  Escape there closes nothing (smoke step). Where no vertical scroller encloses it
   (the fullscreen dialog, the native WebView) it is interactive at once. The page
   uses `touch-action: none` (a `pan-y` page hands vertical drags to the browser
   and leaves touch users without pitch); a wheel zooms only once the canvas has
