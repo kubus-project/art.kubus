@@ -1158,3 +1158,43 @@ test('a host with neither data-locale nor a localized canonical path still never
   page.dispatchEntity({ type: 'artwork', id: 'art-1', path: '/artworks/art-1', locale: 'en' });
   assert.equal(page.classes.has('kubus-takeover-active'), false);
 });
+
+test('PHP gateway: institution pages are server-rendered only and never a takeover target', () => {
+  const gateway = fs.readFileSync(SEO_PROXY, 'utf8');
+  const htaccess = fs.readFileSync(path.join(__dirname, '..', 'web', '.htaccess'), 'utf8');
+
+  // Both institution routes reach the renderer (any /en or /sl path does), not the app shell.
+  assert.match(htaccess, /RewriteRule \^\(\?:en\|sl\)\/\.\+ seo-proxy\.php \[L,QSA\]/);
+  assert.match(gateway, /preg_match\('#\^\/\(\?:en\|sl\)\(\?:\/\.\*\)\?\$#', \$path\) === 1/);
+
+  // The SSR-only list is explicit and is checked before the takeover segment map.
+  assert.match(gateway, /const KUBUS_SSR_ONLY_SEGMENTS = \[\s*'en' => \['institutions'\],\s*'sl' => \['institucije'\],\s*\];/);
+  const guard = gateway.indexOf('in_array($matches[2], KUBUS_SSR_ONLY_SEGMENTS[$matches[1]] ?? [], true)');
+  const segmentMap = gateway.indexOf('$segments = [');
+  assert.ok(guard > -1 && segmentMap > guard, 'the SSR-only guard precedes the takeover segment map');
+
+  // The takeover map itself carries no institution segment and keeps profiles as profiles.
+  const map = gateway.slice(segmentMap, gateway.indexOf('$locale = $matches[1];', segmentMap));
+  assert.doesNotMatch(map, /institutions|institucije|institution/);
+  assert.match(map, /'profiles' => 'profile'/);
+  assert.match(map, /'profili' => 'profile'/);
+
+  // The compact-alias allowlist gained no institution head: institutions have no compact alias.
+  const aliasPattern = gateway.match(/'#\^\/\(\?:a\|u\|e\|x[^']*'/)?.[0] ?? '';
+  assert.ok(aliasPattern.length > 0);
+  assert.doesNotMatch(aliasPattern, /institution/);
+});
+
+test('the app has no institution takeover: its deep-link contract knows no institution route', () => {
+  // If an institution detail screen is added, this test is the reminder to add a takeover type to the
+  // gateway map, the backend TAKEOVER_ENTITY_TYPES and the app deep-link parser together.
+  const parser = fs.readFileSync(path.join(__dirname, '..', 'lib', 'services', 'share', 'share_deep_link_parser.dart'), 'utf8');
+  const provider = fs.readFileSync(path.join(__dirname, '..', 'lib', 'providers', 'public_entity_takeover_provider.dart'), 'utf8');
+  const types = fs.readFileSync(path.join(__dirname, '..', 'lib', 'services', 'share', 'share_types.dart'), 'utf8');
+  assert.doesNotMatch(parser, /'(?:en\/institutions|sl\/institucije)'/);
+  assert.doesNotMatch(provider, /institutions|institucije/);
+  assert.doesNotMatch(types, /enum ShareEntityType \{[^}]*institution/);
+  // The profile route stays the only profile-shaped takeover.
+  assert.match(parser, /'en\/profiles': AppRouteIntentType\.profile/);
+  assert.match(parser, /'sl\/profili': AppRouteIntentType\.profile/);
+});

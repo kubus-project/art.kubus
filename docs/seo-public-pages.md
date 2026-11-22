@@ -117,12 +117,22 @@ Canonical public routes use stable IDs, not mutable or synthetic slugs.
 | --- | --- | --- | --- |
 | Artwork | `/en/artworks/:id` | `/sl/umetnine/:id` | `/a/:id` |
 | Profile | `/en/profiles/:id` | `/sl/profili/:id` | `/u/:id` |
+| Institution | `/en/institutions/:id` | `/sl/institucije/:id` | none |
 | Event | `/en/events/:id` | `/sl/dogodki/:id` | `/e/:id` |
 | Exhibition | `/en/exhibitions/:id` | `/sl/razstave/:id` | `/x/:id` |
 | Public post | `/en/posts/:id` | `/sl/objave/:id` | `/p/:id` |
 | Collection | `/en/collections/:id` | `/sl/zbirke/:id` | `/c/:id` |
 | Collectible | `/en/collectibles/:id` | `/sl/zbirateljski-predmeti/:id` | `/n/:id` |
 | Map marker | `/en/map/:id` | `/sl/zemljevid/:id` | `/m/:id` |
+
+An institution (a row of the institutions table, not a user profile) has its own
+canonical page. Its former `/en/profiles/:id` and `/sl/profili/:id` URLs answer
+301 to it, and its compact aliases answer 308 straight to it. Slovenian points
+to Slovenian for institutions only: each locale page is its own canonical with
+reciprocal `en`/`sl`/`x-default` alternates. Institution pages are server
+rendered only: the app has no institution detail screen, so the gateway
+(`KUBUS_SSR_ONLY_SEGMENTS` in `web/seo-proxy.php`) never injects the takeover
+host for them. See the backend's `docs/SEO_PUBLIC_PAGES.md`, "Institution pages".
 
 Compact and known long-form aliases redirect directly to the English canonical
 with HTTP 308. `?lang=sl` redirects directly to Slovenian. Canonical documents
@@ -164,7 +174,9 @@ technical contract:
 
 - artwork: `VisualArtwork`
 - artist profile: `ProfilePage` plus `Person`
-- institution profile: `ProfilePage` plus the closest stored organization type
+- institution page: `WebPage` whose main entity is the venue type for its kind
+  (`Museum`, `ArtGallery`, `Library`, `CivicStructure`, else `Organization`) with
+  the address, geo, opening hours and admission only where the record stores them
 - event: `Event`
 - exhibition: `ExhibitionEvent`
 - post: `SocialMediaPosting`
