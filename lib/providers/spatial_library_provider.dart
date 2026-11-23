@@ -845,6 +845,14 @@ class SpatialLibraryProvider extends ChangeNotifier {
           record.resultManifestCid == null) {
         throw StateError('local_manifest_invalid');
       }
+      // The backend reads the manifest bytes at `manifestCid`, normalises them
+      // and requires them to match the submitted JSON, so the stored manifest
+      // must already BE its public form: the app cannot repair it by sending a
+      // different document for the same CID. A manifest in the Node's own form
+      // (`transform.matrix`, `viewerDefaults.quality: archive`, floater crop,
+      // processing.orientation, provenance) differs from its projection and is
+      // refused here, before any request, until a projection step has stored
+      // the public form and its CID (docs/SPATIAL_RUNTIME.md, Publication).
       final publicManifest = sanitizePublicationManifest(decoded);
       if (!_deepJsonEquals(publicManifest, decoded)) {
         throw StateError('local_manifest_not_public_safe');
@@ -944,16 +952,18 @@ class SpatialLibraryProvider extends ChangeNotifier {
         ? Map<String, dynamic>.from(manifest['transform'] as Map)
         : <String, dynamic>{};
     // The public manifest contract carries position / rotation / scale only. A
-    // Node placement `matrix` is split into those; one the viewer would refuse
-    // is dropped whole, never mixed with the other fields (the viewer does the
-    // same), so a bad matrix cannot sneak a different transform through.
+    // Node placement `matrix` is split into those. The rule for WHEN a matrix
+    // decides is the viewer's own (SpatialWebDelivery.transformFromManifest and
+    // the page): a list with an absent or `column-major` order decides alone,
+    // and one the viewer would refuse is dropped whole, never mixed with the
+    // other fields. Anything else (a non-list `matrix`, an unknown order) is
+    // not a matrix to them, so the position / rotation / scale fields apply.
+    final matrix = transform['matrix'];
+    final order = transform['matrixOrder'];
     final Map<String, dynamic> publicTransform;
-    if (transform.containsKey('matrix')) {
-      final order = transform['matrixOrder'];
-      publicTransform = order == null || order == 'column-major'
-          ? SpatialWebDelivery.decomposePlacementMatrix(transform['matrix']) ??
-              const <String, dynamic>{}
-          : const <String, dynamic>{};
+    if (matrix is List && (order == null || order == 'column-major')) {
+      publicTransform = SpatialWebDelivery.decomposePlacementMatrix(matrix) ??
+          const <String, dynamic>{};
     } else {
       publicTransform = <String, dynamic>{
         for (final key in const <String>{'position', 'rotation', 'scale'})

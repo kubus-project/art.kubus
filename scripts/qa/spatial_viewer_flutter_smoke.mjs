@@ -127,9 +127,19 @@ async function colourStats(page, png) {
   }, png.toString('base64'));
 }
 
-async function newScenario(browser, { origin, viewport, reducedMotion, hasTouch = false, history = HISTORY, bytesOk = true, manifest = true }) {
+async function newScenario(browser, { origin, viewport, reducedMotion, hasTouch = false, history = HISTORY, bytesOk = true, manifest = true, bytesDelayMs = 0 }) {
   const context = await browser.newContext({ locale: 'en-US', viewport, hasTouch, reducedMotion: reducedMotion ? 'reduce' : 'no-preference' });
-  await context.addInitScript(() => { Error.stackTraceLimit = 60; });
+  await context.addInitScript(() => {
+    Error.stackTraceLimit = 60;
+    // Every object URL the app page creates and revokes, so a test can prove none outlives its use.
+    if (window === window.top) {
+      window.__blobs = { created: [], revoked: [] };
+      const create = URL.createObjectURL.bind(URL);
+      const revoke = URL.revokeObjectURL.bind(URL);
+      URL.createObjectURL = (obj) => { const u = create(obj); window.__blobs.created.push(u); return u; };
+      URL.revokeObjectURL = (u) => { window.__blobs.revoked.push(u); return revoke(u); };
+    }
+  });
   const seen = { upload: [], history: 0, other: [], gateway: [], identified: [] };
   await context.route((u) => u.origin !== origin, async (route) => {
     const url = new URL(route.request().url());
@@ -143,6 +153,7 @@ async function newScenario(browser, { origin, viewport, reducedMotion, hasTouch 
       // The bytes and the manifest are both anonymous: no Referer, cookie or Authorization.
       const sent = await route.request().allHeaders();
       for (const name of ['referer', 'cookie', 'authorization']) if (sent[name]) seen.identified.push(`${m[1]}:${name}`);
+      if (m[1] === 'bafy-sample' && bytesDelayMs) await new Promise((r) => setTimeout(r, bytesDelayMs));
       if (m[1] === 'bafy-sample' && bytesOk) return route.fulfill({ status: 200, headers: { ...CORS, 'content-type': 'application/octet-stream' }, body: SAMPLE });
       if (m[1] === 'bafy-manifest' && manifest) return route.fulfill({ status: 200, headers: { ...CORS, 'content-type': 'application/json' }, body: JSON.stringify({ schema: 'kubus.spatial/1', transform: UPRIGHT }) });
       return route.fulfill({ status: 404, headers: CORS, body: '' });
@@ -417,6 +428,25 @@ async function run(browserType, name) {
         await s.page.getByRole('button', { name: 'Continue' }).click();
         const asked = await waitFor(async () => (s.seen.upload.includes('bafy-archive') ? true : null), 30000);
         check(`${tag}: confirming starts the archive download`, !!asked, s.seen.upload.join(','));
+        await s.context.close();
+      }
+
+      // H. The bytes arrive only after the load budget ran out: the viewer is in its failure state, the late response
+      // is discarded, and no object URL is left behind (the app page creates and revokes them; see newScenario).
+      {
+        const s = await newScenario(browser, { origin, ...layout, bytesDelayMs: 6000 });
+        await s.page.goto(`${origin}/?spacer=0&timeout=2`);
+        await s.page.waitForSelector('flt-semantics-placeholder', { state: 'attached', timeout: 30000 });
+        await s.page.evaluate(() => document.querySelector('flt-semantics-placeholder')?.click());
+        const failed = await s.page.getByRole('button', { name: 'Try again' }).waitFor({ timeout: 30000 }).then(() => true, () => false);
+        check(`${tag}: a load that outlives its budget ends in the failure notice`, failed);
+        // Let the delayed response (6 s) arrive and settle well after the 2 s budget.
+        await s.page.waitForTimeout(8000);
+        const blobs = await s.page.evaluate(() => window.__blobs);
+        const outstanding = blobs.created.filter((u) => !blobs.revoked.includes(u));
+        check(`${tag}: a response that arrives after the timeout leaves no object URL behind`, outstanding.length === 0, `created=${blobs.created.length} revoked=${blobs.revoked.length}`);
+        check(`${tag}: ...and does not bring the failed viewer back`, (await s.page.locator('iframe').getAttribute('src')) === 'about:blank' && !viewerFrame(s.page) && (await s.page.getByRole('button', { name: 'Try again' }).count()) === 1);
+        check(`${tag}: no CSP violation or page error after a late response`, s.problems.length === 0, s.problems.join(' | '));
         await s.context.close();
       }
 

@@ -25,29 +25,80 @@ class SpatialLazyReveal extends StatefulWidget {
 
 class _SpatialLazyRevealState extends State<SpatialLazyReveal> {
   bool _revealed = false;
-  ScrollPosition? _position;
+  final List<ScrollPosition> _positions = <ScrollPosition>[];
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    final next = Scrollable.maybeOf(context)?.position;
-    if (!identical(next, _position)) {
-      _position?.removeListener(_check);
-      _position = next;
-      _position?.addListener(_check);
+    // Every scrollable above this widget, on either axis: a viewer inside a
+    // horizontally paged parent must be revealed by the page turning, not only
+    // by the vertical scroll around it.
+    final next = <ScrollPosition>[];
+    context.visitAncestorElements((element) {
+      if (element is StatefulElement && element.state is ScrollableState) {
+        next.add((element.state as ScrollableState).position);
+      }
+      return true;
+    });
+    var unchanged = next.length == _positions.length;
+    for (var i = 0; unchanged && i < next.length; i++) {
+      unchanged = identical(next[i], _positions[i]);
+    }
+    if (!unchanged) {
+      for (final position in _positions) {
+        position.removeListener(_scheduleCheck);
+      }
+      _positions
+        ..clear()
+        ..addAll(next);
+      for (final position in _positions) {
+        position.addListener(_scheduleCheck);
+      }
     }
     _scheduleCheck();
   }
 
   @override
   void dispose() {
-    _position?.removeListener(_check);
+    for (final position in _positions) {
+      position.removeListener(_scheduleCheck);
+    }
     super.dispose();
   }
 
+  bool _checkQueued = false;
+
+  /// Checks after the next layout. A scroll listener fires before the new
+  /// scroll offset has been laid out (a page jump moves the child only at
+  /// layout), so it must never measure at once.
   void _scheduleCheck() {
-    if (_revealed) return;
-    WidgetsBinding.instance.addPostFrameCallback((_) => _check());
+    if (_revealed || _checkQueued) return;
+    _checkQueued = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _checkQueued = false;
+      _check();
+    });
+  }
+
+  /// The part of the screen this widget may currently be seen through: the
+  /// window, narrowed by the on-screen box of every scrollable above it (a pane
+  /// shorter than the window, a horizontally paged parent). Null when a
+  /// scrollable above it has no layout yet.
+  Rect? _visibleBounds() {
+    var bounds = Offset.zero & MediaQuery.sizeOf(context);
+    final boxes = <RenderBox>[];
+    context.visitAncestorElements((element) {
+      if (element is StatefulElement && element.state is ScrollableState) {
+        final box = element.renderObject;
+        if (box is RenderBox) boxes.add(box);
+      }
+      return true;
+    });
+    for (final box in boxes) {
+      if (!box.attached || !box.hasSize) return null;
+      bounds = bounds.intersect(box.localToGlobal(Offset.zero) & box.size);
+    }
+    return bounds;
   }
 
   void _check() {
@@ -57,9 +108,15 @@ class _SpatialLazyRevealState extends State<SpatialLazyReveal> {
       _scheduleCheck();
       return;
     }
-    final viewportHeight = MediaQuery.sizeOf(context).height;
-    final top = box.localToGlobal(Offset.zero).dy;
-    if (top < viewportHeight && top + box.size.height > 0) {
+    final visible = _visibleBounds();
+    if (visible == null) {
+      _scheduleCheck();
+      return;
+    }
+    final own = box.localToGlobal(Offset.zero) & box.size;
+    // A positive-area overlap: a box that only touches the edge is not seen.
+    final overlap = own.intersect(visible);
+    if (overlap.width > 0 && overlap.height > 0) {
       setState(() => _revealed = true);
     }
   }

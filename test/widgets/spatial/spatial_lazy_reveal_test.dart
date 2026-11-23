@@ -62,4 +62,89 @@ void main() {
     await tester.pump();
     expect(find.text('viewer', skipOffstage: false), findsOneWidget);
   });
+
+  testWidgets(
+      'a viewer below the visible part of a pane shorter than the window waits',
+      (tester) async {
+    tester.view.physicalSize = const Size(400, 800);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    final controller = ScrollController();
+    addTearDown(controller.dispose);
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: Column(
+            children: <Widget>[
+              // A 200 px pane in an 800 px window: the viewer at 400 px is
+              // inside the window but outside the pane.
+              SizedBox(
+                height: 200,
+                child: SingleChildScrollView(
+                  controller: controller,
+                  child: const Column(
+                    children: <Widget>[
+                      SizedBox(height: 400),
+                      SpatialLazyReveal(
+                        height: 300,
+                        placeholder: Text('placeholder'),
+                        child: Text('viewer'),
+                      ),
+                      SizedBox(height: 1500),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.pump();
+    expect(find.text('viewer', skipOffstage: false), findsNothing);
+
+    controller.jumpTo(300);
+    await tester.pump();
+    await tester.pump();
+    expect(find.text('viewer'), findsOneWidget);
+  });
+
+  testWidgets('a viewer on a page that is not shown yet waits for the page',
+      (tester) async {
+    tester.view.physicalSize = const Size(400, 800);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    final pages = PageController();
+    addTearDown(pages.dispose);
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: PageView(
+            controller: pages,
+            allowImplicitScrolling: true,
+            children: const <Widget>[
+              Text('first'),
+              SpatialLazyReveal(
+                height: 300,
+                placeholder: Text('placeholder'),
+                child: Text('viewer'),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.pump();
+    expect(find.text('viewer', skipOffstage: false), findsNothing);
+
+    pages.jumpToPage(1);
+    await tester.pump();
+    await tester.pump();
+    await tester.pump();
+    expect(find.text('viewer'), findsOneWidget);
+  });
 }

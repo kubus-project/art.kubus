@@ -114,6 +114,21 @@ void main() {
       );
     });
 
+    test('the QA harness override replaces every budget and is off by default',
+        () {
+      final mobile = _variant('spatial_mobile', 'cid-mobile', 'spz');
+      final archive = _variant('spatial_archive', 'cid-archive', 'ply');
+      expect(SpatialWebDelivery.loadTimeoutOverride, isNull);
+      SpatialWebDelivery.loadTimeoutOverride = const Duration(seconds: 2);
+      addTearDown(() => SpatialWebDelivery.loadTimeoutOverride = null);
+      expect(
+          SpatialWebDelivery.loadTimeout(mobile), const Duration(seconds: 2));
+      expect(
+        SpatialWebDelivery.loadTimeout(archive),
+        const Duration(seconds: 2),
+      );
+    });
+
     test('the archive gets a longer budget and a size confirmation', () {
       final archive = _variant('spatial_archive', 'cid-archive', 'ply');
       final mobile = _variant('spatial_mobile', 'cid-mobile', 'spz');

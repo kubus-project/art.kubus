@@ -154,8 +154,8 @@ and consent decisions live in `SpatialWebLoadSession` and `SpatialWebDelivery`
   with the same anonymous `fetch` options as the bytes, through
   `AnonymousFetchClient`) is read
   best effort and its `transform` is applied; without a readable transform the
-  piece opens untransformed. Contract, to be mirrored by the backend manifest
-  contract and the Node docs when the backend accepts `matrix`:
+  piece opens untransformed. The rules, one implementation per side and one shared
+  vector file (`test/fixtures/spatial/manifest_transform_vectors.json`):
   - `matrix` is 16 finite numbers in COLUMN-MAJOR order (three.js
     `Matrix4.fromArray`, the order the kubus-node GUI viewer reads); `matrixOrder`
     is absent or `column-major`, anything else is not applied. A matrix is a plain
@@ -176,14 +176,26 @@ and consent decisions live in `SpatialWebLoadSession` and `SpatialWebDelivery`
     Anything outside those bounds is dropped, because a published 1e30 scale only
     renders an empty or exploded view.
   - Publication: the backend manifest contract accepts only `position`, `rotation`
-    and `scale` in `transform` (it rejects `matrix` as an unknown key). The app's
-    `sanitizePublicationManifest` therefore splits an accepted Node `matrix` into
-    those three (`SpatialWebDelivery.decomposePlacementMatrix`: position, rotation
-    as a quaternion x y z w, scale as a 3-vector; the viewer composes the same
-    translation * rotation * scale), so a piece the Node placed opens upright after
-    publication. A matrix the viewer would refuse is dropped whole and is never mixed
-    with the other fields. The backend can then take `matrix` later without an
-    app change being needed first.
+    and `scale` in `transform` (it rejects `matrix` as an unknown key), and it
+    verifies the manifest by READING THE BYTES AT THE SUBMITTED CID and comparing
+    them with the submitted JSON. The app therefore cannot make a Node manifest
+    publishable by changing what it sends: the stored manifest has to be the public
+    form already. `SpatialLibraryProvider.sanitizePublicationManifest` is that
+    projection (strict allowlist; an accepted `matrix` becomes position, rotation as
+    a quaternion x y z w and a 3-vector scale through
+    `SpatialWebDelivery.decomposePlacementMatrix`, the same translation * rotation *
+    scale the viewer composes), and `publish()` submits only a manifest equal to its
+    own projection. A manifest in the Node's own form (`transform.matrix`,
+    `viewerDefaults.quality: archive`, `processing.orientation`, floater crop,
+    provenance) is refused with `local_manifest_not_public_safe` before any request.
+    So a Node-placed piece opens upright after publication only once a projection
+    step has stored the public form and its CID (an operator publication script or a
+    Node-side export; neither is in this repository); the in-app Publish action does not
+    do that by itself. A matrix the viewer would refuse is dropped whole and is never
+    mixed with the other fields; the rule for when a matrix decides at all (a list
+    with an absent or `column-major` order) is the viewer's, so a non-list `matrix`
+    or an unknown order is not a matrix to the app, the viewer or the projection
+    alike.
 - Isolation: the iframe is `sandbox="allow-scripts allow-same-origin"`, which is
   not a security boundary: it stops popups, forms and top navigation, but a
   same-origin frame can remove its own attribute and can reach the app origin's
@@ -248,13 +260,26 @@ and consent decisions live in `SpatialWebLoadSession` and `SpatialWebDelivery`
   rounds the matrix to 6 decimals, so the 1e-3 shear tolerance holds for a uniform
   scale above about 1e-3 (a scene extent below about 2000 splat units); a larger
   scene is refused whole and opens untransformed.
+- Native WebView: the Android/iOS viewer hands the page the Spark file type and the
+  published manifest's placement (the same `SpatialWebDelivery.plan` and
+  `fetchTransform` as the web host), so a Node-placed piece opens upright and a raw
+  `.splat` is typed there too. The inline section on the artwork screen is still web
+  only: an embedded WebView inside a scrolling page needs its own gesture-arena
+  handling (orbit versus scroll) that has to be proven on a real device first.
+- Lazy reveal: the inline viewer is created when its box overlaps the window narrowed
+  by every scrollable above it, on either axis (a short pane or a horizontally paged
+  parent keeps it waiting), not when it merely sits inside the window.
 - Backend cross-lane: the byte route sends the whole body (up to 512 MiB per
   variant) from memory on an anonymous route. The app now shows the size and asks
   first, but a route-level rate limit and concurrency cap belong to the backend and
   must be confirmed before this reaches the public.
 - Browser proof: `scripts/qa/spatial_viewer_smoke.mjs` (viewer page) and
   `scripts/qa/spatial_viewer_flutter_smoke.mjs` (the built Flutter widget), both on
-  the synthetic `test/fixtures/spatial/sample_flower.splat`. Both run in the PR
+  the synthetic `test/fixtures/spatial/sample_flower.splat`. The Flutter smoke's
+  harness takes `?timeout=<seconds>` (`SpatialWebDelivery.loadTimeoutOverride`) to
+  prove that a response arriving after the load budget leaves no object URL and does
+  not revive the failed viewer; the sub-millisecond race (bytes ready as the timer
+  fires) is covered by the `isLiveAttempt` unit test, not by a browser. Both run in the PR
   workflow (the Chrome job builds the harness with `flutter build web --release -t
   tool/qa/spatial_viewer_web_harness_main.dart --output build/spatial-harness`).
   `test/spatial_viewer_asset_contract.test.js` (licence pin, notices, CSP, bundle

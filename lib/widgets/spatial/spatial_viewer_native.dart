@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:webview_flutter/webview_flutter.dart';
@@ -7,6 +8,7 @@ import '../../l10n/app_localizations.dart';
 import '../../models/kubus_node_models.dart';
 import '../../services/kubus_node_service.dart';
 import '../../services/spatial_content_proxy.dart';
+import '../../services/spatial_web_delivery.dart';
 import '../inline_loading.dart';
 
 Widget buildSpatialViewer({
@@ -105,11 +107,7 @@ class _NativeSpatialViewerState extends State<_NativeSpatialViewer> {
           onMessageReceived: (message) {
             if (!mounted) return;
             if (message.message == 'viewer-ready') {
-              unawaited(
-                controller.runJavaScript(
-                  'window.loadSpatial(${_jsString(_proxy!.uri.toString())})',
-                ),
-              );
+              unawaited(_loadInto(controller, variant));
             } else if (message.message == 'ready') {
               setState(() => _ready = true);
             } else if (message.message.startsWith('error:')) {
@@ -125,6 +123,28 @@ class _NativeSpatialViewerState extends State<_NativeSpatialViewer> {
       if (!mounted) return;
       setState(() => _error = error.toString());
     }
+  }
+
+  /// Hands the page the proxied bytes together with what the web host also
+  /// passes: the Spark file type (a raw `.splat` has no magic number) and the
+  /// published manifest's placement, so a piece the Node placed opens upright
+  /// here too. The transform read is best effort and bounded, and never blocks
+  /// the load beyond its own timeout.
+  Future<void> _loadInto(
+    WebViewController controller,
+    SpatialVariant variant,
+  ) async {
+    final proxy = _proxy;
+    if (proxy == null) return;
+    final plan = SpatialWebDelivery.plan(widget.content, variant);
+    final transform = await SpatialWebDelivery.fetchTransform(plan.manifestUrl);
+    if (!mounted || !identical(proxy, _proxy)) return;
+    final args = <String>[
+      _jsString(proxy.uri.toString()),
+      jsonEncode(transform),
+      jsonEncode(plan.fileType),
+    ].join(', ');
+    await controller.runJavaScript('window.loadSpatial($args)');
   }
 
   static String _jsString(String value) =>

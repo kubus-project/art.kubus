@@ -10,11 +10,13 @@
 //     --output build/spatial-harness
 //   node scripts/qa/spatial_viewer_flutter_smoke.mjs
 //
-// Query: ?spacer=<px> pushes the section below the fold (lazy-load check).
+// Query: ?spacer=<px> pushes the section below the fold (lazy-load check);
+// ?timeout=<seconds> replaces the 120 s / 10 min load budgets (timeout checks).
 import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:art_kubus/models/artwork.dart';
 import 'package:art_kubus/providers/artwork_provider.dart';
 import 'package:art_kubus/providers/kubus_node_provider.dart';
+import 'package:art_kubus/services/spatial_web_delivery.dart';
 import 'package:art_kubus/widgets/spatial/artwork_spatial_archive_section.dart';
 import 'package:flutter/material.dart';
 import 'package:latlong2/latlong.dart';
@@ -24,6 +26,10 @@ const String kHarnessArtworkId = '53b99c8b-8503-545c-8a13-55f60cfb8342';
 
 void main() {
   final spacer = double.tryParse(Uri.base.queryParameters['spacer'] ?? '') ?? 0;
+  final timeout = int.tryParse(Uri.base.queryParameters['timeout'] ?? '');
+  if (timeout != null && timeout > 0) {
+    SpatialWebDelivery.loadTimeoutOverride = Duration(seconds: timeout);
+  }
   runApp(
     MultiProvider(
       providers: <ChangeNotifierProvider<ChangeNotifier>>[

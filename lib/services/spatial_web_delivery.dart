@@ -164,9 +164,15 @@ class SpatialWebDelivery {
   /// tier is far larger than the other tiers, so it gets a longer budget
   /// instead of being declared dead while it is still downloading.
   static Duration loadTimeout(SpatialVariant variant) =>
-      variant.role == 'spatial_archive'
+      loadTimeoutOverride ??
+      (variant.role == 'spatial_archive'
           ? const Duration(minutes: 10)
-          : const Duration(seconds: 120);
+          : const Duration(seconds: 120));
+
+  /// Replaces every load budget. Set only by the browser QA harness
+  /// (tool/qa/spatial_viewer_web_harness_main.dart), so a timeout followed by a
+  /// late response can be exercised in seconds; always null in the app.
+  static Duration? loadTimeoutOverride;
 
   static SpatialVariant? archiveVariant(SpatialContent content) =>
       content.variants
