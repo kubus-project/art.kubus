@@ -121,7 +121,7 @@ and consent decisions live in `SpatialWebLoadSession` and `SpatialWebDelivery`
 - Tier: `spatial_mobile`, then `spatial_preview`; when the first cannot be loaded
   (a format Spark rejects, a failed route) the next one is tried. The archive tier
   never opens by default and never falls back; the visitor asks for it, sees its
-  size on the button, and confirms above 50 MiB or when the record states no size
+  size on the button, and confirms at or above 50 MiB or when the record states no size
   (the archive is the large tier by definition). `rad` is not offered (paged RAD
   needs sibling chunk URLs the single route cannot give), and `sog` is not offered
   on the web until a SOG fixture has been loaded through the browser smoke (Spark

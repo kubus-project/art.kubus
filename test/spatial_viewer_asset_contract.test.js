@@ -42,11 +42,37 @@ test('the notices also cover what Spark bundles: fflate and the WASM crates', ()
   assert.doesNotMatch(crates, /GPL|AGPL|LGPL|Proprietary/i, 'no copyleft or proprietary crate');
   // Every crate carries its own notice: the MIT text (or the Zlib text) plus a copyright line or holder.
   const sections = crates.split(/^-{78}$/m).slice(1);
-  assert.equal(sections.length, 20, 'one licence section per listed crate');
+  assert.equal(sections.length, 24, 'one licence section per listed crate (23 crate versions and the Rust standard library)');
   for (const section of sections) {
     const title = section.trim().split(String.fromCharCode(10))[0];
     assert.match(section, /Copyright|\(C\) 20|Holder:/, `${title} names its copyright holder`);
     assert.match(section, /Permission is hereby granted|Permission is granted to anyone/, `${title} carries its licence text`);
+  }
+});
+
+test('every crate the embedded WASM module names has a notice in SPARK-WASM-CRATES.txt', () => {
+  // Decode the module out of the shipped bundle and read the source paths it carries (panic locations),
+  // the same method the notice file states, so a Spark bump that adds a crate fails here instead of drifting.
+  const bundle = read('assets', 'spatial_viewer', 'viewer.bundle.js');
+  const blobs = bundle.match(/AGFzbQ[A-Za-z0-9+/=]{1000000,}/g) || [];
+  assert.equal(blobs.length, 1, 'exactly one embedded WebAssembly module in the bundle');
+  const module = Buffer.from(blobs[0], 'base64').toString('latin1');
+  const found = new Set();
+  for (const m of module.matchAll(/(?:[/]rust[/]deps[/]|[.]cargo[/]registry[/]src[/][^/]+[/])([A-Za-z0-9_+-]+)-([0-9]+[.][0-9]+[.][0-9]+[A-Za-z0-9.+-]*)[/]/g)) {
+    found.add(`${m[1]} ${m[2]}`);
+  }
+  assert.ok(found.size >= 20, `the scan found the crate paths (${found.size})`);
+  const crates = read('third_party', 'licenses', 'SPARK-WASM-CRATES.txt');
+  const titles = new Set(
+    crates.split(/^-{78}$/m).slice(1).map((section) => section.trim().split(String.fromCharCode(10))[0].split(' ').slice(0, 2).join(' ')),
+  );
+  const missing = [...found].filter((pair) => !titles.has(pair)).sort();
+  assert.deepEqual(missing, [], 'crates in the module without a licence section');
+  // The standard library is compiled in too; its section names the rustc commit the module's paths carry.
+  const std = new Set([...module.matchAll(/[/]rustc[/]([0-9a-f]{40})[/]library[/](?:core|alloc|std)[/]/g)].map((m) => m[1]));
+  assert.ok(std.size >= 1, 'the module carries Rust standard library paths');
+  for (const commit of std) {
+    assert.ok(crates.includes(`Rust standard library (core, alloc, std; rustc ${commit})`), `standard library notice for ${commit}`);
   }
 });
 
