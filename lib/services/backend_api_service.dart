@@ -6418,9 +6418,6 @@ class BackendApiService
       'GET',
       uri,
       includeAuth: true,
-      headers: const <String, String>{
-        'Cache-Control': 'no-cache, no-store',
-      },
       isIdempotent: true,
       timeout: const Duration(seconds: 5),
       allowWritableRedirect: false,
@@ -6467,13 +6464,14 @@ class BackendApiService
     final uri = Uri.parse(
       '$baseUrl/api/artworks/${Uri.encodeComponent(id)}?currentMedia=true',
     );
+    // No request Cache-Control: browsers preflight it on web and the API's
+    // Access-Control-Allow-Headers does not name it, so the request was blocked
+    // before reaching the server. The no-store response check below is what
+    // keeps this payload out of caches.
     final response = await _request(
       'GET',
       uri,
       includeAuth: includeAuth,
-      headers: const <String, String>{
-        'Cache-Control': 'no-cache, no-store',
-      },
       isIdempotent: true,
       timeout: const Duration(seconds: 5),
       allowWritableRedirect: false,
@@ -6563,9 +6561,6 @@ class BackendApiService
       'GET',
       uri,
       includeAuth: true,
-      headers: const <String, String>{
-        'Cache-Control': 'no-cache, no-store',
-      },
       isIdempotent: true,
       timeout: const Duration(seconds: 5),
       allowWritableRedirect: false,

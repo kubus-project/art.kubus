@@ -66,6 +66,63 @@ void main() {
     },
   );
 
+  test('current media detail sends only headers the API lets a browser send',
+      () async {
+    // Web browsers preflight every request header outside the CORS-safelisted
+    // set. The API allow-list (Access-Control-Allow-Headers) does not name
+    // Cache-Control, so a request carrying it is blocked before it reaches the
+    // server: "Request header field cache-control is not allowed". That broke
+    // the artwork detail screen on dev.kubus.site (2026-11-23).
+    const allowedByApi = <String>{
+      'accept',
+      'accept-language',
+      'content-language',
+      'content-type',
+      'authorization',
+      'x-requested-with',
+      'x-api-key',
+      'x-csrf-token',
+      'x-kubus-client',
+      'x-kubus-version',
+      'x-request-id',
+      'x-kubus-request-id',
+      'x-kubus-session-id',
+      'x-kubus-screen-name',
+      'x-kubus-screen-route',
+      'x-kubus-flow-stage',
+    };
+    final requests = <http.Request>[];
+    api.setHttpClient(
+      MockClient((request) async {
+        requests.add(request);
+        return http.Response(
+          jsonEncode(<String, Object?>{
+            'success': true,
+            'source': 'postgresql',
+            'mode': 'current-media',
+            'current': true,
+            'publicMediaAllowed': true,
+            'data': _draftJson()
+              ..['isPublic'] = true
+              ..['isActive'] = true
+              ..['editorialState'] = 'approved',
+          }),
+          200,
+          headers: const <String, String>{
+            'content-type': 'application/json',
+            'cache-control': 'private, no-cache, no-store',
+          },
+        );
+      }),
+    );
+
+    await api.getArtworkCurrentMediaDetail(_id, includeAuth: false);
+
+    expect(requests, hasLength(1));
+    final sent = requests.single.headers.keys.map((k) => k.toLowerCase());
+    expect(sent.where((k) => !allowedByApi.contains(k)), isEmpty);
+  });
+
   test('current media detail is a bounded direct current-row request',
       () async {
     final requests = <http.Request>[];
@@ -78,7 +135,7 @@ void main() {
             <String, String>{'currentMedia': 'true'});
         expect(request.followRedirects, isFalse);
         expect(request.headers['authorization'], 'Bearer preview-test-token');
-        expect(request.headers['cache-control'], 'no-cache, no-store');
+        expect(request.headers.containsKey('cache-control'), isFalse);
         return http.Response(
           jsonEncode(<String, Object?>{
             'success': true,
