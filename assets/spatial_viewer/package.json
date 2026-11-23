@@ -1,10 +1,10 @@
 {
   "private": true,
   "scripts": {
-    "build": "esbuild src/viewer.js --bundle --minify --format=iife --outfile=viewer.bundle.js"
+    "build": "node build.mjs"
   },
   "dependencies": {
-    "@sparkjsdev/spark": "2.1.0",
+    "@sparkjsdev/spark": "2.4.0",
     "three": "0.185.1"
   },
   "devDependencies": {

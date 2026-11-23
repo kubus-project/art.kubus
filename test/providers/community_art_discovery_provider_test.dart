@@ -6,6 +6,7 @@ import 'package:art_kubus/models/artwork.dart';
 import 'package:art_kubus/models/exhibition.dart';
 import 'package:art_kubus/models/profile_identity_data.dart';
 import 'package:art_kubus/providers/community_art_discovery_provider.dart';
+import 'package:art_kubus/services/account_identity.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:latlong2/latlong.dart';
 
@@ -108,7 +109,103 @@ class _Rig {
       );
 }
 
+/// [base] with the public posts held until the test answers them, so a load can
+/// be in flight across an identity change.
+ArtDiscoverySources _withGatedPublicPosts(
+  ArtDiscoverySources base,
+  Completer<void> started,
+  Completer<List<CommunityPost>> posts,
+) {
+  return ArtDiscoverySources(
+    artFeed: base.artFeed,
+    publicPosts: ({int limit = 30}) {
+      if (!started.isCompleted) started.complete();
+      return posts.future;
+    },
+    artworks: base.artworks,
+    exhibitions: base.exhibitions,
+    signals: base.signals,
+    selectedArea: base.selectedArea,
+    mapCenter: base.mapCenter,
+    deviceLocation: base.deviceLocation,
+    savedLocation: base.savedLocation,
+    saveLocation: base.saveLocation,
+    now: base.now,
+  );
+}
+
 void main() {
+  tearDown(AccountIdentity.resetForTesting);
+
+  test('walletless account change clears and invalidates discovery feed',
+      () async {
+    AccountIdentity.setAccountKey('account-A');
+    final provider = CommunityArtDiscoveryProvider();
+    addTearDown(provider.dispose);
+    await provider.refresh(_Rig(publicPosts: 2).sources);
+    expect(provider.allItems, isNotEmpty);
+
+    final started = Completer<void>();
+    final stalePosts = Completer<List<CommunityPost>>();
+    final sources = _withGatedPublicPosts(_Rig().sources, started, stalePosts);
+    final pending = provider.refresh(sources);
+    await started.future;
+    AccountIdentity.setAccountKey('account-B');
+    AccountIdentity.notifyListenersChanged();
+
+    expect(provider.allItems, isEmpty);
+    expect(provider.loaded, isFalse);
+    stalePosts.complete([_post('stale-A')]);
+    await pending;
+    expect(provider.allItems, isEmpty);
+    expect(provider.loaded, isFalse);
+  });
+
+  test('same-account token refresh preserves discovery feed', () async {
+    AccountIdentity.setAccountKey('account-A');
+    final provider = CommunityArtDiscoveryProvider();
+    addTearDown(provider.dispose);
+    await provider.refresh(_Rig(publicPosts: 2).sources);
+    final before = provider.allItems.map((item) => item.key).toList();
+
+    AccountIdentity.setAccountKey('account-A');
+
+    expect(provider.allItems.map((item) => item.key), before);
+  });
+
+  test('a same-account identity notification keeps the loaded feed', () async {
+    AccountIdentity.setAccountKey('account-A');
+    final provider = CommunityArtDiscoveryProvider();
+    addTearDown(provider.dispose);
+    await provider.refresh(_Rig(publicPosts: 2).sources);
+    final before = provider.allItems.map((item) => item.key).toList();
+
+    // A wallet link or re-issued token announces the change, same account.
+    AccountIdentity.notifyListenersChanged();
+
+    expect(provider.loaded, isTrue);
+    expect(provider.allItems.map((item) => item.key), before);
+  });
+
+  test('a same-account identity notification lets a load in flight finish',
+      () async {
+    AccountIdentity.setAccountKey('account-A');
+    final provider = CommunityArtDiscoveryProvider();
+    addTearDown(provider.dispose);
+    final started = Completer<void>();
+    final posts = Completer<List<CommunityPost>>();
+    final sources = _withGatedPublicPosts(_Rig().sources, started, posts);
+
+    final pending = provider.refresh(sources);
+    await started.future;
+    AccountIdentity.notifyListenersChanged();
+    posts.complete([_post('fresh-A')]);
+    await pending;
+
+    expect(provider.loaded, isTrue);
+    expect(provider.allItems.map((item) => item.id), contains('fresh-A'));
+  });
+
   test('a dense neighbourhood stays at the first radius', () async {
     final rig = _Rig(map: _mapLocation, artFeedByRadius: {3: 8});
     final provider = CommunityArtDiscoveryProvider();

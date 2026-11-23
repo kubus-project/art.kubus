@@ -183,6 +183,7 @@ void main() {
       (ShareEntityType.collection, 'collections', 'zbirke'),
       (ShareEntityType.post, 'posts', 'objave'),
       (ShareEntityType.marker, 'map', 'zemljevid'),
+      (ShareEntityType.institution, 'institutions', 'institucije'),
     ];
 
     for (final (type, english, slovenian) in cases) {

@@ -7,7 +7,6 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../providers/themeprovider.dart';
 import '../providers/web3provider.dart';
-import '../providers/wallet_provider.dart';
 import '../providers/artwork_provider.dart';
 import '../providers/navigation_provider.dart';
 import '../providers/promotion_provider.dart';
@@ -371,8 +370,11 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
+    // The account's stats, not the stored wallet's: nobody is asked about a
+    // wallet without a live session behind it.
     final walletAddress =
-        (context.watch<WalletProvider>().currentWalletAddress ?? '').trim();
+        (context.watch<ProfileProvider>().currentUser?.walletAddress ?? '')
+            .trim();
     if (walletAddress.isEmpty) {
       _lastHomeActivityWallet = '';
       return;
@@ -438,12 +440,13 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     final profileProvider = Provider.of<ProfileProvider>(context);
     final l10n = AppLocalizations.of(context)!;
     // Guests are welcomed to the product rather than addressed as "there".
-    final headerDisplayName = profileProvider.isSignedIn
-        ? resolveHomeHeaderDisplayName(
-            user: profileProvider.currentUser,
+    final headerUser = profileProvider.currentUser;
+    final headerDisplayName = headerUser == null
+        ? l10n.homeGuestHeaderTitle
+        : resolveHomeHeaderDisplayName(
+            user: headerUser,
             fallbackLabel: l10n.homeDefaultDisplayName,
-          )
-        : l10n.homeGuestHeaderTitle;
+          );
     final fadeAnimation = CurvedAnimation(
       parent: _animationController,
       curve: animationTheme.fadeCurve,
@@ -704,7 +707,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                                   isArtist: isArtist,
                                   isInstitution: isInstitution,
                                   compact: true,
-                                  footer: web3Provider.hasWalletIdentity
+                                  footer: user != null &&
+                                          web3Provider.hasWalletIdentity
                                       ? Wrap(
                                           spacing: KubusSpacing.sm,
                                           runSpacing: KubusSpacing.xxs,

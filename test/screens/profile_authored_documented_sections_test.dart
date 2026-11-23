@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:ui' show Size;
 
 import 'package:art_kubus/services/backend_api_service.dart';
 import 'package:art_kubus/services/http_client_factory.dart';
@@ -7,6 +8,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../support/profile_fixtures.dart';
+import '../support/profile_screen_harness.dart';
 
 http.Response _json(Object? payload) {
   return http.Response(
@@ -137,4 +140,56 @@ void main() {
     expect(sections.authoredTotal, isNull);
     expect(sections.documentedTotal, isNull);
   });
+
+  test('missing author filter echo marks public showcase unavailable',
+      () async {
+    const profileId = '10000000-0000-4000-8000-000000000021';
+    BackendApiService().setHttpClient(MockClient((request) async {
+      if (request.url.path == '/api/artworks') {
+        return _json(<String, Object?>{'data': <Object?>[]});
+      }
+      return _json(<String, Object?>{'data': <Object?>[]});
+    }));
+
+    final package =
+        await ProfilePackageService.loadPublicProfileExtendedPackage(
+      profileId,
+      forceRefresh: true,
+      includePosts: false,
+      user: ProfileFixtures.user(id: profileId, isArtist: true)
+          .copyWith(profileId: profileId),
+    );
+
+    expect(package, isNotNull);
+    expect(package!.authoredArtworksUnavailable, isTrue);
+    expect(package.artistArtworks, isEmpty);
+  });
+
+  for (final (name, surface, size) in <(String, ProfileSurface, Size)>[
+    ('mobile', ProfileSurface.mobilePublic, const Size(390, 2400)),
+    ('desktop', ProfileSurface.desktopPublic, const Size(1440, 1600)),
+  ]) {
+    for (final isOwner in <bool>[false, true]) {
+      testWidgets(
+          '$name ${isOwner ? 'own' : 'foreign'} showcase reports unsupported author filter',
+          (tester) async {
+        const profileId = '10000000-0000-4000-8000-000000000022';
+        BackendApiService().setHttpClient(legacyProfileClient());
+        final user = ProfileFixtures.user(id: profileId, isArtist: true)
+            .copyWith(profileId: profileId);
+        await pumpProfileSurface(
+          tester,
+          surface: surface,
+          user: user,
+          size: size,
+          viewerIsSubject: isOwner,
+          ownerWalletless: isOwner,
+          authoredArtworksUnavailable: true,
+        );
+
+        expect(find.text('Not available'), findsWidgets);
+        expect(find.text('Retry'), findsWidgets);
+      });
+    }
+  }
 }

@@ -6237,14 +6237,6 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     return KubusMarkerOverlayHelpers.canOpenStreetArtClaims(marker);
   }
 
-  bool _markerOwnedByCurrentUser(ArtMarker marker) {
-    return KubusMarkerOverlayHelpers.markerOwnedByCurrentUser(
-      marker: marker,
-      walletAddress: context.read<WalletProvider>().currentWalletAddress,
-      currentUserId: context.read<ProfileProvider>().currentUser?.id,
-    );
-  }
-
   Future<void> _openStreetArtClaimsDialog(ArtMarker marker) async {
     if (!_canOpenStreetArtClaims(marker)) return;
 
@@ -6260,7 +6252,10 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     await StreetArtClaimsDialog.show(
       context: context,
       marker: marker,
-      isMarkerOwner: _markerOwnedByCurrentUser(marker),
+      isMarkerOwner: KubusMarkerOverlayHelpers.markerOwnedByCurrentUser(
+        marker: marker,
+        profile: context.read<ProfileProvider>(),
+      ),
       canUseDaoReviewActions: false,
     );
   }

@@ -12,11 +12,19 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../../support/account_session_fixture.dart';
 
 /// The artwork creator offers an optional "Artist / author" field. It starts
 /// blank even for a signed-in account with a display name: authorship is an
 /// explicit statement and is never inferred from the uploader.
 void main() {
+  // A signed-in surface has a live session behind its held profile.
+  setUp(() => AccountSessionFixture.start(
+        accountId: 'u1',
+        wallet: 'WalletUploader1111111111111111111111111111111',
+      ));
+  tearDown(AccountSessionFixture.end);
+
   TestWidgetsFlutterBinding.ensureInitialized();
   setUp(() => SharedPreferences.setMockInitialValues(<String, Object>{}));
 

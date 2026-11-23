@@ -98,26 +98,23 @@ void main() {
     BackendApiService().setPreferredWalletAddress(null);
   });
 
-  test('canonical authority state starts signed out', () {
+  test('canonical authority state starts with no wallet', () {
     final walletProvider = WalletProvider(deferInit: true);
 
-    expect(walletProvider.authority.state, WalletAuthorityState.signedOut);
-    expect(walletProvider.authority.hasAccountSession, isFalse);
+    expect(walletProvider.authority.state, WalletAuthorityState.noWallet);
     expect(walletProvider.authority.canReadWallet, isFalse);
     expect(walletProvider.authority.canTransact, isFalse);
   });
 
-  test('canonical authority state exposes account shell only', () {
+  test('a session with no wallet leaves the wallet authority at no wallet', () {
     BackendApiService().setAuthTokenForTesting(
       _buildAuthToken(<String, Object?>{'email': 'artist@example.com'}),
     );
     final walletProvider = WalletProvider(deferInit: true);
 
-    expect(
-      walletProvider.authority.state,
-      WalletAuthorityState.accountShellOnly,
-    );
-    expect(walletProvider.authority.accountSignedIn, isTrue);
+    // Whether the account is signed in is the profile provider's answer; the
+    // wallet authority describes the wallet only.
+    expect(walletProvider.authority.state, WalletAuthorityState.noWallet);
     expect(walletProvider.authority.hasWalletIdentity, isFalse);
     expect(walletProvider.authority.canTransact, isFalse);
   });
@@ -237,7 +234,6 @@ void main() {
     );
 
     expect(restored, isTrue);
-    expect(walletProvider.authority.accountSignedIn, isTrue);
     expect(walletProvider.currentWalletAddress, 'claimed-wallet');
     expect(walletProvider.authority.state, WalletAuthorityState.walletReadOnly);
     expect(walletProvider.authority.hasLocalSigner, isFalse);
@@ -311,13 +307,13 @@ void main() {
       allowRefresh: false,
       loadWalletData: false,
     );
-    expect(walletProvider.authority.accountSignedIn, isTrue);
+    expect(walletProvider.currentWalletAddress, 'claimed-wallet');
 
     BackendApiService().setAuthTokenForTesting(null);
     await walletProvider.disconnectWallet(preserveAuthenticatedWallet: false);
 
-    expect(walletProvider.authority.accountSignedIn, isFalse);
-    expect(walletProvider.authority.state, WalletAuthorityState.signedOut);
+    expect(walletProvider.currentWalletAddress, isNull);
+    expect(walletProvider.authority.state, WalletAuthorityState.noWallet);
   });
 
   test('web3 facade mirrors wallet read-only state and network updates',

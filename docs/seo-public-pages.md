@@ -117,12 +117,35 @@ Canonical public routes use stable IDs, not mutable or synthetic slugs.
 | --- | --- | --- | --- |
 | Artwork | `/en/artworks/:id` | `/sl/umetnine/:id` | `/a/:id` |
 | Profile | `/en/profiles/:id` | `/sl/profili/:id` | `/u/:id` |
+| Institution | `/en/institutions/:id` | `/sl/institucije/:id` | none |
 | Event | `/en/events/:id` | `/sl/dogodki/:id` | `/e/:id` |
 | Exhibition | `/en/exhibitions/:id` | `/sl/razstave/:id` | `/x/:id` |
 | Public post | `/en/posts/:id` | `/sl/objave/:id` | `/p/:id` |
 | Collection | `/en/collections/:id` | `/sl/zbirke/:id` | `/c/:id` |
 | Collectible | `/en/collectibles/:id` | `/sl/zbirateljski-predmeti/:id` | `/n/:id` |
 | Map marker | `/en/map/:id` | `/sl/zemljevid/:id` | `/m/:id` |
+
+An institution (a row of the institutions table, not a user profile) has its own
+canonical page. Its former `/en/profiles/:id` and `/sl/profili/:id` URLs answer
+301 to it, and its compact aliases answer 308 straight to it. Slovenian points
+to Slovenian for institutions only, and only while the institution's Slovenian
+description is checked (`description_sl_state = 'checked'`, owner decision
+2026-11-22): then each locale page is its own canonical with reciprocal
+`en`/`sl`/`x-default` alternates and both are in the institutions sitemap. An
+institution without a checked Slovenian description keeps a usable Slovenian
+page, but that page canonicalizes to the English one and is in no sitemap and no
+alternate pair; the English page then declares only `en` and `x-default`. The
+gateway and the app do not compute any of this: the canonical, the alternates and
+the sitemap come from the backend renderer's search policy
+(`institutionLocaleContent` in `publicSearchPolicy.js`), and the gateway passes
+the document through unchanged. Institution pages are server
+rendered first and, like every entity page, taken over by the app when it
+boots: the app has an institution screen (`InstitutionDetailScreen`), the
+gateway maps `institutions` / `institucije` to the `institution` takeover type
+(`takeoverTargetForPath` in `web/seo-proxy.php`, the backend's
+`TAKEOVER_ENTITY_TYPES`), the deep-link parser, Android app links and share
+links route the two URLs to that screen, and the id always names an institution
+record, never an account. See the backend's `docs/SEO_PUBLIC_PAGES.md`, "Institution pages".
 
 Compact and known long-form aliases redirect directly to the English canonical
 with HTTP 308. `?lang=sl` redirects directly to Slovenian. Canonical documents
@@ -164,7 +187,9 @@ technical contract:
 
 - artwork: `VisualArtwork`
 - artist profile: `ProfilePage` plus `Person`
-- institution profile: `ProfilePage` plus the closest stored organization type
+- institution page: `WebPage` whose main entity is the venue type for its kind
+  (`Museum`, `ArtGallery`, `Library`, `CivicStructure`, else `Organization`) with
+  the address, geo, opening hours and admission only where the record stores them
 - event: `Event`
 - exhibition: `ExhibitionEvent`
 - post: `SocialMediaPosting`

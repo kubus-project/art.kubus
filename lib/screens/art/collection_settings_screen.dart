@@ -23,6 +23,7 @@ import '../../utils/artwork_authorship.dart';
 import '../../utils/creator_shell_navigation.dart';
 import '../../utils/design_tokens.dart';
 import '../../utils/media_url_resolver.dart';
+import '../../providers/profile_provider.dart';
 import '../../utils/wallet_utils.dart';
 import '../desktop/desktop_shell.dart';
 
@@ -110,9 +111,9 @@ class _CollectionSettingsScreenState extends State<CollectionSettingsScreen> {
 
   bool _canEdit(CollectionRecord? collection) {
     if (collection == null) return false;
-    final wallet = context.read<WalletProvider>().currentWalletAddress ?? '';
-    return wallet.isNotEmpty &&
-        WalletUtils.equals(wallet, collection.walletAddress);
+    return context
+        .watch<ProfileProvider>()
+        .isCurrentAccount(collection.walletAddress);
   }
 
   Future<void> _pickCover() async {

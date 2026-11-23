@@ -7,6 +7,7 @@ import 'package:http/testing.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:art_kubus/providers/chat_provider.dart';
+import 'package:art_kubus/services/account_identity.dart';
 import 'package:art_kubus/services/backend_api_service.dart';
 import '../helpers/secure_storage_absent.dart';
 
@@ -14,6 +15,9 @@ import '../helpers/secure_storage_absent.dart';
 /// and resolved oldest-first, so a test can answer account A's request after
 /// the session has moved on to account B.
 class _ChatHttp {
+  _ChatHttp({this.walletlessProfile = false});
+
+  final bool walletlessProfile;
   final Map<String, List<Completer<http.Response>>> _held = {};
   final Map<String, Completer<void>> _arrived = {};
 
@@ -25,7 +29,9 @@ class _ChatHttp {
       return http.Response(
         jsonEncode({
           'success': true,
-          'data': {'wallet_address': 'walletA'},
+          'data': walletlessProfile
+              ? <String, dynamic>{}
+              : {'wallet_address': 'walletA'},
         }),
         200,
       );
@@ -99,6 +105,22 @@ Map<String, dynamic> _message(String id, String conversationId) => {
       'message': 'hello from B',
       'createdAt': DateTime.utc(2026, 10, 21).toIso8601String(),
     };
+
+const _walletlessA = 'walletless-account-a';
+const _walletlessB = 'walletless-account-b';
+
+/// A session token carrying only the canonical account id, as a walletless
+/// account has. [refresh] re-issues the token for the same account.
+String _walletlessToken(String accountId, {int refresh = 0}) {
+  final payload = jsonEncode({
+    'id': accountId,
+    'iat': refresh,
+    'exp':
+        DateTime.now().add(const Duration(hours: 1)).millisecondsSinceEpoch ~/
+            1000,
+  });
+  return 'e30.${base64Url.encode(utf8.encode(payload)).replaceAll('=', '')}.synthetic';
+}
 
 void main() {
   installEmptySecureStorage();
@@ -343,16 +365,159 @@ void main() {
     await loadA;
     expect(provider.conversations, isNotEmpty);
     expect(provider.messages.containsKey('convA'), isTrue);
+    expect(provider.participantIdentitySnapshot, isNotEmpty);
+    expect(provider.debugResourceSnapshot['cachedUsers'], greaterThan(0));
     expect(provider.unreadCounts['convA'], 3);
 
     // Account B signs in with its own token and no wallet.
     BackendApiService().setAuthTokenForTesting('tokenB');
-    provider.bindAuthContext(walletAddress: null, isSignedIn: true);
+    provider.bindAuthContext(
+      accountId: 'account-B',
+      walletAddress: null,
+      isSignedIn: true,
+    );
 
     expect(provider.conversations, isEmpty);
     expect(provider.messages, isEmpty);
     expect(provider.unreadCounts, isEmpty);
     expect(provider.totalUnread, 0);
+    expect(provider.participantIdentitySnapshot, isEmpty);
+    expect(provider.debugResourceSnapshot['cachedUsers'], 0);
+  });
+
+  test(
+      'walletless account switch clears cached chat state while token refresh '
+      'for the same account preserves it', () async {
+    final http = _ChatHttp(walletlessProfile: true);
+    BackendApiService().setHttpClient(http.client());
+    BackendApiService().setAuthTokenForTesting('tokenA');
+
+    final provider = ChatProvider();
+    // Account A has no wallet. Initialize and seed its account-scoped state.
+    provider.bindAuthContext(
+      accountId: 'account-A',
+      walletAddress: null,
+      isSignedIn: true,
+    );
+    await http.arrived('conversations');
+    http.complete('conversations', {
+      'success': true,
+      'data': [_conversation('convA')],
+    });
+    await Future<void>.delayed(Duration.zero);
+    final loadA = provider.loadMessages('convA');
+    await http.arrived('messages');
+    http.complete('messages', {
+      'success': true,
+      'data': [_message('m1', 'convA')],
+    });
+    await loadA;
+    expect(provider.conversations, isNotEmpty);
+    expect(provider.messages.containsKey('convA'), isTrue);
+    expect(provider.participantIdentitySnapshot, isNotEmpty);
+    expect(provider.debugResourceSnapshot['cachedUsers'], greaterThan(0));
+
+    // Refreshing A's bearer token must not invalidate its caches.
+    BackendApiService().setAuthTokenForTesting('tokenA-refreshed');
+    provider.bindAuthContext(
+      accountId: 'account-A',
+      walletAddress: null,
+      isSignedIn: true,
+    );
+    expect(provider.conversations, isNotEmpty);
+    expect(provider.messages.containsKey('convA'), isTrue);
+    expect(provider.participantIdentitySnapshot, isNotEmpty);
+    expect(provider.debugResourceSnapshot['cachedUsers'], greaterThan(0));
+
+    // Account B is also walletless; a different canonical account must reset A.
+    BackendApiService().setAuthTokenForTesting('tokenB');
+    provider.bindAuthContext(
+      accountId: 'account-B',
+      walletAddress: null,
+      isSignedIn: true,
+    );
+    expect(provider.conversations, isEmpty);
+    expect(provider.messages, isEmpty);
+    expect(provider.unreadCounts, isEmpty);
+    expect(provider.totalUnread, 0);
+    expect(provider.participantIdentitySnapshot, isEmpty);
+    expect(provider.debugResourceSnapshot['cachedUsers'], 0);
+  });
+
+  test(
+      'linked account switch clears cached chat state when the wallet is the '
+      'same', () async {
+    final http = _ChatHttp();
+    BackendApiService().setHttpClient(http.client());
+    BackendApiService().setAuthTokenForTesting('tokenA');
+
+    final provider = ChatProvider();
+    provider.bindAuthContext(
+      accountId: 'account-A',
+      walletAddress: 'walletA',
+      isSignedIn: true,
+    );
+    await http.arrived('conversations');
+    http.complete('conversations', {
+      'success': true,
+      'data': [_conversation('convA')],
+    });
+    await Future<void>.delayed(Duration.zero);
+    final loadA = provider.loadMessages('convA');
+    await http.arrived('messages');
+    http.complete('messages', {
+      'success': true,
+      'data': [_message('m1', 'convA')],
+    });
+    await loadA;
+    expect(provider.conversations, isNotEmpty);
+    expect(provider.messages.containsKey('convA'), isTrue);
+
+    BackendApiService().setAuthTokenForTesting('tokenB');
+    provider.bindAuthContext(
+      accountId: 'account-B',
+      walletAddress: 'walletA',
+      isSignedIn: true,
+    );
+    expect(provider.conversations, isEmpty);
+    expect(provider.messages, isEmpty);
+    expect(provider.participantIdentitySnapshot, isEmpty);
+  });
+
+  test('case-only wallet identity change resets account chat state', () async {
+    final http = _ChatHttp();
+    BackendApiService().setHttpClient(http.client());
+    BackendApiService().setAuthTokenForTesting('tokenA');
+
+    final provider = ChatProvider();
+    provider.bindAuthContext(
+      accountId: 'account-A',
+      walletAddress: 'walletA',
+      isSignedIn: true,
+    );
+    await http.arrived('conversations');
+    http.complete('conversations', {
+      'success': true,
+      'data': [_conversation('convA')],
+    });
+    await Future<void>.delayed(Duration.zero);
+    final loadA = provider.loadMessages('convA');
+    await http.arrived('messages');
+    http.complete('messages', {
+      'success': true,
+      'data': [_message('m1', 'convA')],
+    });
+    await loadA;
+    expect(provider.conversations, isNotEmpty);
+    expect(provider.messages.containsKey('convA'), isTrue);
+
+    provider.bindAuthContext(
+      accountId: 'account-A',
+      walletAddress: 'WalletA',
+      isSignedIn: true,
+    );
+    expect(provider.conversations, isEmpty);
+    expect(provider.messages, isEmpty);
   });
 
   test('clearing the wallet on a wallet session drops its chat state',
@@ -448,5 +613,66 @@ void main() {
       http.requests.where((r) => r == 'POST /api/messages'),
       isEmpty,
     );
+  });
+
+  group('walletless account identity', () {
+    test('a walletless switch from A to B clears A conversations at the switch',
+        () async {
+      final http = _ChatHttp(walletlessProfile: true);
+      BackendApiService().setHttpClient(http.client());
+      BackendApiService()
+          .setAuthTokenForTesting(_walletlessToken(_walletlessA));
+
+      final provider = ChatProvider();
+      addTearDown(provider.dispose);
+
+      final loadA = provider.refreshConversations();
+      await http.arrived('conversations');
+      http.complete('conversations', {
+        'success': true,
+        'data': [_conversation('convA')],
+      });
+      await loadA;
+      expect(provider.conversations, isNotEmpty);
+
+      // Walletless A -> B. Both wallets are empty, and the profile that carries
+      // the account id has not loaded yet. Only the identity change reaches the
+      // provider before B's first request.
+      BackendApiService()
+          .setAuthTokenForTesting(_walletlessToken(_walletlessB));
+      AccountIdentity.notifyListenersChanged();
+
+      expect(provider.conversations, isEmpty);
+      expect(provider.unreadCounts, isEmpty);
+    });
+
+    test('a same-account identity change keeps the loaded conversations',
+        () async {
+      final http = _ChatHttp(walletlessProfile: true);
+      BackendApiService().setHttpClient(http.client());
+      BackendApiService()
+          .setAuthTokenForTesting(_walletlessToken(_walletlessA));
+
+      final provider = ChatProvider();
+      addTearDown(provider.dispose);
+      // Account A becomes the current account; the identity listener records it.
+      AccountIdentity.notifyListenersChanged();
+
+      final loadA = provider.refreshConversations();
+      await http.arrived('conversations');
+      http.complete('conversations', {
+        'success': true,
+        'data': [_conversation('convA')],
+      });
+      await loadA;
+
+      // A wallet link re-issues A's token: same account, nothing to clear.
+      BackendApiService()
+          .setAuthTokenForTesting(_walletlessToken(_walletlessA, refresh: 1));
+      AccountIdentity.notifyListenersChanged();
+
+      expect(provider.conversations, isNotEmpty);
+      expect(provider.unreadCounts['convA'], 3);
+    });
   });
 }

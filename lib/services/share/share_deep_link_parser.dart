@@ -11,6 +11,7 @@ enum AppRouteIntentType {
   exhibition,
   collection,
   nft,
+  institution,
   map,
 }
 
@@ -47,6 +48,9 @@ class AppRouteIntent {
 
   const AppRouteIntent.nft(String nftId)
       : this._(type: AppRouteIntentType.nft, id: nftId);
+
+  const AppRouteIntent.institution(String institutionId)
+      : this._(type: AppRouteIntentType.institution, id: institutionId);
 
   const AppRouteIntent.map({this.lat, this.lng, this.zoom})
       : type = AppRouteIntentType.map,
@@ -150,6 +154,8 @@ class ShareDeepLinkCodec {
     'sl/zbirke': AppRouteIntentType.collection,
     'en/collectibles': AppRouteIntentType.nft,
     'sl/zbirateljski-predmeti': AppRouteIntentType.nft,
+    'en/institutions': AppRouteIntentType.institution,
+    'sl/institucije': AppRouteIntentType.institution,
     'en/map': AppRouteIntentType.marker,
     'sl/zemljevid': AppRouteIntentType.marker,
   };
@@ -335,6 +341,8 @@ class ShareDeepLinkCodec {
         return AppRouteIntent.collection(id);
       case AppRouteIntentType.nft:
         return AppRouteIntent.nft(id);
+      case AppRouteIntentType.institution:
+        return AppRouteIntent.institution(id);
       case AppRouteIntentType.map:
         return const AppRouteIntent.map();
     }
@@ -446,6 +454,8 @@ class ShareDeepLinkCodec {
         return ShareEntityType.collection;
       case AppRouteIntentType.nft:
         return ShareEntityType.nft;
+      case AppRouteIntentType.institution:
+        return ShareEntityType.institution;
       case AppRouteIntentType.map:
         return null;
     }
@@ -497,6 +507,9 @@ class ShareDeepLinkCodec {
       case 'collectibles':
       case 'zbirateljski-predmeti':
         return AppRouteIntentType.nft;
+      case 'institutions':
+      case 'institucije':
+        return AppRouteIntentType.institution;
       default:
         return null;
     }
@@ -520,6 +533,8 @@ class ShareDeepLinkCodec {
         return 'c';
       case ShareEntityType.nft:
         return 'n';
+      case ShareEntityType.institution:
+        return 'institutions';
     }
   }
 

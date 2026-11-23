@@ -53,9 +53,11 @@ enum WalletAccountLinkPhase {
   failed,
 }
 
+/// What this device can do with a wallet. Wallet facts only: who is signed in
+/// is the profile provider's answer, never this one's, so "no wallet" is a
+/// single state here and callers that word it differently ask the owner.
 enum WalletAuthorityState {
-  signedOut,
-  accountShellOnly,
+  noWallet,
   walletReadOnly,
   localSignerReady,
   externalWalletReady,
@@ -73,9 +75,6 @@ class WalletAuthoritySnapshot {
   const WalletAuthoritySnapshot({
     required this.state,
     required this.signerSource,
-    required this.accountSignedIn,
-    required this.signInMethod,
-    required this.accountEmail,
     this.accountRole = 'user',
     required this.walletAddress,
     required this.hasLocalSigner,
@@ -91,9 +90,9 @@ class WalletAuthoritySnapshot {
 
   final WalletAuthorityState state;
   final WalletSignerSource signerSource;
-  final bool accountSignedIn;
-  final AuthSignInMethod signInMethod;
-  final String? accountEmail;
+
+  /// A claim of the live credential, read for capability checks (admin,
+  /// moderator). Not identity, and not a signed-in answer.
   final String accountRole;
   final String? walletAddress;
   final bool hasLocalSigner;
@@ -107,7 +106,6 @@ class WalletAuthoritySnapshot {
   final bool recoveryNeeded;
 
   bool get hasWalletIdentity => (walletAddress ?? '').trim().isNotEmpty;
-  bool get hasAccountSession => accountSignedIn;
   bool get canReadWallet => hasWalletIdentity;
   bool get canTransact =>
       hasWalletIdentity && (hasLocalSigner || hasExternalSigner);
@@ -229,25 +227,16 @@ class WalletProvider extends ChangeNotifier {
   String? _encryptedWalletBackupError;
   bool _encryptedWalletBackupStatusKnown = false;
   bool _mnemonicBackupRequiredForAuthority = false;
-  bool _accountSignedIn = false;
-  AuthSignInMethod _accountSignInMethod = AuthSignInMethod.unknown;
-  String? _accountEmail;
   String? _externalSignerAddress;
   String? _externalSignerName;
   BackendWalletFeeSplitterConfigDto? _walletFeeSplitterConfigCache;
   DateTime? _walletFeeSplitterConfigFetchedAt;
   static const Duration _walletFeeSplitterConfigCacheTtl = Duration(minutes: 5);
 
-  // Backend supplemental data
-  Map<String, dynamic>? _backendProfile;
-  int _collectionsCount = 0;
-  int _achievementsUnlocked = 0;
+  // Wallet-side reward figure from the stats snapshot. Account profile and
+  // counters are not kept here: the profile provider owns them.
   double _achievementTokenTotal = 0.0; // totalTokens from achievement stats
 
-  // Backend supplemental getters
-  Map<String, dynamic>? get backendProfile => _backendProfile;
-  int get collectionsCount => _collectionsCount;
-  int get achievementsUnlocked => _achievementsUnlocked;
   double get achievementTokenTotal => _achievementTokenTotal;
   WalletSessionPhase get sessionPhase => _sessionPhase;
   WalletAccountLinkPhase get accountLinkPhase => _accountLinkPhase;
@@ -312,22 +301,6 @@ class WalletProvider extends ChangeNotifier {
     }();
 
     return completer.future;
-  }
-
-  @visibleForTesting
-  void seedAccountSessionForTesting({
-    required String email,
-    required Map<String, dynamic> backendProfile,
-    int collectionsCount = 0,
-    int achievementsUnlocked = 0,
-  }) {
-    _resetAccountWalletLinkPhase();
-    _accountSignedIn = true;
-    _accountEmail = email;
-    _backendProfile = backendProfile;
-    _collectionsCount = collectionsCount;
-    _achievementsUnlocked = achievementsUnlocked;
-    notifyListeners();
   }
 
   @visibleForTesting
@@ -933,9 +906,6 @@ class WalletProvider extends ChangeNotifier {
   String? get currentWalletAddress => _currentWalletAddress;
   bool get hasWalletIdentity =>
       _currentWalletAddress != null && _currentWalletAddress!.isNotEmpty;
-  bool get accountSignedIn => authority.accountSignedIn;
-  AuthSignInMethod get accountSignInMethod => authority.signInMethod;
-  String? get accountEmail => authority.accountEmail;
   bool get hasLocalSigner => _localSignerMatchesCurrentWallet;
   bool get hasExternalSigner => _externalSignerMatchesCurrentWallet;
   bool get hasSigner => hasLocalSigner || hasExternalSigner;
@@ -985,8 +955,6 @@ class WalletProvider extends ChangeNotifier {
   }
 
   WalletAuthoritySnapshot get authority {
-    final tokenPresent = (_apiService.getAuthToken() ?? '').trim().isNotEmpty;
-    final accountSignedIn = _accountSignedIn || tokenPresent;
     final hasWallet = hasWalletIdentity;
     final localReady = _localSignerMatchesCurrentWallet;
     final externalReady = _externalSignerMatchesCurrentWallet;
@@ -1014,10 +982,8 @@ class WalletProvider extends ChangeNotifier {
       state = WalletAuthorityState.recoveryNeeded;
     } else if (hasWallet) {
       state = WalletAuthorityState.walletReadOnly;
-    } else if (accountSignedIn) {
-      state = WalletAuthorityState.accountShellOnly;
     } else {
-      state = WalletAuthorityState.signedOut;
+      state = WalletAuthorityState.noWallet;
     }
 
     return WalletAuthoritySnapshot(
@@ -1027,9 +993,6 @@ class WalletProvider extends ChangeNotifier {
           : externalReady
               ? WalletSignerSource.external
               : WalletSignerSource.none,
-      accountSignedIn: accountSignedIn,
-      signInMethod: _accountSignInMethod,
-      accountEmail: _accountEmail,
       accountRole: accountRole.isEmpty ? 'user' : accountRole,
       walletAddress: _currentWalletAddress,
       hasLocalSigner: localReady,
@@ -1078,18 +1041,42 @@ class WalletProvider extends ChangeNotifier {
   /// signed-in account until the strict bind-wallet verification commits.
   bool _suppressAccountLinkIdentityPersistence = false;
 
-  Future<void> _persistWalletIdentity(String address) async {
+  /// Persists the wallet identity keys. With [expectedAuthEpoch], each key is
+  /// written only while the session the operation started under stands: the
+  /// check precedes every write, so a session that ended during the storage
+  /// await receives none of A's wallet.
+  Future<void> _persistWalletIdentity(
+    String address, {
+    int? expectedAuthEpoch,
+  }) async {
     if (_suppressAccountLinkIdentityPersistence) return;
     final prefs = await SharedPreferences.getInstance();
+    bool ended() => _isStaleAuthEpoch(expectedAuthEpoch, forWallet: address);
+    if (ended()) return;
     await prefs.setString('wallet_address', address);
+    if (ended()) return;
     await prefs.setString('walletAddress', address);
+    if (ended()) return;
     await prefs.setString('wallet', address);
+    if (ended()) return;
     await prefs.setBool('has_wallet', true);
   }
 
-  void _setPreferredWalletForIdentity(String address) {
+  /// Sets the API layer's preferred wallet (memory and persisted
+  /// PreferenceKeys.walletAddress). With [expectedAuthEpoch] it is skipped for
+  /// a session that ended, and the API's own epoch gate also covers the
+  /// asynchronous persistence that follows.
+  void _setPreferredWalletForIdentity(
+    String address, {
+    int? expectedAuthEpoch,
+  }) {
     if (_suppressAccountLinkIdentityPersistence) return;
-    _apiService.setPreferredWalletAddress(address);
+    if (_isStaleAuthEpoch(expectedAuthEpoch, forWallet: address)) return;
+    _apiService.setPreferredWalletAddress(
+      address,
+      expectedAuthSessionEpoch:
+          expectedAuthEpoch == null ? null : _apiService.authSessionEpoch,
+    );
   }
 
   String _walletScopedPreferenceKey({
@@ -1137,14 +1124,18 @@ class WalletProvider extends ChangeNotifier {
   Future<ManagedWalletReconnectOutcome> recoverManagedWalletSession({
     String? walletAddress,
     bool refreshBackendSession = true,
+    int? expectedAuthEpoch,
   }) async {
     final inFlight = _managedReconnectInFlight;
     if (inFlight != null) {
       return inFlight;
     }
+    // A caller that did not start from a known session is bound to the one
+    // current now: the reconnect's network awaits must not outlive it.
     final reconnectFuture = _recoverManagedWalletSessionInternal(
       walletAddress: walletAddress,
       refreshBackendSession: refreshBackendSession,
+      expectedAuthEpoch: expectedAuthEpoch ?? _apiService.authSessionEpoch,
     );
     _managedReconnectInFlight = reconnectFuture;
     try {
@@ -1156,9 +1147,38 @@ class WalletProvider extends ChangeNotifier {
     }
   }
 
+  /// Whether the auth session a managed reconnect started under has ended.
+  ///
+  /// Every committed login advances the epoch, this provider's own wallet-signed
+  /// one included. With [forWallet], a wallet-signed session for that same
+  /// wallet is therefore the session the operation wanted, not another
+  /// account's, and the advanced epoch does not end it.
+  bool _isStaleAuthEpoch(int? expectedAuthEpoch, {String? forWallet}) {
+    if (expectedAuthEpoch == null ||
+        expectedAuthEpoch == _apiService.authSessionEpoch) {
+      return false;
+    }
+    final wallet = (forWallet ?? '').trim();
+    if (wallet.isEmpty) return true;
+    final authWallet = (_apiService.getCurrentAuthWalletAddress() ?? '').trim();
+    final sameWalletSession =
+        (_apiService.getAuthToken() ?? '').trim().isNotEmpty &&
+            !_apiService.hasPendingAccountSwitch &&
+            WalletUtils.equals(authWallet, wallet) &&
+            _apiService.getCurrentAuthLevel() == BackendAuthLevel.walletSigned;
+    return !sameWalletSession;
+  }
+
+  void _throwIfAuthSessionEnded(int? expectedAuthEpoch, {String? forWallet}) {
+    if (_isStaleAuthEpoch(expectedAuthEpoch, forWallet: forWallet)) {
+      throw StateError('Authentication request belongs to an ended session');
+    }
+  }
+
   Future<ManagedWalletReconnectOutcome> _recoverManagedWalletSessionInternal({
     String? walletAddress,
     bool refreshBackendSession = true,
+    int? expectedAuthEpoch,
   }) async {
     final targetWallet = await _resolveWalletForRecovery(
       preferredWallet: walletAddress,
@@ -1183,16 +1203,30 @@ class WalletProvider extends ChangeNotifier {
             .timeout(const Duration(seconds: 4));
       }
 
+      if (_isStaleAuthEpoch(expectedAuthEpoch)) {
+        return ManagedWalletReconnectOutcome.failed;
+      }
       await setReadOnlyWalletIdentity(
         targetWallet,
         loadData: true,
         syncBackend: false,
+        expectedAuthEpoch: expectedAuthEpoch,
       );
+      // The identity load awaited the network: a session that ended meanwhile
+      // is neither signed in nor reported as restored.
+      if (_isStaleAuthEpoch(expectedAuthEpoch, forWallet: targetWallet)) {
+        return ManagedWalletReconnectOutcome.failed;
+      }
       if (WalletUtils.equals(_currentWalletAddress, targetWallet) &&
           canTransact) {
         if (refreshBackendSession) {
           await ensureBackendSessionForActiveSigner(
-              walletAddress: targetWallet);
+            walletAddress: targetWallet,
+            expectedAuthEpoch: expectedAuthEpoch,
+          );
+          if (_isStaleAuthEpoch(expectedAuthEpoch, forWallet: targetWallet)) {
+            return ManagedWalletReconnectOutcome.failed;
+          }
         }
         _clearLastError();
         return ManagedWalletReconnectOutcome.signerRestored;
@@ -1221,16 +1255,28 @@ class WalletProvider extends ChangeNotifier {
         return ManagedWalletReconnectOutcome.manualConnectRequired;
       }
 
+      if (_isStaleAuthEpoch(expectedAuthEpoch, forWallet: targetWallet)) {
+        return ManagedWalletReconnectOutcome.failed;
+      }
       await importWalletFromMnemonic(
         normalizedMnemonic,
         preDerived: derived,
         markBackedUp: false,
+        expectedAuthEpoch: expectedAuthEpoch,
       );
+      if (_isStaleAuthEpoch(expectedAuthEpoch, forWallet: targetWallet)) {
+        return ManagedWalletReconnectOutcome.failed;
+      }
       if (WalletUtils.equals(_currentWalletAddress, targetWallet) &&
           canTransact) {
         if (refreshBackendSession) {
           await ensureBackendSessionForActiveSigner(
-              walletAddress: targetWallet);
+            walletAddress: targetWallet,
+            expectedAuthEpoch: expectedAuthEpoch,
+          );
+          if (_isStaleAuthEpoch(expectedAuthEpoch, forWallet: targetWallet)) {
+            return ManagedWalletReconnectOutcome.failed;
+          }
         }
         _clearLastError();
         return ManagedWalletReconnectOutcome.signerRestored;
@@ -1980,10 +2026,6 @@ class WalletProvider extends ChangeNotifier {
     final restored = await _apiService.session.restoreStoredSession(
       allowRefresh: allowRefresh,
     );
-    _accountSignedIn = restored.hasBackendSession;
-    _accountSignInMethod = restored.signInMethod;
-    _accountEmail = restored.email;
-
     final accountWallet = (restored.walletAddress ?? '').trim();
     if (accountWallet.isNotEmpty) {
       await setReadOnlyWalletIdentity(
@@ -1994,7 +2036,7 @@ class WalletProvider extends ChangeNotifier {
     } else {
       notifyListeners();
     }
-    return _accountSignedIn;
+    return restored.hasBackendSession;
   }
 
   Future<void> clearAccountShell() async {
@@ -2004,9 +2046,6 @@ class WalletProvider extends ChangeNotifier {
 
   void _clearAccountShellState() {
     _resetAccountWalletLinkPhase();
-    _accountSignedIn = false;
-    _accountSignInMethod = AuthSignInMethod.unknown;
-    _accountEmail = null;
   }
 
   /// Commits a wallet identity that has ALREADY been verified as linked to
@@ -2061,9 +2100,13 @@ class WalletProvider extends ChangeNotifier {
     bool persist = true,
     bool loadData = true,
     bool syncBackend = false,
+    int? expectedAuthEpoch,
   }) async {
     final sanitized = address.trim();
     if (sanitized.isEmpty) return;
+    // Nothing of a session that ended is applied: the signer, the identity and
+    // the persisted keys below all belong to the session the caller started in.
+    if (_isStaleAuthEpoch(expectedAuthEpoch, forWallet: sanitized)) return;
 
     final activeSignerAddress =
         (_solanaWalletService.activePublicKey ?? '').trim();
@@ -2075,6 +2118,7 @@ class WalletProvider extends ChangeNotifier {
     if ((_externalSignerAddress ?? '').trim().isNotEmpty &&
         !WalletUtils.equals(_externalSignerAddress, sanitized)) {
       await clearExternalSigner(notify: false);
+      if (_isStaleAuthEpoch(expectedAuthEpoch, forWallet: sanitized)) return;
     }
     if (!WalletUtils.equals(_currentWalletAddress, sanitized)) {
       _clearEncryptedWalletBackupState();
@@ -2087,12 +2131,18 @@ class WalletProvider extends ChangeNotifier {
 
     if (persist) {
       try {
-        await _persistWalletIdentity(sanitized);
+        await _persistWalletIdentity(
+          sanitized,
+          expectedAuthEpoch: expectedAuthEpoch,
+        );
       } catch (e) {
         _walletLog('setReadOnlyWalletIdentity: persist failed: $e');
       }
     }
-    _setPreferredWalletForIdentity(sanitized);
+    _setPreferredWalletForIdentity(
+      sanitized,
+      expectedAuthEpoch: expectedAuthEpoch,
+    );
 
     try {
       await isMnemonicBackupRequired(walletAddress: sanitized);
@@ -2110,10 +2160,10 @@ class WalletProvider extends ChangeNotifier {
     );
 
     if (loadData) {
-      await _loadData();
+      await _loadData(authEpoch: expectedAuthEpoch);
     }
     if (syncBackend) {
-      await _syncBackendData(sanitized);
+      await _syncBackendData(sanitized, expectedAuthEpoch: expectedAuthEpoch);
     }
     _clearLastError();
     notifyListeners();
@@ -2237,13 +2287,20 @@ class WalletProvider extends ChangeNotifier {
   String? _walletDataLoadedKey;
   DateTime? _walletDataLoadedAt;
 
-  Future<void> _loadData() {
+  /// [authEpoch] is the auth session the load serves; absent, it is the session
+  /// current when the load begins. The balance fetches take seconds, and the
+  /// backend sync that follows them must not log this wallet in over a session
+  /// that moved on meanwhile.
+  Future<void> _loadData({int? authEpoch}) {
     // One balance/token/history sync per wallet and network at a time: the
     // initializer, cached-wallet import and screens may all ask together.
     final key = _walletDataKey ?? '';
     final inFlight = _walletDataLoad;
     if (inFlight != null && _walletDataLoadKey == key) return inFlight;
-    final load = _loadDataUncoalesced(key);
+    final load = _loadDataUncoalesced(
+      key,
+      authEpoch ?? _apiService.authSessionEpoch,
+    );
     _walletDataLoad = load;
     _walletDataLoadKey = key;
     load.whenComplete(() {
@@ -2255,7 +2312,7 @@ class WalletProvider extends ChangeNotifier {
     return load;
   }
 
-  Future<void> _loadDataUncoalesced(String key) async {
+  Future<void> _loadDataUncoalesced(String key, int authEpoch) async {
     _isLoading = true;
     _sessionPhase = WalletSessionPhase.restoring;
     notifyListeners();
@@ -2264,7 +2321,7 @@ class WalletProvider extends ChangeNotifier {
 
     try {
       _walletLog('_loadData: loading from blockchain');
-      await _loadFromBlockchain();
+      await _loadFromBlockchain(authEpoch);
       _clearLastError();
       // _loadFromBlockchain reports failure by leaving no wallet.
       if (key.isNotEmpty && _wallet != null) {
@@ -2283,7 +2340,8 @@ class WalletProvider extends ChangeNotifier {
     }
   }
 
-  Future<void> _loadFromBlockchain() async {
+  Future<void> _loadFromBlockchain([int? authEpoch]) async {
+    final loadEpoch = authEpoch ?? _apiService.authSessionEpoch;
     try {
       if (_currentWalletAddress == null) {
         _walletLog('no wallet address available; clearing wallet data');
@@ -2295,7 +2353,7 @@ class WalletProvider extends ChangeNotifier {
       }
 
       // Load Solana wallet data
-      await _loadSolanaWallet(_currentWalletAddress!);
+      await _loadSolanaWallet(_currentWalletAddress!, loadEpoch);
     } catch (e) {
       _walletLog('error loading blockchain data: $e');
       // Clear data on error when mock data is disabled
@@ -2306,7 +2364,7 @@ class WalletProvider extends ChangeNotifier {
     }
   }
 
-  Future<void> _loadSolanaWallet(String address) async {
+  Future<void> _loadSolanaWallet(String address, int authEpoch) async {
     try {
       final solBalance = await _solanaWalletService.getBalance(address);
       final tokenBalances =
@@ -2372,7 +2430,7 @@ class WalletProvider extends ChangeNotifier {
         lastUpdated: DateTime.now(),
       );
 
-      await _syncBackendData(address);
+      await _syncBackendData(address, expectedAuthEpoch: authEpoch);
       _clearLastError();
     } catch (e) {
       _walletLog('error loading Solana wallet: $e');
@@ -2620,34 +2678,54 @@ class WalletProvider extends ChangeNotifier {
         : _mergeTransactionPair(existing, transaction);
   }
 
-  Future<void> _syncBackendData(String address) async {
+  /// Syncs the wallet's backend profile and, when this provider owns signer
+  /// authority, its wallet-signed session.
+  ///
+  /// [expectedAuthEpoch] is the auth session the caller started under. When
+  /// absent, the session is the one current when the sync begins: the signature
+  /// follows several network awaits, and a session that moved on meanwhile
+  /// (another account, or a logout) must receive neither this wallet's profile
+  /// nor its token.
+  Future<bool> _syncBackendData(
+    String address, {
+    int? expectedAuthEpoch,
+  }) async {
+    final sessionEpoch = expectedAuthEpoch ?? _apiService.authSessionEpoch;
+    // The account the session belongs to at entry. With the epoch, it binds the
+    // sync: a changed epoch ends it unless the live session is still this
+    // account's (link, refresh, a non-wallet sign-in token swap).
+    final entryAccountKey = _apiService.pendingAuthAccountKey;
+    bool sessionEnded() {
+      if (!_isStaleAuthEpoch(sessionEpoch, forWallet: address)) return false;
+      return entryAccountKey.isEmpty ||
+          _apiService.pendingAuthAccountKey != entryAccountKey;
+    }
+
     // Safety net: account-link wallet setup must never reach backend
     // register/login. The local-only account-link methods are not supposed to
     // call this at all, but guard here in case any wallet create/import/connect
     // path is reused while account-link suppression is active.
     if (_suppressAccountLinkIdentityPersistence) {
       _walletLog('_syncBackendData skipped during account-link wallet setup');
-      return;
+      return true;
     }
+    // A sync that starts after its session ended is never bound to the account
+    // that replaced it.
+    if (_isStaleAuthEpoch(sessionEpoch, forWallet: address)) return false;
     try {
-      // Profile fetch or create
+      // Profile bootstrap only: warm the user cache and register a wallet that
+      // has no profile yet. The account's profile itself is held by the
+      // profile provider, not copied here.
       try {
         // Request fresh profile when syncing backend data for connected wallet
         final user = await UserService.getUserById(address, forceRefresh: true);
-        if (user != null) {
-          _backendProfile = {
-            'walletAddress': user.id,
-            'username': user.username.replaceFirst('@', ''),
-            'displayName': user.name,
-            'bio': user.bio,
-            'avatar': user.profileImageUrl,
-            'isVerified': user.isVerified,
-            'createdAt': null,
-          };
-        } else {
+        if (sessionEnded()) return false;
+        if (user == null) {
           try {
-            _backendProfile = await _apiService.getProfileByWallet(address);
+            await _apiService.getProfileByWallet(address);
+            if (sessionEnded()) return false;
           } catch (e) {
+            if (sessionEnded()) return false;
             if (e.toString().contains('Profile not found')) {
               try {
                 final reg = await _apiService.session.registerWalletBootstrap(
@@ -2655,23 +2733,13 @@ class WalletProvider extends ChangeNotifier {
                   username: 'user_${address.substring(0, 6)}',
                 );
                 _walletLog('_syncBackendData: registerWallet response: $reg');
+                if (sessionEnded()) return false;
                 try {
-                  _backendProfile =
-                      await _apiService.getProfileByWallet(address);
+                  await _apiService.getProfileByWallet(address);
+                  if (sessionEnded()) return false;
                 } catch (_) {
-                  final user2 = await UserService.getUserById(address,
-                      forceRefresh: true);
-                  if (user2 != null) {
-                    _backendProfile = {
-                      'walletAddress': user2.id,
-                      'username': user2.username.replaceFirst('@', ''),
-                      'displayName': user2.name,
-                      'bio': user2.bio,
-                      'avatar': user2.profileImageUrl,
-                      'isVerified': user2.isVerified,
-                      'createdAt': null,
-                    };
-                  }
+                  await UserService.getUserById(address, forceRefresh: true);
+                  if (sessionEnded()) return false;
                 }
               } catch (regErr) {
                 _walletLog('_syncBackendData: registerWallet failed: $regErr');
@@ -2685,20 +2753,15 @@ class WalletProvider extends ChangeNotifier {
         _walletLog('_syncBackendData: profile lookup failed: $e');
       }
 
-      // Canonical user snapshot (collections + achievement stats)
+      // Canonical user snapshot (achievement token total)
       try {
         final snapshot = await StatsApiService(api: _apiService).fetchSnapshot(
           entityType: 'user',
           entityId: address,
-          metrics: const [
-            'collections',
-            'achievementsUnlocked',
-            'achievementTokensTotal'
-          ],
+          metrics: const ['achievementTokensTotal'],
           scope: 'public',
         );
-        _collectionsCount = snapshot.counters['collections'] ?? 0;
-        _achievementsUnlocked = snapshot.counters['achievementsUnlocked'] ?? 0;
+        if (sessionEnded()) return false;
         _achievementTokenTotal =
             (snapshot.counters['achievementTokensTotal'] ?? 0).toDouble();
       } catch (e) {
@@ -2708,12 +2771,24 @@ class WalletProvider extends ChangeNotifier {
       // Keep backend auth aligned only when this provider owns signer
       // authority. Profile bootstrap above is separate from session issuance.
       try {
-        if (await ensureBackendSessionForActiveSigner(walletAddress: address)) {
+        if (sessionEnded()) return false;
+        if (await ensureBackendSessionForActiveSigner(
+          walletAddress: address,
+          // Rebound to the live epoch of the same account: nothing awaits
+          // between the check above and the ensure's own entry check.
+          expectedAuthEpoch: _apiService.authSessionEpoch,
+        )) {
           _walletLog('_syncBackendData: signer-backed session ensured');
+        } else if (sessionEnded()) {
+          return false;
         } else if (AppConfig.enableDebugIssueToken) {
+          // Bound to the session current here: the call awaits the network.
+          final debugEpoch = _apiService.authSessionEpoch;
           final issued = await _apiService.issueDebugTokenForWallet(address);
           _walletLog('_syncBackendData: debug token issued=$issued');
-          if (issued) await _apiService.loadAuthToken();
+          if (issued && debugEpoch == _apiService.authSessionEpoch) {
+            await _apiService.loadAuthToken();
+          }
         }
       } catch (e) {
         _walletLog('_syncBackendData: session ensure failed: $e');
@@ -2724,6 +2799,7 @@ class WalletProvider extends ChangeNotifier {
       _walletLog('backend sync error: $e');
       _setLastError(e);
     }
+    return true;
   }
 
   // Balance visibility toggle
@@ -3527,6 +3603,7 @@ class WalletProvider extends ChangeNotifier {
 
   Future<bool> ensureBackendSessionForActiveSigner({
     String? walletAddress,
+    int? expectedAuthEpoch,
   }) async {
     final targetWallet = (walletAddress ?? _currentWalletAddress ?? '').trim();
     if (targetWallet.isEmpty ||
@@ -3535,11 +3612,22 @@ class WalletProvider extends ChangeNotifier {
       return false;
     }
 
+    // A caller that names no session is bound by the API layer to the session
+    // (epoch and account) current at this entry; a named one is checked here,
+    // before the preferred wallet is touched.
+    if (_isStaleAuthEpoch(expectedAuthEpoch, forWallet: targetWallet)) {
+      return false;
+    }
+
     try {
-      _apiService.setPreferredWalletAddress(targetWallet);
+      _apiService.setPreferredWalletAddress(
+        targetWallet,
+        expectedAuthSessionEpoch: _apiService.authSessionEpoch,
+      );
       await _apiService.signedActions.ensureWalletSignedSession(
         walletAddress: targetWallet,
         signMessage: signMessage,
+        expectedEpoch: expectedAuthEpoch,
       );
       final authWallet =
           (_apiService.getCurrentAuthWalletAddress() ?? '').trim();
@@ -4022,8 +4110,13 @@ class WalletProvider extends ChangeNotifier {
     DerivedKeyPairResult? preDerived,
     bool markBackedUp = true,
     bool syncBackend = true,
+    int? expectedAuthEpoch,
   }) async {
     _walletLog('importWalletFromMnemonic start');
+    _throwIfAuthSessionEnded(expectedAuthEpoch);
+    // The load and sync below are bound to the session current now even for a
+    // caller that passed none; only an explicit epoch makes the import fail.
+    final bindEpoch = expectedAuthEpoch ?? _apiService.authSessionEpoch;
     _lastError = null;
     _sessionPhase = WalletSessionPhase.restoring;
 
@@ -4035,6 +4128,7 @@ class WalletProvider extends ChangeNotifier {
         await _solanaWalletService.derivePreferredKeyPair(
           mnemonic,
         );
+    _throwIfAuthSessionEnded(expectedAuthEpoch, forWallet: derived.address);
     try {
       _solanaWalletService.setActiveKeyPair(derived.hdKeyPair);
       _walletLog('active keypair set for imported wallet');
@@ -4047,11 +4141,18 @@ class WalletProvider extends ChangeNotifier {
     SolanaWalletConnectService.instance
         .updateActiveWalletAddress(_currentWalletAddress);
     // Wallet address set.
+    _throwIfAuthSessionEnded(expectedAuthEpoch, forWallet: derived.address);
 
     // Save to SharedPreferences for profile provider
     try {
-      await _persistWalletIdentity(_currentWalletAddress!);
-      _setPreferredWalletForIdentity(_currentWalletAddress!);
+      await _persistWalletIdentity(
+        _currentWalletAddress!,
+        expectedAuthEpoch: bindEpoch,
+      );
+      _setPreferredWalletForIdentity(
+        _currentWalletAddress!,
+        expectedAuthEpoch: bindEpoch,
+      );
       _walletLog('wallet address saved to SharedPreferences');
     } catch (e) {
       _walletLog('failed to save wallet address to SharedPreferences: $e');
@@ -4063,21 +4164,30 @@ class WalletProvider extends ChangeNotifier {
     // Load the imported wallet from blockchain
     try {
       _walletLog('loading wallet data');
-      await _loadData();
+      await _loadData(authEpoch: bindEpoch);
       _walletLog('wallet data loaded');
     } catch (e) {
       _walletLog('error loading wallet data: $e');
       // Even if loading fails, we have the address
     }
+    _throwIfAuthSessionEnded(expectedAuthEpoch, forWallet: derived.address);
 
     if (syncBackend && _currentWalletAddress != null) {
+      var synced = true;
       try {
-        await _syncBackendData(_currentWalletAddress!);
+        synced = await _syncBackendData(
+          _currentWalletAddress!,
+          expectedAuthEpoch: bindEpoch,
+        );
         _walletLog('backend data synced');
       } catch (e) {
         _walletLog('error syncing backend data: $e');
       }
+      if (!synced && expectedAuthEpoch != null) {
+        throw StateError('Authentication request belongs to an ended session');
+      }
     }
+    _throwIfAuthSessionEnded(expectedAuthEpoch, forWallet: derived.address);
 
     // Cache mnemonic for reuse
     try {
@@ -4244,16 +4354,13 @@ class WalletProvider extends ChangeNotifier {
     );
   }
 
-  /// Drops everything in memory that belongs to the signed-in ACCOUNT (backend
-  /// profile, token/transaction lists, collection and achievement counters).
+  /// Drops everything in memory that belongs to the signed-in ACCOUNT
+  /// (token/transaction lists and the achievement token total).
   /// Shared by [disconnectWallet] and [clearAccountSessionKeepWallet] so the two
   /// cannot drift.
   void _clearAccountData() {
     _tokens.clear();
     _transactions.clear();
-    _backendProfile = null;
-    _collectionsCount = 0;
-    _achievementsUnlocked = 0;
     _achievementTokenTotal = 0.0;
   }
 

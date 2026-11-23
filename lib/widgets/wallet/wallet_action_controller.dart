@@ -11,45 +11,14 @@ enum WalletActionSurface { walletHome, desktopWallet, secureWallet }
 class WalletActionController {
   const WalletActionController._();
 
-  static List<WalletActionConfig> buildPrimaryActionsForProvider({
-    required BuildContext context,
-    required WalletProvider walletProvider,
-    required VoidCallback onSend,
-    required VoidCallback onReceive,
-    required VoidCallback onSwap,
-    required VoidCallback onSecureWallet,
-    required VoidCallback onRestoreSigner,
-    VoidCallback? onNfts,
-    VoidCallback? onConnectExternalWallet,
-    VoidCallback? onCreateLocalWallet,
-    VoidCallback? onImportWallet,
-    bool includeNfts = false,
-    bool swapEnabled = false,
-    WalletActionSurface surface = WalletActionSurface.walletHome,
-  }) {
-    return buildPrimaryActions(
-      l10n: AppLocalizations.of(context)!,
-      roles: KubusColorRoles.of(context),
-      authority: walletProvider.authority,
-      onSend: onSend,
-      onReceive: onReceive,
-      onSwap: onSwap,
-      onSecureWallet: onSecureWallet,
-      onRestoreSigner: onRestoreSigner,
-      onNfts: onNfts,
-      onConnectExternalWallet: onConnectExternalWallet,
-      onCreateLocalWallet: onCreateLocalWallet,
-      onImportWallet: onImportWallet,
-      includeNfts: includeNfts,
-      swapEnabled: swapEnabled,
-      surface: surface,
-    );
-  }
-
   static List<WalletActionConfig> buildPrimaryActions({
     required AppLocalizations l10n,
     required KubusColorRoles roles,
     required WalletAuthoritySnapshot authority,
+
+    /// Whether an account is signed in: the profile provider's answer, passed
+    /// in. The wallet authority holds wallet facts only.
+    required bool isSignedIn,
     required VoidCallback onSend,
     required VoidCallback onReceive,
     required VoidCallback onSwap,
@@ -66,9 +35,8 @@ class WalletActionController {
     final actions = <WalletActionConfig>[];
     final canTransact = authority.canTransact;
     final hasWallet = authority.hasWalletIdentity;
-    final hasAccount = authority.hasAccountSession;
-    final shouldShowWalletSetup =
-        !hasWallet || authority.state == WalletAuthorityState.accountShellOnly;
+    final hasAccount = isSignedIn;
+    final shouldShowWalletSetup = !hasWallet;
 
     if (shouldShowWalletSetup && onCreateLocalWallet != null) {
       actions.add(
@@ -214,79 +182,6 @@ class WalletActionController {
         disabledReason: l10n.walletHomeSignedOutTitle,
       ),
     ];
-  }
-
-  static List<WalletActionConfig> buildSecurityActions({
-    required AppLocalizations l10n,
-    required KubusColorRoles roles,
-    required WalletAuthoritySnapshot authority,
-    required VoidCallback onSecureWallet,
-    required VoidCallback onRestoreSigner,
-    VoidCallback? onConnectExternalWallet,
-  }) {
-    return _dedupeByType(<WalletActionConfig>[
-      WalletActionConfig(
-        type: WalletActionType.secureWallet,
-        title: l10n.walletHomeSecureWalletAction,
-        subtitle: l10n.walletHomeSecuritySubtitle,
-        icon: Icons.shield_outlined,
-        color: roles.warningAction,
-        run: onSecureWallet,
-        enabled: authority.hasWalletIdentity,
-        disabledReason: l10n.walletHomeSignedOutTitle,
-      ),
-      if (authority.canRestoreFromEncryptedBackup)
-        WalletActionConfig(
-          type: WalletActionType.restoreSigner,
-          title: l10n.walletSecurityRestoreSignerAction,
-          subtitle: l10n.walletSecuritySignerRestoreAvailableValue,
-          icon: Icons.login_outlined,
-          color: roles.positiveAction,
-          run: onRestoreSigner,
-        ),
-      if (!authority.canTransact && onConnectExternalWallet != null)
-        WalletActionConfig(
-          type: WalletActionType.connectExternalWallet,
-          title: l10n.walletSecurityConnectExternalAction,
-          subtitle: l10n.connectWalletChooseDescription,
-          icon: Icons.account_balance_wallet_outlined,
-          color: roles.statBlue,
-          run: onConnectExternalWallet,
-          enabled: authority.hasAccountSession,
-          disabledReason: l10n.commonSignIn,
-        ),
-    ]);
-  }
-
-  static List<WalletActionConfig> buildRecoveryActions({
-    required AppLocalizations l10n,
-    required KubusColorRoles roles,
-    required WalletAuthoritySnapshot authority,
-    required VoidCallback onRestoreSigner,
-    VoidCallback? onImportWallet,
-  }) {
-    return _dedupeByType(<WalletActionConfig>[
-      if (authority.canRestoreFromEncryptedBackup)
-        WalletActionConfig(
-          type: WalletActionType.restoreSigner,
-          title: l10n.walletSecurityRestoreSignerAction,
-          subtitle: l10n.walletSecuritySignerRestoreAvailableValue,
-          icon: Icons.login_outlined,
-          color: roles.positiveAction,
-          run: onRestoreSigner,
-        ),
-      if (!authority.canTransact && onImportWallet != null)
-        WalletActionConfig(
-          type: WalletActionType.importWallet,
-          title: l10n.walletHomeImportWalletAction,
-          subtitle: l10n.connectWalletImportDescription,
-          icon: Icons.file_upload_outlined,
-          color: roles.statAmber,
-          run: onImportWallet,
-          enabled: authority.hasAccountSession,
-          disabledReason: l10n.commonSignIn,
-        ),
-    ]);
   }
 
   static List<WalletActionConfig> _dedupeByType(

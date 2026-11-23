@@ -1,3 +1,5 @@
+import 'package:art_kubus/models/gallery_presentation.dart';
+import 'package:art_kubus/widgets/detail/gallery_presentation.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'package:file_picker/file_picker.dart';
@@ -18,7 +20,7 @@ import '../../providers/attestation_provider.dart';
 import '../../providers/collab_provider.dart';
 import '../../providers/events_provider.dart';
 import '../../providers/exhibitions_provider.dart';
-import '../../providers/wallet_provider.dart';
+import '../../providers/profile_provider.dart';
 import '../../providers/saved_items_provider.dart';
 import '../../providers/public_entity_takeover_provider.dart';
 import '../../screens/collab/invites_inbox_screen.dart';
@@ -28,6 +30,7 @@ import '../../services/backend_api_service.dart'
 import '../../services/share/share_service.dart';
 import '../../services/share/share_types.dart';
 import '../../services/contextual_auth_gate.dart';
+import '../../services/public_entity_load_outcome.dart';
 import '../../l10n/app_localizations.dart';
 import '../../utils/artwork_media_resolver.dart';
 import '../../utils/app_color_utils.dart';
@@ -121,13 +124,13 @@ class _ExhibitionDetailScreenState extends State<ExhibitionDetailScreen> {
       final exhibition =
           await provider.fetchExhibition(widget.exhibitionId, force: true);
       if (exhibition == null) reason = UnavailableEntityReason.loadFailed;
-    } on BackendApiRequestException catch (e) {
-      reason = e.statusCode == 404 || e.statusCode == 410
+    } catch (error) {
+      // Provider handles errors. Only the API's own 404/410 says the entity is
+      // gone; the public read reports it as `Request failed: 404`, not always
+      // as a BackendApiRequestException.
+      reason = isEntityNotFoundError(error)
           ? UnavailableEntityReason.notFound
           : UnavailableEntityReason.loadFailed;
-    } catch (_) {
-      // Provider handles errors.
-      reason = UnavailableEntityReason.loadFailed;
     }
     if (mounted && _unavailableReason != reason) {
       setState(() => _unavailableReason = reason);
@@ -1025,8 +1028,7 @@ class _ExhibitionDetailScreenState extends State<ExhibitionDetailScreen> {
       return const SizedBox.shrink();
     }
 
-    final isSignedIn =
-        context.watch<WalletProvider>().authority.hasAccountSession;
+    final isSignedIn = context.watch<ProfileProvider>().isSignedIn;
     if (!isSignedIn) {
       return const SizedBox.shrink();
     }
@@ -1184,7 +1186,13 @@ class _ExhibitionDetailScreenState extends State<ExhibitionDetailScreen> {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) => GalleryHostScope(
+        type: GalleryHostType.exhibition,
+        hostId: widget.exhibitionId,
+        builder: _buildWithGallery,
+      );
+
+  Widget _buildWithGallery(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final scheme = Theme.of(context).colorScheme;
     final isCanonicalPublicEntry = isCanonicalPublicEntityEntry(
@@ -1196,8 +1204,7 @@ class _ExhibitionDetailScreenState extends State<ExhibitionDetailScreen> {
         DesktopShellScope.of(context)?.isCanonicalPublicEntry ?? false;
     final provider = context.watch<ExhibitionsProvider>();
     final savedItems = context.watch<SavedItemsProvider>();
-    final isSignedIn =
-        context.watch<WalletProvider>().authority.hasAccountSession;
+    final isSignedIn = context.watch<ProfileProvider>().isSignedIn;
 
     Exhibition? loadedExhibition;
     for (final candidate in provider.exhibitions) {
@@ -1371,7 +1378,8 @@ class _ExhibitionDetailScreenState extends State<ExhibitionDetailScreen> {
                   ],
                 );
 
-                final artworksCard = DetailCard(
+                final artworksCard = GalleryPanel(
+                    fallback: DetailCard(
                   borderRadius: DetailRadius.md,
                   padding: DetailSpacing.editorialCardPadding,
                   child: Column(
@@ -1392,7 +1400,7 @@ class _ExhibitionDetailScreenState extends State<ExhibitionDetailScreen> {
                       _LinkedArtworksList(exhibition: ex),
                     ],
                   ),
-                );
+                ));
 
                 final programCard = _ProgramSection(
                   exhibition: ex,
@@ -1402,6 +1410,11 @@ class _ExhibitionDetailScreenState extends State<ExhibitionDetailScreen> {
                   onCreateEvent: () => _createProgramEvent(ex),
                   onUnlinkEvent: (event) => _unlinkProgramEvent(ex, event),
                 );
+
+                final galleryPanels = orderedGallerySections(context, {
+                  'program': programCard,
+                  'artworks': artworksCard,
+                });
 
                 final collab = CollaborationPanel(
                   entityType: 'exhibitions',
@@ -1424,9 +1437,11 @@ class _ExhibitionDetailScreenState extends State<ExhibitionDetailScreen> {
                                   topActions,
                                   details,
                                   const SizedBox(height: DetailSpacing.cardGap),
-                                  programCard,
-                                  const SizedBox(height: DetailSpacing.cardGap),
-                                  artworksCard,
+                                  for (final panel in galleryPanels) ...[
+                                    panel,
+                                    const SizedBox(
+                                        height: DetailSpacing.cardGap),
+                                  ],
                                 ],
                               ),
                             ),
@@ -1464,9 +1479,10 @@ class _ExhibitionDetailScreenState extends State<ExhibitionDetailScreen> {
                     const SizedBox(height: DetailSpacing.cardGap),
                     topActions,
                     const SizedBox(height: DetailSpacing.cardGap),
-                    programCard,
-                    const SizedBox(height: DetailSpacing.cardGap),
-                    artworksCard,
+                    for (final panel in galleryPanels) ...[
+                      panel,
+                      const SizedBox(height: DetailSpacing.cardGap),
+                    ],
                     const SizedBox(height: DetailSpacing.cardGap),
                     collab,
                     if (provider.isDetailLoading)

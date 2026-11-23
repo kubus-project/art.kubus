@@ -103,6 +103,7 @@ class _ProfilePeopleListState extends State<ProfilePeopleList> {
   }
 
   static Future<Set<String>?> _defaultViewerFollowing() async {
+    // Credential fact gating a network read; not identity display.
     if (!BackendApiService().hasAuthSession) return null;
     // Null (no toggles) when the follow set is unavailable, never an empty
     // set that would render "Follow" on accounts the viewer already follows.

@@ -88,6 +88,7 @@ class _RecordingWalletProvider extends WalletProvider {
     bool persist = true,
     bool loadData = true,
     bool syncBackend = false,
+    int? expectedAuthEpoch,
   }) async {
     // The account-link transaction must never use this path: loadData/sync
     // can bootstrap a second wallet-root account.

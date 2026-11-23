@@ -18,6 +18,7 @@ import '../screens/events/event_detail_screen.dart';
 import '../screens/events/exhibition_detail_screen.dart';
 import '../services/share/share_types.dart';
 import 'artwork_navigation.dart';
+import 'institution_navigation.dart';
 import 'user_profile_navigation.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
 
@@ -154,7 +155,25 @@ class ShareDeepLinkNavigation {
         await openArtwork(context, target.id,
             source: 'share_deep_link', publicEntityType: ShareEntityType.nft);
         return;
+      case ShareEntityType.institution:
+        tabs?.setIndex(3);
+        await _openInstitution(context, target.id);
+        return;
     }
+  }
+
+  /// /en/institutions/{id} and /sl/institucije/{id} name the institution
+  /// record, never an account, so the id always opens the institution screen
+  /// (InstitutionNavigation adds the desktop sub-screen chrome when needed).
+  static Future<void> _openInstitution(
+    BuildContext context,
+    String institutionId,
+  ) {
+    return InstitutionNavigation.open(
+      context,
+      institutionId: institutionId,
+      recordOnly: true,
+    );
   }
 
   /// A canonical public URL (e.g. /en/profiles/{id}) is served as the public
@@ -254,6 +273,10 @@ class ShareDeepLinkNavigation {
       case ShareEntityType.nft:
         await openArtwork(context, target.id,
             source: 'share_deep_link', publicEntityType: ShareEntityType.nft);
+        return;
+      case ShareEntityType.institution:
+        scope.navigateToRoute('/home');
+        await _openInstitution(context, target.id);
         return;
     }
   }

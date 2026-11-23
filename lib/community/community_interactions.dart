@@ -113,11 +113,11 @@ class CommunityPost {
   String get authorId =>
       authorIdentityData.userId ?? authorIdentityData.walletSeed;
 
-  String? get authorWallet {
-    final seed = authorIdentityData.walletSeed.trim();
-    if (seed.isEmpty || seed == authorIdentityData.label) return null;
-    return seed;
-  }
+  /// The author's wallet, or null. An account UUID is never a wallet.
+  String? get authorWallet => communityAuthorWalletOf(authorIdentityData);
+
+  /// The author's account id, or null. Only a canonical account UUID counts.
+  String? get authorUserId => communityAuthorUserIdOf(authorIdentityData);
 
   String get authorName => authorIdentityData.label;
 
@@ -261,11 +261,11 @@ class Comment {
 
   String? get authorUsername => authorIdentityData.username;
 
-  String? get authorWallet {
-    final seed = authorIdentityData.walletSeed.trim();
-    if (seed.isEmpty || seed == authorIdentityData.label) return null;
-    return seed;
-  }
+  /// The author's wallet, or null. An account UUID is never a wallet.
+  String? get authorWallet => communityAuthorWalletOf(authorIdentityData);
+
+  /// The author's account id, or null. Only a canonical account UUID counts.
+  String? get authorUserId => communityAuthorUserIdOf(authorIdentityData);
 
   Comment copyWith({
     int? likeCount,
@@ -289,6 +289,22 @@ class Comment {
       replies: replies ?? List<Comment>.from(this.replies),
     );
   }
+}
+
+/// The wallet of a post or comment author, or null. A walletless author's
+/// walletSeed falls back to the account UUID, which is never a wallet.
+String? communityAuthorWalletOf(ProfileIdentityData identity) {
+  final seed = identity.walletSeed.trim();
+  if (seed.isEmpty || seed == identity.label) return null;
+  if (WalletUtils.isAccountUuid(seed)) return null;
+  return seed;
+}
+
+/// The account id of a post or comment author, or null. Only a canonical
+/// account UUID counts: a wallet-only payload copies the wallet into userId.
+String? communityAuthorUserIdOf(ProfileIdentityData identity) {
+  final id = (identity.userId ?? '').trim();
+  return WalletUtils.isAccountUuid(id) ? id : null;
 }
 
 ProfileIdentityData _legacyAuthorIdentity({
@@ -1222,11 +1238,17 @@ class CommunityService {
 
   static String _resolveWalletIdentifier(SharedPreferences prefs,
       {String? walletOverride}) {
-    final raw = walletOverride ??
-        prefs.getString('wallet_address') ??
+    final wallet = (walletOverride ?? '').trim();
+    if (wallet.isNotEmpty) return wallet.toLowerCase();
+    // A walletless account is scoped by its own account id. The preferences
+    // below are device-wide: they can name another account, or a wallet left
+    // from an earlier sign-in, so they never decide a session with an id.
+    // Storage scope key for the likes record, not an identity source.
+    final account = AccountIdentity.accountKey.trim();
+    if (WalletUtils.isAccountUuid(account)) return account.toLowerCase();
+    final raw = prefs.getString('wallet_address') ??
         prefs.getString('walletAddress') ??
-        prefs.getString('wallet') ??
-        prefs.getString('user_id');
+        prefs.getString('wallet');
     if (raw == null || raw.isEmpty) {
       return 'guest';
     }

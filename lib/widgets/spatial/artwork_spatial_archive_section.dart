@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -23,6 +24,7 @@ import '../../utils/design_tokens.dart';
 import '../common/kubus_reading_surface.dart';
 import '../kubus_button.dart';
 import '../../utils/kubus_color_roles.dart';
+import 'spatial_lazy_reveal.dart';
 import 'spatial_viewer.dart';
 
 /// The artwork's spatial presence, on the artwork's own screen.
@@ -54,6 +56,10 @@ class ArtworkSpatialArchiveSection extends StatefulWidget {
 
 class _ArtworkSpatialArchiveSectionState
     extends State<ArtworkSpatialArchiveSection> {
+  /// While the fullscreen dialog is open the inline viewer is unmounted, so a
+  /// page never holds two WebGL contexts (and two downloads) for one piece.
+  bool _dialogOpen = false;
+
   @override
   void initState() {
     super.initState();
@@ -162,6 +168,14 @@ class _ArtworkSpatialArchiveSectionState
           if (hasPublic) ...<Widget>[
             const SizedBox(height: KubusSpacing.sm),
             _PublicArchiveSummary(history: history),
+            if (kIsWeb) ...<Widget>[
+              const SizedBox(height: KubusSpacing.md),
+              _InlineArchiveViewer(
+                key: const ValueKey<String>('spatial-inline-viewer'),
+                content: history.current!.content,
+                suspended: _dialogOpen,
+              ),
+            ],
             const SizedBox(height: KubusSpacing.md),
             FilledButton.icon(
               onPressed: () => _openArchive(context, history),
@@ -254,11 +268,73 @@ class _ArtworkSpatialArchiveSectionState
   Future<void> _openArchive(
     BuildContext context,
     ArtworkSpatialHistory history,
-  ) =>
-      showDialog<void>(
+  ) async {
+    setState(() => _dialogOpen = true);
+    try {
+      await showDialog<void>(
         context: context,
         builder: (_) => _SpatialArchiveDialog(history: history),
       );
+    } finally {
+      if (mounted) setState(() => _dialogOpen = false);
+    }
+  }
+}
+
+/// The viewer inline on the artwork screen (web).
+///
+/// Created when it scrolls into view, not on page load. Its height follows the
+/// available width so it reads the same in the desktop column and on a phone.
+class _InlineArchiveViewer extends StatelessWidget {
+  const _InlineArchiveViewer({
+    required this.content,
+    required this.suspended,
+    super.key,
+  });
+
+  final SpatialContent content;
+  final bool suspended;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final nodeService = context.read<KubusNodeProvider>().service;
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final width =
+            constraints.hasBoundedWidth ? constraints.maxWidth : 640.0;
+        final height = (width * 0.75).clamp(260.0, 460.0);
+        // The live viewer is its canvas plus a 36 px control row. The stand-in
+        // that replaces it while the fullscreen dialog is open has the same
+        // total height, so the page does not jump when the dialog opens/closes.
+        final liveHeight = height + 36;
+        final placeholder = ColoredBox(
+          color: scheme.surfaceContainerHighest,
+          child: Center(
+            child: Icon(
+              Icons.view_in_ar_outlined,
+              size: 40,
+              color: scheme.onSurfaceVariant,
+            ),
+          ),
+        );
+        return ClipRRect(
+          borderRadius: BorderRadius.circular(KubusRadius.md),
+          child: suspended
+              ? SizedBox(height: liveHeight, child: placeholder)
+              : SpatialLazyReveal(
+                  height: liveHeight,
+                  placeholder: placeholder,
+                  child: SpatialViewer(
+                    key: ValueKey<String>('inline-${content.id}'),
+                    content: content,
+                    nodeService: nodeService,
+                  ),
+                ),
+        );
+      },
+    );
+  }
 }
 
 /// The public archive's current version and when it was captured.
@@ -321,6 +397,16 @@ class _SpatialArchiveDialog extends StatefulWidget {
 class _SpatialArchiveDialogState extends State<_SpatialArchiveDialog> {
   late ArtworkSpatialCapture selected = widget.history.current!;
 
+  /// Escape inside the web viewer closes this dialog, and only this dialog:
+  /// while another route (the archive-consent prompt) is above it, it is not
+  /// the current route and the key is ignored.
+  void _closeOnEscape() {
+    if (!mounted) return;
+    if (ModalRoute.of(context)?.isCurrent ?? false) {
+      Navigator.of(context).maybePop();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
@@ -345,6 +431,7 @@ class _SpatialArchiveDialogState extends State<_SpatialArchiveDialog> {
                     key: ValueKey(selected.id),
                     content: selected.content,
                     nodeService: nodeService,
+                    onEscape: _closeOnEscape,
                   ),
                 ),
               ),

@@ -40,6 +40,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 import 'package:provider/single_child_widget.dart';
 
+import 'account_session_fixture.dart';
+
 /// Renders any real PRODUCT surface inside the app's provider set for the
 /// visual-QA matrices.
 ///
@@ -57,6 +59,7 @@ Future<List<String>> pumpProductSurface(
   Brightness brightness = Brightness.light,
   double textScale = 1.0,
   UserProfile? signedInProfile,
+  ProfileProvider? profileProvider,
   List<SingleChildWidget> extraProviders = const <SingleChildWidget>[],
   Duration settle = const Duration(seconds: 2),
 }) async {
@@ -77,16 +80,21 @@ Future<List<String>> pumpProductSurface(
   addTearDown(tester.view.reset);
 
   final themeProvider = ThemeProvider();
-  final profileProvider = ProfileProvider();
+  final surfaceProfile = profileProvider ?? ProfileProvider();
   if (signedInProfile != null) {
-    profileProvider.setCurrentUser(signedInProfile);
+    AccountSessionFixture.start(
+      accountId: signedInProfile.userId ?? signedInProfile.id,
+      wallet: signedInProfile.walletAddress,
+    );
+    addTearDown(AccountSessionFixture.end);
+    surfaceProfile.setCurrentUser(signedInProfile);
   }
 
   await tester.pumpWidget(
     MultiProvider(
       providers: [
         ChangeNotifierProvider<ThemeProvider>.value(value: themeProvider),
-        ChangeNotifierProvider<ProfileProvider>.value(value: profileProvider),
+        ChangeNotifierProvider<ProfileProvider>.value(value: surfaceProfile),
         ChangeNotifierProvider<GlassCapabilitiesProvider>(
           create: (_) => GlassCapabilitiesProvider(),
         ),

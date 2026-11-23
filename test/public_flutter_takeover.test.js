@@ -1158,3 +1158,48 @@ test('a host with neither data-locale nor a localized canonical path still never
   page.dispatchEntity({ type: 'artwork', id: 'art-1', path: '/artworks/art-1', locale: 'en' });
   assert.equal(page.classes.has('kubus-takeover-active'), false);
 });
+
+test('PHP gateway: institution pages reach the renderer and are a takeover target of their own type', () => {
+  const gateway = fs.readFileSync(SEO_PROXY, 'utf8');
+  const htaccess = fs.readFileSync(path.join(__dirname, '..', 'web', '.htaccess'), 'utf8');
+
+  // Both institution routes reach the renderer (any /en or /sl path does), not the app shell.
+  assert.match(htaccess, /RewriteRule \^\(\?:en\|sl\)\/\.\+ seo-proxy\.php \[L,QSA\]/);
+  assert.match(gateway, /preg_match\('#\^\/\(\?:en\|sl\)\(\?:\/\.\*\)\?\$#', \$path\) === 1/);
+
+  // The takeover map carries the institution segments in both locales and keeps profiles as profiles.
+  assert.doesNotMatch(gateway, /KUBUS_SSR_ONLY_SEGMENTS/);
+  const segmentMap = gateway.indexOf('$segments = [');
+  const map = gateway.slice(segmentMap, gateway.indexOf('$locale = $matches[1];', segmentMap));
+  assert.match(map, /'institutions' => 'institution'/);
+  assert.match(map, /'institucije' => 'institution'/);
+  assert.match(map, /'profiles' => 'profile'/);
+  assert.match(map, /'profili' => 'profile'/);
+
+  // The compact-alias allowlist gained no institution head: institutions have no compact alias.
+  const aliasPattern = gateway.match(/'#\^\/\(\?:a\|u\|e\|x[^']*'/)?.[0] ?? '';
+  assert.ok(aliasPattern.length > 0);
+  assert.doesNotMatch(aliasPattern, /institution/);
+});
+
+test('the app deep-link contract routes the institution URLs to the institution screen', () => {
+  const read = (...parts) => fs.readFileSync(path.join(__dirname, '..', ...parts), 'utf8');
+  const parser = read('lib', 'services', 'share', 'share_deep_link_parser.dart');
+  const provider = read('lib', 'providers', 'public_entity_takeover_provider.dart');
+  const types = read('lib', 'services', 'share', 'share_types.dart');
+  const builder = read('lib', 'services', 'share', 'share_link_builder.dart');
+  const navigation = read('lib', 'utils', 'share_deep_link_navigation.dart');
+  const screen = read('lib', 'screens', 'web3', 'institution', 'institution_detail_screen.dart');
+  assert.match(parser, /'en\/institutions': AppRouteIntentType\.institution/);
+  assert.match(parser, /'sl\/institucije': AppRouteIntentType\.institution/);
+  assert.match(types, /enum ShareEntityType \{[^}]*institution/);
+  assert.match(builder, /ShareEntityType\.institution: \{'en': 'institutions', 'sl': 'institucije'\}/);
+  // The takeover wire type, the localized segment and the institution screen's readiness signal.
+  assert.match(provider, /ShareEntityType\.institution => 'institution'/);
+  assert.match(provider, /ShareEntityType\.institution =>\s*locale == 'sl' \? 'institucije' : 'institutions'/);
+  assert.match(navigation, /case ShareEntityType\.institution:/);
+  assert.match(screen, /type: ShareEntityType\.institution,/);
+  // The profile route stays the only profile-shaped takeover.
+  assert.match(parser, /'en\/profiles': AppRouteIntentType\.profile/);
+  assert.match(parser, /'sl\/profili': AppRouteIntentType\.profile/);
+});

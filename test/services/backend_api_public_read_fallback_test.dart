@@ -107,6 +107,57 @@ void main() {
     });
   });
 
+  group('public author-profile artwork filter', () {
+    const profileId = '10000000-0000-4000-8000-000000000010';
+
+    test('accepts only a matching appliedFilters echo from PostgreSQL',
+        () async {
+      backend((host, orbit) => http.Response(
+            jsonEncode({
+              'success': true,
+              'source': 'postgresql',
+              'appliedFilters': {'authorProfileId': profileId},
+              'data': [artworkJson()],
+            }),
+            200,
+            headers: const {'content-type': 'application/json'},
+          ));
+
+      final artworks = await BackendApiService().getArtworks(
+        authorProfileId: profileId,
+        limit: 100,
+      );
+
+      expect(artworks.map((artwork) => artwork.id), [id]);
+      expect(requests, hasLength(1));
+      expect(requests.single.url.queryParameters['authorProfileId'], profileId);
+      expect(isOrbit(requests.single), isFalse);
+    });
+
+    test('rejects an old server that ignores the filter without fallback',
+        () async {
+      backend((host, orbit) => http.Response(
+            jsonEncode({
+              'success': true,
+              'data': [artworkJson()]
+            }),
+            200,
+            headers: const {'content-type': 'application/json'},
+          ));
+
+      Object? result;
+      try {
+        await BackendApiService().getArtworks(authorProfileId: profileId);
+      } catch (error) {
+        result = error;
+      }
+
+      expect(result, isA<UnsupportedError>());
+      expect(requests, hasLength(1));
+      expect(isOrbit(requests.single), isFalse);
+    });
+  });
+
   group('outage statuses reach the mirror, then the secondary backend', () {
     for (final code in <int>[502, 503, 504]) {
       test('$code: the mirror answers', () async {

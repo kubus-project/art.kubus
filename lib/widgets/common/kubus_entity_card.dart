@@ -76,6 +76,7 @@ class KubusEntityCard extends StatefulWidget {
     this.accent,
     this.fallbackGlyph,
     this.imageUrl,
+    this.mediaChild,
     this.subtitle,
     this.subtitleWidget,
     this.meta,
@@ -118,6 +119,10 @@ class KubusEntityCard extends StatefulWidget {
   final IconData? fallbackGlyph;
 
   final String? imageUrl;
+
+  /// Optional in-memory or otherwise surface-owned media. When supplied, the
+  /// shared URL cache is not asked to load [imageUrl].
+  final Widget? mediaChild;
 
   /// Creator, institution, authorship or category context. Secondary.
   final String? subtitle;
@@ -404,21 +409,23 @@ class _KubusEntityCardState extends State<KubusEntityCard> {
     bool motion,
   ) {
     final resolved = MediaUrlResolver.resolveDisplayUrl(widget.imageUrl);
-    final hasMedia = resolved != null && resolved.isNotEmpty;
+    final hasMedia =
+        widget.mediaChild != null || (resolved != null && resolved.isNotEmpty);
 
-    final media = hasMedia
-        ? KubusCachedImage(
-            imageUrl: widget.imageUrl,
-            fit: BoxFit.cover,
-            filterQuality: FilterQuality.medium,
-            decodeToDisplaySize: true,
-            cacheVersion: widget.cacheVersion,
-            semanticLabel: widget.imageSemanticLabel,
-            excludeFromSemantics: widget.imageSemanticLabel == null,
-            placeholderBuilder: (context) => _buildField(context, roles),
-            errorBuilder: (context, _, __) => _buildField(context, roles),
-          )
-        : _buildField(context, roles);
+    final media = widget.mediaChild ??
+        (hasMedia
+            ? KubusCachedImage(
+                imageUrl: widget.imageUrl,
+                fit: BoxFit.cover,
+                filterQuality: FilterQuality.medium,
+                decodeToDisplaySize: true,
+                cacheVersion: widget.cacheVersion,
+                semanticLabel: widget.imageSemanticLabel,
+                excludeFromSemantics: widget.imageSemanticLabel == null,
+                placeholderBuilder: (context) => _buildField(context, roles),
+                errorBuilder: (context, _, __) => _buildField(context, roles),
+              )
+            : _buildField(context, roles));
 
     if (!motion) return media;
 
@@ -472,7 +479,8 @@ class _KubusEntityCardState extends State<KubusEntityCard> {
   /// field of that role instead of fading to neutral grey.
   Widget _buildScrim(BuildContext context, Color accent) {
     final resolved = MediaUrlResolver.resolveDisplayUrl(widget.imageUrl);
-    final hasMedia = resolved != null && resolved.isNotEmpty;
+    final hasMedia =
+        widget.mediaChild != null || (resolved != null && resolved.isNotEmpty);
     final ink = hasMedia
         ? Colors.black
         : Color.lerp(Colors.black, accent, 0.32) ?? Colors.black;

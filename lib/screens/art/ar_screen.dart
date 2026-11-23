@@ -3462,19 +3462,22 @@ class _ARScreenState extends State<ARScreen>
 
     if (artwork.isEmpty) return;
 
-    // Track AR view achievement
-    final prefs = await SharedPreferences.getInstance();
-    final userId = prefs.getString('user_id') ?? 'demo_user';
-    await AchievementService().checkAchievements(
-      userId: userId,
-      action: 'ar_viewed',
-      data: {
-        'subjectId': artworkId,
-        'artworkId': artworkId,
-        'idempotencyKey':
-            'ar_viewed:$artworkId:${DateTime.now().toUtc().toIso8601String().substring(0, 13)}',
-      },
-    );
+    // Track AR view achievement, for the signed-in account only.
+    final account =
+        Provider.of<ProfileProvider>(context, listen: false).currentUser;
+    final userId = account?.accountId;
+    if (userId != null) {
+      await AchievementService().checkAchievements(
+        userId: userId,
+        action: 'ar_viewed',
+        data: {
+          'subjectId': artworkId,
+          'artworkId': artworkId,
+          'idempotencyKey':
+              'ar_viewed:$artworkId:${DateTime.now().toUtc().toIso8601String().substring(0, 13)}',
+        },
+      );
+    }
     if (!mounted) return;
 
     showModalBottomSheet(
@@ -3780,11 +3783,20 @@ class _ARScreenState extends State<ARScreen>
       isLiked: _likedArtworks.contains(artwork['id']),
     );
 
-    await CommunityService.togglePostLike(
-      post,
-      currentUserWallet: walletAddress,
-      trackUserAction: true,
-    );
+    try {
+      await CommunityService.togglePostLike(
+        post,
+        currentUserWallet: walletAddress,
+        trackUserAction: true,
+      );
+    } catch (e) {
+      // The server did not record the like (for example a 404 for a post the
+      // viewer cannot see). Keep the error inside the tap handler.
+      if (kDebugMode) {
+        debugPrint('ARScreen: like sync failed: $e');
+      }
+      return;
+    }
 
     if (!mounted) return;
     final isLiked = _likedArtworks.contains(artwork['id']);

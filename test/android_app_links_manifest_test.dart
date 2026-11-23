@@ -21,6 +21,8 @@ void main() {
     '/sl/zemljevid/',
     '/en/collectibles/',
     '/sl/zbirateljski-predmeti/',
+    '/en/institutions/',
+    '/sl/institucije/',
   };
 
   const retainedLegacyPrefixes = <String>{

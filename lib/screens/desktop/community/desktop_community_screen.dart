@@ -76,6 +76,7 @@ import '../desktop_shell.dart';
 import '../../../widgets/community/community_expandable_fab.dart';
 import '../../../widgets/community/community_group_card.dart';
 import '../../../widgets/community/community_group_picker_content.dart';
+import '../../../widgets/community/community_group_sections.dart';
 import '../../../widgets/community/community_likes_sheet.dart';
 import '../../../widgets/profile_identity_summary.dart';
 import '../../community/group_feed_screen.dart';
@@ -129,6 +130,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
   late KubusSearchController _communitySearchController;
   late TextEditingController _messageSearchController;
   Timer? _groupSearchDebounce;
+  final Set<String> _groupActionsInFlight = <String>{};
   bool _isFabExpanded = false;
   final List<String> _tabs = ['discover', 'following', 'groups', 'art'];
   final BackendApiService _backendApi = BackendApiService();

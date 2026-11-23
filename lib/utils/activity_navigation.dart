@@ -7,7 +7,6 @@ import '../config/config.dart';
 import '../features/map/shared/map_screen_shared_helpers.dart';
 import '../models/recent_activity.dart';
 import '../providers/profile_provider.dart';
-import '../providers/wallet_provider.dart';
 import '../screens/community/post_detail_screen.dart';
 import '../screens/activity/saved_items_screen.dart';
 import '../screens/web3/wallet/wallet_home.dart';
@@ -363,7 +362,8 @@ class ActivityNavigation {
       return;
     }
 
-    if (marker == null || !KubusMarkerOverlayHelpers.canOpenStreetArtClaims(marker)) {
+    if (marker == null ||
+        !KubusMarkerOverlayHelpers.canOpenStreetArtClaims(marker)) {
       messenger.showKubusSnackBar(
         SnackBar(content: Text(l10n.commonNotAvailable)),
         tone: KubusSnackBarTone.warning,
@@ -373,8 +373,7 @@ class ActivityNavigation {
 
     final isMarkerOwner = KubusMarkerOverlayHelpers.markerOwnedByCurrentUser(
       marker: marker,
-      walletAddress: context.read<WalletProvider>().currentWalletAddress,
-      currentUserId: context.read<ProfileProvider>().currentUser?.id,
+      profile: context.read<ProfileProvider>(),
     );
 
     await StreetArtClaimsDialog.show(

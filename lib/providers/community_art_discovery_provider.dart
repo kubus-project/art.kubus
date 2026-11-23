@@ -6,6 +6,7 @@ import '../community/art_discovery.dart';
 import '../community/community_interactions.dart';
 import '../models/artwork.dart';
 import '../models/exhibition.dart';
+import '../services/account_identity.dart';
 
 /// Where the Art discovery feed gets everything. Injected so the provider is
 /// testable without a backend, a map or a device.
@@ -72,7 +73,9 @@ class ArtDiscoverySources {
 /// radius, a missing location falls back to public discovery, and a source
 /// that fails only removes its own entries.
 class CommunityArtDiscoveryProvider extends ChangeNotifier {
-  CommunityArtDiscoveryProvider({this.pageSize = 12});
+  CommunityArtDiscoveryProvider({this.pageSize = 12}) {
+    AccountIdentity.addListener(_handleAccountIdentityChanged);
+  }
 
   final int pageSize;
 
@@ -84,8 +87,18 @@ class CommunityArtDiscoveryProvider extends ChangeNotifier {
   ArtDiscoveryLocation? _location;
   double _radiusKm = kArtDiscoveryRadiiKm.first;
   int _generation = 0;
+  // The account the held results were loaded for.
+  String _heldAccountKey = AccountIdentity.accountKey;
   final Set<String> _removedPostIds = <String>{};
   int _failedSources = 0;
+  String? _boundAccount;
+  bool _accountBound = false;
+
+  @override
+  void dispose() {
+    AccountIdentity.removeListener(_handleAccountIdentityChanged);
+    super.dispose();
+  }
 
   /// Everything ranked, in order.
   List<ArtDiscoveryItem> get allItems => _items;
@@ -131,9 +144,6 @@ class CommunityArtDiscoveryProvider extends ChangeNotifier {
   /// The radius the neighbourhood needed, after widening.
   double get radiusKm => _radiusKm;
 
-  String? _boundAccount;
-  bool _accountBound = false;
-
   /// Ties the feed to the signed-in account. A different account must never
   /// see the previous one's personalised order, so a change empties the feed
   /// and the next visit to the tab loads it afresh.
@@ -144,12 +154,27 @@ class CommunityArtDiscoveryProvider extends ChangeNotifier {
     _accountBound = true;
     _boundAccount = next;
     if (!changed) return;
-    _generation += 1;
+    _clearAccountState();
+  }
+
+  void _handleAccountIdentityChanged() {
+    // A same-account change (wallet link, re-issued token) keeps the discovery
+    // results loaded for this account.
+    final key = AccountIdentity.accountKey;
+    if (key.isNotEmpty && key == _heldAccountKey) return;
+    _clearAccountState();
+  }
+
+  void _clearAccountState() {
+    _generation++;
     _items = const <ArtDiscoveryItem>[];
     _visibleCount = 0;
     _loaded = false;
     _loading = false;
     _error = null;
+    _location = null;
+    _radiusKm = kArtDiscoveryRadiiKm.first;
+    _failedSources = 0;
     _removedPostIds.clear();
     notifyListeners();
   }
@@ -178,6 +203,7 @@ class CommunityArtDiscoveryProvider extends ChangeNotifier {
     bool promptForLocation = false,
   }) async {
     final generation = ++_generation;
+    _heldAccountKey = AccountIdentity.accountKey;
     _failedSources = 0;
     _loading = true;
     _error = null;

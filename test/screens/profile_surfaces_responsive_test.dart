@@ -1,6 +1,7 @@
 import 'package:art_kubus/models/user.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:art_kubus/widgets/artist_badge.dart';
+import 'package:art_kubus/widgets/avatar_widget.dart';
 import 'package:art_kubus/widgets/detail/profile_identity_block.dart';
 import 'package:art_kubus/widgets/detail/profile_relationship_actions.dart';
 import 'package:art_kubus/widgets/detail/profile_utility_actions.dart';
@@ -154,6 +155,52 @@ void main() {
     expect(find.text(l10n.userProfileTitle), findsNothing);
     expect(find.text(l10n.settingsRoleArtistTitle), findsNothing);
     expect(find.text(l10n.settingsRoleInstitutionTitle), findsNothing);
+  });
+
+  group('canonical public artist identity keeps the shared avatar treatment',
+      () {
+    for (final (label, surface, size) in <(String, ProfileSurface, Size)>[
+      ('mobile', ProfileSurface.mobilePublic, const Size(393, 900)),
+      ('desktop', ProfileSurface.desktopPublic, const Size(1440, 1000)),
+    ]) {
+      testWidgets('$label UUID entry shows avatar and no role eyebrow', (
+        tester,
+      ) async {
+        const avatarUrl = 'https://media.example.test/profiles/damjan.png';
+        final profile = ProfileFixtures.user(
+          id: '7a7a54a8-8baa-4fc6-bc1c-466b8db9d408',
+          name: 'Damjan Stevovic',
+          username: 'damjan_stevovic',
+          profileImageUrl: avatarUrl,
+          isArtist: true,
+        );
+        await pumpProfileSurface(
+          tester,
+          surface: surface,
+          user: profile,
+          canonicalPublicEntry: true,
+          artistArtworks: const <Map<String, dynamic>>[
+            <String, dynamic>{
+              'id': 'damjan-work-1',
+              'title': 'Profile artwork fixture',
+              'artistName': 'turrdl',
+              'relationship': 'authored',
+            },
+          ],
+          size: size,
+        );
+
+        final avatar =
+            tester.widget<AvatarWidget>(find.byType(AvatarWidget).first);
+        expect(avatar.avatarUrl, avatarUrl);
+        expect(find.byType(ArtistBadge), findsOneWidget);
+        final l10n = AppLocalizations.of(
+          tester.element(find.byType(ProfileIdentityBlock).first),
+        )!;
+        expect(find.text(l10n.settingsRoleArtistTitle), findsNothing);
+        expect(find.text('Profile artwork fixture'), findsWidgets);
+      });
+    }
   });
 
   group('locale, theme and text scale', () {
