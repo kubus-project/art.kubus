@@ -260,7 +260,7 @@ jobs:
           retention-days: 3
 
   map_browser_regression:
-    name: Mounted map fallback revocation in Chrome
+    name: Browser regression in Chrome (map and spatial viewer)
     needs: [changes, guardrails]
     if: ${{ needs.changes.outputs.tier == 'full' && (needs.changes.outputs.full == 'true' || needs.changes.outputs.frontend == 'true') }}
     runs-on: ubuntu-24.04

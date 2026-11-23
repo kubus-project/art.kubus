@@ -14,6 +14,7 @@ import '../services/spatial_capture_store.dart';
 import '../services/spatial_library_store.dart';
 import '../services/spatial_node_upload.dart';
 import '../services/spatial_result_importer.dart';
+import '../services/spatial_web_delivery.dart';
 import 'kubus_node_provider.dart';
 
 /// How the user's own paired Node can be reached right now.
@@ -942,6 +943,23 @@ class SpatialLibraryProvider extends ChangeNotifier {
     final transform = manifest['transform'] is Map
         ? Map<String, dynamic>.from(manifest['transform'] as Map)
         : <String, dynamic>{};
+    // The public manifest contract carries position / rotation / scale only. A
+    // Node placement `matrix` is split into those; one the viewer would refuse
+    // is dropped whole, never mixed with the other fields (the viewer does the
+    // same), so a bad matrix cannot sneak a different transform through.
+    final Map<String, dynamic> publicTransform;
+    if (transform.containsKey('matrix')) {
+      final order = transform['matrixOrder'];
+      publicTransform = order == null || order == 'column-major'
+          ? SpatialWebDelivery.decomposePlacementMatrix(transform['matrix']) ??
+              const <String, dynamic>{}
+          : const <String, dynamic>{};
+    } else {
+      publicTransform = <String, dynamic>{
+        for (final key in const <String>{'position', 'rotation', 'scale'})
+          if (transform.containsKey(key)) key: transform[key],
+      };
+    }
     final viewerDefaults = manifest['viewerDefaults'] is Map
         ? Map<String, dynamic>.from(manifest['viewerDefaults'] as Map)
         : <String, dynamic>{};
@@ -967,11 +985,7 @@ class SpatialLibraryProvider extends ChangeNotifier {
           })
             if (provenance.containsKey(key)) key: provenance[key],
         },
-      if (transform.isNotEmpty)
-        'transform': <String, dynamic>{
-          for (final key in const <String>{'position', 'rotation', 'scale'})
-            if (transform.containsKey(key)) key: transform[key],
-        },
+      if (publicTransform.isNotEmpty) 'transform': publicTransform,
       if (viewerDefaults.isNotEmpty)
         'viewerDefaults': <String, dynamic>{
           for (final key in const <String>{

@@ -225,4 +225,76 @@ void main() {
     expect(publicClient.history.first['isCurrent'], isTrue);
     expect(publicClient.history.last['isCurrent'], isFalse);
   });
+  group('sanitizePublicationManifest transform', () {
+    Map<String, dynamic> manifest(Map<String, dynamic> transform) =>
+        <String, dynamic>{
+          'schema': 'kubus.spatial/1',
+          'type': 'gaussianSplat',
+          'id': _spatialId,
+          'artworkId': _artworkId,
+          'variants': <Object?>[],
+          'transform': transform,
+        };
+
+    // A proper Node placement: rotated 90 degrees about x (quaternion
+    // 0.7071 0 0 0.7071), uniform scale 2, translated (1, 2, 3).
+    const upright = <double>[
+      2, 0, 0, 0, //
+      0, 0, 2, 0, //
+      0, -2, 0, 0, //
+      1, 2, 3, 1,
+    ];
+
+    test('a Node matrix is published as position / rotation / scale', () {
+      final out = SpatialLibraryProvider.sanitizePublicationManifest(
+        manifest(<String, dynamic>{
+          'matrix': upright,
+          'matrixOrder': 'column-major',
+        }),
+      )['transform'] as Map<String, dynamic>;
+      expect(out.keys.toSet(), {'position', 'rotation', 'scale'});
+      expect(out['position'], [1.0, 2.0, 3.0]);
+      expect(out['scale'], [2.0, 2.0, 2.0]);
+      final q = (out['rotation'] as List).cast<double>();
+      expect(q, hasLength(4));
+      expect(q[0], closeTo(0.7071067811865476, 1e-9));
+      expect(q[1], closeTo(0, 1e-9));
+      expect(q[2], closeTo(0, 1e-9));
+      expect(q[3], closeTo(0.7071067811865476, 1e-9));
+    });
+
+    test('a matrix the viewer refuses is dropped whole, not mixed', () {
+      final sheared = List<double>.of(upright)..[4] = 1;
+      final out = SpatialLibraryProvider.sanitizePublicationManifest(
+        manifest(<String, dynamic>{
+          'matrix': sheared,
+          'position': <double>[9, 9, 9],
+        }),
+      );
+      expect(out.containsKey('transform'), isFalse);
+      final unknownOrder = SpatialLibraryProvider.sanitizePublicationManifest(
+        manifest(<String, dynamic>{
+          'matrix': upright,
+          'matrixOrder': 'row-major',
+        }),
+      );
+      expect(unknownOrder.containsKey('transform'), isFalse);
+    });
+
+    test('the position / rotation / scale form passes through unchanged', () {
+      final out = SpatialLibraryProvider.sanitizePublicationManifest(
+        manifest(<String, dynamic>{
+          'position': <double>[1, 2, 3],
+          'rotation': <double>[0, 0, 0, 1],
+          'scale': 2,
+          'matrixOrder': 'column-major',
+        }),
+      )['transform'];
+      expect(out, <String, dynamic>{
+        'position': <double>[1, 2, 3],
+        'rotation': <double>[0, 0, 0, 1],
+        'scale': 2,
+      });
+    });
+  });
 }

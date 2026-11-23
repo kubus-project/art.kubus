@@ -7,6 +7,7 @@ import 'package:web/web.dart' as web;
 
 import '../../l10n/app_localizations.dart';
 import '../../models/kubus_node_models.dart';
+import '../../services/anonymous_fetch_client.dart';
 import '../../services/kubus_node_service.dart';
 import '../../services/spatial_web_delivery.dart';
 import '../../services/spatial_web_load_session.dart';
@@ -109,6 +110,7 @@ class _WebSpatialViewerState extends State<WebSpatialViewer> {
   /// behind. Both are released when the attempt ends, so a replaced attempt
   /// stops downloading and no object URL outlives its use.
   web.AbortController? _download;
+  web.AbortController? _manifestDownload;
   String? _objectUrl;
   late SpatialWebLoadSession _session;
 
@@ -287,11 +289,28 @@ class _WebSpatialViewerState extends State<WebSpatialViewer> {
     final download = web.AbortController();
     _download = download;
     final bytes = _downloadAsObjectUrl(plan.urls, download);
-    final transform = await SpatialWebDelivery.fetchTransform(plan.manifestUrl);
+    // The manifest read is anonymous in the same way as the bytes (no cookies,
+    // no Authorization, no Referer) and is aborted with them.
+    final manifest = web.AbortController();
+    _manifestDownload = manifest;
+    final manifestClient = AnonymousFetchClient(abort: manifest);
+    final Map<String, dynamic>? transform;
+    try {
+      transform = await SpatialWebDelivery.fetchTransform(
+        plan.manifestUrl,
+        client: manifestClient,
+      );
+    } finally {
+      manifestClient.close();
+    }
     final objectUrl = await bytes;
-    if (!mounted || attempt != _session.attempt) {
-      // A newer attempt (or a dispose) already released its own state; this
-      // one's object URL was created after that and is nobody's.
+    // Also stale when this attempt already ended without a fallback (the tier
+    // timeout fired and the viewer is in the failed state): the attempt number
+    // did not change, but _releaseBytes ran before this URL existed, so it
+    // revoked nothing and the URL would outlive the widget's load.
+    if (!mounted || !_session.isLiveAttempt(attempt)) {
+      // A newer attempt, a finished one (or a dispose) already released its own
+      // state; this one's object URL was created after that and is nobody's.
       if (objectUrl != null) web.URL.revokeObjectURL(objectUrl);
       return;
     }
@@ -356,6 +375,8 @@ class _WebSpatialViewerState extends State<WebSpatialViewer> {
   void _releaseBytes() {
     _download?.abort();
     _download = null;
+    _manifestDownload?.abort();
+    _manifestDownload = null;
     _revokeObjectUrl();
   }
 

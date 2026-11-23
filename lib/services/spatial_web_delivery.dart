@@ -258,6 +258,64 @@ class SpatialWebDelivery {
     return dot(axes[0], cross) > 0;
   }
 
+  /// Splits an accepted column-major placement matrix into the
+  /// `{position, rotation, scale}` form the public manifest contract carries
+  /// (position 3, rotation as a quaternion x y z w, scale as a 3-vector).
+  ///
+  /// Composing translation * rotation * scale from the result gives the same
+  /// placement the viewer builds from the matrix itself. Returns null for a
+  /// matrix the viewer would refuse (wrong length, non-finite, non-affine,
+  /// sheared, mirrored, out of bounds), so nothing the viewer rejects reaches
+  /// a publication.
+  static Map<String, dynamic>? decomposePlacementMatrix(Object? matrix) {
+    if (matrix is! List || matrix.length != 16) return null;
+    if (!matrix.every((v) => v is num && v.isFinite)) return null;
+    final m = matrix.map((v) => (v as num).toDouble()).toList(growable: false);
+    if (!_acceptedMatrix(m)) return null;
+    double length(int o) =>
+        math.sqrt(m[o] * m[o] + m[o + 1] * m[o + 1] + m[o + 2] * m[o + 2]);
+    final sx = length(0);
+    final sy = length(4);
+    final sz = length(8);
+    // Rotation matrix entries r<row><col>, from the normalised basis columns.
+    final r00 = m[0] / sx, r10 = m[1] / sx, r20 = m[2] / sx;
+    final r01 = m[4] / sy, r11 = m[5] / sy, r21 = m[6] / sy;
+    final r02 = m[8] / sz, r12 = m[9] / sz, r22 = m[10] / sz;
+    final trace = r00 + r11 + r22;
+    double qx, qy, qz, qw;
+    if (trace > 0) {
+      final s = 0.5 / math.sqrt(trace + 1.0);
+      qw = 0.25 / s;
+      qx = (r21 - r12) * s;
+      qy = (r02 - r20) * s;
+      qz = (r10 - r01) * s;
+    } else if (r00 > r11 && r00 > r22) {
+      final s = 2.0 * math.sqrt(1.0 + r00 - r11 - r22);
+      qw = (r21 - r12) / s;
+      qx = 0.25 * s;
+      qy = (r01 + r10) / s;
+      qz = (r02 + r20) / s;
+    } else if (r11 > r22) {
+      final s = 2.0 * math.sqrt(1.0 + r11 - r00 - r22);
+      qw = (r02 - r20) / s;
+      qx = (r01 + r10) / s;
+      qy = 0.25 * s;
+      qz = (r12 + r21) / s;
+    } else {
+      final s = 2.0 * math.sqrt(1.0 + r22 - r00 - r11);
+      qw = (r10 - r01) / s;
+      qx = (r02 + r20) / s;
+      qy = (r12 + r21) / s;
+      qz = 0.25 * s;
+    }
+    final norm = math.sqrt(qx * qx + qy * qy + qz * qz + qw * qw);
+    return <String, dynamic>{
+      'position': <double>[m[12], m[13], m[14]],
+      'rotation': <double>[qx / norm, qy / norm, qz / norm, qw / norm],
+      'scale': <double>[sx, sy, sz],
+    };
+  }
+
   /// Extracts the viewer transform from a published manifest document.
   ///
   /// Accepts the Node's `{matrix: [16 numbers, column-major]}` and the

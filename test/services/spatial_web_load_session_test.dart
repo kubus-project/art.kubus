@@ -41,6 +41,21 @@ void main() {
     expect(session.canOfferArchive, isTrue);
   });
 
+  test('an attempt ended by the failed state is no longer live', () {
+    final session = SpatialWebLoadSession(_content([
+      _variant('spatial_mobile', 'cid-mobile', 'spz'),
+    ]));
+    final attempt = session.attempt;
+    expect(session.isLiveAttempt(attempt), isTrue);
+    expect(session.isLiveAttempt(attempt + 1), isFalse);
+    // No fallback tier: the timeout ends in failed with the same attempt
+    // number, and a download finishing afterwards must not be handed over.
+    expect(session.onFailed(), isFalse);
+    expect(session.attempt, attempt);
+    expect(session.status, SpatialWebLoadStatus.failed);
+    expect(session.isLiveAttempt(attempt), isFalse);
+  });
+
   test('a failing optimised tier falls back to preview, then fails', () {
     final session = SpatialWebLoadSession(_all);
     final firstAttempt = session.attempt;

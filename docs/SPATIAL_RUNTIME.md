@@ -137,7 +137,8 @@ and consent decisions live in `SpatialWebLoadSession` and `SpatialWebDelivery`
   omit`, `referrerPolicy: no-referrer`, an `AbortController`), turns the answer
   into a Blob and hands the page its object URL (`blob:`); the object URL is
   revoked when the attempt ends or the page reports `ready`, and an attempt that
-  is replaced, times out or is disposed aborts its download. The route is
+  is replaced, times out, fails without a fallback tier or is disposed aborts its
+  download and revokes any object URL it had not yet handed over. The route is
   `GET {backend}/api/upload/file/<cid>`, anonymous and registry-authorised:
   only CIDs of a currently public publication resolve (withdrawn or unregistered
   content answers 404, a failing withdrawal lookup answers 503; whole body, no
@@ -149,7 +150,9 @@ and consent decisions live in `SpatialWebLoadSession` and `SpatialWebDelivery`
   loopback backend in a local build; that works end to end now, because the host
   page downloads it and the viewer page only ever sees a `blob:` URL). The legacy `/uploads/<cid>` path is a
   different store and does not serve published spatial variants.
-- Orientation: the published manifest (`canonicalManifestCid`, same route) is read
+- Orientation: the published manifest (`canonicalManifestCid`, same route, read
+  with the same anonymous `fetch` options as the bytes, through
+  `AnonymousFetchClient`) is read
   best effort and its `transform` is applied; without a readable transform the
   piece opens untransformed. Contract, to be mirrored by the backend manifest
   contract and the Node docs when the backend accepts `matrix`:
@@ -172,9 +175,15 @@ and consent decisions live in `SpatialWebLoadSession` and `SpatialWebDelivery`
     numbers, each within 1e-6 to 1e4); `position` components are within 1e6.
     Anything outside those bounds is dropped, because a published 1e30 scale only
     renders an empty or exploded view.
-  - Today the backend manifest contract rejects `matrix` and the app's
-    `sanitizePublicationManifest` drops it; no producer writes it yet. The viewer
-    reads it so the contract is settled before one does.
+  - Publication: the backend manifest contract accepts only `position`, `rotation`
+    and `scale` in `transform` (it rejects `matrix` as an unknown key). The app's
+    `sanitizePublicationManifest` therefore splits an accepted Node `matrix` into
+    those three (`SpatialWebDelivery.decomposePlacementMatrix`: position, rotation
+    as a quaternion x y z w, scale as a 3-vector; the viewer composes the same
+    translation * rotation * scale), so a piece the Node placed opens upright after
+    publication. A matrix the viewer would refuse is dropped whole and is never mixed
+    with the other fields. The backend can then take `matrix` later without an
+    app change being needed first.
 - Isolation: the iframe is `sandbox="allow-scripts allow-same-origin"`, which is
   not a security boundary: it stops popups, forms and top navigation, but a
   same-origin frame can remove its own attribute and can reach the app origin's
@@ -197,10 +206,8 @@ and consent decisions live in `SpatialWebLoadSession` and `SpatialWebDelivery`
   with `error:url-not-allowed`; the browser smoke asserts that and that a `fetch`
   from inside the page is blocked). So a script that escaped the page's script
   policy would share the web app's storage but would have no channel to send it
-  to: this is the first of the two hardenings review-4 N1 named (the backend
-  origin is configured per build, so instead of writing it into the page the host
-  does the downloading), and it replaces the earlier build-lane decision to accept
-  `connect-src https:`. The frame is still same-origin; a separate cookieless
+  to. The backend origin is configured per build, so instead of writing it into
+  the page the host does the downloading. The frame is still same-origin; a separate cookieless
   origin would remove that too and is not done. Before the first deploy,
   verify that the nginx front adds no `X-Frame-Options` or `frame-ancestors` to
   `/assets/assets/spatial_viewer/index.html` (outside this repo; the smokes apply
@@ -230,7 +237,17 @@ and consent decisions live in `SpatialWebLoadSession` and `SpatialWebDelivery`
   on public pages.
 - Inline section: the artwork detail screens (desktop and mobile) show the viewer
   inline when the public spatial history is non-empty, created when it scrolls into
-  view (`SpatialLazyReveal`); "View in 3D" opens the fullscreen dialog.
+  view (`SpatialLazyReveal`); "View in 3D" opens the fullscreen dialog. Only one
+  WebGL context runs at a time, so the inline viewer is replaced by a placeholder
+  while the dialog is open and reloads its variant (tens of MB) when the dialog is
+  closed: a visible cost on mobile data.
+- Known limits: the download shows a busy indicator only (up to 120 s, 10 minutes
+  for the archive), no progress. The "Tap to interact" overlay carries button
+  semantics for screen readers but is not a focusable control, so a keyboard-only
+  visitor reaches the viewer only through the canvas inside the frame. The Node
+  rounds the matrix to 6 decimals, so the 1e-3 shear tolerance holds for a uniform
+  scale above about 1e-3 (a scene extent below about 2000 splat units); a larger
+  scene is refused whole and opens untransformed.
 - Backend cross-lane: the byte route sends the whole body (up to 512 MiB per
   variant) from memory on an anonymous route. The app now shows the size and asks
   first, but a route-level rate limit and concurrency cap belong to the backend and

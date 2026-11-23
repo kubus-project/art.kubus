@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:math' as math;
 
 import 'package:art_kubus/models/kubus_node_models.dart';
 import 'package:art_kubus/services/spatial_web_delivery.dart';
@@ -385,6 +386,101 @@ void main() {
           reason: 'scale: ${c['name']}',
         );
       }
+    });
+
+    group('decomposePlacementMatrix', () {
+      // Translation * rotation(quaternion x y z w) * scale, column-major, built
+      // independently of the code under test.
+      List<double> compose(
+        List<double> p,
+        List<double> q,
+        List<double> sc,
+      ) {
+        final x = q[0], y = q[1], z = q[2], w = q[3];
+        final r = <List<double>>[
+          [1 - 2 * (y * y + z * z), 2 * (x * y - z * w), 2 * (x * z + y * w)],
+          [2 * (x * y + z * w), 1 - 2 * (x * x + z * z), 2 * (y * z - x * w)],
+          [2 * (x * z - y * w), 2 * (y * z + x * w), 1 - 2 * (x * x + y * y)],
+        ];
+        return <double>[
+          for (var c = 0; c < 3; c++) ...[
+            r[0][c] * sc[c],
+            r[1][c] * sc[c],
+            r[2][c] * sc[c],
+            0,
+          ],
+          p[0],
+          p[1],
+          p[2],
+          1,
+        ];
+      }
+
+      void expectRoundTrip(List<double> matrix) {
+        final parts = SpatialWebDelivery.decomposePlacementMatrix(matrix)!;
+        expect(parts.keys.toSet(), {'position', 'rotation', 'scale'});
+        final rotation = (parts['rotation'] as List).cast<double>();
+        expect(rotation, hasLength(4));
+        final back = compose(
+          (parts['position'] as List).cast<double>(),
+          rotation,
+          (parts['scale'] as List).cast<double>(),
+        );
+        for (var i = 0; i < 16; i++) {
+          expect(back[i], closeTo(matrix[i], 1e-9), reason: 'element $i');
+        }
+      }
+
+      test('the upright Node matrix composes back to itself', () {
+        expectRoundTrip(_upright.map((v) => v.toDouble()).toList());
+      });
+
+      test('covers every quaternion branch, scaled and translated', () {
+        // Rotations by 180 degrees about each axis hit the non-trace branches,
+        // the identity hits the trace branch.
+        final quaternions = <List<double>>[
+          [0, 0, 0, 1],
+          [1, 0, 0, 0],
+          [0, 1, 0, 0],
+          [0, 0, 1, 0],
+          [0.5, 0.5, 0.5, 0.5],
+          [0.2, -0.4, 0.6, 0.6633249580710799],
+        ];
+        for (final q in quaternions) {
+          final length = math.sqrt(q.fold<double>(0, (a, b) => a + b * b));
+          expectRoundTrip(
+            compose(
+              [1.5, -2.25, 40],
+              q.map((v) => v / length).toList(),
+              [0.5, 0.5, 0.5],
+            ),
+          );
+          expectRoundTrip(
+            compose(
+              [0, 0, 0],
+              q.map((v) => v / length).toList(),
+              [2, 3, 0.25],
+            ),
+          );
+        }
+      });
+
+      test('refuses what the viewer refuses and bad input', () {
+        final mirrored = _upright.map((v) => v.toDouble()).toList()
+          ..[0] = -(_upright[0].toDouble())
+          ..[1] = -(_upright[1].toDouble())
+          ..[2] = -(_upright[2].toDouble());
+        expect(SpatialWebDelivery.decomposePlacementMatrix(mirrored), isNull);
+        expect(SpatialWebDelivery.decomposePlacementMatrix(null), isNull);
+        expect(
+            SpatialWebDelivery.decomposePlacementMatrix(<num>[1, 0]), isNull);
+        expect(
+          SpatialWebDelivery.decomposePlacementMatrix(
+            _upright.map((v) => v.toDouble()).toList()..[3] = double.nan,
+          ),
+          isNull,
+        );
+      });
     });
 
     test('position and scale outside the sane range are dropped', () {

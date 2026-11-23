@@ -75,6 +75,13 @@ class SpatialWebLoadSession {
     return true;
   }
 
+  /// True while the work started for [attemptNumber] still has somewhere to
+  /// go: it is the current attempt and that attempt is still loading. A tier
+  /// timeout that ends in the failed state (no fallback left) keeps the attempt
+  /// number but ends the attempt, so the number alone is not enough.
+  bool isLiveAttempt(int attemptNumber) =>
+      attemptNumber == attempt && status == SpatialWebLoadStatus.loading;
+
   void onLoaded() {
     if (status == SpatialWebLoadStatus.loading) {
       status = SpatialWebLoadStatus.ready;

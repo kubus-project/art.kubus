@@ -130,7 +130,7 @@ async function colourStats(page, png) {
 async function newScenario(browser, { origin, viewport, reducedMotion, hasTouch = false, history = HISTORY, bytesOk = true, manifest = true }) {
   const context = await browser.newContext({ locale: 'en-US', viewport, hasTouch, reducedMotion: reducedMotion ? 'reduce' : 'no-preference' });
   await context.addInitScript(() => { Error.stackTraceLimit = 60; });
-  const seen = { upload: [], history: 0, other: [], gateway: [] };
+  const seen = { upload: [], history: 0, other: [], gateway: [], identified: [] };
   await context.route((u) => u.origin !== origin, async (route) => {
     const url = new URL(route.request().url());
     if (/\/api\/artworks\/[^/]+\/spatial$/.test(url.pathname)) {
@@ -140,6 +140,9 @@ async function newScenario(browser, { origin, viewport, reducedMotion, hasTouch 
     const m = /\/api\/upload\/file\/([^/]+)$/.exec(url.pathname);
     if (m) {
       seen.upload.push(m[1]);
+      // The bytes and the manifest are both anonymous: no Referer, cookie or Authorization.
+      const sent = await route.request().allHeaders();
+      for (const name of ['referer', 'cookie', 'authorization']) if (sent[name]) seen.identified.push(`${m[1]}:${name}`);
       if (m[1] === 'bafy-sample' && bytesOk) return route.fulfill({ status: 200, headers: { ...CORS, 'content-type': 'application/octet-stream' }, body: SAMPLE });
       if (m[1] === 'bafy-manifest' && manifest) return route.fulfill({ status: 200, headers: { ...CORS, 'content-type': 'application/json' }, body: JSON.stringify({ schema: 'kubus.spatial/1', transform: UPRIGHT }) });
       return route.fulfill({ status: 404, headers: CORS, body: '' });
@@ -200,6 +203,7 @@ async function run(browserType, name) {
         check(`${tag}: history requested once`, s.seen.history >= 1, `${s.seen.history}`);
         check(`${tag}: bytes come from /api/upload/file, never the archive tier`, s.seen.upload.includes('bafy-sample') && !s.seen.upload.includes('bafy-archive'), s.seen.upload.join(','));
         check(`${tag}: manifest read for the transform`, s.seen.upload.includes('bafy-manifest'));
+        check(`${tag}: the bytes and manifest requests carry no Referer, cookie or Authorization`, s.seen.identified.length === 0, s.seen.identified.join(','));
         const m = ready?.matrix || [];
         check(`${tag}: manifest transform.matrix reached the mesh`, m.length === 16 && Math.abs(m[1] - 1) < 1e-6 && Math.abs(m[4] + 1) < 1e-6, JSON.stringify(m));
         await s.page.waitForTimeout(1500);
