@@ -300,6 +300,31 @@ void main() {
       );
     });
 
+    test('a .splat or .ksplat format suffix is typed and viewable', () {
+      for (final entry in const <String, String>{
+        'compressed.splat': 'splat',
+        'compressed.ksplat': 'ksplat',
+        'Quantised.SPZ': 'spz',
+      }.entries) {
+        final v = _variant(
+          'spatial_mobile',
+          'cidSuffix1',
+          entry.key,
+          mime: 'application/octet-stream',
+        );
+        expect(SpatialWebDelivery.isViewable(v), isTrue, reason: entry.key);
+        expect(
+          SpatialWebDelivery.plan(
+            _content([v]),
+            v,
+            backendBase: 'https://api.kubus.site',
+          ).fileType,
+          entry.value,
+          reason: entry.key,
+        );
+      }
+    });
+
     test('the plan names the file type only when bytes carry no magic number',
         () {
       final splat = _variant('spatial_preview', 'cidSplat1', 'splat');

@@ -48,14 +48,6 @@ const Set<String> kSpatialWebFormats = <String>{
   'ksplat',
 };
 
-/// Formats whose bytes cannot be recognised by content, so Spark is told.
-const Set<String> _kExplicitFileTypes = <String>{
-  'splat',
-  'ply',
-  'spz',
-  'ksplat',
-};
-
 class SpatialWebDelivery {
   const SpatialWebDelivery._();
 
@@ -108,16 +100,31 @@ class SpatialWebDelivery {
         (uri.host == 'localhost' || uri.host == '127.0.0.1');
   }
 
-  static bool isViewable(SpatialVariant variant) {
-    if (!isPlausibleCid(variant.cid)) return false;
+  /// The file type a variant's format or mime names, or null when it names
+  /// none the web viewer supports. One helper feeds both [isViewable] and
+  /// [plan], so the two cannot disagree: the exact format first, then a
+  /// `.<type>` format suffix, then the mime type; within each source the
+  /// longest name wins, so `ksplat` is never read as `splat`.
+  static String? fileTypeOf(SpatialVariant variant) {
     final format = variant.format.toLowerCase();
     final mimeType = variant.mimeType.toLowerCase();
-    return kSpatialWebFormats.any(
-      (supported) =>
-          format == supported ||
-          format.endsWith('.$supported') ||
-          mimeType.contains(supported),
-    );
+    final byLength = kSpatialWebFormats.toList()
+      ..sort((a, b) => b.length.compareTo(a.length));
+    for (final matches in <bool Function(String)>[
+      (t) => format == t,
+      (t) => format.endsWith('.$t'),
+      mimeType.contains,
+    ]) {
+      for (final t in byLength) {
+        if (matches(t)) return t;
+      }
+    }
+    return null;
+  }
+
+  static bool isViewable(SpatialVariant variant) {
+    if (!isPlausibleCid(variant.cid)) return false;
+    return fileTypeOf(variant) != null;
   }
 
   /// The tier that opens by default: optimised, then preview. The archive tier
@@ -185,14 +192,7 @@ class SpatialWebDelivery {
     SpatialVariant variant, {
     String? backendBase,
   }) {
-    final format = variant.format.toLowerCase();
-    final fileType = _kExplicitFileTypes.contains(format)
-        ? format
-        : (_kExplicitFileTypes
-                .where((t) => variant.mimeType.toLowerCase().contains(t))
-                .toList()
-              ..sort((a, b) => b.length.compareTo(a.length)))
-            .firstOrNull;
+    final fileType = fileTypeOf(variant);
     final manifestCid = content.manifestCid;
     final base = (backendBase ?? StorageConfig.httpBackend).trim();
     // The manifest route follows the same rule as the byte route: https, or
