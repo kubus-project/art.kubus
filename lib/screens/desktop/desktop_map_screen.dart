@@ -1893,6 +1893,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
   double get _effectiveZoom => _cameraZoom;
 
   void _handleMapReady() {
+    if (!mounted) return;
     setState(() => _mapReady = true);
     _mapTargetCoordinator.setMapControllerReady(true);
     _mapTargetCoordinator.setStyleReady(_styleInitialized);
