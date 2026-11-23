@@ -1,7 +1,12 @@
 import 'package:art_kubus/models/dao.dart';
+import 'package:art_kubus/models/user_profile.dart';
 import 'package:art_kubus/providers/dao_provider.dart';
+import 'package:art_kubus/providers/profile_provider.dart';
+import 'package:art_kubus/providers/wallet_provider.dart';
 import 'package:art_kubus/screens/web3/dao/governance_hub.dart';
+import 'package:art_kubus/services/encrypted_wallet_backup_service.dart';
 import 'package:art_kubus/widgets/common/kubus_action_tile.dart';
+import 'package:art_kubus/widgets/kubus_button.dart';
 import 'package:art_kubus/widgets/dashboard/kubus_dashboard_chrome.dart';
 import 'package:art_kubus/utils/kubus_color_roles.dart';
 import 'package:art_kubus/widgets/common/kubus_stat_card.dart';
@@ -11,6 +16,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../support/account_session_fixture.dart';
 import '../../support/product_surface_harness.dart';
 
 class _FakeDao extends DAOProvider {
@@ -68,7 +74,80 @@ Future<void> _pump(WidgetTester tester, DAOProvider dao) async {
   expect(errors, isEmpty);
 }
 
+/// Wallet state is seeded through the provider's test hooks; deferInit keeps
+/// the real wallet bootstrap (secure storage, network) out of the test.
+class _GovernanceWallet extends WalletProvider {
+  _GovernanceWallet() : super(deferInit: true);
+}
+
+EncryptedWalletBackupDefinition _governanceBackup() {
+  return EncryptedWalletBackupDefinition(
+    walletAddress: 'wallet123',
+    version: 1,
+    kdfName: 'argon2id',
+    kdfParams: const <String, dynamic>{'iterations': 1},
+    salt: 'salt',
+    wrappedDekNonce: 'wrappedNonce',
+    wrappedDekCiphertext: 'wrappedCipher',
+    mnemonicNonce: 'mnemonicNonce',
+    mnemonicCiphertext: 'mnemonicCipher',
+    passkeys: const <WalletBackupPasskeyDefinition>[],
+  );
+}
+
+/// A signed-in account: a live session behind its held profile. [wallet] is
+/// the linked wallet, or null for a walletless account.
+ProfileProvider _signedInProfile({String? wallet}) {
+  AccountSessionFixture.start(
+    accountId: 'governance-account',
+    wallet: wallet,
+    email: wallet == null ? 'walletless@example.com' : null,
+  );
+  return ProfileProvider()
+    ..setCurrentUser(
+      UserProfile(
+        id: 'profile-governance-account',
+        userId: 'governance-account',
+        walletAddress: wallet ?? '',
+        username: 'tester',
+        displayName: 'Tester',
+        bio: '',
+        avatar: '',
+        createdAt: DateTime(2026),
+        updatedAt: DateTime(2026),
+      ),
+    );
+}
+
+Future<void> _pumpWithWallet(
+  WidgetTester tester,
+  WalletProvider wallet, {
+  Locale locale = const Locale('en'),
+  ProfileProvider? profile,
+}) async {
+  SharedPreferences.setMockInitialValues(<String, Object>{
+    'DAO_onboarding_completed': true,
+    'Governance_onboarding_completed': true,
+  });
+  final prior = FlutterError.onError;
+  final errors = await pumpProductSurface(
+    tester,
+    child: const GovernanceHub(),
+    locale: locale,
+    profileProvider: profile,
+    extraProviders: [
+      ChangeNotifierProvider<DAOProvider>.value(value: _FakeDao()),
+      ChangeNotifierProvider<WalletProvider>.value(value: wallet),
+    ],
+  );
+  // Restore before expect(): the harness collects errors until teardown.
+  FlutterError.onError = prior;
+  expect(errors, isEmpty);
+}
+
 void main() {
+  tearDown(AccountSessionFixture.end);
+
   testWidgets('a network failure is not presented as "no proposals"',
       (tester) async {
     await _pump(
@@ -179,6 +258,119 @@ void main() {
           .evaluate()
           .isNotEmpty;
       expect(createTab, isFalse);
+    });
+  });
+
+  group('participation action follows the wallet identity state', () {
+    testWidgets('a walletless account is offered a connect, never a restore',
+        (tester) async {
+      final wallet = _GovernanceWallet()
+        ..setCurrentWalletAddressForTesting(null);
+
+      await _pumpWithWallet(tester, wallet, profile: _signedInProfile());
+
+      expect(
+        find.text(
+          'Your account is signed in without a wallet. Connect one to continue with this action.',
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.widgetWithText(KubusButton, 'Connect wallet'),
+        findsOneWidget,
+      );
+      expect(
+        find.widgetWithText(KubusButton, 'Restore wallet'),
+        findsNothing,
+      );
+    });
+
+    testWidgets(
+        'a read-only wallet with no proven backup is offered a reconnect',
+        (tester) async {
+      final wallet = _GovernanceWallet()
+        ..setCurrentWalletAddressForTesting('wallet123');
+
+      await _pumpWithWallet(tester, wallet,
+          profile: _signedInProfile(wallet: 'wallet123'));
+
+      expect(
+        find.widgetWithText(KubusButton, 'Reconnect'),
+        findsOneWidget,
+      );
+      expect(
+        find.widgetWithText(KubusButton, 'Restore wallet'),
+        findsNothing,
+      );
+    });
+
+    testWidgets(
+        'a wallet with a proven backup and no local key is offered restore',
+        (tester) async {
+      final wallet = _GovernanceWallet()
+        ..setCurrentWalletAddressForTesting('wallet123')
+        ..setEncryptedWalletBackupDefinitionForTesting(_governanceBackup());
+
+      await _pumpWithWallet(tester, wallet,
+          profile: _signedInProfile(wallet: 'wallet123'));
+
+      expect(
+        find.widgetWithText(KubusButton, 'Restore wallet'),
+        findsOneWidget,
+      );
+      expect(
+        find.widgetWithText(KubusButton, 'Reconnect'),
+        findsNothing,
+      );
+    });
+
+    testWidgets('a walletless account reads the connect copy in Slovenian',
+        (tester) async {
+      final wallet = _GovernanceWallet()
+        ..setCurrentWalletAddressForTesting(null);
+
+      await _pumpWithWallet(tester, wallet,
+          locale: const Locale('sl'), profile: _signedInProfile());
+
+      expect(
+        find.widgetWithText(KubusButton, 'Poveži denarnico'),
+        findsOneWidget,
+      );
+      expect(
+        find.widgetWithText(KubusButton, 'Obnovi denarnico'),
+        findsNothing,
+      );
+    });
+
+    testWidgets(
+        'an account whose wallet link is still settling is not told to connect one',
+        (tester) async {
+      final wallet = _GovernanceWallet();
+
+      await _pumpWithWallet(tester, wallet, profile: _signedInProfile());
+
+      expect(find.text('Checking wallet status…'), findsOneWidget);
+      expect(
+        find.text(
+          'Your account is signed in without a wallet. Connect one to continue with this action.',
+        ),
+        findsNothing,
+      );
+      expect(
+        find.widgetWithText(KubusButton, 'Connect wallet'),
+        findsNothing,
+      );
+
+      // The link settles without a wallet: only now is connecting offered.
+      wallet.setCurrentWalletAddressForTesting(null);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+
+      expect(find.text('Checking wallet status…'), findsNothing);
+      expect(
+        find.widgetWithText(KubusButton, 'Connect wallet'),
+        findsOneWidget,
+      );
     });
   });
 }
