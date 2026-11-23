@@ -366,6 +366,23 @@ class SpatialWebDelivery {
     return result.isEmpty ? null : result;
   }
 
+  /// The placement a viewer applies to [content], by the same validation either
+  /// way: the published manifest read from [plan]'s manifest URL when there is
+  /// one, otherwise the placement the content already carries (a local manifest
+  /// from the Node, whose `matrix` form exists nowhere else). Local content
+  /// never causes a request, so no private CID leaves the device. Never throws.
+  static Future<Map<String, dynamic>?> resolveTransform(
+    SpatialContent content,
+    SpatialWebLoadPlan plan, {
+    http.Client? client,
+  }) async {
+    final published = await fetchTransform(plan.manifestUrl, client: client);
+    if (published != null) return published;
+    return transformFromManifest(<String, dynamic>{
+      'transform': content.transform,
+    });
+  }
+
   /// Largest manifest document read for its transform.
   static const int manifestMaxBytes = 262144;
 

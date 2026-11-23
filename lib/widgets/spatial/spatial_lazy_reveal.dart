@@ -30,9 +30,21 @@ class _SpatialLazyRevealState extends State<SpatialLazyReveal> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    // Every scrollable above this widget, on either axis: a viewer inside a
-    // horizontally paged parent must be revealed by the page turning, not only
-    // by the vertical scroll around it.
+    // Registers a dependency on the nearest scrollable's scope, so this runs
+    // again when that scrollable replaces its ScrollPosition (a new controller
+    // or physics): the position listened to below is disposed then and would
+    // never notify again.
+    Scrollable.maybeOf(context);
+    _syncPositions();
+    _scheduleCheck();
+  }
+
+  /// Listens to the position of every scrollable above this widget, on either
+  /// axis: a viewer inside a horizontally paged parent must be revealed by the
+  /// page turning, not only by the vertical scroll around it. Cheap, and run
+  /// again before every check, so a replaced position (including one of an
+  /// outer scrollable, which registers no dependency) is picked up.
+  void _syncPositions() {
     final next = <ScrollPosition>[];
     context.visitAncestorElements((element) {
       if (element is StatefulElement && element.state is ScrollableState) {
@@ -44,18 +56,16 @@ class _SpatialLazyRevealState extends State<SpatialLazyReveal> {
     for (var i = 0; unchanged && i < next.length; i++) {
       unchanged = identical(next[i], _positions[i]);
     }
-    if (!unchanged) {
-      for (final position in _positions) {
-        position.removeListener(_scheduleCheck);
-      }
-      _positions
-        ..clear()
-        ..addAll(next);
-      for (final position in _positions) {
-        position.addListener(_scheduleCheck);
-      }
+    if (unchanged) return;
+    for (final position in _positions) {
+      position.removeListener(_scheduleCheck);
     }
-    _scheduleCheck();
+    _positions
+      ..clear()
+      ..addAll(next);
+    for (final position in _positions) {
+      position.addListener(_scheduleCheck);
+    }
   }
 
   @override
@@ -103,6 +113,7 @@ class _SpatialLazyRevealState extends State<SpatialLazyReveal> {
 
   void _check() {
     if (!mounted || _revealed) return;
+    _syncPositions();
     final box = context.findRenderObject();
     if (box is! RenderBox || !box.attached || !box.hasSize) {
       _scheduleCheck();

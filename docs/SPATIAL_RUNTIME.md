@@ -261,9 +261,11 @@ and consent decisions live in `SpatialWebLoadSession` and `SpatialWebDelivery`
   scale above about 1e-3 (a scene extent below about 2000 splat units); a larger
   scene is refused whole and opens untransformed.
 - Native WebView: the Android/iOS viewer hands the page the Spark file type and the
-  published manifest's placement (the same `SpatialWebDelivery.plan` and
-  `fetchTransform` as the web host), so a Node-placed piece opens upright and a raw
-  `.splat` is typed there too. The inline section on the artwork screen is still web
+  placement (the same `SpatialWebDelivery.plan` and validation as the web host):
+  the published manifest's when the content has one, otherwise the local manifest's
+  own `transform` (`SpatialWebDelivery.resolveTransform`, no request, so a fresh Node
+  result reviewed on the phone before publishing opens upright too). A raw `.splat`
+  is typed there as well. The inline section on the artwork screen is still web
   only: an embedded WebView inside a scrolling page needs its own gesture-arena
   handling (orbit versus scroll) that has to be proven on a real device first.
 - Lazy reveal: the inline viewer is created when its box overlaps the window narrowed

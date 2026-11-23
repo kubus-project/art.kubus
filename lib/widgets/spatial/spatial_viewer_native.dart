@@ -127,8 +127,8 @@ class _NativeSpatialViewerState extends State<_NativeSpatialViewer> {
 
   /// Hands the page the proxied bytes together with what the web host also
   /// passes: the Spark file type (a raw `.splat` has no magic number) and the
-  /// published manifest's placement, so a piece the Node placed opens upright
-  /// here too. The transform read is best effort and bounded, and never blocks
+  /// placement (the published manifest's, or the local manifest's for content
+  /// not yet published), so a piece the Node placed opens upright here too. The transform read is best effort and bounded, and never blocks
   /// the load beyond its own timeout.
   Future<void> _loadInto(
     WebViewController controller,
@@ -137,7 +137,8 @@ class _NativeSpatialViewerState extends State<_NativeSpatialViewer> {
     final proxy = _proxy;
     if (proxy == null) return;
     final plan = SpatialWebDelivery.plan(widget.content, variant);
-    final transform = await SpatialWebDelivery.fetchTransform(plan.manifestUrl);
+    final transform =
+        await SpatialWebDelivery.resolveTransform(widget.content, plan);
     if (!mounted || !identical(proxy, _proxy)) return;
     final args = <String>[
       _jsString(proxy.uri.toString()),

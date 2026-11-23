@@ -23,7 +23,11 @@ SpatialVariant _variant(
       storageClass: 'warm',
     );
 
-SpatialContent _content(List<SpatialVariant> variants, {String? manifestCid}) =>
+SpatialContent _content(
+  List<SpatialVariant> variants, {
+  String? manifestCid,
+  Map<String, dynamic>? transform,
+}) =>
     SpatialContent(
       id: 'spatial-1',
       type: 'gaussianSplat',
@@ -32,6 +36,7 @@ SpatialContent _content(List<SpatialVariant> variants, {String? manifestCid}) =>
       capturedAt: DateTime.utc(2026, 11, 7),
       variants: variants,
       manifestCid: manifestCid,
+      transform: transform,
     );
 
 const List<num> _upright = <num>[
@@ -601,6 +606,79 @@ void main() {
         isNull,
       );
       expect(await SpatialWebDelivery.fetchTransform(null), isNull);
+    });
+
+    group('resolveTransform', () {
+      final splat = _variant('spatial_preview', 'cidSplat1', 'splat');
+      SpatialWebLoadPlan planFor(SpatialContent content) =>
+          SpatialWebDelivery.plan(
+            content,
+            splat,
+            backendBase: 'https://api.kubus.site',
+          );
+
+      test('local content opens with its own Node placement, no request',
+          () async {
+        final content = _content(
+          [splat],
+          transform: {'matrix': _upright, 'matrixOrder': 'column-major'},
+        );
+        final plan = planFor(content);
+        expect(plan.manifestUrl, isNull);
+        final client = MockClient((request) async {
+          fail('local content must not cause a request: ${request.url}');
+        });
+        final transform = await SpatialWebDelivery.resolveTransform(
+          content,
+          plan,
+          client: client,
+        );
+        expect((transform?['matrix'] as List)[4], -1.0);
+        expect(transform?['matrixOrder'], 'column-major');
+      });
+
+      test('local placement goes through the same validation as published',
+          () async {
+        final sheared = _upright.map((v) => v.toDouble()).toList()..[4] = 0.5;
+        final content = _content([splat], transform: {'matrix': sheared});
+        expect(
+          await SpatialWebDelivery.resolveTransform(content, planFor(content)),
+          isNull,
+        );
+        final noPlacement = _content([splat]);
+        expect(
+          await SpatialWebDelivery.resolveTransform(
+              noPlacement, planFor(noPlacement)),
+          isNull,
+        );
+      });
+
+      test('a published manifest wins over the content placement', () async {
+        final content = _content(
+          [splat],
+          manifestCid: 'bafyManifest',
+          transform: {
+            'position': [9, 9, 9]
+          },
+        );
+        final client = MockClient((request) async {
+          expect(request.url.toString(),
+              'https://api.kubus.site/api/upload/file/bafyManifest');
+          return http.Response(
+            jsonEncode({
+              'transform': {'matrix': _upright},
+            }),
+            200,
+          );
+        });
+        final transform = await SpatialWebDelivery.resolveTransform(
+          content,
+          planFor(content),
+          client: client,
+        );
+        expect((transform?['matrix'] as List)[4], -1.0);
+        expect(transform?.containsKey('position'), isFalse);
+      });
     });
 
     test('the manifest size cap bounds the download, not only the parsing',

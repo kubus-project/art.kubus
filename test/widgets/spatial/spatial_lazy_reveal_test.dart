@@ -147,4 +147,31 @@ void main() {
     await tester.pump();
     expect(find.text('viewer'), findsOneWidget);
   });
+
+  testWidgets('a replaced scroll controller keeps revealing the viewer',
+      (tester) async {
+    tester.view.physicalSize = const Size(400, 800);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    final first = ScrollController();
+    final second = ScrollController();
+    addTearDown(first.dispose);
+    addTearDown(second.dispose);
+    await tester.pumpWidget(_page(spacer: 1200, controller: first));
+    await tester.pump();
+    await tester.pump();
+    expect(find.text('viewer', skipOffstage: false), findsNothing);
+
+    // The scrollable creates a new ScrollPosition and disposes the old one.
+    await tester.pumpWidget(_page(spacer: 1200, controller: second));
+    await tester.pump();
+    await tester.pump();
+    expect(find.text('viewer', skipOffstage: false), findsNothing);
+
+    second.jumpTo(700);
+    await tester.pump();
+    await tester.pump();
+    expect(find.text('viewer'), findsOneWidget);
+  });
 }
