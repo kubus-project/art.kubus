@@ -58,6 +58,8 @@ void main() {
       '/app/sl/zbirateljski-predmeti/n2': ShareEntityType.nft,
       '/app/en/map/m1': ShareEntityType.marker,
       '/app/sl/zemljevid/m2': ShareEntityType.marker,
+      '/app/en/institutions/i1': ShareEntityType.institution,
+      '/app/sl/institucije/i2': ShareEntityType.institution,
     };
 
     for (final entry in routes.entries) {
@@ -86,6 +88,8 @@ void main() {
       '/sl/zbirateljski-predmeti/collectible-2': (ShareEntityType.nft, 'sl'),
       '/en/map/marker-1': (ShareEntityType.marker, 'en'),
       '/sl/zemljevid/marker-2': (ShareEntityType.marker, 'sl'),
+      '/en/institutions/institution-1': (ShareEntityType.institution, 'en'),
+      '/sl/institucije/institution-2': (ShareEntityType.institution, 'sl'),
     };
 
     for (final entry in routes.entries) {
@@ -114,6 +118,8 @@ void main() {
       '/sl/zbirateljski-predmeti/collectible-2',
       '/en/map/marker-1',
       '/sl/zemljevid/marker-2',
+      '/en/institutions/institution-1',
+      '/sl/institucije/institution-2',
     ];
 
     for (final canonicalPath in canonicalPaths) {

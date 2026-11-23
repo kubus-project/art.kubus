@@ -16317,6 +16317,27 @@ class AppLocalizationsEn extends AppLocalizations {
   String get spatialLoadArchiveQuality => 'Load archival quality';
 
   @override
+  String spatialLoadArchiveQualityWithSize(String size) {
+    return 'Load archival quality ($size)';
+  }
+
+  @override
+  String get spatialArchiveConsentBody =>
+      'The archival version is the full-detail capture. It is large and can use a lot of data, so it only loads when you ask.';
+
+  @override
+  String get spatialArchiveConfirmTitle => 'Load a large archive?';
+
+  @override
+  String spatialArchiveConfirmBody(String size) {
+    return 'This download is about $size. Continue only on a connection you are happy to use.';
+  }
+
+  @override
+  String get spatialArchiveConfirmBodyUnknownSize =>
+      'This download is large and its size is not known. Continue only on a connection you are happy to use.';
+
+  @override
   String get spatialQualityMobile => 'Optimised';
 
   @override
@@ -16337,6 +16358,15 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get spatialViewerUnavailable =>
       'This spatial archive is currently unavailable.';
+
+  @override
+  String get spatialViewerLoading => 'Loading the 3D view…';
+
+  @override
+  String get spatialViewerActivate => 'Tap to interact';
+
+  @override
+  String get spatialViewerDragHint => 'Drag to look around';
 
   @override
   String get spatialViewerFallback => 'Trying another archive route…';

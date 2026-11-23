@@ -1,6 +1,5 @@
 import 'package:art_kubus/l10n/app_localizations_en.dart';
 import 'package:art_kubus/providers/wallet_provider.dart';
-import 'package:art_kubus/services/backend_api_service.dart';
 import 'package:art_kubus/utils/kubus_color_roles.dart';
 import 'package:art_kubus/widgets/wallet/kubus_wallet_shell.dart';
 import 'package:art_kubus/widgets/wallet/wallet_action_controller.dart';
@@ -9,9 +8,6 @@ import 'package:flutter_test/flutter_test.dart';
 WalletAuthoritySnapshot _snapshot({
   required WalletAuthorityState state,
   required WalletSignerSource signerSource,
-  bool accountSignedIn = true,
-  AuthSignInMethod signInMethod = AuthSignInMethod.email,
-  String? accountEmail = 'artist@example.com',
   String? walletAddress = 'wallet-address-123',
   bool hasLocalSigner = false,
   bool hasExternalSigner = false,
@@ -26,9 +22,6 @@ WalletAuthoritySnapshot _snapshot({
   return WalletAuthoritySnapshot(
     state: state,
     signerSource: signerSource,
-    accountSignedIn: accountSignedIn,
-    signInMethod: signInMethod,
-    accountEmail: accountEmail,
     walletAddress: walletAddress,
     hasLocalSigner: hasLocalSigner,
     hasExternalSigner: hasExternalSigner,
@@ -42,14 +35,18 @@ WalletAuthoritySnapshot _snapshot({
   );
 }
 
+/// [isSignedIn] is the profile provider's answer; the wallet snapshot holds
+/// wallet facts only.
 List<WalletActionConfig> _actions(
   WalletAuthoritySnapshot authority, {
+  bool isSignedIn = true,
   bool includeSetup = true,
 }) {
   return WalletActionController.buildPrimaryActions(
     l10n: AppLocalizationsEn(),
     roles: KubusColorRoles.light,
     authority: authority,
+    isSignedIn: isSignedIn,
     onSend: () {},
     onReceive: () {},
     onSwap: () {},
@@ -70,11 +67,11 @@ void main() {
   test('signed out action set is disabled and deduped', () {
     final actions = _actions(
       _snapshot(
-        state: WalletAuthorityState.signedOut,
+        state: WalletAuthorityState.noWallet,
         signerSource: WalletSignerSource.none,
-        accountSignedIn: false,
         walletAddress: null,
       ),
+      isSignedIn: false,
     );
 
     _expectNoDuplicateTypes(actions);
@@ -99,7 +96,7 @@ void main() {
   test('account shell exposes wallet setup actions once', () {
     final actions = _actions(
       _snapshot(
-        state: WalletAuthorityState.accountShellOnly,
+        state: WalletAuthorityState.noWallet,
         signerSource: WalletSignerSource.none,
         walletAddress: null,
       ),

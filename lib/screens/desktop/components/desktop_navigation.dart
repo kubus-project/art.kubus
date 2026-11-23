@@ -1057,12 +1057,15 @@ class _DesktopNavigationState extends State<DesktopNavigation>
                         : MainAxisAlignment.center,
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      if (profileProvider.isSignedIn)
+                      // No account without a signed-in profile: the one accessor
+                      // returns the account or nothing, so every part of the
+                      // sidebar entry follows from `user`.
+                      if (user != null)
                         KubusIdentityAvatar(
-                          wallet: user?.walletAddress ?? '',
-                          avatarUrl: user?.avatar,
-                          isArtist: user?.isArtist ?? false,
-                          isInstitution: user?.isInstitution ?? false,
+                          wallet: user.walletAddress,
+                          avatarUrl: user.avatar,
+                          isArtist: user.isArtist,
+                          isInstitution: user.isInstitution,
                           radius: widget.isExpanded ? 17 : 16,
                           allowFabricatedFallback: true,
                           enableProfileNavigation: false,
@@ -1090,16 +1093,12 @@ class _DesktopNavigationState extends State<DesktopNavigation>
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 Text(
-                                  !profileProvider.isSignedIn
+                                  user == null
                                       ? AppLocalizations.of(
                                           context,
                                         )!
                                           .commonSignIn
-                                      : user?.displayName ??
-                                          AppLocalizations.of(
-                                            context,
-                                          )!
-                                              .profilePersonaArtEnthusiast,
+                                      : user.displayName,
                                   style: KubusTextStyles.profileName.copyWith(
                                     color: isSelected
                                         ? widget.activeAccent
@@ -1108,14 +1107,9 @@ class _DesktopNavigationState extends State<DesktopNavigation>
                                   overflow: TextOverflow.ellipsis,
                                   maxLines: 1,
                                 ),
-                                // The handle is account identity: shown only with
-                                // a live session, like the name above it. A held
-                                // profile without one (a forced sign-out's cold
-                                // start) must not leave the account on the sidebar.
-                                if (profileProvider.isSignedIn &&
-                                    user?.username != null)
+                                if (user != null)
                                   Text(
-                                    '@${user!.username}',
+                                    '@${user.username}',
                                     style:
                                         KubusTextStyles.profileHandle.copyWith(
                                       color: isSelected

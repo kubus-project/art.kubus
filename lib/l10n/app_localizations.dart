@@ -28328,6 +28328,36 @@ abstract class AppLocalizations {
   /// **'Load archival quality'**
   String get spatialLoadArchiveQuality;
 
+  /// No description provided for @spatialLoadArchiveQualityWithSize.
+  ///
+  /// In en, this message translates to:
+  /// **'Load archival quality ({size})'**
+  String spatialLoadArchiveQualityWithSize(String size);
+
+  /// No description provided for @spatialArchiveConsentBody.
+  ///
+  /// In en, this message translates to:
+  /// **'The archival version is the full-detail capture. It is large and can use a lot of data, so it only loads when you ask.'**
+  String get spatialArchiveConsentBody;
+
+  /// No description provided for @spatialArchiveConfirmTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Load a large archive?'**
+  String get spatialArchiveConfirmTitle;
+
+  /// No description provided for @spatialArchiveConfirmBody.
+  ///
+  /// In en, this message translates to:
+  /// **'This download is about {size}. Continue only on a connection you are happy to use.'**
+  String spatialArchiveConfirmBody(String size);
+
+  /// No description provided for @spatialArchiveConfirmBodyUnknownSize.
+  ///
+  /// In en, this message translates to:
+  /// **'This download is large and its size is not known. Continue only on a connection you are happy to use.'**
+  String get spatialArchiveConfirmBodyUnknownSize;
+
   /// No description provided for @spatialQualityMobile.
   ///
   /// In en, this message translates to:
@@ -28369,6 +28399,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'This spatial archive is currently unavailable.'**
   String get spatialViewerUnavailable;
+
+  /// No description provided for @spatialViewerLoading.
+  ///
+  /// In en, this message translates to:
+  /// **'Loading the 3D view…'**
+  String get spatialViewerLoading;
+
+  /// No description provided for @spatialViewerActivate.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap to interact'**
+  String get spatialViewerActivate;
+
+  /// No description provided for @spatialViewerDragHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Drag to look around'**
+  String get spatialViewerDragHint;
 
   /// No description provided for @spatialViewerFallback.
   ///

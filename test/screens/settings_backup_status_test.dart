@@ -29,6 +29,8 @@ import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../helpers/secure_storage_absent.dart';
+import '../support/account_session_fixture.dart';
 
 class _FakeWalletProvider extends WalletProvider {
   _FakeWalletProvider({
@@ -188,6 +190,16 @@ Widget _buildSettingsApp(
 }
 
 void main() {
+  // Authenticated requests read the closure receipt from secure storage, which
+  // never answers in fake time unless the channel is mocked.
+  installEmptySecureStorage();
+  // A signed-in surface has a live session behind its held profile.
+  setUp(() => AccountSessionFixture.start(
+        accountId: 'settings-backup-profile',
+        wallet: 'wallet123',
+      ));
+  tearDown(AccountSessionFixture.end);
+
   TestWidgetsFlutterBinding.ensureInitialized();
   final l10n = AppLocalizationsEn();
   final requests = <http.Request>[];
@@ -218,6 +230,7 @@ void main() {
 
     final snapshot = await WalletBackupStatusResolver.resolve(
       walletProvider: walletProvider,
+      isSignedIn: true,
       refreshRemote: false,
     );
 
@@ -237,6 +250,7 @@ void main() {
 
     final snapshot = await WalletBackupStatusResolver.resolve(
       walletProvider: walletProvider,
+      isSignedIn: true,
       refreshRemote: false,
     );
 
@@ -254,6 +268,7 @@ void main() {
 
     final snapshot = await WalletBackupStatusResolver.resolve(
       walletProvider: walletProvider,
+      isSignedIn: true,
       refreshRemote: false,
     );
 
@@ -272,6 +287,7 @@ void main() {
 
     final snapshot = await WalletBackupStatusResolver.resolve(
       walletProvider: walletProvider,
+      isSignedIn: true,
       refreshRemote: false,
     );
 
@@ -282,7 +298,7 @@ void main() {
   test('status summary prefers recovery phrase over encrypted backup', () {
     const snapshot = WalletBackupStatusSnapshot(
       walletAddress: 'wallet123',
-      hasAccountSession: true,
+      isSignedIn: true,
       hasWalletIdentity: true,
       hasSigner: true,
       isReadOnlySession: false,
@@ -300,7 +316,7 @@ void main() {
   test('status headline prefers recovery phrase over passkey backup', () {
     const snapshot = WalletBackupStatusSnapshot(
       walletAddress: 'wallet123',
-      hasAccountSession: true,
+      isSignedIn: true,
       hasWalletIdentity: true,
       hasSigner: true,
       isReadOnlySession: false,
@@ -318,7 +334,7 @@ void main() {
   test('status summary prefers read-only over encrypted backup', () {
     const snapshot = WalletBackupStatusSnapshot(
       walletAddress: 'wallet123',
-      hasAccountSession: true,
+      isSignedIn: true,
       hasWalletIdentity: true,
       hasSigner: false,
       isReadOnlySession: true,

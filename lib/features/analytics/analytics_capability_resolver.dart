@@ -33,8 +33,6 @@ class AnalyticsViewerContext {
   final bool analyticsBuildAvailable;
   final bool analyticsPreferenceEnabled;
 
-  bool get isSignedIn => viewerWallet.trim().isNotEmpty;
-
   bool get isOwner {
     final viewer = viewerWallet.trim();
     final subject = subjectId.trim();

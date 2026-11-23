@@ -6878,6 +6878,25 @@
   },
   "spatialHistoryTitle": "Spatial history",
   "spatialLoadArchiveQuality": "Load archival quality",
+  "spatialLoadArchiveQualityWithSize": "Load archival quality ({size})",
+  "@spatialLoadArchiveQualityWithSize": {
+    "placeholders": {
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "spatialArchiveConsentBody": "The archival version is the full-detail capture. It is large and can use a lot of data, so it only loads when you ask.",
+  "spatialArchiveConfirmTitle": "Load a large archive?",
+  "spatialArchiveConfirmBody": "This download is about {size}. Continue only on a connection you are happy to use.",
+  "@spatialArchiveConfirmBody": {
+    "placeholders": {
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "spatialArchiveConfirmBodyUnknownSize": "This download is large and its size is not known. Continue only on a connection you are happy to use.",
   "spatialQualityMobile": "Optimised",
   "spatialQualityPreview": "Preview",
   "spatialQualityArchive": "Archival",
@@ -6885,6 +6904,9 @@
   "spatialViewerFullscreen": "Fullscreen",
   "spatialViewerRetry": "Try again",
   "spatialViewerUnavailable": "This spatial archive is currently unavailable.",
+  "spatialViewerLoading": "Loading the 3D view…",
+  "spatialViewerActivate": "Tap to interact",
+  "spatialViewerDragHint": "Drag to look around",
   "spatialViewerFallback": "Trying another archive route…",
   "spatialViewerWebSafety": "Open the public archive in a compatible viewer. A secure web page does not contact local LAN nodes.",
   "spatialCaptureFinish": "Finish capture",

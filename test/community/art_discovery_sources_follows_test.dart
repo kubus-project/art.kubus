@@ -16,6 +16,7 @@ import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../support/account_session_fixture.dart';
 
 const _viewer = '4Nd1mYbF7kYgU7kD3bcd1q2w4gS7y8Z9xKLMNPQRSTU';
 const _followed = '6Nd1mYbF7kYgU7kD3bcd1q2w4gS7y8Z9xKLMNPQRSTV';
@@ -48,6 +49,10 @@ void _backend({required int status}) {
 // The follow graph is read and written through account-scoped cache storage,
 // which finishes on the real event loop, so the calls run under runAsync.
 void main() {
+  // A signed-in surface has a live session behind its held profile.
+  setUp(() => AccountSessionFixture.start(accountId: 'test-account'));
+  tearDown(AccountSessionFixture.end);
+
   TestWidgetsFlutterBinding.ensureInitialized();
 
   setUp(() async {

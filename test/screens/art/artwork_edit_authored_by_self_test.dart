@@ -12,6 +12,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:provider/provider.dart';
+import '../../support/account_session_fixture.dart';
 
 const _artworkId = 'artwork-1';
 const _profileId = '8c03b35a-a4d6-4c08-95fc-503c879fbc45';
@@ -160,6 +161,11 @@ void _editorTest(
 }
 
 void main() {
+  // A signed-in surface has a live session behind its held profile.
+  setUp(() =>
+      AccountSessionFixture.start(accountId: _profileId, wallet: '0xabc'));
+  tearDown(AccountSessionFixture.end);
+
   TestWidgetsFlutterBinding.ensureInitialized();
 
   _editorTest(

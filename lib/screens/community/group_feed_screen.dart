@@ -34,7 +34,6 @@ import '../../utils/community_screen_utils.dart';
 import '../../utils/community_subject_navigation.dart';
 import '../../utils/media_url_resolver.dart';
 import '../../utils/wallet_utils.dart';
-import '../../services/account_identity.dart';
 import '../../utils/search_suggestions.dart';
 import '../../utils/profile_identity_navigation.dart';
 import '../../widgets/app_loading.dart';
@@ -779,13 +778,11 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
       onToggleLike: () => _toggleLike(post),
       onOpenComments: () => _openPostDetail(post),
       onRepost: () {
-        final walletProvider =
-            Provider.of<WalletProvider>(context, listen: false);
-        final currentWallet = walletProvider.currentWalletAddress;
         if (post.postType == 'repost' &&
-            post.isAuthoredBySession(
-              accountId: AccountIdentity.accountKey,
-              wallet: currentWallet,
+            Provider.of<ProfileProvider>(context, listen: false)
+                .isCurrentAccountActor(
+              accountId: post.authorUserId,
+              wallet: post.authorWallet,
             )) {
           _showRepostOptions(post);
         } else {
@@ -824,31 +821,23 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
     );
   }
 
-  String? _currentWalletAddress() {
-    try {
-      return Provider.of<WalletProvider>(context, listen: false)
-          .currentWalletAddress;
-    } catch (_) {
-      return null;
-    }
-  }
-
   /// Whether the signed-in session owns [group]. The server's owner flag is
   /// trusted first; otherwise the owner account id, then the legacy owner wallet.
   bool _isGroupOwner(CommunityGroupSummary group) {
     if (group.isOwner) return true;
-    return group.isOwnedBySession(
-      accountId: AccountIdentity.accountKey,
-      wallet: _currentWalletAddress(),
+    return Provider.of<ProfileProvider>(context, listen: false)
+        .isCurrentAccountActor(
+      accountId: group.ownerUserId,
+      wallet: group.ownerWallet,
     );
   }
 
   Future<void> _showPostOptionsForPost(CommunityPost post) async {
     if (!mounted) return;
-    final currentWallet = _currentWalletAddress();
-    final isOwner = post.isAuthoredBySession(
-      accountId: AccountIdentity.accountKey,
-      wallet: currentWallet,
+    final isOwner = Provider.of<ProfileProvider>(context, listen: false)
+        .isCurrentAccountActor(
+      accountId: post.authorUserId,
+      wallet: post.authorWallet,
     );
 
     final action = await showCommunityPostOptionsSheet(

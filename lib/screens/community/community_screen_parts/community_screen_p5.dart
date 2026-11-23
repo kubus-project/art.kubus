@@ -518,10 +518,10 @@ extension _CommunityScreenStatePart5 on _CommunityScreenState {
 
   Future<void> _showPostOptionsForPost(CommunityPost post) async {
     if (!mounted) return;
-    final currentWallet = _currentWalletAddress();
-    final isOwner = post.isAuthoredBySession(
-      accountId: AccountIdentity.accountKey,
-      wallet: currentWallet,
+    final isOwner = Provider.of<ProfileProvider>(context, listen: false)
+        .isCurrentAccountActor(
+      accountId: post.authorUserId,
+      wallet: post.authorWallet,
     );
 
     final action = await showCommunityPostOptionsSheet(

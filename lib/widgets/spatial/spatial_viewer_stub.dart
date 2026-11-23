@@ -10,6 +10,7 @@ Widget buildSpatialViewer({
   required SpatialContent content,
   required KubusNodeService nodeService,
   String? posterUrl,
+  VoidCallback? onEscape,
 }) {
   final variant = content.variants
           .where((item) => item.role == 'spatial_mobile')

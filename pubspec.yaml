@@ -200,6 +200,7 @@ flutter:
     - assets/map_styles/kubus_dark.json
     - assets/spatial_viewer/index.html
     - assets/spatial_viewer/viewer.bundle.js
+    - assets/spatial_viewer/THIRD_PARTY_LICENSES.txt
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/assets-and-images/#resolution-aware

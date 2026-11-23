@@ -7,6 +7,7 @@ import 'package:art_kubus/models/user_profile.dart';
 import 'package:art_kubus/providers/profile_provider.dart';
 import 'package:art_kubus/services/backend_api_service.dart';
 import 'package:art_kubus/utils/profile_edit_error_messages.dart';
+import '../support/account_session_fixture.dart';
 
 /// Email/Google sessions have no wallet. The fake records what the provider
 /// sends so tests can assert the wallet is omitted and the URL is persisted.
@@ -94,7 +95,8 @@ class _EmailSessionApi implements ProfileBackendApi {
 }
 
 UserProfile _emailAccount() => UserProfile(
-      id: 'user-email',
+      id: 'profile-email',
+      userId: 'user-email',
       walletAddress: '',
       username: 'alice',
       displayName: 'Alice',
@@ -105,6 +107,8 @@ UserProfile _emailAccount() => UserProfile(
     );
 
 ProfileProvider _emailProvider(_EmailSessionApi api) {
+  // An email account is signed in by a live session behind its profile.
+  AccountSessionFixture.start(accountId: 'user-email');
   final provider = ProfileProvider(apiService: api);
   provider.setCurrentUser(_emailAccount());
   return provider;
@@ -123,6 +127,7 @@ void main() {
   setUp(() {
     SharedPreferences.setMockInitialValues(<String, Object>{});
   });
+  tearDown(AccountSessionFixture.end);
 
   test('(a) an email session uploads without a wallet or wallet metadata',
       () async {
@@ -317,7 +322,8 @@ void main() {
           'updatedAt': '2026-03-31T00:00:00.000Z',
         },
       };
-    BackendApiService().setAuthTokenForTesting('email-session-token');
+    BackendApiService().setAuthTokenForTesting(
+        AccountSessionFixture.jwt(accountId: 'user-email'));
     addTearDown(() => BackendApiService().setAuthTokenForTesting(null));
     final provider = ProfileProvider(apiService: api);
 

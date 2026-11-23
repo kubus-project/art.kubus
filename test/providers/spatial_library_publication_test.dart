@@ -6,6 +6,7 @@ import 'package:art_kubus/models/kubus_node_models.dart';
 import 'package:art_kubus/providers/spatial_library_provider.dart';
 import 'package:art_kubus/services/spatial_capture_store.dart';
 import 'package:art_kubus/services/spatial_library_store.dart';
+import 'package:art_kubus/services/spatial_web_delivery.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 const _spatialId = '11111111-1111-4111-8111-111111111111';
@@ -224,5 +225,214 @@ void main() {
     expect(publicClient.history, hasLength(2));
     expect(publicClient.history.first['isCurrent'], isTrue);
     expect(publicClient.history.last['isCurrent'], isFalse);
+  });
+  group('publish() with a Node-shaped transform', () {
+    // A proper Node placement: rotated 90 degrees about x, scale 2, at (1, 2, 3).
+    const nodeMatrix = <double>[
+      2, 0, 0, 0, //
+      0, 0, 2, 0, //
+      0, -2, 0, 0, //
+      1, 2, 3, 1,
+    ];
+
+    Future<Map<String, dynamic>> rewriteTransform(
+      Map<String, dynamic> transform,
+    ) async {
+      final file = File(record.resultManifestPath!);
+      final manifest = jsonDecode(await file.readAsString())
+          as Map<String, dynamic>
+        ..['transform'] = transform;
+      await file.writeAsString(jsonEncode(manifest));
+      return manifest;
+    }
+
+    test(
+        'a manifest still carrying the Node matrix is refused before any '
+        'request, and the record is marked failed', () async {
+      await rewriteTransform(<String, dynamic>{
+        'matrix': nodeMatrix,
+        'matrixOrder': 'column-major',
+      });
+
+      await expectLater(
+        provider.publish(record.localSpatialId),
+        throwsA(
+          isA<StateError>().having(
+            (e) => e.message,
+            'message',
+            'local_manifest_not_public_safe',
+          ),
+        ),
+      );
+
+      expect(publicClient.requests, isEmpty);
+      final after = await store.get(record.localSpatialId);
+      expect(after!.publicationState, SpatialLibraryPublicationState.failed);
+    });
+
+    test(
+        'the projection of that manifest is what publish() accepts, and the '
+        'transform reaches the request as position / rotation / scale',
+        () async {
+      final nodeManifest = await rewriteTransform(<String, dynamic>{
+        'matrix': nodeMatrix,
+        'matrixOrder': 'column-major',
+      });
+      // What a projection step stores at the public CID.
+      final projected =
+          SpatialLibraryProvider.sanitizePublicationManifest(nodeManifest);
+      await File(record.resultManifestPath!)
+          .writeAsString(jsonEncode(projected));
+
+      await provider.publish(record.localSpatialId);
+
+      final submitted = publicClient.requests.single['spatial'] as Map;
+      final transform =
+          (submitted['manifest'] as Map)['transform'] as Map<String, dynamic>;
+      expect(transform.keys.toSet(), {'position', 'rotation', 'scale'});
+      expect(transform['position'], [1.0, 2.0, 3.0]);
+      expect(jsonEncode(submitted), isNot(contains('matrix')));
+    });
+
+    test('a manifest already in the public form publishes unchanged', () async {
+      await rewriteTransform(<String, dynamic>{
+        'position': <double>[1, 2, 3],
+        'rotation': <double>[0, 0, 0, 1],
+        'scale': 2,
+      });
+
+      await provider.publish(record.localSpatialId);
+
+      final submitted = publicClient.requests.single['spatial'] as Map;
+      expect((submitted['manifest'] as Map)['transform'], <String, dynamic>{
+        'position': <double>[1, 2, 3],
+        'rotation': <double>[0, 0, 0, 1],
+        'scale': 2,
+      });
+    });
+  });
+
+  group('sanitizePublicationManifest transform', () {
+    Map<String, dynamic> manifest(Map<String, dynamic> transform) =>
+        <String, dynamic>{
+          'schema': 'kubus.spatial/1',
+          'type': 'gaussianSplat',
+          'id': _spatialId,
+          'artworkId': _artworkId,
+          'variants': <Object?>[],
+          'transform': transform,
+        };
+
+    // A proper Node placement: rotated 90 degrees about x (quaternion
+    // 0.7071 0 0 0.7071), uniform scale 2, translated (1, 2, 3).
+    const upright = <double>[
+      2, 0, 0, 0, //
+      0, 0, 2, 0, //
+      0, -2, 0, 0, //
+      1, 2, 3, 1,
+    ];
+
+    test('a Node matrix is published as position / rotation / scale', () {
+      final out = SpatialLibraryProvider.sanitizePublicationManifest(
+        manifest(<String, dynamic>{
+          'matrix': upright,
+          'matrixOrder': 'column-major',
+        }),
+      )['transform'] as Map<String, dynamic>;
+      expect(out.keys.toSet(), {'position', 'rotation', 'scale'});
+      expect(out['position'], [1.0, 2.0, 3.0]);
+      expect(out['scale'], [2.0, 2.0, 2.0]);
+      final q = (out['rotation'] as List).cast<double>();
+      expect(q, hasLength(4));
+      expect(q[0], closeTo(0.7071067811865476, 1e-9));
+      expect(q[1], closeTo(0, 1e-9));
+      expect(q[2], closeTo(0, 1e-9));
+      expect(q[3], closeTo(0.7071067811865476, 1e-9));
+    });
+
+    test('a matrix the viewer refuses is dropped whole, not mixed', () {
+      final sheared = List<double>.of(upright)..[4] = 1;
+      final out = SpatialLibraryProvider.sanitizePublicationManifest(
+        manifest(<String, dynamic>{
+          'matrix': sheared,
+          'position': <double>[9, 9, 9],
+        }),
+      );
+      expect(out.containsKey('transform'), isFalse);
+    });
+
+    test(
+        'an unknown matrixOrder or a non-list matrix is not a matrix: the '
+        'fields apply, exactly as the viewer reads it', () {
+      for (final transform in <Map<String, dynamic>>[
+        <String, dynamic>{
+          'matrix': upright,
+          'matrixOrder': 'row-major',
+          'position': <double>[4, 5, 6],
+        },
+        <String, dynamic>{
+          'matrix': 'not-a-list',
+          'position': <double>[4, 5, 6],
+        },
+      ]) {
+        final out = SpatialLibraryProvider.sanitizePublicationManifest(
+          manifest(transform),
+        )['transform'];
+        expect(out, <String, dynamic>{
+          'position': <double>[4, 5, 6],
+        });
+        expect(
+          SpatialWebDelivery.transformFromManifest(manifest(transform)),
+          <String, dynamic>{
+            'position': <double>[4.0, 5.0, 6.0],
+          },
+        );
+      }
+    });
+
+    test('accepts and refuses the shared fixture matrices like the viewer', () {
+      final fixture = jsonDecode(
+        File('test/fixtures/spatial/manifest_transform_vectors.json')
+            .readAsStringSync(),
+      ) as Map<String, dynamic>;
+      final base = (fixture['upright'] as List).cast<num>();
+      for (final item in (fixture['matrices'] as List).cast<Map>()) {
+        final values = base.map((v) => v as Object?).toList();
+        final edits = (item['edits'] as Map).cast<String, Object?>();
+        edits.forEach((index, value) {
+          values[int.parse(index)] = value == 'NaN'
+              ? double.nan
+              : (value is String ? value : value as num);
+        });
+        final keep = item['keep'] as int?;
+        final matrix = keep == null ? values : values.sublist(0, keep);
+        final transform = <String, dynamic>{'matrix': matrix};
+        final viewerAccepts = SpatialWebDelivery.transformFromManifest(
+              manifest(transform),
+            ) !=
+            null;
+        final published = SpatialLibraryProvider.sanitizePublicationManifest(
+          manifest(transform),
+        ).containsKey('transform');
+        expect(viewerAccepts, item['accepted'], reason: '${item['name']}');
+        expect(published, viewerAccepts, reason: '${item['name']}');
+      }
+    });
+
+    test('the position / rotation / scale form passes through unchanged', () {
+      final out = SpatialLibraryProvider.sanitizePublicationManifest(
+        manifest(<String, dynamic>{
+          'position': <double>[1, 2, 3],
+          'rotation': <double>[0, 0, 0, 1],
+          'scale': 2,
+          'matrixOrder': 'column-major',
+        }),
+      )['transform'];
+      expect(out, <String, dynamic>{
+        'position': <double>[1, 2, 3],
+        'rotation': <double>[0, 0, 0, 1],
+        'scale': 2,
+      });
+    });
   });
 }

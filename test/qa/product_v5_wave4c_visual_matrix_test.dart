@@ -239,6 +239,7 @@ void main() {
       tester,
       'walletless-account-shell-mobile-en',
       () => const WalletHome(),
+      signedIn: _walletlessOwner(),
       extraProviders: [_accountShellWalletProvider()],
     );
   });
@@ -250,6 +251,7 @@ void main() {
       size: _desktop,
       brightness: Brightness.dark,
       locale: const Locale('sl'),
+      signedIn: _walletlessOwner(),
       extraProviders: [_accountShellWalletProvider()],
     );
   });
@@ -258,6 +260,7 @@ void main() {
       tester,
       'wallet-link-in-progress-mobile-en',
       () => const WalletHome(),
+      signedIn: _walletlessOwner(),
       extraProviders: [
         _accountShellWalletProvider(
           linkPhase: WalletAccountLinkPhase.inProgress,
@@ -273,6 +276,7 @@ void main() {
       size: _desktop,
       brightness: Brightness.dark,
       locale: const Locale('sl'),
+      signedIn: _walletlessOwner(),
       extraProviders: [
         _accountShellWalletProvider(linkPhase: WalletAccountLinkPhase.failed),
       ],
@@ -386,6 +390,9 @@ UserProfile _owner({bool isArtist = false, bool isInstitution = false}) {
   );
 }
 
+/// A signed-in account with no wallet: the account shell.
+UserProfile _walletlessOwner() => _owner().copyWith(walletAddress: '');
+
 class _FixtureWallet extends WalletProvider {
   _FixtureWallet(this._tokens) : super(deferInit: true) {
     setCurrentWalletAddressForTesting(ProfileFixtures.wallet);
@@ -407,10 +414,6 @@ class _AccountShellWallet extends WalletProvider {
   _AccountShellWallet(
       {WalletAccountLinkPhase linkPhase = WalletAccountLinkPhase.unknown})
       : super(deferInit: true) {
-    seedAccountSessionForTesting(
-      email: 'walletless-qa@example.test',
-      backendProfile: const <String, dynamic>{},
-    );
     setCurrentWalletAddressForTesting(null);
     if (linkPhase != WalletAccountLinkPhase.unknown) {
       final generation = beginAccountWalletLink();

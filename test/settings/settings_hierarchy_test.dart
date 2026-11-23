@@ -22,6 +22,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../support/account_session_fixture.dart';
 
 /// Wave 5A settings hierarchy: email preferences read as Marketing /
 /// Activity / Essential groups, app notifications are their own section,
@@ -54,6 +55,13 @@ void main() {
         updatedAt: DateTime.utc(2026),
       ));
     await profileProvider.initialize();
+    // The account is signed in: a live session behind its held profile. It
+    // starts after initialize(), which would otherwise load it over the network.
+    AccountSessionFixture.start(
+      accountId: 'settings-hierarchy-profile',
+      wallet: 'settings-hierarchy-wallet',
+    );
+    addTearDown(AccountSessionFixture.end);
     final solana = SolanaWalletService();
 
     await tester.pumpWidget(MultiProvider(

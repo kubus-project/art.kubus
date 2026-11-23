@@ -20,7 +20,7 @@ import '../../providers/attestation_provider.dart';
 import '../../providers/collab_provider.dart';
 import '../../providers/events_provider.dart';
 import '../../providers/exhibitions_provider.dart';
-import '../../providers/wallet_provider.dart';
+import '../../providers/profile_provider.dart';
 import '../../providers/saved_items_provider.dart';
 import '../../providers/public_entity_takeover_provider.dart';
 import '../../screens/collab/invites_inbox_screen.dart';
@@ -1028,8 +1028,7 @@ class _ExhibitionDetailScreenState extends State<ExhibitionDetailScreen> {
       return const SizedBox.shrink();
     }
 
-    final isSignedIn =
-        context.watch<WalletProvider>().authority.hasAccountSession;
+    final isSignedIn = context.watch<ProfileProvider>().isSignedIn;
     if (!isSignedIn) {
       return const SizedBox.shrink();
     }
@@ -1205,8 +1204,7 @@ class _ExhibitionDetailScreenState extends State<ExhibitionDetailScreen> {
         DesktopShellScope.of(context)?.isCanonicalPublicEntry ?? false;
     final provider = context.watch<ExhibitionsProvider>();
     final savedItems = context.watch<SavedItemsProvider>();
-    final isSignedIn =
-        context.watch<WalletProvider>().authority.hasAccountSession;
+    final isSignedIn = context.watch<ProfileProvider>().isSignedIn;
 
     Exhibition? loadedExhibition;
     for (final candidate in provider.exhibitions) {

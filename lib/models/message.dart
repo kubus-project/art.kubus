@@ -301,7 +301,7 @@ class ChatMessage {
   }
 
   /// Whether the signed-in account sent this message. [accountId] is the
-  /// session's canonical account id (AccountIdentity.accountKey). Decided by
+  /// signed-in account's id (ProfileProvider.currentUser). Decided by
   /// [isSameAccountActor]: the account id when both sides have one, else the
   /// wallet. Absent values never match, so two walletless senders are never
   /// each other's messages.

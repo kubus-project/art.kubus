@@ -1,7 +1,5 @@
 import 'package:equatable/equatable.dart';
 
-import 'message.dart';
-
 class GroupPostPreview extends Equatable {
   final String id;
   final String? content;
@@ -45,17 +43,6 @@ class CommunityGroupSummary extends Equatable {
     required this.isOwner,
     this.latestPost,
   });
-
-  /// Whether the account [accountId] or [wallet] owns this group. The owner
-  /// account id is compared first; the owner wallet is the fallback for a row
-  /// that carries no account id. Empty identities never match.
-  bool isOwnedBySession({String? accountId, String? wallet}) =>
-      isSameAccountActor(
-        userId: ownerUserId,
-        wallet: ownerWallet,
-        otherUserId: accountId,
-        otherWallet: wallet,
-      );
 
   CommunityGroupSummary copyWith({
     String? name,

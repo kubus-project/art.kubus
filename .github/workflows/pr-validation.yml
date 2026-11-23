@@ -109,7 +109,7 @@ jobs:
         run: |
           npm run verify:toolchain:node
           npm run verify:architecture
-          node --test scripts/ci/workflow_contracts.test.mjs scripts/ci/locale_shells.test.mjs test/public_flutter_takeover.test.js test/takeover_locale_sanitizer.test.js test/takeover_status_design_parity.test.js test/flutter_bootstrap_engine_gate.test.js test/flutter_bootstrap_failure_signal.test.js scripts/qa/web_runtime_contract.test.mjs scripts/qa/map_request_policy.test.mjs
+          node --test scripts/ci/workflow_contracts.test.mjs scripts/ci/locale_shells.test.mjs test/public_flutter_takeover.test.js test/takeover_locale_sanitizer.test.js test/takeover_status_design_parity.test.js test/flutter_bootstrap_engine_gate.test.js test/flutter_bootstrap_failure_signal.test.js scripts/qa/web_runtime_contract.test.mjs scripts/qa/map_request_policy.test.mjs test/spatial_viewer_asset_contract.test.js
           node --test scripts/qa/staging/isolation.test.mjs
           node scripts/ci/backend_gitlink_contract.mjs
       - name: Validate deployment contracts locally
@@ -260,7 +260,7 @@ jobs:
           retention-days: 3
 
   map_browser_regression:
-    name: Mounted map fallback revocation in Chrome
+    name: Browser regression in Chrome (map and spatial viewer)
     needs: [changes, guardrails]
     if: ${{ needs.changes.outputs.tier == 'full' && (needs.changes.outputs.full == 'true' || needs.changes.outputs.frontend == 'true') }}
     runs-on: ubuntu-24.04
@@ -320,6 +320,23 @@ jobs:
           export CHROME_EXECUTABLE="$(node -e "process.stdout.write(require('./scripts/qa/node_modules/playwright').chromium.executablePath())")"
           test -x "$CHROME_EXECUTABLE"
           flutter test --platform chrome --reporter expanded --concurrency=1 test/map/map_screen_web_smoke_test.dart
+      - name: Spatial viewer page smoke in Chromium
+        shell: bash
+        # The bundled Spark viewer under the .htaccess CSP: boot, route order, upright transform, orbit,
+        # render-loop pause, wheel policy, refused URLs. No Flutter build needed.
+        timeout-minutes: 10
+        run: |
+          set -euo pipefail
+          WEB_ROOT="$RUNNER_TEMP/no-web-build" node scripts/qa/spatial_viewer_smoke.mjs
+      - name: Spatial viewer widget smoke in Chromium
+        shell: bash
+        # The real artwork section and web widget as a release build, with the backend answered at the
+        # network layer: lazy load, tier fallback, archive consent, no gateway contact, fullscreen dialog.
+        timeout-minutes: 20
+        run: |
+          set -euo pipefail
+          flutter build web --release -t tool/qa/spatial_viewer_web_harness_main.dart --output build/spatial-harness
+          node scripts/qa/spatial_viewer_flutter_smoke.mjs
 
   web_artifact:
     name: Release web build and browser smoke

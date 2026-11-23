@@ -50,7 +50,7 @@ Widget _wrapWithProviders({
       ChangeNotifierProvider(create: (_) => ExhibitionsProvider()),
       ChangeNotifierProvider(create: (_) => EventsProvider()),
       ChangeNotifierProvider(
-        create: (_) => ActivationPromptProvider(hasAuthSession: () => false),
+        create: (_) => ActivationPromptProvider(),
       ),
       ChangeNotifierProvider(create: (_) => MarkerManagementProvider()),
       ChangeNotifierProvider(create: (_) => PresenceProvider()),

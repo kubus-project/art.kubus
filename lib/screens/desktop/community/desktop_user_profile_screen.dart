@@ -42,6 +42,7 @@ import '../../../widgets/profile_artist_info_fields.dart';
 import '../../../screens/community/post_detail_screen.dart';
 import '../../../widgets/profile/profile_posts_preview_section.dart';
 import '../../community/profile_posts_screen.dart';
+import '../../../providers/profile_provider.dart';
 import '../../../providers/wallet_provider.dart';
 import '../../../services/socket_service.dart';
 import '../../../screens/community/profile_screen_methods.dart';
@@ -121,22 +122,11 @@ class _UserProfileScreenState extends State<UserProfileScreen>
   bool _authoredArtworksUnavailable = false;
   List<Map<String, dynamic>> _artistCollections = [];
 
-  String? _currentWalletAddress() {
-    try {
-      return Provider.of<WalletProvider>(
-        context,
-        listen: false,
-      ).currentWalletAddress;
-    } catch (_) {
-      return null;
-    }
-  }
-
   bool _canOpenAnalyticsForViewedUser() {
-    final viewedWallet = user?.id.trim() ?? '';
-    final viewerWallet = _currentWalletAddress()?.trim() ?? '';
-    return viewedWallet.isNotEmpty &&
-        WalletUtils.equals(viewerWallet, viewedWallet);
+    final viewedId = user?.id.trim() ?? '';
+    return viewedId.isNotEmpty &&
+        Provider.of<ProfileProvider>(context, listen: false)
+            .isCurrentAccount(viewedId);
   }
 
   void _openDesktopShellAwareScreen(Widget screen) {
@@ -1978,7 +1968,8 @@ class _UserProfileScreenState extends State<UserProfileScreen>
     if (!authenticated || !mounted) return;
     final chatProvider = Provider.of<ChatProvider>(context, listen: false);
     final messenger = ScaffoldMessenger.of(context);
-    final chatAuth = chatProvider.isAuthenticated;
+    final chatAuth =
+        Provider.of<ProfileProvider>(context, listen: false).isSignedIn;
 
     try {
       final outcome = await chatProvider

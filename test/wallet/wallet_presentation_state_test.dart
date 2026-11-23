@@ -1,11 +1,9 @@
 import 'package:art_kubus/providers/wallet_provider.dart';
-import 'package:art_kubus/services/backend_api_service.dart';
 import 'package:art_kubus/utils/wallet_presentation_state.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 WalletAuthoritySnapshot _authority(WalletAuthorityState state) {
-  final hasWallet = state != WalletAuthorityState.signedOut &&
-      state != WalletAuthorityState.accountShellOnly;
+  final hasWallet = state != WalletAuthorityState.noWallet;
   return WalletAuthoritySnapshot(
     state: state,
     signerSource: switch (state) {
@@ -13,9 +11,6 @@ WalletAuthoritySnapshot _authority(WalletAuthorityState state) {
       WalletAuthorityState.externalWalletReady => WalletSignerSource.external,
       _ => WalletSignerSource.none,
     },
-    accountSignedIn: state != WalletAuthorityState.signedOut,
-    signInMethod: AuthSignInMethod.email,
-    accountEmail: 'wallet-test@example.com',
     walletAddress: hasWallet ? 'test-wallet-address' : null,
     hasLocalSigner: state == WalletAuthorityState.localSignerReady,
     hasExternalSigner: state == WalletAuthorityState.externalWalletReady,
@@ -31,11 +26,8 @@ WalletAuthoritySnapshot _authority(WalletAuthorityState state) {
 }
 
 void main() {
-  test('resolves every authority state for shared wallet presentation', () {
+  test('resolves every wallet state for shared wallet presentation', () {
     const expectedStates = <WalletAuthorityState, WalletPresentationState>{
-      WalletAuthorityState.signedOut: WalletPresentationState.signedOut,
-      WalletAuthorityState.accountShellOnly:
-          WalletPresentationState.accountShellOnly,
       WalletAuthorityState.walletReadOnly:
           WalletPresentationState.walletReadOnly,
       WalletAuthorityState.localSignerReady:
@@ -48,24 +40,39 @@ void main() {
           WalletPresentationState.recoveryNeeded,
     };
     for (final entry in expectedStates.entries) {
-      expect(
-        WalletPresentationStateResolver.resolve(_authority(entry.key)),
-        entry.value,
-      );
+      // A wallet state reads the same whether or not an account is signed in.
+      for (final signedIn in const [true, false]) {
+        expect(
+          WalletPresentationStateResolver.resolve(
+            _authority(entry.key),
+            isSignedIn: signedIn,
+          ),
+          entry.value,
+        );
+      }
     }
   });
 
-  test('guest and account shell are walletless', () {
-    expect(
-      WalletPresentationStateResolver.hasWalletIdentity(
-        _authority(WalletAuthorityState.signedOut),
-      ),
-      isFalse,
-    );
-    final authority = _authority(WalletAuthorityState.accountShellOnly);
+  test(
+      'a device with no wallet reads as signed out or account only by who is '
+      'signed in', () {
+    final authority = _authority(WalletAuthorityState.noWallet);
 
     expect(
-      WalletPresentationStateResolver.hasWalletIdentity(authority),
+      WalletPresentationStateResolver.resolve(authority, isSignedIn: false),
+      WalletPresentationState.signedOut,
+    );
+    expect(
+      WalletPresentationStateResolver.resolve(authority, isSignedIn: true),
+      WalletPresentationState.accountShellOnly,
+    );
+  });
+
+  test('no wallet is walletless', () {
+    expect(
+      WalletPresentationStateResolver.hasWalletIdentity(
+        _authority(WalletAuthorityState.noWallet),
+      ),
       isFalse,
     );
   });
@@ -85,13 +92,10 @@ void main() {
 
   test('wallet identity comes from the snapshot, not its presentation label',
       () {
-    final inconsistentSnapshot = _authority(WalletAuthorityState.signedOut);
+    final inconsistentSnapshot = _authority(WalletAuthorityState.noWallet);
     final walletSnapshotWithMissingSigner = WalletAuthoritySnapshot(
       state: inconsistentSnapshot.state,
       signerSource: inconsistentSnapshot.signerSource,
-      accountSignedIn: inconsistentSnapshot.accountSignedIn,
-      signInMethod: inconsistentSnapshot.signInMethod,
-      accountEmail: inconsistentSnapshot.accountEmail,
       walletAddress: 'known-wallet-address',
       hasLocalSigner: false,
       hasExternalSigner: false,
@@ -113,11 +117,12 @@ void main() {
 
   test('unresolved and restoring sessions do not render a walletless state',
       () {
-    final authority = _authority(WalletAuthorityState.accountShellOnly);
+    final authority = _authority(WalletAuthorityState.noWallet);
 
     expect(
       WalletPresentationStateResolver.resolve(
         authority,
+        isSignedIn: true,
         sessionPhase: WalletSessionPhase.idle,
       ),
       WalletPresentationState.unknown,
@@ -125,6 +130,7 @@ void main() {
     expect(
       WalletPresentationStateResolver.resolve(
         authority,
+        isSignedIn: true,
         sessionPhase: WalletSessionPhase.restoring,
       ),
       WalletPresentationState.restoring,
@@ -132,6 +138,7 @@ void main() {
     expect(
       WalletPresentationStateResolver.resolve(
         authority,
+        isSignedIn: true,
         sessionPhase: WalletSessionPhase.error,
       ),
       WalletPresentationState.accountShellOnly,
@@ -139,11 +146,12 @@ void main() {
   });
 
   test('account-link lifecycle takes precedence over wallet authority', () {
-    final authority = _authority(WalletAuthorityState.accountShellOnly);
+    final authority = _authority(WalletAuthorityState.noWallet);
 
     expect(
       WalletPresentationStateResolver.resolve(
         authority,
+        isSignedIn: true,
         accountLinkPhase: WalletAccountLinkPhase.inProgress,
       ),
       WalletPresentationState.accountLinkInProgress,
@@ -151,6 +159,7 @@ void main() {
     expect(
       WalletPresentationStateResolver.resolve(
         authority,
+        isSignedIn: true,
         accountLinkPhase: WalletAccountLinkPhase.failed,
       ),
       WalletPresentationState.accountLinkFailed,

@@ -6851,6 +6851,25 @@
   },
   "spatialHistoryTitle": "Prostorska zgodovina",
   "spatialLoadArchiveQuality": "Naloži arhivsko kakovost",
+  "spatialLoadArchiveQualityWithSize": "Naloži arhivsko kakovost ({size})",
+  "@spatialLoadArchiveQualityWithSize": {
+    "placeholders": {
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "spatialArchiveConsentBody": "Arhivska različica je zajem v polni podrobnosti. Je velika in lahko porabi veliko podatkov, zato se naloži le na vašo zahtevo.",
+  "spatialArchiveConfirmTitle": "Naložim velik arhiv?",
+  "spatialArchiveConfirmBody": "Prenos je velik približno {size}. Nadaljujte le na povezavi, ki jo želite uporabiti.",
+  "@spatialArchiveConfirmBody": {
+    "placeholders": {
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "spatialArchiveConfirmBodyUnknownSize": "Prenos je velik, njegova velikost pa ni znana. Nadaljujte le na povezavi, ki jo želite uporabiti.",
   "spatialQualityMobile": "Optimizirano",
   "spatialQualityPreview": "Predogled",
   "spatialQualityArchive": "Arhivsko",
@@ -6858,6 +6877,9 @@
   "spatialViewerFullscreen": "Celozaslonsko",
   "spatialViewerRetry": "Poskusi znova",
   "spatialViewerUnavailable": "Ta prostorski arhiv trenutno ni na voljo.",
+  "spatialViewerLoading": "Nalaganje 3D pogleda …",
+  "spatialViewerActivate": "Dotaknite se za interakcijo",
+  "spatialViewerDragHint": "Povlecite za razgled",
   "spatialViewerFallback": "Poskušam drugo pot do arhiva …",
   "spatialViewerWebSafety": "Odpri javni arhiv v združljivem pregledovalniku. Varna spletna stran ne vzpostavlja povezave z vozlišči v lokalnem omrežju.",
   "spatialCaptureFinish": "Zaključi zajem",

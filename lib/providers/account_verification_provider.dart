@@ -48,6 +48,9 @@ class AccountVerificationProvider extends ChangeNotifier {
   final BackendApiService? _api;
   final AccountVerificationFetch? _fetchOverride;
 
+  // The account id keys the server state held here, so it is a cache key, not
+  // a second answer to "who is signed in": it is bound from the profile
+  // provider and cleared with it.
   String? _accountId;
   int _generation = 0;
   AccountVerificationState? _state;
@@ -58,11 +61,12 @@ class AccountVerificationProvider extends ChangeNotifier {
   /// Bumped on every account change and sign-out. Exposed for tests and for
   /// callers that start their own request and must discard it on a change.
   int get generation => _generation;
+  // The account whose server state is cached here (a cache key for resetting
+  // on change), bound from the profile provider; not a second identity.
   String? get accountId => _accountId;
   AccountVerificationLoad get load => _load;
   AccountVerificationState? get state => _state;
 
-  bool get isSignedIn => _accountId != null;
   bool get isReady => _load == AccountVerificationLoad.ready && _state != null;
   bool get isLoading => _load == AccountVerificationLoad.loading;
   bool get isUnavailable => _load == AccountVerificationLoad.unavailable;

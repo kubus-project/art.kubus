@@ -42,6 +42,8 @@ extension _DesktopSettingsScreenStatePart1 on _DesktopSettingsScreenState {
 
   Future<void> _loadSettings() async {
     final walletProvider = Provider.of<WalletProvider>(context, listen: false);
+    final isSignedIn =
+        Provider.of<ProfileProvider>(context, listen: false).isSignedIn;
     final settings = await SettingsService.loadSettings(
       fallbackNetwork: walletProvider.currentSolanaNetwork.isNotEmpty
           ? walletProvider.currentSolanaNetwork
@@ -52,6 +54,7 @@ extension _DesktopSettingsScreenStatePart1 on _DesktopSettingsScreenState {
     final secureAccountStatus = await _loadSecureAccountStatus();
     final walletBackupStatus = await WalletBackupStatusResolver.resolve(
       walletProvider: walletProvider,
+      isSignedIn: isSignedIn,
       refreshRemote: true,
     );
     if (!mounted) return;

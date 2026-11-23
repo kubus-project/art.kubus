@@ -110,7 +110,7 @@ class _CollectionCreatorState extends State<CollectionCreator> {
         walletAddress: profile?.walletAddress,
         wallet: web3.walletAddress,
       ),
-      accountId: profile?.userId,
+      accountId: profile?.accountId,
       profileId: profile?.id,
     );
     final nextScopeKey = authorKey?.cacheKey;
@@ -337,7 +337,7 @@ class _CollectionCreatorState extends State<CollectionCreator> {
     // Wallet when the account has one; otherwise the account id.
     final authorKey = ArtworkAuthorKey.resolve(
       walletAddress: walletAddress,
-      accountId: profileProvider.currentUser?.userId,
+      accountId: profileProvider.currentUser?.accountId,
       profileId: profileProvider.currentUser?.id,
     );
     final artworkProvider = context.watch<ArtworkProvider>();

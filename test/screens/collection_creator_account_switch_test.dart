@@ -15,6 +15,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../support/account_session_fixture.dart';
 
 const _accountA = '40000000-0000-4000-8000-000000000010';
 const _profileA = '10000000-0000-4000-8000-000000000010';
@@ -107,6 +108,10 @@ Future<void> _pumpFrames(WidgetTester tester, [int count = 4]) async {
 }
 
 void main() {
+  // A signed-in surface has a live session behind its held profile.
+  setUp(() => AccountSessionFixture.start(accountId: 'test-account'));
+  tearDown(AccountSessionFixture.end);
+
   TestWidgetsFlutterBinding.ensureInitialized();
 
   setUp(() {
@@ -127,7 +132,7 @@ void main() {
     addTearDown(collectionsProvider.dispose);
     addTearDown(web3Provider.dispose);
 
-    AccountIdentity.setAccountKey(_accountA);
+    AccountSessionFixture.start(accountId: _accountA);
     profileProvider.setCurrentUser(
       _profile(accountId: _accountA, profileId: _profileA),
     );
@@ -169,7 +174,7 @@ void main() {
     expect(find.text('Private A library item'), findsWidgets);
     expect(tester.widget<Checkbox>(find.byType(Checkbox).first).value, isTrue);
 
-    AccountIdentity.setAccountKey(_accountB);
+    AccountSessionFixture.start(accountId: _accountB);
     profileProvider.setCurrentUser(
       _profile(accountId: _accountB, profileId: _profileB),
     );
@@ -194,7 +199,7 @@ void main() {
     addTearDown(collectionsProvider.dispose);
     addTearDown(web3Provider.dispose);
 
-    AccountIdentity.setAccountKey(_accountA);
+    AccountSessionFixture.start(accountId: _accountA);
     profileProvider.setCurrentUser(
       _profile(accountId: _accountA, profileId: _profileA),
     );
@@ -217,7 +222,7 @@ void main() {
     await tester.pump();
     expect(api.calls, contains((mine: true, authorProfileId: null)));
 
-    AccountIdentity.setAccountKey(_accountB);
+    AccountSessionFixture.start(accountId: _accountB);
     profileProvider.setCurrentUser(
       _profile(accountId: _accountB, profileId: _profileB),
     );

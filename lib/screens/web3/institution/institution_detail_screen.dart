@@ -11,12 +11,15 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../../core/conversation_navigator.dart';
 import '../../../models/institution.dart';
 import '../../../providers/chat_provider.dart';
+import '../../../providers/profile_provider.dart';
 import '../../../providers/institution_provider.dart';
 import '../../../services/backend_api_service.dart';
 import '../../../services/contextual_auth_gate.dart';
+import '../../../services/share/share_types.dart';
 import '../../../services/telemetry/telemetry_service.dart';
 import '../../../services/user_service.dart';
 import '../../../utils/design_tokens.dart';
+import '../../../utils/institution_navigation.dart';
 import '../../../utils/media_url_resolver.dart';
 import '../../../utils/map_coordinate_rules.dart';
 import '../../../utils/map_navigation.dart';
@@ -30,6 +33,7 @@ import '../../../widgets/profile/profile_identity_hero.dart';
 import '../../../widgets/empty_state_card.dart';
 import '../../../widgets/glass_components.dart';
 import '../../../widgets/inline_loading.dart';
+import '../../../widgets/public_entity_takeover_ready.dart';
 import '../../events/event_detail_screen.dart';
 import 'institution_claim_sheet.dart';
 import '../../../providers/activation_prompt_provider.dart';
@@ -224,6 +228,7 @@ class _InstitutionDetailScreenState extends State<InstitutionDetailScreen> {
   /// Signed-out visitors and any failure leave the claim action available.
   Future<void> _refreshOwnClaimState(Institution institution) async {
     if (!institution.isImportedUnclaimed) return;
+    // Credential fact gating a network read; not identity display.
     if ((_api.getAuthToken() ?? '').trim().isEmpty) return;
     final epoch = _claimEpoch;
     // The read belongs to the account that was signed in when it started. A
@@ -446,7 +451,8 @@ class _InstitutionDetailScreenState extends State<InstitutionDetailScreen> {
     if (!authenticated || !mounted) return;
     final chatProvider = Provider.of<ChatProvider>(context, listen: false);
     final messenger = ScaffoldMessenger.of(context);
-    final chatAuth = chatProvider.isAuthenticated;
+    final chatAuth =
+        Provider.of<ProfileProvider>(context, listen: false).isSignedIn;
     try {
       final conv = await chatProvider.createConversation('', false, [wallet]);
       if (!mounted) return;
@@ -1059,7 +1065,7 @@ class _InstitutionDetailScreenState extends State<InstitutionDetailScreen> {
     final claimButton =
         showClaim ? _buildClaimButton(l10n, institution!) : null;
 
-    final body = _loading
+    final listing = _loading
         ? const Center(child: InlineLoading(expand: false))
         : institution == null
             ? EmptyStateCard(
@@ -1128,6 +1134,20 @@ class _InstitutionDetailScreenState extends State<InstitutionDetailScreen> {
                   ],
                 ],
               );
+
+    // A venue record id names a public /institutions/{id} page: the loaded
+    // record tells the web takeover it is ready, and every state holds the
+    // page's URL. Any other id (an account-backed institution) has no such
+    // page, so it never claims one.
+    final body =
+        InstitutionNavigation.looksLikeInstitutionRecordId(widget.institutionId)
+            ? PublicEntityTakeoverReady(
+                type: ShareEntityType.institution,
+                entityId: widget.institutionId.trim(),
+                signalReady: !_loading && institution != null,
+                child: listing,
+              )
+            : listing;
 
     if (widget.embedded) {
       if (claimButton == null) return body;

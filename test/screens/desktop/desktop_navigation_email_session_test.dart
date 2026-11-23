@@ -10,6 +10,7 @@ import 'package:art_kubus/providers/profile_provider.dart';
 import 'package:art_kubus/providers/themeprovider.dart';
 import 'package:art_kubus/screens/desktop/components/desktop_navigation.dart';
 import 'package:art_kubus/services/backend_api_service.dart';
+import '../../support/account_session_fixture.dart';
 
 /// Serves one authenticated account at a time. The email session has no wallet.
 class _EmailSessionApi implements ProfileBackendApi {
@@ -103,6 +104,8 @@ class _WalletProfileApi extends _EmailSessionApi {
 }
 
 void main() {
+  tearDown(AccountSessionFixture.end);
+
   TestWidgetsFlutterBinding.ensureInitialized();
 
   Future<void> pumpRail(WidgetTester tester, ProfileProvider profile) async {
@@ -158,6 +161,8 @@ void main() {
   testWidgets(
       'an email session without a wallet shows the account, not Sign in',
       (tester) async {
+    SharedPreferences.setMockInitialValues(const <String, Object>{});
+    AccountSessionFixture.start(accountId: 'user-a');
     final api = _EmailSessionApi()..account = _aliceAccount();
     final profile = ProfileProvider(apiService: api);
     // The load awaits real I/O (SharedPreferences), so it runs outside fake
@@ -180,6 +185,8 @@ void main() {
 
   testWidgets('signing out brings Sign in back and drops the account',
       (tester) async {
+    SharedPreferences.setMockInitialValues(const <String, Object>{});
+    AccountSessionFixture.start(accountId: 'user-a');
     final api = _EmailSessionApi()..account = _aliceAccount();
     final profile = ProfileProvider(apiService: api);
     await tester.runAsync(() => profile.loadAuthenticatedProfile());
@@ -205,7 +212,9 @@ void main() {
     final profile = ProfileProvider(apiService: _WalletProfileApi());
     await tester.runAsync(() => profile.loadProfile('WalletArtist111'));
     expect(profile.isSignedIn, isFalse);
-    expect(profile.currentUser?.username, 'qa088_artist');
+    // Held, but nobody is signed in: the account accessor reads nothing.
+    expect(profile.heldProfile?.username, 'qa088_artist');
+    expect(profile.currentUser, isNull);
 
     await pumpRail(tester, profile);
 
