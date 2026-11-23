@@ -1,11 +1,20 @@
 import 'package:art_kubus/models/conversation.dart';
 import 'package:art_kubus/models/message.dart';
 import 'package:art_kubus/models/resolved_conversation_participant.dart';
+import 'package:art_kubus/models/user_profile.dart';
 import 'package:art_kubus/providers/chat_provider.dart';
+import 'package:art_kubus/providers/profile_provider.dart';
 import 'package:art_kubus/screens/community/conversation_screen.dart';
+import 'package:art_kubus/services/account_identity.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import '../support/account_session_fixture.dart';
 
 void main() {
+  // A signed-in surface has a live session behind its held profile.
+  setUp(() => AccountSessionFixture.start(accountId: 'test-account'));
+  tearDown(AccountSessionFixture.end);
+
   ChatMessage message({
     String id = 'm1',
     String wallet = '0x1234567890abcdef1234567890abcdef12345678',
@@ -179,5 +188,114 @@ void main() {
     final empty = message(text: '');
 
     expect(empty.isRenderable, isFalse);
+  });
+
+  test(
+      'Walletless message is own only when its sender is the signed-in account',
+      () {
+    final provider = ChatProvider();
+    addTearDown(provider.dispose);
+    const me = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+    const other = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
+    ChatMessage walletless(String senderUserId) => ChatMessage(
+          id: 'm-$senderUserId',
+          conversationId: 'c1',
+          senderWallet: '',
+          senderUserId: senderUserId,
+          message: 'hello',
+          createdAt: DateTime(2026, 1, 1, 12),
+        );
+
+    bool isMineFor(ChatMessage candidate) =>
+        resolveMessagePresentationForTesting(
+          message: candidate,
+          conversation: Conversation(id: 'c1'),
+          chatProvider: provider,
+          currentUserId: me,
+        ).isMine;
+
+    expect(isMineFor(walletless(me)), isTrue);
+    expect(isMineFor(walletless(other)), isFalse);
+  });
+
+  group('own-message presentation through the profile-backed screen wiring',
+      () {
+    const profileRowId = 'cccccccc-cccc-4ccc-8ccc-cccccccccccc';
+    const accountId = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+    const otherAccountId = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
+
+    setUp(() {
+      SharedPreferences.setMockInitialValues(<String, Object>{});
+    });
+
+    tearDown(AccountIdentity.resetForTesting);
+
+    UserProfile profile({
+      required String id,
+      String? userId,
+      String walletAddress = '',
+    }) {
+      return UserProfile(
+        id: id,
+        userId: userId,
+        walletAddress: walletAddress,
+        username: 'me',
+        displayName: 'Me',
+        bio: '',
+        avatar: '',
+        createdAt: DateTime(2026),
+        updatedAt: DateTime(2026),
+      );
+    }
+
+    ChatMessage walletless(String senderUserId) => ChatMessage(
+          id: 'm-$senderUserId',
+          conversationId: 'c1',
+          senderWallet: '',
+          senderUserId: senderUserId,
+          message: 'hello',
+          createdAt: DateTime(2026, 1, 1, 12),
+        );
+
+    test(
+        'walletless own message is mine when the profile row id differs from the account id',
+        () {
+      AccountSessionFixture.start(accountId: accountId);
+      final chatProvider = ChatProvider();
+      addTearDown(chatProvider.dispose);
+      final profileProvider = ProfileProvider()
+        ..setCurrentUser(profile(id: profileRowId, userId: accountId));
+      addTearDown(profileProvider.dispose);
+
+      bool isMineFor(ChatMessage candidate) =>
+          resolveMessagePresentationForProfile(
+            message: candidate,
+            conversation: Conversation(id: 'c1'),
+            chatProvider: chatProvider,
+            profileProvider: profileProvider,
+          ).isMine;
+
+      expect(isMineFor(walletless(accountId)), isTrue);
+      expect(isMineFor(walletless(otherAccountId)), isFalse);
+    });
+
+    test('wallet account without user ids still owns its wallet messages', () {
+      const wallet = '0x1234567890abcdef1234567890abcdef12345678';
+      AccountSessionFixture.start(accountId: 'test-account', wallet: wallet);
+      final chatProvider = ChatProvider();
+      addTearDown(chatProvider.dispose);
+      final profileProvider = ProfileProvider()
+        ..setCurrentUser(profile(id: wallet, walletAddress: wallet));
+      addTearDown(profileProvider.dispose);
+
+      final mine = resolveMessagePresentationForProfile(
+        message: message(),
+        conversation: Conversation(id: 'c1'),
+        chatProvider: chatProvider,
+        profileProvider: profileProvider,
+      );
+
+      expect(mine.isMine, isTrue);
+    });
   });
 }

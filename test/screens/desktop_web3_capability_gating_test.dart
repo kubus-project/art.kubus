@@ -7,11 +7,11 @@ import 'package:art_kubus/providers/themeprovider.dart';
 import 'package:art_kubus/providers/wallet_provider.dart';
 import 'package:art_kubus/providers/web3provider.dart';
 import 'package:art_kubus/screens/desktop/web3/desktop_governance_hub_screen.dart';
-import 'package:art_kubus/services/backend_api_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../support/account_session_fixture.dart';
 
 class _TestWalletProvider extends WalletProvider {
   _TestWalletProvider(this._authority) : super(deferInit: true);
@@ -72,23 +72,17 @@ class _TestDaoProvider extends DAOProvider {
 }
 
 WalletAuthoritySnapshot _authority({
-  bool account = false,
   String? wallet,
   bool signer = false,
   String role = 'user',
 }) {
   return WalletAuthoritySnapshot(
-    state: !account
-        ? WalletAuthorityState.signedOut
-        : wallet == null
-            ? WalletAuthorityState.accountShellOnly
-            : signer
-                ? WalletAuthorityState.localSignerReady
-                : WalletAuthorityState.walletReadOnly,
+    state: wallet == null
+        ? WalletAuthorityState.noWallet
+        : signer
+            ? WalletAuthorityState.localSignerReady
+            : WalletAuthorityState.walletReadOnly,
     signerSource: signer ? WalletSignerSource.local : WalletSignerSource.none,
-    accountSignedIn: account,
-    signInMethod: account ? AuthSignInMethod.email : AuthSignInMethod.unknown,
-    accountEmail: account ? 'member@example.com' : null,
     accountRole: role,
     walletAddress: wallet,
     hasLocalSigner: signer,
@@ -155,6 +149,13 @@ Future<void> _pumpGovernance(
 }
 
 void main() {
+  // A signed-in surface has a live session behind its held profile.
+  setUp(() => AccountSessionFixture.start(
+        accountId: 'user-1',
+        wallet: 'wallet-member',
+      ));
+  tearDown(AccountSessionFixture.end);
+
   TestWidgetsFlutterBinding.ensureInitialized();
 
   testWidgets('direct desktop route hides all governance mutations for guest',
@@ -176,9 +177,7 @@ void main() {
   testWidgets('account without signer shows participation state before forms',
       (tester) async {
     final profile = ProfileProvider()..setCurrentUser(_profile());
-    final wallet = _TestWalletProvider(
-      _authority(account: true, wallet: 'wallet-member'),
-    );
+    final wallet = _TestWalletProvider(_authority(wallet: 'wallet-member'));
     await _pumpGovernance(tester, profile: profile, wallet: wallet);
 
     final context = tester.element(find.byType(DesktopGovernanceHubScreen));
@@ -191,9 +190,7 @@ void main() {
   testWidgets('capabilities rebuild when signer is gained and lost',
       (tester) async {
     final profile = ProfileProvider()..setCurrentUser(_profile());
-    final wallet = _TestWalletProvider(
-      _authority(account: true, wallet: 'wallet-member'),
-    );
+    final wallet = _TestWalletProvider(_authority(wallet: 'wallet-member'));
     await _pumpGovernance(tester, profile: profile, wallet: wallet);
 
     final context = tester.element(find.byType(DesktopGovernanceHubScreen));
@@ -201,14 +198,14 @@ void main() {
     expect(find.text(l10n.daoHubTabCreateProposal), findsNothing);
 
     wallet.replaceAuthority(
-      _authority(account: true, wallet: 'wallet-member', signer: true),
+      _authority(wallet: 'wallet-member', signer: true),
     );
     await tester.pump(const Duration(milliseconds: 800));
     expect(find.text(l10n.daoHubTabCreateProposal), findsWidgets);
     expect(find.text(l10n.daoVoteYesButton), findsOneWidget);
 
     wallet.replaceAuthority(
-      _authority(account: true, wallet: 'wallet-member'),
+      _authority(wallet: 'wallet-member'),
     );
     await tester.pump(const Duration(milliseconds: 800));
     expect(find.text(l10n.daoHubTabCreateProposal), findsNothing);
@@ -219,7 +216,7 @@ void main() {
       (tester) async {
     final profile = ProfileProvider()..setCurrentUser(_profile());
     final wallet = _TestWalletProvider(
-      _authority(account: true, wallet: 'wallet-member', signer: true),
+      _authority(wallet: 'wallet-member', signer: true),
     );
     await _pumpGovernance(
       tester,

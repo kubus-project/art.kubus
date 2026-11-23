@@ -36,9 +36,27 @@ import 'package:art_kubus/screens/desktop/desktop_shell_scope.dart';
 import 'package:art_kubus/utils/user_profile_navigation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:http/http.dart' as http;
+import 'package:http/testing.dart';
 import 'package:provider/provider.dart';
 
+import 'account_session_fixture.dart';
 import 'profile_fixtures.dart';
+
+/// Models a profile backend that predates the gallery routes.
+MockClient legacyProfileClient([
+  Future<http.Response> Function(http.Request)? handleRequest,
+]) =>
+    MockClient((request) async {
+      if (RegExp(r'^/api/profiles/[^/]+/gallery(?:/draft)?$')
+          .hasMatch(request.url.path)) {
+        return http.Response(
+            '{"success":false,"message":"Route not found"}', 404);
+      }
+      return handleRequest == null
+          ? http.Response('', 400)
+          : handleRequest(request);
+    });
 
 /// Which real profile surface a test or QA capture should render.
 enum ProfileSurface {
@@ -91,10 +109,17 @@ Future<void> pumpProfileSurface(
   /// Posts by the viewed profile, injected through the screens' existing
   /// extended-package seam. Empty by default.
   List<CommunityPost> posts = const <CommunityPost>[],
+  bool authoredArtworksUnavailable = false,
+
+  /// Authored works and public collections, injected through the same package
+  /// seam. Empty by default.
+  List<Map<String, dynamic>> artistArtworks = const <Map<String, dynamic>>[],
+  List<Map<String, dynamic>> artistCollections = const <Map<String, dynamic>>[],
 
   /// Injected DAO state (for example an approved role review); a fresh
   /// [DAOProvider] otherwise.
   AccountVerificationProvider? accountVerification,
+  ProfileProvider? injectedProfileProvider,
 
   /// Paint the theme ground under the screen, as the app shell does, so a
   /// screenshot of a transparent screen is not composited on white.
@@ -121,14 +146,19 @@ Future<void> pumpProfileSurface(
   addTearDown(tester.view.reset);
 
   final themeProvider = ThemeProvider();
-  final profileProvider = ProfileProvider();
+  final profileProvider = injectedProfileProvider ?? ProfileProvider();
   if (surface == ProfileSurface.mobileOwner ||
       surface == ProfileSurface.desktopOwner ||
       surface == ProfileSurface.desktopOwnerInShell ||
       viewerIsSubject) {
-    profileProvider.setCurrentUser(
-      _ownerProfileFrom(resolvedUser, walletless: ownerWalletless),
+    final owner = _ownerProfileFrom(resolvedUser, walletless: ownerWalletless);
+    // The owner is signed in: a live session behind the held profile.
+    AccountSessionFixture.start(
+      accountId: owner.userId ?? owner.id,
+      wallet: owner.walletAddress,
     );
+    addTearDown(AccountSessionFixture.end);
+    profileProvider.setCurrentUser(owner);
   }
 
   final child = _surfaceWidget(
@@ -137,6 +167,9 @@ Future<void> pumpProfileSurface(
     canonicalPublicEntry: canonicalPublicEntry,
     withAchievements: withAchievements,
     posts: posts,
+    authoredArtworksUnavailable: authoredArtworksUnavailable,
+    artistArtworks: artistArtworks,
+    artistCollections: artistCollections,
   );
 
   await tester.pumpWidget(
@@ -236,13 +269,21 @@ Widget _surfaceWidget(
   bool canonicalPublicEntry = false,
   bool withAchievements = false,
   List<CommunityPost> posts = const <CommunityPost>[],
+  bool authoredArtworksUnavailable = false,
+  List<Map<String, dynamic>> artistArtworks = const <Map<String, dynamic>>[],
+  List<Map<String, dynamic>> artistCollections = const <Map<String, dynamic>>[],
 }) {
   final critical = ProfileFixtures.critical(
     user: user,
     withAchievements: withAchievements,
   );
   final extended = Future<ProfileExtendedPackage?>.value(
-    ProfileFixtures.extended(initialPosts: posts),
+    ProfileFixtures.extended(
+      initialPosts: posts,
+      authoredArtworksUnavailable: authoredArtworksUnavailable,
+      artistArtworks: artistArtworks,
+      artistCollections: artistCollections,
+    ),
   );
 
   switch (surface) {
@@ -338,7 +379,7 @@ Widget _surfaceWidget(
 UserProfile _ownerProfileFrom(User user, {bool walletless = false}) {
   return UserProfile(
     id: user.id,
-    userId: user.id,
+    userId: user.userId ?? user.id,
     walletAddress: walletless ? '' : user.id,
     username: user.username,
     displayName: user.name,

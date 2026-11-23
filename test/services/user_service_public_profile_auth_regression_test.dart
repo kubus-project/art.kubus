@@ -64,6 +64,41 @@ void main() {
     );
   });
 
+  test('public profile model keeps profile id separate from account id',
+      () async {
+    const profileId = '10000000-0000-4000-8000-000000000010';
+    const accountId = '40000000-0000-4000-8000-000000000010';
+    BackendApiService().setHttpClient(MockClient((request) async {
+      if (request.url.path == '/api/profiles/$profileId') {
+        return http.Response(
+          jsonEncode(<String, Object?>{
+            'data': <String, Object?>{
+              'id': profileId,
+              'profileId': profileId,
+              'userId': accountId,
+              'walletAddress': null,
+              'username': 'walletless-author',
+              'displayName': 'Walletless Author',
+            },
+          }),
+          200,
+          headers: const <String, String>{'content-type': 'application/json'},
+        );
+      }
+      return http.Response('Not found', 404);
+    }));
+
+    final user = await UserService.getUserById(
+      profileId,
+      forceRefresh: true,
+      includeAchievements: false,
+    );
+
+    expect(user?.profileId, profileId);
+    expect(user?.userId, accountId);
+    expect(user?.walletAddress, isNull);
+  });
+
   test('Viewing own public profile without a session stays anonymous',
       () async {
     const myWallet = '4Nd1mYbF7kYgU7kD3bcd1q2w4gS7y8Z9xKLMNPQRSTU';

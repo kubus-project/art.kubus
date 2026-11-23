@@ -1054,12 +1054,11 @@ extension _DesktopCommunityScreenStatePart4 on _DesktopCommunityScreenState {
 
   bool _isCurrentUserPost(CommunityPost post) {
     try {
-      final walletProvider =
-          Provider.of<WalletProvider>(context, listen: false);
-      final currentWallet = walletProvider.currentWalletAddress;
-      if (currentWallet == null || currentWallet.trim().isEmpty) return false;
-      return WalletUtils.equals(
-          post.authorWallet ?? post.authorId, currentWallet);
+      return Provider.of<ProfileProvider>(context, listen: false)
+          .isCurrentAccountActor(
+        accountId: post.authorUserId,
+        wallet: post.authorWallet,
+      );
     } catch (_) {
       return false;
     }

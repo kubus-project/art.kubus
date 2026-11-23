@@ -130,6 +130,8 @@
                 <data android:scheme="https" android:host="app.kubus.site" android:pathPrefix="/sl/zemljevid/" />
                 <data android:scheme="https" android:host="app.kubus.site" android:pathPrefix="/en/collectibles/" />
                 <data android:scheme="https" android:host="app.kubus.site" android:pathPrefix="/sl/zbirateljski-predmeti/" />
+                <data android:scheme="https" android:host="app.kubus.site" android:pathPrefix="/en/institutions/" />
+                <data android:scheme="https" android:host="app.kubus.site" android:pathPrefix="/sl/institucije/" />
                 <!-- Direct interactive map target used by public entity actions. -->
                 <data android:scheme="https" android:host="app.kubus.site" android:path="/map" />
             </intent-filter>

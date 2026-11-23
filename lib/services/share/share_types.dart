@@ -11,6 +11,7 @@ enum ShareEntityType {
   profile,
   nft,
   collection,
+  institution,
 }
 
 enum ShareAction {
@@ -40,6 +41,8 @@ extension ShareEntityTypeX on ShareEntityType {
         return 'nft';
       case ShareEntityType.collection:
         return 'collection';
+      case ShareEntityType.institution:
+        return 'institution';
     }
   }
 
@@ -101,9 +104,20 @@ class ShareTarget {
         type: ShareEntityType.exhibition, shareId: exhibitionId, title: title);
   }
 
-  factory ShareTarget.profile({required String walletAddress, String? title}) {
+  factory ShareTarget.profile({
+    String? walletAddress,
+    String? profileId,
+    String? title,
+  }) {
+    final identifier = (profileId ?? walletAddress ?? '').trim();
+    if (identifier.isEmpty) {
+      throw ArgumentError('A profile ID or wallet address is required.');
+    }
     return ShareTarget(
-        type: ShareEntityType.profile, shareId: walletAddress, title: title);
+      type: ShareEntityType.profile,
+      shareId: identifier,
+      title: title,
+    );
   }
 
   factory ShareTarget.nft({required String mintAddress, String? title}) {
@@ -115,5 +129,15 @@ class ShareTarget {
       {required String collectionId, String? title}) {
     return ShareTarget(
         type: ShareEntityType.collection, shareId: collectionId, title: title);
+  }
+
+  /// An institution record (not an account profile): its public page is
+  /// /en/institutions/{id} and /sl/institucije/{id}.
+  factory ShareTarget.institution(
+      {required String institutionId, String? title}) {
+    return ShareTarget(
+        type: ShareEntityType.institution,
+        shareId: institutionId,
+        title: title);
   }
 }

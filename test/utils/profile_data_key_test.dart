@@ -84,18 +84,22 @@ void main() {
       requests.add(request);
       return _json(<String, Object?>{
         'data': <Object?>[],
+        'appliedFilters': <String, Object?>{'authorProfileId': _profileId},
         'relationship': request.url.queryParameters['relationship'],
         'pagination': <String, Object?>{'total': 0, 'limit': 6, 'offset': 0},
       });
     }));
 
     final key = profileArtistDataKey(_profile());
-    await ProfilePackageService.loadProfileArtworkSections(key, limit: 6);
-
-    final authored = requests.firstWhere(
-      (r) => r.url.queryParameters['relationship'] == 'authored',
+    await ProfilePackageService.loadProfileArtworkSections(
+      key,
+      limit: 6,
+      authorProfileId: _profileId,
     );
-    expect(authored.url.path, '/api/profiles/$_profileId/artworks');
+
+    final authored = requests.single;
+    expect(authored.url.path, '/api/artworks');
+    expect(authored.url.queryParameters['authorProfileId'], _profileId);
   });
 
   test('a legacy wallet-only profile keeps the wallet route', () async {

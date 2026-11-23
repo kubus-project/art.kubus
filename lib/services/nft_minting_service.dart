@@ -8,7 +8,6 @@ import '../l10n/app_localizations_sl.dart';
 import '../models/collectible.dart';
 import '../services/push_notification_service.dart';
 import '../services/collectibles_storage.dart';
-import 'achievement_service.dart';
 
 /// NFT Minting Service
 ///
@@ -238,14 +237,7 @@ class NFTMintingService {
         transactionId: transactionId,
       );
 
-      // Check NFT minting achievements
-      final prefs = await SharedPreferences.getInstance();
-      final userId = prefs.getString('user_id') ?? 'demo_user';
-      await AchievementService().checkAchievements(
-        userId: userId,
-        action: 'nft_minted',
-        data: {'mintCount': 1}, // Backend should track total count
-      );
+      // Minting achievements are backend-owned: the client reports none.
 
       debugPrint(
         'NFTMintingService: Mint successful - TX: $transactionId, Token: $tokenId',

@@ -240,7 +240,6 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
   bool _webLocationGrantedOverride = false;
 
   bool _isSkippingFlow = false;
-  bool _isSignedIn = false;
   bool _pendingEmailVerification = false;
   String? _pendingVerificationEmail;
   String _pendingVerificationSignupMethod = _emailSignupMethod;
@@ -302,7 +301,7 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
     if (!_walletBackupOnboardingEnabled) return false;
     final hasWalletShell = _walletBackupStatus.walletAddress != null ||
         _walletBackupStatus.hasWalletIdentity ||
-        _walletBackupStatus.hasAccountSession;
+        _walletBackupStatus.isSignedIn;
     if (!hasWalletShell) return false;
     if (!_hasAllRequiredWalletBackups) return true;
     // Required backups are satisfied; still surface the step while web passkey
@@ -326,10 +325,10 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
         _scope?.requiresWallet != true) {
       return false;
     }
-    final profileProvider =
-        Provider.of<ProfileProvider>(context, listen: false);
-    if (!profileProvider.isSignedIn) return false;
-    return (profileProvider.currentUser?.walletAddress ?? '').trim().isEmpty;
+    final account =
+        Provider.of<ProfileProvider>(context, listen: false).currentUser;
+    if (account == null) return false;
+    return account.walletAddress.trim().isEmpty;
   }
 
   static _StepPalette _paletteFrom(KubusAccentGradient g) =>
@@ -495,7 +494,7 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
     // wallet is trusted like any other. A wallet is only compared when both
     // sides have one, to refuse a persona carried over from another wallet.
     final providerWallet =
-        (profileProvider.currentUser?.walletAddress ?? '').trim();
+        (profileProvider.heldProfile?.walletAddress ?? '').trim();
     final sessionWallet = _currentSessionWalletAddress();
     if (providerWallet.isNotEmpty &&
         sessionWallet.isNotEmpty &&
@@ -551,8 +550,6 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
 
   Future<void> _bootstrap() async {
     try {
-      _isSignedIn =
-          Provider.of<ProfileProvider>(context, listen: false).isSignedIn;
       final isWidgetTestBinding = WidgetsBinding.instance.runtimeType
           .toString()
           .contains('TestWidgetsFlutterBinding');
@@ -837,7 +834,7 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
         Provider.of<ProfileProvider>(context, listen: false);
     final walletProvider = Provider.of<WalletProvider>(context, listen: false);
     final fromProfile =
-        (profileProvider.currentUser?.walletAddress ?? '').trim();
+        (profileProvider.heldProfile?.walletAddress ?? '').trim();
     if (fromProfile.isNotEmpty) return fromProfile;
     final fromWallet = (walletProvider.currentWalletAddress ?? '').trim();
     if (fromWallet.isNotEmpty) return fromWallet;
@@ -859,6 +856,7 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
     final resolvedPrefs = prefs ?? await SharedPreferences.getInstance();
     final walletAddress =
         await _resolveWalletForBackupCheck(prefs: resolvedPrefs);
+    // Onboarding-record scope key, not an identity source.
     final userId = (resolvedPrefs.getString('user_id') ?? '').trim();
     return OnboardingStateService.buildAuthOnboardingScopeKey(
       walletAddress: walletAddress,
@@ -868,11 +866,14 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
 
   Future<void> _syncWalletBackupRequirement() async {
     final walletProvider = Provider.of<WalletProvider>(context, listen: false);
+    final isSignedIn =
+        Provider.of<ProfileProvider>(context, listen: false).isSignedIn;
     final prefs = await SharedPreferences.getInstance();
     final walletAddress = await _resolveWalletForBackupCheck(prefs: prefs);
     final normalizedWalletAddress = (walletAddress ?? '').trim();
     _flowScopeKey = OnboardingStateService.buildAuthOnboardingScopeKey(
       walletAddress: normalizedWalletAddress,
+      // Onboarding-record scope key, not an identity source.
       userId: (prefs.getString('user_id') ?? '').trim(),
     );
     if (!_walletBackupOnboardingEnabled) {
@@ -887,6 +888,7 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
     }
     _walletBackupStatus = await WalletBackupStatusResolver.resolve(
       walletProvider: walletProvider,
+      isSignedIn: isSignedIn,
       walletAddress: normalizedWalletAddress,
       refreshRemote: true,
     );
@@ -981,7 +983,7 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
     );
     final providerUsername = _cleanProfileValue(
       Provider.of<ProfileProvider>(context, listen: false)
-          .currentUser
+          .heldProfile
           ?.username,
     ).replaceFirst(RegExp(r'^@+'), '');
     final resolvedUsername = <String>[
@@ -1010,7 +1012,7 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
 
   Future<void> _mergeProfileDraftFromCurrentUserIfMissing() async {
     final user =
-        Provider.of<ProfileProvider>(context, listen: false).currentUser;
+        Provider.of<ProfileProvider>(context, listen: false).heldProfile;
     if (user == null) return;
     final currentUsername =
         _cleanProfileValue(user.username).replaceFirst(RegExp(r'^@+'), '');
@@ -1179,7 +1181,7 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
         !profile.isSignedIn ||
         !profile.hasHydratedProfile ||
         profile.needsStructuredRoleSelection;
-    final user = profile?.currentUser;
+    final user = profile?.heldProfile;
     final profileMissing = profile == null ||
         !profile.isSignedIn ||
         !profile.hasHydratedProfile ||
@@ -1201,7 +1203,11 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
   /// (no scope) keeps its explicit finish step.
   void _finishScopedFlowIfSatisfied() {
     if (!mounted || _scope == null || _isFinishingOnboarding) return;
-    if (_isInitializing || _steps.isEmpty || !_isSignedIn) return;
+    if (_isInitializing ||
+        _steps.isEmpty ||
+        !Provider.of<ProfileProvider>(context, listen: false).isSignedIn) {
+      return;
+    }
     if (_verificationRequired) return;
     final satisfied = _steps.every(
       (step) => _completed.contains(step) || _deferred.contains(step),
@@ -1635,7 +1641,7 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
   Future<void> _syncLocalProfileDraftToBackendIfPossible() async {
     final profileProvider =
         Provider.of<ProfileProvider>(context, listen: false);
-    final wallet = (profileProvider.currentUser?.walletAddress ?? '').trim();
+    final wallet = (profileProvider.heldProfile?.walletAddress ?? '').trim();
     if (wallet.isEmpty) return;
 
     final displayName = (_localProfileDraft['displayName'] ?? '').trim();
@@ -1764,10 +1770,6 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
   }
 
   void _refreshAuthDerivedSteps() {
-    final signedInNow =
-        Provider.of<ProfileProvider>(context, listen: false).isSignedIn;
-
-    _isSignedIn = signedInNow;
     _steps = _buildSteps();
     if (!_requiresVerificationStep) {
       _verificationDraft = null;
@@ -2004,7 +2006,7 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
   }) async {
     final profileProvider =
         Provider.of<ProfileProvider>(context, listen: false);
-    final wallet = profileProvider.currentUser?.walletAddress;
+    final wallet = profileProvider.heldProfile?.walletAddress;
     _localProfileDraft = <String, String>{
       'displayName': displayName.trim(),
       'username': username.trim(),
@@ -2198,8 +2200,8 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
     final profileProvider =
         Provider.of<ProfileProvider>(context, listen: false);
     // Any signed-in account may set its avatar; the wallet is optional.
-    if (profileProvider.currentUser == null) return null;
-    final wallet = (profileProvider.currentUser?.walletAddress ?? '').trim();
+    if (profileProvider.heldProfile == null) return null;
+    final wallet = (profileProvider.heldProfile?.walletAddress ?? '').trim();
 
     try {
       final uploadedUrl = await profileProvider.uploadAvatarBytes(
@@ -2268,11 +2270,11 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
     // URL, then the in-memory profile, then the persisted local draft.
     final fallbackAvatar = <String>[
       (uploadedAvatarUrl ?? '').trim(),
-      (profileProvider.currentUser?.avatar ?? '').trim(),
+      (profileProvider.heldProfile?.avatar ?? '').trim(),
       (_localProfileDraft['avatar'] ?? '').trim(),
     ].firstWhere((value) => value.isNotEmpty, orElse: () => '');
 
-    final wallet = (profileProvider.currentUser?.walletAddress ?? '').trim();
+    final wallet = (profileProvider.heldProfile?.walletAddress ?? '').trim();
     try {
       await profileProvider
           .loadAuthenticatedProfile()
@@ -2290,7 +2292,7 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
     }
 
     if (fallbackAvatar.isEmpty) return;
-    final current = profileProvider.currentUser;
+    final current = profileProvider.heldProfile;
     if (current == null) return;
     if (current.avatar.trim().isEmpty) {
       // Reload produced no avatar; pin the uploaded URL so it renders now. This
@@ -2494,9 +2496,9 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
     });
     try {
       await _persistLocalDrafts();
-      final currentUser = profileProvider.currentUser;
+      final currentUser = profileProvider.heldProfile;
       final wallet = (currentUser?.walletAddress ?? '').trim();
-      final accountKey = (currentUser?.userId ?? currentUser?.id ?? '').trim();
+      final accountKey = currentUser?.accountId ?? '';
       // A walletless (email/Google) account has no wallet but still has an
       // account id. Its role is saved against that id. A session with neither
       // (a guest walking the flow) keeps the choice in the local draft only,
@@ -2574,10 +2576,7 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
         Provider.of<ProfileProvider>(context, listen: false);
     final l10n = AppLocalizations.of(context)!;
     final messenger = ScaffoldMessenger.of(context);
-    final expectedUserId = (profileProvider.currentUser?.userId ??
-            profileProvider.currentUser?.id ??
-            '')
-        .trim();
+    final expectedUserId = profileProvider.heldProfile?.accountId ?? '';
 
     // Reaching this callback means AccountWalletLinkService already bound the
     // wallet AND verified through /api/profiles/me that the signed-in account
@@ -2616,11 +2615,8 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
 
     if (profileReloaded && profileProvider.hasHydratedProfile) {
       final linkedWallet =
-          (profileProvider.currentUser?.walletAddress ?? '').trim();
-      final reloadedUserId = (profileProvider.currentUser?.userId ??
-              profileProvider.currentUser?.id ??
-              '')
-          .trim();
+          (profileProvider.heldProfile?.walletAddress ?? '').trim();
+      final reloadedUserId = profileProvider.heldProfile?.accountId ?? '';
       final userIdStable = expectedUserId.isEmpty ||
           reloadedUserId.isEmpty ||
           reloadedUserId == expectedUserId;
@@ -2819,7 +2815,7 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
       await _syncWalletSessionIntoProviders();
       _refreshAuthDerivedSteps();
 
-      if (!_isSignedIn) {
+      if (!profileProvider.isSignedIn) {
         final authToken = (api.getAuthToken() ?? '').trim();
         if (authToken.isNotEmpty) {
           final prefs = await SharedPreferences.getInstance();
@@ -2843,7 +2839,7 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
         }
       }
 
-      if (_isSignedIn) {
+      if (profileProvider.isSignedIn) {
         await _syncLocalProfileDraftToBackendIfPossible();
         final uploadedAvatarUrl = await _flushPendingAvatarUploadIfPossible();
         if (!mounted) return;
@@ -2920,7 +2916,7 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
         await _markCompleted(_OnboardingStep.guestPermissions);
         return;
       case _OnboardingStep.account:
-        if (_isSignedIn) {
+        if (Provider.of<ProfileProvider>(context, listen: false).isSignedIn) {
           await _markCompleted(_OnboardingStep.account);
         } else {
           await _deferCurrentStep();
@@ -3132,7 +3128,7 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
         break;
       case _OnboardingStep.account:
         final currentProfile =
-            Provider.of<ProfileProvider>(context, listen: false).currentUser;
+            Provider.of<ProfileProvider>(context, listen: false).heldProfile;
         content = _AccountStep(
           title: l10n.onboardingFlowAccountTitle,
           body: l10n.onboardingFlowAccountBody,
@@ -3162,7 +3158,7 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
           body: l10n.onboardingFlowVerifyLastBody,
           email: _pendingVerificationEmail,
           isVerified: _emailVerifiedConfirmed,
-          isSignedIn: _isSignedIn,
+          isSignedIn: Provider.of<ProfileProvider>(context).isSignedIn,
           requiresFinishSignIn: _verificationRequired &&
               _emailVerifiedConfirmed &&
               !_sessionMatchesPendingVerificationEmail(),
@@ -3187,7 +3183,7 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
         break;
       case _OnboardingStep.profile:
         final user =
-            Provider.of<ProfileProvider>(context, listen: false).currentUser;
+            Provider.of<ProfileProvider>(context, listen: false).heldProfile;
         content = _InlineProfileStep(
           title: l10n.onboardingFlowProfileTitle,
           body: l10n.onboardingFlowProfileBody,

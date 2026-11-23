@@ -27,6 +27,7 @@ class _ThrowingWalletProvider extends WalletProvider {
     bool persist = true,
     bool loadData = true,
     bool syncBackend = false,
+    int? expectedAuthEpoch,
   }) async {
     restoreAttempted = true;
     throw Exception('wallet restore failed');

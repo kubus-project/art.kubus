@@ -231,6 +231,27 @@ void main() {
     controller.dispose();
   });
 
+  test('extended package without a critical package clears the loading state',
+      () async {
+    // A critical load that failed leaves no package to attach the extended
+    // data to. The loading flags must still clear, or the sections spin.
+    final controller = ProfilePackageController(
+      walletAddress: wallet,
+      initialExtendedPackageFuture: Future<ProfileExtendedPackage?>.value(
+        ProfileExtendedPackage(fetchedAt: DateTime.now()),
+      ),
+    );
+
+    await controller.loadExtended();
+
+    expect(controller.user, isNull);
+    expect(controller.isLoadingExtended, isFalse);
+    expect(controller.artistDataLoading, isFalse);
+    expect(controller.postsLoading, isFalse);
+
+    controller.dispose();
+  });
+
   group('profile posts query', () {
     const accountUuid = '3f2b9c1e-7a4d-4e8b-9c2a-1d2e3f4a5b6c';
     const foreignUuid = '9a8b7c6d-5e4f-4a3b-8c2d-1e0f9a8b7c6d';

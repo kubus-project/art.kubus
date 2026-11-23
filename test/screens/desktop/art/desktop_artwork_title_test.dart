@@ -6,9 +6,12 @@ import 'package:art_kubus/models/saved_item.dart';
 import 'package:art_kubus/providers/saved_items_provider.dart';
 import 'package:art_kubus/providers/themeprovider.dart';
 import 'package:art_kubus/providers/wallet_provider.dart';
+import 'package:art_kubus/services/backend_api_service.dart';
 import 'package:art_kubus/screens/desktop/art/desktop_artwork_detail_screen.dart';
 import 'package:art_kubus/screens/desktop/desktop_shell_scope.dart';
 import 'package:art_kubus/widgets/detail/detail_shell_primitives.dart';
+import 'package:art_kubus/widgets/artwork_private_preview_image.dart';
+import 'package:art_kubus/widgets/artwork_gallery_view.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:latlong2/latlong.dart';
@@ -16,8 +19,13 @@ import 'package:provider/provider.dart';
 
 const String _title = 'Vodnik mural';
 const String _artworkId = 'title-fixture';
+const String _privateCoverPath = '/api/artworks/title-fixture/media/cover';
 
-Artwork _artwork() => Artwork(
+Artwork _artwork({
+  bool isPublic = true,
+  ArtworkMediaPreviewDescriptor? mediaPreview,
+}) =>
+    Artwork(
       id: _artworkId,
       title: _title,
       artist: 'Miron Milić',
@@ -27,6 +35,9 @@ Artwork _artwork() => Artwork(
       createdAt: DateTime(2024),
       updatedAt: DateTime(2024),
       category: 'Mural',
+      isPublic: isPublic,
+      mediaPreview: mediaPreview,
+      mediaPreviewProvided: mediaPreview != null,
     );
 
 /// Saved status is read from secure storage, which does not complete under the
@@ -48,13 +59,43 @@ class _QuietArtworkProvider extends ArtworkProvider {
 
   @override
   Future<void> incrementViewCount(String artworkId) async {}
+
+  @override
+  Future<Artwork?> refreshArtworkDetailMetadata(String artworkId) async =>
+      getArtworkById(artworkId);
+}
+
+class _RefreshingArtworkProvider extends _QuietArtworkProvider {
+  int detailRefreshes = 0;
+
+  @override
+  Future<Artwork?> refreshArtworkDetailMetadata(String artworkId) async {
+    detailRefreshes += 1;
+    final fetched = getArtworkById(artworkId)!.copyWith(
+      editorialState: 'rejected',
+      mediaPreviewProvided: true,
+    );
+    addOrUpdateArtwork(fetched, retainWhenListRefresh: true);
+    return fetched;
+  }
+}
+
+class _UnverifiedArtworkProvider extends _QuietArtworkProvider {
+  @override
+  Future<Artwork?> refreshArtworkDetailMetadata(String artworkId) async => null;
 }
 
 /// The detail screen hosted the way the desktop shell hosts it: [host] wraps
 /// it (a sub-screen for in-app navigation, or the bare screen for a raw link).
-Widget _app(Widget Function(Widget screen) host) {
-  final artworks = _QuietArtworkProvider()
-    ..seedArtworksForTesting([_artwork()]);
+Widget _app(
+  Widget Function(Widget screen) host, {
+  Artwork? artwork,
+  _QuietArtworkProvider? artworkProvider,
+}) {
+  final artworks = artworkProvider ?? _QuietArtworkProvider();
+  if (artworkProvider == null) {
+    artworks.seedArtworksForTesting([artwork ?? _artwork()]);
+  }
   return MultiProvider(
     providers: [
       ChangeNotifierProvider<ArtworkProvider>.value(value: artworks),
@@ -161,5 +202,185 @@ void main() {
 
     expect(_textCount('art.kubus'), 1);
     expect(_textCount(_title), 1);
+  });
+
+  testWidgets(
+      'private preview descriptor takes precedence when detail omits isPublic',
+      (tester) async {
+    final artwork = _artwork(
+      mediaPreview: const ArtworkMediaPreviewDescriptor(
+        auth: 'bearer',
+        cover: _privateCoverPath,
+        gallery: <String?>[],
+        poap: null,
+      ),
+    );
+    final app = MultiProvider(
+      providers: [
+        ChangeNotifierProvider<ArtworkProvider>.value(
+          value: _QuietArtworkProvider()..seedArtworksForTesting([artwork]),
+        ),
+        ChangeNotifierProvider(create: (_) => ProfileProvider()),
+        ChangeNotifierProvider(create: (_) => WalletProvider()),
+        ChangeNotifierProvider(create: (_) => ThemeProvider()),
+        ChangeNotifierProvider<SavedItemsProvider>(
+          create: (_) => _NoStorageSavedItems(),
+        ),
+      ],
+      child: MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: Scaffold(
+          body: const DesktopArtworkDetailScreen(artworkId: _artworkId),
+        ),
+      ),
+    );
+
+    await pumpAt1440(tester, app);
+
+    final preview = tester.widget<ArtworkPrivatePreviewImage>(
+      find.byType(ArtworkPrivatePreviewImage),
+    );
+    expect(preview.isPublic, isFalse);
+    expect(preview.descriptor?.cover, _privateCoverPath);
+  });
+
+  testWidgets(
+      'rejected authorized detail does not use its public image URL when the preview descriptor is null',
+      (tester) async {
+    final artwork = parseArtworkFromBackendJson(<String, dynamic>{
+      'id': _artworkId,
+      'title': _title,
+      'artistName': 'Artist',
+      'description': 'A hidden record.',
+      'latitude': 46.0,
+      'longitude': 14.0,
+      'createdAt': '2026-01-01T00:00:00.000Z',
+      'imageURL': '/uploads/artworks/covers/hidden.png',
+      'galleryUrls': <String>['/uploads/artworks/covers/hidden-gallery.png'],
+      'isPublic': true,
+      'isActive': true,
+      'editorialState': 'rejected',
+      'mediaPreview': null,
+    });
+
+    await pumpAt1440(tester, _app((screen) => screen, artwork: artwork));
+
+    expect(find.byType(ArtworkPrivatePreviewImage), findsOneWidget);
+    final preview = tester.widget<ArtworkPrivatePreviewImage>(
+      find.byType(ArtworkPrivatePreviewImage),
+    );
+    expect(preview.isPublic, isFalse);
+    expect(find.byType(ArtworkGalleryView), findsNothing);
+  });
+
+  testWidgets(
+      'a cached public detail refreshes eligibility before reusing its public image URL',
+      (tester) async {
+    final artwork = _artwork().copyWith(
+      imageUrl: '/uploads/artworks/covers/stale.png',
+      editorialState: 'approved',
+      mediaPreviewProvided: true,
+    );
+    final provider = _RefreshingArtworkProvider()
+      ..seedArtworksForTesting([artwork]);
+
+    await pumpAt1440(
+      tester,
+      _app((screen) => screen, artworkProvider: provider),
+    );
+
+    expect(provider.detailRefreshes, 1);
+    expect(find.byType(ArtworkPrivatePreviewImage), findsOneWidget);
+    final preview = tester.widget<ArtworkPrivatePreviewImage>(
+      find.byType(ArtworkPrivatePreviewImage),
+    );
+    expect(preview.isPublic, isFalse);
+    expect(find.byType(ArtworkGalleryView), findsNothing);
+  });
+
+  testWidgets(
+      'a cached public image stays hidden while live media authority is unavailable',
+      (tester) async {
+    final artwork = _artwork().copyWith(
+      imageUrl: 'https://images.example.test/previously-public.jpg',
+      galleryUrls: const <String>[
+        'https://images.example.test/previously-public-gallery.jpg',
+      ],
+      editorialState: 'approved',
+    );
+    final provider = _UnverifiedArtworkProvider()
+      ..seedArtworksForTesting([artwork]);
+
+    await tester.pumpWidget(
+      _app((screen) => screen, artworkProvider: provider),
+    );
+    for (var i = 0; i < 8; i++) {
+      await tester.pump(const Duration(milliseconds: 100));
+    }
+
+    expect(find.byType(ElevatedButton), findsOneWidget);
+    expect(find.byType(ArtworkGalleryView), findsNothing);
+    expect(find.byType(ArtworkPrivatePreviewImage), findsNothing);
+  });
+
+  testWidgets(
+      'held approved public artwork never renders an external image for its owner or collaborator',
+      (tester) async {
+    for (final viewer in const <String>['owner', 'collaborator']) {
+      final held = _artwork().copyWith(
+        isPublic: true,
+        isActive: true,
+        editorialState: 'approved',
+        currentPublicMediaAllowed: false,
+        imageUrl: 'https://images.example.test/held.jpg',
+        galleryUrls: const <String>[
+          'https://images.example.test/held-gallery.jpg',
+        ],
+      );
+      final provider = _QuietArtworkProvider()..seedArtworksForTesting([held]);
+      await pumpAt1440(
+        tester,
+        _app((screen) => screen, artworkProvider: provider),
+      );
+
+      expect(held.canUsePublicMedia, isFalse, reason: viewer);
+      expect(find.byType(ArtworkGalleryView), findsNothing, reason: viewer);
+      expect(find.byType(ArtworkPrivatePreviewImage), findsOneWidget,
+          reason: viewer);
+      expect(
+        tester
+            .widget<ArtworkPrivatePreviewImage>(
+              find.byType(ArtworkPrivatePreviewImage),
+            )
+            .descriptor,
+        isNull,
+        reason: viewer,
+      );
+      await tester.pumpWidget(const SizedBox.shrink());
+    }
+  });
+
+  testWidgets(
+      'a cached public-list row refreshes authorized visibility before using its public image URL',
+      (tester) async {
+    final artwork = _artwork().copyWith(
+      imageUrl: '/uploads/artworks/covers/stale.png',
+    );
+    final provider = _RefreshingArtworkProvider()
+      ..seedArtworksForTesting([artwork]);
+
+    await pumpAt1440(
+      tester,
+      _app((screen) => screen, artworkProvider: provider),
+    );
+
+    expect(provider.detailRefreshes, 1);
+    expect(find.byType(ArtworkPrivatePreviewImage), findsOneWidget);
+    final preview = tester.widget<ArtworkPrivatePreviewImage>(
+      find.byType(ArtworkPrivatePreviewImage),
+    );
+    expect(preview.isPublic, isFalse);
+    expect(find.byType(ArtworkGalleryView), findsNothing);
   });
 }

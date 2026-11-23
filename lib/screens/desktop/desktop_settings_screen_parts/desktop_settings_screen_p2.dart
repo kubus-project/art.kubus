@@ -518,6 +518,9 @@ extension _DesktopSettingsScreenStatePart2 on _DesktopSettingsScreenState {
 
   Future<void> _handleLogout() async {
     final l10n = AppLocalizations.of(context)!;
+    final walletProvider = Provider.of<WalletProvider>(context, listen: false);
+    // A walletless account has no wallet to disconnect; the copy must not say so.
+    final hasWallet = walletProvider.hasWalletIdentity;
     final confirmed = await showKubusDialog<bool>(
       context: context,
       builder: (dialogContext) => KubusAlertDialog(
@@ -531,7 +534,9 @@ extension _DesktopSettingsScreenStatePart2 on _DesktopSettingsScreenState {
           ),
         ),
         content: Text(
-          l10n.settingsLogoutDialogBody,
+          hasWallet
+              ? l10n.settingsLogoutDialogBody
+              : l10n.settingsLogoutDialogBodyAccountOnly,
           style: KubusTextStyles.detailBody.copyWith(
             color: Theme.of(dialogContext).colorScheme.onSurface,
           ),
@@ -559,12 +564,11 @@ extension _DesktopSettingsScreenStatePart2 on _DesktopSettingsScreenState {
     );
 
     if (confirmed != true || !mounted) return;
-    final walletProvider = Provider.of<WalletProvider>(context, listen: false);
     final notificationProvider =
         Provider.of<NotificationProvider>(context, listen: false);
     final profileProvider =
         Provider.of<ProfileProvider>(context, listen: false);
-    await SettingsService.logout(
+    final browserSessionRevoked = await SettingsService.logout(
       walletProvider: walletProvider,
       backendApi: BackendApiService(),
       notificationProvider: notificationProvider,
@@ -574,6 +578,11 @@ extension _DesktopSettingsScreenStatePart2 on _DesktopSettingsScreenState {
     );
 
     if (!mounted) return;
+    if (!browserSessionRevoked) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(l10n.settingsBrowserLogoutPending)),
+      );
+    }
     _restartToOnboarding();
   }
 

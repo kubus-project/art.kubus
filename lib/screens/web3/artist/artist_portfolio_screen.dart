@@ -18,12 +18,15 @@ import '../../../utils/artwork_media_resolver.dart';
 import '../../../utils/artwork_navigation.dart';
 import '../../../utils/media_url_resolver.dart';
 import '../../../utils/artwork_edit_navigation.dart';
+import '../../../utils/artwork_editorial_hold_message.dart';
+import '../../../services/backend_api_service.dart';
 import '../../../utils/share_deep_link_navigation.dart';
 import '../../../utils/wallet_action_guard.dart';
 import '../../../utils/design_tokens.dart';
 import '../../../utils/kubus_color_roles.dart';
 import '../../../utils/kubus_entity_semantics.dart';
 import '../../../widgets/common/kubus_entity_card.dart';
+import '../../../widgets/artwork_private_preview_image.dart';
 import '../../../widgets/kubus_button.dart';
 import '../../../widgets/kubus_card.dart';
 import '../../art/collection_detail_screen.dart';
@@ -189,8 +192,9 @@ class _ArtistPortfolioScreenState extends State<ArtistPortfolioScreen> {
             const SizedBox(height: KubusSpacing.sm),
             Text(
               error,
-              style:
-                  KubusTextStyles.sectionSubtitle.copyWith(color: scheme.error),
+              style: KubusTextStyles.sectionSubtitle.copyWith(
+                color: scheme.error,
+              ),
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
             ),
@@ -301,11 +305,13 @@ class _ArtistPortfolioScreenState extends State<ArtistPortfolioScreen> {
               items: <_DropdownItem<PortfolioPublishState>>[
                 _DropdownItem(value: null, label: l10n.artistGalleryFilterAll),
                 _DropdownItem(
-                    value: PortfolioPublishState.published,
-                    label: l10n.artistGalleryFilterActive),
+                  value: PortfolioPublishState.published,
+                  label: l10n.artistGalleryFilterActive,
+                ),
                 _DropdownItem(
-                    value: PortfolioPublishState.draft,
-                    label: l10n.artistGalleryFilterDraft),
+                  value: PortfolioPublishState.draft,
+                  label: l10n.artistGalleryFilterDraft,
+                ),
               ],
               onSelected: provider.setStatusFilter,
             ),
@@ -318,13 +324,17 @@ class _ArtistPortfolioScreenState extends State<ArtistPortfolioScreen> {
                 value: typeFilter,
                 items: <_DropdownItem<PortfolioEntryType>>[
                   _DropdownItem(
-                      value: null, label: l10n.artistGalleryFilterAll),
+                    value: null,
+                    label: l10n.artistGalleryFilterAll,
+                  ),
                   _DropdownItem(
-                      value: PortfolioEntryType.collection,
-                      label: l10n.userProfileCollectionsTitle),
+                    value: PortfolioEntryType.collection,
+                    label: l10n.userProfileCollectionsTitle,
+                  ),
                   _DropdownItem(
-                      value: PortfolioEntryType.exhibition,
-                      label: l10n.artistStudioTabExhibitions),
+                    value: PortfolioEntryType.exhibition,
+                    label: l10n.artistStudioTabExhibitions,
+                  ),
                 ],
                 onSelected: provider.setTypeFilter,
               ),
@@ -387,10 +397,7 @@ class _ArtistPortfolioScreenState extends State<ArtistPortfolioScreen> {
       slivers: [
         if (notices.isNotEmpty)
           SliverToBoxAdapter(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: notices,
-            ),
+            child: Column(mainAxisSize: MainAxisSize.min, children: notices),
           ),
         if (entries.isNotEmpty)
           _buildGallery(context, entries, provider, section, l10n),
@@ -472,7 +479,9 @@ class _ArtistPortfolioScreenState extends State<ArtistPortfolioScreen> {
   }
 
   Widget _buildEmptyState(
-      AppLocalizations l10n, PortfolioStudioSection section) {
+    AppLocalizations l10n,
+    PortfolioStudioSection section,
+  ) {
     final scheme = Theme.of(context).colorScheme;
     final (icon, title, description, showCreate) = switch (section) {
       PortfolioStudioSection.authoredArtworks => (
@@ -666,21 +675,36 @@ class _ArtistPortfolioScreenState extends State<ArtistPortfolioScreen> {
       // Only a record the owner's full data confirms gets management actions.
       if (section == PortfolioStudioSection.authoredArtworks &&
           artwork != null) {
-        actions.add(_actionsButton(l10n, title, () {
-          unawaited(_showEntryOptionsSheet(context, provider, entry));
-        }));
+        actions.add(
+          _actionsButton(l10n, title, () {
+            unawaited(_showEntryOptionsSheet(context, provider, entry));
+          }),
+        );
       }
     } else if (entry.type == PortfolioEntryType.collection ||
         entry.type == PortfolioEntryType.exhibition) {
-      actions.add(_actionsButton(l10n, title, () {
-        unawaited(_showEntryOptionsSheet(context, provider, entry));
-      }));
+      actions.add(
+        _actionsButton(l10n, title, () {
+          unawaited(_showEntryOptionsSheet(context, provider, entry));
+        }),
+      );
     }
 
+    final privateArtwork = artwork != null && !artwork.isPublic;
     return KubusEntityCard(
       variant: KubusEntityCardVariant.media,
       kind: kind,
-      imageUrl: coverUrl,
+      imageUrl: privateArtwork ? null : coverUrl,
+      mediaChild: privateArtwork
+          ? ArtworkPrivatePreviewImage(
+              artworkId: artwork.id,
+              isPublic: false,
+              slot: 'cover',
+              descriptor: artwork.mediaPreview,
+              descriptorProvided: artwork.mediaPreviewProvided,
+              publicFallback: const SizedBox.expand(),
+            )
+          : null,
       title: title,
       subtitle: primaryLine,
       meta: secondaryLine,
@@ -734,8 +758,11 @@ class _ArtistPortfolioScreenState extends State<ArtistPortfolioScreen> {
     unawaited(_openEntry(context, entry, provider));
   }
 
-  Future<void> _openEntry(BuildContext context, PortfolioEntry entry,
-      PortfolioProvider provider) async {
+  Future<void> _openEntry(
+    BuildContext context,
+    PortfolioEntry entry,
+    PortfolioProvider provider,
+  ) async {
     switch (entry.type) {
       case PortfolioEntryType.artwork:
         await openArtwork(context, entry.id);
@@ -786,8 +813,11 @@ class _ArtistPortfolioScreenState extends State<ArtistPortfolioScreen> {
 
     switch (action) {
       case 'edit':
-        await openArtworkEditor(context, artwork.id,
-            source: 'artist_portfolio');
+        await openArtworkEditor(
+          context,
+          artwork.id,
+          source: 'artist_portfolio',
+        );
         return;
       case 'publish':
         await _runPublishActionWithGuard(
@@ -810,8 +840,11 @@ class _ArtistPortfolioScreenState extends State<ArtistPortfolioScreen> {
             _deleteInFlightArtworkIds.contains(artwork.id)) {
           return;
         }
-        final confirmed =
-            await _confirmDeleteArtwork(context, artwork.id, artwork.title);
+        final confirmed = await _confirmDeleteArtwork(
+          context,
+          artwork.id,
+          artwork.title,
+        );
         if (confirmed != true) return;
         if (!mounted) return;
         if (_deleteInFlightArtworkIds.contains(artwork.id)) return;
@@ -821,7 +854,8 @@ class _ArtistPortfolioScreenState extends State<ArtistPortfolioScreen> {
           if (!mounted) return;
           messenger.showKubusSnackBar(
             SnackBar(
-                content: Text(l10n.artistGalleryDeletedToast(artwork.title))),
+              content: Text(l10n.artistGalleryDeletedToast(artwork.title)),
+            ),
           );
         } catch (_) {
           if (!mounted) return;
@@ -967,7 +1001,8 @@ class _ArtistPortfolioScreenState extends State<ArtistPortfolioScreen> {
     required bool publish,
   }) async {
     final messenger = ScaffoldMessenger.of(context);
-    final savedToastMessage = AppLocalizations.of(context)!.commonSavedToast;
+    final l10n = AppLocalizations.of(context)!;
+    final savedToastMessage = l10n.commonSavedToast;
     final profileProvider = context.read<ProfileProvider>();
     final walletProvider = context.read<WalletProvider>();
     final canProceed = await WalletActionGuard.ensureSignerAccess(
@@ -979,16 +1014,23 @@ class _ArtistPortfolioScreenState extends State<ArtistPortfolioScreen> {
       return;
     }
 
-    if (publish) {
-      await provider.publishArtwork(artworkId);
-    } else {
-      await provider.unpublishArtwork(artworkId);
+    try {
+      if (publish) {
+        await provider.publishArtwork(artworkId);
+      } else {
+        await provider.unpublishArtwork(artworkId);
+      }
+    } on ArtworkEditorialHoldException catch (hold) {
+      // An editor's hold is a decision to explain, not a failure to retry.
+      if (!mounted) return;
+      messenger.showKubusSnackBar(
+        SnackBar(content: Text(artworkEditorialHoldMessage(l10n, hold))),
+      );
+      return;
     }
 
     if (!mounted) return;
-    messenger.showKubusSnackBar(
-      SnackBar(content: Text(savedToastMessage)),
-    );
+    messenger.showKubusSnackBar(SnackBar(content: Text(savedToastMessage)));
   }
 }
 
@@ -1047,7 +1089,8 @@ class _DropdownFilter<T> extends StatelessWidget {
 
     return Container(
       padding: const EdgeInsets.symmetric(
-          horizontal: KubusSpacing.md - KubusSpacing.xxs),
+        horizontal: KubusSpacing.md - KubusSpacing.xxs,
+      ),
       decoration: BoxDecoration(
         color: scheme.surfaceContainerHighest,
         borderRadius: BorderRadius.circular(KubusRadius.md),

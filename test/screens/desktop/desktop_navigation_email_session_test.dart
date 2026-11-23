@@ -10,6 +10,7 @@ import 'package:art_kubus/providers/profile_provider.dart';
 import 'package:art_kubus/providers/themeprovider.dart';
 import 'package:art_kubus/screens/desktop/components/desktop_navigation.dart';
 import 'package:art_kubus/services/backend_api_service.dart';
+import '../../support/account_session_fixture.dart';
 
 /// Serves one authenticated account at a time. The email session has no wallet.
 class _EmailSessionApi implements ProfileBackendApi {
@@ -84,7 +85,27 @@ Map<String, dynamic> _aliceAccount() => <String, dynamic>{
       'updatedAt': '2026-03-31T00:00:00.000Z',
     };
 
+/// Serves a wallet account's public profile by its wallet address, which is how
+/// the cold-start load reads a stored wallet with no account session.
+class _WalletProfileApi extends _EmailSessionApi {
+  @override
+  Future<Map<String, dynamic>> getProfileByWallet(String walletAddress) async =>
+      <String, dynamic>{
+        'id': 'user-artist',
+        'userId': 'user-artist',
+        'walletAddress': walletAddress,
+        'username': 'qa088_artist',
+        'displayName': 'QA Artist',
+        'bio': '',
+        'avatar': '',
+        'createdAt': '2026-03-31T00:00:00.000Z',
+        'updatedAt': '2026-03-31T00:00:00.000Z',
+      };
+}
+
 void main() {
+  tearDown(AccountSessionFixture.end);
+
   TestWidgetsFlutterBinding.ensureInitialized();
 
   Future<void> pumpRail(WidgetTester tester, ProfileProvider profile) async {
@@ -140,6 +161,8 @@ void main() {
   testWidgets(
       'an email session without a wallet shows the account, not Sign in',
       (tester) async {
+    SharedPreferences.setMockInitialValues(const <String, Object>{});
+    AccountSessionFixture.start(accountId: 'user-a');
     final api = _EmailSessionApi()..account = _aliceAccount();
     final profile = ProfileProvider(apiService: api);
     // The load awaits real I/O (SharedPreferences), so it runs outside fake
@@ -162,6 +185,8 @@ void main() {
 
   testWidgets('signing out brings Sign in back and drops the account',
       (tester) async {
+    SharedPreferences.setMockInitialValues(const <String, Object>{});
+    AccountSessionFixture.start(accountId: 'user-a');
     final api = _EmailSessionApi()..account = _aliceAccount();
     final profile = ProfileProvider(apiService: api);
     await tester.runAsync(() => profile.loadAuthenticatedProfile());
@@ -173,5 +198,27 @@ void main() {
 
     expect(find.text('Sign in'), findsOneWidget);
     expect(find.text('Alice'), findsNothing);
+    expect(find.text('@alice'), findsNothing);
+  });
+
+  testWidgets(
+      'a forced sign-out on reload shows Sign in without the previous account handle',
+      (tester) async {
+    // The stored wallet outlives a forced sign-out, so the cold-start load holds
+    // that wallet's account profile while no session is left behind it.
+    SharedPreferences.setMockInitialValues(<String, Object>{
+      'wallet_address': 'WalletArtist111',
+    });
+    final profile = ProfileProvider(apiService: _WalletProfileApi());
+    await tester.runAsync(() => profile.loadProfile('WalletArtist111'));
+    expect(profile.isSignedIn, isFalse);
+    // Held, but nobody is signed in: the account accessor reads nothing.
+    expect(profile.heldProfile?.username, 'qa088_artist');
+    expect(profile.currentUser, isNull);
+
+    await pumpRail(tester, profile);
+
+    expect(find.text('Sign in'), findsOneWidget);
+    expect(find.text('@qa088_artist'), findsNothing);
   });
 }

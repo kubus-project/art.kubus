@@ -1193,7 +1193,14 @@
   "settingsEnableNotificationsInSystemToast": "Enable notifications in system settings to receive alerts.",
   "settingsLogoutDialogTitle": "Log out",
   "settingsLogoutDialogBody": "Disconnect your wallet and clear your session on this device?",
+  "settingsLogoutDialogBodyAccountOnly": "Clear your session on this device?",
   "settingsLogoutButton": "Log out",
+  "settingsBrowserLogoutPending": "You are signed out on this device. The browser could not confirm server sign-out; it will retry before restoring a session.",
+  "@settingsBrowserLogoutPending": {"description": "Message shown when local sign-out completed but cookie revocation is pending."},
+  "browserSessionRestoreUnavailable": "We couldn't restore your browser session. Sign in again to continue.",
+  "@browserSessionRestoreUnavailable": {"description": "Message shown when browser session restoration could not be confirmed."},
+  "browserSessionLogoutUnresolved": "We couldn't confirm that your earlier browser session ended. Sign out again when the connection is back.",
+  "@browserSessionLogoutUnresolved": {"description": "Message shown when a web sign-out could not be confirmed on the server."},
   "settingsTransactionHistoryDialogTitle": "Transaction history",
   "settingsRecentTransactionsTitle": "Recent transactions",
   "settingsNoTransactionsTitle": "No transactions found",
@@ -1233,6 +1240,10 @@
   "settingsTermsDialogBody": "By using art.kubus, you agree to these terms:\n\n1. art.kubus is an open art platform and research-development prototype.\n2. You are responsible for protecting any wallet, recovery phrase, and recovery passwords you choose to use.\n3. Wallet-based actions can be final and irreversible.\n4. Discovery, community participation, and public cultural access should be used responsibly.\n5. We may update these terms over time.\n\nFor the complete terms, visit our website.",
   "settingsPrivacyPolicyDialogTitle": "Privacy policy",
   "settingsPrivacyPolicyDialogBody": "Your privacy matters to us:\n\n• We only collect personal data when it is needed and you have consented\n• Your wallet keys and recovery phrase stay under your control\n• We may collect anonymous usage statistics to improve the app\n• We do not share your data with third parties\n• You can disable analytics in Privacy settings\n\nFor our complete privacy policy, visit our website.",
+  "settingsLegalOpenFullTerms": "Read full terms",
+  "settingsLegalOpenFullPrivacy": "Read full privacy policy",
+  "settingsLegalOpenFailed": "Could not open {url}",
+  "@settingsLegalOpenFailed": {"placeholders": {"url": {"type": "String"}}},
   "settingsSupportDialogTitle": "Support",
   "settingsSupportDialogBody": "Need help? Choose an option:",
   "settingsOpeningFaqToast": "Opening FAQ…",
@@ -2250,6 +2261,7 @@
   "userProfileFollowingLoadFailedMessage": "Failed to load following.",
   "userProfileMessageLoginRequiredToast": "Please log in to message this user.",
   "userProfileConversationOpenFailedToast": "Could not open conversation.",
+  "messagingRecipientUnavailableToast": "You cannot message this account.",
   "userProfileConversationOpenGenericErrorToast": "Failed to open conversation. Please try again.",
   "userProfileAchievementsTitle": "Achievements",
   "profileBadgesVerificationTitle": "Profile badges",
@@ -4219,6 +4231,8 @@
   "communityGroupsSearchHint": "Search community groups",
   "communityGroupsDirectoryTitle": "Group directory",
   "communityGroupsDirectoryDescription": "Find focused spaces for critiques, exhibitions, public art, events, and collaborations.",
+  "communityGroupsJoinedSectionTitle": "Your groups",
+  "communityGroupsDiscoverSectionTitle": "Discover public groups",
   "communityClearSearchTooltip": "Clear search",
   "communityFabNewPost": "New post",
   "communityFabCreateGroup": "Create group",
@@ -5408,6 +5422,9 @@
   "commonChange": "Change",
   "commonOpen": "Open",
   "commonLoading": "Loading",
+  "artworkPrivatePreviewDenied": "Sign in with an account that can view this draft.",
+  "artworkPrivatePreviewUnavailable": "This preview is not available.",
+  "artworkPrivatePreviewRetry": "This preview is temporarily unavailable. Try again later.",
   "desktopShellNavHome": "Home",
   "desktopShellNavExplore": "Explore",
   "desktopShellNavConnect": "Connect",
@@ -6861,6 +6878,25 @@
   },
   "spatialHistoryTitle": "Spatial history",
   "spatialLoadArchiveQuality": "Load archival quality",
+  "spatialLoadArchiveQualityWithSize": "Load archival quality ({size})",
+  "@spatialLoadArchiveQualityWithSize": {
+    "placeholders": {
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "spatialArchiveConsentBody": "The archival version is the full-detail capture. It is large and can use a lot of data, so it only loads when you ask.",
+  "spatialArchiveConfirmTitle": "Load a large archive?",
+  "spatialArchiveConfirmBody": "This download is about {size}. Continue only on a connection you are happy to use.",
+  "@spatialArchiveConfirmBody": {
+    "placeholders": {
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "spatialArchiveConfirmBodyUnknownSize": "This download is large and its size is not known. Continue only on a connection you are happy to use.",
   "spatialQualityMobile": "Optimised",
   "spatialQualityPreview": "Preview",
   "spatialQualityArchive": "Archival",
@@ -6868,6 +6904,9 @@
   "spatialViewerFullscreen": "Fullscreen",
   "spatialViewerRetry": "Try again",
   "spatialViewerUnavailable": "This spatial archive is currently unavailable.",
+  "spatialViewerLoading": "Loading the 3D view…",
+  "spatialViewerActivate": "Tap to interact",
+  "spatialViewerDragHint": "Drag to look around",
   "spatialViewerFallback": "Trying another archive route…",
   "spatialViewerWebSafety": "Open the public archive in a compatible viewer. A secure web page does not contact local LAN nodes.",
   "spatialCaptureFinish": "Finish capture",
@@ -8117,5 +8156,64 @@
   "analyticsConsentPromptBody": "May we record how this app is used, such as the screens you open and steps like signing up, to improve it? Nothing is collected unless you accept. You can change this at any time in Settings.",
   "analyticsConsentPromptAccept": "Accept",
   "analyticsConsentPromptDecline": "Decline",
-  "analyticsConsentPromptSemanticsLabel": "Optional analytics choice"
+  "analyticsConsentPromptSemanticsLabel": "Optional analytics choice",
+  "galleryTitle": "Gallery",
+  "galleryCurate": "Curate gallery",
+  "galleryModeWall": "Gallery wall",
+  "galleryModeRooms": "Folded rooms",
+  "galleryModeField": "Reading field",
+  "galleryModeLabel": "Layout",
+  "galleryPublished": "Published",
+  "galleryUnpublished": "Unpublished draft",
+  "galleryUnsaved": "Unsaved changes",
+  "galleryArtworkOrder": "Artwork order",
+  "gallerySectionOrder": "Section order",
+  "galleryMoveEarlier": "Move earlier",
+  "galleryMoveLater": "Move later",
+  "galleryHideSection": "Hide section",
+  "gallerySaveDraft": "Save draft",
+  "galleryPublish": "Publish gallery",
+  "galleryResetToAutomatic": "Reset to automatic",
+  "galleryDiscard": "Discard changes",
+  "galleryDiscardPrompt": "Discard your unsaved changes to the gallery?",
+  "galleryConflict": "This gallery changed elsewhere. Reload before saving again.",
+  "galleryUnavailable": "Gallery unavailable.",
+  "galleryArtworkUnavailable": "Artwork unavailable",
+  "galleryEmpty": "No artworks to display.",
+  "galleryMore": "Show more artworks",
+  "gallerySectionIdentity": "Identity",
+  "gallerySectionStats": "Statistics",
+  "gallerySectionWork": "Works and projects",
+  "gallerySectionPublicArt": "Public art",
+  "gallerySectionActivity": "Activity",
+  "gallerySectionRecognition": "Recognition",
+  "gallerySectionProgram": "Programme",
+  "gallerySectionPoap": "Attendance collectible",
+  "gallerySectionVisit": "Visit",
+  "gallerySectionEvents": "Events",
+  "gallerySectionCredits": "Credits",
+  "galleryPersonalPreview": "Draft preview",
+  "galleryReload": "Reload gallery",
+  "galleryArtworkSizing": "Artwork size and placement",
+  "gallerySizeSmall": "Small",
+  "gallerySizeStandard": "Standard",
+  "gallerySizeLead": "Large",
+  "galleryMakeLead": "Make lead artwork",
+  "galleryClearLead": "Clear lead artwork",
+  "galleryPublishNotAllowed": "You can edit this gallery but not publish it.",
+  "galleryRefreshFailed": "Your change was saved, but the gallery could not be refreshed.",
+  "galleryMovedTo": "Moved to position {position} of {total}",
+  "@galleryMovedTo": {
+    "placeholders": {
+      "position": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "artworkPublishHeldWithdrawn": "An editor withdrew this artwork. Only an editorial decision can restore it.",
+  "artworkPublishHeldInReview": "This artwork is waiting for editorial review. It can be published once it is approved.",
+  "artworkPublishHeldGeneric": "This artwork is on editorial hold and cannot be published yet."
 }

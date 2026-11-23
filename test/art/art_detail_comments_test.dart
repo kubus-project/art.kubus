@@ -9,6 +9,7 @@ import 'package:art_kubus/services/backend_api_service.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../support/account_session_fixture.dart';
 
 class _FakeArtworkApi implements ArtworkBackendApi {
   _FakeArtworkApi({required Completer<ArtworkComment> createCompleter})
@@ -49,6 +50,8 @@ class _FakeArtworkApi implements ArtworkBackendApi {
     String? walletAddress,
     bool includePrivateForWallet = false,
     List<String>? ids,
+    bool mine = false,
+    String? authorProfileId,
   }) =>
       throw UnimplementedError();
 
@@ -170,6 +173,10 @@ class _FakeProfileApi implements ProfileBackendApi {
 }
 
 void main() {
+  // A signed-in surface has a live session behind its held profile.
+  setUp(() => AccountSessionFixture.start(accountId: 'test-account'));
+  tearDown(AccountSessionFixture.end);
+
   TestWidgetsFlutterBinding.ensureInitialized();
 
   setUp(() async {
@@ -226,6 +233,8 @@ void main() {
     await provider.initialize();
 
     const wallet = 'wallet_2';
+    // The saved wallet profile is the account behind the session.
+    AccountSessionFixture.start(accountId: 'test-account', wallet: wallet);
     final ok = await provider.saveProfile(
       walletAddress: wallet,
       username: 'tester',

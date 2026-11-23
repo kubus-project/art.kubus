@@ -41,6 +41,7 @@ class DeepLinkStartupRouting {
       case ShareEntityType.profile:
       case ShareEntityType.exhibition:
       case ShareEntityType.collection:
+      case ShareEntityType.institution:
       case ShareEntityType.nft:
         // Shared NFT URLs identify public collectible documents. Wallet-owned
         // assets and on-chain actions keep their contextual action gates.
@@ -105,6 +106,8 @@ class DeepLinkStartupRouting {
       ShareEntityType.post => locale == 'sl' ? 'objave' : 'posts',
       ShareEntityType.nft =>
         locale == 'sl' ? 'zbirateljski-predmeti' : 'collectibles',
+      ShareEntityType.institution =>
+        locale == 'sl' ? 'institucije' : 'institutions',
     };
 
     final expected = '/$locale/$segment/${Uri.encodeComponent(pending.id)}';

@@ -13,6 +13,7 @@ import '../services/account_identity.dart';
 import '../services/backend_api_service.dart';
 import '../services/profile_package_mutation_tracker.dart';
 import '../services/user_action_logger.dart';
+import '../utils/artwork_author_key.dart';
 import '../utils/wallet_utils.dart';
 import 'saved_items_provider.dart';
 
@@ -27,6 +28,10 @@ class ArtworkProvider extends ChangeNotifier {
   int _loadingSequence = 0;
   final Set<String> _walletsWithPrivateArtworks = <String>{};
   final Set<String> _walletsWithPublicArtworks = <String>{};
+  // Artwork ids listed for each walletless account (keyed by account id).
+  final Map<String, Set<String>> _artworkIdsByAccount = <String, Set<String>>{};
+  final Map<String, Set<String>> _artworkIdsByProfile = <String, Set<String>>{};
+  final Map<String, String> _authorListErrors = <String, String>{};
   String? _error;
   SavedItemsProvider? _savedItemsProvider;
   final ArtworkBackendApi _backendApi;
@@ -34,12 +39,20 @@ class ArtworkProvider extends ChangeNotifier {
   final Map<String, ArtworkSpatialHistory> _spatialHistory = {};
   final Map<String, Future<ArtworkSpatialHistory>> _spatialHistoryLoads = {};
   final Map<String, String> _spatialHistoryErrors = {};
-  final Map<String, Future<Artwork>> _inFlightArtworkFetches =
-      <String, Future<Artwork>>{};
+  final Map<String, Future<Artwork?>> _inFlightArtworkFetches =
+      <String, Future<Artwork?>>{};
+  final Map<String, Future<Artwork?>> _inFlightArtworkDetailRefreshes =
+      <String, Future<Artwork?>>{};
   // Individual detail requests may return artwork outside the first page used
   // by the startup list. Keep those records available for the provider's
   // lifetime instead of treating an omitted first-page row as a deletion.
   final Set<String> _supplementalArtworkIds = <String>{};
+  // Permission is coupled to the URLs from the current detail response. List,
+  // wallet, and local upserts cannot introduce different media under that grant.
+  final Map<String, Artwork> _trustedCurrentMediaDetails = <String, Artwork>{};
+  // Account switches invalidate grants but keep an in-memory deny-only marker
+  // until a fresh current read for that identity replaces it.
+  final Set<String> _currentMediaDenyIds = <String>{};
   Future<void>? _inFlightLoadArtworks;
   DateTime? _lastArtworksLoadAt;
   // Bumped by clearAccountScopedState. A response that started under an
@@ -160,8 +173,11 @@ class ArtworkProvider extends ChangeNotifier {
       ..._walletsWithPrivateArtworks,
       ..._walletsWithPublicArtworks,
     };
+    final ownedAccountArtworkIds =
+        _artworkIdsByAccount.values.expand((ids) => ids).toSet();
     bool ownedByEndingSession(Artwork artwork) {
       if (!artwork.isPublic) return true;
+      if (ownedAccountArtworkIds.contains(artwork.id)) return true;
       final wallet = artwork.walletAddress?.trim() ?? '';
       return wallet.isNotEmpty &&
           ownedWallets.contains(WalletUtils.canonical(wallet));
@@ -177,8 +193,13 @@ class ArtworkProvider extends ChangeNotifier {
     );
 
     _supplementalArtworkIds.clear();
+    _currentMediaDenyIds.addAll(_trustedCurrentMediaDetails.keys);
+    _trustedCurrentMediaDetails.clear();
     _walletsWithPrivateArtworks.clear();
     _walletsWithPublicArtworks.clear();
+    _artworkIdsByAccount.clear();
+    _artworkIdsByProfile.clear();
+    _authorListErrors.clear();
     _lastArtworksLoadAt = null;
     _inFlightLoadArtworks = null;
     _inFlightArtworkFetches.clear();
@@ -194,6 +215,18 @@ class ArtworkProvider extends ChangeNotifier {
     _commentLoadErrors.clear();
     _commentSubmitErrors.clear();
 
+    for (final id in _artworkById.keys.toList(growable: false)) {
+      final artwork = _artworkById[id]!;
+      if (artwork.currentPublicMediaAllowed != null ||
+          artwork.mediaPreview != null) {
+        _currentMediaDenyIds.add(id);
+        _artworkById[id] = artwork.copyWith(
+          currentPublicMediaAllowed: false,
+          clearMediaPreview: true,
+          mediaPreviewProvided: true,
+        );
+      }
+    }
     for (final id in _artworkById.keys.toList(growable: false)) {
       final artwork = _artworkById[id]!;
       final viewerScoped = artwork.isLikedByCurrentUser ||
@@ -318,10 +351,14 @@ class ArtworkProvider extends ChangeNotifier {
 
     try {
       final epoch = _accountEpoch;
-      final future = _backendApi.getArtwork(key).then((fetched) {
-        if (epoch == _accountEpoch) {
-          addOrUpdateArtwork(fetched, retainWhenListRefresh: true);
-        }
+      final future = (() async {
+        final api = _backendApi;
+        return _getCurrentMediaArtwork(api, key);
+      })()
+          .then((current) {
+        if (epoch != _accountEpoch) return null;
+        final fetched = _storeCurrentMediaDetail(current);
+        addOrUpdateArtwork(fetched, retainWhenListRefresh: true);
         return fetched;
       });
       _inFlightArtworkFetches[key] = future;
@@ -333,6 +370,86 @@ class ArtworkProvider extends ChangeNotifier {
       rethrow;
     } finally {
       _inFlightArtworkFetches.remove(key);
+    }
+  }
+
+  static bool _isSessionRejection(Object error) =>
+      error is BackendApiRequestException &&
+      (error.statusCode == 401 || error.statusCode == 403);
+
+  Future<ArtworkCurrentMediaDetail> _getCurrentMediaArtwork(
+    ArtworkBackendApi api,
+    String identifier,
+  ) async {
+    if (api is! ArtworkCurrentMediaApi) {
+      throw StateError('Current artwork media detail unavailable');
+    }
+    final currentApi = api as ArtworkCurrentMediaApi;
+    late final ArtworkCurrentMediaDetail current;
+    try {
+      current = await currentApi.getArtworkCurrentMediaDetail(
+        identifier,
+        includeAuth: true,
+      );
+    } catch (error) {
+      // A rejected session gets exactly one guest current-row read. Other
+      // errors remain fail-closed and never fall back to snapshots or Orbit.
+      if (!_isSessionRejection(error)) rethrow;
+      final guest = await currentApi.getArtworkCurrentMediaDetail(
+        identifier,
+        includeAuth: false,
+      );
+      if (!guest.publicMediaAllowed) {
+        throw BackendApiRequestException(
+          statusCode: 404,
+          path: '/api/artworks/$identifier?currentMedia=true',
+        );
+      }
+      return guest;
+    }
+    return current;
+  }
+
+  /// Refreshes detail visibility and media authority for the current screen
+  /// entry, even when an older detail response already supplied a descriptor.
+  Future<Artwork?> refreshArtworkDetailMetadata(String artworkId) async {
+    final id = artworkId.trim();
+    final current = getArtworkById(id);
+    if (id.isEmpty || current == null) return current;
+
+    final epoch = _accountEpoch;
+    final requestKey = '$epoch-$id';
+    final pending = _inFlightArtworkDetailRefreshes[requestKey];
+    if (pending != null) return pending;
+
+    final future = _fetchArtworkDetailMetadata(id, epoch);
+    _inFlightArtworkDetailRefreshes[requestKey] = future;
+    try {
+      return await future;
+    } finally {
+      if (identical(_inFlightArtworkDetailRefreshes[requestKey], future)) {
+        _inFlightArtworkDetailRefreshes.remove(requestKey);
+      }
+    }
+  }
+
+  Future<Artwork?> _fetchArtworkDetailMetadata(String id, int epoch) async {
+    final api = _backendApi;
+    try {
+      final current = await _getCurrentMediaArtwork(api, id);
+      final fetched = current.artwork;
+      final exactId = fetched.id.toLowerCase() == id.toLowerCase();
+      final exactMintAlias =
+          fetched.isNft && fetched.nftMintAddress?.trim() == id;
+      if (epoch != _accountEpoch || (!exactId && !exactMintAlias)) return null;
+      final stored = _storeCurrentMediaDetail(current);
+      _supplementalArtworkIds.add(stored.id);
+      notifyListeners();
+      return getArtworkById(stored.id);
+    } catch (_) {
+      // A cached detail is not proof that media remains public. Callers keep
+      // the loading/error surface instead of displaying stale URLs.
+      return null;
     }
   }
 
@@ -446,6 +563,56 @@ class ArtworkProvider extends ChangeNotifier {
     return matches;
   }
 
+  /// Artwork library visible for [key]. Wallet behavior stays legacy-compatible;
+  /// walletless owners combine their authorized own list and the public works
+  /// attributed to their canonical profile.
+  List<Artwork> artworksForAuthor(ArtworkAuthorKey key) {
+    final wallet = key.wallet;
+    if (wallet != null) {
+      return artworksForWallet(wallet);
+    }
+    final ids = <String>{
+      if (key.accountId != null) ...?_artworkIdsByAccount[key.accountId],
+      if (key.profileId != null) ...?_artworkIdsByProfile[key.profileId],
+    };
+    if (ids.isEmpty) {
+      return const <Artwork>[];
+    }
+    final matches = _artworks
+        .where((artwork) => ids.contains(artwork.id))
+        .toList(growable: false);
+    matches.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+    return matches;
+  }
+
+  /// Public authored works for a profile surface.
+  ///
+  /// Walletless creator libraries may combine private account-owned works
+  /// with public authorship. A profile sheet is a public authorship surface,
+  /// so it must use only the canonical profile scope. Keep legacy wallet
+  /// profile behavior unchanged.
+  List<Artwork> publicArtworksForAuthor(ArtworkAuthorKey key) {
+    final wallet = key.wallet;
+    if (wallet != null) {
+      return artworksForWallet(wallet)
+          .where((artwork) => artwork.isPublic)
+          .toList(growable: false);
+    }
+    final profileId = key.profileId;
+    if (profileId == null) return const <Artwork>[];
+    final ids = _artworkIdsByProfile[profileId];
+    if (ids == null || ids.isEmpty) return const <Artwork>[];
+
+    final matches = _artworks
+        .where((artwork) => ids.contains(artwork.id) && artwork.isPublic)
+        .toList(growable: false);
+    matches.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+    return matches;
+  }
+
+  String? authorListErrorFor(ArtworkAuthorKey key) =>
+      _authorListErrors[key.cacheKey];
+
   /// Get artworks by category
   List<Artwork> getArtworksByCategory(String category) {
     return _artworks.where((artwork) => artwork.category == category).toList();
@@ -464,14 +631,59 @@ class ArtworkProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  void _upsertArtwork(Artwork artwork) {
-    final index = _artworks.indexWhere((a) => a.id == artwork.id);
-    if (index >= 0) {
-      _artworks[index] = artwork;
-    } else {
-      _artworks.add(artwork);
+  void _upsertArtwork(Artwork artwork, {bool currentMediaDetail = false}) {
+    final nextArtwork =
+        currentMediaDetail ? artwork : _bindCurrentMediaToTrustedUrls(artwork);
+    if (currentMediaDetail) {
+      _trustedCurrentMediaDetails[nextArtwork.id] = nextArtwork;
     }
-    _artworkById[artwork.id] = artwork;
+    final index = _artworks.indexWhere((a) => a.id == nextArtwork.id);
+    if (index >= 0) {
+      _artworks[index] = nextArtwork;
+    } else {
+      _artworks.add(nextArtwork);
+    }
+    _artworkById[nextArtwork.id] = nextArtwork;
+  }
+
+  Artwork _bindCurrentMediaToTrustedUrls(Artwork incoming) {
+    final trusted = _trustedCurrentMediaDetails[incoming.id];
+    if (trusted == null) {
+      // A runtime grant copied from an old model is not a new current read.
+      if (_currentMediaDenyIds.contains(incoming.id) ||
+          incoming.currentPublicMediaAllowed != null) {
+        _currentMediaDenyIds.add(incoming.id);
+        return incoming.copyWith(
+          currentPublicMediaAllowed: false,
+          clearMediaPreview: true,
+          mediaPreviewProvided: true,
+        );
+      }
+      return incoming;
+    }
+    return incoming.copyWith(
+      imageUrl: trusted.imageUrl,
+      clearImageUrl: trusted.imageUrl == null,
+      galleryUrls: trusted.galleryUrls,
+      galleryMeta: trusted.galleryMeta,
+      model3DURL: trusted.model3DURL,
+      clearModel3DURL: trusted.model3DURL == null,
+      poapImageUrl: trusted.poapImageUrl,
+      clearPoapImageUrl: trusted.poapImageUrl == null,
+      mediaPreview: trusted.mediaPreview,
+      clearMediaPreview: trusted.mediaPreview == null,
+      mediaPreviewProvided: trusted.mediaPreviewProvided,
+      currentPublicMediaAllowed: trusted.currentPublicMediaAllowed,
+    );
+  }
+
+  Artwork _storeCurrentMediaDetail(ArtworkCurrentMediaDetail current) {
+    final artwork = _mergeSavedBookmarkState(current.artwork.copyWith(
+      currentPublicMediaAllowed: current.publicMediaAllowed,
+    ));
+    _currentMediaDenyIds.remove(artwork.id);
+    _upsertArtwork(artwork, currentMediaDetail: true);
+    return artwork;
   }
 
   void _invalidateShowcaseForArtwork(Artwork artwork) {
@@ -572,6 +784,8 @@ class ArtworkProvider extends ChangeNotifier {
   void removeArtwork(String artworkId) {
     _artworks.removeWhere((artwork) => artwork.id == artworkId);
     _artworkById.remove(artworkId);
+    _trustedCurrentMediaDetails.remove(artworkId);
+    _currentMediaDenyIds.remove(artworkId);
     _comments.remove(artworkId);
     notifyListeners();
   }
@@ -612,6 +826,10 @@ class ArtworkProvider extends ChangeNotifier {
         // No cached artwork; backend likely succeeded but we can't verify
         return null;
       }
+    } on ArtworkEditorialHoldException {
+      // An editor's hold is a decision the caller explains to the owner, not
+      // a generic failure, and it is never retried.
+      rethrow;
     } catch (e) {
       if (epoch == _accountEpoch) _setError('Failed to publish artwork: $e');
       return null;
@@ -697,7 +915,10 @@ class ArtworkProvider extends ChangeNotifier {
     } catch (e) {
       final failure = classifyArtworkUpdateFailure(e);
       if (epoch == _accountEpoch) _setError('Failed to update artwork: $e');
-      return ArtworkUpdateResult.failed(failure);
+      return ArtworkUpdateResult.failed(
+        failure,
+        hold: e is ArtworkEditorialHoldException ? e : null,
+      );
     } finally {
       _endLoading(operation, loadingGeneration);
     }
@@ -1191,16 +1412,21 @@ class ArtworkProvider extends ChangeNotifier {
       if (refresh) {
         _walletsWithPrivateArtworks.clear();
         _walletsWithPublicArtworks.clear();
+        _artworkIdsByAccount.clear();
       }
       final artworks = await _backendApi.getArtworks(limit: 100);
       if (epoch != _accountEpoch) return;
-      final merged = artworks.map(_mergeSavedBookmarkState).toList();
+      final merged = artworks
+          .map(_mergeSavedBookmarkState)
+          .map(_bindCurrentMediaToTrustedUrls)
+          .toList();
       final listedArtworkIds = merged.map((artwork) => artwork.id).toSet();
       final supplementalArtworks = _supplementalArtworkIds
           .where((artworkId) => !listedArtworkIds.contains(artworkId))
           .map((artworkId) => _artworkById[artworkId])
           .whereType<Artwork>()
           .map(_mergeSavedBookmarkState)
+          .map(_bindCurrentMediaToTrustedUrls)
           .toList(growable: false);
       _artworks
         ..clear()
@@ -1252,7 +1478,9 @@ class ArtworkProvider extends ChangeNotifier {
       if (epoch != _accountEpoch) return;
       bool updated = false;
       for (final artwork in walletArtworks) {
-        final merged = _mergeSavedBookmarkState(artwork);
+        final merged = _bindCurrentMediaToTrustedUrls(
+          _mergeSavedBookmarkState(artwork),
+        );
         final index = _artworks.indexWhere((a) => a.id == artwork.id);
         if (index >= 0) {
           _artworks[index] = merged;
@@ -1268,6 +1496,107 @@ class ArtworkProvider extends ChangeNotifier {
       }
     } catch (e) {
       _setError('Failed to load wallet artworks: $e');
+    } finally {
+      _endLoading(operationKey, loadingGeneration);
+    }
+  }
+
+  /// Loads the artworks authored by [key].
+  ///
+  /// Wallet reads remain unchanged. Walletless own libraries combine the
+  /// caller's private/owned `mine=true` list with public authorship filtered by
+  /// canonical `profiles.id`; foreign profiles request only the public scope.
+  Future<void> loadArtworksForAuthor(
+    ArtworkAuthorKey key, {
+    bool force = false,
+    bool includePrivateForWallet = true,
+  }) async {
+    final wallet = key.wallet;
+    if (wallet != null) {
+      return loadArtworksForWallet(
+        wallet,
+        force: force,
+        includePrivateForWallet: includePrivateForWallet,
+      );
+    }
+    final accountId = key.accountId;
+    final profileId = key.profileId;
+    if ((accountId == null || accountId.isEmpty) &&
+        (profileId == null || profileId.isEmpty)) {
+      return;
+    }
+    if (!force &&
+        profileId == null &&
+        accountId != null &&
+        _artworkIdsByAccount.containsKey(accountId)) {
+      return;
+    }
+
+    final operationKey = key.loadOperationKey;
+    final loadingGeneration = _beginLoading(operationKey);
+    final epoch = _accountEpoch;
+    _authorListErrors.remove(key.cacheKey);
+    if (profileId != null) _artworkIdsByProfile.remove(profileId);
+    try {
+      var accountArtworks = const <Artwork>[];
+      var authoredArtworks = const <Artwork>[];
+      Object? accountFailure;
+      Object? authorshipFailure;
+      await Future.wait<void>([
+        if (accountId != null && accountId.isNotEmpty)
+          _backendApi.getArtworks(mine: true, limit: 100).then<void>(
+                (items) => accountArtworks = items,
+                onError: (Object error, StackTrace _) => accountFailure = error,
+              ),
+        if (profileId != null && profileId.isNotEmpty)
+          _backendApi
+              .getArtworks(authorProfileId: profileId, limit: 200)
+              .then<void>(
+                (items) => authoredArtworks = items,
+                onError: (Object error, StackTrace _) =>
+                    authorshipFailure = error,
+              ),
+      ]);
+      if (epoch != _accountEpoch) return;
+      if (authorshipFailure != null) {
+        _authorListErrors[key.cacheKey] = authorshipFailure.toString();
+      }
+      if (accountFailure != null && authorshipFailure == null) {
+        _authorListErrors[key.cacheKey] = accountFailure.toString();
+      }
+      final accountIds = <String>{};
+      final profileIds = <String>{};
+      for (final artwork in <Artwork>[
+        ...accountArtworks,
+        ...authoredArtworks
+      ]) {
+        final merged = _mergeSavedBookmarkState(artwork);
+        _upsertArtwork(merged);
+        _supplementalArtworkIds.add(merged.id);
+      }
+      for (final artwork in accountArtworks) {
+        accountIds.add(artwork.id);
+      }
+      for (final artwork in authoredArtworks) {
+        profileIds.add(artwork.id);
+      }
+      if (accountId != null) {
+        _artworkIdsByAccount[accountId] = accountIds;
+      }
+      if (profileId != null) {
+        _artworkIdsByProfile[profileId] = profileIds;
+      }
+      if (accountFailure != null || authorshipFailure != null) {
+        _setError('Failed to load authored artworks: '
+            '${authorshipFailure ?? accountFailure}');
+      } else {
+        notifyListeners();
+      }
+    } catch (e) {
+      if (epoch == _accountEpoch) {
+        _authorListErrors[key.cacheKey] = e.toString();
+        _setError('Failed to load authored artworks: $e');
+      }
     } finally {
       _endLoading(operationKey, loadingGeneration);
     }
@@ -1557,6 +1886,10 @@ enum ArtworkUpdateFailure {
   /// 409: the record changed underneath the edit.
   conflict,
 
+  /// 409 ARTWORK_EDITORIAL_HOLD: an editor holds the artwork; publishing it is
+  /// an editorial decision.
+  editorialHold,
+
   /// 429
   rateLimited,
 
@@ -1578,6 +1911,9 @@ ArtworkUpdateFailure classifyArtworkUpdateFailure(Object error) {
     }
     if (code == 401) return ArtworkUpdateFailure.unauthorized;
     if (code == 403) return ArtworkUpdateFailure.forbidden;
+    if (error is ArtworkEditorialHoldException) {
+      return ArtworkUpdateFailure.editorialHold;
+    }
     if (code == 409) return ArtworkUpdateFailure.conflict;
     if (code == 429) return ArtworkUpdateFailure.rateLimited;
     if (code == 400 || code == 404 || code == 422) {
@@ -1589,7 +1925,8 @@ ArtworkUpdateFailure classifyArtworkUpdateFailure(Object error) {
 }
 
 class ArtworkUpdateResult {
-  const ArtworkUpdateResult._(this.status, this.artwork, this.failure);
+  const ArtworkUpdateResult._(this.status, this.artwork, this.failure,
+      [this.hold]);
 
   const ArtworkUpdateResult.confirmed(Artwork artwork)
       : this._(ArtworkUpdateStatus.confirmed, artwork, null);
@@ -1597,8 +1934,9 @@ class ArtworkUpdateResult {
   const ArtworkUpdateResult.acknowledged(Artwork? artwork)
       : this._(ArtworkUpdateStatus.acknowledged, artwork, null);
 
-  const ArtworkUpdateResult.failed(ArtworkUpdateFailure failure)
-      : this._(ArtworkUpdateStatus.failed, null, failure);
+  const ArtworkUpdateResult.failed(ArtworkUpdateFailure failure,
+      {ArtworkEditorialHoldException? hold})
+      : this._(ArtworkUpdateStatus.failed, null, failure, hold);
 
   const ArtworkUpdateResult.alreadyInFlight()
       : this._(ArtworkUpdateStatus.alreadyInFlight, null, null);
@@ -1610,6 +1948,9 @@ class ArtworkUpdateResult {
   final Artwork? artwork;
 
   final ArtworkUpdateFailure? failure;
+
+  /// The editorial hold behind an [ArtworkUpdateFailure.editorialHold].
+  final ArtworkEditorialHoldException? hold;
 
   /// True when the backend accepted the write.
   bool get succeeded =>

@@ -1,8 +1,11 @@
+import 'dart:async';
+
 import 'package:art_kubus/models/saved_item.dart';
 import 'package:art_kubus/community/community_interactions.dart';
 import 'package:art_kubus/models/profile_identity_data.dart';
 import 'package:art_kubus/providers/saved_items_provider.dart';
 import 'package:art_kubus/services/backend_api_service.dart';
+import 'package:art_kubus/services/account_identity.dart';
 import 'package:art_kubus/services/saved_items_repository.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -114,8 +117,51 @@ class _FakeSavedItemsRepository extends SavedItemsRepository {
   }
 }
 
+class _GatedSavedItemsRepository extends _FakeSavedItemsRepository {
+  _GatedSavedItemsRepository({
+    required super.cachedItems,
+  });
+
+  final Completer<void> backendPageRequested = Completer<void>();
+  final Completer<SavedItemsPage> backendPage = Completer<SavedItemsPage>();
+  bool _holdFirstPage = true;
+
+  void releaseBackendPage(SavedItemsPage page) => backendPage.complete(page);
+
+  @override
+  Future<SavedItemsPage> loadBackendItems({
+    SavedItemType? type,
+    int limit = 50,
+    String? cursor,
+  }) {
+    if (_holdFirstPage) {
+      _holdFirstPage = false;
+      backendPageRequested.complete();
+      return backendPage.future;
+    }
+    return super.loadBackendItems(type: type, limit: limit, cursor: cursor);
+  }
+}
+
+class _GatedSavedMutationRepository extends _FakeSavedItemsRepository {
+  _GatedSavedMutationRepository() : super();
+
+  final Completer<void> saveStarted = Completer<void>();
+  final Completer<SavedItemRecord> saveResult = Completer<SavedItemRecord>();
+
+  void releaseSave(SavedItemRecord item) => saveResult.complete(item);
+
+  @override
+  Future<SavedItemRecord> save(SavedItemRecord item) {
+    saveStarted.complete();
+    return saveResult.future;
+  }
+}
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
+
+  tearDown(AccountIdentity.resetForTesting);
 
   setUp(() async {
     SharedPreferences.setMockInitialValues(<String, Object>{});
@@ -267,6 +313,90 @@ void main() {
     expect(provider.isPostSaved('post-1'), isTrue);
     expect(provider.savedArtistsCount, equals(0));
     expect(provider.savedPostsCount, equals(1));
+  });
+
+  test('account change clears saved cache and drops an earlier refresh',
+      () async {
+    final savedA = SavedItemRecord(
+      type: SavedItemType.artwork,
+      id: 'saved-A',
+      savedAt: DateTime.utc(2026, 11, 1),
+    );
+    final repository = _GatedSavedItemsRepository(
+      cachedItems: <SavedItemRecord>[savedA],
+    );
+    AccountIdentity.setAccountKey('account-A');
+    final provider = SavedItemsProvider(repository: repository);
+    addTearDown(provider.dispose);
+    await provider.initialize(syncBackend: false);
+    expect(provider.isArtworkSaved(savedA.id), isTrue);
+
+    final pending = provider.refreshFromBackend();
+    await repository.backendPageRequested.future;
+    AccountIdentity.setAccountKey('account-B');
+    AccountIdentity.notifyListenersChanged();
+
+    expect(provider.savedArtworkIds, isEmpty);
+    expect(provider.totalSavedCount, 0);
+    repository
+        .releaseBackendPage(SavedItemsPage(items: <SavedItemRecord>[savedA]));
+    await pending;
+    await provider.identityCleanupForTesting;
+
+    expect(provider.savedArtworkIds, isEmpty);
+    expect(provider.totalSavedCount, 0);
+    expect(repository.clearCachedStateCalled, isTrue);
+  });
+
+  test('same-account token refresh preserves saved cache', () async {
+    final savedA = SavedItemRecord(
+      type: SavedItemType.artwork,
+      id: 'saved-A',
+      savedAt: DateTime.utc(2026, 11, 1),
+    );
+    final provider = SavedItemsProvider(
+      repository: _FakeSavedItemsRepository(
+        cachedItems: <SavedItemRecord>[savedA],
+      ),
+    );
+    addTearDown(provider.dispose);
+    AccountIdentity.setAccountKey('account-A');
+    await provider.initialize(syncBackend: false);
+    BackendApiService().setAuthTokenForTesting('token-A');
+    BackendApiService().setAuthTokenForTesting('token-A-refreshed');
+    AccountIdentity.setAccountKey('account-A');
+
+    expect(provider.isArtworkSaved(savedA.id), isTrue);
+  });
+
+  test(
+      'account change discards a delayed save completion and clears its outbox',
+      () async {
+    final repository = _GatedSavedMutationRepository();
+    AccountIdentity.setAccountKey('account-A');
+    final provider = SavedItemsProvider(repository: repository);
+    addTearDown(provider.dispose);
+    await provider.initialize(syncBackend: false);
+
+    final savedA = SavedItemRecord(
+      type: SavedItemType.artwork,
+      id: 'saved-A',
+      savedAt: DateTime.utc(2026, 11, 1),
+    );
+    final pending = provider.setArtworkSaved(savedA.id, true);
+    await repository.saveStarted.future;
+    expect(provider.isArtworkSaved(savedA.id), isTrue);
+
+    AccountIdentity.setAccountKey('account-B');
+    AccountIdentity.notifyListenersChanged();
+    expect(provider.isArtworkSaved(savedA.id), isFalse);
+
+    repository.releaseSave(savedA);
+    await pending;
+    await provider.identityCleanupForTesting;
+    expect(provider.isArtworkSaved(savedA.id), isFalse);
+    expect(provider.totalSavedCount, 0);
+    expect(repository.clearCachedStateCalled, isTrue);
   });
 
   test('backend refresh preserves pending offline save', () async {

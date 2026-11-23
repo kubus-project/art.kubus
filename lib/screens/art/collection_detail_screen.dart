@@ -8,7 +8,7 @@ import 'package:provider/provider.dart';
 
 import '../../models/collection_record.dart';
 import '../../providers/collections_provider.dart';
-import '../../providers/wallet_provider.dart';
+import '../../providers/profile_provider.dart';
 import '../../providers/saved_items_provider.dart';
 import '../../providers/public_entity_takeover_provider.dart';
 import '../../services/share/share_service.dart';
@@ -21,7 +21,6 @@ import '../../utils/user_profile_navigation.dart';
 import '../../screens/desktop/desktop_shell_scope.dart';
 import '../../utils/media_url_resolver.dart';
 import '../../widgets/common/kubus_cached_image.dart';
-import '../../utils/wallet_utils.dart';
 import '../../widgets/creator/creator_kit.dart';
 import '../../widgets/common/subject_options_sheet.dart';
 import '../../widgets/collaboration_panel.dart';
@@ -302,8 +301,9 @@ class _CollectionDetailScreenState extends State<CollectionDetailScreen> {
 
     return Scaffold(
       backgroundColor: scheme.surface,
-      body: Consumer3<CollectionsProvider, WalletProvider, SavedItemsProvider>(
-        builder: (context, collectionsProvider, walletProvider, savedItems, _) {
+      body: Consumer3<CollectionsProvider, ProfileProvider, SavedItemsProvider>(
+        builder:
+            (context, collectionsProvider, profileProvider, savedItems, _) {
           final collection = collectionsProvider.getCollectionById(
             widget.collectionId,
           );
@@ -363,10 +363,9 @@ class _CollectionDetailScreenState extends State<CollectionDetailScreen> {
           );
           final artworks = resolved.artworks;
 
-          final walletAddress = walletProvider.currentWalletAddress;
-          final canEdit = walletAddress != null &&
-              walletAddress.isNotEmpty &&
-              WalletUtils.equals(walletAddress, resolved.walletAddress);
+          // Owner affordances belong to the signed-in account only.
+          final canEdit =
+              profileProvider.isCurrentAccount(resolved.walletAddress);
 
           final slivers = <Widget>[
             if (widget.embedded)

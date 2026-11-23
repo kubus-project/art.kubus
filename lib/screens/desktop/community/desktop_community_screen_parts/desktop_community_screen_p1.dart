@@ -322,9 +322,11 @@ extension _DesktopCommunityScreenStatePart1 on _DesktopCommunityScreenState {
     final blocked = await BlockListService().loadBlockedWallets();
     if (blocked.isEmpty) return posts;
     return posts.where((post) {
-      final author = WalletUtils.canonical(post.authorWallet);
-      if (author.isEmpty) return true;
-      return !blocked.contains(author);
+      return !BlockListService.blocksAuthor(
+        blocked,
+        wallet: post.authorWallet,
+        accountId: post.authorUserId,
+      );
     }).toList();
   }
 

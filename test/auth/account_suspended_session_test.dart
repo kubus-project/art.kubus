@@ -63,12 +63,6 @@ class _SecureStorage {
 
 void _seedAccount(WalletProvider wallet) {
   wallet.setCurrentWalletAddressForTesting('WalletAddr111');
-  wallet.seedAccountSessionForTesting(
-    email: 'suspended@example.com',
-    backendProfile: <String, dynamic>{'id': 'user-suspended'},
-    collectionsCount: 4,
-    achievementsUnlocked: 7,
-  );
 }
 
 /// Mirrors the JS-style error a Socket.IO client surfaces: `message` plus the
@@ -383,12 +377,7 @@ void main() {
       expect(prefs.getBool('allow_messages'), isNull);
       expect(wallet.disconnects, 0);
 
-      // The real provider no longer shows the previous account...
-      expect(wallet.accountSignedIn, isFalse);
-      expect(wallet.accountEmail, isNull);
-      expect(wallet.backendProfile, isNull);
-      expect(wallet.collectionsCount, 0);
-      expect(wallet.achievementsUnlocked, 0);
+      // The real provider no longer holds the previous account's lists...
       expect(wallet.tokens, isEmpty);
       expect(wallet.transactions, isEmpty);
       // ...while the wallet itself, its identity and its recovery phrase stay.
@@ -452,15 +441,9 @@ void main() {
       final wallet = _Wallet();
       _seedAccount(wallet);
       BackendApiService().setAuthTokenForTesting(null);
-      expect(wallet.accountSignedIn, isTrue);
 
       await wallet.clearAccountSessionKeepWallet();
 
-      expect(wallet.accountSignedIn, isFalse);
-      expect(wallet.accountEmail, isNull);
-      expect(wallet.backendProfile, isNull);
-      expect(wallet.collectionsCount, 0);
-      expect(wallet.achievementsUnlocked, 0);
       expect(wallet.currentWalletAddress, 'WalletAddr111');
       expect(storage.values['cached_mnemonic'], 'alpha beta gamma');
       expect(storage.deletedKeys, isEmpty);

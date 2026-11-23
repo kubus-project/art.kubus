@@ -1,3 +1,5 @@
+import 'package:art_kubus/models/gallery_presentation.dart';
+import 'package:art_kubus/widgets/detail/gallery_presentation.dart';
 import 'package:art_kubus/widgets/community/community_post_media_carousel.dart';
 import 'dart:async';
 
@@ -7,6 +9,7 @@ import 'package:art_kubus/l10n/app_localizations.dart';
 import '../../community/profile_section_order.dart';
 import '../../../utils/design_tokens.dart';
 import '../../../utils/wallet_utils.dart';
+import '../../../utils/artwork_author_key.dart';
 import '../../../widgets/app_loading.dart';
 import 'package:provider/provider.dart';
 import '../../../models/profile_package.dart';
@@ -39,6 +42,7 @@ import '../../../widgets/profile_artist_info_fields.dart';
 import '../../../screens/community/post_detail_screen.dart';
 import '../../../widgets/profile/profile_posts_preview_section.dart';
 import '../../community/profile_posts_screen.dart';
+import '../../../providers/profile_provider.dart';
 import '../../../providers/wallet_provider.dart';
 import '../../../services/socket_service.dart';
 import '../../../screens/community/profile_screen_methods.dart';
@@ -115,24 +119,14 @@ class _UserProfileScreenState extends State<UserProfileScreen>
   List<Map<String, dynamic>> _documentedArtworks = const [];
   int? _authoredArtworksTotal;
   int? _authoredArtworksCounter;
+  bool _authoredArtworksUnavailable = false;
   List<Map<String, dynamic>> _artistCollections = [];
 
-  String? _currentWalletAddress() {
-    try {
-      return Provider.of<WalletProvider>(
-        context,
-        listen: false,
-      ).currentWalletAddress;
-    } catch (_) {
-      return null;
-    }
-  }
-
   bool _canOpenAnalyticsForViewedUser() {
-    final viewedWallet = user?.id.trim() ?? '';
-    final viewerWallet = _currentWalletAddress()?.trim() ?? '';
-    return viewedWallet.isNotEmpty &&
-        WalletUtils.equals(viewerWallet, viewedWallet);
+    final viewedId = user?.id.trim() ?? '';
+    return viewedId.isNotEmpty &&
+        Provider.of<ProfileProvider>(context, listen: false)
+            .isCurrentAccount(viewedId);
   }
 
   void _openDesktopShellAwareScreen(Widget screen) {
@@ -263,6 +257,9 @@ class _UserProfileScreenState extends State<UserProfileScreen>
       _authoredArtworksTotal = _profileController.authoredArtworksTotal;
       _authoredArtworksCounter =
           _profileController.package?.publicStats['authoredArtworks'];
+      _authoredArtworksUnavailable =
+          _profileController.package?.extended?.authoredArtworksUnavailable ??
+              false;
       _artistCollections = _profileController.artistCollections;
       _artistDataLoaded = _profileController.artistDataLoaded;
       _artistDataLoading = _profileController.artistDataLoading;
@@ -285,7 +282,13 @@ class _UserProfileScreenState extends State<UserProfileScreen>
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) => GalleryHostScope(
+        type: GalleryHostType.profile,
+        hostId: user?.profileId,
+        builder: _buildProfileWithGallery,
+      );
+
+  Widget _buildProfileWithGallery(BuildContext context) {
     final themeProvider = Provider.of<ThemeProvider>(context);
     final l10n = AppLocalizations.of(context)!;
     final animationTheme = context.animationTheme;
@@ -423,34 +426,62 @@ class _UserProfileScreenState extends State<UserProfileScreen>
                               ? KubusSpacing.lg
                               : KubusSpacing.xl,
                         ),
-                        if (isCanonicalPublicEntry)
-                          _buildStatsCards(themeProvider, isLarge, l10n)
-                        else
-                          _buildStatsCards(
-                            themeProvider,
-                            isLarge,
-                            l10n,
-                            isCommunityOverlay: isCommunityOverlay,
-                          ),
-                        const SizedBox(height: KubusSpacing.xl),
-                        // Wide two-column content begins at ~1200px so
-                        // intermediate desktop widths do not inherit the mobile
-                        // single-column layout.
-                        if (!isCanonicalPublicEntry && isLarge)
-                          _buildTwoColumnLayout(
-                            themeProvider: themeProvider,
-                            isArtist: isArtist,
-                            isInstitution: isInstitution,
-                            l10n: l10n,
+                        if (GalleryHostScope.maybeOf(context)
+                                ?.published
+                                ?.automatic ==
+                            false)
+                          ...composeProfileSections<Widget>(
+                            order: gallerySectionOrder(
+                                    context, publicProfileSections)
+                                .where(
+                              (section) => section != ProfileSection.identity,
+                            ),
+                            gap: (_, __) =>
+                                const SizedBox(height: KubusSpacing.md),
+                            build: (section) => section == ProfileSection.stats
+                                ? [
+                                    _buildStatsCards(
+                                        themeProvider, isLarge, l10n,
+                                        isCommunityOverlay: isCommunityOverlay)
+                                  ]
+                                : _contentSectionWidgets(section,
+                                    themeProvider: themeProvider,
+                                    isArtist: isArtist,
+                                    isInstitution: isInstitution,
+                                    isCanonicalPublicEntry:
+                                        isCanonicalPublicEntry,
+                                    l10n: l10n),
                           )
-                        else
-                          _buildSingleColumnContent(
-                            themeProvider: themeProvider,
-                            isArtist: isArtist,
-                            isInstitution: isInstitution,
-                            isCanonicalPublicEntry: isCanonicalPublicEntry,
-                            l10n: l10n,
-                          ),
+                        else ...[
+                          if (isCanonicalPublicEntry)
+                            _buildStatsCards(themeProvider, isLarge, l10n)
+                          else
+                            _buildStatsCards(
+                              themeProvider,
+                              isLarge,
+                              l10n,
+                              isCommunityOverlay: isCommunityOverlay,
+                            ),
+                          const SizedBox(height: KubusSpacing.xl),
+                          // Wide two-column content begins at ~1200px so
+                          // intermediate desktop widths do not inherit the mobile
+                          // single-column layout.
+                          if (!isCanonicalPublicEntry && isLarge)
+                            _buildTwoColumnLayout(
+                              themeProvider: themeProvider,
+                              isArtist: isArtist,
+                              isInstitution: isInstitution,
+                              l10n: l10n,
+                            )
+                          else
+                            _buildSingleColumnContent(
+                              themeProvider: themeProvider,
+                              isArtist: isArtist,
+                              isInstitution: isInstitution,
+                              isCanonicalPublicEntry: isCanonicalPublicEntry,
+                              l10n: l10n,
+                            ),
+                        ],
                         const SizedBox(height: KubusSpacing.lg),
                       ],
                     ),
@@ -489,17 +520,33 @@ class _UserProfileScreenState extends State<UserProfileScreen>
   }) {
     switch (section) {
       case ProfileSection.work:
-        return [
-          if (isArtist) ...[
-            _buildArtistPortfolioSection(themeProvider, l10n),
-            if (_documentedArtworks.isNotEmpty) ...[
-              const SizedBox(height: KubusSpacing.md),
-              _buildArtistDocumentedSection(l10n),
-            ],
-            const SizedBox(height: KubusSpacing.md),
+        // Authored works and public collections are public content, not an
+        // artist privilege. The artist title and the institution programme
+        // stay on their roles; a non-artist sees only the bands with content.
+        if (isInstitution && !isArtist) {
+          return [_buildInstitutionHighlightsSection(themeProvider, l10n)];
+        }
+        final contentOnly = !isArtist;
+        final bands = <Widget>[
+          if (!contentOnly ||
+              _artistArtworks.isNotEmpty ||
+              _authoredArtworksUnavailable)
+            GalleryPanel(
+                fallback: _buildArtistPortfolioSection(
+              themeProvider,
+              l10n,
+              isArtist: isArtist,
+            )),
+          if (_documentedArtworks.isNotEmpty)
+            _buildArtistDocumentedSection(l10n),
+          if (!contentOnly || _artistCollections.isNotEmpty)
             _buildArtistCollectionsSection(themeProvider, l10n),
-          ] else if (isInstitution)
-            _buildInstitutionHighlightsSection(themeProvider, l10n),
+        ];
+        return [
+          for (var i = 0; i < bands.length; i++) ...[
+            if (i > 0) const SizedBox(height: KubusSpacing.md),
+            bands[i],
+          ],
         ];
       case ProfileSection.publicArt:
         // The canonical artist hero already carries the added-art count.
@@ -623,12 +670,14 @@ class _UserProfileScreenState extends State<UserProfileScreen>
   }
 
   void _handleShare() {
-    final targetWallet = user?.id.toString().trim();
-    if (targetWallet == null || targetWallet.isEmpty) return;
+    final wallet = user?.walletAddress?.trim() ?? '';
+    final profileId = user?.profileId?.trim() ?? '';
+    if (wallet.isEmpty && profileId.isEmpty) return;
     ShareService().showShareSheet(
       context,
       target: ShareTarget.profile(
-        walletAddress: targetWallet,
+        walletAddress: wallet.isEmpty ? null : wallet,
+        profileId: wallet.isEmpty ? profileId : null,
         title: user?.name,
       ),
       sourceScreen: 'desktop_user_profile',
@@ -733,35 +782,46 @@ class _UserProfileScreenState extends State<UserProfileScreen>
       KubusTypography.content(fontSize: 64, fontWeight: FontWeight.w700),
       availableWidth: MediaQuery.sizeOf(context).width,
     ).copyWith(height: 1.02, letterSpacing: -0.65);
-    final roleLabel = isInstitution
-        ? l10n.settingsRoleInstitutionTitle
-        : isArtist
-            ? l10n.settingsRoleArtistTitle
-            : null;
+    const avatarRadius = 44.0;
 
     final identity = Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        if (roleLabel != null) ...[
-          Text(
-            roleLabel,
-            style: KubusTextStyles.structuralLabel.copyWith(
-              color: roles.foregroundMuted,
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            ProfileAvatarMount(
+              radius: avatarRadius,
+              isVerified: profile.isVerified,
+              isArtist: isArtist,
+              isInstitution: isInstitution,
+              child: AvatarWidget(
+                wallet: profile.id,
+                displayName: profile.name,
+                avatarUrl: profile.profileImageUrl,
+                radius: avatarRadius,
+                borderWidth: 0,
+                borderColor: Colors.transparent,
+                enableProfileNavigation: false,
+                heroTag: widget.heroTag,
+              ),
             ),
-          ),
-          const SizedBox(height: KubusSpacing.md),
-        ],
-        ProfileIdentityBlock(
-          displayName: profile.name,
-          handle: profile.username,
-          isVerified: profile.isVerified,
-          isArtist: isArtist,
-          isInstitution: isInstitution,
-          density: ProfileIdentityDensity.spacious,
-          nameStyle: titleStyle,
-          handleStyle: KubusTextStyles.metadataRegister,
-          nameColor: roles.foreground,
-          handleColor: roles.foregroundMuted,
+            const SizedBox(width: KubusSpacing.md),
+            Expanded(
+              child: ProfileIdentityBlock(
+                displayName: profile.name,
+                handle: profile.username,
+                isVerified: profile.isVerified,
+                isArtist: isArtist,
+                isInstitution: isInstitution,
+                density: ProfileIdentityDensity.spacious,
+                nameStyle: titleStyle,
+                handleStyle: KubusTextStyles.metadataRegister,
+                nameColor: roles.foreground,
+                handleColor: roles.foregroundMuted,
+              ),
+            ),
+          ],
         ),
         if (placeLabel != null) ...[
           const SizedBox(height: KubusSpacing.sm),
@@ -1169,13 +1229,20 @@ class _UserProfileScreenState extends State<UserProfileScreen>
     final screenWidth = MediaQuery.of(context).size.width;
     final maxCols =
         isCommunityOverlay ? 2 : (screenWidth >= 1400 ? 4 : (isLarge ? 4 : 2));
-    final localArtworksCount = Provider.of<ArtworkProvider>(
-      context,
-      listen: true,
-    ).artworksForWallet(user!.id).length;
-    final artworksCount = _authoredArtworksTotal ??
-        _authoredArtworksCounter ??
-        localArtworksCount;
+    final authorKey = ArtworkAuthorKey.resolve(
+      walletAddress: user?.walletAddress,
+      profileId: user?.profileId,
+    );
+    final localArtworksCount = authorKey == null
+        ? 0
+        : Provider.of<ArtworkProvider>(context, listen: true)
+            .artworksForAuthor(authorKey)
+            .length;
+    final artworksCount = _authoredArtworksUnavailable
+        ? null
+        : _authoredArtworksTotal ??
+            _authoredArtworksCounter ??
+            localArtworksCount;
 
     return DesktopGrid(
       minCrossAxisCount: 2,
@@ -1215,12 +1282,17 @@ class _UserProfileScreenState extends State<UserProfileScreen>
         ),
         DesktopStatCard(
           label: l10n.userProfileArtworksTitle,
-          value: _formatCount(artworksCount),
+          value: artworksCount == null
+              ? l10n.commonNotAvailable
+              : _formatCount(artworksCount),
           icon: Icons.palette_outlined,
           color: _profileStatAccentForIcon(Icons.palette_outlined),
-          onTap: () {
-            ProfileScreenMethods.showArtworks(context, walletAddress: user!.id);
-          },
+          onTap: authorKey == null
+              ? null
+              : () => ProfileScreenMethods.showArtworks(
+                    context,
+                    authorKey: authorKey,
+                  ),
         ),
       ],
     );
@@ -1338,13 +1410,16 @@ class _UserProfileScreenState extends State<UserProfileScreen>
 
   Widget _buildArtistPortfolioSection(
     ThemeProvider themeProvider,
-    AppLocalizations l10n,
-  ) {
+    AppLocalizations l10n, {
+    required bool isArtist,
+  }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         DesktopSectionHeader(
-          title: l10n.userProfileArtistPortfolioTitle,
+          title: isArtist
+              ? l10n.userProfileArtistPortfolioTitle
+              : l10n.userProfileArtworksTitle,
           subtitle: l10n.userProfileArtistPortfolioDesktopSubtitle,
         ),
         const SizedBox(height: KubusSpacing.md),
@@ -1355,6 +1430,16 @@ class _UserProfileScreenState extends State<UserProfileScreen>
               alignment: Alignment.center,
               child: const InlineLoading(width: 40, height: 40),
             ),
+          )
+        else if (_authoredArtworksUnavailable)
+          Column(
+            children: [
+              Text(l10n.commonNotAvailable),
+              TextButton(
+                onPressed: _handleRefresh,
+                child: Text(l10n.commonRetry),
+              ),
+            ],
           )
         else if (_artistArtworks.isEmpty)
           EmptyStateCard(
@@ -1864,9 +1949,9 @@ class _UserProfileScreenState extends State<UserProfileScreen>
   }
 
   Future<void> _openConversation() async {
-    // Conversations are addressed by wallet only. Without a linked wallet there
-    // is no message target, so nothing is sent and no id is substituted.
-    final messageTarget = user?.messagingWallet;
+    // A conversation is addressed to the wallet, or to the account UUID of a
+    // walletless account. With neither there is no target, so nothing is sent.
+    final messageTarget = user?.messageTargetId;
     if (user?.supportsMessaging != true || messageTarget == null) return;
     final l10n = AppLocalizations.of(context)!;
     final authenticated = await const ContextualAuthGate().ensureAuthenticated(
@@ -1883,11 +1968,21 @@ class _UserProfileScreenState extends State<UserProfileScreen>
     if (!authenticated || !mounted) return;
     final chatProvider = Provider.of<ChatProvider>(context, listen: false);
     final messenger = ScaffoldMessenger.of(context);
-    final chatAuth = chatProvider.isAuthenticated;
+    final chatAuth =
+        Provider.of<ProfileProvider>(context, listen: false).isSignedIn;
 
     try {
-      final conv =
-          await chatProvider.createConversation('', false, [messageTarget]);
+      final outcome = await chatProvider
+          .createConversationOutcome('', false, [messageTarget]);
+      if (outcome.recipientUnavailable) {
+        if (mounted) {
+          messenger.showKubusSnackBar(
+            SnackBar(content: Text(l10n.messagingRecipientUnavailableToast)),
+          );
+        }
+        return;
+      }
+      final conv = outcome.conversation;
       if (conv != null) {
         if (!mounted) return;
         final preloaded = chatProvider.getPreloadedProfileMapsForConversation(
@@ -2007,8 +2102,11 @@ class _UserProfileScreenState extends State<UserProfileScreen>
 
   void _confirmBlockUser() {
     final l10n = AppLocalizations.of(context)!;
-    final targetWallet = WalletUtils.canonical(user?.id ?? widget.userId);
-    if (targetWallet.isEmpty) {
+    // The wallet when the account has one, else its account UUID. The profile
+    // row id is never a block key: feeds match blocks against authorWallet or
+    // authorUserId.
+    final targetId = WalletUtils.canonical(user?.messageTargetId ?? '');
+    if (targetId.isEmpty) {
       ScaffoldMessenger.of(context).showKubusSnackBar(
         SnackBar(content: Text(l10n.userProfileUnableToBlockToast)),
       );
@@ -2024,7 +2122,7 @@ class _UserProfileScreenState extends State<UserProfileScreen>
           borderRadius: BorderRadius.circular(KubusRadius.lg),
         ),
         title: Text(
-          l10n.userProfileBlockDialogTitle(user?.name ?? targetWallet),
+          l10n.userProfileBlockDialogTitle(user?.name ?? targetId),
           style: KubusTypography.inter(
             fontWeight: FontWeight.bold,
             color: Theme.of(context).colorScheme.onSurface,
@@ -2047,7 +2145,7 @@ class _UserProfileScreenState extends State<UserProfileScreen>
             onPressed: () async {
               final messenger = ScaffoldMessenger.of(context);
               try {
-                await BlockListService().blockWallet(targetWallet);
+                await BlockListService().blockWallet(targetId);
               } catch (e) {
                 debugPrint(
                   'DesktopUserProfileScreen: failed to block user: $e',
@@ -2065,12 +2163,11 @@ class _UserProfileScreenState extends State<UserProfileScreen>
               messenger.showKubusSnackBar(
                 SnackBar(
                   content: Text(
-                    l10n.userProfileBlockedToast(user?.name ?? targetWallet),
+                    l10n.userProfileBlockedToast(user?.name ?? targetId),
                   ),
                   action: SnackBarAction(
                     label: l10n.commonUndo,
-                    onPressed: () =>
-                        BlockListService().unblockWallet(targetWallet),
+                    onPressed: () => BlockListService().unblockWallet(targetId),
                   ),
                 ),
               );

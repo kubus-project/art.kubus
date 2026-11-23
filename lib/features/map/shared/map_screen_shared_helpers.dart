@@ -15,6 +15,7 @@ import '../../../models/event.dart';
 import '../../../models/exhibition.dart';
 import '../../../models/map_marker_subject.dart';
 import '../../../models/task.dart';
+import '../../../providers/profile_provider.dart';
 import '../../../services/backend_api_service.dart';
 import '../../../services/task_service.dart';
 import '../../../utils/app_color_utils.dart';
@@ -22,7 +23,6 @@ import '../../../utils/category_accent_color.dart';
 import '../../../utils/design_tokens.dart';
 import '../../../utils/kubus_map_tokens.dart';
 import '../../../utils/maplibre_style_utils.dart';
-import '../../../utils/wallet_utils.dart';
 import '../../../widgets/common/kubus_marker_overlay_card.dart';
 import '../../../widgets/map_marker_style_config.dart';
 import '../../../widgets/map/cards/kubus_discovery_card.dart';
@@ -943,12 +943,13 @@ class KubusMarkerOverlayHelpers {
         marker.isPublic;
   }
 
+  /// Whether the signed-in account owns [marker]. Asks the one owner of
+  /// "who is signed in" ([ProfileProvider.isCurrentAccount]), so nobody owns a
+  /// marker without a live session.
   static bool markerOwnedByCurrentUser({
     required ArtMarker marker,
-    required String? walletAddress,
-    required String? currentUserId,
+    required ProfileProvider profile,
   }) {
-    final normalizedUserId = (currentUserId ?? '').trim();
     final metadata = marker.metadata ?? const <String, dynamic>{};
     final nestedMetadataRaw = metadata['metadata'] ?? metadata['meta'];
     final nestedMetadata = nestedMetadataRaw is Map
@@ -983,12 +984,7 @@ class KubusMarkerOverlayHelpers {
     for (final candidate in ownerCandidates) {
       final value = candidate.trim();
       if (value.isEmpty) continue;
-      if (WalletUtils.equals(value, walletAddress)) {
-        return true;
-      }
-      if (normalizedUserId.isNotEmpty && value == normalizedUserId) {
-        return true;
-      }
+      if (profile.isCurrentAccount(value)) return true;
     }
 
     return false;

@@ -1,14 +1,18 @@
 import 'dart:convert';
 
+import '../utils/wallet_utils.dart';
+
 class MessageReply {
   final String messageId;
   final String senderWallet;
+  final String? senderUserId;
   final String? senderDisplayName;
   final String? message;
 
   const MessageReply({
     required this.messageId,
     required this.senderWallet,
+    this.senderUserId,
     this.senderDisplayName,
     this.message,
   });
@@ -20,6 +24,7 @@ class MessageReply {
       senderWallet:
           (j['senderWallet'] ?? j['sender_wallet'] ?? j['wallet'] ?? '')
               .toString(),
+      senderUserId: _optionalText(j['senderUserId'] ?? j['sender_user_id']),
       senderDisplayName: j['senderDisplayName'] as String? ??
           j['sender_display_name'] as String?,
       message: j['message'] as String?,
@@ -54,12 +59,32 @@ class MessageReaction {
     }
     return MessageReaction(emoji: emoji, count: count, reactors: reactors);
   }
+
+  /// Whether the signed-in account is among the reactors. A reactor is stored
+  /// as the account's wallet when it has one and as its account id otherwise,
+  /// so either [accountId] or [wallet] may match. Absent values never match.
+  bool isReactedBy({String? accountId, String? wallet}) => reactors.any(
+      (reactor) => _isReactorOf(reactor, accountId: accountId, wallet: wallet));
+
+  /// The reactors other than the given account, for removing its reaction.
+  List<String> reactorsExcept({String? accountId, String? wallet}) => reactors
+      .where((reactor) =>
+          !_isReactorOf(reactor, accountId: accountId, wallet: wallet))
+      .toList(growable: false);
+}
+
+bool _isReactorOf(String reactor, {String? accountId, String? wallet}) {
+  final me = _accountIdOrNull(accountId);
+  if (me != null && _accountIdOrNull(reactor) == me) return true;
+  final myWallet = _canonicalWallet(wallet);
+  return myWallet.isNotEmpty && _canonicalWallet(reactor) == myWallet;
 }
 
 class ChatMessage {
   final String id;
   final String conversationId;
   final String senderWallet;
+  final String? senderUserId;
   final String? senderUsername;
   final String? senderDisplayName;
   final String? senderAvatar;
@@ -108,6 +133,7 @@ class ChatMessage {
     required this.id,
     required this.conversationId,
     required this.senderWallet,
+    this.senderUserId,
     this.senderUsername,
     this.senderDisplayName,
     this.senderAvatar,
@@ -249,6 +275,7 @@ class ChatMessage {
               j['wallet'] ??
               j['from']) as String? ??
           '',
+      senderUserId: _optionalText(j['sender_user_id'] ?? j['senderUserId']),
       senderUsername: (j['username'] ??
           j['sender_username'] ??
           j['senderUsername']) as String?,
@@ -273,6 +300,18 @@ class ChatMessage {
     );
   }
 
+  /// Whether the signed-in account sent this message. [accountId] is the
+  /// signed-in account's id (ProfileProvider.currentUser). Decided by
+  /// [isSameAccountActor]: the account id when both sides have one, else the
+  /// wallet. Absent values never match, so two walletless senders are never
+  /// each other's messages.
+  bool isSentBy({String? accountId, String? wallet}) => isSameAccountActor(
+        userId: senderUserId,
+        wallet: senderWallet,
+        otherUserId: accountId,
+        otherWallet: wallet,
+      );
+
   ChatMessage copyWith({
     String? message,
     Map<String, dynamic>? data,
@@ -286,6 +325,7 @@ class ChatMessage {
       id: id,
       conversationId: conversationId,
       senderWallet: senderWallet,
+      senderUserId: senderUserId,
       senderUsername: senderUsername,
       senderDisplayName: senderDisplayName,
       senderAvatar: senderAvatar,
@@ -300,6 +340,102 @@ class ChatMessage {
     );
   }
 }
+
+/// Trimmed text, or null when the value is absent or blank.
+String? _optionalText(dynamic value) {
+  final text = value?.toString().trim() ?? '';
+  return text.isEmpty ? null : text;
+}
+
+/// A canonical account id, or null when blank or wallet-shaped. A legacy token
+/// with no id claim reports its wallet as the account key; that is a wallet,
+/// not an account id, so it never decides an identity by itself.
+String? _accountIdOrNull(String? value) {
+  final raw = (value ?? '').trim();
+  if (raw.isEmpty) return null;
+  if (WalletUtils.looksLikeWalletAddress(raw) ||
+      RegExp(r'^0x[0-9a-fA-F]{40}$').hasMatch(raw)) {
+    return null;
+  }
+  return raw.toLowerCase();
+}
+
+/// Whether two identities name the same account. When both sides carry an
+/// account id, only the ids decide. Otherwise the wallets decide, as they do
+/// for legacy payloads and tokens. Blank values never match.
+bool isSameAccountActor({
+  String? userId,
+  String? wallet,
+  String? otherUserId,
+  String? otherWallet,
+}) {
+  final id = _accountIdOrNull(userId);
+  final otherId = _accountIdOrNull(otherUserId);
+  if (id != null && otherId != null) return id == otherId;
+  final actorWallet = _canonicalWallet(wallet);
+  final myWallet = _canonicalWallet(otherWallet);
+  return actorWallet.isNotEmpty &&
+      myWallet.isNotEmpty &&
+      actorWallet == myWallet;
+}
+
+String? _readerText(Map<String, dynamic> entry, List<String> keys) {
+  for (final key in keys) {
+    final text = _optionalText(entry[key]);
+    if (text != null) return text;
+  }
+  return null;
+}
+
+/// Whether a read receipt (a reader entry with `user_id` and/or
+/// `wallet_address`, as ChatMessage.readers carries) names the given account.
+bool isReaderEntryOf(
+  Map<String, dynamic> entry, {
+  String? accountId,
+  String? wallet,
+}) {
+  final userId = _readerText(entry, const ['user_id', 'userId']);
+  final entryWallet = _readerText(entry, const ['wallet_address', 'wallet']);
+  if (userId == null && entryWallet == null) return false;
+  return isSameAccountActor(
+    userId: userId,
+    wallet: entryWallet,
+    otherUserId: accountId,
+    otherWallet: wallet,
+  );
+}
+
+/// Whether a read receipt was left by someone other than the message's
+/// sender. A receipt with no identity counts for nothing.
+bool isReceiptFromOtherThanSender(
+  Map<String, dynamic> entry, {
+  String? senderUserId,
+  String? senderWallet,
+}) {
+  final userId = _readerText(entry, const ['user_id', 'userId']);
+  final entryWallet = _readerText(entry, const ['wallet_address', 'wallet']);
+  if (userId == null && entryWallet == null) return false;
+  return !isReaderEntryOf(
+    entry,
+    accountId: senderUserId,
+    wallet: senderWallet,
+  );
+}
+
+/// Whether any of [readers] was left by someone other than the sender.
+bool hasReceiptFromOtherThanSender(
+  List<Map<String, dynamic>> readers, {
+  String? senderUserId,
+  String? senderWallet,
+}) =>
+    readers.any((entry) => isReceiptFromOtherThanSender(
+          entry,
+          senderUserId: senderUserId,
+          senderWallet: senderWallet,
+        ));
+
+/// Wallets compare exactly after trimming. Blank is absent.
+String _canonicalWallet(String? value) => WalletUtils.canonical(value);
 
 String _extractMessageText(Map<String, dynamic> j) {
   for (final key in const [
