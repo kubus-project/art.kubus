@@ -369,12 +369,20 @@ class KubusGhostGlyph extends StatefulWidget {
 
 class _KubusGhostGlyphState extends State<KubusGhostGlyph>
     with SingleTickerProviderStateMixin {
-  late final AnimationController _float = AnimationController(
-    vsync: this,
-    duration: KubusHoverResponse.floatPeriod,
-  );
+  // Created in initState, never lazily: a first touch in dispose() would
+  // create a ticker on an already-deactivated element.
+  late final AnimationController _float;
 
   bool _motion = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _float = AnimationController(
+      vsync: this,
+      duration: KubusHoverResponse.floatPeriod,
+    );
+  }
 
   void _syncFloat() {
     if (widget.hovered && _motion) {
@@ -582,13 +590,21 @@ class KubusHoverResponse extends StatefulWidget {
 class _KubusHoverResponseState extends State<KubusHoverResponse>
     with SingleTickerProviderStateMixin {
   /// One cycle of the float; runs only while a lifted surface is hovered.
-  late final AnimationController _float = AnimationController(
-    vsync: this,
-    duration: KubusHoverResponse.floatPeriod,
-  );
+  /// Created in initState, never lazily: a first touch in dispose() would
+  /// create a ticker on an already-deactivated element.
+  late final AnimationController _float;
 
   bool _hovered = false;
   bool _motion = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _float = AnimationController(
+      vsync: this,
+      duration: KubusHoverResponse.floatPeriod,
+    );
+  }
 
   bool get _active => _hovered && widget.enabled && widget.lift;
 
