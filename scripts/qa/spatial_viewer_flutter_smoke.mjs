@@ -405,7 +405,7 @@ async function run(browserType, name) {
         check(`${tag}: the archive button states the archive size`, (await offer.count()) === 1);
         await offer.click();
         await s.page.getByText('Load a large archive?').waitFor({ timeout: 20000 });
-        check(`${tag}: a large archive asks for confirmation`, true);
+        check(`${tag}: a large archive asks for confirmation before anything downloads`, (await s.page.getByText('Load a large archive?').isVisible()) && !s.seen.upload.includes('bafy-archive'), s.seen.upload.join(','));
         await s.page.getByRole('button', { name: 'Cancel' }).click();
         await s.page.waitForTimeout(1500);
         check(`${tag}: declining the confirmation downloads nothing`, !s.seen.upload.includes('bafy-archive'), s.seen.upload.join(','));

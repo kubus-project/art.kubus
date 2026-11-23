@@ -263,17 +263,17 @@ function allowedUrl(value) {
   if (typeof value !== "string") return undefined;
   try {
     const parsed = new URL(value, window.location.href);
+    // Only object URLs of this origin: the page's CSP (`connect-src blob:`)
+    // cannot reach the network, and the host downloads the bytes itself.
     const allowed =
-      parsed.protocol === "https:" ||
-      parsed.protocol === "blob:" ||
-      parsed.origin === window.location.origin;
+      parsed.protocol === "blob:" && parsed.origin === window.location.origin;
     return allowed ? parsed.href : undefined;
   } catch (_) {
     return undefined;
   }
 }
 
-// Web host protocol: same-origin parent only; https / same-origin / blob URLs only.
+// Web host protocol: same-origin parent only; blob URLs of this origin only.
 window.addEventListener("message", (event) => {
   if (event.source !== window.parent || event.origin !== window.location.origin) return;
   const command = event.data && event.data.kubusSpatialViewerCommand;

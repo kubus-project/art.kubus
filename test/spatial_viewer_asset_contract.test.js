@@ -93,6 +93,20 @@ test('the viewer page allows Spark WASM and stays closed otherwise', () => {
   assert.doesNotMatch(csp.split(';').find((part) => part.trim().startsWith('script-src')), /'unsafe-inline'|'unsafe-eval'/);
 });
 
+test('the viewer page has no network of its own: connect-src is blob and the native loopback only', () => {
+  const html = read('assets', 'spatial_viewer', 'index.html');
+  const csp = /Content-Security-Policy" content="([^"]+)"/.exec(html)[1];
+  const connect = csp.split(';').map((part) => part.trim()).find((part) => part.startsWith('connect-src'));
+  assert.equal(connect, 'connect-src http://127.0.0.1:* blob:', 'no https:, no self, no wildcard');
+  // The host (not the page) downloads the bytes and hands over a blob: URL; the page accepts nothing else.
+  const source = read('assets', 'spatial_viewer', 'src', 'viewer.js');
+  assert.match(source, /parsed\.protocol === "blob:" && parsed\.origin === window\.location\.origin/);
+  assert.doesNotMatch(source.slice(source.indexOf('function allowedUrl')), /"https:"/);
+  const widget = read('lib', 'widgets', 'spatial', 'spatial_viewer_web.dart');
+  assert.ok(widget.includes("credentials: 'omit'") && widget.includes("referrerPolicy: 'no-referrer'") && widget.includes('createObjectURL'));
+  assert.match(widget, /'urls': <String>\[objectUrl\]/, 'the page is handed the object URL, never a network URL');
+});
+
 test('the shipped bundle carries the host protocol and the manifest transform', () => {
   const bundle = read('assets', 'spatial_viewer', 'viewer.bundle.js');
   for (const token of ['kubusSpatialViewerCommand', 'kubusSpatialViewer', 'column-major', '__spatialDebug']) {
@@ -119,25 +133,22 @@ test('the static HTML policy already permits the viewer frame and its WASM', () 
   assert.match(csp, /connect-src 'self' https:/);
 });
 
-test('the manifest transform rules refuse projective, sheared, mirrored and absurd placements', async () => {
+test('the manifest transform rules match the shared accept/refuse vectors (the Dart side reads the same file)', async () => {
   const { acceptedMatrix, acceptedPosition, acceptedScale } = await import(
     pathToFileURL(path.join(root, 'assets', 'spatial_viewer', 'src', 'manifest_transform.mjs')).href
   );
-  const upright = [0, 1, 0, 0, -1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1];
-  const edit = (edits) => upright.map((value, i) => (i in edits ? edits[i] : value));
-  assert.ok(acceptedMatrix(upright), 'the Node upright matrix passes');
-  assert.ok(acceptedMatrix(edit({ 0: 0, 1: 2, 4: -2, 10: 3, 12: 5, 13: -4, 14: 1 })), 'rotation, scale and translation pass');
-  assert.ok(!acceptedMatrix(edit({ 3: 0.5 })), 'projective bottom row');
-  assert.ok(!acceptedMatrix(edit({ 15: 2 })), 'bottom-right is not 1');
-  assert.ok(!acceptedMatrix(edit({ 4: -1, 5: 0.5 })), 'shear');
-  assert.ok(!acceptedMatrix(edit({ 10: -1 })), 'mirror');
-  assert.ok(!acceptedMatrix(edit({ 12: 1e9 })), 'translation out of bounds');
-  assert.ok(!acceptedMatrix(edit({ 0: 0, 1: 1e9 })), 'scale too large');
-  assert.ok(!acceptedMatrix(edit({ 0: 0, 1: 1e-9 })), 'scale too small');
-  assert.ok(!acceptedMatrix(edit({ 0: Number.NaN })), 'non-finite');
-  assert.ok(!acceptedMatrix(upright.slice(0, 15)), 'wrong length');
-  assert.ok(acceptedPosition([0, 1e6, 0]) && !acceptedPosition([0, 1e12, 0]) && !acceptedPosition([0, 1]));
-  assert.ok(acceptedScale(2) && acceptedScale([1, 1, 1e4]) && !acceptedScale(1e30) && !acceptedScale(0) && !acceptedScale([1, 1, 1e-12]));
+  const vectors = JSON.parse(read('test', 'fixtures', 'spatial', 'manifest_transform_vectors.json'));
+  assert.ok(vectors.matrices.length >= 15 && vectors.positions.length >= 5 && vectors.scales.length >= 8, 'the fixture is not hollowed out');
+  const build = ({ edits, keep }) => {
+    const values = vectors.upright.map((value, i) => {
+      if (!(String(i) in edits)) return value;
+      return edits[String(i)] === 'NaN' ? Number.NaN : edits[String(i)];
+    });
+    return keep === undefined ? values : values.slice(0, keep);
+  };
+  for (const c of vectors.matrices) assert.equal(acceptedMatrix(build(c)), c.accepted, `matrix: ${c.name}`);
+  for (const c of vectors.positions) assert.equal(acceptedPosition(c.value), c.accepted, `position: ${c.name}`);
+  for (const c of vectors.scales) assert.equal(acceptedScale(c.value), c.accepted, `scale: ${c.name}`);
 });
 
 test('the viewer applies those rules to the fallback fields as well as the matrix', () => {

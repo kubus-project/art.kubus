@@ -3,7 +3,7 @@
 // What it proves, in a real Chromium (and Firefox when BROWSERS lists it) with WebGL:
 //   - the shipped viewer page (Spark 2.4.0) boots under the same CSP header web/.htaccess sends for HTML,
 //   - a same-origin parent can drive it with the postMessage protocol the Flutter widget uses,
-//   - the public route order is honoured (a 404 route falls through to the next one),
+//   - the host hands it blob: URLs (the page itself has no network access) and a failing first URL falls through to the next one,
 //   - the Node manifest transform.matrix (column-major) stands the sample piece upright,
 //   - drag-orbit changes the camera, a missing route ends in the failure state, a foreign origin is ignored.
 //
@@ -58,6 +58,26 @@ const HARNESS = `<!doctype html><meta charset="utf-8"><title>harness</title>
     }
   });
   window.sendCommand = (command) => document.getElementById('v').contentWindow.postMessage({ kubusSpatialViewerCommand: command }, location.origin);
+  // What the Flutter host does: the page has no network (connect-src blob:), so the host downloads each route
+  // and hands the page an object URL. A route that does not answer becomes an object URL that is already
+  // revoked, which the page cannot read (the host would fail that attempt itself; here it keeps the page's
+  // error path and its URL fallback testable).
+  window.sendLoad = async (command) => {
+    const urls = [];
+    for (const url of command.urls || []) {
+      let blob = null;
+      try {
+        const response = await fetch(url, { credentials: 'omit', referrerPolicy: 'no-referrer' });
+        if (response.ok) blob = await response.blob();
+      } catch (_) {
+        blob = null;
+      }
+      const objectUrl = URL.createObjectURL(blob || new Blob([]));
+      if (!blob) URL.revokeObjectURL(objectUrl);
+      urls.push(objectUrl);
+    }
+    window.sendCommand({ ...command, type: 'load', urls });
+  };
 </script>`;
 
 const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.json': 'application/json', '.wasm': 'application/wasm' };
@@ -164,8 +184,8 @@ async function run(browserType, name) {
 
     // 1. Boots, falls through a 404 route, ends ready.
     await loadHarness();
-    check(`${name}: viewer announces viewer-ready under the htaccess CSP`, true);
-    await page.evaluate((o) => window.sendCommand({
+    check(`${name}: viewer announces viewer-ready under the htaccess CSP`, (await page.evaluate(() => window.__msgs)).includes('viewer-ready'));
+    await page.evaluate((o) => window.sendLoad({
       type: 'load',
       urls: [`${o}/api/upload/file/bafy-missing`, `${o}/api/upload/file/bafy-sample`],
       fileType: 'splat',
@@ -197,7 +217,7 @@ async function run(browserType, name) {
 
     // 3. Manifest transform stands it upright.
     await loadHarness();
-    await page.evaluate(({ o, transform }) => window.sendCommand({ type: 'load', urls: [`${o}/api/upload/file/bafy-sample`], fileType: 'splat', transform }), { o: origin, transform: UPRIGHT });
+    await page.evaluate(({ o, transform }) => window.sendLoad({ type: 'load', urls: [`${o}/api/upload/file/bafy-sample`], fileType: 'splat', transform }), { o: origin, transform: UPRIGHT });
     await waitMsg(page, (m) => m === 'ready' || m.startsWith('error:'));
     await page.waitForTimeout(1500);
     const debug = await frameOf().evaluate(() => window.__spatialDebug());
@@ -256,7 +276,7 @@ async function run(browserType, name) {
       const touchPage = await touchContext.newPage();
       await touchPage.goto(`${origin}/harness.html`);
       await touchPage.waitForFunction(() => window.__msgs.includes('viewer-ready'), null, { timeout: 30000 });
-      await touchPage.evaluate((o) => window.sendCommand({ type: 'load', urls: [`${o}/api/upload/file/bafy-sample`], fileType: 'splat' }), origin);
+      await touchPage.evaluate((o) => window.sendLoad({ type: 'load', urls: [`${o}/api/upload/file/bafy-sample`], fileType: 'splat' }), origin);
       await touchPage.waitForFunction(() => window.__msgs.includes('ready'), null, { timeout: 30000 });
       const touchFrame = touchPage.frames().find((fr) => fr.url().includes(VIEWER_PATH));
       const cdp = await touchContext.newCDPSession(touchPage);
@@ -282,17 +302,39 @@ async function run(browserType, name) {
 
     // 4. Failure state.
     await loadHarness();
-    await page.evaluate((o) => window.sendCommand({ type: 'load', urls: [`${o}/api/upload/file/bafy-missing`] }), origin);
+    await page.evaluate((o) => window.sendLoad({ type: 'load', urls: [`${o}/api/upload/file/bafy-missing`] }), origin);
     await waitMsg(page, (msg) => msg.startsWith('error:'));
     const statusText = await frameOf().evaluate(() => document.querySelector('#status').textContent);
     check(`${name}: unreachable route ends in the failure state`, /could not be loaded/i.test(statusText), statusText);
     check(`${name}: a failed viewer renders nothing`, (await frameOf().evaluate(() => window.__spatialDebug())).running === false);
 
-    // 5. Disallowed URL schemes are refused, not fetched.
+    // 5. Disallowed URLs are refused, not fetched.
     await loadHarness();
-    await page.evaluate(() => window.sendCommand({ type: 'load', urls: ['http://example.invalid/x.splat', 'file:///etc/passwd', 'javascript:1'] }));
+    const sampleRequestsBefore = requests.filter((p) => p === '/api/upload/file/bafy-sample').length;
+    const sameOriginRoute = `${origin}/api/upload/file/bafy-sample`;
+    await page.evaluate((same) => window.sendCommand({ type: 'load', urls: ['https://example.invalid/x.splat', 'http://example.invalid/x.splat', same, 'file:///etc/passwd', 'javascript:1', 'blob:https://example.invalid/not-this-origin'] }), sameOriginRoute);
     await waitMsg(page, (msg) => msg === 'error:url-not-allowed');
-    check(`${name}: http / file / javascript URLs are refused`, true);
+    const refused = await page.evaluate(() => window.__msgs);
+    const refusedDebug = await frameOf().evaluate(() => window.__spatialDebug());
+    check(`${name}: https / http / same-origin route / file / javascript / foreign blob URLs are refused and nothing is loaded`, refused.includes('error:url-not-allowed') && !refused.includes('ready') && refusedDebug.hasMesh === false, refused.join(','));
+    check(`${name}: the refused URLs were never requested`, !requests.some((p) => p.endsWith('/x.splat')) && requests.filter((p) => p === '/api/upload/file/bafy-sample').length === sampleRequestsBefore, requests.join(','));
+
+    // 6. The page has no network of its own: even a script already inside it cannot fetch (connect-src blob:).
+    await loadHarness();
+    const problemsBefore = consoleProblems.length;
+    // (The page's own loopback origin is not a target here: `http://127.0.0.1:*` is the native WebView's proxy
+    // allowance and this smoke happens to serve from 127.0.0.1; on the web build the .htaccess header removes it.)
+    const otherHost = sameOriginRoute.replace('127.0.0.1', 'localhost');
+    const pageFetch = await frameOf().evaluate(async (targets) => {
+      const result = {};
+      for (const [key, target] of Object.entries(targets)) {
+        try { await fetch(target); result[key] = 'reached'; } catch (error) { result[key] = 'blocked'; }
+      }
+      return result;
+    }, { otherHost, https: 'https://example.invalid/x' });
+    check(`${name}: a fetch from inside the page to another host or to any https host is blocked by its CSP`, pageFetch.otherHost === 'blocked' && pageFetch.https === 'blocked', JSON.stringify(pageFetch));
+    // The two blocked fetches above are the point of that check, not a regression: drop their console lines.
+    consoleProblems.length = problemsBefore;
 
     check(`${name}: no CSP violation or page error`, consoleProblems.length === 0, consoleProblems.join(' | '));
   } finally {

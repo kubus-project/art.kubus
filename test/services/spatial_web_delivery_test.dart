@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:art_kubus/models/kubus_node_models.dart';
 import 'package:art_kubus/services/spatial_web_delivery.dart';
@@ -332,6 +333,58 @@ void main() {
       // A genuine rotation, scale and translation still passes.
       expect(read(withEdits({0: 0, 1: 2, 4: -2, 10: 3, 12: 5, 13: -4, 14: 1})),
           isNotNull);
+    });
+
+    test(
+        'matches the shared accept/refuse vectors '
+        '(the viewer page tests read the same file)', () {
+      final vectors = jsonDecode(
+        File('test/fixtures/spatial/manifest_transform_vectors.json')
+            .readAsStringSync(),
+      ) as Map<String, dynamic>;
+      final upright = (vectors['upright'] as List).cast<num>();
+      final matrices =
+          (vectors['matrices'] as List).cast<Map<String, dynamic>>();
+      final positions =
+          (vectors['positions'] as List).cast<Map<String, dynamic>>();
+      final scales = (vectors['scales'] as List).cast<Map<String, dynamic>>();
+      expect(matrices.length, greaterThanOrEqualTo(15));
+      expect(positions.length, greaterThanOrEqualTo(5));
+      expect(scales.length, greaterThanOrEqualTo(8));
+
+      Object? read(Map<String, Object?> transform) =>
+          SpatialWebDelivery.transformFromManifest({'transform': transform});
+
+      for (final c in matrices) {
+        final edits = (c['edits'] as Map).cast<String, Object?>();
+        final values = <Object?>[
+          for (var i = 0; i < upright.length; i++)
+            edits.containsKey('$i')
+                ? (edits['$i'] == 'NaN' ? double.nan : edits['$i'])
+                : upright[i],
+        ];
+        final keep = c['keep'] as int?;
+        final matrix = keep == null ? values : values.take(keep).toList();
+        expect(
+          read({'matrix': matrix}) != null,
+          c['accepted'],
+          reason: 'matrix: ${c['name']}',
+        );
+      }
+      for (final c in positions) {
+        expect(
+          read({'position': c['value']}) != null,
+          c['accepted'],
+          reason: 'position: ${c['name']}',
+        );
+      }
+      for (final c in scales) {
+        expect(
+          read({'scale': c['value']}) != null,
+          c['accepted'],
+          reason: 'scale: ${c['name']}',
+        );
+      }
     });
 
     test('position and scale outside the sane range are dropped', () {

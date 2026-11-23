@@ -106,7 +106,7 @@ Xcode and cannot be verified from the Windows development environment.
 
 On Flutter web `SpatialViewer` resolves to `spatial_viewer_web.dart`: the same
 bundled viewer page runs in a same-origin iframe (`HtmlElementView`). The widget
-only chooses bytes and relays messages (`viewer-ready`, `ready`, `escape`,
+chooses and downloads the bytes and relays messages (`viewer-ready`, `ready`, `escape`,
 `error:*` from the page; `load` / `reset` / `activate` / `deactivate` commands to
 it, same-origin only). Each load attempt puts its number in the page URL
 (`index.html?a=<n>`); the page echoes it in every message and the widget drops any
@@ -133,7 +133,12 @@ and consent decisions live in `SpatialWebLoadSession` and `SpatialWebDelivery`
   with no retry button, because there is nothing a retry could start.
 - Timeouts: 120 s for the optimised and preview tiers, 10 minutes for the archive,
   so a large archive is not declared dead while it is still downloading.
-- Bytes: `GET {backend}/api/upload/file/<cid>`, anonymous and registry-authorised:
+- Bytes: the widget (not the page) downloads them with `fetch` (`credentials:
+  omit`, `referrerPolicy: no-referrer`, an `AbortController`), turns the answer
+  into a Blob and hands the page its object URL (`blob:`); the object URL is
+  revoked when the attempt ends or the page reports `ready`, and an attempt that
+  is replaced, times out or is disposed aborts its download. The route is
+  `GET {backend}/api/upload/file/<cid>`, anonymous and registry-authorised:
   only CIDs of a currently public publication resolve (withdrawn or unregistered
   content answers 404, a failing withdrawal lookup answers 503; whole body, no
   Range). That route is the publication gate and the only route the web viewer
@@ -141,7 +146,8 @@ and consent decisions live in `SpatialWebLoadSession` and `SpatialWebDelivery`
   gate and would keep serving pinned bytes of withdrawn content (and learn the
   visitor's address). A CID must be CID-shaped (`[A-Za-z0-9_-]`, 4 to 128
   characters) before it becomes a URL. Never a LAN node, never plain http (except a
-  loopback backend in a local build). The legacy `/uploads/<cid>` path is a
+  loopback backend in a local build; that works end to end now, because the host
+  page downloads it and the viewer page only ever sees a `blob:` URL). The legacy `/uploads/<cid>` path is a
   different store and does not serve published spatial variants.
 - Orientation: the published manifest (`canonicalManifestCid`, same route) is read
   best effort and its `transform` is applied; without a readable transform the
@@ -155,8 +161,10 @@ and consent decisions live in `SpatialWebLoadSession` and `SpatialWebDelivery`
     mutually perpendicular axes (no shear, 1e-3 tolerance) and a right-handed
     basis (no mirror). The app checks this before handing the transform over
     (`SpatialWebDelivery.transformFromManifest`) and the viewer page checks it
-    again (`assets/spatial_viewer/src/manifest_transform.mjs`); keep the two in
-    step. The Node's pose helper (`poseConversion.ts`)
+    again (`assets/spatial_viewer/src/manifest_transform.mjs`). Both are tested
+    against one shared vector file, `test/fixtures/spatial/manifest_transform_vectors.json`
+    (a Dart test and a node test read it), so a change to one rule set that is not
+    made in the other fails CI. The Node's pose helper (`poseConversion.ts`)
     is ROW-MAJOR: a producer that reuses it must transpose, or pieces stand on
     their side.
   - Otherwise `position` (3 numbers), `rotation` (4 numbers = quaternion xyzw, or
@@ -177,19 +185,23 @@ and consent decisions live in `SpatialWebLoadSession` and `SpatialWebDelivery`
   the host hands it no token, header or cookie (URLs, file type, transform and an
   accessible label only); the frame has `referrerpolicy="no-referrer"` and
   `allow=""`; messages are accepted only from the parent window of the same
-  origin and URLs only if https, blob or same-origin. `window.loadSpatial(url)`
+  origin and URLs only if they are `blob:` URLs of that origin. `window.loadSpatial(url)`
   is the native WebView contract and deliberately skips the URL allow-list; it is
   reachable only by script already inside the page.
-  Decision (2026-11-23, review-4 N1), accepted for 0.8.8: the frame stays
-  same-origin and its CSP keeps `connect-src https:` (any host), because the
-  splat bytes come from the backend origin, which is configured per build and
-  cannot be named in a static page. A script that escaped the page's CSP could
-  therefore read the web app's storage and send it to any https host. The
-  mitigations above (own bundle only, no inline script, WASM-parsed bytes, no
-  credential handed over) are what stand between that and the app; the open
-  hardening is to serve the viewer from a separate cookieless origin, which
-  removes `allow-same-origin`, or to write the backend origin into the page's
-  `connect-src` at build time. Neither is done yet. Before the first deploy,
+  Network: the viewer page cannot reach the network. Its CSP is `connect-src
+  http://127.0.0.1:* blob:` (the loopback entry is the native WebView's content
+  proxy; on the web the HTML header in `web/.htaccess` intersects it away): no
+  `https:`, no `'self'`. The web host downloads the bytes itself and hands over a
+  `blob:` URL of its own origin, which is the only kind of URL the page accepts
+  (an https, http, same-origin route, `file:` or foreign `blob:` URL is refused
+  with `error:url-not-allowed`; the browser smoke asserts that and that a `fetch`
+  from inside the page is blocked). So a script that escaped the page's script
+  policy would share the web app's storage but would have no channel to send it
+  to: this is the first of the two hardenings review-4 N1 named (the backend
+  origin is configured per build, so instead of writing it into the page the host
+  does the downloading), and it replaces the earlier build-lane decision to accept
+  `connect-src https:`. The frame is still same-origin; a separate cookieless
+  origin would remove that too and is not done. Before the first deploy,
   verify that the nginx front adds no `X-Frame-Options` or `frame-ancestors` to
   `/assets/assets/spatial_viewer/index.html` (outside this repo; the smokes apply
   only the `web/.htaccess` policy).

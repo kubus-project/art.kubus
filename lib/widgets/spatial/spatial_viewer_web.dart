@@ -17,12 +17,14 @@ import '../inline_loading.dart';
 ///
 /// The bundled Spark viewer (`assets/spatial_viewer`) runs in a same-origin
 /// iframe whose page carries a closed CSP (`default-src 'none'`, scripts only
-/// from `'self'`). The iframe is not a security boundary: `allow-same-origin`
-/// is required for the postMessage origin check, so a script that escaped the
-/// page would share the app's origin. What keeps the risk small is that the
-/// page only runs this app's own bundle, parses the splat bytes in Spark's WASM
-/// (never executes them), and is handed no credential: the host sends URLs, a
-/// file type and a transform, nothing else.
+/// from `'self'`, `connect-src blob:`). The iframe is not a security boundary:
+/// `allow-same-origin` is required for the postMessage origin check, so a script
+/// that escaped the page would share the app's origin. What keeps the risk small
+/// is that the page only runs this app's own bundle, parses the splat bytes in
+/// Spark's WASM (never executes them), is handed no credential, and cannot
+/// reach the network at all: this host downloads the bytes itself (anonymous,
+/// no cookies, no referrer) and hands the page a `blob:` URL, the only thing
+/// the page's `connect-src` allows.
 ///
 /// This widget only chooses the bytes and relays a few messages. Bytes come
 /// from the one route the backend serves for published spatial variants
@@ -102,6 +104,12 @@ class _WebSpatialViewerState extends State<WebSpatialViewer> {
   late final web.HTMLIFrameElement _iframe;
   JSFunction? _messageListener;
   Timer? _timeout;
+
+  /// The download of the current attempt, and the `blob:` URL its bytes live
+  /// behind. Both are released when the attempt ends, so a replaced attempt
+  /// stops downloading and no object URL outlives its use.
+  web.AbortController? _download;
+  String? _objectUrl;
   late SpatialWebLoadSession _session;
 
   /// A vertical scroller encloses the viewer, so the iframe starts inert.
@@ -158,6 +166,7 @@ class _WebSpatialViewerState extends State<WebSpatialViewer> {
     // Same widget slot, different piece (or a refreshed record): start over
     // instead of keeping the old piece on screen.
     _timeout?.cancel();
+    _releaseBytes();
     // Attempt numbers continue across sessions: the iframe is reused, and a
     // message still in flight from the old page must not match attempt 1 again.
     _session = SpatialWebLoadSession(
@@ -176,6 +185,7 @@ class _WebSpatialViewerState extends State<WebSpatialViewer> {
   @override
   void dispose() {
     _timeout?.cancel();
+    _releaseBytes();
     _iframes.remove(_viewKey);
     final listener = _messageListener;
     if (listener != null) {
@@ -196,6 +206,7 @@ class _WebSpatialViewerState extends State<WebSpatialViewer> {
   /// page that is being replaced can never answer for the next attempt.
   void _startIframe() {
     _timeout?.cancel();
+    _releaseBytes();
     _interactive = false;
     _iframe.style.visibility = 'hidden';
     _iframe.src = Uri.parse(_viewerUrl).replace(
@@ -209,6 +220,7 @@ class _WebSpatialViewerState extends State<WebSpatialViewer> {
   void _fail() {
     _timeout?.cancel();
     if (!mounted) return;
+    _releaseBytes();
     final fallback = _session.onFailed();
     setState(() {});
     if (fallback) {
@@ -248,6 +260,8 @@ class _WebSpatialViewerState extends State<WebSpatialViewer> {
       unawaited(_sendLoad());
     } else if (message == 'ready') {
       _timeout?.cancel();
+      // The viewer has parsed the bytes; the object URL has done its job.
+      _revokeObjectUrl();
       setState(_session.onLoaded);
       if (_session.status == SpatialWebLoadStatus.ready) {
         _iframe.style.visibility = 'visible';
@@ -266,22 +280,83 @@ class _WebSpatialViewerState extends State<WebSpatialViewer> {
       _fail();
       return;
     }
-    // Best effort and bounded: a record without a readable manifest transform
-    // simply opens untransformed.
+    // The page cannot reach the network (its CSP allows `blob:` only), so the
+    // bytes are downloaded here and handed over as an object URL. Best effort
+    // and bounded for the transform: a record without a readable manifest
+    // transform simply opens untransformed.
+    final download = web.AbortController();
+    _download = download;
+    final bytes = _downloadAsObjectUrl(plan.urls, download);
     final transform = await SpatialWebDelivery.fetchTransform(plan.manifestUrl);
-    if (!mounted || attempt != _session.attempt) return;
+    final objectUrl = await bytes;
+    if (!mounted || attempt != _session.attempt) {
+      // A newer attempt (or a dispose) already released its own state; this
+      // one's object URL was created after that and is nobody's.
+      if (objectUrl != null) web.URL.revokeObjectURL(objectUrl);
+      return;
+    }
+    if (objectUrl == null) {
+      _fail();
+      return;
+    }
+    _objectUrl = objectUrl;
     final label = AppLocalizations.of(context)!.spatialArchiveTitle;
     final command = <String, Object?>{
       'kubusSpatialViewerCommand': <String, Object?>{
         'type': 'load',
         'label': label,
-        'urls': plan.urls,
+        'urls': <String>[objectUrl],
         if (plan.fileType != null) 'fileType': plan.fileType,
         if (transform != null) 'transform': transform,
       },
     };
     _iframe.contentWindow
         ?.postMessage(command.jsify(), web.window.location.origin.toJS);
+  }
+
+  /// Downloads the first route that answers into a Blob and returns its object
+  /// URL, or null when none did (or the download was aborted). Anonymous and
+  /// referrer-free: the same request the page used to make itself, minus the
+  /// page's access to the network.
+  Future<String?> _downloadAsObjectUrl(
+    List<String> urls,
+    web.AbortController download,
+  ) async {
+    for (final url in urls) {
+      try {
+        final response = await web.window
+            .fetch(
+              url.toJS,
+              web.RequestInit(
+                method: 'GET',
+                credentials: 'omit',
+                referrerPolicy: 'no-referrer',
+                signal: download.signal,
+              ),
+            )
+            .toDart;
+        if (!response.ok) continue;
+        final blob = await response.blob().toDart;
+        if (download.signal.aborted) return null;
+        return web.URL.createObjectURL(blob);
+      } catch (_) {
+        if (download.signal.aborted) return null;
+      }
+    }
+    return null;
+  }
+
+  void _revokeObjectUrl() {
+    final url = _objectUrl;
+    _objectUrl = null;
+    if (url != null) web.URL.revokeObjectURL(url);
+  }
+
+  /// Stops the download of the current attempt and frees its bytes.
+  void _releaseBytes() {
+    _download?.abort();
+    _download = null;
+    _revokeObjectUrl();
   }
 
   void _send(String type) => _iframe.contentWindow?.postMessage(
