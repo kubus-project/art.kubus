@@ -6,7 +6,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/collab_invite.dart';
 import '../models/collab_member.dart';
-import '../models/user_profile.dart';
 import '../config/config.dart';
 import '../providers/app_refresh_provider.dart';
 import '../providers/profile_provider.dart';
@@ -14,7 +13,6 @@ import '../services/backend_api_service.dart' show BackendApiRequestException;
 import '../services/collab_api.dart';
 import '../services/push_notification_service.dart';
 import '../services/socket_service.dart';
-import '../utils/profile_data_key.dart' show isSyntheticProfileId;
 import '../utils/wallet_utils.dart';
 
 class CollabProvider extends ChangeNotifier {
@@ -260,17 +258,6 @@ class CollabProvider extends ChangeNotifier {
     }
   }
 
-  /// Account identity of a walletless profile: the account id, then the
-  /// profile id (locally invented `profile_...` ids are not identities).
-  static String _accountIdentity(UserProfile? user) {
-    if (user == null) return '';
-    for (final candidate in <String?>[user.userId, user.id]) {
-      final value = (candidate ?? '').trim();
-      if (value.isNotEmpty && !isSyntheticProfileId(value)) return value;
-    }
-    return '';
-  }
-
   void _syncAuthState() {
     if (!AppConfig.isFeatureEnabled('collabInvites')) return;
 
@@ -283,7 +270,7 @@ class CollabProvider extends ChangeNotifier {
     // is polled.
     final user = profile?.currentUser;
     final wallet = (user?.walletAddress ?? '').trim();
-    final identity = wallet.isNotEmpty ? wallet : _accountIdentity(user);
+    final identity = wallet.isNotEmpty ? wallet : (user?.accountId ?? '');
     final token = (_api.getAuthToken() ?? '').trim();
 
     if (!signedIn || identity.isEmpty || token.isEmpty) {

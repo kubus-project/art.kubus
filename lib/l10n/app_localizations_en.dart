@@ -2673,7 +2673,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get walletActionAccountShellNeedsWalletToast =>
-      'Your account is signed in, but this device still needs the wallet restored or connected before this action can continue.';
+      'Your account is signed in without a wallet. Connect one to continue with this action.';
 
   @override
   String get walletActionEncryptedBackupRestoreToast =>
@@ -2681,11 +2681,15 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get walletActionRecoveryNeededToast =>
-      'Restore wallet access on this device before continuing.';
+      'Reconnect your wallet or import your recovery phrase on this device before continuing.';
 
   @override
   String get walletActionReadOnlyReconnectToast =>
-      'Reconnect with your wallet provider or restore wallet access on this device before continuing.';
+      'Reconnect with your wallet provider or import your recovery phrase on this device before continuing.';
+
+  @override
+  String get walletBackupStatusUnavailableHint =>
+      'Backup status is unavailable right now. Try again in a moment.';
 
   @override
   String get settingsNetworkTileTitle => 'Network';
@@ -2713,8 +2717,11 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsBackupStatusNoWallet => 'No wallet connected yet';
 
   @override
-  String get settingsBackupStatusAccountShellOnly =>
-      'Account wallet has not been restored on this device yet';
+  String get settingsBackupStatusChecking => 'Checking wallet status…';
+
+  @override
+  String get settingsBackupStatusWalletless =>
+      'No wallet linked to this account';
 
   @override
   String get settingsBackupStatusNoBackup =>
@@ -3169,7 +3176,23 @@ class AppLocalizationsEn extends AppLocalizations {
       'Disconnect your wallet and clear your session on this device?';
 
   @override
+  String get settingsLogoutDialogBodyAccountOnly =>
+      'Clear your session on this device?';
+
+  @override
   String get settingsLogoutButton => 'Log out';
+
+  @override
+  String get settingsBrowserLogoutPending =>
+      'You are signed out on this device. The browser could not confirm server sign-out; it will retry before restoring a session.';
+
+  @override
+  String get browserSessionRestoreUnavailable =>
+      'We couldn\'t restore your browser session. Sign in again to continue.';
+
+  @override
+  String get browserSessionLogoutUnresolved =>
+      'We couldn\'t confirm that your earlier browser session ended. Sign out again when the connection is back.';
 
   @override
   String get settingsTransactionHistoryDialogTitle => 'Transaction history';
@@ -3235,6 +3258,17 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get settingsPrivacyPolicyDialogBody =>
       'Your privacy matters to us:\n\n• We only collect personal data when it is needed and you have consented\n• Your wallet keys and recovery phrase stay under your control\n• We may collect anonymous usage statistics to improve the app\n• We do not share your data with third parties\n• You can disable analytics in Privacy settings\n\nFor our complete privacy policy, visit our website.';
+
+  @override
+  String get settingsLegalOpenFullTerms => 'Read full terms';
+
+  @override
+  String get settingsLegalOpenFullPrivacy => 'Read full privacy policy';
+
+  @override
+  String settingsLegalOpenFailed(String url) {
+    return 'Could not open $url';
+  }
 
   @override
   String get settingsSupportDialogTitle => 'Support';
@@ -5598,6 +5632,10 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get userProfileConversationOpenFailedToast =>
       'Could not open conversation.';
+
+  @override
+  String get messagingRecipientUnavailableToast =>
+      'You cannot message this account.';
 
   @override
   String get userProfileConversationOpenGenericErrorToast =>
@@ -10223,6 +10261,12 @@ class AppLocalizationsEn extends AppLocalizations {
       'Find focused spaces for critiques, exhibitions, public art, events, and collaborations.';
 
   @override
+  String get communityGroupsJoinedSectionTitle => 'Your groups';
+
+  @override
+  String get communityGroupsDiscoverSectionTitle => 'Discover public groups';
+
+  @override
   String get communityClearSearchTooltip => 'Clear search';
 
   @override
@@ -11352,15 +11396,23 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get walletBackupProtectionNoWalletBody =>
-      'Connect or restore the wallet on this device before managing backup protection.';
+      'Connect a wallet on this device before managing backup protection.';
 
   @override
-  String get walletBackupProtectionAccountShellHeadline =>
-      'Your account is ready, but this device does not have wallet access yet.';
+  String get walletBackupProtectionCheckingHeadline =>
+      'Checking wallet status…';
 
   @override
-  String get walletBackupProtectionAccountShellBody =>
-      'Restore the account wallet on this device before you configure wallet backup protection, transfers, or future wallet-linked access.';
+  String get walletBackupProtectionCheckingBody =>
+      'This device is checking whether a wallet is linked to your account. Backup options appear when the check finishes.';
+
+  @override
+  String get walletBackupProtectionWalletlessHeadline =>
+      'No wallet is linked to this account.';
+
+  @override
+  String get walletBackupProtectionWalletlessBody =>
+      'A wallet is optional. Connect one from the Wallet screen when you need wallet-based ownership or participation.';
 
   @override
   String get walletBackupProtectionNoBackupHeadline =>
@@ -11408,7 +11460,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get walletBackupProtectionReadOnlyBody =>
-      'Restore signing access with your encrypted backup or recovery phrase before using transfers and other wallet-protected actions on this device.';
+      'Reconnect your wallet provider, or import your recovery phrase, before using transfers and other wallet-protected actions on this device.';
 
   @override
   String get walletSessionStateAccountShellOnly => 'Account shell only';
@@ -12100,9 +12152,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get securityHubExternalSignerConnected => 'External signer connected';
 
   @override
-  String get securityHubConnectOrRestoreWallet => 'Connect or restore a wallet';
-
-  @override
   String get securityHubDeleteBackupAction => 'Delete backup';
 
   @override
@@ -12728,6 +12777,18 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get commonLoading => 'Loading';
+
+  @override
+  String get artworkPrivatePreviewDenied =>
+      'Sign in with an account that can view this draft.';
+
+  @override
+  String get artworkPrivatePreviewUnavailable =>
+      'This preview is not available.';
+
+  @override
+  String get artworkPrivatePreviewRetry =>
+      'This preview is temporarily unavailable. Try again later.';
 
   @override
   String get desktopShellNavHome => 'Home';
@@ -16268,6 +16329,27 @@ class AppLocalizationsEn extends AppLocalizations {
   String get spatialLoadArchiveQuality => 'Load archival quality';
 
   @override
+  String spatialLoadArchiveQualityWithSize(String size) {
+    return 'Load archival quality ($size)';
+  }
+
+  @override
+  String get spatialArchiveConsentBody =>
+      'The archival version is the full-detail capture. It is large and can use a lot of data, so it only loads when you ask.';
+
+  @override
+  String get spatialArchiveConfirmTitle => 'Load a large archive?';
+
+  @override
+  String spatialArchiveConfirmBody(String size) {
+    return 'This download is about $size. Continue only on a connection you are happy to use.';
+  }
+
+  @override
+  String get spatialArchiveConfirmBodyUnknownSize =>
+      'This download is large and its size is not known. Continue only on a connection you are happy to use.';
+
+  @override
   String get spatialQualityMobile => 'Optimised';
 
   @override
@@ -16288,6 +16370,15 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get spatialViewerUnavailable =>
       'This spatial archive is currently unavailable.';
+
+  @override
+  String get spatialViewerLoading => 'Loading the 3D view…';
+
+  @override
+  String get spatialViewerActivate => 'Tap to interact';
+
+  @override
+  String get spatialViewerDragHint => 'Drag to look around';
 
   @override
   String get spatialViewerFallback => 'Trying another archive route…';
@@ -19062,4 +19153,160 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get analyticsConsentPromptSemanticsLabel =>
       'Optional analytics choice';
+
+  @override
+  String get galleryTitle => 'Gallery';
+
+  @override
+  String get galleryCurate => 'Curate gallery';
+
+  @override
+  String get galleryModeWall => 'Gallery wall';
+
+  @override
+  String get galleryModeRooms => 'Folded rooms';
+
+  @override
+  String get galleryModeField => 'Reading field';
+
+  @override
+  String get galleryModeLabel => 'Layout';
+
+  @override
+  String get galleryPublished => 'Published';
+
+  @override
+  String get galleryUnpublished => 'Unpublished draft';
+
+  @override
+  String get galleryUnsaved => 'Unsaved changes';
+
+  @override
+  String get galleryArtworkOrder => 'Artwork order';
+
+  @override
+  String get gallerySectionOrder => 'Section order';
+
+  @override
+  String get galleryMoveEarlier => 'Move earlier';
+
+  @override
+  String get galleryMoveLater => 'Move later';
+
+  @override
+  String get galleryHideSection => 'Hide section';
+
+  @override
+  String get gallerySaveDraft => 'Save draft';
+
+  @override
+  String get galleryPublish => 'Publish gallery';
+
+  @override
+  String get galleryResetToAutomatic => 'Reset to automatic';
+
+  @override
+  String get galleryDiscard => 'Discard changes';
+
+  @override
+  String get galleryDiscardPrompt =>
+      'Discard your unsaved changes to the gallery?';
+
+  @override
+  String get galleryConflict =>
+      'This gallery changed elsewhere. Reload before saving again.';
+
+  @override
+  String get galleryUnavailable => 'Gallery unavailable.';
+
+  @override
+  String get galleryArtworkUnavailable => 'Artwork unavailable';
+
+  @override
+  String get galleryEmpty => 'No artworks to display.';
+
+  @override
+  String get galleryMore => 'Show more artworks';
+
+  @override
+  String get gallerySectionIdentity => 'Identity';
+
+  @override
+  String get gallerySectionStats => 'Statistics';
+
+  @override
+  String get gallerySectionWork => 'Works and projects';
+
+  @override
+  String get gallerySectionPublicArt => 'Public art';
+
+  @override
+  String get gallerySectionActivity => 'Activity';
+
+  @override
+  String get gallerySectionRecognition => 'Recognition';
+
+  @override
+  String get gallerySectionProgram => 'Programme';
+
+  @override
+  String get gallerySectionPoap => 'Attendance collectible';
+
+  @override
+  String get gallerySectionVisit => 'Visit';
+
+  @override
+  String get gallerySectionEvents => 'Events';
+
+  @override
+  String get gallerySectionCredits => 'Credits';
+
+  @override
+  String get galleryPersonalPreview => 'Draft preview';
+
+  @override
+  String get galleryReload => 'Reload gallery';
+
+  @override
+  String get galleryArtworkSizing => 'Artwork size and placement';
+
+  @override
+  String get gallerySizeSmall => 'Small';
+
+  @override
+  String get gallerySizeStandard => 'Standard';
+
+  @override
+  String get gallerySizeLead => 'Large';
+
+  @override
+  String get galleryMakeLead => 'Make lead artwork';
+
+  @override
+  String get galleryClearLead => 'Clear lead artwork';
+
+  @override
+  String get galleryPublishNotAllowed =>
+      'You can edit this gallery but not publish it.';
+
+  @override
+  String get galleryRefreshFailed =>
+      'Your change was saved, but the gallery could not be refreshed.';
+
+  @override
+  String galleryMovedTo(int position, int total) {
+    return 'Moved to position $position of $total';
+  }
+
+  @override
+  String get artworkPublishHeldWithdrawn =>
+      'An editor withdrew this artwork. Only an editorial decision can restore it.';
+
+  @override
+  String get artworkPublishHeldInReview =>
+      'This artwork is waiting for editorial review. It can be published once it is approved.';
+
+  @override
+  String get artworkPublishHeldGeneric =>
+      'This artwork is on editorial hold and cannot be published yet.';
 }

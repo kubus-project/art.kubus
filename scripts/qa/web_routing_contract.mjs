@@ -99,6 +99,9 @@ await expectAppShell('/?lang=sl&utm_source=test');
 // into the app shell. The renderer decides eligibility and real 404s at runtime.
 await expectGatewayHandoff('/en/artworks/contract-probe');
 await expectGatewayHandoff('/sl/umetnine/contract-probe');
+// Institution pages (own canonical per locale) are renderer-owned too, never the app shell.
+await expectGatewayHandoff('/en/institutions/contract-probe');
+await expectGatewayHandoff('/sl/institucije/contract-probe');
 
 // Compact and long-form entity aliases remain renderer-owned. The PHP-less CI
 // container proves the handoff target; production contract tests prove the

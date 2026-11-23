@@ -3,17 +3,9 @@ import 'package:latlong2/latlong.dart';
 import '../utils/map_coordinate_rules.dart';
 import 'promotion.dart';
 
-enum ArtworkStatus {
-  undiscovered,
-  discovered,
-  favorite,
-}
+enum ArtworkStatus { undiscovered, discovered, favorite }
 
-enum ArtworkPoapMode {
-  none,
-  existingPoap,
-  kubusPoap,
-}
+enum ArtworkPoapMode { none, existingPoap, kubusPoap }
 
 extension ArtworkPoapModeApi on ArtworkPoapMode {
   String get apiValue {
@@ -42,12 +34,7 @@ extension ArtworkPoapModeApi on ArtworkPoapMode {
   }
 }
 
-enum ArtworkArStatus {
-  none,
-  draft,
-  ready,
-  error,
-}
+enum ArtworkArStatus { none, draft, ready, error }
 
 extension ArtworkArStatusApi on ArtworkArStatus {
   String get apiValue {
@@ -151,6 +138,59 @@ class ArtworkAuthorProfile {
   int get hashCode => Object.hash(profileId, username, displayName);
 }
 
+/// Authenticated, request-time routes for artwork bytes that are not public.
+/// These values are never serialized to local artwork storage.
+class ArtworkMediaPreviewDescriptor {
+  const ArtworkMediaPreviewDescriptor({
+    required this.auth,
+    required this.cover,
+    required this.gallery,
+    required this.poap,
+  });
+
+  final String auth;
+  final String? cover;
+  final List<String?> gallery;
+  final String? poap;
+
+  String? pathFor(String slot) {
+    switch (slot) {
+      case 'cover':
+        return cover;
+      case 'poap':
+        return poap;
+      default:
+        final match = RegExp(r'^gallery-(\d{1,2})$').firstMatch(slot);
+        if (match == null) return null;
+        final index = int.tryParse(match.group(1) ?? '');
+        if (index == null || index >= gallery.length) return null;
+        return gallery[index];
+    }
+  }
+
+  static ArtworkMediaPreviewDescriptor? tryParse(Object? raw) {
+    if (raw is! Map) return null;
+    final galleryRaw = raw['gallery'];
+    final gallery = galleryRaw is List
+        ? galleryRaw
+            .map(
+              (value) => value is String && value.trim().isNotEmpty
+                  ? value.trim()
+                  : null,
+            )
+            .toList(growable: false)
+        : const <String?>[];
+    String? readPath(Object? value) =>
+        value is String && value.trim().isNotEmpty ? value.trim() : null;
+    return ArtworkMediaPreviewDescriptor(
+      auth: raw['auth']?.toString() ?? '',
+      cover: readPath(raw['cover']),
+      gallery: gallery,
+      poap: readPath(raw['poap']),
+    );
+  }
+}
+
 class Artwork {
   final String id;
   final String? walletAddress;
@@ -167,6 +207,11 @@ class Artwork {
   final ArtworkStatus status;
   final bool isPublic;
   final bool isActive;
+  final String? editorialState;
+
+  /// Runtime-only permission from a current-media response. It is excluded
+  /// from snapshots because a hold or restriction can change between reads.
+  final bool? currentPublicMediaAllowed;
   final bool isForSale;
   final double? price;
   final String? currency;
@@ -224,6 +269,8 @@ class Artwork {
   final double? averageRating;
   final int ratingsCount;
   final Map<String, dynamic>? metadata;
+  final ArtworkMediaPreviewDescriptor? mediaPreview;
+  final bool mediaPreviewProvided;
   final PromotionMetadata promotion;
 
   String? _metaString(String key) {
@@ -259,6 +306,8 @@ class Artwork {
     this.status = ArtworkStatus.undiscovered,
     this.isPublic = true,
     this.isActive = true,
+    this.editorialState,
+    this.currentPublicMediaAllowed,
     this.isForSale = false,
     this.price,
     this.currency,
@@ -302,6 +351,8 @@ class Artwork {
     this.averageRating,
     this.ratingsCount = 0,
     this.metadata,
+    this.mediaPreview,
+    this.mediaPreviewProvided = false,
     this.promotion = PromotionMetadata.none,
   });
 
@@ -326,6 +377,17 @@ class Artwork {
   /// Check if artwork is favorite
   bool get isFavorite => status == ArtworkStatus.favorite;
 
+  /// Whether URL-based public media is allowed by the known publication state.
+  /// Missing state remains compatible with public-list documents; an unknown
+  /// explicit state fails closed so a new moderation state cannot expose bytes.
+  bool get canUsePublicMedia {
+    if (currentPublicMediaAllowed == false) return false;
+    if (!isPublic || !isActive) return false;
+    final state = editorialState?.trim().toLowerCase();
+    if (state == null || state.isEmpty) return true;
+    return const {'unreviewed', 'needs_review', 'approved'}.contains(state);
+  }
+
   /// Backward-compatible legacy alias. Do not use in presentation.
   @Deprecated('Legacy artwork reward alias; do not present as artwork value.')
   int get actualRewards => rewards;
@@ -347,6 +409,7 @@ class Artwork {
       'status': status.name,
       'isPublic': isPublic,
       'isActive': isActive,
+      if (editorialState != null) 'editorialState': editorialState,
       'isForSale': isForSale,
       'price': price,
       'currency': currency,
@@ -420,6 +483,8 @@ class Artwork {
       ),
       isPublic: map['isPublic'] ?? map['is_public'] ?? true,
       isActive: map['isActive'] ?? map['is_active'] ?? true,
+      editorialState: map['editorialState']?.toString() ??
+          map['editorial_state']?.toString(),
       isForSale: map['isForSale'] ?? map['is_for_sale'] ?? false,
       price: map['price'] is num
           ? (map['price'] as num).toDouble()
@@ -522,6 +587,8 @@ class Artwork {
     ArtworkStatus? status,
     bool? isPublic,
     bool? isActive,
+    String? editorialState,
+    bool? currentPublicMediaAllowed,
     bool? isForSale,
     double? price,
     String? currency,
@@ -565,15 +632,27 @@ class Artwork {
     double? averageRating,
     int? ratingsCount,
     Map<String, dynamic>? metadata,
+    ArtworkMediaPreviewDescriptor? mediaPreview,
+    bool? mediaPreviewProvided,
     PromotionMetadata? promotion,
     // `copyWith` keeps the old value for a null argument; these flags are the
-    // only way to explicitly clear a nullable field.
+    // explicit clear flags are the only way to clear nullable fields.
     bool clearPrice = false,
     bool clearArScale = false,
+    bool clearImageUrl = false,
+    bool clearModel3DURL = false,
+    bool clearPoapImageUrl = false,
+    bool clearMediaPreview = false,
     bool clearDiscoveredAt = false,
     bool clearDiscoveryUserId = false,
     bool clearAuthorProfile = false,
   }) {
+    // An explicit descriptor-presence value wins over clearing the value.
+    // Account-switch tombstones clear the descriptor but set this to true so
+    // private-preview code cannot fetch another session's detail as fallback.
+    final resolvedMediaPreviewProvided = mediaPreviewProvided ??
+        (clearMediaPreview ? false : this.mediaPreviewProvided);
+
     return Artwork(
       id: id ?? this.id,
       walletAddress: walletAddress ?? this.walletAddress,
@@ -582,13 +661,16 @@ class Artwork {
       authorProfile:
           clearAuthorProfile ? null : (authorProfile ?? this.authorProfile),
       description: description ?? this.description,
-      imageUrl: imageUrl ?? this.imageUrl,
+      imageUrl: clearImageUrl ? null : (imageUrl ?? this.imageUrl),
       galleryUrls: galleryUrls ?? this.galleryUrls,
       galleryMeta: galleryMeta ?? this.galleryMeta,
       position: position ?? this.position,
       status: status ?? this.status,
       isPublic: isPublic ?? this.isPublic,
       isActive: isActive ?? this.isActive,
+      editorialState: editorialState ?? this.editorialState,
+      currentPublicMediaAllowed:
+          currentPublicMediaAllowed ?? this.currentPublicMediaAllowed,
       isForSale: isForSale ?? this.isForSale,
       price: clearPrice ? null : (price ?? this.price),
       currency: currency ?? this.currency,
@@ -609,7 +691,7 @@ class Artwork {
       arConfigId: arConfigId ?? this.arConfigId,
       arStatus: arStatus ?? this.arStatus,
       model3DCID: model3DCID ?? this.model3DCID,
-      model3DURL: model3DURL ?? this.model3DURL,
+      model3DURL: clearModel3DURL ? null : (model3DURL ?? this.model3DURL),
       arScale: clearArScale ? null : (arScale ?? this.arScale),
       arRotation: arRotation ?? this.arRotation,
       arEnableAnimation: arEnableAnimation ?? this.arEnableAnimation,
@@ -623,7 +705,8 @@ class Artwork {
       poapRewardAmount: poapRewardAmount ?? this.poapRewardAmount,
       poapTitle: poapTitle ?? this.poapTitle,
       poapDescription: poapDescription ?? this.poapDescription,
-      poapImageUrl: poapImageUrl ?? this.poapImageUrl,
+      poapImageUrl:
+          clearPoapImageUrl ? null : (poapImageUrl ?? this.poapImageUrl),
       likesCount: likesCount ?? this.likesCount,
       commentsCount: commentsCount ?? this.commentsCount,
       viewsCount: viewsCount ?? this.viewsCount,
@@ -636,6 +719,9 @@ class Artwork {
       averageRating: averageRating ?? this.averageRating,
       ratingsCount: ratingsCount ?? this.ratingsCount,
       metadata: metadata ?? this.metadata,
+      mediaPreview:
+          clearMediaPreview ? null : (mediaPreview ?? this.mediaPreview),
+      mediaPreviewProvided: resolvedMediaPreviewProvided,
       promotion: promotion ?? this.promotion,
     );
   }

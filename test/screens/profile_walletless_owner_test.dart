@@ -14,6 +14,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../support/profile_fixtures.dart';
 import '../support/profile_screen_harness.dart';
+import '../support/account_session_fixture.dart';
 
 /// A wallet is optional. The owner's own profile of an account that has no
 /// wallet identity must not tell them to connect one.
@@ -167,7 +168,8 @@ void main() {
             (tester) async {
           SharedPreferences.setMockInitialValues(<String, Object>{});
           final requests = <http.Request>[];
-          BackendApiService().setHttpClient(MockClient((request) async {
+          BackendApiService()
+              .setHttpClient(legacyProfileClient((request) async {
             requests.add(request);
             if (request.url.path == '/api/artworks' &&
                 request.url.queryParameters['authorProfileId'] == profileId) {
@@ -233,7 +235,7 @@ void main() {
         var failCollections = false;
         var collectionFailures = 0;
         const profileId = '10000000-0000-4000-8000-000000000003';
-        BackendApiService().setHttpClient(MockClient((request) async {
+        BackendApiService().setHttpClient(legacyProfileClient((request) async {
           requests.add(request);
           if (request.url.path == '/api/collections') {
             if (failCollections) {
@@ -318,8 +320,8 @@ void main() {
         final bResponse = Completer<http.Response>();
         final authorRequests = <String>[];
         final profileProvider = ProfileProvider();
-        AccountIdentity.setAccountKey(accountA);
-        BackendApiService().setHttpClient(MockClient((request) async {
+        AccountSessionFixture.start(accountId: accountA);
+        BackendApiService().setHttpClient(legacyProfileClient((request) async {
           if (request.url.path == '/api/artworks' &&
               request.url.queryParameters['authorProfileId'] != null) {
             final author = request.url.queryParameters['authorProfileId']!;
@@ -369,7 +371,7 @@ void main() {
 
         // Match production order: the session is B before B's profile has
         // hydrated, so the screen must stay cleared and must not request A.
-        AccountIdentity.setAccountKey(accountB);
+        AccountSessionFixture.start(accountId: accountB);
         AccountIdentity.notifyListenersChanged();
         await tester.pump();
         await tester.pump(const Duration(milliseconds: 100));
@@ -409,8 +411,8 @@ void main() {
         final bResponse = Completer<http.Response>();
         final authorRequests = <String>[];
         final profileProvider = ProfileProvider();
-        AccountIdentity.setAccountKey(accountA);
-        BackendApiService().setHttpClient(MockClient((request) async {
+        AccountSessionFixture.start(accountId: accountA);
+        BackendApiService().setHttpClient(legacyProfileClient((request) async {
           if (request.url.path == '/api/artworks' &&
               request.url.queryParameters['authorProfileId'] != null) {
             final author = request.url.queryParameters['authorProfileId']!;
@@ -431,7 +433,7 @@ void main() {
         );
         expect(authorRequests.where((id) => id == profileA), hasLength(1));
 
-        AccountIdentity.setAccountKey(accountB);
+        AccountSessionFixture.start(accountId: accountB);
         AccountIdentity.notifyListenersChanged();
         await tester.pump();
         expect(authorRequests.where((id) => id == profileA), hasLength(1));

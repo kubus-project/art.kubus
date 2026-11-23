@@ -35,8 +35,9 @@ Future<Map<String, dynamic>> _backendApiLoginWithWallet(
   required String walletAddress,
   required String signature,
   required String message,
+  int? expectedEpoch,
 }) async {
-  var sessionEpoch = service._authSessionEpoch;
+  var sessionEpoch = expectedEpoch ?? service._authSessionEpoch;
   try {
     const path = '/api/auth/login';
     final response = await service._sendAuthRequestWithFailover(
@@ -55,6 +56,7 @@ Future<Map<String, dynamic>> _backendApiLoginWithWallet(
 
     if (response.statusCode == 200) {
       final data = jsonDecode(response.body) as Map<String, dynamic>;
+      await _browserSessionEndForSignIn(service, data);
       sessionEpoch = await service._persistTokenFromResponse(data,
           expectedEpoch: sessionEpoch);
       await service.syncSecureAccountStatusFromResponse(
@@ -116,6 +118,7 @@ Future<Map<String, dynamic>> _backendApiRegisterWithEmail(
     );
     final data = jsonDecode(response.body) as Map<String, dynamic>;
     if (response.statusCode == 200 || response.statusCode == 201) {
+      if (!includeAuth) await _browserSessionEndForSignIn(service, data);
       sessionEpoch = await service._persistTokenFromResponse(data,
           expectedEpoch: sessionEpoch);
       await service.syncSecureAccountStatusFromResponse(
@@ -171,16 +174,23 @@ Future<Map<String, dynamic>> _backendApiLoginWithEmail(
     );
     final data = jsonDecode(response.body) as Map<String, dynamic>;
     if (response.statusCode == 200) {
-      sessionEpoch = await service._persistTokenFromResponse(data,
+      // Web: the login token is exchanged for a session-bound bearer first
+      // (best effort; the login body is kept when no session starts).
+      final committed = await _browserSessionIssueAfterEmailLogin(
+        service,
+        data,
+        expectedEpoch: sessionEpoch,
+      );
+      sessionEpoch = await service._persistTokenFromResponse(committed,
           expectedEpoch: sessionEpoch);
       await service.syncSecureAccountStatusFromResponse(
-        data,
+        committed,
         sessionEpoch: sessionEpoch,
         fetchIfMissing: false,
       );
       await service.setLastSignInMethod(AuthSignInMethod.email,
           sessionEpoch: sessionEpoch);
-      return data;
+      return committed;
     }
     if (response.statusCode == 429) {
       service._markRateLimited(key, response, defaultWindowMs: 900000);
@@ -249,6 +259,7 @@ Future<Map<String, dynamic>> _backendApiVerifyPasskeyLogin(
     );
     final data = jsonDecode(response.body) as Map<String, dynamic>;
     if (response.statusCode == 200 || response.statusCode == 201) {
+      await _browserSessionEndForSignIn(service, data);
       sessionEpoch = await service._persistTokenFromResponse(data,
           expectedEpoch: sessionEpoch);
       await service.setLastSignInMethod(AuthSignInMethod.passkey,
@@ -752,6 +763,7 @@ Future<Map<String, dynamic>> _backendApiLoginWithGoogle(
     );
     final data = jsonDecode(response.body) as Map<String, dynamic>;
     if (response.statusCode == 200 || response.statusCode == 201) {
+      await _browserSessionEndForSignIn(service, data);
       sessionEpoch = await service._persistTokenFromResponse(data,
           expectedEpoch: sessionEpoch);
       await service.syncSecureAccountStatusFromResponse(
@@ -802,6 +814,9 @@ Future<Map<String, dynamic>> _backendApiBindAuthenticatedWallet(
 }) async {
   var sessionEpoch = service._authSessionEpoch;
   try {
+    // A bind from a session-bound bearer continues that browser session; any
+    // other bind is a new bearer for a stateless login, so the cookie ends.
+    final continuesSession = _browserSessionIsBound(service);
     const path = '/api/auth/bind-wallet';
     final normalizedSignature = (signature ?? '').trim();
     final response = await service._sendAuthRequestWithFailover(
@@ -816,8 +831,12 @@ Future<Map<String, dynamic>> _backendApiBindAuthenticatedWallet(
     );
     final data = jsonDecode(response.body) as Map<String, dynamic>;
     if (response.statusCode == 200 || response.statusCode == 201) {
+      if (!continuesSession) await _browserSessionEndForSignIn(service, data);
       sessionEpoch = await service._persistTokenFromResponse(data,
           expectedEpoch: sessionEpoch);
+      if (continuesSession) {
+        service._browserBoundToken = _browserSessionTokenOf(data);
+      }
       await service.syncSecureAccountStatusFromResponse(data,
           sessionEpoch: sessionEpoch);
       return data;

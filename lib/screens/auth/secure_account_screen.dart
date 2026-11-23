@@ -46,6 +46,7 @@ class _SecureAccountScreenState extends State<SecureAccountScreen> {
   bool _isResending = false;
   bool _verificationSent = false;
   bool _emailVerified = false;
+  // Server status of this secure-account step (email to verify), not the signed-in identity.
   String? _accountEmail;
 
   String? _emailError;
@@ -74,7 +75,7 @@ class _SecureAccountScreenState extends State<SecureAccountScreen> {
     final direct = (walletProvider.currentWalletAddress ?? '').trim();
     if (direct.isNotEmpty) return direct;
     final fromProfile =
-        (profileProvider.currentUser?.walletAddress ?? '').trim();
+        (profileProvider.heldProfile?.walletAddress ?? '').trim();
     if (fromProfile.isNotEmpty) return fromProfile;
     return '';
   }

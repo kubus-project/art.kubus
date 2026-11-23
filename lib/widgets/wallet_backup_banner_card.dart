@@ -57,6 +57,8 @@ class _WalletBackupBannerCardState extends State<WalletBackupBannerCard> {
     await _load();
   }
 
+  // The wallet whose recovery phrase needs backing up: wallet custody on this
+  // device, not account identity, so it resolves without a live session.
   Future<String?> _resolveWalletAddress() async {
     final profileProvider =
         Provider.of<ProfileProvider>(context, listen: false);

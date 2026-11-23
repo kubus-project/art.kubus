@@ -587,7 +587,6 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
     if (draft.authoredBySelf &&
         AuthoredBySelf.displayNameFor(
               profileProvider.currentUser,
-              isSignedIn: profileProvider.isSignedIn,
             ) ==
             null) {
       drafts.updateBasics(draftId: widget.draftId, authoredBySelf: false);
@@ -780,7 +779,6 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
     final profileProvider = context.watch<ProfileProvider>();
     final selfName = AuthoredBySelf.displayNameFor(
       profileProvider.currentUser,
-      isSignedIn: profileProvider.isSignedIn,
     );
     final selfActive = draft.authoredBySelf && selfName != null;
     return CreatorSection(

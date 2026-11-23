@@ -602,10 +602,8 @@ class _UnifiedAnalyticsScreenState extends State<UnifiedAnalyticsScreen> {
     ProfileProvider profileProvider,
     Web3Provider web3Provider,
   ) {
-    return WalletUtils.coalesce(
-      walletAddress: profileProvider.currentUser?.walletAddress,
-      wallet: web3Provider.walletAddress,
-    );
+    // "Me" is the signed-in account; a stored wallet with no session is not.
+    return WalletUtils.canonical(profileProvider.currentUser?.walletAddress);
   }
 
   String _resolveSubjectId(AnalyticsPreset preset, String viewerWallet) {

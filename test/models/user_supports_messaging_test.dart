@@ -33,25 +33,32 @@ void main() {
     expect(user.walletAddress, _wallet);
   });
 
-  test(
-      'without a wallet there is no message target, even when messages are allowed',
-      () {
+  test('a walletless account can be messaged by its account UUID', () {
     final user = _user(walletAddress: null);
     expect(user.allowsMessages, isTrue);
-    expect(user.supportsMessaging, isFalse,
-        reason: 'the conversation API is wallet-keyed');
+    expect(user.messageTargetId, _accountUuid);
+    expect(user.supportsMessaging, isTrue);
   });
 
   test('a blank wallet is no wallet', () {
-    expect(_user(walletAddress: '   ').supportsMessaging, isFalse);
-    expect(_user(walletAddress: '').supportsMessaging, isFalse);
+    expect(
+        _user(walletAddress: '   ', userId: null).supportsMessaging, isFalse);
+    expect(_user(walletAddress: '', userId: null).supportsMessaging, isFalse);
   });
 
-  test('the id and account UUID alone never make an account messageable', () {
-    // The profile id and the users.id are present; neither is a wallet.
+  test('the profile id is never used instead of the account UUID', () {
+    // The account UUID is a valid account target; the profile id is not used.
     final user = _user(walletAddress: null, userId: _accountUuid);
     expect(user.id, isNotEmpty);
     expect(user.userId, _accountUuid);
+    expect(user.messageTargetId, _accountUuid);
+    expect(user.messageTargetId, isNot(user.id));
+    expect(user.supportsMessaging, isTrue);
+  });
+
+  test('without wallet or account UUID a profile cannot be messaged', () {
+    final user = _user(walletAddress: null, userId: null);
+    expect(user.messageTargetId, isNull);
     expect(user.supportsMessaging, isFalse);
   });
 
@@ -60,12 +67,14 @@ void main() {
     expect(user.supportsMessaging, isFalse);
   });
 
-  test('copyWith keeps the preference and the wallet rule together', () {
+  test('copyWith keeps the preference and account target together', () {
     final user = _user(walletAddress: null);
     final linked = user.copyWith(walletAddress: _wallet);
     expect(linked.supportsMessaging, isTrue);
     expect(linked.copyWith(allowsMessages: false).supportsMessaging, isFalse);
-    expect(user.copyWith(walletAddress: null).supportsMessaging, isFalse);
+    final walletless = user.copyWith(walletAddress: null);
+    expect(walletless.messageTargetId, _accountUuid);
+    expect(walletless.supportsMessaging, isTrue);
   });
 
   // Review 5 P1: username routes, the persisted user cache and profile packages

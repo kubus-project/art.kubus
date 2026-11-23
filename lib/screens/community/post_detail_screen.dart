@@ -37,7 +37,7 @@ import '../../services/pending_action_executor.dart';
 import '../../widgets/community/post_like_settlement.dart';
 import '../../providers/saved_items_provider.dart';
 import '../../providers/themeprovider.dart';
-import '../../providers/wallet_provider.dart';
+import '../../providers/profile_provider.dart';
 import '../../widgets/empty_state_card.dart';
 import '../../widgets/community/community_comment_row.dart';
 import '../../widgets/community/community_composer_character_counter.dart';
@@ -64,7 +64,6 @@ class PostDetailScreen extends StatefulWidget {
       postLikesLoader;
   final Future<List<Map<String, dynamic>>> Function(String postId)?
       postRepostsLoader;
-  final String? currentWalletAddressOverride;
   final PostDetailInitialAction? initialAction;
 
   const PostDetailScreen({
@@ -74,7 +73,6 @@ class PostDetailScreen extends StatefulWidget {
     this.onClose,
     this.postLikesLoader,
     this.postRepostsLoader,
-    this.currentWalletAddressOverride,
     this.initialAction,
   }) : assert(post != null || postId != null);
 
@@ -102,19 +100,6 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
   final Set<String> _deleteDialogOpenCommentIds = <String>{};
   final Set<String> _deleteInFlightCommentIds = <String>{};
   PendingActionProvider? _pendingActions;
-
-  String? _currentWalletAddress() {
-    final override = widget.currentWalletAddressOverride;
-    if (override != null) return override;
-    try {
-      return Provider.of<WalletProvider>(
-        context,
-        listen: false,
-      ).currentWalletAddress;
-    } catch (_) {
-      return null;
-    }
-  }
 
   @override
   void initState() {
@@ -1045,9 +1030,12 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
   }
 
   bool _isCurrentUserPost(CommunityPost post) {
-    final current = _currentWalletAddress();
-    if (current == null || current.trim().isEmpty) return false;
-    return WalletUtils.equals(post.authorWallet ?? post.authorId, current);
+    // The account id decides; the wallet is the legacy fallback only.
+    return Provider.of<ProfileProvider>(context, listen: false)
+        .isCurrentAccountActor(
+      accountId: post.authorUserId,
+      wallet: post.authorWallet,
+    );
   }
 
   Future<void> _showPostOptionsMenu() async {
@@ -2122,9 +2110,6 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
 
                                     final scheme =
                                         Theme.of(context).colorScheme;
-                                    final currentWallet = WalletUtils.canonical(
-                                      _currentWalletAddress() ?? '',
-                                    );
                                     final loading = commentsProvider.isLoading(
                                       post.id,
                                     );
@@ -2134,15 +2119,13 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                                     final comments = commentsProvider
                                         .commentsForPost(post.id);
 
-                                    bool canModify(Comment c) {
-                                      if (currentWallet.isEmpty) return false;
-                                      final authorKey = WalletUtils.canonical(
-                                        (c.authorWallet ?? c.authorId)
-                                            .toString(),
-                                      );
-                                      return authorKey.isNotEmpty &&
-                                          authorKey == currentWallet;
-                                    }
+                                    final profile =
+                                        Provider.of<ProfileProvider>(context);
+                                    bool canModify(Comment c) =>
+                                        profile.isCurrentAccountActor(
+                                          accountId: c.authorUserId,
+                                          wallet: c.authorWallet,
+                                        );
 
                                     Future<void> showHistory(Comment c) async {
                                       if (!c.isEdited ||

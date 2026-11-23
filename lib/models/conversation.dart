@@ -1,21 +1,34 @@
 import 'dart:convert';
 
 class ConversationMemberProfile {
+  final String? userId;
   final String wallet;
   final String? displayName;
   final String? avatarUrl;
 
   const ConversationMemberProfile({
     required this.wallet,
+    this.userId,
     this.displayName,
     this.avatarUrl,
   });
 
   factory ConversationMemberProfile.fromJson(Map<String, dynamic> map) {
-    final wallet = ((map['wallet'] ?? map['wallet_address'] ?? map['walletAddress']) ?? '').toString();
-    final displayName = map['displayName'] as String? ?? map['display_name'] as String? ?? map['name'] as String? ?? (wallet.isNotEmpty ? wallet : null);
+    final wallet =
+        ((map['wallet'] ?? map['wallet_address'] ?? map['walletAddress']) ?? '')
+            .toString();
+    final userId = ((map['userId'] ?? map['user_id']) ?? '').toString().trim();
+    final displayName = map['displayName'] as String? ??
+        map['display_name'] as String? ??
+        map['name'] as String? ??
+        (wallet.isNotEmpty ? wallet : null);
     final avatar = map['avatarUrl'] as String? ?? map['avatar_url'] as String?;
-    return ConversationMemberProfile(wallet: wallet, displayName: displayName, avatarUrl: avatar);
+    return ConversationMemberProfile(
+      userId: userId.isEmpty ? null : userId,
+      wallet: wallet,
+      displayName: displayName,
+      avatarUrl: avatar,
+    );
   }
 }
 
@@ -29,6 +42,7 @@ class Conversation {
   final String? lastMessage;
   final String? displayAvatar;
   final List<String> memberWallets;
+  final List<String> memberUserIds;
   final List<ConversationMemberProfile> memberProfiles;
   final int memberCount;
   final ConversationMemberProfile? counterpartProfile;
@@ -43,6 +57,7 @@ class Conversation {
     this.lastMessage,
     this.displayAvatar,
     this.memberWallets = const [],
+    this.memberUserIds = const [],
     this.memberProfiles = const [],
     this.memberCount = 0,
     this.counterpartProfile,
@@ -62,13 +77,19 @@ class Conversation {
     List<String> parseWallets(dynamic value) {
       if (value == null) return <String>[];
       if (value is List) {
-        return value.map((e) => (e ?? '').toString()).where((e) => e.isNotEmpty).toList();
+        return value
+            .map((e) => (e ?? '').toString())
+            .where((e) => e.isNotEmpty)
+            .toList();
       }
       if (value is String && value.isNotEmpty) {
         try {
           final parsed = jsonDecode(value);
           if (parsed is List) {
-            return parsed.map((e) => (e ?? '').toString()).where((e) => e.isNotEmpty).toList();
+            return parsed
+                .map((e) => (e ?? '').toString())
+                .where((e) => e.isNotEmpty)
+                .toList();
           }
         } catch (_) {}
       }
@@ -78,7 +99,8 @@ class Conversation {
     Map<String, dynamic>? castToMap(dynamic value) {
       if (value is Map<String, dynamic>) return value;
       if (value is Map) {
-        return value.map((key, val) => MapEntry(key == null ? '' : key.toString(), val));
+        return value.map(
+            (key, val) => MapEntry(key == null ? '' : key.toString(), val));
       }
       return null;
     }
@@ -90,7 +112,8 @@ class Conversation {
             .map(castToMap)
             .whereType<Map<String, dynamic>>()
             .map(ConversationMemberProfile.fromJson)
-            .where((profile) => profile.wallet.isNotEmpty)
+            .where((profile) =>
+                profile.wallet.isNotEmpty || profile.userId != null)
             .toList();
       }
       if (value is String && value.isNotEmpty) {
@@ -101,7 +124,8 @@ class Conversation {
                 .map(castToMap)
                 .whereType<Map<String, dynamic>>()
                 .map(ConversationMemberProfile.fromJson)
-                .where((profile) => profile.wallet.isNotEmpty)
+                .where((profile) =>
+                    profile.wallet.isNotEmpty || profile.userId != null)
                 .toList();
           }
         } catch (_) {}
@@ -114,7 +138,9 @@ class Conversation {
       final asMap = castToMap(value);
       if (asMap != null) {
         final profile = ConversationMemberProfile.fromJson(asMap);
-        return profile.wallet.isNotEmpty ? profile : null;
+        return profile.wallet.isNotEmpty || profile.userId != null
+            ? profile
+            : null;
       }
       if (value is String && value.isNotEmpty) {
         try {
@@ -122,7 +148,9 @@ class Conversation {
           final parsedMap = castToMap(parsed);
           if (parsedMap != null) {
             final profile = ConversationMemberProfile.fromJson(parsedMap);
-            return profile.wallet.isNotEmpty ? profile : null;
+            return profile.wallet.isNotEmpty || profile.userId != null
+                ? profile
+                : null;
           }
         } catch (_) {}
       }
@@ -141,22 +169,46 @@ class Conversation {
       if (value is String) {
         final lower = value.trim().toLowerCase();
         if (lower.isEmpty) return fallback;
-        if (lower == 'true' || lower == '1' || lower == 'yes' || lower == 'y') return true;
-        if (lower == 'false' || lower == '0' || lower == 'no' || lower == 'n') return false;
+        if (lower == 'true' || lower == '1' || lower == 'yes' || lower == 'y') {
+          return true;
+        }
+        if (lower == 'false' || lower == '0' || lower == 'no' || lower == 'n') {
+          return false;
+        }
       }
       return fallback;
     }
 
     final rawTitle = (j['raw_title'] ?? j['rawTitle']) as String?;
-    final resolvedTitle = (j['resolved_title'] ?? j['resolvedTitle'] ?? j['title']) as String?;
-    final memberWallets = parseWallets(j['memberWallets'] ?? j['member_wallets']);
-    final memberProfiles = parseProfiles(j['memberProfiles'] ?? j['member_profiles']);
-    final counterpart = parseCounterpart(j['counterpartProfile'] ?? j['counterpart_profile']);
-    final memberCountRaw = parseMemberCount(j['memberCount'] ?? j['member_count'], memberProfiles.length);
-    final memberCount = memberCountRaw == 0 && memberWallets.isNotEmpty ? memberWallets.length : memberCountRaw;
-    final avatarCandidate = (j['display_avatar'] ?? j['displayAvatar'] ?? j['avatar'] ?? j['avatar_url']) as String?;
+    final resolvedTitle =
+        (j['resolved_title'] ?? j['resolvedTitle'] ?? j['title']) as String?;
+    final memberWallets =
+        parseWallets(j['memberWallets'] ?? j['member_wallets']);
+    final memberProfiles =
+        parseProfiles(j['memberProfiles'] ?? j['member_profiles']);
+    final explicitMemberUserIds =
+        parseWallets(j['memberUserIds'] ?? j['member_user_ids']);
+    final memberUserIds = explicitMemberUserIds.isNotEmpty
+        ? explicitMemberUserIds.toSet().toList()
+        : memberProfiles
+            .map((profile) => profile.userId)
+            .whereType<String>()
+            .toSet()
+            .toList();
+    final counterpart =
+        parseCounterpart(j['counterpartProfile'] ?? j['counterpart_profile']);
+    final memberCountRaw = parseMemberCount(
+        j['memberCount'] ?? j['member_count'], memberProfiles.length);
+    final memberCount = memberCountRaw == 0 && memberWallets.isNotEmpty
+        ? memberWallets.length
+        : memberCountRaw;
+    final avatarCandidate = (j['display_avatar'] ??
+        j['displayAvatar'] ??
+        j['avatar'] ??
+        j['avatar_url']) as String?;
     final effectiveAvatar = avatarCandidate ?? counterpart?.avatarUrl;
-    final isGroup = parseBool(j['isGroup'] ?? j['is_group'], fallback: memberCount >= 3);
+    final isGroup =
+        parseBool(j['isGroup'] ?? j['is_group'], fallback: memberCount >= 3);
 
     return Conversation(
       id: j['id'] as String,
@@ -168,6 +220,7 @@ class Conversation {
       lastMessage: (j['lastMessage'] ?? j['last_message']) as String?,
       displayAvatar: effectiveAvatar,
       memberWallets: memberWallets,
+      memberUserIds: memberUserIds,
       memberProfiles: memberProfiles,
       memberCount: memberCount,
       counterpartProfile: counterpart,

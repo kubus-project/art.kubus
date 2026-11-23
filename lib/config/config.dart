@@ -681,15 +681,15 @@ class AppInfo {
   static const String appName = 'art.kubus';
   static const String version = String.fromEnvironment(
     'KUBUS_APP_VERSION',
-    defaultValue: '0.8.7',
+    defaultValue: '0.8.8',
   );
   static const int buildNumber = int.fromEnvironment(
     'KUBUS_BUILD_NUMBER',
-    defaultValue: 26111201,
+    defaultValue: 26112301,
   );
   static const String buildDate = String.fromEnvironment(
     'KUBUS_BUILD_DATE',
-    defaultValue: '2026-11-12',
+    defaultValue: '2026-11-23',
   );
 
   /// Get full version string
@@ -717,6 +717,8 @@ class PreferenceKeys {
   static const String secureAccountStatusCacheTsV1 =
       'secure_account_status_cache_ts_v1';
   static const String authLastSignInMethodV1 = 'auth_last_sign_in_method_v1';
+  static const String browserSessionPendingLogoutV1 =
+      'browser_session_pending_logout_v1';
   static const String walletAddress = 'wallet_address';
   static const String walletMnemonicBackedUpV1Prefix =
       'wallet_mnemonic_backed_up_v1';

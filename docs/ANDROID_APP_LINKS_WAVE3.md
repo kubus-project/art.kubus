@@ -19,6 +19,7 @@ entity families on `app.kubus.site`:
 | Exhibition | `/en/exhibitions/` | `/sl/razstave/` |
 | Post | `/en/posts/` | `/sl/objave/` |
 | Collection | `/en/collections/` | `/sl/zbirke/` |
+| Institution | `/en/institutions/` | `/sl/institucije/` |
 | Collectible | not claimed (no public destination in the app) | not claimed |
 | Map record | `/en/map/` | `/sl/zemljevid/` |
 
@@ -26,7 +27,7 @@ The filter remains limited to `https://app.kubus.site`, `VIEW`, `DEFAULT`, and
 `BROWSABLE`. It does not claim the site root, assets, login callbacks, or
 internal endpoints. Previously declared compact and long-form compatibility
 prefixes are retained. The localized URL is the preferred sharing identity;
-`ShareLinkBuilder` continues to emit HTTPS URLs for both locales and all eight
+`ShareLinkBuilder` continues to emit HTTPS URLs for both locales and all nine
 entity types. Collectible links remain parseable for in-app sharing but are
 deliberately not claimed, so they keep opening in the browser.
 

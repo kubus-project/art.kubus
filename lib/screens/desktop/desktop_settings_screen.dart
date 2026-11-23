@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import '../../widgets/inline_loading.dart';
+import '../../widgets/legal_document_link_action.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:art_kubus/screens/moderation/my_reports_screen.dart';
 import 'package:provider/provider.dart';
@@ -13,6 +14,7 @@ import '../../providers/profile_provider.dart';
 import '../../providers/stats_provider.dart';
 import '../../providers/task_provider.dart';
 import '../../providers/wallet_provider.dart';
+import '../../utils/wallet_presentation_state.dart';
 import '../../providers/platform_provider.dart';
 import '../../providers/security_gate_provider.dart';
 import '../../providers/email_preferences_provider.dart';
@@ -121,7 +123,9 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
   String _networkSelection = 'Mainnet';
   bool _autoBackup = true;
   WalletBackupStatusSnapshot _walletBackupStatus =
-      const WalletBackupStatusSnapshot.noWallet();
+      const WalletBackupStatusSnapshot.pending();
+  final WalletBackupStatusTracker _walletBackupTracker =
+      WalletBackupStatusTracker();
 
   // Profile interaction settings
   bool _showAchievements = true;
@@ -140,6 +144,17 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
     _tabController = TabController(length: 11, vsync: this);
     _animationController.forward();
     _loadSettings();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Subscribes this screen to the wallet and profile providers: a change to
+    // any backup input, or a profile sign-in flip, re-resolves the backup row
+    // (see _syncWalletBackupStatus).
+    context.watch<WalletProvider>();
+    context.watch<ProfileProvider>();
+    _syncWalletBackupStatus();
   }
 
   @override

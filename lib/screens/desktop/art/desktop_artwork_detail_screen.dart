@@ -28,8 +28,8 @@ import '../../../utils/artwork_location_actions.dart';
 import '../../../features/map/shared/map_screen_shared_helpers.dart';
 import '../../../utils/design_tokens.dart';
 import '../../../utils/kubus_color_roles.dart';
-import '../../../utils/wallet_utils.dart';
 import '../../../widgets/artwork_gallery_view.dart';
+import '../../../widgets/artwork_private_preview_image.dart';
 import '../../../widgets/artwork_author_line.dart';
 import '../../../widgets/inline_loading.dart';
 import '../../../widgets/detail/detail_shell_components.dart';
@@ -162,6 +162,25 @@ class _DesktopArtworkDetailScreenState
     final savedItemsProvider = context.read<SavedItemsProvider>();
 
     if (existing != null) {
+      if (mounted) {
+        setState(() {
+          _artworkLoading = true;
+          _artworkError = null;
+        });
+      }
+      final refreshed =
+          await provider.refreshArtworkDetailMetadata(widget.artworkId);
+      if (!mounted) return;
+      if (refreshed == null) {
+        setState(() {
+          _artworkLoading = false;
+          _artworkError = l10n.artDetailLoadFailedMessage;
+        });
+        return;
+      }
+    }
+
+    if (existing != null) {
       await savedItemsProvider.hydrateSavedStatus(
         type: SavedItemType.artwork,
         ids: [widget.artworkId],
@@ -184,6 +203,7 @@ class _DesktopArtworkDetailScreenState
 
     try {
       await provider.fetchArtworkIfNeeded(widget.artworkId);
+
       await savedItemsProvider.hydrateSavedStatus(
         type: SavedItemType.artwork,
         ids: [widget.artworkId],
@@ -511,6 +531,28 @@ class _DesktopArtworkDetailScreenState
 
   Widget _buildMedia(Artwork artwork, String? coverUrl) {
     final scheme = Theme.of(context).colorScheme;
+    if (!artwork.canUsePublicMedia || artwork.mediaPreview != null) {
+      return ClipRRect(
+        borderRadius: BorderRadius.circular(KubusRadius.lg),
+        child: AspectRatio(
+          aspectRatio: 14 / 9,
+          child: ArtworkPrivatePreviewImage(
+            artworkId: artwork.id,
+            isPublic: false,
+            slot: 'cover',
+            descriptor: artwork.mediaPreview,
+            descriptorProvided: artwork.mediaPreviewProvided,
+            publicFallback: Container(
+              color: scheme.surfaceContainerHighest,
+              child: Icon(
+                Icons.image_not_supported,
+                color: scheme.onSurfaceVariant,
+              ),
+            ),
+          ),
+        ),
+      );
+    }
     final primaryCover = <String>[
       if (coverUrl != null && coverUrl.trim().isNotEmpty) coverUrl.trim(),
       ...artwork.galleryUrls.map((u) => u.trim()).where((u) => u.isNotEmpty),
@@ -548,6 +590,47 @@ class _DesktopArtworkDetailScreenState
 
   Widget _buildGallerySection(Artwork artwork, String? coverUrl) {
     final l10n = AppLocalizations.of(context)!;
+    if (!artwork.canUsePublicMedia || artwork.mediaPreview != null) {
+      final descriptor = artwork.mediaPreview;
+      if (descriptor == null || descriptor.gallery.isEmpty) {
+        return const SizedBox.shrink();
+      }
+      final slots = List<String>.generate(
+        descriptor.gallery.length,
+        (index) => 'gallery-$index',
+        growable: false,
+      );
+      return Padding(
+        padding: const EdgeInsets.only(top: DetailSpacing.cardGap),
+        child: DetailCard(
+          child: DetailSection(
+            title: l10n.artistStudioTabGallery,
+            collapsible: true,
+            initiallyExpanded: true,
+            child: Padding(
+              padding: const EdgeInsets.only(top: DetailSpacing.sm),
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  final galleryHeight = (constraints.maxWidth / 1.9)
+                      .clamp(180.0, 260.0)
+                      .toDouble();
+                  return ArtworkGalleryView(
+                    imageUrls: List<String>.filled(
+                      slots.length,
+                      'private-preview-slot',
+                    ),
+                    privateArtwork: artwork,
+                    privateSlots: slots,
+                    height: galleryHeight,
+                    semanticLabel: _artworkImageSemanticLabel(artwork),
+                  );
+                },
+              ),
+            ),
+          ),
+        ),
+      );
+    }
     final normalizedCover = (coverUrl ?? '').trim();
     final urls = artwork.galleryUrls
         .map((u) => u.trim())
@@ -593,17 +676,8 @@ class _DesktopArtworkDetailScreenState
 
     final l10n = AppLocalizations.of(context)!;
     final scheme = Theme.of(context).colorScheme;
-    final profileProvider = context.read<ProfileProvider>();
-    final walletProvider = context.read<WalletProvider>();
-    final viewerWallet = WalletUtils.coalesce(
-      walletAddress: profileProvider.currentUser?.walletAddress,
-      wallet: walletProvider.currentWalletAddress,
-      userId: profileProvider.currentUser?.id,
-    );
-    final ownerWallet = WalletUtils.canonical(artwork.walletAddress);
-    final isOwner = viewerWallet.isNotEmpty &&
-        ownerWallet.isNotEmpty &&
-        WalletUtils.equals(viewerWallet, ownerWallet);
+    final isOwner =
+        context.read<ProfileProvider>().isCurrentAccount(artwork.walletAddress);
 
     String statusLabel() {
       switch (artwork.arStatus) {
@@ -951,8 +1025,9 @@ class _DesktopArtworkDetailScreenState
                   icon: Icons.navigation_outlined,
                   label: l10n.commonNavigate,
                   onPressed: () => unawaited(
-                    MapDestination.ofArtwork(artwork)
-                        .showNavigationOptions(context),
+                    MapDestination.ofArtwork(
+                      artwork,
+                    ).showNavigationOptions(context),
                   ),
                 ),
               if (showArPrimaryAction)
@@ -1003,8 +1078,7 @@ class _DesktopArtworkDetailScreenState
 
     final isMarkerOwner = KubusMarkerOverlayHelpers.markerOwnedByCurrentUser(
       marker: marker,
-      walletAddress: context.read<WalletProvider>().currentWalletAddress,
-      currentUserId: context.read<ProfileProvider>().currentUser?.id,
+      profile: context.read<ProfileProvider>(),
     );
 
     await StreetArtClaimsDialog.show(

@@ -1,0 +1,40 @@
+{
+  "comment": "Accept/refuse vectors for a published manifest transform. Read by BOTH test/services/spatial_web_delivery_test.dart (SpatialWebDelivery.transformFromManifest) and test/spatial_viewer_asset_contract.test.js (assets/spatial_viewer/src/manifest_transform.mjs), so the two hand-kept implementations cannot drift apart without a test failing. A matrix case is the upright base matrix with `edits` (index -> number) applied; the edit value \"NaN\" means a NaN and any other string means a non-number; `keep` truncates the array to that length.",
+  "upright": [0, 1, 0, 0, -1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1],
+  "matrices": [
+    { "name": "the Node upright matrix", "edits": {}, "accepted": true },
+    { "name": "rotation, scale and translation", "edits": { "0": 0, "1": 2, "4": -2, "10": 3, "12": 5, "13": -4, "14": 1 }, "accepted": true },
+    { "name": "translation at the bound", "edits": { "12": 1000000 }, "accepted": true },
+    { "name": "scale at the upper bound", "edits": { "0": 0, "1": 10000, "4": -10000, "10": 10000 }, "accepted": true },
+    { "name": "projective bottom row (3)", "edits": { "3": 0.5 }, "accepted": false },
+    { "name": "projective bottom row (7)", "edits": { "7": 0.5 }, "accepted": false },
+    { "name": "projective bottom row (11)", "edits": { "11": 0.5 }, "accepted": false },
+    { "name": "bottom-right is not 1", "edits": { "15": 2 }, "accepted": false },
+    { "name": "shear", "edits": { "4": -1, "5": 0.5 }, "accepted": false },
+    { "name": "mirror (left-handed basis)", "edits": { "10": -1 }, "accepted": false },
+    { "name": "translation out of bounds", "edits": { "12": 1000000000 }, "accepted": false },
+    { "name": "scale too large", "edits": { "0": 0, "1": 1000000000 }, "accepted": false },
+    { "name": "scale too small", "edits": { "0": 0, "1": 1e-9 }, "accepted": false },
+    { "name": "non-finite element", "edits": { "0": "NaN" }, "accepted": false },
+    { "name": "non-number element", "edits": { "15": "x" }, "accepted": false },
+    { "name": "one element short", "edits": {}, "keep": 15, "accepted": false },
+    { "name": "empty", "edits": {}, "keep": 0, "accepted": false }
+  ],
+  "positions": [
+    { "name": "origin", "value": [0, 0, 0], "accepted": true },
+    { "name": "at the bound", "value": [0, 1000000, 0], "accepted": true },
+    { "name": "out of bounds", "value": [0, 1000000000000, 0], "accepted": false },
+    { "name": "two components", "value": [0, 1], "accepted": false },
+    { "name": "four components", "value": [0, 1, 2, 3], "accepted": false }
+  ],
+  "scales": [
+    { "name": "uniform", "value": 2, "accepted": true },
+    { "name": "per axis at the bound", "value": [1, 1, 10000], "accepted": true },
+    { "name": "uniform at the lower bound", "value": 1e-6, "accepted": true },
+    { "name": "uniform too large", "value": 1e30, "accepted": false },
+    { "name": "zero", "value": 0, "accepted": false },
+    { "name": "negative", "value": -1, "accepted": false },
+    { "name": "per axis too small", "value": [1, 1, 1e-12], "accepted": false },
+    { "name": "per axis wrong length", "value": [1, 1], "accepted": false }
+  ]
+}

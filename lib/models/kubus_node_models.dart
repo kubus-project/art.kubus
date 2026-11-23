@@ -451,6 +451,7 @@ class SpatialContent {
     this.markerId,
     this.transform,
     this.viewerDefaults = const {},
+    this.manifestCid,
   });
   final String id;
   final String type;
@@ -461,6 +462,12 @@ class SpatialContent {
   final List<SpatialVariant> variants;
   final Map<String, dynamic>? transform;
   final Map<String, dynamic> viewerDefaults;
+
+  /// CID of the published manifest this content was read from, when known.
+  ///
+  /// The public history does not inline the manifest's `transform`; a viewer
+  /// that wants the piece to open upright reads the manifest by this CID.
+  final String? manifestCid;
   factory SpatialContent.fromJson(Map<String, dynamic> json) {
     if (json['schema'] != 'kubus.spatial/1') {
       throw const FormatException('Unsupported spatial manifest');
@@ -520,6 +527,7 @@ class ArtworkSpatialCapture {
         captureId: id,
         capturedAt: capturedAt,
         variants: variants,
+        manifestCid: canonicalManifestCid,
       );
 
   factory ArtworkSpatialCapture.fromJson(Map<String, dynamic> json) {

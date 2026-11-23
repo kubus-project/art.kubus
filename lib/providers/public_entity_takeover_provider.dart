@@ -407,9 +407,13 @@ class PublicEntityTakeoverProvider extends ChangeNotifier {
       ShareEntityType.marker => locale == 'sl' ? 'zemljevid' : 'map',
       ShareEntityType.nft =>
         locale == 'sl' ? 'zbirateljski-predmeti' : 'collectibles',
+      ShareEntityType.institution =>
+        locale == 'sl' ? 'institucije' : 'institutions',
     };
   }
 
+  /// The wire type of a takeover entity, or null for a type the gateway never
+  /// hands over to the app.
   String? _wireType(ShareEntityType type) {
     return switch (type) {
       ShareEntityType.artwork => 'artwork',
@@ -420,6 +424,7 @@ class PublicEntityTakeoverProvider extends ChangeNotifier {
       ShareEntityType.post => 'post',
       ShareEntityType.marker => 'marker',
       ShareEntityType.nft => 'collectible',
+      ShareEntityType.institution => 'institution',
     };
   }
 }

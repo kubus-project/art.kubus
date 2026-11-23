@@ -107,4 +107,57 @@ void main() {
       });
     });
   });
+
+  group('WalletUtils.isAccountUuid', () {
+    test('accepts a canonical account UUID in either case', () {
+      expect(WalletUtils.isAccountUuid('6f1c1d2e-3a4b-4c5d-8e9f-0a1b2c3d4e5f'),
+          isTrue);
+      expect(WalletUtils.isAccountUuid('6F1C1D2E-3A4B-4C5D-8E9F-0A1B2C3D4E5F'),
+          isTrue);
+    });
+
+    test('rejects wallets, empty and null values', () {
+      expect(WalletUtils.isAccountUuid(null), isFalse);
+      expect(WalletUtils.isAccountUuid(''), isFalse);
+      expect(
+          WalletUtils.isAccountUuid(
+              '7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU'),
+          isFalse);
+    });
+
+    test('a UUID is excluded from wallets although looksLikeWallet accepts it',
+        () {
+      const uuid = '6f1c1d2e-3a4b-4c5d-8e9f-0a1b2c3d4e5f';
+      expect(WalletUtils.looksLikeWallet(uuid), isTrue);
+      expect(WalletUtils.isAccountUuid(uuid), isTrue);
+    });
+  });
+
+  group('WalletUtils.sameIdentity', () {
+    test('an empty or null side never matches', () {
+      expect(WalletUtils.sameIdentity(null, null), isFalse);
+      expect(WalletUtils.sameIdentity('', ''), isFalse);
+      expect(WalletUtils.sameIdentity('', null), isFalse);
+      expect(
+          WalletUtils.sameIdentity('6f1c1d2e-3a4b-4c5d-8e9f-0a1b2c3d4e5f', ''),
+          isFalse);
+    });
+
+    test('UUIDs and 0x wallets compare case-insensitively', () {
+      expect(
+          WalletUtils.sameIdentity('6f1c1d2e-3a4b-4c5d-8e9f-0a1b2c3d4e5f',
+              '6F1C1D2E-3A4B-4C5D-8E9F-0A1B2C3D4E5F'),
+          isTrue);
+      expect(
+          WalletUtils.sameIdentity('0xABCDEF0123456789abcdef0123456789ABCDEF01',
+              '0xabcdef0123456789ABCDEF0123456789abcdef01'),
+          isTrue);
+    });
+
+    test('base58 wallets compare case-sensitively', () {
+      const wallet = '7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU';
+      expect(WalletUtils.sameIdentity(wallet, wallet), isTrue);
+      expect(WalletUtils.sameIdentity(wallet, wallet.toLowerCase()), isFalse);
+    });
+  });
 }

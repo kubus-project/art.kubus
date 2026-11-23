@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import '../widgets/inline_loading.dart';
+import '../widgets/legal_document_link_action.dart';
 import 'moderation/my_reports_screen.dart';
 import 'package:flutter/foundation.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
@@ -13,6 +14,7 @@ import '../utils/app_color_utils.dart';
 import '../providers/notification_provider.dart';
 import '../providers/web3provider.dart';
 import '../providers/wallet_provider.dart';
+import '../utils/wallet_presentation_state.dart';
 import '../providers/platform_provider.dart';
 import '../providers/profile_provider.dart';
 import '../providers/navigation_provider.dart';
@@ -114,7 +116,9 @@ class _SettingsScreenState extends State<SettingsScreen>
   String _networkSelection = 'Mainnet';
   bool _autoBackup = true;
   WalletBackupStatusSnapshot _walletBackupStatus =
-      const WalletBackupStatusSnapshot.noWallet();
+      const WalletBackupStatusSnapshot.pending();
+  final WalletBackupStatusTracker _walletBackupTracker =
+      WalletBackupStatusTracker();
 
   // Profile interaction settings
   bool _showAchievements = true;
@@ -145,6 +149,12 @@ class _SettingsScreenState extends State<SettingsScreen>
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
+    // Subscribes this screen to the wallet and profile providers: a change to
+    // any backup input, or a profile sign-in flip, re-resolves the backup row
+    // (see _syncWalletBackupStatus).
+    context.watch<WalletProvider>();
+    context.watch<ProfileProvider>();
+    _syncWalletBackupStatus();
     final animationTheme = context.animationTheme;
     if (_animationController.duration != animationTheme.long) {
       _animationController.duration = animationTheme.long;
@@ -166,6 +176,8 @@ class _SettingsScreenState extends State<SettingsScreen>
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final isSignedIn = context.watch<ProfileProvider>().isSignedIn;
+    final walletProvider = context.watch<WalletProvider>();
+    final hasWalletAccountContext = walletProvider.hasWalletIdentity;
     return Scaffold(
       backgroundColor: Colors.transparent,
       body: SafeArea(
@@ -203,7 +215,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                           // account, so it is always reachable.
                           _buildPrivacySection(l10n),
                           const SizedBox(height: 40),
-                          if (isSignedIn) ...[
+                          if (isSignedIn || hasWalletAccountContext) ...[
                             _buildSettingsGroupHeading(
                                 l10n.settingsGroupInfrastructure),
                             _buildPlatformCapabilitiesSection(l10n),

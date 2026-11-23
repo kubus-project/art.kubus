@@ -1,3 +1,5 @@
+import 'package:art_kubus/models/gallery_presentation.dart';
+import 'package:art_kubus/widgets/detail/gallery_presentation.dart';
 import 'package:art_kubus/widgets/community/community_post_media_carousel.dart';
 import 'dart:async';
 
@@ -29,6 +31,7 @@ import '../../utils/profile_showcase_normalizer.dart';
 import '../../community/community_interactions.dart';
 import '../../providers/themeprovider.dart';
 import '../../providers/chat_provider.dart';
+import '../../providers/profile_provider.dart';
 import '../../providers/stats_provider.dart';
 import '../../providers/app_refresh_provider.dart';
 import '../../providers/artwork_provider.dart';
@@ -469,7 +472,13 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) => GalleryHostScope(
+        type: GalleryHostType.profile,
+        hostId: user?.profileId,
+        builder: _buildProfileWithGallery,
+      );
+
+  Widget _buildProfileWithGallery(BuildContext context) {
     final themeProvider = Provider.of<ThemeProvider>(context);
     final l10n = AppLocalizations.of(context)!;
 
@@ -590,7 +599,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                 // [publicProfileSections]); a surface only decides what a
                 // section contributes.
                 ...composeProfileSections<Widget>(
-                  order: publicProfileSections,
+                  order: gallerySectionOrder(context, publicProfileSections),
                   gap: (previous, _) => SizedBox(
                     height: previous == ProfileSection.identity
                         ? DetailSpacing.md
@@ -838,11 +847,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     final profile = user!;
     final roles = KubusColorRoles.of(context);
     final placeLabel = _publicEntryPlaceLabel();
-    final roleLabel = isInstitution
-        ? l10n.settingsRoleInstitutionTitle
-        : isArtist
-            ? l10n.settingsRoleArtistTitle
-            : null;
+    const avatarRadius = 42.0;
     final titleStyle = KubusTextStyles.responsiveTitleStyle(
       context,
       KubusTypography.content(fontSize: 40, fontWeight: FontWeight.w700),
@@ -853,26 +858,41 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const SizedBox(height: KubusSpacing.lg),
-        if (roleLabel != null) ...[
-          Text(
-            roleLabel.toUpperCase(),
-            style: KubusTextStyles.structuralLabel.copyWith(
-              color: roles.foregroundMuted,
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            ProfileAvatarMount(
+              radius: avatarRadius,
+              isVerified: profile.isVerified,
+              isArtist: isArtist,
+              isInstitution: isInstitution,
+              child: AvatarWidget(
+                wallet: profile.id,
+                displayName: profile.name,
+                avatarUrl: profile.profileImageUrl,
+                radius: avatarRadius,
+                borderWidth: 0,
+                borderColor: Colors.transparent,
+                enableProfileNavigation: false,
+                heroTag: widget.heroTag,
+              ),
             ),
-          ),
-          const SizedBox(height: KubusSpacing.sm),
-        ],
-        ProfileIdentityBlock(
-          displayName: profile.name,
-          handle: profile.username,
-          isVerified: profile.isVerified,
-          isArtist: isArtist,
-          isInstitution: isInstitution,
-          density: ProfileIdentityDensity.spacious,
-          nameStyle: titleStyle,
-          handleStyle: KubusTextStyles.metadataRegister,
-          nameColor: roles.foreground,
-          handleColor: roles.foregroundMuted,
+            const SizedBox(width: KubusSpacing.md),
+            Expanded(
+              child: ProfileIdentityBlock(
+                displayName: profile.name,
+                handle: profile.username,
+                isVerified: profile.isVerified,
+                isArtist: isArtist,
+                isInstitution: isInstitution,
+                density: ProfileIdentityDensity.spacious,
+                nameStyle: titleStyle,
+                handleStyle: KubusTextStyles.metadataRegister,
+                nameColor: roles.foreground,
+                handleColor: roles.foregroundMuted,
+              ),
+            ),
+          ],
         ),
         if (placeLabel != null) ...[
           const SizedBox(height: KubusSpacing.sm),
@@ -1235,9 +1255,9 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
   }
 
   Future<void> _openMessageConversation(AppLocalizations l10n) async {
-    // Conversations are addressed by wallet only. Without a linked wallet there
-    // is no message target, so nothing is sent and no id is substituted.
-    final messageTarget = user?.messagingWallet;
+    // A conversation is addressed to the wallet, or to the account UUID of a
+    // walletless account. With neither there is no target, so nothing is sent.
+    final messageTarget = user?.messageTargetId;
     if (user?.supportsMessaging != true || messageTarget == null) return;
     final authenticated = await const ContextualAuthGate().ensureAuthenticated(
       requirements: ProtectedActionRequirements.participant,
@@ -1255,10 +1275,20 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     // navigator variable no longer used; ConversationNavigator handles
     // navigation.
     final messenger = ScaffoldMessenger.of(context);
-    final chatAuth = chatProvider.isAuthenticated;
+    final chatAuth =
+        Provider.of<ProfileProvider>(context, listen: false).isSignedIn;
     try {
-      final conv =
-          await chatProvider.createConversation('', false, [messageTarget]);
+      final outcome = await chatProvider
+          .createConversationOutcome('', false, [messageTarget]);
+      if (outcome.recipientUnavailable) {
+        if (mounted) {
+          messenger.showKubusSnackBar(
+            SnackBar(content: Text(l10n.messagingRecipientUnavailableToast)),
+          );
+        }
+        return;
+      }
+      final conv = outcome.conversation;
       if (conv != null) {
         if (!mounted) return;
         final preloaded = Provider.of<ChatProvider>(
@@ -1403,25 +1433,26 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
       if (!contentOnly ||
           _artistArtworks.isNotEmpty ||
           _authoredArtworksUnavailable)
-        _authoredArtworksUnavailable
-            ? Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(l10n.commonNotAvailable),
-                  TextButton(
-                    onPressed: _handleRefresh,
-                    child: Text(l10n.commonRetry),
-                  ),
-                ],
-              )
-            : _buildShowcaseSection(
-                l10n: l10n,
-                title: l10n.userProfileArtworksTitle,
-                items: _artistArtworks,
-                emptyLabel: l10n.userProfileNoArtworksYetLabel(user!.name),
-                emptyIcon: Icons.image_outlined,
-                builder: _buildArtworkCard,
-              ),
+        GalleryPanel(
+            fallback: _authoredArtworksUnavailable
+                ? Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(l10n.commonNotAvailable),
+                      TextButton(
+                        onPressed: _handleRefresh,
+                        child: Text(l10n.commonRetry),
+                      ),
+                    ],
+                  )
+                : _buildShowcaseSection(
+                    l10n: l10n,
+                    title: l10n.userProfileArtworksTitle,
+                    items: _artistArtworks,
+                    emptyLabel: l10n.userProfileNoArtworksYetLabel(user!.name),
+                    emptyIcon: Icons.image_outlined,
+                    builder: _buildArtworkCard,
+                  )),
       if (_documentedArtworks.isNotEmpty)
         _buildShowcaseSection(
           l10n: l10n,
@@ -1664,10 +1695,11 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
           ElevatedButton(
             onPressed: () async {
               final messenger = ScaffoldMessenger.of(context);
-              final targetWallet = WalletUtils.canonical(
-                user?.id ?? widget.userId,
-              );
-              if (targetWallet.isEmpty) {
+              // The wallet when the account has one, else its account UUID.
+              // The profile row id is never a block key: feeds match blocks
+              // against authorWallet or authorUserId.
+              final targetId = user?.messageTargetId ?? '';
+              if (targetId.isEmpty) {
                 if (!mounted) return;
                 Navigator.pop(context);
                 messenger.showKubusSnackBar(
@@ -1677,7 +1709,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
               }
 
               try {
-                await BlockListService().blockWallet(targetWallet);
+                await BlockListService().blockWallet(targetId);
               } catch (e) {
                 debugPrint('UserProfileScreen: failed to block user: $e');
                 if (!mounted) return;
@@ -1693,7 +1725,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
               messenger.showKubusSnackBar(
                 SnackBar(
                   content: Text(
-                    l10n.userProfileBlockedToast(user?.name ?? targetWallet),
+                    l10n.userProfileBlockedToast(user?.name ?? targetId),
                   ),
                 ),
               );

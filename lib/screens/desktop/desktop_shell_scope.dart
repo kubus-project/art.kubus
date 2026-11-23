@@ -26,6 +26,7 @@ bool matchesCanonicalPublicEntry({
     ShareEntityType.collection => 'collection',
     ShareEntityType.post => 'post',
     ShareEntityType.nft => 'collectible',
+    ShareEntityType.institution => 'institution',
     ShareEntityType.marker => null,
   };
   if (requestedType == null ||
@@ -45,6 +46,8 @@ bool matchesCanonicalPublicEntry({
     ShareEntityType.post => locale == 'sl' ? 'objave' : 'posts',
     ShareEntityType.nft =>
       locale == 'sl' ? 'zbirateljski-predmeti' : 'collectibles',
+    ShareEntityType.institution =>
+      locale == 'sl' ? 'institucije' : 'institutions',
     ShareEntityType.marker => null,
   };
   if (segment == null) return false;

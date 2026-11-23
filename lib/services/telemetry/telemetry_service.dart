@@ -171,6 +171,7 @@ class TelemetryService {
       final claims = BackendApiService().getCurrentAuthTokenClaims();
       return _normalizeUuid((claims?['id'] ?? claims?['sub'])?.toString());
     }
+    // Actor tag for the non-backend sender only; not an identity source.
     return _normalizeUuid(prefs?.getString('user_id'));
   }
 

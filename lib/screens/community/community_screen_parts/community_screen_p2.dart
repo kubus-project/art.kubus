@@ -332,18 +332,11 @@ extension _CommunityScreenStatePart2 on _CommunityScreenState {
                     const SizedBox(width: 12),
                     OutlinedButton.icon(
                       onPressed: post.group != null
+                          // A post's author is not the group owner, so the
+                          // summary carries no owner (see the helper).
                           ? () => _openGroupFeed(
-                                CommunityGroupSummary(
-                                  id: post.group!.id,
-                                  name: post.group!.name,
-                                  slug: post.group!.slug,
-                                  coverImage: post.group!.coverImage,
-                                  description: post.group!.description,
-                                  isPublic: true,
-                                  ownerWallet: post.authorWallet ?? '',
-                                  memberCount: 0,
-                                  isMember: false,
-                                  isOwner: false,
+                                communityGroupSummaryFromReference(
+                                  post.group!,
                                 ),
                               )
                           : null,
@@ -398,10 +391,12 @@ extension _CommunityScreenStatePart2 on _CommunityScreenState {
       onToggleLike: () => _toggleLike(index),
       onOpenComments: () => _toggleInlineComments(index),
       onRepost: () {
-        final walletProvider =
-            Provider.of<WalletProvider>(context, listen: false);
-        final currentWallet = walletProvider.currentWalletAddress;
-        if (post.postType == 'repost' && post.authorWallet == currentWallet) {
+        if (post.postType == 'repost' &&
+            Provider.of<ProfileProvider>(context, listen: false)
+                .isCurrentAccountActor(
+              accountId: post.authorUserId,
+              wallet: post.authorWallet,
+            )) {
           _showRepostOptions(post);
         } else {
           _showRepostModal(post);

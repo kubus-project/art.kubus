@@ -20,6 +20,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../support/account_session_fixture.dart';
 
 UserProfile _signedInProfile() => UserProfile(
       id: 'notification-settings-profile',
@@ -109,6 +110,13 @@ void main() {
     final profileProvider = ProfileProvider()
       ..setCurrentUser(_signedInProfile());
     await profileProvider.initialize();
+    // The account is signed in: a live session behind its held profile. It
+    // starts after initialize(), which would otherwise load it over the network.
+    AccountSessionFixture.start(
+      accountId: 'notification-settings-profile',
+      wallet: 'notification-settings-wallet',
+    );
+    addTearDown(AccountSessionFixture.end);
 
     final solana = SolanaWalletService();
     final web3Provider = Web3Provider(solanaWalletService: solana);
@@ -163,6 +171,13 @@ void main() {
     final profileProvider = ProfileProvider()
       ..setCurrentUser(_signedInProfile());
     await profileProvider.initialize();
+    // The account is signed in: a live session behind its held profile. It
+    // starts after initialize(), which would otherwise load it over the network.
+    AccountSessionFixture.start(
+      accountId: 'notification-settings-profile',
+      wallet: 'notification-settings-wallet',
+    );
+    addTearDown(AccountSessionFixture.end);
 
     final solana = SolanaWalletService();
     final web3Provider = Web3Provider(solanaWalletService: solana);

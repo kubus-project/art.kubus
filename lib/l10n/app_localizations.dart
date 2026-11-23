@@ -4747,7 +4747,7 @@ abstract class AppLocalizations {
   /// No description provided for @walletActionAccountShellNeedsWalletToast.
   ///
   /// In en, this message translates to:
-  /// **'Your account is signed in, but this device still needs the wallet restored or connected before this action can continue.'**
+  /// **'Your account is signed in without a wallet. Connect one to continue with this action.'**
   String get walletActionAccountShellNeedsWalletToast;
 
   /// No description provided for @walletActionEncryptedBackupRestoreToast.
@@ -4759,14 +4759,20 @@ abstract class AppLocalizations {
   /// No description provided for @walletActionRecoveryNeededToast.
   ///
   /// In en, this message translates to:
-  /// **'Restore wallet access on this device before continuing.'**
+  /// **'Reconnect your wallet or import your recovery phrase on this device before continuing.'**
   String get walletActionRecoveryNeededToast;
 
   /// No description provided for @walletActionReadOnlyReconnectToast.
   ///
   /// In en, this message translates to:
-  /// **'Reconnect with your wallet provider or restore wallet access on this device before continuing.'**
+  /// **'Reconnect with your wallet provider or import your recovery phrase on this device before continuing.'**
   String get walletActionReadOnlyReconnectToast;
+
+  /// No description provided for @walletBackupStatusUnavailableHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Backup status is unavailable right now. Try again in a moment.'**
+  String get walletBackupStatusUnavailableHint;
 
   /// No description provided for @settingsNetworkTileTitle.
   ///
@@ -4810,11 +4816,17 @@ abstract class AppLocalizations {
   /// **'No wallet connected yet'**
   String get settingsBackupStatusNoWallet;
 
-  /// No description provided for @settingsBackupStatusAccountShellOnly.
+  /// No description provided for @settingsBackupStatusChecking.
   ///
   /// In en, this message translates to:
-  /// **'Account wallet has not been restored on this device yet'**
-  String get settingsBackupStatusAccountShellOnly;
+  /// **'Checking wallet status…'**
+  String get settingsBackupStatusChecking;
+
+  /// No description provided for @settingsBackupStatusWalletless.
+  ///
+  /// In en, this message translates to:
+  /// **'No wallet linked to this account'**
+  String get settingsBackupStatusWalletless;
 
   /// No description provided for @settingsBackupStatusNoBackup.
   ///
@@ -5620,11 +5632,35 @@ abstract class AppLocalizations {
   /// **'Disconnect your wallet and clear your session on this device?'**
   String get settingsLogoutDialogBody;
 
+  /// No description provided for @settingsLogoutDialogBodyAccountOnly.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear your session on this device?'**
+  String get settingsLogoutDialogBodyAccountOnly;
+
   /// No description provided for @settingsLogoutButton.
   ///
   /// In en, this message translates to:
   /// **'Log out'**
   String get settingsLogoutButton;
+
+  /// Message shown when local sign-out completed but cookie revocation is pending.
+  ///
+  /// In en, this message translates to:
+  /// **'You are signed out on this device. The browser could not confirm server sign-out; it will retry before restoring a session.'**
+  String get settingsBrowserLogoutPending;
+
+  /// Message shown when browser session restoration could not be confirmed.
+  ///
+  /// In en, this message translates to:
+  /// **'We couldn\'t restore your browser session. Sign in again to continue.'**
+  String get browserSessionRestoreUnavailable;
+
+  /// Message shown when a web sign-out could not be confirmed on the server.
+  ///
+  /// In en, this message translates to:
+  /// **'We couldn\'t confirm that your earlier browser session ended. Sign out again when the connection is back.'**
+  String get browserSessionLogoutUnresolved;
 
   /// No description provided for @settingsTransactionHistoryDialogTitle.
   ///
@@ -5733,6 +5769,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Your privacy matters to us:\n\n• We only collect personal data when it is needed and you have consented\n• Your wallet keys and recovery phrase stay under your control\n• We may collect anonymous usage statistics to improve the app\n• We do not share your data with third parties\n• You can disable analytics in Privacy settings\n\nFor our complete privacy policy, visit our website.'**
   String get settingsPrivacyPolicyDialogBody;
+
+  /// No description provided for @settingsLegalOpenFullTerms.
+  ///
+  /// In en, this message translates to:
+  /// **'Read full terms'**
+  String get settingsLegalOpenFullTerms;
+
+  /// No description provided for @settingsLegalOpenFullPrivacy.
+  ///
+  /// In en, this message translates to:
+  /// **'Read full privacy policy'**
+  String get settingsLegalOpenFullPrivacy;
+
+  /// No description provided for @settingsLegalOpenFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not open {url}'**
+  String settingsLegalOpenFailed(String url);
 
   /// No description provided for @settingsSupportDialogTitle.
   ///
@@ -9897,6 +9951,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Could not open conversation.'**
   String get userProfileConversationOpenFailedToast;
+
+  /// No description provided for @messagingRecipientUnavailableToast.
+  ///
+  /// In en, this message translates to:
+  /// **'You cannot message this account.'**
+  String get messagingRecipientUnavailableToast;
 
   /// No description provided for @userProfileConversationOpenGenericErrorToast.
   ///
@@ -17817,6 +17877,18 @@ abstract class AppLocalizations {
   /// **'Find focused spaces for critiques, exhibitions, public art, events, and collaborations.'**
   String get communityGroupsDirectoryDescription;
 
+  /// No description provided for @communityGroupsJoinedSectionTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Your groups'**
+  String get communityGroupsJoinedSectionTitle;
+
+  /// No description provided for @communityGroupsDiscoverSectionTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Discover public groups'**
+  String get communityGroupsDiscoverSectionTitle;
+
   /// No description provided for @communityClearSearchTooltip.
   ///
   /// In en, this message translates to:
@@ -19824,20 +19896,32 @@ abstract class AppLocalizations {
   /// No description provided for @walletBackupProtectionNoWalletBody.
   ///
   /// In en, this message translates to:
-  /// **'Connect or restore the wallet on this device before managing backup protection.'**
+  /// **'Connect a wallet on this device before managing backup protection.'**
   String get walletBackupProtectionNoWalletBody;
 
-  /// No description provided for @walletBackupProtectionAccountShellHeadline.
+  /// No description provided for @walletBackupProtectionCheckingHeadline.
   ///
   /// In en, this message translates to:
-  /// **'Your account is ready, but this device does not have wallet access yet.'**
-  String get walletBackupProtectionAccountShellHeadline;
+  /// **'Checking wallet status…'**
+  String get walletBackupProtectionCheckingHeadline;
 
-  /// No description provided for @walletBackupProtectionAccountShellBody.
+  /// No description provided for @walletBackupProtectionCheckingBody.
   ///
   /// In en, this message translates to:
-  /// **'Restore the account wallet on this device before you configure wallet backup protection, transfers, or future wallet-linked access.'**
-  String get walletBackupProtectionAccountShellBody;
+  /// **'This device is checking whether a wallet is linked to your account. Backup options appear when the check finishes.'**
+  String get walletBackupProtectionCheckingBody;
+
+  /// No description provided for @walletBackupProtectionWalletlessHeadline.
+  ///
+  /// In en, this message translates to:
+  /// **'No wallet is linked to this account.'**
+  String get walletBackupProtectionWalletlessHeadline;
+
+  /// No description provided for @walletBackupProtectionWalletlessBody.
+  ///
+  /// In en, this message translates to:
+  /// **'A wallet is optional. Connect one from the Wallet screen when you need wallet-based ownership or participation.'**
+  String get walletBackupProtectionWalletlessBody;
 
   /// No description provided for @walletBackupProtectionNoBackupHeadline.
   ///
@@ -19908,7 +19992,7 @@ abstract class AppLocalizations {
   /// No description provided for @walletBackupProtectionReadOnlyBody.
   ///
   /// In en, this message translates to:
-  /// **'Restore signing access with your encrypted backup or recovery phrase before using transfers and other wallet-protected actions on this device.'**
+  /// **'Reconnect your wallet provider, or import your recovery phrase, before using transfers and other wallet-protected actions on this device.'**
   String get walletBackupProtectionReadOnlyBody;
 
   /// No description provided for @walletSessionStateAccountShellOnly.
@@ -21058,12 +21142,6 @@ abstract class AppLocalizations {
   /// **'External signer connected'**
   String get securityHubExternalSignerConnected;
 
-  /// No description provided for @securityHubConnectOrRestoreWallet.
-  ///
-  /// In en, this message translates to:
-  /// **'Connect or restore a wallet'**
-  String get securityHubConnectOrRestoreWallet;
-
   /// No description provided for @securityHubDeleteBackupAction.
   ///
   /// In en, this message translates to:
@@ -22180,6 +22258,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Loading'**
   String get commonLoading;
+
+  /// No description provided for @artworkPrivatePreviewDenied.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign in with an account that can view this draft.'**
+  String get artworkPrivatePreviewDenied;
+
+  /// No description provided for @artworkPrivatePreviewUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'This preview is not available.'**
+  String get artworkPrivatePreviewUnavailable;
+
+  /// No description provided for @artworkPrivatePreviewRetry.
+  ///
+  /// In en, this message translates to:
+  /// **'This preview is temporarily unavailable. Try again later.'**
+  String get artworkPrivatePreviewRetry;
 
   /// No description provided for @desktopShellNavHome.
   ///
@@ -28250,6 +28346,36 @@ abstract class AppLocalizations {
   /// **'Load archival quality'**
   String get spatialLoadArchiveQuality;
 
+  /// No description provided for @spatialLoadArchiveQualityWithSize.
+  ///
+  /// In en, this message translates to:
+  /// **'Load archival quality ({size})'**
+  String spatialLoadArchiveQualityWithSize(String size);
+
+  /// No description provided for @spatialArchiveConsentBody.
+  ///
+  /// In en, this message translates to:
+  /// **'The archival version is the full-detail capture. It is large and can use a lot of data, so it only loads when you ask.'**
+  String get spatialArchiveConsentBody;
+
+  /// No description provided for @spatialArchiveConfirmTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Load a large archive?'**
+  String get spatialArchiveConfirmTitle;
+
+  /// No description provided for @spatialArchiveConfirmBody.
+  ///
+  /// In en, this message translates to:
+  /// **'This download is about {size}. Continue only on a connection you are happy to use.'**
+  String spatialArchiveConfirmBody(String size);
+
+  /// No description provided for @spatialArchiveConfirmBodyUnknownSize.
+  ///
+  /// In en, this message translates to:
+  /// **'This download is large and its size is not known. Continue only on a connection you are happy to use.'**
+  String get spatialArchiveConfirmBodyUnknownSize;
+
   /// No description provided for @spatialQualityMobile.
   ///
   /// In en, this message translates to:
@@ -28291,6 +28417,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'This spatial archive is currently unavailable.'**
   String get spatialViewerUnavailable;
+
+  /// No description provided for @spatialViewerLoading.
+  ///
+  /// In en, this message translates to:
+  /// **'Loading the 3D view…'**
+  String get spatialViewerLoading;
+
+  /// No description provided for @spatialViewerActivate.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap to interact'**
+  String get spatialViewerActivate;
+
+  /// No description provided for @spatialViewerDragHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Drag to look around'**
+  String get spatialViewerDragHint;
 
   /// No description provided for @spatialViewerFallback.
   ///
@@ -33086,6 +33230,300 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Optional analytics choice'**
   String get analyticsConsentPromptSemanticsLabel;
+
+  /// No description provided for @galleryTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Gallery'**
+  String get galleryTitle;
+
+  /// No description provided for @galleryCurate.
+  ///
+  /// In en, this message translates to:
+  /// **'Curate gallery'**
+  String get galleryCurate;
+
+  /// No description provided for @galleryModeWall.
+  ///
+  /// In en, this message translates to:
+  /// **'Gallery wall'**
+  String get galleryModeWall;
+
+  /// No description provided for @galleryModeRooms.
+  ///
+  /// In en, this message translates to:
+  /// **'Folded rooms'**
+  String get galleryModeRooms;
+
+  /// No description provided for @galleryModeField.
+  ///
+  /// In en, this message translates to:
+  /// **'Reading field'**
+  String get galleryModeField;
+
+  /// No description provided for @galleryModeLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Layout'**
+  String get galleryModeLabel;
+
+  /// No description provided for @galleryPublished.
+  ///
+  /// In en, this message translates to:
+  /// **'Published'**
+  String get galleryPublished;
+
+  /// No description provided for @galleryUnpublished.
+  ///
+  /// In en, this message translates to:
+  /// **'Unpublished draft'**
+  String get galleryUnpublished;
+
+  /// No description provided for @galleryUnsaved.
+  ///
+  /// In en, this message translates to:
+  /// **'Unsaved changes'**
+  String get galleryUnsaved;
+
+  /// No description provided for @galleryArtworkOrder.
+  ///
+  /// In en, this message translates to:
+  /// **'Artwork order'**
+  String get galleryArtworkOrder;
+
+  /// No description provided for @gallerySectionOrder.
+  ///
+  /// In en, this message translates to:
+  /// **'Section order'**
+  String get gallerySectionOrder;
+
+  /// No description provided for @galleryMoveEarlier.
+  ///
+  /// In en, this message translates to:
+  /// **'Move earlier'**
+  String get galleryMoveEarlier;
+
+  /// No description provided for @galleryMoveLater.
+  ///
+  /// In en, this message translates to:
+  /// **'Move later'**
+  String get galleryMoveLater;
+
+  /// No description provided for @galleryHideSection.
+  ///
+  /// In en, this message translates to:
+  /// **'Hide section'**
+  String get galleryHideSection;
+
+  /// No description provided for @gallerySaveDraft.
+  ///
+  /// In en, this message translates to:
+  /// **'Save draft'**
+  String get gallerySaveDraft;
+
+  /// No description provided for @galleryPublish.
+  ///
+  /// In en, this message translates to:
+  /// **'Publish gallery'**
+  String get galleryPublish;
+
+  /// No description provided for @galleryResetToAutomatic.
+  ///
+  /// In en, this message translates to:
+  /// **'Reset to automatic'**
+  String get galleryResetToAutomatic;
+
+  /// No description provided for @galleryDiscard.
+  ///
+  /// In en, this message translates to:
+  /// **'Discard changes'**
+  String get galleryDiscard;
+
+  /// No description provided for @galleryDiscardPrompt.
+  ///
+  /// In en, this message translates to:
+  /// **'Discard your unsaved changes to the gallery?'**
+  String get galleryDiscardPrompt;
+
+  /// No description provided for @galleryConflict.
+  ///
+  /// In en, this message translates to:
+  /// **'This gallery changed elsewhere. Reload before saving again.'**
+  String get galleryConflict;
+
+  /// No description provided for @galleryUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Gallery unavailable.'**
+  String get galleryUnavailable;
+
+  /// No description provided for @galleryArtworkUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Artwork unavailable'**
+  String get galleryArtworkUnavailable;
+
+  /// No description provided for @galleryEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No artworks to display.'**
+  String get galleryEmpty;
+
+  /// No description provided for @galleryMore.
+  ///
+  /// In en, this message translates to:
+  /// **'Show more artworks'**
+  String get galleryMore;
+
+  /// No description provided for @gallerySectionIdentity.
+  ///
+  /// In en, this message translates to:
+  /// **'Identity'**
+  String get gallerySectionIdentity;
+
+  /// No description provided for @gallerySectionStats.
+  ///
+  /// In en, this message translates to:
+  /// **'Statistics'**
+  String get gallerySectionStats;
+
+  /// No description provided for @gallerySectionWork.
+  ///
+  /// In en, this message translates to:
+  /// **'Works and projects'**
+  String get gallerySectionWork;
+
+  /// No description provided for @gallerySectionPublicArt.
+  ///
+  /// In en, this message translates to:
+  /// **'Public art'**
+  String get gallerySectionPublicArt;
+
+  /// No description provided for @gallerySectionActivity.
+  ///
+  /// In en, this message translates to:
+  /// **'Activity'**
+  String get gallerySectionActivity;
+
+  /// No description provided for @gallerySectionRecognition.
+  ///
+  /// In en, this message translates to:
+  /// **'Recognition'**
+  String get gallerySectionRecognition;
+
+  /// No description provided for @gallerySectionProgram.
+  ///
+  /// In en, this message translates to:
+  /// **'Programme'**
+  String get gallerySectionProgram;
+
+  /// No description provided for @gallerySectionPoap.
+  ///
+  /// In en, this message translates to:
+  /// **'Attendance collectible'**
+  String get gallerySectionPoap;
+
+  /// No description provided for @gallerySectionVisit.
+  ///
+  /// In en, this message translates to:
+  /// **'Visit'**
+  String get gallerySectionVisit;
+
+  /// No description provided for @gallerySectionEvents.
+  ///
+  /// In en, this message translates to:
+  /// **'Events'**
+  String get gallerySectionEvents;
+
+  /// No description provided for @gallerySectionCredits.
+  ///
+  /// In en, this message translates to:
+  /// **'Credits'**
+  String get gallerySectionCredits;
+
+  /// No description provided for @galleryPersonalPreview.
+  ///
+  /// In en, this message translates to:
+  /// **'Draft preview'**
+  String get galleryPersonalPreview;
+
+  /// No description provided for @galleryReload.
+  ///
+  /// In en, this message translates to:
+  /// **'Reload gallery'**
+  String get galleryReload;
+
+  /// No description provided for @galleryArtworkSizing.
+  ///
+  /// In en, this message translates to:
+  /// **'Artwork size and placement'**
+  String get galleryArtworkSizing;
+
+  /// No description provided for @gallerySizeSmall.
+  ///
+  /// In en, this message translates to:
+  /// **'Small'**
+  String get gallerySizeSmall;
+
+  /// No description provided for @gallerySizeStandard.
+  ///
+  /// In en, this message translates to:
+  /// **'Standard'**
+  String get gallerySizeStandard;
+
+  /// No description provided for @gallerySizeLead.
+  ///
+  /// In en, this message translates to:
+  /// **'Large'**
+  String get gallerySizeLead;
+
+  /// No description provided for @galleryMakeLead.
+  ///
+  /// In en, this message translates to:
+  /// **'Make lead artwork'**
+  String get galleryMakeLead;
+
+  /// No description provided for @galleryClearLead.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear lead artwork'**
+  String get galleryClearLead;
+
+  /// No description provided for @galleryPublishNotAllowed.
+  ///
+  /// In en, this message translates to:
+  /// **'You can edit this gallery but not publish it.'**
+  String get galleryPublishNotAllowed;
+
+  /// No description provided for @galleryRefreshFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Your change was saved, but the gallery could not be refreshed.'**
+  String get galleryRefreshFailed;
+
+  /// No description provided for @galleryMovedTo.
+  ///
+  /// In en, this message translates to:
+  /// **'Moved to position {position} of {total}'**
+  String galleryMovedTo(int position, int total);
+
+  /// No description provided for @artworkPublishHeldWithdrawn.
+  ///
+  /// In en, this message translates to:
+  /// **'An editor withdrew this artwork. Only an editorial decision can restore it.'**
+  String get artworkPublishHeldWithdrawn;
+
+  /// No description provided for @artworkPublishHeldInReview.
+  ///
+  /// In en, this message translates to:
+  /// **'This artwork is waiting for editorial review. It can be published once it is approved.'**
+  String get artworkPublishHeldInReview;
+
+  /// No description provided for @artworkPublishHeldGeneric.
+  ///
+  /// In en, this message translates to:
+  /// **'This artwork is on editorial hold and cannot be published yet.'**
+  String get artworkPublishHeldGeneric;
 }
 
 class _AppLocalizationsDelegate

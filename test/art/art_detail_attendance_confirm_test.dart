@@ -22,11 +22,26 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../support/account_session_fixture.dart';
 
-class _FakeArtworkBackendApi implements ArtworkBackendApi {
+class _FakeArtworkBackendApi
+    implements ArtworkBackendApi, ArtworkCurrentMediaApi {
   final Artwork artwork;
 
   _FakeArtworkBackendApi(this.artwork);
+
+  @override
+  int get authSessionEpoch => 0;
+
+  @override
+  Future<ArtworkCurrentMediaDetail> getArtworkCurrentMediaDetail(
+    String identifier, {
+    required bool includeAuth,
+  }) async =>
+      ArtworkCurrentMediaDetail(
+        artwork: artwork,
+        publicMediaAllowed: artwork.canUsePublicMedia,
+      );
 
   @override
   Future<Artwork> getArtwork(String artworkId) async => artwork;
@@ -176,6 +191,11 @@ class _NoopSavedItemsRepository extends SavedItemsRepository {
 }
 
 void main() {
+  // A signed-in surface has a live session behind its held profile.
+  setUp(
+      () => AccountSessionFixture.start(accountId: 'user_1', wallet: '0xabc'));
+  tearDown(AccountSessionFixture.end);
+
   TestWidgetsFlutterBinding.ensureInitialized();
 
   setUp(() {
@@ -217,7 +237,7 @@ void main() {
       ..setCurrentWalletAddressForTesting('0xabc');
 
     final attendanceProvider = AttendanceProvider()
-      ..bindAuthContext(isSignedIn: true, walletAddress: '0xabc')
+      ..bindAuthContext(identityOwner: profileProvider, walletAddress: '0xabc')
       ..updateProximity(
         markerId: markerId,
         lat: 0,

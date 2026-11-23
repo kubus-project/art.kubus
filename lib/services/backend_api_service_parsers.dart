@@ -672,6 +672,9 @@ CommunityGroupSummary _backendApiCommunityGroupSummaryFromJson(
     });
   }
 
+  final ownerUserId =
+      (json['ownerUserId'] ?? json['owner_user_id'] ?? '').toString().trim();
+
   return CommunityGroupSummary(
     id: id,
     name: (json['name'] ?? 'Community Group').toString(),
@@ -682,6 +685,7 @@ CommunityGroupSummary _backendApiCommunityGroupSummaryFromJson(
     ),
     isPublic: json['isPublic'] as bool? ?? json['is_public'] as bool? ?? true,
     ownerWallet: (json['ownerWallet'] ?? json['owner_wallet'] ?? '').toString(),
+    ownerUserId: ownerUserId.isEmpty ? null : ownerUserId,
     memberCount: (json['memberCount'] as num?)?.toInt() ??
         (json['member_count'] as num?)?.toInt() ??
         (json['member_count_cached'] as num?)?.toInt() ??

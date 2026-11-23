@@ -21,6 +21,7 @@ import 'package:latlong2/latlong.dart';
 // ignore: depend_on_referenced_packages
 import 'package:plugin_platform_interface/plugin_platform_interface.dart';
 import 'package:provider/provider.dart';
+import '../../support/account_session_fixture.dart';
 
 /// Pressing Save on an existing artwork must leave the app usable.
 ///
@@ -320,6 +321,11 @@ _ShellHostState _host(WidgetTester tester) =>
     tester.state<_ShellHostState>(find.byType(_ShellHost));
 
 void main() {
+  // A signed-in surface has a live session behind its held profile.
+  setUp(
+      () => AccountSessionFixture.start(accountId: 'user-1', wallet: _wallet));
+  tearDown(AccountSessionFixture.end);
+
   TestWidgetsFlutterBinding.ensureInitialized();
 
   group('desktop workspace editor (in-shell stack)', () {

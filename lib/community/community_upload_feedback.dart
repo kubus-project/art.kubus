@@ -67,6 +67,20 @@ String communityUploadRateLimitMessage(
   return l10n.communityUploadRateLimitedMinutes((seconds / 60).ceil());
 }
 
+/// Whether a group post was refused because the account is not a member. The
+/// backend answers 403 on the group posts route with no error code, so the
+/// route and status identify it. A wallet requirement is not a membership error.
+bool communityGroupPostMembershipRequired(Object error) {
+  if (error is! BackendApiRequestException || error.statusCode != 403) {
+    return false;
+  }
+  final path = error.path;
+  if (!path.startsWith('/api/groups/') || !path.endsWith('/posts')) {
+    return false;
+  }
+  return !(error.body ?? '').contains('WALLET_REQUIRED');
+}
+
 /// What the server said was wrong with a rejected post, from a 400 response.
 ///
 /// Reads the express-validator `details` list (`field` and `message`), falling

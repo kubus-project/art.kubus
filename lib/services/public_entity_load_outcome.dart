@@ -67,6 +67,17 @@ PublicEntityLoadOutcome<T> classifyPublicEntityLoadError<T extends Object>(
   );
 }
 
+/// Whether [error] is the API's own answer that the entity does not exist
+/// (404, or 410 for one that was removed). A transport failure, a timeout, a
+/// rate limit and a server error are not: the entity may well exist.
+///
+/// The public reads report a failed status either as a
+/// [BackendApiRequestException] or as `Request failed: <code>`; this reads both.
+bool isEntityNotFoundError(Object error) {
+  final status = _statusOf(error);
+  return status == 404 || status == 410;
+}
+
 /// A 4xx other than the retryable 408 and 429 is the API's answer.
 bool _isAnswer(int status) =>
     status == 404 ||
