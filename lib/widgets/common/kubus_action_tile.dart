@@ -314,7 +314,8 @@ class KubusActionTile extends StatelessWidget {
                   shape: RoundedRectangleBorder(
                     borderRadius: radius,
                     side: BorderSide(
-                      color: hovered ? accent.withValues(alpha: 0.5) : roles.rule,
+                      color:
+                          hovered ? accent.withValues(alpha: 0.5) : roles.rule,
                       width: KubusSizes.hairline,
                     ),
                   ),
