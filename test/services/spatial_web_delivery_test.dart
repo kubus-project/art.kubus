@@ -265,6 +265,41 @@ void main() {
       expect(urls, ['http://127.0.0.1:3000/api/upload/file/bafyCid']);
     });
 
+    test('the manifest route follows the byte route https-or-loopback rule',
+        () {
+      final v = _variant('spatial_mobile', 'bafyMobile', 'spz');
+      final content = _content([v], manifestCid: 'bafyManifest');
+      String? manifestFor(String base) =>
+          SpatialWebDelivery.plan(content, v, backendBase: base).manifestUrl;
+      expect(manifestFor('http://192.168.1.20:3000'), isNull);
+      expect(manifestFor('http://api.kubus.site'), isNull);
+      expect(
+        manifestFor('http://127.0.0.1:3000'),
+        'http://127.0.0.1:3000/api/upload/file/bafyManifest',
+      );
+      expect(
+        manifestFor('https://api.kubus.site'),
+        'https://api.kubus.site/api/upload/file/bafyManifest',
+      );
+    });
+
+    test('a ksplat mime type is not typed as splat', () {
+      final v = _variant(
+        'spatial_mobile',
+        'cidKs1',
+        'compressed',
+        mime: 'application/x-ksplat',
+      );
+      expect(
+        SpatialWebDelivery.plan(
+          _content([v]),
+          v,
+          backendBase: 'https://api.kubus.site',
+        ).fileType,
+        'ksplat',
+      );
+    });
+
     test('the plan names the file type only when bytes carry no magic number',
         () {
       final splat = _variant('spatial_preview', 'cidSplat1', 'splat');

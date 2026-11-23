@@ -147,7 +147,7 @@ and consent decisions live in `SpatialWebLoadSession` and `SpatialWebDelivery`
   gate and would keep serving pinned bytes of withdrawn content (and learn the
   visitor's address). A CID must be CID-shaped (`[A-Za-z0-9_-]`, 4 to 128
   characters) before it becomes a URL. Never a LAN node, never plain http (except a
-  loopback backend in a local build; that works end to end now, because the host
+  loopback backend in a local build; the same rule covers the manifest route; that works end to end now, because the host
   page downloads it and the viewer page only ever sees a `blob:` URL). The legacy `/uploads/<cid>` path is a
   different store and does not serve published spatial variants.
 - Orientation: the published manifest (`canonicalManifestCid`, same route, read

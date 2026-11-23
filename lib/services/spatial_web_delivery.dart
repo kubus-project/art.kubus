@@ -188,18 +188,26 @@ class SpatialWebDelivery {
     final format = variant.format.toLowerCase();
     final fileType = _kExplicitFileTypes.contains(format)
         ? format
-        : _kExplicitFileTypes
-            .where((t) => variant.mimeType.toLowerCase().contains(t))
+        : (_kExplicitFileTypes
+                .where((t) => variant.mimeType.toLowerCase().contains(t))
+                .toList()
+              ..sort((a, b) => b.length.compareTo(a.length)))
             .firstOrNull;
     final manifestCid = content.manifestCid;
     final base = (backendBase ?? StorageConfig.httpBackend).trim();
+    // The manifest route follows the same rule as the byte route: https, or
+    // the backend's own loopback origin in a local build, never plain http.
+    final manifestUrl =
+        manifestCid == null || manifestCid.isEmpty || base.isEmpty
+            ? null
+            : backendUrl(base, manifestCid);
     return SpatialWebLoadPlan(
       variant: variant,
       urls: candidateUrls(variant.cid, backendBase: backendBase),
       fileType: fileType,
-      manifestUrl: manifestCid == null || manifestCid.isEmpty || base.isEmpty
-          ? null
-          : backendUrl(base, manifestCid),
+      manifestUrl: manifestUrl != null && _isSecureOrLoopback(manifestUrl)
+          ? manifestUrl
+          : null,
     );
   }
 
