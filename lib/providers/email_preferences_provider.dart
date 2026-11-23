@@ -50,9 +50,15 @@ class EmailPreferencesProvider extends ChangeNotifier {
     // When a session becomes active, initialize lazily outside the ProxyProvider
     // update/build phase. This avoids triggering notifyListeners while widgets
     // are building (and keeps init in provider-land, not screen-land).
-    if (canManage && !_initialized && !_isLoading && _initializeCompleter == null) {
+    if (canManage &&
+        !_initialized &&
+        !_isLoading &&
+        _initializeCompleter == null) {
       Future.microtask(() {
-        if (!canManage || _initialized || _isLoading || _initializeCompleter != null) {
+        if (!canManage ||
+            _initialized ||
+            _isLoading ||
+            _initializeCompleter != null) {
           return;
         }
         initialize();
@@ -132,12 +138,14 @@ class EmailPreferencesProvider extends ChangeNotifier {
     if (data is Map<String, dynamic>) {
       final raw = data['emailPreferences'];
       if (raw is Map<String, dynamic>) return EmailPreferences.fromJson(raw);
-      if (raw is Map) return EmailPreferences.fromJson(raw.cast<String, dynamic>());
+      if (raw is Map)
+        return EmailPreferences.fromJson(raw.cast<String, dynamic>());
     }
 
     final raw = payload['emailPreferences'];
     if (raw is Map<String, dynamic>) return EmailPreferences.fromJson(raw);
-    if (raw is Map) return EmailPreferences.fromJson(raw.cast<String, dynamic>());
+    if (raw is Map)
+      return EmailPreferences.fromJson(raw.cast<String, dynamic>());
     return EmailPreferences.defaults();
   }
 }
