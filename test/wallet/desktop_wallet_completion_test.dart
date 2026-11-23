@@ -4,10 +4,10 @@ import 'package:art_kubus/models/artwork.dart';
 import 'package:art_kubus/models/collectible.dart';
 import 'package:art_kubus/providers/artwork_provider.dart';
 import 'package:art_kubus/providers/collectibles_provider.dart';
+import 'package:art_kubus/providers/profile_provider.dart';
 import 'package:art_kubus/providers/themeprovider.dart';
 import 'package:art_kubus/providers/wallet_provider.dart';
 import 'package:art_kubus/screens/desktop/web3/desktop_wallet_screen.dart';
-import 'package:art_kubus/services/backend_api_service.dart';
 import 'package:art_kubus/widgets/wallet_custody_status_panel.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -23,9 +23,6 @@ class _WalletWithIdentity extends WalletProvider {
   WalletAuthoritySnapshot get authority => const WalletAuthoritySnapshot(
         state: WalletAuthorityState.localSignerReady,
         signerSource: WalletSignerSource.local,
-        accountSignedIn: true,
-        signInMethod: AuthSignInMethod.email,
-        accountEmail: 'owner@example.com',
         walletAddress: address,
         hasLocalSigner: true,
         hasExternalSigner: false,
@@ -115,6 +112,9 @@ void main() {
       MultiProvider(
         providers: [
           ChangeNotifierProvider<ThemeProvider>.value(value: theme),
+          ChangeNotifierProvider<ProfileProvider>(
+            create: (_) => ProfileProvider(),
+          ),
           ChangeNotifierProvider<WalletProvider>.value(value: wallet),
           ChangeNotifierProvider<CollectiblesProvider>.value(
             value: collectibles,

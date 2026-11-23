@@ -255,6 +255,8 @@ class UserService {
   /// Some endpoints (like detailed achievements) are intentionally self-only on
   /// the backend and return 403 for other wallets. Public profile viewing must
   /// not call those endpoints.
+  // The device wallet, not the signed-in account: this static service has no
+  // provider access. It only decides whether to skip self-only endpoints.
   static Future<bool> _isCurrentUserWallet(String walletAddress) async {
     final normalizedTarget = WalletUtils.normalize(walletAddress);
     if (normalizedTarget.isEmpty) return false;
@@ -638,6 +640,7 @@ class UserService {
       var user = User(
         id: resolvedWallet,
         userId: accountUserId,
+        profileId: (profile['profileId'] ?? profile['profile_id'])?.toString(),
         walletAddress: publicWalletAddress.isEmpty ? null : publicWalletAddress,
         // The wallet requirement lives in User.supportsMessaging: a profile
         // without a wallet has no message target, whatever its preference.

@@ -31,6 +31,8 @@ import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../helpers/secure_storage_absent.dart';
+import '../support/account_session_fixture.dart';
 
 class _FakeWalletProvider extends WalletProvider {
   _FakeWalletProvider({
@@ -155,6 +157,36 @@ class _AllowAllSecurityGateProvider extends SecurityGateProvider {
   Future<bool> requireSensitiveActionVerification() async => true;
 }
 
+/// The held profile of [accountId], with a wallet linked only when [wallet]
+/// is given.
+UserProfile _accountProfile({required String accountId, String? wallet}) =>
+    UserProfile(
+      id: 'profile-$accountId',
+      userId: accountId,
+      walletAddress: wallet ?? '',
+      username: 'tester',
+      displayName: 'Tester',
+      bio: '',
+      avatar: '',
+      createdAt: DateTime(2026),
+      updatedAt: DateTime(2026),
+    );
+
+/// A signed-in account: a live session behind its held profile.
+ProfileProvider _signedInAccount({
+  required String accountId,
+  String? wallet,
+  String? email,
+}) {
+  AccountSessionFixture.start(
+    accountId: accountId,
+    wallet: wallet,
+    email: email,
+  );
+  return ProfileProvider()
+    ..setCurrentUser(_accountProfile(accountId: accountId, wallet: wallet));
+}
+
 Widget _buildSettingsApp(
   _FakeWalletProvider walletProvider, {
   Widget? home,
@@ -217,6 +249,16 @@ Widget _buildSettingsApp(
 }
 
 void main() {
+  // Authenticated requests read the closure receipt from secure storage, which
+  // never answers in fake time unless the channel is mocked.
+  installEmptySecureStorage();
+  // A signed-in surface has a live session behind its held profile.
+  setUp(() => AccountSessionFixture.start(
+        accountId: 'settings-backup-profile',
+        wallet: 'wallet123',
+      ));
+  tearDown(AccountSessionFixture.end);
+
   TestWidgetsFlutterBinding.ensureInitialized();
   final l10n = AppLocalizationsEn();
   final requests = <http.Request>[];
@@ -247,6 +289,7 @@ void main() {
 
     final snapshot = await WalletBackupStatusResolver.resolve(
       walletProvider: walletProvider,
+      isSignedIn: true,
       refreshRemote: false,
     );
 
@@ -266,6 +309,7 @@ void main() {
 
     final snapshot = await WalletBackupStatusResolver.resolve(
       walletProvider: walletProvider,
+      isSignedIn: true,
       refreshRemote: false,
     );
 
@@ -283,6 +327,7 @@ void main() {
 
     final snapshot = await WalletBackupStatusResolver.resolve(
       walletProvider: walletProvider,
+      isSignedIn: true,
       refreshRemote: false,
     );
 
@@ -301,6 +346,7 @@ void main() {
 
     final snapshot = await WalletBackupStatusResolver.resolve(
       walletProvider: walletProvider,
+      isSignedIn: true,
       refreshRemote: false,
     );
 
@@ -311,7 +357,7 @@ void main() {
   test('status summary prefers recovery phrase over encrypted backup', () {
     const snapshot = WalletBackupStatusSnapshot(
       walletAddress: 'wallet123',
-      hasAccountSession: true,
+      isSignedIn: true,
       hasWalletIdentity: true,
       hasSigner: true,
       isReadOnlySession: false,
@@ -329,7 +375,7 @@ void main() {
   test('status headline prefers recovery phrase over passkey backup', () {
     const snapshot = WalletBackupStatusSnapshot(
       walletAddress: 'wallet123',
-      hasAccountSession: true,
+      isSignedIn: true,
       hasWalletIdentity: true,
       hasSigner: true,
       isReadOnlySession: false,
@@ -347,7 +393,7 @@ void main() {
   test('status summary prefers read-only over encrypted backup', () {
     const snapshot = WalletBackupStatusSnapshot(
       walletAddress: 'wallet123',
-      hasAccountSession: true,
+      isSignedIn: true,
       hasWalletIdentity: true,
       hasSigner: false,
       isReadOnlySession: true,
@@ -371,7 +417,7 @@ void main() {
     }) {
       return WalletBackupStatusSnapshot(
         walletAddress: hasWalletIdentity ? 'wallet123' : null,
-        hasAccountSession: true,
+        isSignedIn: true,
         hasWalletIdentity: hasWalletIdentity,
         hasSigner: false,
         isReadOnlySession: hasWalletIdentity,
@@ -489,7 +535,7 @@ void main() {
         () {
       const lookupFailed = WalletBackupStatusSnapshot(
         walletAddress: 'wallet123',
-        hasAccountSession: true,
+        isSignedIn: true,
         hasWalletIdentity: true,
         hasSigner: false,
         isReadOnlySession: true,
@@ -528,19 +574,15 @@ void main() {
         hasSignerValue: false,
         isReadOnlySessionValue: false,
         mnemonicBackupRequiredValue: false,
-      )
-        ..seedAccountSessionForTesting(
-          email: 'walletless@example.com',
-          backendProfile: const <String, dynamic>{},
-        )
-        ..setCurrentWalletAddressForTesting(null);
+      )..setCurrentWalletAddressForTesting(null);
 
       final resolved = await WalletBackupStatusResolver.resolve(
         walletProvider: walletProvider,
+        isSignedIn: true,
         refreshRemote: false,
       );
 
-      expect(resolved.hasAccountSession, isTrue);
+      expect(resolved.isSignedIn, isTrue);
       expect(resolved.hasWalletIdentity, isFalse);
       expect(
         resolved.settingsSummary(l10n),
@@ -563,6 +605,7 @@ void main() {
 
       final resolved = await WalletBackupStatusResolver.resolve(
         walletProvider: walletProvider,
+        isSignedIn: false,
         refreshRemote: false,
       );
       final pending =
@@ -584,14 +627,17 @@ void main() {
         hasSignerValue: false,
         isReadOnlySessionValue: false,
         mnemonicBackupRequiredValue: false,
-      )
-        ..seedAccountSessionForTesting(
-          email: 'walletless@example.com',
-          backendProfile: const <String, dynamic>{},
-        )
-        ..setCurrentWalletAddressForTesting(null);
+      )..setCurrentWalletAddressForTesting(null);
 
-      await tester.pumpWidget(_buildSettingsApp(walletProvider));
+      await tester.pumpWidget(
+        _buildSettingsApp(
+          walletProvider,
+          profileProvider: _signedInAccount(
+            accountId: 'walletless-account',
+            email: 'walletless@example.com',
+          ),
+        ),
+      );
       await tester.pump();
       await tester.pump(const Duration(seconds: 2));
       await tester.scrollUntilVisible(
@@ -827,8 +873,15 @@ void main() {
         (tester) async {
       SharedPreferences.setMockInitialValues(<String, Object>{});
       final walletProvider = unlinked();
+      // A held profile with no live session: the account is not signed in.
+      final profileProvider = ProfileProvider()
+        ..setCurrentUser(
+          _accountProfile(accountId: 'settings-backup-profile'),
+        );
 
-      await tester.pumpWidget(_buildSettingsApp(walletProvider));
+      await tester.pumpWidget(
+        _buildSettingsApp(walletProvider, profileProvider: profileProvider),
+      );
       await tester.pump();
       await tester.pump(const Duration(seconds: 2));
       await tester.scrollUntilVisible(
@@ -839,9 +892,12 @@ void main() {
       expect(find.text(checkingCopy), findsOneWidget);
       expect(find.text(walletlessCopy), findsNothing);
 
-      walletProvider.seedAccountSessionForTesting(
+      AccountSessionFixture.start(
+        accountId: 'walletless-account',
         email: 'walletless@example.com',
-        backendProfile: const <String, dynamic>{},
+      );
+      profileProvider.setCurrentUser(
+        _accountProfile(accountId: 'walletless-account'),
       );
       walletProvider.unlinkWallet();
       await tester.pump();
@@ -861,8 +917,14 @@ void main() {
         (tester) async {
       SharedPreferences.setMockInitialValues(<String, Object>{});
       final walletProvider = restorable();
+      final profileProvider = _signedInAccount(
+        accountId: 'restorable-account',
+        wallet: 'wallet123',
+      );
 
-      await tester.pumpWidget(_buildSettingsApp(walletProvider));
+      await tester.pumpWidget(
+        _buildSettingsApp(walletProvider, profileProvider: profileProvider),
+      );
       await tester.pump();
       await tester.pump(const Duration(seconds: 2));
       await tester.scrollUntilVisible(
@@ -872,9 +934,12 @@ void main() {
       );
       expect(find.text(restoreCopy), findsOneWidget);
 
-      walletProvider.seedAccountSessionForTesting(
+      AccountSessionFixture.start(
+        accountId: 'second-account',
         email: 'second@example.com',
-        backendProfile: const <String, dynamic>{},
+      );
+      profileProvider.setCurrentUser(
+        _accountProfile(accountId: 'second-account'),
       );
       walletProvider.unlinkWallet();
       await tester.pump();
@@ -899,9 +964,14 @@ void main() {
       addTearDown(tester.view.resetDevicePixelRatio);
 
       final walletProvider = restorable();
+      final profileProvider = _signedInAccount(
+        accountId: 'restorable-account',
+        wallet: 'wallet123',
+      );
       await tester.pumpWidget(
         _buildSettingsApp(
           walletProvider,
+          profileProvider: profileProvider,
           home: const DesktopSettingsScreen(),
         ),
       );
@@ -909,9 +979,12 @@ void main() {
       await tester.pump(const Duration(seconds: 2));
       expect(find.text(restoreCopy), findsOneWidget);
 
-      walletProvider.seedAccountSessionForTesting(
+      AccountSessionFixture.start(
+        accountId: 'second-account',
         email: 'second@example.com',
-        backendProfile: const <String, dynamic>{},
+      );
+      profileProvider.setCurrentUser(
+        _accountProfile(accountId: 'second-account'),
       );
       walletProvider.unlinkWallet();
       await tester.pump();
@@ -1007,11 +1080,7 @@ void main() {
         (tester) async {
       SharedPreferences.setMockInitialValues(<String, Object>{});
       final walletProvider = restorable()
-        ..setCurrentWalletAddressForTesting('wallet123')
-        ..seedAccountSessionForTesting(
-          email: 'restorable@example.com',
-          backendProfile: const <String, dynamic>{},
-        );
+        ..setCurrentWalletAddressForTesting('wallet123');
       final profileProvider = ProfileProvider();
 
       await tester.pumpWidget(

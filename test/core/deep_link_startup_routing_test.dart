@@ -17,6 +17,7 @@ void main() {
       ShareEntityType.exhibition,
       ShareEntityType.collection,
       ShareEntityType.nft,
+      ShareEntityType.institution,
     ];
 
     for (final type in publicTypes) {

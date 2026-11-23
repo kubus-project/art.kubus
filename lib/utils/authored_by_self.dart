@@ -11,13 +11,11 @@ class AuthoredBySelf {
   const AuthoredBySelf._();
 
   /// The profile display name the artist field shows while the box is ticked,
-  /// or null when the box cannot be used (guest, or a profile without a
-  /// display name).
-  static String? displayNameFor(
-    UserProfile? profile, {
-    required bool isSignedIn,
-  }) {
-    if (!isSignedIn || profile == null) return null;
+  /// or null when the box cannot be used (nobody signed in, or a profile
+  /// without a display name). [profile] is the signed-in account, which the
+  /// profile provider's `currentUser` already is.
+  static String? displayNameFor(UserProfile? profile) {
+    if (profile == null) return null;
     final name = profile.displayName.trim();
     return name.isEmpty ? null : name;
   }

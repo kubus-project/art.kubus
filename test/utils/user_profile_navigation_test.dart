@@ -18,12 +18,25 @@ import 'package:art_kubus/utils/share_deep_link_navigation.dart';
 import 'package:art_kubus/utils/user_profile_navigation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:provider/provider.dart';
+import '../support/account_session_fixture.dart';
+import '../helpers/secure_storage_absent.dart';
 
 const _accountId = '11111111-1111-4111-8111-111111111111';
 const _wallet = 'ArtistWallet111111111111111111111111111111111';
 
 void main() {
+  // Authenticated requests read the closure receipt from secure storage, which
+  // never answers in fake time unless the channel is mocked.
+  installEmptySecureStorage();
+  // A signed-in surface has a live session behind its held profile.
+  setUp(() {
+    SharedPreferences.setMockInitialValues(<String, Object>{});
+    AccountSessionFixture.start(accountId: _accountId, wallet: _wallet);
+  });
+  tearDown(AccountSessionFixture.end);
+
   testWidgets('username-only entry resolves the account before owner routing',
       (tester) async {
     final profileProvider = ProfileProvider()..setCurrentUser(_ownerProfile());
@@ -294,6 +307,7 @@ void main() {
   testWidgets('an upper-case UUID still reaches the owner profile',
       (tester) async {
     const lowerId = 'abcdef12-3456-4abc-8def-0123456789ab';
+    AccountSessionFixture.start(accountId: lowerId, wallet: _wallet);
     final owner = _ownerProfile(userId: lowerId);
     final screen = await _openDesktop(tester, owner, lowerId.toUpperCase());
 

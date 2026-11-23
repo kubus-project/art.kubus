@@ -1,5 +1,7 @@
 import 'package:art_kubus/models/dao.dart';
+import 'package:art_kubus/models/user_profile.dart';
 import 'package:art_kubus/providers/dao_provider.dart';
+import 'package:art_kubus/providers/profile_provider.dart';
 import 'package:art_kubus/providers/wallet_provider.dart';
 import 'package:art_kubus/screens/web3/dao/governance_hub.dart';
 import 'package:art_kubus/services/encrypted_wallet_backup_service.dart';
@@ -14,6 +16,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../support/account_session_fixture.dart';
 import '../../support/product_surface_harness.dart';
 
 class _FakeDao extends DAOProvider {
@@ -92,10 +95,35 @@ EncryptedWalletBackupDefinition _governanceBackup() {
   );
 }
 
+/// A signed-in account: a live session behind its held profile. [wallet] is
+/// the linked wallet, or null for a walletless account.
+ProfileProvider _signedInProfile({String? wallet}) {
+  AccountSessionFixture.start(
+    accountId: 'governance-account',
+    wallet: wallet,
+    email: wallet == null ? 'walletless@example.com' : null,
+  );
+  return ProfileProvider()
+    ..setCurrentUser(
+      UserProfile(
+        id: 'profile-governance-account',
+        userId: 'governance-account',
+        walletAddress: wallet ?? '',
+        username: 'tester',
+        displayName: 'Tester',
+        bio: '',
+        avatar: '',
+        createdAt: DateTime(2026),
+        updatedAt: DateTime(2026),
+      ),
+    );
+}
+
 Future<void> _pumpWithWallet(
   WidgetTester tester,
   WalletProvider wallet, {
   Locale locale = const Locale('en'),
+  ProfileProvider? profile,
 }) async {
   SharedPreferences.setMockInitialValues(<String, Object>{
     'DAO_onboarding_completed': true,
@@ -106,6 +134,7 @@ Future<void> _pumpWithWallet(
     tester,
     child: const GovernanceHub(),
     locale: locale,
+    profileProvider: profile,
     extraProviders: [
       ChangeNotifierProvider<DAOProvider>.value(value: _FakeDao()),
       ChangeNotifierProvider<WalletProvider>.value(value: wallet),
@@ -117,6 +146,8 @@ Future<void> _pumpWithWallet(
 }
 
 void main() {
+  tearDown(AccountSessionFixture.end);
+
   testWidgets('a network failure is not presented as "no proposals"',
       (tester) async {
     await _pump(
@@ -234,13 +265,9 @@ void main() {
     testWidgets('a walletless account is offered a connect, never a restore',
         (tester) async {
       final wallet = _GovernanceWallet()
-        ..seedAccountSessionForTesting(
-          email: 'walletless@example.com',
-          backendProfile: const <String, dynamic>{},
-        )
         ..setCurrentWalletAddressForTesting(null);
 
-      await _pumpWithWallet(tester, wallet);
+      await _pumpWithWallet(tester, wallet, profile: _signedInProfile());
 
       expect(
         find.text(
@@ -262,13 +289,10 @@ void main() {
         'a read-only wallet with no proven backup is offered a reconnect',
         (tester) async {
       final wallet = _GovernanceWallet()
-        ..seedAccountSessionForTesting(
-          email: 'readonly@example.com',
-          backendProfile: const <String, dynamic>{},
-        )
         ..setCurrentWalletAddressForTesting('wallet123');
 
-      await _pumpWithWallet(tester, wallet);
+      await _pumpWithWallet(tester, wallet,
+          profile: _signedInProfile(wallet: 'wallet123'));
 
       expect(
         find.widgetWithText(KubusButton, 'Reconnect'),
@@ -284,14 +308,11 @@ void main() {
         'a wallet with a proven backup and no local key is offered restore',
         (tester) async {
       final wallet = _GovernanceWallet()
-        ..seedAccountSessionForTesting(
-          email: 'restorable@example.com',
-          backendProfile: const <String, dynamic>{},
-        )
         ..setCurrentWalletAddressForTesting('wallet123')
         ..setEncryptedWalletBackupDefinitionForTesting(_governanceBackup());
 
-      await _pumpWithWallet(tester, wallet);
+      await _pumpWithWallet(tester, wallet,
+          profile: _signedInProfile(wallet: 'wallet123'));
 
       expect(
         find.widgetWithText(KubusButton, 'Restore wallet'),
@@ -306,13 +327,10 @@ void main() {
     testWidgets('a walletless account reads the connect copy in Slovenian',
         (tester) async {
       final wallet = _GovernanceWallet()
-        ..seedAccountSessionForTesting(
-          email: 'walletless@example.com',
-          backendProfile: const <String, dynamic>{},
-        )
         ..setCurrentWalletAddressForTesting(null);
 
-      await _pumpWithWallet(tester, wallet, locale: const Locale('sl'));
+      await _pumpWithWallet(tester, wallet,
+          locale: const Locale('sl'), profile: _signedInProfile());
 
       expect(
         find.widgetWithText(KubusButton, 'Poveži denarnico'),
@@ -327,13 +345,9 @@ void main() {
     testWidgets(
         'an account whose wallet link is still settling is not told to connect one',
         (tester) async {
-      final wallet = _GovernanceWallet()
-        ..seedAccountSessionForTesting(
-          email: 'settling@example.com',
-          backendProfile: const <String, dynamic>{},
-        );
+      final wallet = _GovernanceWallet();
 
-      await _pumpWithWallet(tester, wallet);
+      await _pumpWithWallet(tester, wallet, profile: _signedInProfile());
 
       expect(find.text('Checking wallet status…'), findsOneWidget);
       expect(

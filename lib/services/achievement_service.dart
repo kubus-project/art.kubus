@@ -1,4 +1,3 @@
-import 'package:shared_preferences/shared_preferences.dart';
 import '../config/config.dart';
 import '../models/art_marker.dart';
 import '../models/achievements.dart' as backend_achievements;
@@ -527,30 +526,6 @@ class AchievementService {
         'AchievementService: getUnlockedAchievements failed: $e',
       );
       return [];
-    }
-  }
-
-  /// Get user's total recorded recognition
-  Future<int> getTotalEarnedTokens() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final wallet = (prefs.getString('wallet_address') ??
-              prefs.getString('wallet') ??
-              prefs.getString('walletAddress') ??
-              prefs.getString('user_id'))
-          ?.trim();
-      if (wallet == null || wallet.isEmpty) return 0;
-
-      final data = await _backendApi.getUserAchievements(wallet);
-      final raw = data['totalTokens'] ?? data['total_tokens'] ?? 0;
-      if (raw is int) return raw;
-      if (raw is num) return raw.toInt();
-      return int.tryParse(raw.toString()) ?? 0;
-    } catch (e) {
-      AppConfig.debugPrint(
-        'AchievementService: getTotalEarnedTokens failed: $e',
-      );
-      return 0;
     }
   }
 

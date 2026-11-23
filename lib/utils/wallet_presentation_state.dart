@@ -18,8 +18,12 @@ enum WalletPresentationState {
 class WalletPresentationStateResolver {
   const WalletPresentationStateResolver._();
 
+  /// [isSignedIn] is the profile provider's answer, passed in: the wallet
+  /// authority knows the wallet only, so a device with no wallet reads as
+  /// "account only" or "signed out" by who is signed in, not by the wallet.
   static WalletPresentationState resolve(
     WalletAuthoritySnapshot authority, {
+    required bool isSignedIn,
     WalletSessionPhase sessionPhase = WalletSessionPhase.ready,
     WalletAccountLinkPhase accountLinkPhase = WalletAccountLinkPhase.unknown,
   }) {
@@ -43,9 +47,9 @@ class WalletPresentationStateResolver {
     }
 
     return switch (authority.state) {
-      WalletAuthorityState.signedOut => WalletPresentationState.signedOut,
-      WalletAuthorityState.accountShellOnly =>
-        WalletPresentationState.accountShellOnly,
+      WalletAuthorityState.noWallet => isSignedIn
+          ? WalletPresentationState.accountShellOnly
+          : WalletPresentationState.signedOut,
       WalletAuthorityState.walletReadOnly =>
         WalletPresentationState.walletReadOnly,
       WalletAuthorityState.localSignerReady =>
@@ -88,6 +92,10 @@ class WalletPresentationStateResolver {
       isLinkagePending(
         resolve(
           walletProvider.authority,
+          // Linkage pending is decided by the session and link phases, which
+          // return before the authority mapping, and every non-pending state
+          // is non-pending whatever [isSignedIn] says, so it is not an input.
+          isSignedIn: false,
           sessionPhase: walletProvider.sessionPhase,
           accountLinkPhase: walletProvider.accountLinkPhase,
         ),

@@ -100,6 +100,8 @@ class _ServerApi implements ArtworkBackendApi {
     String? walletAddress,
     bool includePrivateForWallet = false,
     List<String>? ids,
+    bool mine = false,
+    String? authorProfileId,
   }) async {
     if (ids != null) {
       return ids

@@ -4,6 +4,62 @@
 // file (an older web build, a 404 for it) the class is absent and the section stays hidden, as before.
 (function () {
   var root = document.documentElement;
+
+  // Flutter's engine reads navigator.language before app initialization. Keep
+  // this parser-blocking handshake ahead of the engine on both the normal app
+  // shell and the server-rendered takeover shell.
+  try {
+    var nav = window.navigator;
+    if (nav) {
+      function normalizeLanguage(value) {
+        if (value == null) return null;
+        var normalized = String(value).trim();
+        if (!normalized) return null;
+        var lower = normalized.toLowerCase();
+        if (lower === "undefined" || lower === "null") return null;
+        try {
+          if (typeof Intl === "undefined" || typeof Intl.Locale !== "function") {
+            return null;
+          }
+          new Intl.Locale(normalized);
+        } catch (_) {
+          return null;
+        }
+        return normalized;
+      }
+
+      var rawLanguages = [];
+      try {
+        if (Array.isArray(nav.languages)) rawLanguages = nav.languages.slice();
+      } catch (_) {}
+      if (!rawLanguages.length) rawLanguages = [nav.language];
+
+      var sanitized = rawLanguages
+        .map(normalizeLanguage)
+        .filter(function (value) { return !!value; });
+      if (!sanitized.length) sanitized = ["en-US", "en"];
+
+      var primary = sanitized[0];
+      try {
+        Object.defineProperty(nav, "language", {
+          configurable: true,
+          get: function () { return primary; },
+        });
+      } catch (_) {}
+      try {
+        Object.defineProperty(nav, "languages", {
+          configurable: true,
+          get: function () { return sanitized.slice(); },
+        });
+      } catch (_) {}
+
+      var htmlLanguage = normalizeLanguage(root.lang);
+      if (!htmlLanguage) {
+        root.lang = (primary.split("-")[0] || "en").toLowerCase();
+      }
+    }
+  } catch (_) {}
+
   root.classList.add("kubus-takeover-capable");
 
   // Safety: the main takeover script never ran (blocked, failed or missing). The section then moves to

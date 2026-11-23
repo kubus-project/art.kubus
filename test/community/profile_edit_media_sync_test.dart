@@ -13,6 +13,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../support/account_session_fixture.dart';
 
 class _FakeProfileApi implements ProfileBackendApi {
   Map<String, dynamic>? nextSaveResponse;
@@ -108,6 +109,7 @@ class _ProfileEditTestProvider extends ProfileProvider {
 
   static final _initialProfile = UserProfile(
     id: 'profile-1',
+    userId: 'profile-1',
     walletAddress: 'ArtistWallet111111111111111111111111111111111',
     username: 'artist_user',
     displayName: 'Artist User',
@@ -278,6 +280,13 @@ Future<void> _pumpEditScreen(
 }
 
 void main() {
+  // A signed-in surface has a live session behind its held profile.
+  setUp(() => AccountSessionFixture.start(
+        accountId: 'profile-1',
+        wallet: 'ArtistWallet111111111111111111111111111111111',
+      ));
+  tearDown(AccountSessionFixture.end);
+
   TestWidgetsFlutterBinding.ensureInitialized();
 
   setUp(() {

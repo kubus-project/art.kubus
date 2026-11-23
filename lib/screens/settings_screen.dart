@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import '../widgets/inline_loading.dart';
+import '../widgets/legal_document_link_action.dart';
 import 'moderation/my_reports_screen.dart';
 import 'package:flutter/foundation.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
@@ -176,9 +177,7 @@ class _SettingsScreenState extends State<SettingsScreen>
     final l10n = AppLocalizations.of(context)!;
     final isSignedIn = context.watch<ProfileProvider>().isSignedIn;
     final walletProvider = context.watch<WalletProvider>();
-    final hasWalletAccountContext =
-        walletProvider.authority.hasAccountSession ||
-            walletProvider.hasWalletIdentity;
+    final hasWalletAccountContext = walletProvider.hasWalletIdentity;
     return Scaffold(
       backgroundColor: Colors.transparent,
       body: SafeArea(

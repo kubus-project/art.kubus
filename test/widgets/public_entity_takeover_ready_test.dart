@@ -19,6 +19,7 @@ void main() {
     (ShareEntityType.exhibition, 'exhibitions'),
     (ShareEntityType.collection, 'collections'),
     (ShareEntityType.post, 'posts'),
+    (ShareEntityType.institution, 'institutions'),
   ];
 
   for (final (type, segment) in cases) {

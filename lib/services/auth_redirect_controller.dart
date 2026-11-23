@@ -205,7 +205,7 @@ class AuthRedirectController {
     final result = await resolvePostAuthRedirect(
       prefs: prefs,
       payload: payload,
-      hasHydratedProfile: profileProvider.profile != null,
+      hasHydratedProfile: profileProvider.heldProfile != null,
       hasUsableProfile: profileProvider.hasUsablePublicProfile,
       requiresWalletBackup: requiresWalletBackup,
       walletAddress: targetWallet,

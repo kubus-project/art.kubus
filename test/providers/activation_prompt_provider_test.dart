@@ -2,6 +2,9 @@ import 'package:art_kubus/providers/activation_prompt_provider.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../support/account_session_fixture.dart';
+import '../support/signed_in_profile.dart';
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
@@ -9,8 +12,9 @@ void main() {
     SharedPreferences.setMockInitialValues(<String, Object>{});
   });
 
-  ActivationPromptProvider guestProvider() =>
-      ActivationPromptProvider(hasAuthSession: () => false);
+  tearDown(AccountSessionFixture.end);
+
+  ActivationPromptProvider guestProvider() => ActivationPromptProvider();
 
   test('stays quiet on landing and until enough interest is shown', () async {
     final provider = guestProvider();
@@ -30,7 +34,8 @@ void main() {
   });
 
   test('never prompts an authenticated visitor', () async {
-    final provider = ActivationPromptProvider(hasAuthSession: () => true);
+    final provider = ActivationPromptProvider()
+      ..bindIdentityOwner(signedInProfile(accountId: 'account-signed-in'));
 
     for (var i = 0; i < 10; i++) {
       await provider.recordEntityView();

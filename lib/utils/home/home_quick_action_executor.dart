@@ -33,7 +33,16 @@ class HomeQuickActionExecutor {
     }
 
     final target = _targetFor(context, definition, source);
-    if (!_passesCapabilities(context, definition)) return false;
+    if (!_passesCapabilities(
+      context,
+      definition,
+      required: <HomeQuickActionCapability>{
+        ...definition.capabilities,
+        if (target.requiresSignedIn) HomeQuickActionCapability.signedIn,
+      },
+    )) {
+      return false;
+    }
 
     final handled = _executeTarget(context, definition, target);
     if (handled) {
@@ -245,12 +254,19 @@ class HomeQuickActionExecutor {
 
   static bool _passesCapabilities(
     BuildContext context,
-    HomeQuickActionDefinition definition,
-  ) {
-    for (final capability in definition.capabilities) {
+    HomeQuickActionDefinition definition, {
+    required Set<HomeQuickActionCapability> required,
+  }) {
+    for (final capability in required) {
       switch (capability) {
         case HomeQuickActionCapability.signedIn:
-          if (!_isSignedIn(context)) {
+          bool signedIn;
+          try {
+            signedIn = context.read<ProfileProvider>().isSignedIn;
+          } catch (_) {
+            signedIn = false;
+          }
+          if (!signedIn) {
             _showSnackBar(
               context,
               AppLocalizations.of(context)!.walletActionSignInRequiredToast,
@@ -277,14 +293,6 @@ class HomeQuickActionExecutor {
       }
     }
     return true;
-  }
-
-  static bool _isSignedIn(BuildContext context) {
-    try {
-      return context.read<ProfileProvider>().isSignedIn;
-    } catch (_) {
-      return false;
-    }
   }
 
   static bool _isWalletConnected(BuildContext context) {

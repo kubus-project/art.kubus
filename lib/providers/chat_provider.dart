@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:async';
 import '../config/config.dart';
+import '../services/account_identity.dart';
 import '../services/backend_api_service.dart';
 import '../services/socket_service.dart';
 import '../models/conversation.dart';
@@ -21,6 +22,19 @@ part 'chat_provider_cache_helpers.dart';
 part 'chat_provider_conversation_helpers.dart';
 part 'chat_provider_lifecycle_helpers.dart';
 
+/// The result of starting a conversation. [recipientUnavailable] is the neutral
+/// "cannot message this account" state. The backend answers every restricted,
+/// closed or unknown recipient the same way, so no reason is carried.
+class ConversationCreateOutcome {
+  const ConversationCreateOutcome({
+    this.conversation,
+    this.recipientUnavailable = false,
+  });
+
+  final Conversation? conversation;
+  final bool recipientUnavailable;
+}
+
 class ChatProvider extends ChangeNotifier {
   static const int _maxCachedMessageConversations = 24;
   static const int _maxMessagesPerConversation = 200;
@@ -28,6 +42,7 @@ class ChatProvider extends ChangeNotifier {
   static const int _maxCachedUsers = 320;
 
   ChatProvider() {
+    AccountIdentity.addListener(_handleAccountIdentityChanged);
     // Register socket listeners early so the provider receives events even
     // if initialize() runs earlier or in a different order. SocketService
     // deduplicates listeners, so calling these here is safe.
@@ -411,17 +426,30 @@ class ChatProvider extends ChangeNotifier {
     final generation = sessionGeneration ?? _sessionGeneration;
     try {
       final wallets = <String>{};
+      final accountIds = <String>{};
       final myWalletCanonical = WalletUtils.canonical(_currentWallet);
+      final mySessionAccountId = _sessionAccountUuid();
 
       void collectWallet(String? wallet) {
         if (wallet == null) return;
         final normalized = WalletUtils.normalize(wallet);
         if (normalized.isEmpty) return;
+        // An account UUID is an identity, never a wallet.
+        if (WalletUtils.isAccountUuid(normalized)) return;
         final canonical = WalletUtils.canonical(normalized);
         if (myWalletCanonical.isNotEmpty && canonical == myWalletCanonical) {
           return;
         }
         wallets.add(normalized);
+      }
+
+      // A member without a wallet is identified by its account UUID alone.
+      void collectAccountId(String? userId, {required bool hasWallet}) {
+        if (hasWallet) return;
+        final id = (userId ?? '').trim();
+        if (!WalletUtils.isAccountUuid(id)) return;
+        if (WalletUtils.sameIdentity(id, mySessionAccountId)) return;
+        accountIds.add(id);
       }
 
       final convsNeedingMembers = <Conversation>[];
@@ -431,6 +459,8 @@ class ChatProvider extends ChangeNotifier {
           hasMetadata = true;
           for (final profile in conv.memberProfiles) {
             collectWallet(profile.wallet);
+            collectAccountId(profile.userId,
+                hasWallet: WalletUtils.normalize(profile.wallet).isNotEmpty);
           }
         }
         if (conv.memberWallets.isNotEmpty) {
@@ -441,7 +471,10 @@ class ChatProvider extends ChangeNotifier {
         }
         if (conv.counterpartProfile != null) {
           hasMetadata = true;
-          collectWallet(conv.counterpartProfile!.wallet);
+          final counterpart = conv.counterpartProfile!;
+          collectWallet(counterpart.wallet);
+          collectAccountId(counterpart.userId,
+              hasWallet: WalletUtils.normalize(counterpart.wallet).isNotEmpty);
         }
         if (!hasMetadata) {
           convsNeedingMembers.add(conv);
@@ -453,14 +486,19 @@ class ChatProvider extends ChangeNotifier {
           final members = await fetchMembers(conv.id);
           if (generation != _sessionGeneration) return;
           for (final member in members) {
+            final rawId = member['id']?.toString();
             final wallet = WalletUtils.normalize(
               (member['wallet_address'] ??
                       member['wallet'] ??
                       member['walletAddress'] ??
-                      member['id'])
+                      rawId)
                   ?.toString(),
             );
             collectWallet(wallet);
+            final userId = member['user_id'] ??
+                member['userId'] ??
+                (WalletUtils.isAccountUuid(rawId) ? rawId : null);
+            collectAccountId(userId?.toString(), hasWallet: wallet.isNotEmpty);
           }
         } catch (e) {
           debugPrint(
@@ -472,11 +510,25 @@ class ChatProvider extends ChangeNotifier {
       if (wallets.isNotEmpty && generation == _sessionGeneration) {
         await _prefetchUsersForWallets(wallets.toList());
       }
+      if (accountIds.isNotEmpty && generation == _sessionGeneration) {
+        await _prefetchUsersForAccountIds(accountIds.toList());
+      }
     } catch (e) {
       debugPrint(
         'ChatProvider._prefetchMembersAndProfilesFromConversations error: $e',
       );
     }
+  }
+
+  /// Test seam: the participant prefetch for [convs], as a load runs it.
+  @visibleForTesting
+  Future<void> prefetchParticipantsForTesting(List<Conversation> convs) =>
+      _prefetchMembersAndProfilesFromConversations(convs);
+
+  /// The signed-in account's UUID, or empty. A wallet is never returned here.
+  String _sessionAccountUuid() {
+    final key = AccountIdentity.accountKey.trim();
+    return WalletUtils.isAccountUuid(key) ? key : '';
   }
 
   final BackendApiService _api = BackendApiService();
@@ -532,6 +584,14 @@ class ChatProvider extends ChangeNotifier {
   DateTime? _lastUnauthorizedAt;
   final Duration _unauthCooldown = const Duration(seconds: 30);
   String _lastAuthSignature = '';
+  // The owner of "who is signed in", handed in by the binder. Every "is this
+  // me" decision about a message or socket payload goes through it.
+  ProfileProvider? _identityOwner;
+  String _lastAuthAccountId = '';
+  // The account whose personal socket rooms this session holds. Read by the
+  // session reset, which runs after _lastAuthAccountId has already moved on to
+  // the new account on a switch.
+  String _socketAccountId = '';
   DateTime? _lastIncomingMessageAt;
   String? _lastIncomingConversationId;
   final Map<String, int> _messageCacheTouchMs = {};
@@ -968,13 +1028,13 @@ class ChatProvider extends ChangeNotifier {
     return normalized.trim();
   }
 
-  bool get isAuthenticated => (_api.getAuthToken() ?? '').isNotEmpty;
-  bool get _hasAuthToken => (_api.getAuthToken() ?? '').isNotEmpty;
+  // A wallet alone may request a chat session, so it counts here. This gates
+  // network work only; nothing in the UI reads it as "signed in".
   bool get _hasAuthContext =>
-      _hasAuthToken || ((_currentWallet ?? '').isNotEmpty);
+      _api.hasAuthSession || ((_currentWallet ?? '').isNotEmpty);
   Map<String, Object?> get debugResourceSnapshot => <String, Object?>{
         'initialized': _initialized,
-        'hasAuthToken': _hasAuthToken,
+        'hasAuthToken': _api.hasAuthSession,
         'currentWallet': _currentWallet,
         'openConversationId': _openConversationId,
         'lastIncomingMessageAt': _lastIncomingMessageAt?.toIso8601String(),
@@ -1009,13 +1069,43 @@ class ChatProvider extends ChangeNotifier {
   }
 
   @visibleForTesting
+  bool matchesOptimisticMessageForTesting(
+    ChatMessage current,
+    ChatMessage incoming,
+  ) =>
+      _matchesOptimisticMessage(current, incoming);
+
+  @visibleForTesting
   void handleMessageReactionForTesting(Map<String, dynamic> data) {
     _onMessageReaction(data);
   }
 
   @visibleForTesting
+  void handleMessageReadForTesting(Map<String, dynamic> data) {
+    _onMessageRead(data);
+  }
+
+  /// Test seam: the owner that answers "is this me", as the binder hands it in.
+  @visibleForTesting
+  void setIdentityOwnerForTesting(ProfileProvider? owner) {
+    _identityOwner = owner;
+  }
+
+  @visibleForTesting
   void setCurrentWalletForTesting(String? wallet) {
     _currentWallet = wallet;
+  }
+
+  /// Test seam: the account whose personal socket room this session joined.
+  @visibleForTesting
+  void bindSocketAccountForTesting(String accountId) {
+    _socketAccountId = accountId;
+  }
+
+  /// Test seam: runs a session reset with [reason], as the auth bind does.
+  @visibleForTesting
+  void resetSessionForTesting(String reason) {
+    _resetSessionState(reason: reason, notify: false);
   }
 
   @visibleForTesting
@@ -1080,9 +1170,81 @@ class ChatProvider extends ChangeNotifier {
     _chatProviderResetSessionState(this, reason: reason, notify: notify);
   }
 
+  /// A walletless switch leaves the wallet empty on both sides, and the profile
+  /// that carries the account id clears first. The identity change is the
+  /// signal that reaches this provider before the next token's first request.
+  /// A same-account change (wallet link, re-issued token) keeps the state.
+  void _handleAccountIdentityChanged() {
+    final key = AccountIdentity.accountKey;
+    if (key.isNotEmpty && key == _lastAuthAccountId) return;
+    _resetSessionState(reason: 'accountChanged');
+    // Recorded after the reset so the bind path sees this account as current
+    // and does not reset again for the same switch.
+    _lastAuthAccountId = key;
+  }
+
+  /// The session's canonical account id for socket routing, or empty when
+  /// unknown. A legacy token with no id claim reports its wallet as the account
+  /// key. That is a wallet, not an account id, so it is not returned here.
+  String _socketSessionAccountId() {
+    final key = AccountIdentity.accountKey.trim();
+    if (key.isEmpty || WalletUtils.equals(key, _currentWallet)) return '';
+    return key;
+  }
+
+  /// Whether an identity named by a socket payload or a message is the
+  /// signed-in account. The owner answers; without one bound nobody is.
+  bool _isCurrentAccountActor({String? userId, String? wallet}) =>
+      _identityOwner?.isCurrentAccountActor(
+          accountId: userId, wallet: wallet) ??
+      false;
+
+  /// A trimmed identifier from the first of [keys] that carries one, or null.
+  String? _identityText(Map<String, dynamic> data, List<String> keys) {
+    for (final key in keys) {
+      final text = (data[key] ?? '').toString().trim();
+      if (text.isNotEmpty) return text;
+    }
+    return null;
+  }
+
+  /// The account id a socket payload names as its recipient, or null.
+  String? _socketRecipientUserId(Map<String, dynamic>? data) {
+    if (data == null) return null;
+    final nested = data['data'] is Map
+        ? Map<String, dynamic>.from(data['data'] as Map)
+        : const <String, dynamic>{};
+    for (final source in <Map<String, dynamic>>[data, nested]) {
+      for (final key in const ['recipientUserId', 'recipient_user_id']) {
+        final value = source[key]?.toString().trim() ?? '';
+        if (value.isNotEmpty) return value;
+      }
+    }
+    return null;
+  }
+
   /// Whether a socket event for [conversationId] belongs to the current session.
-  bool _isSocketEventForCurrentSession(String conversationId) {
-    if ((_currentWallet ?? '').trim().isEmpty) return false;
+  ///
+  /// The session is known by its account id or, for a wallet session, its
+  /// wallet. A payload that names a recipient account must name this session's
+  /// account, so an event addressed to a previous account is dropped. Otherwise
+  /// the event belongs to a conversation the session has joined (or is joining).
+  bool _isSocketEventForCurrentSession(
+    String conversationId, [
+    Map<String, dynamic>? data,
+  ]) {
+    final wallet = (_currentWallet ?? '').trim();
+    final accountId = _socketSessionAccountId();
+    if (wallet.isEmpty && accountId.isEmpty) return false;
+    final addressedTo = _socketRecipientUserId(data);
+    // Addressed to this session by account id, or by wallet for a legacy
+    // payload. An unknown identity never matches, and ids compare
+    // case-insensitively.
+    if (addressedTo != null &&
+        !WalletUtils.sameIdentity(addressedTo, accountId) &&
+        !WalletUtils.sameIdentity(addressedTo, wallet)) {
+      return false;
+    }
     if (_conversations.any((c) => c.id == conversationId)) return true;
     return !_retiredSessionConversationIds.contains(conversationId);
   }
@@ -1092,7 +1254,7 @@ class ChatProvider extends ChangeNotifier {
     if (_initialized) {
       if (normalizedInitialWallet.isNotEmpty) {
         await setCurrentWallet(normalizedInitialWallet);
-      } else if (_conversations.isEmpty && isAuthenticated) {
+      } else if (_conversations.isEmpty && _api.hasAuthSession) {
         unawaited(refreshConversations());
       }
       return;
@@ -1461,12 +1623,14 @@ class ChatProvider extends ChangeNotifier {
 
   void bindAuthContext({
     ProfileProvider? profileProvider,
+    String? accountId,
     String? walletAddress,
     bool? isSignedIn,
   }) {
     _chatProviderBindAuthContext(
       this,
       profileProvider: profileProvider,
+      accountId: accountId,
       walletAddress: walletAddress,
       isSignedIn: isSignedIn,
     );
@@ -1477,7 +1641,7 @@ class ChatProvider extends ChangeNotifier {
     final generation = _sessionGeneration;
     try {
       debugPrint(
-        'ChatProvider.refreshConversations: isAuthenticated=$_hasAuthToken',
+        'ChatProvider.refreshConversations: isAuthenticated=${_api.hasAuthSession}',
       );
       if (!_hasAuthContext) {
         return;
@@ -1493,7 +1657,7 @@ class ChatProvider extends ChangeNotifier {
         _lastUnauthorizedAt = DateTime.now();
         return;
       }
-      if (!_hasAuthToken && (_currentWallet ?? '').isNotEmpty) {
+      if (!_api.hasAuthSession && (_currentWallet ?? '').isNotEmpty) {
         try {
           await _api.ensureAuthLoaded(walletAddress: _currentWallet);
         } catch (_) {}
@@ -1551,6 +1715,7 @@ class ChatProvider extends ChangeNotifier {
           shouldUpdateTimestamp ? message.message : existing.lastMessage,
       displayAvatar: existing.displayAvatar,
       memberWallets: existing.memberWallets,
+      memberUserIds: existing.memberUserIds,
       memberProfiles: existing.memberProfiles,
       memberCount: existing.memberCount,
       counterpartProfile: existing.counterpartProfile,
@@ -1743,9 +1908,15 @@ class ChatProvider extends ChangeNotifier {
     final isOptimistic = current.id.startsWith('temp-') ||
         current.data?['sendStatus']?.toString() == 'sending';
     if (!isOptimistic) return false;
-    if (!WalletUtils.equals(current.senderWallet, incoming.senderWallet)) {
-      return false;
-    }
+    // A walletless optimistic message is this account's own send. Only the
+    // account's echo may replace it; another walletless sender never can.
+    final sameSender = WalletUtils.canonical(current.senderWallet).isEmpty
+        ? _isCurrentAccountActor(
+            userId: incoming.senderUserId,
+            wallet: incoming.senderWallet,
+          )
+        : WalletUtils.equals(current.senderWallet, incoming.senderWallet);
+    if (!sameSender) return false;
     if (current.message.trim() != incoming.message.trim()) return false;
 
     final deltaSeconds =
@@ -1784,7 +1955,7 @@ class ChatProvider extends ChangeNotifier {
         }
         return;
       }
-      if (!_isSocketEventForCurrentSession(convId)) {
+      if (!_isSocketEventForCurrentSession(convId, data)) {
         if (kDebugMode) {
           debugPrint(
             'ChatProvider._onMessageReceived: dropping event outside current session',
@@ -1806,28 +1977,10 @@ class ChatProvider extends ChangeNotifier {
         return;
       }
       final normalizedMsg = msg;
-      final senderUserId = (data['senderUserId'] ??
-              data['sender_user_id'] ??
-              payload['senderUserId'] ??
-              payload['sender_user_id'])
-          ?.toString()
-          .trim();
-      final currentClaims = _api.getCurrentAuthTokenClaims();
-      final currentUserId = (currentClaims?['id'] ??
-              currentClaims?['user_id'] ??
-              currentClaims?['sub'])
-          ?.toString()
-          .trim();
-      final senderWallet = WalletUtils.canonical(normalizedMsg.senderWallet);
-      final currentWallet = WalletUtils.canonical(_currentWallet);
-      final isSelfSender = (senderWallet.isNotEmpty &&
-              currentWallet.isNotEmpty &&
-              senderWallet == currentWallet) ||
-          (senderUserId != null &&
-              senderUserId.isNotEmpty &&
-              currentUserId != null &&
-              currentUserId.isNotEmpty &&
-              senderUserId == currentUserId);
+      final isSelfSender = _isCurrentAccountActor(
+        userId: normalizedMsg.senderUserId,
+        wallet: normalizedMsg.senderWallet,
+      );
       final existing = _messages[convId] ?? const <ChatMessage>[];
       final next = <ChatMessage>[];
       var inserted = false;
@@ -1920,9 +2073,15 @@ class ChatProvider extends ChangeNotifier {
       final messageId =
           (data['message_id'] ?? data['messageId'] ?? '').toString();
       final reader = (data['reader'] ?? data['wallet'] ?? '').toString();
+      // The reader is named by account id, wallet, or both. A payload with no
+      // user id is a legacy one, whose `reader` is the wallet.
+      final readerUserId = _identityText(data, const ['userId', 'user_id']);
+      final readerWallet = _identityText(
+              data, const ['wallet', 'walletAddress']) ??
+          (readerUserId == null ? _identityText(data, const ['reader']) : null);
 
       if (convId.isEmpty || messageId.isEmpty) return;
-      if (!_isSocketEventForCurrentSession(convId)) return;
+      if (!_isSocketEventForCurrentSession(convId, data)) return;
 
       debugPrint(
         'ChatProvider._onMessageRead: convId=$convId, messageId=$messageId, reader=$reader',
@@ -1944,14 +2103,11 @@ class ChatProvider extends ChangeNotifier {
         messageFound = true;
 
         // Check if this reader is already in the list
-        final readerCanonical = WalletUtils.canonical(reader);
-        final alreadyRegistered = m.readers.any((r) {
-          final existing = WalletUtils.normalize(
-            (r['wallet_address'] ?? r['wallet'] ?? '').toString(),
-          );
-          return existing.isNotEmpty &&
-              WalletUtils.equals(existing, readerCanonical);
-        });
+        final alreadyRegistered = m.readers.any((r) => isReaderEntryOf(
+              r,
+              accountId: readerUserId,
+              wallet: readerWallet,
+            ));
 
         if (alreadyRegistered) {
           debugPrint(
@@ -1965,14 +2121,21 @@ class ChatProvider extends ChangeNotifier {
         final readAt = (data['read_at'] ?? data['readAt'] ?? data['readAtUtc'])
             ?.toString();
         newReaders.add(
-          _buildReaderMetadata(reader, readAtOverride: readAt, payload: data),
+          _buildReaderMetadata(
+            readerWallet ?? '',
+            userId: readerUserId,
+            readAtOverride: readAt,
+            payload: data,
+          ),
         );
 
         final updatedMsg = m.copyWith(
           readers: newReaders,
           readersCount: newReaders.length,
-          readByCurrent: (_currentWallet != null &&
-                  WalletUtils.equals(reader, _currentWallet))
+          readByCurrent: _isCurrentAccountActor(
+            userId: readerUserId,
+            wallet: readerWallet,
+          )
               ? true
               : m.readByCurrent,
         );
@@ -1985,8 +2148,8 @@ class ChatProvider extends ChangeNotifier {
         _cacheMessages(convId, newList);
 
         // Update unread count if current user is the reader
-        if (_currentWallet != null &&
-            WalletUtils.equals(reader, _currentWallet)) {
+        if (_isCurrentAccountActor(
+            userId: readerUserId, wallet: readerWallet)) {
           final curr = _unreadCounts[convId] ?? 0;
           if (curr > 0) _unreadCounts[convId] = curr - 1;
         }
@@ -2064,10 +2227,13 @@ class ChatProvider extends ChangeNotifier {
         'ChatProvider._onConversationMemberRead: convId=$convId, wallet=$wallet, lastRead=$lastRead',
       );
       if (convId.isEmpty) return;
-      // Compare wallet to current wallet case-insensitively for detection only
-      if (wallet.isNotEmpty &&
-          _currentWallet != null &&
-          WalletUtils.equals(wallet, _currentWallet)) {
+      final memberUserId = _identityText(data, const ['userId', 'user_id']);
+      // Detection only: the member is this session when the account id or the
+      // wallet names it.
+      if (_isCurrentAccountActor(
+        userId: memberUserId,
+        wallet: wallet.isEmpty ? null : wallet,
+      )) {
         _unreadCounts[convId] = 0;
         _safeNotifyListeners(force: true);
       }
@@ -2288,10 +2454,12 @@ class ChatProvider extends ChangeNotifier {
 
   Map<String, dynamic> _buildReaderMetadata(
     String wallet, {
+    String? userId,
     String? readAtOverride,
     Map<String, dynamic>? payload,
   }) {
     final normalizedWallet = wallet.trim();
+    final normalizedUserId = (userId ?? '').trim();
     final timestamp = (readAtOverride != null && readAtOverride.isNotEmpty)
         ? readAtOverride
         : DateTime.now().toIso8601String();
@@ -2327,12 +2495,15 @@ class ChatProvider extends ChangeNotifier {
       avatarUrl = null;
     }
     if (displayName == null || displayName.trim().isEmpty) {
-      displayName = normalizedWallet;
+      displayName =
+          normalizedWallet.isNotEmpty ? normalizedWallet : normalizedUserId;
     }
 
     return {
       'wallet_address': normalizedWallet,
       'wallet': normalizedWallet,
+      'user_id': normalizedUserId,
+      'userId': normalizedUserId,
       'read_at': timestamp,
       'displayName': displayName,
       'avatar_url': avatarUrl,
@@ -2345,6 +2516,10 @@ class ChatProvider extends ChangeNotifier {
 
   Future<void> _prefetchUsersForWallets(List<String> wallets) async {
     await _chatProviderPrefetchUsersForWallets(this, wallets);
+  }
+
+  Future<void> _prefetchUsersForAccountIds(List<String> accountIds) async {
+    await _chatProviderPrefetchUsersForAccountIds(this, accountIds);
   }
 
   /// Merge provided users into the ChatProvider user cache and notify listeners.
@@ -2376,7 +2551,31 @@ class ChatProvider extends ChangeNotifier {
     return resp;
   }
 
+  /// The backend answers a restricted, closed or unknown recipient with
+  /// 404 RECIPIENT_UNAVAILABLE. Nothing else about the refusal is surfaced.
+  bool _isRecipientUnavailable(Map<String, dynamic> resp) {
+    if (resp['status'] != 404) return false;
+    final code = (resp['errorCode'] ?? '').toString().trim().toUpperCase();
+    return code == 'RECIPIENT_UNAVAILABLE';
+  }
+
+  static const ConversationCreateOutcome _noConversation =
+      ConversationCreateOutcome();
+
+  static ConversationCreateOutcome _created(Conversation conversation) =>
+      ConversationCreateOutcome(conversation: conversation);
+
+  /// Starts (or finds) a conversation with [members]. Members are wallets or
+  /// account UUIDs; the server resolves either. The result says when the
+  /// recipient cannot be messaged.
   Future<Conversation?> createConversation(
+    String title,
+    bool isGroup,
+    List<String> members,
+  ) async =>
+      (await createConversationOutcome(title, isGroup, members)).conversation;
+
+  Future<ConversationCreateOutcome> createConversationOutcome(
     String title,
     bool isGroup,
     List<String> members,
@@ -2387,11 +2586,11 @@ class ChatProvider extends ChangeNotifier {
     try {
       await _api.loadAuthToken();
     } catch (_) {}
-    if (generation != _sessionGeneration) return null;
+    if (generation != _sessionGeneration) return _noConversation;
     // First-pass: fetch conversations from backend and try to find an existing 1:1 conversation
     try {
       var convResp = await _api.fetchConversations();
-      if (generation != _sessionGeneration) return null;
+      if (generation != _sessionGeneration) return _noConversation;
       // If unauthorized, try to issue a token for current wallet and retry once
       try {
         final status = convResp['status'] as int?;
@@ -2401,7 +2600,7 @@ class ChatProvider extends ChangeNotifier {
             try {
               final prefs = await SharedPreferences.getInstance();
               final w = storedWalletFromPrefs(prefs);
-              if (generation != _sessionGeneration) return null;
+              if (generation != _sessionGeneration) return _noConversation;
               if (w.isNotEmpty) _currentWallet = w.toString();
             } catch (e2) {
               debugPrint(
@@ -2409,11 +2608,11 @@ class ChatProvider extends ChangeNotifier {
               );
             }
             // If we still don't have a wallet and there IS a token, try resolving via getMyProfile
-            if ((_api.getAuthToken() ?? '').isNotEmpty &&
+            if (_api.hasAuthSession &&
                 (_currentWallet == null || _currentWallet!.isEmpty)) {
               try {
                 final meResp = await _api.getMyProfile();
-                if (generation != _sessionGeneration) return null;
+                if (generation != _sessionGeneration) return _noConversation;
                 if (meResp['success'] == true && meResp['data'] != null) {
                   final me = meResp['data'] as Map<String, dynamic>;
                   _currentWallet = (me['wallet_address'] ??
@@ -2433,13 +2632,13 @@ class ChatProvider extends ChangeNotifier {
               _currentWallet != null &&
               _currentWallet!.isNotEmpty) {
             final issued = await _api.issueDebugTokenForWallet(_currentWallet!);
-            if (generation != _sessionGeneration) return null;
+            if (generation != _sessionGeneration) return _noConversation;
             if (issued) {
               try {
                 await _api.loadAuthToken();
               } catch (_) {}
               convResp = await _api.fetchConversations();
-              if (generation != _sessionGeneration) return null;
+              if (generation != _sessionGeneration) return _noConversation;
             }
           }
         }
@@ -2473,7 +2672,7 @@ class ChatProvider extends ChangeNotifier {
             if (isGroupFlag == true) continue;
 
             final mresp = await _api.fetchConversationMembers(cid);
-            if (generation != _sessionGeneration) return null;
+            if (generation != _sessionGeneration) return _noConversation;
             if ((mresp['success'] == true) || (mresp['data'] != null)) {
               final list = (mresp['data'] ??
                   mresp['members'] ??
@@ -2488,7 +2687,12 @@ class ChatProvider extends ChangeNotifier {
                                     m['id'])
                                 ?.toString() ??
                             '';
-                    if (wallet.isNotEmpty && wallet == target) {
+                    final memberUserId =
+                        ((m)['user_id'] ?? m['userId'])?.toString() ?? '';
+                    final isTarget = (wallet.isNotEmpty && wallet == target) ||
+                        (memberUserId.isNotEmpty &&
+                            WalletUtils.sameIdentity(memberUserId, target));
+                    if (isTarget) {
                       // Found existing direct conversation — build Conversation from backend item
                       Conversation conv;
                       try {
@@ -2506,7 +2710,7 @@ class ChatProvider extends ChangeNotifier {
                       _conversations.removeWhere((c) => c.id == cid);
                       _conversations.insert(0, conv);
                       _safeNotifyListeners(force: true);
-                      return conv;
+                      return _created(conv);
                     }
                   } catch (_) {}
                 }
@@ -2528,7 +2732,10 @@ class ChatProvider extends ChangeNotifier {
       isGroup: isGroup,
       members: members,
     );
-    if (generation != _sessionGeneration) return null;
+    if (generation != _sessionGeneration) return _noConversation;
+    if (_isRecipientUnavailable(resp)) {
+      return const ConversationCreateOutcome(recipientUnavailable: true);
+    }
     if (resp['success'] == true) {
       final conv = Conversation.fromJson(resp['data']);
       _conversations.insert(0, conv);
@@ -2544,12 +2751,12 @@ class ChatProvider extends ChangeNotifier {
           'ChatProvider.createConversation: subscribeConversation failed: $e',
         );
       }
-      if (generation != _sessionGeneration) return null;
+      if (generation != _sessionGeneration) return _noConversation;
       // Optionally open conversation automatically
       try {
         await openConversation(conv.id);
       } catch (_) {}
-      return conv;
+      return _created(conv);
     }
 
     // If unauthorized, attempt to obtain a token for the current wallet and retry once
@@ -2561,7 +2768,7 @@ class ChatProvider extends ChangeNotifier {
           try {
             final prefs = await SharedPreferences.getInstance();
             final w = storedWalletFromPrefs(prefs);
-            if (generation != _sessionGeneration) return null;
+            if (generation != _sessionGeneration) return _noConversation;
             if (w.isNotEmpty) {
               _currentWallet = w.toString();
             }
@@ -2571,11 +2778,11 @@ class ChatProvider extends ChangeNotifier {
             );
           }
           // If we have a token and no wallet, try to call getMyProfile
-          if ((_api.getAuthToken() ?? '').isNotEmpty &&
+          if (_api.hasAuthSession &&
               (_currentWallet == null || _currentWallet!.isEmpty)) {
             try {
               final meResp = await _api.getMyProfile();
-              if (generation != _sessionGeneration) return null;
+              if (generation != _sessionGeneration) return _noConversation;
               if (meResp['success'] == true && meResp['data'] != null) {
                 final me = meResp['data'] as Map<String, dynamic>;
                 _currentWallet = (me['wallet_address'] ??
@@ -2595,24 +2802,28 @@ class ChatProvider extends ChangeNotifier {
             _currentWallet != null &&
             _currentWallet!.isNotEmpty) {
           final issued = await _api.issueDebugTokenForWallet(_currentWallet!);
-          if (generation != _sessionGeneration) return null;
+          if (generation != _sessionGeneration) return _noConversation;
           if (issued) {
             try {
               await _api.loadAuthToken();
             } catch (_) {}
-            if (generation != _sessionGeneration) return null;
+            if (generation != _sessionGeneration) return _noConversation;
             // Retry once
             resp = await _api.createConversation(
               title: title,
               isGroup: isGroup,
               members: members,
             );
-            if (generation != _sessionGeneration) return null;
+            if (generation != _sessionGeneration) return _noConversation;
+            if (_isRecipientUnavailable(resp)) {
+              return const ConversationCreateOutcome(
+                  recipientUnavailable: true);
+            }
             if (resp['success'] == true) {
               final conv = Conversation.fromJson(resp['data']);
               _conversations.insert(0, conv);
               _safeNotifyListeners(force: true);
-              return conv;
+              return _created(conv);
             }
           }
         }
@@ -2621,7 +2832,7 @@ class ChatProvider extends ChangeNotifier {
       debugPrint('ChatProvider.createConversation retry flow failed: $e');
     }
 
-    return null;
+    return _noConversation;
   }
 
   Future<Map<String, dynamic>> uploadConversationAvatar(
@@ -2732,14 +2943,21 @@ class ChatProvider extends ChangeNotifier {
     return map.values.toList();
   }
 
-  /// Accepts either a wallet or a username. Returns the created conversation when a new group chat is spawned.
+  /// Accepts either a wallet or a username. A walletless member is named by
+  /// [memberUserId], the account id from the picker; it is then added by that
+  /// id alone. Returns the created conversation when a new group chat is spawned.
   Future<Conversation?> addMember(
     String conversationId,
-    String memberIdentifier,
-  ) async {
+    String memberIdentifier, {
+    String? memberUserId,
+  }) async {
+    final generation = _sessionGeneration;
+    final accountId = (memberUserId ?? '').trim();
+    if (WalletUtils.isAccountUuid(accountId)) {
+      return _addWalletlessMember(conversationId, accountId, generation);
+    }
     final trimmed = memberIdentifier.trim();
     if (trimmed.isEmpty) return null;
-    final generation = _sessionGeneration;
 
     var memberWallet = trimmed;
     final usernameCandidate = trimmed.replaceFirst(RegExp(r'^@+'), '');
@@ -2828,6 +3046,35 @@ class ChatProvider extends ChangeNotifier {
     return conversation;
   }
 
+  /// Adds a walletless member by account id. The wallet-keyed steps (the local
+  /// duplicate check and the promotion to a new group) do not apply, so the
+  /// backend decides a duplicate.
+  Future<Conversation?> _addWalletlessMember(
+    String conversationId,
+    String accountId,
+    int generation,
+  ) async {
+    final conversation = _findConversationById(conversationId);
+    try {
+      final resp = await _api.addConversationMember(
+        conversationId,
+        '',
+        userId: accountId,
+      );
+      debugPrint(
+        'ChatProvider.addMember: addConversationMember response: $resp',
+      );
+    } catch (e) {
+      debugPrint(
+        'ChatProvider.addMember: addConversationMember call failed: $e',
+      );
+    }
+    if (generation != _sessionGeneration) return null;
+    await fetchMembers(conversationId);
+    await refreshConversations();
+    return conversation;
+  }
+
   Future<void> removeMember(
     String conversationId,
     String memberIdentifier,
@@ -2870,6 +3117,7 @@ class ChatProvider extends ChangeNotifier {
             lastMessage: old.lastMessage,
             displayAvatar: old.displayAvatar,
             memberWallets: old.memberWallets,
+            memberUserIds: old.memberUserIds,
             memberProfiles: old.memberProfiles,
             memberCount: old.memberCount,
             counterpartProfile: old.counterpartProfile,
@@ -3029,21 +3277,17 @@ class ChatProvider extends ChangeNotifier {
         final existingReaders =
             m.readers.map((e) => Map<String, dynamic>.from(e)).toList();
         final readerWallet = WalletUtils.normalize(_currentWallet);
-        final readerCanonical = WalletUtils.canonical(readerWallet);
-        if (readerWallet.isNotEmpty &&
-            !existingReaders.any((r) {
-              try {
-                final existing = WalletUtils.normalize(
-                  ((r['wallet_address'] ?? r['wallet']) ?? '').toString(),
-                );
-                return existing.isNotEmpty &&
-                    WalletUtils.equals(existing, readerCanonical) &&
-                    readerCanonical.isNotEmpty;
-              } catch (_) {
-                return false;
-              }
-            })) {
-          existingReaders.add(_buildReaderMetadata(readerWallet));
+        final readerAccountId = _socketSessionAccountId();
+        if ((readerWallet.isNotEmpty || readerAccountId.isNotEmpty) &&
+            !existingReaders.any((r) => isReaderEntryOf(
+                  r,
+                  accountId: readerAccountId,
+                  wallet: readerWallet,
+                ))) {
+          existingReaders.add(_buildReaderMetadata(
+            readerWallet,
+            userId: readerAccountId,
+          ));
         }
         final updatedMsg = m.copyWith(
           readersCount: existingReaders.length,
@@ -3073,6 +3317,7 @@ class ChatProvider extends ChangeNotifier {
 
   @override
   void dispose() {
+    AccountIdentity.removeListener(_handleAccountIdentityChanged);
     _unbindRefreshProvider();
     try {
       _subscriptionMonitorTimer?.cancel();
@@ -3129,7 +3374,7 @@ class ChatProvider extends ChangeNotifier {
       final reactions = data['reactions']; // List of reaction objects
 
       if (convId.isEmpty || messageId.isEmpty) return;
-      if (!_isSocketEventForCurrentSession(convId)) return;
+      if (!_isSocketEventForCurrentSession(convId, data)) return;
 
       final list = _messages[convId];
       if (list == null) return;
@@ -3184,6 +3429,7 @@ class ChatProvider extends ChangeNotifier {
           lastMessage: old.lastMessage,
           displayAvatar: old.displayAvatar,
           memberWallets: old.memberWallets,
+          memberUserIds: old.memberUserIds,
           memberProfiles: old.memberProfiles,
           memberCount: old.memberCount,
           counterpartProfile: old.counterpartProfile,
@@ -3207,7 +3453,12 @@ class ChatProvider extends ChangeNotifier {
       for (var i = 0; i < list.length; i++) {
         if (list[i].id == messageId) {
           final msg = list[i];
-          final currentWallet = _currentWallet ?? '';
+          final accountId = _socketSessionAccountId();
+          final wallet = (_currentWallet ?? '').trim();
+          // A reactor is stored as the wallet when there is one, else as the
+          // account id. A session with neither has no reaction to record.
+          final reactor = wallet.isNotEmpty ? wallet : accountId;
+          if (reactor.isEmpty) return;
 
           // Check if already reacted
           final existingReactionIndex = msg.reactions.indexWhere(
@@ -3219,11 +3470,13 @@ class ChatProvider extends ChangeNotifier {
 
           if (existingReactionIndex >= 0) {
             final reaction = newReactions[existingReactionIndex];
-            if (reaction.reactors.contains(currentWallet)) {
+            if (reaction.isReactedBy(accountId: accountId, wallet: wallet)) {
               // Remove reaction
               isRemoving = true;
-              final newReactors = List<String>.from(reaction.reactors)
-                ..remove(currentWallet);
+              final newReactors = reaction.reactorsExcept(
+                accountId: accountId,
+                wallet: wallet,
+              );
               if (newReactors.isEmpty) {
                 newReactions.removeAt(existingReactionIndex);
               } else {
@@ -3236,7 +3489,7 @@ class ChatProvider extends ChangeNotifier {
             } else {
               // Add to existing reaction
               final newReactors = List<String>.from(reaction.reactors)
-                ..add(currentWallet);
+                ..add(reactor);
               newReactions[existingReactionIndex] = MessageReaction(
                 emoji: emoji,
                 count: newReactors.length,
@@ -3249,7 +3502,7 @@ class ChatProvider extends ChangeNotifier {
               MessageReaction(
                 emoji: emoji,
                 count: 1,
-                reactors: [currentWallet],
+                reactors: [reactor],
               ),
             );
           }

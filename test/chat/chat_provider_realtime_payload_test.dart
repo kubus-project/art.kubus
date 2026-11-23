@@ -1,6 +1,10 @@
 import 'package:art_kubus/models/conversation.dart';
 import 'package:art_kubus/providers/chat_provider.dart';
+import 'package:art_kubus/services/account_identity.dart';
 import 'package:flutter_test/flutter_test.dart';
+
+import '../support/account_session_fixture.dart';
+import '../support/signed_in_profile.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 const String _conversationId = 'a0840000-0000-4000-8000-0000000000c1';
@@ -178,6 +182,69 @@ void main() {
       });
 
       expect(provider.messages[_conversationId], isNull);
+    });
+  });
+
+  group('socket addressing and sender identity', () {
+    const accountA = '5c1a0e7e-2f4b-4d8a-9b3e-0d1c2b3a4f50';
+    const accountB = '9e8d7c6b-5a49-4837-8291-0a1b2c3d4e5f';
+
+    tearDown(() => AccountIdentity.setAccountKey(''));
+
+    test(
+        'a wallet session with no account id accepts an event addressed to its wallet',
+        () {
+      final provider = ChatProvider();
+      provider.setCurrentWalletForTesting(_selfWallet);
+
+      provider.handleIncomingMessageForTesting(<String, dynamic>{
+        ..._capturedFrame(),
+        'recipientUserId': _selfWallet,
+      });
+
+      expect(provider.messages[_conversationId], hasLength(1));
+    });
+
+    test('an event addressed to this account matches its id case-insensitively',
+        () {
+      AccountIdentity.setAccountKey(accountA);
+      final provider = ChatProvider();
+      provider.setCurrentWalletForTesting(_selfWallet);
+
+      provider.handleIncomingMessageForTesting(<String, dynamic>{
+        ..._capturedFrame(),
+        'recipientUserId': accountA.toUpperCase(),
+      });
+
+      expect(provider.messages[_conversationId], hasLength(1));
+    });
+
+    test('an event addressed to another account is still dropped', () {
+      AccountIdentity.setAccountKey(accountA);
+      final provider = ChatProvider();
+      provider.setCurrentWalletForTesting(_selfWallet);
+
+      provider.handleIncomingMessageForTesting(<String, dynamic>{
+        ..._capturedFrame(),
+        'recipientUserId': accountB,
+      });
+
+      expect(provider.messages[_conversationId], isNull);
+    });
+
+    test('an own echo whose account id differs only in case is not unread', () {
+      addTearDown(AccountSessionFixture.end);
+      final provider = ChatProvider()
+        ..setIdentityOwnerForTesting(signedInProfile(accountId: accountA));
+      provider.setCurrentWalletForTesting(_selfWallet);
+
+      provider.handleIncomingMessageForTesting(<String, dynamic>{
+        ..._capturedFrame(),
+        'senderUserId': accountA.toUpperCase(),
+      });
+
+      expect(provider.messages[_conversationId], hasLength(1));
+      expect(provider.unreadCounts[_conversationId] ?? 0, equals(0));
     });
   });
 }

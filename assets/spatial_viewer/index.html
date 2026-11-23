@@ -3,7 +3,8 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'unsafe-inline'; img-src data: blob:; connect-src http://127.0.0.1:* https: blob:; worker-src blob:">
+  <!-- connect-src carries http://127.0.0.1:* for the native WebView's loopback content proxy. On the web the HTML CSP header (web/.htaccess) is intersected with this one and removes it; a host that drops that header would leave the loopback allowance in place, so keep the header. There is no https: here on purpose: the web host downloads the bytes itself and hands the page a blob: URL, so a script that escaped this page has no network to send anything to. -->
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'wasm-unsafe-eval'; style-src 'unsafe-inline'; img-src data: blob:; connect-src http://127.0.0.1:* blob:; worker-src blob:">
   <style>
     html,body,canvas{width:100%;height:100%;margin:0;overflow:hidden;background:#101415}canvas{display:block;touch-action:none}#status{position:fixed;inset:auto 20px 24px;padding:10px 14px;border-radius:12px;background:#182022;color:#fff;font:14px system-ui;text-align:center}
   </style>

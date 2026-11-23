@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/saved_item.dart';
+import 'account_identity.dart';
 import 'backend_api_service.dart';
 
 class SavedItemsRepository {
@@ -10,13 +11,26 @@ class SavedItemsRepository {
     BackendApiService? api,
     SharedPreferences? prefs,
   })  : _api = api ?? BackendApiService(),
-        _prefs = prefs;
+        _prefs = prefs {
+    AccountIdentity.addListener(_handleAccountIdentityChanged);
+  }
 
   static const _cacheKey = 'saved_items_v3_cache';
   static const _outboxKey = 'saved_items_v3_outbox';
 
   final BackendApiService _api;
   SharedPreferences? _prefs;
+  int _identityGeneration = 0;
+
+  void _handleAccountIdentityChanged() {
+    _identityGeneration += 1;
+  }
+
+  bool _isCurrentIdentity(int generation) => generation == _identityGeneration;
+
+  void dispose() {
+    AccountIdentity.removeListener(_handleAccountIdentityChanged);
+  }
 
   Future<SharedPreferences> get _preferences async =>
       _prefs ??= await SharedPreferences.getInstance();
@@ -56,30 +70,54 @@ class SavedItemsRepository {
     int limit = 50,
     String? cursor,
   }) async {
+    final generation = _identityGeneration;
     await _api.ensureAuthLoaded();
-    return _api.getSavedItems(type: type, limit: limit, cursor: cursor);
+    if (!_isCurrentIdentity(generation)) {
+      return const SavedItemsPage(items: <SavedItemRecord>[]);
+    }
+    final page =
+        await _api.getSavedItems(type: type, limit: limit, cursor: cursor);
+    if (!_isCurrentIdentity(generation)) {
+      return const SavedItemsPage(items: <SavedItemRecord>[]);
+    }
+    return page;
   }
 
   Future<SavedItemRecord> save(SavedItemRecord item) async {
+    return _saveForGeneration(item, _identityGeneration);
+  }
+
+  Future<SavedItemRecord> _saveForGeneration(
+    SavedItemRecord item,
+    int generation,
+  ) async {
     try {
-      await _replayOutbox();
-      return await _api.saveSavedItem(item);
+      await _replayOutbox(generation);
+      if (!_isCurrentIdentity(generation)) return item;
+      final saved = await _api.saveSavedItem(item);
+      if (!_isCurrentIdentity(generation)) return item;
+      return saved;
     } catch (_) {
-      await _enqueue(_SavedMutationRecord.save(item));
+      if (!_isCurrentIdentity(generation)) return item;
+      await _enqueue(_SavedMutationRecord.save(item), generation);
       return item;
     }
   }
 
   Future<void> unsave(SavedItemType type, String id) async {
+    final generation = _identityGeneration;
     try {
-      await _replayOutbox();
+      await _replayOutbox(generation);
+      if (!_isCurrentIdentity(generation)) return;
       await _api.deleteSavedItem(type, id);
+      if (!_isCurrentIdentity(generation)) return;
     } catch (_) {
-      await _enqueue(_SavedMutationRecord.delete(type, id));
+      if (!_isCurrentIdentity(generation)) return;
+      await _enqueue(_SavedMutationRecord.delete(type, id), generation);
     }
   }
 
-  Future<void> replayPendingMutations() => _replayOutbox();
+  Future<void> replayPendingMutations() => _replayOutbox(_identityGeneration);
 
   Future<List<SavedItemRecord>> loadPendingSaves() async {
     final prefs = await _preferences;
@@ -100,9 +138,13 @@ class SavedItemsRepository {
   Future<Map<String, bool>> getSavedBatchStatus(
     Iterable<SavedItemRecord> items,
   ) async {
+    final generation = _identityGeneration;
     try {
-      await _replayOutbox();
-      return await _api.getSavedBatchStatus(items);
+      await _replayOutbox(generation);
+      if (!_isCurrentIdentity(generation)) return const <String, bool>{};
+      final status = await _api.getSavedBatchStatus(items);
+      if (!_isCurrentIdentity(generation)) return const <String, bool>{};
+      return status;
     } catch (_) {
       return const <String, bool>{};
     }
@@ -110,40 +152,53 @@ class SavedItemsRepository {
 
   Future<void> migrateLegacyItems(List<SavedItemRecord> items) async {
     if (items.isEmpty) return;
+    final generation = _identityGeneration;
     for (final item in items) {
-      await save(item);
+      if (!_isCurrentIdentity(generation)) return;
+      await _saveForGeneration(item, generation);
+      if (!_isCurrentIdentity(generation)) return;
     }
   }
 
-  Future<void> _enqueue(_SavedMutationRecord mutation) async {
+  Future<void> _enqueue(
+    _SavedMutationRecord mutation,
+    int generation,
+  ) async {
     final prefs = await _preferences;
+    if (!_isCurrentIdentity(generation)) return;
     final mutations = _decodeMutations(prefs.getString(_outboxKey));
     mutations.removeWhere((entry) => entry.key == mutation.key);
     mutations.add(mutation);
+    if (!_isCurrentIdentity(generation)) return;
     await prefs.setString(
       _outboxKey,
       jsonEncode(mutations.map((entry) => entry.toJson()).toList()),
     );
   }
 
-  Future<void> _replayOutbox() async {
+  Future<void> _replayOutbox(int generation) async {
     final prefs = await _preferences;
+    if (!_isCurrentIdentity(generation)) return;
     final mutations = _decodeMutations(prefs.getString(_outboxKey));
     if (mutations.isEmpty) return;
 
     final remaining = <_SavedMutationRecord>[];
     for (final mutation in mutations) {
+      if (!_isCurrentIdentity(generation)) return;
       try {
         if (mutation.deleteOnly) {
           await _api.deleteSavedItem(mutation.type, mutation.id);
         } else {
           await _api.saveSavedItem(mutation.item!);
         }
+        if (!_isCurrentIdentity(generation)) return;
       } catch (_) {
+        if (!_isCurrentIdentity(generation)) return;
         remaining.add(mutation);
       }
     }
 
+    if (!_isCurrentIdentity(generation)) return;
     await prefs.setString(
       _outboxKey,
       jsonEncode(remaining.map((entry) => entry.toJson()).toList()),

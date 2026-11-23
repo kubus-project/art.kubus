@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/saved_item.dart';
+import '../services/account_identity.dart';
 import '../services/saved_items_repository.dart';
 
 class SavedItemsAuthenticationRequired implements Exception {
@@ -15,7 +16,9 @@ class SavedItemsAuthenticationRequired implements Exception {
 
 class SavedItemsProvider extends ChangeNotifier {
   SavedItemsProvider({SavedItemsRepository? repository})
-      : _repository = repository ?? SavedItemsRepository();
+      : _repository = repository ?? SavedItemsRepository() {
+    AccountIdentity.addListener(_handleAccountIdentityChanged);
+  }
 
   static const _storageKeyV2 = 'saved_items_v2';
   static const _artworkKey = 'saved_artwork_ids';
@@ -38,12 +41,28 @@ class SavedItemsProvider extends ChangeNotifier {
   };
 
   bool _isInitialized = false;
+  // The account the held items were loaded for. A same-account identity change
+  // (wallet link, re-issued token) keeps the items, the cache and the outbox.
+  String _heldAccountKey = AccountIdentity.accountKey;
   bool _legacyMigrationAttempted = false;
   bool _isSyncing = false;
   SharedPreferences? _prefs;
+  int _identityGeneration = 0;
+  Future<void> _identityCleanup = Future<void>.value();
+  Future<void> _persistenceTail = Future<void>.value();
 
   bool get isInitialized => _isInitialized;
   bool get isSyncing => _isSyncing;
+
+  @visibleForTesting
+  Future<void> get identityCleanupForTesting => _identityCleanup;
+
+  @override
+  void dispose() {
+    AccountIdentity.removeListener(_handleAccountIdentityChanged);
+    _repository.dispose();
+    super.dispose();
+  }
 
   Set<String> get savedArtworkIds =>
       Set.unmodifiable(_idsForType(SavedItemType.artwork));
@@ -102,37 +121,113 @@ class SavedItemsProvider extends ChangeNotifier {
     return latest;
   }
 
+  void _handleAccountIdentityChanged() {
+    final key = AccountIdentity.accountKey;
+    if (key.isNotEmpty && key == _heldAccountKey) return;
+    _resetForIdentityChange();
+  }
+
+  void _resetForIdentityChange() {
+    _heldAccountKey = AccountIdentity.accountKey;
+    _identityGeneration += 1;
+    _replaceAll(const <SavedItemRecord>[]);
+    _isInitialized = false;
+    _legacyMigrationAttempted = false;
+    _isSyncing = false;
+    notifyListeners();
+    _identityCleanup = _clearPersistedAccountState();
+  }
+
+  Future<void> _clearPersistedAccountState() =>
+      _serializePersistence<void>(() async {
+        try {
+          await _repository.clearCachedState();
+          final prefs = _prefs ??= await SharedPreferences.getInstance();
+          await prefs.remove(_storageKeyV2);
+          await prefs.remove(_artworkKey);
+          await prefs.remove(_postKey);
+          await prefs.remove(_bookmarkKey);
+          await prefs.remove(_timestampKey);
+        } catch (_) {
+          // Account changes still clear memory if local storage is unavailable.
+        }
+      });
+
+  Future<T> _serializePersistence<T>(Future<T> Function() operation) {
+    final result = _persistenceTail.then((_) => operation());
+    _persistenceTail = result.then<void>(
+      (_) {},
+      onError: (Object _, StackTrace __) {},
+    );
+    return result;
+  }
+
+  Future<void> _persistCurrentItems(int generation) {
+    if (!_isCurrentIdentity(generation)) return Future<void>.value();
+    return _serializePersistence<void>(() async {
+      if (!_isCurrentIdentity(generation)) return;
+      await _repository.cacheItems(_sortedRecords());
+    });
+  }
+
+  bool _isCurrentIdentity(int generation) => generation == _identityGeneration;
+
   Future<void> initialize({bool syncBackend = true}) async {
+    final generation = _identityGeneration;
+    await _identityCleanup;
+    if (!_isCurrentIdentity(generation)) return;
     if (!_isInitialized) {
       _prefs = await SharedPreferences.getInstance();
+      if (!_isCurrentIdentity(generation)) return;
       final cached = await _repository.loadCachedItems();
+      if (!_isCurrentIdentity(generation)) return;
       final legacy = _loadLegacyItems();
       _replaceAll(_mergeRecords([...cached, ...legacy]));
+      _heldAccountKey = AccountIdentity.accountKey;
       _isInitialized = true;
       notifyListeners();
     }
 
-    if (!syncBackend || !await _repository.hasBackendSession()) return;
+    if (!syncBackend) return;
+    final hasBackendSession = await _repository.hasBackendSession();
+    if (!_isCurrentIdentity(generation) || !hasBackendSession) return;
     if (!_legacyMigrationAttempted) {
       _legacyMigrationAttempted = true;
-      await _repository.migrateLegacyItems(_loadLegacyItems());
+      await _serializePersistence<void>(() async {
+        if (_isCurrentIdentity(generation)) {
+          await _repository.migrateLegacyItems(_loadLegacyItems());
+        }
+      });
+      if (!_isCurrentIdentity(generation)) return;
     }
     await refreshFromBackend();
   }
 
   Future<void> refreshFromBackend() async {
+    final generation = _identityGeneration;
+    await _identityCleanup;
+    if (!_isCurrentIdentity(generation)) return;
     if (_isSyncing) return;
     // Saved items are account-scoped; without a session every per-type page
     // request would just 401. Guests keep whatever is cached locally.
-    if (!await _repository.hasBackendSession()) return;
+    final hasBackendSession = await _repository.hasBackendSession();
+    if (!_isCurrentIdentity(generation) || !hasBackendSession) return;
     _isSyncing = true;
     notifyListeners();
     try {
-      await _repository.replayPendingMutations();
+      await _serializePersistence<void>(() async {
+        if (_isCurrentIdentity(generation)) {
+          await _repository.replayPendingMutations();
+        }
+      });
+      if (!_isCurrentIdentity(generation)) return;
       final pendingSaves = await _repository.loadPendingSaves();
+      if (!_isCurrentIdentity(generation)) return;
       final pendingDeleteKeys = await _repository.loadPendingDeleteKeys();
+      if (!_isCurrentIdentity(generation)) return;
       for (final type in SavedItemType.values) {
         final page = await _repository.loadBackendItems(type: type, limit: 100);
+        if (!_isCurrentIdentity(generation)) return;
         _nextCursorByType[type] = page.nextCursor;
         _typePageLoaded[type] = true;
         _hasMoreByType[type] = page.nextCursor != null;
@@ -143,17 +238,23 @@ class SavedItemsProvider extends ChangeNotifier {
           pendingDeleteKeys: pendingDeleteKeys,
         );
       }
-      await _repository.cacheItems(_sortedRecords());
-      await _saveLegacyCompatKeys();
+      await _persistCurrentItems(generation);
+      if (!_isCurrentIdentity(generation)) return;
+      await _saveLegacyCompatKeys(generation);
     } catch (_) {
       // Cached state remains authoritative for offline display until replay.
     } finally {
-      _isSyncing = false;
-      notifyListeners();
+      if (_isCurrentIdentity(generation)) {
+        _isSyncing = false;
+        notifyListeners();
+      }
     }
   }
 
   Future<void> loadMore(SavedItemType type) async {
+    final generation = _identityGeneration;
+    await _identityCleanup;
+    if (!_isCurrentIdentity(generation)) return;
     final cursor = _nextCursorByType[type];
     if ((_typePageLoaded[type] ?? false) && cursor == null) {
       _hasMoreByType[type] = false;
@@ -165,8 +266,11 @@ class SavedItemsProvider extends ChangeNotifier {
       limit: 50,
       cursor: cursor,
     );
+    if (!_isCurrentIdentity(generation)) return;
     final pendingSaves = await _repository.loadPendingSaves();
+    if (!_isCurrentIdentity(generation)) return;
     final pendingDeleteKeys = await _repository.loadPendingDeleteKeys();
+    if (!_isCurrentIdentity(generation)) return;
     _nextCursorByType[type] = page.nextCursor;
     _typePageLoaded[type] = true;
     _hasMoreByType[type] = page.nextCursor != null;
@@ -183,7 +287,8 @@ class SavedItemsProvider extends ChangeNotifier {
       );
       _upsertAll(pendingSaves.where((item) => item.type == type));
     }
-    await _repository.cacheItems(_sortedRecords());
+    await _persistCurrentItems(generation);
+    if (!_isCurrentIdentity(generation)) return;
     notifyListeners();
   }
 
@@ -197,6 +302,7 @@ class SavedItemsProvider extends ChangeNotifier {
   Future<void> hydrateSavedBatchStatus(
     Map<SavedItemType, Iterable<String>> idsByType,
   ) async {
+    final generation = _identityGeneration;
     final items = <SavedItemRecord>[];
     for (final entry in idsByType.entries) {
       for (final rawId in entry.value) {
@@ -213,10 +319,13 @@ class SavedItemsProvider extends ChangeNotifier {
       }
     }
     if (items.isEmpty) return;
-    if (!await _repository.hasBackendSession()) return;
+    if (!await _repository.hasBackendSession() ||
+        !_isCurrentIdentity(generation)) {
+      return;
+    }
 
     final statusMap = await _repository.getSavedBatchStatus(items);
-    if (statusMap.isEmpty) return;
+    if (statusMap.isEmpty || !_isCurrentIdentity(generation)) return;
 
     var changed = false;
     for (final item in items) {
@@ -240,12 +349,18 @@ class SavedItemsProvider extends ChangeNotifier {
 
     if (!changed) return;
     notifyListeners();
-    await _repository.cacheItems(_sortedRecords());
-    await _saveLegacyCompatKeys();
+    await _persistCurrentItems(generation);
+    if (!_isCurrentIdentity(generation)) return;
+    await _saveLegacyCompatKeys(generation);
   }
 
   Future<void> saveItem(SavedItemRecord record) async {
-    if (!await _repository.hasBackendSession()) {
+    final generation = _identityGeneration;
+    await _identityCleanup;
+    if (!_isCurrentIdentity(generation)) return;
+    final hasBackendSession = await _repository.hasBackendSession();
+    if (!_isCurrentIdentity(generation)) return;
+    if (!hasBackendSession) {
       throw const SavedItemsAuthenticationRequired();
     }
     final normalized = record.copyWith(
@@ -255,11 +370,17 @@ class SavedItemsProvider extends ChangeNotifier {
     );
     _upsert(normalized);
     notifyListeners();
-    await _repository.cacheItems(_sortedRecords());
-    final synced = await _repository.save(normalized);
+    await _persistCurrentItems(generation);
+    if (!_isCurrentIdentity(generation)) return;
+    final synced = await _serializePersistence<SavedItemRecord>(() async {
+      if (!_isCurrentIdentity(generation)) return normalized;
+      return _repository.save(normalized);
+    });
+    if (!_isCurrentIdentity(generation)) return;
     _upsert(synced);
-    await _repository.cacheItems(_sortedRecords());
-    await _saveLegacyCompatKeys();
+    await _persistCurrentItems(generation);
+    if (!_isCurrentIdentity(generation)) return;
+    await _saveLegacyCompatKeys(generation);
     notifyListeners();
   }
 
@@ -275,6 +396,7 @@ class SavedItemsProvider extends ChangeNotifier {
     String? authorName,
     Map<String, dynamic> metadata = const <String, dynamic>{},
   }) async {
+    final generation = _identityGeneration;
     final normalizedId = id.trim();
     if (normalizedId.isEmpty) return;
 
@@ -293,15 +415,25 @@ class SavedItemsProvider extends ChangeNotifier {
       return;
     }
 
-    if (!await _repository.hasBackendSession()) {
+    await _identityCleanup;
+    if (!_isCurrentIdentity(generation)) return;
+    final hasBackendSession = await _repository.hasBackendSession();
+    if (!_isCurrentIdentity(generation)) return;
+    if (!hasBackendSession) {
       throw const SavedItemsAuthenticationRequired();
     }
 
     final removed = _itemsByType[type]!.remove(normalizedId);
     notifyListeners();
-    await _repository.cacheItems(_sortedRecords());
-    await _repository.unsave(type, normalizedId);
-    await _saveLegacyCompatKeys();
+    await _persistCurrentItems(generation);
+    if (!_isCurrentIdentity(generation)) return;
+    await _serializePersistence<void>(() async {
+      if (_isCurrentIdentity(generation)) {
+        await _repository.unsave(type, normalizedId);
+      }
+    });
+    if (!_isCurrentIdentity(generation)) return;
+    await _saveLegacyCompatKeys(generation);
     if (removed == null) notifyListeners();
   }
 
@@ -543,39 +675,52 @@ class SavedItemsProvider extends ChangeNotifier {
   Future<void> clearAllPosts() => _clearType(SavedItemType.communityPost);
 
   Future<void> clearAll() async {
+    final generation = _identityGeneration;
+    await _identityCleanup;
+    if (!_isCurrentIdentity(generation)) return;
     final records = _sortedRecords();
     for (final record in records) {
+      if (!_isCurrentIdentity(generation)) return;
       _itemsByType[record.type]!.remove(record.id);
-      await _repository.unsave(record.type, record.id);
+      await _serializePersistence<void>(() async {
+        if (_isCurrentIdentity(generation)) {
+          await _repository.unsave(record.type, record.id);
+        }
+      });
     }
-    await _repository.cacheItems(const <SavedItemRecord>[]);
-    await _saveLegacyCompatKeys();
+    if (!_isCurrentIdentity(generation)) return;
+    await _persistCurrentItems(generation);
+    if (!_isCurrentIdentity(generation)) return;
+    await _saveLegacyCompatKeys(generation);
+    if (!_isCurrentIdentity(generation)) return;
     notifyListeners();
   }
 
   Future<void> resetForLogout() async {
-    await _repository.clearCachedState();
-    final prefs = _prefs ??= await SharedPreferences.getInstance();
-    await prefs.remove(_storageKeyV2);
-    await prefs.remove(_artworkKey);
-    await prefs.remove(_postKey);
-    await prefs.remove(_bookmarkKey);
-    await prefs.remove(_timestampKey);
-    _replaceAll(const <SavedItemRecord>[]);
-    _isInitialized = false;
-    _isSyncing = false;
-    notifyListeners();
+    // Unguarded: a sign-out always clears, even before the key has changed.
+    _resetForIdentityChange();
+    await _identityCleanup;
   }
 
   Future<void> _clearType(SavedItemType type) async {
+    final generation = _identityGeneration;
+    await _identityCleanup;
+    if (!_isCurrentIdentity(generation)) return;
     final records = _sortedItemsForType(type);
     _itemsByType[type]!.clear();
     notifyListeners();
     for (final record in records) {
-      await _repository.unsave(type, record.id);
+      if (!_isCurrentIdentity(generation)) return;
+      await _serializePersistence<void>(() async {
+        if (_isCurrentIdentity(generation)) {
+          await _repository.unsave(type, record.id);
+        }
+      });
     }
-    await _repository.cacheItems(_sortedRecords());
-    await _saveLegacyCompatKeys();
+    if (!_isCurrentIdentity(generation)) return;
+    await _persistCurrentItems(generation);
+    if (!_isCurrentIdentity(generation)) return;
+    await _saveLegacyCompatKeys(generation);
   }
 
   List<String> getSortedSavedIds({String? type}) {
@@ -596,6 +741,7 @@ class SavedItemsProvider extends ChangeNotifier {
   Future<void> reloadFromDisk() => refreshFromBackend();
 
   Future<void> reconcileVisibleItems(Iterable<SavedItemRecord> items) async {
+    final generation = _identityGeneration;
     final visibleItems =
         items.where((item) => item.id.trim().isNotEmpty).toList(
               growable: false,
@@ -603,10 +749,13 @@ class SavedItemsProvider extends ChangeNotifier {
     if (visibleItems.isEmpty) return;
     // Saved state is per account: a signed-out visitor (e.g. on a public post) has none, and the
     // endpoint would only answer 401.
-    if (!await _repository.hasBackendSession()) return;
+    if (!await _repository.hasBackendSession() ||
+        !_isCurrentIdentity(generation)) {
+      return;
+    }
 
     final statusMap = await _repository.getSavedBatchStatus(visibleItems);
-    if (statusMap.isEmpty) return;
+    if (statusMap.isEmpty || !_isCurrentIdentity(generation)) return;
 
     var changed = false;
     for (final item in visibleItems) {
@@ -627,8 +776,9 @@ class SavedItemsProvider extends ChangeNotifier {
 
     if (!changed) return;
     notifyListeners();
-    await _repository.cacheItems(_sortedRecords());
-    await _saveLegacyCompatKeys();
+    await _persistCurrentItems(generation);
+    if (!_isCurrentIdentity(generation)) return;
+    await _saveLegacyCompatKeys(generation);
   }
 
   List<SavedItemRecord> _loadLegacyItems() {
@@ -717,17 +867,21 @@ class SavedItemsProvider extends ChangeNotifier {
     return value is String ? value : null;
   }
 
-  Future<void> _saveLegacyCompatKeys() async {
-    final prefs = _prefs ??= await SharedPreferences.getInstance();
-    await prefs.setStringList(
-      _artworkKey,
-      _idsForType(SavedItemType.artwork).toList(growable: false),
-    );
-    await prefs.setStringList(
-      _postKey,
-      _idsForType(SavedItemType.communityPost).toList(growable: false),
-    );
-  }
+  Future<void> _saveLegacyCompatKeys(int generation) =>
+      _serializePersistence<void>(() async {
+        if (!_isCurrentIdentity(generation)) return;
+        final prefs = _prefs ??= await SharedPreferences.getInstance();
+        if (!_isCurrentIdentity(generation)) return;
+        await prefs.setStringList(
+          _artworkKey,
+          _idsForType(SavedItemType.artwork).toList(growable: false),
+        );
+        if (!_isCurrentIdentity(generation)) return;
+        await prefs.setStringList(
+          _postKey,
+          _idsForType(SavedItemType.communityPost).toList(growable: false),
+        );
+      });
 
   void _replaceAll(List<SavedItemRecord> records) {
     for (final type in SavedItemType.values) {

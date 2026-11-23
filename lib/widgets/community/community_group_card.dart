@@ -269,6 +269,32 @@ class CommunityGroupCard extends StatelessWidget {
                     ],
                   ),
                 ),
+                if (!_isMobile) ...[
+                  const SizedBox(width: KubusSpacing.md),
+                  ElevatedButton.icon(
+                    onPressed: group.isOwner ||
+                            isMembershipActionInFlight ||
+                            onToggleMembership == null
+                        ? null
+                        : onToggleMembership,
+                    icon: Icon(
+                      group.isMember ? Icons.check : Icons.group_add,
+                      size: 16,
+                    ),
+                    label: Text(_membershipLabel(l10n)),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor:
+                          group.isMember ? scheme.surface : accentColor,
+                      foregroundColor:
+                          group.isMember ? scheme.onSurface : scheme.onPrimary,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 8,
+                      ),
+                      textStyle: KubusTypography.textTheme.labelMedium,
+                    ),
+                  ),
+                ],
                 const SizedBox(width: 8),
                 Icon(
                   Icons.chevron_right,

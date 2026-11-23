@@ -1,11 +1,15 @@
 import 'package:art_kubus/models/pending_action_intent.dart';
 import 'package:art_kubus/providers/artwork_provider.dart';
 import 'package:art_kubus/providers/pending_action_provider.dart';
+import 'package:art_kubus/providers/profile_provider.dart';
 import 'package:art_kubus/providers/saved_items_provider.dart';
 import 'package:art_kubus/services/pending_action_executor.dart';
 import 'package:art_kubus/services/pending_action_service.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+import '../support/account_session_fixture.dart';
+import '../support/signed_in_profile.dart';
 
 /// Counts executions so "exactly once" is actually observable.
 class RecordingExecutor implements PendingActionExecutor {
@@ -206,29 +210,29 @@ void main() {
   });
 
   group('identity binding', () {
+    tearDown(AccountSessionFixture.end);
+
+    PendingActionProvider boundTo(ProfileProvider owner) =>
+        PendingActionProvider(executor: executor)..bindIdentityOwner(owner);
+
     test('a guest intent may be completed by the account they create',
         () async {
       await provider.capture(_saveArtwork());
-      // The visitor signs up; a user id now exists.
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString('user_id', 'user-new');
-
+      // The visitor signs up; an account now exists.
       final restored =
-          await PendingActionProvider(executor: executor).restore();
+          await boundTo(signedInProfile(accountId: 'user-new')).restore();
 
       expect(restored, isNotNull);
     });
 
     test('an intent captured while signed in is pinned to that account',
         () async {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString('user_id', 'user-a');
-      await provider.capture(_saveArtwork());
-      expect(provider.pending!.capturedByUserId, 'user-a');
+      final a = boundTo(signedInProfile(accountId: 'user-a'));
+      await a.capture(_saveArtwork());
+      expect(a.pending!.capturedByUserId, 'user-a');
 
       // Someone else signs in on the same device.
-      await prefs.setString('user_id', 'user-b');
-      final other = PendingActionProvider(executor: executor);
+      final other = boundTo(signedInProfile(accountId: 'user-b'));
       final restored = await other.restore();
 
       expect(restored, isNull, reason: 'must not cross an identity boundary');
@@ -239,12 +243,21 @@ void main() {
     });
 
     test('the same account still gets its own intent back', () async {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString('user_id', 'user-a');
-      await provider.capture(_saveArtwork());
+      final owner = signedInProfile(accountId: 'user-a');
+      await boundTo(owner).capture(_saveArtwork());
 
-      final again = PendingActionProvider(executor: executor);
-      expect(await again.restore(), isNotNull);
+      expect(await boundTo(owner).restore(), isNotNull);
+    });
+
+    test('nobody signed in claims nothing and drops nothing', () async {
+      final owner = signedInProfile(accountId: 'user-a');
+      await boundTo(owner).capture(_saveArtwork());
+
+      AccountSessionFixture.end();
+      final again = boundTo(owner);
+
+      expect(await again.restore(), isNull);
+      expect(await const PendingActionService().read(), isNotNull);
     });
   });
 

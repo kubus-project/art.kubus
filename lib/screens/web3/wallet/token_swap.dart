@@ -107,6 +107,7 @@ class _TokenSwapState extends State<TokenSwap> {
         l10n,
         authority,
         linkagePending: linkagePending,
+        isSignedIn: context.watch<ProfileProvider>().isSignedIn,
       );
     }
     final tokens = _availableTokens(walletProvider);
@@ -211,15 +212,16 @@ class _TokenSwapState extends State<TokenSwap> {
     AppLocalizations l10n,
     WalletAuthoritySnapshot authority, {
     bool linkagePending = false,
+    required bool isSignedIn,
   }) {
     final canRestore = authority.canRestoreFromEncryptedBackup;
     // Until linkage settles, neither "no wallet" nor "connect one" is shown.
     final title = linkagePending
         ? l10n.settingsBackupStatusChecking
         : switch (authority.state) {
-            WalletAuthorityState.signedOut => l10n.walletHomeSignedOutTitle,
-            WalletAuthorityState.accountShellOnly =>
-              l10n.walletHomeAccountShellTitle,
+            WalletAuthorityState.noWallet => isSignedIn
+                ? l10n.walletHomeAccountShellTitle
+                : l10n.walletHomeSignedOutTitle,
             WalletAuthorityState.walletReadOnly =>
               l10n.walletSessionStateWalletReadOnly,
             WalletAuthorityState.localSignerReady =>
@@ -234,10 +236,9 @@ class _TokenSwapState extends State<TokenSwap> {
     final body = linkagePending
         ? l10n.walletHomeLoadingLabel
         : switch (authority.state) {
-            WalletAuthorityState.signedOut =>
-              l10n.walletActionSignInRequiredToast,
-            WalletAuthorityState.accountShellOnly =>
-              l10n.walletActionAccountShellNeedsWalletToast,
+            WalletAuthorityState.noWallet => isSignedIn
+                ? l10n.walletActionAccountShellNeedsWalletToast
+                : l10n.walletActionSignInRequiredToast,
             WalletAuthorityState.walletReadOnly =>
               l10n.walletActionReadOnlyReconnectToast,
             WalletAuthorityState.localSignerReady =>
@@ -328,7 +329,8 @@ class _TokenSwapState extends State<TokenSwap> {
                   child: Text(
                     canRestore
                         ? l10n.commonReconnect
-                        : authority.state == WalletAuthorityState.signedOut
+                        : !isSignedIn &&
+                                authority.state == WalletAuthorityState.noWallet
                             ? l10n.commonContinue
                             : l10n.walletSecurityConnectExternalAction,
                   ),

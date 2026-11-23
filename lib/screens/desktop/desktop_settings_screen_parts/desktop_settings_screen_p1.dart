@@ -45,13 +45,19 @@ extension _DesktopSettingsScreenStatePart1 on _DesktopSettingsScreenState {
   /// superseded resolve is ignored. [force] re-resolves regardless.
   void _syncWalletBackupStatus({bool force = false}) {
     final walletProvider = Provider.of<WalletProvider>(context, listen: false);
-    final inputs = WalletBackupStatusInputs.of(walletProvider);
+    final isSignedIn =
+        Provider.of<ProfileProvider>(context, listen: false).isSignedIn;
+    final inputs = WalletBackupStatusInputs.of(
+      walletProvider,
+      profileSignedIn: isSignedIn,
+    );
     if (!force && !_walletBackupTracker.needsResolve(inputs)) return;
     final token = _walletBackupTracker.begin(inputs);
     _applyState(
         () => _walletBackupStatus = const WalletBackupStatusSnapshot.pending());
     WalletBackupStatusResolver.resolve(
       walletProvider: walletProvider,
+      isSignedIn: isSignedIn,
       refreshRemote: true,
     ).then((snapshot) {
       if (!mounted || !_walletBackupTracker.isCurrent(token)) return;
@@ -918,6 +924,7 @@ extension _DesktopSettingsScreenStatePart1 on _DesktopSettingsScreenState {
           ),
         ),
         actions: [
+          const LegalDocumentLinkAction(document: LegalDocument.termsOfUse),
           TextButton(
               onPressed: () => Navigator.pop(context),
               child: Text(l10n.commonClose)),
@@ -946,6 +953,7 @@ extension _DesktopSettingsScreenStatePart1 on _DesktopSettingsScreenState {
           ),
         ),
         actions: [
+          const LegalDocumentLinkAction(document: LegalDocument.privacyPolicy),
           TextButton(
               onPressed: () => Navigator.pop(context),
               child: Text(l10n.commonClose)),

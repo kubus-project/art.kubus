@@ -287,9 +287,9 @@ extension _DesktopCommunityScreenStatePart5 on _DesktopCommunityScreenState {
       sourceScreen: 'desktop_community_screen',
     );
     if (!canPost || !mounted) return;
-    // Email-only accounts have no wallet; posting would only fail at the
-    // backend. Ask for a wallet up front, keeping the draft in the composer.
-    if (await readCommunityPostingWallet() == null) {
+    // A signed-in account posts with or without a wallet. Only a session with
+    // no identity at all stops here, keeping the draft in the composer.
+    if (!context.read<ProfileProvider>().isSignedIn) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showKubusSnackBar(
         SnackBar(
@@ -962,10 +962,10 @@ extension _DesktopCommunityScreenStatePart5 on _DesktopCommunityScreenState {
                   ? institutionId
                   : ((walletAddress ?? artist['id'])?.toString() ?? handle);
               final canonicalWallet = WalletUtils.canonical(walletAddress);
-              final currentWallet = WalletUtils.canonical(
-                  context.read<WalletProvider>().currentWalletAddress);
               final canFollow = canonicalWallet.isNotEmpty &&
-                  !WalletUtils.equals(canonicalWallet, currentWallet);
+                  !context
+                      .read<ProfileProvider>()
+                      .isCurrentAccount(canonicalWallet);
               final isFollowing =
                   canFollow && _followingWallets.contains(canonicalWallet);
               final isFollowBusy = canFollow &&

@@ -7,7 +7,7 @@ import 'package:flutter/foundation.dart';
 class WalletBackupStatusSnapshot {
   const WalletBackupStatusSnapshot({
     required this.walletAddress,
-    required this.hasAccountSession,
+    required this.isSignedIn,
     required this.hasWalletIdentity,
     required this.hasSigner,
     required this.isReadOnlySession,
@@ -22,7 +22,7 @@ class WalletBackupStatusSnapshot {
   /// "no wallet" or "restore" before the account's wallet linkage is known.
   const WalletBackupStatusSnapshot.pending()
       : walletAddress = null,
-        hasAccountSession = false,
+        isSignedIn = false,
         hasWalletIdentity = false,
         hasSigner = false,
         isReadOnlySession = false,
@@ -34,7 +34,7 @@ class WalletBackupStatusSnapshot {
 
   const WalletBackupStatusSnapshot.noWallet()
       : walletAddress = null,
-        hasAccountSession = false,
+        isSignedIn = false,
         hasWalletIdentity = false,
         hasSigner = false,
         isReadOnlySession = false,
@@ -45,7 +45,10 @@ class WalletBackupStatusSnapshot {
         resolved = true;
 
   final String? walletAddress;
-  final bool hasAccountSession;
+
+  /// Whether an account is signed in: the profile provider's answer, passed
+  /// in. A device with no wallet reads as "account only" by it.
+  final bool isSignedIn;
   final bool hasWalletIdentity;
   final bool hasSigner;
   final bool isReadOnlySession;
@@ -73,8 +76,9 @@ class WalletBackupStatusSnapshot {
         return _WalletBackupStatusKind.loading;
       }
       // A wallet is optional for an account. Nothing exists to restore here,
-      // so this is never a restore state.
-      if (hasAccountSession) {
+      // so this is never a restore state. Who is signed in is the profile
+      // provider's answer, passed in as [isSignedIn].
+      if (isSignedIn) {
         return _WalletBackupStatusKind.walletless;
       }
       return _WalletBackupStatusKind.noWallet;
@@ -213,8 +217,6 @@ class WalletBackupStatusInputs {
     required this.authorityState,
     required this.hasEncryptedBackup,
     required this.hasSigner,
-    required this.accountSignedIn,
-    required this.accountEmail,
     required this.linkagePending,
     this.profileSignedIn = true,
   });
@@ -233,8 +235,6 @@ class WalletBackupStatusInputs {
       authorityState: authority.state,
       hasEncryptedBackup: walletProvider.hasEncryptedWalletBackup,
       hasSigner: walletProvider.hasSigner,
-      accountSignedIn: authority.accountSignedIn,
-      accountEmail: authority.accountEmail,
       linkagePending:
           WalletPresentationStateResolver.linkagePendingFor(walletProvider),
       profileSignedIn: profileSignedIn,
@@ -246,8 +246,6 @@ class WalletBackupStatusInputs {
   final WalletAuthorityState authorityState;
   final bool hasEncryptedBackup;
   final bool hasSigner;
-  final bool accountSignedIn;
-  final String? accountEmail;
   final bool linkagePending;
   final bool profileSignedIn;
 
@@ -259,8 +257,6 @@ class WalletBackupStatusInputs {
         other.authorityState == authorityState &&
         other.hasEncryptedBackup == hasEncryptedBackup &&
         other.hasSigner == hasSigner &&
-        other.accountSignedIn == accountSignedIn &&
-        other.accountEmail == accountEmail &&
         other.linkagePending == linkagePending &&
         other.profileSignedIn == profileSignedIn;
   }
@@ -272,8 +268,6 @@ class WalletBackupStatusInputs {
         authorityState,
         hasEncryptedBackup,
         hasSigner,
-        accountSignedIn,
-        accountEmail,
         linkagePending,
         profileSignedIn,
       );
@@ -300,6 +294,7 @@ class WalletBackupStatusTracker {
 class WalletBackupStatusResolver {
   static Future<WalletBackupStatusSnapshot> resolve({
     required WalletProvider walletProvider,
+    required bool isSignedIn,
     String? walletAddress,
     bool refreshRemote = true,
   }) async {
@@ -313,11 +308,11 @@ class WalletBackupStatusResolver {
       if (WalletPresentationStateResolver.linkagePendingFor(walletProvider)) {
         return const WalletBackupStatusSnapshot.pending();
       }
-      // Keep the account session: a signed-in account without a wallet is a
+      // Keep the signed-in state: a signed-in account without a wallet is a
       // walletless account, which must not be read as signed out.
       return WalletBackupStatusSnapshot(
         walletAddress: null,
-        hasAccountSession: walletProvider.authority.hasAccountSession,
+        isSignedIn: isSignedIn,
         hasWalletIdentity: false,
         hasSigner: false,
         isReadOnlySession: false,
@@ -363,7 +358,7 @@ class WalletBackupStatusResolver {
 
     return WalletBackupStatusSnapshot(
       walletAddress: resolvedWallet.isEmpty ? null : resolvedWallet,
-      hasAccountSession: walletProvider.authority.hasAccountSession,
+      isSignedIn: isSignedIn,
       hasWalletIdentity: hasWalletIdentity,
       hasSigner: walletProvider.hasSigner,
       isReadOnlySession: walletProvider.isReadOnlySession,

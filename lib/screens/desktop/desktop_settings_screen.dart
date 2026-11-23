@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import '../../widgets/inline_loading.dart';
+import '../../widgets/legal_document_link_action.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:art_kubus/screens/moderation/my_reports_screen.dart';
 import 'package:provider/provider.dart';
@@ -148,9 +149,11 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    // Subscribes this screen to the wallet provider: a change to any backup
-    // input re-resolves the backup row (see _syncWalletBackupStatus).
+    // Subscribes this screen to the wallet and profile providers: a change to
+    // any backup input, or a profile sign-in flip, re-resolves the backup row
+    // (see _syncWalletBackupStatus).
     context.watch<WalletProvider>();
+    context.watch<ProfileProvider>();
     _syncWalletBackupStatus();
   }
 

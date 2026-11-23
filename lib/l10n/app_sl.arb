@@ -1190,7 +1190,11 @@
   "settingsEnableNotificationsInSystemToast": "Za prejemanje obvestil jih omogoči v sistemskih nastavitvah.",
   "settingsLogoutDialogTitle": "Odjava",
   "settingsLogoutDialogBody": "Odklopim denarnico in počistim sejo na tej napravi?",
+  "settingsLogoutDialogBodyAccountOnly": "Počistim sejo na tej napravi?",
   "settingsLogoutButton": "Odjava",
+  "settingsBrowserLogoutPending": "Na tej napravi ste odjavljeni. Strežnik odjave ni mogel potrditi; pred obnovitvijo seje bo poskus ponovljen.",
+  "browserSessionRestoreUnavailable": "Seje brskalnika ni bilo mogoče obnoviti. Za nadaljevanje se znova prijavite.",
+  "browserSessionLogoutUnresolved": "Ni mogoče potrditi, da se je vaša prejšnja seja v brskalniku končala. Ko bo povezava spet na voljo, se znova odjavite.",
   "settingsTransactionHistoryDialogTitle": "Zgodovina transakcij",
   "settingsRecentTransactionsTitle": "Nedavne transakcije",
   "settingsNoTransactionsTitle": "Ni transakcij",
@@ -1230,6 +1234,9 @@
   "settingsTermsDialogBody": "Z uporabo art.kubus se strinjaš s temi pogoji:\n\n1. art.kubus je odprta umetniška platforma in raziskovalno-razvojni prototip.\n2. Sam/-a si odgovoren/-na za zaščito denarnice, obnovitvene fraze in obnovitvenih gesel, če jih uporabiš.\n3. Dejanja z denarnico so lahko dokončna in nepovratna.\n4. Odkrivanje, sodelovanje v skupnosti in javni kulturni dostop uporabljaj odgovorno.\n5. Pogoje lahko sčasoma posodobimo.\n\nZa celotne pogoje obišči našo spletno stran.",
   "settingsPrivacyPolicyDialogTitle": "Pravilnik o zasebnosti",
   "settingsPrivacyPolicyDialogBody": "Tvoja zasebnost nam je pomembna:\n\n• Osebne podatke zbiramo le, ko so potrebni in ko za to podaš soglasje\n• Zasebni ključi in obnovitvena fraza ostanejo pod tvojim nadzorom\n• Za izboljšave aplikacije lahko zbiramo anonimne statistične podatke o uporabi\n• Tvojih podatkov ne delimo s tretjimi osebami\n• Analitiko lahko izključiš v nastavitvah zasebnosti\n\nZa celoten pravilnik obišči našo spletno stran.",
+  "settingsLegalOpenFullTerms": "Preberi celotne pogoje",
+  "settingsLegalOpenFullPrivacy": "Preberi celoten pravilnik o zasebnosti",
+  "settingsLegalOpenFailed": "Povezave ni bilo mogoče odpreti: {url}",
   "settingsSupportDialogTitle": "Podpora",
   "settingsSupportDialogBody": "Potrebuješ pomoč? Izberi možnost:",
   "settingsOpeningFaqToast": "Odpiram FAQ…",
@@ -2201,6 +2208,7 @@
   "userProfileFollowingLoadFailedMessage": "Seznama sledenih ni bilo mogoče naložiti.",
   "userProfileMessageLoginRequiredToast": "Za sporočanje se prijavi.",
   "userProfileConversationOpenFailedToast": "Pogovora ni bilo mogoče odpreti.",
+  "messagingRecipientUnavailableToast": "Temu računu ni mogoče poslati sporočila.",
   "userProfileConversationOpenGenericErrorToast": "Pogovora ni bilo mogoče odpreti. Poskusi znova.",
   "userProfileAchievementsTitle": "Dosežki",
   "profileBadgesVerificationTitle": "Profilne značke",
@@ -3934,6 +3942,8 @@
   "communityGroupsEndOfDirectory": "Konec imenika",
   "communityGroupsDirectoryTitle": "Imenik skupin",
   "communityGroupsDirectoryDescription": "Poišči osredotočene prostore za kritike, razstave, javno umetnost, dogodke in sodelovanja.",
+  "communityGroupsJoinedSectionTitle": "Vaše skupine",
+  "communityGroupsDiscoverSectionTitle": "Poišči javne skupine",
   "communityGroupsSearchHint": "Išči skupine",
   "communityClearSearchTooltip": "Počisti iskanje",
   "communityFabNewPost": "Nova objava",
@@ -5097,6 +5107,9 @@
   "commonChange": "Spremeni",
   "commonOpen": "Odpri",
   "commonLoading": "Nalagam",
+  "artworkPrivatePreviewDenied": "Prijavite se z računom, ki si lahko ogleda ta osnutek.",
+  "artworkPrivatePreviewUnavailable": "Ta predogled ni na voljo.",
+  "artworkPrivatePreviewRetry": "Ta predogled je začasno nedosegljiv. Poskusite pozneje.",
   "desktopShellNavHome": "Domov",
   "desktopShellNavExplore": "Raziskuj",
   "desktopShellNavConnect": "Poveži",
@@ -6841,6 +6854,25 @@
   },
   "spatialHistoryTitle": "Prostorska zgodovina",
   "spatialLoadArchiveQuality": "Naloži arhivsko kakovost",
+  "spatialLoadArchiveQualityWithSize": "Naloži arhivsko kakovost ({size})",
+  "@spatialLoadArchiveQualityWithSize": {
+    "placeholders": {
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "spatialArchiveConsentBody": "Arhivska različica je zajem v polni podrobnosti. Je velika in lahko porabi veliko podatkov, zato se naloži le na vašo zahtevo.",
+  "spatialArchiveConfirmTitle": "Naložim velik arhiv?",
+  "spatialArchiveConfirmBody": "Prenos je velik približno {size}. Nadaljujte le na povezavi, ki jo želite uporabiti.",
+  "@spatialArchiveConfirmBody": {
+    "placeholders": {
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "spatialArchiveConfirmBodyUnknownSize": "Prenos je velik, njegova velikost pa ni znana. Nadaljujte le na povezavi, ki jo želite uporabiti.",
   "spatialQualityMobile": "Optimizirano",
   "spatialQualityPreview": "Predogled",
   "spatialQualityArchive": "Arhivsko",
@@ -6848,6 +6880,9 @@
   "spatialViewerFullscreen": "Celozaslonsko",
   "spatialViewerRetry": "Poskusi znova",
   "spatialViewerUnavailable": "Ta prostorski arhiv trenutno ni na voljo.",
+  "spatialViewerLoading": "Nalaganje 3D pogleda …",
+  "spatialViewerActivate": "Dotaknite se za interakcijo",
+  "spatialViewerDragHint": "Povlecite za razgled",
   "spatialViewerFallback": "Poskušam drugo pot do arhiva …",
   "spatialViewerWebSafety": "Odpri javni arhiv v združljivem pregledovalniku. Varna spletna stran ne vzpostavlja povezave z vozlišči v lokalnem omrežju.",
   "spatialCaptureFinish": "Zaključi zajem",
@@ -8054,5 +8089,64 @@
   "analyticsConsentPromptBody": "Ali smemo beležiti, kako uporabljate aplikacijo, na primer katere zaslone odprete in korake, kot je registracija, da jo izboljšamo? Brez vašega soglasja ne zbiramo ničesar. Izbiro lahko kadar koli spremenite v nastavitvah.",
   "analyticsConsentPromptAccept": "Sprejmi",
   "analyticsConsentPromptDecline": "Zavrni",
-  "analyticsConsentPromptSemanticsLabel": "Izbira izbirne analitike"
+  "analyticsConsentPromptSemanticsLabel": "Izbira izbirne analitike",
+  "galleryTitle": "Galerija",
+  "galleryCurate": "Uredi galerijo",
+  "galleryModeWall": "Galerijska stena",
+  "galleryModeRooms": "Zgibani prostori",
+  "galleryModeField": "Bralno polje",
+  "galleryModeLabel": "Postavitev",
+  "galleryPublished": "Objavljeno",
+  "galleryUnpublished": "Neobjavljen osnutek",
+  "galleryUnsaved": "Neshranjene spremembe",
+  "galleryArtworkOrder": "Vrstni red del",
+  "gallerySectionOrder": "Vrstni red razdelkov",
+  "galleryMoveEarlier": "Premakni navzgor",
+  "galleryMoveLater": "Premakni navzdol",
+  "galleryHideSection": "Skrij razdelek",
+  "gallerySaveDraft": "Shrani osnutek",
+  "galleryPublish": "Objavi galerijo",
+  "galleryResetToAutomatic": "Ponastavi na samodejno",
+  "galleryDiscard": "Zavrzi spremembe",
+  "galleryDiscardPrompt": "Želite zavreči neshranjene spremembe galerije?",
+  "galleryConflict": "Galerija je bila spremenjena drugje. Pred ponovnim shranjevanjem jo znova naložite.",
+  "galleryUnavailable": "Galerija ni dostopna.",
+  "galleryArtworkUnavailable": "Delo ni dostopno",
+  "galleryEmpty": "Ni del za prikaz.",
+  "galleryMore": "Prikaži več del",
+  "gallerySectionIdentity": "Predstavitev",
+  "gallerySectionStats": "Statistika",
+  "gallerySectionWork": "Dela in projekti",
+  "gallerySectionPublicArt": "Umetnost v javnem prostoru",
+  "gallerySectionActivity": "Dejavnost",
+  "gallerySectionRecognition": "Priznanja",
+  "gallerySectionProgram": "Program",
+  "gallerySectionPoap": "Zbirateljski predmet za udeležbo",
+  "gallerySectionVisit": "Obisk",
+  "gallerySectionEvents": "Dogodki",
+  "gallerySectionCredits": "Zasluge",
+  "galleryPersonalPreview": "Predogled osnutka",
+  "galleryReload": "Znova naloži galerijo",
+  "galleryArtworkSizing": "Velikost in umestitev dela",
+  "gallerySizeSmall": "Majhno",
+  "gallerySizeStandard": "Običajno",
+  "gallerySizeLead": "Veliko",
+  "galleryMakeLead": "Nastavi kot vodilno delo",
+  "galleryClearLead": "Odstrani oznako vodilnega dela",
+  "galleryPublishNotAllowed": "Galerijo lahko urejate, vendar je ne morete objaviti.",
+  "galleryRefreshFailed": "Sprememba je shranjena, galerije pa ni bilo mogoče osvežiti.",
+  "galleryMovedTo": "Premaknjeno na mesto {position} od {total}",
+  "@galleryMovedTo": {
+    "placeholders": {
+      "position": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "artworkPublishHeldWithdrawn": "Urednik je to delo umaknil. Obnovi ga lahko samo uredniška odločitev.",
+  "artworkPublishHeldInReview": "To delo čaka na uredniški pregled. Objavljeno bo, ko bo odobreno.",
+  "artworkPublishHeldGeneric": "To delo je v uredniškem zadržanju in ga še ni mogoče objaviti."
 }

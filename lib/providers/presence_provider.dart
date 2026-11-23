@@ -6,7 +6,6 @@ import '../config/config.dart';
 import '../models/user_presence.dart';
 import '../providers/app_refresh_provider.dart';
 import '../providers/profile_provider.dart';
-import '../services/backend_api_service.dart';
 import '../services/presence_api.dart';
 import '../services/socket_service.dart';
 
@@ -71,7 +70,6 @@ class PresenceProvider extends ChangeNotifier {
   int _lastChatVersion = 0;
 
   String? _lastAuthSignature;
-  bool _hasAuthSession = false;
 
   int _debugAutoRefreshTicks = 0;
   int _debugAutoRefreshSkipped = 0;
@@ -163,20 +161,16 @@ class PresenceProvider extends ChangeNotifier {
     final wallet = (profile.currentUser?.walletAddress ?? '').trim();
     final signedIn = profile.isSignedIn == true;
     final allowVisible = profile.preferences.showActivityStatus == true;
-    final tokenPresent =
-        (BackendApiService().getAuthToken() ?? '').trim().isNotEmpty;
 
     final signature =
-        '${signedIn ? '1' : '0'}:${allowVisible ? '1' : '0'}:${tokenPresent ? '1' : '0'}:${wallet.toLowerCase()}';
+        '${signedIn ? '1' : '0'}:${allowVisible ? '1' : '0'}:${wallet.toLowerCase()}';
     if (signature == _lastAuthSignature) return;
 
-    final hadAuth = _hasAuthSession;
     _lastAuthSignature = signature;
-    final authAvailable = signedIn && wallet.isNotEmpty && tokenPresent;
-    _hasAuthSession = authAvailable;
+    final authAvailable = signedIn && wallet.isNotEmpty;
     final walletLower = wallet.toLowerCase();
-    final walletChanged = hadAuth &&
-        _lastAuthWalletLower != null &&
+    // The wallet recorded while presence was available names the previous one.
+    final walletChanged = _lastAuthWalletLower != null &&
         _lastAuthWalletLower != walletLower &&
         walletLower.isNotEmpty;
     _lastAuthWalletLower = authAvailable ? walletLower : null;
@@ -891,7 +885,7 @@ class PresenceProvider extends ChangeNotifier {
 
   Map<String, Object> get debugSnapshot => <String, Object>{
         'initialized': _initialized,
-        'hasAuthSession': _hasAuthSession,
+        'presenceAvailable': _lastAuthWalletLower != null,
         'watchedWallets': _watchedWalletsLower.length,
         'pendingWallets': _pendingWalletsLower.length,
         'cachedWallets': _cacheByWalletLower.length,

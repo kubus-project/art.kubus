@@ -139,12 +139,13 @@ class _EmailVerificationSuccessScreenState
         }
       }
 
-      final walletAddress = (profileProvider.currentUser?.walletAddress ??
+      final walletAddress = (profileProvider.heldProfile?.walletAddress ??
               walletProvider.currentWalletAddress ??
               '')
           .trim();
-      final userId = (profileProvider.currentUser?.userId ??
-              profileProvider.currentUser?.id ??
+      // Onboarding-record scope key (the stored id is its fallback), not an
+      // identity source.
+      final userId = (profileProvider.heldProfile?.accountId ??
               prefs.getString('user_id') ??
               '')
           .trim();

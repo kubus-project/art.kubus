@@ -127,6 +127,11 @@ void main() {
         en: '/en/map/marker-1',
         sl: '/sl/zemljevid/marker-1',
       ),
+      (
+        target: ShareTarget.institution(institutionId: 'institution-1'),
+        en: '/en/institutions/institution-1',
+        sl: '/sl/institucije/institution-1',
+      ),
     ];
 
     for (final entry in cases) {

@@ -316,7 +316,7 @@ class PostAuthCoordinator {
                 const Duration(seconds: 5),
               );
           final hydratedWallet =
-              (profileProvider.currentUser?.walletAddress ?? '').trim();
+              (profileProvider.heldProfile?.walletAddress ?? '').trim();
           if (hydratedWallet.isNotEmpty) {
             walletForProfile = hydratedWallet;
             normalizedWallet = hydratedWallet;

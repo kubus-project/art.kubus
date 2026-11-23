@@ -108,6 +108,9 @@ extension _SettingsScreenStatePart3 on _SettingsScreenState {
 
   Future<void> _handleLogout() async {
     final l10n = AppLocalizations.of(context)!;
+    final walletProvider = Provider.of<WalletProvider>(context, listen: false);
+    // A walletless account has no wallet to disconnect; the copy must not say so.
+    final hasWallet = walletProvider.hasWalletIdentity;
     final confirmed = await showKubusDialog<bool>(
       context: context,
       builder: (dialogContext) => KubusAlertDialog(
@@ -121,7 +124,9 @@ extension _SettingsScreenStatePart3 on _SettingsScreenState {
           ),
         ),
         content: Text(
-          l10n.settingsLogoutDialogBody,
+          hasWallet
+              ? l10n.settingsLogoutDialogBody
+              : l10n.settingsLogoutDialogBodyAccountOnly,
           style: KubusTypography.inter(
             color: Theme.of(dialogContext).colorScheme.onSurface,
           ),
@@ -150,12 +155,11 @@ extension _SettingsScreenStatePart3 on _SettingsScreenState {
 
     if (confirmed != true || !mounted) return;
 
-    final walletProvider = Provider.of<WalletProvider>(context, listen: false);
     final notificationProvider =
         Provider.of<NotificationProvider>(context, listen: false);
     final profileProvider =
         Provider.of<ProfileProvider>(context, listen: false);
-    await SettingsService.logout(
+    final browserSessionRevoked = await SettingsService.logout(
       walletProvider: walletProvider,
       backendApi: BackendApiService(),
       notificationProvider: notificationProvider,
@@ -165,6 +169,11 @@ extension _SettingsScreenStatePart3 on _SettingsScreenState {
     );
 
     if (!mounted) return;
+    if (!browserSessionRevoked) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(l10n.settingsBrowserLogoutPending)),
+      );
+    }
     _restartToOnboarding();
   }
 
@@ -185,9 +194,7 @@ extension _SettingsScreenStatePart3 on _SettingsScreenState {
     // Profile loading can fail while WalletProvider already holds a valid
     // account session (and its linked wallet). Keep the backup row grounded in
     // that authority instead of treating the profile fallback as signed out.
-    final hasAccountContext = isSignedIn ||
-        walletProvider.authority.hasAccountSession ||
-        walletProvider.hasWalletIdentity;
+    final hasAccountContext = isSignedIn || walletProvider.hasWalletIdentity;
     final inputs = WalletBackupStatusInputs.of(
       walletProvider,
       profileSignedIn: hasAccountContext,
@@ -199,6 +206,7 @@ extension _SettingsScreenStatePart3 on _SettingsScreenState {
     final resolved = hasAccountContext
         ? WalletBackupStatusResolver.resolve(
             walletProvider: walletProvider,
+            isSignedIn: isSignedIn,
             refreshRemote: true,
           )
         : Future<WalletBackupStatusSnapshot>.value(
@@ -565,6 +573,7 @@ extension _SettingsScreenStatePart3 on _SettingsScreenState {
           ),
         ),
         actions: [
+          const LegalDocumentLinkAction(document: LegalDocument.termsOfUse),
           TextButton(
             onPressed: () => Navigator.pop(context),
             child: Text(
@@ -602,6 +611,7 @@ extension _SettingsScreenStatePart3 on _SettingsScreenState {
           ),
         ),
         actions: [
+          const LegalDocumentLinkAction(document: LegalDocument.privacyPolicy),
           TextButton(
             onPressed: () => Navigator.pop(context),
             child: Text(

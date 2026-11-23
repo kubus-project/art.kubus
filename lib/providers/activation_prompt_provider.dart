@@ -5,7 +5,8 @@ import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../config/config.dart';
-import '../services/backend_api_service.dart';
+import 'profile_provider.dart';
+import '../services/account_identity.dart';
 import '../services/telemetry/telemetry_service.dart';
 
 /// Decides when to offer an unauthenticated visitor a non-blocking reason to
@@ -22,12 +23,10 @@ import '../services/telemetry/telemetry_service.dart';
 /// * at most once per session and once per [promptInterval],
 /// * dismissible, and dismissal is remembered.
 class ActivationPromptProvider extends ChangeNotifier {
-  ActivationPromptProvider({
-    TelemetryService? telemetry,
-    bool Function()? hasAuthSession,
-  })  : _telemetry = telemetry ?? TelemetryService(),
-        _hasAuthSession =
-            hasAuthSession ?? (() => BackendApiService().hasAuthSession);
+  ActivationPromptProvider({TelemetryService? telemetry})
+      : _telemetry = telemetry ?? TelemetryService() {
+    AccountIdentity.addListener(_handleAccountIdentityChanged);
+  }
 
   static const String lastShownPrefsKey =
       'kubus_activation_prompt_last_shown_v1';
@@ -42,13 +41,29 @@ class ActivationPromptProvider extends ChangeNotifier {
   static const String triggerName = 'entity_views';
 
   final TelemetryService _telemetry;
-  final bool Function() _hasAuthSession;
+
+  // The owner of "who is signed in": the prompt is for visitors without an
+  // account, so it asks the owner. Nothing here reads the credential.
+  ProfileProvider? _identityOwner;
+
+  /// Hands in the owner (the provider tree does so on every owner change) and
+  /// follows it, so a sign-in takes the prompt off screen at once.
+  void bindIdentityOwner(ProfileProvider owner) {
+    if (identical(_identityOwner, owner)) return;
+    _identityOwner?.removeListener(notifyListeners);
+    _identityOwner = owner..addListener(notifyListeners);
+  }
 
   int _entityViews = 0;
   bool _armed = false;
   bool _resolvedThisSession = false;
   bool _intervalChecked = false;
   bool _intervalAllows = true;
+
+  // The account the pending state belongs to. The canonical account key, not a
+  // profile id: a wallet disconnect or a token refresh of the same account keeps
+  // the state.
+  String _heldAccountKey = AccountIdentity.accountKey;
 
   int get entityViews => _entityViews;
 
@@ -57,7 +72,7 @@ class ActivationPromptProvider extends ChangeNotifier {
       AppConfig.isFeatureEnabled('activationPrompt') &&
       _armed &&
       !_resolvedThisSession &&
-      !_hasAuthSession();
+      !(_identityOwner?.isSignedIn ?? false);
 
   /// Records a meaningful entity view from a screen that may be rendered
   /// outside the app's provider tree (embedded shells, widget tests).
@@ -76,7 +91,7 @@ class ActivationPromptProvider extends ChangeNotifier {
   /// institution or a marker overlay opened on the map).
   Future<void> recordEntityView() async {
     if (!AppConfig.isFeatureEnabled('activationPrompt')) return;
-    if (_resolvedThisSession || _hasAuthSession()) return;
+    if (_resolvedThisSession || (_identityOwner?.isSignedIn ?? false)) return;
 
     _entityViews += 1;
     if (_entityViews < viewsBeforePrompt || _armed) return;
@@ -124,6 +139,26 @@ class ActivationPromptProvider extends ChangeNotifier {
     _armed = false;
     _resolvedThisSession = false;
     notifyListeners();
+  }
+
+  /// A pending prompt belongs to one session. An account switch or sign-out
+  /// ends that session, so its pending prompt and view count go with it. A
+  /// same-account change (a token refresh, a wallet link or disconnect) keeps
+  /// them. A sign-out always clears, even when the held key is a guest's: a
+  /// guest sign-in announces nothing, so the held key may not name the account.
+  void _handleAccountIdentityChanged() {
+    final key = AccountIdentity.accountKey;
+    final sameAccount = key.isNotEmpty && key == _heldAccountKey;
+    _heldAccountKey = key;
+    if (sameAccount) return;
+    reset();
+  }
+
+  @override
+  void dispose() {
+    AccountIdentity.removeListener(_handleAccountIdentityChanged);
+    _identityOwner?.removeListener(notifyListeners);
+    super.dispose();
   }
 
   Future<bool> _intervalElapsed() async {
