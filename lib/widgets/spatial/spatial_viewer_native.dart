@@ -128,8 +128,9 @@ class _NativeSpatialViewerState extends State<_NativeSpatialViewer> {
   /// Hands the page the proxied bytes together with what the web host also
   /// passes: the Spark file type (a raw `.splat` has no magic number) and the
   /// placement (the published manifest's, or the local manifest's for content
-  /// not yet published), so a piece the Node placed opens upright here too. The transform read is best effort and bounded, and never blocks
-  /// the load beyond its own timeout.
+  /// not yet published), so a piece the Node placed opens upright here too.
+  /// The transform read is best effort and bounded, and never blocks the load
+  /// beyond its own timeout.
   Future<void> _loadInto(
     WebViewController controller,
     SpatialVariant variant,
