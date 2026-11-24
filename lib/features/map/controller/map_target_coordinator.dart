@@ -273,7 +273,8 @@ class MapTargetCoordinator {
     if (completion != null && !completion.isCompleted) {
       completion.complete(MapTargetResult.cancelled);
     }
-    _clearPin();
+    // The owning map is being torn down and can no longer refresh its layers.
+    _pinnedMarkerId = null;
   }
 
   void _requestDrive() {
