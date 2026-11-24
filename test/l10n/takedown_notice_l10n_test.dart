@@ -41,7 +41,8 @@ void main() {
     expect(en['settingsPrivacyPolicyDialogBody'], contains('takedown notice'));
     expect(en['settingsPrivacyPolicyDialogBody'], contains('no fixed period'));
     expect(sl['settingsPrivacyPolicyDialogBody'], contains('Obvestilo'));
-    expect(sl['settingsPrivacyPolicyDialogBody'], contains('stalnega roka'));
+    expect(sl['settingsPrivacyPolicyDialogBody'],
+        contains('določenega roka hrambe'));
   });
 
   test('the Terms summary says where the report control exists', () {
@@ -57,11 +58,17 @@ void main() {
     expect(enBody, isNot(contains('you have consented')));
     expect(enBody, contains('do not sell your data'));
     expect(enBody, contains('service providers'));
+    expect(enBody, contains('the law requires it'));
+    expect(enBody, contains('who you are or what you wrote'));
+    expect(enBody, contains('process it on our behalf'));
     expect(enBody, contains('any later claim about the same content'));
     expect(slBody, isNot(contains('ne delimo s tretjimi osebami')));
     expect(slBody, isNot(contains('podaš soglasje')));
     expect(slBody, contains('ne prodajamo'));
-    expect(slBody, contains('ponudnike storitev'));
+    expect(slBody, contains('ponudniki storitev'));
+    expect(slBody, contains('ali če to zahteva zakon'));
+    expect(slBody, contains('tvoje identitete ali vsebine tvojega obvestila'));
+    expect(slBody, contains('V našem imenu ga obdelujejo'));
     expect(slBody, contains('morebitni poznejši zahtevek glede iste vsebine'));
   });
 
