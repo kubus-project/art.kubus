@@ -498,6 +498,24 @@ void main() {
     expect(harness.events.last, 'pin:null');
   });
 
+  test('disposal does not ask the exiting map to refresh its pinned marker',
+      () async {
+    final harness = _Harness()..markers.add(_marker(id: 'm1'));
+    harness.coordinator.setMapControllerReady(true);
+    harness.coordinator.setStyleReady(true);
+    final result = harness.coordinator.submit(
+      const MapTargetIntent(exactMarkerId: 'm1'),
+    );
+    await harness.settle();
+    expect(harness.pinnedMarkerId, 'm1');
+    final eventsBeforeDisposal = List<String>.of(harness.events);
+
+    harness.coordinator.dispose();
+
+    expect(await result, MapTargetResult.cancelled);
+    expect(harness.events, eventsBeforeDisposal);
+  });
+
   group('public marker entry under a failed lookup', () {
     test('a 429 marker lookup is a transient failure, never a missing marker',
         () async {
