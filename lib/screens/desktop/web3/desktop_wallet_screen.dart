@@ -7,6 +7,7 @@ import '../../../l10n/app_localizations.dart';
 import '../../../config/config.dart';
 import '../../../models/collectible.dart';
 import '../../../providers/collectibles_provider.dart';
+import '../../../providers/profile_provider.dart';
 import '../../../providers/themeprovider.dart';
 import '../../../providers/wallet_provider.dart';
 import '../../../models/wallet.dart';
@@ -134,6 +135,8 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
                         final presentationState =
                             WalletPresentationStateResolver.resolve(
                           walletProvider.authority,
+                          isSignedIn:
+                              context.watch<ProfileProvider>().isSignedIn,
                           sessionPhase: walletProvider.sessionPhase,
                           accountLinkPhase: walletProvider.accountLinkPhase,
                         );
@@ -182,6 +185,7 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
       builder: (context, walletProvider, _) {
         final presentationState = WalletPresentationStateResolver.resolve(
           walletProvider.authority,
+          isSignedIn: context.watch<ProfileProvider>().isSignedIn,
           sessionPhase: walletProvider.sessionPhase,
           accountLinkPhase: walletProvider.accountLinkPhase,
         );
@@ -278,6 +282,7 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
     final authority = walletProvider.authority;
     final presentationState = WalletPresentationStateResolver.resolve(
       authority,
+      isSignedIn: context.watch<ProfileProvider>().isSignedIn,
       sessionPhase: walletProvider.sessionPhase,
       accountLinkPhase: walletProvider.accountLinkPhase,
     );
@@ -625,6 +630,7 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
       l10n: l10n,
       roles: roles,
       authority: walletProvider.authority,
+      isSignedIn: Provider.of<ProfileProvider>(context).isSignedIn,
       onSend: _openSendScreen,
       onReceive: _openReceiveScreen,
       onSwap: _openSwapScreen,
@@ -1289,6 +1295,7 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
       l10n: l10n,
       roles: roles,
       authority: walletProvider.authority,
+      isSignedIn: Provider.of<ProfileProvider>(context).isSignedIn,
       onSend: _openSendScreen,
       onReceive: _openReceiveScreen,
       onSwap: _openSwapScreen,

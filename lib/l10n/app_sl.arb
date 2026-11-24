@@ -1019,10 +1019,11 @@
   },
   "walletActionSignInRequiredToast": "Za nadaljevanje se prijavi.",
   "walletActionConnectWalletRequiredToast": "Za to dejanje, vezano na denarnico, poveži denarnico.",
-  "walletActionAccountShellNeedsWalletToast": "Račun je prijavljen, vendar je treba na tej napravi še obnoviti ali povezati denarnico, preden lahko to dejanje nadaljuje.",
+  "walletActionAccountShellNeedsWalletToast": "Račun je prijavljen brez denarnice. Za nadaljevanje s tem dejanjem jo poveži.",
   "walletActionEncryptedBackupRestoreToast": "Na voljo je šifrirana varnostna kopija. Pred nadaljevanjem na tej napravi obnovi dostop do denarnice.",
-  "walletActionRecoveryNeededToast": "Pred nadaljevanjem na tej napravi obnovi dostop do denarnice.",
-  "walletActionReadOnlyReconnectToast": "Pred nadaljevanjem se znova poveži s ponudnikom denarnice ali na tej napravi obnovi dostop do denarnice.",
+  "walletActionRecoveryNeededToast": "Pred nadaljevanjem na tej napravi poveži denarnico ali uvozi obnovitveno frazo.",
+  "walletActionReadOnlyReconnectToast": "Pred nadaljevanjem se znova poveži s ponudnikom denarnice ali na tej napravi uvozi obnovitveno frazo.",
+  "walletBackupStatusUnavailableHint": "Stanje varnostne kopije trenutno ni na voljo. Poskusi znova čez trenutek.",
   "settingsNetworkTileTitle": "Omrežje",
   "settingsCurrentNetworkValue": "Trenutno: {network}",
   "@settingsCurrentNetworkValue": {
@@ -1189,6 +1190,7 @@
   "settingsEnableNotificationsInSystemToast": "Za prejemanje obvestil jih omogoči v sistemskih nastavitvah.",
   "settingsLogoutDialogTitle": "Odjava",
   "settingsLogoutDialogBody": "Odklopim denarnico in počistim sejo na tej napravi?",
+  "settingsLogoutDialogBodyAccountOnly": "Počistim sejo na tej napravi?",
   "settingsLogoutButton": "Odjava",
   "settingsBrowserLogoutPending": "Na tej napravi ste odjavljeni. Strežnik odjave ni mogel potrditi; pred obnovitvijo seje bo poskus ponovljen.",
   "browserSessionRestoreUnavailable": "Seje brskalnika ni bilo mogoče obnoviti. Za nadaljevanje se znova prijavite.",
@@ -4560,7 +4562,7 @@
   "walletBackupConfirmAction": "Frazo sem varno shranil/a",
   "walletBackupMarkedCompleteToast": "Varnostna kopija obnovitvene fraze je označena kot zaključena.",
   "walletBackupProtectionNoWalletHeadline": "Na tej napravi še ni povezane denarnice.",
-  "walletBackupProtectionNoWalletBody": "Pred upravljanjem zaščite varnostnih kopij na tej napravi poveži ali obnovi denarnico.",
+  "walletBackupProtectionNoWalletBody": "Pred upravljanjem zaščite z varnostno kopijo na tej napravi poveži denarnico.",
   "walletBackupProtectionNoBackupHeadline": "Šifrirana strežniška varnostna kopija še ni nastavljena.",
   "walletBackupProtectionNoBackupBody": "Če želiš dodatno možnost obnove prek strežnika, ustvari šifrirano strežniško kopijo in njeno obnovitveno geslo shrani ločeno od obnovitvene fraze.",
   "walletBackupProtectionRecoveryPhraseHeadline": "Obnovitveno frazo je še treba varnostno shraniti.",
@@ -4572,7 +4574,7 @@
   "walletBackupProtectionPasskeyHeadline": "Šifrirana strežniška kopija, zaščitena s passkeyem, je nastavljena.",
   "walletBackupProtectionPasskeyBody": "Ta šifrirana strežniška kopija je na spletu zaščitena s passkeyem. Obnovitveno geslo še vedno shrani ločeno od obnovitvene fraze.",
   "walletBackupProtectionReadOnlyHeadline": "Ta naprava ima do denarnice dostop samo za branje.",
-  "walletBackupProtectionReadOnlyBody": "Pred prenosi in drugimi dejanji, zaščitenimi z denarnico, obnovi možnost podpisovanja s šifrirano kopijo ali obnovitveno frazo.",
+  "walletBackupProtectionReadOnlyBody": "Pred prenosi in drugimi dejanji, zaščitenimi z denarnico, na tej napravi znova poveži ponudnika denarnice ali uvozi obnovitveno frazo.",
   "walletSessionStateAccountShellOnly": "Samo lupina računa",
   "walletSessionStateWalletReadOnly": "Identiteta denarnice, samo za branje",
   "walletSessionStateLocalSignerReady": "Dostop do denarnice na tej napravi je pripravljen",
@@ -4859,7 +4861,6 @@
   },
   "securityHubExternalWalletConnected": "Zunanja denarnica je povezana.",
   "securityHubExternalSignerConnected": "Zunanji podpisnik je povezan",
-  "securityHubConnectOrRestoreWallet": "Poveži ali obnovi denarnico",
   "securityHubDeleteBackupAction": "Izbriši kopijo",
   "securityHubBiometricUnlockDescription": "Uporablja biometrično potrditev te naprave, potem ko obstaja lokalni PIN.",
   "walletRecoveryFallbackTitle": "Obnovi dostop do denarnice",
@@ -6112,9 +6113,12 @@
       "signature": {}
     }
   },
-  "settingsBackupStatusAccountShellOnly": "Računska denarnica na tej napravi še ni obnovljena",
-  "walletBackupProtectionAccountShellHeadline": "Račun je pripravljen, vendar ta naprava še nima dostopa do denarnice.",
-  "walletBackupProtectionAccountShellBody": "Pred nastavljanjem zaščite denarnice, prenosi in prihodnjim dostopom, vezanim na denarnico, na tej napravi najprej obnovi računsko denarnico.",
+  "settingsBackupStatusChecking": "Preverjamo stanje denarnice…",
+  "settingsBackupStatusWalletless": "Z računom ni povezana nobena denarnica",
+  "walletBackupProtectionCheckingHeadline": "Preverjamo stanje denarnice…",
+  "walletBackupProtectionCheckingBody": "Naprava preverja, ali je z vašim računom povezana denarnica. Možnosti zaščite z varnostno kopijo se prikažejo, ko preverjanje konča.",
+  "walletBackupProtectionWalletlessHeadline": "Z vašim računom ni povezana nobena denarnica.",
+  "walletBackupProtectionWalletlessBody": "Denarnica je izbirna. Ko potrebujete lastništvo ali sodelovanje prek denarnice, jo povežite na zaslonu Denarnica.",
   "walletSwapSubmittedToastWithSignature": "Zamenjava oddana: {fromToken} → {toToken}. Tx: {signature}",
   "@walletSwapSubmittedToastWithSignature": {
     "placeholders": {
@@ -6851,6 +6855,25 @@
   },
   "spatialHistoryTitle": "Prostorska zgodovina",
   "spatialLoadArchiveQuality": "Naloži arhivsko kakovost",
+  "spatialLoadArchiveQualityWithSize": "Naloži arhivsko kakovost ({size})",
+  "@spatialLoadArchiveQualityWithSize": {
+    "placeholders": {
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "spatialArchiveConsentBody": "Arhivska različica je zajem v polni podrobnosti. Je velika in lahko porabi veliko podatkov, zato se naloži le na vašo zahtevo.",
+  "spatialArchiveConfirmTitle": "Naložim velik arhiv?",
+  "spatialArchiveConfirmBody": "Prenos je velik približno {size}. Nadaljujte le na povezavi, ki jo želite uporabiti.",
+  "@spatialArchiveConfirmBody": {
+    "placeholders": {
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "spatialArchiveConfirmBodyUnknownSize": "Prenos je velik, njegova velikost pa ni znana. Nadaljujte le na povezavi, ki jo želite uporabiti.",
   "spatialQualityMobile": "Optimizirano",
   "spatialQualityPreview": "Predogled",
   "spatialQualityArchive": "Arhivsko",
@@ -6858,6 +6881,9 @@
   "spatialViewerFullscreen": "Celozaslonsko",
   "spatialViewerRetry": "Poskusi znova",
   "spatialViewerUnavailable": "Ta prostorski arhiv trenutno ni na voljo.",
+  "spatialViewerLoading": "Nalaganje 3D pogleda …",
+  "spatialViewerActivate": "Dotaknite se za interakcijo",
+  "spatialViewerDragHint": "Povlecite za razgled",
   "spatialViewerFallback": "Poskušam drugo pot do arhiva …",
   "spatialViewerWebSafety": "Odpri javni arhiv v združljivem pregledovalniku. Varna spletna stran ne vzpostavlja povezave z vozlišči v lokalnem omrežju.",
   "spatialCaptureFinish": "Zaključi zajem",

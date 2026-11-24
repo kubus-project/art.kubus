@@ -14,6 +14,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../support/profile_fixtures.dart';
 import '../support/profile_screen_harness.dart';
+import '../support/account_session_fixture.dart';
 
 /// A wallet is optional. The owner's own profile of an account that has no
 /// wallet identity must not tell them to connect one.
@@ -319,7 +320,7 @@ void main() {
         final bResponse = Completer<http.Response>();
         final authorRequests = <String>[];
         final profileProvider = ProfileProvider();
-        AccountIdentity.setAccountKey(accountA);
+        AccountSessionFixture.start(accountId: accountA);
         BackendApiService().setHttpClient(legacyProfileClient((request) async {
           if (request.url.path == '/api/artworks' &&
               request.url.queryParameters['authorProfileId'] != null) {
@@ -370,7 +371,7 @@ void main() {
 
         // Match production order: the session is B before B's profile has
         // hydrated, so the screen must stay cleared and must not request A.
-        AccountIdentity.setAccountKey(accountB);
+        AccountSessionFixture.start(accountId: accountB);
         AccountIdentity.notifyListenersChanged();
         await tester.pump();
         await tester.pump(const Duration(milliseconds: 100));
@@ -410,7 +411,7 @@ void main() {
         final bResponse = Completer<http.Response>();
         final authorRequests = <String>[];
         final profileProvider = ProfileProvider();
-        AccountIdentity.setAccountKey(accountA);
+        AccountSessionFixture.start(accountId: accountA);
         BackendApiService().setHttpClient(legacyProfileClient((request) async {
           if (request.url.path == '/api/artworks' &&
               request.url.queryParameters['authorProfileId'] != null) {
@@ -432,7 +433,7 @@ void main() {
         );
         expect(authorRequests.where((id) => id == profileA), hasLength(1));
 
-        AccountIdentity.setAccountKey(accountB);
+        AccountSessionFixture.start(accountId: accountB);
         AccountIdentity.notifyListenersChanged();
         await tester.pump();
         expect(authorRequests.where((id) => id == profileA), hasLength(1));

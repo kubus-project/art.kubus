@@ -10,6 +10,7 @@ import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:provider/provider.dart';
 import 'package:logger/logger.dart';
 import 'config/config.dart';
+import 'services/third_party_licenses.dart';
 import 'providers/chat_provider.dart';
 import 'providers/glass_capabilities_provider.dart';
 import 'providers/app_mode_provider.dart';
@@ -248,6 +249,9 @@ void main() {
         // Initialize Flutter bindings in the guarded zone.
         WidgetsFlutterBinding.ensureInitialized();
         StartupTrace.mark('binding ready');
+        // Third-party notices for the bundled spatial viewer go on the in-app
+        // licence page; the text is read only when that page is opened.
+        registerSpatialViewerLicenses();
         if (kIsWeb && _enableWebSemantics) {
           // Opt in only for dedicated automation runs. Leaving semantics forced
           // on in production can place a Flutter overlay above DOM-backed
@@ -513,16 +517,6 @@ class _AppLauncherState extends State<AppLauncher> {
               ChangeNotifierProvider(
                 create: (context) => DeferredOnboardingProvider(),
               ),
-              // Remembers the identity-dependent action a guest attempted, so
-              // it can be offered back to them after they create an account.
-              ChangeNotifierProvider(
-                create: (context) => PendingActionProvider(),
-              ),
-              // Non-blocking "create a free account" prompt, armed only after
-              // a visitor has shown real interest.
-              ChangeNotifierProvider(
-                create: (context) => ActivationPromptProvider(),
-              ),
               ChangeNotifierProvider(
                 create: (context) => PublicEntityTakeoverProvider(),
               ),
@@ -586,6 +580,24 @@ class _AppLauncherState extends State<AppLauncher> {
                   provider.bindWalletProvider(walletProvider);
                   return provider;
                 },
+              ),
+              // Remembers the identity-dependent action a guest attempted, so
+              // it can be offered back to them after they create an account.
+              ChangeNotifierProxyProvider<ProfileProvider,
+                  PendingActionProvider>(
+                create: (context) => PendingActionProvider(),
+                update: (context, profileProvider, pendingActions) =>
+                    (pendingActions ?? PendingActionProvider())
+                      ..bindIdentityOwner(profileProvider),
+              ),
+              // Non-blocking "create a free account" prompt, armed only after
+              // a visitor has shown real interest.
+              ChangeNotifierProxyProvider<ProfileProvider,
+                  ActivationPromptProvider>(
+                create: (context) => ActivationPromptProvider(),
+                update: (context, profileProvider, activationPrompt) =>
+                    (activationPrompt ?? ActivationPromptProvider())
+                      ..bindIdentityOwner(profileProvider),
               ),
               ChangeNotifierProxyProvider2<AppRefreshProvider, ConfigProvider,
                   StatsProvider>(
@@ -844,7 +856,7 @@ class _AppLauncherState extends State<AppLauncher> {
                 ) {
                   final provider = attendanceProvider ?? AttendanceProvider();
                   provider.bindAuthContext(
-                    isSignedIn: walletProvider.authority.hasAccountSession,
+                    identityOwner: profileProvider,
                     walletAddress: walletProvider.currentWalletAddress,
                   );
                   return provider;
@@ -866,8 +878,8 @@ class _AppLauncherState extends State<AppLauncher> {
                   final provider =
                       verificationProvider ?? AccountVerificationProvider();
                   provider.bindAccount(
-                    accountId: profileProvider.currentUser?.userId,
-                    isSignedIn: walletProvider.authority.hasAccountSession,
+                    accountId: profileProvider.currentUser?.accountId,
+                    isSignedIn: profileProvider.isSignedIn,
                   );
                   return provider;
                 },
@@ -883,9 +895,8 @@ class _AppLauncherState extends State<AppLauncher> {
                 ) {
                   final provider = attestationProvider ?? AttestationProvider();
                   provider.bindAuthContext(
-                    isSignedIn: walletProvider.authority.hasAccountSession,
-                    walletAddress: profileProvider.currentUser?.walletAddress ??
-                        walletProvider.currentWalletAddress,
+                    identityOwner: profileProvider,
+                    walletAddress: walletProvider.currentWalletAddress,
                   );
                   return provider;
                 },
@@ -902,12 +913,10 @@ class _AppLauncherState extends State<AppLauncher> {
                 ) {
                   final provider = chatProvider ?? ChatProvider();
                   provider.bindToRefresh(appRefreshProvider);
+                  // Who is signed in comes from the owner, through profileProvider.
                   provider.bindAuthContext(
                     profileProvider: profileProvider,
-                    accountId: profileProvider.currentUser?.userId ??
-                        profileProvider.currentUser?.id,
                     walletAddress: walletProvider.currentWalletAddress,
-                    isSignedIn: walletProvider.authority.hasAccountSession,
                   );
                   return provider;
                 },
@@ -936,21 +945,13 @@ class _AppLauncherState extends State<AppLauncher> {
                   return provider;
                 },
               ),
-              ChangeNotifierProxyProvider<SecurityGateProvider,
+              ChangeNotifierProxyProvider<ProfileProvider,
                   EmailPreferencesProvider>(
                 create: (context) => EmailPreferencesProvider(),
-                update:
-                    (context, securityGateProvider, emailPreferencesProvider) {
+                update: (context, profileProvider, emailPreferencesProvider) {
                   final provider =
                       emailPreferencesProvider ?? EmailPreferencesProvider();
-                  final tokenPresent =
-                      (BackendApiService().getAuthToken() ?? '')
-                          .trim()
-                          .isNotEmpty;
-                  provider.bindSession(
-                    hasSession:
-                        tokenPresent || securityGateProvider.hasLocalAccount,
-                  );
+                  provider.bindSession(hasSession: profileProvider.isSignedIn);
                   return provider;
                 },
               ),
@@ -965,10 +966,8 @@ class _AppLauncherState extends State<AppLauncher> {
                 ) {
                   final provider =
                       markerManagementProvider ?? MarkerManagementProvider();
-                  provider.bindWallet(
-                    profileProvider.currentUser?.walletAddress ??
-                        walletProvider.currentWalletAddress,
-                  );
+                  // A wallet is signing state, not identity: the wallet provider's.
+                  provider.bindWallet(walletProvider.currentWalletAddress);
                   if (!provider.initialized && !provider.isLoading) {
                     unawaited(provider.initialize());
                   }
@@ -981,10 +980,8 @@ class _AppLauncherState extends State<AppLauncher> {
                 update:
                     (context, profileProvider, walletProvider, claimsProvider) {
                   final provider = claimsProvider ?? StreetArtClaimsProvider();
-                  provider.bindWallet(
-                    profileProvider.currentUser?.walletAddress ??
-                        walletProvider.currentWalletAddress,
-                  );
+                  // A wallet is signing state, not identity: the wallet provider's.
+                  provider.bindWallet(walletProvider.currentWalletAddress);
                   if (!provider.initialized) {
                     unawaited(provider.initialize());
                   }

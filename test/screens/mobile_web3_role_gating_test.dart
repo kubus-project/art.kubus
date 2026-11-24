@@ -23,6 +23,7 @@ import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../helpers/secure_storage_absent.dart';
 import '../support/verification_fixtures.dart';
+import '../support/account_session_fixture.dart';
 
 class _TestSolanaWalletService extends SolanaWalletService {
   @override
@@ -57,7 +58,9 @@ UserProfile _buildUser({
 
 void _configureBackendApi() {
   final api = BackendApiService();
-  api.setAuthTokenForTesting('test-token');
+  api.setAuthTokenForTesting(
+    AccountSessionFixture.jwt(accountId: 'user-1', wallet: 'wallet-1'),
+  );
   api.setHttpClient(
     MockClient((request) async {
       final path = request.url.path;

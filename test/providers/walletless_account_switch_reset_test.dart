@@ -29,11 +29,33 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../helpers/secure_storage_absent.dart';
 
+/// The owner of "who is signed in", holding account [accountId]. The session
+/// itself (the token) is set by the test through the backend api.
+ProfileProvider _ownerOf(String accountId) {
+  final owner = ProfileProvider()
+    ..setCurrentUser(UserProfile(
+      id: accountId,
+      userId: accountId,
+      walletAddress: '',
+      username: 'synthetic',
+      displayName: 'Synthetic',
+      bio: '',
+      avatar: '',
+      createdAt: DateTime(2026),
+      updatedAt: DateTime(2026),
+    ));
+  addTearDown(owner.dispose);
+  return owner;
+}
+
 // Walletless accounts: the session token carries only the canonical account
 // id, so the wallet address is empty for both A and B. A wallet-keyed change
 // check cannot tell these apart; only the account id can.
 const _accountA = 'walletless-account-a';
 const _accountB = 'walletless-account-b';
+
+/// 2100-01-01T00:00:00Z, in seconds.
+const int _farFutureExpirySeconds = 4102444800;
 
 /// A session token for [accountId]. [refresh] changes the token itself without
 /// changing the account, as a silent token refresh does.
@@ -41,9 +63,9 @@ String _token(String accountId, {int refresh = 0}) {
   final payload = jsonEncode({
     'id': accountId,
     'iat': refresh,
-    'exp':
-        DateTime.now().add(const Duration(hours: 1)).millisecondsSinceEpoch ~/
-            1000,
+    // A fixed, far-future expiry: a clock-derived one differs between two
+    // calls that straddle a second boundary, which made token equality flaky.
+    'exp': _farFutureExpirySeconds,
   });
   return 'e30.${base64Url.encode(utf8.encode(payload)).replaceAll('=', '')}.synthetic';
 }
@@ -359,9 +381,9 @@ String _walletSignedToken(String accountId, String wallet) {
     'id': accountId,
     'walletAddress': wallet,
     'authLevel': 'wallet_signed',
-    'exp':
-        DateTime.now().add(const Duration(hours: 1)).millisecondsSinceEpoch ~/
-            1000,
+    // A fixed, far-future expiry: a clock-derived one differs between two
+    // calls that straddle a second boundary, which made token equality flaky.
+    'exp': _farFutureExpirySeconds,
   });
   return 'e30.${base64Url.encode(utf8.encode(payload)).replaceAll('=', '')}.synthetic';
 }
@@ -475,9 +497,7 @@ void main() {
     test('a pending activation prompt from A does not survive into B',
         () async {
       // Armed while signed out, then A signs in and the session moves to B.
-      final prompt = ActivationPromptProvider(
-        hasAuthSession: () => api.hasAuthSession,
-      );
+      final prompt = ActivationPromptProvider();
       addTearDown(prompt.dispose);
       for (var i = 0; i < ActivationPromptProvider.viewsBeforePrompt; i++) {
         await prompt.recordEntityView();
@@ -573,7 +593,8 @@ void main() {
       await api.setAuthToken(_token(_accountA));
       final challengeApi = _GatedChallengeApi();
       final attendance = AttendanceProvider(api: challengeApi)
-        ..bindAuthContext(isSignedIn: true, walletAddress: null);
+        ..bindAuthContext(
+            identityOwner: _ownerOf(_accountA), walletAddress: null);
       addTearDown(attendance.dispose);
 
       final fetch = attendance.ensureChallenge('marker-1');
@@ -591,7 +612,8 @@ void main() {
       await api.setAuthToken(_token(_accountA));
       final confirmApi = _GatedConfirmApi();
       final attendance = AttendanceProvider(api: confirmApi)
-        ..bindAuthContext(isSignedIn: true, walletAddress: null);
+        ..bindAuthContext(
+            identityOwner: _ownerOf(_accountA), walletAddress: null);
       addTearDown(attendance.dispose);
       attendance.updateProximity(
         markerId: 'marker-1',
@@ -607,6 +629,9 @@ void main() {
       expect(confirmApi.confirmGates, hasLength(1));
 
       await api.setAuthToken(_token(_accountB));
+      // B's profile is the owner's once it has loaded.
+      attendance.bindAuthContext(
+          identityOwner: _ownerOf(_accountB), walletAddress: null);
       final confirmB = attendance.confirmAttendance('marker-1');
       await Future<void>.delayed(Duration.zero);
       expect(confirmApi.confirmGates, hasLength(2));
@@ -685,9 +710,7 @@ void main() {
     });
 
     test('keeps the pending activation prompt state', () async {
-      final prompt = ActivationPromptProvider(
-        hasAuthSession: () => api.hasAuthSession,
-      );
+      final prompt = ActivationPromptProvider();
       addTearDown(prompt.dispose);
       for (var i = 0; i < ActivationPromptProvider.viewsBeforePrompt; i++) {
         await prompt.recordEntityView();
@@ -765,7 +788,8 @@ void main() {
       await api.setAuthToken(_token(_accountA));
       final challengeApi = _GatedChallengeApi();
       final attendance = AttendanceProvider(api: challengeApi)
-        ..bindAuthContext(isSignedIn: true, walletAddress: null);
+        ..bindAuthContext(
+            identityOwner: _ownerOf(_accountA), walletAddress: null);
       addTearDown(attendance.dispose);
 
       final fetch = attendance.ensureChallenge('marker-1');
@@ -1033,7 +1057,7 @@ void main() {
   group('the pending activation prompt across identity changes', () {
     test('a wallet disconnect or link of the same account keeps it', () async {
       AccountIdentity.setAccountKey(_accountA);
-      final prompt = ActivationPromptProvider(hasAuthSession: () => false);
+      final prompt = ActivationPromptProvider();
       addTearDown(prompt.dispose);
       for (var i = 0; i < ActivationPromptProvider.viewsBeforePrompt; i++) {
         await prompt.recordEntityView();
@@ -1050,7 +1074,7 @@ void main() {
 
     test('logout clears it', () async {
       await api.setAuthToken(_token(_accountA));
-      final prompt = ActivationPromptProvider(hasAuthSession: () => false);
+      final prompt = ActivationPromptProvider();
       addTearDown(prompt.dispose);
       for (var i = 0; i < ActivationPromptProvider.viewsBeforePrompt; i++) {
         await prompt.recordEntityView();
@@ -1066,9 +1090,7 @@ void main() {
     test('a guest who signs in silently and then logs out loses it', () async {
       // Armed as a guest. A guest sign-in announces nothing, so the prompt
       // never learns the account before the sign-out arrives.
-      final prompt = ActivationPromptProvider(
-        hasAuthSession: () => api.hasAuthSession,
-      );
+      final prompt = ActivationPromptProvider();
       addTearDown(prompt.dispose);
       for (var i = 0; i < ActivationPromptProvider.viewsBeforePrompt; i++) {
         await prompt.recordEntityView();
@@ -1567,7 +1589,8 @@ void main() {
     test('drops the attendance challenge fetched for the account', () async {
       final challengeApi = _GatedChallengeApi();
       final attendance = AttendanceProvider(api: challengeApi)
-        ..bindAuthContext(isSignedIn: true, walletAddress: null);
+        ..bindAuthContext(
+            identityOwner: _ownerOf(_accountA), walletAddress: null);
       addTearDown(attendance.dispose);
       await api.setAuthToken(_token(_accountA));
 
@@ -1586,7 +1609,8 @@ void main() {
       await api.setAuthToken(_token(_accountA));
       final confirmApi = _GatedConfirmApi();
       final attendance = AttendanceProvider(api: confirmApi)
-        ..bindAuthContext(isSignedIn: true, walletAddress: null);
+        ..bindAuthContext(
+            identityOwner: _ownerOf(_accountA), walletAddress: null);
       addTearDown(attendance.dispose);
       attendance.updateProximity(
         markerId: 'marker-1',
@@ -1601,7 +1625,8 @@ void main() {
       expect(confirmApi.confirmGates, hasLength(1));
 
       attendance.bindAuthContext(
-          isSignedIn: true, walletAddress: 'synthetic-wallet-a');
+          identityOwner: _ownerOf(_accountA),
+          walletAddress: 'synthetic-wallet-a');
       confirmApi.confirmGates.single.complete(_confirmBody);
 
       expect(await confirm, isNotNull);

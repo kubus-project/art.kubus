@@ -42,6 +42,16 @@ class UserProfile {
     required this.updatedAt,
   });
 
+  /// The account this profile belongs to: [userId], the account id the
+  /// backend defines, or null when the profile row carries none (a legacy
+  /// wallet profile, a local placeholder). [id] is never an account id: for
+  /// such rows it is the profile row's own id, which no session token names.
+  /// The one definition every identity decision reads.
+  String? get accountId {
+    final value = (userId ?? '').trim();
+    return value.isEmpty ? null : value;
+  }
+
   UserProfile copyWith({
     String? id,
     String? userId,

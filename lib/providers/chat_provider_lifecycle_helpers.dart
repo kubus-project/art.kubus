@@ -306,16 +306,14 @@ void _chatProviderBindAuthContext(
   bool? isSignedIn,
 }) {
   try {
+    if (profileProvider != null) provider._identityOwner = profileProvider;
     final profileWallet =
         WalletUtils.normalize(profileProvider?.currentUser?.walletAddress);
     final wallet = WalletUtils.normalize(walletAddress);
     final resolvedWallet = profileWallet.isNotEmpty ? profileWallet : wallet;
     final signedIn = isSignedIn ?? (profileProvider?.isSignedIn ?? false);
-    final resolvedAccountId = (accountId ??
-            profileProvider?.currentUser?.userId ??
-            profileProvider?.currentUser?.id ??
-            '')
-        .trim();
+    final resolvedAccountId =
+        (accountId ?? profileProvider?.currentUser?.accountId ?? '').trim();
     final token = (provider._api.getAuthToken() ?? '').trim();
     final previousSignature = provider._lastAuthSignature;
     final accountChanged = previousSignature.isNotEmpty &&
@@ -371,7 +369,7 @@ void _chatProviderBindAuthContext(
       return;
     }
 
-    if (provider._conversations.isEmpty || !provider._hasAuthToken) {
+    if (provider._conversations.isEmpty || !provider._api.hasAuthSession) {
       unawaited(provider.refreshConversations());
     }
   } catch (e) {

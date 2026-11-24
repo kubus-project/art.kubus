@@ -4747,7 +4747,7 @@ abstract class AppLocalizations {
   /// No description provided for @walletActionAccountShellNeedsWalletToast.
   ///
   /// In en, this message translates to:
-  /// **'Your account is signed in, but this device still needs the wallet restored or connected before this action can continue.'**
+  /// **'Your account is signed in without a wallet. Connect one to continue with this action.'**
   String get walletActionAccountShellNeedsWalletToast;
 
   /// No description provided for @walletActionEncryptedBackupRestoreToast.
@@ -4759,14 +4759,20 @@ abstract class AppLocalizations {
   /// No description provided for @walletActionRecoveryNeededToast.
   ///
   /// In en, this message translates to:
-  /// **'Restore wallet access on this device before continuing.'**
+  /// **'Reconnect your wallet or import your recovery phrase on this device before continuing.'**
   String get walletActionRecoveryNeededToast;
 
   /// No description provided for @walletActionReadOnlyReconnectToast.
   ///
   /// In en, this message translates to:
-  /// **'Reconnect with your wallet provider or restore wallet access on this device before continuing.'**
+  /// **'Reconnect with your wallet provider or import your recovery phrase on this device before continuing.'**
   String get walletActionReadOnlyReconnectToast;
+
+  /// No description provided for @walletBackupStatusUnavailableHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Backup status is unavailable right now. Try again in a moment.'**
+  String get walletBackupStatusUnavailableHint;
 
   /// No description provided for @settingsNetworkTileTitle.
   ///
@@ -4810,11 +4816,17 @@ abstract class AppLocalizations {
   /// **'No wallet connected yet'**
   String get settingsBackupStatusNoWallet;
 
-  /// No description provided for @settingsBackupStatusAccountShellOnly.
+  /// No description provided for @settingsBackupStatusChecking.
   ///
   /// In en, this message translates to:
-  /// **'Account wallet has not been restored on this device yet'**
-  String get settingsBackupStatusAccountShellOnly;
+  /// **'Checking wallet status…'**
+  String get settingsBackupStatusChecking;
+
+  /// No description provided for @settingsBackupStatusWalletless.
+  ///
+  /// In en, this message translates to:
+  /// **'No wallet linked to this account'**
+  String get settingsBackupStatusWalletless;
 
   /// No description provided for @settingsBackupStatusNoBackup.
   ///
@@ -5619,6 +5631,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Disconnect your wallet and clear your session on this device?'**
   String get settingsLogoutDialogBody;
+
+  /// No description provided for @settingsLogoutDialogBodyAccountOnly.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear your session on this device?'**
+  String get settingsLogoutDialogBodyAccountOnly;
 
   /// No description provided for @settingsLogoutButton.
   ///
@@ -19884,20 +19902,32 @@ abstract class AppLocalizations {
   /// No description provided for @walletBackupProtectionNoWalletBody.
   ///
   /// In en, this message translates to:
-  /// **'Connect or restore the wallet on this device before managing backup protection.'**
+  /// **'Connect a wallet on this device before managing backup protection.'**
   String get walletBackupProtectionNoWalletBody;
 
-  /// No description provided for @walletBackupProtectionAccountShellHeadline.
+  /// No description provided for @walletBackupProtectionCheckingHeadline.
   ///
   /// In en, this message translates to:
-  /// **'Your account is ready, but this device does not have wallet access yet.'**
-  String get walletBackupProtectionAccountShellHeadline;
+  /// **'Checking wallet status…'**
+  String get walletBackupProtectionCheckingHeadline;
 
-  /// No description provided for @walletBackupProtectionAccountShellBody.
+  /// No description provided for @walletBackupProtectionCheckingBody.
   ///
   /// In en, this message translates to:
-  /// **'Restore the account wallet on this device before you configure wallet backup protection, transfers, or future wallet-linked access.'**
-  String get walletBackupProtectionAccountShellBody;
+  /// **'This device is checking whether a wallet is linked to your account. Backup options appear when the check finishes.'**
+  String get walletBackupProtectionCheckingBody;
+
+  /// No description provided for @walletBackupProtectionWalletlessHeadline.
+  ///
+  /// In en, this message translates to:
+  /// **'No wallet is linked to this account.'**
+  String get walletBackupProtectionWalletlessHeadline;
+
+  /// No description provided for @walletBackupProtectionWalletlessBody.
+  ///
+  /// In en, this message translates to:
+  /// **'A wallet is optional. Connect one from the Wallet screen when you need wallet-based ownership or participation.'**
+  String get walletBackupProtectionWalletlessBody;
 
   /// No description provided for @walletBackupProtectionNoBackupHeadline.
   ///
@@ -19968,7 +19998,7 @@ abstract class AppLocalizations {
   /// No description provided for @walletBackupProtectionReadOnlyBody.
   ///
   /// In en, this message translates to:
-  /// **'Restore signing access with your encrypted backup or recovery phrase before using transfers and other wallet-protected actions on this device.'**
+  /// **'Reconnect your wallet provider, or import your recovery phrase, before using transfers and other wallet-protected actions on this device.'**
   String get walletBackupProtectionReadOnlyBody;
 
   /// No description provided for @walletSessionStateAccountShellOnly.
@@ -21117,12 +21147,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'External signer connected'**
   String get securityHubExternalSignerConnected;
-
-  /// No description provided for @securityHubConnectOrRestoreWallet.
-  ///
-  /// In en, this message translates to:
-  /// **'Connect or restore a wallet'**
-  String get securityHubConnectOrRestoreWallet;
 
   /// No description provided for @securityHubDeleteBackupAction.
   ///
@@ -28328,6 +28352,36 @@ abstract class AppLocalizations {
   /// **'Load archival quality'**
   String get spatialLoadArchiveQuality;
 
+  /// No description provided for @spatialLoadArchiveQualityWithSize.
+  ///
+  /// In en, this message translates to:
+  /// **'Load archival quality ({size})'**
+  String spatialLoadArchiveQualityWithSize(String size);
+
+  /// No description provided for @spatialArchiveConsentBody.
+  ///
+  /// In en, this message translates to:
+  /// **'The archival version is the full-detail capture. It is large and can use a lot of data, so it only loads when you ask.'**
+  String get spatialArchiveConsentBody;
+
+  /// No description provided for @spatialArchiveConfirmTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Load a large archive?'**
+  String get spatialArchiveConfirmTitle;
+
+  /// No description provided for @spatialArchiveConfirmBody.
+  ///
+  /// In en, this message translates to:
+  /// **'This download is about {size}. Continue only on a connection you are happy to use.'**
+  String spatialArchiveConfirmBody(String size);
+
+  /// No description provided for @spatialArchiveConfirmBodyUnknownSize.
+  ///
+  /// In en, this message translates to:
+  /// **'This download is large and its size is not known. Continue only on a connection you are happy to use.'**
+  String get spatialArchiveConfirmBodyUnknownSize;
+
   /// No description provided for @spatialQualityMobile.
   ///
   /// In en, this message translates to:
@@ -28369,6 +28423,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'This spatial archive is currently unavailable.'**
   String get spatialViewerUnavailable;
+
+  /// No description provided for @spatialViewerLoading.
+  ///
+  /// In en, this message translates to:
+  /// **'Loading the 3D view…'**
+  String get spatialViewerLoading;
+
+  /// No description provided for @spatialViewerActivate.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap to interact'**
+  String get spatialViewerActivate;
+
+  /// No description provided for @spatialViewerDragHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Drag to look around'**
+  String get spatialViewerDragHint;
 
   /// No description provided for @spatialViewerFallback.
   ///

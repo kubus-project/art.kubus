@@ -2688,7 +2688,7 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get walletActionAccountShellNeedsWalletToast =>
-      'Račun je prijavljen, vendar je treba na tej napravi še obnoviti ali povezati denarnico, preden lahko to dejanje nadaljuje.';
+      'Račun je prijavljen brez denarnice. Za nadaljevanje s tem dejanjem jo poveži.';
 
   @override
   String get walletActionEncryptedBackupRestoreToast =>
@@ -2696,11 +2696,15 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get walletActionRecoveryNeededToast =>
-      'Pred nadaljevanjem na tej napravi obnovi dostop do denarnice.';
+      'Pred nadaljevanjem na tej napravi poveži denarnico ali uvozi obnovitveno frazo.';
 
   @override
   String get walletActionReadOnlyReconnectToast =>
-      'Pred nadaljevanjem se znova poveži s ponudnikom denarnice ali na tej napravi obnovi dostop do denarnice.';
+      'Pred nadaljevanjem se znova poveži s ponudnikom denarnice ali na tej napravi uvozi obnovitveno frazo.';
+
+  @override
+  String get walletBackupStatusUnavailableHint =>
+      'Stanje varnostne kopije trenutno ni na voljo. Poskusi znova čez trenutek.';
 
   @override
   String get settingsNetworkTileTitle => 'Omrežje';
@@ -2728,8 +2732,11 @@ class AppLocalizationsSl extends AppLocalizations {
   String get settingsBackupStatusNoWallet => 'Denarnica še ni povezana';
 
   @override
-  String get settingsBackupStatusAccountShellOnly =>
-      'Računska denarnica na tej napravi še ni obnovljena';
+  String get settingsBackupStatusChecking => 'Preverjamo stanje denarnice…';
+
+  @override
+  String get settingsBackupStatusWalletless =>
+      'Z računom ni povezana nobena denarnica';
 
   @override
   String get settingsBackupStatusNoBackup =>
@@ -3192,6 +3199,10 @@ class AppLocalizationsSl extends AppLocalizations {
   @override
   String get settingsLogoutDialogBody =>
       'Odklopim denarnico in počistim sejo na tej napravi?';
+
+  @override
+  String get settingsLogoutDialogBodyAccountOnly =>
+      'Počistim sejo na tej napravi?';
 
   @override
   String get settingsLogoutButton => 'Odjava';
@@ -11502,15 +11513,23 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get walletBackupProtectionNoWalletBody =>
-      'Pred upravljanjem zaščite varnostnih kopij na tej napravi poveži ali obnovi denarnico.';
+      'Pred upravljanjem zaščite z varnostno kopijo na tej napravi poveži denarnico.';
 
   @override
-  String get walletBackupProtectionAccountShellHeadline =>
-      'Račun je pripravljen, vendar ta naprava še nima dostopa do denarnice.';
+  String get walletBackupProtectionCheckingHeadline =>
+      'Preverjamo stanje denarnice…';
 
   @override
-  String get walletBackupProtectionAccountShellBody =>
-      'Pred nastavljanjem zaščite denarnice, prenosi in prihodnjim dostopom, vezanim na denarnico, na tej napravi najprej obnovi računsko denarnico.';
+  String get walletBackupProtectionCheckingBody =>
+      'Naprava preverja, ali je z vašim računom povezana denarnica. Možnosti zaščite z varnostno kopijo se prikažejo, ko preverjanje konča.';
+
+  @override
+  String get walletBackupProtectionWalletlessHeadline =>
+      'Z vašim računom ni povezana nobena denarnica.';
+
+  @override
+  String get walletBackupProtectionWalletlessBody =>
+      'Denarnica je izbirna. Ko potrebujete lastništvo ali sodelovanje prek denarnice, jo povežite na zaslonu Denarnica.';
 
   @override
   String get walletBackupProtectionNoBackupHeadline =>
@@ -11558,7 +11577,7 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get walletBackupProtectionReadOnlyBody =>
-      'Pred prenosi in drugimi dejanji, zaščitenimi z denarnico, obnovi možnost podpisovanja s šifrirano kopijo ali obnovitveno frazo.';
+      'Pred prenosi in drugimi dejanji, zaščitenimi z denarnico, na tej napravi znova poveži ponudnika denarnice ali uvozi obnovitveno frazo.';
 
   @override
   String get walletSessionStateAccountShellOnly => 'Samo lupina računa';
@@ -12260,9 +12279,6 @@ class AppLocalizationsSl extends AppLocalizations {
   @override
   String get securityHubExternalSignerConnected =>
       'Zunanji podpisnik je povezan';
-
-  @override
-  String get securityHubConnectOrRestoreWallet => 'Poveži ali obnovi denarnico';
 
   @override
   String get securityHubDeleteBackupAction => 'Izbriši kopijo';
@@ -16483,6 +16499,27 @@ class AppLocalizationsSl extends AppLocalizations {
   String get spatialLoadArchiveQuality => 'Naloži arhivsko kakovost';
 
   @override
+  String spatialLoadArchiveQualityWithSize(String size) {
+    return 'Naloži arhivsko kakovost ($size)';
+  }
+
+  @override
+  String get spatialArchiveConsentBody =>
+      'Arhivska različica je zajem v polni podrobnosti. Je velika in lahko porabi veliko podatkov, zato se naloži le na vašo zahtevo.';
+
+  @override
+  String get spatialArchiveConfirmTitle => 'Naložim velik arhiv?';
+
+  @override
+  String spatialArchiveConfirmBody(String size) {
+    return 'Prenos je velik približno $size. Nadaljujte le na povezavi, ki jo želite uporabiti.';
+  }
+
+  @override
+  String get spatialArchiveConfirmBodyUnknownSize =>
+      'Prenos je velik, njegova velikost pa ni znana. Nadaljujte le na povezavi, ki jo želite uporabiti.';
+
+  @override
   String get spatialQualityMobile => 'Optimizirano';
 
   @override
@@ -16503,6 +16540,15 @@ class AppLocalizationsSl extends AppLocalizations {
   @override
   String get spatialViewerUnavailable =>
       'Ta prostorski arhiv trenutno ni na voljo.';
+
+  @override
+  String get spatialViewerLoading => 'Nalaganje 3D pogleda …';
+
+  @override
+  String get spatialViewerActivate => 'Dotaknite se za interakcijo';
+
+  @override
+  String get spatialViewerDragHint => 'Povlecite za razgled';
 
   @override
   String get spatialViewerFallback => 'Poskušam drugo pot do arhiva …';

@@ -1,12 +1,13 @@
 import 'package:art_kubus/config/config.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:art_kubus/providers/wallet_provider.dart';
+import 'package:art_kubus/utils/wallet_presentation_state.dart';
 import 'package:flutter/foundation.dart';
 
 class WalletBackupStatusSnapshot {
   const WalletBackupStatusSnapshot({
     required this.walletAddress,
-    required this.hasAccountSession,
+    required this.isSignedIn,
     required this.hasWalletIdentity,
     required this.hasSigner,
     required this.isReadOnlySession,
@@ -14,21 +15,40 @@ class WalletBackupStatusSnapshot {
     required this.hasEncryptedServerBackup,
     required this.hasPasskeyProtection,
     this.encryptedBackupStatusKnown = true,
+    this.resolved = true,
   });
 
-  const WalletBackupStatusSnapshot.noWallet()
+  /// Nothing has been resolved yet: the copy stays neutral and never reads as
+  /// "no wallet" or "restore" before the account's wallet linkage is known.
+  const WalletBackupStatusSnapshot.pending()
       : walletAddress = null,
-        hasAccountSession = false,
+        isSignedIn = false,
         hasWalletIdentity = false,
         hasSigner = false,
         isReadOnlySession = false,
         mnemonicBackupRequired = false,
         hasEncryptedServerBackup = false,
         hasPasskeyProtection = false,
-        encryptedBackupStatusKnown = true;
+        encryptedBackupStatusKnown = true,
+        resolved = false;
+
+  const WalletBackupStatusSnapshot.noWallet()
+      : walletAddress = null,
+        isSignedIn = false,
+        hasWalletIdentity = false,
+        hasSigner = false,
+        isReadOnlySession = false,
+        mnemonicBackupRequired = false,
+        hasEncryptedServerBackup = false,
+        hasPasskeyProtection = false,
+        encryptedBackupStatusKnown = true,
+        resolved = true;
 
   final String? walletAddress;
-  final bool hasAccountSession;
+
+  /// Whether an account is signed in: the profile provider's answer, passed
+  /// in. A device with no wallet reads as "account only" by it.
+  final bool isSignedIn;
   final bool hasWalletIdentity;
   final bool hasSigner;
   final bool isReadOnlySession;
@@ -36,16 +56,30 @@ class WalletBackupStatusSnapshot {
   final bool hasEncryptedServerBackup;
   final bool hasPasskeyProtection;
   final bool encryptedBackupStatusKnown;
+  final bool resolved;
 
   bool get encryptedBackupRequirementSatisfiedForGating =>
       hasEncryptedServerBackup || !encryptedBackupStatusKnown;
 
   bool get needsSignerRestore => hasWalletIdentity && !hasSigner;
 
-  _WalletBackupStatusKind get _statusKind {
+  /// [linkagePending] is the live linkage state from
+  /// [WalletPresentationStateResolver.linkagePendingFor]. While it is pending
+  /// and no wallet identity is known, nothing can honestly be said about
+  /// wallet absence, so the copy is the neutral loading state.
+  _WalletBackupStatusKind _statusKind({required bool linkagePending}) {
+    if (!resolved) {
+      return _WalletBackupStatusKind.loading;
+    }
     if (!hasWalletIdentity) {
-      if (hasAccountSession) {
-        return _WalletBackupStatusKind.accountShellOnly;
+      if (linkagePending) {
+        return _WalletBackupStatusKind.loading;
+      }
+      // A wallet is optional for an account. Nothing exists to restore here,
+      // so this is never a restore state. Who is signed in is the profile
+      // provider's answer, passed in as [isSignedIn].
+      if (isSignedIn) {
+        return _WalletBackupStatusKind.walletless;
       }
       return _WalletBackupStatusKind.noWallet;
     }
@@ -67,16 +101,32 @@ class WalletBackupStatusSnapshot {
     return _WalletBackupStatusKind.noBackup;
   }
 
-  String settingsSummary(AppLocalizations l10n) {
-    switch (_statusKind) {
+  /// A read-only copy never implies "no backup" when the backup lookup itself
+  /// failed: the hint says the status is unknown and can be retried.
+  String _withBackupLookupHint(String copy, AppLocalizations l10n) {
+    if (encryptedBackupStatusKnown) return copy;
+    final separator = copy.endsWith('.') ? ' ' : '. ';
+    return '$copy$separator${l10n.walletBackupStatusUnavailableHint}';
+  }
+
+  String settingsSummary(
+    AppLocalizations l10n, {
+    bool linkagePending = false,
+  }) {
+    switch (_statusKind(linkagePending: linkagePending)) {
+      case _WalletBackupStatusKind.loading:
+        return l10n.settingsBackupStatusChecking;
       case _WalletBackupStatusKind.noWallet:
         return l10n.settingsBackupStatusNoWallet;
-      case _WalletBackupStatusKind.accountShellOnly:
-        return l10n.settingsBackupStatusAccountShellOnly;
+      case _WalletBackupStatusKind.walletless:
+        return l10n.settingsBackupStatusWalletless;
       case _WalletBackupStatusKind.encryptedBackupRestoreAvailable:
         return l10n.settingsBackupStatusEncryptedBackupRestoreAvailable;
       case _WalletBackupStatusKind.readOnly:
-        return l10n.settingsBackupStatusReadOnly;
+        return _withBackupLookupHint(
+          l10n.settingsBackupStatusReadOnly,
+          l10n,
+        );
       case _WalletBackupStatusKind.recoveryPhraseRequired:
         return l10n.settingsBackupStatusRecoveryPhraseRequired;
       case _WalletBackupStatusKind.passkeyProtection:
@@ -88,12 +138,17 @@ class WalletBackupStatusSnapshot {
     }
   }
 
-  String protectionHeadline(AppLocalizations l10n) {
-    switch (_statusKind) {
+  String protectionHeadline(
+    AppLocalizations l10n, {
+    bool linkagePending = false,
+  }) {
+    switch (_statusKind(linkagePending: linkagePending)) {
+      case _WalletBackupStatusKind.loading:
+        return l10n.walletBackupProtectionCheckingHeadline;
       case _WalletBackupStatusKind.noWallet:
         return l10n.walletBackupProtectionNoWalletHeadline;
-      case _WalletBackupStatusKind.accountShellOnly:
-        return l10n.walletBackupProtectionAccountShellHeadline;
+      case _WalletBackupStatusKind.walletless:
+        return l10n.walletBackupProtectionWalletlessHeadline;
       case _WalletBackupStatusKind.encryptedBackupRestoreAvailable:
         return l10n.walletBackupProtectionEncryptedRestoreHeadline;
       case _WalletBackupStatusKind.readOnly:
@@ -109,16 +164,24 @@ class WalletBackupStatusSnapshot {
     }
   }
 
-  String protectionBody(AppLocalizations l10n) {
-    switch (_statusKind) {
+  String protectionBody(
+    AppLocalizations l10n, {
+    bool linkagePending = false,
+  }) {
+    switch (_statusKind(linkagePending: linkagePending)) {
+      case _WalletBackupStatusKind.loading:
+        return l10n.walletBackupProtectionCheckingBody;
       case _WalletBackupStatusKind.noWallet:
         return l10n.walletBackupProtectionNoWalletBody;
-      case _WalletBackupStatusKind.accountShellOnly:
-        return l10n.walletBackupProtectionAccountShellBody;
+      case _WalletBackupStatusKind.walletless:
+        return l10n.walletBackupProtectionWalletlessBody;
       case _WalletBackupStatusKind.encryptedBackupRestoreAvailable:
         return l10n.walletBackupProtectionEncryptedRestoreBody;
       case _WalletBackupStatusKind.readOnly:
-        return l10n.walletBackupProtectionReadOnlyBody;
+        return _withBackupLookupHint(
+          l10n.walletBackupProtectionReadOnlyBody,
+          l10n,
+        );
       case _WalletBackupStatusKind.recoveryPhraseRequired:
         return l10n.walletBackupProtectionRecoveryPhraseBody;
       case _WalletBackupStatusKind.passkeyProtection:
@@ -132,8 +195,9 @@ class WalletBackupStatusSnapshot {
 }
 
 enum _WalletBackupStatusKind {
+  loading,
   noWallet,
-  accountShellOnly,
+  walletless,
   encryptedBackupRestoreAvailable,
   readOnly,
   recoveryPhraseRequired,
@@ -142,9 +206,95 @@ enum _WalletBackupStatusKind {
   noBackup,
 }
 
+/// The live inputs a backup snapshot is resolved from. A settings screen
+/// re-resolves whenever any of them changes, so its row never keeps a "no
+/// wallet" claim from before linkage settled, nor an earlier account's copy.
+@immutable
+class WalletBackupStatusInputs {
+  const WalletBackupStatusInputs({
+    required this.walletAddress,
+    required this.hasWalletIdentity,
+    required this.authorityState,
+    required this.hasEncryptedBackup,
+    required this.hasSigner,
+    required this.linkagePending,
+    this.profileSignedIn = true,
+  });
+
+  /// [profileSignedIn] is the profile account's sign-in state. Only the mobile
+  /// row gates on it (a signed-out row is a fixed no-wallet snapshot), so it
+  /// passes the value; a screen that does not gate keeps the default.
+  factory WalletBackupStatusInputs.of(
+    WalletProvider walletProvider, {
+    bool profileSignedIn = true,
+  }) {
+    final authority = walletProvider.authority;
+    return WalletBackupStatusInputs(
+      walletAddress: walletProvider.currentWalletAddress,
+      hasWalletIdentity: walletProvider.hasWalletIdentity,
+      authorityState: authority.state,
+      hasEncryptedBackup: walletProvider.hasEncryptedWalletBackup,
+      hasSigner: walletProvider.hasSigner,
+      linkagePending:
+          WalletPresentationStateResolver.linkagePendingFor(walletProvider),
+      profileSignedIn: profileSignedIn,
+    );
+  }
+
+  final String? walletAddress;
+  final bool hasWalletIdentity;
+  final WalletAuthorityState authorityState;
+  final bool hasEncryptedBackup;
+  final bool hasSigner;
+  final bool linkagePending;
+  final bool profileSignedIn;
+
+  @override
+  bool operator ==(Object other) {
+    return other is WalletBackupStatusInputs &&
+        other.walletAddress == walletAddress &&
+        other.hasWalletIdentity == hasWalletIdentity &&
+        other.authorityState == authorityState &&
+        other.hasEncryptedBackup == hasEncryptedBackup &&
+        other.hasSigner == hasSigner &&
+        other.linkagePending == linkagePending &&
+        other.profileSignedIn == profileSignedIn;
+  }
+
+  @override
+  int get hashCode => Object.hash(
+        walletAddress,
+        hasWalletIdentity,
+        authorityState,
+        hasEncryptedBackup,
+        hasSigner,
+        linkagePending,
+        profileSignedIn,
+      );
+}
+
+/// Tracks which inputs the current backup snapshot was resolved for. Only the
+/// latest resolve may apply its result; a superseded resolve is dropped.
+class WalletBackupStatusTracker {
+  WalletBackupStatusInputs? _inputs;
+  int _generation = 0;
+
+  /// True when [inputs] differ from the ones the latest resolve started with.
+  bool needsResolve(WalletBackupStatusInputs inputs) => inputs != _inputs;
+
+  /// Starts a resolve for [inputs] and returns the token it must present.
+  int begin(WalletBackupStatusInputs inputs) {
+    _inputs = inputs;
+    return ++_generation;
+  }
+
+  bool isCurrent(int token) => token == _generation;
+}
+
 class WalletBackupStatusResolver {
   static Future<WalletBackupStatusSnapshot> resolve({
     required WalletProvider walletProvider,
+    required bool isSignedIn,
     String? walletAddress,
     bool refreshRemote = true,
   }) async {
@@ -153,7 +303,23 @@ class WalletBackupStatusResolver {
     final hasWalletIdentity =
         resolvedWallet.isNotEmpty || walletProvider.hasWalletIdentity;
     if (!hasWalletIdentity) {
-      return const WalletBackupStatusSnapshot.noWallet();
+      // While the account's wallet linkage is still settling, absence of a
+      // wallet is unknown: stay unresolved rather than claim "no wallet".
+      if (WalletPresentationStateResolver.linkagePendingFor(walletProvider)) {
+        return const WalletBackupStatusSnapshot.pending();
+      }
+      // Keep the signed-in state: a signed-in account without a wallet is a
+      // walletless account, which must not be read as signed out.
+      return WalletBackupStatusSnapshot(
+        walletAddress: null,
+        isSignedIn: isSignedIn,
+        hasWalletIdentity: false,
+        hasSigner: false,
+        isReadOnlySession: false,
+        mnemonicBackupRequired: false,
+        hasEncryptedServerBackup: false,
+        hasPasskeyProtection: false,
+      );
     }
 
     var mnemonicBackupRequired = false;
@@ -192,7 +358,7 @@ class WalletBackupStatusResolver {
 
     return WalletBackupStatusSnapshot(
       walletAddress: resolvedWallet.isEmpty ? null : resolvedWallet,
-      hasAccountSession: walletProvider.authority.hasAccountSession,
+      isSignedIn: isSignedIn,
       hasWalletIdentity: hasWalletIdentity,
       hasSigner: walletProvider.hasSigner,
       isReadOnlySession: walletProvider.isReadOnlySession,

@@ -125,10 +125,10 @@ class Web3CapabilityResolver {
 
   static Web3Capabilities resolve(Web3CapabilityContext context) {
     final authority = context.authority;
-    // The backend session is the account authority. A wallet-less account does
-    // not necessarily hydrate a wallet-keyed profile, so profile state cannot
-    // be used to decide whether the account itself exists.
-    final hasAccount = authority.hasAccountSession;
+    // Whether an account is signed in is the profile provider's one answer; the
+    // wallet authority says nothing about it. A wallet-less account signs in
+    // through its own profile, so it counts here without a wallet.
+    final hasAccount = context.profileSignedIn;
     // Mutations continue to fail closed until the authenticated profile has
     // hydrated. Profile roles and personas must never flash stale privileges.
     final profileReadyForPrivileges =

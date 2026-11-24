@@ -3,6 +3,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:art_kubus/providers/profile_provider.dart';
 import 'package:art_kubus/services/backend_api_service.dart';
+import '../support/account_session_fixture.dart';
 
 /// Serves one authenticated account at a time, so a test can swap the session
 /// between accounts. No wallet is involved: the email session has no wallet.
@@ -86,7 +87,10 @@ Map<String, dynamic> _emailAccount({
 void main() {
   setUp(() {
     SharedPreferences.setMockInitialValues(<String, Object>{});
+    // An email account is signed in by a live session behind its profile.
+    AccountSessionFixture.start(accountId: 'user-a');
   });
+  tearDown(AccountSessionFixture.end);
 
   test('(a) an email session without a wallet loads the account', () async {
     final api = _SessionProfileApi()
@@ -133,6 +137,8 @@ void main() {
     expect(provider.currentUser?.displayName, 'Alice');
 
     // Sign-in as B replaces the session; the authenticated load follows it.
+    await BackendApiService()
+        .setAuthToken(AccountSessionFixture.jwt(accountId: 'user-b'));
     api.account = _emailAccount(
       userId: 'user-b',
       username: 'bob',
@@ -157,6 +163,8 @@ void main() {
     await provider.loadAuthenticatedProfile();
 
     provider.signOut();
+    await BackendApiService()
+        .setAuthToken(AccountSessionFixture.jwt(accountId: 'user-b'));
     api.account = _emailAccount(
       userId: 'user-b',
       username: 'bob',

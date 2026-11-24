@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:ui' show CheckedState, SemanticsRole, Tristate;
 
 import 'package:art_kubus/l10n/app_localizations.dart';
+import 'package:art_kubus/providers/profile_provider.dart';
 import 'package:art_kubus/providers/support_center_provider.dart';
 import 'package:art_kubus/providers/themeprovider.dart';
 import 'package:art_kubus/services/backend_api_service.dart';
@@ -16,6 +17,8 @@ import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+import '../support/signed_in_profile.dart';
 
 const _authToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.'
     'eyJleHAiOjQ3MzM4NTYwMDAsIndhbGxldEFkZHJlc3MiOiJXYWxsZXRUZXN0MTExMTExMTExMTExMTExMTExMTExMTExMTExMSJ9.'
@@ -156,15 +159,27 @@ void main() {
     bool supportEnabled = true,
     bool dark = false,
     Map<String, WidgetBuilder>? routes,
+    // The signed-in account, held by the owner (ProfileProvider) behind a
+    // session token for it. Without one the session is an anonymous token.
+    String? accountId,
   }) async {
     tester.view.physicalSize = size;
     tester.view.devicePixelRatio = 1.0;
     addTearDown(tester.view.reset);
-    api.setAuthTokenForTesting(signedIn ? _authToken : null);
+    final owner =
+        accountId == null ? null : signedInProfile(accountId: accountId);
+    if (owner == null) api.setAuthTokenForTesting(signedIn ? _authToken : null);
     final themes = ThemeProvider();
     await tester.pumpWidget(
-      ChangeNotifierProvider<SupportCenterProvider>(
-        create: (_) => SupportCenterProvider(supportEnabled: supportEnabled),
+      MultiProvider(
+        providers: [
+          ChangeNotifierProvider<SupportCenterProvider>(
+            create: (_) =>
+                SupportCenterProvider(supportEnabled: supportEnabled),
+          ),
+          if (owner != null)
+            ChangeNotifierProvider<ProfileProvider>.value(value: owner),
+        ],
         child: MaterialApp(
           locale: locale,
           supportedLocales: AppLocalizations.supportedLocales,
@@ -1162,13 +1177,11 @@ void main() {
         }
         return _ok(<Object?>[_ticket()]);
       });
-      SharedPreferences.setMockInitialValues(<String, Object>{
-        'user_id': 'account-a',
-      });
       await pumpScreen(
         tester,
         section: SupportSection.requests,
         routes: freshSignIn(),
+        accountId: 'account-a',
       );
       await tester.tap(find.text('Map does not load'));
       await settle(tester);
@@ -1202,13 +1215,11 @@ void main() {
         }
         return _ok(<Object?>[_ticket()]);
       });
-      SharedPreferences.setMockInitialValues(<String, Object>{
-        'user_id': 'account-a',
-      });
       await pumpScreen(
         tester,
         section: SupportSection.requests,
         routes: freshSignIn(),
+        accountId: 'account-a',
       );
       await tester.tap(find.text('Map does not load'));
       await settle(tester);

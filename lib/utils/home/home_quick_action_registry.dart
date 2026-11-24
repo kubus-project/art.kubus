@@ -76,6 +76,9 @@ class HomeQuickActionRegistry {
         type: HomeQuickActionTargetType.pushDesktopSubscreen,
         screenBuilder: _buildProfileScreen,
         title: 'Profile',
+        // The owner's profile screen opens only with a live session. The mobile
+        // tab shows the guest account screen itself, so it needs no gate.
+        requiresSignedIn: true,
       ),
     ),
     'marketplace': HomeQuickActionDefinition(

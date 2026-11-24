@@ -166,10 +166,10 @@ class _PostAuthLoadingScreenState extends State<PostAuthLoadingScreen> {
     // failed, not auth itself. Never bounce an authenticated session back to
     // /sign-in; open the main shell instead and let it recover.
     final token = (BackendApiService().getAuthToken() ?? '').trim();
-    final isAuthenticated =
+    final holdsValidCredential =
         token.isNotEmpty && AuthGatingService.isAccessTokenValid(token);
     await Navigator.of(context).pushNamedAndRemoveUntil(
-      isAuthenticated ? '/main' : '/sign-in',
+      holdsValidCredential ? '/main' : '/sign-in',
       (_) => false,
     );
   }

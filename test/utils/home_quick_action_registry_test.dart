@@ -91,6 +91,21 @@ void main() {
     }
   });
 
+  test('only the desktop owner-profile target requires a signed-in account',
+      () {
+    final profile = HomeQuickActionRegistry.of('profile');
+
+    expect(profile.desktopTarget.requiresSignedIn, isTrue);
+    // The mobile tab shows the guest account screen itself.
+    expect(profile.mobileTarget.requiresSignedIn, isFalse);
+    for (final key in HomeQuickActionRegistry.knownKeys()) {
+      if (key == 'profile') continue;
+      final definition = HomeQuickActionRegistry.of(key);
+      expect(definition.desktopTarget.requiresSignedIn, isFalse, reason: key);
+      expect(definition.mobileTarget.requiresSignedIn, isFalse, reason: key);
+    }
+  });
+
   test('canonical entity links stay separate from internal shell aliases', () {
     const target = ShareDeepLinkTarget(type: ShareEntityType.artwork, id: 'a1');
 

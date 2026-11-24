@@ -31,6 +31,7 @@ import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../support/account_session_fixture.dart';
 
 const _closureRouteText = 'closure-status-route';
 
@@ -79,6 +80,7 @@ Widget _app(Widget home) {
           ..setCurrentUser(
             UserProfile(
               id: 'closure-entry-profile',
+              userId: 'closure-entry-account',
               walletAddress: '',
               username: 'tester',
               displayName: 'Tester',
@@ -163,6 +165,10 @@ Future<void> _deleteThroughUi(WidgetTester tester, AppLocalizationsEn l10n,
 }
 
 void main() {
+  // A signed-in surface has a live session behind its held profile.
+  setUp(() => AccountSessionFixture.start(accountId: 'closure-entry-account'));
+  tearDown(AccountSessionFixture.end);
+
   TestWidgetsFlutterBinding.ensureInitialized();
   final l10n = AppLocalizationsEn();
 
@@ -209,6 +215,9 @@ void main() {
     // Mobile: a fresh tree, the same coordinator instance.
     await tester.pumpWidget(const SizedBox.shrink());
     await tester.binding.setSurfaceSize(const Size(430, 932));
+    // The first deletion ended the session; the second tree is a fresh
+    // signed-in account behind its own session.
+    AccountSessionFixture.start(accountId: 'closure-entry-account');
     await tester.pumpWidget(_app(const SettingsScreen()));
     await tester.pump(const Duration(seconds: 2));
 

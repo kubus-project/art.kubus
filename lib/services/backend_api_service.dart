@@ -767,6 +767,9 @@ class BackendApiService
   String? _authToken;
   String? _credentialTargetToken;
   String? _authWalletCanonical;
+  // How the live credential was obtained, kept beside it so account screens
+  // can read it without waiting on storage. Cleared with the credential.
+  AuthSignInMethod _signInMethod = AuthSignInMethod.unknown;
   String? _preferredWalletCanonical;
   AuthCredentialStore _credentialStore = AuthCredentialStore();
   Future<void>? _authInitFuture;
@@ -972,6 +975,7 @@ class BackendApiService
   }) async {
     final epoch = sessionEpoch ?? _authSessionEpoch;
     final value = _authSignInMethodToStorageValue(method);
+    if (epoch == _authSessionEpoch) _signInMethod = method;
     try {
       final prefs = await SharedPreferences.getInstance();
       if (epoch != _authSessionEpoch) return;
@@ -988,13 +992,26 @@ class BackendApiService
   Future<AuthSignInMethod> getLastSignInMethod() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      return _authSignInMethodFromStorageValue(
+      final stored = _authSignInMethodFromStorageValue(
         prefs.getString(PreferenceKeys.authLastSignInMethodV1),
       );
+      if (stored != AuthSignInMethod.unknown && hasAuthSession) {
+        _signInMethod = stored;
+      }
+      return stored;
     } catch (e) {
       AppConfig.debugPrint('BackendApiService.getLastSignInMethod failed: $e');
       return AuthSignInMethod.unknown;
     }
+  }
+
+  /// How the live credential was obtained, readable synchronously: the method
+  /// recorded at sign-in, else what the token's claims say. Unknown without a
+  /// credential.
+  AuthSignInMethod get currentSignInMethod {
+    if (!hasAuthSession) return AuthSignInMethod.unknown;
+    if (_signInMethod != AuthSignInMethod.unknown) return _signInMethod;
+    return inferSignInMethodFromClaims();
   }
 
   Future<AuthSignInMethod> resolveLastSignInMethod({
@@ -1031,6 +1048,7 @@ class BackendApiService
 
   @visibleForTesting
   void setAuthTokenForTesting(String? token) {
+    if ((token ?? '').isEmpty) _signInMethod = AuthSignInMethod.unknown;
     _authToken = token;
     _credentialTargetToken = token;
     _authWalletCanonical = _tryExtractWalletFromToken(token);
@@ -1440,6 +1458,16 @@ class BackendApiService
     return _tryExtractWalletFromToken(token) ?? '';
   }
 
+  /// The live session's own account id (a JWT claim), or its wallet for a
+  /// legacy token with no id claim; empty without a session. The owner
+  /// (ProfileProvider) binds the held profile to the session with this; display
+  /// code never reads it.
+  String get authAccountKey => _accountKeyOf(_authToken);
+
+  /// The wallet the live session's token carries, or empty.
+  String get authWalletAddress =>
+      _authWalletCanonical ?? _tryExtractWalletFromToken(_authToken) ?? '';
+
   /// The account the session is moving to or already is: the credential target
   /// when a commit is pending, else the live token. The target is set
   /// synchronously with the epoch bump and cleared on sign-out, so from the
@@ -1608,6 +1636,7 @@ class BackendApiService
     _authToken = null;
     _credentialTargetToken = null;
     _authWalletCanonical = null;
+    _signInMethod = AuthSignInMethod.unknown;
     _authCoordinator?.reset();
     AccountIdentity.setAccountKey('');
     AccountIdentity.notifyListenersChanged();
@@ -6389,9 +6418,6 @@ class BackendApiService
       'GET',
       uri,
       includeAuth: true,
-      headers: const <String, String>{
-        'Cache-Control': 'no-cache, no-store',
-      },
       isIdempotent: true,
       timeout: const Duration(seconds: 5),
       allowWritableRedirect: false,
@@ -6438,13 +6464,14 @@ class BackendApiService
     final uri = Uri.parse(
       '$baseUrl/api/artworks/${Uri.encodeComponent(id)}?currentMedia=true',
     );
+    // No request Cache-Control: browsers preflight it on web and the API's
+    // Access-Control-Allow-Headers does not name it, so the request was blocked
+    // before reaching the server. The no-store response check below is what
+    // keeps this payload out of caches.
     final response = await _request(
       'GET',
       uri,
       includeAuth: includeAuth,
-      headers: const <String, String>{
-        'Cache-Control': 'no-cache, no-store',
-      },
       isIdempotent: true,
       timeout: const Duration(seconds: 5),
       allowWritableRedirect: false,
@@ -6534,9 +6561,6 @@ class BackendApiService
       'GET',
       uri,
       includeAuth: true,
-      headers: const <String, String>{
-        'Cache-Control': 'no-cache, no-store',
-      },
       isIdempotent: true,
       timeout: const Duration(seconds: 5),
       allowWritableRedirect: false,

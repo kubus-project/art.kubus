@@ -31,6 +31,29 @@ void main() {
       }
     });
 
+    test('accepts the exact localized institution route and stable ID', () {
+      for (final locale in ['en', 'sl']) {
+        final segment = locale == 'sl' ? 'institucije' : 'institutions';
+        final path = '/$locale/$segment/institution-1';
+        expect(
+          matchesCanonicalPublicEntry(
+            seededTarget: PublicEntityTakeoverTarget(
+              type: 'institution',
+              id: 'institution-1',
+              path: path,
+              browserRoute: path,
+            ),
+            requestedTarget: ShareDeepLinkTarget(
+              type: ShareEntityType.institution,
+              id: 'institution-1',
+              localeCode: locale,
+            ),
+          ),
+          isTrue,
+        );
+      }
+    });
+
     test('accepts the exact localized artwork route and stable ID', () {
       final requested = ShareDeepLinkTarget(
         type: ShareEntityType.artwork,

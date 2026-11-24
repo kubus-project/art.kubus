@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 
 import '../config/config.dart';
 import '../models/attestation.dart';
+import 'profile_provider.dart';
 import '../services/account_identity.dart';
 import '../services/backend_api_service.dart';
 
@@ -226,7 +227,9 @@ class AttendanceProvider extends ChangeNotifier {
   final Map<String, AttendanceMarkerState> _statesByMarkerId =
       <String, AttendanceMarkerState>{};
 
-  bool _isSignedIn = false;
+  // The owner of "who is signed in", and the wallet handed in with it. The
+  // wallet is kept only to reset per-account state when it changes.
+  ProfileProvider? _identityOwner;
   String? _walletAddress;
 
   // The account the user-specific state belongs to. A walletless switch leaves
@@ -251,27 +254,26 @@ class AttendanceProvider extends ChangeNotifier {
   }
 
   void bindAuthContext({
-    required bool isSignedIn,
+    required ProfileProvider identityOwner,
     required String? walletAddress,
   }) {
+    _identityOwner = identityOwner;
+    final isSignedIn = identityOwner.isSignedIn;
     final normalizedWallet = (walletAddress ?? '').trim();
     final accountKey = AccountIdentity.accountKey;
     // Linking a wallet to the account already signed in changes nothing the
     // account owns, and must not drop its in-flight confirm.
     final walletLinkedToSameAccount = (_walletAddress ?? '').isEmpty &&
         normalizedWallet.isNotEmpty &&
-        _isSignedIn &&
         isSignedIn &&
         accountKey.isNotEmpty &&
         accountKey == _identityKey;
     final walletChanged = (_walletAddress ?? '') != normalizedWallet &&
         !walletLinkedToSameAccount;
-    final signedInChanged = _isSignedIn != isSignedIn;
 
-    _isSignedIn = isSignedIn;
     _walletAddress = normalizedWallet;
 
-    if (walletChanged || (!isSignedIn && signedInChanged)) {
+    if (walletChanged || (!isSignedIn && _hasUserScopedState)) {
       _clearUserScopedState();
       if (hasListeners) notifyListeners();
     }
@@ -286,6 +288,13 @@ class AttendanceProvider extends ChangeNotifier {
     _clearUserScopedState();
     if (hasListeners) notifyListeners();
   }
+
+  bool get _hasUserScopedState => _statesByMarkerId.values.any((state) =>
+      state.challenge != null ||
+      state.lastConfirm != null ||
+      state.isFetchingChallenge ||
+      state.isConfirming ||
+      state.lastError != null);
 
   void _clearUserScopedState() {
     _identityEpoch += 1;
@@ -356,7 +365,7 @@ class AttendanceProvider extends ChangeNotifier {
     }
     final id = markerId.trim();
     if (id.isEmpty) return null;
-    if (!_isSignedIn) return null;
+    if (!(_identityOwner?.isSignedIn ?? false)) return null;
 
     final state = stateFor(id);
     final existing = state.challenge;
@@ -405,7 +414,7 @@ class AttendanceProvider extends ChangeNotifier {
     }
     final id = markerId.trim();
     if (id.isEmpty) return null;
-    if (!_isSignedIn) return null;
+    if (!(_identityOwner?.isSignedIn ?? false)) return null;
 
     final state = stateFor(id);
     if (state.isConfirming) return state.lastConfirm;

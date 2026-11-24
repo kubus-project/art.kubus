@@ -14,12 +14,17 @@ class InstitutionNavigation {
     Map<String, dynamic>? data,
     String? title,
     Future<void> Function(String profileTargetId)? openProfileTarget,
+    bool recordOnly = false,
   }) async {
-    final resolvedProfileTargetId = resolveProfileTargetId(
-      institutionId: institutionId,
-      explicitProfileTargetId: profileTargetId,
-      data: data,
-    );
+    // [recordOnly]: the id is known to name an institution record (a public
+    // /institutions/{id} link), so it never resolves to an account profile.
+    final resolvedProfileTargetId = recordOnly
+        ? null
+        : resolveProfileTargetId(
+            institutionId: institutionId,
+            explicitProfileTargetId: profileTargetId,
+            data: data,
+          );
     if (resolvedProfileTargetId != null) {
       if (openProfileTarget != null) {
         await openProfileTarget(resolvedProfileTargetId);

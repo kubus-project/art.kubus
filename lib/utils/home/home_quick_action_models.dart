@@ -32,6 +32,7 @@ class HomeQuickActionTarget {
     this.title,
     this.message,
     this.initialSection,
+    this.requiresSignedIn = false,
   });
 
   final HomeQuickActionTargetType type;
@@ -41,6 +42,10 @@ class HomeQuickActionTarget {
   final String? title;
   final String? message;
   final String? initialSection;
+
+  /// This target is an account surface: it opens only while someone is signed
+  /// in, by the same rule as [HomeQuickActionCapability.signedIn].
+  final bool requiresSignedIn;
 }
 
 @immutable

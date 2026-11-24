@@ -28,7 +28,6 @@ import '../../../utils/artwork_location_actions.dart';
 import '../../../features/map/shared/map_screen_shared_helpers.dart';
 import '../../../utils/design_tokens.dart';
 import '../../../utils/kubus_color_roles.dart';
-import '../../../utils/wallet_utils.dart';
 import '../../../widgets/artwork_gallery_view.dart';
 import '../../../widgets/artwork_private_preview_image.dart';
 import '../../../widgets/artwork_author_line.dart';
@@ -677,17 +676,8 @@ class _DesktopArtworkDetailScreenState
 
     final l10n = AppLocalizations.of(context)!;
     final scheme = Theme.of(context).colorScheme;
-    final profileProvider = context.read<ProfileProvider>();
-    final walletProvider = context.read<WalletProvider>();
-    final viewerWallet = WalletUtils.coalesce(
-      walletAddress: profileProvider.currentUser?.walletAddress,
-      wallet: walletProvider.currentWalletAddress,
-      userId: profileProvider.currentUser?.id,
-    );
-    final ownerWallet = WalletUtils.canonical(artwork.walletAddress);
-    final isOwner = viewerWallet.isNotEmpty &&
-        ownerWallet.isNotEmpty &&
-        WalletUtils.equals(viewerWallet, ownerWallet);
+    final isOwner =
+        context.read<ProfileProvider>().isCurrentAccount(artwork.walletAddress);
 
     String statusLabel() {
       switch (artwork.arStatus) {
@@ -1088,8 +1078,7 @@ class _DesktopArtworkDetailScreenState
 
     final isMarkerOwner = KubusMarkerOverlayHelpers.markerOwnedByCurrentUser(
       marker: marker,
-      walletAddress: context.read<WalletProvider>().currentWalletAddress,
-      currentUserId: context.read<ProfileProvider>().currentUser?.id,
+      profile: context.read<ProfileProvider>(),
     );
 
     await StreetArtClaimsDialog.show(

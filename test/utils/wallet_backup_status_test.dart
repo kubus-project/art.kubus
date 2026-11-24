@@ -69,6 +69,7 @@ void main() {
 
     final status = await WalletBackupStatusResolver.resolve(
       walletProvider: provider,
+      isSignedIn: true,
       refreshRemote: true,
     );
 
@@ -86,6 +87,7 @@ void main() {
 
     final status = await WalletBackupStatusResolver.resolve(
       walletProvider: provider,
+      isSignedIn: true,
       refreshRemote: true,
     );
 
@@ -104,6 +106,7 @@ void main() {
 
     final status = await WalletBackupStatusResolver.resolve(
       walletProvider: provider,
+      isSignedIn: true,
       refreshRemote: true,
     );
 

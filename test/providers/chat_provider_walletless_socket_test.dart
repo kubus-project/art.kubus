@@ -5,10 +5,12 @@ import 'package:art_kubus/services/account_identity.dart';
 import 'package:art_kubus/services/backend_api_service.dart';
 import 'package:art_kubus/services/socket_service.dart';
 import 'package:flutter_test/flutter_test.dart';
+
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../helpers/recording_socket.dart';
 import '../helpers/secure_storage_absent.dart';
+import '../support/signed_in_profile.dart';
 
 const _accountA = '11111111-1111-4111-8111-111111111111';
 const _accountB = '22222222-2222-4222-8222-222222222222';
@@ -134,7 +136,8 @@ void main() {
 
   test('a walletless session reading a message marks it read for itself', () {
     BackendApiService().setAuthTokenForTesting(_walletlessToken(_accountA));
-    final provider = ChatProvider();
+    final provider = ChatProvider()
+      ..setIdentityOwnerForTesting(signedInProfile(accountId: _accountA));
     provider.setCurrentWalletForTesting(null);
     provider.handleIncomingMessageForTesting(
       _liveMessage('m5', 'convA', recipientUserId: _accountA),

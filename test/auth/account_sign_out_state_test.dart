@@ -149,12 +149,6 @@ void main() {
         () async {
       final wallet = _Wallet();
       wallet.setCurrentWalletAddressForTesting('WalletAddr111');
-      wallet.seedAccountSessionForTesting(
-        email: 'person@example.com',
-        backendProfile: <String, dynamic>{'id': 'user-person'},
-        collectionsCount: 4,
-        achievementsUnlocked: 7,
-      );
 
       await SettingsService.logout(
         walletProvider: wallet,
@@ -169,7 +163,6 @@ void main() {
       expect(prefs.getString('wallet_address'), 'WalletAddr111');
       expect(prefs.getBool('has_wallet'), isTrue);
       expect(secureValues['cached_mnemonic'], 'alpha beta gamma');
-      expect(wallet.accountSignedIn, isFalse);
       expect(wallet.currentWalletAddress, 'WalletAddr111');
     });
 

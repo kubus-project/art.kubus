@@ -10,6 +10,9 @@ import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../support/account_session_fixture.dart';
+import '../support/signed_in_profile.dart';
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
@@ -245,7 +248,7 @@ void main() {
     test(
         'a walletless echo from another account never matches my optimistic send',
         () {
-      AccountIdentity.setAccountKey(aliceId);
+      addTearDown(AccountSessionFixture.end);
       final createdAt = DateTime.now();
       // The optimistic send of a walletless session carries no wallet and no
       // sender user id, exactly as ChatProvider.sendMessage builds it.
@@ -266,7 +269,8 @@ void main() {
             message: 'same text',
             createdAt: createdAt,
           );
-      final provider = ChatProvider();
+      final provider = ChatProvider()
+        ..setIdentityOwnerForTesting(signedInProfile(accountId: aliceId));
 
       expect(
         provider.matchesOptimisticMessageForTesting(

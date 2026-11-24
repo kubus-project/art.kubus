@@ -40,7 +40,6 @@ import '../../features/map/shared/map_screen_shared_helpers.dart';
 import '../../utils/artwork_location_actions.dart';
 import '../../utils/artwork_edit_navigation.dart';
 import '../../utils/wallet_action_guard.dart';
-import '../../utils/wallet_utils.dart';
 import '../../widgets/collaboration_panel.dart';
 import '../../config/config.dart';
 import '../../services/share/share_service.dart';
@@ -237,30 +236,20 @@ class _ArtDetailScreenState extends State<ArtDetailScreen> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    return Consumer4<ArtworkProvider, ProfileProvider, SavedItemsProvider,
-        WalletProvider>(
+    return Consumer3<ArtworkProvider, ProfileProvider, SavedItemsProvider>(
       builder: (
         context,
         artworkProvider,
         profileProvider,
         savedItemsProvider,
-        walletProvider,
         child,
       ) {
         final artwork = artworkProvider.getArtworkById(widget.artworkId);
         final isSignedIn = profileProvider.isSignedIn;
-        final viewerWallet = WalletUtils.coalesce(
-          walletAddress: profileProvider.currentUser?.walletAddress,
-          wallet: walletProvider.currentWalletAddress,
-          userId: profileProvider.currentUser?.id,
-        );
-        final artworkOwnerWallet = WalletUtils.canonical(
-          artwork?.walletAddress,
-        );
-        final isOwner = viewerWallet.isNotEmpty &&
-            artworkOwnerWallet.isNotEmpty &&
-            WalletUtils.equals(viewerWallet, artworkOwnerWallet);
-        final canManage = isSignedIn && isOwner;
+        // Owning an artwork is an account fact: nobody owns it without a session.
+        final isOwner =
+            profileProvider.isCurrentAccount(artwork?.walletAddress);
+        final canManage = isOwner;
 
         if (_artworkLoading) {
           return _holdEntryUrl(
@@ -1357,8 +1346,7 @@ class _ArtDetailScreenState extends State<ArtDetailScreen> {
 
     final isMarkerOwner = KubusMarkerOverlayHelpers.markerOwnedByCurrentUser(
       marker: marker,
-      walletAddress: context.read<WalletProvider>().currentWalletAddress,
-      currentUserId: context.read<ProfileProvider>().currentUser?.id,
+      profile: context.read<ProfileProvider>(),
     );
 
     await StreetArtClaimsDialog.show(
@@ -1924,18 +1912,8 @@ class _ArtDetailScreenState extends State<ArtDetailScreen> {
   }) {
     final l10n = AppLocalizations.of(context)!;
     final scheme = Theme.of(context).colorScheme;
-    final currentUser = context.read<ProfileProvider>().currentUser;
-    final walletProvider = context.read<WalletProvider>();
-    final currentWallet = WalletUtils.canonical(
-      (currentUser?.walletAddress ?? walletProvider.currentWalletAddress ?? '')
-          .toString(),
-    );
-    final currentId = WalletUtils.canonical((currentUser?.id ?? '').toString());
-    final authorKey = WalletUtils.canonical(comment.userId);
-
-    final canModify = authorKey.isNotEmpty &&
-        (authorKey == currentWallet ||
-            (currentId.isNotEmpty && authorKey == currentId));
+    final canModify =
+        context.read<ProfileProvider>().isCurrentAccount(comment.userId);
 
     final isReply = depth > 0;
 

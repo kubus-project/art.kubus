@@ -57,7 +57,6 @@ import '../../../utils/search_suggestions.dart';
 import '../../../utils/user_profile_navigation.dart';
 import '../../../utils/profile_identity_navigation.dart';
 import '../../../utils/wallet_utils.dart';
-import '../../../services/account_identity.dart';
 import '../../../utils/community_subject_navigation.dart';
 import '../../../widgets/glass_components.dart';
 import '../../../widgets/community/community_composer_controls.dart';
