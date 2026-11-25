@@ -1893,6 +1893,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
   double get _effectiveZoom => _cameraZoom;
 
   void _handleMapReady() {
+    if (!mounted) return;
     setState(() => _mapReady = true);
     _mapTargetCoordinator.setMapControllerReady(true);
     _mapTargetCoordinator.setStyleReady(_styleInitialized);
@@ -3588,7 +3589,6 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     );
     final distanceLabel = _formatDistanceToArtwork(artwork);
     final categoryLabel = artwork.category.trim();
-    final artistLabel = artwork.artist.trim();
     final isSaved = savedItemsProvider.isArtworkSaved(artwork.id);
     final arBadge = artwork.arEnabled
         ? Container(
@@ -3644,10 +3644,6 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
               DetailIdentityBlock(
                 title: artwork.title,
                 kicker: l10n.commonArtwork,
-                subtitle:
-                    (artistLabel.isNotEmpty && artistLabel != artwork.title)
-                        ? artistLabel
-                        : null,
               ),
               const SizedBox(height: KubusSpacing.xs),
               ArtworkCreatorByline(
