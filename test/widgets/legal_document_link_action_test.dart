@@ -83,6 +83,35 @@ void main() {
     });
   }
 
+  group('takedown section link', () {
+    test('points at the notice-and-takedown anchor of the Terms page', () {
+      expect(LegalLinks.of(LegalDocument.takedownNotice, 'en').toString(),
+          'https://art.kubus.site/terms-of-use.html#notice-and-takedown');
+      expect(LegalLinks.of(LegalDocument.takedownNotice, 'sl').toString(),
+          'https://art.kubus.site/terms-of-use.html#obvestilo-in-odstranitev');
+    });
+
+    for (final (locale, label, anchor) in const [
+      (Locale('en'), 'How notice and takedown works', '#notice-and-takedown'),
+      (
+        Locale('sl'),
+        'Kako deluje obvestilo in odstranitev',
+        '#obvestilo-in-odstranitev'
+      ),
+    ]) {
+      testWidgets('${locale.languageCode}: opens the takedown section',
+          (tester) async {
+        final launcher = _FakeUrlLauncherPlatform();
+        UrlLauncherPlatform.instance = launcher;
+        await tester.pumpWidget(_host(locale, LegalDocument.takedownNotice));
+        await tester.tap(find.text(label));
+        await tester.pumpAndSettle();
+        expect(launcher.launchedUrls,
+            <String>['https://art.kubus.site/terms-of-use.html$anchor']);
+      });
+    }
+  });
+
   testWidgets('a refused launch tells the user and names the URL',
       (tester) async {
     UrlLauncherPlatform.instance = _FakeUrlLauncherPlatform(result: false);

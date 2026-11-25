@@ -3250,20 +3250,23 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get settingsTermsDialogBody =>
-      'By using art.kubus, you agree to these terms:\n\n1. art.kubus is an open art platform and research-development prototype.\n2. You are responsible for protecting any wallet, recovery phrase, and recovery passwords you choose to use.\n3. Wallet-based actions can be final and irreversible.\n4. Discovery, community participation, and public cultural access should be used responsibly.\n5. We may update these terms over time.\n\nFor the complete terms, visit our website.';
+      'By using art.kubus, you agree to these terms:\n\n1. art.kubus is an open art platform and research-development prototype.\n2. You are responsible for protecting any wallet, recovery phrase, and recovery passwords you choose to use.\n3. Wallet-based actions can be final and irreversible.\n4. Discovery, community participation, and public cultural access should be used responsibly.\n5. If you hold rights in something shown here, or you appear in it, you can ask us to remove it: write to support@kubus.site (any content, no account needed) or use the report control on a post or profile. It costs nothing and needs no legal action. A person reads each notice, we may hide the content while we review it, and we tell you what we decided.\n6. We may update these terms over time.\n\nFor the complete terms, visit our website.';
 
   @override
   String get settingsPrivacyPolicyDialogTitle => 'Privacy policy';
 
   @override
   String get settingsPrivacyPolicyDialogBody =>
-      'Your privacy matters to us:\n\n• We only collect personal data when it is needed and you have consented\n• Your wallet keys and recovery phrase stay under your control\n• We may collect anonymous usage statistics to improve the app\n• We do not share your data with third parties\n• You can disable analytics in Privacy settings\n\nFor our complete privacy policy, visit our website.';
+      'Your privacy matters to us:\n\n• We only collect personal data when it is needed, with your consent or on another legal basis set out in the full policy\n• Your wallet keys and recovery phrase stay under your control\n• We may collect anonymous usage statistics to improve the app\n• We do not sell your data. We share it only with service providers that process it for us and with authorities where the law requires it\n• You can disable analytics in Privacy settings\n• A takedown notice holds your name, contact details and explanation. Moderators and support staff read it. The providers that run our email and servers process it on our behalf. The person concerned sees our decision and reasons, not who you are or what you wrote, unless disclosure is necessary to deal with a counter-notice or the law requires it. We keep it as long as needed to handle it, any appeal and any later claim about the same content; no fixed period is set yet\n\nFor our complete privacy policy, visit our website.';
 
   @override
   String get settingsLegalOpenFullTerms => 'Read full terms';
 
   @override
   String get settingsLegalOpenFullPrivacy => 'Read full privacy policy';
+
+  @override
+  String get settingsLegalOpenTakedown => 'How notice and takedown works';
 
   @override
   String settingsLegalOpenFailed(String url) {
@@ -17975,6 +17978,14 @@ class AppLocalizationsEn extends AppLocalizations {
       'Open My requests and select a request to read replies and respond.';
 
   @override
+  String get supportFaqQuestion6 =>
+      'I hold rights in something shown here. How do I ask for its removal?';
+
+  @override
+  String get supportFaqAnswer6 =>
+      'Write to support@kubus.site, or use the report control on a post or profile and choose Copyright or other rights. Say what the work is, what right you hold and where it appears. It costs nothing and needs no legal action. The Terms of service describe what happens next.';
+
+  @override
   String get supportFormSubjectLabel => 'Subject';
 
   @override
@@ -18769,6 +18780,10 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get reportContentContactInvalid => 'Enter a valid email address.';
+
+  @override
+  String get reportContentRightsNote =>
+      'A person on our team reads this report. If it looks well founded we may hide the content while we review it, and we tell you what we decided. It costs nothing and needs no legal action. You can also write to support@kubus.site.';
 
   @override
   String get reportContentAccountNote =>

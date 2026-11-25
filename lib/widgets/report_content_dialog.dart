@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import '../services/content_report_service.dart';
 import '../utils/design_tokens.dart';
 import 'glass_components.dart';
+import 'legal_document_link_action.dart';
 
 /// Localized label for a report category.
 String reportCategoryLabel(AppLocalizations l10n, ReportCategory category) {
@@ -159,6 +160,17 @@ class _ReportContentDialogState extends State<_ReportContentDialog> {
               errorText: emailInvalid ? l10n.reportContentContactInvalid : null,
             ),
           ),
+          if (category?.isRightsOrLegal ?? false) ...[
+            const SizedBox(height: KubusSpacing.sm),
+            Text(l10n.reportContentRightsNote,
+                key: const ValueKey<String>('report-rights-note'),
+                style: Theme.of(context).textTheme.bodySmall),
+            const Align(
+              alignment: AlignmentDirectional.centerStart,
+              child: LegalDocumentLinkAction(
+                  document: LegalDocument.takedownNotice),
+            ),
+          ],
           const SizedBox(height: KubusSpacing.sm),
           Text(l10n.reportContentAccountNote,
               style: Theme.of(context).textTheme.bodySmall),

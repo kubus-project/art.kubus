@@ -1,5 +1,6 @@
 import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:art_kubus/services/content_report_service.dart';
+import 'package:art_kubus/widgets/legal_document_link_action.dart';
 import 'package:art_kubus/widgets/report_content_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -132,6 +133,48 @@ void main() {
     await tester.pumpAndSettle();
     expect(_closed, isTrue);
     expect(_result, isNull);
+  });
+
+  testWidgets('rights-type categories explain how the notice is handled',
+      (tester) async {
+    await _open(tester);
+    final note = find.byKey(const ValueKey<String>('report-rights-note'));
+    expect(note, findsNothing);
+    await _pick(tester, ReportCategory.spam);
+    expect(note, findsNothing);
+    for (final category in [
+      ReportCategory.copyright,
+      ReportCategory.illegalContent,
+      ReportCategory.privacy,
+    ]) {
+      await _pick(tester, category);
+      expect(note, findsOneWidget, reason: category.wire);
+    }
+    final text = tester.widget<Text>(note).data!;
+    expect(text, contains('support@kubus.site'));
+    expect(text, contains('no legal action'));
+    await _pick(tester, ReportCategory.harassment);
+    expect(note, findsNothing);
+  });
+
+  testWidgets('the rights note is shown in Slovenian', (tester) async {
+    await _open(tester, locale: const Locale('sl'));
+    await _pick(tester, ReportCategory.copyright);
+    final note = find.byKey(const ValueKey<String>('report-rights-note'));
+    expect(note, findsOneWidget);
+    expect(tester.widget<Text>(note).data, contains('brezplačna'));
+  });
+
+  testWidgets('the rights note links to the takedown section of the Terms',
+      (tester) async {
+    await _open(tester);
+    expect(find.byType(LegalDocumentLinkAction), findsNothing);
+    await _pick(tester, ReportCategory.copyright);
+    final link = tester
+        .widget<LegalDocumentLinkAction>(find.byType(LegalDocumentLinkAction));
+    expect(link.document, LegalDocument.takedownNotice);
+    await _pick(tester, ReportCategory.spam);
+    expect(find.byType(LegalDocumentLinkAction), findsNothing);
   });
 
   testWidgets('Slovenian shows every label in Slovenian', (tester) async {

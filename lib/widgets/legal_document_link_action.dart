@@ -5,8 +5,10 @@ import '../l10n/app_localizations.dart';
 import 'kubus_snackbar.dart';
 
 /// The canonical published legal documents. Each page carries the English and
-/// Slovenian text, so both locales link to the same URL.
-enum LegalDocument { termsOfUse, privacyPolicy }
+/// Slovenian text, so both locales link to the same URL. `takedownNotice` is
+/// the notice-and-takedown section of the Terms; the page carries one anchor
+/// per language.
+enum LegalDocument { termsOfUse, privacyPolicy, takedownNotice }
 
 abstract final class LegalLinks {
   static final Uri termsOfUse =
@@ -14,9 +16,14 @@ abstract final class LegalLinks {
   static final Uri privacyPolicy =
       Uri.parse('https://art.kubus.site/privacy-policy.html');
 
-  static Uri of(LegalDocument document) => switch (document) {
+  static Uri of(LegalDocument document, [String languageCode = 'en']) =>
+      switch (document) {
         LegalDocument.termsOfUse => termsOfUse,
         LegalDocument.privacyPolicy => privacyPolicy,
+        LegalDocument.takedownNotice => termsOfUse.replace(
+            fragment: languageCode == 'sl'
+                ? 'obvestilo-in-odstranitev'
+                : 'notice-and-takedown'),
       };
 }
 
@@ -32,6 +39,7 @@ class LegalDocumentLinkAction extends StatelessWidget {
     final label = switch (document) {
       LegalDocument.termsOfUse => l10n.settingsLegalOpenFullTerms,
       LegalDocument.privacyPolicy => l10n.settingsLegalOpenFullPrivacy,
+      LegalDocument.takedownNotice => l10n.settingsLegalOpenTakedown,
     };
     return TextButton.icon(
       onPressed: () => _open(context),
@@ -41,7 +49,8 @@ class LegalDocumentLinkAction extends StatelessWidget {
   }
 
   Future<void> _open(BuildContext context) async {
-    final uri = LegalLinks.of(document);
+    final uri =
+        LegalLinks.of(document, Localizations.localeOf(context).languageCode);
     final messenger = ScaffoldMessenger.maybeOf(context);
     final failure =
         AppLocalizations.of(context)!.settingsLegalOpenFailed(uri.toString());
