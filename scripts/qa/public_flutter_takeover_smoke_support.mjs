@@ -7,6 +7,22 @@ export function parseTakeoverEventDetail(detail) {
   }
 }
 
+export const productionGuestRestoreUrl =
+  'https://api.kubus.site/api/auth/browser-session/restore';
+
+export function isExpectedGuestRestore({ url, status, method, errorCode }) {
+  return url === productionGuestRestoreUrl
+    && method === 'POST'
+    && status === 401
+    && errorCode === 'BROWSER_SESSION_INVALID';
+}
+
+export function isGuestRestoreConsoleError({ text, url }, expectedRestoreCount) {
+  return expectedRestoreCount > 0
+    && url === productionGuestRestoreUrl
+    && /^Failed to load resource: the server responded with a status of 401 \([^)]*\)$/.test(text);
+}
+
 export function classifyBrowserFailures({
   consoleErrors,
   failedRequests,

@@ -1,7 +1,10 @@
 import { chromium, firefox, request } from 'playwright';
 import {
   classifyBrowserFailures,
+  isExpectedGuestRestore,
+  isGuestRestoreConsoleError,
   parseTakeoverEventDetail,
+  productionGuestRestoreUrl,
 } from './public_flutter_takeover_smoke_support.mjs';
 
 // Optional SSH SOCKS egress (see open_smoke_ssh_egress.sh): when set, both the
@@ -229,8 +232,20 @@ async function verifyBrowser(
   }
   const consoleErrors = [];
   const httpFailures = [];
+  const guestRestoreChecks = [];
   page.on('response', (response) => {
     if (response.status() < 400) return;
+    if (response.url() === productionGuestRestoreUrl) {
+      guestRestoreChecks.push((async () => {
+        const body = response.status() === 401 ? await response.json().catch(() => null) : null;
+        return isExpectedGuestRestore({
+          url: response.url(),
+          status: response.status(),
+          method: response.request().method(),
+          errorCode: body?.errorCode,
+        });
+      })());
+    }
     const url = new URL(response.url());
     httpFailures.push({ status: response.status(), url: url.origin + url.pathname });
   });
@@ -243,7 +258,7 @@ async function verifyBrowser(
       externalBeaconCspErrors.push(text);
       return;
     }
-    consoleErrors.push(text);
+    consoleErrors.push({ text, url: message.location().url });
   });
   page.on('requestfailed', (request) => {
     if (!isExternalBeaconCspFailure(request)) {
@@ -307,8 +322,16 @@ async function verifyBrowser(
     ensure(readyDetail?.path === new URL(canonicalUrl).pathname, `${browserLabel} entity-ready path did not match requested URL`);
     ensure(parsedDetail?.type === readyDetail?.type, `${browserLabel} route-parsed type did not match entity-ready type`);
     ensure(page.url() === canonicalUrl, `${browserLabel} changed URL during takeover`);
+    const guestRestores = await Promise.all(guestRestoreChecks);
+    ensure(guestRestores.every(Boolean),
+      `${browserLabel} unexpected browser-session restore response: ${JSON.stringify(httpFailures)}`);
+    let guestRestoreConsoleBudget = guestRestores.length;
     const failures = classifyBrowserFailures({
-      consoleErrors,
+      consoleErrors: consoleErrors.filter((entry) => {
+        if (!isGuestRestoreConsoleError(entry, guestRestoreConsoleBudget)) return true;
+        guestRestoreConsoleBudget -= 1;
+        return false;
+      }).map(({ text }) => text),
       failedRequests,
       optionalStandbyProbeUrl,
     });

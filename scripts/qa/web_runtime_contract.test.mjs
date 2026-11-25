@@ -7,7 +7,10 @@ import { fileURLToPath } from 'node:url';
 import { buildStableApiStub } from './web_runtime_contract.mjs';
 import {
   classifyBrowserFailures,
+  isExpectedGuestRestore,
+  isGuestRestoreConsoleError,
   parseTakeoverEventDetail,
+  productionGuestRestoreUrl,
 } from './public_flutter_takeover_smoke_support.mjs';
 import { resolveBuildMetadata } from '../../scripts/resolve_ci_build_metadata.mjs';
 
@@ -27,6 +30,32 @@ test('takeover smoke parses the serialized Flutter event contract', () => {
     { type: 'artwork', id: 'art-1', path: '/en/artworks/art-1' },
   );
   assert.equal(parseTakeoverEventDetail('{invalid'), null);
+});
+
+test('takeover smoke accepts only the verified guest restore failure', () => {
+  const restore = {
+    url: productionGuestRestoreUrl,
+    method: 'POST',
+    status: 401,
+    errorCode: 'BROWSER_SESSION_INVALID',
+  };
+  assert.equal(isExpectedGuestRestore(restore), true);
+  assert.equal(isExpectedGuestRestore({ ...restore, status: 404 }), false);
+  assert.equal(isExpectedGuestRestore({ ...restore, status: 503 }), false);
+  assert.equal(isExpectedGuestRestore({ ...restore, errorCode: 'OTHER' }), false);
+  assert.equal(isExpectedGuestRestore({ ...restore, method: 'GET' }), false);
+
+  const consoleError = {
+    url: productionGuestRestoreUrl,
+    text: 'Failed to load resource: the server responded with a status of 401 ()',
+  };
+  assert.equal(isGuestRestoreConsoleError(consoleError, 1), true);
+  assert.equal(isGuestRestoreConsoleError(consoleError, 0), false);
+  assert.equal(isGuestRestoreConsoleError({
+    ...consoleError,
+    url: 'https://api.kubus.site/api/artworks',
+  }, 1), false);
+  assert.equal(isGuestRestoreConsoleError({ ...consoleError, text: 'Application error' }, 1), false);
 });
 
 test('takeover smoke separates an explicitly configured standby probe failure', () => {
