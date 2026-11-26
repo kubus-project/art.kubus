@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:typed_data';
 import 'dart:js_interop';
 import 'dart:ui_web' as ui_web;
 
@@ -49,11 +50,13 @@ Widget buildSpatialViewer({
   required KubusNodeService nodeService,
   String? posterUrl,
   VoidCallback? onEscape,
+  Future<Uint8List> Function()? privateBytes,
 }) =>
     WebSpatialViewer(
       content: content,
       posterUrl: posterUrl,
       onEscape: onEscape,
+      privateBytes: privateBytes,
     );
 
 class WebSpatialViewer extends StatefulWidget {
@@ -61,6 +64,7 @@ class WebSpatialViewer extends StatefulWidget {
     required this.content,
     this.posterUrl,
     this.onEscape,
+    this.privateBytes,
     super.key,
   });
 
@@ -69,6 +73,7 @@ class WebSpatialViewer extends StatefulWidget {
 
   /// Relayed Escape; see [SpatialViewer.onEscape].
   final VoidCallback? onEscape;
+  final Future<Uint8List> Function()? privateBytes;
 
   @override
   State<WebSpatialViewer> createState() => _WebSpatialViewerState();
@@ -215,7 +220,11 @@ class _WebSpatialViewerState extends State<WebSpatialViewer> {
         queryParameters: <String, String>{
           'a': '${_session.attempt}'
         }).toString();
-    _timeout = Timer(_session.timeout, _fail);
+    _timeout = Timer(
+        widget.privateBytes == null
+            ? _session.timeout
+            : const Duration(minutes: 2),
+        _fail);
   }
 
   /// The current tier failed: try the next default tier, else show the failure.
@@ -278,7 +287,7 @@ class _WebSpatialViewerState extends State<WebSpatialViewer> {
     if (variant == null || !_session.takeLoadCommand()) return;
     final attempt = _session.attempt;
     final plan = SpatialWebDelivery.plan(widget.content, variant);
-    if (plan.urls.isEmpty) {
+    if (plan.urls.isEmpty && widget.privateBytes == null) {
       _fail();
       return;
     }
@@ -288,7 +297,9 @@ class _WebSpatialViewerState extends State<WebSpatialViewer> {
     // transform simply opens untransformed.
     final download = web.AbortController();
     _download = download;
-    final bytes = _downloadAsObjectUrl(plan.urls, download);
+    final bytes = widget.privateBytes == null
+        ? _downloadAsObjectUrl(plan.urls, download)
+        : _privateObjectUrl(widget.privateBytes!, download);
     // The manifest read is anonymous in the same way as the bytes (no cookies,
     // no Authorization, no Referer) and is aborted with them.
     final manifest = web.AbortController();
@@ -296,10 +307,12 @@ class _WebSpatialViewerState extends State<WebSpatialViewer> {
     final manifestClient = AnonymousFetchClient(abort: manifest);
     final Map<String, dynamic>? transform;
     try {
-      transform = await SpatialWebDelivery.fetchTransform(
-        plan.manifestUrl,
-        client: manifestClient,
-      );
+      transform = widget.privateBytes != null
+          ? widget.content.transform
+          : await SpatialWebDelivery.fetchTransform(
+              plan.manifestUrl,
+              client: manifestClient,
+            );
     } finally {
       manifestClient.close();
     }
@@ -363,6 +376,19 @@ class _WebSpatialViewerState extends State<WebSpatialViewer> {
       }
     }
     return null;
+  }
+
+  Future<String?> _privateObjectUrl(
+    Future<Uint8List> Function() load,
+    web.AbortController download,
+  ) async {
+    try {
+      final bytes = await load();
+      if (download.signal.aborted) return null;
+      return web.URL.createObjectURL(web.Blob([bytes.toJS].toJS));
+    } catch (_) {
+      return null;
+    }
   }
 
   void _revokeObjectUrl() {

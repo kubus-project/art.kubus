@@ -13,6 +13,8 @@ import '../../services/spatial_upload_source.dart';
 import '../../utils/design_tokens.dart';
 import '../../widgets/detail/detail_shell_components.dart';
 import '../../widgets/inline_loading.dart';
+import '../settings/availability_node_operator_screen.dart';
+import 'artwork_spatial_review_screen.dart';
 
 class ArtworkSpatialUploadScreen extends StatefulWidget {
   const ArtworkSpatialUploadScreen({
@@ -20,6 +22,8 @@ class ArtworkSpatialUploadScreen extends StatefulWidget {
     this.pickFile = pickSpatialUploadFile,
     super.key,
   });
+
+  static const pilotArtworkId = '53b99c8b-8503-545c-8a13-55f60cfb8342';
 
   final String artworkId;
   @visibleForTesting
@@ -337,6 +341,22 @@ class _ArtworkSpatialUploadScreenState
                               onPressed: busy ? null : _load,
                               child: Text(l10n.commonRetry),
                             ),
+                          if (draft?.ready == true)
+                            FilledButton(
+                              onPressed: busy
+                                  ? null
+                                  : () async {
+                                      await Navigator.of(context).push(
+                                        MaterialPageRoute<void>(
+                                          builder: (_) =>
+                                              ArtworkSpatialReviewScreen(
+                                                  draft: draft!),
+                                        ),
+                                      );
+                                      if (_currentSession) await _load();
+                                    },
+                              child: Text(l10n.spatialReviewTitle),
+                            ),
                           if (draft != null)
                             TextButton(
                               onPressed: busy ? null : _remove,
@@ -345,6 +365,18 @@ class _ArtworkSpatialUploadScreenState
                         ],
                       ),
                     ],
+                  ),
+                ),
+                const SizedBox(height: KubusSpacing.md),
+                Text(l10n.spatialPilotNodeExplanation),
+                Align(
+                  alignment: AlignmentDirectional.centerStart,
+                  child: TextButton(
+                    onPressed: () =>
+                        Navigator.of(context).push(MaterialPageRoute<void>(
+                      builder: (_) => const AvailabilityNodeOperatorScreen(),
+                    )),
+                    child: Text(l10n.availabilityNodeTitle),
                   ),
                 ),
               ],

@@ -984,7 +984,8 @@ class _ArtworkEditScreenState extends State<ArtworkEditScreen> {
         : ListView(
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
             children: [
-              if (kIsWeb) ...[
+              if (kIsWeb &&
+                  art.id == ArtworkSpatialUploadScreen.pilotArtworkId) ...[
                 DetailCard(
                   child: ListTile(
                     leading: const Icon(Icons.view_in_ar_outlined),

@@ -262,7 +262,9 @@ class _ArtworkSpatialArchiveSectionState
               const SizedBox(height: KubusSpacing.sm),
             ],
           ],
-          if (_canUpload) ...<Widget>[
+          if (_canUpload &&
+              widget.artwork.id ==
+                  ArtworkSpatialUploadScreen.pilotArtworkId) ...<Widget>[
             const SizedBox(height: KubusSpacing.md),
             KubusButton(
               onPressed: () => Navigator.of(context).push(

@@ -128,6 +128,59 @@ extension BackendApiServiceSpatialTransport on BackendApiService {
     return updated;
   }
 
+  Uri _spatialDraftAction(SpatialUploadDraft draft, String action) =>
+      _spatialDraftUri(
+          draft.artworkId, '/${Uri.encodeComponent(draft.id)}/$action');
+
+  Future<Map<String, dynamic>> getSpatialDraftReview(
+      SpatialUploadDraft draft) async {
+    final uri = _spatialDraftAction(draft, 'submission');
+    return _spatialReviewResponse(await _get(uri), uri);
+  }
+
+  Future<void> submitSpatialDraft(
+      SpatialUploadDraft draft, Map<String, dynamic> input) async {
+    final uri = _spatialDraftAction(draft, 'submission');
+    final response = await _post(uri,
+        body: jsonEncode(input), allowImplicitBackendFailover: false);
+    _spatialReviewResponse(response, uri);
+  }
+
+  Map<String, dynamic> _spatialReviewResponse(http.Response response, Uri uri) {
+    if (!_isSuccessStatus(response.statusCode)) {
+      throw BackendApiRequestException(
+          statusCode: response.statusCode, path: uri.path, body: response.body);
+    }
+    return (jsonDecode(response.body) as Map<String, dynamic>)['data']
+        as Map<String, dynamic>;
+  }
+
+  Future<void> retireSpatialDraft(
+      SpatialUploadDraft draft, String submissionId, int revision) async {
+    final uri = _spatialDraftAction(draft, 'retire');
+    final response = await _post(uri,
+        body: jsonEncode({
+          'expectedSubmissionId': submissionId,
+          'expectedRevision': revision,
+        }),
+        allowImplicitBackendFailover: false);
+    if (!_isSuccessStatus(response.statusCode)) {
+      throw BackendApiRequestException(
+          statusCode: response.statusCode, path: uri.path, body: response.body);
+    }
+  }
+
+  Future<Uint8List> getSpatialDraftPreview(SpatialUploadDraft draft) async {
+    final uri = _spatialDraftAction(draft, 'preview');
+    final response = await _get(uri, timeout: const Duration(minutes: 2));
+    if (!_isSuccessStatus(response.statusCode) ||
+        response.bodyBytes.length != draft.sizeBytes) {
+      throw BackendApiRequestException(
+          statusCode: response.statusCode, path: uri.path, body: '');
+    }
+    return response.bodyBytes;
+  }
+
   Future<void> deleteSpatialUploadDraft(SpatialUploadDraft draft) async {
     final uri =
         _spatialDraftUri(draft.artworkId, '/${Uri.encodeComponent(draft.id)}');

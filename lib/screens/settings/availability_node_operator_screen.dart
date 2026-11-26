@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../../widgets/inline_loading.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../providers/availability_operator_provider.dart';
 import '../../providers/kubus_node_provider.dart';
@@ -261,7 +262,7 @@ class _AvailabilityNodeOperatorBodyState
           vertical: KubusSpacing.lg,
         ),
         children: [
-          const _InfoPanel(),
+          _InfoPanel(onPair: () => setState(() => _section = 5)),
           const SizedBox(height: KubusSpacing.lg),
           _LocalNodePanel(provider: localNode),
           const SizedBox(height: KubusSpacing.md),
@@ -417,7 +418,9 @@ class _AvailabilityNodeOperatorBodyState
 }
 
 class _InfoPanel extends StatelessWidget {
-  const _InfoPanel();
+  const _InfoPanel({required this.onPair});
+
+  final VoidCallback onPair;
 
   @override
   Widget build(BuildContext context) {
@@ -432,6 +435,32 @@ class _InfoPanel extends StatelessWidget {
                 style: Theme.of(context).textTheme.headlineMedium),
             const SizedBox(height: KubusSpacing.sm),
             Text(l10n.kubusNodeHeroBody),
+            const SizedBox(height: KubusSpacing.sm),
+            Text(l10n.kubusNodeHardwareGuide),
+            const SizedBox(height: KubusSpacing.sm),
+            Text(l10n.kubusNodeComputeRewardGuide),
+            const SizedBox(height: KubusSpacing.md),
+            Wrap(
+              spacing: KubusSpacing.sm,
+              runSpacing: KubusSpacing.sm,
+              children: [
+                FilledButton(
+                  onPressed: () => launchUrl(
+                      Uri.https('node.kubus.site', '/releases/'),
+                      mode: LaunchMode.externalApplication),
+                  child: Text(l10n.kubusNodeDownloadAction),
+                ),
+                OutlinedButton(
+                  onPressed: () => launchUrl(
+                      Uri.https('node.kubus.site', '/install/'),
+                      mode: LaunchMode.externalApplication),
+                  child: Text(l10n.kubusNodeInstallAction),
+                ),
+                TextButton(
+                    onPressed: onPair,
+                    child: Text(l10n.kubusNodePairGuideAction)),
+              ],
+            ),
             const SizedBox(height: KubusSpacing.md),
             Row(
               children: [
