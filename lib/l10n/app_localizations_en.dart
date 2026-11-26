@@ -19329,16 +19329,19 @@ class AppLocalizationsEn extends AppLocalizations {
   String get spatialDraftUploadTitle => 'Spatial';
 
   @override
-  String get spatialDraftUploadEditorSummary => 'Upload a prepared 3D model as a private draft.';
+  String get spatialDraftUploadEditorSummary =>
+      'Upload a prepared 3D model as a private draft.';
 
   @override
   String get spatialDraftUploadPrivateTitle => 'Private spatial draft';
 
   @override
-  String get spatialDraftUploadIntro => 'Choose a prepared Gaussian splat from your device. The upload stays private. You can pause and resume by choosing the same file.';
+  String get spatialDraftUploadIntro =>
+      'Choose a prepared Gaussian splat from your device. The upload stays private. You can pause and resume by choosing the same file.';
 
   @override
-  String get spatialDraftUploadFormats => 'PLY, SPZ, SPLAT or KSPLAT, up to 512 MiB.';
+  String get spatialDraftUploadFormats =>
+      'PLY, SPZ, SPLAT or KSPLAT, up to 512 MiB.';
 
   @override
   String get spatialDraftUploadLoading => 'Loading the spatial draft…';
@@ -19350,25 +19353,32 @@ class AppLocalizationsEn extends AppLocalizations {
   String get spatialDraftUploadSending => 'Uploading the spatial model…';
 
   @override
-  String get spatialDraftUploadReady => 'Upload complete. This model is saved as a private draft.';
+  String get spatialDraftUploadReady =>
+      'Upload complete. This model is saved as a private draft.';
 
   @override
-  String get spatialDraftUploadIncomplete => 'Upload incomplete. Choose the same file to resume.';
+  String get spatialDraftUploadIncomplete =>
+      'Upload incomplete. Choose the same file to resume.';
 
   @override
-  String get spatialDraftUploadUnavailable => 'Spatial uploads are unavailable on this server.';
+  String get spatialDraftUploadUnavailable =>
+      'Spatial uploads are unavailable on this server.';
 
   @override
-  String get spatialDraftUploadFailed => 'Could not complete the request. Any saved upload progress is kept.';
+  String get spatialDraftUploadFailed =>
+      'Could not complete the request. Any saved upload progress is kept.';
 
   @override
-  String get spatialDraftUploadUnsupported => 'Choose a nonempty PLY, SPZ, SPLAT or KSPLAT file.';
+  String get spatialDraftUploadUnsupported =>
+      'Choose a nonempty PLY, SPZ, SPLAT or KSPLAT file.';
 
   @override
-  String get spatialDraftUploadTooLarge => 'This file exceeds the 512 MiB upload limit.';
+  String get spatialDraftUploadTooLarge =>
+      'This file exceeds the 512 MiB upload limit.';
 
   @override
-  String get spatialDraftUploadDifferentFile => 'Choose the same file to resume this draft, or remove the draft to upload a different file.';
+  String get spatialDraftUploadDifferentFile =>
+      'Choose the same file to resume this draft, or remove the draft to upload a different file.';
 
   @override
   String get spatialDraftUploadPause => 'Pause upload';
@@ -19383,5 +19393,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get spatialDraftUploadRemoveTitle => 'Remove private draft';
 
   @override
-  String get spatialDraftUploadRemoveBody => 'Remove this model and any uploaded parts from the private draft?';
+  String get spatialDraftUploadRemoveBody =>
+      'Remove this model and any uploaded parts from the private draft?';
 }

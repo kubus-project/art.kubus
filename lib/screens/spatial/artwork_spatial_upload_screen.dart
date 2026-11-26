@@ -290,7 +290,6 @@ class _ArtworkSpatialUploadScreenState
                             style: Theme.of(context).textTheme.titleMedium),
                         const SizedBox(height: KubusSpacing.sm),
                         Semantics(
-                          label: status,
                           value: '${(progress! * 100).floor()}%',
                           child: InlineLoading(
                               height: 4, progress: progress, animate: false),
