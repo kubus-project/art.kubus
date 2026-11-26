@@ -3,9 +3,11 @@ import 'dart:typed_data';
 
 import 'package:crypto/crypto.dart' as crypto;
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 import '../../l10n/app_localizations.dart';
 import '../../models/spatial_upload_draft.dart';
+import '../../providers/profile_provider.dart';
 import '../../services/backend_api_service.dart';
 import '../../services/spatial_upload_source.dart';
 import '../../utils/design_tokens.dart';
@@ -45,6 +47,8 @@ class _UploadPaused implements Exception {
 class _ArtworkSpatialUploadScreenState
     extends State<ArtworkSpatialUploadScreen> {
   final _api = BackendApiService();
+  late final int _sessionEpoch;
+  bool get _currentSession => mounted && _api.authSessionEpoch == _sessionEpoch;
   SpatialUploadDraft? _draft;
   _UploadPhase _phase = _UploadPhase.loading;
   _UploadProblem? _problem;
@@ -54,17 +58,19 @@ class _ArtworkSpatialUploadScreenState
   @override
   void initState() {
     super.initState();
+    _sessionEpoch = _api.authSessionEpoch;
     _load();
   }
 
   Future<void> _load() async {
+    if (!_currentSession) return;
     setState(() {
       _phase = _UploadPhase.loading;
       _problem = null;
     });
     try {
       final draft = await _api.getSpatialUploadDraft(widget.artworkId);
-      if (!mounted) return;
+      if (!_currentSession) return;
       if (draft != null && draft.artworkId != widget.artworkId) {
         throw const FormatException('Unexpected spatial draft identity');
       }
@@ -88,7 +94,7 @@ class _ArtworkSpatialUploadScreenState
   }
 
   void _ensureRunning() {
-    if (!mounted || _pauseRequested) throw const _UploadPaused();
+    if (!_currentSession || _pauseRequested) throw const _UploadPaused();
   }
 
   Future<Uint8List> _read(
@@ -114,6 +120,7 @@ class _ArtworkSpatialUploadScreenState
   }
 
   Future<void> _upload() async {
+    if (!_currentSession) return;
     setState(() {
       _problem = null;
       _phase = _UploadPhase.choosing;
@@ -121,7 +128,7 @@ class _ArtworkSpatialUploadScreenState
     });
     try {
       final source = await widget.pickFile();
-      if (source == null || !mounted) return;
+      if (source == null || !_currentSession) return;
       if (source.size == 0 ||
           !SpatialUploadDraft.formats.contains(source.format)) {
         _setProblem(_UploadProblem.unsupported);
@@ -157,7 +164,7 @@ class _ArtworkSpatialUploadScreenState
         sizeBytes: source.size,
         sha256: digest,
       );
-      if (!mounted) return;
+      if (!_currentSession) return;
       if (draft.artworkId != widget.artworkId ||
           draft.sha256 != digest ||
           draft.sizeBytes != source.size) {
@@ -171,7 +178,7 @@ class _ArtworkSpatialUploadScreenState
         final bytes =
             await _read(source, draft.receivedBytes, draft.chunkSizeBytes);
         draft = await _api.uploadSpatialDraftChunk(draft: draft, bytes: bytes);
-        if (!mounted) return;
+        if (!_currentSession) return;
         setState(() => _draft = draft);
       }
       if (!draft.ready) throw const FormatException('Spatial draft not ready');
@@ -186,7 +193,7 @@ class _ArtworkSpatialUploadScreenState
 
   Future<void> _remove() async {
     final draft = _draft;
-    if (draft == null) return;
+    if (draft == null || !_currentSession) return;
     final l10n = AppLocalizations.of(context)!;
     final confirmed = await showDialog<bool>(
       context: context,
@@ -205,11 +212,11 @@ class _ArtworkSpatialUploadScreenState
         ],
       ),
     );
-    if (!mounted || confirmed != true) return;
+    if (!_currentSession || confirmed != true) return;
     setState(() => _phase = _UploadPhase.removing);
     try {
       await _api.deleteSpatialUploadDraft(draft);
-      if (!mounted) return;
+      if (!_currentSession) return;
       setState(() {
         _draft = null;
         _problem = null;
@@ -224,6 +231,13 @@ class _ArtworkSpatialUploadScreenState
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
+    context.watch<ProfileProvider?>();
+    if (!_currentSession) {
+      return Scaffold(
+        appBar: AppBar(title: Text(l10n.spatialDraftUploadTitle)),
+        body: Center(child: Text(l10n.spatialDraftUploadUnavailable)),
+      );
+    }
     final draft = _draft;
     final busy = _phase != _UploadPhase.idle;
     final progress =
