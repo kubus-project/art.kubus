@@ -185,7 +185,7 @@ class _ArtworkSpatialReviewScreenState
     try {
       await _api.retireSpatialDraft(
           _draft, prior['id'] as String, prior['revision'] as int);
-      if (_inSession) Navigator.of(context).pop();
+      if (mounted && _inSession) Navigator.of(context).pop();
     } catch (_) {
       if (_inSession) {
         setState(() {
