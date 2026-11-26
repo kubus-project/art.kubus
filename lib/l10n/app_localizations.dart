@@ -33548,6 +33548,126 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'This artwork is on editorial hold and cannot be published yet.'**
   String get artworkPublishHeldGeneric;
+
+  /// No description provided for @spatialDraftUploadTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Spatial'**
+  String get spatialDraftUploadTitle;
+
+  /// No description provided for @spatialDraftUploadEditorSummary.
+  ///
+  /// In en, this message translates to:
+  /// **'Upload a prepared 3D model as a private draft.'**
+  String get spatialDraftUploadEditorSummary;
+
+  /// No description provided for @spatialDraftUploadPrivateTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Private spatial draft'**
+  String get spatialDraftUploadPrivateTitle;
+
+  /// No description provided for @spatialDraftUploadIntro.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose a prepared Gaussian splat from your device. The upload stays private. You can pause and resume by choosing the same file.'**
+  String get spatialDraftUploadIntro;
+
+  /// No description provided for @spatialDraftUploadFormats.
+  ///
+  /// In en, this message translates to:
+  /// **'PLY, SPZ, SPLAT or KSPLAT, up to 512 MiB.'**
+  String get spatialDraftUploadFormats;
+
+  /// No description provided for @spatialDraftUploadLoading.
+  ///
+  /// In en, this message translates to:
+  /// **'Loading the spatial draft…'**
+  String get spatialDraftUploadLoading;
+
+  /// No description provided for @spatialDraftUploadChecking.
+  ///
+  /// In en, this message translates to:
+  /// **'Checking the file…'**
+  String get spatialDraftUploadChecking;
+
+  /// No description provided for @spatialDraftUploadSending.
+  ///
+  /// In en, this message translates to:
+  /// **'Uploading the spatial model…'**
+  String get spatialDraftUploadSending;
+
+  /// No description provided for @spatialDraftUploadReady.
+  ///
+  /// In en, this message translates to:
+  /// **'Upload complete. This model is saved as a private draft.'**
+  String get spatialDraftUploadReady;
+
+  /// No description provided for @spatialDraftUploadIncomplete.
+  ///
+  /// In en, this message translates to:
+  /// **'Upload incomplete. Choose the same file to resume.'**
+  String get spatialDraftUploadIncomplete;
+
+  /// No description provided for @spatialDraftUploadUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Spatial uploads are unavailable on this server.'**
+  String get spatialDraftUploadUnavailable;
+
+  /// No description provided for @spatialDraftUploadFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not complete the request. Any saved upload progress is kept.'**
+  String get spatialDraftUploadFailed;
+
+  /// No description provided for @spatialDraftUploadUnsupported.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose a nonempty PLY, SPZ, SPLAT or KSPLAT file.'**
+  String get spatialDraftUploadUnsupported;
+
+  /// No description provided for @spatialDraftUploadTooLarge.
+  ///
+  /// In en, this message translates to:
+  /// **'This file exceeds the 512 MiB upload limit.'**
+  String get spatialDraftUploadTooLarge;
+
+  /// No description provided for @spatialDraftUploadDifferentFile.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose the same file to resume this draft, or remove the draft to upload a different file.'**
+  String get spatialDraftUploadDifferentFile;
+
+  /// No description provided for @spatialDraftUploadPause.
+  ///
+  /// In en, this message translates to:
+  /// **'Pause upload'**
+  String get spatialDraftUploadPause;
+
+  /// No description provided for @spatialDraftUploadChoose.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose and upload'**
+  String get spatialDraftUploadChoose;
+
+  /// No description provided for @spatialDraftUploadResume.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose the same file'**
+  String get spatialDraftUploadResume;
+
+  /// No description provided for @spatialDraftUploadRemoveTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove private draft'**
+  String get spatialDraftUploadRemoveTitle;
+
+  /// No description provided for @spatialDraftUploadRemoveBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove this model and any uploaded parts from the private draft?'**
+  String get spatialDraftUploadRemoveBody;
 }
 
 class _AppLocalizationsDelegate

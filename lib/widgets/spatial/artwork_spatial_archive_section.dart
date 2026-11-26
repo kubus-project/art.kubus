@@ -16,8 +16,10 @@ import '../../providers/kubus_node_provider.dart';
 import '../../providers/marker_management_provider.dart';
 import '../../providers/profile_provider.dart';
 import '../../providers/spatial_library_provider.dart';
+import '../../services/backend_api_service.dart';
 import '../../services/spatial_library_store.dart';
 import '../inline_loading.dart';
+import '../../screens/spatial/artwork_spatial_upload_screen.dart';
 import '../../screens/spatial/spatial_capture_launch.dart';
 import '../../screens/spatial/spatial_library_detail_screen.dart';
 import '../../utils/design_tokens.dart';
@@ -59,6 +61,42 @@ class _ArtworkSpatialArchiveSectionState
   /// While the fullscreen dialog is open the inline viewer is unmounted, so a
   /// page never holds two WebGL contexts (and two downloads) for one piece.
   bool _dialogOpen = false;
+  (String, int)? _uploadCheck;
+  bool _canUpload = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (kIsWeb) {
+      _checkUploadAccess(
+          context.watch<ProfileProvider?>()?.isSignedIn ?? false);
+    }
+  }
+
+  void _checkUploadAccess(bool signedIn) {
+    final api = BackendApiService();
+    final check = signedIn ? (widget.artwork.id, api.authSessionEpoch) : null;
+    if (_uploadCheck == check) return;
+    _uploadCheck = check;
+    _canUpload = false;
+    if (check == null) return;
+    unawaited(_loadUploadAccess(api, check));
+  }
+
+  Future<void> _loadUploadAccess(
+    BackendApiService api,
+    (String, int) check,
+  ) async {
+    try {
+      await api.getSpatialUploadDraft(check.$1);
+    } on Exception {
+      return;
+    }
+    if (!mounted || _uploadCheck != check || api.authSessionEpoch != check.$2) {
+      return;
+    }
+    setState(() => _canUpload = true);
+  }
 
   @override
   void initState() {
@@ -78,6 +116,9 @@ class _ArtworkSpatialArchiveSectionState
   void didUpdateWidget(covariant ArtworkSpatialArchiveSection oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.artwork.id == widget.artwork.id) return;
+    if (kIsWeb) {
+      _checkUploadAccess(context.read<ProfileProvider?>()?.isSignedIn ?? false);
+    }
     unawaited(
       context
           .read<ArtworkProvider>()
@@ -111,26 +152,30 @@ class _ArtworkSpatialArchiveSectionState
         knownCount == 0 &&
         drafts.isEmpty &&
         !canCapture &&
+        !_canUpload &&
         history == null) {
       return const SizedBox.shrink();
     }
 
-    if (!hasPublic && knownCount > 0 && error != null && drafts.isEmpty) {
-      return KubusReadingSurface(
-        child: Row(
-          children: <Widget>[
-            const Icon(Icons.view_in_ar_outlined),
-            const SizedBox(width: KubusSpacing.sm),
-            Expanded(child: Text(l10n.spatialViewerUnavailable)),
-            TextButton(
-              onPressed: () => unawaited(
-                provider.loadSpatialHistory(widget.artwork.id, refresh: true),
+    final showHistoryError =
+        !hasPublic && knownCount > 0 && error != null && drafts.isEmpty;
+    final historyError = showHistoryError
+        ? Row(
+            children: <Widget>[
+              const Icon(Icons.view_in_ar_outlined),
+              const SizedBox(width: KubusSpacing.sm),
+              Expanded(child: Text(l10n.spatialViewerUnavailable)),
+              TextButton(
+                onPressed: () => unawaited(
+                  provider.loadSpatialHistory(widget.artwork.id, refresh: true),
+                ),
+                child: Text(l10n.spatialViewerRetry),
               ),
-              child: Text(l10n.spatialViewerRetry),
-            ),
-          ],
-        ),
-      );
+            ],
+          )
+        : null;
+    if (historyError != null && !_canUpload) {
+      return KubusReadingSurface(child: historyError);
     }
 
     return KubusReadingSurface(
@@ -151,6 +196,7 @@ class _ArtworkSpatialArchiveSectionState
                 Text(l10n.spatialCaptureCount(history.history.length)),
             ],
           ),
+          if (historyError != null) historyError,
           if (!hasPublic && history != null && knownCount == 0) ...<Widget>[
             const SizedBox(height: KubusSpacing.sm),
             Text(
@@ -215,6 +261,21 @@ class _ArtworkSpatialArchiveSectionState
               ),
               const SizedBox(height: KubusSpacing.sm),
             ],
+          ],
+          if (_canUpload) ...<Widget>[
+            const SizedBox(height: KubusSpacing.md),
+            KubusButton(
+              onPressed: () => Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (_) =>
+                      ArtworkSpatialUploadScreen(artworkId: widget.artwork.id),
+                ),
+              ),
+              label: l10n.spatialDraftUploadTitle,
+              icon: Icons.upload_file_outlined,
+              variant: KubusButtonVariant.secondary,
+              isFullWidth: true,
+            ),
           ],
           if (canCapture) ...<Widget>[
             const SizedBox(height: KubusSpacing.md),
