@@ -33627,6 +33627,66 @@ abstract class AppLocalizations {
   /// **'Enter a valid placement matrix.'**
   String get spatialReviewPlacementInvalid;
 
+  /// No description provided for @spatialSourceTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Create from photos or video'**
+  String get spatialSourceTitle;
+
+  /// No description provided for @spatialSourceFormats.
+  ///
+  /// In en, this message translates to:
+  /// **'Upload JPEG or PNG photos, MP4 or MOV clips, or a mix. The total limit is 2 GiB.'**
+  String get spatialSourceFormats;
+
+  /// No description provided for @spatialSourceProviderDisclosure.
+  ///
+  /// In en, this message translates to:
+  /// **'I understand that a selected Kubus Node provider can read the source files while processing them.'**
+  String get spatialSourceProviderDisclosure;
+
+  /// No description provided for @spatialSourceProcessingPaused.
+  ///
+  /// In en, this message translates to:
+  /// **'Remote reconstruction is paused. You can upload and verify your files now.'**
+  String get spatialSourceProcessingPaused;
+
+  /// No description provided for @spatialSourceTooLarge.
+  ///
+  /// In en, this message translates to:
+  /// **'Select up to 256 files totalling 2 GiB.'**
+  String get spatialSourceTooLarge;
+
+  /// No description provided for @spatialSourceChoose.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose files or resume upload'**
+  String get spatialSourceChoose;
+
+  /// No description provided for @spatialSourceVerified.
+  ///
+  /// In en, this message translates to:
+  /// **'Verified'**
+  String get spatialSourceVerified;
+
+  /// No description provided for @spatialSourceDelete.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete source files now'**
+  String get spatialSourceDelete;
+
+  /// No description provided for @spatialSourceDeleteFile.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete this source file'**
+  String get spatialSourceDeleteFile;
+
+  /// No description provided for @spatialSourceDeleteConfirmation.
+  ///
+  /// In en, this message translates to:
+  /// **'All photos and clips in this private workspace will be deleted.'**
+  String get spatialSourceDeleteConfirmation;
+
   /// No description provided for @spatialReviewTitle.
   ///
   /// In en, this message translates to:

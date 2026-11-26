@@ -15,6 +15,7 @@ import '../../widgets/detail/detail_shell_components.dart';
 import '../../widgets/inline_loading.dart';
 import '../settings/availability_node_operator_screen.dart';
 import 'artwork_spatial_review_screen.dart';
+import 'artwork_spatial_source_screen.dart';
 
 class ArtworkSpatialUploadScreen extends StatefulWidget {
   const ArtworkSpatialUploadScreen({
@@ -58,12 +59,25 @@ class _ArtworkSpatialUploadScreenState
   _UploadProblem? _problem;
   bool _pauseRequested = false;
   bool _loaded = false;
+  bool _sourceIntakeAvailable = false;
 
   @override
   void initState() {
     super.initState();
     _sessionEpoch = _api.authSessionEpoch;
     _load();
+    _checkSourceAvailability();
+  }
+
+  Future<void> _checkSourceAvailability() async {
+    try {
+      final source = await _api.getSpatialSourceIntake(widget.artworkId);
+      if (_currentSession) {
+        setState(() => _sourceIntakeAvailable = source != null);
+      }
+    } catch (_) {
+      if (_currentSession) setState(() => _sourceIntakeAvailable = false);
+    }
   }
 
   Future<void> _load() async {
@@ -367,6 +381,23 @@ class _ArtworkSpatialUploadScreenState
                     ],
                   ),
                 ),
+                if (_sourceIntakeAvailable) ...[
+                  const SizedBox(height: KubusSpacing.md),
+                  Align(
+                    alignment: AlignmentDirectional.centerStart,
+                    child: OutlinedButton.icon(
+                      icon: const Icon(Icons.photo_library_outlined),
+                      onPressed: busy
+                          ? null
+                          : () => Navigator.of(context)
+                                  .push(MaterialPageRoute<void>(
+                                builder: (_) => ArtworkSpatialSourceScreen(
+                                    artworkId: widget.artworkId),
+                              )),
+                      label: Text(l10n.spatialSourceTitle),
+                    ),
+                  ),
+                ],
                 const SizedBox(height: KubusSpacing.md),
                 Text(l10n.spatialPilotNodeExplanation),
                 Align(

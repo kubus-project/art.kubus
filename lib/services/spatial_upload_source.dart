@@ -2,7 +2,7 @@ import 'dart:typed_data';
 
 export 'spatial_upload_source_stub.dart'
     if (dart.library.js_interop) 'spatial_upload_source_web.dart'
-    show pickSpatialUploadFile;
+    show pickSpatialUploadFile, pickSpatialSourceMedia;
 
 /// Owns a browser file handle and reads bounded byte ranges on demand.
 class SpatialUploadSource {

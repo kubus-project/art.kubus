@@ -181,6 +181,80 @@ extension BackendApiServiceSpatialTransport on BackendApiService {
     return response.bodyBytes;
   }
 
+  Uri _spatialSourceUri(String artworkId, [String suffix = '']) =>
+      _spatialDraftUri(artworkId, '/sources$suffix');
+
+  Future<SpatialSourceIntake?> getSpatialSourceIntake(String artworkId) async {
+    final uri = _spatialSourceUri(artworkId);
+    final response = await _get(uri);
+    if (response.statusCode == 404) return null;
+    return SpatialSourceIntake.fromJson(_spatialReviewResponse(response, uri));
+  }
+
+  Future<String> startSpatialSourceWorkspace(String artworkId) async {
+    final uri = _spatialSourceUri(artworkId);
+    final response = await _post(uri,
+        body: jsonEncode({'providerDisclosureConfirmed': true}),
+        allowImplicitBackendFailover: false);
+    return _spatialReviewResponse(response, uri)['id'] as String;
+  }
+
+  Future<SpatialSourceFile> stageSpatialSourceFile(
+      String artworkId, String workspaceId,
+      {required String fileName,
+      required String format,
+      required int size,
+      required String sha256}) async {
+    final uri = _spatialSourceUri(
+        artworkId, '/${Uri.encodeComponent(workspaceId)}/files');
+    final response = await _post(uri,
+        body: jsonEncode({
+          'fileName': fileName,
+          'format': format,
+          'sizeBytes': size,
+          'sha256': sha256,
+        }),
+        allowImplicitBackendFailover: false);
+    return SpatialSourceFile.fromJson(_spatialReviewResponse(response, uri));
+  }
+
+  Future<SpatialSourceFile> appendSpatialSourceFile(String artworkId,
+      String workspaceId, SpatialSourceFile file, Uint8List bytes) async {
+    final uri = _spatialSourceUri(artworkId,
+        '/${Uri.encodeComponent(workspaceId)}/files/${Uri.encodeComponent(file.id)}/chunks/${file.received}');
+    final response = await _request('PUT', uri,
+        headers: {..._getHeaders(), 'Content-Type': 'application/octet-stream'},
+        body: bytes,
+        timeout: const Duration(minutes: 2),
+        allowImplicitBackendFailover: false);
+    final update =
+        SpatialSourceFile.fromJson(_spatialReviewResponse(response, uri));
+    if (update.id != file.id ||
+        update.sha256 != file.sha256 ||
+        update.size != file.size ||
+        update.received != file.received + bytes.length) {
+      throw const FormatException('Unexpected spatial source upload progress');
+    }
+    return update;
+  }
+
+  Future<void> deleteSpatialSourceWorkspace(
+      String artworkId, String workspaceId,
+      {String? fileId}) async {
+    final workspace = '/${Uri.encodeComponent(workspaceId)}';
+    final uri = _spatialSourceUri(
+        artworkId,
+        fileId == null
+            ? workspace
+            : '$workspace/files/${Uri.encodeComponent(fileId)}');
+    final response =
+        await _request('DELETE', uri, allowImplicitBackendFailover: false);
+    if (!_isSuccessStatus(response.statusCode)) {
+      throw BackendApiRequestException(
+          statusCode: response.statusCode, path: uri.path, body: response.body);
+    }
+  }
+
   Future<void> deleteSpatialUploadDraft(SpatialUploadDraft draft) async {
     final uri =
         _spatialDraftUri(draft.artworkId, '/${Uri.encodeComponent(draft.id)}');

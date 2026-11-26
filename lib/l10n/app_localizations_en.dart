@@ -19370,6 +19370,40 @@ class AppLocalizationsEn extends AppLocalizations {
   String get spatialReviewPlacementInvalid => 'Enter a valid placement matrix.';
 
   @override
+  String get spatialSourceTitle => 'Create from photos or video';
+
+  @override
+  String get spatialSourceFormats =>
+      'Upload JPEG or PNG photos, MP4 or MOV clips, or a mix. The total limit is 2 GiB.';
+
+  @override
+  String get spatialSourceProviderDisclosure =>
+      'I understand that a selected Kubus Node provider can read the source files while processing them.';
+
+  @override
+  String get spatialSourceProcessingPaused =>
+      'Remote reconstruction is paused. You can upload and verify your files now.';
+
+  @override
+  String get spatialSourceTooLarge => 'Select up to 256 files totalling 2 GiB.';
+
+  @override
+  String get spatialSourceChoose => 'Choose files or resume upload';
+
+  @override
+  String get spatialSourceVerified => 'Verified';
+
+  @override
+  String get spatialSourceDelete => 'Delete source files now';
+
+  @override
+  String get spatialSourceDeleteFile => 'Delete this source file';
+
+  @override
+  String get spatialSourceDeleteConfirmation =>
+      'All photos and clips in this private workspace will be deleted.';
+
+  @override
   String get spatialReviewTitle => 'Preview and submit';
 
   @override

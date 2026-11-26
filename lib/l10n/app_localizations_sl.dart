@@ -19558,6 +19558,41 @@ class AppLocalizationsSl extends AppLocalizations {
       'Vnesi veljavno matriko postavitve.';
 
   @override
+  String get spatialSourceTitle => 'Ustvari iz fotografij ali videa';
+
+  @override
+  String get spatialSourceFormats =>
+      'Naloži fotografije JPEG ali PNG, posnetke MP4 ali MOV ali kombinacijo obojega. Skupna omejitev je 2 GiB.';
+
+  @override
+  String get spatialSourceProviderDisclosure =>
+      'Razumem, da lahko izbrani ponudnik kubus Node med obdelavo prebere izvorne datoteke.';
+
+  @override
+  String get spatialSourceProcessingPaused =>
+      'Oddaljena rekonstrukcija je zaustavljena. Datoteke lahko že naložiš in preveriš.';
+
+  @override
+  String get spatialSourceTooLarge =>
+      'Izberi največ 256 datotek v skupni velikosti do 2 GiB.';
+
+  @override
+  String get spatialSourceChoose => 'Izberi datoteke ali nadaljuj nalaganje';
+
+  @override
+  String get spatialSourceVerified => 'Preverjeno';
+
+  @override
+  String get spatialSourceDelete => 'Izbriši izvorne datoteke zdaj';
+
+  @override
+  String get spatialSourceDeleteFile => 'Izbriši to izvorno datoteko';
+
+  @override
+  String get spatialSourceDeleteConfirmation =>
+      'Vse fotografije in posnetki iz tega zasebnega delovnega prostora bodo izbrisani.';
+
+  @override
   String get spatialReviewTitle => 'Predogled in oddaja';
 
   @override
