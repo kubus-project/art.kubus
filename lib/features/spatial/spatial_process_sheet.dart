@@ -169,7 +169,7 @@ class _ProcessorOption extends StatelessWidget {
                   KubusFamilyBrandText(title,
                       style: KubusTextStyles.detailCardTitle),
                   const SizedBox(height: KubusSpacing.xxs),
-                  Text(
+                  KubusFamilyBrandText(
                     body,
                     style: KubusTextStyles.detailCaption.copyWith(
                       color: scheme.onSurfaceVariant,

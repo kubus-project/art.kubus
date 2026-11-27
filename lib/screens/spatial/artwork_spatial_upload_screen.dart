@@ -414,7 +414,7 @@ class _ArtworkSpatialUploadScreenState
                         Navigator.of(context).push(MaterialPageRoute<void>(
                       builder: (_) => const AvailabilityNodeOperatorScreen(),
                     )),
-                    child: Text(l10n.availabilityNodeTitle),
+                    child: KubusFamilyBrandText(l10n.availabilityNodeTitle),
                   ),
                 ),
               ],

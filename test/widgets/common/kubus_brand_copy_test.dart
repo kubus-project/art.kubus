@@ -155,14 +155,23 @@ void main() {
     // Each of these l10n values names kubus, so the UI must show it through
     // KubusFamilyBrandText; a plain Text(...) would render kubus upright.
     final plain = RegExp(
-      r'Text\(\s*(?:_?l10n|AppLocalizations\.of\(context\)!?)\.'
+      r'\bText\(\s*(?:_?l10n|AppLocalizations\.of\(context\)!?)\.'
       r'(spatialProgressLeaveHint|spatialPilotNodeExplanation|'
       r'kubusNodeOfferGpu|kubusNodeOfferGpuBody|kubusNodeDownloadAction|'
       r'spatialReconstructionFree|spatialReconstructionCancelling|'
       r'spatialReconstructionWaiting|spatialReconstructionProcessing|'
       r'spatialSourceProviderDisclosure|spatialProgressRemoteBody|'
-      r'spatialProcessNetworkTitle|spatialRemotePrivacyTitle)',
+      r'spatialProcessNetworkTitle|spatialRemotePrivacyTitle|'
+      r'spatialResultReviewBody|spatialFailedLocalBody|'
+      r'spatialProcessOwnNodeSubtitle|availabilityNodeTitle)\b',
     );
+    // Positive controls: the pattern must bite a plain Text and spare the
+    // brand widget, otherwise this scan is silently vacuous.
+    expect(plain.hasMatch('Text(l10n.kubusNodeOfferGpu)'), isTrue);
+    expect(
+        plain.hasMatch('child: Text(   l10n.availabilityNodeTitle,'), isTrue);
+    expect(plain.hasMatch('KubusFamilyBrandText(l10n.kubusNodeOfferGpu)'),
+        isFalse);
     final offenders = <String>[];
     for (final entity in Directory('lib').listSync(recursive: true)) {
       if (entity is! File || !entity.path.endsWith('.dart')) continue;

@@ -255,7 +255,7 @@ class _ProcessingDestination extends StatelessWidget {
             ),
           ],
           const SizedBox(height: KubusSpacing.sm),
-          Text(body, style: theme.textTheme.bodyMedium),
+          KubusFamilyBrandText(body, style: theme.textTheme.bodyMedium),
           const SizedBox(height: KubusSpacing.md),
           SizedBox(
             width: double.infinity,
@@ -2202,7 +2202,7 @@ class _ARScreenState extends State<ARScreen>
       context: context,
       builder: (dialogContext) => KubusAlertDialog(
         title: Text(l10n.spatialFailedTitle),
-        content: Text(
+        content: KubusFamilyBrandText(
           remote ? l10n.spatialFailedRemoteBody : l10n.spatialFailedLocalBody,
         ),
         actions: [
@@ -2453,7 +2453,7 @@ class _ARScreenState extends State<ARScreen>
                   ),
                 ),
                 const SizedBox(height: KubusSpacing.sm),
-                Text(l10n.spatialResultReviewBody),
+                KubusFamilyBrandText(l10n.spatialResultReviewBody),
               ],
             ),
           ),
