@@ -48,6 +48,9 @@ class SpatialSourceFeedback {
   final bool usable;
   final int? usableViews;
   final String? reason;
+
+  /// The requester refused to send this file because face masking flagged it.
+  bool get faceReview => reason == SpatialReconstruction.faceReviewReason;
 }
 
 /// The artist's latest reconstruction attempt for an artwork.
@@ -69,6 +72,16 @@ class SpatialReconstruction {
                 SpatialSourceFeedback.fromJson(item),
         };
 
+  /// Problem codes for a capture that may show a person's face. The artist
+  /// removes or replaces the marked files; the platform never retries them.
+  static const faceReviewProblemCodes = {
+    'face_review_required',
+    'provider_face_review_required',
+  };
+
+  /// Per-file feedback reason for a file flagged by face masking.
+  static const faceReviewReason = 'face_review';
+
   static const activeStates = {
     'queued',
     'preparing',
@@ -89,6 +102,8 @@ class SpatialReconstruction {
   final Map<String, SpatialSourceFeedback> inputs;
 
   bool get active => activeStates.contains(state);
+
+  bool get faceReviewRequired => faceReviewProblemCodes.contains(problemCode);
 }
 
 class SpatialReconstructionStatus {

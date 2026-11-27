@@ -168,6 +168,74 @@ void main() {
     await unmount(tester);
   });
 
+  for (final code in [
+    'face_review_required',
+    'provider_face_review_required'
+  ]) {
+    testWidgets('explains $code and marks the flagged file', (tester) async {
+      final semantics = tester.ensureSemantics();
+      api.setHttpClient(
+          MockClient((request) async => request.url.path.endsWith('/sources')
+              ? sources()
+              : ok({
+                  'remoteProcessingEnabled': true,
+                  'reconstruction': {
+                    ...attempt('needs_more_views', feedback: {
+                      'inputs': [
+                        {'fileId': photo, 'usable': true, 'usableViews': 3},
+                        {
+                          'fileId': clip,
+                          'usable': false,
+                          'reason': 'face_review',
+                        },
+                      ],
+                    }),
+                    'problemCode': code,
+                  },
+                })));
+      await mount(tester);
+      expect(find.textContaining("may show a person's face"), findsOneWidget);
+      expect(find.textContaining('Too few views'), findsNothing);
+      expect(find.text('May show a face'), findsOneWidget);
+      expect(find.text('Usable views: 3'), findsOneWidget);
+      expect(find.text('Not usable'), findsNothing);
+      // The ListTile merges its subtree into one node, so the label is
+      // asserted on the Semantics widget that carries it.
+      expect(
+          find.byWidgetPredicate((widget) =>
+              widget is Semantics &&
+              widget.properties.label ==
+                  "orbit.mp4: may show a person's face. Remove or replace this photo."),
+          findsOneWidget);
+      expect(find.text('Add more views and retry'), findsOneWidget);
+      semantics.dispose();
+      await unmount(tester);
+    });
+  }
+
+  testWidgets('keeps the generic text for an unknown reason', (tester) async {
+    api.setHttpClient(
+        MockClient((request) async => request.url.path.endsWith('/sources')
+            ? sources()
+            : ok({
+                'remoteProcessingEnabled': true,
+                'reconstruction': attempt('needs_more_views', feedback: {
+                  'inputs': [
+                    {
+                      'fileId': clip,
+                      'usable': false,
+                      'reason': 'something_new'
+                    },
+                  ],
+                }),
+              })));
+    await mount(tester);
+    expect(find.textContaining('Too few views'), findsOneWidget);
+    expect(find.text('Not usable'), findsOneWidget);
+    expect(find.text('May show a face'), findsNothing);
+    await unmount(tester);
+  });
+
   testWidgets('keeps uploads available while remote processing is paused',
       (tester) async {
     api.setHttpClient(MockClient((request) async =>

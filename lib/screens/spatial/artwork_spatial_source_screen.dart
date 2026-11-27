@@ -152,6 +152,10 @@ class _ArtworkSpatialSourceScreenState
     if (attempt.cancelRequested && attempt.active) {
       return l10n.spatialReconstructionCancelling;
     }
+    if (attempt.faceReviewRequired &&
+        (attempt.state == 'needs_more_views' || attempt.state == 'failed')) {
+      return l10n.spatialReconstructionFaceReview;
+    }
     return switch (attempt.state) {
       'queued' => l10n.spatialReconstructionQueued,
       'preparing' => l10n.spatialReconstructionPreparing,
@@ -217,8 +221,23 @@ class _ArtworkSpatialSourceScreenState
   String _fileFeedback(AppLocalizations l10n, SpatialSourceFile file) {
     final feedback = _attempt?.inputs[file.id];
     if (feedback == null) return l10n.spatialSourceVerified;
+    if (feedback.faceReview) return l10n.spatialSourceFaceReview;
     if (!feedback.usable) return l10n.spatialSourceNotUsable;
     return l10n.spatialSourceUsableViews(feedback.usableViews ?? 0);
+  }
+
+  Widget _fileFeedbackLine(AppLocalizations l10n, SpatialSourceFile file) {
+    final text = Text(_fileFeedback(l10n, file));
+    if (_attempt?.inputs[file.id]?.faceReview != true) return text;
+    // Not colour alone: an icon and a spoken label say what to do with the file.
+    return Semantics(
+        label: l10n.spatialSourceFaceReviewSemantics(file.name),
+        excludeSemantics: true,
+        child: Row(mainAxisSize: MainAxisSize.min, children: [
+          const Icon(Icons.face_retouching_off, size: 16),
+          const SizedBox(width: KubusSpacing.xs),
+          Flexible(child: text),
+        ]));
   }
 
   Future<Uint8List> _read(
@@ -397,7 +416,7 @@ class _ArtworkSpatialSourceScreenState
                           height: 4,
                           progress: file.received / file.size,
                           animate: false)
-                      : Text(_fileFeedback(l10n, file)),
+                      : _fileFeedbackLine(l10n, file),
                   trailing: IconButton(
                       tooltip: l10n.spatialSourceDeleteFile,
                       icon: const Icon(Icons.delete_outline),
