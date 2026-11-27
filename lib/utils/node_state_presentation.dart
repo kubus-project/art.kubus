@@ -154,7 +154,7 @@ class NodeStatePresentation {
     );
   }
 
-  /// "RTX 3080 Ti · 12 GB", or null when there is nothing worth showing.
+  /// "RTX 3080 Ti · 12.0 GiB", or null when there is nothing worth showing.
   static String? gpuLabel(Map<String, dynamic> worker) {
     final gpu = worker['gpu'];
     if (gpu is! Map || gpu['available'] != true) return null;

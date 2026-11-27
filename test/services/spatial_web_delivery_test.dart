@@ -892,12 +892,19 @@ void main() {
     expect(capture.content.variants.map((v) => v.role), ['spatial_mobile']);
   });
 
-  test('without a manifest variant the canonical CID is the only candidate',
-      () {
+  test('without a manifest variant no manifest is requested at all', () {
+    // The canonical CID names the registry record and 404s on the byte route,
+    // so it is not a fallback: the plan carries no manifest URL.
     final capture = ArtworkSpatialCapture.fromJson(
         captureJson(canonicalManifestCid: 'bafyCanonical'));
     expect(capture.manifestVariantCid, isNull);
-    expect(capture.content.manifestCid, 'bafyCanonical');
+    expect(capture.content.manifestCid, isNull);
+    final plan = SpatialWebDelivery.plan(
+      capture.content,
+      capture.content.variants.single,
+      backendBase: 'https://api.example',
+    );
+    expect(plan.manifestUrl, isNull);
     final none = ArtworkSpatialCapture.fromJson(captureJson());
     expect(none.content.manifestCid, isNull);
   });

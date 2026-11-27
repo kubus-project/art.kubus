@@ -524,8 +524,11 @@ class ArtworkSpatialCapture {
   /// CID of the `spatial_manifest` variant the public history lists. This is
   /// the manifest the anonymous byte route (`/api/upload/file/<cid>`) serves.
   /// The canonical manifest CID names the registry record and is not served
-  /// there (it answers 404), so the viewer reads this one. The variant itself
-  /// is kept out of [variants]: it is metadata, not a model to open.
+  /// there (it answers 404), so the viewer reads this one and never falls
+  /// back to [canonicalManifestCid]: a capture without the variant opens
+  /// with no published transform instead of issuing a request that 404s. The
+  /// variant itself is kept out of [variants]: it is metadata, not a model to
+  /// open.
   final String? manifestVariantCid;
 
   SpatialContent get content => SpatialContent(
@@ -535,7 +538,7 @@ class ArtworkSpatialCapture {
         captureId: id,
         capturedAt: capturedAt,
         variants: variants,
-        manifestCid: manifestVariantCid ?? canonicalManifestCid,
+        manifestCid: manifestVariantCid,
       );
 
   factory ArtworkSpatialCapture.fromJson(Map<String, dynamic> json) {
