@@ -24,6 +24,9 @@ import '../../utils/profile_package_prefetcher.dart';
 import '../../utils/profile_identity_navigation.dart';
 import '../../utils/search_suggestions.dart';
 import '../../utils/wallet_utils.dart';
+import '../../utils/kubus_color_roles.dart';
+import '../../utils/kubus_entity_semantics.dart';
+import '../../widgets/common/kubus_focusable_card.dart';
 import '../../widgets/common/kubus_glass_icon_button.dart';
 import '../../widgets/common/kubus_screen_header.dart';
 import '../../widgets/glass_components.dart';
@@ -1156,182 +1159,198 @@ class _ArtworksBottomSheet extends StatelessWidget {
         final authorError = artworkProvider.authorListErrorFor(authorKey);
         final isLoading = artworkProvider.isLoading(operationKey);
 
-        return SizedBox(
-          height: MediaQuery.of(context).size.height * 0.8,
-          child: BackdropGlassSheet(
-            showBorder: false,
-            showHandle: false,
-            padding: EdgeInsets.zero,
-            backgroundColor: theme.colorScheme.surface,
-            enableBlur: !isDesktopLike,
-            child: Column(
-              children: [
-                KubusSheetHeader(
-                  title:
-                      '${l10n.userProfileArtworksTitle} (${userArtworks.length})',
-                  showHandle: !isDesktopLike,
-                  trailing: KubusGlassIconButton(
-                    icon: Icons.close,
-                    tooltip:
-                        MaterialLocalizations.of(context).closeButtonTooltip,
-                    onPressed: () => Navigator.pop(context),
-                  ),
-                ),
-                if (authorError != null && userArtworks.isNotEmpty)
-                  Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: KubusSpacing.md,
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Flexible(child: Text(l10n.commonNotAvailable)),
-                        TextButton(
-                          onPressed: () => unawaited(
-                            artworkProvider.loadArtworksForAuthor(
-                              authorKey,
-                              force: true,
-                              includePrivateForWallet: includePrivateForWallet,
-                            ),
-                          ),
-                          child: Text(l10n.commonRetry),
-                        ),
-                      ],
+        // Focus enters the sheet when it opens: the first Tab then starts at
+        // the close control, not on the page behind the modal.
+        return FocusScope(
+          autofocus: true,
+          child: SizedBox(
+            height: MediaQuery.of(context).size.height * 0.8,
+            child: BackdropGlassSheet(
+              showBorder: false,
+              showHandle: false,
+              padding: EdgeInsets.zero,
+              backgroundColor: theme.colorScheme.surface,
+              enableBlur: !isDesktopLike,
+              child: Column(
+                children: [
+                  KubusSheetHeader(
+                    title:
+                        '${l10n.userProfileArtworksTitle} (${userArtworks.length})',
+                    showHandle: !isDesktopLike,
+                    trailing: KubusGlassIconButton(
+                      icon: Icons.close,
+                      tooltip:
+                          MaterialLocalizations.of(context).closeButtonTooltip,
+                      onPressed: () => Navigator.pop(context),
                     ),
                   ),
-                SizedBox(
-                  height: contentHeight,
-                  child: (isLoading && userArtworks.isEmpty)
-                      ? const AppLoading()
-                      : userArtworks.isEmpty && authorError != null
-                          ? Center(
-                              child: Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Text(
-                                    l10n.commonNotAvailable,
-                                    textAlign: TextAlign.center,
-                                  ),
-                                  const SizedBox(height: KubusSpacing.sm),
-                                  TextButton.icon(
-                                    onPressed: () => unawaited(
-                                      artworkProvider.loadArtworksForAuthor(
-                                        authorKey,
-                                        force: true,
-                                        includePrivateForWallet:
-                                            includePrivateForWallet,
-                                      ),
-                                    ),
-                                    icon: const Icon(Icons.refresh),
-                                    label: Text(l10n.commonRetry),
-                                  ),
-                                ],
+                  if (authorError != null && userArtworks.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: KubusSpacing.md,
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Flexible(child: Text(l10n.commonNotAvailable)),
+                          TextButton(
+                            onPressed: () => unawaited(
+                              artworkProvider.loadArtworksForAuthor(
+                                authorKey,
+                                force: true,
+                                includePrivateForWallet:
+                                    includePrivateForWallet,
                               ),
-                            )
-                          : userArtworks.isEmpty
-                              ? Center(
-                                  child: Column(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      Icon(
-                                        Icons.image_not_supported,
-                                        size: 64,
-                                        color: theme.colorScheme.onSurface
-                                            .withValues(alpha: 0.3),
-                                      ),
-                                      const SizedBox(height: 16),
-                                      Text(
-                                        l10n.artistGalleryEmptyTitle,
-                                        style: KubusTypography.inter(
-                                          fontSize: 16,
-                                          fontWeight: FontWeight.w500,
-                                          color: theme.colorScheme.onSurface
-                                              .withValues(alpha: 0.6),
+                            ),
+                            child: Text(l10n.commonRetry),
+                          ),
+                        ],
+                      ),
+                    ),
+                  SizedBox(
+                    height: contentHeight,
+                    child: (isLoading && userArtworks.isEmpty)
+                        ? const AppLoading()
+                        : userArtworks.isEmpty && authorError != null
+                            ? Center(
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Text(
+                                      l10n.commonNotAvailable,
+                                      textAlign: TextAlign.center,
+                                    ),
+                                    const SizedBox(height: KubusSpacing.sm),
+                                    TextButton.icon(
+                                      onPressed: () => unawaited(
+                                        artworkProvider.loadArtworksForAuthor(
+                                          authorKey,
+                                          force: true,
+                                          includePrivateForWallet:
+                                              includePrivateForWallet,
                                         ),
                                       ),
-                                    ],
-                                  ),
-                                )
-                              : GridView.builder(
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 16),
-                                  gridDelegate:
-                                      const SliverGridDelegateWithFixedCrossAxisCount(
-                                    crossAxisCount: 2,
-                                    crossAxisSpacing: 12,
-                                    mainAxisSpacing: 12,
-                                    childAspectRatio: 0.8,
-                                  ),
-                                  itemCount: userArtworks.length,
-                                  itemBuilder: (context, index) {
-                                    final artwork = userArtworks[index];
-                                    return GestureDetector(
-                                      onTap: () {
-                                        openArtwork(context, artwork.id,
-                                            source: 'profile_methods');
-                                      },
-                                      child: LiquidGlassCard(
+                                      icon: const Icon(Icons.refresh),
+                                      label: Text(l10n.commonRetry),
+                                    ),
+                                  ],
+                                ),
+                              )
+                            : userArtworks.isEmpty
+                                ? Center(
+                                    child: Column(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
+                                      children: [
+                                        Icon(
+                                          Icons.image_not_supported,
+                                          size: 64,
+                                          color: theme.colorScheme.onSurface
+                                              .withValues(alpha: 0.3),
+                                        ),
+                                        const SizedBox(height: 16),
+                                        Text(
+                                          l10n.artistGalleryEmptyTitle,
+                                          style: KubusTypography.inter(
+                                            fontSize: 16,
+                                            fontWeight: FontWeight.w500,
+                                            color: theme.colorScheme.onSurface
+                                                .withValues(alpha: 0.6),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  )
+                                : GridView.builder(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 16),
+                                    gridDelegate:
+                                        const SliverGridDelegateWithFixedCrossAxisCount(
+                                      crossAxisCount: 2,
+                                      crossAxisSpacing: 12,
+                                      mainAxisSpacing: 12,
+                                      childAspectRatio: 0.8,
+                                    ),
+                                    itemCount: userArtworks.length,
+                                    itemBuilder: (context, index) {
+                                      final artwork = userArtworks[index];
+                                      return KubusFocusableCard(
+                                        semanticLabel:
+                                            '${artwork.title}, ${l10n.userProfileLikesLabel(artwork.likesCount)}',
+                                        accent: KubusEntitySemantics.accentFor(
+                                          KubusEntityKind.artwork,
+                                          KubusColorRoles.of(context),
+                                        ),
                                         borderRadius: BorderRadius.circular(
                                             KubusRadius.lg),
-                                        enableBlur: enableCardBlur,
-                                        padding: EdgeInsets.zero,
-                                        child: Column(
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.start,
-                                          children: [
-                                            Expanded(
-                                              child: _buildArtworkCover(
-                                                context: context,
-                                                theme: theme,
-                                                artwork: artwork,
+                                        onTap: () {
+                                          openArtwork(context, artwork.id,
+                                              source: 'profile_methods');
+                                        },
+                                        child: LiquidGlassCard(
+                                          borderRadius: BorderRadius.circular(
+                                              KubusRadius.lg),
+                                          enableBlur: enableCardBlur,
+                                          padding: EdgeInsets.zero,
+                                          child: Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: [
+                                              Expanded(
+                                                child: _buildArtworkCover(
+                                                  context: context,
+                                                  theme: theme,
+                                                  artwork: artwork,
+                                                ),
                                               ),
-                                            ),
-                                            Padding(
-                                              padding: const EdgeInsets.all(
-                                                  KubusSpacing.sm),
-                                              child: Column(
-                                                crossAxisAlignment:
-                                                    CrossAxisAlignment.start,
-                                                children: [
-                                                  Text(
-                                                    artwork.title,
-                                                    style:
-                                                        KubusTypography.inter(
-                                                      fontWeight:
-                                                          FontWeight.w600,
-                                                      fontSize: 14,
-                                                      color: theme.colorScheme
-                                                          .onSurface,
+                                              Padding(
+                                                padding: const EdgeInsets.all(
+                                                    KubusSpacing.sm),
+                                                child: Column(
+                                                  crossAxisAlignment:
+                                                      CrossAxisAlignment.start,
+                                                  children: [
+                                                    Text(
+                                                      artwork.title,
+                                                      style:
+                                                          KubusTypography.inter(
+                                                        fontWeight:
+                                                            FontWeight.w600,
+                                                        fontSize: 14,
+                                                        color: theme.colorScheme
+                                                            .onSurface,
+                                                      ),
+                                                      maxLines: 1,
+                                                      overflow:
+                                                          TextOverflow.ellipsis,
                                                     ),
-                                                    maxLines: 1,
-                                                    overflow:
-                                                        TextOverflow.ellipsis,
-                                                  ),
-                                                  const SizedBox(
-                                                      height: KubusSpacing.xxs),
-                                                  Text(
-                                                    l10n.userProfileLikesLabel(
-                                                        artwork.likesCount),
-                                                    style:
-                                                        KubusTypography.inter(
-                                                      fontSize: 12,
-                                                      color: theme
-                                                          .colorScheme.onSurface
-                                                          .withValues(
-                                                              alpha: 0.6),
+                                                    const SizedBox(
+                                                        height:
+                                                            KubusSpacing.xxs),
+                                                    Text(
+                                                      l10n.userProfileLikesLabel(
+                                                          artwork.likesCount),
+                                                      style:
+                                                          KubusTypography.inter(
+                                                        fontSize: 12,
+                                                        color: theme.colorScheme
+                                                            .onSurface
+                                                            .withValues(
+                                                                alpha: 0.6),
+                                                      ),
                                                     ),
-                                                  ),
-                                                ],
+                                                  ],
+                                                ),
                                               ),
-                                            ),
-                                          ],
+                                            ],
+                                          ),
                                         ),
-                                      ),
-                                    );
-                                  },
-                                ),
-                ),
-              ],
+                                      );
+                                    },
+                                  ),
+                  ),
+                ],
+              ),
             ),
           ),
         );

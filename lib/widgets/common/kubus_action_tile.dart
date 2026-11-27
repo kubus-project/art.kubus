@@ -273,153 +273,199 @@ class KubusActionTile extends StatelessWidget {
     final double resolvedMinHeight =
         minHeight ?? (stacked ? 112 : (compact ? (hasSubtitle ? 64 : 52) : 56));
 
-    return Semantics(
-      button: true,
-      enabled: interactive,
-      label: title,
-      hint: shownSubtitle,
-      onTap: interactive ? onTap : null,
-      child: KubusHoverResponse(
-        lift: true,
+    // Keyboard focus lives on the InkWell below. Its own focus node would add
+    // an unlabelled focusable child, so the labelled button node carries the
+    // focus state instead (as KubusEntityCard does) and the InkWell is kept
+    // out of semantics.
+    return _KubusActionTileFocus(
+      builder: (context, hasFocus, onFocusChange) => Semantics(
+        button: true,
         enabled: interactive,
-        cursor:
-            interactive ? SystemMouseCursors.click : SystemMouseCursors.basic,
-        builder: (context, hovered) {
-          return ConstrainedBox(
-            constraints: BoxConstraints(
-              minHeight: resolvedMinHeight,
-              maxWidth: maxWidth,
-            ),
-            child: AnimatedContainer(
-              duration: KubusHoverResponse.durationOf(context),
-              curve: Curves.easeOutCubic,
-              decoration: BoxDecoration(
-                borderRadius: radius,
-                boxShadow: KubusHoverResponse.accentShadow(
-                  accent,
-                  brightness,
-                  hovered: hovered,
-                ),
+        focused: interactive ? hasFocus : null,
+        label: title,
+        hint: shownSubtitle,
+        onTap: interactive ? onTap : null,
+        // The title is the label; the status stays its own node beside it.
+        explicitChildNodes: true,
+        child: KubusHoverResponse(
+          lift: true,
+          enabled: interactive,
+          cursor:
+              interactive ? SystemMouseCursors.click : SystemMouseCursors.basic,
+          builder: (context, hovered) {
+            return ConstrainedBox(
+              constraints: BoxConstraints(
+                minHeight: resolvedMinHeight,
+                maxWidth: maxWidth,
               ),
-              child: Material(
-                color: roles.surface,
-                shape: RoundedRectangleBorder(
+              child: AnimatedContainer(
+                duration: KubusHoverResponse.durationOf(context),
+                curve: Curves.easeOutCubic,
+                decoration: BoxDecoration(
                   borderRadius: radius,
-                  side: BorderSide(
-                    color: hovered ? accent.withValues(alpha: 0.5) : roles.rule,
-                    width: KubusSizes.hairline,
+                  boxShadow: KubusHoverResponse.accentShadow(
+                    accent,
+                    brightness,
+                    hovered: hovered,
                   ),
                 ),
-                clipBehavior: Clip.antiAlias,
-                child: Stack(
-                  // The ink area fills the whole tile, including min height.
-                  fit: StackFit.passthrough,
-                  children: [
-                    Positioned.fill(
-                      child: IgnorePointer(
-                        child: AnimatedContainer(
-                          duration: KubusHoverResponse.durationOf(context),
-                          decoration: BoxDecoration(
-                            gradient: RadialGradient(
-                              center: Alignment.topRight,
-                              radius: stacked ? 1.2 : 1.6,
-                              colors: [
-                                accent.withValues(
-                                  alpha: (brightness == Brightness.dark
-                                          ? 0.14
-                                          : 0.09) +
-                                      (hovered ? 0.06 : 0),
-                                ),
-                                accent.withValues(alpha: 0),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
+                child: Material(
+                  color: roles.surface,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: radius,
+                    side: BorderSide(
+                      color:
+                          hovered ? accent.withValues(alpha: 0.5) : roles.rule,
+                      width: KubusSizes.hairline,
                     ),
-                    // The inline tile is too short for a legible ghost glyph;
-                    // its arrow carries the accent instead.
-                    if (!inline)
+                  ),
+                  clipBehavior: Clip.antiAlias,
+                  child: Stack(
+                    // The ink area fills the whole tile, including min height.
+                    fit: StackFit.passthrough,
+                    children: [
                       Positioned.fill(
-                        child: KubusGhostGlyph(
-                          key: const ValueKey<String>(
-                              'kubus_action_tile_ghost_glyph'),
-                          icon: icon,
-                          color: accent,
-                          placement: compact
-                              ? KubusGhostGlyphPlacement.row
-                              : KubusGhostGlyphPlacement.tile,
-                          alignment: Alignment.topRight,
-                          // A compact row keeps its trailing arrow lane clear.
-                          inset: compact
-                              ? const EdgeInsets.only(right: compactArrowLane)
-                              : EdgeInsets.zero,
-                          hovered: hovered,
-                        ),
-                      ),
-                    Positioned(
-                      left: 0,
-                      right: 0,
-                      top: 0,
-                      child: KubusEdgeLight(
-                        color: accent,
-                        strength: hovered ? 0.85 : 0.5,
-                      ),
-                    ),
-                    if (compact)
-                      Positioned(
-                        left: 0,
-                        top: KubusSpacing.sm,
-                        bottom: KubusSpacing.sm,
                         child: IgnorePointer(
                           child: AnimatedContainer(
-                            key: const ValueKey<String>(
-                                'kubus_action_tile_indicator'),
                             duration: KubusHoverResponse.durationOf(context),
-                            width: 3,
                             decoration: BoxDecoration(
-                              color:
-                                  accent.withValues(alpha: hovered ? 0.9 : 0),
-                              borderRadius: const BorderRadius.horizontal(
-                                right: Radius.circular(2),
+                              gradient: RadialGradient(
+                                center: Alignment.topRight,
+                                radius: stacked ? 1.2 : 1.6,
+                                colors: [
+                                  accent.withValues(
+                                    alpha: (brightness == Brightness.dark
+                                            ? 0.14
+                                            : 0.09) +
+                                        (hovered ? 0.06 : 0),
+                                  ),
+                                  accent.withValues(alpha: 0),
+                                ],
                               ),
                             ),
                           ),
                         ),
                       ),
-                    if (stacked && loading)
-                      const Positioned(
-                        top: KubusSpacing.md,
-                        right: KubusSpacing.md,
-                        width: 16,
-                        height: 16,
-                        child: IgnorePointer(
-                          child: InlineLoading(
-                            expand: true,
-                            shape: BoxShape.circle,
-                            tileSize: 3,
+                      // The inline tile is too short for a legible ghost glyph;
+                      // its arrow carries the accent instead.
+                      if (!inline)
+                        Positioned.fill(
+                          child: KubusGhostGlyph(
+                            key: const ValueKey<String>(
+                                'kubus_action_tile_ghost_glyph'),
+                            icon: icon,
+                            color: accent,
+                            placement: compact
+                                ? KubusGhostGlyphPlacement.row
+                                : KubusGhostGlyphPlacement.tile,
+                            alignment: Alignment.topRight,
+                            // A compact row keeps its trailing arrow lane clear.
+                            inset: compact
+                                ? const EdgeInsets.only(right: compactArrowLane)
+                                : EdgeInsets.zero,
+                            hovered: hovered,
                           ),
                         ),
+                      Positioned(
+                        left: 0,
+                        right: 0,
+                        top: 0,
+                        child: KubusEdgeLight(
+                          color: accent,
+                          strength: hovered ? 0.85 : 0.5,
+                        ),
                       ),
-                    InkWell(
-                      onTap: interactive ? onTap : null,
-                      focusColor: roles.focus.withValues(alpha: 0.14),
-                      hoverColor: accent.withValues(alpha: 0),
-                      child: Padding(
+                      if (compact)
+                        Positioned(
+                          left: 0,
+                          top: KubusSpacing.sm,
+                          bottom: KubusSpacing.sm,
+                          child: IgnorePointer(
+                            child: AnimatedContainer(
+                              key: const ValueKey<String>(
+                                  'kubus_action_tile_indicator'),
+                              duration: KubusHoverResponse.durationOf(context),
+                              width: 3,
+                              decoration: BoxDecoration(
+                                color:
+                                    accent.withValues(alpha: hovered ? 0.9 : 0),
+                                borderRadius: const BorderRadius.horizontal(
+                                  right: Radius.circular(2),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      if (stacked && loading)
+                        const Positioned(
+                          top: KubusSpacing.md,
+                          right: KubusSpacing.md,
+                          width: 16,
+                          height: 16,
+                          child: IgnorePointer(
+                            child: InlineLoading(
+                              expand: true,
+                              shape: BoxShape.circle,
+                              tileSize: 3,
+                            ),
+                          ),
+                        ),
+                      // The content stays in semantics (the compact status is
+                      // read with the title); only the InkWell's own focus
+                      // node is kept out of it.
+                      Padding(
                         padding: EdgeInsets.symmetric(
                           horizontal: KubusSpacing.md,
                           vertical: stacked ? KubusSpacing.md : KubusSpacing.sm,
                         ),
                         child: body(hovered),
                       ),
-                    ),
-                  ],
+                      Positioned.fill(
+                        child: ExcludeSemantics(
+                          child: InkWell(
+                            onTap: interactive ? onTap : null,
+                            onFocusChange: onFocusChange,
+                            focusColor: roles.focus.withValues(alpha: 0.14),
+                            hoverColor: accent.withValues(alpha: 0),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
-            ),
-          );
-        },
+            );
+          },
+        ),
       ),
     );
   }
+}
+
+/// Keyboard focus state for [KubusActionTile], handed to its builder so the
+/// labelled button node can report it.
+class _KubusActionTileFocus extends StatefulWidget {
+  const _KubusActionTileFocus({required this.builder});
+
+  final Widget Function(
+    BuildContext context,
+    bool hasFocus,
+    ValueChanged<bool> onFocusChange,
+  ) builder;
+
+  @override
+  State<_KubusActionTileFocus> createState() => _KubusActionTileFocusState();
+}
+
+class _KubusActionTileFocusState extends State<_KubusActionTileFocus> {
+  bool _hasFocus = false;
+
+  void _handleFocusChange(bool hasFocus) {
+    if (_hasFocus == hasFocus || !mounted) return;
+    setState(() => _hasFocus = hasFocus);
+  }
+
+  @override
+  Widget build(BuildContext context) =>
+      widget.builder(context, _hasFocus, _handleFocusChange);
 }
