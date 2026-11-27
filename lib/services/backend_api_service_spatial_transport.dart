@@ -170,11 +170,24 @@ extension BackendApiServiceSpatialTransport on BackendApiService {
     }
   }
 
-  Future<Uint8List> getSpatialDraftPreview(SpatialUploadDraft draft) async {
-    final uri = _spatialDraftAction(draft, 'preview');
+  /// The owner's private preview bytes. [lightweight] fetches the candidate's
+  /// smaller companion (`?variant=lightweight`) instead of the full file.
+  Future<Uint8List> getSpatialDraftPreview(
+    SpatialUploadDraft draft, {
+    bool lightweight = false,
+  }) async {
+    final companion = draft.lightweight;
+    if (lightweight && companion == null) {
+      throw ArgumentError('Draft has no lightweight preview');
+    }
+    final uri = lightweight
+        ? _spatialDraftAction(draft, 'preview')
+            .replace(queryParameters: const {'variant': 'lightweight'})
+        : _spatialDraftAction(draft, 'preview');
+    final expected = lightweight ? companion!.sizeBytes : draft.sizeBytes;
     final response = await _get(uri, timeout: const Duration(minutes: 2));
     if (!_isSuccessStatus(response.statusCode) ||
-        response.bodyBytes.length != draft.sizeBytes) {
+        response.bodyBytes.length != expected) {
       throw BackendApiRequestException(
           statusCode: response.statusCode, path: uri.path, body: '');
     }
