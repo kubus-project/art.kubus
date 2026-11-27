@@ -6901,6 +6901,20 @@
     }
   },
   "spatialArchiveConfirmBodyUnknownSize": "This download is large and its size is not known. Continue only on a connection you are happy to use.",
+  "spatialLoadFullQuality": "Load full quality",
+  "spatialLoadFullQualityWithSize": "Load full quality ({size})",
+  "@spatialLoadFullQualityWithSize": {
+    "placeholders": {
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "spatialLoadFullQualitySemantics": "Load the full-quality model. It is a larger download.",
+  "spatialFullConfirmTitle": "Load the full-quality model?",
+  "spatialFullConsentBody": "The full-quality model is large and can use a lot of data, so it only loads when you ask.",
+  "spatialReviewLightweightNotice": "Showing a lighter preview suited to this device.",
+  "spatialReviewPreviewUnavailable": "The preview could not be loaded. You can try again.",
   "spatialQualityMobile": "Optimised",
   "spatialQualityPreview": "Preview",
   "spatialQualityArchive": "Archival",

@@ -16353,6 +16353,33 @@ class AppLocalizationsEn extends AppLocalizations {
       'This download is large and its size is not known. Continue only on a connection you are happy to use.';
 
   @override
+  String get spatialLoadFullQuality => 'Load full quality';
+
+  @override
+  String spatialLoadFullQualityWithSize(String size) {
+    return 'Load full quality ($size)';
+  }
+
+  @override
+  String get spatialLoadFullQualitySemantics =>
+      'Load the full-quality model. It is a larger download.';
+
+  @override
+  String get spatialFullConfirmTitle => 'Load the full-quality model?';
+
+  @override
+  String get spatialFullConsentBody =>
+      'The full-quality model is large and can use a lot of data, so it only loads when you ask.';
+
+  @override
+  String get spatialReviewLightweightNotice =>
+      'Showing a lighter preview suited to this device.';
+
+  @override
+  String get spatialReviewPreviewUnavailable =>
+      'The preview could not be loaded. You can try again.';
+
+  @override
   String get spatialQualityMobile => 'Optimised';
 
   @override

@@ -6874,6 +6874,20 @@
     }
   },
   "spatialArchiveConfirmBodyUnknownSize": "Prenos je velik, njegova velikost pa ni znana. Nadaljujte le na povezavi, ki jo želite uporabiti.",
+  "spatialLoadFullQuality": "Naloži polno kakovost",
+  "spatialLoadFullQualityWithSize": "Naloži polno kakovost ({size})",
+  "@spatialLoadFullQualityWithSize": {
+    "placeholders": {
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "spatialLoadFullQualitySemantics": "Naloži model v polni kakovosti. Prenos je večji.",
+  "spatialFullConfirmTitle": "Naložim model v polni kakovosti?",
+  "spatialFullConsentBody": "Model v polni kakovosti je velik in lahko porabi veliko podatkov, zato se naloži le na vašo zahtevo.",
+  "spatialReviewLightweightNotice": "Prikazan je lažji predogled, primeren za to napravo.",
+  "spatialReviewPreviewUnavailable": "Predogleda ni bilo mogoče naložiti. Poskusite znova.",
   "spatialQualityMobile": "Optimizirano",
   "spatialQualityPreview": "Predogled",
   "spatialQualityArchive": "Arhivsko",

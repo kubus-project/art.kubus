@@ -16520,6 +16520,33 @@ class AppLocalizationsSl extends AppLocalizations {
       'Prenos je velik, njegova velikost pa ni znana. Nadaljujte le na povezavi, ki jo želite uporabiti.';
 
   @override
+  String get spatialLoadFullQuality => 'Naloži polno kakovost';
+
+  @override
+  String spatialLoadFullQualityWithSize(String size) {
+    return 'Naloži polno kakovost ($size)';
+  }
+
+  @override
+  String get spatialLoadFullQualitySemantics =>
+      'Naloži model v polni kakovosti. Prenos je večji.';
+
+  @override
+  String get spatialFullConfirmTitle => 'Naložim model v polni kakovosti?';
+
+  @override
+  String get spatialFullConsentBody =>
+      'Model v polni kakovosti je velik in lahko porabi veliko podatkov, zato se naloži le na vašo zahtevo.';
+
+  @override
+  String get spatialReviewLightweightNotice =>
+      'Prikazan je lažji predogled, primeren za to napravo.';
+
+  @override
+  String get spatialReviewPreviewUnavailable =>
+      'Predogleda ni bilo mogoče naložiti. Poskusite znova.';
+
+  @override
   String get spatialQualityMobile => 'Optimizirano';
 
   @override

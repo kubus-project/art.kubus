@@ -28382,6 +28382,48 @@ abstract class AppLocalizations {
   /// **'This download is large and its size is not known. Continue only on a connection you are happy to use.'**
   String get spatialArchiveConfirmBodyUnknownSize;
 
+  /// No description provided for @spatialLoadFullQuality.
+  ///
+  /// In en, this message translates to:
+  /// **'Load full quality'**
+  String get spatialLoadFullQuality;
+
+  /// No description provided for @spatialLoadFullQualityWithSize.
+  ///
+  /// In en, this message translates to:
+  /// **'Load full quality ({size})'**
+  String spatialLoadFullQualityWithSize(String size);
+
+  /// No description provided for @spatialLoadFullQualitySemantics.
+  ///
+  /// In en, this message translates to:
+  /// **'Load the full-quality model. It is a larger download.'**
+  String get spatialLoadFullQualitySemantics;
+
+  /// No description provided for @spatialFullConfirmTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Load the full-quality model?'**
+  String get spatialFullConfirmTitle;
+
+  /// No description provided for @spatialFullConsentBody.
+  ///
+  /// In en, this message translates to:
+  /// **'The full-quality model is large and can use a lot of data, so it only loads when you ask.'**
+  String get spatialFullConsentBody;
+
+  /// No description provided for @spatialReviewLightweightNotice.
+  ///
+  /// In en, this message translates to:
+  /// **'Showing a lighter preview suited to this device.'**
+  String get spatialReviewLightweightNotice;
+
+  /// No description provided for @spatialReviewPreviewUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'The preview could not be loaded. You can try again.'**
+  String get spatialReviewPreviewUnavailable;
+
   /// No description provided for @spatialQualityMobile.
   ///
   /// In en, this message translates to:
