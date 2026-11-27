@@ -840,4 +840,65 @@ void main() {
     // The manifest is metadata, not a model the viewer may try to open.
     expect(capture.content.variants.map((v) => v.role), ['spatial_mobile']);
   });
+
+  Map<String, dynamic> captureJson({
+    String? canonicalManifestCid,
+    String? manifestVariantCid,
+  }) =>
+      {
+        'id': 'spatial-1',
+        'artworkId': 'art-1',
+        'capturedAt': '2026-11-07T10:00:00Z',
+        'publishedAt': '2026-11-22T10:00:00Z',
+        'version': 1,
+        'isCurrent': true,
+        'canonicalManifestCid': canonicalManifestCid,
+        'variants': [
+          if (manifestVariantCid != null)
+            {
+              'role': 'spatial_manifest',
+              'cid': manifestVariantCid,
+              'format': 'json',
+              'mimeType': 'application/json',
+            },
+          {
+            'role': 'spatial_mobile',
+            'cid': 'bafyMobile',
+            'format': 'spz',
+            'mimeType': 'application/octet-stream',
+          },
+        ],
+      };
+
+  test('the viewer asks for the manifest variant, never the canonical record',
+      () {
+    // Staging: the canonical manifest CID is not served by /api/upload/file
+    // (404 on every open); the spatial_manifest variant CID is.
+    final capture = ArtworkSpatialCapture.fromJson(captureJson(
+      canonicalManifestCid: 'bafyCanonical',
+      manifestVariantCid: 'bafyManifestVariant',
+    ));
+    expect(capture.content.manifestCid, 'bafyManifestVariant');
+    final plan = SpatialWebDelivery.plan(
+      capture.content,
+      capture.content.variants.single,
+      backendBase: 'https://api.example',
+    );
+    expect(
+        plan.manifestUrl,
+        'https://api.example/api/upload/file/'
+        'bafyManifestVariant');
+    expect(plan.manifestUrl, isNot(contains('bafyCanonical')));
+    expect(capture.content.variants.map((v) => v.role), ['spatial_mobile']);
+  });
+
+  test('without a manifest variant the canonical CID is the only candidate',
+      () {
+    final capture = ArtworkSpatialCapture.fromJson(
+        captureJson(canonicalManifestCid: 'bafyCanonical'));
+    expect(capture.manifestVariantCid, isNull);
+    expect(capture.content.manifestCid, 'bafyCanonical');
+    final none = ArtworkSpatialCapture.fromJson(captureJson());
+    expect(none.content.manifestCid, isNull);
+  });
 }
