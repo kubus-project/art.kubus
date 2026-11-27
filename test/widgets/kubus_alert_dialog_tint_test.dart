@@ -5,7 +5,11 @@ import 'package:art_kubus/widgets/glass_components.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-Future<void> _open(WidgetTester tester, ThemeData theme) async {
+Future<void> _open(
+  WidgetTester tester,
+  ThemeData theme, {
+  bool opaque = false,
+}) async {
   tester.view.physicalSize = const Size(1440, 900);
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.reset);
@@ -17,6 +21,7 @@ Future<void> _open(WidgetTester tester, ThemeData theme) async {
           onPressed: () => showKubusDialog<void>(
             context: context,
             builder: (ctx) => KubusAlertDialog(
+              opaque: opaque,
               title: const Text('Title'),
               content: const Text('Body'),
               actions: [
@@ -106,4 +111,55 @@ void main() {
     await _open(tester, theme);
     expect(actionPrimary(tester), theme.colorScheme.primary);
   });
+
+  // Every colour stop the panel paints, as it composites over nothing.
+  List<Color> panelStops(WidgetTester tester) {
+    final box = tester.widget<DecoratedBox>(find
+        .descendant(
+          of: find.descendant(
+            of: find.byType(KubusAlertDialog),
+            matching: find.byType(GlassSurface),
+          ),
+          matching: find.byType(DecoratedBox),
+        )
+        .first);
+    final decoration = box.decoration as BoxDecoration;
+    return (decoration.gradient! as LinearGradient).colors;
+  }
+
+  for (final entry in {
+    'light': ThemeData.light(),
+    'dark': ThemeData.dark(),
+  }.entries) {
+    testWidgets('${entry.key}: an opaque dialog paints a solid surface',
+        (tester) async {
+      await _open(tester, entry.value, opaque: true);
+      final stops = panelStops(tester);
+      expect(stops, isNotEmpty);
+      for (final stop in stops) {
+        expect(stop.a, 1.0, reason: 'stop $stop lets the page show through');
+      }
+      // No backdrop blur is stacked on a solid panel.
+      expect(
+        find.descendant(
+          of: find.byType(KubusAlertDialog),
+          matching: find.byType(BackdropFilter),
+        ),
+        findsNothing,
+      );
+      // The solid colour comes from the theme surface, not a hard-coded one.
+      final surface = entry.value.colorScheme.surface;
+      for (final stop in stops) {
+        expect(stop.r, closeTo(surface.r, 0.08));
+        expect(stop.g, closeTo(surface.g, 0.08));
+        expect(stop.b, closeTo(surface.b, 0.08));
+      }
+    });
+
+    testWidgets('${entry.key}: the default dialog stays frosted glass',
+        (tester) async {
+      await _open(tester, entry.value);
+      expect(panelStops(tester).any((stop) => stop.a < 1.0), isTrue);
+    });
+  }
 }

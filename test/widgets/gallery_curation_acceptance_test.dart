@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:ui' show Tristate;
 
 import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:art_kubus/models/gallery_presentation.dart';
@@ -439,6 +440,58 @@ void main() {
       expect(announced.last, 'Moved to position 2 of 3');
       expect(moveButton(tester, 'Move earlier', 1).focusNode!.hasPrimaryFocus,
           isTrue);
+    });
+  });
+
+  group('D5 focus is re-asserted on the rebuilt control', () {
+    // A move rebuilds the row's semantics node. On the web the browser drops
+    // DOM focus when that node is re-parented, and the engine only restores it
+    // when the node's focused flag changes. So the flag has to go false and
+    // then true again after a move; a no-op requestFocus on a control that
+    // already has focus leaves the browser's focus on <body>.
+    testWidgets('focus leaves and returns so the semantics flag changes',
+        (tester) async {
+      final handle = tester.ensureSemantics();
+      await pumpEditor(tester, _Server());
+      final later = moveButton(tester, 'Move later', 0).focusNode!;
+      later.requestFocus();
+      await tester.pump();
+
+      final seen = <bool>[];
+      void record() => seen.add(later.hasPrimaryFocus);
+      later.addListener(record);
+      addTearDown(() => later.removeListener(record));
+
+      await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+      await tester.pumpAndSettle();
+
+      expect(artworkRowTitles(tester), ['A', 'C', 'B']);
+      // Out, then back in, across separate frames.
+      expect(seen, containsAllInOrder([false, true]), reason: '$seen');
+      expect(later.hasPrimaryFocus, isTrue);
+
+      // The moved row's control reports focus in the semantics tree.
+      final node = tester.getSemantics(find.byTooltip('Move later').at(1));
+      expect(node.flagsCollection.isFocused, Tristate.isTrue);
+      handle.dispose();
+    });
+
+    testWidgets(
+        'every keyboard move ends with focus on a move control of the '
+        'moved row', (tester) async {
+      final handle = tester.ensureSemantics();
+      await pumpEditor(tester, _Server());
+      moveButton(tester, 'Move later', 0).focusNode!.requestFocus();
+      await tester.pump();
+      for (var step = 0; step < 4; step++) {
+        await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+        await tester.pumpAndSettle();
+        final focused = FocusManager.instance.primaryFocus;
+        expect(focused, isNotNull);
+        expect(focused!.debugLabel, startsWith('gallery move'),
+            reason: 'step $step left focus on ${focused.debugLabel}');
+      }
+      handle.dispose();
     });
   });
 
