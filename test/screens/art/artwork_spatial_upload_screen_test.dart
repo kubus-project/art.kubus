@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:art_kubus/l10n/app_localizations.dart';
+import 'package:art_kubus/screens/spatial/artwork_spatial_review_screen.dart';
 import 'package:art_kubus/screens/spatial/artwork_spatial_upload_screen.dart';
 import 'package:art_kubus/services/backend_api_service.dart';
 import 'package:art_kubus/services/spatial_upload_source.dart';
@@ -21,12 +22,14 @@ void main() {
   late String token;
   const draftPath = '/api/publications/spatial/drafts/artwork-1';
 
-  http.Response draft(int offset, {bool ready = false}) => http.Response(
+  http.Response draft(int offset,
+          {bool ready = false, String artwork = 'artwork-1'}) =>
+      http.Response(
         jsonEncode({
           'success': true,
           'data': {
             'id': 'draft-1',
-            'artworkId': 'artwork-1',
+            'artworkId': artwork,
             'fileName': 'model.ply',
             'format': 'ply',
             'sizeBytes': body.length,
@@ -39,11 +42,16 @@ void main() {
         200,
       );
 
-  Widget screen([Uint8List? selected]) => MaterialApp(
+  Widget screen(
+          [Uint8List? selected,
+          String? posterUrl,
+          String artwork = 'artwork-1']) =>
+      MaterialApp(
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         home: ArtworkSpatialUploadScreen(
-          artworkId: 'artwork-1',
+          artworkId: artwork,
+          posterUrl: posterUrl,
           pickFile: () async => SpatialUploadSource(
             name: 'model.ply',
             size: body.length,
@@ -138,5 +146,33 @@ void main() {
     expect(find.text('Spatial uploads are unavailable on this server.'),
         findsOneWidget);
     expect(find.text('Choose and upload'), findsNothing);
+  });
+
+  testWidgets('hands the artwork poster on to the review screen',
+      (tester) async {
+    api.setHttpClient(MockClient((request) async {
+      if (request.method == 'GET' &&
+          request.url.path ==
+              '/api/publications/spatial/drafts/artwork-poster') {
+        return draft(8, ready: true, artwork: 'artwork-poster');
+      }
+      return http.Response('{}', 404);
+    }));
+    await mountPage(tester,
+        screen(null, 'https://example.test/cover.jpg', 'artwork-poster'));
+    await tester.runAsync(() async {
+      await tester.tap(find.text('Preview and submit'));
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+    });
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+    expect(
+        tester
+            .widget<ArtworkSpatialReviewScreen>(
+                find.byType(ArtworkSpatialReviewScreen))
+            .posterUrl,
+        'https://example.test/cover.jpg');
+    // Unmount so the review screen's own work ends with the test.
+    await tester.pumpWidget(const SizedBox.shrink());
   });
 }

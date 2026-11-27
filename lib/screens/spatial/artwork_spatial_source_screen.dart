@@ -16,9 +16,16 @@ import '../../widgets/inline_loading.dart';
 import 'artwork_spatial_review_screen.dart';
 
 class ArtworkSpatialSourceScreen extends StatefulWidget {
-  const ArtworkSpatialSourceScreen({required this.artworkId, super.key});
+  const ArtworkSpatialSourceScreen({
+    required this.artworkId,
+    this.posterUrl,
+    super.key,
+  });
 
   final String artworkId;
+
+  /// The artwork's poster, handed on to the review screen.
+  final String? posterUrl;
 
   @override
   State<ArtworkSpatialSourceScreen> createState() =>
@@ -134,7 +141,8 @@ class _ArtworkSpatialSourceScreenState
           await _api.getSpatialReconstructionCandidate(_artwork, attempt.id);
       if (!mounted || !_activeSession) return;
       await Navigator.of(context).push(MaterialPageRoute<void>(
-          builder: (_) => ArtworkSpatialReviewScreen(draft: draft)));
+          builder: (_) => ArtworkSpatialReviewScreen(
+              draft: draft, posterUrl: widget.posterUrl)));
     } catch (_) {
       if (_activeSession) setState(() => _failed = true);
     }

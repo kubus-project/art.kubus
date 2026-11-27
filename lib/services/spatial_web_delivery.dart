@@ -135,6 +135,13 @@ class SpatialWebDelivery {
   }) =>
       defaultTiers(content, constrained: constrained).firstOrNull;
 
+  /// The roles that may open without the visitor asking, in the order they are
+  /// tried. The one copy of the device-class tier order: the web viewer reads
+  /// it through [defaultTiers], the native viewer reads it directly.
+  static List<String> defaultRoles({bool constrained = false}) => constrained
+      ? const <String>['spatial_preview', 'spatial_mobile']
+      : const <String>['spatial_mobile', 'spatial_preview'];
+
   /// The tiers that may open without the visitor asking, best first:
   /// optimised, then preview. On a [constrained] device (see
   /// SpatialDeviceClass) the small preview comes first and the optimised tier
@@ -145,11 +152,8 @@ class SpatialWebDelivery {
     bool constrained = false,
   }) {
     final viewable = content.variants.where(isViewable).toList();
-    final roles = constrained
-        ? const <String>['spatial_preview', 'spatial_mobile']
-        : const <String>['spatial_mobile', 'spatial_preview'];
     return <SpatialVariant>[
-      for (final role in roles)
+      for (final role in defaultRoles(constrained: constrained))
         ...viewable.where((v) => v.role == role).take(1),
     ];
   }
@@ -184,8 +188,9 @@ class SpatialWebDelivery {
 
   /// True when starting [variant] needs the visitor's explicit confirmation:
   /// the archive when it is large or of unknown size, and on a [constrained]
-  /// device an optimised model above [mobileConfirmBytes]. The preview never
-  /// asks.
+  /// device an optimised model above [mobileConfirmBytes] or of unknown size
+  /// (`sizeBytes` 0: a record that omits the field is asked about, not
+  /// downloaded on the strength of a missing value). The preview never asks.
   static bool needsConfirmation(
     SpatialVariant variant, {
     bool constrained = false,
@@ -195,7 +200,7 @@ class SpatialWebDelivery {
     }
     return constrained &&
         variant.role == 'spatial_mobile' &&
-        variant.sizeBytes > mobileConfirmBytes;
+        (variant.sizeBytes <= 0 || variant.sizeBytes > mobileConfirmBytes);
   }
 
   /// How long one load may take before it is reported as failed. The archive

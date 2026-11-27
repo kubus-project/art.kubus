@@ -85,6 +85,27 @@ void main() {
           isFalse);
     });
 
+    test('a constrained device confirms an optimised model of unknown size',
+        () {
+      // sizeBytes defaults to 0 when the record omits it: that is "unknown",
+      // not "small", and matches the archive rule.
+      expect(
+          SpatialWebDelivery.needsConfirmation(_sized('spatial_mobile', 'c', 0),
+              constrained: true),
+          isTrue);
+      expect(
+          SpatialWebDelivery.needsConfirmation(
+              _sized('spatial_mobile', 'c', 0)),
+          isFalse);
+    });
+
+    test('the tier order has one source: defaultRoles', () {
+      expect(SpatialWebDelivery.defaultRoles(),
+          ['spatial_mobile', 'spatial_preview']);
+      expect(SpatialWebDelivery.defaultRoles(constrained: true),
+          ['spatial_preview', 'spatial_mobile']);
+    });
+
     test('an unconstrained device never confirms the optimised tier', () {
       expect(
           SpatialWebDelivery.needsConfirmation(

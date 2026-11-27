@@ -64,13 +64,14 @@ void main() {
   }
 
   // Requests complete on real async work, as in the upload screen tests.
-  Future<void> mount(WidgetTester tester) async {
+  Future<void> mount(WidgetTester tester, {String? posterUrl}) async {
     await tester.runAsync(() async {
-      await tester.pumpWidget(const MaterialApp(
-        locale: Locale('en'),
+      await tester.pumpWidget(MaterialApp(
+        locale: const Locale('en'),
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
-        home: ArtworkSpatialSourceScreen(artworkId: 'artwork-1'),
+        home: ArtworkSpatialSourceScreen(
+            artworkId: 'artwork-1', posterUrl: posterUrl),
       ));
       await Future<void>.delayed(const Duration(milliseconds: 50));
     });
@@ -207,7 +208,7 @@ void main() {
       }
       return http.Response('{}', 404);
     }));
-    await mount(tester);
+    await mount(tester, posterUrl: 'https://example.test/cover.jpg');
     expect(find.textContaining('the published model does not change'),
         findsOneWidget);
     await tester.runAsync(() async {
@@ -216,6 +217,14 @@ void main() {
     });
     await settle(tester);
     expect(find.byType(ArtworkSpatialReviewScreen), findsOneWidget);
+    // The artwork's poster travels with the candidate to the review screen, so
+    // its viewer has something to show when the preview cannot load.
+    expect(
+        tester
+            .widget<ArtworkSpatialReviewScreen>(
+                find.byType(ArtworkSpatialReviewScreen))
+            .posterUrl,
+        'https://example.test/cover.jpg');
     await unmount(tester);
   });
 }

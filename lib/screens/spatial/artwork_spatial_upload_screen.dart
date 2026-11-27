@@ -20,6 +20,7 @@ import 'artwork_spatial_source_screen.dart';
 class ArtworkSpatialUploadScreen extends StatefulWidget {
   const ArtworkSpatialUploadScreen({
     required this.artworkId,
+    this.posterUrl,
     this.pickFile = pickSpatialUploadFile,
     super.key,
   });
@@ -27,6 +28,9 @@ class ArtworkSpatialUploadScreen extends StatefulWidget {
   static const pilotArtworkId = '53b99c8b-8503-545c-8a13-55f60cfb8342';
 
   final String artworkId;
+
+  /// The artwork's poster, handed on to the review and source screens.
+  final String? posterUrl;
   @visibleForTesting
   final Future<SpatialUploadSource?> Function() pickFile;
 
@@ -364,7 +368,8 @@ class _ArtworkSpatialUploadScreenState
                                         MaterialPageRoute<void>(
                                           builder: (_) =>
                                               ArtworkSpatialReviewScreen(
-                                                  draft: draft!),
+                                                  draft: draft!,
+                                                  posterUrl: widget.posterUrl),
                                         ),
                                       );
                                       if (_currentSession) await _load();
@@ -392,7 +397,8 @@ class _ArtworkSpatialUploadScreenState
                           : () => Navigator.of(context)
                                   .push(MaterialPageRoute<void>(
                                 builder: (_) => ArtworkSpatialSourceScreen(
-                                    artworkId: widget.artworkId),
+                                    artworkId: widget.artworkId,
+                                    posterUrl: widget.posterUrl),
                               )),
                       label: Text(l10n.spatialSourceTitle),
                     ),
