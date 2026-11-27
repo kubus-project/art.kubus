@@ -19495,14 +19495,14 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get spatialReconstructionFaceReview =>
-      'Some photos may show a person\'s face, so they were not sent for processing. Remove or replace the marked photos, then retry.';
+      'Some photos or clips may show a person\'s face. Remove or replace the marked files, then retry.';
 
   @override
   String get spatialSourceFaceReview => 'May show a face';
 
   @override
   String spatialSourceFaceReviewSemantics(String name) {
-    return '$name: may show a person\'s face. Remove or replace this photo.';
+    return '$name: may show a person\'s face. Remove or replace this file.';
   }
 
   @override

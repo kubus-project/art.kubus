@@ -198,7 +198,8 @@ class _ArtworkSpatialSourceScreenState
                   ? _startReconstruction
                   : null,
               icon: const Icon(Icons.view_in_ar_outlined),
-              label: Text(attempt?.state == 'needs_more_views'
+              label: Text(attempt?.state == 'needs_more_views' &&
+                      !attempt!.faceReviewRequired
                   ? l10n.spatialReconstructionAddViews
                   : attempt == null || attempt.state == 'ready'
                       ? l10n.spatialReconstructionStart

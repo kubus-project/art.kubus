@@ -33834,7 +33834,7 @@ abstract class AppLocalizations {
   /// No description provided for @spatialReconstructionFaceReview.
   ///
   /// In en, this message translates to:
-  /// **'Some photos may show a person\'s face, so they were not sent for processing. Remove or replace the marked photos, then retry.'**
+  /// **'Some photos or clips may show a person\'s face. Remove or replace the marked files, then retry.'**
   String get spatialReconstructionFaceReview;
 
   /// No description provided for @spatialSourceFaceReview.
@@ -33846,7 +33846,7 @@ abstract class AppLocalizations {
   /// No description provided for @spatialSourceFaceReviewSemantics.
   ///
   /// In en, this message translates to:
-  /// **'{name}: may show a person\'s face. Remove or replace this photo.'**
+  /// **'{name}: may show a person\'s face. Remove or replace this file.'**
   String spatialSourceFaceReviewSemantics(String name);
 
   /// No description provided for @spatialSourceLocked.

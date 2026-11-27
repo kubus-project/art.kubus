@@ -205,13 +205,43 @@ void main() {
           find.byWidgetPredicate((widget) =>
               widget is Semantics &&
               widget.properties.label ==
-                  "orbit.mp4: may show a person's face. Remove or replace this photo."),
+                  "orbit.mp4: may show a person's face. Remove or replace this file."),
           findsOneWidget);
-      expect(find.text('Add more views and retry'), findsOneWidget);
+      expect(find.text('Add more views and retry'), findsNothing);
+      expect(find.text('Retry'), findsOneWidget);
       semantics.dispose();
       await unmount(tester);
     });
   }
+
+  testWidgets('failed attempt with provider face review offers a neutral retry',
+      (tester) async {
+    api.setHttpClient(
+        MockClient((request) async => request.url.path.endsWith('/sources')
+            ? sources()
+            : ok({
+                'remoteProcessingEnabled': true,
+                'reconstruction': {
+                  ...attempt('failed', feedback: {
+                    'inputs': [
+                      {
+                        'fileId': clip,
+                        'usable': false,
+                        'reason': 'face_review',
+                      },
+                    ],
+                  }),
+                  'problemCode': 'provider_face_review_required',
+                },
+              })));
+    await mount(tester);
+    expect(find.textContaining("may show a person's face"), findsOneWidget);
+    expect(find.textContaining('not sent'), findsNothing);
+    expect(find.text('May show a face'), findsOneWidget);
+    expect(find.text('Retry'), findsOneWidget);
+    expect(find.text('Add more views and retry'), findsNothing);
+    await unmount(tester);
+  });
 
   testWidgets('keeps the generic text for an unknown reason', (tester) async {
     api.setHttpClient(

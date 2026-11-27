@@ -8296,9 +8296,9 @@
     }
   },
   "spatialSourceNotUsable": "Not usable",
-  "spatialReconstructionFaceReview": "Some photos may show a person's face, so they were not sent for processing. Remove or replace the marked photos, then retry.",
+  "spatialReconstructionFaceReview": "Some photos or clips may show a person's face. Remove or replace the marked files, then retry.",
   "spatialSourceFaceReview": "May show a face",
-  "spatialSourceFaceReviewSemantics": "{name}: may show a person's face. Remove or replace this photo.",
+  "spatialSourceFaceReviewSemantics": "{name}: may show a person's face. Remove or replace this file.",
   "@spatialSourceFaceReviewSemantics": {
     "placeholders": {
       "name": {

@@ -19686,14 +19686,14 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get spatialReconstructionFaceReview =>
-      'Na nekaterih fotografijah je morda videti obraz osebe, zato jih nismo poslali v obdelavo. Odstrani ali zamenjaj označene fotografije in poskusi znova.';
+      'Na nekaterih fotografijah ali posnetkih je morda videti obraz osebe. Odstrani ali zamenjaj označene datoteke in poskusi znova.';
 
   @override
   String get spatialSourceFaceReview => 'Morda prikazuje obraz';
 
   @override
   String spatialSourceFaceReviewSemantics(String name) {
-    return '$name: morda prikazuje obraz osebe. Odstrani ali zamenjaj to fotografijo.';
+    return '$name: morda prikazuje obraz osebe. Odstrani ali zamenjaj to datoteko.';
   }
 
   @override
