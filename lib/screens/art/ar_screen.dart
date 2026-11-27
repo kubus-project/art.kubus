@@ -131,7 +131,7 @@ class _SpatialProcessingProgressDialog extends StatelessWidget {
             const SizedBox(height: KubusSpacing.md),
             KubusFamilyBrandText(progress.body),
             const SizedBox(height: KubusSpacing.sm),
-            Text(
+            KubusFamilyBrandText(
               l10n.spatialProgressLeaveHint,
               style: Theme.of(context).textTheme.bodySmall,
             ),

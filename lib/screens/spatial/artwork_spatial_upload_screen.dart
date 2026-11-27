@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 import 'dart:typed_data';
 
+import 'package:art_kubus/widgets/common/kubus_family_brand.dart';
 import 'package:crypto/crypto.dart' as crypto;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -405,7 +406,7 @@ class _ArtworkSpatialUploadScreenState
                   ),
                 ],
                 const SizedBox(height: KubusSpacing.md),
-                Text(l10n.spatialPilotNodeExplanation),
+                KubusFamilyBrandText(l10n.spatialPilotNodeExplanation),
                 Align(
                   alignment: AlignmentDirectional.centerStart,
                   child: TextButton(

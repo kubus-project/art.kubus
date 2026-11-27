@@ -820,8 +820,8 @@ class _ComputeSectionState extends State<_ComputeSection> {
                 onChanged: !available || _busy
                     ? null
                     : (value) => unawaited(_update({'enabled': value})),
-                title: Text(l10n.kubusNodeOfferGpu),
-                subtitle: Text(l10n.kubusNodeOfferGpuBody),
+                title: KubusFamilyBrandText(l10n.kubusNodeOfferGpu),
+                subtitle: KubusFamilyBrandText(l10n.kubusNodeOfferGpuBody),
               ),
               if (enabled)
                 SwitchListTile(

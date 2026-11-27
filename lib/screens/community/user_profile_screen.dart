@@ -1,6 +1,7 @@
 import 'package:art_kubus/models/gallery_presentation.dart';
 import 'package:art_kubus/widgets/detail/gallery_presentation.dart';
 import 'package:art_kubus/widgets/community/community_post_media_carousel.dart';
+import 'package:art_kubus/widgets/common/kubus_family_brand.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -553,16 +554,16 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                 ),
               )
             : const KubusGlassAppBarBackdrop(showBottomDivider: true),
-        title: Text(
-          isCanonicalPublicEntry
-              ? 'art.kubus'
-              : user!.name.isNotEmpty
-                  ? user!.name
-                  : l10n.userProfileTitle,
-          style: isCanonicalPublicEntry
-              ? KubusTextStyles.screenTitle.copyWith(color: roles.foreground)
-              : KubusTextStyles.mobileAppBarTitle,
-        ),
+        title: isCanonicalPublicEntry
+            ? KubusFamilyBrandText(
+                'art.kubus',
+                style: KubusTextStyles.screenTitle
+                    .copyWith(color: roles.foreground),
+              )
+            : Text(
+                user!.name.isNotEmpty ? user!.name : l10n.userProfileTitle,
+                style: KubusTextStyles.mobileAppBarTitle,
+              ),
         actions: [
           Padding(
             padding: const EdgeInsets.only(right: KubusSpacing.sm),

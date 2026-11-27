@@ -8,6 +8,8 @@ import 'package:art_kubus/widgets/unavailable_entity_scaffold.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import '../../support/profile_screen_harness.dart';
+
 /// The brand is lowercase everywhere and `kubus` is always bold italic where
 /// the UI can style it. The pilot strings below are plain l10n values, so the
 /// styling comes from [KubusFamilyBrandText] at the point they are shown.
@@ -22,6 +24,11 @@ void main() {
     'spatialProcessNetworkTitle': (l) => l.spatialProcessNetworkTitle,
     'spatialRemotePrivacyTitle': (l) => l.spatialRemotePrivacyTitle,
     'authSignInTitle': (l) => l.authSignInTitle,
+    'spatialProgressLeaveHint': (l) => l.spatialProgressLeaveHint,
+    'spatialPilotNodeExplanation': (l) => l.spatialPilotNodeExplanation,
+    'kubusNodeOfferGpu': (l) => l.kubusNodeOfferGpu,
+    'kubusNodeOfferGpuBody': (l) => l.kubusNodeOfferGpuBody,
+    'kubusNodeDownloadAction': (l) => l.kubusNodeDownloadAction,
   };
 
   List<TextSpan> brandRuns(InlineSpan root) {
@@ -142,5 +149,48 @@ void main() {
     final runs = brandRuns(tester.widget<RichText>(bar.first).text);
     expect(runs, hasLength(1));
     expect(runs.single.style?.fontStyle, FontStyle.italic);
+  });
+
+  test('brand-bearing pilot strings are never handed to a plain Text', () {
+    // Each of these l10n values names kubus, so the UI must show it through
+    // KubusFamilyBrandText; a plain Text(...) would render kubus upright.
+    final plain = RegExp(
+      r'Text\(\s*(?:_?l10n|AppLocalizations\.of\(context\)!?)\.'
+      r'(spatialProgressLeaveHint|spatialPilotNodeExplanation|'
+      r'kubusNodeOfferGpu|kubusNodeOfferGpuBody|kubusNodeDownloadAction|'
+      r'spatialReconstructionFree|spatialReconstructionCancelling|'
+      r'spatialReconstructionWaiting|spatialReconstructionProcessing|'
+      r'spatialSourceProviderDisclosure|spatialProgressRemoteBody|'
+      r'spatialProcessNetworkTitle|spatialRemotePrivacyTitle)',
+    );
+    final offenders = <String>[];
+    for (final entity in Directory('lib').listSync(recursive: true)) {
+      if (entity is! File || !entity.path.endsWith('.dart')) continue;
+      if (entity.path.contains('l10n')) continue;
+      final source = entity.readAsStringSync();
+      if (plain.hasMatch(source)) offenders.add(entity.path);
+    }
+    expect(offenders, isEmpty);
+  });
+
+  testWidgets(
+      'the public profile app bar renders art.kubus with kubus bold italic',
+      (tester) async {
+    await pumpProfileSurface(
+      tester,
+      surface: ProfileSurface.mobilePublic,
+      canonicalPublicEntry: true,
+    );
+    final bar = find.descendant(
+      of: find.byType(AppBar),
+      matching: find.byType(RichText),
+    );
+    final texts = tester.widgetList<RichText>(bar).toList();
+    final branded = texts.where((t) => t.text.toPlainText() == 'art.kubus');
+    expect(branded, hasLength(1));
+    final runs = brandRuns(branded.single.text);
+    expect(runs, hasLength(1));
+    expect(runs.single.style?.fontStyle, FontStyle.italic);
+    expect(runs.single.style?.fontWeight, FontWeight.w800);
   });
 }
