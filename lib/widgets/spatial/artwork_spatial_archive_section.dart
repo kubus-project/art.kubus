@@ -271,8 +271,10 @@ class _ArtworkSpatialArchiveSectionState
             KubusButton(
               onPressed: () => Navigator.of(context).push(
                 MaterialPageRoute<void>(
-                  builder: (_) =>
-                      ArtworkSpatialUploadScreen(artworkId: widget.artwork.id),
+                  builder: (_) => ArtworkSpatialUploadScreen(
+                    artworkId: widget.artwork.id,
+                    posterUrl: _posterUrl,
+                  ),
                 ),
               ),
               label: l10n.spatialDraftUploadTitle,
