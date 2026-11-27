@@ -18514,6 +18514,32 @@ class AppLocalizationsEn extends AppLocalizations {
       'Photo source, opens in browser';
 
   @override
+  String get institutionDetailDataSourcesTitle => 'Data sources';
+
+  @override
+  String get institutionDetailDataSourceOsm =>
+      'Data © OpenStreetMap contributors (ODbL)';
+
+  @override
+  String get institutionDetailDataSourceLicenceLink => 'ODbL 1.0 licence';
+
+  @override
+  String get institutionDetailDataSourceCopyrightLink =>
+      'OpenStreetMap copyright';
+
+  @override
+  String get institutionDetailDataSourceObjectLink => 'OpenStreetMap object';
+
+  @override
+  String get institutionDetailDataSourceExportLink =>
+      'Download OpenStreetMap-derived data (ODbL)';
+
+  @override
+  String institutionDetailDataSourceLinkSemantics(Object label) {
+    return '$label, opens in browser';
+  }
+
+  @override
   String get institutionDetailVisitTitle => 'Visit';
 
   @override

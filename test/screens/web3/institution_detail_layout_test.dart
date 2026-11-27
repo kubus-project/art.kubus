@@ -38,6 +38,7 @@ Map<String, Object?> _payload({
   Map<String, Object?>? coverAttribution,
   Map<String, Object?>? logoAttribution,
   Map<String, Object?>? visitorAccess,
+  List<Map<String, Object?>>? dataSources,
   int activeEvents = 0,
 }) {
   return {
@@ -64,6 +65,7 @@ Map<String, Object?> _payload({
     if (coverAttribution != null) 'coverAttribution': coverAttribution,
     if (logoAttribution != null) 'logoAttribution': logoAttribution,
     if (visitorAccess != null) 'visitorAccess': visitorAccess,
+    if (dataSources != null) 'dataSources': dataSources,
     'stats': {
       'totalVisitors': 0,
       'activeEvents': activeEvents,
@@ -76,6 +78,18 @@ Map<String, Object?> _payload({
     'createdAt': '2026-07-01T10:00:00.000Z',
   };
 }
+
+const _osmDataSource = <String, Object?>{
+  'id': 'osm',
+  'attribution': '© OpenStreetMap contributors',
+  'attributionLine': 'Data © OpenStreetMap contributors (ODbL)',
+  'license': 'ODbL-1.0',
+  'licenseUrl': 'https://opendatacommons.org/licenses/odbl/1-0/',
+  'copyrightUrl': 'https://www.openstreetmap.org/copyright',
+  'exportUrl': '/api/open-data/institutions-odbl.geojson',
+  'sourceUrls': ['https://www.openstreetmap.org/node/1'],
+  'fields': ['name', 'coordinates'],
+};
 
 void _serve(Map<String, Object?> institution) {
   BackendApiService().setHttpClient(MockClient((request) async {
@@ -362,5 +376,55 @@ void main() {
     );
     expect(errors, isEmpty);
     expect(find.textContaining('reading column honest'), findsOneWidget);
+  });
+  testWidgets(
+      'OpenStreetMap-derived data is credited with licence and download',
+      (tester) async {
+    final handle = tester.ensureSemantics();
+    final errors = await _pump(
+      tester,
+      institution: _payload(dataSources: const [_osmDataSource]),
+    );
+    expect(errors, isEmpty);
+    expect(
+        find.byKey(const ValueKey('institution-data-sources')), findsOneWidget);
+    expect(find.text('Data sources'), findsOneWidget);
+    expect(
+        find.text('Data © OpenStreetMap contributors (ODbL)'), findsOneWidget);
+    expect(find.text('ODbL 1.0 licence'), findsOneWidget);
+    expect(find.text('OpenStreetMap copyright'), findsOneWidget);
+    expect(find.text('Download OpenStreetMap-derived data (ODbL)'),
+        findsOneWidget);
+    expect(
+      find.bySemanticsLabel(
+          'Download OpenStreetMap-derived data (ODbL), opens in browser'),
+      findsOneWidget,
+    );
+    handle.dispose();
+  });
+
+  testWidgets('the OpenStreetMap credit is shown in Slovene too',
+      (tester) async {
+    final errors = await _pump(
+      tester,
+      institution: _payload(dataSources: const [_osmDataSource]),
+      locale: const Locale('sl'),
+    );
+    expect(errors, isEmpty);
+    expect(find.text('Viri podatkov'), findsOneWidget);
+    expect(find.text('Podatki © OpenStreetMap contributors (ODbL)'),
+        findsOneWidget);
+    expect(find.text('Licenca ODbL 1.0'), findsOneWidget);
+    expect(find.text('Prenesi podatke, izpeljane iz OpenStreetMap (ODbL)'),
+        findsOneWidget);
+  });
+
+  testWidgets('no credit appears when no shown fact came from OpenStreetMap',
+      (tester) async {
+    final errors = await _pump(tester, institution: _payload());
+    expect(errors, isEmpty);
+    expect(
+        find.byKey(const ValueKey('institution-data-sources')), findsNothing);
+    expect(find.textContaining('OpenStreetMap'), findsNothing);
   });
 }

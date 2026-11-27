@@ -7885,6 +7885,18 @@
     }
   },
   "institutionDetailSourceLinkSemantics": "Vir slike, odpre se v brskalniku",
+  "institutionDetailDataSourcesTitle": "Viri podatkov",
+  "institutionDetailDataSourceOsm": "Podatki © OpenStreetMap contributors (ODbL)",
+  "institutionDetailDataSourceLicenceLink": "Licenca ODbL 1.0",
+  "institutionDetailDataSourceCopyrightLink": "Avtorske pravice OpenStreetMap",
+  "institutionDetailDataSourceObjectLink": "Objekt OpenStreetMap",
+  "institutionDetailDataSourceExportLink": "Prenesi podatke, izpeljane iz OpenStreetMap (ODbL)",
+  "institutionDetailDataSourceLinkSemantics": "{label}, odpre se v brskalniku",
+  "@institutionDetailDataSourceLinkSemantics": {
+    "placeholders": {
+      "label": {}
+    }
+  },
   "institutionDetailVisitTitle": "Obisk",
   "institutionDetailOpeningHours": "Odpiralni čas",
   "institutionDetailAdmission": "Vstopnina",

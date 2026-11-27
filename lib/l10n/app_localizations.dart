@@ -32085,6 +32085,48 @@ abstract class AppLocalizations {
   /// **'Photo source, opens in browser'**
   String get institutionDetailSourceLinkSemantics;
 
+  /// No description provided for @institutionDetailDataSourcesTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Data sources'**
+  String get institutionDetailDataSourcesTitle;
+
+  /// No description provided for @institutionDetailDataSourceOsm.
+  ///
+  /// In en, this message translates to:
+  /// **'Data © OpenStreetMap contributors (ODbL)'**
+  String get institutionDetailDataSourceOsm;
+
+  /// No description provided for @institutionDetailDataSourceLicenceLink.
+  ///
+  /// In en, this message translates to:
+  /// **'ODbL 1.0 licence'**
+  String get institutionDetailDataSourceLicenceLink;
+
+  /// No description provided for @institutionDetailDataSourceCopyrightLink.
+  ///
+  /// In en, this message translates to:
+  /// **'OpenStreetMap copyright'**
+  String get institutionDetailDataSourceCopyrightLink;
+
+  /// No description provided for @institutionDetailDataSourceObjectLink.
+  ///
+  /// In en, this message translates to:
+  /// **'OpenStreetMap object'**
+  String get institutionDetailDataSourceObjectLink;
+
+  /// No description provided for @institutionDetailDataSourceExportLink.
+  ///
+  /// In en, this message translates to:
+  /// **'Download OpenStreetMap-derived data (ODbL)'**
+  String get institutionDetailDataSourceExportLink;
+
+  /// No description provided for @institutionDetailDataSourceLinkSemantics.
+  ///
+  /// In en, this message translates to:
+  /// **'{label}, opens in browser'**
+  String institutionDetailDataSourceLinkSemantics(Object label);
+
   /// No description provided for @institutionDetailVisitTitle.
   ///
   /// In en, this message translates to:

@@ -7951,6 +7951,18 @@
     }
   },
   "institutionDetailSourceLinkSemantics": "Photo source, opens in browser",
+  "institutionDetailDataSourcesTitle": "Data sources",
+  "institutionDetailDataSourceOsm": "Data © OpenStreetMap contributors (ODbL)",
+  "institutionDetailDataSourceLicenceLink": "ODbL 1.0 licence",
+  "institutionDetailDataSourceCopyrightLink": "OpenStreetMap copyright",
+  "institutionDetailDataSourceObjectLink": "OpenStreetMap object",
+  "institutionDetailDataSourceExportLink": "Download OpenStreetMap-derived data (ODbL)",
+  "institutionDetailDataSourceLinkSemantics": "{label}, opens in browser",
+  "@institutionDetailDataSourceLinkSemantics": {
+    "placeholders": {
+      "label": {}
+    }
+  },
   "institutionDetailVisitTitle": "Visit",
   "institutionDetailOpeningHours": "Opening hours",
   "institutionDetailAdmission": "Admission",
