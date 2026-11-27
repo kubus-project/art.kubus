@@ -10157,13 +10157,12 @@ class BackendApiService
 
   /// List events
   ///
-  /// - Primary backend: GET /api/events
-  /// - Legacy/fallback: GET /api/institutions/:id/events (may not exist on all deployments)
+  /// - Backend: GET /api/events. The backend serves no institution-event
+  ///   relation, so there is no institution filter or institution route.
   ///
   /// Returns a list of event JSON maps (not typed) to preserve backward compatibility
   /// with older parts of the app.
   Future<List<Map<String, dynamic>>> listEvents({
-    String? institutionId,
     bool? upcoming,
     String? from,
     String? to,
@@ -10187,10 +10186,9 @@ class BackendApiService
       }
       return await _performPublicRead<List<Map<String, dynamic>>>(
         liveRead: (candidateBaseUrl) async {
-          final base = institutionId == null
-              ? '${_normalizeApiBaseUrl(candidateBaseUrl)}/api/events'
-              : '${_normalizeApiBaseUrl(candidateBaseUrl)}/api/institutions/$institutionId/events';
-          final uri = Uri.parse(base).replace(queryParameters: query);
+          final uri = Uri.parse(
+            '${_normalizeApiBaseUrl(candidateBaseUrl)}/api/events',
+          ).replace(queryParameters: query);
           final response = await _get(
             uri,
             includeAuth: false,
@@ -10221,7 +10219,7 @@ class BackendApiService
             return [];
           }
 
-          if (response.statusCode == 400 && institutionId == null) {
+          if (response.statusCode == 400) {
             final page = (offset ~/ (limit <= 0 ? 1 : limit)) + 1;
             final retryQuery = <String, String>{
               'limit': '$limit',
@@ -10298,15 +10296,6 @@ class BackendApiService
               if (startsAt != null && startsAt.isBefore(DateTime.now())) {
                 return false;
               }
-            }
-
-            if (institutionId != null &&
-                institutionId.trim().isNotEmpty &&
-                (entry['institutionId'] ?? entry['institution_id'] ?? '')
-                        .toString()
-                        .trim() !=
-                    institutionId.trim()) {
-              return false;
             }
 
             return true;

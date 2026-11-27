@@ -34,7 +34,6 @@ import '../../../widgets/empty_state_card.dart';
 import '../../../widgets/glass_components.dart';
 import '../../../widgets/inline_loading.dart';
 import '../../../widgets/public_entity_takeover_ready.dart';
-import '../../events/event_detail_screen.dart';
 import 'institution_claim_sheet.dart';
 import '../../../providers/activation_prompt_provider.dart';
 
@@ -63,7 +62,6 @@ class _InstitutionDetailScreenState extends State<InstitutionDetailScreen> {
   final BackendApiService _api = BackendApiService();
 
   Institution? _institution;
-  List<Event> _events = const <Event>[];
   bool _loading = true;
   String? _error;
 
@@ -152,15 +150,10 @@ class _InstitutionDetailScreenState extends State<InstitutionDetailScreen> {
       final provider = context.read<InstitutionProvider>();
       Institution? institution =
           provider.getInstitutionById(widget.institutionId);
-      var events = provider.getEventsByInstitution(widget.institutionId);
-
-      if (institution == null || events.isEmpty) {
+      if (institution == null) {
         await provider.refreshData();
         if (!mounted) return;
         institution ??= provider.getInstitutionById(widget.institutionId);
-        if (events.isEmpty) {
-          events = provider.getEventsByInstitution(widget.institutionId);
-        }
       }
 
       if (institution == null) {
@@ -171,22 +164,9 @@ class _InstitutionDetailScreenState extends State<InstitutionDetailScreen> {
         }
       }
 
-      if (events.isEmpty) {
-        final rawEvents = await _api.listEvents(
-          institutionId: widget.institutionId,
-          limit: 20,
-          offset: 0,
-        );
-        if (!mounted) return;
-        events = rawEvents.map(_tryParseEvent).whereType<Event>().toList();
-      }
-
-      events.sort((a, b) => a.startDate.compareTo(b.startDate));
-
       if (!mounted) return;
       setState(() {
         _institution = institution;
-        _events = List<Event>.unmodifiable(events);
         _loading = false;
       });
       final linkedUserId = institution?.verifiedAccountProfile?.userId;
@@ -316,33 +296,9 @@ class _InstitutionDetailScreenState extends State<InstitutionDetailScreen> {
     }
   }
 
-  Event? _tryParseEvent(Map<String, dynamic> json) {
-    try {
-      return Event.fromJson(json);
-    } catch (_) {
-      return null;
-    }
-  }
-
-  String _formatDateRange(BuildContext context, Event event) {
-    final localizations = MaterialLocalizations.of(context);
-    final start = localizations.formatShortDate(event.startDate);
-    final end = localizations.formatShortDate(event.endDate);
-    if (start == end) return start;
-    return '$start - $end';
-  }
-
   /// Website, booking, licence and source links only (not directions).
   void _openExternal(Uri uri) {
     unawaited(launchUrl(uri, mode: LaunchMode.externalApplication));
-  }
-
-  Future<void> _openEvent(Event event) async {
-    await Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) => EventDetailScreen(eventId: event.id),
-      ),
-    );
   }
 
   void _openInstitutionOnMap(Institution institution) {
@@ -733,9 +689,7 @@ class _InstitutionDetailScreenState extends State<InstitutionDetailScreen> {
             showMessage: messageWallet != null,
           )
         : null;
-    final hasStats = stats.activeEvents > 0 ||
-        stats.artworkViews > 0 ||
-        stats.totalVisitors > 0;
+    final hasStats = stats.artworkViews > 0 || stats.totalVisitors > 0;
 
     final content = Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -827,10 +781,6 @@ class _InstitutionDetailScreenState extends State<InstitutionDetailScreen> {
             spacing: KubusSpacing.md,
             runSpacing: KubusSpacing.md,
             children: [
-              _StatTile(
-                label: l10n.institutionDetailStatActiveEvents,
-                value: stats.activeEvents.toString(),
-              ),
               _StatTile(
                 label: l10n.institutionDetailStatArtworkViews,
                 value: stats.artworkViews.toString(),
@@ -985,66 +935,10 @@ class _InstitutionDetailScreenState extends State<InstitutionDetailScreen> {
 
   Widget _buildEventsSection(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    final scheme = Theme.of(context).colorScheme;
-    if (_events.isEmpty) {
-      return EmptyStateCard(
-        icon: Icons.event_busy_outlined,
-        title: l10n.institutionDetailNoEventsTitle,
-        description: l10n.institutionDetailNoEventsDescription,
-      );
-    }
-
-    final visibleEvents = _events.take(6).toList(growable: false);
-
-    return LiquidGlassCard(
-      padding: const EdgeInsets.all(KubusSpacing.lg),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            l10n.institutionDetailEventsTitle,
-            style: KubusTextStyles.sectionTitle.copyWith(
-              color: scheme.onSurface,
-            ),
-          ),
-          const SizedBox(height: KubusSpacing.md),
-          ...visibleEvents.map(
-            (event) => Padding(
-              padding: EdgeInsets.only(
-                bottom:
-                    identical(event, visibleEvents.last) ? 0 : KubusSpacing.sm,
-              ),
-              child: ListTile(
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: KubusSpacing.sm,
-                  vertical: KubusSpacing.xs,
-                ),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(KubusRadius.md),
-                ),
-                tileColor:
-                    scheme.surfaceContainerHighest.withValues(alpha: 0.24),
-                leading: Icon(
-                  Icons.event_outlined,
-                  color: scheme.primary,
-                ),
-                title: Text(
-                  event.title,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                subtitle: Text(
-                  '${_formatDateRange(context, event)}\n${event.location}',
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                trailing: const Icon(Icons.chevron_right),
-                onTap: () => _openEvent(event),
-              ),
-            ),
-          ),
-        ],
-      ),
+    return EmptyStateCard(
+      icon: Icons.event_busy_outlined,
+      title: l10n.institutionDetailNoEventsTitle,
+      description: l10n.institutionDetailNoEventsDescription,
     );
   }
 
