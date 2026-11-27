@@ -19593,6 +19593,79 @@ class AppLocalizationsSl extends AppLocalizations {
       'Vse fotografije in posnetki iz tega zasebnega delovnega prostora bodo izbrisani.';
 
   @override
+  String get spatialReconstructionFree =>
+      'Med pilotom brezplačno. Za obdelavo potrebuješ le račun Kubus: brez denarnice in brez plačila.';
+
+  @override
+  String get spatialReconstructionStart => 'Ustvari rekonstrukcijo';
+
+  @override
+  String get spatialReconstructionAddViews =>
+      'Dodaj več pogledov in poskusi znova';
+
+  @override
+  String get spatialReconstructionCancel => 'Prekliči rekonstrukcijo';
+
+  @override
+  String get spatialReconstructionCancelling =>
+      'Preklic poteka. kubus Node ustavlja opravilo.';
+
+  @override
+  String get spatialReconstructionQueued => 'V vrsti za obdelavo.';
+
+  @override
+  String get spatialReconstructionPreparing =>
+      'Pripravljamo tvoje fotografije in posnetke: zakrivamo obraze in določamo položaje kamere.';
+
+  @override
+  String get spatialReconstructionWaiting =>
+      'Čakamo na vozlišče. Trenutno nobeno ustrezno vozlišče kubus Node nima prostih zmogljivosti. Tvoje datoteke ostanejo preverjene.';
+
+  @override
+  String get spatialReconstructionProcessing =>
+      'Obdelava poteka na vozlišču kubus Node.';
+
+  @override
+  String get spatialReconstructionImporting =>
+      'Preverjeni rezultat uvažamo kot zasebnega kandidata.';
+
+  @override
+  String get spatialReconstructionReady =>
+      'Rekonstrukcija je pripravljena. Je zasebni kandidat poleg morebitnega naloženega splata; objavljeni model se ne spremeni.';
+
+  @override
+  String get spatialReconstructionOpen => 'Predogled in oddaja';
+
+  @override
+  String spatialReconstructionNeedsViews(int usable, int required) {
+    return 'Uporabnih pogledov je premalo: $usable od potrebnih $required. Dodaj fotografije ali posnetke, ki se prekrivajo, in poskusi znova.';
+  }
+
+  @override
+  String get spatialReconstructionFailed =>
+      'Obdelava ni uspela. Tvoje preverjene datoteke ostanejo shranjene, zato lahko poskusiš znova.';
+
+  @override
+  String get spatialReconstructionCancelled =>
+      'Rekonstrukcija je preklicana. Tvoje preverjene datoteke ostanejo shranjene.';
+
+  @override
+  String spatialSourceUsableViews(int count) {
+    return 'Uporabni pogledi: $count';
+  }
+
+  @override
+  String get spatialSourceNotUsable => 'Ni uporabno';
+
+  @override
+  String get spatialSourceLocked =>
+      'Datoteke so med rekonstrukcijo zaklenjene.';
+
+  @override
+  String get spatialSourceRetention =>
+      'Izvorne datoteke hranimo sedem dni po zadnjem poskusu oziroma dokler jih ne izbrišeš.';
+
+  @override
   String get spatialReviewTitle => 'Predogled in oddaja';
 
   @override

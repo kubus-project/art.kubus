@@ -8248,6 +8248,42 @@
   "spatialSourceDelete": "Delete source files now",
   "spatialSourceDeleteFile": "Delete this source file",
   "spatialSourceDeleteConfirmation": "All photos and clips in this private workspace will be deleted.",
+  "spatialReconstructionFree": "Free during the pilot. Processing needs only your Kubus account: no wallet, no payment.",
+  "spatialReconstructionStart": "Create reconstruction",
+  "spatialReconstructionAddViews": "Add more views and retry",
+  "spatialReconstructionCancel": "Cancel reconstruction",
+  "spatialReconstructionCancelling": "Cancelling. The Kubus Node is stopping the job.",
+  "spatialReconstructionQueued": "Queued for processing.",
+  "spatialReconstructionPreparing": "Preparing your photos and clips: masking faces and solving camera positions.",
+  "spatialReconstructionWaiting": "Waiting for a node. No eligible Kubus Node has capacity right now. Your files stay verified.",
+  "spatialReconstructionProcessing": "Processing on a Kubus Node.",
+  "spatialReconstructionImporting": "Importing the verified result as a private candidate.",
+  "spatialReconstructionReady": "Reconstruction ready. It is a private candidate beside any uploaded splat; the published model does not change.",
+  "spatialReconstructionOpen": "Preview and submit",
+  "spatialReconstructionNeedsViews": "Too few views could be used: {usable} of the {required} needed. Add photos or clips that overlap, then retry.",
+  "@spatialReconstructionNeedsViews": {
+    "placeholders": {
+      "usable": {
+        "type": "int"
+      },
+      "required": {
+        "type": "int"
+      }
+    }
+  },
+  "spatialReconstructionFailed": "Processing failed. Your verified files are kept, so you can retry.",
+  "spatialReconstructionCancelled": "Reconstruction cancelled. Your verified files are kept.",
+  "spatialSourceUsableViews": "Usable views: {count}",
+  "@spatialSourceUsableViews": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "spatialSourceNotUsable": "Not usable",
+  "spatialSourceLocked": "Files are locked while a reconstruction runs.",
+  "spatialSourceRetention": "Source files are kept for seven days after the last attempt, or until you delete them.",
   "spatialReviewTitle": "Preview and submit",
   "spatialReviewPreview": "Open private preview",
   "spatialReviewClosePreview": "Close preview",

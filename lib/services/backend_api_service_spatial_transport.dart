@@ -255,6 +255,49 @@ extension BackendApiServiceSpatialTransport on BackendApiService {
     }
   }
 
+  Uri _spatialReconstructionUri(String artworkId, [String suffix = '']) =>
+      _spatialDraftUri(artworkId, '/reconstructions$suffix');
+
+  Future<SpatialReconstructionStatus?> getSpatialReconstruction(
+      String artworkId) async {
+    final uri = _spatialReconstructionUri(artworkId);
+    final response = await _get(uri);
+    if (response.statusCode == 404) return null;
+    return SpatialReconstructionStatus.fromJson(
+        _spatialReviewResponse(response, uri));
+  }
+
+  /// Starts an attempt over the workspace revision the artist last saw.
+  Future<SpatialReconstruction> startSpatialReconstruction(
+      String artworkId, String workspaceId, int revision) async {
+    final uri = _spatialReconstructionUri(artworkId);
+    final response = await _post(uri,
+        body: jsonEncode(
+            {'workspaceId': workspaceId, 'expectedRevision': revision}),
+        allowImplicitBackendFailover: false);
+    return SpatialReconstruction.fromJson(
+        _spatialReviewResponse(response, uri));
+  }
+
+  Future<SpatialReconstruction> cancelSpatialReconstruction(
+      String artworkId, String reconstructionId) async {
+    final uri = _spatialReconstructionUri(
+        artworkId, '/${Uri.encodeComponent(reconstructionId)}/cancel');
+    final response = await _post(uri,
+        body: jsonEncode(const <String, Object>{}),
+        allowImplicitBackendFailover: false);
+    return SpatialReconstruction.fromJson(
+        _spatialReviewResponse(response, uri));
+  }
+
+  Future<SpatialUploadDraft> getSpatialReconstructionCandidate(
+      String artworkId, String reconstructionId) async {
+    final uri = _spatialReconstructionUri(
+        artworkId, '/${Uri.encodeComponent(reconstructionId)}/candidate');
+    final response = await _get(uri);
+    return SpatialUploadDraft.fromJson(_spatialReviewResponse(response, uri));
+  }
+
   Future<void> deleteSpatialUploadDraft(SpatialUploadDraft draft) async {
     final uri =
         _spatialDraftUri(draft.artworkId, '/${Uri.encodeComponent(draft.id)}');

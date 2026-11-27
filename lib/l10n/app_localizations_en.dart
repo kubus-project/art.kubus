@@ -19404,6 +19404,77 @@ class AppLocalizationsEn extends AppLocalizations {
       'All photos and clips in this private workspace will be deleted.';
 
   @override
+  String get spatialReconstructionFree =>
+      'Free during the pilot. Processing needs only your Kubus account: no wallet, no payment.';
+
+  @override
+  String get spatialReconstructionStart => 'Create reconstruction';
+
+  @override
+  String get spatialReconstructionAddViews => 'Add more views and retry';
+
+  @override
+  String get spatialReconstructionCancel => 'Cancel reconstruction';
+
+  @override
+  String get spatialReconstructionCancelling =>
+      'Cancelling. The Kubus Node is stopping the job.';
+
+  @override
+  String get spatialReconstructionQueued => 'Queued for processing.';
+
+  @override
+  String get spatialReconstructionPreparing =>
+      'Preparing your photos and clips: masking faces and solving camera positions.';
+
+  @override
+  String get spatialReconstructionWaiting =>
+      'Waiting for a node. No eligible Kubus Node has capacity right now. Your files stay verified.';
+
+  @override
+  String get spatialReconstructionProcessing => 'Processing on a Kubus Node.';
+
+  @override
+  String get spatialReconstructionImporting =>
+      'Importing the verified result as a private candidate.';
+
+  @override
+  String get spatialReconstructionReady =>
+      'Reconstruction ready. It is a private candidate beside any uploaded splat; the published model does not change.';
+
+  @override
+  String get spatialReconstructionOpen => 'Preview and submit';
+
+  @override
+  String spatialReconstructionNeedsViews(int usable, int required) {
+    return 'Too few views could be used: $usable of the $required needed. Add photos or clips that overlap, then retry.';
+  }
+
+  @override
+  String get spatialReconstructionFailed =>
+      'Processing failed. Your verified files are kept, so you can retry.';
+
+  @override
+  String get spatialReconstructionCancelled =>
+      'Reconstruction cancelled. Your verified files are kept.';
+
+  @override
+  String spatialSourceUsableViews(int count) {
+    return 'Usable views: $count';
+  }
+
+  @override
+  String get spatialSourceNotUsable => 'Not usable';
+
+  @override
+  String get spatialSourceLocked =>
+      'Files are locked while a reconstruction runs.';
+
+  @override
+  String get spatialSourceRetention =>
+      'Source files are kept for seven days after the last attempt, or until you delete them.';
+
+  @override
   String get spatialReviewTitle => 'Preview and submit';
 
   @override

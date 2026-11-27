@@ -33687,6 +33687,120 @@ abstract class AppLocalizations {
   /// **'All photos and clips in this private workspace will be deleted.'**
   String get spatialSourceDeleteConfirmation;
 
+  /// No description provided for @spatialReconstructionFree.
+  ///
+  /// In en, this message translates to:
+  /// **'Free during the pilot. Processing needs only your Kubus account: no wallet, no payment.'**
+  String get spatialReconstructionFree;
+
+  /// No description provided for @spatialReconstructionStart.
+  ///
+  /// In en, this message translates to:
+  /// **'Create reconstruction'**
+  String get spatialReconstructionStart;
+
+  /// No description provided for @spatialReconstructionAddViews.
+  ///
+  /// In en, this message translates to:
+  /// **'Add more views and retry'**
+  String get spatialReconstructionAddViews;
+
+  /// No description provided for @spatialReconstructionCancel.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel reconstruction'**
+  String get spatialReconstructionCancel;
+
+  /// No description provided for @spatialReconstructionCancelling.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancelling. The Kubus Node is stopping the job.'**
+  String get spatialReconstructionCancelling;
+
+  /// No description provided for @spatialReconstructionQueued.
+  ///
+  /// In en, this message translates to:
+  /// **'Queued for processing.'**
+  String get spatialReconstructionQueued;
+
+  /// No description provided for @spatialReconstructionPreparing.
+  ///
+  /// In en, this message translates to:
+  /// **'Preparing your photos and clips: masking faces and solving camera positions.'**
+  String get spatialReconstructionPreparing;
+
+  /// No description provided for @spatialReconstructionWaiting.
+  ///
+  /// In en, this message translates to:
+  /// **'Waiting for a node. No eligible Kubus Node has capacity right now. Your files stay verified.'**
+  String get spatialReconstructionWaiting;
+
+  /// No description provided for @spatialReconstructionProcessing.
+  ///
+  /// In en, this message translates to:
+  /// **'Processing on a Kubus Node.'**
+  String get spatialReconstructionProcessing;
+
+  /// No description provided for @spatialReconstructionImporting.
+  ///
+  /// In en, this message translates to:
+  /// **'Importing the verified result as a private candidate.'**
+  String get spatialReconstructionImporting;
+
+  /// No description provided for @spatialReconstructionReady.
+  ///
+  /// In en, this message translates to:
+  /// **'Reconstruction ready. It is a private candidate beside any uploaded splat; the published model does not change.'**
+  String get spatialReconstructionReady;
+
+  /// No description provided for @spatialReconstructionOpen.
+  ///
+  /// In en, this message translates to:
+  /// **'Preview and submit'**
+  String get spatialReconstructionOpen;
+
+  /// No description provided for @spatialReconstructionNeedsViews.
+  ///
+  /// In en, this message translates to:
+  /// **'Too few views could be used: {usable} of the {required} needed. Add photos or clips that overlap, then retry.'**
+  String spatialReconstructionNeedsViews(int usable, int required);
+
+  /// No description provided for @spatialReconstructionFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Processing failed. Your verified files are kept, so you can retry.'**
+  String get spatialReconstructionFailed;
+
+  /// No description provided for @spatialReconstructionCancelled.
+  ///
+  /// In en, this message translates to:
+  /// **'Reconstruction cancelled. Your verified files are kept.'**
+  String get spatialReconstructionCancelled;
+
+  /// No description provided for @spatialSourceUsableViews.
+  ///
+  /// In en, this message translates to:
+  /// **'Usable views: {count}'**
+  String spatialSourceUsableViews(int count);
+
+  /// No description provided for @spatialSourceNotUsable.
+  ///
+  /// In en, this message translates to:
+  /// **'Not usable'**
+  String get spatialSourceNotUsable;
+
+  /// No description provided for @spatialSourceLocked.
+  ///
+  /// In en, this message translates to:
+  /// **'Files are locked while a reconstruction runs.'**
+  String get spatialSourceLocked;
+
+  /// No description provided for @spatialSourceRetention.
+  ///
+  /// In en, this message translates to:
+  /// **'Source files are kept for seven days after the last attempt, or until you delete them.'**
+  String get spatialSourceRetention;
+
   /// No description provided for @spatialReviewTitle.
   ///
   /// In en, this message translates to:

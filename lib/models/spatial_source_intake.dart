@@ -21,6 +21,7 @@ class SpatialSourceIntake {
         chunkSize = value['chunkSizeBytes'] as int,
         maxFiles = value['maxFiles'] as int,
         workspaceId = (value['workspace'] as Map?)?['id'] as String?,
+        revision = (value['workspace'] as Map?)?['revision'] as int?,
         files = [
           for (final file
               in ((value['workspace'] as Map?)?['files'] as List? ?? const []))
@@ -31,5 +32,73 @@ class SpatialSourceIntake {
   final int chunkSize;
   final int maxFiles;
   final String? workspaceId;
+  final int? revision;
   final List<SpatialSourceFile> files;
+}
+
+/// How one source file fared in the last reconstruction attempt.
+class SpatialSourceFeedback {
+  SpatialSourceFeedback.fromJson(Map<String, dynamic> value)
+      : fileId = value['fileId'] as String,
+        usable = value['usable'] == true,
+        usableViews = value['usableViews'] as int?,
+        reason = value['reason'] as String?;
+
+  final String fileId;
+  final bool usable;
+  final int? usableViews;
+  final String? reason;
+}
+
+/// The artist's latest reconstruction attempt for an artwork.
+class SpatialReconstruction {
+  SpatialReconstruction.fromJson(Map<String, dynamic> value)
+      : id = value['id'] as String,
+        attempt = value['attempt'] as int,
+        state = value['state'] as String,
+        stage = value['stage'] as String?,
+        cancelRequested = value['cancelRequested'] == true,
+        problemCode = value['problemCode'] as String?,
+        candidateDraftId = value['candidateDraftId'] as String?,
+        usableViews = (value['feedback'] as Map?)?['usableViews'] as int?,
+        requiredViews = (value['feedback'] as Map?)?['requiredViews'] as int?,
+        inputs = {
+          for (final item
+              in ((value['feedback'] as Map?)?['inputs'] as List? ?? const []))
+            (item as Map<String, dynamic>)['fileId'] as String:
+                SpatialSourceFeedback.fromJson(item),
+        };
+
+  static const activeStates = {
+    'queued',
+    'preparing',
+    'waiting_for_node',
+    'processing',
+    'importing',
+  };
+
+  final String id;
+  final int attempt;
+  final String state;
+  final String? stage;
+  final bool cancelRequested;
+  final String? problemCode;
+  final String? candidateDraftId;
+  final int? usableViews;
+  final int? requiredViews;
+  final Map<String, SpatialSourceFeedback> inputs;
+
+  bool get active => activeStates.contains(state);
+}
+
+class SpatialReconstructionStatus {
+  SpatialReconstructionStatus.fromJson(Map<String, dynamic> value)
+      : remoteProcessingEnabled = value['remoteProcessingEnabled'] == true,
+        reconstruction = value['reconstruction'] is Map<String, dynamic>
+            ? SpatialReconstruction.fromJson(
+                value['reconstruction'] as Map<String, dynamic>)
+            : null;
+
+  final bool remoteProcessingEnabled;
+  final SpatialReconstruction? reconstruction;
 }

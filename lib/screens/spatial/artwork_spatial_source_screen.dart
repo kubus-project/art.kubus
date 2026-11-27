@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math' as math;
 import 'dart:typed_data';
 
@@ -12,6 +13,7 @@ import '../../services/backend_api_service.dart';
 import '../../services/spatial_upload_source.dart';
 import '../../utils/design_tokens.dart';
 import '../../widgets/inline_loading.dart';
+import 'artwork_spatial_review_screen.dart';
 
 class ArtworkSpatialSourceScreen extends StatefulWidget {
   const ArtworkSpatialSourceScreen({required this.artworkId, super.key});
@@ -28,6 +30,8 @@ class _ArtworkSpatialSourceScreenState
   final _api = BackendApiService();
   late final int _epoch = _api.authSessionEpoch;
   SpatialSourceIntake? _intake;
+  SpatialReconstructionStatus? _status;
+  Timer? _poll;
   final _progress = <String, SpatialSourceFile>{};
   bool _accepted = false;
   bool _busy = false;
@@ -38,6 +42,8 @@ class _ArtworkSpatialSourceScreenState
 
   bool get _activeSession => mounted && _epoch == _api.authSessionEpoch;
   String get _artwork => widget.artworkId;
+  SpatialReconstruction? get _attempt => _status?.reconstruction;
+  bool get _locked => _attempt?.active == true;
 
   @override
   void initState() {
@@ -45,14 +51,32 @@ class _ArtworkSpatialSourceScreenState
     _refresh();
   }
 
+  @override
+  void dispose() {
+    _poll?.cancel();
+    super.dispose();
+  }
+
+  // An attempt runs for minutes to hours on another Node; follow it while it is active.
+  void _schedulePoll() {
+    _poll?.cancel();
+    if (_locked && _activeSession) {
+      _poll = Timer(const Duration(seconds: 10), _refresh);
+    }
+  }
+
   Future<void> _refresh() async {
     if (!_activeSession) return;
     setState(() => _busy = true);
     try {
       final intake = await _api.getSpatialSourceIntake(_artwork);
+      final status =
+          intake == null ? null : await _api.getSpatialReconstruction(_artwork);
       if (!_activeSession) return;
       setState(() {
         _intake = intake;
+        _status = status;
+        _failed = false;
         _accepted = intake?.workspaceId != null;
         _progress
           ..clear()
@@ -62,8 +86,131 @@ class _ArtworkSpatialSourceScreenState
     } catch (_) {
       if (_activeSession) setState(() => _failed = true);
     } finally {
-      if (_activeSession) setState(() => _busy = false);
+      if (_activeSession) {
+        setState(() => _busy = false);
+        _schedulePoll();
+      }
     }
+  }
+
+  Future<void> _startReconstruction() async {
+    final intake = _intake;
+    final workspaceId = intake?.workspaceId;
+    final revision = intake?.revision;
+    if (!_activeSession || _busy || workspaceId == null || revision == null) {
+      return;
+    }
+    setState(() {
+      _busy = true;
+      _failed = false;
+    });
+    try {
+      await _api.startSpatialReconstruction(_artwork, workspaceId, revision);
+    } catch (_) {
+      if (_activeSession) setState(() => _failed = true);
+    } finally {
+      if (_activeSession) await _refresh();
+    }
+  }
+
+  Future<void> _cancelReconstruction() async {
+    final attempt = _attempt;
+    if (!_activeSession || _busy || attempt == null) return;
+    setState(() => _busy = true);
+    try {
+      await _api.cancelSpatialReconstruction(_artwork, attempt.id);
+    } catch (_) {
+      if (_activeSession) setState(() => _failed = true);
+    } finally {
+      if (_activeSession) await _refresh();
+    }
+  }
+
+  Future<void> _openCandidate() async {
+    final attempt = _attempt;
+    if (!_activeSession || _busy || attempt == null) return;
+    try {
+      final draft =
+          await _api.getSpatialReconstructionCandidate(_artwork, attempt.id);
+      if (!mounted || !_activeSession) return;
+      await Navigator.of(context).push(MaterialPageRoute<void>(
+          builder: (_) => ArtworkSpatialReviewScreen(draft: draft)));
+    } catch (_) {
+      if (_activeSession) setState(() => _failed = true);
+    }
+  }
+
+  String _statusText(AppLocalizations l10n, SpatialReconstruction attempt) {
+    if (attempt.cancelRequested && attempt.active) {
+      return l10n.spatialReconstructionCancelling;
+    }
+    return switch (attempt.state) {
+      'queued' => l10n.spatialReconstructionQueued,
+      'preparing' => l10n.spatialReconstructionPreparing,
+      'waiting_for_node' => l10n.spatialReconstructionWaiting,
+      'processing' => l10n.spatialReconstructionProcessing,
+      'importing' => l10n.spatialReconstructionImporting,
+      'ready' => l10n.spatialReconstructionReady,
+      'needs_more_views' => l10n.spatialReconstructionNeedsViews(
+          attempt.usableViews ?? 0, attempt.requiredViews ?? 24),
+      'cancelled' => l10n.spatialReconstructionCancelled,
+      _ => l10n.spatialReconstructionFailed,
+    };
+  }
+
+  List<Widget> _reconstructionSection(
+      AppLocalizations l10n, List<SpatialSourceFile> files) {
+    final status = _status;
+    if (status == null) return const [];
+    if (!status.remoteProcessingEnabled && !_locked) {
+      return [Text(l10n.spatialSourceProcessingPaused)];
+    }
+    final attempt = _attempt;
+    final ready = files.isNotEmpty &&
+        files.every((file) => file.ready) &&
+        _intake?.workspaceId != null;
+    final retry = attempt != null && !attempt.active;
+    final canStart =
+        status.remoteProcessingEnabled && (attempt == null || retry);
+    final running = attempt != null && attempt.active;
+    return [
+      if (attempt != null)
+        Semantics(liveRegion: true, child: Text(_statusText(l10n, attempt))),
+      if (running && !attempt.cancelRequested) const InlineLoading(height: 4),
+      if (canStart) Text(l10n.spatialReconstructionFree),
+      const SizedBox(height: KubusSpacing.sm),
+      Wrap(spacing: KubusSpacing.sm, runSpacing: KubusSpacing.sm, children: [
+        if (canStart)
+          FilledButton.icon(
+              onPressed: ready && !_busy && !_transferring
+                  ? _startReconstruction
+                  : null,
+              icon: const Icon(Icons.view_in_ar_outlined),
+              label: Text(attempt?.state == 'needs_more_views'
+                  ? l10n.spatialReconstructionAddViews
+                  : attempt == null || attempt.state == 'ready'
+                      ? l10n.spatialReconstructionStart
+                      : l10n.commonRetry)),
+        if (running && !attempt.cancelRequested)
+          OutlinedButton(
+              onPressed: _busy ? null : _cancelReconstruction,
+              child: Text(l10n.spatialReconstructionCancel)),
+        if (attempt?.state == 'ready' && attempt?.candidateDraftId != null)
+          FilledButton.tonal(
+              onPressed: _busy ? null : _openCandidate,
+              child: Text(l10n.spatialReconstructionOpen)),
+      ]),
+      if (_locked) Text(l10n.spatialSourceLocked),
+      Text(l10n.spatialSourceRetention),
+    ];
+  }
+
+  // Usable-view counts from the latest attempt, so the artist can see what to reshoot.
+  String _fileFeedback(AppLocalizations l10n, SpatialSourceFile file) {
+    final feedback = _attempt?.inputs[file.id];
+    if (feedback == null) return l10n.spatialSourceVerified;
+    if (!feedback.usable) return l10n.spatialSourceNotUsable;
+    return l10n.spatialSourceUsableViews(feedback.usableViews ?? 0);
   }
 
   Future<Uint8List> _read(
@@ -191,7 +338,7 @@ class _ArtworkSpatialSourceScreenState
           : ListView(padding: const EdgeInsets.all(KubusSpacing.lg), children: [
               Text(l10n.spatialSourceFormats),
               const SizedBox(height: KubusSpacing.sm),
-              Text(l10n.spatialSourceProcessingPaused),
+              ..._reconstructionSection(l10n, files),
               const SizedBox(height: KubusSpacing.md),
               if (intake != null && intake.workspaceId == null)
                 CheckboxListTile(
@@ -215,7 +362,8 @@ class _ArtworkSpatialSourceScreenState
                   children: [
                     if (intake != null)
                       FilledButton.icon(
-                          onPressed: _accepted && !_busy ? _choose : null,
+                          onPressed:
+                              _accepted && !_busy && !_locked ? _choose : null,
                           icon: const Icon(Icons.upload_file_outlined),
                           label: Text(l10n.spatialSourceChoose)),
                     if (_transferring)
@@ -226,7 +374,7 @@ class _ArtworkSpatialSourceScreenState
                           child: Text(l10n.spatialDraftUploadPause)),
                     if (intake?.workspaceId != null)
                       TextButton(
-                          onPressed: _busy ? null : _delete,
+                          onPressed: _busy || _locked ? null : _delete,
                           child: Text(l10n.spatialSourceDelete)),
                     if (intake == null && !_busy)
                       TextButton(
@@ -236,16 +384,17 @@ class _ArtworkSpatialSourceScreenState
                 ListTile(
                   contentPadding: EdgeInsets.zero,
                   title: Text(file.name),
-                  subtitle: file.ready
-                      ? Text(l10n.spatialSourceVerified)
-                      : InlineLoading(
+                  subtitle: !file.ready
+                      ? InlineLoading(
                           height: 4,
                           progress: file.received / file.size,
-                          animate: false),
+                          animate: false)
+                      : Text(_fileFeedback(l10n, file)),
                   trailing: IconButton(
                       tooltip: l10n.spatialSourceDeleteFile,
                       icon: const Icon(Icons.delete_outline),
-                      onPressed: _busy ? null : () => _delete(file: file)),
+                      onPressed:
+                          _busy || _locked ? null : () => _delete(file: file)),
                 ),
             ]),
     );
