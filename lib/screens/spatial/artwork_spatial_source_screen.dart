@@ -12,6 +12,7 @@ import '../../providers/profile_provider.dart';
 import '../../services/backend_api_service.dart';
 import '../../services/spatial_upload_source.dart';
 import '../../utils/design_tokens.dart';
+import '../../widgets/common/kubus_family_brand.dart';
 import '../../widgets/inline_loading.dart';
 import 'artwork_spatial_review_screen.dart';
 
@@ -163,8 +164,11 @@ class _ArtworkSpatialSourceScreenState
       'processing' => l10n.spatialReconstructionProcessing,
       'importing' => l10n.spatialReconstructionImporting,
       'ready' => l10n.spatialReconstructionReady,
-      'needs_more_views' => l10n.spatialReconstructionNeedsViews(
-          attempt.usableViews ?? 0, attempt.requiredViews ?? 24),
+      'needs_more_views' =>
+        attempt.usableViews != null && attempt.requiredViews != null
+            ? l10n.spatialReconstructionNeedsViews(
+                attempt.usableViews!, attempt.requiredViews!)
+            : l10n.spatialReconstructionNeedsViewsGeneric,
       'cancelled' => l10n.spatialReconstructionCancelled,
       _ => l10n.spatialReconstructionFailed,
     };
@@ -187,9 +191,14 @@ class _ArtworkSpatialSourceScreenState
     final running = attempt != null && attempt.active;
     return [
       if (attempt != null)
-        Semantics(liveRegion: true, child: Text(_statusText(l10n, attempt))),
+        Semantics(
+            liveRegion: true,
+            child: KubusFamilyBrandText(_statusText(l10n, attempt))),
       if (running && !attempt.cancelRequested) const InlineLoading(height: 4),
-      if (canStart) Text(l10n.spatialReconstructionFree),
+      if (canStart) ...[
+        if (attempt != null) const SizedBox(height: KubusSpacing.xs),
+        KubusFamilyBrandText(l10n.spatialReconstructionFree),
+      ],
       const SizedBox(height: KubusSpacing.sm),
       Wrap(spacing: KubusSpacing.sm, runSpacing: KubusSpacing.sm, children: [
         if (canStart)
@@ -375,7 +384,8 @@ class _ArtworkSpatialSourceScreenState
                   onChanged: _busy
                       ? null
                       : (value) => setState(() => _accepted = value == true),
-                  title: Text(l10n.spatialSourceProviderDisclosure),
+                  title: KubusFamilyBrandText(
+                      l10n.spatialSourceProviderDisclosure),
                 ),
               if (_busy) const InlineLoading(height: 4),
               if (_failed || _overLimit)

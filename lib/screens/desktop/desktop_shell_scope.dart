@@ -212,6 +212,7 @@ class DesktopSubScreen extends StatelessWidget {
 
     Widget buildHeader() => KubusScreenHeaderBar(
           title: isCanonicalPublicEntry ? 'art.kubus' : title,
+          brandTitle: isCanonicalPublicEntry,
           compact: true,
           minHeight: KubusHeaderMetrics.actionHitArea,
           titleStyle: KubusTextStyles.screenTitle,

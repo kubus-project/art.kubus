@@ -29,6 +29,7 @@ import '../../services/share/share_types.dart';
 import '../../services/spatial_library_store.dart';
 import '../../utils/artwork_navigation.dart';
 import '../../utils/node_state_presentation.dart';
+import '../../widgets/common/kubus_family_brand.dart';
 import '../../widgets/kubus_kit.dart';
 import '../../widgets/spatial/spatial_upload_progress.dart';
 import '../../widgets/spatial/spatial_viewer.dart';
@@ -563,7 +564,7 @@ class _SpatialLibraryDetailScreenState
               context: context,
               builder: (dialogContext) => KubusAlertDialog(
                 size: KubusDialogSize.compact,
-                title: Text(l10n.spatialRemotePrivacyTitle),
+                title: KubusFamilyBrandText(l10n.spatialRemotePrivacyTitle),
                 content: Text(l10n.spatialRemotePrivacyBody),
                 actions: <Widget>[
                   KubusOutlineButton(

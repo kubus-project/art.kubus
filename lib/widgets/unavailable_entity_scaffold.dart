@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../l10n/app_localizations.dart';
 import '../utils/design_tokens.dart';
 import '../utils/kubus_color_roles.dart';
+import 'common/kubus_family_brand.dart';
 import 'empty_state_card.dart';
 
 /// Why a detail screen has no entity to show.
@@ -46,10 +47,12 @@ class UnavailableEntityScaffold extends StatelessWidget {
           ? AppBar(
               backgroundColor: canonicalPublicEntry ? roles.surface : null,
               elevation: 0,
-              title: Text(
-                canonicalPublicEntry ? 'art.kubus' : entityLabel,
-                style: KubusTextStyles.screenTitle,
-              ),
+              title: canonicalPublicEntry
+                  ? KubusFamilyBrandText(
+                      'art.kubus',
+                      style: KubusTextStyles.screenTitle,
+                    )
+                  : Text(entityLabel, style: KubusTextStyles.screenTitle),
             )
           : null,
       body: Center(

@@ -69,6 +69,7 @@ import '../download_app_screen.dart';
 import '../community/profile_screen_methods.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
 import 'package:art_kubus/widgets/common/keyboard_inset_padding.dart';
+import 'package:art_kubus/widgets/common/kubus_family_brand.dart';
 import 'package:art_kubus/widgets/glass_components.dart';
 import '../../widgets/spatial/spatial_viewer.dart';
 import '../../utils/share_deep_link_navigation.dart';
@@ -128,7 +129,7 @@ class _SpatialProcessingProgressDialog extends StatelessWidget {
               color: Theme.of(context).colorScheme.primary,
             ),
             const SizedBox(height: KubusSpacing.md),
-            Text(progress.body),
+            KubusFamilyBrandText(progress.body),
             const SizedBox(height: KubusSpacing.sm),
             Text(
               l10n.spatialProgressLeaveHint,
@@ -238,7 +239,7 @@ class _ProcessingDestination extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
+          KubusFamilyBrandText(
             title,
             style: theme.textTheme.titleSmall?.copyWith(
               fontWeight: FontWeight.w600,
@@ -2399,7 +2400,7 @@ class _ARScreenState extends State<ARScreen>
           context: context,
           builder: (dialogContext) => KubusAlertDialog(
             size: KubusDialogSize.compact,
-            title: Text(l10n.spatialRemotePrivacyTitle),
+            title: KubusFamilyBrandText(l10n.spatialRemotePrivacyTitle),
             content: Text(
               '${l10n.spatialRemotePrivacyBody}\n\n${l10n.spatialProcessMaximumPrivacy}',
             ),

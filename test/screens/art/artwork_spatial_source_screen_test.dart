@@ -168,6 +168,95 @@ void main() {
     await unmount(tester);
   });
 
+  for (final feedback in <Map<String, dynamic>>[
+    // The backend sends no counts for an sfm_failed attempt.
+    {
+      'usableViews': null,
+      'requiredViews': null,
+      'inputs': [
+        {'fileId': photo, 'usable': true, 'usableViews': 1},
+        {'fileId': clip, 'usable': true, 'usableViews': 1},
+      ],
+    },
+    // Only one of the two numbers is known: still no invented figure.
+    {'usableViews': 3, 'requiredViews': null},
+    {'usableViews': null, 'requiredViews': 24},
+    const <String, dynamic>{},
+  ]) {
+    testWidgets('does not invent view counts when $feedback', (tester) async {
+      api.setHttpClient(
+          MockClient((request) async => request.url.path.endsWith('/sources')
+              ? sources()
+              : ok({
+                  'remoteProcessingEnabled': true,
+                  'reconstruction':
+                      attempt('needs_more_views', feedback: feedback),
+                })));
+      await mount(tester);
+      expect(find.textContaining('Too few views'), findsNothing);
+      expect(find.textContaining('0 of the'), findsNothing);
+      expect(find.textContaining('of the 24 needed'), findsNothing);
+      expect(
+        find.textContaining(
+            'Add more photos or clips with good overlap, taken from different '
+            'angles'),
+        findsOneWidget,
+      );
+      expect(find.text('Add more views and retry'), findsOneWidget);
+      await unmount(tester);
+    });
+  }
+
+  testWidgets('the Slovenian generic copy appears when counts are null',
+      (tester) async {
+    api.setHttpClient(
+        MockClient((request) async => request.url.path.endsWith('/sources')
+            ? sources()
+            : ok({
+                'remoteProcessingEnabled': true,
+                'reconstruction': attempt('needs_more_views'),
+              })));
+    await tester.runAsync(() async {
+      await tester.pumpWidget(MaterialApp(
+        locale: const Locale('sl'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: const ArtworkSpatialSourceScreen(artworkId: 'artwork-1'),
+      ));
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+    });
+    await settle(tester);
+    expect(find.textContaining('Dodaj več fotografij ali posnetkov'),
+        findsOneWidget);
+    expect(find.textContaining('0 od'), findsNothing);
+    await unmount(tester);
+  });
+
+  testWidgets('renders kubus bold italic in the waiting status',
+      (tester) async {
+    api.setHttpClient(
+        MockClient((request) async => request.url.path.endsWith('/sources')
+            ? sources()
+            : ok({
+                'remoteProcessingEnabled': true,
+                'reconstruction': attempt('waiting_for_node'),
+              })));
+    await mount(tester);
+    final text = tester.widget<Text>(find.byWidgetPredicate((widget) =>
+        widget is Text &&
+        (widget.textSpan?.toPlainText() ?? '')
+            .startsWith('Waiting for a node')));
+    final brand = <TextSpan>[];
+    text.textSpan!.visitChildren((span) {
+      if (span is TextSpan && span.text == 'kubus') brand.add(span);
+      return true;
+    });
+    expect(brand, hasLength(1));
+    expect(brand.single.style?.fontStyle, FontStyle.italic);
+    expect(brand.single.style?.fontWeight, FontWeight.w800);
+    await unmount(tester);
+  });
+
   for (final code in [
     'face_review_required',
     'provider_face_review_required'
@@ -260,7 +349,9 @@ void main() {
                 }),
               })));
     await mount(tester);
-    expect(find.textContaining('Too few views'), findsOneWidget);
+    // No counts were sent, so none are invented ("0 of the 24 needed").
+    expect(find.textContaining('Too few views'), findsNothing);
+    expect(find.textContaining('good overlap'), findsOneWidget);
     expect(find.text('Not usable'), findsOneWidget);
     expect(find.text('May show a face'), findsNothing);
     await unmount(tester);

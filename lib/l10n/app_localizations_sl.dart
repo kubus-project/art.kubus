@@ -7282,7 +7282,7 @@ class AppLocalizationsSl extends AppLocalizations {
       'Obdelava poteka na tvojem vozlišču kubus Node.';
 
   @override
-  String get spatialProgressRemoteBody => 'Obdelava poteka v omrežju Kubus.';
+  String get spatialProgressRemoteBody => 'Obdelava poteka v omrežju kubus.';
 
   @override
   String get spatialProgressLeaveHint =>
@@ -16341,7 +16341,7 @@ class AppLocalizationsSl extends AppLocalizations {
       'Izvorni zajem ostane na strojni opremi, ki jo nadzoruješ.';
 
   @override
-  String get spatialProcessNetworkTitle => 'Omrežje Kubus';
+  String get spatialProcessNetworkTitle => 'Omrežje kubus';
 
   @override
   String spatialProcessNetworkAvailable(int count) {
@@ -16386,7 +16386,7 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get spatialRemotePrivacyTitle =>
-      'Želiš uporabiti GPU v omrežju Kubus?';
+      'Želiš uporabiti GPU v omrežju kubus?';
 
   @override
   String get spatialRemotePrivacyBody =>
@@ -16422,7 +16422,7 @@ class AppLocalizationsSl extends AppLocalizations {
       'Deljenje GPU-ja je prostovoljno. Lokalne naloge imajo prednost, prispevek k arhivu pa ostaja obvezen.';
 
   @override
-  String get kubusNodeOfferGpu => 'Ponudi GPU omrežju Kubus';
+  String get kubusNodeOfferGpu => 'Ponudi GPU omrežju kubus';
 
   @override
   String get kubusNodeOfferGpuBody =>
@@ -19621,7 +19621,7 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get spatialReconstructionFree =>
-      'Med pilotom brezplačno. Za obdelavo potrebuješ le račun Kubus: brez denarnice in brez plačila.';
+      'Med pilotom brezplačno. Za obdelavo potrebuješ le račun kubus: brez denarnice in brez plačila.';
 
   @override
   String get spatialReconstructionStart => 'Ustvari rekonstrukcijo';
@@ -19667,6 +19667,10 @@ class AppLocalizationsSl extends AppLocalizations {
   String spatialReconstructionNeedsViews(int usable, int required) {
     return 'Uporabnih pogledov je premalo: $usable od potrebnih $required. Dodaj fotografije ali posnetke, ki se prekrivajo, in poskusi znova.';
   }
+
+  @override
+  String get spatialReconstructionNeedsViewsGeneric =>
+      'Iz datotek ni bilo mogoče sestaviti 3D-modela. Dodaj več fotografij ali posnetkov, ki se dobro prekrivajo in so posneti z različnih kotov, in poskusi znova.';
 
   @override
   String get spatialReconstructionFailed =>

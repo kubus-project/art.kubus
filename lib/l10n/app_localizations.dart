@@ -12673,7 +12673,7 @@ abstract class AppLocalizations {
   /// No description provided for @spatialProgressRemoteBody.
   ///
   /// In en, this message translates to:
-  /// **'Processing on the Kubus network.'**
+  /// **'Processing on the kubus network.'**
   String get spatialProgressRemoteBody;
 
   /// No description provided for @spatialProgressLeaveHint.
@@ -28097,7 +28097,7 @@ abstract class AppLocalizations {
   /// No description provided for @spatialProcessNetworkTitle.
   ///
   /// In en, this message translates to:
-  /// **'Kubus network'**
+  /// **'kubus network'**
   String get spatialProcessNetworkTitle;
 
   /// No description provided for @spatialProcessNetworkAvailable.
@@ -28169,7 +28169,7 @@ abstract class AppLocalizations {
   /// No description provided for @spatialRemotePrivacyTitle.
   ///
   /// In en, this message translates to:
-  /// **'Use a Kubus network GPU?'**
+  /// **'Use a kubus network GPU?'**
   String get spatialRemotePrivacyTitle;
 
   /// No description provided for @spatialRemotePrivacyBody.
@@ -28235,7 +28235,7 @@ abstract class AppLocalizations {
   /// No description provided for @kubusNodeOfferGpu.
   ///
   /// In en, this message translates to:
-  /// **'Offer GPU to Kubus network'**
+  /// **'Offer GPU to kubus network'**
   String get kubusNodeOfferGpu;
 
   /// No description provided for @kubusNodeOfferGpuBody.
@@ -33684,7 +33684,7 @@ abstract class AppLocalizations {
   /// No description provided for @spatialSourceProviderDisclosure.
   ///
   /// In en, this message translates to:
-  /// **'I understand that a selected Kubus Node provider can read the source files while processing them.'**
+  /// **'I understand that a selected kubus Node provider can read the source files while processing them.'**
   String get spatialSourceProviderDisclosure;
 
   /// No description provided for @spatialSourceProcessingPaused.
@@ -33732,7 +33732,7 @@ abstract class AppLocalizations {
   /// No description provided for @spatialReconstructionFree.
   ///
   /// In en, this message translates to:
-  /// **'Free during the pilot. Processing needs only your Kubus account: no wallet, no payment.'**
+  /// **'Free during the pilot. Processing needs only your kubus account: no wallet, no payment.'**
   String get spatialReconstructionFree;
 
   /// No description provided for @spatialReconstructionStart.
@@ -33756,7 +33756,7 @@ abstract class AppLocalizations {
   /// No description provided for @spatialReconstructionCancelling.
   ///
   /// In en, this message translates to:
-  /// **'Cancelling. The Kubus Node is stopping the job.'**
+  /// **'Cancelling. The kubus Node is stopping the job.'**
   String get spatialReconstructionCancelling;
 
   /// No description provided for @spatialReconstructionQueued.
@@ -33774,13 +33774,13 @@ abstract class AppLocalizations {
   /// No description provided for @spatialReconstructionWaiting.
   ///
   /// In en, this message translates to:
-  /// **'Waiting for a node. No eligible Kubus Node has capacity right now. Your files stay verified.'**
+  /// **'Waiting for a node. No eligible kubus Node has capacity right now. Your files stay verified.'**
   String get spatialReconstructionWaiting;
 
   /// No description provided for @spatialReconstructionProcessing.
   ///
   /// In en, this message translates to:
-  /// **'Processing on a Kubus Node.'**
+  /// **'Processing on a kubus Node.'**
   String get spatialReconstructionProcessing;
 
   /// No description provided for @spatialReconstructionImporting.
@@ -33806,6 +33806,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Too few views could be used: {usable} of the {required} needed. Add photos or clips that overlap, then retry.'**
   String spatialReconstructionNeedsViews(int usable, int required);
+
+  /// No description provided for @spatialReconstructionNeedsViewsGeneric.
+  ///
+  /// In en, this message translates to:
+  /// **'The files could not be turned into a 3D model. Add more photos or clips with good overlap, taken from different angles, then retry.'**
+  String get spatialReconstructionNeedsViewsGeneric;
 
   /// No description provided for @spatialReconstructionFailed.
   ///
@@ -33990,7 +33996,7 @@ abstract class AppLocalizations {
   /// No description provided for @kubusNodeDownloadAction.
   ///
   /// In en, this message translates to:
-  /// **'Download Kubus Node'**
+  /// **'Download kubus Node'**
   String get kubusNodeDownloadAction;
 
   /// No description provided for @kubusNodeInstallAction.

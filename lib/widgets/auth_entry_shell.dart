@@ -6,6 +6,7 @@ import 'package:art_kubus/utils/keyboard_inset_resolver.dart';
 import 'package:art_kubus/widgets/app_logo.dart';
 import 'package:art_kubus/widgets/auth/auth_atmosphere.dart';
 import 'package:art_kubus/widgets/auth_entry_controls.dart';
+import 'package:art_kubus/widgets/common/kubus_family_brand.dart';
 import 'package:art_kubus/widgets/common/keyboard_inset_padding.dart';
 import 'package:flutter/material.dart';
 
@@ -300,7 +301,7 @@ class _ShellTopBar extends StatelessWidget {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text(
+          KubusFamilyBrandText(
             title,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
@@ -385,7 +386,7 @@ class _HeroColumn extends StatelessWidget {
         ],
         Semantics(
           header: true,
-          child: Text(
+          child: KubusFamilyBrandText(
             title,
             softWrap: true,
             style: (compact

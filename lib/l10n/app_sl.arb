@@ -6275,7 +6275,7 @@
   "spatialStageReceiving": "Prejemanje rezultata",
   "spatialStageVerifying": "Preverjanje",
   "spatialProgressLocalBody": "Obdelava poteka na tvojem vozlišču kubus Node.",
-  "spatialProgressRemoteBody": "Obdelava poteka v omrežju Kubus.",
+  "spatialProgressRemoteBody": "Obdelava poteka v omrežju kubus.",
   "spatialProgressLeaveHint": "Ta zaslon lahko zapustiš. Obdelava se nadaljuje na tvojem vozlišču kubus Node.",
   "spatialFailedTitle": "Obdelava je bila prekinjena",
   "spatialFailedRemoteBody": "Ponudnikovo vozlišče je postalo nedosegljivo, preden se je rekonstrukcija zaključila. Tvoj izvorni zajem je še vedno na voljo.",
@@ -6779,7 +6779,7 @@
   "spatialProcessTitle": "Obdelaj prostorski zajem",
   "spatialProcessLocalTitle": "To vozlišče kubus Node",
   "spatialProcessLocalPrivacy": "Izvorni zajem ostane na strojni opremi, ki jo nadzoruješ.",
-  "spatialProcessNetworkTitle": "Omrežje Kubus",
+  "spatialProcessNetworkTitle": "Omrežje kubus",
   "spatialProcessNetworkAvailable": "Na voljo je {count} združljivih vozlišč",
   "@spatialProcessNetworkAvailable": {
     "placeholders": {
@@ -6810,7 +6810,7 @@
       "rate": {}
     }
   },
-  "spatialRemotePrivacyTitle": "Želiš uporabiti GPU v omrežju Kubus?",
+  "spatialRemotePrivacyTitle": "Želiš uporabiti GPU v omrežju kubus?",
   "spatialRemotePrivacyBody": "Zajem se šifrirano prenese na izbrano računsko vozlišče, kjer se izvorni podatki začasno dešifrirajo za izvedbo obdelave. Izvorni zajem se ne objavi v javnem arhivu.",
   "spatialRemotePrivacyConfirm": "Nadaljuj z omrežnim GPU-jem",
   "spatialResultReviewTitle": "Prostorski rezultat je pripravljen",
@@ -6821,7 +6821,7 @@
   "kubusNodeCompute": "Računsko omrežje",
   "kubusNodeComputeTitle": "Računsko omrežje",
   "kubusNodeComputeBody": "Deljenje GPU-ja je prostovoljno. Lokalne naloge imajo prednost, prispevek k arhivu pa ostaja obvezen.",
-  "kubusNodeOfferGpu": "Ponudi GPU omrežju Kubus",
+  "kubusNodeOfferGpu": "Ponudi GPU omrežju kubus",
   "kubusNodeOfferGpuBody": "Sprejemaj nove združljive prostorske naloge drugih uporabnikov art.kubus.",
   "kubusNodePauseRemoteJobs": "Začasno ustavi sprejem novih oddaljenih nalog",
   "kubusNodeMaxRemoteJobs": "Največ sočasnih oddaljenih nalog",
@@ -8190,7 +8190,7 @@
   "spatialSourceDelete": "Izbriši izvorne datoteke zdaj",
   "spatialSourceDeleteFile": "Izbriši to izvorno datoteko",
   "spatialSourceDeleteConfirmation": "Vse fotografije in posnetki iz tega zasebnega delovnega prostora bodo izbrisani.",
-  "spatialReconstructionFree": "Med pilotom brezplačno. Za obdelavo potrebuješ le račun Kubus: brez denarnice in brez plačila.",
+  "spatialReconstructionFree": "Med pilotom brezplačno. Za obdelavo potrebuješ le račun kubus: brez denarnice in brez plačila.",
   "spatialReconstructionStart": "Ustvari rekonstrukcijo",
   "spatialReconstructionAddViews": "Dodaj več pogledov in poskusi znova",
   "spatialReconstructionCancel": "Prekliči rekonstrukcijo",
@@ -8203,6 +8203,7 @@
   "spatialReconstructionReady": "Rekonstrukcija je pripravljena. Je zasebni kandidat poleg morebitnega naloženega splata; objavljeni model se ne spremeni.",
   "spatialReconstructionOpen": "Predogled in oddaja",
   "spatialReconstructionNeedsViews": "Uporabnih pogledov je premalo: {usable} od potrebnih {required}. Dodaj fotografije ali posnetke, ki se prekrivajo, in poskusi znova.",
+  "spatialReconstructionNeedsViewsGeneric": "Iz datotek ni bilo mogoče sestaviti 3D-modela. Dodaj več fotografij ali posnetkov, ki se dobro prekrivajo in so posneti z različnih kotov, in poskusi znova.",
   "spatialReconstructionFailed": "Obdelava ni uspela. Tvoje preverjene datoteke ostanejo shranjene, zato lahko poskusiš znova.",
   "spatialReconstructionCancelled": "Rekonstrukcija je preklicana. Tvoje preverjene datoteke ostanejo shranjene.",
   "spatialSourceUsableViews": "Uporabni pogledi: {count}",

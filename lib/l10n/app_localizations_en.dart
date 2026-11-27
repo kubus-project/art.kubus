@@ -7227,7 +7227,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get spatialProgressLocalBody => 'Processing on your kubus Node.';
 
   @override
-  String get spatialProgressRemoteBody => 'Processing on the Kubus network.';
+  String get spatialProgressRemoteBody => 'Processing on the kubus network.';
 
   @override
   String get spatialProgressLeaveHint =>
@@ -16178,7 +16178,7 @@ class AppLocalizationsEn extends AppLocalizations {
       'Source capture stays on hardware you control.';
 
   @override
-  String get spatialProcessNetworkTitle => 'Kubus network';
+  String get spatialProcessNetworkTitle => 'kubus network';
 
   @override
   String spatialProcessNetworkAvailable(int count) {
@@ -16222,7 +16222,7 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get spatialRemotePrivacyTitle => 'Use a Kubus network GPU?';
+  String get spatialRemotePrivacyTitle => 'Use a kubus network GPU?';
 
   @override
   String get spatialRemotePrivacyBody =>
@@ -16258,7 +16258,7 @@ class AppLocalizationsEn extends AppLocalizations {
       'Offering your GPU is optional. Local jobs keep priority and archive contribution remains required.';
 
   @override
-  String get kubusNodeOfferGpu => 'Offer GPU to Kubus network';
+  String get kubusNodeOfferGpu => 'Offer GPU to kubus network';
 
   @override
   String get kubusNodeOfferGpuBody =>
@@ -19405,7 +19405,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get spatialSourceProviderDisclosure =>
-      'I understand that a selected Kubus Node provider can read the source files while processing them.';
+      'I understand that a selected kubus Node provider can read the source files while processing them.';
 
   @override
   String get spatialSourceProcessingPaused =>
@@ -19432,7 +19432,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get spatialReconstructionFree =>
-      'Free during the pilot. Processing needs only your Kubus account: no wallet, no payment.';
+      'Free during the pilot. Processing needs only your kubus account: no wallet, no payment.';
 
   @override
   String get spatialReconstructionStart => 'Create reconstruction';
@@ -19445,7 +19445,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get spatialReconstructionCancelling =>
-      'Cancelling. The Kubus Node is stopping the job.';
+      'Cancelling. The kubus Node is stopping the job.';
 
   @override
   String get spatialReconstructionQueued => 'Queued for processing.';
@@ -19456,10 +19456,10 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get spatialReconstructionWaiting =>
-      'Waiting for a node. No eligible Kubus Node has capacity right now. Your files stay verified.';
+      'Waiting for a node. No eligible kubus Node has capacity right now. Your files stay verified.';
 
   @override
-  String get spatialReconstructionProcessing => 'Processing on a Kubus Node.';
+  String get spatialReconstructionProcessing => 'Processing on a kubus Node.';
 
   @override
   String get spatialReconstructionImporting =>
@@ -19476,6 +19476,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String spatialReconstructionNeedsViews(int usable, int required) {
     return 'Too few views could be used: $usable of the $required needed. Add photos or clips that overlap, then retry.';
   }
+
+  @override
+  String get spatialReconstructionNeedsViewsGeneric =>
+      'The files could not be turned into a 3D model. Add more photos or clips with good overlap, taken from different angles, then retry.';
 
   @override
   String get spatialReconstructionFailed =>
@@ -19582,7 +19586,7 @@ class AppLocalizationsEn extends AppLocalizations {
       'Artists with a compatible kubus Node can reconstruct on their own hardware and upload the finished splat here.';
 
   @override
-  String get kubusNodeDownloadAction => 'Download Kubus Node';
+  String get kubusNodeDownloadAction => 'Download kubus Node';
 
   @override
   String get kubusNodeInstallAction => 'Installation guide';

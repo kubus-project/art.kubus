@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../l10n/app_localizations.dart';
 import '../../providers/spatial_library_provider.dart';
+import '../../widgets/common/kubus_family_brand.dart';
 import '../../widgets/kubus_kit.dart';
 
 /// What the user picked in the processing sheet.
@@ -165,7 +166,8 @@ class _ProcessorOption extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: <Widget>[
-                  Text(title, style: KubusTextStyles.detailCardTitle),
+                  KubusFamilyBrandText(title,
+                      style: KubusTextStyles.detailCardTitle),
                   const SizedBox(height: KubusSpacing.xxs),
                   Text(
                     body,

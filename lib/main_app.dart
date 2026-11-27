@@ -26,6 +26,7 @@ import 'screens/settings_screen.dart';
 import 'screens/desktop/desktop_shell.dart';
 import 'utils/design_tokens.dart';
 import 'utils/keyboard_inset_resolver.dart';
+import 'widgets/common/kubus_family_brand.dart';
 import 'widgets/glass_components.dart';
 import 'widgets/kubus_button.dart';
 import 'utils/kubus_color_roles.dart';
@@ -462,7 +463,7 @@ class GuestAccountScreen extends StatelessWidget {
               children: [
                 Semantics(
                   header: true,
-                  child: Text(
+                  child: KubusFamilyBrandText(
                     l10n.authSignInTitle,
                     style: textTheme.headlineSmall?.copyWith(
                       color: roles.foreground,
