@@ -129,17 +129,31 @@ class SpatialWebDelivery {
 
   /// The tier that opens by default: optimised, then preview. The archive tier
   /// is never chosen here; it is large, so the visitor asks for it.
-  static SpatialVariant? defaultVariant(SpatialContent content) =>
-      defaultTiers(content).firstOrNull;
+  static SpatialVariant? defaultVariant(
+    SpatialContent content, {
+    bool constrained = false,
+  }) =>
+      defaultTiers(content, constrained: constrained).firstOrNull;
+
+  /// The roles that may open without the visitor asking, in the order they are
+  /// tried. The one copy of the device-class tier order: the web viewer reads
+  /// it through [defaultTiers], the native viewer reads it directly.
+  static List<String> defaultRoles({bool constrained = false}) => constrained
+      ? const <String>['spatial_preview', 'spatial_mobile']
+      : const <String>['spatial_mobile', 'spatial_preview'];
 
   /// The tiers that may open without the visitor asking, best first:
-  /// optimised, then preview. When one cannot be loaded (a format the viewer
-  /// rejects, a failed route) the next is tried; the archive is never in this
-  /// list.
-  static List<SpatialVariant> defaultTiers(SpatialContent content) {
+  /// optimised, then preview. On a [constrained] device (see
+  /// SpatialDeviceClass) the small preview comes first and the optimised tier
+  /// second. When one cannot be loaded (a format the viewer rejects, a failed
+  /// route) the next is tried; the archive is never in this list.
+  static List<SpatialVariant> defaultTiers(
+    SpatialContent content, {
+    bool constrained = false,
+  }) {
     final viewable = content.variants.where(isViewable).toList();
     return <SpatialVariant>[
-      for (final role in const <String>['spatial_mobile', 'spatial_preview'])
+      for (final role in defaultRoles(constrained: constrained))
         ...viewable.where((v) => v.role == role).take(1),
     ];
   }
@@ -148,9 +162,10 @@ class SpatialWebDelivery {
   /// archive tier never falls back: it was an explicit request.
   static SpatialVariant? nextTier(
     SpatialContent content,
-    SpatialVariant failed,
-  ) {
-    final tiers = defaultTiers(content);
+    SpatialVariant failed, {
+    bool constrained = false,
+  }) {
+    final tiers = defaultTiers(content, constrained: constrained);
     final at = tiers.indexWhere(
       (v) => v.role == failed.role && v.cid == failed.cid,
     );
@@ -166,6 +181,27 @@ class SpatialWebDelivery {
   /// about too instead of being downloaded on the strength of a missing field.
   static bool archiveNeedsConfirmation(SpatialVariant variant) =>
       variant.sizeBytes <= 0 || variant.sizeBytes >= archiveConfirmBytes;
+
+  /// Largest optimised (`spatial_mobile`) model a constrained device may start
+  /// without an explicit confirmation.
+  static const int mobileConfirmBytes = 50 * 1024 * 1024;
+
+  /// True when starting [variant] needs the visitor's explicit confirmation:
+  /// the archive when it is large or of unknown size, and on a [constrained]
+  /// device an optimised model above [mobileConfirmBytes] or of unknown size
+  /// (`sizeBytes` 0: a record that omits the field is asked about, not
+  /// downloaded on the strength of a missing value). The preview never asks.
+  static bool needsConfirmation(
+    SpatialVariant variant, {
+    bool constrained = false,
+  }) {
+    if (variant.role == 'spatial_archive') {
+      return archiveNeedsConfirmation(variant);
+    }
+    return constrained &&
+        variant.role == 'spatial_mobile' &&
+        (variant.sizeBytes <= 0 || variant.sizeBytes > mobileConfirmBytes);
+  }
 
   /// How long one load may take before it is reported as failed. The archive
   /// tier is far larger than the other tiers, so it gets a longer budget

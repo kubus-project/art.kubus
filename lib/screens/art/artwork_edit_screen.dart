@@ -31,6 +31,7 @@ import '../../widgets/common/subject_options_sheet.dart';
 import '../../widgets/common/kubus_atmosphere.dart';
 import '../../widgets/kubus_button.dart';
 import '../../utils/kubus_color_roles.dart';
+import '../../utils/media_url_resolver.dart';
 import '../../widgets/detail/detail_shell_components.dart';
 import '../../widgets/inline_loading.dart';
 import '../../widgets/artwork_private_preview_image.dart';
@@ -998,6 +999,8 @@ class _ArtworkEditScreenState extends State<ArtworkEditScreen> {
                               MaterialPageRoute<void>(
                                 builder: (_) => ArtworkSpatialUploadScreen(
                                   artworkId: art.id,
+                                  posterUrl: MediaUrlResolver.resolveDisplayUrl(
+                                      art.imageUrl),
                                 ),
                               ),
                             ),

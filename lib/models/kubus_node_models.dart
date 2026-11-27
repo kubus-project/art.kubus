@@ -507,6 +507,7 @@ class ArtworkSpatialCapture {
     this.capturedBy,
     this.canonicalManifestCid,
     this.canonicalRecordCid,
+    this.manifestVariantCid,
   });
 
   final String id;
@@ -520,6 +521,16 @@ class ArtworkSpatialCapture {
   final String? canonicalManifestCid;
   final String? canonicalRecordCid;
 
+  /// CID of the `spatial_manifest` variant the public history lists. This is
+  /// the manifest the anonymous byte route (`/api/upload/file/<cid>`) serves.
+  /// The canonical manifest CID names the registry record and is not served
+  /// there (it answers 404), so the viewer reads this one and never falls
+  /// back to [canonicalManifestCid]: a capture without the variant opens
+  /// with no published transform instead of issuing a request that 404s. The
+  /// variant itself is kept out of [variants]: it is metadata, not a model to
+  /// open.
+  final String? manifestVariantCid;
+
   SpatialContent get content => SpatialContent(
         id: id,
         type: 'gaussianSplat',
@@ -527,17 +538,23 @@ class ArtworkSpatialCapture {
         captureId: id,
         capturedAt: capturedAt,
         variants: variants,
-        manifestCid: variants
-                .where((entry) => entry.role == 'spatial_manifest')
-                .firstOrNull
-                ?.cid ??
-            canonicalManifestCid,
+        manifestCid: manifestVariantCid,
       );
 
   factory ArtworkSpatialCapture.fromJson(Map<String, dynamic> json) {
     final capturedAt = DateTime.tryParse((json['capturedAt'] ?? '').toString());
     final publishedAt =
         DateTime.tryParse((json['publishedAt'] ?? '').toString());
+    final allVariants = (json['variants'] as List<dynamic>? ?? const [])
+        .whereType<Map>()
+        .map((value) =>
+            SpatialVariant.fromJson(Map<String, dynamic>.from(value)))
+        .toList(growable: false);
+    final manifestVariantCid = allVariants
+        .where((variant) => variant.role == 'spatial_manifest')
+        .map((variant) => variant.cid.trim())
+        .where((cid) => cid.isNotEmpty)
+        .firstOrNull;
     return ArtworkSpatialCapture(
       id: (json['id'] ?? '').toString(),
       artworkId: (json['artworkId'] ?? '').toString(),
@@ -548,12 +565,10 @@ class ArtworkSpatialCapture {
           capturedAt ??
           DateTime.fromMillisecondsSinceEpoch(0, isUtc: true),
       version: int.tryParse((json['version'] ?? 0).toString()) ?? 0,
-      variants: (json['variants'] as List<dynamic>? ?? const [])
-          .whereType<Map>()
-          .map((value) =>
-              SpatialVariant.fromJson(Map<String, dynamic>.from(value)))
+      variants: allVariants
           .where((variant) => variant.role != 'spatial_manifest')
           .toList(growable: false),
+      manifestVariantCid: manifestVariantCid,
       isCurrent: json['isCurrent'] == true,
       capturedBy: (json['capturedBy'] ?? '').toString().trim().isEmpty
           ? null

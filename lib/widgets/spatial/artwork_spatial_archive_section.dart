@@ -23,6 +23,7 @@ import '../../screens/spatial/artwork_spatial_upload_screen.dart';
 import '../../screens/spatial/spatial_capture_launch.dart';
 import '../../screens/spatial/spatial_library_detail_screen.dart';
 import '../../utils/design_tokens.dart';
+import '../../utils/media_url_resolver.dart';
 import '../common/kubus_reading_surface.dart';
 import '../kubus_button.dart';
 import '../../utils/kubus_color_roles.dart';
@@ -220,6 +221,7 @@ class _ArtworkSpatialArchiveSectionState
                 key: const ValueKey<String>('spatial-inline-viewer'),
                 content: history.current!.content,
                 suspended: _dialogOpen,
+                posterUrl: _posterUrl,
               ),
             ],
             const SizedBox(height: KubusSpacing.md),
@@ -269,8 +271,10 @@ class _ArtworkSpatialArchiveSectionState
             KubusButton(
               onPressed: () => Navigator.of(context).push(
                 MaterialPageRoute<void>(
-                  builder: (_) =>
-                      ArtworkSpatialUploadScreen(artworkId: widget.artwork.id),
+                  builder: (_) => ArtworkSpatialUploadScreen(
+                    artworkId: widget.artwork.id,
+                    posterUrl: _posterUrl,
+                  ),
                 ),
               ),
               label: l10n.spatialDraftUploadTitle,
@@ -328,6 +332,10 @@ class _ArtworkSpatialArchiveSectionState
     );
   }
 
+  /// The artwork's cover, shown where the viewer cannot show the model.
+  String? get _posterUrl =>
+      MediaUrlResolver.resolveDisplayUrl(widget.artwork.imageUrl);
+
   Future<void> _openArchive(
     BuildContext context,
     ArtworkSpatialHistory history,
@@ -336,7 +344,8 @@ class _ArtworkSpatialArchiveSectionState
     try {
       await showDialog<void>(
         context: context,
-        builder: (_) => _SpatialArchiveDialog(history: history),
+        builder: (_) =>
+            _SpatialArchiveDialog(history: history, posterUrl: _posterUrl),
       );
     } finally {
       if (mounted) setState(() => _dialogOpen = false);
@@ -352,11 +361,13 @@ class _InlineArchiveViewer extends StatelessWidget {
   const _InlineArchiveViewer({
     required this.content,
     required this.suspended,
+    this.posterUrl,
     super.key,
   });
 
   final SpatialContent content;
   final bool suspended;
+  final String? posterUrl;
 
   @override
   Widget build(BuildContext context) {
@@ -392,6 +403,7 @@ class _InlineArchiveViewer extends StatelessWidget {
                     key: ValueKey<String>('inline-${content.id}'),
                     content: content,
                     nodeService: nodeService,
+                    posterUrl: posterUrl,
                   ),
                 ),
         );
@@ -449,9 +461,10 @@ class _PublicArchiveSummary extends StatelessWidget {
 }
 
 class _SpatialArchiveDialog extends StatefulWidget {
-  const _SpatialArchiveDialog({required this.history});
+  const _SpatialArchiveDialog({required this.history, this.posterUrl});
 
   final ArtworkSpatialHistory history;
+  final String? posterUrl;
 
   @override
   State<_SpatialArchiveDialog> createState() => _SpatialArchiveDialogState();
@@ -494,6 +507,7 @@ class _SpatialArchiveDialogState extends State<_SpatialArchiveDialog> {
                     key: ValueKey(selected.id),
                     content: selected.content,
                     nodeService: nodeService,
+                    posterUrl: widget.posterUrl,
                     onEscape: _closeOnEscape,
                   ),
                 ),

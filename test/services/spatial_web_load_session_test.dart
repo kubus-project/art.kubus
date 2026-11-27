@@ -88,7 +88,7 @@ void main() {
     final session = SpatialWebLoadSession(
       _content([_variant('spatial_archive', 'cid-archive', 'ply')]),
     );
-    expect(session.status, SpatialWebLoadStatus.awaitingArchiveConsent);
+    expect(session.status, SpatialWebLoadStatus.awaitingConsent);
     expect(session.variant, isNull);
     expect(session.takeLoadCommand(), isFalse);
     session.loadArchive();

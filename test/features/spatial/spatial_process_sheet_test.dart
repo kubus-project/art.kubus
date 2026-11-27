@@ -131,7 +131,7 @@ void main() {
         ),
         findsOneWidget,
       );
-      await tester.tap(find.text('Kubus network'));
+      await tester.tap(find.text('kubus network'));
       await tester.pumpAndSettle();
       expect(result, SpatialProcessorChoice.kubusNetwork);
     });
@@ -163,7 +163,7 @@ void main() {
       );
       await tester.tap(find.text('open'));
       await tester.pumpAndSettle();
-      await tester.tap(find.text('Kubus network'));
+      await tester.tap(find.text('kubus network'));
       await tester.pumpAndSettle();
       expect(result, SpatialProcessorChoice.kubusNetwork);
     });

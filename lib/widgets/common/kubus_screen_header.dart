@@ -362,10 +362,14 @@ class KubusScreenHeaderBar extends StatelessWidget {
     this.subtitleStyle,
     this.titleColor,
     this.subtitleColor,
+    this.brandTitle = false,
   });
 
   final String title;
   final String? subtitle;
+
+  /// See [KubusHeaderTitleBlock.brandTitle].
+  final bool brandTitle;
   final Widget? leading;
   final List<Widget>? actions;
   final EdgeInsetsGeometry? padding;
@@ -400,6 +404,7 @@ class KubusScreenHeaderBar extends StatelessWidget {
               subtitleStyle: subtitleStyle,
               titleColor: titleColor,
               subtitleColor: subtitleColor,
+              brandTitle: brandTitle,
             ),
           ),
           if (actions != null && actions!.isNotEmpty) ...[

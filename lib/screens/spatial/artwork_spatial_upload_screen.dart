@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 import 'dart:typed_data';
 
+import 'package:art_kubus/widgets/common/kubus_family_brand.dart';
 import 'package:crypto/crypto.dart' as crypto;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -15,10 +16,12 @@ import '../../widgets/detail/detail_shell_components.dart';
 import '../../widgets/inline_loading.dart';
 import '../settings/availability_node_operator_screen.dart';
 import 'artwork_spatial_review_screen.dart';
+import 'artwork_spatial_source_screen.dart';
 
 class ArtworkSpatialUploadScreen extends StatefulWidget {
   const ArtworkSpatialUploadScreen({
     required this.artworkId,
+    this.posterUrl,
     this.pickFile = pickSpatialUploadFile,
     super.key,
   });
@@ -26,6 +29,9 @@ class ArtworkSpatialUploadScreen extends StatefulWidget {
   static const pilotArtworkId = '53b99c8b-8503-545c-8a13-55f60cfb8342';
 
   final String artworkId;
+
+  /// The artwork's poster, handed on to the review and source screens.
+  final String? posterUrl;
   @visibleForTesting
   final Future<SpatialUploadSource?> Function() pickFile;
 
@@ -58,12 +64,25 @@ class _ArtworkSpatialUploadScreenState
   _UploadProblem? _problem;
   bool _pauseRequested = false;
   bool _loaded = false;
+  bool _sourceIntakeAvailable = false;
 
   @override
   void initState() {
     super.initState();
     _sessionEpoch = _api.authSessionEpoch;
     _load();
+    _checkSourceAvailability();
+  }
+
+  Future<void> _checkSourceAvailability() async {
+    try {
+      final source = await _api.getSpatialSourceIntake(widget.artworkId);
+      if (_currentSession) {
+        setState(() => _sourceIntakeAvailable = source != null);
+      }
+    } catch (_) {
+      if (_currentSession) setState(() => _sourceIntakeAvailable = false);
+    }
   }
 
   Future<void> _load() async {
@@ -350,7 +369,8 @@ class _ArtworkSpatialUploadScreenState
                                         MaterialPageRoute<void>(
                                           builder: (_) =>
                                               ArtworkSpatialReviewScreen(
-                                                  draft: draft!),
+                                                  draft: draft!,
+                                                  posterUrl: widget.posterUrl),
                                         ),
                                       );
                                       if (_currentSession) await _load();
@@ -367,8 +387,26 @@ class _ArtworkSpatialUploadScreenState
                     ],
                   ),
                 ),
+                if (_sourceIntakeAvailable) ...[
+                  const SizedBox(height: KubusSpacing.md),
+                  Align(
+                    alignment: AlignmentDirectional.centerStart,
+                    child: OutlinedButton.icon(
+                      icon: const Icon(Icons.photo_library_outlined),
+                      onPressed: busy
+                          ? null
+                          : () => Navigator.of(context)
+                                  .push(MaterialPageRoute<void>(
+                                builder: (_) => ArtworkSpatialSourceScreen(
+                                    artworkId: widget.artworkId,
+                                    posterUrl: widget.posterUrl),
+                              )),
+                      label: Text(l10n.spatialSourceTitle),
+                    ),
+                  ),
+                ],
                 const SizedBox(height: KubusSpacing.md),
-                Text(l10n.spatialPilotNodeExplanation),
+                KubusFamilyBrandText(l10n.spatialPilotNodeExplanation),
                 Align(
                   alignment: AlignmentDirectional.centerStart,
                   child: TextButton(
@@ -376,7 +414,7 @@ class _ArtworkSpatialUploadScreenState
                         Navigator.of(context).push(MaterialPageRoute<void>(
                       builder: (_) => const AvailabilityNodeOperatorScreen(),
                     )),
-                    child: Text(l10n.availabilityNodeTitle),
+                    child: KubusFamilyBrandText(l10n.availabilityNodeTitle),
                   ),
                 ),
               ],

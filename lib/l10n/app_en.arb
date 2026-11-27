@@ -2925,7 +2925,7 @@
   "spatialStageReceiving": "Receiving result",
   "spatialStageVerifying": "Verifying",
   "spatialProgressLocalBody": "Processing on your kubus Node.",
-  "spatialProgressRemoteBody": "Processing on the Kubus network.",
+  "spatialProgressRemoteBody": "Processing on the kubus network.",
   "spatialProgressLeaveHint": "You can leave this screen. Processing continues on your kubus Node.",
   "spatialFailedTitle": "Processing stopped",
   "spatialFailedRemoteBody": "The provider node became unavailable before reconstruction finished. Your original capture is still available.",
@@ -6806,7 +6806,7 @@
   "spatialProcessTitle": "Process spatial capture",
   "spatialProcessLocalTitle": "This kubus Node",
   "spatialProcessLocalPrivacy": "Source capture stays on hardware you control.",
-  "spatialProcessNetworkTitle": "Kubus network",
+  "spatialProcessNetworkTitle": "kubus network",
   "spatialProcessNetworkAvailable": "{count} compatible nodes available",
   "@spatialProcessNetworkAvailable": {
     "placeholders": {
@@ -6837,7 +6837,7 @@
       "rate": {}
     }
   },
-  "spatialRemotePrivacyTitle": "Use a Kubus network GPU?",
+  "spatialRemotePrivacyTitle": "Use a kubus network GPU?",
   "spatialRemotePrivacyBody": "The capture is encrypted in transit and sent to the selected compute node. That node temporarily decrypts the source data to process the job. The source capture is not published to the public archive.",
   "spatialRemotePrivacyConfirm": "Continue with network GPU",
   "spatialResultReviewTitle": "Spatial result is ready",
@@ -6848,7 +6848,7 @@
   "kubusNodeCompute": "Compute",
   "kubusNodeComputeTitle": "Compute network",
   "kubusNodeComputeBody": "Offering your GPU is optional. Local jobs keep priority and archive contribution remains required.",
-  "kubusNodeOfferGpu": "Offer GPU to Kubus network",
+  "kubusNodeOfferGpu": "Offer GPU to kubus network",
   "kubusNodeOfferGpuBody": "Accept new compatible spatial jobs from other art.kubus users.",
   "kubusNodePauseRemoteJobs": "Pause accepting new remote jobs",
   "kubusNodeMaxRemoteJobs": "Maximum concurrent remote jobs",
@@ -6901,6 +6901,20 @@
     }
   },
   "spatialArchiveConfirmBodyUnknownSize": "This download is large and its size is not known. Continue only on a connection you are happy to use.",
+  "spatialLoadFullQuality": "Load full quality",
+  "spatialLoadFullQualityWithSize": "Load full quality ({size})",
+  "@spatialLoadFullQualityWithSize": {
+    "placeholders": {
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "spatialLoadFullQualitySemantics": "Load the full-quality model. It is a larger download.",
+  "spatialFullConfirmTitle": "Load the full-quality model?",
+  "spatialFullConsentBody": "The full-quality model is large and can use a lot of data, so it only loads when you ask.",
+  "spatialReviewLightweightNotice": "Showing a lighter preview suited to this device.",
+  "spatialReviewPreviewUnavailable": "The preview could not be loaded. You can try again.",
   "spatialQualityMobile": "Optimised",
   "spatialQualityPreview": "Preview",
   "spatialQualityArchive": "Archival",
@@ -8238,6 +8252,63 @@
   "spatialReviewPlacement": "Placement matrix (optional)",
   "spatialReviewPlacementHelp": "Paste the 16 values in column-major order from the Node capture.",
   "spatialReviewPlacementInvalid": "Enter a valid placement matrix.",
+  "spatialSourceTitle": "Create from photos or video",
+  "spatialSourceFormats": "Upload JPEG or PNG photos, MP4 or MOV clips, or a mix. The total limit is 2 GiB.",
+  "spatialSourceProviderDisclosure": "I understand that a selected kubus Node provider can read the source files while processing them.",
+  "spatialSourceProcessingPaused": "Remote reconstruction is paused. You can upload and verify your files now.",
+  "spatialSourceTooLarge": "Select up to 256 files totalling 2 GiB.",
+  "spatialSourceChoose": "Choose files or resume upload",
+  "spatialSourceVerified": "Verified",
+  "spatialSourceDelete": "Delete source files now",
+  "spatialSourceDeleteFile": "Delete this source file",
+  "spatialSourceDeleteConfirmation": "All photos and clips in this private workspace will be deleted.",
+  "spatialReconstructionFree": "Free during the pilot. Processing needs only your kubus account: no wallet, no payment.",
+  "spatialReconstructionStart": "Create reconstruction",
+  "spatialReconstructionAddViews": "Add more views and retry",
+  "spatialReconstructionCancel": "Cancel reconstruction",
+  "spatialReconstructionCancelling": "Cancelling. The kubus Node is stopping the job.",
+  "spatialReconstructionQueued": "Queued for processing.",
+  "spatialReconstructionPreparing": "Preparing your photos and clips: masking faces and solving camera positions.",
+  "spatialReconstructionWaiting": "Waiting for a node. No eligible kubus Node has capacity right now. Your files stay verified.",
+  "spatialReconstructionProcessing": "Processing on a kubus Node.",
+  "spatialReconstructionImporting": "Importing the verified result as a private candidate.",
+  "spatialReconstructionReady": "Reconstruction ready. It is a private candidate beside any uploaded splat; the published model does not change.",
+  "spatialReconstructionOpen": "Preview and submit",
+  "spatialReconstructionNeedsViews": "Too few views could be used: {usable} of the {required} needed. Add photos or clips that overlap, then retry.",
+  "@spatialReconstructionNeedsViews": {
+    "placeholders": {
+      "usable": {
+        "type": "int"
+      },
+      "required": {
+        "type": "int"
+      }
+    }
+  },
+  "spatialReconstructionNeedsViewsGeneric": "The files could not be turned into a 3D model. Add more photos or clips with good overlap, taken from different angles, then retry.",
+  "spatialReconstructionFailed": "Processing failed. Your verified files are kept, so you can retry.",
+  "spatialReconstructionCancelled": "Reconstruction cancelled. Your verified files are kept.",
+  "spatialSourceUsableViews": "Usable views: {count}",
+  "@spatialSourceUsableViews": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "spatialSourceNotUsable": "Not usable",
+  "spatialReconstructionFaceReview": "Some photos or clips may show a person's face. Remove or replace the marked files, then retry.",
+  "spatialSourceFaceReview": "May show a face",
+  "spatialSourceFaceReviewSemantics": "{name}: may show a person's face. Remove or replace this file.",
+  "@spatialSourceFaceReviewSemantics": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "spatialSourceLocked": "Files are locked while a reconstruction runs.",
+  "spatialSourceRetention": "Source files are kept for seven days after the last attempt, or until you delete them.",
   "spatialReviewTitle": "Preview and submit",
   "spatialReviewPreview": "Open private preview",
   "spatialReviewClosePreview": "Close preview",
@@ -8259,7 +8330,7 @@
   "spatialReviewConfirm": "I confirm the artwork, marker, capture date and credit. I have permission to capture and reproduce the work, create the model, and make it available worldwide for display, download and IPFS distribution after approval.",
   "spatialReviewSubmit": "Submit for review",
   "spatialPilotNodeExplanation": "Artists with a compatible kubus Node can reconstruct on their own hardware and upload the finished splat here.",
-  "kubusNodeDownloadAction": "Download Kubus Node",
+  "kubusNodeDownloadAction": "Download kubus Node",
   "kubusNodeInstallAction": "Installation guide",
   "kubusNodePairGuideAction": "Pair a Node",
   "kubusNodeHardwareGuide": "Archive hosting uses local storage and a reliable network connection. Spatial reconstruction requires a compatible NVIDIA GPU and the spatial worker. Artists can upload a prepared splat from a browser without installing a Node.",

@@ -448,7 +448,7 @@ class _InfoPanel extends StatelessWidget {
                   onPressed: () => launchUrl(
                       Uri.https('node.kubus.site', '/releases/'),
                       mode: LaunchMode.externalApplication),
-                  child: Text(l10n.kubusNodeDownloadAction),
+                  child: KubusFamilyBrandText(l10n.kubusNodeDownloadAction),
                 ),
                 OutlinedButton(
                   onPressed: () => launchUrl(
@@ -693,8 +693,8 @@ class _ComputePanel extends StatelessWidget {
             onChanged: settingsAvailable
                 ? (value) => unawaited(_update(context, {'enabled': value}))
                 : null,
-            title: Text(l10n.kubusNodeOfferGpu),
-            subtitle: Text(l10n.kubusNodeOfferGpuBody),
+            title: KubusFamilyBrandText(l10n.kubusNodeOfferGpu),
+            subtitle: KubusFamilyBrandText(l10n.kubusNodeOfferGpuBody),
           ),
           SwitchListTile.adaptive(
             contentPadding: EdgeInsets.zero,
@@ -839,11 +839,11 @@ class _SectionPanel extends StatelessWidget {
 int _asInt(Object? value) => int.tryParse('${value ?? 0}') ?? 0;
 String _formatBytes(int bytes) {
   if (bytes < 1024) return '$bytes B';
-  if (bytes < 1024 * 1024) return '${(bytes / 1024).toStringAsFixed(1)} KB';
+  if (bytes < 1024 * 1024) return '${(bytes / 1024).toStringAsFixed(1)} KiB';
   if (bytes < 1024 * 1024 * 1024) {
-    return '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB';
+    return '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MiB';
   }
-  return '${(bytes / (1024 * 1024 * 1024)).toStringAsFixed(1)} GB';
+  return '${(bytes / (1024 * 1024 * 1024)).toStringAsFixed(1)} GiB';
 }
 
 class _NodeStatusPanel extends StatelessWidget {

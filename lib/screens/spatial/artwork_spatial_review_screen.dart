@@ -11,15 +11,34 @@ import '../../models/spatial_upload_draft.dart';
 import '../../providers/kubus_node_provider.dart';
 import '../../providers/profile_provider.dart';
 import '../../services/backend_api_service.dart';
+import '../../services/kubus_node_service.dart';
+import '../../services/spatial_device_class.dart';
 import '../../services/spatial_web_delivery.dart';
 import '../../utils/design_tokens.dart';
+import '../../utils/node_state_presentation.dart';
 import '../../widgets/inline_loading.dart';
 import '../../widgets/spatial/spatial_viewer.dart';
 
 class ArtworkSpatialReviewScreen extends StatefulWidget {
-  const ArtworkSpatialReviewScreen({required this.draft, super.key});
+  const ArtworkSpatialReviewScreen({
+    required this.draft,
+    this.posterUrl,
+    @visibleForTesting this.viewerBuilder,
+    super.key,
+  });
 
   final SpatialUploadDraft draft;
+
+  /// The artwork's poster, shown while the preview loads and when it cannot.
+  final String? posterUrl;
+
+  /// Replaces the spatial viewer (widget tests only).
+  final Widget Function(
+    SpatialContent content,
+    KubusNodeService nodeService,
+    Future<Uint8List> Function() privateBytes,
+    String? posterUrl,
+  )? viewerBuilder;
 
   @override
   State<ArtworkSpatialReviewScreen> createState() =>
@@ -42,9 +61,26 @@ class _ArtworkSpatialReviewScreenState
   bool _showPreview = false;
   bool _busy = false;
   bool _failed = false;
+  bool _previewFailed = false;
+
+  /// The artist asked for the full-quality preview on a constrained device.
+  bool _fullRequested = false;
+  late final bool _constrained = SpatialDeviceClass.constrained;
 
   bool get _inSession => mounted && _api.authSessionEpoch == _epoch;
   SpatialUploadDraft get _draft => widget.draft;
+
+  /// The companion a constrained device previews first, when the candidate
+  /// has a complete one.
+  SpatialUploadDraft? get _lightweight {
+    final light = _draft.lightweight;
+    return light != null && light.ready ? light : null;
+  }
+
+  bool get _previewIsLightweight =>
+      _constrained && !_fullRequested && _lightweight != null;
+  SpatialUploadDraft get _previewDraft =>
+      _previewIsLightweight ? _lightweight! : _draft;
 
   @override
   void initState() {
@@ -89,13 +125,27 @@ class _ArtworkSpatialReviewScreenState
 
   Future<Uint8List> _preview() async {
     if (!_inSession) throw StateError('Spatial preview session changed');
-    final bytes = await _api.getSpatialDraftPreview(_draft);
-    if (!_inSession ||
-        crypto.sha256.convert(bytes).toString() != _draft.sha256) {
-      throw StateError('Spatial preview could not be verified');
+    final lightweight = _previewIsLightweight;
+    final shown = _previewDraft;
+    try {
+      final bytes =
+          await _api.getSpatialDraftPreview(_draft, lightweight: lightweight);
+      if (!_inSession ||
+          crypto.sha256.convert(bytes).toString() != shown.sha256) {
+        throw StateError('Spatial preview could not be verified');
+      }
+      if (_previewFailed && mounted) setState(() => _previewFailed = false);
+      return bytes;
+    } catch (_) {
+      if (mounted) setState(() => _previewFailed = true);
+      rethrow;
     }
-    return bytes;
   }
+
+  void _loadFullPreview() => setState(() {
+        _fullRequested = true;
+        _previewFailed = false;
+      });
 
   Map<String, dynamic>? _newPlacement(String value) {
     try {
@@ -196,6 +246,80 @@ class _ArtworkSpatialReviewScreenState
     }
   }
 
+  List<Widget> _previewSection(
+    AppLocalizations l10n,
+    KubusNodeProvider node,
+    Map<String, dynamic>? prior,
+  ) {
+    final shown = _previewDraft;
+    final light = _previewIsLightweight;
+    final content = SpatialContent(
+      id: shown.id,
+      type: 'gaussianSplat',
+      artworkId: shown.artworkId,
+      captureId: shown.id,
+      capturedAt: _captureDate ?? DateTime.now(),
+      transform: _newPlacement(_placement.text) ??
+          (prior?['transform'] as Map<String, dynamic>?),
+      variants: [
+        SpatialVariant(
+            role: 'spatial_preview',
+            cid: shown.sha256,
+            sizeBytes: shown.sizeBytes,
+            mimeType: 'application/octet-stream',
+            format: shown.format,
+            storageClass: 'hot')
+      ],
+    );
+    final builder = widget.viewerBuilder;
+    final viewerKey =
+        '${prior?['id'] ?? _draft.id}-${light ? 'light' : 'full'}';
+    return [
+      if (light)
+        Padding(
+          padding: const EdgeInsets.only(top: KubusSpacing.sm),
+          child: Semantics(
+              liveRegion: true,
+              child: Text(l10n.spatialReviewLightweightNotice)),
+        ),
+      SizedBox(
+          height: 370,
+          child: builder != null
+              ? KeyedSubtree(
+                  key: ValueKey(viewerKey),
+                  child: builder(
+                      content, node.service, _preview, widget.posterUrl))
+              : SpatialViewer(
+                  key: ValueKey(viewerKey),
+                  nodeService: node.service,
+                  privateBytes: _preview,
+                  posterUrl: widget.posterUrl,
+                  content: content,
+                )),
+      if (_previewFailed)
+        Semantics(
+          liveRegion: true,
+          child: Text(l10n.spatialReviewPreviewUnavailable,
+              style: TextStyle(color: Theme.of(context).colorScheme.error)),
+        ),
+      if (light)
+        Align(
+          alignment: AlignmentDirectional.centerStart,
+          child: Semantics(
+            button: true,
+            label: l10n.spatialLoadFullQualitySemantics,
+            excludeSemantics: true,
+            child: OutlinedButton.icon(
+              onPressed: _loadFullPreview,
+              icon: const Icon(Icons.threed_rotation_rounded),
+              label: Text(l10n.spatialLoadFullQualityWithSize(
+                  NodeStatePresentation.formatBytes(_draft.sizeBytes))),
+            ),
+          ),
+        ),
+    ];
+  }
+
   @override
   Widget build(BuildContext context) {
     context.watch<ProfileProvider?>();
@@ -241,8 +365,10 @@ class _ArtworkSpatialReviewScreenState
                 Wrap(spacing: KubusSpacing.sm, children: [
                   if (node != null)
                     OutlinedButton(
-                        onPressed: () =>
-                            setState(() => _showPreview = !_showPreview),
+                        onPressed: () => setState(() {
+                              _showPreview = !_showPreview;
+                              _previewFailed = false;
+                            }),
                         child: Text(_showPreview
                             ? l10n.spatialReviewClosePreview
                             : l10n.spatialReviewPreview)),
@@ -263,31 +389,7 @@ class _ArtworkSpatialReviewScreenState
                     ),
                   ),
                 if (_showPreview && node != null)
-                  SizedBox(
-                      height: 370,
-                      child: SpatialViewer(
-                        key: ValueKey(prior?['id'] ?? _draft.id),
-                        nodeService: node.service,
-                        privateBytes: _preview,
-                        content: SpatialContent(
-                          id: _draft.id,
-                          type: 'gaussianSplat',
-                          artworkId: _draft.artworkId,
-                          captureId: _draft.id,
-                          capturedAt: _captureDate ?? DateTime.now(),
-                          transform: _newPlacement(_placement.text) ??
-                              (prior?['transform'] as Map<String, dynamic>?),
-                          variants: [
-                            SpatialVariant(
-                                role: 'spatial_preview',
-                                cid: _draft.sha256,
-                                sizeBytes: _draft.sizeBytes,
-                                mimeType: 'application/octet-stream',
-                                format: _draft.format,
-                                storageClass: 'hot')
-                          ],
-                        ),
-                      )),
+                  ..._previewSection(l10n, node, prior),
                 if (editable && grant?['status'] != 'active')
                   Text(l10n.spatialReviewGrantRequired),
                 if (editable && grant?['status'] == 'active')

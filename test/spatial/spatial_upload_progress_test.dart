@@ -52,7 +52,7 @@ void main() {
     expect(find.textContaining('67%'), findsOneWidget);
     // Byte sizes are binary-prefixed by the shared formatter; what matters
     // here is that both halves of the ratio are shown.
-    expect(find.textContaining(RegExp(r'MB / .* MB')), findsOneWidget);
+    expect(find.textContaining(RegExp(r'MiB / .* MiB')), findsOneWidget);
     expect(find.textContaining('19 sec'), findsOneWidget);
     expect(find.textContaining('84 / 126 files'), findsOneWidget);
     expect(find.textContaining('Local network'), findsOneWidget);

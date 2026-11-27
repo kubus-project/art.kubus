@@ -10,9 +10,19 @@ class SpatialUploadDraft {
     required this.sha256,
     required this.chunkSizeBytes,
     required this.ready,
+    this.lightweight,
   });
 
-  factory SpatialUploadDraft.fromJson(Map<String, dynamic> json) {
+  /// Parses a draft. A reconstruction candidate may carry a `lightweight`
+  /// companion (same shape, or null). It only ever shortens the preview, so a
+  /// malformed one is dropped and the full draft stays usable.
+  factory SpatialUploadDraft.fromJson(Map<String, dynamic> json) =>
+      _parse(json, allowLightweight: true);
+
+  static SpatialUploadDraft _parse(
+    Map<String, dynamic> json, {
+    required bool allowLightweight,
+  }) {
     final size = json['sizeBytes'];
     final received = json['receivedBytes'];
     final chunkSize = json['chunkSizeBytes'];
@@ -30,6 +40,20 @@ class SpatialUploadDraft {
         (state == 'ready' && received != size)) {
       throw const FormatException('Invalid spatial draft upload response');
     }
+    SpatialUploadDraft? lightweight;
+    final companion = json['lightweight'];
+    if (allowLightweight && companion is Map) {
+      try {
+        lightweight = _parse(
+          Map<String, dynamic>.from(companion),
+          allowLightweight: false,
+        );
+      } on FormatException {
+        lightweight = null;
+      } on TypeError {
+        lightweight = null;
+      }
+    }
     return SpatialUploadDraft(
       id: json['id'] as String,
       artworkId: json['artworkId'] as String,
@@ -40,6 +64,7 @@ class SpatialUploadDraft {
       sha256: json['sha256'] as String,
       chunkSizeBytes: chunkSize,
       ready: state == 'ready',
+      lightweight: lightweight,
     );
   }
 
@@ -56,4 +81,8 @@ class SpatialUploadDraft {
   final String sha256;
   final int chunkSizeBytes;
   final bool ready;
+
+  /// The smaller preview companion of a candidate (SH degree 0, at most
+  /// 20 MiB), or null when the candidate has none.
+  final SpatialUploadDraft? lightweight;
 }

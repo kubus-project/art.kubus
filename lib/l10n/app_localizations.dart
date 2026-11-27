@@ -12673,7 +12673,7 @@ abstract class AppLocalizations {
   /// No description provided for @spatialProgressRemoteBody.
   ///
   /// In en, this message translates to:
-  /// **'Processing on the Kubus network.'**
+  /// **'Processing on the kubus network.'**
   String get spatialProgressRemoteBody;
 
   /// No description provided for @spatialProgressLeaveHint.
@@ -28097,7 +28097,7 @@ abstract class AppLocalizations {
   /// No description provided for @spatialProcessNetworkTitle.
   ///
   /// In en, this message translates to:
-  /// **'Kubus network'**
+  /// **'kubus network'**
   String get spatialProcessNetworkTitle;
 
   /// No description provided for @spatialProcessNetworkAvailable.
@@ -28169,7 +28169,7 @@ abstract class AppLocalizations {
   /// No description provided for @spatialRemotePrivacyTitle.
   ///
   /// In en, this message translates to:
-  /// **'Use a Kubus network GPU?'**
+  /// **'Use a kubus network GPU?'**
   String get spatialRemotePrivacyTitle;
 
   /// No description provided for @spatialRemotePrivacyBody.
@@ -28235,7 +28235,7 @@ abstract class AppLocalizations {
   /// No description provided for @kubusNodeOfferGpu.
   ///
   /// In en, this message translates to:
-  /// **'Offer GPU to Kubus network'**
+  /// **'Offer GPU to kubus network'**
   String get kubusNodeOfferGpu;
 
   /// No description provided for @kubusNodeOfferGpuBody.
@@ -28381,6 +28381,48 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'This download is large and its size is not known. Continue only on a connection you are happy to use.'**
   String get spatialArchiveConfirmBodyUnknownSize;
+
+  /// No description provided for @spatialLoadFullQuality.
+  ///
+  /// In en, this message translates to:
+  /// **'Load full quality'**
+  String get spatialLoadFullQuality;
+
+  /// No description provided for @spatialLoadFullQualityWithSize.
+  ///
+  /// In en, this message translates to:
+  /// **'Load full quality ({size})'**
+  String spatialLoadFullQualityWithSize(String size);
+
+  /// No description provided for @spatialLoadFullQualitySemantics.
+  ///
+  /// In en, this message translates to:
+  /// **'Load the full-quality model. It is a larger download.'**
+  String get spatialLoadFullQualitySemantics;
+
+  /// No description provided for @spatialFullConfirmTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Load the full-quality model?'**
+  String get spatialFullConfirmTitle;
+
+  /// No description provided for @spatialFullConsentBody.
+  ///
+  /// In en, this message translates to:
+  /// **'The full-quality model is large and can use a lot of data, so it only loads when you ask.'**
+  String get spatialFullConsentBody;
+
+  /// No description provided for @spatialReviewLightweightNotice.
+  ///
+  /// In en, this message translates to:
+  /// **'Showing a lighter preview suited to this device.'**
+  String get spatialReviewLightweightNotice;
+
+  /// No description provided for @spatialReviewPreviewUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'The preview could not be loaded. You can try again.'**
+  String get spatialReviewPreviewUnavailable;
 
   /// No description provided for @spatialQualityMobile.
   ///
@@ -33627,6 +33669,204 @@ abstract class AppLocalizations {
   /// **'Enter a valid placement matrix.'**
   String get spatialReviewPlacementInvalid;
 
+  /// No description provided for @spatialSourceTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Create from photos or video'**
+  String get spatialSourceTitle;
+
+  /// No description provided for @spatialSourceFormats.
+  ///
+  /// In en, this message translates to:
+  /// **'Upload JPEG or PNG photos, MP4 or MOV clips, or a mix. The total limit is 2 GiB.'**
+  String get spatialSourceFormats;
+
+  /// No description provided for @spatialSourceProviderDisclosure.
+  ///
+  /// In en, this message translates to:
+  /// **'I understand that a selected kubus Node provider can read the source files while processing them.'**
+  String get spatialSourceProviderDisclosure;
+
+  /// No description provided for @spatialSourceProcessingPaused.
+  ///
+  /// In en, this message translates to:
+  /// **'Remote reconstruction is paused. You can upload and verify your files now.'**
+  String get spatialSourceProcessingPaused;
+
+  /// No description provided for @spatialSourceTooLarge.
+  ///
+  /// In en, this message translates to:
+  /// **'Select up to 256 files totalling 2 GiB.'**
+  String get spatialSourceTooLarge;
+
+  /// No description provided for @spatialSourceChoose.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose files or resume upload'**
+  String get spatialSourceChoose;
+
+  /// No description provided for @spatialSourceVerified.
+  ///
+  /// In en, this message translates to:
+  /// **'Verified'**
+  String get spatialSourceVerified;
+
+  /// No description provided for @spatialSourceDelete.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete source files now'**
+  String get spatialSourceDelete;
+
+  /// No description provided for @spatialSourceDeleteFile.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete this source file'**
+  String get spatialSourceDeleteFile;
+
+  /// No description provided for @spatialSourceDeleteConfirmation.
+  ///
+  /// In en, this message translates to:
+  /// **'All photos and clips in this private workspace will be deleted.'**
+  String get spatialSourceDeleteConfirmation;
+
+  /// No description provided for @spatialReconstructionFree.
+  ///
+  /// In en, this message translates to:
+  /// **'Free during the pilot. Processing needs only your kubus account: no wallet, no payment.'**
+  String get spatialReconstructionFree;
+
+  /// No description provided for @spatialReconstructionStart.
+  ///
+  /// In en, this message translates to:
+  /// **'Create reconstruction'**
+  String get spatialReconstructionStart;
+
+  /// No description provided for @spatialReconstructionAddViews.
+  ///
+  /// In en, this message translates to:
+  /// **'Add more views and retry'**
+  String get spatialReconstructionAddViews;
+
+  /// No description provided for @spatialReconstructionCancel.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel reconstruction'**
+  String get spatialReconstructionCancel;
+
+  /// No description provided for @spatialReconstructionCancelling.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancelling. The kubus Node is stopping the job.'**
+  String get spatialReconstructionCancelling;
+
+  /// No description provided for @spatialReconstructionQueued.
+  ///
+  /// In en, this message translates to:
+  /// **'Queued for processing.'**
+  String get spatialReconstructionQueued;
+
+  /// No description provided for @spatialReconstructionPreparing.
+  ///
+  /// In en, this message translates to:
+  /// **'Preparing your photos and clips: masking faces and solving camera positions.'**
+  String get spatialReconstructionPreparing;
+
+  /// No description provided for @spatialReconstructionWaiting.
+  ///
+  /// In en, this message translates to:
+  /// **'Waiting for a node. No eligible kubus Node has capacity right now. Your files stay verified.'**
+  String get spatialReconstructionWaiting;
+
+  /// No description provided for @spatialReconstructionProcessing.
+  ///
+  /// In en, this message translates to:
+  /// **'Processing on a kubus Node.'**
+  String get spatialReconstructionProcessing;
+
+  /// No description provided for @spatialReconstructionImporting.
+  ///
+  /// In en, this message translates to:
+  /// **'Importing the verified result as a private candidate.'**
+  String get spatialReconstructionImporting;
+
+  /// No description provided for @spatialReconstructionReady.
+  ///
+  /// In en, this message translates to:
+  /// **'Reconstruction ready. It is a private candidate beside any uploaded splat; the published model does not change.'**
+  String get spatialReconstructionReady;
+
+  /// No description provided for @spatialReconstructionOpen.
+  ///
+  /// In en, this message translates to:
+  /// **'Preview and submit'**
+  String get spatialReconstructionOpen;
+
+  /// No description provided for @spatialReconstructionNeedsViews.
+  ///
+  /// In en, this message translates to:
+  /// **'Too few views could be used: {usable} of the {required} needed. Add photos or clips that overlap, then retry.'**
+  String spatialReconstructionNeedsViews(int usable, int required);
+
+  /// No description provided for @spatialReconstructionNeedsViewsGeneric.
+  ///
+  /// In en, this message translates to:
+  /// **'The files could not be turned into a 3D model. Add more photos or clips with good overlap, taken from different angles, then retry.'**
+  String get spatialReconstructionNeedsViewsGeneric;
+
+  /// No description provided for @spatialReconstructionFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Processing failed. Your verified files are kept, so you can retry.'**
+  String get spatialReconstructionFailed;
+
+  /// No description provided for @spatialReconstructionCancelled.
+  ///
+  /// In en, this message translates to:
+  /// **'Reconstruction cancelled. Your verified files are kept.'**
+  String get spatialReconstructionCancelled;
+
+  /// No description provided for @spatialSourceUsableViews.
+  ///
+  /// In en, this message translates to:
+  /// **'Usable views: {count}'**
+  String spatialSourceUsableViews(int count);
+
+  /// No description provided for @spatialSourceNotUsable.
+  ///
+  /// In en, this message translates to:
+  /// **'Not usable'**
+  String get spatialSourceNotUsable;
+
+  /// No description provided for @spatialReconstructionFaceReview.
+  ///
+  /// In en, this message translates to:
+  /// **'Some photos or clips may show a person\'s face. Remove or replace the marked files, then retry.'**
+  String get spatialReconstructionFaceReview;
+
+  /// No description provided for @spatialSourceFaceReview.
+  ///
+  /// In en, this message translates to:
+  /// **'May show a face'**
+  String get spatialSourceFaceReview;
+
+  /// No description provided for @spatialSourceFaceReviewSemantics.
+  ///
+  /// In en, this message translates to:
+  /// **'{name}: may show a person\'s face. Remove or replace this file.'**
+  String spatialSourceFaceReviewSemantics(String name);
+
+  /// No description provided for @spatialSourceLocked.
+  ///
+  /// In en, this message translates to:
+  /// **'Files are locked while a reconstruction runs.'**
+  String get spatialSourceLocked;
+
+  /// No description provided for @spatialSourceRetention.
+  ///
+  /// In en, this message translates to:
+  /// **'Source files are kept for seven days after the last attempt, or until you delete them.'**
+  String get spatialSourceRetention;
+
   /// No description provided for @spatialReviewTitle.
   ///
   /// In en, this message translates to:
@@ -33756,7 +33996,7 @@ abstract class AppLocalizations {
   /// No description provided for @kubusNodeDownloadAction.
   ///
   /// In en, this message translates to:
-  /// **'Download Kubus Node'**
+  /// **'Download kubus Node'**
   String get kubusNodeDownloadAction;
 
   /// No description provided for @kubusNodeInstallAction.

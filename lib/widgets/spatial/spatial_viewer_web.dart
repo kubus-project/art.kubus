@@ -11,6 +11,7 @@ import '../../models/kubus_node_models.dart';
 import '../../services/anonymous_fetch_client.dart';
 import '../../services/kubus_node_service.dart';
 import '../../services/spatial_web_delivery.dart';
+import '../../services/spatial_device_class.dart';
 import '../../services/spatial_web_load_session.dart';
 import '../../utils/node_state_presentation.dart';
 import '../inline_loading.dart';
@@ -155,7 +156,10 @@ class _WebSpatialViewerState extends State<WebSpatialViewer> {
     _messageListener = ((web.MessageEvent event) => _onMessage(event)).toJS;
     web.window.addEventListener('message', _messageListener);
 
-    _session = SpatialWebLoadSession(widget.content);
+    _session = SpatialWebLoadSession(
+      widget.content,
+      constrained: SpatialDeviceClass.constrained,
+    );
     if (_session.variant != null) _startIframe();
   }
 
@@ -179,6 +183,7 @@ class _WebSpatialViewerState extends State<WebSpatialViewer> {
     _session = SpatialWebLoadSession(
       widget.content,
       attemptBase: _session.attempt,
+      constrained: SpatialDeviceClass.constrained,
     );
     _interactive = false;
     _iframe.style.visibility = 'hidden';
@@ -236,7 +241,8 @@ class _WebSpatialViewerState extends State<WebSpatialViewer> {
     setState(() {});
     if (fallback) {
       _startIframe();
-    } else if (_session.status == SpatialWebLoadStatus.failed) {
+    } else if (_session.status == SpatialWebLoadStatus.failed ||
+        _session.status == SpatialWebLoadStatus.awaitingConsent) {
       // Hidden and emptied: a stalled page must not keep its download running.
       _interactive = false;
       _iframe.style.visibility = 'hidden';
@@ -420,40 +426,74 @@ class _WebSpatialViewerState extends State<WebSpatialViewer> {
     if (_session.variant != null) _startIframe();
   }
 
+  /// Asks before a large download. Returns true when the visitor continues.
+  Future<bool> _confirmLarge(SpatialVariant variant) async {
+    final l10n = AppLocalizations.of(context)!;
+    final archive = variant.role == 'spatial_archive';
+    _confirming = true;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(
+          archive
+              ? l10n.spatialArchiveConfirmTitle
+              : l10n.spatialFullConfirmTitle,
+        ),
+        content: Text(
+          variant.sizeBytes > 0
+              ? l10n.spatialArchiveConfirmBody(
+                  NodeStatePresentation.formatBytes(variant.sizeBytes),
+                )
+              : l10n.spatialArchiveConfirmBodyUnknownSize,
+        ),
+        actions: <Widget>[
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: Text(l10n.commonCancel),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: Text(l10n.commonContinue),
+          ),
+        ],
+      ),
+    );
+    _confirming = false;
+    return confirmed == true && mounted;
+  }
+
   /// Starts the archive tier, after a confirmation when it is large.
   Future<void> _loadArchive() async {
     final archive = _session.archive;
     if (archive == null || _confirming) return;
-    if (SpatialWebDelivery.archiveNeedsConfirmation(archive)) {
-      final l10n = AppLocalizations.of(context)!;
-      _confirming = true;
-      final confirmed = await showDialog<bool>(
-        context: context,
-        builder: (dialogContext) => AlertDialog(
-          title: Text(l10n.spatialArchiveConfirmTitle),
-          content: Text(
-            archive.sizeBytes > 0
-                ? l10n.spatialArchiveConfirmBody(
-                    NodeStatePresentation.formatBytes(archive.sizeBytes),
-                  )
-                : l10n.spatialArchiveConfirmBodyUnknownSize,
-          ),
-          actions: <Widget>[
-            TextButton(
-              onPressed: () => Navigator.of(dialogContext).pop(false),
-              child: Text(l10n.commonCancel),
-            ),
-            FilledButton(
-              onPressed: () => Navigator.of(dialogContext).pop(true),
-              child: Text(l10n.commonContinue),
-            ),
-          ],
-        ),
-      );
-      _confirming = false;
-      if (confirmed != true || !mounted) return;
+    if (SpatialWebDelivery.archiveNeedsConfirmation(archive) &&
+        !await _confirmLarge(archive)) {
+      return;
     }
     setState(_session.loadArchive);
+    _startIframe();
+  }
+
+  /// Starts the optimised tier a constrained device parked behind a
+  /// confirmation (the preview failed, or it is the only tier).
+  Future<void> _loadPending() async {
+    final pending = _session.pending;
+    if (pending == null || _confirming) return;
+    if (pending.role == 'spatial_archive') return _loadArchive();
+    if (!await _confirmLarge(pending)) return;
+    setState(_session.loadPending);
+    _startIframe();
+  }
+
+  /// "Load full quality" from the preview a constrained device opened first.
+  Future<void> _loadFullQuality() async {
+    final full = _session.fullQuality;
+    if (full == null || _confirming) return;
+    if (SpatialWebDelivery.needsConfirmation(full, constrained: true) &&
+        !await _confirmLarge(full)) {
+      return;
+    }
+    setState(_session.loadFullQuality);
     _startIframe();
   }
 
@@ -466,6 +506,12 @@ class _WebSpatialViewerState extends State<WebSpatialViewer> {
           )
         : l10n.spatialLoadArchiveQuality;
   }
+
+  String _fullLabel(AppLocalizations l10n, int bytes) => bytes > 0
+      ? l10n.spatialLoadFullQualityWithSize(
+          NodeStatePresentation.formatBytes(bytes),
+        )
+      : l10n.spatialLoadFullQuality;
 
   @override
   Widget build(BuildContext context) {
@@ -484,17 +530,30 @@ class _WebSpatialViewerState extends State<WebSpatialViewer> {
           message: l10n.spatialViewerLoading,
           busy: true,
         ),
-      SpatialWebLoadStatus.awaitingArchiveConsent => _Notice(
-          poster: widget.posterUrl,
-          icon: Icons.view_in_ar_outlined,
-          message:
-              '${l10n.spatialArchiveTitle}\n${l10n.spatialArchiveConsentBody}',
-          action: FilledButton.icon(
-            onPressed: () => unawaited(_loadArchive()),
-            icon: const Icon(Icons.threed_rotation_rounded),
-            label: Text(_archiveLabel(l10n)),
-          ),
-        ),
+      SpatialWebLoadStatus.awaitingConsent => _session.pending?.role ==
+              'spatial_archive'
+          ? _Notice(
+              poster: widget.posterUrl,
+              icon: Icons.view_in_ar_outlined,
+              message:
+                  '${l10n.spatialArchiveTitle}\n${l10n.spatialArchiveConsentBody}',
+              action: FilledButton.icon(
+                onPressed: () => unawaited(_loadArchive()),
+                icon: const Icon(Icons.threed_rotation_rounded),
+                label: Text(_archiveLabel(l10n)),
+              ),
+            )
+          : _Notice(
+              poster: widget.posterUrl,
+              icon: Icons.view_in_ar_outlined,
+              message: '${l10n.spatialArchiveTitle}\n'
+                  '${l10n.spatialFullConsentBody}',
+              action: FilledButton.icon(
+                onPressed: () => unawaited(_loadPending()),
+                icon: const Icon(Icons.threed_rotation_rounded),
+                label: Text(_fullLabel(l10n, _session.pending?.sizeBytes ?? 0)),
+              ),
+            ),
       SpatialWebLoadStatus.failed => _Notice(
           poster: widget.posterUrl,
           icon: Icons.view_in_ar_outlined,
@@ -581,6 +640,20 @@ class _WebSpatialViewerState extends State<WebSpatialViewer> {
                 _archiveLabel(l10n),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          if (_session.fullQuality != null && !active)
+            Semantics(
+              button: true,
+              label: l10n.spatialLoadFullQualitySemantics,
+              excludeSemantics: true,
+              child: TextButton(
+                onPressed: () => unawaited(_loadFullQuality()),
+                child: Text(
+                  _fullLabel(l10n, _session.fullQuality!.sizeBytes),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
             ),
           TextButton(

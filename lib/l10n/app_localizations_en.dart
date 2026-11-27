@@ -7227,7 +7227,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get spatialProgressLocalBody => 'Processing on your kubus Node.';
 
   @override
-  String get spatialProgressRemoteBody => 'Processing on the Kubus network.';
+  String get spatialProgressRemoteBody => 'Processing on the kubus network.';
 
   @override
   String get spatialProgressLeaveHint =>
@@ -16178,7 +16178,7 @@ class AppLocalizationsEn extends AppLocalizations {
       'Source capture stays on hardware you control.';
 
   @override
-  String get spatialProcessNetworkTitle => 'Kubus network';
+  String get spatialProcessNetworkTitle => 'kubus network';
 
   @override
   String spatialProcessNetworkAvailable(int count) {
@@ -16222,7 +16222,7 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get spatialRemotePrivacyTitle => 'Use a Kubus network GPU?';
+  String get spatialRemotePrivacyTitle => 'Use a kubus network GPU?';
 
   @override
   String get spatialRemotePrivacyBody =>
@@ -16258,7 +16258,7 @@ class AppLocalizationsEn extends AppLocalizations {
       'Offering your GPU is optional. Local jobs keep priority and archive contribution remains required.';
 
   @override
-  String get kubusNodeOfferGpu => 'Offer GPU to Kubus network';
+  String get kubusNodeOfferGpu => 'Offer GPU to kubus network';
 
   @override
   String get kubusNodeOfferGpuBody =>
@@ -16351,6 +16351,33 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get spatialArchiveConfirmBodyUnknownSize =>
       'This download is large and its size is not known. Continue only on a connection you are happy to use.';
+
+  @override
+  String get spatialLoadFullQuality => 'Load full quality';
+
+  @override
+  String spatialLoadFullQualityWithSize(String size) {
+    return 'Load full quality ($size)';
+  }
+
+  @override
+  String get spatialLoadFullQualitySemantics =>
+      'Load the full-quality model. It is a larger download.';
+
+  @override
+  String get spatialFullConfirmTitle => 'Load the full-quality model?';
+
+  @override
+  String get spatialFullConsentBody =>
+      'The full-quality model is large and can use a lot of data, so it only loads when you ask.';
+
+  @override
+  String get spatialReviewLightweightNotice =>
+      'Showing a lighter preview suited to this device.';
+
+  @override
+  String get spatialReviewPreviewUnavailable =>
+      'The preview could not be loaded. You can try again.';
 
   @override
   String get spatialQualityMobile => 'Optimised';
@@ -19370,6 +19397,127 @@ class AppLocalizationsEn extends AppLocalizations {
   String get spatialReviewPlacementInvalid => 'Enter a valid placement matrix.';
 
   @override
+  String get spatialSourceTitle => 'Create from photos or video';
+
+  @override
+  String get spatialSourceFormats =>
+      'Upload JPEG or PNG photos, MP4 or MOV clips, or a mix. The total limit is 2 GiB.';
+
+  @override
+  String get spatialSourceProviderDisclosure =>
+      'I understand that a selected kubus Node provider can read the source files while processing them.';
+
+  @override
+  String get spatialSourceProcessingPaused =>
+      'Remote reconstruction is paused. You can upload and verify your files now.';
+
+  @override
+  String get spatialSourceTooLarge => 'Select up to 256 files totalling 2 GiB.';
+
+  @override
+  String get spatialSourceChoose => 'Choose files or resume upload';
+
+  @override
+  String get spatialSourceVerified => 'Verified';
+
+  @override
+  String get spatialSourceDelete => 'Delete source files now';
+
+  @override
+  String get spatialSourceDeleteFile => 'Delete this source file';
+
+  @override
+  String get spatialSourceDeleteConfirmation =>
+      'All photos and clips in this private workspace will be deleted.';
+
+  @override
+  String get spatialReconstructionFree =>
+      'Free during the pilot. Processing needs only your kubus account: no wallet, no payment.';
+
+  @override
+  String get spatialReconstructionStart => 'Create reconstruction';
+
+  @override
+  String get spatialReconstructionAddViews => 'Add more views and retry';
+
+  @override
+  String get spatialReconstructionCancel => 'Cancel reconstruction';
+
+  @override
+  String get spatialReconstructionCancelling =>
+      'Cancelling. The kubus Node is stopping the job.';
+
+  @override
+  String get spatialReconstructionQueued => 'Queued for processing.';
+
+  @override
+  String get spatialReconstructionPreparing =>
+      'Preparing your photos and clips: masking faces and solving camera positions.';
+
+  @override
+  String get spatialReconstructionWaiting =>
+      'Waiting for a node. No eligible kubus Node has capacity right now. Your files stay verified.';
+
+  @override
+  String get spatialReconstructionProcessing => 'Processing on a kubus Node.';
+
+  @override
+  String get spatialReconstructionImporting =>
+      'Importing the verified result as a private candidate.';
+
+  @override
+  String get spatialReconstructionReady =>
+      'Reconstruction ready. It is a private candidate beside any uploaded splat; the published model does not change.';
+
+  @override
+  String get spatialReconstructionOpen => 'Preview and submit';
+
+  @override
+  String spatialReconstructionNeedsViews(int usable, int required) {
+    return 'Too few views could be used: $usable of the $required needed. Add photos or clips that overlap, then retry.';
+  }
+
+  @override
+  String get spatialReconstructionNeedsViewsGeneric =>
+      'The files could not be turned into a 3D model. Add more photos or clips with good overlap, taken from different angles, then retry.';
+
+  @override
+  String get spatialReconstructionFailed =>
+      'Processing failed. Your verified files are kept, so you can retry.';
+
+  @override
+  String get spatialReconstructionCancelled =>
+      'Reconstruction cancelled. Your verified files are kept.';
+
+  @override
+  String spatialSourceUsableViews(int count) {
+    return 'Usable views: $count';
+  }
+
+  @override
+  String get spatialSourceNotUsable => 'Not usable';
+
+  @override
+  String get spatialReconstructionFaceReview =>
+      'Some photos or clips may show a person\'s face. Remove or replace the marked files, then retry.';
+
+  @override
+  String get spatialSourceFaceReview => 'May show a face';
+
+  @override
+  String spatialSourceFaceReviewSemantics(String name) {
+    return '$name: may show a person\'s face. Remove or replace this file.';
+  }
+
+  @override
+  String get spatialSourceLocked =>
+      'Files are locked while a reconstruction runs.';
+
+  @override
+  String get spatialSourceRetention =>
+      'Source files are kept for seven days after the last attempt, or until you delete them.';
+
+  @override
   String get spatialReviewTitle => 'Preview and submit';
 
   @override
@@ -19438,7 +19586,7 @@ class AppLocalizationsEn extends AppLocalizations {
       'Artists with a compatible kubus Node can reconstruct on their own hardware and upload the finished splat here.';
 
   @override
-  String get kubusNodeDownloadAction => 'Download Kubus Node';
+  String get kubusNodeDownloadAction => 'Download kubus Node';
 
   @override
   String get kubusNodeInstallAction => 'Installation guide';
