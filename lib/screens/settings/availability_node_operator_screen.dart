@@ -839,11 +839,11 @@ class _SectionPanel extends StatelessWidget {
 int _asInt(Object? value) => int.tryParse('${value ?? 0}') ?? 0;
 String _formatBytes(int bytes) {
   if (bytes < 1024) return '$bytes B';
-  if (bytes < 1024 * 1024) return '${(bytes / 1024).toStringAsFixed(1)} KB';
+  if (bytes < 1024 * 1024) return '${(bytes / 1024).toStringAsFixed(1)} KiB';
   if (bytes < 1024 * 1024 * 1024) {
-    return '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB';
+    return '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MiB';
   }
-  return '${(bytes / (1024 * 1024 * 1024)).toStringAsFixed(1)} GB';
+  return '${(bytes / (1024 * 1024 * 1024)).toStringAsFixed(1)} GiB';
 }
 
 class _NodeStatusPanel extends StatelessWidget {

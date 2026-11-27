@@ -296,10 +296,11 @@ class NodeStatePresentation {
     }
   }
 
-  static const List<String> _byteUnits = ['B', 'KB', 'MB', 'GB', 'TB'];
+  static const List<String> _byteUnits = ['B', 'KiB', 'MiB', 'GiB', 'TiB'];
 
-  /// Storage is shown in whole human units. Operators read "12.4 GB", never a
-  /// byte count.
+  /// Storage is shown in whole human units. Operators read "12.4 GiB", never a
+  /// byte count. The divisor is 1024, so the units are binary and labelled as
+  /// such (KiB/MiB/GiB), matching the "50 MiB" and "512 MiB" copy elsewhere.
   static String formatBytes(num? bytes) {
     final value = (bytes ?? 0).toDouble();
     if (!value.isFinite || value <= 0) return '0 B';

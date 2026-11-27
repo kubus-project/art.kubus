@@ -114,7 +114,7 @@ void main() {
             'totalVramBytes': 12 * 1024 * 1024 * 1024,
           },
         }),
-        'RTX 3080 Ti · 12.0 GB',
+        'RTX 3080 Ti · 12.0 GiB',
       );
       expect(
           NodeStatePresentation.gpuLabel({
@@ -201,11 +201,33 @@ void main() {
     test('storage reads in human units, never bytes', () {
       expect(NodeStatePresentation.formatBytes(0), '0 B');
       expect(NodeStatePresentation.formatBytes(512), '512 B');
-      expect(NodeStatePresentation.formatBytes(1024 * 1024), '1.0 MB');
+      expect(NodeStatePresentation.formatBytes(1024 * 1024), '1.0 MiB');
       expect(
         NodeStatePresentation.formatBytes(12.4 * 1024 * 1024 * 1024),
-        '12.4 GB',
+        '12.4 GiB',
       );
+    });
+
+    test('binary divisor is labelled with binary units', () {
+      expect(NodeStatePresentation.formatBytes(1024), '1.0 KiB');
+      expect(NodeStatePresentation.formatBytes(1536), '1.5 KiB');
+      // The staging full-quality splat: 46,981,525 B is 44.8 MiB, not 44.8 MB.
+      expect(NodeStatePresentation.formatBytes(46981525), '44.8 MiB');
+      // The 50 MiB confirmation threshold reads exactly as its copy does.
+      expect(NodeStatePresentation.formatBytes(50 * 1024 * 1024), '50.0 MiB');
+      expect(
+          NodeStatePresentation.formatBytes(2 * 1024 * 1024 * 1024), '2.0 GiB');
+      expect(NodeStatePresentation.formatBytes(1024 * 1024 * 1024 * 1024),
+          '1.0 TiB');
+      // Three-digit values drop the decimal.
+      expect(NodeStatePresentation.formatBytes(512 * 1024 * 1024), '512 MiB');
+      expect(NodeStatePresentation.formatBytes(1023), '1023 B');
+      for (final label in ['KB', 'MB', 'GB', 'TB']) {
+        expect(
+          NodeStatePresentation.formatBytes(46981525),
+          isNot(contains(' $label')),
+        );
+      }
     });
 
     test('percentages drop noise digits', () {
