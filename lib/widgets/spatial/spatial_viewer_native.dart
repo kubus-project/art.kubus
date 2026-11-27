@@ -9,7 +9,9 @@ import '../../l10n/app_localizations.dart';
 import '../../models/kubus_node_models.dart';
 import '../../services/kubus_node_service.dart';
 import '../../services/spatial_content_proxy.dart';
+import '../../services/spatial_device_class.dart';
 import '../../services/spatial_web_delivery.dart';
+import '../../utils/node_state_presentation.dart';
 import '../inline_loading.dart';
 
 Widget buildSpatialViewer({
@@ -49,15 +51,16 @@ class _NativeSpatialViewerState extends State<_NativeSpatialViewer> {
   String? _error;
   bool _ready = false;
   SpatialVariant? _selectedVariant;
-  bool _awaitingArchiveConsent = false;
+  bool _awaitingConsent = false;
+  late final bool _constrained = SpatialDeviceClass.constrained;
 
   @override
   void initState() {
     super.initState();
     final preferred = _preferredVariant();
-    if (preferred?.role == 'spatial_archive') {
+    if (preferred != null && _needsConsent(preferred)) {
       _selectedVariant = preferred;
-      _awaitingArchiveConsent = true;
+      _awaitingConsent = true;
     } else {
       unawaited(_initialize(preferred));
     }
@@ -66,13 +69,22 @@ class _NativeSpatialViewerState extends State<_NativeSpatialViewer> {
   List<SpatialVariant> get _supportedVariants =>
       widget.content.variants.where(_isSplatVariant).toList(growable: false);
 
+  /// The archive always waits for the visitor; so does a large optimised model
+  /// on a constrained device.
+  bool _needsConsent(SpatialVariant variant) =>
+      variant.role == 'spatial_archive' ||
+      SpatialWebDelivery.needsConfirmation(variant, constrained: _constrained);
+
   SpatialVariant? _preferredVariant() {
     final supported = _supportedVariants;
-    return supported
-            .where((item) => item.role == 'spatial_mobile')
-            .firstOrNull ??
-        supported.where((item) => item.role == 'spatial_preview').firstOrNull ??
-        supported.where((item) => item.role == 'spatial_archive').firstOrNull;
+    final roles = _constrained
+        ? const ['spatial_preview', 'spatial_mobile', 'spatial_archive']
+        : const ['spatial_mobile', 'spatial_preview', 'spatial_archive'];
+    for (final role in roles) {
+      final match = supported.where((item) => item.role == role).firstOrNull;
+      if (match != null) return match;
+    }
+    return null;
   }
 
   Future<void> _initialize([SpatialVariant? requested]) async {
@@ -86,7 +98,7 @@ class _NativeSpatialViewerState extends State<_NativeSpatialViewer> {
       if (mounted) {
         setState(() {
           _selectedVariant = variant;
-          _awaitingArchiveConsent = false;
+          _awaitingConsent = false;
           _error = null;
           _ready = false;
           _controller = null;
@@ -175,14 +187,20 @@ class _NativeSpatialViewerState extends State<_NativeSpatialViewer> {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final l10n = AppLocalizations.of(context)!;
-    if (_awaitingArchiveConsent) {
+    if (_awaitingConsent) {
+      final waiting = _selectedVariant;
       return ColoredBox(
         color: scheme.surfaceContainerHighest,
         child: Center(
           child: FilledButton.icon(
             onPressed: () => unawaited(_initialize(_selectedVariant)),
             icon: const Icon(Icons.download_rounded),
-            label: Text(l10n.spatialLoadArchiveQuality),
+            label: Text(waiting?.role == 'spatial_archive'
+                ? l10n.spatialLoadArchiveQuality
+                : (waiting?.sizeBytes ?? 0) > 0
+                    ? l10n.spatialLoadFullQualityWithSize(
+                        NodeStatePresentation.formatBytes(waiting!.sizeBytes))
+                    : l10n.spatialLoadFullQuality),
           ),
         ),
       );
@@ -269,7 +287,7 @@ class _NativeSpatialViewerState extends State<_NativeSpatialViewer> {
                   MenuItemButton(
                     onPressed: variant.cid == _selectedVariant?.cid
                         ? null
-                        : () => unawaited(_initialize(variant)),
+                        : () => _selectQuality(variant),
                     child: Text(_qualityLabel(l10n, variant.role)),
                   ),
               ],
@@ -283,6 +301,19 @@ class _NativeSpatialViewerState extends State<_NativeSpatialViewer> {
           ),
       ],
     );
+  }
+
+  /// Picking a quality from the menu: the archive loads as before, a large
+  /// optimised model on a constrained device waits for the visitor's go-ahead.
+  void _selectQuality(SpatialVariant variant) {
+    if (variant.role != 'spatial_archive' && _needsConsent(variant)) {
+      setState(() {
+        _selectedVariant = variant;
+        _awaitingConsent = true;
+      });
+      return;
+    }
+    unawaited(_initialize(variant));
   }
 
   String _qualityLabel(AppLocalizations l10n, String role) => switch (role) {
