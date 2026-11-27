@@ -262,6 +262,61 @@ void main() {
     });
   });
 
+  group('choosing the archive from the menu', () {
+    Future<void> openMenuAndPickArchive(WidgetTester tester) async {
+      await tester.tap(find.text('Preview'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Archival'));
+      await tester.pumpAndSettle();
+    }
+
+    for (final bytes in [300 * _mib, 0]) {
+      testWidgets(
+          'an archive of ${bytes == 0 ? 'unknown size' : '300 MiB'} is '
+          'offered, not downloaded, and loads once accepted', (tester) async {
+        SpatialDeviceClass.debugSignals =
+            const SpatialDeviceSignals(nativeMobile: true);
+        final node = _RecordingNode();
+        await tester.pumpWidget(_host(debugNativeSpatialViewer(
+          content: _content([
+            _variant('spatial_archive', 'cid-archive', bytes),
+            _variant('spatial_preview', 'cid-preview', 10 * _mib),
+          ]),
+          nodeService: node,
+          loaded: true,
+        )));
+        await tester.pump();
+        await openMenuAndPickArchive(tester);
+        expect(find.textContaining('Load archival quality'), findsOneWidget);
+        expect(find.byTooltip('Reset view'), findsOneWidget);
+        expect(node.asked, isEmpty);
+
+        await tester.tap(find.textContaining('Load archival quality'));
+        await _settle(tester);
+        expect(node.asked, ['ipfs://cid-archive']);
+      });
+    }
+
+    testWidgets('a small archive of known size loads on one tap, as on the web',
+        (tester) async {
+      SpatialDeviceClass.debugSignals =
+          const SpatialDeviceSignals(nativeMobile: true);
+      final node = _RecordingNode();
+      await tester.pumpWidget(_host(debugNativeSpatialViewer(
+        content: _content([
+          _variant('spatial_archive', 'cid-archive', 20 * _mib),
+          _variant('spatial_preview', 'cid-preview', 10 * _mib),
+        ]),
+        nodeService: node,
+        loaded: true,
+      )));
+      await tester.pump();
+      await openMenuAndPickArchive(tester);
+      await _settle(tester);
+      expect(node.asked, ['ipfs://cid-archive']);
+    });
+  });
+
   group('fullscreen', () {
     testWidgets(
         'opens the variant the visitor already has, without asking again '

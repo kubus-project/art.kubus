@@ -391,19 +391,23 @@ class _NativeSpatialViewerState extends State<_NativeSpatialViewer> {
         onPressed: () => unawaited(load()),
         icon: const Icon(Icons.download_rounded),
         label: Text(variant?.role == 'spatial_archive'
-            ? l10n.spatialLoadArchiveQuality
+            ? ((variant?.sizeBytes ?? 0) > 0
+                ? l10n.spatialLoadArchiveQualityWithSize(
+                    NodeStatePresentation.formatBytes(variant!.sizeBytes))
+                : l10n.spatialLoadArchiveQuality)
             : (variant?.sizeBytes ?? 0) > 0
                 ? l10n.spatialLoadFullQualityWithSize(
                     NodeStatePresentation.formatBytes(variant!.sizeBytes))
                 : l10n.spatialLoadFullQuality),
       );
 
-  /// Picking a quality from the menu: the archive loads as before. A large
-  /// optimised model on a constrained device is offered with a button while
-  /// the current variant stays on screen, so declining costs the visitor
-  /// nothing.
+  /// Picking a quality from the menu follows the web rule: the archive when it
+  /// is 50 MiB or larger or of unknown size, and a large optimised model on a
+  /// constrained device, are offered with a button while the current variant
+  /// stays on screen, so declining costs the visitor nothing.
   void _selectQuality(SpatialVariant variant) {
-    if (variant.role != 'spatial_archive' && _needsConsent(variant)) {
+    if (SpatialWebDelivery.needsConfirmation(variant,
+        constrained: _constrained)) {
       setState(() => _offered = variant);
       return;
     }
