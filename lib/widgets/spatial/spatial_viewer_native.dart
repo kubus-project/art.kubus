@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:typed_data';
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
@@ -17,6 +18,7 @@ Widget buildSpatialViewer({
   required KubusNodeService nodeService,
   String? posterUrl,
   VoidCallback? onEscape,
+  Future<Uint8List> Function()? privateBytes,
 }) =>
     _NativeSpatialViewer(
       content: content,

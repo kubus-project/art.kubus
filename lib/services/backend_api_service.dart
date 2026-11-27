@@ -58,6 +58,8 @@ import 'telemetry/telemetry_uuid.dart';
 import 'node/turn_configuration.dart';
 import 'account_identity.dart';
 
+import '../models/spatial_upload_draft.dart';
+
 part 'backend_api_service_auth_helpers.dart';
 part 'backend_api_service_auth_account_helpers.dart';
 part 'backend_api_service_auth_transport.dart';

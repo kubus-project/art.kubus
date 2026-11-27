@@ -19511,4 +19511,174 @@ class AppLocalizationsSl extends AppLocalizations {
   @override
   String get artworkPublishHeldGeneric =>
       'To delo je v uredniškem zadržanju in ga še ni mogoče objaviti.';
+
+  @override
+  String get spatialDraftUploadTitle => 'Prostorski zapis';
+
+  @override
+  String get spatialDraftUploadEditorSummary =>
+      'Naloži pripravljen 3D-model kot zasebni osnutek.';
+
+  @override
+  String get spatialDraftUploadPrivateTitle => 'Zasebni prostorski osnutek';
+
+  @override
+  String get spatialDraftUploadIntro =>
+      'V napravi izberi pripravljen gaussovski model. Naložena datoteka ostane zasebna. Nalaganje lahko začasno ustaviš in nadaljuješ z izbiro iste datoteke.';
+
+  @override
+  String get spatialDraftUploadFormats =>
+      'PLY, SPZ, SPLAT ali KSPLAT, največ 512 MiB.';
+
+  @override
+  String get spatialDraftUploadLoading => 'Nalaganje prostorskega osnutka …';
+
+  @override
+  String get spatialDraftUploadChecking => 'Preverjanje datoteke …';
+
+  @override
+  String get spatialDraftUploadSending => 'Nalaganje prostorskega modela …';
+
+  @override
+  String get spatialDraftUploadReady =>
+      'Nalaganje je končano. Model je shranjen kot zasebni osnutek.';
+
+  @override
+  String get spatialReviewNewCandidate => 'Začni nov osnutek';
+
+  @override
+  String get spatialReviewPlacement => 'Matrika postavitve (neobvezno)';
+
+  @override
+  String get spatialReviewPlacementHelp =>
+      'Prilepi 16 vrednosti iz zajema Node, po stolpcih.';
+
+  @override
+  String get spatialReviewPlacementInvalid =>
+      'Vnesi veljavno matriko postavitve.';
+
+  @override
+  String get spatialReviewTitle => 'Predogled in oddaja';
+
+  @override
+  String get spatialReviewPreview => 'Odpri zasebni predogled';
+
+  @override
+  String get spatialReviewClosePreview => 'Zapri predogled';
+
+  @override
+  String get spatialReviewRefresh => 'Osveži stanje';
+
+  @override
+  String get spatialReviewPublishing => 'Objavljanje';
+
+  @override
+  String get spatialReviewDeliveryFailed =>
+      'Dostava ni uspela. Pregledovalec jo lahko ponovi.';
+
+  @override
+  String get spatialReviewPublished => 'Objavljeno';
+
+  @override
+  String get spatialReviewPending => 'Čaka na neodvisni pregled';
+
+  @override
+  String get spatialReviewChanges => 'Zahtevane so spremembe';
+
+  @override
+  String get spatialReviewHeld => 'Objava je zadržana';
+
+  @override
+  String get spatialReviewFailed =>
+      'Zahteve ni bilo mogoče dokončati. Osveži pregled in poskusi znova.';
+
+  @override
+  String get spatialReviewGrantRequired =>
+      'Pred oddajo mora biti vpisano veljavno dovoljenje.';
+
+  @override
+  String get spatialReviewMarker => 'Oznaka umetnine';
+
+  @override
+  String get spatialReviewDate => 'Datum zajema';
+
+  @override
+  String get spatialReviewAttribution =>
+      'Javna navedba avtorstva zajema (neobvezno)';
+
+  @override
+  String get spatialReviewEvidence => 'Zasebni povzetek dovoljenj';
+
+  @override
+  String get spatialReviewDocument => 'Zasebni sklic na zapis o dovoljenju';
+
+  @override
+  String get spatialReviewRequiredField => 'Vnesi ta podatek';
+
+  @override
+  String get spatialReviewConfirm =>
+      'Potrjujem umetnino, oznako, datum zajema in navedbo avtorstva. Imam dovoljenje za zajem in reproduciranje dela, izdelavo modela ter njegovo javno prikazovanje, prenos in distribucijo prek IPFS po vsem svetu po odobritvi.';
+
+  @override
+  String get spatialReviewSubmit => 'Oddaj v pregled';
+
+  @override
+  String get spatialPilotNodeExplanation =>
+      'Umetniki z združljivim kubus Node lahko model rekonstruirajo na svoji opremi in sem naložijo dokončane podatke splat.';
+
+  @override
+  String get kubusNodeDownloadAction => 'Prenesi kubus Node';
+
+  @override
+  String get kubusNodeInstallAction => 'Navodila za namestitev';
+
+  @override
+  String get kubusNodePairGuideAction => 'Poveži vozlišče';
+
+  @override
+  String get kubusNodeHardwareGuide =>
+      'Gostovanje arhiva potrebuje lokalno shrambo in zanesljivo omrežno povezavo. Za prostorsko rekonstrukcijo potrebuješ združljivo grafično kartico NVIDIA in prostorski procesni modul. Pripravljene podatke splat lahko umetniki naložijo v brskalniku brez namestitve vozlišča.';
+
+  @override
+  String get kubusNodeComputeRewardGuide =>
+      'Lokalna rekonstrukcija sama po sebi ne prinaša nagrade za računsko delo. Upravljavci so lahko upravičeni do nagrade za ustrezne arhivske prispevke ali preverjeno delo za druge upravljavce. Evidentirani prispevki v obdelavi in poravnani KUB8 so prikazani ločeno.';
+
+  @override
+  String get spatialDraftUploadIncomplete =>
+      'Nalaganje ni končano. Za nadaljevanje izberi isto datoteko.';
+
+  @override
+  String get spatialDraftUploadUnavailable =>
+      'Ta strežnik trenutno ne sprejema prostorskih modelov.';
+
+  @override
+  String get spatialDraftUploadFailed =>
+      'Zahteve ni bilo mogoče dokončati. Že naloženi deli ostanejo shranjeni.';
+
+  @override
+  String get spatialDraftUploadUnsupported =>
+      'Izberi neprazno datoteko PLY, SPZ, SPLAT ali KSPLAT.';
+
+  @override
+  String get spatialDraftUploadTooLarge => 'Datoteka presega omejitev 512 MiB.';
+
+  @override
+  String get spatialDraftUploadDifferentFile =>
+      'Za nadaljevanje izberi isto datoteko. Če želiš naložiti drugo, odstrani osnutek.';
+
+  @override
+  String get spatialDraftUploadPause => 'Začasno ustavi nalaganje';
+
+  @override
+  String get spatialDraftUploadChoose => 'Izberi datoteko in jo naloži';
+
+  @override
+  String get spatialDraftUploadResume => 'Izberi isto datoteko';
+
+  @override
+  String get spatialDraftUploadRemoveTitle => 'Odstrani zasebni osnutek';
+
+  @override
+  String get spatialDraftUploadRemoveBody =>
+      'Želiš iz zasebnega osnutka odstraniti model in vse že naložene dele?';
 }

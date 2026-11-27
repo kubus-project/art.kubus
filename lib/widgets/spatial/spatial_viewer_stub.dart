@@ -1,3 +1,4 @@
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -11,6 +12,7 @@ Widget buildSpatialViewer({
   required KubusNodeService nodeService,
   String? posterUrl,
   VoidCallback? onEscape,
+  Future<Uint8List> Function()? privateBytes,
 }) {
   final variant = content.variants
           .where((item) => item.role == 'spatial_mobile')

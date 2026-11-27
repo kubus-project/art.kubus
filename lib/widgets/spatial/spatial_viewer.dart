@@ -1,3 +1,4 @@
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 
 import '../../models/kubus_node_models.dart';
@@ -17,6 +18,7 @@ class SpatialViewer extends StatelessWidget {
     super.key,
     this.posterUrl,
     this.onEscape,
+    this.privateBytes,
   });
 
   final SpatialContent content;
@@ -28,6 +30,7 @@ class SpatialViewer extends StatelessWidget {
   /// that wants Escape to dismiss it (the fullscreen dialog) passes this. The
   /// viewer itself closes nothing. Native and stub viewers never call it.
   final VoidCallback? onEscape;
+  final Future<Uint8List> Function()? privateBytes;
 
   @override
   Widget build(BuildContext context) => implementation.buildSpatialViewer(
@@ -36,5 +39,6 @@ class SpatialViewer extends StatelessWidget {
         nodeService: nodeService,
         posterUrl: posterUrl,
         onEscape: onEscape,
+        privateBytes: privateBytes,
       );
 }

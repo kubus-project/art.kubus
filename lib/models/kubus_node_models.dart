@@ -527,7 +527,11 @@ class ArtworkSpatialCapture {
         captureId: id,
         capturedAt: capturedAt,
         variants: variants,
-        manifestCid: canonicalManifestCid,
+        manifestCid: variants
+                .where((entry) => entry.role == 'spatial_manifest')
+                .firstOrNull
+                ?.cid ??
+            canonicalManifestCid,
       );
 
   factory ArtworkSpatialCapture.fromJson(Map<String, dynamic> json) {

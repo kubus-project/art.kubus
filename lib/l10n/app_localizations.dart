@@ -33548,6 +33548,306 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'This artwork is on editorial hold and cannot be published yet.'**
   String get artworkPublishHeldGeneric;
+
+  /// No description provided for @spatialDraftUploadTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Spatial'**
+  String get spatialDraftUploadTitle;
+
+  /// No description provided for @spatialDraftUploadEditorSummary.
+  ///
+  /// In en, this message translates to:
+  /// **'Upload a prepared 3D model as a private draft.'**
+  String get spatialDraftUploadEditorSummary;
+
+  /// No description provided for @spatialDraftUploadPrivateTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Private spatial draft'**
+  String get spatialDraftUploadPrivateTitle;
+
+  /// No description provided for @spatialDraftUploadIntro.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose a prepared Gaussian splat from your device. The upload stays private. You can pause and resume by choosing the same file.'**
+  String get spatialDraftUploadIntro;
+
+  /// No description provided for @spatialDraftUploadFormats.
+  ///
+  /// In en, this message translates to:
+  /// **'PLY, SPZ, SPLAT or KSPLAT, up to 512 MiB.'**
+  String get spatialDraftUploadFormats;
+
+  /// No description provided for @spatialDraftUploadLoading.
+  ///
+  /// In en, this message translates to:
+  /// **'Loading the spatial draft…'**
+  String get spatialDraftUploadLoading;
+
+  /// No description provided for @spatialDraftUploadChecking.
+  ///
+  /// In en, this message translates to:
+  /// **'Checking the file…'**
+  String get spatialDraftUploadChecking;
+
+  /// No description provided for @spatialDraftUploadSending.
+  ///
+  /// In en, this message translates to:
+  /// **'Uploading the spatial model…'**
+  String get spatialDraftUploadSending;
+
+  /// No description provided for @spatialDraftUploadReady.
+  ///
+  /// In en, this message translates to:
+  /// **'Upload complete. This model is saved as a private draft.'**
+  String get spatialDraftUploadReady;
+
+  /// No description provided for @spatialReviewNewCandidate.
+  ///
+  /// In en, this message translates to:
+  /// **'Start a new candidate'**
+  String get spatialReviewNewCandidate;
+
+  /// No description provided for @spatialReviewPlacement.
+  ///
+  /// In en, this message translates to:
+  /// **'Placement matrix (optional)'**
+  String get spatialReviewPlacement;
+
+  /// No description provided for @spatialReviewPlacementHelp.
+  ///
+  /// In en, this message translates to:
+  /// **'Paste the 16 values in column-major order from the Node capture.'**
+  String get spatialReviewPlacementHelp;
+
+  /// No description provided for @spatialReviewPlacementInvalid.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter a valid placement matrix.'**
+  String get spatialReviewPlacementInvalid;
+
+  /// No description provided for @spatialReviewTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Preview and submit'**
+  String get spatialReviewTitle;
+
+  /// No description provided for @spatialReviewPreview.
+  ///
+  /// In en, this message translates to:
+  /// **'Open private preview'**
+  String get spatialReviewPreview;
+
+  /// No description provided for @spatialReviewClosePreview.
+  ///
+  /// In en, this message translates to:
+  /// **'Close preview'**
+  String get spatialReviewClosePreview;
+
+  /// No description provided for @spatialReviewRefresh.
+  ///
+  /// In en, this message translates to:
+  /// **'Refresh status'**
+  String get spatialReviewRefresh;
+
+  /// No description provided for @spatialReviewPublishing.
+  ///
+  /// In en, this message translates to:
+  /// **'Publishing'**
+  String get spatialReviewPublishing;
+
+  /// No description provided for @spatialReviewDeliveryFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Delivery failed. The reviewer can retry delivery.'**
+  String get spatialReviewDeliveryFailed;
+
+  /// No description provided for @spatialReviewPublished.
+  ///
+  /// In en, this message translates to:
+  /// **'Published'**
+  String get spatialReviewPublished;
+
+  /// No description provided for @spatialReviewPending.
+  ///
+  /// In en, this message translates to:
+  /// **'Awaiting independent review'**
+  String get spatialReviewPending;
+
+  /// No description provided for @spatialReviewChanges.
+  ///
+  /// In en, this message translates to:
+  /// **'Changes requested'**
+  String get spatialReviewChanges;
+
+  /// No description provided for @spatialReviewHeld.
+  ///
+  /// In en, this message translates to:
+  /// **'Publication on hold'**
+  String get spatialReviewHeld;
+
+  /// No description provided for @spatialReviewFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not complete the request. Refresh the review and try again.'**
+  String get spatialReviewFailed;
+
+  /// No description provided for @spatialReviewGrantRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'An active permission record is required before submission.'**
+  String get spatialReviewGrantRequired;
+
+  /// No description provided for @spatialReviewMarker.
+  ///
+  /// In en, this message translates to:
+  /// **'Artwork marker'**
+  String get spatialReviewMarker;
+
+  /// No description provided for @spatialReviewDate.
+  ///
+  /// In en, this message translates to:
+  /// **'Capture date'**
+  String get spatialReviewDate;
+
+  /// No description provided for @spatialReviewAttribution.
+  ///
+  /// In en, this message translates to:
+  /// **'Public capture credit (optional)'**
+  String get spatialReviewAttribution;
+
+  /// No description provided for @spatialReviewEvidence.
+  ///
+  /// In en, this message translates to:
+  /// **'Private rights summary'**
+  String get spatialReviewEvidence;
+
+  /// No description provided for @spatialReviewDocument.
+  ///
+  /// In en, this message translates to:
+  /// **'Private permission record reference'**
+  String get spatialReviewDocument;
+
+  /// No description provided for @spatialReviewRequiredField.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter this information'**
+  String get spatialReviewRequiredField;
+
+  /// No description provided for @spatialReviewConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'I confirm the artwork, marker, capture date and credit. I have permission to capture and reproduce the work, create the model, and make it available worldwide for display, download and IPFS distribution after approval.'**
+  String get spatialReviewConfirm;
+
+  /// No description provided for @spatialReviewSubmit.
+  ///
+  /// In en, this message translates to:
+  /// **'Submit for review'**
+  String get spatialReviewSubmit;
+
+  /// No description provided for @spatialPilotNodeExplanation.
+  ///
+  /// In en, this message translates to:
+  /// **'Artists with a compatible kubus Node can reconstruct on their own hardware and upload the finished splat here.'**
+  String get spatialPilotNodeExplanation;
+
+  /// No description provided for @kubusNodeDownloadAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Download Kubus Node'**
+  String get kubusNodeDownloadAction;
+
+  /// No description provided for @kubusNodeInstallAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Installation guide'**
+  String get kubusNodeInstallAction;
+
+  /// No description provided for @kubusNodePairGuideAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Pair a Node'**
+  String get kubusNodePairGuideAction;
+
+  /// No description provided for @kubusNodeHardwareGuide.
+  ///
+  /// In en, this message translates to:
+  /// **'Archive hosting uses local storage and a reliable network connection. Spatial reconstruction requires a compatible NVIDIA GPU and the spatial worker. Artists can upload a prepared splat from a browser without installing a Node.'**
+  String get kubusNodeHardwareGuide;
+
+  /// No description provided for @kubusNodeComputeRewardGuide.
+  ///
+  /// In en, this message translates to:
+  /// **'Reconstructing locally does not earn a compute reward. Operators can qualify through eligible archive contributions or verified work for other operators. Pending accounting and settled KUB8 are shown separately.'**
+  String get kubusNodeComputeRewardGuide;
+
+  /// No description provided for @spatialDraftUploadIncomplete.
+  ///
+  /// In en, this message translates to:
+  /// **'Upload incomplete. Choose the same file to resume.'**
+  String get spatialDraftUploadIncomplete;
+
+  /// No description provided for @spatialDraftUploadUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Spatial uploads are unavailable on this server.'**
+  String get spatialDraftUploadUnavailable;
+
+  /// No description provided for @spatialDraftUploadFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not complete the request. Any saved upload progress is kept.'**
+  String get spatialDraftUploadFailed;
+
+  /// No description provided for @spatialDraftUploadUnsupported.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose a nonempty PLY, SPZ, SPLAT or KSPLAT file.'**
+  String get spatialDraftUploadUnsupported;
+
+  /// No description provided for @spatialDraftUploadTooLarge.
+  ///
+  /// In en, this message translates to:
+  /// **'This file exceeds the 512 MiB upload limit.'**
+  String get spatialDraftUploadTooLarge;
+
+  /// No description provided for @spatialDraftUploadDifferentFile.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose the same file to resume this draft, or remove the draft to upload a different file.'**
+  String get spatialDraftUploadDifferentFile;
+
+  /// No description provided for @spatialDraftUploadPause.
+  ///
+  /// In en, this message translates to:
+  /// **'Pause upload'**
+  String get spatialDraftUploadPause;
+
+  /// No description provided for @spatialDraftUploadChoose.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose and upload'**
+  String get spatialDraftUploadChoose;
+
+  /// No description provided for @spatialDraftUploadResume.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose the same file'**
+  String get spatialDraftUploadResume;
+
+  /// No description provided for @spatialDraftUploadRemoveTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove private draft'**
+  String get spatialDraftUploadRemoveTitle;
+
+  /// No description provided for @spatialDraftUploadRemoveBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove this model and any uploaded parts from the private draft?'**
+  String get spatialDraftUploadRemoveBody;
 }
 
 class _AppLocalizationsDelegate

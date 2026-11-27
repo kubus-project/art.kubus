@@ -19324,4 +19324,173 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get artworkPublishHeldGeneric =>
       'This artwork is on editorial hold and cannot be published yet.';
+
+  @override
+  String get spatialDraftUploadTitle => 'Spatial';
+
+  @override
+  String get spatialDraftUploadEditorSummary =>
+      'Upload a prepared 3D model as a private draft.';
+
+  @override
+  String get spatialDraftUploadPrivateTitle => 'Private spatial draft';
+
+  @override
+  String get spatialDraftUploadIntro =>
+      'Choose a prepared Gaussian splat from your device. The upload stays private. You can pause and resume by choosing the same file.';
+
+  @override
+  String get spatialDraftUploadFormats =>
+      'PLY, SPZ, SPLAT or KSPLAT, up to 512 MiB.';
+
+  @override
+  String get spatialDraftUploadLoading => 'Loading the spatial draft…';
+
+  @override
+  String get spatialDraftUploadChecking => 'Checking the file…';
+
+  @override
+  String get spatialDraftUploadSending => 'Uploading the spatial model…';
+
+  @override
+  String get spatialDraftUploadReady =>
+      'Upload complete. This model is saved as a private draft.';
+
+  @override
+  String get spatialReviewNewCandidate => 'Start a new candidate';
+
+  @override
+  String get spatialReviewPlacement => 'Placement matrix (optional)';
+
+  @override
+  String get spatialReviewPlacementHelp =>
+      'Paste the 16 values in column-major order from the Node capture.';
+
+  @override
+  String get spatialReviewPlacementInvalid => 'Enter a valid placement matrix.';
+
+  @override
+  String get spatialReviewTitle => 'Preview and submit';
+
+  @override
+  String get spatialReviewPreview => 'Open private preview';
+
+  @override
+  String get spatialReviewClosePreview => 'Close preview';
+
+  @override
+  String get spatialReviewRefresh => 'Refresh status';
+
+  @override
+  String get spatialReviewPublishing => 'Publishing';
+
+  @override
+  String get spatialReviewDeliveryFailed =>
+      'Delivery failed. The reviewer can retry delivery.';
+
+  @override
+  String get spatialReviewPublished => 'Published';
+
+  @override
+  String get spatialReviewPending => 'Awaiting independent review';
+
+  @override
+  String get spatialReviewChanges => 'Changes requested';
+
+  @override
+  String get spatialReviewHeld => 'Publication on hold';
+
+  @override
+  String get spatialReviewFailed =>
+      'Could not complete the request. Refresh the review and try again.';
+
+  @override
+  String get spatialReviewGrantRequired =>
+      'An active permission record is required before submission.';
+
+  @override
+  String get spatialReviewMarker => 'Artwork marker';
+
+  @override
+  String get spatialReviewDate => 'Capture date';
+
+  @override
+  String get spatialReviewAttribution => 'Public capture credit (optional)';
+
+  @override
+  String get spatialReviewEvidence => 'Private rights summary';
+
+  @override
+  String get spatialReviewDocument => 'Private permission record reference';
+
+  @override
+  String get spatialReviewRequiredField => 'Enter this information';
+
+  @override
+  String get spatialReviewConfirm =>
+      'I confirm the artwork, marker, capture date and credit. I have permission to capture and reproduce the work, create the model, and make it available worldwide for display, download and IPFS distribution after approval.';
+
+  @override
+  String get spatialReviewSubmit => 'Submit for review';
+
+  @override
+  String get spatialPilotNodeExplanation =>
+      'Artists with a compatible kubus Node can reconstruct on their own hardware and upload the finished splat here.';
+
+  @override
+  String get kubusNodeDownloadAction => 'Download Kubus Node';
+
+  @override
+  String get kubusNodeInstallAction => 'Installation guide';
+
+  @override
+  String get kubusNodePairGuideAction => 'Pair a Node';
+
+  @override
+  String get kubusNodeHardwareGuide =>
+      'Archive hosting uses local storage and a reliable network connection. Spatial reconstruction requires a compatible NVIDIA GPU and the spatial worker. Artists can upload a prepared splat from a browser without installing a Node.';
+
+  @override
+  String get kubusNodeComputeRewardGuide =>
+      'Reconstructing locally does not earn a compute reward. Operators can qualify through eligible archive contributions or verified work for other operators. Pending accounting and settled KUB8 are shown separately.';
+
+  @override
+  String get spatialDraftUploadIncomplete =>
+      'Upload incomplete. Choose the same file to resume.';
+
+  @override
+  String get spatialDraftUploadUnavailable =>
+      'Spatial uploads are unavailable on this server.';
+
+  @override
+  String get spatialDraftUploadFailed =>
+      'Could not complete the request. Any saved upload progress is kept.';
+
+  @override
+  String get spatialDraftUploadUnsupported =>
+      'Choose a nonempty PLY, SPZ, SPLAT or KSPLAT file.';
+
+  @override
+  String get spatialDraftUploadTooLarge =>
+      'This file exceeds the 512 MiB upload limit.';
+
+  @override
+  String get spatialDraftUploadDifferentFile =>
+      'Choose the same file to resume this draft, or remove the draft to upload a different file.';
+
+  @override
+  String get spatialDraftUploadPause => 'Pause upload';
+
+  @override
+  String get spatialDraftUploadChoose => 'Choose and upload';
+
+  @override
+  String get spatialDraftUploadResume => 'Choose the same file';
+
+  @override
+  String get spatialDraftUploadRemoveTitle => 'Remove private draft';
+
+  @override
+  String get spatialDraftUploadRemoveBody =>
+      'Remove this model and any uploaded parts from the private draft?';
 }

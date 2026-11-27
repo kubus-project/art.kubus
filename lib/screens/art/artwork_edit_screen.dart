@@ -36,6 +36,7 @@ import '../../widgets/inline_loading.dart';
 import '../../widgets/artwork_private_preview_image.dart';
 import '../../widgets/glass_components.dart';
 import '../desktop/desktop_shell.dart';
+import '../spatial/artwork_spatial_upload_screen.dart';
 import '../web3/artist/artwork_ar_manager_screen.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
 
@@ -983,6 +984,27 @@ class _ArtworkEditScreenState extends State<ArtworkEditScreen> {
         : ListView(
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
             children: [
+              if (kIsWeb &&
+                  art.id == ArtworkSpatialUploadScreen.pilotArtworkId) ...[
+                DetailCard(
+                  child: ListTile(
+                    leading: const Icon(Icons.view_in_ar_outlined),
+                    title: Text(l10n.spatialDraftUploadTitle),
+                    subtitle: Text(l10n.spatialDraftUploadEditorSummary),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: _isSaving
+                        ? null
+                        : () => Navigator.of(context).push(
+                              MaterialPageRoute<void>(
+                                builder: (_) => ArtworkSpatialUploadScreen(
+                                  artworkId: art.id,
+                                ),
+                              ),
+                            ),
+                  ),
+                ),
+                const SizedBox(height: DetailSpacing.md),
+              ],
               DetailCard(
                 padding: const EdgeInsets.all(DetailSpacing.md),
                 child: Column(
