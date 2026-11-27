@@ -43,8 +43,16 @@ void main() {
     await pumpDashboard(tester, const Size(390, 844));
 
     expect(find.text('kubus Node'), findsWidgets);
-    await tester.drag(find.byType(ListView), const Offset(0, -600));
-    await tester.pump();
+    // The pre-pairing guide above the section control grows with its copy,
+    // so scroll until the control is built rather than a fixed distance.
+    await tester.scrollUntilVisible(
+      find.byType(SegmentedButton<int>),
+      300,
+      scrollable: find
+          .descendant(
+              of: find.byType(ListView), matching: find.byType(Scrollable))
+          .first,
+    );
     expect(find.byType(SegmentedButton<int>), findsOneWidget);
     expect(tester.takeException(), isNull);
   });

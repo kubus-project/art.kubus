@@ -60,11 +60,17 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  Future<void> tapResume(WidgetTester tester) async {
+  // Hashing and the mock transport complete on real async I/O, so a fixed
+  // delay races a loaded test runner. Pump until the outcome is observable.
+  Future<void> tapResume(WidgetTester tester, bool Function() done) async {
     await tester.runAsync(() async {
       await tester.tap(find.text('Choose the same file'));
-      await Future<void>.delayed(const Duration(milliseconds: 50));
     });
+    for (var i = 0; i < 200 && !done(); i++) {
+      await tester.runAsync(
+          () => Future<void>.delayed(const Duration(milliseconds: 25)));
+      await tester.pump();
+    }
     await tester.pumpAndSettle();
   }
 
@@ -103,12 +109,13 @@ void main() {
       return draft(8, ready: true);
     }));
 
+    final complete =
+        find.text('Upload complete. This model is saved as a private draft.');
     await mountPage(tester, screen());
-    await tapResume(tester);
+    await tapResume(
+        tester, () => chunkRequests == 1 && complete.evaluate().isNotEmpty);
     expect(chunkRequests, 1);
-    expect(
-        find.text('Upload complete. This model is saved as a private draft.'),
-        findsOneWidget);
+    expect(complete, findsOneWidget);
   });
 
   testWidgets('rejects a same-name, same-size replacement before any write',
@@ -117,10 +124,11 @@ void main() {
       expect(request.method, 'GET');
       return draft(4);
     }));
+    final mismatch =
+        find.textContaining('remove the draft to upload a different file');
     await mountPage(tester, screen(Uint8List(body.length)));
-    await tapResume(tester);
-    expect(find.textContaining('remove the draft to upload a different file'),
-        findsOneWidget);
+    await tapResume(tester, () => mismatch.evaluate().isNotEmpty);
+    expect(mismatch, findsOneWidget);
   });
 
   testWidgets('an unavailable server exposes retry instead of upload',
